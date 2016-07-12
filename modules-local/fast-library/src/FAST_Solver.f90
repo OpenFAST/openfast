@@ -1,5 +1,6 @@
 !**********************************************************************************************************************************
-! The FAST_Prog.f90, FAST_Solver.f90, FAST_Subs.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
+! FAST_Solver.f90, FAST_Subs.f90, FAST_Lin.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
+! FAST_Prog.f90, FAST_Library.f90, FAST_Prog.c are different drivers for this code.
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2013-2016  National Renewable Energy Laboratory
@@ -323,14 +324,11 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, y_ED, Err
          END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
       END DO !K = 1,p%NumBl         
 
-      if (allocated(u_AD%InflowOnTower)) then
-
-         DO J=1,u_AD%TowerMotion%nnodes
-            Node = Node + 1      
-            u_IfW%PositionXYZ(:,Node) = u_AD%TowerMotion%TranslationDisp(:,J) + u_AD%TowerMotion%Position(:,J)
-         END DO      
+      DO J=1,u_AD%TowerMotion%nnodes
+         Node = Node + 1      
+         u_IfW%PositionXYZ(:,Node) = u_AD%TowerMotion%TranslationDisp(:,J) + u_AD%TowerMotion%Position(:,J)
+      END DO      
                   
-      end if
                         
    END IF
    
@@ -4148,7 +4146,6 @@ END SUBROUTINE InitModuleMappings
 !> This subroutine solves the input-output relations for all of the modules. It is a subroutine because it gets done twice--
 !! once at the start of the n_t_global loop and once in the j_pc loop, using different states.
 !! *** Note that modules that do not have direct feedthrough should be called first. ***
-!! also note that this routine uses variables from the main routine (not declared as arguments)
 SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, calcJacobian, NextJacCalcTime, &
                p_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
    REAL(DbKi)              , intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)

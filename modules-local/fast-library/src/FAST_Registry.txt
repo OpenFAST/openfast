@@ -61,91 +61,126 @@ param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there a
 typedef	^	FAST_VTK_BLSurfaceType	SiKi	AirfoilCoords	{:}{:}{:}	-	-	"x,y coordinates for airfoil around each blade node on a blade (relative to reference)"	-
 # ...... Data for VTK surface visualization ............................................................................
 typedef	^	FAST_VTK_SurfaceType	IntKi	NumSectors	-	-	-	"number of sectors in which to split circles (higher number gives smoother surface)"	-
-typedef	^	^	SiKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
-typedef	^	^	SiKi	GroundRad	-	-	-	"radius for plotting circle on ground"	m
-typedef	^	^	SiKi	NacelleBox	{3}{8}	-	-	"X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position"	m
-typedef	^	^	SiKi	TowerRad	{:}	-	-	"radius of each ED tower node"	m
-typedef	^	^	IntKi	NWaveElevPts	{2}	-	-	"number of points for wave elevation visualization"	-
-typedef	^	^	SiKi	WaveElevXY	{:}{:}	-	-	"X-Y locations for WaveElev output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."	"m,-"
-typedef	^	^	SiKi	WaveElev	{:}{:}	-	-	"wave elevation at WaveElevXY; first dimension is time step; second dimension is point number"	"m,-"
-typedef	^	^	FAST_VTK_BLSurfaceType	BladeShape	{:}	-	-	"AirfoilCoords for each blade"	m
-typedef	^	^	SiKi	MorisonRad	{:}	-	-	"radius of each Morison node"	m
+typedef	^	FAST_VTK_SurfaceType	SiKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
+typedef	^	FAST_VTK_SurfaceType	SiKi	GroundRad	-	-	-	"radius for plotting circle on ground"	m
+typedef	^	FAST_VTK_SurfaceType	SiKi	NacelleBox	{3}{8}	-	-	"X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position"	m
+typedef	^	FAST_VTK_SurfaceType	SiKi	TowerRad	{:}	-	-	"radius of each ED tower node"	m
+typedef	^	FAST_VTK_SurfaceType	IntKi	NWaveElevPts	{2}	-	-	"number of points for wave elevation visualization"	-
+typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElevXY	{:}{:}	-	-	"X-Y locations for WaveElev output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."	"m,-"
+typedef	^	FAST_VTK_SurfaceType	SiKi	WaveElev	{:}{:}	-	-	"wave elevation at WaveElevXY; first dimension is time step; second dimension is point number"	"m,-"
+typedef	^	FAST_VTK_SurfaceType	FAST_VTK_BLSurfaceType	BladeShape	{:}	-	-	"AirfoilCoords for each blade"	m
+typedef	^	FAST_VTK_SurfaceType	SiKi	MorisonRad	{:}	-	-	"radius of each Morison node"	m
 
 # ..... FAST_ParameterType data .......................................................................................................
 # Misc data for coupling:
 typedef	FAST	FAST_ParameterType	DbKi	DT	-	-	-	"Integration time step [global time]"	s
-typedef	^	^	DbKi	DT_module	{NumModules}	-	-	"Integration time step [global time]"	s
-typedef	^	^	IntKi	n_substeps	{NumModules}	-	-	"The number of module substeps for advancing states from t_global to t_global_next"	-
-typedef	^	^	INTEGER	n_TMax_m1	-	-	-	"The time step of TMax - dt (the end time of the simulation)"	(-)
-typedef	^	^	DbKi	TMax	-	-	-	"Total run time"	s
-typedef	^	^	IntKi	InterpOrder	-	-	-	"Interpolation order {0,1,2}"	-
-typedef	^	^	IntKi	NumCrctn	-	-	-	"Number of correction iterations"	-
-typedef	^	^	IntKi	KMax	-	-	-	"Maximum number of input-output-solve iterations (KMax >= 1)"	-
-typedef	^	^	IntKi	numIceLegs	-	-	-	"number of suport-structure legs in contact with ice (IceDyn coupling)"	-
-typedef	^	^	IntKi	nBeams	-	-	-	"number of BeamDyn instances"	-
-typedef	^	^	LOGICAL	ModuleInitialized	{NumModules}	-	-	"An array determining if the module has been initialized"	-
+typedef	^	FAST_ParameterType	DbKi	DT_module	{NumModules}	-	-	"Integration time step [global time]"	s
+typedef	^	FAST_ParameterType	IntKi	n_substeps	{NumModules}	-	-	"The number of module substeps for advancing states from t_global to t_global_next"	-
+typedef	^	FAST_ParameterType	INTEGER	n_TMax_m1	-	-	-	"The time step of TMax - dt (the end time of the simulation)"	(-)
+typedef	^	FAST_ParameterType	DbKi	TMax	-	-	-	"Total run time"	s
+typedef	^	FAST_ParameterType	IntKi	InterpOrder	-	-	-	"Interpolation order {0,1,2}"	-
+typedef	^	FAST_ParameterType	IntKi	NumCrctn	-	-	-	"Number of correction iterations"	-
+typedef	^	FAST_ParameterType	IntKi	KMax	-	-	-	"Maximum number of input-output-solve iterations (KMax >= 1)"	-
+typedef	^	FAST_ParameterType	IntKi	numIceLegs	-	-	-	"number of suport-structure legs in contact with ice (IceDyn coupling)"	-
+typedef	^	FAST_ParameterType	IntKi	nBeams	-	-	-	"number of BeamDyn instances"	-
+typedef	^	FAST_ParameterType	LOGICAL	ModuleInitialized	{NumModules}	-	-	"An array determining if the module has been initialized"	-
 # Data for Jacobians:
-typedef	^	^	DbKi	DT_Ujac	-	-	-	"Time between when we need to re-calculate these Jacobians"	s
-typedef	^	^	Reki	UJacSclFact	-	-	-	"Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians"	-
-typedef	^	^	IntKi	SizeJac_ED_SD_HD_BD_Orca	{8}	-	-	"(1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion"	-
+typedef	^	FAST_ParameterType	DbKi	DT_Ujac	-	-	-	"Time between when we need to re-calculate these Jacobians"	s
+typedef	^	FAST_ParameterType	Reki	UJacSclFact	-	-	-	"Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians"	-
+typedef	^	FAST_ParameterType	IntKi	SizeJac_ED_SD_HD_BD_Orca	{8}	-	-	"(1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion"	-
 # Feature switches and flags:
-typedef	^	^	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
-typedef	^	^	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM}"	-
-typedef	^	^	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD}"	-
-typedef	^	^	IntKi	CompServo	-	-	-	"Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}"	-
-typedef	^	^	IntKi	CompHydro	-	-	-	"Compute hydrodynamic loads (switch) {Module_None; Module_HD}"	-
-typedef	^	^	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_HD}"	-
-typedef	^	^	IntKi	CompMooring	-	-	-	"Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca}"	-
-typedef	^	^	IntKi	CompIce	-	-	-	"Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD}"	-
-typedef	^	^	LOGICAL	UseDWM	-	-	-	"Use the DWM module in AeroDyn"	-
+typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM}"	-
+typedef	^	FAST_ParameterType	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_AD14; Module_AD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompServo	-	-	-	"Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompHydro	-	-	-	"Compute hydrodynamic loads (switch) {Module_None; Module_HD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_HD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompMooring	-	-	-	"Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca}"	-
+typedef	^	FAST_ParameterType	IntKi	CompIce	-	-	-	"Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD}"	-
+typedef	^	FAST_ParameterType	LOGICAL	UseDWM	-	-	-	"Use the DWM module in AeroDyn"	-
+typedef	^	FAST_ParameterType	LOGICAL	Linearize	-	-	-	"Linearization analysis (flag)"	-
 # Input file names:
-typedef	^	^	CHARACTER(1024)	EDFile	-	-	-	"The name of the ElastoDyn input file"	-
-typedef	^	^	CHARACTER(1024)	BDBldFile	{MaxNBlades}	-	-	"Name of files containing BeamDyn inputs for each blade"	-
-typedef	^	^	CHARACTER(1024)	InflowFile	-	-	-	"Name of file containing inflow wind input parameters"	-
-typedef	^	^	CHARACTER(1024)	AeroFile	-	-	-	"Name of file containing aerodynamic input parameters"	-
-typedef	^	^	CHARACTER(1024)	ServoFile	-	-	-	"Name of file containing control and electrical-drive input parameters"	-
-typedef	^	^	CHARACTER(1024)	HydroFile	-	-	-	"Name of file containing hydrodynamic input parameters"	-
-typedef	^	^	CHARACTER(1024)	SubFile	-	-	-	"Name of file containing sub-structural input parameters"	-
-typedef	^	^	CHARACTER(1024)	MooringFile	-	-	-	"Name of file containing mooring system input parameters"	-
-typedef	^	^	CHARACTER(1024)	IceFile	-	-	-	"Name of file containing ice loading input parameters"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	EDFile	-	-	-	"The name of the ElastoDyn input file"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	BDBldFile	{MaxNBlades}	-	-	"Name of files containing BeamDyn inputs for each blade"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	InflowFile	-	-	-	"Name of file containing inflow wind input parameters"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	AeroFile	-	-	-	"Name of file containing aerodynamic input parameters"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	ServoFile	-	-	-	"Name of file containing control and electrical-drive input parameters"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	HydroFile	-	-	-	"Name of file containing hydrodynamic input parameters"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	SubFile	-	-	-	"Name of file containing sub-structural input parameters"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	MooringFile	-	-	-	"Name of file containing mooring system input parameters"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	IceFile	-	-	-	"Name of file containing ice loading input parameters"	-
 #  Parameters for file/screen output
-#typedef	^	^	DbKi	SttsTime	-	-	-	"Amount of time between screen status messages"	s
-typedef	^	^	DbKi	TStart	-	-	-	"Time to begin tabular output"	s
-typedef	^	^	DbKi	DT_Out	-	-	-	"Time step for tabular output"	s
-typedef	^	^	INTEGER	n_SttsTime	-	-	-	"Number of time steps between screen status messages"	-
-typedef	^	^	INTEGER	n_ChkptTime	-	-	-	"Number of time steps between writing checkpoint files"	-
-typedef	^	^	INTEGER	n_VTKTime	-	-	-	"Number of time steps between writing VTK files"	-
-typedef	^	^	IntKi	TurbineType	-	-	-	"Type_LandBased, Type_Offshore_Fixed, or Type_Offshore_Floating"	-
-typedef	^	^	LOGICAL	WrBinOutFile	-	-	-	"Write a binary output file? (.outb)"	-
-typedef	^	^	LOGICAL	WrTxtOutFile	-	-	-	"Write a text (formatted) output file? (.out)"	-
-typedef	^	^	LOGICAL	SumPrint	-	-	-	"Print summary data to file? (.sum)"	-
-typedef	^	^	INTEGER	WrVTK	-	-	-	"VTK Visualization data output: (switch) {0=none; 1=initialization data only; 2=animation}"	-
-typedef	^	^	INTEGER	VTK_Type	-	-	-	"Type of  VTK visualization data: (switch) {1=surfaces; 2=basic meshes (lines/points); 3=all meshes (debug)}"	-
-typedef	^	^	LOGICAL	VTK_fields	-	-	-	"Write mesh fields to VTK data files? (flag) {true/false}"	-
-typedef	^	^	CHARACTER(1)	Delim	-	-	-	"Delimiter between columns of text output file (.out): space or tab"	-
-typedef	^	^	CHARACTER(20)	OutFmt	-	-	-	"Format used for text tabular output (except time); resulting field should be 10 characters"	-
-typedef	^	^	CHARACTER(20)	OutFmt_t	-	-	-	"Format used for time channel in text tabular output; resulting field should be 10 characters"	-
-typedef	^	^	IntKi	TChanLen	-	-	-	"width of the time channel"	-
-typedef	^	^	CHARACTER(1024)	OutFileRoot	-	-	-	"The rootname of the output files"	-
-typedef	^	^	CHARACTER(1024)	FTitle	-	-	-	"The description line from the FAST (glue-code) input file"	-
-typedef	^	^	FAST_VTK_SurfaceType	VTK_surface	-	-	-	"Data for VTK surface visualization"
-typedef	^	^	SiKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used for graphics)"	m
+#typedef	^	FAST_ParameterType	DbKi	SttsTime	-	-	-	"Amount of time between screen status messages"	s
+typedef	^	FAST_ParameterType	DbKi	TStart	-	-	-	"Time to begin tabular output"	s
+typedef	^	FAST_ParameterType	DbKi	DT_Out	-	-	-	"Time step for tabular output"	s
+typedef	^	FAST_ParameterType	INTEGER	n_SttsTime	-	-	-	"Number of time steps between screen status messages"	-
+typedef	^	FAST_ParameterType	INTEGER	n_ChkptTime	-	-	-	"Number of time steps between writing checkpoint files"	-
+typedef	^	FAST_ParameterType	INTEGER	n_VTKTime	-	-	-	"Number of time steps between writing VTK files"	-
+typedef	^	FAST_ParameterType	IntKi	TurbineType	-	-	-	"Type_LandBased, Type_Offshore_Fixed, or Type_Offshore_Floating"	-
+typedef	^	FAST_ParameterType	LOGICAL	WrBinOutFile	-	-	-	"Write a binary output file? (.outb)"	-
+typedef	^	FAST_ParameterType	LOGICAL	WrTxtOutFile	-	-	-	"Write a text (formatted) output file? (.out)"	-
+typedef	^	FAST_ParameterType	LOGICAL	SumPrint	-	-	-	"Print summary data to file? (.sum)"	-
+typedef	^	FAST_ParameterType	INTEGER	WrVTK	-	-	-	"VTK Visualization data output: (switch) {0=none; 1=initialization data only; 2=animation}"	-
+typedef	^	FAST_ParameterType	INTEGER	VTK_Type	-	-	-	"Type of  VTK visualization data: (switch) {1=surfaces; 2=basic meshes (lines/points); 3=all meshes (debug)}"	-
+typedef	^	FAST_ParameterType	LOGICAL	VTK_fields	-	-	-	"Write mesh fields to VTK data files? (flag) {true/false}"	-
+typedef	^	FAST_ParameterType	CHARACTER(1)	Delim	-	-	-	"Delimiter between columns of text output file (.out): space or tab"	-
+typedef	^	FAST_ParameterType	CHARACTER(20)	OutFmt	-	-	-	"Format used for text tabular output (except time); resulting field should be 10 characters"	-
+typedef	^	FAST_ParameterType	CHARACTER(20)	OutFmt_t	-	-	-	"Format used for time channel in text tabular output; resulting field should be 10 characters"	-
+typedef	^	FAST_ParameterType	IntKi	FmtWidth	-	-	-	"width of the time OutFmt specifier"	-
+typedef	^	FAST_ParameterType	IntKi	TChanLen	-	-	-	"width of the time channel"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	OutFileRoot	-	-	-	"The rootname of the output files"	-
+typedef	^	FAST_ParameterType	CHARACTER(1024)	FTitle	-	-	-	"The description line from the FAST (glue-code) input file"	-
+typedef	^	FAST_ParameterType	DbKi	LinTimes	{:}	-	-	"List of times at which to linearize"	s
+typedef	^	FAST_ParameterType	IntKi	LinInputs	-	-	-	"Inputs included in linearization (switch) {0=none; 1=standard; 2=all module inputs (debug)} [unused if Linearize=False]"	-
+typedef	^	FAST_ParameterType	IntKi	LinOutputs	-	-	-	"Outputs included in linearization (switch) {0=none; 1=from OutList(s); 2=all module outputs (debug)} [unused if Linearize=False]"	-
+typedef	^	FAST_ParameterType	LOGICAL	LinOutJac	-	-	-	"Include full Jacabians in linearization output (for debug) (flag) [unused if Linearize=False; used only if LinInputs=LinOutputs=2]"	-
+typedef	^	FAST_ParameterType	LOGICAL	LinOutMod	-	-	-	"Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False]"	-
+typedef	^	FAST_ParameterType	FAST_VTK_SurfaceType	VTK_surface	-	-	-	"Data for VTK surface visualization"
+typedef	^	FAST_ParameterType	SiKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used for graphics)"	m
+typedef	^	FAST_ParameterType	IntKi	SizeLin	{NumModules+1}{3}	-	-	"dimension 1 is the module (numModules+1 is glue): dimension 2 is the size of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states"	-
+typedef	^	FAST_ParameterType	IntKi	Lin_NumMods	-	-	-	"number of modules in the linearization"
+typedef	^	FAST_ParameterType	Integer	Lin_ModOrder	{NumModules}	-	-	"indices that determine which order the modules are in the glue-code linearization matrix"
+
+# ..... FAST_LinType data .......................................................................................................
+typedef	FAST	FAST_LinType	CHARACTER(LinChanLen)	Names_u	{:}	-	-	"Names of the linearized inputs"
+typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_y	{:}	-	-	"Names of the linearized outputs"
+typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_x	{:}	-	-	"Names of the linearized continuous states"
+typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_xd	{:}	-	-	"Names of the linearized discrete states"
+typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_z	{:}	-	-	"Names of the linearized constraint states"
+typedef	^	FAST_LinType	ReKi	op_u	{:}	-	-	"input operating point"
+typedef	^	FAST_LinType	ReKi	op_y	{:}	-	-	"output operating point"
+typedef	^	FAST_LinType	ReKi	op_x	{:}	-	-	"continuous state operating point"
+typedef	^	FAST_LinType	ReKi	op_dx	{:}	-	-	"1st time derivative of continuous state operating point"
+typedef	^	FAST_LinType	ReKi	op_xd	{:}	-	-	"discrete state operating point"
+typedef	^	FAST_LinType	ReKi	op_z	{:}	-	-	"constraint state operating point"
+typedef	^	FAST_LinType	ReKi	A	{:}{:}	-	-	"A matrix"
+typedef	^	FAST_LinType	ReKi	B	{:}{:}	-	-	"B matrix"
+typedef	^	FAST_LinType	ReKi	C	{:}{:}	-	-	"C matrix"
+typedef	^	FAST_LinType	ReKi	D	{:}{:}	-	-	"D matrix"
+
+# ..... FAST_LinFileType data .......................................................................................................
+typedef	FAST	FAST_LinFileType	FAST_LinType	Modules	{NumModules}	-	-	"Linearization data for each module"
+typedef	^	FAST_LinFileType	FAST_LinType	Glue	-	-	-	"Linearization data for the glue code (coupled system)"
+
 
 # ..... FAST_OutputFileType data .......................................................................................................
 typedef	FAST	FAST_OutputFileType	DbKi	TimeData	{:}	-	-	"Array to contain the time output data for the binary file (first output time and a time [fixed] increment)"
-typedef	^	^	ReKi	AllOutData	{:}{:}	-	-	"Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step"
-typedef	^	^	IntKi	n_Out	-	-	-	"Time index into the AllOutData array"
-typedef	^	^	IntKi	NOutSteps	-	-	-	"Maximum number of output steps"
-typedef	^	^	IntKi	numOuts	{NumModules}	-	-	"number of outputs to print from each module"
-typedef	^	^	IntKi	UnOu	-	-1	-	"I/O unit number for the tabular output file"
-typedef	^	^	IntKi	UnSum	-	-1	-	"I/O unit number for the summary file"
-typedef	^	^	IntKi	UnGra	-	-1	-	"I/O unit number for mesh graphics"
-typedef	^	^	CHARACTER(1024)	FileDescLines	{3}	-	-	"Description lines to include in output files (header, time run, plus module names/versions)"
-typedef	^	^	CHARACTER(ChanLen)	ChannelNames	{:}	-	-	"Names of the output channels"
-typedef	^	^	CHARACTER(ChanLen)	ChannelUnits	{:}	-	-	"Units for the output channels"
-typedef	^	^	ProgDesc	Module_Ver	{NumModules}	-	-	"version information from all modules"
-typedef	^	^	IntKi	VTK_count	-	-	-	"Number of VTK files written (for naming output files)"
-typedef	^	^	IntKi	VTK_LastWaveIndx	-	-	-	"last index into wave array"	-
+typedef	^	FAST_OutputFileType	ReKi	AllOutData	{:}{:}	-	-	"Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step"
+typedef	^	FAST_OutputFileType	IntKi	n_Out	-	-	-	"Time index into the AllOutData array"
+typedef	^	FAST_OutputFileType	IntKi	NOutSteps	-	-	-	"Maximum number of output steps"
+typedef	^	FAST_OutputFileType	IntKi	numOuts	{NumModules}	-	-	"number of outputs to print from each module"
+typedef	^	FAST_OutputFileType	IntKi	UnOu	-	-1	-	"I/O unit number for the tabular output file"
+typedef	^	FAST_OutputFileType	IntKi	UnSum	-	-1	-	"I/O unit number for the summary file"
+typedef	^	FAST_OutputFileType	IntKi	UnGra	-	-1	-	"I/O unit number for mesh graphics"
+typedef	^	FAST_OutputFileType	CHARACTER(1024)	FileDescLines	{3}	-	-	"Description lines to include in output files (header, time run, plus module names/versions)"
+typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	ChannelNames	{:}	-	-	"Names of the output channels"
+typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	ChannelUnits	{:}	-	-	"Units for the output channels"
+typedef	^	FAST_OutputFileType	ProgDesc	Module_Ver	{NumModules}	-	-	"version information from all modules"
+typedef	^	FAST_OutputFileType	CHARACTER(ChanLen)	Module_Abrev	{NumModules}	-	-	"abbreviation for module (used in file output naming conventions)"
+typedef	^	FAST_OutputFileType	IntKi	VTK_count	-	-	-	"Number of VTK files written (for naming output files)"
+typedef	^	FAST_OutputFileType	IntKi	VTK_LastWaveIndx	-	-	-	"last index into wave array"	-
+typedef	^	FAST_OutputFileType	FAST_LinFileType	Lin	-	-	-	"linearization data for output"
+
 
 # ..... IceDyn data .......................................................................................................
 # [ the last dimension of each allocatable array is for the instance of IceDyn being used ]
@@ -392,7 +427,7 @@ typedef	^	FAST_ModuleMapType	MeshType	y_BD_BldMotion_4Loads	{:}	-	-	"BD blade mo
 typedef	^	FAST_ModuleMapType	MeshType	u_Orca_PtfmMesh	-	-	-	"copy of Orca PtfmMesh input mesh"
 # ..... FAST_ExternalInput data .......................................................................................................
 typedef	FAST	FAST_ExternInputType	ReKi	GenTrq	-	-	-	"generator torque input from Simulink/Labview"
-typedef	^	FAST_ExternInputType	ReKi	ElecPwr	-	-	-	"electric poser input from Simulink/Labview"
+typedef	^	FAST_ExternInputType	ReKi	ElecPwr	-	-	-	"electric power input from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	YawPosCom	-	-	-	"yaw position command from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	YawRateCom	-	-	-	"yaw rate command from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	BlPitchCom	3	-	-	"blade pitch commands from Simulink/Labview"	"rad/s"
@@ -411,6 +446,7 @@ typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation
 #typedef	^	FAST_MiscVarType	IntKi	n_t_global	-	-	-	"simulation time step, loop counter for global (FAST) simulation"	(s)
 typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)
 typedef	^	FAST_MiscVarType	FAST_ExternInputType	ExternInput	-	-	-	"external input values"	-
+typedef	^	FAST_MiscVarType	INTEGER	NextLinTimeIndx	-	-	-	"index for next time in LinTimes where linearization should occur"	-
 
 # ..... FAST External Initialization Input data .......................................................................................................
 typedef	^	FAST_ExternInitType	DbKi	Tmax	-	-1	-	"External code specified Tmax"	s

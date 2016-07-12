@@ -1,5 +1,6 @@
 !**********************************************************************************************************************************
-! The FAST_Prog.f90, FAST_IO.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
+! FAST_Solver.f90, FAST_Subs.f90, FAST_Lin.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
+! FAST_Prog.f90, FAST_Library.f90, FAST_Prog.c are different drivers for this code.
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2013-2016  National Renewable Energy Laboratory
@@ -89,6 +90,15 @@ INTEGER(IntKi)                        :: Restart_step                           
          CALL FAST_Solution0_T( Turbine(i_turb), ErrStat, ErrMsg )
          CALL CheckError( ErrStat, ErrMsg, 'during simulation initialization'  )
       
+         
+         !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+         ! linearization (bjj: we want to call FAST_Linearize_T whenever WriteOutputToFile is called, but I'll put it at the driver level for now)
+         !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+            ! if we need to do linarization analysis at t=0, do it at this operating point 
+         CALL FAST_Linearize_T(t_initial, 0, Turbine(i_turb), ErrStat, ErrMsg)
+            CALL CheckError( ErrStat, ErrMsg  )
+         
+         
       END DO
    END IF
    
@@ -98,8 +108,11 @@ INTEGER(IntKi)                        :: Restart_step                           
    ! Time Stepping:
    !...............................................................................................................................         
    
-   DO n_t_global = Restart_step, Turbine(1)%p_FAST%n_TMax_m1 ! bjj: we have to make sure the n_TMax_m1 and n_ChkptTime are the same for all turbines or have some logic
-            
+   DO n_t_global = Restart_step, Turbine(1)%p_FAST%n_TMax_m1 
+      
+      ! bjj: we have to make sure the n_TMax_m1 and n_ChkptTime are the same for all turbines or have some different logic here
+      
+      
       ! write checkpoint file if requested
       IF (mod(n_t_global, Turbine(1)%p_FAST%n_ChkptTime) == 0 .AND. Restart_step /= n_t_global) then
          CheckpointRoot = TRIM(Turbine(1)%p_FAST%OutFileRoot)//'.'//TRIM(Num2LStr(n_t_global))
@@ -111,16 +124,23 @@ INTEGER(IntKi)                        :: Restart_step                           
             END IF
             CALL CheckError( ErrStat, ErrMsg  )
       END IF
-      
+
       
       ! this takes data from n_t_global and gets values at n_t_global + 1
       DO i_turb = 1,NumTurbines
   
          CALL FAST_Solution_T( t_initial, n_t_global, Turbine(i_turb), ErrStat, ErrMsg )
             CALL CheckError( ErrStat, ErrMsg  )
-                                    
+                                   
+            
+            ! if we need to do linarization analysis, do it at this operating point (which is now n_t_global + 1) 
+            ! put this at the end of the loop so that we can output linearization analysis at last OP if desired
+         CALL FAST_Linearize_T(t_initial, n_t_global+1, Turbine(i_turb), ErrStat, ErrMsg)
+            CALL CheckError( ErrStat, ErrMsg  )
+            
       END DO
 
+      
       
    END DO ! n_t_global
   

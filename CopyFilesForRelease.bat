@@ -131,20 +131,23 @@ IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :IceFloe
 ECHO IceFloe
-SET src_folder=%IceF_Loc%\..
 SET dst_folder=%depend_dir%\IceFloe
-SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
-@CALL :CopyFileList
+SET src_folder=%IceF_Loc%
+@CALL :CopyFileFolder
+SET src_folder=%IceF_RanLux_Loc%
+copy /Y "%src_folder%\*" "%dst_folder%"
+SET src_folder=%IceF_Loc2%
+copy /Y "%src_folder%\*" "%dst_folder%"
+
 IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :IceDyn
 ECHO IceDyn
-SET src_folder=%IceD_Loc%\..
+SET src_folder=%IceD_Loc%
 SET dst_folder=%depend_dir%\IceDyn
-SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
-@CALL :CopyFileList
+@CALL :CopyFileFolder
 IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :MAP
@@ -173,11 +176,10 @@ IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :FEAMooring
 ECHO FEAMooring
-SET src_folder=%FEAM_Loc%\..
+SET src_folder=%FEAM_Loc%
 SET dst_folder=%depend_dir%\FEAMooring
-SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
-@CALL :CopyFileList
+@CALL :CopyFileFolder
 IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 

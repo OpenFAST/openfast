@@ -1,5 +1,6 @@
 !**********************************************************************************************************************************
-! FAST_Prog.f90, FAST_IO.f90, FAST_Types.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
+! FAST_Prog.f90, FAST_Subs.f90, FAST_Solver.f90, FAST_Lin.f90, FAST_Types.f90, and FAST_Mods.f90 make up the FAST glue code in 
+! the FAST Modularization Framework.
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2013-2016  National Renewable Energy Laboratory
@@ -29,7 +30,7 @@ MODULE FAST_ModTypes
    USE FAST_Types
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.15.02a-bjj', '15-Jun-2016' ) !< The version number of this module
+                                ProgDesc( 'FAST', 'v8.16.00a-bjj', '12-Jul-2016' ) !< The version number of this module
          
    !..................................................................
    
@@ -53,6 +54,16 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: VTK_Old                 =  4         !< output in old binary format (for Matlab viewing)
    REAL(SiKi),     PARAMETER :: VTK_GroundFactor        =  4.0_SiKi  !< factor for number of rotor radii -- sets width of seabed, waves, and still water in VTK surface visualization
          
+   ! linearization values
+   INTEGER(IntKi), PARAMETER :: LIN_NONE                = 0          !< no inputs/outputs in linearization
+   INTEGER(IntKi), PARAMETER :: LIN_STANDARD            = 1          !< use standard inputs/outputs in linearization
+   INTEGER(IntKi), PARAMETER :: LIN_ALL                 = 2          !< use all inputs/outputs in linearization
+   
+   INTEGER(IntKi), PARAMETER :: LIN_INPUT_COL           = 1          !< index for inputs
+   INTEGER(IntKi), PARAMETER :: LIN_OUTPUT_COL          = 2          !< index for outputs
+   INTEGER(IntKi), PARAMETER :: LIN_ContSTATE_COL       = 3          !< index for continuous states
+   
+   
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
    
 #if defined COMPILE_SIMULINK || defined COMPILE_LABVIEW
