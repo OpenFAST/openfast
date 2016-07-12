@@ -107,8 +107,8 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, ErrStat, ErrMsg)
       p_FAST%SizeLin(ThisModule,LIN_ContSTATE_COL) = size(y_FAST%Lin%Modules(ThisModule)%Names_x)      
    end do
                
-   if (p_FAST%LinInputs == LIN_NONE) p_FAST%SizeLin(:,LIN_INPUT_COL) = 0
-   if (p_FAST%LinOutputs == LIN_NONE) p_FAST%SizeLin(:,LIN_OUTPUT_COL) = 0
+   !if (p_FAST%LinInputs == LIN_NONE) p_FAST%SizeLin(:,LIN_INPUT_COL) = 0
+   !if (p_FAST%LinOutputs == LIN_NONE) p_FAST%SizeLin(:,LIN_OUTPUT_COL) = 0
          
    p_FAST%SizeLin(NumModules+1,LIN_INPUT_COL) = sum( p_FAST%SizeLin(1:NumModules,LIN_INPUT_COL) )  ! total number of inputs
    p_FAST%SizeLin(NumModules+1,LIN_OUTPUT_COL) = sum( p_FAST%SizeLin(1:NumModules,LIN_OUTPUT_COL) )  ! total number of outputs
