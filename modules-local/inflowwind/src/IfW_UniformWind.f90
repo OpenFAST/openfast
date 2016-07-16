@@ -156,7 +156,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
 
    ParamData%RefHt            =  InitData%ReferenceHeight
    ParamData%RefLength        =  InitData%RefLength
-   ParamData%WindFileName     =  InitData%WindFileName
 
 
       !-------------------------------------------------------------------------------------------------
@@ -445,7 +444,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
       WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)
       WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    'Uniform wind.  Module '//TRIM(IfW_UniformWind_Ver%Name)//  &
                                                                                  ' '//TRIM(IfW_UniformWind_Ver%Ver)
-      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     FileName:                    '//TRIM(ParamData%WindFileName)
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     FileName:                    '//TRIM(InitData%WindFileName)
       WRITE(InitData%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Reference height (m):        ',ParamData%RefHt
       WRITE(InitData%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Reference length (m):        ',ParamData%RefLength
       WRITE(InitData%SumFileUnit,'(A32,I8)',   IOSTAT=TmpErrStat)    '     Number of data lines:        ',ParamData%NumDataLines
@@ -489,7 +488,7 @@ END SUBROUTINE IfW_UniformWind_Init
 !! @note  This routine does not satisfy the Modular framework.  
 !! @date  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
 !-------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, DiskVel, MiscVars, ErrStat, ErrMsg)
+SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m, y, ErrStat, ErrMsg)
 
    IMPLICIT                                                       NONE
 
@@ -499,10 +498,11 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, Di
       ! Passed Variables
    REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
    REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
-   TYPE(IfW_UniformWind_ParameterType),         INTENT(IN   )  :: ParamData         !< Parameters
+   TYPE(IfW_UniformWind_ParameterType),         INTENT(IN   )  :: p                 !< Parameters
    REAL(ReKi),                                  INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
    REAL(ReKi),                                  INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
-   TYPE(IfW_UniformWind_MiscVarType),           INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
+   TYPE(IfW_UniformWind_MiscVarType),           INTENT(INOUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
+   TYPE(IfW_UniformWind_OutputType),            INTENT(INOUT)  :: y                 !< output values (for glue-code linearization operating point)
 
       ! Error handling
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< error status
@@ -533,11 +533,17 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, Di
    NumPoints   =  SIZE(PositionXYZ,DIM=2)
 
 
+   !-------------------------------------------------------------------------------------------------
+   !> 1. Linearly interpolate parameters in time (or use nearest-neighbor to extrapolate)
+   !! (compare with nwtc_num::interpstpreal)
+   !-------------------------------------------------------------------------------------------------
+   CALL InterpParams(Time, p, m, y%V, y%Delta, y%VZ, y%HShr, y%VShr, y%VLinShr, y%VGust)   
+   
       ! Step through all the positions and get the velocities
    DO PointNum = 1, NumPoints
 
          ! Calculate the velocity for the position
-      Velocity(:,PointNum) = GetWindSpeed(Time, PositionXYZ(:,PointNum), ParamData, MiscVars, TmpErrStat, TmpErrMsg)
+      call GetWindSpeed(PositionXYZ(:,PointNum), p, m, y, Velocity(:,PointNum), TmpErrStat, TmpErrMsg)
 
          ! Error handling
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
@@ -553,9 +559,8 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, Di
    ENDDO
 
 
-
       ! DiskVel term -- this represents the average across the disk -- sort of.  This changes for AeroDyn 15
-   DiskVel   =  WindInf_ADhack_diskVel(Time, ParamData, MiscVars, TmpErrStat, TmpErrMsg)
+   DiskVel   =  WindInf_ADhack_diskVel(Time, p, m, TmpErrStat, TmpErrMsg)
 
    RETURN
 
@@ -651,31 +656,24 @@ END SUBROUTINE InterpParams
 !! in space represented by InputPosition.
 !!
 !!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-FUNCTION GetWindSpeed(Time, InputPosition, p, m, ErrStat, ErrMsg)
+SUBROUTINE GetWindSpeed(InputPosition, p, m, y, WindSpeed, ErrStat, ErrMsg)
 
       ! Passed Variables
-   REAL(DbKi),                            INTENT(IN   )  :: Time              !< time from the start of the simulation
    REAL(ReKi),                            INTENT(IN   )  :: InputPosition(3)  !< input information: positions X,Y,Z
    TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: p                 !< Parameters
    TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: m                 !< Misc variables (stores last index into array time for efficiency)
+   TYPE(IfW_UniformWind_OutputType),      INTENT(IN   )  :: y                 !< output values; interpolated UniformWind parameters for this time (for glue-code linearization operating point)
 
    INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< error status
    CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg            !< The error message
 
       ! Returned variables
-   REAL(ReKi)                                            :: GetWindSpeed(3)   !< return velocities (U,V,W)
-
+   REAL(ReKi),                            INTENT(  OUT)  :: WindSpeed(3)      !< return velocities (U,V,W)
 
       ! Local Variables
-   REAL(ReKi)                                            :: CosDelta          ! cosine of Delta_tmp
-   REAL(ReKi)                                            :: Delta_tmp         ! interpolated Delta   at input TIME
-   REAL(ReKi)                                            :: HShr_tmp          ! interpolated HShr    at input TIME
-   REAL(ReKi)                                            :: SinDelta          ! sine of Delta_tmp
-   REAL(ReKi)                                            :: V_tmp             ! interpolated V       at input TIME
-   REAL(ReKi)                                            :: VGust_tmp         ! interpolated VGust   at input TIME
-   REAL(ReKi)                                            :: VLinShr_tmp       ! interpolated VLinShr at input TIME
-   REAL(ReKi)                                            :: VShr_tmp          ! interpolated VShr    at input TIME
-   REAL(ReKi)                                            :: VZ_tmp            ! interpolated VZ      at input TIME
+   REAL(ReKi)                                            :: CosDelta          ! cosine of y%Delta
+   
+   REAL(ReKi)                                            :: SinDelta          ! sine of y%Delta
    REAL(ReKi)                                            :: V1                ! temporary storage for horizontal velocity
 
 
@@ -683,11 +681,6 @@ FUNCTION GetWindSpeed(Time, InputPosition, p, m, ErrStat, ErrMsg)
    ErrMsg   =  ""
 
 
-   !-------------------------------------------------------------------------------------------------
-   !> 1. Linearly interpolate parameters in time (or use nearest-neighbor to extrapolate)
-   !! (compare with nwtc_num::interpstpreal)
-   !-------------------------------------------------------------------------------------------------
-   CALL InterpParams(Time, p, m, V_tmp, Delta_tmp, VZ_tmp, HShr_tmp, VShr_tmp, VLinShr_tmp, VGust_tmp)
    
    !-------------------------------------------------------------------------------------------------
    !> 2. Calculate the wind speed at this time (if z<0, return an error):
@@ -707,21 +700,21 @@ FUNCTION GetWindSpeed(Time, InputPosition, p, m, ErrStat, ErrMsg)
    !! \f$Vt_w =  V_z \f$ \n using input positions \f$X,Y,Z\f$ and interpolated values for time-dependent input-file parameters 
    !! \f$V, Delta, V_z, H_{LinShr}, V_{Shr}, V_{LinShr}, V_{Gust}\f$.
    
-   CosDelta = COS( Delta_tmp )
-   SinDelta = SIN( Delta_tmp )
-   V1 = V_tmp * ( ( InputPosition(3)/p%RefHt ) ** VShr_tmp &                                 ! power-law wind shear
-         + ( HShr_tmp   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &    ! horizontal linear shear
-         +  VLinShr_tmp * ( InputPosition(3)-p%RefHt ) )/p%RefLength  ) &                    ! vertical linear shear
-         + VGust_tmp                                                                         ! gust speed
+   CosDelta = COS( y%Delta )
+   SinDelta = SIN( y%Delta )
+   V1 = y%V * ( ( InputPosition(3)/p%RefHt ) ** y%VShr &                                   ! power-law wind shear
+         + ( y%HShr   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &    ! horizontal linear shear
+         +  y%VLinShr * ( InputPosition(3)-p%RefHt ) )/p%RefLength  ) &                    ! vertical linear shear
+         +  y%VGust                                                                        ! gust speed
          
-   GetWindSpeed(1) =  V1 * CosDelta
-   GetWindSpeed(2) = -V1 * SinDelta
-   GetWindSpeed(3) =  VZ_tmp
+   WindSpeed(1) =  V1 * CosDelta
+   WindSpeed(2) = -V1 * SinDelta
+   WindSpeed(3) =  y%VZ
 
 
    RETURN
 
-END FUNCTION GetWindSpeed
+END SUBROUTINE GetWindSpeed
 
 
 

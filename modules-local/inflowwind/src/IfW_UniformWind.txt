@@ -40,8 +40,7 @@ typedef  ^                       MiscVarType          IntKi    TimeIndex        
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^                    ParameterType       CHARACTER(1024) WindFileName      -     -     -     "Name of the wind file to use"                                 -
-typedef  ^                       ^                       ReKi     TData             :     -     -     "Time array from the HH file"                                  seconds
+typedef  ^                    ParameterType              ReKi     TData             :     -     -     "Time array from the HH file"                                  seconds
 typedef  ^                       ^                       ReKi     DELTA             :     -     -     "HH Wind direction (angle)"                                    degrees
 typedef  ^                       ^                       ReKi     V                 :     -     -     "HH horizontal wind speed"                                     meters/sec
 typedef  ^                       ^                       ReKi     VZ                :     -     -     "wind, including tower shadow, along the Z axis"               meters/sec
@@ -53,5 +52,16 @@ typedef  ^                       ^                       ReKi     RefHt         
 typedef  ^                       ^                       ReKi     RefLength         -     -     -     "reference length used to scale the linear shear"              meters
 typedef  ^                       ^                       IntKi    NumDataLines      -     -     -     ""                                                             -
 
+# ..... Input (dummy type for extrap/interp routine) ................................................................................................................
+typedef  ^                    InputType                  SiKi     dummy             -     -     -     "dummy type because we need extrap/interp routine if we put the below outputs in the InflowWind type"                            
+
+# ..... Output (for extended AD inputs in linearization) ................................................................................................................
+typedef  ^                    OutputType                 ReKi     DELTA             -     -     -     "HH Wind direction (angle)"                                    degrees
+typedef  ^                       ^                       ReKi     V                 -     -     -     "HH horizontal wind speed"                                     meters/sec
+typedef  ^                       ^                       ReKi     VZ                -     -     -     "wind, including tower shadow, along the Z axis"               meters/sec
+typedef  ^                       ^                       ReKi     HSHR              -     -     -     "HH Horizontal linear shear"                                   -
+typedef  ^                       ^                       ReKi     VSHR              -     -     -     "HH vertical shear exponent"                                   -
+typedef  ^                       ^                       ReKi     VLINSHR           -     -     -     "HH vertical linear shear"                                     -
+typedef  ^                       ^                       ReKi     VGUST             -     -     -     "HH wind gust"                                                 -
 
 

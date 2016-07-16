@@ -109,8 +109,6 @@ SUBROUTINE IfW_UserWind_Init(InitData, ParamData, MiscVars, Interval, InitOutDat
 
 !   ParamData%RefHt            =  InitData%ReferenceHeight
 !   ParamData%RefLength        =  InitData%RefLength
-!   ParamData%WindFileName     =  InitData%WindFileName
-    ParamData%WindFileName     = ""
 
       !-------------------------------------------------------------------------------------------------
       ! Open the file for reading.  Proceed with file parsing etc.  Populate your wind field here.
