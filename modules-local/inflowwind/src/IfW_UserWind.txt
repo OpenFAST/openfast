@@ -33,7 +33,7 @@ typedef    ^              MiscVarType          ReKi     DummyMiscVar - - -  "Rem
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^                    ParameterType       CHARACTER(1024) WindFileName      -     -     -     "Name of the wind file to use"                     -
+typedef  ^                    ParameterType       SiKi     dummy      -     -     -     "remove if you have parameters"                     -
 
 
 

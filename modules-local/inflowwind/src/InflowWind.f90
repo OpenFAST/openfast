@@ -194,9 +194,8 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
 
          ! Set the names of the files based on the inputfilename
-      p%InputFileName = InitInp%InputFileName
       p%RootFileName  = InitInp%RootName
-      IF (LEN_TRIM(p%RootFileName) == 0) CALL GetRoot( p%InputFileName, p%RootFileName )
+      IF (LEN_TRIM(p%RootFileName) == 0) CALL GetRoot( InitInp%InputFileName, p%RootFileName )
       EchoFileName  = TRIM(p%RootFileName)//".ech"
       SumFileName   = TRIM(p%RootFileName)//".sum"
 
@@ -204,7 +203,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
 
       IF ( InitInp%UseInputFile ) THEN
-         CALL InflowWind_ReadInput( p%InputFileName, EchoFileName, InputFileData, TmpErrStat, TmpErrMsg )
+         CALL InflowWind_ReadInput( InitInp%InputFileName, EchoFileName, InputFileData, TmpErrStat, TmpErrMsg )
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
@@ -253,56 +252,6 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          ENDIF
 
  
-
-         ! Allocate arrays for the WriteOutput
-
-      CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat>= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
-      y%WriteOutput = 0.0_ReKi
-      
-      CALL AllocAry( InitOutData%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      CALL AllocAry( InitOutData%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat>= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
-   
-      InitOutData%WriteOutputHdr = p%OutParam(1:p%NumOuts)%Name
-      InitOutData%WriteOutputUnt = p%OutParam(1:p%NumOuts)%Units     
- 
-
-      ! allocate and fill variables for linearization:
-      if (InitInp%Linearize) then
-         
-         CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3, 'LinNames_u', TmpErrStat, TmpErrMsg)
-            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3+p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
-            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
-         
-         do i=1,InitInp%NumWindPoints
-            do j=1,3
-               InitOutData%LinNames_y((i-1)*3+j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s'
-               InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
-            end do            
-         end do
-         
-         do i=1,p%NumOuts
-            InitOutData%LinNames_y(i+3*InitInp%NumWindPoints) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
-         end do
-                  
-      end if
-      
-      
       
          ! If a summary file was requested, open it.
       IF ( InputFileData%SumPrint ) THEN
@@ -736,8 +685,59 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 !!!!           CALL HW_Init( UnWind, p%WindFileName, ErrStat )
 !!!
 
+      
+         ! Allocate arrays for the WriteOutput
 
+      CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         IF ( ErrStat>= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         ENDIF
+      y%WriteOutput = 0.0_ReKi
+      
+      CALL AllocAry( InitOutData%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL AllocAry( InitOutData%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         IF ( ErrStat>= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         ENDIF
+   
+      InitOutData%WriteOutputHdr = p%OutParam(1:p%NumOuts)%Name
+      InitOutData%WriteOutputUnt = p%OutParam(1:p%NumOuts)%Units     
+       
 
+      ! allocate and fill variables for linearization:
+      if (InitInp%Linearize) then
+         
+         CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3, 'LinNames_u', TmpErrStat, TmpErrMsg)
+            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3+p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
+            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         ENDIF
+         
+         do i=1,InitInp%NumWindPoints
+            do j=1,3
+               InitOutData%LinNames_y((i-1)*3+j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s'
+               InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
+            end do            
+         end do
+         
+         do i=1,p%NumOuts
+            InitOutData%LinNames_y(i+3*InitInp%NumWindPoints) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+         end do
+               
+         InitOutData%PropagationDir = -p%PropagationDir
+         InitOutData%RefHt = p%UniformWind%RefHt
+         InitOutData%RefLength = p%UniformWind%RefLength
+         
+      end if
+                  
 
          ! Set the version information in InitOutData
       InitOutData%Ver   = IfW_Ver

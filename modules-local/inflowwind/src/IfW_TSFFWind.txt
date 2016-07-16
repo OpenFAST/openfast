@@ -32,8 +32,7 @@ typedef  ^                       MiscVarType          IntKi    TimeIndex        
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^                    ParameterType       CHARACTER(1024) WindFileName      -     -     -     "Name of the wind file to use"                                 -
-typedef  ^                       ^                       DbKi     DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
+typedef  ^                    ParameterType              DbKi     DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 typedef  ^                       ^                       Logical  TowerDataExist    -  .FALSE.  -     "Data exists for the tower"                                    -
 typedef  ^                       ^                       Logical  Periodic          -  .FALSE.  -     "Flag to indicate if the wind file is periodic"                -
 typedef  ^                       ^                       SiKi     FFData            ::::  -     -     "Array of FF data"                                             -
