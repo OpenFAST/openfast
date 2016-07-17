@@ -3,10 +3,6 @@
 # Module IfW_HAWCWind_Types contains all of the user-defined types needed in IfW_HAWCWind. It also contains copy, destroy, pack, and
 # unpack routines associated with each defined data types.
 ###################################################################################################################################
-# File last committed: $Date: 2014-07-23 11:40:57 -0600 (Wed, 23 Jul 2014) $
-# (File) Revision #: $Rev: 115 $
-# URL: $HeadURL: https://windsvn.nrel.gov/InflowWind/branches/modularization/Source/Registry/IfW_HAWCWind.txt $
-###################################################################################################################################
 # Entries are of the form
 # keyword <IfW_HAWCWind[/ModuleAbvr]> <TypeName>   <FieldType>    <FieldName>  <Dims>  <Ctrl> <DNAME> <DESCRIP> <UNITS>
 ###################################################################################################################################

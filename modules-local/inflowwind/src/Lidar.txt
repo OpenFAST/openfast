@@ -5,10 +5,6 @@
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
-# File last committed $Date: 2015-02-05 12:40:18 -0700 (Thu, 05 Feb 2015) $
-# (File) Revision #: $Rev: 138 $
-# URL: $HeadURL: https://windsvn.nrel.gov/InflowWind/branches/modularization/Source/Registry/Lidar.txt $
-###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
 #include	Registry_NWTC_Library.txt
 

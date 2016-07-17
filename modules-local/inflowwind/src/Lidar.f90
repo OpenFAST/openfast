@@ -18,10 +18,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-02-09 11:06:27 -0700 (Mon, 09 Feb 2015) $
-! (File) Revision #: $Rev: 140 $
-! URL: $HeadURL: https://windsvn.nrel.gov/InflowWind/branches/modularization/Source/Lidar.f90 $
-!**********************************************************************************************************************************
 MODULE Lidar
 
    USE InflowWind_Subs
