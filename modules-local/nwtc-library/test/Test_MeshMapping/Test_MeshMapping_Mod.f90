@@ -2,6 +2,8 @@ module TestMeshMapping_Mod
    
    USE NWTC_Library
    
+   implicit none
+
    TYPE(meshtype) :: mesh1_I, mesh1_O
    TYPE(meshtype) :: mesh2_I, mesh2_O 
 
@@ -15,10 +17,9 @@ module TestMeshMapping_Mod
    REAL(R8Ki)              :: Orientation(3,3), angles(3)
    REAL(ReKi)              :: position(3)
    REAL(ReKi)              :: Angle, e, mf, mm
-   REAL(ReKi), parameter   :: mmin = sqrt(epsilon(mmin))
    
    CHARACTER(*), PARAMETER :: Fmt = '(ES10.3E2)'
-   CHARACTER(*), PARAMETER :: ErrFmt = '(A28,i2,15(1x,F18.8))'
+   CHARACTER(*), PARAMETER :: ErrFmt = '(A28,i2,1x,F18.8,1x,F18.4,13(1x,F18.8))'
    CHARACTER(*), PARAMETER :: ErrTxtFmt = '(A28,A2,15(1x,A18))'
    
    !
@@ -40,16 +41,24 @@ contains
       real(reki), intent(inout) :: vec(:)
       
       real(reki)                :: mx,mn
+      integer                   :: nq
       
       !call getRandomVector(Vec, 0.4_ReKi)
       
       call random_number( Vec )
       mx = maxval(Vec)
       mn = minval(Vec)
-
+            
       Vec = 0.4_ReKi*(2.*(Vec-mn)/(mx-mn)-1.)/real(n1**2)  !note n1 from the loop this is called in
           
+      do nq=2,size(Vec),3
+         Vec(nq-1)=0
+         Vec(nq+1)=0
+      end do
+                 
       
+      !vec = 0.0_ReKi
+   
    end subroutine getRotationPerturb
    ! ..............................................   
    subroutine getRandomVector(Vec, InLimits)
@@ -61,6 +70,7 @@ contains
       
       if (present(InLimits)) then
          Limits = abs(InLimits)
+         if (EqualRealNos( Limits, 0.0_ReKi ) ) Limits = 1.0_ReKi
       else
          Limits = 1.0_ReKi
       end if
@@ -78,11 +88,98 @@ contains
       real(reki), intent(in   )           :: theta(3)
       real(R8ki), intent(inout)           :: Orientation(3,3)
    
-      call eye(Orientation,ErrStat,ErrMsg)
-      Orientation = Orientation - SkewSymMat(theta)
+      !call eye(Orientation,ErrStat,ErrMsg)
+      !Orientation = Orientation - SkewSymMat(theta)
             
+      call SmllRotTrans( 'orientation', theta(1) &
+                                      , theta(2) &
+                                      , theta(3) & 
+                                      , Orientation, ErrStat=ErrStat, ErrMsg=ErrMsg)  
+      
+      
    end subroutine getLinearOrient
    ! ..............................................   
+   subroutine WrErrorLine(Desc, Actual, Approx, DestField, DeltaS1, DeltaS2, DeltaS3, DeltaS4)
+   character(*), intent(in)            :: Desc
+   real(reki)  , intent(in)            :: Actual(:)
+   real(reki)  , intent(in)            :: Approx(:)
+   real(reki)  , intent(in)            :: DestField(:,:)
+   real(reki)  , intent(in)            :: DeltaS1(:)
+   real(reki)  , intent(in), optional  :: DeltaS2(:)
+   real(reki)  , intent(in), optional  :: DeltaS3(:)
+   real(reki)  , intent(in), optional  :: DeltaS4(:)
+   
+   real(reki)                          :: MaxAbsErr, MaxRelErr
+   real(reki)                          :: AbsErr,    RelErr, Denom
+   real(reki)                          :: v(3)
+   
+   integer(intki)                      :: i
+   REAL(ReKi), parameter               :: mmin = 1D-7; !sqrt(epsilon(mmin)) !1D-7 !
+   
+   
+   MaxAbsErr = 0.0_ReKi
+   MaxRelErr = 0.0_ReKi
+
+   do i=1,size(Actual)-1,3
+      v = Actual(i:i+2) - Approx(i:i+2)
+      AbsErr = TwoNorm( v )
+
+      v = Actual(i:i+2)
+      Denom = TwoNorm(v)
+      RelErr = AbsErr / max(mmin, Denom)
+      
+      if (AbsErr > MaxAbsErr) then
+         MaxAbsErr = max(MaxAbsErr,AbsErr) 
+         
+         MaxRelErr = RelErr !jmj wants the relative error associated with the node with greatest absolute error
+         !MaxRelErr = max(MaxAbsErr,RelErr) 
+      end if
+      
+      if (debug_print) then
+         call WrNumAryFileNR ( 58, (/ AbsErr /), 'ES15.8', ErrStat, ErrMsg  )   
+         call WrNumAryFileNR ( 59, (/ RelErr /), 'ES15.8', ErrStat, ErrMsg  )   
+         call WrNumAryFileNR ( 60, (/ Denom /),  'ES15.8', ErrStat, ErrMsg  )   
+      end if
+      
+   end do
+   
+   if (debug_print) then
+      write( 58, *)   
+      write( 59, *)   
+      write( 60, *)   
+   end if
+      
+   
+   !do i=1,size(Actual)
+   !   
+   !   AbsErr = abs(Actual(i) - Approx(i))
+   !   if (AbsErr > MaxAbsErr) then
+   !      MaxAbsErr = max(MaxAbsErr,AbsErr) 
+   !         
+   !      RelErr = AbsErr / max(mmin, Actual(i))
+   !      
+   !      MaxRelErr = RelErr !jmj wants the relative error associated with the node with greatest absolute error
+   !      !MaxRelErr = max(MaxAbsErr,RelErr) 
+   !   end if
+   !                     
+   !end do
+
+   MaxRelErr = MaxRelErr*100.
+   !note: n1 comes from loops where this is called (global variable)!
+   
+   if (present(DeltaS4)) then
+      write(*,ErrFmt) Desc//': ', n1, MaxAbsErr, MaxRelErr, maxval(abs(Actual)), maxval(abs(DestField)), maxval(abs(DeltaS1)), maxval(abs(DeltaS2)), maxval(abs(DeltaS3)), maxval(abs(DeltaS4))
+   elseif (present(DeltaS3)) then
+      write(*,ErrFmt) Desc//': ', n1, MaxAbsErr, MaxRelErr, maxval(abs(Actual)), maxval(abs(DestField)), maxval(abs(DeltaS1)), maxval(abs(DeltaS2)), maxval(abs(DeltaS3))
+   elseif (present(DeltaS2)) then
+      write(*,ErrFmt) Desc//': ', n1, MaxAbsErr, MaxRelErr, maxval(abs(Actual)), maxval(abs(DestField)), maxval(abs(DeltaS1)), maxval(abs(DeltaS2))
+   else
+      write(*,ErrFmt) Desc//': ', n1, MaxAbsErr, MaxRelErr, maxval(abs(Actual)), maxval(abs(DestField)), maxval(abs(DeltaS1))
+   end if
+   
+      
+   end subroutine
+   ! .............................................. 
    subroutine CreateOutputMeshes_Test1()   
       ! this is a point-to-point mapping, with one point going to many.
       ! it is a figure in the AIAA paper.
@@ -547,12 +644,12 @@ contains
       
       Mesh1Type = ELEMENT_LINE2
       Mesh2Type = ELEMENT_LINE2
-      
+         
       !.........................
       ! Mesh1 (Output: Motions)
       !.........................
       
-      Nnodes = 5            
+      Nnodes =5 !100 !100 !5            
       CALL MeshCreate( BlankMesh          = mesh1_O           &
                        , IOS              = COMPONENT_OUTPUT  &
                        , NNodes           = NNodes            &
@@ -573,13 +670,18 @@ contains
             
          position = (/0.0_ReKi, 0.0_ReKi, 1.0_ReKi*(j-1)/(Nnodes-1) /)          
          
-         CALL MeshPositionNode ( mesh1_O, j, position, ErrStat, ErrMsg, orient=orientation )     
+         !CALL MeshPositionNode ( mesh1_O, j, position, ErrStat, ErrMsg, orient=orientation )     
+         CALL MeshPositionNode ( mesh1_O, j, position, ErrStat, ErrMsg )     
          IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                      
       END DO   
 
+      !do j=1,NNodes 
+      !   CALL MeshConstructElement ( mesh1_O, Mesh1Type, ErrStat, ErrMsg, j )
+      !   IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                     
+      !end do      
 
       do j=2,NNodes 
-         CALL MeshConstructElement ( mesh1_O, ELEMENT_LINE2, ErrStat, ErrMsg, J-1, j )
+         CALL MeshConstructElement ( mesh1_O, Mesh1Type, ErrStat, ErrMsg, J-1, j )
          IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                     
       end do
       
@@ -595,6 +697,7 @@ contains
       do j=1,Mesh1_O%NNodes
       
          !Angle = 0      
+         !Angle = 0.5* Mesh1_O%Position(3,j) !28.6479
          Angle = 45.0_ReKi*Mesh1_O%Position(3,j)*D2R
          Mesh1_O%Orientation(:,:,j) = GetDCM(Angle,2)
                               
@@ -612,7 +715,7 @@ contains
       ! Mesh2 (Output: Loads)
       !.........................
                  
-      NNodes = 8
+      NNodes = 8 !105 !
    
       CALL MeshCreate(  BlankMesh       = mesh2_O           &
                         , IOS           = COMPONENT_OUTPUT  &
@@ -636,11 +739,17 @@ contains
 
       END DO
       
+      !do j=1,NNodes 
+      !   CALL MeshConstructElement ( mesh2_O, Mesh2Type, ErrStat, ErrMsg, J )
+      !   IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                     
+      !end do      
+                  
       do j=2,NNodes 
-         CALL MeshConstructElement ( mesh2_O, ELEMENT_LINE2, ErrStat, ErrMsg, J-1, j )
+         CALL MeshConstructElement ( mesh2_O, Mesh2Type, ErrStat, ErrMsg, J-1, j )
          IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                     
       end do      
-                  
+      
+      
          ! that's our entire mesh:
       CALL MeshCommit ( mesh2_O, ErrStat, ErrMsg )   
       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))   
@@ -1347,7 +1456,15 @@ Mesh1_O%TranslationDisp = 0
       real(reki),parameter  :: omega=2.
       real(reki)            :: L, LineLen
       real(reKi)            :: x, dx, yp, omega2, a2
-   
+
+      real(reKi),parameter  :: xAry1_disp(11) = (/ &
+      0.00000000000000_DbKi, 0.51960358494079_DbKi, 1.05066474308880_DbKi, 1.58938188333378_DbKi, 2.12044304148178_DbKi, 2.64004662642258_DbKi, 3.15959741148684_DbKi, 3.69065856963484_DbKi, 4.22937570987983_DbKi, 4.76043686802783_DbKi, 5.27998765309209_DbKi /)
+      
+      real(reKi),parameter  :: xAry1(11) = (/ &
+      0.00000000000000_DbKi, 0.24325351916746_DbKi, 0.55141234255808_DbKi, 1.01941540016335_DbKi, 1.32757422355397_DbKi, 1.57082774272143_DbKi, 1.81404984596235_DbKi, 2.12220866935298_DbKi, 2.59021172695825_DbKi, 2.89837055034887_DbKi, 3.14159265358979_DbKi  /)     
+      real(reKi),parameter  :: xAry2(31) = (/ &
+      0.00000000000000_DbKi, 0.07885397560510_DbKi, 0.15927874753700_DbKi, 0.24325351916746_DbKi, 0.33329156461934_DbKi, 0.43357120212193_DbKi, 0.55141234255808_DbKi, 0.69925569283602_DbKi, 0.87157204988542_DbKi, 1.01941540016335_DbKi, 1.13725654059951_DbKi, 1.23753617810209_DbKi, 1.32757422355397_DbKi, 1.41154899518443_DbKi, 1.49197376711633_DbKi, 1.57082774272143_DbKi, 1.64965030240000_DbKi, 1.73007507433190_DbKi, 1.81404984596235_DbKi, 1.90408789141424_DbKi, 2.00436752891682_DbKi, 2.12220866935298_DbKi, 2.27005201963091_DbKi, 2.44236837668031_DbKi, 2.59021172695825_DbKi, 2.70805286739440_DbKi, 2.80833250489699_DbKi, 2.89837055034887_DbKi, 2.98234532197933_DbKi, 3.06277009391123_DbKi, 3.14159265358979_DbKi  /)
+      
       Mesh1Type = ELEMENT_Line2
       Mesh2Type = ELEMENT_Line2
                         
@@ -1356,7 +1473,7 @@ Mesh1_O%TranslationDisp = 0
       ! Mesh1 (Output: Motions)
       !.........................
       
-      Nnodes = 11
+      Nnodes = size(xAry1) !11
             
       CALL MeshCreate( BlankMesh          = mesh1_O           &
                        , IOS              = COMPONENT_OUTPUT  &
@@ -1377,7 +1494,7 @@ Mesh1_O%TranslationDisp = 0
       dx = L/(NNodes-1.0_ReKi)   
       do j=1,NNodes 
             ! place nodes in a line
-         x        = (j-1.0_ReKi) * dx
+         x        = xAry1(j) !(j-1.0_ReKi) * dx
          yp       = a*omega*cos(omega*x)
          position = (/x, a*sin(omega*x), 0.0_ReKi /)                    
          Angle    = atan(yp)
@@ -1419,7 +1536,7 @@ LineLen = 5.27038
 
       do j=1,Mesh1_O%NNodes
          
-         x        = (j-1.0_ReKi) * dx 
+         x        = xAry1_disp(j) !(j-1.0_ReKi) * dx 
          yp       = a2*omega2*cos(omega2*x)
          position = (/x, a2*sin(omega2*x), 0.0_ReKi /)             
          Mesh1_O%TranslationDisp(:,J) = position - Mesh1_O%Position(:,j)
@@ -1432,8 +1549,6 @@ LineLen = 5.27038
          Mesh1_O%Orientation(:,2,j) = (/ SIN(Angle),     COS(Angle), 0.0_ReKi /)
          Mesh1_O%Orientation(:,3,j) = (/      0.,        0.0,        1.0 /)
          
-         
-         
          Mesh1_O%TranslationVel(:,j)  = (/ 0., 0.,  0. /)
          Mesh1_O%RotationVel(:,j)     = 0.0_ReKi ! (/ 0., 0.5, 0.5 /)*.5
          Mesh1_O%TranslationAcc(:,j)  = 0.0_ReKi ! (/ 1., 1., 0. /)*.115
@@ -1441,13 +1556,17 @@ LineLen = 5.27038
          
       
       end do
-                    
+       
+!Mesh1_O%TranslationDisp = 0.0_ReKi         
+!Mesh1_O%Orientation = Mesh1_O%RefOrientation         
+         
+      
                
       !.........................
       ! Mesh2 (Output: Loads)
       !.........................
                     
-      NNodes = 31 !19   
+      NNodes = size(xAry2) !31 !19   
       L = TwoPi/omega      
       dx = L/(NNodes-1.0_ReKi)   
       CALL MeshCreate(  BlankMesh       = mesh2_O           &
@@ -1463,7 +1582,7 @@ LineLen = 5.27038
             
       do j=1,NNodes
             ! place nodes in a line
-         x           = (j-1.0_ReKi) * dx
+         x           = xAry2(j) !(j-1.0_ReKi) * dx
          yp          = a*omega*cos(omega*x)
          position    = (/x, a*sin(omega*x), 0.0_ReKi /)                    
          Angle       = atan(yp) 
@@ -1472,8 +1591,7 @@ LineLen = 5.27038
          Orientation(:,2) = (/ SIN(Angle),     COS(Angle), 0.0_ReKi /)
          Orientation(:,3) = (/      0.,        0.0,        1.0 /)
                  
-         CALL MeshPositionNode ( mesh2_O, j, position, ErrStat, ErrMsg, &
-               Orient= Orientation )    
+         CALL MeshPositionNode ( mesh2_O, j, position, ErrStat, ErrMsg, Orient= Orientation )    
          
          !CALL MeshPositionNode ( mesh2_O, j, position, ErrStat, ErrMsg )     
          

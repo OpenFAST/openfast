@@ -32,7 +32,7 @@ MODULE NWTC_Base
 
 !=======================================================================
 
-   logical :: debug_print = .false.
+   !logical :: debug_print = .false.
    
       ! General constants:
 

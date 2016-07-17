@@ -1653,7 +1653,6 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
          end if !MASKID_RotationVel
          
       else
-         if (allocated(MeshMap%dM%fx_p)) deallocate(MeshMap%dM%fx_p)
          if (allocated(MeshMap%dM%tv_uD)) deallocate(MeshMap%dM%tv_uD)               
          if (allocated(MeshMap%dM%tv_uS)) deallocate(MeshMap%dM%tv_uS)               
       end if !MASKID_TranslationVel
@@ -2883,7 +2882,6 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                if (allocated(MeshMap%dM%tv_uS)) deallocate(MeshMap%dM%tv_uS)               
             end if !MASKID_RotationVel
          else
-            if (allocated(MeshMap%dM%fx_p)) deallocate(MeshMap%dM%fx_p)
             if (allocated(MeshMap%dM%tv_uD)) deallocate(MeshMap%dM%tv_uD)               
             if (allocated(MeshMap%dM%tv_uS)) deallocate(MeshMap%dM%tv_uS)               
          end if !MASKID_TranslationVel
