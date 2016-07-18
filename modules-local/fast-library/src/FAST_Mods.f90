@@ -60,8 +60,9 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: LIN_ALL                 = 2          !< use all inputs/outputs in linearization
    
    INTEGER(IntKi), PARAMETER :: LIN_INPUT_COL           = 1          !< index for inputs
-   INTEGER(IntKi), PARAMETER :: LIN_OUTPUT_COL          = 2          !< index for outputs
-   INTEGER(IntKi), PARAMETER :: LIN_ContSTATE_COL       = 3          !< index for continuous states
+   INTEGER(IntKi), PARAMETER :: LIN_ExtINPUT_COL        = 2          !< index for extended inputs
+   INTEGER(IntKi), PARAMETER :: LIN_OUTPUT_COL          = 3          !< index for outputs
+   INTEGER(IntKi), PARAMETER :: LIN_ContSTATE_COL       = 4          !< index for continuous states
    
    
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12

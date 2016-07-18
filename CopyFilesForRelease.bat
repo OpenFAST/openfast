@@ -45,7 +45,7 @@ IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 ECHO NetLib
 SET src_folder=%NETLIB_Loc%\..
 SET dst_folder=%depend_dir%\NetLib
-SET list_of_files=%src_folder%\SourceFiles.txt
+SET list_of_files=%src_folder%\NetLib_SourceFiles.txt
 
 @CALL :CopyFileList
 IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
@@ -83,11 +83,12 @@ IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :InflowWind
 ECHO InflowWind
-SET src_folder=%IfW_Loc%\..
+SET src_folder=%IfW_Loc%
 SET dst_folder=%depend_dir%\InflowWind
-SET list_of_files=%src_folder%/FAST_SourceFiles.txt
 
-@CALL :CopyFileList
+@CALL :CopyFileFolder
+SET src_folder=%IfW_Reg_Loc%
+copy /Y "%src_folder%\*" "%dst_folder%"
 IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 

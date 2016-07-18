@@ -505,6 +505,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          
       if (allocated(InitOutData_IfW%LinNames_y)) call move_alloc(InitOutData_IfW%LinNames_y,y_FAST%Lin%Modules(MODULE_IfW)%Names_y )
       if (allocated(InitOutData_IfW%LinNames_u)) call move_alloc(InitOutData_IfW%LinNames_u,y_FAST%Lin%Modules(MODULE_IfW)%Names_u )
+      y_FAST%Lin%PropagationDir = InitOutData_IfW%PropagationDir
+      y_FAST%Lin%cosPropDir = cos(InitOutData_IfW%PropagationDir)
+      y_FAST%Lin%sinPropDir = sin(InitOutData_IfW%PropagationDir)
+      y_FAST%Lin%RefHt = InitOutData_IfW%RefHt
+      y_FAST%Lin%RefLength = InitOutData_IfW%RefLength
       
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -1009,7 +1014,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! Initialize for linearization:
    ! -------------------------------------------------------------------------
    if ( p_FAST%Linearize ) then      
-      call Init_Lin(p_FAST, y_FAST, m_FAST, ErrStat2, ErrMsg2)      
+      call Init_Lin(p_FAST, y_FAST, m_FAST, InitOutData_ED%NumBl, ErrStat2, ErrMsg2)      
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          if (ErrStat >= AbortErrLev) then
