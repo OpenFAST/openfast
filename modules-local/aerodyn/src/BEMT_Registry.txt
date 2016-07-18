@@ -87,7 +87,10 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            MiscVarType                   Logical                  FirstWarn_M                     -             -         -        "flag so Mach number warning doesn't get repeated forever" -
 typedef   ^                            MiscVarType                   UA_MiscVarType           UA                              -             -         -        "misc vars for UnsteadyAero"        -
 typedef   ^                            MiscVarType                   UA_OutputType            y_UA                            -             -         -        "outputs from UnsteadyAero"        -
-
+typedef   ^                            MiscVarType                   ReKi                     TnInd_op                       {:}{:}         -         -        "tangential induction at the operating point (for linearization with frozen wake assumption)"
+typedef   ^                            MiscVarType                   ReKi                     AxInd_op                       {:}{:}         -         -        "axial induction at the operating point (for linearization) with frozen wake assumption"
+typedef   ^                            MiscVarType                   Logical                  UseFrozenWake                   -             -         -        "flag set to determine if frozen values of TnInd_op and AxInd_op should be used for this calculation in the linearization process"   
+ 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:

@@ -35,14 +35,15 @@ module BEMT
    
 
    implicit none
-   
-   
-   
+         
    
    private
    
-   type(ProgDesc), parameter  :: BEMT_Ver = ProgDesc( 'BEM', 'v1.01.00a', '12-Apr-2016' )
+   type(ProgDesc), parameter  :: BEMT_Ver = ProgDesc( 'BEM', 'v1.02.00', '29-Jun-2016' )
    character(*),   parameter  :: BEMT_Nickname = 'BEM'
+   
+   real(ReKi),      parameter :: BEMT_epsilon2 = sqrt(epsilon(1.0_ReKi)) ! 1e-6 
+   
    
    ! ..... Public Subroutines ...................................................................................................
 
@@ -56,6 +57,11 @@ module BEMT
    public :: BEMT_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    public :: BEMT_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    public :: BEMT_UpdateDiscState                ! Tight coupling routine for updating discrete states
+   
+   ! routines for linearization
+   public :: Get_phi_perturbations   
+   public :: ComputeFrozenWake
+   public :: CheckLinearizationInput
    
    contains
 
@@ -739,7 +745,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
       end if
    
    
-
+   misc%useFrozenWake = .FALSE.
 
    InitOut%Version         = BEMT_Ver
    
@@ -930,7 +936,6 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
                   !call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
                   !if (errStat >= AbortErrLev) return 
                   
-                     ! We'll simply compute a geometrical phi based on both induction factors
                   phitemp = ComputePhiWithInduction( u1%Vx(i,j), u1%Vy(i,j),  axInduction, tanInduction, errStat2, errMsg2 )  
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
                      ! angle of attack
@@ -1089,29 +1094,37 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
             
          if ( p%useInduction ) then
             
-            r = u%rlocal(i,j)
-               ! Compute Re based on zero inductions (axInduction, tanInduction), this would needed for the airfoil lookups 
-               !    which occur within BEMTU_InductionWithResidual if we had implemented airfoil tables which are dependent on Reynold's number: Currently unused, 4-Nov-2015
-            call BEMTU_Wind( 0.0_ReKi, 0.0_ReKi, Vx, Vy, p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
-            
-               ! Compute inductions using steady aero.  NOTE: When we use Re, we are using uninduced Re for Steady Airfoil Coef looks here
-            fzero = BEMTU_InductionWithResidual(y%phi(i,j), y%AOA(i,j), Re, p%numBlades, u%rlocal(i,j), p%chord(i,j), AFInfo(p%AFindx(i,j)), &
-                           Vx, Vy, p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
-                           y%axInduction(i,j), y%tanInduction(i,j), errStat2, errMsg2)
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-               if (errStat >= AbortErrLev) return 
-               
-               ! Apply the skewed wake correction to the axial induction (y%axInduction) and recompute y%phi, y%AOA
-            if ( p%skewWakeMod == SkewMod_PittPeters ) then
-               call ApplySkewedWakeCorrection( Vx, Vy, u%psi(j), u%chi0, u%rlocal(i,j)/Rtip, y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), ErrStat2, ErrMsg2 )           
-               ! ApplySkewedWakeCorrection doesn't set errors
-               
-                  ! We'll simply compute a geometrical phi based on both induction factors being 0.0
+            if (m%UseFrozenWake) then
+               y%axInduction(i,j)  = -m%AxInd_op(i,j) / u%Vx(i,j)               
+               y%tanInduction(i,j) =  m%TnInd_op(i,j) / u%Vy(i,j)
                y%phi(i,j) = ComputePhiWithInduction( u%Vx(i,j), u%Vy(i,j),  y%axInduction(i,j), y%tanInduction(i,j), errStat2, errMsg2 )  
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-                  ! angle of attack
-               y%AOA(i,j) = y%phi(i,j) - theta
-            end if
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
+               y%AOA(i,j) = y%phi(i,j) - theta               
+            else
+                                             
+               r = u%rlocal(i,j)
+                  ! Compute Re based on zero inductions (axInduction, tanInduction), this would needed for the airfoil lookups 
+                  !    which occur within BEMTU_InductionWithResidual if we had implemented airfoil tables which are dependent on Reynold's number: Currently unused, 4-Nov-2015
+               call BEMTU_Wind( 0.0_ReKi, 0.0_ReKi, Vx, Vy, p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
+            
+                  ! Compute inductions using steady aero.  NOTE: When we use Re, we are using uninduced Re for Steady Airfoil Coef looks here
+               fzero = BEMTU_InductionWithResidual(y%phi(i,j), y%AOA(i,j), Re, p%numBlades, u%rlocal(i,j), p%chord(i,j), AFInfo(p%AFindx(i,j)), &
+                              Vx, Vy, p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
+                              y%axInduction(i,j), y%tanInduction(i,j), errStat2, errMsg2)
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
+                  if (errStat >= AbortErrLev) return 
+               
+                  ! Apply the skewed wake correction to the axial induction (y%axInduction) and recompute y%phi, y%AOA
+               if ( p%skewWakeMod == SkewMod_PittPeters ) then
+                  call ApplySkewedWakeCorrection( Vx, Vy, u%psi(j), u%chi0, u%rlocal(i,j)/Rtip, y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), ErrStat2, ErrMsg2 )           
+                  ! ApplySkewedWakeCorrection doesn't set errors
+               
+                  y%phi(i,j) = ComputePhiWithInduction( u%Vx(i,j), u%Vy(i,j),  y%axInduction(i,j), y%tanInduction(i,j), errStat2, errMsg2 )  
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
+                     ! angle of attack
+                  y%AOA(i,j) = y%phi(i,j) - theta
+               end if
+            end if ! UseFrozenWake
             
          end if        
             
@@ -1282,39 +1295,237 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   if (p%useInduction) then 
    
-      do j = 1,p%numBlades
-            
-         do i = 1,p%numBladeNodes
+   if (p%useInduction) then 
+      
+      if ( m%UseFrozenWake ) then ! we are linearizing with frozen wake assumption; i.e., p%FrozenWake is true and this was called from the linearization routine
+         do j = 1,p%numBlades            
+            do i = 1,p%numBladeNodes
+               Z_residual%phi = sin(z%phi(i,j)) * (u%Vy(i,j) + m%TnInd_op(i,j)) - cos(z%phi(i,j)) * (u%Vx(i,j) + m%AxInd_op(i,j))
+            end do
+         end do
          
-               ! Need to initialize the inductions to zero for this calculation (NOTE: They are actually computed within UnCpldReFn(), but still need to be intialized to zero!)
-            axInduction  = 0.0_ReKi
-            tanInduction = 0.0_ReKi
-            AOA = z%phi(i,j) - u%theta(i,j)
+      else
             
-               ! Need to call BEMTU_Wind to obtain Re, even though we aren't using it in this version.
-            call BEMTU_Wind( axInduction, tanInduction, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
+         do j = 1,p%numBlades            
+            do i = 1,p%numBladeNodes
+         
+                  ! Need to initialize the inductions to zero for this calculation (NOTE: They are actually computed within UnCpldReFn(), but still need to be intialized to zero!)
+               axInduction  = 0.0_ReKi
+               tanInduction = 0.0_ReKi
+               AOA = z%phi(i,j) - u%theta(i,j)
             
-               ! Solve for the constraint states here:
-            z_residual%phi(i,j) = UncoupledErrFn(z%phi(i,j), AOA, Re, p%numBlades, u%rlocal(i,j), p%chord(i,j),  AFInfo(p%AFindx(i,j)), &
-                                 u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
-                                 ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat >= AbortErrLev) return
-         
-         
+                  ! Need to call BEMTU_Wind to obtain Re, even though we aren't using it in this version.
+               call BEMTU_Wind( axInduction, tanInduction, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
+            
+                  ! Solve for the constraint states here:
+               Z_residual%phi(i,j) = UncoupledErrFn(z%phi(i,j), AOA, Re, p%numBlades, u%rlocal(i,j), p%chord(i,j),  AFInfo(p%AFindx(i,j)), &
+                                    u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
+                                    ErrStat2, ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+               if (ErrStat >= AbortErrLev) return                  
            
+            end do
+         end do
+         
+      end if ! not frozen wake
+      
+   else
+      
+      do j = 1,p%numBlades            
+         do i = 1,p%numBladeNodes     
+            Z_residual%Phi = sin(z%phi(i,j)) * u%Vy(i,j) - cos(z%phi(i,j)) * u%Vx(i,j)
          end do
       end do
-   else
-      z_residual%phi = 0.0_ReKi  ! residual is zero for the case where we do not use induction
+      
+
    end if
    
    
 END SUBROUTINE BEMT_CalcConstrStateResidual
 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the BEMT inductions that are frozen when linearizing with the FrozenWake flag.
+!> It first calls BEMT_CalcOutput to compute y%tanInduction and y%axInduction at this operating point.
+!SUBROUTINE computeFrozenWake( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat, errMsg )
+SUBROUTINE computeFrozenWake( u, p, y, m )
+!..................................................................................................................................
 
+   
+   !real(DbKi),                     intent(in   )  :: t           ! Current simulation time in seconds
+   type(BEMT_InputType),           intent(in   )  :: u           ! Inputs at Time t
+   type(BEMT_ParameterType),       intent(in   )  :: p           ! Parameters
+   !type(BEMT_ContinuousStateType), intent(in   )  :: x           ! Continuous states at t
+   !type(BEMT_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at t
+   !type(BEMT_ConstraintStateType), intent(in   )  :: z           ! Constraint states at t
+   !type(BEMT_OtherStateType),      intent(in   )  :: OtherState  ! Other states at t
+   type(BEMT_MiscVarType),         intent(inout)  :: m           ! Misc/optimization variables
+   !type(AFInfoType),               intent(in   )  :: AFInfo(:)   ! The airfoil parameter data
+   type(BEMT_OutputType),          intent(inout)  :: y           ! Outputs computed at t (Input only so that mesh con-
+                                                                 !   nectivity information does not have to be recalculated)
+   !integer(IntKi),                 intent(  out)  :: errStat     ! Error status of the operation
+   !character(*),                   intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
+
+
+      ! local variables
+   INTEGER(IntKi)                                 :: j,k  ! loop counters
+   character(*), parameter                        :: RoutineName = 'computeFrozenWake'
+   
+      ! get a and aprime            
+   !call BEMT_CalcOutput(t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat, errMsg)
+      
+   do k = 1,p%numBlades            
+      do j = 1,p%numBladeNodes
+            
+         m%AxInd_op(j,k) = - u%Vx(j,k) * y%axInduction( j,k)
+         m%TnInd_op(j,k) =   u%Vy(j,k) * y%tanInduction(j,k)
+            
+      end do
+   end do
+      
+      
+     
+END SUBROUTINE computeFrozenWake
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine checks for BEMT inputs that are invalid when linearizing constraint state equations.
+SUBROUTINE CheckLinearizationInput(p, u, z, m, ErrStat, ErrMsg)
+
+   type(BEMT_ParameterType),       intent(in   )  :: p           ! Parameters
+   type(BEMT_InputType),           intent(in   )  :: u           ! Inputs at the operating point
+   type(BEMT_ConstraintStateType), intent(in   )  :: z           ! Constraint states at the operating point
+   type(BEMT_MiscVarType),         intent(in   )  :: m           ! Misc/optimization variables
+   integer(IntKi),                 intent(  out)  :: ErrStat     ! Error status of the operation
+   character(*),                   intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+      ! local variables
+   INTEGER(IntKi)                                 :: j,k  ! loop counters
+   character(*), parameter                        :: RoutineName = 'CheckLinearizationInput'
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   if (p%UseInduction) then
+      
+
+      if ( m%UseFrozenWake )  then ! we are linearizing with frozen wake assumption (i.e., p%FrozenWake is true and this is called from linearization routine)
+      
+         do k = 1,p%numBlades            
+            do j = 1,p%numBladeNodes
+            
+               if ( EqualRealNos( u%Vy(j,k), -m%TnInd_op(j,k)) .and. EqualRealNos( u%Vx(j,k), -m%AxInd_op(j,k) ) ) then
+                  call SetErrStat(ErrID_Fatal,"Residual is undefined because u%Vy + TnInd_op = u%Vx + AxInd_op = 0.",ErrStat,ErrMsg,RoutineName)
+                  return
+               end if
+            
+            end do
+         end do
+      
+      else
+      
+         do k = 1,p%numBlades            
+            do j = 1,p%numBladeNodes
+            
+               if ( EqualRealNos(z%phi(j,k), 0.0_ReKi) ) then
+                  call SetErrStat(ErrID_Fatal,"Residual is discountinuous or undefined because z%phi = 0.",ErrStat,ErrMsg,RoutineName)
+                  return
+               else if ( EqualRealNos(u%Vy(j,k), 0.0_ReKi) ) then
+                  call SetErrStat(ErrID_Fatal,"Residual is discountinuous or undefined because u%Vy = 0.",ErrStat,ErrMsg,RoutineName)
+                  return
+               else if ( EqualRealNos(u%Vx(j,k), 0.0_ReKi) ) then
+                  call SetErrStat(ErrID_Fatal,"Residual is discountinuous or undefined because u%Vx = 0.",ErrStat,ErrMsg,RoutineName)
+                  return
+               end if
+               
+            
+            end do
+         end do
+               
+      end if      
+      
+      
+            
+   else ! .not. p%UseInduction:
+      
+      do k = 1,p%numBlades            
+         do j = 1,p%numBladeNodes
+            
+            if ( EqualRealNos( u%Vy(j,k), 0.0_ReKi) .and. EqualRealNos( u%Vx(j,k), 0.0_ReKi ) ) then
+               call SetErrStat(ErrID_Fatal,"Residual is undefined because u%Vy = u%Vx = 0.",ErrStat,ErrMsg,RoutineName)
+               return
+            end if
+            
+         end do
+      end do      
+      
+
+                  
+   end if
+                  
+END SUBROUTINE CheckLinearizationInput
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This gets the constraint-state perturbations for linearization about a given operating point. This returns two deltas (one plus 
+!! and one minus) such that z_op+dz_p and z_op-dz_m are in the same solution region (or that they are in adjacent regions that have 
+!! continuous solution regions [i.e, the pi/2 boundary is okay because it is continuous across the momentum/empirical regions]).
+SUBROUTINE Get_phi_perturbations(p, m, z_op, dz_p, dz_m)
+
+   type(BEMT_ParameterType),       intent(in   )  :: p           ! Parameters
+   type(BEMT_MiscVarType),         intent(in   )  :: m           ! Misc/optimization variables
+
+   REAL(ReKi), intent(in    ) :: z_op     !< value of z%phi(i,j) at the operating point
+   REAL(ReKi), intent(   out) :: dz_p     !< change in z_op in the plus direction 
+   REAL(ReKi), intent(   out) :: dz_m     !< change in z_op in the minus direction
+
+      ! local variables
+   real(ReKi)                 :: dz         ! size of perturbation
+   real(ReKi)                 :: zp         ! z_op+dz
+   real(ReKi)                 :: zm         ! z_op-dz
+
+   
+   dz = 2*D2R
+   
+      ! we'll assume a central difference unless we are on the boundaries below  [default]
+   dz_p = dz
+   dz_m = dz
+   
+   
+   if (p%UseInduction .and. .not. m%UseFrozenWake) then
+   
+      zp = z_op+dz
+      zm = z_op-dz
+   
+         ! check if it goes past the pi-eps upper boundary
+      if ( zp > pi - BEMT_epsilon2 ) then
+         ! 1-sided difference
+         dz_p = 0
+         dz_m = dz
+      
+         ! next we care about the -pi/4-eps boundary:
+      else if ( zm < -pi/4 - BEMT_epsilon2) then
+         ! 1-sided difference
+         dz_p = dz
+         dz_m = 0
+      
+         ! next let's check the +eps boundaries:
+      else if ( z_op > 0.0_ReKi .and. zm < BEMT_epsilon2 ) then
+         ! 1-sided difference
+         dz_p = dz
+         dz_m = 0
+      
+         ! next let's check the -eps boundaries:
+      else if ( z_op < 0.0_ReKi .and. zp > -BEMT_epsilon2 ) then
+         ! 1-sided difference
+         dz_p = 0
+         dz_m = dz
+      
+      ! else ! we don't care about the pi/2 boundary, so let's do a central difference for everything else
+      end if
+   
+   end if
+      
+   
+END SUBROUTINE Get_phi_perturbations
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine GetSolveRegionOrdering(epsilon2, phiIn, test_lower, test_upper)
    real(ReKi),             intent(in   ) :: epsilon2
    real(ReKi),             intent(in   ) :: phiIn
@@ -1508,16 +1719,15 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, airDens, mu, AFInfo, rlocal, c
    integer(IntKi)                                :: errStat2, errStat3      ! temporary Error status of the operation
    character(*), parameter                       :: RoutineName = 'BEMT_UnCoupledSolve'
 
+   real(ReKi), parameter :: epsilon2 = BEMT_epsilon2 ! 1e-6 !bjj: needed to make this epsilon2 available for linearization, too, so have created BEMT_epsilon2
+   
    real(ReKi) :: f1, AOA
-   real(ReKi) :: phi_lower, phi_upper, epsilon2         ! wake skew angle (rad)
+   real(ReKi) :: phi_lower, phi_upper         ! wake skew angle (rad)
    logical    :: isEpsilon
    real(ReKi) :: Re, Vrel
    
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-   epsilon2 = sqrt(epsilon(1.0_ReKi)) ! 1e-6 !
-
   
           
          !   ! Check for validity of inputs
