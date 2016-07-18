@@ -359,18 +359,24 @@ subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, tipRatio, a, ap, ch
       chi = chi0
    end if
       
+   
+      ! check that this doesn't produce an error in ComputePhiWithInduction, which just calculates atan2(y,x)
+   ! bjj 23-Jun-2016: I tried changing the below IF statement to AND because that is the limiting case in atan2,
+   ! but it drastically changed some results in the FAST certification tests, so I'm putting it back.
    y = (1-a )*Vx
    x = (1+ap)*Vy
    
+   !if ( EqualRealNos(y, 0.0_ReKi) .AND. EqualRealNos(x, 0.0_ReKi) ) then
    if ( EqualRealNos(y, 0.0_ReKi) .OR. EqualRealNos(x, 0.0_ReKi) ) then
+      ! NOTE that we've already checked that Vx and Vy are not zero
       a     = 0.0_ReKi
       ap    = 0.0_ReKi
-
    end if
    
 end subroutine ApplySkewedWakeCorrection
                               
-recursive subroutine inductionFactors(r ,  chord, phi, cn, ct, B, &
+!recursive !bjj <- not sure why that would be necessary because inductionFactors() doesn't call itself...
+subroutine inductionFactors(r ,  chord, phi, cn, ct, B, &
                               Vx, Vy, wakerotation, hubLoss, tipLoss, hubLossConst, tipLossConst, &
                               fzero, a, ap, ErrStat, ErrMsg)
 
