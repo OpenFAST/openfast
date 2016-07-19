@@ -125,6 +125,8 @@ typedef  ^                       ^                 ProgDesc          Ver        
 typedef  ^                       ^                 WindFileMetaData  WindFileInfo      -     -     -     "Meta data from the wind file"                           -
 typedef  ^               InitOutputType         CHARACTER(LinChanLen) LinNames_y      {:} - -   "Names of the outputs used in linearization" -
 typedef  ^               InitOutputType         CHARACTER(LinChanLen) LinNames_u      {:} - -   "Names of the inputs used in linearization" -
+typedef  ^               InitOutputType         LOGICAL               RotFrame_y      {:} - -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
+typedef  ^               InitOutputType         LOGICAL               RotFrame_u      {:} - -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
 typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation"                          radians
 typedef  ^                       ^                 ReKi              RefHt             -     -     -     "reference height; was HH (hub height); used to center the wind"  meters
 typedef  ^                       ^                 ReKi              RefLength         -     -     -     "reference length used to scale the linear shear"              meters
