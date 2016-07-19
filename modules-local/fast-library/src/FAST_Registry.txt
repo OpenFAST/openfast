@@ -164,6 +164,9 @@ typedef	^	FAST_LinType	CHARACTER(LinChanLen)	Names_u_ext	{:}	-	-	"Names of the l
 typedef	^	FAST_LinType	ReKi	op_u_ext	{:}	-	-	"extended input operating point"
 typedef	^	FAST_LinType	ReKi	B_ext	{:}{:}	-	-	"columns of the B matrix for the extended inputs"
 typedef	^	FAST_LinType	ReKi	D_ext	{:}{:}	-	-	"columns of the D matrix for the extended inputs"
+typedef	^	FAST_LinType	Logical	RotFrame_u	{:}	-	-	"Whether corresponding input is in rotating frame"
+typedef	^	FAST_LinType	Logical	RotFrame_y	{:}	-	-	"Whether corresponding output is in rotating frame"
+typedef	^	FAST_LinType	Logical	RotFrame_x	{:}	-	-	"Whether corresponding continuous state is in rotating frame"
 
 # ..... FAST_LinFileType data .......................................................................................................
 typedef	FAST	FAST_LinFileType	FAST_LinType	Modules	{NumModules}	-	-	"Linearization data for each module"

@@ -266,6 +266,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    if (allocated(InitOutData_ED%LinNames_y)) call move_alloc(InitOutData_ED%LinNames_y,y_FAST%Lin%Modules(MODULE_ED)%Names_y )
    if (allocated(InitOutData_ED%LinNames_x)) call move_alloc(InitOutData_ED%LinNames_x,y_FAST%Lin%Modules(MODULE_ED)%Names_x )
    if (allocated(InitOutData_ED%LinNames_u)) call move_alloc(InitOutData_ED%LinNames_u,y_FAST%Lin%Modules(MODULE_ED)%Names_u )
+   if (allocated(InitOutData_ED%RotFrame_y)) call move_alloc(InitOutData_ED%RotFrame_y,y_FAST%Lin%Modules(MODULE_ED)%RotFrame_y )
+   if (allocated(InitOutData_ED%RotFrame_x)) call move_alloc(InitOutData_ED%RotFrame_x,y_FAST%Lin%Modules(MODULE_ED)%RotFrame_x )
+   if (allocated(InitOutData_ED%RotFrame_u)) call move_alloc(InitOutData_ED%RotFrame_u,y_FAST%Lin%Modules(MODULE_ED)%RotFrame_u )
    
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -441,6 +444,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       if (allocated(InitOutData_AD%LinNames_y)) call move_alloc(InitOutData_AD%LinNames_y,y_FAST%Lin%Modules(MODULE_AD)%Names_y )
       if (allocated(InitOutData_AD%LinNames_z)) call move_alloc(InitOutData_AD%LinNames_z,y_FAST%Lin%Modules(MODULE_AD)%Names_z )
       if (allocated(InitOutData_AD%LinNames_u)) call move_alloc(InitOutData_AD%LinNames_u,y_FAST%Lin%Modules(MODULE_AD)%Names_u )
+      if (allocated(InitOutData_AD%RotFrame_y)) call move_alloc(InitOutData_AD%RotFrame_y,y_FAST%Lin%Modules(MODULE_AD)%RotFrame_y )
+      if (allocated(InitOutData_AD%RotFrame_u)) call move_alloc(InitOutData_AD%RotFrame_u,y_FAST%Lin%Modules(MODULE_AD)%RotFrame_u )
 
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -505,6 +510,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          
       if (allocated(InitOutData_IfW%LinNames_y)) call move_alloc(InitOutData_IfW%LinNames_y,y_FAST%Lin%Modules(MODULE_IfW)%Names_y )
       if (allocated(InitOutData_IfW%LinNames_u)) call move_alloc(InitOutData_IfW%LinNames_u,y_FAST%Lin%Modules(MODULE_IfW)%Names_u )
+      if (allocated(InitOutData_IfW%RotFrame_y)) call move_alloc(InitOutData_IfW%RotFrame_y,y_FAST%Lin%Modules(MODULE_IfW)%RotFrame_y )
+      if (allocated(InitOutData_IfW%RotFrame_u)) call move_alloc(InitOutData_IfW%RotFrame_u,y_FAST%Lin%Modules(MODULE_IfW)%RotFrame_u )
       y_FAST%Lin%PropagationDir = InitOutData_IfW%PropagationDir
       y_FAST%Lin%cosPropDir = cos(InitOutData_IfW%PropagationDir)
       y_FAST%Lin%sinPropDir = sin(InitOutData_IfW%PropagationDir)
@@ -634,6 +641,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
                   
       if (allocated(InitOutData_SrvD%LinNames_y)) call move_alloc(InitOutData_SrvD%LinNames_y,y_FAST%Lin%Modules(MODULE_SrvD)%Names_y )
       if (allocated(InitOutData_SrvD%LinNames_u)) call move_alloc(InitOutData_SrvD%LinNames_u,y_FAST%Lin%Modules(MODULE_SrvD)%Names_u )
+      if (allocated(InitOutData_SrvD%RotFrame_y)) call move_alloc(InitOutData_SrvD%RotFrame_y,y_FAST%Lin%Modules(MODULE_SrvD)%RotFrame_y )
+      if (allocated(InitOutData_SrvD%RotFrame_u)) call move_alloc(InitOutData_SrvD%RotFrame_u,y_FAST%Lin%Modules(MODULE_SrvD)%RotFrame_u )
       
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -1014,7 +1023,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! Initialize for linearization:
    ! -------------------------------------------------------------------------
    if ( p_FAST%Linearize ) then      
-      call Init_Lin(p_FAST, y_FAST, m_FAST, InitOutData_ED%NumBl, ErrStat2, ErrMsg2)      
+      call Init_Lin(p_FAST, y_FAST, m_FAST, AD, InitOutData_ED%NumBl, ErrStat2, ErrMsg2)      
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          if (ErrStat >= AbortErrLev) then

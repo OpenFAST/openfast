@@ -34,17 +34,17 @@ MODULE FAST_Linear
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that initializes some variables for linearization.
-SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, NumBl, ErrStat, ErrMsg)
+SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, NumBl, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
    TYPE(FAST_MiscVarType),   INTENT(INOUT) :: m_FAST              !< Miscellaneous variables
+   TYPE(AeroDyn_Data),       INTENT(IN   ) :: AD                  !< AeroDyn data
    INTEGER(IntKi),           INTENT(IN)    :: NumBl               !< Number of blades (for index into ED input array)
    
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi)                          :: position            ! position in string
    INTEGER(IntKi)                          :: i, j                ! loop/temp variables
    INTEGER(IntKi)                          :: ThisModule          ! Module ID # 
    
@@ -70,20 +70,8 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, NumBl, ErrStat, ErrMsg)
       p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
       p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_IfW
       
-      
-      ! I'm going to overwrite some of the input/output descriptions 
-      if (p_FAST%CompServo == MODULE_SrvD) then
-         do i=1,3
-            position = index(y_FAST%Lin%Modules(Module_IfW)%Names_u(i), ',') - 1
-            y_FAST%Lin%Modules(Module_IfW)%Names_u(i) = y_FAST%Lin%Modules(Module_IfW)%Names_u(i)(1:position)//' (hub)'//&
-                                                         y_FAST%Lin%Modules(Module_IfW)%Names_u(i)(position+1:)
-         end do    
-         do i=1,3
-            position = index(y_FAST%Lin%Modules(Module_IfW)%Names_y(i), ',') - 1
-            y_FAST%Lin%Modules(Module_IfW)%Names_y(i) = y_FAST%Lin%Modules(Module_IfW)%Names_y(i)(1:position)//' (hub)'//&
-                                                         y_FAST%Lin%Modules(Module_IfW)%Names_y(i)(position+1:)
-         end do    
-      end if         
+      call Init_Lin_IfW( p_FAST, y_FAST, AD%Input(1) ) ! overwrite some variables based on knowledge from glue code
+                  
    end if
    
       ! ServoDyn is next, if activated:
@@ -182,6 +170,13 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, NumBl, ErrStat, ErrMsg)
       call SetErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
    call AllocAry( y_FAST%Lin%Glue%Use_y, p_FAST%SizeLin(NumModules+1,LIN_OUTPUT_COL), 'use_y', ErrStat2, ErrMsg2)
       call SetErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
+   call AllocAry( y_FAST%Lin%Glue%RotFrame_u, p_FAST%SizeLin(NumModules+1,LIN_INPUT_COL), 'RotFrame_u', ErrStat2, ErrMsg2)
+      call SetErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( y_FAST%Lin%Glue%RotFrame_y, p_FAST%SizeLin(NumModules+1,LIN_OUTPUT_COL), 'RotFrame_y', ErrStat2, ErrMsg2)
+      call SetErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)      
+   call AllocAry( y_FAST%Lin%Glue%RotFrame_x, p_FAST%SizeLin(NumModules+1,LIN_ContSTATE_COL), 'RotFrame_x', ErrStat2, ErrMsg2)
+      call SetErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)       
+      
    if (ErrStat >= AbortErrLev) return
                
    
@@ -194,7 +189,14 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, NumBl, ErrStat, ErrMsg)
       
       do j=1,p_FAST%SizeLin(ThisModule,LIN_INPUT_COL)
          y_FAST%Lin%Glue%names_u(i_u) = TRIM(y_FAST%Module_Abrev(ThisModule))//' '//y_FAST%Lin%Modules(ThisModule)%Names_u(j)         
-         y_FAST%Lin%Glue%use_u(  i_u) = y_FAST%Lin%Modules(ThisModule)%use_u(j)         
+         y_FAST%Lin%Glue%use_u(  i_u) = y_FAST%Lin%Modules(ThisModule)%use_u(j) 
+         
+         if (allocated(y_FAST%Lin%Modules(ThisModule)%RotFrame_u)) then
+            y_FAST%Lin%Glue%RotFrame_u(i_u) = y_FAST%Lin%Modules(ThisModule)%RotFrame_u(j) 
+         else 
+            y_FAST%Lin%Glue%RotFrame_u(i_u) = .false.
+         end if         
+         
          i_u = i_u + 1;
       end do
       
@@ -208,11 +210,21 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, NumBl, ErrStat, ErrMsg)
       do j=1,p_FAST%SizeLin(ThisModule,LIN_OUTPUT_COL)
          y_FAST%Lin%Glue%names_y(i_y) = TRIM(y_FAST%Module_Abrev(ThisModule))//' '//y_FAST%Lin%Modules(ThisModule)%Names_y(j)
          y_FAST%Lin%Glue%use_y(  i_y) = y_FAST%Lin%Modules(ThisModule)%use_y(j)
+         if (allocated(y_FAST%Lin%Modules(ThisModule)%RotFrame_y)) then
+            y_FAST%Lin%Glue%RotFrame_y(i_y) = y_FAST%Lin%Modules(ThisModule)%RotFrame_y(j)
+         else 
+            y_FAST%Lin%Glue%RotFrame_y(i_y) = .false.
+         end if                  
          i_y = i_y + 1;
       end do      
 
       do j=1,p_FAST%SizeLin(ThisModule,LIN_ContSTATE_COL)
          y_FAST%Lin%Glue%names_x( i_x) = TRIM(y_FAST%Module_Abrev(ThisModule))//' '//y_FAST%Lin%Modules(ThisModule)%Names_x( j)
+         if (allocated(y_FAST%Lin%Modules(ThisModule)%RotFrame_x)) then
+            y_FAST%Lin%Glue%RotFrame_x(i_x) = y_FAST%Lin%Modules(ThisModule)%RotFrame_x(j) 
+         else 
+            y_FAST%Lin%Glue%RotFrame_x(i_x) = .false.
+         end if                  
          i_x = i_x + 1;
       end do      
       
@@ -220,6 +232,88 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, NumBl, ErrStat, ErrMsg)
          
    
 END SUBROUTINE Init_Lin
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine that initializes the names and rotating frame portion of IfW.
+SUBROUTINE Init_Lin_IfW( p_FAST, y_FAST, u_AD )
+
+   TYPE(FAST_ParameterType),       INTENT(IN   )   :: p_FAST      !< FAST parameter data 
+   TYPE(FAST_OutputFileType),      INTENT(INOUT)   :: y_FAST      !< Output variables for the glue code
+   TYPE(AD_InputType),             INTENT(IN)      :: u_AD        !< The input meshes (already calculated) from AeroDyn   
+   
+   INTEGER(IntKi)                          :: i, j, k             ! loop counters
+   INTEGER(IntKi)                          :: i2, j2              ! loop counters
+   INTEGER(IntKi)                          :: Node                ! InflowWind node number
+   CHARACTER(25)                           :: NodeDesc            ! Node description
+   INTEGER(IntKi)                          :: position            ! position in string
+   
+            
+         ! compare with IfW_InputSolve():
+   
+      Node = 0 !InflowWind node
+            
+      ! I'm going to overwrite some of the input/output descriptions 
+      if (p_FAST%CompServo == MODULE_SrvD) then
+         Node = Node + 1
+         NodeDesc = ' (hub)'
+         
+         do i=1,3
+            position = index(y_FAST%Lin%Modules(Module_IfW)%Names_u(i), ',') - 1
+            y_FAST%Lin%Modules(Module_IfW)%Names_u(i) = y_FAST%Lin%Modules(Module_IfW)%Names_u(i)(1:position)//trim(NodeDesc)//&
+                                                        y_FAST%Lin%Modules(Module_IfW)%Names_u(i)(position+1:)
+         end do    
+         do i=1,3
+            position = index(y_FAST%Lin%Modules(Module_IfW)%Names_y(i), ',') - 1
+            y_FAST%Lin%Modules(Module_IfW)%Names_y(i) = y_FAST%Lin%Modules(Module_IfW)%Names_y(i)(1:position)//trim(NodeDesc)//&
+                                                        y_FAST%Lin%Modules(Module_IfW)%Names_y(i)(position+1:)
+         end do    
+      end if
+                  
+      IF (p_FAST%CompAero == MODULE_AD) THEN 
+                           
+         DO K = 1,SIZE(u_AD%BladeMotion)
+            DO J = 1,u_AD%BladeMotion(k)%Nnodes
+               Node = Node + 1 ! InflowWind node
+               NodeDesc = ' (blade '//trim(num2lstr(k))//', node '//trim(num2lstr(j))//')'
+               
+               do i=1,3 !XYZ components of this node
+                  i2 = (Node-1)*3 + i
+                                    
+                  position = index(y_FAST%Lin%Modules(Module_IfW)%Names_u(i2), ',') - 1
+                  y_FAST%Lin%Modules(Module_IfW)%Names_u(i2) = y_FAST%Lin%Modules(Module_IfW)%Names_u(i2)(1:position)//trim(NodeDesc)//&
+                                                               y_FAST%Lin%Modules(Module_IfW)%Names_u(i2)(position+1:)
+                                                       
+                  position = index(y_FAST%Lin%Modules(Module_IfW)%Names_y(i2), ',') - 1
+                  y_FAST%Lin%Modules(Module_IfW)%Names_y(i2) = y_FAST%Lin%Modules(Module_IfW)%Names_y(i2)(1:position)//trim(NodeDesc)//&
+                                                               y_FAST%Lin%Modules(Module_IfW)%Names_y(i2)(position+1:)
+                  
+                  y_FAST%Lin%Modules(Module_IfW)%RotFrame_u(i2) = .true.
+                  y_FAST%Lin%Modules(Module_IfW)%RotFrame_y(i2) = .true.
+                  
+               end do            
+            END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
+         END DO !K = 1,p%NumBl     
+         
+            ! tower:
+         DO J=1,u_AD%TowerMotion%nnodes
+            Node = Node + 1  
+            NodeDesc = ' (Tower node '//trim(num2lstr(j))//')'
+
+            do i=1,3 !XYZ components of this node
+               i2 = (Node-1)*3 + i
+                                    
+               position = index(y_FAST%Lin%Modules(Module_IfW)%Names_u(i2), ',') - 1
+               y_FAST%Lin%Modules(Module_IfW)%Names_u(i2) = y_FAST%Lin%Modules(Module_IfW)%Names_u(i2)(1:position)//trim(NodeDesc)//&
+                                                            y_FAST%Lin%Modules(Module_IfW)%Names_u(i2)(position+1:)
+                                     
+               position = index(y_FAST%Lin%Modules(Module_IfW)%Names_y(i2), ',') - 1
+               y_FAST%Lin%Modules(Module_IfW)%Names_y(i2) = y_FAST%Lin%Modules(Module_IfW)%Names_y(i2)(1:position)//trim(NodeDesc)//&
+                                                            y_FAST%Lin%Modules(Module_IfW)%Names_y(i2)(position+1:)                                    
+            end do            
+         END DO              
+         
+      END IF     
+   
+END SUBROUTINE Init_Lin_IfW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that initializes some use_u and use_y, which determine which, if any, inputs and outputs are output in the linearization file.
 SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, m_FAST, NumBl, ErrStat, ErrMsg)
@@ -1173,10 +1267,10 @@ SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, E
          !......................................................
    if (n(Indx_x) > 0) then
       WRITE(Un, '(A)') 'Order of continuous states:'      
-      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_x, LinData%names_x  )      
+      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_x, LinData%names_x, rotFrame=LinData%RotFrame_x  )      
       
       WRITE(Un, '(A)') 'Order of continuous state derivatives:'      
-      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_dx, LinData%names_x, deriv=.true.  )      
+      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_dx, LinData%names_x, rotFrame=LinData%RotFrame_x, deriv=.true.  )      
    end if
    
    if (n(Indx_xd) > 0) then
@@ -1191,7 +1285,7 @@ SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, E
          
    if (n(Indx_u) > 0) then
       WRITE(Un, '(A)') 'Order of inputs:'   
-      call WrLinFile_txt_Table(p_FAST, Un, "Column  ", LinData%op_u, LinData%names_u, UseCol=LinData%use_u  )
+      call WrLinFile_txt_Table(p_FAST, Un, "Column  ", LinData%op_u, LinData%names_u, rotFrame=LinData%RotFrame_u, UseCol=LinData%use_u  )
    end if
    
    if (n(Indx_u_ext) > 0) then
@@ -1201,7 +1295,7 @@ SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, E
    
    if (n(Indx_y) > 0) then
       WRITE(Un, '(A)') 'Order of outputs:'      
-      call WrLinFile_txt_Table(p_FAST, Un, "Row  ", LinData%op_y, LinData%names_y, UseCol=LinData%use_y  )      
+      call WrLinFile_txt_Table(p_FAST, Un, "Row  ", LinData%op_y, LinData%names_y, rotFrame=LinData%RotFrame_y, UseCol=LinData%use_y  )      
    end if
       
    !.............
@@ -1251,13 +1345,14 @@ SUBROUTINE WrLinFile_txt_End(Un, p_FAST, LinData)
    
 END SUBROUTINE WrLinFile_txt_End   
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, deriv, UseCol)
+SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, UseCol)
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< parameters
    INTEGER(IntKi),           INTENT(IN   ) :: Un                  !< unit number
    CHARACTER(*),             INTENT(IN   ) :: RowCol              !< Row/Column description
    REAL(ReKi),               INTENT(IN   ) :: op(:)               !< operating point values (possibly different size that Desc because of orientations)
    CHARACTER(LinChanLen),    INTENT(IN   ) :: names(:)            !< Descriptions of the channels (names and units)
+   logical, optional,        INTENT(IN   ) :: rotFrame(:)         !< determines if this parameter is in the rotating frame
    logical, optional,        intent(in   ) :: deriv               !< flag that tells us if we need to modify the channel names for derivatives (xdot)
    logical, optional,        intent(in   ) :: UseCol(:)           !< flags that tell us if we should use each column or skip it
    
@@ -1270,6 +1365,7 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, deriv, UseCol)
    CHARACTER(1024)                         :: ErrMsg2             ! local error message
    logical                                 :: UseDerivNames       !< flag that tells us if we need to modify the channel names for derivatives (xdot)
    logical                                 :: UseThisCol          !< flag that tells us if we should use this particular column or skip it
+   logical                                 :: RotatingCol         !< flag that tells us if this column is in the rotating frame
    CHARACTER(*),             PARAMETER     :: RoutineName = 'WrLinFile_txt_Table'    
    CHARACTER(100)                          :: Fmt
    CHARACTER(100)                          :: Fmt_Str
@@ -1284,26 +1380,30 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, deriv, UseCol)
    end if
    
    
-   TS = 14 + 3*p_FAST%FmtWidth+7 
+   TS = 14 + 3*p_FAST%FmtWidth+7 ! tab stop after operating point
    
-   Fmt       = '(3x,I8,3x,'//trim(p_FAST%OutFmt)//',T'//trim(num2lstr(TS))//',A)'
-   FmtOrient = '(3x,I8,3x,'//trim(p_FAST%OutFmt)//',2(", ",'//trim(p_FAST%OutFmt)//'),2x,A)'
-   Fmt_Str   = '(3x,A10,1x,A,T'//trim(num2lstr(TS))//',A)'
+   Fmt       = '(3x,I8,3x,'//trim(p_FAST%OutFmt)//',T'//trim(num2lstr(TS))//',L8,8x,A)'
+   FmtOrient = '(3x,I8,3x,'//trim(p_FAST%OutFmt)//',2(", ",'//trim(p_FAST%OutFmt)//'),T'//trim(num2lstr(TS))//',L8,8x,A)'
+   Fmt_Str   = '(3x,A10,1x,A,T'//trim(num2lstr(TS))//',A15,1x,A)'
    
-   WRITE(Un, Fmt_Str) RowCol,      'Operating Point', 'Description'
-   WRITE(Un, Fmt_Str) '----------','---------------', '-----------'
+   WRITE(Un, Fmt_Str) RowCol,      'Operating Point', 'Rotating Frame?','Description'
+   WRITE(Un, Fmt_Str) '----------','---------------', '---------------','-----------'
    
    i_op = 1
    i_print = 1
    do i=1,size(names)
+      
       UseThisCol = .true.
       if (present(UseCol)) then
          UseThisCol = useCol(i)
-      end if            
+      end if     
       
+      RotatingCol = .false.
+      if (present(rotFrame)) RotatingCol = rotFrame(i)
+                  
       if (index(names(i), ' orientation angle, node ') > 0 ) then  ! make sure this matches what is written in PackMotionMesh_Names()
          if (UseThisCol) then
-            WRITE(Un, FmtOrient) i_print, op(i_op), op(i_op+1), op(i_op+2), trim(names(i))  !//' [OP is a row of the DCM]
+            WRITE(Un, FmtOrient) i_print, op(i_op), op(i_op+1), op(i_op+2), RotatingCol, trim(names(i))  !//' [OP is a row of the DCM]
             i_print = i_print + 1
          end if
          
@@ -1311,9 +1411,9 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, deriv, UseCol)
       else
          if (UseThisCol) then
             if (UseDerivNames) then
-               WRITE(Un, Fmt) i_print, op(i_op), 'First time derivative of '//trim(names(i))//'/s'
+               WRITE(Un, Fmt) i_print, op(i_op), RotatingCol, 'First time derivative of '//trim(names(i))//'/s'
             else
-               WRITE(Un, Fmt) i_print, op(i_op), trim(names(i))
+               WRITE(Un, Fmt) i_print, op(i_op), RotatingCol, trim(names(i))
             end if         
             i_print = i_print + 1
          end if         
