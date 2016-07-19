@@ -710,7 +710,11 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          
          CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3, 'LinNames_u', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3, 'RotFrame_u', TmpErrStat, TmpErrMsg)
+            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3+p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
+            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3+p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
@@ -727,7 +731,11 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          do i=1,p%NumOuts
             InitOutData%LinNames_y(i+3*InitInp%NumWindPoints) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
          end do
-               
+
+         ! for the blades, this may in fact be in the rotating frame, but InflowWind doesn't know about that (glue code can overwrite if necessary)
+         InitOutData%RotFrame_u = .false. 
+         InitOutData%RotFrame_y = .false. 
+         
          InitOutData%PropagationDir = -p%PropagationDir
          InitOutData%RefHt = p%UniformWind%RefHt
          InitOutData%RefLength = p%UniformWind%RefLength
