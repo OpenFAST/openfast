@@ -539,20 +539,36 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! If the module does allow linearization, return the appropriate Jacobian row/column names here:   
       ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u 
       
+      CALL AllocAry( InitOut%RotFrame_y, 6+p%NumOuts, 'RotFrame_y', ErrStat2, ErrMsg2 )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+      
       CALL AllocAry( InitOut%LinNames_y, 6+p%NumOuts, 'LinNames_y', ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
          
       do i=1,size(Indx_Y_BlPitchCom)
          InitOut%LinNames_y(Indx_Y_BlPitchCom(i)) = 'BlPitchCom('//trim(num2lstr(i))//'), rad'
+         InitOut%RotFrame_y(Indx_Y_BlPitchCom(i)) = .true.         
       end do
       InitOut%LinNames_y(Indx_Y_YawMom)  = 'YawMom, Nm'
+      InitOut%RotFrame_y(Indx_Y_YawMom)  = .false.
+      
       InitOut%LinNames_y(Indx_Y_GenTrq)  = 'GenTrq, Nm'
+      InitOut%RotFrame_y(Indx_Y_GenTrq)  = .false.
+
       InitOut%LinNames_y(Indx_Y_ElecPwr) = 'ElecPwr, W'
+      InitOut%RotFrame_y(Indx_Y_ElecPwr) = .false.
+      
       do i=1,p%NumOuts
          InitOut%LinNames_y(i+Indx_Y_WrOutput) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+         InitOut%RotFrame_y(i+Indx_Y_WrOutput) = ANY( p%OutParam(i)%Indx == BlPitchC ) ! the only WriteOutput values in the rotating frame are BlPitch commands
       end do
+            
       
+      CALL AllocAry( InitOut%RotFrame_u, 3, 'RotFrame_u', ErrStat2, ErrMsg2 )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
       
       CALL AllocAry( InitOut%LinNames_u, 3, 'LinNames_u', ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
@@ -561,6 +577,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       InitOut%LinNames_u(Indx_u_Yaw    ) = 'Yaw, rad'
       InitOut%LinNames_u(Indx_u_YawRate) = 'YawRate, rad/s'
       InitOut%LinNames_u(Indx_u_HSS_Spd) = 'HSS_Spd, rad/s'
+      InitOut%RotFrame_u = .false.  ! none of these are in the rotating frame
                           
    end if
    

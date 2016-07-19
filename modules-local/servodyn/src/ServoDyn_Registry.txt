@@ -38,6 +38,8 @@ typedef	^	InitOutputType	IntKi	CouplingScheme	-	-	-	"Switch that indicates if a 
 typedef	^	InitOutputType	Logical	UseHSSBrake	-	-	-	"flag to determine if high-speed shaft brake is potentially used (true=yes)"	-
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the outputs used in linearization"	-
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
+typedef	^	InitOutputType	LOGICAL	RotFrame_y	{:}	-	-	"Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
+typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
