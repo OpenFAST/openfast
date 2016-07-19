@@ -3132,13 +3132,13 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
    
+      ! local variables:
+   INTEGER(IntKi)                :: i, j, k, indx_next, indx_last
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_Jacobian_y'
-   
-      ! local variables:
-   INTEGER(IntKi)                :: i, k, indx_first
-               
+   logical, allocatable                              :: AllOut(:)
+                        
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -3154,22 +3154,83 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    
    
       ! get the names of the linearized outputs:
-   call AllocAry(InitOut%LinNames_y, p%Jac_ny,'',ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(InitOut%LinNames_y, p%Jac_ny,'',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(InitOut%RotFrame_y, p%Jac_ny,'',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
    
          
-   indx_first = 1  
-   call PackLoadMesh_Names(y%TowerLoad, 'Tower', InitOut%LinNames_y, indx_first)
+   InitOut%RotFrame_y = .false. ! default all to false, then set the true ones below
+   indx_next = 1  
+   call PackLoadMesh_Names(y%TowerLoad, 'Tower', InitOut%LinNames_y, indx_next)
+   
+   indx_last = indx_next
    do k=1,p%NumBlades
-      call PackLoadMesh_Names(y%BladeLoad(k), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_y, indx_first)
+      call PackLoadMesh_Names(y%BladeLoad(k), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_y, indx_next)
    end do
+   InitOut%RotFrame_y(indx_last:indx_next-1) = .true.
 
    do i=1,p%NumOuts
-      InitOut%LinNames_y(i+indx_first) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+      InitOut%LinNames_y(i+indx_next) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do    
 
-     
+      ! check for all the WriteOutput values that are functions of blade number:
+   allocate( AllOut(0:MaxOutPts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
+   if (ErrStat2 /=0 ) then
+      call SetErrStat(ErrID_Info, 'error allocating temporary space for AllOut',ErrStat,ErrMsg,RoutineName)
+      return;
+   end if
+   
+   AllOut = .false.
+   do k=1,3
+      AllOut( BAzimuth(k)) = .true.
+      AllOut( BPitch  (k)) = .true.
+      do j=1,9
+         AllOut(BNVUndx(j,k)) = .true.
+         AllOut(BNVUndy(j,k)) = .true.
+         AllOut(BNVUndz(j,k)) = .true.
+         AllOut(BNVDisx(j,k)) = .true.
+         AllOut(BNVDisy(j,k)) = .true.
+         AllOut(BNVDisz(j,k)) = .true.
+         AllOut(BNSTVx (j,k)) = .true.
+         AllOut(BNSTVy (j,k)) = .true.
+         AllOut(BNSTVz (j,k)) = .true.
+         AllOut(BNVRel (j,k)) = .true.
+         AllOut(BNDynP (j,k)) = .true.
+         AllOut(BNRe   (j,k)) = .true.
+         AllOut(BNM    (j,k)) = .true.   
+         AllOut(BNVIndx(j,k)) = .true.   
+         AllOut(BNVIndy(j,k)) = .true. 
+         AllOut(BNAxInd(j,k)) = .true.         
+         AllOut(BNTnInd(j,k)) = .true.
+         AllOut(BNAlpha(j,k)) = .true.
+         AllOut(BNTheta(j,k)) = .true.
+         AllOut(BNPhi  (j,k)) = .true.   
+         AllOut(BNCurve(j,k)) = .true.
+         AllOut(BNCl   (j,k)) = .true.
+         AllOut(BNCd   (j,k)) = .true.
+         AllOut(BNCm   (j,k)) = .true.
+         AllOut(BNCx   (j,k)) = .true.
+         AllOut(BNCy   (j,k)) = .true.
+         AllOut(BNCn   (j,k)) = .true.
+         AllOut(BNCt   (j,k)) = .true.
+         AllOut(BNFl   (j,k)) = .true.
+         AllOut(BNFd   (j,k)) = .true.
+         AllOut(BNMm   (j,k)) = .true.
+         AllOut(BNFx   (j,k)) = .true.
+         AllOut(BNFy   (j,k)) = .true.
+         AllOut(BNFn   (j,k)) = .true.
+         AllOut(BNFt   (j,k)) = .true.
+         AllOut(BNClrnc(j,k)) = .true.
+      end do
+   end do
+   
+   
+   do i=1,p%NumOuts
+      InitOut%RotFrame_y(i+indx_next) = AllOut( p%OutParam(i)%Indx )      
+   end do    
+   
+   deallocate(AllOut)
+          
 END SUBROUTINE Init_Jacobian_y
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
@@ -3191,7 +3252,7 @@ SUBROUTINE Init_Jacobian( InputFileData, p, u, y, m, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_Jacobian'
    
       ! local variables:
-   INTEGER(IntKi)                :: i, j, k, index, nu, i_meshField
+   INTEGER(IntKi)                :: i, j, k, index, index_last, nu, i_meshField
    REAL(ReKi)                    :: perturb, perturb_t, perturb_b(MaxBl)
    LOGICAL                       :: FieldMask(FIELDMASK_SIZE)
    CHARACTER(1), PARAMETER       :: UVW(3) = (/'U','V','W'/)
@@ -3379,8 +3440,12 @@ SUBROUTINE Init_Jacobian( InputFileData, p, u, y, m, InitOut, ErrStat, ErrMsg)
       !.....................
    call AllocAry(InitOut%LinNames_u, nu, 'LinNames_u', ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%RotFrame_u, nu, 'RotFrame_u', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
+   InitOut%RotFrame_u = .false.
+      
    index = 1
    FieldMask = .false.
    FieldMask(MASKID_TRANSLATIONDISP) = .true.
@@ -3391,7 +3456,8 @@ SUBROUTINE Init_Jacobian( InputFileData, p, u, y, m, InitOut, ErrStat, ErrMsg)
    FieldMask(MASKID_TRANSLATIONVel) = .false.
    FieldMask(MASKID_RotationVel) = .true.
    call PackMotionMesh_Names(u%HubMotion, 'Hub', InitOut%LinNames_u, index, FieldMask=FieldMask)
-   
+
+   index_last = index   
    FieldMask = .false.
    FieldMask(MASKID_Orientation) = .true.
    do k = 1,p%NumBlades
@@ -3412,6 +3478,7 @@ SUBROUTINE Init_Jacobian( InputFileData, p, u, y, m, InitOut, ErrStat, ErrMsg)
          end do            
       end do
    end do
+   InitOut%RotFrame_u(index_last:index-1) = .true.
 
    do i=1,p%NumTwrNds
       do j=1,3
