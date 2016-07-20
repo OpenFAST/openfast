@@ -1744,7 +1744,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       INTEGER(IntKi)                             :: Int_Xferred   ! number of integers transferred
       
       INTEGER(IntKi)                             :: ErrStat2
-      CHARACTER(1024)                            :: ErrMess2
+      CHARACTER(ErrMsgLen)                       :: ErrMess2
       CHARACTER(*),      PARAMETER               :: RoutineName = "MeshUnpack"        
      
       Re_Xferred  = 1
