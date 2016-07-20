@@ -6,9 +6,9 @@
 !! code to compile in double vs. single precision.   
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2016-01-22 12:03:00 -0700 (Fri, 22 Jan 2016) $
-! (File) Revision #: $Rev: 361 $
-! URL: $HeadURL: https://windsvn.nrel.gov/NWTC_Library/branches/NetLib/NWTC_source/NWTC_LAPACK.f90 $
+! File last committed: $Date: 2016-07-16 14:54:28 -0600 (Sat, 16 Jul 2016) $
+! (File) Revision #: $Rev: 391 $
+! URL: $HeadURL: https://windsvn2.nrel.gov/NWTC_Library/branches/NetLib/NWTC_source/NWTC_LAPACK.f90 $
 !**********************************************************************************************************************************
 MODULE NWTC_LAPACK
 
@@ -274,15 +274,26 @@ MODULE NWTC_LAPACK
       
       IF ( K /= Kb ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg = Routinename//":Size of Matrix A is incompatible with size of Matrix B."
+         ErrMsg = RoutineName//":Size of Matrix A is incompatible with size of Matrix B."
          RETURN
       END IF
       
       IF ( M /= SIZE(C,1) .OR. N /= SIZE(C,2) ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg = Routinename//":Size of Matrix C is incompatible with Matrix A and Matrix B."
+         ErrMsg = RoutineName//":Size of Matrix C is incompatible with Matrix A and Matrix B."
          RETURN
       END IF
+      
+      IF ( M == 0 .or. N == 0 ) THEN
+         ! this is a null case...
+         RETURN
+      END IF
+      
+      IF (K == 0) THEN
+         C = C * beta ! A*B is null
+         RETURN
+      END IF
+      
       
       CALL dgemm (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, M)
 
@@ -353,15 +364,26 @@ MODULE NWTC_LAPACK
       
       IF ( K /= Kb ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg = Routinename//":Size of Matrix A is incompatible with size of Matrix B."
+         ErrMsg = RoutineName//":Size of Matrix A is incompatible with size of Matrix B."
          RETURN
       END IF
       
       IF ( M /= SIZE(C,1) .OR. N /= SIZE(C,2) ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg = Routinename//":Size of Matrix C is incompatible with Matrix A and Matrix B."
+         ErrMsg = RoutineName//":Size of Matrix C is incompatible with Matrix A and Matrix B."
          RETURN
       END IF
+      
+      IF ( M == 0 .or. N == 0 ) THEN
+         ! this is a null case...
+         RETURN
+      END IF
+      
+      IF (K == 0) THEN
+         C = C * beta ! A*B is null
+         RETURN
+      END IF
+         
       
       CALL sgemm (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, M)
 
