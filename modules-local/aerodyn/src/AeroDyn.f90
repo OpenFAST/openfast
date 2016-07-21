@@ -3027,9 +3027,12 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
              + u%BladeRootMotion(i)%NNodes * 6   ! Jac_u_indx has 3 orientation angles, but the OP needs the full 9 elements of the DCM
       end do      
                   
-      call AllocAry(u_op, nu, 'u_op', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      if (.not. allocated(u_op)) then
+         call AllocAry(u_op, nu, 'u_op', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end if
+      
 
       index = 1
       FieldMask = .false.
@@ -3074,9 +3077,12 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    IF ( PRESENT( y_op ) ) THEN
       
-      call AllocAry(y_op, p%Jac_ny, 'y_op', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      if (.not. allocated(y_op)) then
+         call AllocAry(y_op, p%Jac_ny, 'y_op', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end if
+      
       
       
       index = 1               
@@ -3107,9 +3113,12 @@ SUBROUTINE AD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    
    IF ( PRESENT( z_op ) ) THEN
 
-      call AllocAry(z_op, p%NumBlades*p%NumBlNds, 'z_op', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      if (.not. allocated(z_op)) then
+         call AllocAry(z_op, p%NumBlades*p%NumBlNds, 'z_op', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end if
+      
    
       index = 1      
       do k=1,p%NumBlades ! size(z%BEMT%Phi,2)
@@ -3170,7 +3179,7 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    InitOut%RotFrame_y(indx_last:indx_next-1) = .true.
 
    do i=1,p%NumOuts
-      InitOut%LinNames_y(i+indx_next) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+      InitOut%LinNames_y(i+indx_next-1) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do    
 
       ! check for all the WriteOutput values that are functions of blade number:
@@ -3226,7 +3235,7 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    
    
    do i=1,p%NumOuts
-      InitOut%RotFrame_y(i+indx_next) = AllOut( p%OutParam(i)%Indx )      
+      InitOut%RotFrame_y(i+indx_next-1) = AllOut( p%OutParam(i)%Indx )      
    end do    
    
    deallocate(AllOut)
