@@ -3856,21 +3856,24 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
 
       ! Local variables:
 
-   REAL(ReKi)                                     :: Current1_c  ! complex portion of Current passing through the stator (amps)
+   REAL(ReKi)                                     :: Current1_r, Current1_r_du  ! Current passing through the stator (amps) and its derivative w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: Current1_i, Current1_i_du  ! Current passing through the stator (amps) and its derivative w.r.t. u%HSS_Spd
    REAL(ReKi)                                     :: Current2_r, Current2_r_du  ! Current passing through the rotor (amps) and its derivative w.r.t. u%HSS_Spd
-   REAL(ReKi)                                     :: Current2_c, Current2_c_du  ! Current passing through the rotor (amps) and its derivative w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: Current2_i, Current2_i_du  ! Current passing through the rotor (amps) and its derivative w.r.t. u%HSS_Spd
                                                   
    REAL(ReKi)                                     :: GenTrq      ! generator torque 
    
+   REAL(ReKi)                                     :: ComDenom, ComDenom_du  ! temporary variable (common denominator)
    REAL(ReKi)                                     :: PwrLossS, PwrLossS_du  ! Power loss in the stator (watts) and its derivative w.r.t. u%HSS_Spd 
    REAL(ReKi)                                     :: PwrLossR, PwrLossR_du  ! Power loss in the rotor (watts) and its derivative w.r.t. u%HSS_Spd 
    REAL(ReKi)                                     :: PwrMech_du  ! partial derivative of Mechanical power (watts) w.r.t. u%HSS_Spd
    REAL(ReKi)                                     :: Slip        ! Generator slip
    REAL(ReKi)                                     :: SlipRat     ! Generator slip ratio
    
-   REAL(ReKi)                                     :: tmp, A, B, dAdu, dBdu ! temporary variables for computing derivatives
+   REAL(ReKi)                                     :: tmp, A, B, dAdu, dBdu
+   REAL(ReKi)                                     :: SlipRat_du ! temporary variables for computing derivatives
       
-   REAL(ReKi)                                     :: S2          ! SlipRat**2
+   !REAL(ReKi)                                     :: S2          ! SlipRat**2
    
    character(*), parameter                        :: RoutineName = 'CalculateTorqueJacobian'
 
@@ -3913,46 +3916,55 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
                   ENDIF
                                     
                CASE ( ControlMode_ADVANCED )                          ! Thevenin-equivalent generator model.
-
+                 
                   SlipRat  = ( u%HSS_Spd - p%TEC_SySp )/p%TEC_SySp
-
+                  SlipRat_du = 1.0_ReKi / p%TEC_SySp
+                  
                   A = p%TEC_A0*(p%TEC_VLL**2)*SlipRat
-                  B = p%TEC_C0 + p%TEC_C1*SlipRat + p%TEC_C2*(SlipRat**2)                  
-                  GenTrq    = A / B
-                  
-                  dAdu =  p%TEC_A0*(p%TEC_VLL**2)/p%TEC_SySp
-                  dBdu = (p%TEC_C1 + 2.0_ReKi*p%TEC_C2*SlipRat)/p%TEC_SySp
-                  
-                  GenTrq_du = dAdu / B - A * dBdu / B**2 
+                  B = p%TEC_C0 + p%TEC_C1*SlipRat + p%TEC_C2*(SlipRat**2)
 
-                     ! trying to refactor so we don't divide by SlipRat, which may be 0
-                     ! jmj tells me I need not worry about ComDenom being zero because these equations behave nicely
-                  S2 = SlipRat**2
+                  dAdu = p%TEC_A0*(p%TEC_VLL**2)*SlipRat_du
+                  dBdu = p%TEC_C1*SlipRat_du + 2.0_ReKi*p%TEC_C2*SlipRat*SlipRat_du
                   
-                  B    = ( SlipRat*p%TEC_Re1 - p%TEC_RRes )**2 + (SlipRat*( p%TEC_Xe1 + p%TEC_RLR ))**2 !common denominator
-                  dBdu = 2.0_ReKi/p%TEC_SySp*( ( SlipRat*p%TEC_Re1 - p%TEC_RRes )*p%TEC_Re1 + SlipRat * ( p%TEC_Xe1 + p%TEC_RLR )**2 )
+                  GenTrq    =  A / B
+                  GenTrq_du = dAdu / B - A/B**2 * dBdu
+
                   
-                  Current2_r =  p%TEC_V1a*SlipRat*( SlipRat*p%TEC_Re1 - p%TEC_RRes )/B 
-                  Current2_c = -p%TEC_V1a*S2     *(         p%TEC_Xe1 + p%TEC_RLR  )/B                  
-                 !Current1_r = Current2_r
-                  Current1_c = Current2_c -p%TEC_V1a/p%TEC_MR
+                  A = SlipRat*p%TEC_Re1 - p%TEC_RRes
+                  B = SlipRat*( p%TEC_Xe1 + p%TEC_RLR )
+                  dAdu = SlipRat_du * p%TEC_Re1
+                  dBdu = SlipRat_du * (p%TEC_Xe1 + p%TEC_RLR)
                   
-                  A = SlipRat*dBdu/B
-                  tmp = SlipRat*p%TEC_Re1/B
-                  Current2_r_du =  p%TEC_V1a*( 2.0_ReKi*tmp/p%TEC_SySp - p%TEC_RRes/(B*p%TEC_SySp) - tmp*A )
-                  Current2_c_du = -p%TEC_V1a*(p%TEC_Xe1 + p%TEC_RLR)*SlipRat/B*( 2.0_ReKi/p%TEC_SySp - A) 
+                  ComDenom  = A**2 + B**2                  
+                  ComDenom_du = 2.0_ReKi * A * dAdu +  2.0_ReKi * B * dBdu
                   
-                  !PwrLossS  = 3.0_ReKi*p%TEC_SRes*( Current2_r**2 + Current1_c**2 )
-                  !PwrLossR  = 3.0_ReKi*p%TEC_RRes*( Current2_r**2 + Current2_c**2 )                  
-                  PwrLossS_du = 6.0_ReKi*p%TEC_SRes*( Current2_r * Current2_r_du + Current1_c * Current2_c_du )
-                  PwrLossR_du = 6.0_ReKi*p%TEC_RRes*( Current2_r * Current2_r_du + Current2_c * Current2_c_du )
+                                    
+                  A = SlipRat**2*p%TEC_Re1 - SlipRat*p%TEC_RRes
+                  dAdu = 2.0_ReKi * SlipRat * SlipRat_du * p%TEC_Re1 - SlipRat_du * p%TEC_RRes
+                  Current2_r = p%TEC_V1a*A/ComDenom
+                  Current2_r_du = p%TEC_V1a*(dAdu/ComDenom - A/ComDenom**2 * ComDenom_du)
                   
-                  !PwrMech      = GenTrq*u%HSS_Spd                  
-                  PwrMech_du   = GenTrq_du*u%HSS_Spd + GenTrq
+                  Current2_i = -p%TEC_V1a*( p%TEC_Xe1 + p%TEC_RLR  )*SlipRat**2/ComDenom
+                  Current2_i_du = -p%TEC_V1a*( p%TEC_Xe1 + p%TEC_RLR ) * ( 2.0_ReKi*SlipRat*SlipRat_du / ComDenom - SlipRat**2/(ComDenom**2) * ComDenom_du)
+                                    
+                  Current1_r  = Current2_r
+                  Current1_i  = Current2_i - p%TEC_V1a/p%TEC_MR 
+                  Current1_r_du = Current2_r_du
+                  Current1_i_du = Current2_i_du
+
+                                    
+                  !PwrLossS  = 3.0*( Current1_r**2 + Current1_i**2 )*p%TEC_SRes
+                  PwrLossS_du = 3.0*p%TEC_SRes*( 2.0_ReKi*Current1_r*Current1_r_du + 2.0_ReKi*Current1_i*Current1_i_du )
+                  
+                  !PwrLossR  = 3.0*( Current2_r**2 + Current2_i**2  )*p%TEC_RRes
+                  PwrLossR_du = 3.0*p%TEC_RRes*( 2.0_ReKi*Current2_r*Current2_r_du + 2.0_ReKi*Current2_i*Current2_i_du )
+                  
+                  !PwrMech   = GenTrq*u%HSS_Spd
+                  PwrMech_du = GenTrq_du * u%HSS_Spd + GenTrq
                   
                   !ElecPwr   = PwrMech - PwrLossS - PwrLossR
-                  ElecPwr_du =  PwrMech_du - PwrLossS_du - PwrLossR_du
-
+                  ElecPwr_du = PwrMech_du - PwrLossS_du - PwrLossR_du                  
+                  
                CASE ( ControlMode_USER )                          ! User-defined generator model.
 
                      ! we should not get here (initialization should have caught this issue)
