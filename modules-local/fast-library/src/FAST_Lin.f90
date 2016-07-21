@@ -520,6 +520,12 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
       ! write the module matrices:
    if (p_FAST%LinOutMod) then
       
+      if ( p_FAST%SizeLin(Module_ED, LIN_ExtINPUT_COL) > 0 ) then
+         call ED_SetExtInputs(p_FAST, y_FAST%Lin%Modules(Module_ED)%B, 1, 1, NumBl, y_FAST%Lin%Modules(Module_ED)%B_ext)
+         call ED_SetExtInputs(p_FAST, y_FAST%Lin%Modules(Module_ED)%D, 1, 1, NumBl, y_FAST%Lin%Modules(Module_ED)%D_ext)
+      end if
+      
+      
       OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_ED))      
       call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_ED), OutFileName, Un, ErrStat2, ErrMsg2 )       
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -535,7 +541,6 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
          
          !dXdu, possibly with extended inputs:
          if ( p_FAST%SizeLin(Module_ED, LIN_ExtINPUT_COL) > 0 ) then
-            call ED_SetExtInputs( p_FAST, y_FAST%Lin%Modules(Module_ED)%B, 1, 1, NumBl, y_FAST%Lin%Modules(Module_ED)%B_ext)
             call WrPartialMatrix( y_FAST%Lin%Modules(Module_ED)%B, Un, p_FAST%OutFmt, 'dXdu',&
                                     UseCol=y_FAST%Lin%Modules(Module_ED)%use_u, ExtCol = y_FAST%Lin%Modules(Module_ED)%B_ext )
          else
@@ -547,7 +552,6 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
          
          !dYdu, possibly with extended inputs:
          if ( p_FAST%SizeLin(Module_ED, LIN_ExtINPUT_COL) > 0 ) then
-            call ED_SetExtInputs(p_FAST, y_FAST%Lin%Modules(Module_ED)%D, 1, 1, NumBl, y_FAST%Lin%Modules(Module_ED)%D_ext)
             call WrPartialMatrix( y_FAST%Lin%Modules(Module_ED)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_ED)%use_y, &
                                              UseCol=y_FAST%Lin%Modules(Module_ED)%use_u, ExtCol = y_FAST%Lin%Modules(Module_ED)%D_ext )
          else         
@@ -756,7 +760,8 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       ! note that after the above solve, dZdu is now matmul(dZdz^-1, dZdu)
-      y_FAST%Lin%Modules(Module_AD)%D = y_FAST%Lin%Modules(Module_AD)%D - matmul(dYdz, dZdu )
+      !y_FAST%Lin%Modules(Module_AD)%D = y_FAST%Lin%Modules(Module_AD)%D - matmul(dYdz, dZdu )
+      call LAPACK_GEMM( 'N', 'N', -1.0_ReKi, dYdz, dZdu, 1.0_ReKi, y_FAST%Lin%Modules(Module_AD)%D, ErrStat2, ErrMsg2 )
       
       ! extended inputs:
       if ( p_FAST%SizeLin(Module_AD, LIN_ExtINPUT_COL) > 0 ) then
@@ -903,7 +908,7 @@ SUBROUTINE ED_SetExtInputs( p_FAST, inMat, ED_Start, ED_Ext_Start, NumBl, ext)
    integer(intKi)                          :: i                   ! loop counter
    
    
-   ED_Start_BLPitchCom = ED_Start + p_FAST%SizeLin(Module_ED,LIN_INPUT_COL) - NumBl - 2 + 1 ! last NumBl+2 columns are: GenTrq, YawMom, and BlPitchCom
+   ED_Start_BLPitchCom = ED_Start + p_FAST%SizeLin(Module_ED,LIN_INPUT_COL) - NumBl - 2  ! last NumBl+2 columns are: GenTrq, YawMom, and BlPitchCom
    
       ! collective pitch
    ext(:,1) = inMat(:,ED_Start_BLPitchCom)   
@@ -1279,8 +1284,8 @@ SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, E
    end if
 
    if (n(Indx_z) > 0) then
-      WRITE(Un, '(A)') 'Order of constraint states:'      
-      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_z, LinData%names_z  )      
+      WRITE(Un, '(A)') 'Order of constraint states:' 
+      call WrLinFile_txt_Table(p_FAST, Un, "Row/Column", LinData%op_z, LinData%names_z, rotFrame=LinData%RotFrame_z  )      
    end if
          
    if (n(Indx_u) > 0) then
@@ -1290,7 +1295,7 @@ SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, E
    
    if (n(Indx_u_ext) > 0) then
       WRITE(Un, '(A)') 'Order of extended inputs:'   
-      call WrLinFile_txt_Table(p_FAST, Un, "Column  ", LinData%op_u_ext, LinData%names_u_ext )
+      call WrLinFile_txt_Table(p_FAST, Un, "Column  ", LinData%op_u_ext, LinData%names_u_ext, start_indx=n(Indx_u) )
    end if
    
    if (n(Indx_y) > 0) then
@@ -1345,7 +1350,7 @@ SUBROUTINE WrLinFile_txt_End(Un, p_FAST, LinData)
    
 END SUBROUTINE WrLinFile_txt_End   
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, UseCol)
+SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, UseCol,start_indx)
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< parameters
    INTEGER(IntKi),           INTENT(IN   ) :: Un                  !< unit number
@@ -1355,6 +1360,7 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, U
    logical, optional,        INTENT(IN   ) :: rotFrame(:)         !< determines if this parameter is in the rotating frame
    logical, optional,        intent(in   ) :: deriv               !< flag that tells us if we need to modify the channel names for derivatives (xdot)
    logical, optional,        intent(in   ) :: UseCol(:)           !< flags that tell us if we should use each column or skip it
+   INTEGER(IntKi),optional,  INTENT(IN   ) :: start_indx          !< starting index (so extended inputs can be numbered starting after the # of inputs)
    
       ! local variables
    INTEGER(IntKi)                          :: TS                  ! tab stop column
@@ -1390,7 +1396,12 @@ SUBROUTINE WrLinFile_txt_Table(p_FAST, Un, RowCol, op, names, rotFrame, deriv, U
    WRITE(Un, Fmt_Str) '----------','---------------', '---------------','-----------'
    
    i_op = 1
-   i_print = 1
+   if (present(start_indx)) then
+      i_print = start_indx + 1
+   else      
+      i_print = 1
+   end if
+   
    do i=1,size(names)
       
       UseThisCol = .true.

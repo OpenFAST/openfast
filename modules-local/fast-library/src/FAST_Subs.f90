@@ -441,12 +441,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL SetModuleSubstepTime(Module_AD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                                
+      if (allocated(InitOutData_AD%LinNames_u)) call move_alloc(InitOutData_AD%LinNames_u,y_FAST%Lin%Modules(MODULE_AD)%Names_u )
       if (allocated(InitOutData_AD%LinNames_y)) call move_alloc(InitOutData_AD%LinNames_y,y_FAST%Lin%Modules(MODULE_AD)%Names_y )
       if (allocated(InitOutData_AD%LinNames_z)) call move_alloc(InitOutData_AD%LinNames_z,y_FAST%Lin%Modules(MODULE_AD)%Names_z )
-      if (allocated(InitOutData_AD%LinNames_u)) call move_alloc(InitOutData_AD%LinNames_u,y_FAST%Lin%Modules(MODULE_AD)%Names_u )
-      if (allocated(InitOutData_AD%RotFrame_y)) call move_alloc(InitOutData_AD%RotFrame_y,y_FAST%Lin%Modules(MODULE_AD)%RotFrame_y )
       if (allocated(InitOutData_AD%RotFrame_u)) call move_alloc(InitOutData_AD%RotFrame_u,y_FAST%Lin%Modules(MODULE_AD)%RotFrame_u )
-
+      if (allocated(InitOutData_AD%RotFrame_y)) call move_alloc(InitOutData_AD%RotFrame_y,y_FAST%Lin%Modules(MODULE_AD)%RotFrame_y )
+      if (allocated(InitOutData_AD%RotFrame_z)) call move_alloc(InitOutData_AD%RotFrame_z,y_FAST%Lin%Modules(MODULE_AD)%RotFrame_z )
+      
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -5382,8 +5383,9 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
    REAL(DbKi)                              :: next_lin_time       ! next simulation time where linearization analysis should be performed
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
    CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(MaxWrScrLen)                  :: BlankLine
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_T' 
-   
+
             
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -5397,6 +5399,12 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
    
       if ( EqualRealNos( t_global, next_lin_time ) .or. t_global > next_lin_time ) then
             
+         BlankLine = ""
+         CALL WrOver( BlankLine )  ! BlankLine contains MaxWrScrLen spaces
+         CALL WrOver ( ' Performing linearization at simulation time '//TRIM( Num2LStr(t_global) )//' s.' )
+         CALL WrScr('')
+
+
          CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
                   Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &

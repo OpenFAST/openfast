@@ -167,6 +167,7 @@ typedef	^	FAST_LinType	ReKi	D_ext	{:}{:}	-	-	"columns of the D matrix for the ex
 typedef	^	FAST_LinType	Logical	RotFrame_u	{:}	-	-	"Whether corresponding input is in rotating frame"
 typedef	^	FAST_LinType	Logical	RotFrame_y	{:}	-	-	"Whether corresponding output is in rotating frame"
 typedef	^	FAST_LinType	Logical	RotFrame_x	{:}	-	-	"Whether corresponding continuous state is in rotating frame"
+typedef	^	FAST_LinType	Logical	RotFrame_z	{:}	-	-	"Whether corresponding constraint state is in rotating frame"
 
 # ..... FAST_LinFileType data .......................................................................................................
 typedef	FAST	FAST_LinFileType	FAST_LinType	Modules	{NumModules}	-	-	"Linearization data for each module"
