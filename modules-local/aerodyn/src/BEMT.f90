@@ -1414,7 +1414,8 @@ SUBROUTINE CheckLinearizationInput(p, u, z, m, ErrStat, ErrMsg)
             do j = 1,p%numBladeNodes
             
                if ( EqualRealNos( u%Vy(j,k), -m%TnInd_op(j,k)) .and. EqualRealNos( u%Vx(j,k), -m%AxInd_op(j,k) ) ) then
-                  call SetErrStat(ErrID_Fatal,"Residual is undefined because u%Vy + TnInd_op = u%Vx + AxInd_op = 0.",ErrStat,ErrMsg,RoutineName)
+                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(k))//&
+                      "Residual is undefined because u%Vy + TnInd_op = u%Vx + AxInd_op = 0.",ErrStat,ErrMsg,RoutineName)
                   return
                end if
             
@@ -1427,17 +1428,19 @@ SUBROUTINE CheckLinearizationInput(p, u, z, m, ErrStat, ErrMsg)
             do j = 1,p%numBladeNodes
             
                if ( EqualRealNos(z%phi(j,k), 0.0_ReKi) ) then
-                  call SetErrStat(ErrID_Fatal,"Residual is discountinuous or undefined because z%phi = 0.",ErrStat,ErrMsg,RoutineName)
+                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(k))//&
+                       "Residual is discontinuous or undefined because z%phi = 0.",ErrStat,ErrMsg,RoutineName)
                   return
                else if ( EqualRealNos(u%Vy(j,k), 0.0_ReKi) ) then
-                  call SetErrStat(ErrID_Fatal,"Residual is discountinuous or undefined because u%Vy = 0.",ErrStat,ErrMsg,RoutineName)
+                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(k))//&
+                       "Residual is discontinuous or undefined because u%Vy = 0.",ErrStat,ErrMsg,RoutineName)
                   return
                else if ( EqualRealNos(u%Vx(j,k), 0.0_ReKi) ) then
-                  call SetErrStat(ErrID_Fatal,"Residual is discountinuous or undefined because u%Vx = 0.",ErrStat,ErrMsg,RoutineName)
+                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(k))//&
+                       "Residual is discontinuous or undefined because u%Vx = 0.",ErrStat,ErrMsg,RoutineName)
                   return
                end if
-               
-            
+                           
             end do
          end do
                
