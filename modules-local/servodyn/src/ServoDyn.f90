@@ -1251,7 +1251,7 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       !...............................................................................................................................   
       
       DO I = 1,p%NumOuts  ! Loop through all selected output channels      
-         dYdu(:,I+Indx_Y_WrOutput) = p%OutParam(I)%SignM * AllOuts( :, p%OutParam(I)%Indx )      
+         dYdu(I+Indx_Y_WrOutput,:) = p%OutParam(I)%SignM * AllOuts( :, p%OutParam(I)%Indx )      
       ENDDO             ! I - All selected output channels
                
    END IF
@@ -1533,9 +1533,12 @@ SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_o
    !..........................................
    IF ( PRESENT( u_op ) ) THEN
                   
-      CALL AllocAry( u_op, 3, 'u_op', ErrStat2, ErrMsg2 )
+      if (.not. allocated(u_op)) then
+         CALL AllocAry( u_op, 3, 'u_op', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) RETURN
+      end if
+      
 
       u_op(Indx_u_Yaw    ) = u%Yaw
       u_op(Indx_u_YawRate) = u%YawRate
@@ -1546,9 +1549,12 @@ SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_o
    !..........................................
    IF ( PRESENT( y_op ) ) THEN
       
-      CALL AllocAry( y_op, 6+p%NumOuts, 'y_op', ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) RETURN
+      if (.not. allocated(y_op)) then
+         CALL AllocAry( y_op, 6+p%NumOuts, 'y_op', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            IF (ErrStat >= AbortErrLev) RETURN
+      end if
+      
          
       do i=1,size(Indx_Y_BlPitchCom)
          y_op(Indx_Y_BlPitchCom(i)) = y%BlPitchCom(i)
