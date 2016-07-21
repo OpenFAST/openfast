@@ -3501,10 +3501,11 @@ SUBROUTINE Init_Jacobian( InputFileData, p, u, y, m, InitOut, ErrStat, ErrMsg)
       !.....................
       ! get names of linearized constraint states (though i don't think we really need them)
       !.....................
-   call AllocAry(InitOut%LinNames_z, p%NumBlades*p%NumBlNds, 'LinNames_z', ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%LinNames_z, p%NumBlades*p%NumBlNds, 'LinNames_z', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%RotFrame_z, p%NumBlades*p%NumBlNds, 'RotFrame_z', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
-   
+   InitOut%RotFrame_z = .true.
+      
    index = 1      
    do k=1,p%NumBlades ! size(z%BEMT%Phi,2)
       do i=1,p%NumBlNds ! size(z%BEMT%Phi,1)
