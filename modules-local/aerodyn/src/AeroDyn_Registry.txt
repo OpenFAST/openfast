@@ -42,6 +42,7 @@ typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the 
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_z	{:}	-	-	"Names of the constraint states used in linearization"	-
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_y	{:}	-	-	"Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
+typedef	^	InitOutputType	LOGICAL	RotFrame_z	{:}	-	-	"Flag that tells FAST/MBC3 if the constraint states used in linearization are in the rotating frame (not used for glue)"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
 
 # ..... Input file data ...........................................................................................................
