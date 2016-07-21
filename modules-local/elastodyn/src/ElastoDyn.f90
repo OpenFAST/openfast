@@ -10979,14 +10979,15 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
    
+      ! local variables:
+   INTEGER(IntKi)                :: i,j,k, index_last, index_next
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_Init_Jacobian_y'
    LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
+   logical, allocatable                              :: AllOut(:)
    
    
-      ! local variables:
-   INTEGER(IntKi)                :: i, indx_first
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -11016,36 +11017,102 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       !.................   
       ! set linearization output names:
       !.................   
-   CALL AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y', ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
+   InitOut%RotFrame_y = .false.
    
    Mask  = .false.
    Mask(MASKID_TRANSLATIONDISP) = .true.
    Mask(MASKID_ORIENTATION) = .true.
    Mask(MASKID_ROTATIONVEL) = .true.
    
-   indx_first = 1
+   index_next = 1
    if (allocated(y%BladeLn2Mesh)) then
+      index_last = index_next
       do i=1,p%NumBl
-         call PackMotionMesh_Names(y%BladeLn2Mesh(i), 'Blade '//trim(num2lstr(i)), InitOut%LinNames_y, indx_first)
+         call PackMotionMesh_Names(y%BladeLn2Mesh(i), 'Blade '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
       end do      
+      InitOut%RotFrame_y(index_last:index_next-1) = .true.
    end if
-   call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, indx_first)
-   call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, indx_first)
-   call PackMotionMesh_Names(y%HubPtMotion, 'Hub', InitOut%LinNames_y, indx_first, FieldMask=Mask)
+   call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, index_next)
+   call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, index_next)
+   call PackMotionMesh_Names(y%HubPtMotion, 'Hub', InitOut%LinNames_y, index_next, FieldMask=Mask)
+   index_last = index_next
    do i=1,p%NumBl
-      call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, indx_first)
+      call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
    end do   
-   call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, indx_first)
-   InitOut%LinNames_y(indx_first) = 'Yaw, rad'; indx_first = indx_first+1
-   InitOut%LinNames_y(indx_first) = 'YawRate, rad/s'; indx_first = indx_first+1
-   InitOut%LinNames_y(indx_first) = 'HSS_Spd, rad/s'
+   InitOut%RotFrame_y(index_last:index_next-1) = .true.
+
+   call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
+   InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
+   InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
+   InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
          
    do i=1,p%NumOuts
-      InitOut%LinNames_y(i+indx_first) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+      InitOut%LinNames_y(i+index_next) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do   
+   
+   
+   !! check for AllOuts in rotating frame
+   allocate( AllOut(0:MaxOutPts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
+   if (ErrStat2 /=0 ) then
+      call SetErrStat(ErrID_Info, 'error allocating temporary space for AllOut',ErrStat,ErrMsg,RoutineName)
+      return;
+   end if
+   
+   AllOut = .false.
+   do k=1,3
+      AllOut(TipDxc(  k)) = .true.
+      AllOut(TipDyc(  k)) = .true.
+      AllOut(TipDzc(  k)) = .true.
+      AllOut(TipDxb(  k)) = .true.
+      AllOut(TipDyb(  k)) = .true.
+      AllOut(TipALxb( k)) = .true.
+      AllOut(TipALyb( k)) = .true.
+      AllOut(TipALzb( k)) = .true.
+      AllOut(TipRDxb( k)) = .true.
+      AllOut(TipRDyb( k)) = .true.
+      AllOut(TipRDzc( k)) = .true.
+      AllOut(TipClrnc(k)) = .true.
+      AllOut(PtchPMzc(k)) = .true.
+      AllOut(RootFxc( k)) = .true.
+      AllOut(RootFyc( k)) = .true.
+      AllOut(RootFzc( k)) = .true.
+      AllOut(RootFxb( k)) = .true.
+      AllOut(RootFyb( k)) = .true.
+      AllOut(RootMxc( k)) = .true.
+      AllOut(RootMyc( k)) = .true.
+      AllOut(RootMzc( k)) = .true.
+      AllOut(RootMxb( k)) = .true.
+      AllOut(RootMyb( k)) = .true.
+      
+      do j=1,9            
+         AllOut(SpnALxb( j,k)) = .true.         
+         AllOut(SpnALyb( j,k)) = .true.
+         AllOut(SpnALzb( j,k)) = .true.
+         AllOut(SpnFLxb( j,k)) = .true.
+         AllOut(SpnFLyb( j,k)) = .true.
+         AllOut(SpnFLzb( j,k)) = .true.
+         AllOut(SpnMLxb( j,k)) = .true.
+         AllOut(SpnMLyb( j,k)) = .true.
+         AllOut(SpnMLzb( j,k)) = .true.
+         AllOut(SpnTDxb( j,k)) = .true.
+         AllOut(SpnTDyb( j,k)) = .true.
+         AllOut(SpnTDzb( j,k)) = .true.
+         AllOut(SpnRDxb( j,k)) = .true.
+         AllOut(SpnRDyb( j,k)) = .true.
+         AllOut(SpnRDzb( j,k)) = .true.
+      end do
+   end do
+   
+   do i=1,p%NumOuts
+      InitOut%RotFrame_y(i+index_next) = AllOut( p%OutParam(i)%Indx )      
+   end do    
+   
+   deallocate(AllOut)         
+   
    
 END SUBROUTINE ED_Init_Jacobian_y
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -11072,6 +11139,7 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
       ! allocate space for the row/column names and for perturbation sizes
    call allocAry(p%dx,               p%NDof,            'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%LinNames_x, p%DOFs%NActvDOF*2, 'LinNames_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%RotFrame_x, p%DOFs%NActvDOF*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
    
@@ -11088,13 +11156,25 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    end if
    
       
+   InitOut%RotFrame_x   = .false.
+   do i=1,p%DOFs%NActvDOF
+      if (  p%DOFs%PS(i) >=  DOF_BF(1,1) ) then
+         if ( p%NumBl == 2 ) then
+            InitOut%RotFrame_x(i) = p%DOFs%PS(i) < DOF_Teet
+         else
+            InitOut%RotFrame_x(i) = .true. ! = p%DOFs%PS(i) <= DOF_BF (MaxBl,NumBF)
+         end if
+      end if      
+   end do
+   
       ! set linearization output names:
    do i=1,p%DOFs%NActvDOF
       InitOut%LinNames_x(i) = p%DOF_Desc( p%DOFs%PS(i) )
    end do
    
    do i=1,p%DOFs%NActvDOF
-      InitOut%LinNames_x(i+p%DOFs%NActvDOF) = 'First time derivative of '//trim(p%DOF_Desc( p%DOFs%PS(i) ))//'/s'
+      InitOut%LinNames_x(i+p%DOFs%NActvDOF) = 'First time derivative of '//trim(InitOut%LinNames_x(i))//'/s'
+      InitOut%RotFrame_x(i+p%DOFs%NActvDOF) = InitOut%RotFrame_x(i)
    end do      
    
 END SUBROUTINE ED_Init_Jacobian_x
@@ -11115,7 +11195,7 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_Init_Jacobian'
    
       ! local variables:
-   INTEGER(IntKi)                :: i, j, k, index, nu, i_meshField, m
+   INTEGER(IntKi)                :: i, j, k, index, index_last, nu, i_meshField, m
    REAL(ReKi)                    :: MaxThrust, MaxTorque, perturb, PerturbConst(2)
    
    
@@ -11283,25 +11363,31 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    !................
    ! names of the columns, InitOut%LinNames_u:
    !................
-   call AllocAry(InitOut%LinNames_u, nu,    'LinNames_u', ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%LinNames_u, nu, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%RotFrame_u, nu, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       
+   InitOut%RotFrame_u = .false.
    index = 1
    if (allocated(u%BladePtLoads)) then
+      index_last = index
       do k=1,p%NumBl
          call PackLoadMesh_Names(u%BladePtLoads(i), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_u, index)   
       end do
+      InitOut%RotFrame_u(index_last:index-1) = .true.
    end if
    call PackLoadMesh_Names(u%PlatformPtMesh, 'Platform', InitOut%LinNames_u, index)   
    call PackLoadMesh_Names(u%TowerPtLoads, 'Tower', InitOut%LinNames_u, index)   
    call PackLoadMesh_Names(u%HubPtLoad, 'Hub', InitOut%LinNames_u, index)   
    call PackLoadMesh_Names(u%NacelleLoads, 'Nacelle', InitOut%LinNames_u, index)   
       
+   index_last = index
    do k = 1,p%NumBl ! scalars
       InitOut%LinNames_u(index) = 'Blade '//trim(num2lstr(k))//' pitch command, rad'
       index = index + 1
    end do
+   InitOut%RotFrame_u(index_last:index-1) = .true.
+
    InitOut%LinNames_u(index) = 'Yaw moment, Nm' ; index = index + 1
    InitOut%LinNames_u(index) = 'Generator torque, Nm'
 
