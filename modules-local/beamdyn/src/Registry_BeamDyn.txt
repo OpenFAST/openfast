@@ -213,6 +213,8 @@ typedef ^    MiscVarType    MeshType    u_DistrLoad_at_y - - - "input loads at o
 typedef ^    MiscVarType    MeshType    y_BldMotion_at_u - - - "output motions at input node locations (displacements necessary for mapping loads)" -
 typedef ^    MiscVarType    MeshMapType Map_u_DistrLoad_to_y - - - "mapping of input loads to output node locations" -
 typedef ^    MiscVarType    MeshMapType Map_y_BldMotion_to_u - - - "mapping of output motions to input node locations (for load transfer)" -
+typedef ^      ^            IntKi       Un_Sum  -  -  -  "unit number of summary file"	-
+
 #
 # these are temporary variables placed in a type so we don't allocate and deallocate each time step
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv

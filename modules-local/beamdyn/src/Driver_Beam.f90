@@ -86,7 +86,6 @@ PROGRAM BeamDyn_Driver_Program
       CALL CheckError()
    BD_InitInput%RootName         = TRIM(BD_Initinput%InputFile)
    BD_InitInput%RootDisp(:)      = 0.0_R8Ki
-   BD_InitInput%RootOri(:,:)     = 0.0_R8Ki
    BD_InitInput%RootOri(1:3,1:3) = BD_InitInput%GlbRot(1:3,1:3)
    t_global = t_initial
    n_t_final = ((t_final - t_initial) / dt_global )

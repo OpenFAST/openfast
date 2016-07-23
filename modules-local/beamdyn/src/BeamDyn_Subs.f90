@@ -503,7 +503,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, y, ErrStat, ErrMsg)
            temp_id = (j-1)*p%dof_node
            cc0 = p%uuN0(temp_id+4:temp_id+6,i)
            cc0 = MATMUL(p%GlbRot,cc0)
-           CALL BD_CrvCompose(temp_cc,p%Glb_crv,cc0,0,ErrStat2,ErrMsg2) ! set temp_cc
+           CALL BD_CrvCompose(temp_cc,cc0,p%Glb_crv,0,ErrStat2,ErrMsg2) ! set temp_cc
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            CALL BD_CrvCompose(cc0,cc,temp_cc,0,ErrStat2,ErrMsg2) ! set cc0
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
