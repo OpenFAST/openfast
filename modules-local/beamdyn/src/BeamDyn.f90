@@ -541,7 +541,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
        ! Print the summary file if requested:
    if (InputFileData%SumPrint) then
       call BD_PrintSum( p, u, y, x, MiscVar, InitInp%RootName, ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )      
    end if
       
    !...............................................
@@ -894,7 +894,7 @@ subroutine Init_y( p, x, u, y, ErrStat, ErrMsg)
    indx = 2
    DO i=1,NNodes-1
       
-      if (.not. equalRealNos( TwoNorm( y%BldMotion%Position(:,i)-y%BldMotion%Position(:,i+1) ), 0.0_ReKi ) ) then
+      if (.not. equalRealNos( REAL( TwoNorm( y%BldMotion%Position(:,i)-y%BldMotion%Position(:,i+1) ), SiKi ), 0.0_SiKi ) ) then
          p%NdIndx(indx) = i + 1
          indx = indx + 1;
          ! do not connect nodes that are collocated
@@ -1211,6 +1211,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   m%Un_Sum = -1
    !if (p%analysis_type == BD_DYNAMIC_ANALYSIS) then
          ! allocate arrays at initialization so we don't waste so much time on memory allocation/deallocation on each step
       
@@ -1393,7 +1394,9 @@ SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ! Place any last minute operations or calculations here:
 
    ! Close files here:
+   if (m%Un_Sum > 0) CLOSE(m%Un_Sum)
 
+   
    ! Destroy the input data:
 
    CALL BD_DestroyInput( u, ErrStat, ErrMsg )
@@ -4095,6 +4098,29 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, m, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
+
+      if (m%Un_Sum > 0) then
+         ! Transform quantities from global frame to local (blade) frame
+         CALL BD_InputGlobalLocal(p,u_interp,ErrStat2,ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+         ! Incorporate boundary conditions
+         CALL BD_BoundaryGA2(x,p,u_interp,t,OtherState,m,ErrStat2,ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         ! find x, acc, and xcc at t+dt
+         CALL BD_ComputeMKGA2( x%q,x%dqdt,OtherState%acc,OtherState%xcc,u_interp, p, m, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         WRITE(m%Un_Sum,'()')
+         CALL WrMatrix(m%StifK,m%Un_Sum, p%OutFmt, 'Full stiffness matrix')
+         WRITE(m%Un_Sum,'()')
+         CALL WrMatrix(m%MassM, m%Un_Sum, p%OutFmt, 'Full mass matrix')
+          
+          CLOSE(m%Un_Sum)
+          m%Un_Sum = -1
+      end if
+      
    end if
 
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -4429,6 +4455,60 @@ contains
       end subroutine Cleanup
 END SUBROUTINE BD_DynamicSolutionGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine perform time-marching in one interval
+!! Given states (u,v) and accelerations (acc,xcc) at the initial of a time step (t_i),
+!! it returns the values of states and accelerations at the end of a time step (t_f)
+SUBROUTINE BD_ComputeMKGA2( uuNf,vvNf,aaNf,xxNf, u, p, m, ErrStat, ErrMsg)
+
+   TYPE(BD_InputType), INTENT(IN   ):: u
+   REAL(BDKi),         INTENT(INOUT):: uuNf(:)
+   REAL(BDKi),         INTENT(INOUT):: vvNf(:)
+   REAL(BDKi),         INTENT(INOUT):: aaNf(:)
+   REAL(BDKi),         INTENT(INOUT):: xxNf(:)
+   TYPE(BD_ParameterType),INTENT(IN   ):: p           !< Parameters
+   TYPE(BD_MiscVarType),  INTENT(INOUT):: m           !< misc/optimization variables   
+   INTEGER(IntKi),        INTENT(  OUT):: ErrStat     !< Error status of the operation
+   CHARACTER(*),          INTENT(  OUT):: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   INTEGER(IntKi)                   :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)             :: ErrMsg2     ! Temporary Error message
+   CHARACTER(*), PARAMETER          :: RoutineName = 'BD_ComputeMKGA2'         
+   REAL(BDKi),           ALLOCATABLE:: DampG(:,:)
+   INTEGER(IntKi)                   :: i
+   INTEGER(IntKi)                   :: j
+   INTEGER(IntKi)                   :: k
+
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+
+   CALL AllocAry(DampG,p%dof_total,p%dof_total,'Damping Matrix',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+  
+   if (ErrStat >= AbortErrLev) then
+       call Cleanup()
+       return
+   end if
+
+   CALL BD_GenerateDynamicElementGA2(uuNf,vvNf,aaNf, p, m, u,.TRUE.,DampG, ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+          call Cleanup()
+          return
+      end if
+   CALL Cleanup()
+   RETURN
+
+contains
+      subroutine Cleanup()
+
+         if (allocated(DampG      )) deallocate(DampG      )
+
+      end subroutine Cleanup
+END SUBROUTINE BD_ComputeMKGA2
+!-----------------------------------------------------------------------------------------------------------------------------------
 ! this routine computes m%MassM, m%RHS, m%StifK
 SUBROUTINE BD_GenerateDynamicElementGA2(uuNf,vvNf,aaNf, p, m,         &
                                         u,fact,DampG, &
@@ -4636,6 +4716,7 @@ SUBROUTINE BD_CalcIC( u, p, x, ErrStat, ErrMsg)
    INTEGER(IntKi)                             :: j
    INTEGER(IntKi)                             :: k
    INTEGER(IntKi)                             :: temp_id
+   INTEGER(IntKi)                             :: temp_id2
    REAL(BDKi)                                 :: temp3(3)
    REAL(BDKi)                                 :: temp_p0(3)
    REAL(BDKi)                                 :: temp_rv(3)
@@ -4693,12 +4774,14 @@ SUBROUTINE BD_CalcIC( u, p, x, ErrStat, ErrMsg)
    DO i=1,p%elem_total
       DO j=k,p%node_elem
          temp_id = (j-1)*p%dof_node
-         temp3 = MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+         temp_id2 = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+         
+         temp3 = MATMUL(p%GlbRot, p%uuN0(temp_id+1:temp_id+3,i) + x%q(temp_id2+1:temp_id2+3) )
          temp3 = GlbRot_TransVel + MATMUL(GlbRot_RotVel_tilde,temp3)
          
          temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-         x%dqdt(temp_id+1:temp_id+3) = MATMUL(temp3,p%GlbRot) ! = transpose(MATMUL(transpose(temp3),p%GlbRot)) = MATMUL(TRANSPOSE(p%GlbRot),temp3)  because temp3 is 1-dimension
-         x%dqdt(temp_id+4:temp_id+6) = u%RootMotion%RotationVel(1:3,1)
+         x%dqdt(temp_id2+1:temp_id2+3) = MATMUL(temp3,p%GlbRot) ! = transpose(MATMUL(transpose(temp3),p%GlbRot)) = MATMUL(TRANSPOSE(p%GlbRot),temp3)  because temp3 is 1-dimension
+         x%dqdt(temp_id2+4:temp_id2+6) = u%RootMotion%RotationVel(1:3,1)
       ENDDO
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
