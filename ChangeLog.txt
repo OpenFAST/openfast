@@ -3,13 +3,24 @@
 --------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
-v2.09.00 25-Apr-2016  B. Jonkman
+v2.09.00 23-Jul-2016  B. Jonkman
 --------------------------------------------------------------------------------
 New routines in the library:
 + Linearize_Point_to_Point()
 + Linearize_Line2_to_Point()
 + Linearize_Point_to_Line2()
 + Linearize_Line2_to_Line2()
++ PackLoadMesh_Names()
++ PackMotionMesh_Names()
++ PackLoadMesh()
++ PackMotionMesh()
++ WrPartialMatrix()
+
+
+Changes:
++ changed the error message on Linux when not compiled with USE_DLL_INTERFACE and trying to dynamically load libraries
++ added NetLib directory from old NWTC Library SVN branch
++ modified LAPACK_GEMM routines to deal with matrices of size 0
 
 --------------------------------------------------------------------------------
 v2.08.00 5-Apr-2016  B. Jonkman
