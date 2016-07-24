@@ -52,7 +52,7 @@ PROGRAM ModName_Driver
 
    INTEGER(IntKi)                                     :: n                    !< Loop counter (for time step)
    INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
-   CHARACTER(1024)                                    :: ErrMsg               !< Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                               :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
 
 
