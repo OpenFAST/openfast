@@ -58,3 +58,8 @@ BuildLog.htm
 *.rar
 
 
+*.eps
+*.png
+*.bin
+/Drivers/Test_MeshMapping/*.m
+*.fig

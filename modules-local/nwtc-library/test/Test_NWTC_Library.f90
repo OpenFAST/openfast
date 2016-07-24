@@ -19,6 +19,8 @@ PROGRAM Test_NWTC_Library
 
     USE NWTC_Library
     USE NWTC_LAPACK
+    
+    
     IMPLICIT NONE   
     
    
@@ -55,32 +57,236 @@ PROGRAM Test_NWTC_Library
    INTEGER(IntKi), ALLOCATABLE  :: TempVec(:,:)
    INTEGER(IntKi), ALLOCATABLE  :: IC(:)
    integer,parameter ::    NMX = 9
-   integer :: i, j
+   integer :: i, j, k, i4
    
    integer, parameter:: m=5
    integer, parameter:: n=5
-   double precision :: a(m,n), b(n,1)
+   double precision :: a(m,n), b(n)
    integer :: ipiv(m)
 
    type(meshtype) :: mesh1, mesh2, mesh3
    
+   
+   integer,parameter :: ndims=10
+   real(reki),dimension(ndims,3) :: vec1,  vec2
+   real(reki),dimension(3,ndims) :: vec11, vec21
+   real(reki),dimension(3)       :: vec3
+   
+   REAL time_begin, time_end
+   
+         
+   integer,parameter :: nx=1, ny=1, nz=2, n4=1
+   complex(ReKi)     :: data2d(nx,nz), data3d(nx,nz,n4) , data4d(nx,ny,nz,n4) ,interpVal  
+   real(reki)        :: x(nx), y(ny), z(nz), w(n4), InCoord2(2), InCoord(3), InCoord4(4)
+   integer           :: LastIndex(3) = 0, LastIndex4(4) = 0, LastIndex2(2) = 0
    !...............................................................................................................................    
    ! Initialize the library
    !...............................................................................................................................    
    
    CALL NWTC_Init(  )
-   
 
+   !print *, sqrt(epsilon(1.0_ReKi)), sqrt(epsilon(1.0_SiKi)), sqrt(epsilon(1.0_R8Ki))
+   !stop
+   
+   call Test_TestMeshMapping()
+   stop
+   
+   !...............................................................................................................................    
+   ! arrays for interpolation:         
+   
+#ifdef WAMIT_INTERPOLATION   
+   
+   do i=1,n4
+      w(i) = -120 + (i-1) * 200/max(1,n4-1)    
+   end do
+      
+   do i=1,nz
+      z(i) = -180 + (i-1) * 90/max(1,nz-1)    
+   end do
+   
+   do i=1,ny
+      y(i) = -10 + (i-1)*20  
+   end do
+
+   do i=1,nx
+      x(i) = (i-1)*10
+   end do   
+   
+   !...............................................................................................................................    
+   ! 2d interpolation:         
+   
+print *, x
+print *, z
+   
+   data2d = 0.0_ReKi
+   do j =1,nz
+      do i =1,nx
+         data2d(i,j) = (j-1)*nx + i
+      end do
+   end do
+      
+   do j =1,nz 
+      do i =1,nx
+         InCoord2(1) = x(i) 
+         InCoord2(2) = z(j) + 45
+            
+         call WAMIT_Interp2D_Cplx( InCoord2, data2d, x, z, LastIndex2, interpVal, ErrStat, ErrMsg )   
+
+!if   ( .not. equalrealnos( REAL(data2d(i,j)), REAL(interpVal) ) .or. &
+!       .not. equalrealnos( IMAG(data2d(i,j)), IMAG(interpVal) ) ) then 
+!print *, '----------------- not equal ---------------------------------------------------'
+print *, '**** ', i, j, ' ****'            
+print *, ''            
+print *, 'input value:', InCoord2
+   
+print *, 'data at point:', data2d(i,j)
+print *, 'interp data  :', interpVal
+print *, '-------------------------------------------------------------------------------'
+!end if
+   
+      end do
+   end do
+   
+   
+   !...............................................................................................................................    
+   ! 3d interpolation:         
+   
+   data3d = 0.0_ReKi
+   do k=1,n4
+      do j =1,nz
+         do i =1,nx
+            data3d(i,j,k) = (k-1)*(nx*nz) + (j-1)*nx + i
+         end do
+      end do
+   end do
+      
+   do k=1,n4
+      do j =1,nz 
+         do i =1,nx
+            InCoord(1) = x(i)
+            InCoord(2) = z(j)
+            InCoord(3) = w(k)
+            
+   
+   call WAMIT_Interp3D_Cplx( InCoord, data3d, x, z, w, LastIndex, interpVal, ErrStat, ErrMsg )   
+
+if   ( .not. equalrealnos( REAL(data3d(i,j,k)), REAL(interpVal) ) .or. &
+       .not. equalrealnos( IMAG(data3d(i,j,k)), IMAG(interpVal) ) ) then 
+print *, '----------------- not equal ---------------------------------------------------'
+print *, '**** ', i, j, k, ' ****'            
+print *, ''            
+print *, 'input value:', InCoord
+   
+print *, 'data at point:', data3d(i,j,k)
+print *, 'interp data  :', interpVal
+print *, '-------------------------------------------------------------------------------'
+end if
+   
+         end do
+      end do
+   end do
+   
+   
+   !...............................................................................................................................    
+   ! 4d interpolation:   
+   data4d = 0.0_ReKi
+   do i4 = 1,n4
+      do k=1,nz
+         do j =1,ny
+            do i =1,nx
+               data4d(i,j,k,i4) = (i4-1)*nz*ny*nx + (k-1)*(nx*ny) + (j-1)*nx + i
+            end do
+         end do
+      end do
+   end do 
+   
+      
+   do i4 = 1,n4
+      do k=1,nz
+         do j =1,ny 
+            do i =1,nx
+               InCoord4(1) = x(i)
+               InCoord4(2) = y(j)
+               InCoord4(3) = z(k)
+               InCoord4(4) = w(i4)
+            
+   
+   call WAMIT_Interp4D_Cplx( InCoord4, data4d, x, y, z, w, LastIndex4, interpVal, ErrStat, ErrMsg )   
+
+if   ( .not. equalrealnos( REAL(data4d(i,j,k,i4)), REAL(interpVal) ) .or. &
+       .not. equalrealnos( IMAG(data4d(i,j,k,i4)), IMAG(interpVal) ) ) then 
+print *, '----------------- not equal ---------------------------------------------------'
+print *, '**** ', i, j, k, i4 , ' ****'            
+print *, ''            
+print *, 'input value:', InCoord4
+   
+print *, 'data at point:', data4d(i,j,k,i4)
+print *, 'interp data  :', interpVal
+print *, '-------------------------------------------------------------------------------'
+end if
+            end do            
+         end do
+      end do
+   end do
+      
+   
+   stop
+#endif   
+   !...............................................................................................................................    
+   ! Test cross_product timing with array dimensions
+   !...............................................................................................................................    
+   
+   do k=1,5
+   
+   CALL CPU_TIME(time_begin)
+   vec1 = 1.;
+   vec2 = 2.
+   do    i=1,ndims         
+      vec1(i,1) = i  
+      vec1(i,2) = 0.2
+      vec1(i,3) = 0.25
+      do j=1,20
+         vec3 = cross_product(vec1(i,:), vec2(i,:))
+         vec1(i,:) = vec3
+      end    do  
+   end do
+   print *, vec3
+   print *, vec1(1,:)
+   CALL CPU_TIME ( time_end )
+   WRITE (*,*) 'Time of operation A was ', time_end - time_begin, ' seconds'
+   
+   CALL CPU_TIME(time_begin)
+   vec11 = 1.;
+   vec21 = 2.
+   do    i=1,ndims         
+      vec11(1,i) = i  
+      vec11(2,i) = 0.2
+      vec11(3,i) = 0.25
+      do j=1,20
+         vec3 = cross_product(vec11(:,i), vec21(:,i))
+         vec11(:,i) = vec3
+      end    do  
+   end do
+   print *, vec3
+   print *, vec11(:,i)
+   CALL CPU_TIME ( time_end )
+   WRITE (*,*) 'Time of operation B was ', time_end - time_begin, ' seconds'
+   
+   end do
+   
+stop;
+   
    !...............................................................................................................................    
    ! Test interface with LAPACK
    !...............................................................................................................................    
          
-   call LAPACK_GETRF( m, n, a, m, IPIV, ErrStat, ErrMsg )
+   call LAPACK_GETRF( m, n, a, IPIV, ErrStat, ErrMsg )
    print *, 'LAPACK_Getrf: ', ErrStat, TRIM(ErrMsg)       
    
-   call LAPACK_GETRs( 'N', n, 1, a, m, IPIV, b, n, ErrStat, ErrMsg )
-   print *, 'LAPACK_dGETRs: ', ErrStat, TRIM(ErrMsg)       
-  
+   call LAPACK_GETRs( 'N', n, a, IPIV, b, ErrStat, ErrMsg )
+   print *, 'LAPACK_GETRs: ', ErrStat, TRIM(ErrMsg)       
+   
+   
    !...............................................................................................................................    
    ! Let's check that the PRECISION kinds are specified correctly:
    !...............................................................................................................................    
