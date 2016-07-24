@@ -34,7 +34,7 @@
 
 # Visual Studio Files
 *.exp
-*.mainfest
+*.manifest
 *.suo
 *.sln
 *.u2d
