@@ -31,6 +31,7 @@ module TestMeshMapping_Mod
    INTEGER(IntKi) :: ErrStat
    CHARACTER(1024) :: ErrMsg   
    
+   logical :: debug_print = .false.
    
       
         
