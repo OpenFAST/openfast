@@ -67,7 +67,7 @@ PROGRAM Main
   FEAM_InitInput%gravity     = 9.81     ! This need to be according to g used in ElastoDyn 
   FEAM_InitInput%WtrDens     = 1025     ! This needs to be set according to seawater density in HydroDyn      
   FEAM_InitInput%PtfmInit    = 0.0
-  FEAM_InitInput%RootName    = "FE_Mooring"
+  FEAM_InitInput%RootName    = "FE_Mooring.FEAM"
   
   CALL GetNewUnit( Un )
   OPEN(Unit=Un,FILE='FEAM.out',STATUS='UNKNOWN')

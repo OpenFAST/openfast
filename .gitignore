@@ -57,3 +57,6 @@ BuildLog.htm
 /SourceFiles.txt
 /ArcWin.txt
 /Archive.bat
+/compiling/VisualStudio/Debug
+*.manifest
+/FAST_SourceFiles.txt
