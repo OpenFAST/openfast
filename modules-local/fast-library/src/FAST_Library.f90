@@ -127,6 +127,9 @@ subroutine FAST_Start(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c,
    INTEGER                               :: i
    REAL(ReKi)                            :: Outputs(NumOutputs_c-1)
      
+   INTEGER(IntKi)                        :: ErrStat2                                ! Error status
+   CHARACTER(IntfStrLen-1)               :: ErrMsg2                                 ! Error message  (this needs to be static so that it will print in Matlab's mex library)
+   
       ! initialize variables:   
    n_t_global = 0
 
@@ -145,18 +148,27 @@ subroutine FAST_Start(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c,
    !...............................................................................................................................  
    CALL FAST_Solution0_T(Turbine, ErrStat, ErrMsg )      
    
-      ! return outputs here, too
-   IF(NumOutputs_c /= SIZE(Turbine%y_FAST%ChannelNames) ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = trim(ErrMsg)//NewLine//"FAST_Start:size of NumOutputs is invalid."
-      RETURN
-   ELSE
+   if (ErrStat <= AbortErrLev) then
+         ! return outputs here, too
+      IF(NumOutputs_c /= SIZE(Turbine%y_FAST%ChannelNames) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = trim(ErrMsg)//NewLine//"FAST_Start:size of NumOutputs is invalid."
+      ELSE
       
-      CALL FillOutputAry_T(Turbine, Outputs)   
-      OutputAry(1)              = Turbine%m_FAST%t_global 
-      OutputAry(2:NumOutputs_c) = Outputs 
-            
-   END IF
+         CALL FillOutputAry_T(Turbine, Outputs)   
+         OutputAry(1)              = Turbine%m_FAST%t_global 
+         OutputAry(2:NumOutputs_c) = Outputs 
+
+         CALL FAST_Linearize_T(t_initial, 0, Turbine, ErrStat, ErrMsg)
+         if (ErrStat2 /= ErrID_None) then
+            ErrStat = max(ErrStat,ErrStat2)
+            ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
+         end if
+         
+                  
+      END IF
+   end if
+   
    
    ErrStat_c     = ErrStat
    ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
@@ -184,6 +196,8 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       ! local variables
    REAL(ReKi)                            :: Outputs(NumOutputs_c-1)
    INTEGER(IntKi)                        :: i
+   INTEGER(IntKi)                        :: ErrStat2                                ! Error status
+   CHARACTER(IntfStrLen-1)               :: ErrMsg2                                 ! Error message  (this needs to be static so that it will print in Matlab's mex library)
                  
    
    IF ( n_t_global > Turbine%p_FAST%n_TMax_m1 ) THEN !finish 
@@ -218,6 +232,12 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       CALL FAST_Solution_T( t_initial, n_t_global, Turbine, ErrStat, ErrMsg )                  
       n_t_global = n_t_global + 1
 
+      CALL FAST_Linearize_T( t_initial, n_t_global, Turbine, ErrStat2, ErrMsg2)
+      if (ErrStat2 /= ErrID_None) then
+         ErrStat = max(ErrStat,ErrStat2)
+         ErrMsg = TRIM(ErrMsg)//NewLine//TRIM(ErrMsg2)
+      end if
+      
       
       ! set the outputs for external code here...
       ! return y_FAST%ChannelNames

@@ -68,7 +68,6 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, MeshMapData, ErrStat, ErrMsg )
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                   !< Error message
    
       ! local variables
-   INTEGER(IntKi)                                 :: J                        ! Loops through nodes / elements
    INTEGER(IntKi)                                 :: K                        ! Loops through blades
    INTEGER(IntKi)                                 :: ErrStat2                 ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2                  ! temporary Error message if ErrStat /= ErrID_None
@@ -139,8 +138,6 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
    real(reKi)                                     :: Force(3,u_ED%TowerPtLoads%Nnodes)
    real(reKi)                                     :: Moment(3,u_ED%TowerPtLoads%Nnodes)
    
-   integer         :: un_out
-   character(1024) :: BinOutputName
    
       ! Initialize error status
       
@@ -174,17 +171,7 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
          ! we'll need to add this to the loads from AeroDyn, later, so we're going to transfer to a temp mesh here instead of u_ED%TowerPtLoads
             Force  = u_ED%TowerPtLoads%force
             Moment = u_ED%TowerPtLoads%moment
-            
-!BinOutputName = trim(p_FAST%OutFileRoot)//'.Meshes.bin'            
-!un_out = -1
-!CALL MeshWrBin ( un_out, u_ED%TowerPtLoads,  ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
-!CALL MeshWrBin ( un_out, y_ED%TowerLn2Mesh,  ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
-!CALL MeshWrBin ( un_out, u_SrvD%TTMD%Mesh,   ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
-!CALL MeshWrBin ( un_out, y_SrvD%TTMD%Mesh,   ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
-!CALL MeshMapWrBin( un_out, y_ED%TowerLn2Mesh, u_SrvD%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
-!CALL MeshMapWrBin( un_out, y_SrvD%TTMD%Mesh, u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_L_T, ErrStat2, ErrMsg2, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
-!close( un_out )
-            
+                        
       END IF
             
    ELSE !we'll just take the initial guesses..
@@ -348,7 +335,6 @@ SUBROUTINE IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW )
    TYPE(InflowWind_InputType),       INTENT(INOUT)  :: u_IfW        !< InflowWind Inputs at t
 
       ! local variables
-   INTEGER(IntKi)                                   :: i            ! loop counter
    
    ! bjj: this is a total hack to get the lidar inputs into InflowWind. We should use a mesh to take care of this messiness (and, really this Lidar Focus should come
    ! from Fortran (a scanning pattern or file-lookup inside InflowWind), not MATLAB.
@@ -377,7 +363,6 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
 
    INTEGER(IntKi)                               :: J           ! Loops through nodes / elements.
    INTEGER(IntKi)                               :: K           ! Loops through blades.
-   INTEGER(IntKi)                               :: NodeNum     ! Node number for blade/node on mesh
    INTEGER(IntKi)                               :: NumBl
    INTEGER(IntKi)                               :: NNodes
    INTEGER(IntKi)                               :: node
@@ -466,9 +451,6 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_ED, BD, MeshMapData, ErrStat, Er
       ! Local variables:
 
    INTEGER(IntKi)                               :: K           ! Loops through blades
-   INTEGER(IntKi)                               :: NodeNum     ! Node number for blade/node on mesh
-   INTEGER(IntKi)                               :: NumBl
-   INTEGER(IntKi)                               :: node
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2 
    CHARACTER(*), PARAMETER                      :: RoutineName = 'AD_InputSolve_NoIfW'
@@ -540,9 +522,6 @@ SUBROUTINE AD14_InputSolve_IfW( p_FAST, u_AD14, y_IfW, y_OpFM, ErrStat, ErrMsg )
 
       ! Local variables:
 
-   INTEGER(IntKi)                               :: J           ! Loops through nodes / elements.
-   INTEGER(IntKi)                               :: K           ! Loops through blades.
-   INTEGER(IntKi)                               :: NodeNum     ! Node number for blade/node on mesh
    INTEGER(IntKi)                               :: NumBl
    INTEGER(IntKi)                               :: BldNodes
 
@@ -4183,7 +4162,6 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'CalcOutputs_And_SolveForInputs'
    
-   integer :: k
    
 #ifdef OUTPUT_MASS_MATRIX   
    INTEGER                                 :: UnMM

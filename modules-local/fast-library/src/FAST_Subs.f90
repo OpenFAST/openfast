@@ -513,11 +513,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       if (allocated(InitOutData_IfW%LinNames_u)) call move_alloc(InitOutData_IfW%LinNames_u,y_FAST%Lin%Modules(MODULE_IfW)%Names_u )
       if (allocated(InitOutData_IfW%RotFrame_y)) call move_alloc(InitOutData_IfW%RotFrame_y,y_FAST%Lin%Modules(MODULE_IfW)%RotFrame_y )
       if (allocated(InitOutData_IfW%RotFrame_u)) call move_alloc(InitOutData_IfW%RotFrame_u,y_FAST%Lin%Modules(MODULE_IfW)%RotFrame_u )
-      y_FAST%Lin%PropagationDir = InitOutData_IfW%PropagationDir
-      y_FAST%Lin%cosPropDir = cos(InitOutData_IfW%PropagationDir)
-      y_FAST%Lin%sinPropDir = sin(InitOutData_IfW%PropagationDir)
-      y_FAST%Lin%RefHt = InitOutData_IfW%RefHt
-      y_FAST%Lin%RefLength = InitOutData_IfW%RefLength
       
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -836,7 +831,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ELSEIF (p_FAST%CompMooring == Module_FEAM) THEN
             
       InitInData_FEAM%InputFile   = p_FAST%MooringFile         ! This needs to be set according to what is in the FAST input file. 
-      InitInData_FEAM%RootName    = p_FAST%OutFileRoot
+      InitInData_FEAM%RootName    = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_FEAM))
       
       InitInData_FEAM%PtfmInit    = InitOutData_ED%PlatformPos !ED%x(STATE_CURR)%QT(1:6)   ! initial position of the platform !bjj: this should come from InitOutData_ED, not x_ED
       InitInData_FEAM%NStepWave   = 1                          ! an arbitrary number > 0 (to set the size of the wave data, which currently contains all zero values)     
@@ -2994,7 +2989,7 @@ SUBROUTINE WrVTK_Ground ( RefPoint, HalfLengths, FileRootName, ErrStat, ErrMsg )
 
    ! local variables
    INTEGER(IntKi)                        :: Un            ! fortran unit number
-   INTEGER(IntKi)                        :: iy, ix        ! loop counters
+   INTEGER(IntKi)                        :: ix            ! loop counters
    CHARACTER(1024)                       :: FileName
    INTEGER(IntKi), parameter             :: NumberOfPoints = 4
    INTEGER(IntKi), parameter             :: NumberOfLines = 0
@@ -5035,7 +5030,7 @@ SUBROUTINE WrVTK_WaveElev(t_global, p_FAST, y_FAST, HD)
 
    ! local variables
    INTEGER(IntKi)                        :: Un                    ! fortran unit number
-   INTEGER(IntKi)                        :: n, iy, ix, it         ! loop counters
+   INTEGER(IntKi)                        :: n, iy, ix             ! loop counters
    REAL(SiKi)                            :: t
    CHARACTER(1024)                       :: FileName
    INTEGER(IntKi)                        :: NumberOfPoints 
