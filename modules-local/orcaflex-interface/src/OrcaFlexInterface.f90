@@ -20,10 +20,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-06-21 23:15:24 -0600 (Sun, 21 Jun 2015) $
-! (File) Revision #: $Rev: 1045 $
-! URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/OrcaFlexCoupling/Source/OrcaFlexInterface.f90 $
-!**********************************************************************************************************************************
 !> This module contains definitions of compile-time PARAMETERS for the OrcaFlex Interface module.
 !! Every variable defined here MUST have the PARAMETER attribute.
 MODULE OrcaFlexInterface_Parameters
@@ -32,7 +28,7 @@ MODULE OrcaFlexInterface_Parameters
 
    IMPLICIT                      NONE
 
-   TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', 'v1.01.01', '11-Apr-2016' )
+   TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', 'v1.01.02', '25-Jul-2016' )
    CHARACTER(*),   PARAMETER  :: Orca_Nickname = 'Orca'
 
 
