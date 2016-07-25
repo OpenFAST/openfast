@@ -213,9 +213,6 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Initialize variables for this routine
    ErrStat                 = ErrID_None
    ErrMsg                  = ""
-   ErrStatTmp              = ErrID_None
-   ErrMsgTmp               = ""
-   m%Initialized  =  .FALSE.     ! Set to true when we finish the _Init routine
 
    ! dummy variables for the FAST framework:
    ! (initialized to prevent compiler warnings about INTENT(OUT) variables)
@@ -307,7 +304,6 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       CALL CleanUp
       RETURN
    END IF
-   m%Initialized  =  .TRUE.  ! set this flag immediately after the library was successfully loaded
 
    CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(1), OrcaDLL_Init )
 #endif
@@ -636,16 +632,13 @@ SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 #ifdef NO_LibLoad
    CALL SetErrStat( ErrID_Warn,'   -->  Skipping OrcaDLL_End call',ErrStat,ErrMsg,RoutineName )
 #else
-   if (m%Initialized) then
-         ! Release the DLL
-      CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(3), OrcaDLL_End )
-      CALL OrcaDLL_End        ! No error handling here.  Just have to assume it worked.
+      ! Release the DLL
+   CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(3), OrcaDLL_End )
+   CALL OrcaDLL_End        ! No error handling here.  Just have to assume it worked.
 
 
-      CALL FreeDynamicLib( p%DLL_Orca, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
-   end if
-   
+   CALL FreeDynamicLib( p%DLL_Orca, ErrStatTmp, ErrMsgTmp )
+   CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )   
 #endif
 
 
@@ -680,8 +673,6 @@ SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! Destroy the output data:
    CALL Orca_DestroyOutput( y, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
-
-   m%Initialized = .FALSE.
 
 
 END SUBROUTINE Orca_End
@@ -737,15 +728,6 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    CHARACTER(ErrMsgLen)                            :: ErrMsgTmp         !< Temporary Error message if ErrStat /= ErrID_None
    CHARACTER(*),     PARAMETER                     :: RoutineName='Orca_Calc'
    REAL(ReKi),       PARAMETER                     :: SymmetryTol =  9.999E-4_ReKi  !< Tolerance used to determine if the PtfmAM is symmetric
-
-
-
-      ! Check that we actually initialized things
-   IF ( .NOT. m%Initialized ) THEN
-      CALL SetErrStat( ErrID_Fatal, ' Programming error.  Call Orca_Init before calling Orca_CalcOutput.',ErrStat,ErrMsg,RoutineName )
-      RETURN
-   ENDIF
-
 
 
       ! Copy over time and name to pass to OrcaFlex DLL
