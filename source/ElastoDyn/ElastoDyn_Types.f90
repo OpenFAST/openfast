@@ -3,7 +3,7 @@
 ! WARNING This file is generated automatically by the FAST registry.
 ! Do not edit.  Your changes to this file will be lost.
 !
-! FAST Registry (v3.02.00, 7-Jul-2016)
+! FAST Registry (v3.02.00, 23-Jul-2016)
 !*********************************************************************************************************************************
 ! ElastoDyn_Types
 !.................................................................................................................................
@@ -548,6 +548,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: AugMat_pivot      !< Pivot column for AugMat in LAPACK factorization [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: OgnlGeAzRo      !< Original DOF_GeAz row in AugMat [-]
     REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: QD2T      !< Solution (acceleration) vector; the first time derivative of QDT [-]
+    LOGICAL  :: IgnoreMod      !< whether to ignore the modulo in ED outputs (necessary for linearization perturbations) [-]
   END TYPE ED_MiscVarType
 ! =======================
 ! =========  ED_ParameterType  =======
@@ -15553,6 +15554,7 @@ IF (ALLOCATED(SrcMiscData%QD2T)) THEN
   END IF
     DstMiscData%QD2T = SrcMiscData%QD2T
 ENDIF
+    DstMiscData%IgnoreMod = SrcMiscData%IgnoreMod
  END SUBROUTINE ED_CopyMisc
 
  SUBROUTINE ED_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -15694,6 +15696,7 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! QD2T upper/lower bounds for each dimension
       Db_BufSz   = Db_BufSz   + SIZE(InData%QD2T)  ! QD2T
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! IgnoreMod
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -15874,6 +15877,8 @@ ENDIF
       IF (SIZE(InData%QD2T)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%QD2T))-1 ) = PACK(InData%QD2T,.TRUE.)
       Db_Xferred   = Db_Xferred   + SIZE(InData%QD2T)
   END IF
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%IgnoreMod , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE ED_PackMisc
 
  SUBROUTINE ED_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -16157,6 +16162,8 @@ ENDIF
       Db_Xferred   = Db_Xferred   + SIZE(OutData%QD2T)
     DEALLOCATE(mask1)
   END IF
+      OutData%IgnoreMod = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE ED_UnPackMisc
 
  SUBROUTINE ED_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
