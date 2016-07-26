@@ -1388,11 +1388,8 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    IF ( ErrStat>= AbortErrLev ) RETURN
 
    if (InitInp%Linearize) then
-      p%NumLinOuts = p%NumOuts !bjj: use this instead of SetOutParamLin
-      !CALL SetOutParamLin( p, TmpErrStat, TmpErrmsg )
-      !CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   else
-      p%NumLinOuts = 0
+      CALL SetOutParamLin( p, TmpErrStat, TmpErrmsg )
+           CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    end if
    
       ! Allocate array for AllOuts
@@ -1605,7 +1602,6 @@ END SUBROUTINE SetOutParam
 !..................................................................................................................................
 !> This routine checks to see if any requested output channel names are to be output in linearization analysis.
 !! note that we output all WriteOutput values and assume that none of them depend on inputs (so I don't need this mapping any more)
-! THIS ROUTINE IS NOT USED!
 SUBROUTINE SetOutParamLin( p, ErrStat, ErrMsg )
 
    IMPLICIT                        NONE
@@ -1627,33 +1623,25 @@ SUBROUTINE SetOutParamLin( p, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   call AllocAry(p%OutParamLinIndx, 3, p%NumOuts, 'OutParamLinIndx', ErrStat2, ErrMsg2)
+   call AllocAry(p%OutParamLinIndx, 2, p%NumOuts, 'OutParamLinIndx', ErrStat2, ErrMsg2)
    call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    if (ErrStat >= AbortErrLev) return
-   
-   p%NumLinOuts = 0;
-   
+      
    do i = 1,p%NumOuts
       if (p%OutParam(i)%SignM /= 0 ) then
          
          do j=1,size(WindVelX)
             if ( p%OutParam(i)%Indx == WindVelX(j) ) then
-               p%NumLinOuts = p%NumLinOuts + 1
-               p%OutParamLinIndx(1,p%NumLinOuts) = j
-               p%OutParamLinIndx(2,p%NumLinOuts) = 1
-               p%OutParamLinIndx(3,p%NumLinOuts) = p%OutParam(i)%SignM
+               p%OutParamLinIndx(1,i) = j
+               p%OutParamLinIndx(2,i) = 1
                exit !exit j loop; move to next parameter
             elseif ( p%OutParam(i)%Indx == WindVelY(j) ) then
-               p%NumLinOuts = p%NumLinOuts + 1
-               p%OutParamLinIndx(1,p%NumLinOuts) = j
-               p%OutParamLinIndx(2,p%NumLinOuts) = 2
-               p%OutParamLinIndx(3,p%NumLinOuts) = p%OutParam(i)%SignM
+               p%OutParamLinIndx(1,i) = j
+               p%OutParamLinIndx(2,i) = 2
                exit !exit j loop; move to next parameter
             elseif ( p%OutParam(i)%Indx == WindVelZ(j) ) then
-               p%NumLinOuts = p%NumLinOuts + 1
-               p%OutParamLinIndx(1,p%NumLinOuts) = j
-               p%OutParamLinIndx(2,p%NumLinOuts) = 3
-               p%OutParamLinIndx(3,p%NumLinOuts) = p%OutParam(i)%SignM
+               p%OutParamLinIndx(1,i) = j
+               p%OutParamLinIndx(2,i) = 3
                exit !exit j loop; move to next parameter
             end if
          end do
@@ -1869,7 +1857,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
 
                ! InputData only contains the Position array, so we can pass that directly.
             CALL  IfW_UniformWind_CalcOutput(  Time, PositionXYZprime, p%UniformWind, y%VelocityUVW, &
-                                          DiskVel, m%UniformWind, y%UniformWind, TmpErrStat, TmpErrMsg)
+                                          DiskVel, m%UniformWind, TmpErrStat, TmpErrMsg)
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1878,7 +1866,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
             IF ( p%NWindVel >= 1_IntKi .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
                CALL  IfW_UniformWind_CalcOutput(  Time, p%WindViXYZprime, p%UniformWind, m%WindViUVW, &
-                                             DiskVel, m%UniformWind, y%UniformWind, TmpErrStat, TmpErrMsg)
+                                             DiskVel, m%UniformWind, TmpErrStat, TmpErrMsg)
             ENDIF
 
          CASE (TSFF_WindNumber)
