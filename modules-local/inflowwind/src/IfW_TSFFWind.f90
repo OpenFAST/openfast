@@ -83,20 +83,8 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOutDat
 
       ! Local Variables:
 
-!   REAL(ReKi)                                               :: TI      (3)       ! turbulence intensities of the wind components as defined in the FF file, not necessarially the actual TI
-!   REAL(ReKi)                                               :: BinTI   (3)       ! turbulence intensities of the wind components as defined in the FF binary file, not necessarially the actual TI
-   REAL(ReKi)                                               :: UBar
-   REAL(ReKi)                                               :: ZCenter
-
    INTEGER(IntKi)                                           :: UnitWind     ! Unit number for the InflowWind input file
    INTEGER(B2Ki)                                            :: Dum_Int2
-   INTEGER(IntKi)                                           :: I
-   LOGICAL                                                  :: CWise
-   LOGICAL                                                  :: Exists
-   CHARACTER( 1028 )                                        :: SumFile           ! length is LEN(InitData%WindFileName) + the 4-character extension.
-   CHARACTER( 1028 )                                        :: TwrFile           ! length is LEN(InitData%WindFileName) + the 4-character extension.
-
-
 
       !-------------------------------------------------------------------------------------------------
       ! Initialize temporary variables

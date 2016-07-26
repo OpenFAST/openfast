@@ -66,6 +66,7 @@ MODULE IfW_UniformWind
    PUBLIC                                    :: IfW_UniformWind_End
    PUBLIC                                    :: IfW_UniformWind_CalcOutput
    PUBLIC                                    :: IfW_UniformWind_JacobianPInput
+   PUBLIC                                    :: IfW_UniformWind_GetOP
    
 CONTAINS
 
@@ -484,7 +485,7 @@ END SUBROUTINE IfW_UniformWind_Init
 !! @note  This routine does not satisfy the Modular framework.  
 !! @date  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
 !-------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m, y, ErrStat, ErrMsg)
+SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m, ErrStat, ErrMsg)
 
    IMPLICIT                                                       NONE
 
@@ -498,7 +499,6 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m
    REAL(ReKi),                                  INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
    REAL(ReKi),                                  INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
    TYPE(IfW_UniformWind_MiscVarType),           INTENT(INOUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
-   TYPE(IfW_UniformWind_OutputType),            INTENT(INOUT)  :: y                 !< output values (for glue-code linearization operating point)
 
       ! Error handling
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< error status
@@ -507,8 +507,7 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m
 
       ! local variables
    INTEGER(IntKi)                                              :: NumPoints      ! Number of points specified by the PositionXYZ array
-
-      ! local counters
+   TYPE(IfW_UniformWind_Intrp)                                 :: op             ! interpolated values of InterpParams
    INTEGER(IntKi)                                              :: PointNum       ! a loop counter for the current point
 
       ! temporary variables
@@ -533,13 +532,13 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, m
    !> 1. Linearly interpolate parameters in time (or use nearest-neighbor to extrapolate)
    !! (compare with nwtc_num::interpstpreal)
    !-------------------------------------------------------------------------------------------------
-   CALL InterpParams(Time, p, m, y%V, y%Delta, y%VZ, y%HShr, y%VShr, y%VLinShr, y%VGust)   
+   CALL InterpParams(Time, p, m, op)   
    
       ! Step through all the positions and get the velocities
    DO PointNum = 1, NumPoints
 
          ! Calculate the velocity for the position
-      call GetWindSpeed(PositionXYZ(:,PointNum), p, m, y, Velocity(:,PointNum), TmpErrStat, TmpErrMsg)
+      call GetWindSpeed(PositionXYZ(:,PointNum), p, m, op, Velocity(:,PointNum), TmpErrStat, TmpErrMsg)
 
          ! Error handling
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
@@ -564,20 +563,14 @@ END SUBROUTINE IfW_UniformWind_CalcOutput
 !+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 !> This subroutine linearly interpolates the parameters that are used to compute uniform 
 !! wind.
-SUBROUTINE InterpParams(Time, p, m, V_tmp, Delta_tmp, VZ_tmp, HShr_tmp, VShr_tmp, VLinShr_tmp, VGust_tmp)
+SUBROUTINE InterpParams(Time, p, m, op)
 
       ! Passed Variables
    REAL(DbKi),                            INTENT(IN   )  :: Time              !< time from the start of the simulation
    TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: p                 !< Parameters
    TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: m                 !< Misc variables (index)
 
-   REAL(ReKi)                           , INTENT(  OUT)  :: V_tmp             !< interpolated V       at input TIME
-   REAL(ReKi)                           , INTENT(  OUT)  :: Delta_tmp         !< interpolated Delta   at input TIME
-   REAL(ReKi)                           , INTENT(  OUT)  :: VZ_tmp            !< interpolated VZ      at input TIME
-   REAL(ReKi)                           , INTENT(  OUT)  :: HShr_tmp          !< interpolated HShr    at input TIME
-   REAL(ReKi)                           , INTENT(  OUT)  :: VShr_tmp          !< interpolated VShr    at input TIME
-   REAL(ReKi)                           , INTENT(  OUT)  :: VLinShr_tmp       !< interpolated VLinShr at input TIME
-   REAL(ReKi)                           , INTENT(  OUT)  :: VGust_tmp         !< interpolated VGust   at input TIME
+   TYPE(IfW_UniformWind_Intrp)          , INTENT(  OUT)  :: op                !< interpolated V values at input TIME
 
 
       ! Local Variables
@@ -593,24 +586,24 @@ SUBROUTINE InterpParams(Time, p, m, V_tmp, Delta_tmp, VZ_tmp, HShr_tmp, VShr_tmp
    IF ( Time <= p%Tdata(1) .OR. p%NumDataLines == 1 )  THEN
 
       m%TimeIndex  = 1
-      V_tmp         = p%V      (1)
-      Delta_tmp     = p%Delta  (1)
-      VZ_tmp        = p%VZ     (1)
-      HShr_tmp      = p%HShr   (1)
-      VShr_tmp      = p%VShr   (1)
-      VLinShr_tmp   = p%VLinShr(1)
-      VGust_tmp     = p%VGust  (1)
+      op%V         = p%V      (1)
+      op%Delta     = p%Delta  (1)
+      op%VZ        = p%VZ     (1)
+      op%HShr      = p%HShr   (1)
+      op%VShr      = p%VShr   (1)
+      op%VLinShr   = p%VLinShr(1)
+      op%VGust     = p%VGust  (1)
 
    ELSE IF ( Time >= p%Tdata(p%NumDataLines) )  THEN
 
-      m%TimeIndex   = p%NumDataLines - 1
-      V_tmp         = p%V      (p%NumDataLines)
-      Delta_tmp     = p%Delta  (p%NumDataLines)
-      VZ_tmp        = p%VZ     (p%NumDataLines)
-      HShr_tmp      = p%HShr   (p%NumDataLines)
-      VShr_tmp      = p%VShr   (p%NumDataLines)
-      VLinShr_tmp   = p%VLinShr(p%NumDataLines)
-      VGust_tmp     = p%VGust  (p%NumDataLines)
+      m%TimeIndex  = p%NumDataLines - 1
+      op%V         = p%V      (p%NumDataLines)
+      op%Delta     = p%Delta  (p%NumDataLines)
+      op%VZ        = p%VZ     (p%NumDataLines)
+      op%HShr      = p%HShr   (p%NumDataLines)
+      op%VShr      = p%VShr   (p%NumDataLines)
+      op%VLinShr   = p%VLinShr(p%NumDataLines)
+      op%VGust     = p%VGust  (p%NumDataLines)
 
    ELSE
 
@@ -630,13 +623,13 @@ SUBROUTINE InterpParams(Time, p, m, V_tmp, Delta_tmp, VZ_tmp, HShr_tmp, VShr_tmp
          ELSE
             slope       = ( Time - p%Tdata(m%TimeIndex) )/( p%Tdata(m%TimeIndex+1) - p%Tdata(m%TimeIndex) )
             
-            V_tmp       = ( p%V(      m%TimeIndex+1) - p%V(      m%TimeIndex) )*slope  + p%V(      m%TimeIndex)
-            Delta_tmp   = ( p%Delta(  m%TimeIndex+1) - p%Delta(  m%TimeIndex) )*slope  + p%Delta(  m%TimeIndex)
-            VZ_tmp      = ( p%VZ(     m%TimeIndex+1) - p%VZ(     m%TimeIndex) )*slope  + p%VZ(     m%TimeIndex)
-            HShr_tmp    = ( p%HShr(   m%TimeIndex+1) - p%HShr(   m%TimeIndex) )*slope  + p%HShr(   m%TimeIndex)
-            VShr_tmp    = ( p%VShr(   m%TimeIndex+1) - p%VShr(   m%TimeIndex) )*slope  + p%VShr(   m%TimeIndex)
-            VLinShr_tmp = ( p%VLinShr(m%TimeIndex+1) - p%VLinShr(m%TimeIndex) )*slope  + p%VLinShr(m%TimeIndex)
-            VGust_tmp   = ( p%VGust(  m%TimeIndex+1) - p%VGust(  m%TimeIndex) )*slope  + p%VGust(  m%TimeIndex)
+            op%V       = ( p%V(      m%TimeIndex+1) - p%V(      m%TimeIndex) )*slope  + p%V(      m%TimeIndex)
+            op%Delta   = ( p%Delta(  m%TimeIndex+1) - p%Delta(  m%TimeIndex) )*slope  + p%Delta(  m%TimeIndex)
+            op%VZ      = ( p%VZ(     m%TimeIndex+1) - p%VZ(     m%TimeIndex) )*slope  + p%VZ(     m%TimeIndex)
+            op%HShr    = ( p%HShr(   m%TimeIndex+1) - p%HShr(   m%TimeIndex) )*slope  + p%HShr(   m%TimeIndex)
+            op%VShr    = ( p%VShr(   m%TimeIndex+1) - p%VShr(   m%TimeIndex) )*slope  + p%VShr(   m%TimeIndex)
+            op%VLinShr = ( p%VLinShr(m%TimeIndex+1) - p%VLinShr(m%TimeIndex) )*slope  + p%VLinShr(m%TimeIndex)
+            op%VGust   = ( p%VGust(  m%TimeIndex+1) - p%VGust(  m%TimeIndex) )*slope  + p%VGust(  m%TimeIndex)
             EXIT
 
          END IF
@@ -652,13 +645,13 @@ END SUBROUTINE InterpParams
 !! in space represented by InputPosition.
 !!
 !!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-SUBROUTINE GetWindSpeed(InputPosition, p, m, y, WindSpeed, ErrStat, ErrMsg)
+SUBROUTINE GetWindSpeed(InputPosition, p, m, op, WindSpeed, ErrStat, ErrMsg)
 
       ! Passed Variables
    REAL(ReKi),                            INTENT(IN   )  :: InputPosition(3)  !< input information: positions X,Y,Z
    TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: p                 !< Parameters
    TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: m                 !< Misc variables (stores last index into array time for efficiency)
-   TYPE(IfW_UniformWind_OutputType),      INTENT(IN   )  :: y                 !< output values; interpolated UniformWind parameters for this time (for glue-code linearization operating point)
+   TYPE(IfW_UniformWind_Intrp),           INTENT(IN   )  :: op                !< operating point values; interpolated UniformWind parameters for this time (for glue-code linearization operating point)
 
    INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< error status
    CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg            !< The error message
@@ -696,16 +689,16 @@ SUBROUTINE GetWindSpeed(InputPosition, p, m, y, WindSpeed, ErrStat, ErrMsg)
    !! \f$Vt_w =  V_z \f$ \n using input positions \f$X,Y,Z\f$ and interpolated values for time-dependent input-file parameters 
    !! \f$V, Delta, V_z, H_{LinShr}, V_{Shr}, V_{LinShr}, V_{Gust}\f$.
    
-   CosDelta = COS( y%Delta )
-   SinDelta = SIN( y%Delta )
-   V1 = y%V * ( ( InputPosition(3)/p%RefHt ) ** y%VShr &                                   ! power-law wind shear
-         + ( y%HShr   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &    ! horizontal linear shear
-         +  y%VLinShr * ( InputPosition(3)-p%RefHt ) )/p%RefLength  ) &                    ! vertical linear shear
-         +  y%VGust                                                                        ! gust speed
+   CosDelta = COS( op%Delta )
+   SinDelta = SIN( op%Delta )
+   V1 = op%V * ( ( InputPosition(3)/p%RefHt ) ** op%VShr &                                  ! power-law wind shear
+         + ( op%HShr   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &    ! horizontal linear shear
+         +  op%VLinShr * ( InputPosition(3) - p%RefHt ) )/p%RefLength  ) &                  ! vertical linear shear
+         +  op%VGust                                                                        ! gust speed
          
    WindSpeed(1) =  V1 * CosDelta
    WindSpeed(2) = -V1 * SinDelta
-   WindSpeed(3) =  y%VZ
+   WindSpeed(3) =  op%VZ
 
 
    RETURN
@@ -721,26 +714,18 @@ FUNCTION WindInf_ADhack_diskVel( t, p, m,ErrStat, ErrMsg )
    
          ! Passed variables
    
-      REAL(DbKi),                            INTENT(IN   )  :: t         !< Time
-      TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: p         !< Parameters
-      TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: m         !< misc/optimization data (storage for efficiency index)
+   REAL(DbKi),                            INTENT(IN   )  :: t         !< Time
+   TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: p         !< Parameters
+   TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: m         !< misc/optimization data (storage for efficiency index)
    
-      INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat   !< error status from this function
-      CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg    !< error message from this function 
+   INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat   !< error status from this function
+   CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg    !< error message from this function 
    
-         ! Function definition
-      REAL(ReKi)                    :: WindInf_ADhack_diskVel(3)
+      ! Function definition
+   REAL(ReKi)                    :: WindInf_ADhack_diskVel(3)
    
-         ! Local variables
-      REAL(ReKi)                                            :: CosDelta          ! cosine of Delta_tmp
-      REAL(ReKi)                                            :: Delta_tmp         ! interpolated Delta   at input TIME
-      REAL(ReKi)                                            :: HShr_tmp          ! interpolated HShr    at input TIME
-      REAL(ReKi)                                            :: SinDelta          ! sine of Delta_tmp
-      REAL(ReKi)                                            :: V_tmp             ! interpolated V       at input TIME
-      REAL(ReKi)                                            :: VGust_tmp         ! interpolated VGust   at input TIME
-      REAL(ReKi)                                            :: VLinShr_tmp       ! interpolated VLinShr at input TIME
-      REAL(ReKi)                                            :: VShr_tmp          ! interpolated VShr    at input TIME
-      REAL(ReKi)                                            :: VZ_tmp            ! interpolated VZ      at input TIME
+      ! Local variables
+   TYPE(IfW_UniformWind_Intrp)                           :: op         ! interpolated values of InterpParams
    
       
       ErrStat = ErrID_None
@@ -751,15 +736,15 @@ FUNCTION WindInf_ADhack_diskVel( t, p, m,ErrStat, ErrMsg )
       ! (compare with NWTC_Num.f90\InterpStpReal)
       !-------------------------------------------------------------------------------------------------
 
-      call InterpParams(t, p, m, V_tmp, Delta_tmp, VZ_tmp, HShr_tmp, VShr_tmp, VLinShr_tmp, VGust_tmp)
+      call InterpParams(t, p, m, op)
 
       !-------------------------------------------------------------------------------------------------
       ! calculate the wind speed at this time (note that it is not the full uniform wind equation!)
       !-------------------------------------------------------------------------------------------------
    
-         WindInf_ADhack_diskVel(1) =  V_tmp * COS( Delta_tmp )
-         WindInf_ADhack_diskVel(2) = -V_tmp * SIN( Delta_tmp )
-         WindInf_ADhack_diskVel(3) =  VZ_tmp
+         WindInf_ADhack_diskVel(1) =  op%V * COS( op%Delta )
+         WindInf_ADhack_diskVel(2) = -op%V * SIN( op%Delta )
+         WindInf_ADhack_diskVel(3) =  op%VZ
       
    
       RETURN
@@ -826,12 +811,12 @@ END SUBROUTINE IfW_UniformWind_End
 SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, p, m, dYdu )
 
    REAL(DbKi),                            INTENT(IN   )   :: t             !< Current simulation time in seconds
-   REAL(ReKi),                            INTENT(IN   )   :: Position(3)   !< XYZ Position at which to find position vector
+   REAL(ReKi),                            INTENT(IN   )   :: Position(3)   !< XYZ Position at which to find velocity (operating point)
    REAL(ReKi),                            INTENT(IN   )   :: CosPropDir    !< cosine of InflowWind propagation direction
    REAL(ReKi),                            INTENT(IN   )   :: SinPropDir    !< sine of InflowWind propagation direction
    TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )   :: p             !< Parameters
    TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)   :: m             !< Misc/optimization variables
-   REAL(ReKi),                            INTENT(INOUT)   :: dYdu(3,3)     !< Partial derivatives of output functions
+   REAL(ReKi),                            INTENT(INOUT)   :: dYdu(3,6)     !< Partial derivatives of output functions
                                                                            !!   (Y) with respect to the inputs (u)
 
       ! local variables: 
@@ -840,23 +825,22 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    !CHARACTER(*), PARAMETER                                :: RoutineName = 'IfW_UniformWind_JacobianPInput'
       
       ! Local Variables
+   TYPE(IfW_UniformWind_Intrp)                           :: op                ! interpolated values of InterpParams
    REAL(ReKi)                                            :: CosDelta          ! cosine of Delta_tmp
-   REAL(ReKi)                                            :: Delta_tmp         ! interpolated Delta   at input TIME
-   REAL(ReKi)                                            :: HShr_tmp          ! interpolated HShr    at input TIME
    REAL(ReKi)                                            :: SinDelta          ! sine of Delta_tmp
-   REAL(ReKi)                                            :: V_tmp             ! interpolated V       at input TIME
-   REAL(ReKi)                                            :: VGust_tmp         ! interpolated VGust   at input TIME
-   REAL(ReKi)                                            :: VLinShr_tmp       ! interpolated VLinShr at input TIME
-   REAL(ReKi)                                            :: VShr_tmp          ! interpolated VShr    at input TIME
-   REAL(ReKi)                                            :: VZ_tmp            ! interpolated VZ      at input TIME
-   REAL(ReKi)                                            :: V1                ! temporary storage for horizontal velocity
+   REAL(ReKi)                                            :: RotatePosition(3)  !< rotated position
 
    REAL(ReKi)                                            :: dVhdx             ! temporary value to hold partial v_h partial X   
    REAL(ReKi)                                            :: dVhdy             ! temporary value to hold partial v_h partial Y   
    REAL(ReKi)                                            :: dVhdz             ! temporary value to hold partial v_h partial Z   
    REAL(ReKi)                                            :: tmp_du            ! temporary value to hold calculations that are part of multiple components   
    REAL(ReKi)                                            :: tmp_dv            ! temporary value to hold calculations that are part of multiple components   
-      
+   REAL(ReKi)                                            :: dVhdPD            ! temporary value to hold partial v_h partial propagation direction
+   REAL(ReKi)                                            :: dVhdV             ! temporary value to hold partial v_h partial V   
+   REAL(ReKi)                                            :: Vh                ! temporary value to hold v_h    
+   REAL(ReKi)                                            :: dVhdVShr          ! temporary value to hold partial v_h partial VShr   
+   REAL(ReKi)                                            :: zr 
+   
       
 
 
@@ -869,10 +853,15 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    !> 1. Linearly interpolate parameters in time at operating point (or use nearest-neighbor to extrapolate)
    !! (compare with nwtc_num::interpstpreal) 
    !-------------------------------------------------------------------------------------------------
-   CALL InterpParams(t, p, m, V_tmp, Delta_tmp, VZ_tmp, HShr_tmp, VShr_tmp, VLinShr_tmp, VGust_tmp)
+   CALL InterpParams(t, p, m, op)
       
-   CosDelta = COS( Delta_tmp )
-   SinDelta = SIN( Delta_tmp )
+   CosDelta = COS( op%Delta )
+   SinDelta = SIN( op%Delta )
+   
+   RotatePosition(1) = Position(1)*cosPropDir - Position(2)*sinPropDir
+   RotatePosition(2) = Position(1)*sinPropDir + Position(2)*cosPropDir
+   RotatePosition(3) = Position(3)
+   
    
    !-------------------------------------------------------------------------------------------------
    !> 2. Calculate \f$ \frac{\partial Y_{Output \, Equations}}{\partial u_{inputs}} = \begin{bmatrix}
@@ -881,11 +870,20 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    !! \frac{\partial Vt_w}{\partial X} & \frac{\partial Vt_w}{\partial Y} & \frac{\partial Vt_w}{\partial Z} \\
    !! \end{bmatrix} \f$
    !-------------------------------------------------------------------------------------------------
-   tmp_du = V_tmp * HShr_tmp /p%RefLength * CosPropDir
+   zr = RotatePosition(3)/p%RefHt
+   tmp_du = op%V * op%HShr /p%RefLength * CosPropDir
    dVhdx  = tmp_du * SinDelta
-   dVhdy  = tmp_du * CosDelta
-   dVhdz  = V_tmp * ( VShr_tmp / p%RefHt * ( Position(3)/p%RefHt ) ** (VShr_tmp-1.0_ReKi) + VLinShr_tmp/p%RefLength)
+   dVhdy  = tmp_du * CosDelta   
+   dVhdz  = op%V * ( op%VShr / p%RefHt * zr**(op%VShr-1.0_ReKi) + op%VLinShr/p%RefLength)
    
+   dVhdV = ( ( RotatePosition(3)/p%RefHt ) ** op%VShr &                                             ! power-law wind shear
+             + ( op%HShr   * ( RotatePosition(2) * CosDelta + RotatePosition(1) * SinDelta ) &      ! horizontal linear shear
+             +  op%VLinShr * ( RotatePosition(3) - p%RefHt ) )/p%RefLength  )                       ! vertical linear shear   
+   Vh = op%V * dVhdV + op%Vgust
+   
+   dVhdVShr = op%V * zr**op%VShr * log(zr)
+   dVhdPD   = op%V * op%HShr / p%RefLength * ( RotatePosition(1) * CosDelta - RotatePosition(2) * SinDelta )
+             
    tmp_du =  CosPropDir*CosDelta  - SinPropDir*SinDelta
    tmp_dv = -SinPropDir*CosDelta  - CosPropDir*SinDelta
       
@@ -911,7 +909,7 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    dYdu(2,2) = tmp_dv*dVhdy
       
       !> \f$ \frac{\partial Vt_w}{\partial Y} = 0 \f$
-   dYdu(3,1) = 0.0_ReKi
+   dYdu(3,2) = 0.0_ReKi
       
       
       !> \f$ \frac{\partial Vt_u}{\partial Z} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
@@ -923,11 +921,62 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    dYdu(2,3) = tmp_dv*dVhdz
             
       !> \f$ \frac{\partial Vt_w}{\partial Z} = 0 \f$
-   dYdu(3,1) = 0.0_ReKi
-      
+   dYdu(3,3) = 0.0_ReKi
+   
+   
+   
+      ! \f$ \frac{\partial Vt_u}{\partial V} =  \f$
+   dYdu(1,4) = tmp_du*dVhdV      
+      ! \f$ \frac{\partial Vt_v}{\partial V} =  \f$
+   dYdu(2,4) = tmp_dv*dVhdV
+      !> \f$ \frac{\partial Vt_w}{\partial V} = 0 \f$
+   dYdu(3,4) = 0.0_ReKi
+   
+
+      ! \f$ \frac{\partial Vt_u}{\partial VShr} =  \f$
+   dYdu(1,5) = tmp_du*dVhdVShr
+      ! \f$ \frac{\partial Vt_v}{\partial VShr} =  \f$
+   dYdu(2,5) = tmp_dv*dVhdVShr
+      !> \f$ \frac{\partial Vt_w}{\partial VShr} = 0 \f$
+   dYdu(3,5) = 0.0_ReKi
+
+      ! \f$ \frac{\partial Vt_u}{\partial PropDir} =  \f$
+   dYdu(1,6) = tmp_dv*Vh + tmp_du*dVhdPD
+      ! \f$ \frac{\partial Vt_v}{\partial PropDir} =  \f$
+   dYdu(2,6) = -tmp_du*Vh + tmp_dv*dVhdPD
+      !> \f$ \frac{\partial Vt_w}{\partial PropDir} = 0 \f$
+   dYdu(3,6) = 0.0_ReKi
+   
    RETURN
 
 END SUBROUTINE IfW_UniformWind_JacobianPInput
+!..................................................................................................................................
+!> Routine to compute the Jacobians of the output (Y) function with respect to the inputs (u). The partial 
+!! derivative dY/du is returned. This submodule does not follow the modularization framework.
+SUBROUTINE IfW_UniformWind_GetOP( t, p, m, OP_out )
+
+   REAL(DbKi),                            INTENT(IN   )   :: t             !< Current simulation time in seconds
+   REAL(ReKi),                            INTENT(  OUT)   :: OP_out(2)     !< operating point (HWindSpeed and PLexp
+   TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )   :: p             !< Parameters
+   TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)   :: m             !< Misc/optimization variables
+
+      ! Local Variables
+   TYPE(IfW_UniformWind_Intrp)                            :: op             ! interpolated values of InterpParams
+      
+            
+   !-------------------------------------------------------------------------------------------------
+   !> 1. Linearly interpolate parameters in time at operating point (or use nearest-neighbor to extrapolate)
+   !! (compare with nwtc_num::interpstpreal) 
+   !-------------------------------------------------------------------------------------------------
+   CALL InterpParams(t, p, m, op)
+            
+   OP_out(1) = op%V
+   OP_out(2) = op%VSHR
+   
+   RETURN
+
+END SUBROUTINE IfW_UniformWind_GetOP
+
 
 !====================================================================================================
 END MODULE IfW_UniformWind

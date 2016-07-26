@@ -234,7 +234,6 @@ SUBROUTINE ReadTurbulenceData(p, InitInp, ErrStat, ErrMsg)
    INTEGER                                                   :: IC               ! Loop counter for the number of wind components
    INTEGER                                                   :: IX               ! Loop counter for the number of grid points in the X direction
    INTEGER                                                   :: IY               ! Loop counter for the number of grid points in the Y direction
-   INTEGER                                                   :: IZ               ! Loop counter for the number of grid points in the Z direction
    INTEGER                                                   :: unWind           ! unit number for reading binary files
 
    INTEGER(IntKi)                                           :: TmpErrStat        ! temporary error status
@@ -319,17 +318,13 @@ SUBROUTINE ScaleTurbulence(p, InitInp, Interval, InitOut, MiscVars, ErrStat, Err
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Message about errors
    
       ! Local Variables:
-   REAL(ReKi)                                               :: position(3)       ! location where std dev of wind speed will be computed
-   REAL(DbKi)                                               :: t                 ! time  
    REAL(DbKi)                                               :: v(3)              ! instanteanous wind speed at target position   
    REAL(DbKi)                                               :: vMean(3)          ! average wind speeds over time at target position
    REAL(DbKi)                                               :: vSum(3)           ! sum over time of wind speeds at target position
    REAL(DbKi)                                               :: vSum2(3)          ! sum of wind speeds squared
    REAL(ReKi)                                               :: ActualSigma(3)    ! computed standard deviation
    
-   INTEGER                                                  :: n                 ! number of time steps between TStart and TEnd
    INTEGER                                                  :: ic                ! Loop counter for wind component
-   INTEGER                                                  :: it                ! Loop counter for time
    INTEGER                                                  :: ix                ! Loop counter for x
    INTEGER                                                  :: iy                ! Loop counter for y
    INTEGER                                                  :: iz                ! Loop counter for z
@@ -596,8 +591,6 @@ END SUBROUTINE IfW_HAWCWind_CalcOutput
       REAL(ReKi)                                         :: ZGRID
       REAL(ReKi)                                         :: N(8)           ! array for holding scaling factors for the interpolation algorithm
       REAL(ReKi)                                         :: u(8)           ! array for holding the corner values for the interpolation algorithm across a cubic volume
-      REAL(ReKi)                                         :: M(4)           ! array for holding scaling factors for the interpolation algorithm
-      REAL(ReKi)                                         :: v(4)           ! array for holding the corner values for the interpolation algorithm across an area
 
       INTEGER(IntKi)                                     :: IDIM
       INTEGER(IntKi)                                     :: IXHI

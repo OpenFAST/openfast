@@ -127,9 +127,6 @@ typedef  ^               InitOutputType         CHARACTER(LinChanLen) LinNames_y
 typedef  ^               InitOutputType         CHARACTER(LinChanLen) LinNames_u      {:} - -   "Names of the inputs used in linearization" -
 typedef  ^               InitOutputType         LOGICAL               RotFrame_y      {:} - -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
 typedef  ^               InitOutputType         LOGICAL               RotFrame_u      {:} - -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
-typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation"                          radians
-typedef  ^                       ^                 ReKi              RefHt             -     -     -     "reference height; was HH (hub height); used to center the wind"  meters
-typedef  ^                       ^                 ReKi              RefLength         -     -     -     "reference length used to scale the linear shear"              meters
 
 
 # ..... Misc/Optimization variables.................................................................................................
@@ -170,7 +167,6 @@ typedef  ^                       ^        IfW_UserWind_ParameterType UserWind   
 typedef  ^                       ^                 IntKi             NumOuts           -     0     -     "Number of parameters in the output list (number of outputs requested)" -
 typedef  ^                       ^                 OutParmType       OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
 typedef  ^                       ^                 IntKi             OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for WindViXYZ in linearization analysis" -
-typedef  ^                       ^                 IntKi             NumLinOuts        -     0     -     "Number of WindViXYZ variables in WriteOutput for linearization analysis" -
 typedef  ^                       ^          lidar_ParameterType      lidar             -     -     -     "Lidar parameter data"                                       -
 
 
@@ -186,7 +182,7 @@ typedef  ^                    OutputType           ReKi              VelocityUVW
 typedef  ^                    OutputType           ReKi              WriteOutput       :     -     -     "Array with values to output to file"                    -
 typedef  ^                       ^                 ReKi              DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"  meters/sec
 typedef  ^                       ^              lidar_OutputType     lidar             -     -     -     "Lidar data"                                       -
-typedef  ^                       ^       IfW_UniformWind_OutputType  UniformWind       -     -     -     "uniform/steady wind operating point"
+#typedef  ^                       ^       IfW_UniformWind_OutputType  UniformWind       -     -     -     "uniform/steady wind operating point"
 
 # ..... States not used by this module ...................................................................................................................
 typedef  ^                    ContinuousStateType  ReKi              DummyContState    -     -     -     "Remove this variable if you have continuous states"     -

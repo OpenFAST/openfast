@@ -708,9 +708,9 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       ! allocate and fill variables for linearization:
       if (InitInp%Linearize) then
          
-         CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3, 'LinNames_u', TmpErrStat, TmpErrMsg)
+         CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + 3, 'LinNames_u', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3, 'RotFrame_u', TmpErrStat, TmpErrMsg)
+         CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + 3, 'RotFrame_u', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3+p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
@@ -727,6 +727,10 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
                InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
             end do            
          end do
+
+         InitOutData%LinNames_u(InitInp%NumWindPoints*3 + 1) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'
+         InitOutData%LinNames_u(InitInp%NumWindPoints*3 + 2) = 'Extended input: vertical power-law shear exponent, -'
+         InitOutData%LinNames_u(InitInp%NumWindPoints*3 + 3) = 'Extended input: propagation direction, rad'         
          
          do i=1,p%NumOuts
             InitOutData%LinNames_y(i+3*InitInp%NumWindPoints) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
@@ -736,9 +740,9 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          InitOutData%RotFrame_u = .false. 
          InitOutData%RotFrame_y = .false. 
          
-         InitOutData%PropagationDir = -p%PropagationDir
-         InitOutData%RefHt = p%UniformWind%RefHt
-         InitOutData%RefLength = p%UniformWind%RefLength
+         !InitOutData%PropagationDir = -p%PropagationDir
+         !InitOutData%RefHt = p%UniformWind%RefHt
+         !InitOutData%RefLength = p%UniformWind%RefLength
          
       end if
                   
@@ -1130,9 +1134,11 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
    CHARACTER(ErrMsgLen)                                           :: ErrMsg2            ! temporary error message
    CHARACTER(*), PARAMETER                                        :: RoutineName = 'InflowWind_JacobianPInput'
       
-   REAL(ReKi)                                                     :: local_dYdu(3,3)
-   integer                                                        :: i
+   REAL(ReKi)                                                     :: local_dYdu(3,6)
+   integer                                                        :: i, n
    integer                                                        :: i_start, i_end  ! indices for input/output start and end
+   integer                                                        :: node, comp, SignM
+   
       
       ! Initialize ErrStat
 
@@ -1147,7 +1153,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
          ! outputs are all velocities at all positions plus the WriteOutput values
          !
       if (.not. ALLOCATED(dYdu)) then
-         CALL AllocAry( dYdu, SIZE(u%PositionXYZ)+p%NumOuts, SIZE(u%PositionXYZ), 'dYdu', ErrStat2, ErrMsg2 )
+         CALL AllocAry( dYdu, SIZE(u%PositionXYZ)+p%NumOuts, SIZE(u%PositionXYZ)+3, 'dYdu', ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       end if
          
@@ -1160,8 +1166,9 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
          
          dYdu = 0.0_ReKi ! initialize all non-diagonal entries to zero (position of node effects the output of only that node) 
          
+         n = SIZE(u%PositionXYZ,2)
             ! these are the positions used in the module coupling
-         do i=1, SIZE(u%PositionXYZ,2)
+         do i=1,n
             ! note that p%RotToWind(1,1) = cos(p%PropagationDir) and p%RotToWind(2,1) = sin(p%PropagationDir), which are the
             ! values we need to compute the jacobian.
             call IfW_UniformWind_JacobianPInput( t, u%PositionXYZ(:,i), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )
@@ -1169,14 +1176,26 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
             i_end  = 3*i
             i_start= i_end - 2
             
-            dYdu(i_start:i_end,i_start:i_end) = local_dYdu
+            dYdu(i_start:i_end,i_start:i_end) = local_dYdu(:,1:3)
+            
+            dYdu(i_start:i_end,n*3+1:) = local_dYdu(:,4:6)
+            
          end do            
 
             ! these are the InflowWind WriteOutput velocities (and note that we may not have all of the components of each point) 
-         ! they do not depend on the inputs, so they are all zero
-         !do i=1, p%NumLinOuts               
-         !   call IfW_UniformWind_JacobianPInput( t, p%WindViXYZ(:,i), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )                                                                                       
-         !end do            
+         ! they do not depend on the inputs, so the derivatives w.r.t. X, Y, Z are all zero
+         do i=1, p%NumOuts               
+            node  = p%OutParamLinIndx(1,i) ! output node
+            comp  = p%OutParamLinIndx(2,i) ! component of output node
+
+            if (node > 0) then
+               call IfW_UniformWind_JacobianPInput( t, p%WindViXYZ(:,node), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )                                                                                       
+            else
+               local_dYdu = 0.0_ReKi
+            end if            
+            
+            dYdu(3*n+i, 3*n+1:) = p%OutParam(i)%SignM * local_dYdu( comp , 4:6)         
+         end do            
 
       CASE DEFAULT
 
@@ -1456,9 +1475,12 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
    ErrMsg  = ''
 
    IF ( PRESENT( u_op ) ) THEN
-      call AllocAry(u_op, size(u%PositionXYZ), 'u_op', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat >= AbortErrLev) return
+      if (.not. allocated(u_op)) then
+         call AllocAry(u_op, size(u%PositionXYZ)+3, 'u_op', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end if
+      
          
       index = 0
       do i=1,size(u%PositionXYZ,2)
@@ -1468,13 +1490,18 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
          end do            
       end do  
       
+      call IfW_UniformWind_GetOP( t, p%UniformWind, m%UniformWind, u_op(index+1:index+2) )
+      u_op(index + 3) = p%PropagationDir
+      
    END IF
 
    IF ( PRESENT( y_op ) ) THEN
-      call AllocAry(y_op, size(u%PositionXYZ)+p%NumOuts, 'y_op', ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat >= AbortErrLev) return
-
+      if (.not. allocated(y_op)) then
+         call AllocAry(y_op, size(u%PositionXYZ)+p%NumOuts, 'y_op', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end if
+      
       index = 0
       do i=1,size(u%PositionXYZ,2)
          do j=1,size(u%PositionXYZ,1)
@@ -1483,8 +1510,8 @@ SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMs
          end do            
       end do
          
-      do i=1,p%NumOuts
-         y_op(i+index) = y%WriteOutput(i)
+      do i=1,p%NumOuts         
+         y_op(i+index) = y%WriteOutput( i )
       end do      
          
    END IF
