@@ -62,7 +62,7 @@ MODULE InflowWind
    IMPLICIT NONE
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.03.00a-bjj', '15-Jun-2016' )
+   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.03.00', '26-Jul-2016' )
 
 
 

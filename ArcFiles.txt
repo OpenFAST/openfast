@@ -9,9 +9,9 @@ Source/Driver/InflowWind_Driver.f90
 Source/Driver/InflowWind_Driver_Subs.f90
 Source/Driver/InflowWind_Driver_Types.f90
 
-Source\dependencies\NWTC_Library\*.f90
-Source\dependencies\NWTC_Library\Registry_NWTC_Library.txt
-Source\dependencies\NWTC_Library\dependencies\lapack\*.f90
+Source\NWTC_Library\source\*.f90
+Source\NWTC_Library\source\Registry_NWTC_Library.txt
+Source\NWTC_Library\NetLib\lapack\*.f90
 
 Docs\InflowWind_Manual.pdf
 Docs\Doxygen\Doxyfile
