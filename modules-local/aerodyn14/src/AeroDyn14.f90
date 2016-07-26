@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 !> Module for the old aerodynamic routines. This module is for loose coupling only, without linearization, because it does not
 !! fully conform to the FAST framework. This module will eventually be replaced by AeroDyn (i.e., AeroDyn v15 [aerodyn.f90])
 MODULE AeroDyn14
@@ -103,18 +99,10 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrSt
    ErrStat = ErrID_None
    ErrMess  = ""
    InterpIndx = 1
-   !-------------------------------------------------------------------------------------------------
-   ! Check that the module hasn't already been initialized.
-   !-------------------------------------------------------------------------------------------------
 
-   IF ( p%Initialized ) THEN
-      CALL SetErrStat( ErrID_Warn,'AeroDyn has already been initialized.',ErrStat,ErrMess,RoutineName)
-      RETURN
-   ELSE
-      p%Initialized = .TRUE.
-      CALL NWTC_Init( )
-   END IF
-
+   
+   CALL NWTC_Init( )
+   
    
          ! Display the module information
 
@@ -614,10 +602,7 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrSt
    m%NoLoadsCalculated   = .TRUE.
 
    p%TwoPiNB     = TwoPi / REAL( p%NumBl, ReKi )
-
-   p%Initialized = .TRUE.
-   
-        
+           
    
    DO ie = 1, maxInfl
       p%DynInflow%xMinv(ie) = PIBY2 / hfunc(MRvector(ie), NJvector(ie))   !bjj: this is really just a Fortran parameter, too.
@@ -802,15 +787,6 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
    ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMess  = ""
-
-   !-------------------------------------------------------------------------------------------------
-   ! Check that the module has been initialized.
-   !-------------------------------------------------------------------------------------------------
-   IF ( .NOT. p%Initialized ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMess = 'AeroDyn must be initialized before trying to calculate aerodynamic loads.'
-      RETURN
-   END IF
 
 
    !-------------------------------------------------------------------------------------------------

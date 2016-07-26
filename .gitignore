@@ -58,6 +58,7 @@ BuildLog.htm
 *.rar
 
 # NWTC web developer
+Archive/*
 /ArcFiles.txt
 /SourceFiles.txt
 /ArcWin.txt

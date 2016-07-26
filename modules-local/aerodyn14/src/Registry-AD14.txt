@@ -4,11 +4,6 @@
 # It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
 # See the NWTC Programmer's Handbook for further information on the format/contents of this file.
 ###################################################################################################################################
-# File last committed: $Date$
-# (File) Revision #: $Rev$
-# URL: $HeadURL$
-###################################################################################################################################
-#
 # Entries are of the form
 # <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
 #
@@ -366,7 +361,6 @@ typedef	^	ParameterType	LOGICAL	Echo	-	.FALSE.	-
 typedef	^	ParameterType	LOGICAL	MultiTab	-
 typedef	^	ParameterType	LOGICAL	LinearizeFlag
 typedef	^	ParameterType	LOGICAL	OutputPlottingInfo	-	.FALSE.
-typedef	^	ParameterType	LOGICAL	Initialized	-	.FALSE.	-		-
 typedef	^	ParameterType	LOGICAL	UseDWM	-	.FALSE.	-	"flag to determine if DWM module should be used"	-
 typedef	^	ParameterType	ReKi	TwoPiNB	-	-	-	"2*pi/num of blades"	-
 typedef	^	ParameterType	INTEGER	NumBl	-	-	-	"Number of Blades"
