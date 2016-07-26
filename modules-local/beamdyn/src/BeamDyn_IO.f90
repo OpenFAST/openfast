@@ -23,7 +23,7 @@ MODULE BeamDyn_IO
 
    IMPLICIT NONE
 
-   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.01.04','23-Jul-2016')
+   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.01.04','26-Jul-2016')
 
 
 ! ===================================================================================================
@@ -1461,8 +1461,6 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    INTEGER(IntKi)                            :: node_no
    INTEGER(IntKi)                            :: temp_id
    REAL(BDKi)                                :: temp_glb(3)
-   REAL(BDKi)                                :: temp_root0(3)
-   REAL(BDKi)                                :: temp_rootR0(3)
    REAL(BDKi)                                :: temp_vec(3)
    REAL(BDKi)                                :: temp_vec2(3)
    REAL(BDKi)                                :: temp_glbp(3)
@@ -1505,29 +1503,17 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    temp_glbp(2) = p%GlbPos(3)
    temp_glbp(3) = p%GlbPos(1)
    
-   temp_vec = MATMUL(p%GlbRot,p%uuN0(1:3,1))
-   temp_root0(1) = temp_vec(2)    ! Initial root position vector resolved in global frame
-   temp_root0(2) = temp_vec(3)
-   temp_root0(3) = temp_vec(1)
-
-   temp_vec = MATMUL(p%GlbRot,p%uuN0(4:6,1))
-   temp_rootR0(1) = temp_vec(2)   ! Initial root rotation rarameters resolved in global frame
-   temp_rootR0(2) = temp_vec(3)
-   temp_rootR0(3) = temp_vec(1)
-
       ! tip motions:   
    temp_vec = MATMUL(p%GlbRot, p%uuN0( (p%node_elem*p%dof_node-5):(p%node_elem*p%dof_node-3),p%elem_total) )
    temp_tip0(1) = temp_vec(2)
    temp_tip0(2) = temp_vec(3)
    temp_tip0(3) = temp_vec(1)
    temp_ini(:) = temp_glbp(:) + temp_tip0(:)
-   temp_roott(:) = temp_glbp(:) + temp_root0 + m%u2%RootMotion%TranslationDisp(:,1)
+   temp_roott(:) = temp_glbp(:) + m%u2%RootMotion%TranslationDisp(:,1)
    temp33_2=TRANSPOSE(m%u2%RootMotion%Orientation(1:3,1:3,1))  ! possible type conversion here
    CALL BD_CrvExtractCrv(temp33_2,temp_vec,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvCompose(temp_vec2,temp_rootR0,temp_glb,0,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvCompose(temp_cc,temp_vec,temp_vec2,2,ErrStat2,ErrMsg2)
+   CALL BD_CrvCompose(temp_cc,temp_vec,temp_glb,2,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvMatrixR(temp_cc,temp_R,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
