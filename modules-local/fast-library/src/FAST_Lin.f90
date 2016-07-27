@@ -309,9 +309,9 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat, ErrMsg)
    do i = 1,p_FAST%Lin_NumMods
       ThisModule = p_FAST%Lin_ModOrder( i )
       
-      call AllocAry ( y_FAST%Lin%Modules(ThisModule)%Use_u, size(y_FAST%Lin%Modules(ThisModule)%Names_u), TRIM(y_FAST%Module_Abrev(ThisModule))//'_'//'Use_u', ErrStat2, ErrMsg2)
+      call AllocAry ( y_FAST%Lin%Modules(ThisModule)%Use_u, size(y_FAST%Lin%Modules(ThisModule)%Names_u), TRIM(y_FAST%Module_Abrev(ThisModule))//'_Use_u', ErrStat2, ErrMsg2)
          call SetErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call AllocAry ( y_FAST%Lin%Modules(ThisModule)%Use_y, size(y_FAST%Lin%Modules(ThisModule)%Names_y), TRIM(y_FAST%Module_Abrev(ThisModule))//'_'//'Use_y', ErrStat2, ErrMsg2)
+      call AllocAry ( y_FAST%Lin%Modules(ThisModule)%Use_y, size(y_FAST%Lin%Modules(ThisModule)%Names_y), TRIM(y_FAST%Module_Abrev(ThisModule))//'_Use_y', ErrStat2, ErrMsg2)
          call SetErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)                     
    end do
    if (ErrStat >= AbortErrLev) return
@@ -735,7 +735,6 @@ contains
       if (allocated(dZdz)) deallocate(dZdz)
       if (allocated(dZdu)) deallocate(dZdu)
       if (allocated(ipiv)) deallocate(ipiv)     
-      if (allocated(ext))  deallocate(ext)
       
       if (allocated(dUdu)) deallocate(dUdu)
       if (allocated(dUdy)) deallocate(dUdy)
@@ -1124,7 +1123,7 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
    
       ! local variables
    INTEGER(IntKi)                          :: ThisModule          ! Module ID
-   INTEGER(IntKi)                          :: i                   ! loop counter
+   INTEGER(IntKi)                          :: i, j                ! loop counter
    INTEGER(IntKi)                          :: r_start, r_end      ! row start/end of glue matrix
    
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
@@ -1164,35 +1163,22 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
    
    dUdu = 0.0_ReKi      ! most of this matrix is zero, so we'll just initialize everything and set only the non-zero parts below
    
-      !............
-      ! \f$ \frac{\partial U_\Lambda^{IfW}}{\partial u^{IfW}} = I \f$ 
-      !............
-   ThisModule = Module_Ifw
-   r_start = p_FAST%LinStartIndx(ThisModule,LIN_INPUT_COL)
-   r_end   = r_start + p_FAST%SizeLin(ThisModule,LIN_INPUT_COL) - 1
-   do i = r_start,r_end
-      dUdu(i,i) = 1.0_ReKi
-   end do
-
-      !............
-      ! \f$ \frac{\partial U_\Lambda^{SrvD}}{\partial u^{SrvD}} = I \f$ 
-      !............
-   ThisModule = Module_SrvD
-   r_start = p_FAST%LinStartIndx(ThisModule,LIN_INPUT_COL)
-   r_end   = r_start + p_FAST%SizeLin(ThisModule,LIN_INPUT_COL) - 1
-   do i = r_start,r_end
-      dUdu(i,i) = 1.0_ReKi
-   end do   
    
       !............
-      ! \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{ED}} = I \f$ 
+      !> \f$ \frac{\partial U_\Lambda^{IfW}}{\partial u^{IfW}} = I \f$ \n
+      !> \f$ \frac{\partial U_\Lambda^{SrvD}}{\partial u^{SrvD}} = I \f$ \n
+      !> \f$ \frac{\partial U_\Lambda^{ED}}{\partial u^{ED}} = I \f$ 
+      ! note that we're also doing \f$ \frac{\partial U_\Lambda^{AD}}{\partial u^{AD}} = I \f$ here, we will add values to the off=diagonal terms later
       !............
-   ThisModule = Module_ED
-   r_start = p_FAST%LinStartIndx(ThisModule,LIN_INPUT_COL)
-   r_end   = r_start + p_FAST%SizeLin(ThisModule,LIN_INPUT_COL) - 1
-   do i = r_start,r_end
-      dUdu(i,i) = 1.0_ReKi
+   do j = 1,p_FAST%Lin_NumMods
+      ThisModule = p_FAST%Lin_ModOrder(j) 
+      r_start = p_FAST%LinStartIndx(ThisModule,LIN_INPUT_COL)
+      r_end   = r_start + p_FAST%SizeLin(ThisModule,LIN_INPUT_COL) - 1
+      do i = r_start,r_end
+         dUdu(i,i) = 1.0_ReKi
+      end do
    end do
+   
    
       !............
       ! \f$ \frac{\partial U_\Lambda^{IfW}}{\partial u^{AD}} \end{bmatrix} = \f$   
@@ -1307,7 +1293,7 @@ SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, u_AD, dUdu )
          do k = 1,size(u_AD%BladeRootMotion)         
             AD_Start_Bl = AD_Start_Bl + u_AD%BladeRootMotion(k)%NNodes * 3 ! 1 field (MASKID_Orientation) with 3 components
          end do
-         ! next is u_AD%BladeMotion(k); note that it has 3 fields and we only need 1
+         ! next is u_AD%BladeMotion(k):
                   
          DO K = 1,SIZE(u_AD%BladeMotion)
             DO J = 1,u_AD%BladeMotion(k)%Nnodes
@@ -1471,10 +1457,10 @@ SUBROUTINE Linear_AD_InputSolve_du_AD( p_FAST, u_AD, y_ED, MeshMapData, dUdu, Er
    ! note that we assume this block matrix has been initialized to zero before calling this routine
    
    ! first we set this block to have 1s on the diagonal:   
-   do j=p_FAST%LinStartIndx(MODULE_AD, LIN_INPUT_COL), &
-        p_FAST%LinStartIndx(MODULE_AD, LIN_INPUT_COL)+p_FAST%SizeLin(MODULE_AD, LIN_INPUT_COL) - 1
-      dUdu(j,j) = 1.0_ReKi
-   end do
+   !do j=p_FAST%LinStartIndx(MODULE_AD, LIN_INPUT_COL), &
+   !     p_FAST%LinStartIndx(MODULE_AD, LIN_INPUT_COL)+p_FAST%SizeLin(MODULE_AD, LIN_INPUT_COL) - 1
+   !   dUdu(j,j) = 1.0_ReKi
+   !end do
       
    ! then we look at how the translational displacement gets transfered to the translational velocity: 
       
@@ -1610,7 +1596,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, u_ED, y_ED, y_AD, u_AD, MeshMapData,
    INTEGER(IntKi)                                 :: ErrStat2         ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2          ! temporary Error message if ErrStat /= ErrID_None
    
-   CHARACTER(*), PARAMETER                        :: RoutineName = 'Linear_ED_InputSolve_du_AD' 
+   CHARACTER(*), PARAMETER                        :: RoutineName = 'Linear_ED_InputSolve_dy' 
    
    
       ! Initialize error status
