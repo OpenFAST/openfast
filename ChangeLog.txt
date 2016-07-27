@@ -1,6 +1,12 @@
 BeamDyn Change Log
 
 ================================================================================
+v1.01.04 26-Jul-2016
+- added the full finite-element mass and stiffness matrices of the blade model at time zero to the summary file
+- fixed a problem in BeamDyn whereby its velocities were initialized incorrectly when ElastoDyn was initialized
+  with nonzero deflections/displacements
+
+================================================================================
 v1.01.03 12-Apr-2016
 - modified validity check to use single-precision variables
 
