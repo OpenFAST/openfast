@@ -63,41 +63,17 @@ Compiling\DISCON_DLLs\DISCON.vfproj
 Utilities\ModeShapePolyFitting.xls
 Utilities\DISCON_DLL_template.f90
 
-Utilities\MatlabGeneratedOutput\Write_ChckOutLst.m
 
-Utilities\SimulationToolbox\FAST_Model_Conversion_MATLAB_Toolbox.pdf
+Utilities\MATLAB_Toolbox\ConvertFASTVersions\*
+Utilities\MATLAB_Toolbox\ConvertFASTVersions\InputConversions\*.m
+Utilities\MATLAB_Toolbox\ConvertFASTVersions\TemplateFiles\*
+Utilities\MATLAB_Toolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\*
 
-Utilities\SimulationToolbox\ConvertFASTVersions\*.m
-
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\AD_Primary.dat
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Blade.dat
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Furling.dat
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Tower.dat
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\OutListParameters.xlsx
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\*.dat
-
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\*.m
-
-Utilities\SimulationToolbox\FAST2Matlab\Fast2Matlab.m
-Utilities\SimulationToolbox\FAST2Matlab\HD2Matlab.m
-Utilities\SimulationToolbox\FAST2Matlab\ParseFASTInputLine.m
-
-Utilities\SimulationToolbox\Matlab2FAST\Matlab2FAST.m
-Utilities\SimulationToolbox\Matlab2FAST\Matlab2HD.m
-Utilities\SimulationToolbox\Matlab2FAST\writeUniformWindFile.m
-
-Utilities\SimulationToolbox\Utilities\GetFastPar.m
-Utilities\SimulationToolbox\Utilities\GetFullFileName.m
-Utilities\SimulationToolbox\Utilities\GetOutListParameters.m
-Utilities\SimulationToolbox\Utilities\GetOutListVars.m
-Utilities\SimulationToolbox\Utilities\ReadFASTbinary.m
-Utilities\SimulationToolbox\Utilities\ReadFASTtext.m
-Utilities\SimulationToolbox\Utilities\ReadFASTmesh.m
-Utilities\SimulationToolbox\Utilities\ReadSubDynSummary.m
-Utilities\SimulationToolbox\Utilities\SetFastPar.m
-
-Utilities\SimulationToolbox\Visualization\PlotFASToutput.m
-Utilities\SimulationToolbox\Visualization\DrawMesh.m
+Utilities\MATLAB_Toolbox\FAST2MATLAB\*
+Utilities\MATLAB_Toolbox\MATLAB2FAST\*
+Utilities\MATLAB_Toolbox\Plots\*
+Utilities\MATLAB_Toolbox\ProgrammingTools\*
+Utilities\MATLAB_Toolbox\Utilities\*
 
 
 CertTest\ConvertFiles.m
