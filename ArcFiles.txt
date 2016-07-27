@@ -335,9 +335,7 @@ CertTest\WP_Baseline\Wind\IEC.ipt
 
 CerttEST\WP_Baseline\WP_Baseline_AeroDyn_blade.dat
 CertTest\WP_Baseline\Baseline_Blade.dat
-CertTest\WP_Baseline\Baseline_Blade_NoDamp.dat
 CertTest\WP_Baseline\Baseline_Tower.dat
-CertTest\WP_Baseline\Baseline_Tower_NoDamp.dat
 
 CertTest\WP_Baseline\WP_Baseline_InflowWind_12mps.dat
 CertTest\WP_Baseline\WP_Baseline_InflowWind_ECD.dat
@@ -353,6 +351,7 @@ CertTest\WP_Baseline\Test12_ServoDyn.dat
 CertTest\WP_Baseline\Test13_ElastoDyn.dat
 CertTest\WP_Baseline\Test13_ServoDyn.dat
 
+CertTest\WP_Baseline\Test14_ElastoDyn.dat
 
 CertTest\Test01.fst
 CertTest\Test01.cru
@@ -392,6 +391,9 @@ CertTest\Test12.cru
 
 CertTest\Test13.fst
 CertTest\Test13.cru
+
+CertTest\Test14.fst
+CertTest\Test14.m
 
 CertTest\Test15.fst
 CertTest\Test15.cru
@@ -486,6 +488,10 @@ CertTest\TstFiles\Test13.ED.sum
 CertTest\TstFiles\Test13.AD.sum
 CertTest\TstFiles\Test13.sts
 CertTest\TstFiles\Test13.pmf
+
+CertTest\TstFiles\Test14.ED.sum
+CertTest\TstFiles\Test14.1.lin
+CertTest\TstFiles\Test14.eig
 
 
 CertTest\TstFiles\Test15.sum
