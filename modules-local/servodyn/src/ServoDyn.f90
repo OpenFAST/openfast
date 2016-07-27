@@ -33,7 +33,7 @@ MODULE ServoDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: SrvD_Ver = ProgDesc( 'ServoDyn', 'v1.06.00a-bjj', '17-Jun-2016' )
+   TYPE(ProgDesc), PARAMETER            :: SrvD_Ver = ProgDesc( 'ServoDyn', 'v1.06.00a-bjj', '26-Jul-2016' )
    
 #ifdef COMPILE_SIMULINK
    LOGICAL, PARAMETER, PUBLIC           :: Cmpl4SFun  = .TRUE.                            ! Is the module being compiled as an S-Function for Simulink?
@@ -1058,7 +1058,6 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       CHARACTER(*), PARAMETER                        :: RoutineName = 'SrvD_UpdateDiscState'
-      REAL(ReKi)                                     :: temp
       
          ! Initialize ErrStat
 
@@ -3144,7 +3143,6 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
    INTEGER                      :: ErrStat2                                        ! temporary (local) error status
    INTEGER                      :: I                                               ! Generic loop-counting index
-   INTEGER                      :: J                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
 
    LOGICAL                      :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
@@ -3426,17 +3424,7 @@ SUBROUTINE Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! Local variables:
 
-   COMPLEX(ReKi)                :: Current1                                        ! Current passing through the stator (amps)
-   COMPLEX(ReKi)                :: Current2                                        ! Current passing through the rotor (amps)
-   COMPLEX(ReKi)                :: Currentm                                        ! Magnitizing current (amps)
-
-   REAL(ReKi)                   :: ComDenom                                        ! Common denominator of variables used in the TEC model
    REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque {0 (off) <= HSSBrFrac <= 1 (full)} (-)
-   REAL(ReKi)                   :: PwrLossS                                        ! Power loss in the stator (watts)
-   REAL(ReKi)                   :: PwrLossR                                        ! Power loss in the rotor (watts)
-   REAL(ReKi)                   :: PwrMech                                         ! Mechanical power (watts)
-   REAL(ReKi)                   :: Slip                                            ! Generator slip.
-   REAL(ReKi)                   :: SlipRat                                         ! Generator slip ratio.
 
 
 
@@ -3618,7 +3606,6 @@ SUBROUTINE CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
    COMPLEX(ReKi)                                  :: Currentm    ! Magnitizing current (amps)
                                                   
    REAL(ReKi)                                     :: ComDenom    ! Common denominator of variables used in the TEC model
-   REAL(ReKi)                                     :: HSSBrFrac   ! Fraction of full braking torque {0 (off) <= HSSBrFrac <= 1 (full)} (-)
    REAL(ReKi)                                     :: PwrLossS    ! Power loss in the stator (watts)
    REAL(ReKi)                                     :: PwrLossR    ! Power loss in the rotor (watts)
    REAL(ReKi)                                     :: PwrMech     ! Mechanical power (watts)
@@ -3798,21 +3785,7 @@ SUBROUTINE Torque_JacobianPInput( t, u, p, x, xd, z, OtherState, m, GenTrq, Elec
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-      ! Local variables:
-
-   COMPLEX(ReKi)                :: Current1                                        ! Current passing through the stator (amps)
-   COMPLEX(ReKi)                :: Current2                                        ! Current passing through the rotor (amps)
-   COMPLEX(ReKi)                :: Currentm                                        ! Magnitizing current (amps)
-
-   REAL(ReKi)                   :: ComDenom                                        ! Common denominator of variables used in the TEC model
-   REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque {0 (off) <= HSSBrFrac <= 1 (full)} (-)
-   REAL(ReKi)                   :: PwrLossS                                        ! Power loss in the stator (watts)
-   REAL(ReKi)                   :: PwrLossR                                        ! Power loss in the rotor (watts)
-   REAL(ReKi)                   :: PwrMech                                         ! Mechanical power (watts)
-   REAL(ReKi)                   :: Slip                                            ! Generator slip.
-   REAL(ReKi)                   :: SlipRat                                         ! Generator slip ratio.
-
-
+ 
 
       ! Initialize variables
    ErrStat = ErrID_None
@@ -3864,13 +3837,13 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
    REAL(ReKi)                                     :: GenTrq      ! generator torque 
    
    REAL(ReKi)                                     :: ComDenom, ComDenom_du  ! temporary variable (common denominator)
-   REAL(ReKi)                                     :: PwrLossS, PwrLossS_du  ! Power loss in the stator (watts) and its derivative w.r.t. u%HSS_Spd 
-   REAL(ReKi)                                     :: PwrLossR, PwrLossR_du  ! Power loss in the rotor (watts) and its derivative w.r.t. u%HSS_Spd 
+   REAL(ReKi)                                     :: PwrLossS_du ! Power loss in the stator (watts) and its derivative w.r.t. u%HSS_Spd 
+   REAL(ReKi)                                     :: PwrLossR_du ! Power loss in the rotor (watts) and its derivative w.r.t. u%HSS_Spd 
    REAL(ReKi)                                     :: PwrMech_du  ! partial derivative of Mechanical power (watts) w.r.t. u%HSS_Spd
    REAL(ReKi)                                     :: Slip        ! Generator slip
    REAL(ReKi)                                     :: SlipRat     ! Generator slip ratio
    
-   REAL(ReKi)                                     :: tmp, A, B, dAdu, dBdu
+   REAL(ReKi)                                     :: A, B, dAdu, dBdu
    REAL(ReKi)                                     :: SlipRat_du ! temporary variables for computing derivatives
       
    !REAL(ReKi)                                     :: S2          ! SlipRat**2
