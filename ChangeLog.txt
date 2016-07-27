@@ -1,0 +1,37 @@
+v15.03
+Version 15.02 integrates with the FAST v8 software v8.16.
+• Primary input file changes
+o Added FrozenWake
+• New features:
+o Added linearization capability
+
+v15.02 (April 2016)
+Version 15.02 integrates with the FAST v8 software v8.15.
+• Primary input file changes
+o IndToler can now be specified as “default”. The default in single precision is 5E-5; the default in double precision is 5E-10.
+• Airfoil data input file changes
+o InterpOrd was added. This variable gives the user an option to use either linear (InterpOrd = 1) or cubic-spline (InterpOrd = 3) methods to interpolate the quasi-steady table lookup. The "default" option will use cubic splines.
+o filtCutOff was added to the parameters specified for UA. This is the cut-off frequency (-3 dB corner frequency) in Hz for low-pass filtering the AoA input to UA, as well as the 1st and 2nd derivatives. filtCutOff can be specified as "default", which will set it to be 20 Hz.
+o When specifying coordinates for the airfoil shape, we added the aerodynamic center (reference point for the airfoil lift and drag forces, likely not on the surface of the airfoil) as the first point to be specified. The airfoil shape is currently unused by AeroDyn, but when AeroDyn is coupled to FAST, the airfoil shape will be used by FAST for blade surface visualization when enabled.
+• New or modified aerodynamics
+o Improved the BEMT solution algorithm, addressed numerical issues, and cleaned up the code.
+o Corrected the González and Minnema/Pierce UA models to match documented theory, addressed numerical issues, and enabled UA for the first time. While all of the UA models are documented in this manual, the original B-L model is not yet functional. Testing has shown that the González and Minnema/Pierce models produce reasonable hysteresis of the normal force, tangential force, and pitching-moment coefficients if the UA model parameters are set appropriately for a given airfoil, Reynold’s number, and/or Mach number. However, the results will differ a bit from earlier versions of AeroDyn, (which was based on the Minnema/Pierce extensions to B-L) even if the default UA model parameters are used, due to differences in the UA model logic between the versions. We recommend that users run test cases with uniform wind inflow and fixed yaw error (e.g., through the standalone AeroDyn driver) to examine the accuracy of the normal force, tangential
+force, and pitching-moment coefficient hysteresis and to adjust the UA model parameters appropriately.
+• Output file changes
+o Added output channels for blade-to-tower clearance.
+v15.00 (September 2015)
+• The AeroDyn v15 module interfaces with FAST v8.12.
+• The AeroDyn v15 source code has been entirely rewritten and is now fully compatible with the requirements of the FAST modularization framework.
+• The AeroDyn v15 module can be run uncoupled from FAST by a standalone driver code (in addition to the FAST v8 interface).
+• The InflowWind v3 routines have been converted from a submodule of AeroDyn to a core module of FAST v8. So, undisturbed wind inflow is no longer calculated within AeroDyn, but is passed into AeroDyn from the driver (either FAST or the standalone driver). Unlike previous versions, InflowWind v3 supports HAWC wind file formats and arbitrary wind directions for all wind file types.
+• The format of the AeroDyn v15 input files (including the airfoil data) is entirely different.
+• The BEM solution method in AeroDyn v15 is improved and more robust and now treats structural velocities identically to wind velocities (the induction calculation is based on the relative velocity between the wind and structure, whereas previously, structural velocities where only included in a few terms). As a result, small differences in tangential induction are expected under most conditions and overall differences are expected for large structural motions.
+• The Generalized Dynamic Wake (GDW) model is not yet available in AeroDyn v15.
+• The DWM interface is not yet available in AeroDyn v15.
+• Airfoil data is now interpolated via cubic splines (previously, linear interpolation was used). As a result, small differences in the aerodynamic loads are expected when the airfoil data used is coarse. Moreover, the interpolation of airfoil data based on Reynolds number or aerodynamic-control setting (e.g., flaps) is not yet available in AeroDyn v15.
+• The AeroDyn v15 module supports three UA modeling options: the original theoretical developments of B-L, extensions to the B-L developed by González, and extensions to the B-L model developed by Minnema/Pierce (previously, only the Minnema/Pierce extension was available).
+• The AeroDyn v15 module supports nonstraight blades, highly flexible blades, and geometrical differences between blades (previously, only identical straight blades were considered and structural motions were not handled consistently in all terms).
+• The tower influence on wind in AeroDyn v15 accounts for deflections/displacements of the tower (previously, the tower was assumed to be fixed and rigid).
+• The tower aerodynamic drag is available for floating offshore wind turbines (previously, tower drag was only available for land-based and fixed offshore wind turbines).
+• Blade and tower analysis nodes in AeroDyn v15 no longer need to be placed at element centers; however, nodes must be placed at the blade root and tip and tower base and top. When AeroDyn v15 is coupled to FAST, blade and tower discretizations are independent of discretizations in the structural code.
+• The AeroDyn v15 module supports many new output channels.

@@ -38,7 +38,6 @@ CertTest\PlotResults.m
 CertTest\Airfoils\AOC\*
 CertTest\Airfoils\NREL_5MW\*
 CertTest\NREL_Results\*
-CertTest\Results\*
 
 CertTest\UA_Tests\05000051_AD15.dat
 CertTest\UA_Tests\05014051.dvr
@@ -61,7 +60,6 @@ CertTest\UA_Tests\S809_AD15.dat
 CertTest\UA_Tests\S813_15.dat
 CertTest\UA_Tests\S813_15_mod2.dvr
 CertTest\UA_Tests\Exp_Results\*
-CertTest\UA_Tests\Results\*
 CertTest\UA_Tests\NREL_Results\*
 
 
