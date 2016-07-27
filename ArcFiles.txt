@@ -13,6 +13,7 @@ Source\FAST_Registry.txt
 Source\FAST_Types.f90
 Source\FAST_Mods.f90
 Source\FAST_Solver.f90
+Source\FAST_Lin.f90
 Source\FAST_Subs.f90
 Source\FAST_Library.f90
 Source\FAST_Prog.f90
@@ -74,6 +75,8 @@ Utilities\MATLAB_Toolbox\MATLAB2FAST\*
 Utilities\MATLAB_Toolbox\Plots\*
 Utilities\MATLAB_Toolbox\ProgrammingTools\*
 Utilities\MATLAB_Toolbox\Utilities\*
+
+Utilities\MATLAB_Toolbox\MBC\Source\*
 
 
 CertTest\ConvertFiles.m
