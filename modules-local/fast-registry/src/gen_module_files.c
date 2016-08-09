@@ -844,7 +844,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
            fprintf(fp, "      Db_Xferred   = Db_Xferred + 1\n");
         }
         else if (!strcmp(r->type->mapsto, "REAL(R8Ki)")) {
-           fprintf(fp, "      OutData%%%s = REAL( DbKiBuf( Re_Xferred ), R8Ki) \n", r->name);
+           fprintf(fp, "      OutData%%%s = REAL( DbKiBuf( Db_Xferred ), R8Ki) \n", r->name);
            fprintf(fp, "      Db_Xferred   = Db_Xferred + 1\n");
         }
         else if (!strcmp(r->type->mapsto, "INTEGER(IntKi)")) {
