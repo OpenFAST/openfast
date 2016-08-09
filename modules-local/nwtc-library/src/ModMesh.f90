@@ -1895,7 +1895,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       ENDIF
       IF ( FieldMask(MASKID_TRANSLATIONDISP) ) THEN ! TranslationDisp
          DO i = 1, Mesh%Nnodes
-            Mesh%TranslationDisp(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+            Mesh%TranslationDisp(:,i) = DbKiBuf(Db_Xferred:Db_Xferred+2); Re_Xferred = Re_Xferred + 3
          ENDDO
       ENDIF
       IF ( FieldMask(MASKID_ROTATIONVEL) ) THEN ! RotationVel
