@@ -3753,18 +3753,18 @@ END SUBROUTINE Transfer_Loads_Point_to_Line2
 !! \f{equation}{ 
 !!   \begin{aligned}
 !! \left\{ \begin{matrix} \Delta\vec{u}^D \\  \Delta\vec{\theta}^D \\  \Delta\vec{f}^D \\   \Delta\vec{m}^D \end{matrix} \right\} & = 
-!! \begin{bmatrix} M_{mi} & M_{f_{\times p}} & 0      & 0      \\ 
-!!                 0        & M_{mi}         & 0      & 0      \\   
-!!                 0        & 0              & M_{li} & 0      \\   
+!! \begin{bmatrix} M_{mi} & M_{f_{\times p}} & 0      & 0      \\
+!!                 0        & M_{mi}         & 0      & 0      \\
+!!                 0        & 0              & M_{li} & 0      \\
 !!                 M_{um}   & M_{tm}         & M_{fm} & M_{li} \\ \end{bmatrix} 
 !! \left\{ \begin{matrix} \Delta\vec{u}^S \\  \Delta\vec{\theta}^S \\  \Delta\vec{F}^S \\   \Delta\vec{M}^S \end{matrix} \right\} \\ & =   
-!! \begin{bmatrix} I                                                         & 0 & 0                                                                                                        & 0        \\ 
-!!                 0                                                         & I & 0                                                                                                        & 0        \\   
-!!                 0                                                         & 0 &  \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}                                                          & 0        \\   
+!! \begin{bmatrix} I                                                         & 0 & 0                                                                                                        & 0        \\
+!!                 0                                                         & I & 0                                                                                                        & 0        \\
+!!                 0                                                         & 0 &  \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}                                                          & 0        \\
 !!                -\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}M_{um}^{DL} & 0 & -\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}M_{fm}^{DL}\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} & \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} \\ \end{bmatrix}  
-!! \begin{bmatrix} M_{mi}   & M_{f_{\times p}} & 0        & 0        \\ 
-!!                 0        & M_{mi}           & 0        & 0        \\   
-!!                 0        & 0                & M_{li}^D & 0        \\   
+!! \begin{bmatrix} M_{mi}   & M_{f_{\times p}} & 0        & 0        \\
+!!                 0        & M_{mi}           & 0        & 0        \\
+!!                 0        & 0                & M_{li}^D & 0        \\
 !!                 0        & M_{tm}^D         & M_{fm}^D & M_{li}^D \\ \end{bmatrix}  
 !! \left\{ \begin{matrix} \Delta\vec{u}^S \\  \Delta\vec{\theta}^S \\  \Delta\vec{F}^S \\   \Delta\vec{M}^S \end{matrix} \right\}
 !! \end{aligned}
