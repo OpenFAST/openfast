@@ -1,0 +1,3 @@
+[submodule "Utilities/MATLAB_Toolbox"]
+	path = Utilities/MATLAB_Toolbox
+	url = https://github.com/NWTC/MATLAB_Toolbox
