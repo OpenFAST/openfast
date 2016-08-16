@@ -362,6 +362,9 @@ subroutine FAST_Restart(CheckpointRootName_c, AbortErrLev_c, NumOuts_c, dt_c, n_
    CHARACTER(*),           PARAMETER     :: RoutineName = 'FAST_Restart' 
              
    
+   call NWTC_Init() ! make sure we re-initialize global constants in NWTC Library
+   
+   
       ! transfer the character array from C to a Fortran string:   
    CheckpointRootName = TRANSFER( CheckpointRootName_c, CheckpointRootName )
    I = INDEX(CheckpointRootName,C_NULL_CHAR) - 1                 ! if this has a c null character at the end...
@@ -500,6 +503,8 @@ subroutine FAST_OpFM_Restart(CheckpointRootName_c, AbortErrLev_c, dt_c, n_t_glob
    ! local variables
    INTEGER(C_INT)                        :: NumOuts_c      
 
+   call NWTC_Init() ! make sure we re-initialize global constants in NWTC Library   
+   
    call FAST_Restart(CheckpointRootName_c, AbortErrLev_c, NumOuts_c, dt_c, n_t_global_c, ErrStat_c, ErrMsg_c)
    
    call SetOpenFOAM_pointers(OpFM_Input_from_FAST, OpFM_Output_to_FAST)
