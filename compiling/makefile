@@ -43,12 +43,12 @@ LDFLAGS = -O2 -m$(BITS) -fbacktrace
 
    # Location of source files for FAST, and its modules.
 
-ModName_DIR  = ../source/ModuleName
+ModName_DIR  = ../source
 Driver_DIR   = ../source/drivers
 BIN_DIR      = ../bin
 
-NWTC_Lib_DIR = ../source/NWTC_Library
-NETLIB_DIR   = ../source/NetLib
+NWTC_Lib_DIR = ../subs/NWTC_Library/source
+NETLIB_DIR   = $(NWTC_Lib_Dir)/NetLib/lapack
 
 
    # Names and locations of the Registry, MAP libraries, and instructions for linking with LAPACK.
@@ -64,7 +64,7 @@ ifeq ($(OS),Windows_NT)
 
 else
 
-   Registry     = $(FAST_DIR)/dependencies/registry.exe
+   Registry     = ../bin/registry.exe
 
    UNAME := $(shell uname -s)
 

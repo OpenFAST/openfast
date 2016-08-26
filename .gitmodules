@@ -1,0 +1,3 @@
+[submodule "subs/NWTC_Library"]
+	path = subs/NWTC_Library
+	url = https://github.com/NWTC/NWTC_Library

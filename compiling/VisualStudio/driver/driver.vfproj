@@ -3,7 +3,7 @@
 	<Platforms>
 		<Platform Name="Win32"/></Platforms>
 	<Configurations>
-		<Configuration Name="Debug|Win32">
+		<Configuration Name="Debug|Win32" TargetName="$(ProjectName)_debug_$(PlatformName)">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
@@ -13,7 +13,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Release|Win32">
+		<Configuration Name="Release|Win32" TargetName="$(ProjectName)_$(PlatformName)">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RuntimeLibrary="rtMultiThreadedDLL" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
@@ -28,19 +28,19 @@
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<Filter Name="ModuleName">
-		<File RelativePath="..\..\..\source\ModuleName\ModuleName.f90"/>
-		<File RelativePath="..\..\..\source\ModuleName\ModuleName_Types.f90"/></Filter>
+		<File RelativePath="..\..\..\source\ModuleName.f90"/>
+		<File RelativePath="..\..\..\source\ModuleName_Types.f90"/></Filter>
 		<Filter Name="NWTC_Library">
-		<File RelativePath="..\..\..\source\NWTC_Library\ModMesh.f90"/>
-		<File RelativePath="..\..\..\source\NWTC_Library\ModMesh_Mapping.f90"/>
-		<File RelativePath="..\..\..\source\NWTC_Library\ModMesh_Types.f90"/>
-		<File RelativePath="..\..\..\source\NWTC_Library\NWTC_Base.f90"/>
-		<File RelativePath="..\..\..\source\NWTC_Library\NWTC_IO.f90"/>
-		<File RelativePath="..\..\..\source\NetLib\NWTC_LAPACK.f90"/>
-		<File RelativePath="..\..\..\source\NWTC_Library\NWTC_Library.f90"/>
-		<File RelativePath="..\..\..\source\NWTC_Library\NWTC_Library_Types.f90"/>
-		<File RelativePath="..\..\..\source\NWTC_Library\NWTC_Num.f90"/>
-		<File RelativePath="..\..\..\source\NWTC_Library\SingPrec.f90"/>
-		<File RelativePath="..\..\..\source\NWTC_Library\SysIVF.f90"/></Filter>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\ModMesh.f90"/>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\ModMesh_Mapping.f90"/>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\ModMesh_Types.f90"/>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\NWTC_Base.f90"/>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\NWTC_IO.f90"/>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\NetLib\lapack\NWTC_LAPACK.f90"/>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\NWTC_Library.f90"/>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\NWTC_Library_Types.f90"/>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\NWTC_Num.f90"/>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\SingPrec.f90"/>
+		<File RelativePath="..\..\..\subs\NWTC_Library\source\SysIVF.f90"/></Filter>
 		<File RelativePath="..\..\..\source\drivers\ModName_Driver.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
