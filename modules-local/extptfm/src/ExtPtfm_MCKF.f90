@@ -104,7 +104,6 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       ! Initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ""
-   NumOuts = 2
 
 
       ! Initialize the NWTC Subroutine Library
@@ -113,48 +112,30 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       ! Display the module information
    call DispNVD( ExtPtfm_Ver )
 
-
-      ! Define parameters here:
-   p%DT  = Interval
-
-
+      ! set parameters
+   p%NumOuts = 0   
+   call ReadPrimaryFile( InitInp%InputFile, p, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+      if (errStat >= AbortErrLev) return
+   
       ! Define initial system states here:
    x%DummyContState           = 0.0_ReKi
    xd%DummyDiscState          = 0.0_ReKi
    z%DummyConstrState         = 0.0_ReKi
    OtherState%DummyOtherState = 0.0_ReKi
 
-      
-      ! Define optimization variables here:      
-   m%DummyMiscVar          = 0.0_ReKi
-
-      
-      ! Define initial guess for the system inputs here:
-   u%DummyInput = 0.0_ReKi
-
+      ! initialize optimization variables:
+   m%Indx = 1
+   
+      ! Define initial guess (set up mesh first) for the system inputs here:
+   call Init_meshes(u, y, ErrStat, ErrMsg)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
 
       ! Define system output initializations (set up mesh) here:
-   call AllocAry( y%WriteOutput, NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! set return error status based on local (concatenate errors)
+   call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! set return error status based on local (concatenate errors)
+   call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return        ! if there are local variables that need to be deallocated, do so before early return
-
-   y%DummyOutput = 0
-   y%WriteOutput = 0
-
-
-      ! Define initialization-routine output here:
-   call AllocAry(InitOut%WriteOutputHdr,NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry(InitOut%WriteOutputUnt,NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat >= AbortErrLev) return        ! if there are local variables that need to be deallocated, do so before early return
-
-   InitOut%WriteOutputHdr = (/ 'Time   ', 'Column2' /)
-   InitOut%WriteOutputUnt = (/ '(s)',     '(-)'     /)
-
-
-      ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
-      !   this module must be called here:
-
-      !Interval = p%DT
 
       
    if (InitInp%Linearize) then
@@ -172,6 +153,218 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    
       
 END SUBROUTINE ExtPtfm_Init
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+   IMPLICIT                        NONE
+
+      ! Passed variables
+   CHARACTER(*),                INTENT(IN)    :: InputFile                           !< Name of the file containing the primary input data
+   TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p                                   !< All the parameter matrices stored in this input file
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status                              
+   CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
+
+   
+      ! Local variables:
+   REAL(ReKi)                    :: TmpAry(7)                                 ! temporary array for reading row from file
+   INTEGER(IntKi)                :: I                                         ! loop counter
+   INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
+   INTEGER(IntKi)                :: UnEc                                      !< I/O unit for echo file. If > 0, file is open for writing.
+   
+   INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
+   LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
+   CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
+   CHARACTER(1024)               :: FTitle                                    ! "File Title": the 1st line of the input file, which contains a description of its contents
+   CHARACTER(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+   CHARACTER(*), PARAMETER       :: RoutineName = 'ReadPrimaryFile'
+   
+   
+   
+   
+      ! Initialize some variables:
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+      
+   UnEc = -1
+   Echo = .FALSE.   
+   !CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
+   
+   
+      ! Get an available unit number for the file.
+   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+      ! Open the Primary input file.
+   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+                  
+      
+   !-------------------------- HEADER ---------------------------------------------
+   CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: External Platform MCKF Matrices (line 1)', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   
+   !---------------------- DAMPING MATRIX --------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Damping Matrix', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+      !Read Damping
+   DO I =1,6
+      CALL ReadAry( UnIn, InputFile, p%Damp(I,:), 6, 'Damp', 'Damping Matrix Terms', ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDDO
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      return
+   end if
+
+   
+   !---------------------- STIFFNESS MATRIX --------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Stiffness Matrix', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+      !Read Stiffness
+   DO I =1,6
+      CALL ReadAry( UnIn, InputFile, p%Stff(I,:), 6, 'Stff', 'Stiffness Matrix Terms', ErrStat2, ErrMsg2, UnEc  )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDDO
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      return
+   end if
+   
+   
+   !---------------------- MASS MATRIX --------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Mass Matrix', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+      !Read Mass
+   DO I =1,6
+      CALL ReadAry( UnIn, InputFile, p%PtfmAM(I,:), 6, 'PtfmAM', 'Mass Matrix Terms', ErrStat2, ErrMsg2, UnEc  )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDDO
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      return
+   end if
+   
+   
+   !---------------------- LOAD time-history --------------------------------------
+   p%nPtfmFt = 0
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Loads time-history', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InputFile, 'Loads time-history table channel names', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InputFile, 'Loads time-history table channel units', ErrStat2, ErrMsg2, UnEc )
+   if (ErrStat2 < AbortErrLev) then
+      ! let's figure out how many rows of data are in the time-history table:
+         read( UnIn, *, IOSTAT=ErrStat2 ) TmpAry
+      do while (ErrStat==0)
+         p%nPtfmFt = p%nPtfmFt + 1
+         read( UnIn, *, IOSTAT=ErrStat2 ) TmpAry
+      end do
+   end if
+
+   call allocAry( p%PtfmFt,   max(1,p%nPtfmFt), 6, 'p%PtfmFt',   ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call allocAry( p%PtfmFt_t, max(1,p%nPtfmFt),    'p%PtfmFt_t', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+      
+   if (p%nPtfmFt == 0) then
+      p%PtfmFt = 0.0_ReKi
+      p%PtfmFt_t = 0.0_ReKi
+      p%nPtfmFt = 1
+   else
+      close(UnIn)
+      rewind(UnIn)
+      
+      do i=1,25 ! skip the first 25 rows of the file until we get to the data for the time-history table
+         read(UnIn,'(A)',IOSTAT=ErrStat2)
+      end do
+      
+      do i=1,p%nPtfmFt
+      
+         call ReadAry( UnIn, InputFile, TmpAry, 7, 'PtfmFt', 'PtfmFt time-history', ErrStat2, ErrMsg2, UnEc  )
+         
+         p%PtfmFt_t(i) = TmpAry(1)
+         p%PtfmFt(i,:) = TmpAry(2:7)
+            
+      end do
+      
+   end if
+      
+   
+   !---------------------- END OF FILE -----------------------------------------
+      
+   call cleanup()
+   RETURN
+
+
+CONTAINS
+   !...............................................................................................................................
+   SUBROUTINE cleanup()
+
+         CLOSE( UnIn )
+
+   END SUBROUTINE cleanup
+   !...............................................................................................................................
+END SUBROUTINE ReadPrimaryFile      
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Init_meshes(u, y, ErrStat, ErrMsg)
+
+   TYPE(ExtPtfm_InputType),           INTENT(INOUT)  :: u           !< System inputs
+   TYPE(ExtPtfm_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+      ! local variables
+   INTEGER(IntKi)                                    :: ErrStat2    ! local error status
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! local error message
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_meshes'
+
+   
+   ErrStat = ErrID_None
+   ErrMSg = ""
+   
+      ! Create the input and output meshes associated with platform loads
+   CALL MeshCreate(  BlankMesh         = u%PtfmMesh       , &
+                     IOS               = COMPONENT_INPUT  , &
+                     Nnodes            = 1                , &
+                     ErrStat           = ErrStat2         , &
+                     ErrMess           = ErrMsg2          , &
+                     TranslationDisp   = .TRUE.           , &
+                     Orientation       = .TRUE.           , &
+                     TranslationVel    = .TRUE.           , &
+                     RotationVel       = .TRUE.           , &
+                     TranslationAcc    = .TRUE.           , &
+                     RotationAcc       = .TRUE.)
+
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) return
+      
+      ! Create the node on the mesh
+   CALL MeshPositionNode (u%PtfmMesh, 1, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/), ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      ! Create the mesh element
+   CALL MeshConstructElement (  u%PtfmMesh, ELEMENT_POINT, ErrStat2, ErrMsg2, 1 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   CALL MeshCommit ( u%PtfmMesh, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) return
+
+      
+      ! the output mesh is a sibling of the input:
+   CALL MeshCopy( SrcMesh=u%PtfmMesh, DestMesh=y%PtfmMesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
+                  ErrStat=ErrStat2, ErrMess=ErrMsg2, Force=.TRUE., Moment=.TRUE. )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+END SUBROUTINE Init_meshes
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE ExtPtfm_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
@@ -260,15 +453,9 @@ SUBROUTINE ExtPtfm_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
    CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
       ! Local variables
-
-   TYPE(ExtPtfm_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
-   TYPE(ExtPtfm_DiscreteStateType)                   :: xd_t            ! Discrete states at t (copy)
-   TYPE(ExtPtfm_ConstraintStateType)                 :: z_Residual      ! Residual of the constraint state functions (Z)
-   TYPE(ExtPtfm_InputType)                           :: u               ! Instantaneous inputs
-
-   INTEGER(IntKi)                                    :: ErrStat2        ! local error status
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2         ! local error message
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'ExtPtfm_UpdateStates'
+   !INTEGER(IntKi)                                    :: ErrStat2        ! local error status
+   !CHARACTER(ErrMsgLen)                              :: ErrMsg2         ! local error message
+   !CHARACTER(*), PARAMETER                           :: RoutineName = 'ExtPtfm_UpdateStates'
 
 
       ! Initialize variables
@@ -277,97 +464,7 @@ SUBROUTINE ExtPtfm_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
    ErrMsg    = ""
 
 
-   ! This subroutine contains an example of how the states could be updated. Developers will
-   ! want to adjust the logic as necessary for their own situations.
 
-
-
-      ! Get the inputs at time t, based on the array of values sent by the glue code:
-
-   ! before calling ExtrapInterp routine, memory in u must be allocated; we can do that with a copy:
-   call ExtPtfm_CopyInput( Inputs(1), u, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()       ! to avoid memory leaks, we have to destroy the local variables that may have allocatable arrays or meshes
-         return
-      end if
-
-   call ExtPtfm_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         return
-      end if
-
-
-
-      ! Get first time derivatives of continuous states (dxdt):
-
-   call ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         return
-      end if
-
-
-      ! Update discrete states:
-      !   Note that xd [discrete state] is changed in ExtPtfm_UpdateDiscState() so xd will now contain values at t+Interval
-      !   We'll first make a copy that contains xd at time t, which will be used in computing the constraint states
-   call ExtPtfm_CopyDiscState( xd, xd_t, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         return
-      end if
-
-   call ExtPtfm_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         return
-      end if
-
-
-      ! Solve for the constraint states (z) here:
-
-      ! Iterate until the value is within a given tolerance.
-
-   ! DO
-
-      call ExtPtfm_CalcConstrStateResidual( t, u, p, x, xd_t, z, OtherState, m, Z_Residual, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
-            return
-         end if
-
-      !  z =
-
-   ! END DO
-
-
-
-      ! Integrate (update) continuous states (x) here:
-
-   !x = function of dxdt and x
-
-
-      ! Destroy local variables before returning
-   call cleanup()
-
-
-CONTAINS
-   SUBROUTINE cleanup()
-      ! note that this routine inherits all of the data in ExtPtfm_UpdateStates
-
-
-      CALL ExtPtfm_DestroyInput(       u,          ErrStat2, ErrMsg2)
-      CALL ExtPtfm_DestroyConstrState( Z_Residual, ErrStat2, ErrMsg2)
-      CALL ExtPtfm_DestroyContState(   dxdt,       ErrStat2, ErrMsg2)
-      CALL ExtPtfm_DestroyDiscState(   xd_t,       ErrStat2, ErrMsg2)
-
-   END SUBROUTINE cleanup
 END SUBROUTINE ExtPtfm_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a routine for computing outputs, used in both loose and tight coupling.
@@ -388,18 +485,54 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
+      ! Local variables
+   INTEGER(IntKi)                                  :: I,J               !< Generic counters
+   INTEGER(IntKi)                                  :: ErrStat2          !< Temporary Error status of the operation
+   CHARACTER(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(*),     PARAMETER                     :: RoutineName='ExtPtfm_CalcOutput'
+   
+   
       ! Initialize ErrStat
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   
+      ! translate inputs on mesh to arrays for computations:
+   m%q(1:3) = u%PtfmMesh%TranslationDisp(:,1)
+   m%q(4:6) = GetSmllRotAngs ( u%PtfmMesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   m%qdot(1:3) = u%PtfmMesh%TranslationVel(:,1)
+   m%qdot(4:6) = u%PtfmMesh%RotationVel(:,1)   
 
-      ! Compute outputs here:
-   y%DummyOutput    = 2.0_ReKi
+   m%qdotdot(1:3) = u%PtfmMesh%TranslationAcc(:,1)
+   m%qdotdot(4:6) = u%PtfmMesh%RotationAcc(:,1)
 
-   y%WriteOutput(1) = REAL(t,ReKi)
-   y%WriteOutput(2) = 1.0_ReKi
+      ! compute the platform force (without added mass):
+   m%PtfmFt = 0.0_ReKi ! interpolate this based on the time history read in !!!!!!!!!!fix me!!!!!!!!!!!!!!!!
+   
+   DO J = 1,6
+      DO I = 1,6
+         m%PtfmFt(I) = m%PtfmFt(I) - p%Damp(I,J) * m%qdot(J) - p%Stff(I,J) * m%q(J)
+      ENDDO
+   ENDDO      
+   
+      ! Now calculate the forces from the added mass matrix
+   m%F_PtfmAM     =  -matmul(p%PtfmAM, m%qdotdot)
 
+
+      ! Update the Mesh with values from OrcaFlex
+   DO I=1,3
+      y%PtfmMesh%Force(I,1)  =  m%F_PtfmAM(I)   +  m%PtfmFt(I)
+      y%PtfmMesh%Moment(I,1) =  m%F_PtfmAM(I+3) +  m%PtfmFt(I+3)
+   ENDDO
+  
+   
+
+   !y%WriteOutput(1) = y%PtfmMesh%Force(1,1)
+   !y%WriteOutput(2) = y%PtfmMesh%Moment(1,1)
+   !
 
 END SUBROUTINE ExtPtfm_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
