@@ -137,6 +137,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return        ! if there are local variables that need to be deallocated, do so before early return
 
+   InitOut%Ver = ExtPtfm_Ver
       
    if (InitInp%Linearize) then
       
@@ -207,6 +208,21 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: External Platform MCKF Matrices (line 1)', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
+      
+   !---------------------- MASS MATRIX --------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Mass Matrix', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+      !Read Mass
+   DO I =1,6
+      CALL ReadAry( UnIn, InputFile, p%PtfmAM(I,:), 6, 'PtfmAM', 'Mass Matrix Terms', ErrStat2, ErrMsg2, UnEc  )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDDO
+   if ( ErrStat >= AbortErrLev ) then
+      call cleanup()
+      return
+   end if
+   
    
    !---------------------- DAMPING MATRIX --------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Damping Matrix', ErrStat2, ErrMsg2, UnEc )
@@ -230,21 +246,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
       !Read Stiffness
    DO I =1,6
       CALL ReadAry( UnIn, InputFile, p%Stff(I,:), 6, 'Stff', 'Stiffness Matrix Terms', ErrStat2, ErrMsg2, UnEc  )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ENDDO
-   if ( ErrStat >= AbortErrLev ) then
-      call cleanup()
-      return
-   end if
-   
-   
-   !---------------------- MASS MATRIX --------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Mass Matrix', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-      !Read Mass
-   DO I =1,6
-      CALL ReadAry( UnIn, InputFile, p%PtfmAM(I,:), 6, 'PtfmAM', 'Mass Matrix Terms', ErrStat2, ErrMsg2, UnEc  )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDDO
    if ( ErrStat >= AbortErrLev ) then
@@ -392,24 +393,24 @@ SUBROUTINE ExtPtfm_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ErrMsg  = ""
 
 
-      !! Place any last minute operations or calculations here:
+      ! Place any last minute operations or calculations here:
 
 
-      !! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
+      ! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
 
 
-      !! Destroy the input data:
+      ! Destroy the input data:
 
    call ExtPtfm_DestroyInput( u, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
-      !! Destroy the parameter data:
+      ! Destroy the parameter data:
 
    call ExtPtfm_DestroyParam( p, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      !! Destroy the state data:
+      ! Destroy the state data:
 
    call ExtPtfm_DestroyContState(   x,          ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call ExtPtfm_DestroyDiscState(   xd,         ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -417,12 +418,12 @@ SUBROUTINE ExtPtfm_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    call ExtPtfm_DestroyOtherState(  OtherState, ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
-      !! Destroy the output data:
+      ! Destroy the output data:
 
    call ExtPtfm_DestroyOutput( y, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
-      !! Destroy the misc data:
+      ! Destroy the misc data:
 
    call ExtPtfm_DestroyMisc( m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -510,19 +511,21 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%qdotdot(4:6) = u%PtfmMesh%RotationAcc(:,1)
 
       ! compute the platform force (without added mass):
-   m%PtfmFt = 0.0_ReKi ! interpolate this based on the time history read in !!!!!!!!!!fix me!!!!!!!!!!!!!!!!
+   ! get interpolated (in time) loads, m%PtfmFt
+   call InterpStpMat( REAL(t,ReKi), p%PtfmFt_t, p%PtfmFt, m%Indx, p%nPtfmFt, m%PtfmFt ) ! interpolate this based on the time history read in
    
+   ! add the loads from damping and stiffness
    DO J = 1,6
       DO I = 1,6
          m%PtfmFt(I) = m%PtfmFt(I) - p%Damp(I,J) * m%qdot(J) - p%Stff(I,J) * m%q(J)
       ENDDO
    ENDDO      
    
-      ! Now calculate the forces from the added mass matrix
+      ! Now calculate the loads from the added mass matrix
    m%F_PtfmAM     =  -matmul(p%PtfmAM, m%qdotdot)
 
 
-      ! Update the Mesh with values from OrcaFlex
+      ! Update the Mesh with sum of these loads
    DO I=1,3
       y%PtfmMesh%Force(I,1)  =  m%F_PtfmAM(I)   +  m%PtfmFt(I)
       y%PtfmMesh%Moment(I,1) =  m%F_PtfmAM(I+3) +  m%PtfmFt(I+3)
