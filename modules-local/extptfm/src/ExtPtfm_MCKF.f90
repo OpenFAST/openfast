@@ -262,7 +262,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    if (ErrStat2 < AbortErrLev) then
       ! let's figure out how many rows of data are in the time-history table:
          read( UnIn, *, IOSTAT=ErrStat2 ) TmpAry
-      do while (ErrStat==0)
+      do while (ErrStat2==0)
          p%nPtfmFt = p%nPtfmFt + 1
          read( UnIn, *, IOSTAT=ErrStat2 ) TmpAry
       end do
