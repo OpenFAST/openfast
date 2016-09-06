@@ -9,10 +9,6 @@
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
-# File last committed $Date$
-# (File) Revision #: $Rev$
-# URL: $HeadURL$
-###################################################################################################################################
 # ...... Include files (definitions from NWTC Library and module components) ............................................................................
 include	Registry_NWTC_Library.txt
 usefrom	ElastoDyn_Registry.txt
@@ -30,6 +26,7 @@ usefrom	FEAM_Registry.txt
 usefrom	MAP_Registry.txt
 usefrom	MoorDyn_Registry.txt
 usefrom	OrcaFlexInterface.txt
+usefrom	ExtPtfm_MCKF_Registry.txt
 
 # ...... Constants ............................................................................
 
@@ -39,7 +36,7 @@ usefrom	OrcaFlexInterface.txt
 param	FAST	-	INTEGER	Module_Unknown	-	-1	-	"Unknown"	-
 param	^	-	INTEGER	Module_None	-	0	-	"No module selected"	-
 param	^	-	INTEGER	Module_IfW	-	1	-	"InflowWind"	-
-param	^	-	INTEGER	Module_OpFM	-	2		"OpenFOAM"
+param	^	-	INTEGER	Module_OpFM	-	2		"OpenFOAM"	-
 param	^	-	INTEGER	Module_ED	-	3	-	"ElastoDyn"	-
 param	^	-	INTEGER	Module_BD	-	4	-	"BeamDyn"	-
 param	^	-	INTEGER	Module_AD14	-	5	-	"AeroDyn14"	-
@@ -47,13 +44,14 @@ param	^	-	INTEGER	Module_AD	-	6	-	"AeroDyn"	-
 param	^	-	INTEGER	Module_SrvD	-	7	-	"ServoDyn"	-
 param	^	-	INTEGER	Module_HD	-	8	-	"HydroDyn"	-
 param	^	-	INTEGER	Module_SD	-	9	-	"SubDyn"	-
-param	^	-	INTEGER	Module_MAP	-	10	-	"MAP (Mooring Analysis Program)"	-
-param	^	-	INTEGER	Module_FEAM	-	11	-	"FEAMooring"	-
-param	^	-	INTEGER	Module_MD	-	12	-	"MoorDyn"	-
-param	^	-	INTEGER	Module_Orca	-	13		"OrcaFlex integration (HD/Mooring)"	#VALUE!
-param	^	-	INTEGER	Module_IceF	-	14	-	"IceFloe"	-
-param	^	-	INTEGER	Module_IceD	-	15	-	"IceDyn"	-
-param	^	-	INTEGER	NumModules	-	15	-	"The number of modules available in FAST"	-
+param	^	-	INTEGER	Module_ExtPtfm	-	10	-	"External Platform Loading MCKF"	-
+param	^	-	INTEGER	Module_MAP	-	11	-	"MAP (Mooring Analysis Program)"	-
+param	^	-	INTEGER	Module_FEAM	-	12	-	"FEAMooring"	-
+param	^	-	INTEGER	Module_MD	-	13	-	"MoorDyn"	-
+param	^	-	INTEGER	Module_Orca	-	14	-	"OrcaFlex integration (HD/Mooring)"	-
+param	^	-	INTEGER	Module_IceF	-	15	-	"IceFloe"	-
+param	^	-	INTEGER	Module_IceD	-	16	-	"IceDyn"	-
+param	^	-	INTEGER	NumModules	-	16	-	"The number of modules available in FAST"	-
 # Other Constants
 param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
@@ -87,7 +85,7 @@ typedef	^	FAST_ParameterType	LOGICAL	ModuleInitialized	{NumModules}	-	-	"An arra
 # Data for Jacobians:
 typedef	^	FAST_ParameterType	DbKi	DT_Ujac	-	-	-	"Time between when we need to re-calculate these Jacobians"	s
 typedef	^	FAST_ParameterType	Reki	UJacSclFact	-	-	-	"Scaling factor used to get similar magnitudes between accelerations, forces, and moments in Jacobians"	-
-typedef	^	FAST_ParameterType	IntKi	SizeJac_ED_SD_HD_BD_Orca	{8}	-	-	"(1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion"	-
+typedef	^	FAST_ParameterType	IntKi	SizeJac_Opt1	{9}	-	-	"(1)=size of matrix; (2)=size of ED portion; (3)=size of SD portion [2 meshes]; (4)=size of HD portion; (5)=size of BD portion blade 1; (6)=size of BD portion blade 2; (7)=size of BD portion blade 3; (8)=size of Orca portion; (9)=size of ExtPtfm portion;"	-
 # Feature switches and flags:
 typedef	^	FAST_ParameterType	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW; Module_OpFM}"	-
@@ -299,6 +297,18 @@ typedef	^	^	SD_MiscVarType	m	-	-	-	"Misc/optimization variables"
 typedef	^	^	SD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
+# ..... ExtPtfm data .......................................................................................................
+typedef	FAST	ExtPtfm_Data	ExtPtfm_ContinuousStateType	x	{2}	-	-	"Continuous states"
+typedef	^	^	ExtPtfm_DiscreteStateType	xd	{2}	-	-	"Discrete states"
+typedef	^	^	ExtPtfm_ConstraintStateType	z	{2}	-	-	"Constraint states"
+typedef	^	^	ExtPtfm_OtherStateType	OtherSt	{2}	-	-	"Other states"
+typedef	^	^	ExtPtfm_ParameterType	p	-	-	-	"Parameters"
+typedef	^	^	ExtPtfm_InputType	u	-	-	-	"System inputs"
+typedef	^	^	ExtPtfm_OutputType	y	-	-	-	"System outputs"
+typedef	^	^	ExtPtfm_MiscVarType	m	-	-	-	"Misc/optimization variables"
+typedef	^	^	ExtPtfm_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
+
 # ..... HydroDyn data .......................................................................................................
 typedef	FAST	HydroDyn_Data	HydroDyn_ContinuousStateType	x	{2}	-	-	"Continuous states"
 typedef	^	^	HydroDyn_DiscreteStateType	xd	{2}	-	-	"Discrete states"
@@ -387,7 +397,7 @@ typedef	^	FAST_ModuleMapType	MeshMapType	HD_M_L_2_ED_P	-	-	-	"Map HydroDyn Moris
 # ED <-> Mooring (MAP, FEAM, MoorDyn, OrcaFlex)
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_Mooring_P	-	-	-	"Map ElastoDyn PlatformPtMesh to MAP/FEAM/MoorDyn/OrcaFlex point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	Mooring_P_2_ED_P	-	-	-	"Map FEAM/MAP/MoorDyn/OrcaFlex point mesh to ElastoDyn PlatformPtMesh"
-# ED <-> SD
+# ED <-> SD or User-Platform (ExtPtfm_MCKF)
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SD_TP	-	-	-	"Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SD_TP_2_ED_P	-	-	-	"Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh"
 # SD <-> HD
@@ -416,8 +426,8 @@ typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_2_IceF_P	-	-	-	"Map SubDyn y2Mesh 
 typedef	^	FAST_ModuleMapType	MeshMapType	IceD_P_2_SD_P	{:}	-	-	"Map IceDyn point mesh to SubDyn y2Mesh point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SD_P_2_IceD_P	{:}	-	-	"Map SubDyn y2Mesh point mesh to IceDyn point mesh"
 # Stored Jacobians:
-typedef	^	FAST_ModuleMapType	ReKi	Jacobian_ED_SD_HD_BD	{:}{:}	-	-	"Stored Jacobian in ED_HD_InputOutputSolve or ED_SD_HD_BD_InputOutputSolve"
-typedef	^	FAST_ModuleMapType	Integer	Jacobian_pivot	{:}	-	-	"Pivot array used for LU decomposition of Jacobian_ED_SD_HD_BD"
+typedef	^	FAST_ModuleMapType	ReKi	Jacobian_Opt1	{:}{:}	-	-	"Stored Jacobian in ED_HD_InputOutputSolve or ED_SD_HD_BD_InputOutputSolve"
+typedef	^	FAST_ModuleMapType	Integer	Jacobian_pivot	{:}	-	-	"Pivot array used for LU decomposition of Jacobian_Opt1"
 typedef	^	FAST_ModuleMapType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"
 # Temporary copies of input meshes (stored here so we don't have to keep allocating/destroying them)
 typedef	^	FAST_ModuleMapType	MeshType	u_ED_PlatformPtMesh	-	-	-	"copy of ED input mesh"
@@ -433,6 +443,7 @@ typedef	^	FAST_ModuleMapType	MeshType	u_ED_HubPtLoad_2	-	-	-	"copy of  ED input 
 typedef	^	FAST_ModuleMapType	MeshType	u_BD_RootMotion	{:}	-	-	"copy of  BD input meshes"
 typedef	^	FAST_ModuleMapType	MeshType	y_BD_BldMotion_4Loads	{:}	-	-	"BD blade motion output at locations on DistrLoad input meshes"
 typedef	^	FAST_ModuleMapType	MeshType	u_Orca_PtfmMesh	-	-	-	"copy of Orca PtfmMesh input mesh"
+typedef	^	FAST_ModuleMapType	MeshType	u_ExtPtfm_PtfmMesh	-	-	-	"copy of ExtPtfm_MCKF PtfmMesh input mesh"
 # ..... FAST_ExternalInput data .......................................................................................................
 typedef	FAST	FAST_ExternInputType	ReKi	GenTrq	-	-	-	"generator torque input from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	ElecPwr	-	-	-	"electric power input from Simulink/Labview"
@@ -486,3 +497,4 @@ typedef	^	FAST_TurbineType	MoorDyn_Data	MD	-	-	-	"Data for the MoorDyn module"	-
 typedef	^	FAST_TurbineType	OrcaFlex_Data	Orca	-	-	-	"Data for the OrcaFlex interface module"	-
 typedef	^	FAST_TurbineType	IceFloe_Data	IceF	-	-	-	"Data for the IceFloe module"	-
 typedef	^	FAST_TurbineType	IceDyn_Data	IceD	-	-	-	"Data for the IceDyn module"	-
+typedef	^	FAST_TurbineType	ExtPtfm_Data	ExtPtfm	-	-	-	"Data for the ExtPtfm (external platform loading) module"	-

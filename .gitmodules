@@ -1,3 +1,6 @@
 [submodule "Utilities/MATLAB_Toolbox"]
 	path = Utilities/MATLAB_Toolbox
 	url = https://github.com/NWTC/MATLAB_Toolbox
+[submodule "subs/ExtPtfm"]
+	path = subs/ExtPtfm
+	url = https://github.com/NWTC/ExtPtfm
