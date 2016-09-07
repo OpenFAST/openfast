@@ -280,11 +280,10 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
       p%PtfmFt_t = 0.0_ReKi
       p%nPtfmFt = 1
    else
-      close(UnIn)
       rewind(UnIn)
       
       do i=1,25 ! skip the first 25 rows of the file until we get to the data for the time-history table
-         read(UnIn,'(A)',IOSTAT=ErrStat2)
+         read(UnIn,*,IOSTAT=ErrStat2) line
       end do
       
       do i=1,p%nPtfmFt
