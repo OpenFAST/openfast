@@ -5015,7 +5015,7 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, ErrStat, ErrMsg )
    IF ( InputFileData%BldNodes < 1_IntKi ) CALL SetErrStat( ErrID_Fatal, 'BldNodes must not be less than 1.',ErrStat,ErrMsg,RoutineName )
    
       ! Check that the gearbox efficiency is valid:
-   IF ( ( InputFileData%GBoxEff <= 0.0_ReKi ) .OR. ( InputFileData%GBoxEff > 100.0 ) ) THEN
+   IF ( ( InputFileData%GBoxEff <= 0.0_ReKi ) .OR. ( InputFileData%GBoxEff > 1.0_ReKi ) ) THEN
       CALL SetErrStat( ErrID_Fatal, 'GBoxEff must be in the range (0,1] (i.e., (0,100] percent).',ErrStat,ErrMsg,RoutineName )
    END IF
 
