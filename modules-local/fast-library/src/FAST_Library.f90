@@ -294,7 +294,7 @@ subroutine FAST_End() BIND (C, NAME='FAST_End')
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
 #endif
 
-   CALL ExitThisProgram_T( Turbine, ErrID_None )
+   CALL ExitThisProgram_T( Turbine, ErrID_None, .TRUE. )
    
 end subroutine FAST_End
 !==================================================================================================================================

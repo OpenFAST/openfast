@@ -3060,7 +3060,7 @@ SUBROUTINE WrVTK_Ground ( RefPoint, HalfLengths, FileRootName, ErrStat, ErrMsg )
    ! write the data that potentially changes each time step:
    !.................................................................
       
-   ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
+   ! PolyData (.vtp) ï¿½ Serial vtkPolyData (unstructured) file
    FileName = TRIM(FileRootName)//'.vtp'
       
    call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat2, ErrMsg2 )    
@@ -5167,7 +5167,7 @@ SUBROUTINE WrVTK_WaveElev(t_global, p_FAST, y_FAST, HD)
    ! write the data that potentially changes each time step:
    !.................................................................
       
-   ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
+   ! PolyData (.vtp) ï¿½ Serial vtkPolyData (unstructured) file
    FileName = TRIM(p_FAST%OutFileRoot)//'.WaveSurface.t'//TRIM(Num2LStr(y_FAST%VTK_count))//'.vtp'
       
    call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat2, ErrMsg2 )    
@@ -5539,10 +5539,11 @@ END SUBROUTINE FAST_Linearize_T
 !> Routine that calls ExitThisProgram for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
 !! driver programs do not need to change or operate on the individual module level. 
 !! This routine should be called from glue code only (e.g., FAST_Prog.f90). It should not be called in any of these driver routines.
-SUBROUTINE ExitThisProgram_T( Turbine, ErrLevel_in, ErrLocMsg )
+SUBROUTINE ExitThisProgram_T( Turbine, ErrLevel_in, StopTheProgram, ErrLocMsg )
    
    TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             !< Data for one turbine instance
    INTEGER(IntKi),           INTENT(IN)    :: ErrLevel_in         !< Error level when Error == .TRUE. (required when Error is .TRUE.)
+   LOGICAL,                  INTENT(IN)    :: StopTheProgram      !< flag indicating if the program should end (false if there are more turbines to end)
    CHARACTER(*), OPTIONAL,   INTENT(IN)    :: ErrLocMsg           !< an optional message describing the location of the error
    
    
@@ -5551,14 +5552,14 @@ SUBROUTINE ExitThisProgram_T( Turbine, ErrLevel_in, ErrLocMsg )
       CALL ExitThisProgram( Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
                      Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrLevel_in, ErrLocMsg )
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrLevel_in, StopTheProgram, ErrLocMsg )
    
    ELSE     
       
       CALL ExitThisProgram( Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
                      Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrLevel_in )
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrLevel_in, StopTheProgram )
       
    END IF
 
@@ -5569,7 +5570,7 @@ END SUBROUTINE ExitThisProgram_T
 !! This routine should not be called from glue code (e.g., FAST_Prog.f90) or ExitThisProgram_T only. It should not be called in any 
 !! of these driver routines.
 SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                            MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrLevel_in, ErrLocMsg )
+                            MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrLevel_in, StopTheProgram, ErrLocMsg )
 !...............................................................................................................................
 
       ! Passed arguments
@@ -5597,6 +5598,7 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
 
    INTEGER(IntKi),           INTENT(IN)    :: ErrLevel_in         !< Error level when Error == .TRUE. (required when Error is .TRUE.)
+   LOGICAL,                  INTENT(IN)    :: StopTheProgram      !< flag indicating if the program should end (false if there are more turbines to end)
    CHARACTER(*), OPTIONAL,   INTENT(IN)    :: ErrLocMsg           !< an optional message describing the location of the error
 
 
@@ -5605,7 +5607,7 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
                                           
    INTEGER(IntKi)                          :: ErrStat2            ! Error status
    CHARACTER(1024)                         :: ErrMsg2             ! Error message
-   CHARACTER(1024)                         :: SimMsg              ! optional message to print about where the error took place in the simulation
+   CHARACTER(1224)                         :: SimMsg              ! optional message to print about where the error took place in the simulation
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'ExitThisProgram'       
    CHARACTER( LEN(p_FAST%OutFileRoot) )    :: TmpOutFileRoot
@@ -5648,11 +5650,16 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
       IF (PRESENT(ErrLocMsg)) THEN
          SimMsg = ErrLocMsg
       ELSE
-         SimMsg = 'after the simulation was complete'
+         SimMsg = 'after the simulation completed'
       END IF
-                                         
-      CALL ProgAbort( 'FAST encountered an error '//TRIM(SimMsg)//'.'//NewLine//' Simulation error level: '&
-                        //TRIM(GetErrStr(ErrorLevel)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+                         
+      SimMsg = 'FAST encountered an error '//TRIM(SimMsg)//'.'//NewLine//' Simulation error level: '//TRIM(GetErrStr(ErrorLevel))
+      if (StopTheProgram) then
+         CALL ProgAbort( trim(SimMsg), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+      else
+         CALL WrScr(trim(SimMsg))
+      end if
+                        
    END IF
       
    !............................................................................................................................
@@ -5661,12 +5668,14 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
 
    CALL RunTimes( m_FAST%StrtTime, m_FAST%UsrTime1, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global )
 
+   if (StopTheProgram) then
 #if (defined COMPILE_SIMULINK || defined COMPILE_LABVIEW)
-   ! for Simulink, this may not be a normal stop. It might call this after an error in the model.
-   CALL WrScr( NewLine//' '//TRIM(FAST_Ver%Name)//' completed.'//NewLine )
+      ! for Simulink, this may not be a normal stop. It might call this after an error in the model.
+      CALL WrScr( NewLine//' '//TRIM(FAST_Ver%Name)//' completed.'//NewLine )
 #else   
-   CALL NormStop( )
+      CALL NormStop( )
 #endif   
+   end if
 
 
 END SUBROUTINE ExitThisProgram

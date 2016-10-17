@@ -150,7 +150,7 @@ INTEGER(IntKi)                        :: Restart_step                           
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    
    DO i_turb = 1,NumTurbines
-      CALL ExitThisProgram_T( Turbine(i_turb), ErrID_None )
+      CALL ExitThisProgram_T( Turbine(i_turb), ErrID_None, i_turb==NumTurbines )
    END DO
    
 
@@ -166,6 +166,8 @@ CONTAINS
       CHARACTER(*),   INTENT(IN), OPTIONAL :: ErrLocMsg   ! an optional message describing the location of the error
 
       CHARACTER(1024)                      :: SimMsg      
+      integer(IntKi)                       :: i_turb2
+      
       
       IF ( ErrID /= ErrID_None ) THEN
          CALL WrScr( NewLine//TRIM(Msg)//NewLine )
@@ -177,8 +179,8 @@ CONTAINS
                SimMsg = 'at simulation time '//TRIM(Num2LStr(Turbine(1)%m_FAST%t_global))//' of '//TRIM(Num2LStr(Turbine(1)%p_FAST%TMax))//' seconds'
             END IF
             
-            DO i_turb = 1,NumTurbines
-               CALL ExitThisProgram_T( Turbine(i_turb), ErrID, SimMsg )
+            DO i_turb2 = 1,NumTurbines
+               CALL ExitThisProgram_T( Turbine(i_turb2), ErrID, i_turb2==NumTurbines, SimMsg )
             END DO
                         
          END IF
