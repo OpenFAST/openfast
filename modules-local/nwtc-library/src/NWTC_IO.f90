@@ -4596,16 +4596,17 @@ CONTAINS
    END SUBROUTINE ReadCAryLines
 !=======================================================================
 !> This routine reads a comment from the next line of the input file.
-   SUBROUTINE ReadCom ( UnIn, Fil, ComName, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE ReadCom ( UnIn, Fil, ComName, ErrStat, ErrMsg, UnEc, Comment )
 
       ! Argument declarations:
 
-   INTEGER,        INTENT(IN)          :: UnIn                                     !< I/O unit for input file.
-   INTEGER,        INTENT(IN), OPTIONAL:: UnEc                                     !< I/O unit for echo file. If present and > 0, write to UnEc
-   CHARACTER(*),   INTENT(IN)          :: Fil                                      !< Name of the input file.
-   CHARACTER(*),   INTENT(IN)          :: ComName                                  !< Text string containing the comment name.
-   INTEGER(IntKi), INTENT(OUT)         :: ErrStat                                  !< Error status; if present, program does not abort on error
-   CHARACTER(*),   INTENT(OUT)         :: ErrMsg                                   !< Error message
+   INTEGER,        INTENT(IN)              :: UnIn                                     !< I/O unit for input file.
+   INTEGER,        INTENT(IN), OPTIONAL    :: UnEc                                     !< I/O unit for echo file. If present and > 0, write to UnEc
+   CHARACTER(*),   INTENT(IN)              :: Fil                                      !< Name of the input file.
+   CHARACTER(*),   INTENT(IN)              :: ComName                                  !< Text string containing the comment name.
+   INTEGER(IntKi), INTENT(OUT)             :: ErrStat                                  !< Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT)             :: ErrMsg                                   !< Error message
+   CHARACTER(*),   INTENT(OUT), OPTIONAL   :: Comment                                  !< Text string containing the comment.
 
 
 
@@ -4613,7 +4614,6 @@ CONTAINS
 
    INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
 
-   CHARACTER(200)               :: Comment                                         ! Text string containing the comment.
 
 
 
