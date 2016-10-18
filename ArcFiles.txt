@@ -21,8 +21,6 @@ Source\FAST_Prog.f90
 Source\FAST_Library.h
 Source\FAST_Prog.c
 
-Source\dependencies\NWTC_Library\*
-Source\dependencies\NetLib\*
 Source\dependencies\ElastoDyn\*
 Source\dependencies\BeamDyn\*
 Source\dependencies\AeroDyn\*
@@ -40,6 +38,13 @@ Source\dependencies\IceFloe\*
 Source\dependencies\IceDyn\*
 Source\dependencies\FAST_dependencies.xlsx
 
+subs\NWTC_Library\source\*
+subs\NWTC_Library\source\NetLib\Dierckx_FitPack\*
+subs\NWTC_Library\source\NetLib\fftpack\*
+subs\NWTC_Library\source\NetLib\lapack\*
+subs\NWTC_Library\source\NetLib\scalapack\*
+subs\ExtPtfm\source\*
+
 Source\dependencies\Registry\*
 
 OutListParameters.xlsx
@@ -55,7 +60,6 @@ Simulink\Samples\Run_Test01_SIG.m
 
 
 Compiling\CompilingInstructions_FASTv8.pdf
-Compiling\Compile_FAST.bat
 Compiling\makefile
 Compiling\Compile_DISCON_DLL.bat
 Compiling\makefile_DISCON_DLL

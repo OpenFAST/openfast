@@ -4,3 +4,6 @@
 [submodule "subs/ExtPtfm"]
 	path = subs/ExtPtfm
 	url = https://github.com/NWTC/ExtPtfm
+[submodule "subs/NWTC_Library"]
+	path = subs/NWTC_Library
+	url = https://github.com/NWTC/NWTC_Library

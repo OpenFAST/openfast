@@ -32,23 +32,6 @@ SET dst_folder=%depend_dir%\Registry
 @CALL :CopyFileFolder
 IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
-:NWTC_Library
-ECHO NWTC_Library
-SET src_folder=%NWTC_Lib_Loc%\..
-SET dst_folder=%depend_dir%\NWTC_Library
-SET list_of_files=%src_folder%\SourceFiles.txt
-
-@CALL :CopyFileList
-IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
-
-:NetLib
-ECHO NetLib
-SET src_folder=%NETLIB_Loc%\..
-SET dst_folder=%depend_dir%\NetLib
-SET list_of_files=%src_folder%\NetLib_SourceFiles.txt
-
-@CALL :CopyFileList
-IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :ElastoDyn
 ECHO ElastoDyn
