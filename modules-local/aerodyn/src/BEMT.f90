@@ -983,10 +983,12 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
                   if (errStat >= AbortErrLev) return 
                   
                      ! Apply the skewed wake correction to the axial induction
-                  if ( p%skewWakeMod == SkewMod_PittPeters ) then                  
-                           ! Correct for skewed wake, by recomputing axInduction
-                     call ApplySkewedWakeCorrection( u1%Vx(i,j), u1%Vy(i,j), u1%psi(j), u1%chi0, u1%rlocal(i,j)/Rtip, axInduction, tanInduction, chi, ErrStat2, ErrMsg2 ) !replaced phiOut with phitemp  RRD
-                        ! ApplySkewedWakeCorrection doesn't produce errors
+                  if ( p%skewWakeMod == SkewMod_PittPeters ) then 
+                     if ( .not.( useTiploss .and. EqualRealNos(tipLossConst,0.0_ReKi) ) .and. .not. ( useHubloss .and. EqualRealNos(hubLossConst,0.0_ReKi) ) ) then
+                              ! Correct for skewed wake, by recomputing axInduction
+                        call ApplySkewedWakeCorrection( u1%Vx(i,j), u1%Vy(i,j), u1%psi(j), u1%chi0, u1%rlocal(i,j)/Rtip, axInduction, tanInduction, chi, ErrStat2, ErrMsg2 ) !replaced phiOut with phitemp  RRD
+                           ! ApplySkewedWakeCorrection doesn't produce errors
+                     end if   
                   end if
                   
                   ! recompute phi and alpha
@@ -1196,8 +1198,10 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                                
                   ! Apply the skewed wake correction to the axial induction (y%axInduction)
                   if ( p%skewWakeMod == SkewMod_PittPeters ) then
+                     if ( .not.( useTiploss .and. EqualRealNos(tipLossConst,0.0_ReKi) ) .and. .not. ( useHubloss .and. EqualRealNos(hubLossConst,0.0_ReKi) ) ) then
                         call ApplySkewedWakeCorrection( u%Vx(i,j), u%Vy(i,j), u%psi(j), u%chi0, u%rlocal(i,j)/Rtip, y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), ErrStat2, ErrMsg2 )           
-                     ! ApplySkewedWakeCorrection doesn't set errors
+                           ! ApplySkewedWakeCorrection doesn't set errors
+                     end if
                   end if
 
                      ! recompute y%phi, y%AOA:
