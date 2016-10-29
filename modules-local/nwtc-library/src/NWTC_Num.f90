@@ -3976,6 +3976,20 @@ CONTAINS
    RETURN
    END SUBROUTINE MPi2Pi
 !=======================================================================
+!> This function takes an angle in radians and converts it to 
+!! an angle in degrees in the range [-180,180]
+real(reKi) function Rad2M180to180Deg(Angle) result(Alpha)
+
+   real(ReKi),             intent(in   ) :: Angle !< input angle, radians
+   
+   Alpha = Angle
+   
+   call MPi2Pi ( Alpha ) ! change Angle into range of -pi to pi
+   Alpha = Alpha*R2D     ! change Angle into degrees
+   
+end function Rad2M180to180Deg
+!=======================================================================
+   
 !> This routine calculates the outer product of two vectors, 
 !! \f$u = \left(u_1, u_2, \ldots, u_m\right)\f$ and 
 !! \f$v = \left(v_1, v_2, \ldots ,v_n\right)\f$. The outer product is defined as
