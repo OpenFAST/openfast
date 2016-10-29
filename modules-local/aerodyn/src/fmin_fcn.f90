@@ -25,8 +25,8 @@ module fminfcn
    
    use NWTC_Library
    use AirFoilInfo_Types
-   use UnsteadyAero_Types
-   use BEMTUnCoupled
+   !use UnsteadyAero_Types
+   use BEMTUnCoupled, only: UncoupledErrFn
    
    type, public :: fmin_fcnArgs 
       real(ReKi)        :: airDens
@@ -45,7 +45,8 @@ module fminfcn
       logical           :: useHubLoss
       logical           :: useTipLoss 
       real(ReKi)        :: hubLossConst 
-      real(ReKi)        :: tipLossConst    
+      real(ReKi)        :: tipLossConst
+      logical           :: IsValidSolution
       integer(IntKi)    :: errStat       ! Error status of the operation
       character(ErrMsgLen)   :: errMsg        ! Error message if ErrStat /= ErrID_None
    end type fmin_fcnArgs
@@ -65,14 +66,12 @@ real(ReKi) function fmin_fcn(x, fcnArgs)
    
    integer(IntKi)       :: errStat       ! Error status of the operation
    character(ErrMsgLen) :: errMsg        ! Error message if ErrStat /= ErrID_None
-   real(ReKi)           :: AOA
    
    
       ! Call the UncoupledErrFn subroutine to compute the residual
-   AOA      = x - fcnArgs%theta
-   fmin_fcn = UncoupledErrFn( x,  AOA, fcnArgs%Re, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, fcnArgs%AFInfo, &
+   fmin_fcn = UncoupledErrFn( x,  fcnArgs%theta, fcnArgs%Re, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, fcnArgs%AFInfo, &
                               fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
-                              errStat, errMsg)  
+                              fcnArgs%IsValidSolution, errStat, errMsg)  
    
   ! fmin_fcn = UncoupledErrFn( x,  AOA, fcnArgs%psi, fcnArgs%Re, 1, fcnArgs%airDens, fcnArgs%mu, fcnArgs%numBlades, fcnArgs%rlocal, fcnArgs%chord, fcnArgs%theta, fcnArgs%AFInfo, &
   !                            fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &

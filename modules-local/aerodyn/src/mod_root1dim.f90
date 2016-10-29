@@ -18,14 +18,15 @@
 module mod_root1dim
     use NWTC_Library
     implicit none
-    real(ReKi), parameter, private :: xtoler_def = 1d-6, toler_def = 1d-6, printmod_def = -1, maxiter_def = 100
+    integer, parameter, private :: SolveKi = ReKi
+    real(SolveKi), parameter, private :: xtoler_def = 1d-6, toler_def = 1d-6, printmod_def = -1, maxiter_def = 100
 contains
 
 ! Tests whether the two functions values bracket a root -- i.e., have different signs
 function bracketsRoot(fa,fb) result(tf)
     logical :: tf
-    real(ReKi) :: fa,fb
-    tf = sign(fa,fb)/=fa
+    real(SolveKi) :: fa,fb
+    tf = sign(1.0_SolveKi,fb)/=sign(1.0_SolveKi,fa)
 end function bracketsRoot
 
 
@@ -57,21 +58,22 @@ subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,fa_in,fb_in,xtol
     real(ReKi), intent(in), optional :: toler_in,fa_in,fb_in,xtoler_in
     integer, intent(in), optional :: maxiter_in, printmod_in
     ! local
-    real(ReKi), parameter :: machep = epsilon(0d0)
-    real(ReKi) :: a,b,c,fa,fb,fc,toler,xtoler,e,d,m,p,q,tol,t,r,s
+    real(SolveKi), parameter :: machep = epsilon(0.0_SolveKi)
+    real(SolveKi) :: c,fa,fb,fc,toler,xtoler,e,d,m,p,q,tol,t,r,s
+    real(ReKi) :: a,b
     integer :: maxiter,printmod,iter
     character(len=6) :: step
 
     ! Set of get parameters
-    toler = 0d0; if (present(toler_in)) toler = toler_in ! Better to use custom toler here
+    toler = 0.0_SolveKi; if (present(toler_in)) toler = toler_in ! Better to use custom toler here
     xtoler = xtoler_def; if (present(xtoler_in)) xtoler = xtoler_in
     maxiter = maxiter_def; if (present(maxiter_in)) maxiter = maxiter_in    
     printmod = printmod_def; if (present(printmod_in)) printmod = printmod_in
 
     ! Set the user chosen tolerance t to xtoler
-    if (xtoler<0d0) then
-        print*,'WARNING: xtoler must be positive. Resetting xtoler.'
-        xtoler = 0d0
+    if (xtoler<0.0_SolveKi) then
+        CALL WrScr('WARNING: xtoler must be positive. Resetting xtoler.')
+        xtoler = 0.0_SolveKi
     end if
     t = xtoler
     
@@ -107,7 +109,7 @@ subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,fa_in,fb_in,xtol
     ! and the root is bracketed by b and c.
     do iter = 1,maxiter
 
-        if (iter==1 .or. (fb>0d0 .and. fc>0d0) .or. (fb<=0d0 .and. fc<=0d0)) then
+        if (iter==1 .or. (fb>0.0_SolveKi .and. fc>0.0_SolveKi) .or. (fb<=0.0_SolveKi .and. fc<=0.0_SolveKi)) then
             c = a
             fc = fa
             e = b - a
@@ -125,13 +127,13 @@ subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,fa_in,fb_in,xtol
         end if
 
         ! Set the tolerance. Note: brent is very careful with these things, so don't deviate from this.
-        tol = 2d0*machep*abs(b) + t
+        tol = 2.0_SolveKi*machep*abs(b) + t
 
         ! Determine what half the length of the bracket [b,c] is
-        m = .5d0*(c-b)
+        m = 0.5_SolveKi*(c-b)
 
         ! If taking a bisection step would move the guess of the root less than tol, then return b the best guess.
-        if ((abs(m)<=tol) .or. (fb==0d0)) then
+        if ((abs(m)<=tol) .or. (fb==0.0_SolveKi)) then
             x = b
             return
         end if
@@ -147,20 +149,20 @@ subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,fa_in,fb_in,xtol
                 ! Inverse quadratic interpolation
                 q = fa/fc
                 r = fb/fc
-                p = s*(2d0*m*q*(q-r) - (b-a)*(r-1d0))
-                q = (q-1d0)*(r-1d0)*(s-1d0)
+                p = s*(2.0_SolveKi*m*q*(q-r) - (b-a)*(r-1.0_SolveKi))
+                q = (q-1.0_SolveKi)*(r-1.0_SolveKi)*(s-1.0_SolveKi)
                 
                 step = 'quad'
             else
                 ! Linear interpolation
-                p = 2d0*m*s
-                q = 1d0-s
+                p = 2.0_SolveKi*m*s
+                q = 1.0_SolveKi-s
 
                 step = 'linear'
             end if
 
             ! Ensure p is positive
-            if (p<=0d0) then
+            if (p<=0.0_SolveKi) then
                 p = -p
             else
                 q = -q
@@ -168,8 +170,8 @@ subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,fa_in,fb_in,xtol
 
             s = e
             e = d
-            if ((2d0*p>=3d0*m*q-abs(tol*q)) .or. &
-                (p>=abs(.5d0*s*q))) then
+            if ((2.0_SolveKi*p>=3.0_SolveKi*m*q-abs(tol*q)) .or. &
+                (p>=abs(0.5_SolveKi*s*q))) then
                 ! Interpolation step failed to produce good step, bisect instead
                 e = m
                 d = m ! m is half the distance between b and c
@@ -194,7 +196,7 @@ subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,fa_in,fb_in,xtol
         !!! Increment b by d if that is greater than the tolerance. O/w, increment by tol.
         if (abs(d)<=tol) then
             ! m is .5*(c-b) with the bracket either [b,c] or [c,b]. 
-            if (m > 0d0) then
+            if (m > 0.0_SolveKi) then
                 ! If m>0d0, then bracket is [b,c] so move towards c by tol
                 b = b + tol
             else
