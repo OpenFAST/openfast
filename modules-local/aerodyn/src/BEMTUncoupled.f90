@@ -266,9 +266,9 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
     
       ! Set the local version of the induction factors (use values that set the force to 0)
    if ( ( useTiploss .and. EqualRealNos(tipLossConst,0.0_ReKi) ) .or. ( useHubloss .and. EqualRealNos(hubLossConst,0.0_ReKi) ) ) then
-      ! We are simply going to bail if we are using tiploss and tipLossConst = 0 or using hubloss and hubLossConst=0, regardless of phi!
-      axInduction  =  0.0_ReKi
-      tanInduction =  0.0_ReKi
+      ! We are simply going to bail if we are using tiploss and tipLossConst = 0 or using hubloss and hubLossConst=0, regardless of phi! [do this before checking if Vx or Vy is zero or you'll get jumps in the induction and loads]
+      axInduction  =  1.0_ReKi
+      tanInduction = -1.0_ReKi
    elseif ( EqualRealNos(phi, 0.0_ReKi) .or. VelocityIsZero(Vx) .OR. VelocityIsZero(Vy) ) then 
       axInduction  =  0.0_ReKi
       tanInduction =  0.0_ReKi
