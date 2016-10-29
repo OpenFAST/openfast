@@ -63,4 +63,7 @@ Archive/*
 /SourceFiles.txt
 /ArcWin.txt
 /Archive.bat
-/Compiling/VisualStudio/Debug/*
+/Compiling/Visual Studio 2013/AeroDyn_Driver/Debug/*
+/Compiling/Visual Studio 2013/AeroDyn_Driver/Release/*
+/Compiling/Visual Studio 2013/UnsteadyAero_Driver/Debug/*
+/Compiling/Visual Studio 2013/UnsteadyAero_Driver/Release/*
