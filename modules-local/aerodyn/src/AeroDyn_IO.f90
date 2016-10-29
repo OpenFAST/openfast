@@ -2932,7 +2932,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                  TwN8STVy ,  TwN8STVz ,  TwN8Vrel , TwN8VUndx , TwN8VUndy , TwN8VUndz ,  TwN9DynP , &
                                   TwN9Fdx ,   TwN9Fdy ,     TwN9M ,    TwN9Re ,  TwN9STVx ,  TwN9STVy ,  TwN9STVz , &
                                  TwN9Vrel , TwN9VUndx , TwN9VUndy , TwN9VUndz /)
-   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1103) =  (/ &                     ! This lists the units corresponding to the allowed parameters
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1103) =  (/ character(ChanLen) :: &    ! This lists the units corresponding to the allowed parameters
                                "(deg)     ","(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ","(-)       ", &
                                "(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ", &
                                "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ", &

@@ -80,7 +80,7 @@ typedef   ^                            ConstraintStateType           ReKi       
 #
 typedef   ^                            OtherStateType                UA_OtherStateType        UA                                  -           -         -        "other states for UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         {:}{:}          -         -        "logical flag indicating whether to use UnsteadyAero"        -
-typedef   ^                            ^                             LOGICAL                  ValidPhi                        {:}{:}          -         -         "set to indicate when there is no valid Phi for this node at this time (temporarially turn off induction when this is false)" -
+typedef   ^                            ^                             LOGICAL                  ValidPhi                        {:}{:}          -         -        "set to indicate when there is no valid Phi for this node at this time (temporarially turn off induction when this is false)" -
 typedef   ^                            OtherStateType                Logical                  nodesInitialized                -               -         -        "the node states have been initialized properly" -
 
 # ..... Misc/Optimization variables.................................................................................................
