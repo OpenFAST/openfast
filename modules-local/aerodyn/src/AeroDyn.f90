@@ -2464,7 +2464,7 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
    IF ( PRESENT( dZdu ) ) THEN
 
-      call CheckLinearizationInput(p%BEMT, m%BEMT_u(op_indx), z%BEMT, m%BEMT, ErrStat2, ErrMsg2)      
+      call CheckLinearizationInput(p%BEMT, m%BEMT_u(op_indx), z%BEMT, m%BEMT, OtherState%BEMT, ErrStat2, ErrMsg2)      
          call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -2894,7 +2894,7 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
 
    IF ( PRESENT(dZdz) ) THEN
 
-      call CheckLinearizationInput(p%BEMT, m%BEMT_u(op_indx), z%BEMT, m%BEMT, ErrStat2, ErrMsg2)      
+      call CheckLinearizationInput(p%BEMT, m%BEMT_u(op_indx), z%BEMT, m%BEMT, OtherState%BEMT, ErrStat2, ErrMsg2)      
          call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
@@ -3179,7 +3179,7 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    InitOut%RotFrame_y(indx_last:indx_next-1) = .true.
 
    do i=1,p%NumOuts
-      InitOut%LinNames_y(i+indx_next-1) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+      InitOut%LinNames_y(i+indx_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))  !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do    
 
       ! check for all the WriteOutput values that are functions of blade number:
@@ -3648,8 +3648,6 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta_p, delta_m, dY)
    end do
    
    
-   !indx_last = indx_first + p%NumOuts - 1
-   !if (p%NumOuts > 0) dY(indx_first:) = y_p%WriteOutput - y_m%WriteOutput
    do k=1,p%NumOuts
       dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
    end do   
@@ -3696,6 +3694,7 @@ FUNCTION CheckBEMTInputPerturbations( p, m ) RESULT(ValidPerturb)
    
    integer, parameter                      :: indx    = 1  ! index of perturbed input
    integer, parameter                      :: indx_op = 2  ! index of operating point
+   real(ReKi)                              :: Vx_prod, Vy_prod
    
    ValidPerturb = .true.
    
@@ -3707,16 +3706,15 @@ FUNCTION CheckBEMTInputPerturbations( p, m ) RESULT(ValidPerturb)
             
                   ! don't allow the input perturbations to change Vx or Vy so that Vx+AxInd_op=0 and Vy+TnInd_op=0 to 
                   ! avoid ill-conditioning in CalcConstrStateResidual:
-               if ( EqualRealNos( m%BEMT_u(indx)%Vx(j,k), -m%BEMT%AxInd_op(j,k) ) .and. &
-                    EqualRealNos( m%BEMT_u(indx)%Vy(j,k), -m%BEMT%TnInd_op(j,k) ) ) then
+               if ( VelocityIsZero( m%BEMT_u(indx)%Vx(j,k)+m%BEMT%AxInd_op(j,k) ) .and. &
+                    VelocityIsZero( m%BEMT_u(indx)%Vy(j,k)+m%BEMT%TnInd_op(j,k) ) ) then
                   ValidPerturb = .false.
                   return
                end if
 
                   ! don't allow the input perturbations to change Vx or Vy so that Vx=0 or Vy=0 to 
                   ! avoid division-by-zero errors in CalcOutput:
-               if ( EqualRealNos( m%BEMT_u(indx)%Vx(j,k), 0.0_ReKi ) .or. &
-                    EqualRealNos( m%BEMT_u(indx)%Vy(j,k), 0.0_ReKi ) ) then
+               if ( VelocityIsZero( m%BEMT_u(indx)%Vx(j,k) ) .or. VelocityIsZero( m%BEMT_u(indx)%Vy(j,k) ) ) then
                   ValidPerturb = .false.
                   return
                end if
@@ -3731,12 +3729,22 @@ FUNCTION CheckBEMTInputPerturbations( p, m ) RESULT(ValidPerturb)
             
                   ! don't allow the input perturbations to change Vx or Vy far enough to switch sign (or go to zero)
                   ! so as to change solution regions. 
-               if ( m%BEMT_u(indx)%Vx(j,k) * m%BEMT_u(indx_op)%Vx(j,k) <= 0.0_ReKi ) then
+               Vx_prod = m%BEMT_u(indx)%Vx(j,k) * m%BEMT_u(indx_op)%Vx(j,k)
+               if ( Vx_prod <= 0.0_ReKi ) then
                   ValidPerturb = .false.
                   return
-               elseif (m%BEMT_u(indx)%Vy(j,k) * m%BEMT_u(indx_op)%Vy(j,k) <= 0.0_ReKi ) then
+               elseif ( VelocityIsZero( m%BEMT_u(indx)%Vx(j,k) ) .or. VelocityIsZero( m%BEMT_u(indx_op)%Vx(j,k) )  ) then
                   ValidPerturb = .false.
                   return
+               else
+                  Vy_prod = m%BEMT_u(indx)%Vy(j,k) * m%BEMT_u(indx_op)%Vy(j,k)
+                  if (Vy_prod <= 0.0_ReKi ) then
+                     ValidPerturb = .false.
+                     return
+                  elseif ( VelocityIsZero(  m%BEMT_u(indx)%Vy(j,k) ) .or. VelocityIsZero( m%BEMT_u(indx_op)%Vy(j,k) )) then
+                     ValidPerturb = .false.
+                     return
+                  end if
                end if
                      
             end do !j=nodes
@@ -3750,8 +3758,7 @@ FUNCTION CheckBEMTInputPerturbations( p, m ) RESULT(ValidPerturb)
             do j=1,p%NumBlNds         
             
                   ! don't allow the input perturbations to change Vx or Vy so that Vx=0 or Vy=0:
-               if ( EqualRealNos( m%BEMT_u(indx)%Vx(j,k), 0.0_ReKi ) .or. &
-                    EqualRealNos( m%BEMT_u(indx)%Vy(j,k), 0.0_ReKi ) ) then
+               if ( EqualRealNos( m%BEMT_u(indx)%Vx(j,k), 0.0_ReKi ) .or. EqualRealNos( m%BEMT_u(indx)%Vy(j,k), 0.0_ReKi ) ) then
                   ValidPerturb = .false.
                   return
                end if

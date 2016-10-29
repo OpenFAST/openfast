@@ -84,6 +84,7 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
    
    real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
    integer                         :: s1                    ! Number of columns in the AFInfo structure
+   real(reki)                      :: Alpha                 ! AOA in degrees
 
    
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
@@ -103,7 +104,9 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
    !   return
    !end if
    Cd0 =   AFInfo%Table(1)%UA_BL%Cd0
-   IntAFCoefs(1:s1) = CubicSplineInterpM( real( AOA*180.0_ReKi/PI, ReKi ) &
+   
+   Alpha = Rad2M180to180Deg(AOA)
+   IntAFCoefs(1:s1) = CubicSplineInterpM( Alpha &
                                              , AFInfo%Table(1)%Alpha &
                                              , AFInfo%Table(1)%Coefs &
                                              , AFInfo%Table(1)%SplineCoefs &

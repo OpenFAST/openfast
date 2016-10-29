@@ -35,6 +35,9 @@ module BEMTUnCoupled
    integer(IntKi), public, parameter  :: SkewMod_PittPeters = 2      ! Pitt/Peters [-]
    integer(IntKi), public, parameter  :: SkewMod_Coupled    = 3      ! Coupled [-]
    
+   !1e-6 works for double precision, but not single precision 
+   real(ReKi),     public, parameter  :: BEMT_epsilon2 = 10.0_ReKi*sqrt(epsilon(1.0_ReKi)) !this is the tolerance in radians for values around singularities in phi (i.e., phi=0 and phi=pi/2); must be large enough so that EqualRealNos(BEMT_epsilon2, 0.0_ReKi) is false
+   
    
    private
    
@@ -46,8 +49,24 @@ module BEMTUnCoupled
    public :: Transform_ClCd_to_CxCy
    
    public :: BEMTU_Wind
-   contains
+   public :: VelocityIsZero
+contains
    
+!..................................................................................................................................   
+   function VelocityIsZero ( v )
+
+      ! passed variables
+
+   REAL(ReKi), INTENT(IN )         :: v                                 !< the velocity that needs to be compared with zero
+
+   LOGICAL                         :: VelocityIsZero                    !< .true. if and only if the velocity is (almost) equal to zero
+
+   
+      
+      VelocityIsZero = abs(v) < 0.001_ReKi ! tolerance in m/s for what we consider zero velocity for BEM computations
+   
+   end function VelocityIsZero
+!..................................................................................................................................   
    
    subroutine BEMTU_Wind( axInduction, tanInduction, Vx, Vy,  chord, airDens, mu, W, Re )
 
@@ -123,6 +142,7 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
    
 
    real                            :: IntAFCoefs(4)                ! The interpolated airfoil coefficients.
+   real(reki)                      :: Alpha
    integer                         :: s1      
       
    ErrStat = ErrID_None
@@ -138,7 +158,8 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
       !
    s1 = size(AFInfo%Table(1)%Coefs,2)
    
-   IntAFCoefs(1:s1) = CubicSplineInterpM( 1.0_ReKi*real( AOA*R2D, ReKi ) &
+   Alpha = Rad2M180to180Deg(AOA)
+   IntAFCoefs(1:s1) = CubicSplineInterpM( Alpha  &
                                           , AFInfo%Table(1)%Alpha &
                                           , AFInfo%Table(1)%Coefs &
                                           , AFInfo%Table(1)%SplineCoefs &
@@ -151,9 +172,7 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
    
        
 end subroutine ComputeSteadyAirfoilCoefs
-
-
-
+   
 !----------------------------------------------------------------------------------------------------------------------------------  
 subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
                       p_UA, xd_UA, OtherState_UA, y_UA, m_UA, &
@@ -198,11 +217,11 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
                   
        
 end subroutine Compute_UA_AirfoilCoefs
-
-                           ! This is the residual calculation for the uncoupled BEM solve
+!----------------------------------------------------------------------------------------------------------------------------------
+!>This is the residual calculation for the uncoupled BEM solve
 real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal, chord, AFInfo, &
                               Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst,  &
-                              axInduction, tanInduction,  ErrStat, ErrMsg)
+                              axInduction, tanInduction,  IsValidSolution, ErrStat, ErrMsg)
       
 
 
@@ -223,6 +242,7 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
    real(ReKi),             intent(in   ) :: hubLossConst
    real(ReKi),             intent(in   ) :: tipLossConst
    real(ReKi),             intent(  out) :: axInduction, tanInduction
+   logical,                intent(  out) :: IsValidSolution !< this is set to false if k<=1 in the propeller brake region or k<-1 in the momentum region, indicating an invalid solution
    integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
    character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
   
@@ -240,27 +260,32 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
    ErrStat = ErrID_None
    ErrMsg  = ""
    BEMTU_InductionWithResidual = 0.0_ReKi
-    
-      ! Set the local version of the induction factors
-   axInduction  = 0.0_ReKi  ! axInductionIN
-   tanInduction = 0.0_ReKi  ! tanInductionIN
+   IsValidSolution = .true.
    
-         
-   if (( .NOT. EqualRealNos(Vx, 0.0_ReKi) ) .AND. ( .NOT. EqualRealNos(Vy, 0.0_ReKi) ) ) then 
-      
-      call ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, Cl, Cd, Cm, errStat2, errMsg2 )       
+   ! make these return values consistent with what is returned in inductionFactors routine:
+    
+      ! Set the local version of the induction factors (use values that set the force to 0)
+   if ( ( useTiploss .and. EqualRealNos(tipLossConst,0.0_ReKi) ) .or. ( useHubloss .and. EqualRealNos(hubLossConst,0.0_ReKi) ) ) then
+      ! We are simply going to bail if we are using tiploss and tipLossConst = 0 or using hubloss and hubLossConst=0, regardless of phi!
+      axInduction  =  0.0_ReKi
+      tanInduction =  0.0_ReKi
+   elseif ( EqualRealNos(phi, 0.0_ReKi) .or. VelocityIsZero(Vx) .OR. VelocityIsZero(Vy) ) then 
+      axInduction  =  0.0_ReKi
+      tanInduction =  0.0_ReKi
+   else !if ( (.NOT. VelocityIsZero(Vx)) .AND. (.NOT. VelocityIsZero(Vy)) ) then 
+
+      call ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, Cl, Cd, Cm, errStat2, errMsg2 )       !bjj: would be nice if this could be done outside this routine (so we don't copy AFInfo so much)
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
          if (ErrStat >= AbortErrLev) return
       
          ! Compute Cx, Cy given Cl, Cd and phi, we honor the useAIDrag and useTIDrag flag because Cx,Cy are only used for the solution of inductions
       call Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )  
       
+      
          ! Determine axInduction, tanInduction for the current Cl, Cd, phi
       call inductionFactors( rlocal, chord, phi, Cx, Cy, numBlades, &
                               Vx, Vy, useTanInd, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &
-                              fzero, axInduction, tanInduction, errStat2, errMsg2)
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
-         if (ErrStat >= AbortErrLev) return
+                              fzero, axInduction, tanInduction, IsValidSolution)
       BEMTU_InductionWithResidual = fzero  ! the residual
       
    end if
@@ -268,16 +293,17 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
    
 end function BEMTU_InductionWithResidual
 
+
       ! This is the residual calculation for the uncoupled BEM solve
 
-real(ReKi) function UncoupledErrFn(phi, AOA, Re, numBlades, rlocal, chord, AFInfo, &
+real(ReKi) function UncoupledErrFn(phi, theta, Re, numBlades, rlocal, chord, AFInfo, &
                               Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
-                              ErrStat, ErrMsg)
+                              IsValidSolution, ErrStat, ErrMsg)
       
 
 
    real(ReKi),             intent(in   ) :: phi
-   real(ReKi),             intent(in   ) :: AOA
+   real(ReKi),             intent(in   ) :: theta
    real(ReKi),             intent(in   ) :: Re
    integer,                intent(in   ) :: numBlades
    real(ReKi),             intent(in   ) :: rlocal      
@@ -293,19 +319,22 @@ real(ReKi) function UncoupledErrFn(phi, AOA, Re, numBlades, rlocal, chord, AFInf
    real(ReKi),             intent(in   ) :: hubLossConst
    real(ReKi),             intent(in   ) :: tipLossConst
    integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
+   logical,                intent(  out) :: IsValidSolution !< this is set to false if k<=1 in the propeller brake region or k<-1 in the momentum region, indicating an invalid solution
    character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
   
    ! Local variables
    
-   
-   real(ReKi)                            :: axInduction, tanInduction
+   real(ReKi)                            :: axInduction, tanInduction, AoA
    
    ErrStat = ErrID_None
    ErrMsg  = ""
     
+   AOA = phi - theta
+   
+                
    UncoupledErrFn = BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal, chord, AFInfo, &
                            Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
-                           axInduction, tanInduction, ErrStat, ErrMsg)
+                           axInduction, tanInduction, IsValidSolution, ErrStat, ErrMsg)
 
    
 end function UncoupledErrFn
@@ -325,7 +354,7 @@ subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, tipRatio, a, ap, ch
    character(*),              intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None   
    
       ! Local variables      
-   real(ReKi)                               :: yawCorr, saz, x, y
+   real(ReKi)                               :: yawCorr, saz
    
    
    ErrStat = ErrID_None
@@ -360,203 +389,255 @@ subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, tipRatio, a, ap, ch
    end if
       
    
-      ! check that this doesn't produce an error in ComputePhiWithInduction, which just calculates atan2(y,x)
-   ! bjj 23-Jun-2016: I tried changing the below IF statement to AND because that is the limiting case in atan2,
-   ! but it drastically changed some results in the FAST certification tests, so I'm putting it back.
-   y = (1-a )*Vx
-   x = (1+ap)*Vy
-   
-   !if ( EqualRealNos(y, 0.0_ReKi) .AND. EqualRealNos(x, 0.0_ReKi) ) then
-   if ( EqualRealNos(y, 0.0_ReKi) .OR. EqualRealNos(x, 0.0_ReKi) ) then
-      ! NOTE that we've already checked that Vx and Vy are not zero
-      a     = 0.0_ReKi
-      ap    = 0.0_ReKi
-   end if
    
 end subroutine ApplySkewedWakeCorrection
-                              
-!recursive !bjj <- not sure why that would be necessary because inductionFactors() doesn't call itself...
-subroutine inductionFactors(r ,  chord, phi, cn, ct, B, &
-                              Vx, Vy, wakerotation, hubLoss, tipLoss, hubLossConst, tipLossConst, &
-                              fzero, a, ap, ErrStat, ErrMsg)
+!-----------------------------------------------------------------------------------------
+subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
+                              fzero, a, ap, IsValidSolution)
 
    implicit none
 
    ! in
-   real(ReKi), intent(in) :: r, chord, phi, cn, ct
-   integer, intent(in) :: B
-   real(ReKi), intent(in) :: Vx, Vy
-   real(ReKi), intent(in) :: hubLossConst, tipLossConst
-   logical, intent(in) ::  hubLoss, tipLoss,  wakerotation
-   
+   real(ReKi), intent(in) :: r              !< local radial position [u%rlocal]
+   real(ReKi), intent(in) :: chord          !< chord [p%chord]
+   real(ReKi), intent(in) :: phi            !< angle between the plane of rotation and the direction of the local wind [y%phi]; must be in range [-pi,pi]
+   real(ReKi), intent(in) :: cn             !< normal force coefficient (normal to the plane, not chord) of the jth node in the kth blade; [y%cx]
+   real(ReKi), intent(in) :: ct             !< tangential force coefficient (tangential to the plane, not chord) of the jth node in the kth blade; [y%cy]
+   integer,    intent(in) :: B              !< number of blades [p%numBlades]
+   real(ReKi), intent(in) :: Vx             !< velocity component [u%Vx]
+   real(ReKi), intent(in) :: Vy             !< velocity component [u%Vy]
+   real(ReKi), intent(in) :: hubLossConst   !< hub loss constant [p%hubLossConst]
+   real(ReKi), intent(in) :: tipLossConst   !< tip loss constant [p%tipLossConst]
+   logical,    intent(in) :: useHubLoss     !< hub-loss flag [p%useHubLoss]
+   logical,    intent(in) :: useTipLoss     !< tip-loss flag [p%useTipLoss]
+   logical,    intent(in) :: wakerotation   !< Include tangential induction in BEMT calculations [flag] [p%useTanInd]
+               
     
-    
-    
-    
-
    ! out
-   real(ReKi), intent(out) :: fzero, a, ap
-   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat       ! Error status of the operation
-   CHARACTER(*),     INTENT(  OUT) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
-
+   real(ReKi), intent(out) :: fzero         !< residual of BEM equations
+   real(ReKi), intent(out) :: a             !< axial induction [y%axInduction]
+   real(ReKi), intent(out) :: ap            !< tangential induction, i.e., a-prime [y%tanInduction]
+   logical,    intent(out) :: IsValidSolution !< this is set to false if k<=1 in the propeller brake region or k<-1 in the momentum region, indicating an invalid solution
+   
    ! local
-    
-      ! constants
-   REAL(ReKi), PARAMETER :: c1 = 2.6296e-3 
-   REAL(ReKi), PARAMETER :: c2 = 1.6222e-3 
-   REAL(ReKi), PARAMETER :: c3 = -1.1111e-5 
-   REAL(ReKi), PARAMETER :: c4 = -3.70371e-6 
-   
-
-    
-   
-    
-   real(ReKi) ::  sigma_p, sphi, cphi, lambda_r
-   real(ReKi) :: factortip, Ftip, factorhub, Fhub
-   real(ReKi) :: k, kp,  F 
+        
+   real(ReKi) :: sigma_p   ! local solidity (B*chord/(TwoPi*r))
+   real(ReKi) :: sphi, cphi, lambda_r
+   real(ReKi) :: k, kp ! non-dimensional parameters 
+   real(ReKi) :: F ! hub/tip loss correction factor
    real(ReKi) :: g1, g2, g3
+   real(ReKi) :: temp  ! temporary variable so we don't have to calculate 2.0_ReKi*F*k multiple times
+   real(ReKi), parameter :: InductionLimit = 1000000.0_ReKi
+   real(ReKi), parameter :: MaxTnInd = 2.0_ReKi
+   real(ReKi), parameter :: MaxAxInd = 2.0_ReKi
+   
+   logical    :: momentumRegion
 
- 
 
-   errStat = ErrID_None
-   errMsg  = ""
    
-      ! We are simply going to bail if we are using tiploss and tipLossConst = 0 or using hubloss and hubLossConst=0, regardless of phi!
-   if ( ( tiploss .and. EqualRealNos(tipLossConst,0.0_ReKi) ) .or. ( hubloss .and. EqualRealNos(hubLossConst,0.0_ReKi) ) ) then
-      fzero =  0.0_ReKi
-      a     =  1.0_ReKi
-      ap    =  -1.0_ReKi
-      return      
-   end if
+   IsValidSolution  = .true.
    
+   !.....................................................
+   ! Some special cases (bjj commented out because we have taken care of these in BEMTU_InductionWithResidual, the only routine that calls this function)
+   !.....................................................
+   !if ( ( useTiploss .and. EqualRealNos(tipLossConst,0.0_ReKi) ) .or. ( useHubloss .and. EqualRealNos(hubLossConst,0.0_ReKi) ) ) then
+   !   ! We are simply going to bail if we are using tiploss and tipLossConst = 0 or using hubloss and hubLossConst=0, regardless of phi!
+   !   fzero =  0.0_ReKi
+   !   a     =  1.0_ReKi
+   !   ap    = -1.0_ReKi
+   !   return      
+   !else if ( EqualRealNos(phi, 0.0_ReKi) ) then 
+   !   fzero =  0.0_ReKi
+   !   a     =  1.0_ReKi
+   !   if (wakerotation) then 
+   !      ap = -1.0_ReKi
+   !   else
+   !      ap = 0.0_ReKi
+   !   end if
+   !   
+   !   return
+   !end if
    
-   if ( EqualRealNos(phi, 0.0_ReKi) ) then
-      fzero =  0.0_ReKi
-      a     =  0.0_ReKi
-      ap    =  0.0_ReKi
-      return
-   end if
-    
-   sigma_p = B/2.0_ReKi/pi*chord/r
+   !.....................................................
+   ! Temporary variables:
+   !.....................................................
    sphi = sin(phi)
    cphi = cos(phi)
    
-    
    
-         ! Prandtl's tip and hub loss factor
-   Ftip = 1.0
-   if ( tipLoss ) then
-      factortip = tipLossConst/abs(sphi)
-      Ftip = (2.0/pi)*acos(min(1.0_ReKi,exp(-factortip)))
-   end if
+   !.....................................................
+   ! Prandtl's tip and hub loss factor:
+   !.....................................................
 
-   Fhub = 1.0
-   if ( hubLoss ) then
-      factorhub = hubLossConst/abs(sphi)
-      Fhub = (2.0/pi)*acos(min(1.0_ReKi,exp(-factorhub)))
-   end if
-      
-   F = Ftip * Fhub
-
+   F = getHubTipLossCorrection(sphi, useHubLoss, useTipLoss, hubLossConst, tipLossConst) ! Prandtl's tip and hub loss factor
    
     
-      ! bem parameters
- 
-    
+   !.....................................................
+   ! compute axial induction factor:
+   !.....................................................
+   sigma_p = B*chord/(TwoPi*r)  ! local solidity   
    k = sigma_p*cn/4.0_ReKi/F/sphi/sphi
     
-    ! compute axial induction factor
-   if (phi > 0.0_ReKi) then  ! momentum/empirical
+   
+   momentumRegion = (phi > 0.0_ReKi .and. Vx >= 0.0_ReKi) .or. (phi < 0.0_ReKi .and. Vx < 0.0_ReKi)
+   if (momentumRegion) then  ! momentum/empirical
 
  
         ! update axial induction factor
-      if (k <= 2.0_ReKi/3.0_ReKi) then  ! momentum state
-         if ( EqualRealNos( k, -1.0_ReKi) ) then
-            k = k - 0.1_ReKi   ! Need to bump k to avoid singularities
+      if (k <= 2.0_ReKi/3.0_ReKi) then  ! momentum state for a < 0.4
+         
+         if ( EqualRealNos(k,-1.0_ReKi) ) then
+            a = -sign(InductionLimit, 1.0_ReKi+k)
+         else   
+            a = k/(1.0_ReKi+k)
          end if
-      
-         a = k/(1.0_ReKi+k)
+         
+         if (k<-1.0_ReKi) then ! k < -1 cannot be a solution in momentum region (this is equivalent to a>1.0)
+            IsValidSolution = .false.
+         end if
+         
+         
+         ! note that we'll put a max on the magnitude of 'a' later 
+                  
+      else  ! Glauert(Buhl) correction for 0.4<a<1
 
-      else  ! Glauert(Buhl) correction
-
-         g1 = 2.0_ReKi*F*k - (10.0_ReKi/9-F)
-         g2 = 2.0_ReKi*F*k - (4.0_ReKi/3-F)*F
-         g3 = 2.0_ReKi*F*k - (25.0_ReKi/9-2*F)
+         temp = 2.0_ReKi*F*k
+         g1 = temp - (10.0_ReKi/9.0_ReKi-F)
+         g2 = temp - ( 4.0_ReKi/3.0_ReKi-F)*F
+         g3 = temp - (25.0_ReKi/9.0_ReKi-2.0_ReKi*F)
 
          if (abs(g3) < 1e-6_ReKi) then  ! avoid singularity
-               a = 1.0_ReKi - 1.0_ReKi/2.0/sqrt(g2)
+            a = 1.0_ReKi - 0.5_ReKi/sqrt(g2)
          else
-               a = (g1 - sqrt(g2)) / g3
+            a = (g1 - sqrt(abs(g2))) / g3 ! bjj: g2 should always be > 0, but just in case there are numerical issues, I will add the abs() here
          end if
 
       end if
-
-   else  ! propeller brake region (a and ap not directly used but update anyway) !bjj: huh? when k is slightly larger than 1, a is definitely getting used (and causing issues)...
-
-      if (k > 1.0_ReKi .and. .not. EqualRealNos(k, 1.0_ReKi) ) then
-      !if (sigma_pcn > Fsphi) then
-         a =   k/(k-1.0_ReKi) !sigma_pcn / (sigma_pcn - Fsphi )  !
-
-         ! axial induction is blowing up, so I'm putting a band-aid here. BJJ 25-Feb-2016
-         a = min(a, 10.0_ReKi ) 
       
+   else  ! propeller brake
+      
+            
+      if ( EqualRealNos(k,1.0_ReKi) ) then
+         IsValidSolution = .false.
+         a = InductionLimit
       else
-         a = 0.0_ReKi  ! dummy value
+         a = k/(k-1.0_ReKi)
       end if
 
+      
+      if (k<=1.0_ReKi) then ! k <= 1 cannot be a solution in propeller brake region (this is equivalent to a<1.0)
+         IsValidSolution = .false.
+      else if (a > MaxAxInd) then ! propeller brake region is for induction factors > 1, but not too large; 
+         ! note that we use k in the residual equation instead of a in the propeller brake region, so we can put the limit here
+         a = MaxAxInd
+      end if         
+      
    end if
 
+   !.....................................................
+   ! compute tangential induction factor:
+   !.....................................................
     
+   if (wakerotation) then 
    
-    ! compute tangential induction factor
-   if ( cphi==0.0_ReKi ) then ! We don't want NaN here
-      kp = HUGE(kp)
-   else
-      kp = sigma_p*ct/4.0_ReKi/F/sphi/cphi
-   end if
-   
-      ! Per conversation with Rick, we should only trigger this if phi = 0 , so we will return predefined values as if phi=0.0
-   if (EqualRealNos(kp, 1.0_ReKi)) then
-      fzero =  0.0_ReKi
-      a     =  0.0_ReKi
-      ap    =  0.0_ReKi
-      return
-   end if
-   
-   ap = kp/(1.0_ReKi-kp)
-   ! tangential induction is blowing up, so we're putting a band-aid here. GJH, JMJ, BJJ 1-Sep-2015
-   if ( abs(ap) > 10.0_ReKi ) then
-      ap = sign( 10.0_ReKi, ap )
-   end if
+         ! compute tangential induction factor
+      if ( EqualRealNos(cphi,0.0_ReKi) ) then
+         
+         ap = -1.0_ReKi
+         kp =  sign(InductionLimit, ct*sphi)*sign(1.0_ReKi,Vx)
+         
+      else
+         
+         kp = sigma_p*ct/4.0_ReKi/F/sphi/cphi
+         if (Vx < 0.0_ReKi) then 
+            kp = -kp
+         end if
+         
       
-   
-!bjj: 3-jun-2015: TODO: was able to trigger divide-by-zero here using ccBlade_UAE.dvr without tiploss or hubloss
-    
-   if (.not. wakerotation) then
+         if ( EqualRealNos(kp,1.0_ReKi) ) then
+            ap = sign(InductionLimit, 1.0_ReKi-kp)
+         else
+            ap = kp/(1.0_ReKi-kp)
+         end if
+         
+         ! bandaid so that this doesn't blow up. Note that we're not using ap in the residual calculation, so we can modify it here.
+         if (abs(ap) > MaxTnInd) ap = sign(MaxTnInd, ap)
+         
+      end if
+         
+            
+   else 
+      
+      ! we're not computing tangential induction:       
       ap = 0.0_ReKi
       kp = 0.0_ReKi
+      
    end if
 
     
-    
-    ! error function
+   !.....................................................
+   ! error function (residual)
+   !.....................................................
    lambda_r = Vy/Vx
-   if (phi > 0) then  ! momentum/empirical
+
+   if (momentumRegion) then  ! momentum/empirical
       if ( EqualRealNos(a, 1.0_ReKi) ) then
          fzero = - cphi/lambda_r*(1-kp)
       else       
          fzero = sphi/(1-a) - cphi/lambda_r*(1-kp)
+
+         ! bandaid so that axial induction doesn't blow up
+         a = max(a,-MaxAxInd)
       end if
       
    else  ! propeller brake region
       fzero = sphi*(1-k) - cphi/lambda_r*(1-kp)
    end if
     
+   if (.not. IsValidSolution) then
+      a = 0.0_ReKi
+      ap = 0.0_ReKi
+   end if
+   
+   
 end subroutine inductionFactors
-    
+!-----------------------------------------------------------------------------------------
+!> This function computes \f$F\f$, the hub/tip loss correction
+real(reKi) function getHubTipLossCorrection(sphi, useHubLoss, useTipLoss, hubLossConst, tipLossConst) result(F)
 
-                              
+   real(ReKi), intent(in) :: sphi           !< sine of local inflow angle, sin(phi)
+   real(ReKi), intent(in) :: hubLossConst   !< hub loss constant [p%hubLossConst]
+   real(ReKi), intent(in) :: tipLossConst   !< tip loss constant [p%tipLossConst]
+   logical,    intent(in) :: useHubLoss     !< hub-loss flag [p%useHubLoss]
+   logical,    intent(in) :: useTipLoss     !< tip-loss flag [p%useTipLoss]
 
-                              
-                              
+
+   real(ReKi) :: factortip, Ftip, factorhub, Fhub
+
+   !.....................................................
+   ! Prandtl's tip and hub loss factor:
+   !.....................................................
+
+   Ftip = 1.0_ReKi     ! default tip loss value 
+   Fhub = 1.0_ReKi     ! default hub loss value
+   
+   if (.not. EqualRealNos(sphi,0.0_ReKi)) then
+      if ( useTipLoss ) then
+         factortip = tipLossConst/abs(sphi)
+         Ftip = TwoByPi*acos(min(1.0_ReKi,exp(-factortip)))
+         ! else Ftip = 1.0_ReKi  ! TwoByPi*Pi/2
+      end if
+
+      if ( useHubLoss ) then
+         factorhub = hubLossConst/abs(sphi)
+         Fhub = TwoByPi*acos(min(1.0_ReKi,exp(-factorhub)))
+         ! else Ftip = 1.0_ReKi  ! TwoByPi*Pi/2
+      end if
+   end if
+      
+   F = Ftip * Fhub
+   
+end function getHubTipLossCorrection
+!-----------------------------------------------------------------------------------------
+
 end module BEMTUncoupled

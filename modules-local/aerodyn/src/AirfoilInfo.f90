@@ -751,6 +751,7 @@ CONTAINS
                   
                CALL ParseVarWDefault ( FileInfo, CurLine, 'UACutout', AFInfo%Table(Table)%UA_BL%UACutout, 45.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               AFInfo%Table(Table)%UA_BL%UACutout = AFInfo%Table(Table)%UA_BL%UACutout*D2R
 
                CALL ParseVarWDefault ( FileInfo, CurLine, 'filtCutOff', AFInfo%Table(Table)%UA_BL%filtCutOff, 20.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
