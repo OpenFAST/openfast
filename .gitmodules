@@ -7,3 +7,6 @@
 [submodule "subs/NWTC_Library"]
 	path = subs/NWTC_Library
 	url = https://github.com/NWTC/NWTC_Library
+[submodule "subs/AeroDyn"]
+	path = subs/AeroDyn
+	url = https://github.com/NWTC/AeroDyn

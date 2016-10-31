@@ -44,6 +44,10 @@ subs\NWTC_Library\source\NetLib\fftpack\*
 subs\NWTC_Library\source\NetLib\lapack\*
 subs\NWTC_Library\source\NetLib\scalapack\*
 subs\ExtPtfm\source\*
+subs\AeroDyn\Source\dependencies\AeroDyn\*
+subs\AeroDyn\Source\dependencies\Airfoil_Info\*
+subs\AeroDyn\Source\dependencies\BEMT\*
+subs\AeroDyn\Source\dependencies\UnsteadyAero\*
 
 Source\dependencies\Registry\*
 
