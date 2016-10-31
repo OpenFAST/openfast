@@ -815,8 +815,8 @@ CONTAINS
                   RETURN
                END IF
 
-   !mlb: testing         AFInfo%Table(Table)%Alpha(Row  ) = SiAry(InCol_Alfa)*D2R
-            AFInfo%Table(Table)%Alpha(Row  ) = SiAry(InCol_Alfa)
+            AFInfo%Table(Table)%Alpha(Row  ) = SiAry(InCol_Alfa)*D2R
+           !AFInfo%Table(Table)%Alpha(Row  ) = SiAry(InCol_Alfa)
             AFInfo%Table(Table)%Coefs(Row,1) = SiAry(InCol_Cl  )
             AFInfo%Table(Table)%Coefs(Row,2) = SiAry(InCol_Cd  )
 
@@ -836,12 +836,12 @@ CONTAINS
          IF ( .NOT. AFInfo%Table(Table)%ConstData )  THEN
             NumAlf  = AFInfo%Table(Table)%NumAlf
             BadVals = .FALSE.
-  !mlb: testing          IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(1), -Pi ) )  THEN
-            IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(1), -180.0_ReKi ) )  THEN
+            IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(1), -Pi ) )  THEN
+            !IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(1), -180.0_ReKi ) )  THEN
                BadVals = .TRUE.
             ENDIF
-  !mlb: testing          IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(NumAlf), Pi ) )  THEN
-            IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(NumAlf), 180.0_ReKi ) )  THEN
+            IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(NumAlf), Pi ) )  THEN
+            !IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(NumAlf), 180.0_ReKi ) )  THEN
                BadVals = .TRUE.
             ENDIF
             DO Coef=1,NumCoefs
@@ -851,7 +851,7 @@ CONTAINS
             ENDDO ! Coef
             IF ( BadVals )  THEN
                CALL SetErrStat( ErrID_Warn, &
-                  'Airfoil data should go from -180 to 180 and the coefficients at the ends should be the same.', ErrStat, ErrMsg, RoutineName )
+                  'Airfoil data should go from -180 degrees to 180 degrees and the coefficients at the ends should be the same.', ErrStat, ErrMsg, RoutineName )
                CALL Cleanup()
                RETURN
             ENDIF
