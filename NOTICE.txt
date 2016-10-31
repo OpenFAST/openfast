@@ -1,8 +1,12 @@
 AeroDyn Driver
-Copyright (c) 2015  National Renewable Energy Laboratory
+Copyright (c) 2015-2016  National Renewable Energy Laboratory
 
 This product includes software developed at
 National Renewable Energy Laboratory (http://www.nrel.gov, wind.nrel.gov)
+
+NREL gratefully acknowledges development contributions from the following organizations: 
+- Envision Energy USA, Ltd.
+- Bringham Young University
 
 
 Third Party Content

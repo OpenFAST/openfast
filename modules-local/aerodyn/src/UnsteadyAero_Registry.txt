@@ -37,14 +37,14 @@ typedef   ^                            ^                             LOGICAL    
 #typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
 #typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "The number of outputs for this module as requested in the input file"    -
-#typedef   ^                            ^                             CHARACTER(10)            OutList                         {199}         -         -        "The user-requested output channel labels for this module. This should really be dimensioned with MaxOutPts"    -
+#typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                         {199}         -         -        "The user-requested output channel labels for this module. This should really be dimensioned with MaxOutPts"    -
 #                                                                                                                                         
 #                                                                                                                                         
 # Define outputs from the initialization routine here:                                                                                    
 #                                                                                                                                         
 typedef   ^                            InitOutputType                ProgDesc                 Version                         -             -         -        "Version structure" -
-typedef   ^                            InitOutputType                CHARACTER(15)            WriteOutputHdr                  {:}           -         -        "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
-typedef   ^                            ^                             CHARACTER(15)            WriteOutputUnt                  {:}           -         -        "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
+typedef   ^                            InitOutputType                CHARACTER(ChanLen)       WriteOutputHdr                  {:}           -         -        "The is the list of all UA-related output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                  {:}           -         -        "The is the list of all UA-related output channel unit strings (includes all sub-module channels)"    -
 #
 #
 # ..... States ....................................................................................................................
@@ -124,7 +124,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  OutSwtch                        -             -         -        "Output requested channels to: [1=Unsteady.out 2=GlueCode.out  3=both files]"    -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
-typedef   ^                            ^                             CHARACTER(10)            Delim                           -             -         -        "Delimiter string for outputs, defaults to tab-delimiters"        -
+typedef   ^                            ^                             CHARACTER(1)             Delim                           -             -         -        "Delimiter string for outputs, defaults to tab-delimiters"        -
 typedef   ^                            ^                             INTEGER                  UnOutFile                       -             -         -        "File unit for the UnsteadyAero outputs"        -
 #
 
