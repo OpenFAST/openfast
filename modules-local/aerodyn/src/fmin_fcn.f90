@@ -35,7 +35,6 @@ module fminfcn
       real(ReKi)        :: rlocal      
       real(ReKi)        :: chord 
       real(ReKi)        :: theta         
-      type(AFInfoType)  :: AFInfo
       real(ReKi)        :: Vx
       real(ReKi)        :: Vy
       real(ReKi)        :: Re
@@ -60,20 +59,21 @@ module fminfcn
 !   integer   ,           intent(  out)   :: iflag   
 !   type(fmin_fcnArgs),  intent(inout)    :: fcnArgs
    
-real(ReKi) function fmin_fcn(x, fcnArgs)
-   real(ReKi),           intent(in   )   :: x
+real(ReKi) function fmin_fcn(x, fcnArgs, AFInfo)
+   real(ReKi),          intent(in   )    :: x
    type(fmin_fcnArgs),  intent(inout)    :: fcnArgs
+   type(AFInfoType),    intent(in)       :: AFInfo
    
    integer(IntKi)       :: errStat       ! Error status of the operation
    character(ErrMsgLen) :: errMsg        ! Error message if ErrStat /= ErrID_None
    
    
       ! Call the UncoupledErrFn subroutine to compute the residual
-   fmin_fcn = UncoupledErrFn( x,  fcnArgs%theta, fcnArgs%Re, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, fcnArgs%AFInfo, &
+   fmin_fcn = UncoupledErrFn( x,  fcnArgs%theta, fcnArgs%Re, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, AFInfo, &
                               fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
                               fcnArgs%IsValidSolution, errStat, errMsg)  
    
-  ! fmin_fcn = UncoupledErrFn( x,  AOA, fcnArgs%psi, fcnArgs%Re, 1, fcnArgs%airDens, fcnArgs%mu, fcnArgs%numBlades, fcnArgs%rlocal, fcnArgs%chord, fcnArgs%theta, fcnArgs%AFInfo, &
+  ! fmin_fcn = UncoupledErrFn( x,  AOA, fcnArgs%psi, fcnArgs%Re, 1, fcnArgs%airDens, fcnArgs%mu, fcnArgs%numBlades, fcnArgs%rlocal, fcnArgs%chord, fcnArgs%theta, AFInfo, &
   !                            fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
   !                            errStat, errMsg)  
    

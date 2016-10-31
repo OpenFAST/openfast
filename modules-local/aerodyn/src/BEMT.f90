@@ -1682,7 +1682,7 @@ end subroutine GetSolveRegionOrdering
    
 integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, chord, theta, AFInfo, &
                         Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst,  atol, &
-                        errStat, errMsg)
+                        f1, f2, errStat, errMsg)
 
    real(ReKi),             intent(in   ) :: phiLower
    real(ReKi),             intent(in   ) :: phiUpper
@@ -1703,6 +1703,8 @@ integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, chord, theta,
    real(ReKi),             intent(in   ) :: hubLossConst
    real(ReKi),             intent(in   ) :: tipLossConst
    real(ReKi),             intent(in   ) :: atol
+   real(ReKi),             intent(  out) :: f1 !< value of residual at phiLower
+   real(ReKi),             intent(  out) :: f2 !< value of residual at phiUpper
    integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
    character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
    
@@ -1711,7 +1713,6 @@ integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, chord, theta,
    integer(IntKi)                        :: errStat2                ! temporary Error status of the operation
    character(*), parameter               :: RoutineName='TestRegion'
    logical                               :: IsValidSolution, IsValidSolution2 ! placeholder for flag to determine if the residual solution is invalid (we'll handle that after the brent solve) 
-   real(ReKi) :: f1, f2
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1792,11 +1793,11 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
       ! Local variables
    type(fmin_fcnArgs)                   :: fcnArgs
    
-   character(ErrMsgLen)                          :: errMsg2, errMsg3        ! temporary Error message if ErrStat /= ErrID_None
-   integer(IntKi)                                :: errStat2, errStat3      ! temporary Error status of the operation
+   character(ErrMsgLen)                          :: errMsg2       ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)                                :: errStat2      ! temporary Error status of the operation
    character(*), parameter                       :: RoutineName = 'BEMT_UnCoupledSolve'
    
-   real(ReKi) :: f1 
+   real(ReKi) :: f1, f_lower, f_upper
    real(ReKi) :: phi_lower(3), phi_upper(3)         ! upper and lower bounds for region of phi in which we are trying to find a solution to the BEM equations
    integer    :: i, TestRegionResult
    logical    :: IsValidSolution
@@ -1850,7 +1851,6 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    !............
    ! 
    
-   ! bjj: set this type up in the BEMT miscvars data type so that we don't have to copy AFI each time?
       ! Set up the fcn argument settings for Brent's method
 
    fcnArgs%airDens         = airDens
@@ -1859,7 +1859,6 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    fcnArgs%rlocal          = rlocal
    fcnArgs%chord           = chord
    fcnArgs%theta           = theta   
-   call AFI_Copyafinfotype( AFInfo, fcnArgs%AFInfo, MESH_NEWCOPY, errStat3, errMsg3 )  
    fcnArgs%Vx              = Vx
    fcnArgs%Vy              = Vy
    fcnArgs%Re              = Re
@@ -1877,7 +1876,7 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    do i = 1,size(phi_upper)   ! Need to potentially test 3 regions
       TestRegionResult = TestRegion(phi_lower(i), phi_upper(i), numBlades, rlocal, chord, theta, AFInfo, &
                         Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, atol, &
-                        errStat2, errMsg2)
+                        f_lower, f_upper, errStat2, errMsg2)
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
       
       if ( TestRegionResult == 1 ) then
@@ -1885,7 +1884,7 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
          ! There is a zero in the solution region [phi_lower(i), phi_upper(i)] because the endpoints have residuals with different signs (SolutionRegion=1)
          ! We use Brent's Method to find the zero-residual solution in this region
                   
-         call sub_brent(phi,fmin_fcn,phi_lower(i),phi_upper(i), aTol, maxIndIterations, fcnArgs)
+         call sub_brent(phi,fmin_fcn,phi_lower(i),phi_upper(i), aTol, maxIndIterations, fcnArgs, AFInfo, f_lower, f_upper)
             call SetErrStat(fcnArgs%ErrStat, fcnArgs%ErrMsg, ErrStat, ErrMsg, RoutineName)
    
          if (fcnArgs%IsValidSolution) then ! we have a valid BEMT solution
@@ -1913,8 +1912,6 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
       end if 
       
    end do
-
-   call AFI_DestroyAFInfoType(fcnArgs%AFInfo, ErrStat2, ErrMsg2) !bjj: we should pass cl,cd instead of AFInfo to avoid all this memory overhead here!
    
 
    if (.not. ValidPhi) then
