@@ -38,25 +38,34 @@ end function bracketsRoot
 !       Returns a zero x of the function f in the given interval [a,b], to within a tolerance 6macheps|x| + 2t, 
 ! where macheps is the relative machine precision and t is a positive tolerance. The procedure assumes that 
 ! f(a) and f(b) have different signs.
-subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,fa_in,fb_in,xtoler_in,printmod_in)
+subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in,xtoler_in,printmod_in)
     use fminfcn
     
     implicit none 
     
-    real(ReKi), intent(out) :: x
+    real(ReKi), intent(out) :: x !< solution
     interface
-        function f(x, fcnArgs)
+        function f(x, fcnArgs, AFInfo)
         use fminfcn
         implicit none
-        real(ReKi),            intent(in)           :: x
-        type(fmin_fcnArgs), intent(inout)           :: fcnArgs
+        real(ReKi),         intent(in)           :: x
+        type(fmin_fcnArgs), intent(inout)        :: fcnArgs
+        TYPE (AFInfoType),  INTENT(IN   )        :: AFInfo          ! The derived type for holding the constant parameters for this airfoil.
         real(ReKi) :: f
         end function f
     end interface
-    real(ReKi), intent(in) :: a_in,b_in
-    type(fmin_fcnArgs), intent(inout), optional :: fcnArgs
-    real(ReKi), intent(in), optional :: toler_in,fa_in,fb_in,xtoler_in
-    integer, intent(in), optional :: maxiter_in, printmod_in
+    
+    real(ReKi), intent(in) :: a_in  !< lower bound of solution region
+    real(ReKi), intent(in) :: b_in  !< upper bound of solution region
+    
+    type(fmin_fcnArgs), intent(inout) :: fcnArgs !< function arguments
+    TYPE (AFInfoType),  INTENT(IN   ) :: AFInfo  !< The derived type for holding the constant parameters for this airfoil.
+    real(ReKi), intent(in),  optional :: toler_in !< induction tolerance
+    real(ReKi), intent(in),  optional :: fa_in !< starting value for f(a), if not present, will be evaluated
+    real(ReKi), intent(in),  optional :: fb_in !< starting value for f(b), if not present, will be evaluated
+    real(ReKi), intent(in),  optional :: xtoler_in !< 
+    integer,    intent(in),  optional :: printmod_in !< print switch; otherwise uses default printmod_deff
+    integer,    intent(in),  optional :: maxiter_in !< maximum number of iterations; otherwise uses default maxiter_def
     ! local
     real(SolveKi), parameter :: machep = epsilon(0.0_SolveKi)
     real(SolveKi) :: c,fa,fb,fc,toler,xtoler,e,d,m,p,q,tol,t,r,s
@@ -83,12 +92,12 @@ subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,fa_in,fb_in,xtol
     if (present(fa_in)) then
         fa = fa_in
     else
-        fa = f(a, fcnArgs)
+        fa = f(a, fcnArgs, AFInfo)
     end if
     if (present(fb_in)) then
         fb = fb_in
     else
-        fb = f(b, fcnArgs)
+        fb = f(b, fcnArgs, AFInfo)
     end if
 
     ! Test whether root is bracketed
@@ -208,7 +217,7 @@ subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,fa_in,fb_in,xtol
         end if
 
         !!! Evaluate at the new point
-        fb = f(b, fcnArgs)
+        fb = f(b, fcnArgs, AFInfo)
 
         ! Check my custom tolerance 
         if (abs(fb)<toler) then
