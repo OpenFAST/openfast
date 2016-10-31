@@ -1791,11 +1791,12 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    
    
       ! Local variables
-   type(fmin_fcnArgs)                   :: fcnArgs
+   type(fmin_fcnArgs)                    :: fcnArgs
    
-   character(ErrMsgLen)                          :: errMsg2       ! temporary Error message if ErrStat /= ErrID_None
-   integer(IntKi)                                :: errStat2      ! temporary Error status of the operation
-   character(*), parameter                       :: RoutineName = 'BEMT_UnCoupledSolve'
+   character(ErrMsgLen)                  :: errMsg2       ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)                        :: errStat2      ! temporary Error status of the operation
+   character(*), parameter               :: RoutineName = 'BEMT_UnCoupledSolve'
+   real(ReKi), parameter                 :: MsgLimit = BEMT_epsilon2*100.0_ReKi
    
    real(ReKi) :: f1, f_lower, f_upper
    real(ReKi) :: phi_lower(3), phi_upper(3)         ! upper and lower bounds for region of phi in which we are trying to find a solution to the BEM equations
@@ -1917,9 +1918,7 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    if (.not. ValidPhi) then
       phi = ComputePhiWithInduction(Vx, Vy,  0.0_ReKi, 0.0_ReKi)
       
-      if (abs(phi)<BEMT_epsilon2 .or. abs(abs(phi)-PiBy2) < BEMT_epsilon2*100.0_ReKi ) then
-!print *, 'solution at ', phi         
-      else
+      if (abs(phi)>MsgLimit .and. abs(abs(phi)-PiBy2) > MsgLimit ) then
          call SetErrStat( ErrID_Info, 'There is no valid value of phi for these operating conditions: Vx = '//TRIM(Num2Lstr(Vx))//&
             ', Vy = '//TRIM(Num2Lstr(Vy))//', rlocal = '//TRIM(Num2Lstr(rLocal))//', theta = '//TRIM(Num2Lstr(theta))//', geometric phi = '//TRIM(Num2Lstr(phi)), errStat, errMsg, RoutineName )
       end if
