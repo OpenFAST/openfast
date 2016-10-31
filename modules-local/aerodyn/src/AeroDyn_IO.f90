@@ -25,12 +25,12 @@ MODULE AeroDyn_IO
  
    use NWTC_Library
    use AeroDyn_Types
-   use BEMTUncoupled, only : SkewMod_Uncoupled, SkewMod_PittPeters
+   use BEMTUncoupled, only : SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
 
    
    implicit none
    
-   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.03.00', '27-Jul-2016' )
+   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.04.00', '29-Oct-2016' )
    character(*),   parameter  :: AD_Nickname = 'AD'
       
 ! ===================================================================================================
@@ -1573,7 +1573,7 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, indx, ErrStat, ErrMsg )
          m%AllOuts( BNAxInd(beta,k) ) = m%BEMT_y%axInduction(j,k)
          m%AllOuts( BNTnInd(beta,k) ) = m%BEMT_y%tanInduction(j,k)
 
-         m%AllOuts( BNAlpha(beta,k) ) = (m%BEMT_y%phi(j,k) - m%BEMT_u(indx)%theta(j,k))*R2D         
+         m%AllOuts( BNAlpha(beta,k) ) = Rad2M180to180Deg( m%BEMT_y%phi(j,k) - m%BEMT_u(indx)%theta(j,k) )         
          m%AllOuts( BNTheta(beta,k) ) = m%BEMT_u(indx)%theta(j,k)*R2D         
          m%AllOuts( BNPhi(  beta,k) ) = m%BEMT_y%phi(j,k)*R2D         
          m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D         
@@ -1998,12 +1998,12 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadCom( UnIn, InputFile, 'Section Header: Beddoes-Leishman Unsteady Airfoil Aerodynamics Options', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez’s variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%UAMod, "UAMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez’s variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
+      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
+   CALL ReadVar( UnIn, InputFile, InputFileData%UAMod, "UAMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! FLookup - Flag to indicate whether a lookup for f’ will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%FLookup, "FLookup", "Flag to indicate whether a lookup for f’ will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag)", ErrStat2, ErrMsg2, UnEc)
+      ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag):
+   CALL ReadVar( UnIn, InputFile, InputFileData%FLookup, "FLookup", "Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    
       ! UACutout - Angle-of-attach beyond which unsteady aerodynamics are disabled (deg)
@@ -2511,7 +2511,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
          case (1)
             Msg = 'baseline model (original)'
          case (2)
-            Msg = 'Gonzalez’s variant (changes in Cn, Cc, and Cm)'
+            Msg = "Gonzalez's variant (changes in Cn, Cc, and Cm)"
          case (3)
             Msg = 'Minemma/Pierce variant (changes in Cc and Cm)'      
          !case (4)
@@ -2932,148 +2932,148 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                  TwN8STVy ,  TwN8STVz ,  TwN8Vrel , TwN8VUndx , TwN8VUndy , TwN8VUndz ,  TwN9DynP , &
                                   TwN9Fdx ,   TwN9Fdy ,     TwN9M ,    TwN9Re ,  TwN9STVx ,  TwN9STVy ,  TwN9STVz , &
                                  TwN9Vrel , TwN9VUndx , TwN9VUndy , TwN9VUndz /)
-   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1103) =  (/ &                     ! This lists the units corresponding to the allowed parameters
+   CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(1103) =  (/ character(ChanLen) :: &    ! This lists the units corresponding to the allowed parameters
                                "(deg)     ","(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ","(-)       ", &
                                "(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ", &
                                "(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ", &
                                "(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ", &
                                "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ", &
-                               "(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
+                               "(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
                                "(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ", &
                                "(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ", &
                                "(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
+                               "(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ", &
                                "(-)       ","(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ", &
                                "(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ", &
+                               "(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ", &
                                "(-)       ","(-)       ","(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ", &
                                "(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ", &
+                               "(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
                                "(-)       ","(-)       ","(-)       ","(m)       ","(-)       ","(-)       ","(-)       ", &
                                "(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ","(-)       ","(-)       ", &
                                "(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ", &
                                "(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ","(-)       ", &
                                "(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ", &
                                "(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ", &
                                "(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ", &
                                "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ", &
-                               "(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
+                               "(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
                                "(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(deg)     ","(deg)     ","(-)       ", &
                                "(-)       ","(-)       ","(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ", &
                                "(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ", &
+                               "(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
                                "(-)       ","(-)       ","(-)       ","(m)       ","(-)       ","(-)       ","(-)       ", &
                                "(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ","(-)       ","(-)       ", &
                                "(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ", &
                                "(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ","(-)       ", &
                                "(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ", &
                                "(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ", &
                                "(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ", &
                                "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ", &
-                               "(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
+                               "(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
                                "(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ", &
                                "(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ", &
                                "(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
+                               "(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ", &
                                "(-)       ","(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ", &
                                "(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ", &
+                               "(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ", &
                                "(-)       ","(-)       ","(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ", &
                                "(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ", &
+                               "(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
                                "(-)       ","(-)       ","(-)       ","(m)       ","(-)       ","(-)       ","(-)       ", &
                                "(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(deg)     ","(deg)     ","(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ", &
                                "(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ", &
                                "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ", &
-                               "(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
+                               "(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
                                "(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ", &
                                "(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ", &
                                "(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
+                               "(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ", &
                                "(-)       ","(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ", &
                                "(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ", &
+                               "(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ", &
                                "(-)       ","(-)       ","(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ", &
                                "(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ", &
+                               "(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
                                "(-)       ","(-)       ","(-)       ","(m)       ","(-)       ","(-)       ","(-)       ", &
                                "(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ","(-)       ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ","(-)       ","(-)       ", &
                                "(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ","(deg)     ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ","(deg)     ", &
                                "(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ","(-)       ", &
                                "(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ","(N/m)     ", &
-                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(N·m/m)   ", &
+                               "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ","(NÂ·m/m)   ", &
                                "(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ","(m)       ", &
                                "(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ","(Pa)      ", &
                                "(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(-)       ", &
-                               "(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
+                               "(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ", &
                                "(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ","(-)       ", &
                                "(m)       ","(-)       ","(-)       ","(-)       ","(deg)     ","(-)       ","(-)       ", &
                                "(Pa)      ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ","(N/m)     ", &
-                               "(-)       ","(N·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
+                               "(-)       ","(NÂ·m/m)   ","(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(deg)     ","(-)       ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(deg)     ","(-)       ","(-)       ", &
-                               "(-)       ","(N)       ","(N)       ","(N)       ","(N·m)     ","(N·m)     ","(N·m)     ", &
+                               "(-)       ","(N)       ","(N)       ","(N)       ","(NÂ·m)     ","(NÂ·m)     ","(NÂ·m)     ", &
                                "(W)       ","(m^2)     ","(deg)     ","(rpm)     ","(-)       ","(m/s)     ","(m/s)     ", &
                                "(m/s)     ","(Pa)      ","(N/m)     ","(N/m)     ","(-)       ","(-)       ","(m/s)     ", &
                                "(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(m/s)     ","(Pa)      ", &
