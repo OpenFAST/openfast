@@ -158,7 +158,8 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
       !
    s1 = size(AFInfo%Table(1)%Coefs,2)
    
-   Alpha = Rad2M180to180Deg(AOA)
+   Alpha = AOA
+   call MPi2Pi ( Alpha ) ! change AOA into range of -pi to pi
    IntAFCoefs(1:s1) = CubicSplineInterpM( Alpha  &
                                           , AFInfo%Table(1)%Alpha &
                                           , AFInfo%Table(1)%Coefs &
