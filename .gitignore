@@ -58,6 +58,7 @@ BuildLog.htm
 /ArcWin.txt
 /Archive.bat
 
+*.asv
 bin
 CertTest/*.sum
 CertTest/*.out*
