@@ -1796,7 +1796,7 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    character(ErrMsgLen)                  :: errMsg2       ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                        :: errStat2      ! temporary Error status of the operation
    character(*), parameter               :: RoutineName = 'BEMT_UnCoupledSolve'
-   real(ReKi), parameter                 :: MsgLimit = BEMT_epsilon2*100.0_ReKi
+   real(ReKi), parameter                 :: MsgLimit = 0.07_ReKi ! don't print a message if we're within about 4 degrees of 0 or +/- pi/2 [arbitrary number picked by bjj]
    
    real(ReKi) :: f1, f_lower, f_upper
    real(ReKi) :: phi_lower(3), phi_upper(3)         ! upper and lower bounds for region of phi in which we are trying to find a solution to the BEM equations
