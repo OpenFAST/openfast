@@ -977,7 +977,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       AllOuts( BlPitchC(K) ) = y%BlPitchCom(K)*R2D
    END DO        
    
-   AllOuts(YawMomCom) = y%YawMom
+   AllOuts(YawMomCom) = -0.001*y%YawMom
    
    AllOuts(NTMD_XQ ) = x%NTMD%tmd_x(1)
    AllOuts(NTMD_XQD) = x%NTMD%tmd_x(2)
@@ -1241,9 +1241,9 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          !.........................................................................................................................   
       AllOuts = 0.0_ReKi ! all variables not specified below are zeros (either constant or disabled):
          
-      AllOuts(:, GenTq)     = 0.001*dYdu(Indx_Y_GenTrq,:)
-      AllOuts(:, GenPwr)    = 0.001*dYdu(Indx_Y_ElecPwr,:)
-      AllOuts(:, YawMomCom) =       dYdu(Indx_Y_YawMom,:)
+      AllOuts(:, GenTq)     =  0.001*dYdu(Indx_Y_GenTrq,:)
+      AllOuts(:, GenPwr)    =  0.001*dYdu(Indx_Y_ElecPwr,:)
+      AllOuts(:, YawMomCom) = -0.001*dYdu(Indx_Y_YawMom,:)
       
       !...............................................................................................................................   
       ! Place the selected output channels into the WriteOutput(:) portion of the jacobian with the proper sign:
