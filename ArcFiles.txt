@@ -27,7 +27,6 @@ Source\dependencies\AeroDyn\*
 Source\dependencies\AeroDyn14\*
 Source\dependencies\InflowWind\*
 Source\dependencies\OpenFOAM\*
-Source\dependencies\ServoDyn\*
 Source\dependencies\HydroDyn\*
 Source\dependencies\SubDyn\*
 Source\dependencies\MAP\*
@@ -48,6 +47,8 @@ subs\AeroDyn\Source\dependencies\AeroDyn\*
 subs\AeroDyn\Source\dependencies\Airfoil_Info\*
 subs\AeroDyn\Source\dependencies\BEMT\*
 subs\AeroDyn\Source\dependencies\UnsteadyAero\*
+subs\ServoDyn\source\ServoDyn\*
+subs\ServoDyn\source\TMD\*
 
 Source\dependencies\Registry\*
 

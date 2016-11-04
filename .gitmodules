@@ -10,3 +10,6 @@
 [submodule "subs/AeroDyn"]
 	path = subs/AeroDyn
 	url = https://github.com/NWTC/AeroDyn
+[submodule "subs/ServoDyn"]
+	path = subs/ServoDyn
+	url = https://github.com/NWTC/ServoDyn
