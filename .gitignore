@@ -38,6 +38,7 @@
 *.suo
 *.sln
 *.u2d
+*.sdf
 BuildLog.htm
 
 # Executables
