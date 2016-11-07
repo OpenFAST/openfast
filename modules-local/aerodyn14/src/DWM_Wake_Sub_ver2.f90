@@ -34,7 +34,6 @@ MODULE DWM_Wake_Sub
 !   PUBLIC :: rename_FAST_output
    PUBLIC :: min_of_array
    PUBLIC :: max_of_array
-   PUBLIC :: max_of_TwoNum
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -341,12 +340,12 @@ SUBROUTINE calculate_mean_u( m, p, u, num_element,r_t,turbine_mean_velocity,TI_n
     
     INTEGER           ::    num_element
     INTEGER           ::    i
-    REAL              ::    r_t ( num_element )              ! The distance from the node to the hub
-    REAL              ::    turbine_mean_velocity            ! turbine mean velocity
-    REAL              ::    node_radius    ( num_element )
-    REAL              ::    element_length ( num_element )
-    REAL              ::    TI_normalization
-    REAL              ::    FAST_Time
+    REAL(ReKi)              ::    r_t ( num_element )              ! The distance from the node to the hub
+    REAL(ReKi)              ::    turbine_mean_velocity            ! turbine mean velocity
+    REAL(ReKi)              ::    node_radius    ( num_element )
+    REAL(ReKi)              ::    element_length ( num_element )
+    REAL(ReKi)              ::    TI_normalization
+    REAL(ReKi)              ::    FAST_Time
     
     ! check if the meandering simulation time is valid
     IF (p%WakePosition_1 < FAST_Time/ ( (20*p%RotorR/p%p_p_r)/(0.32*p%Uambient) ) + 1 ) THEN
@@ -505,16 +504,16 @@ SUBROUTINE get_initial_condition( m, p, u, y, induc_array, r_t, element_num, r_w
     
     INTEGER           :: element_num
     INTEGER           :: i,J
-    REAL              :: induc_array(element_num)
-    REAL              :: r_t(element_num)
-    REAL              :: dA (element_num-1)
-    REAL              :: a_cellC (element_num-1)
-    REAL              :: mean_a
-    REAL              :: f_w
-    REAL              :: fU !fU factor (realised induction for wake depth) {0-1}
-    REAL              :: fR !fR factor (realised expansion for wake width) {0-1} 
-    REAL, ALLOCATABLE :: r_w(:)
-    REAL, ALLOCATABLE :: U_w(:)
+    REAL(ReKi)              :: induc_array(element_num)
+    REAL(ReKi)              :: r_t(element_num)
+    REAL(ReKi)              :: dA (element_num-1)
+    REAL(ReKi)              :: a_cellC (element_num-1)
+    REAL(ReKi)              :: mean_a
+    REAL(ReKi)              :: f_w
+    REAL(ReKi)              :: fU !fU factor (realised induction for wake depth) {0-1}
+    REAL(ReKi)              :: fR !fR factor (realised expansion for wake width) {0-1} 
+    REAL(ReKi), ALLOCATABLE :: r_w(:)
+    REAL(ReKi), ALLOCATABLE :: U_w(:)
     
 
     ALLOCATE       (r_w(element_num))
@@ -623,136 +622,136 @@ SUBROUTINE calculate_wake(m, p, y, r_w, U_w, element_num, U, b)
     TYPE(DWM_OutputType),          INTENT(INOUT)  :: y
     
     INTEGER              ::    element_num
-    REAL                 ::    r_w (element_num)        ! scaled rotor radius r_w
-    REAL                 ::    U_w (element_num)        ! scaled velocity  U_w
-    REAL,ALLOCATABLE     ::    U(:,:)
+    REAL(ReKi)                 ::    r_w (element_num)        ! scaled rotor radius r_w
+    REAL(ReKi)                 ::    U_w (element_num)        ! scaled velocity  U_w
+    REAL(ReKi),ALLOCATABLE     ::    U(:,:)
     INTEGER,ALLOCATABLE     ::    b(:)
     
     ! local variables    
-    REAL   ::  mtemp
-    REAL   ::  ntemp
-    REAL   ::  xtemp
-    REAL   ::  ytemp
+    REAL(ReKi)   ::  mtemp
+    REAL(ReKi)   ::  ntemp
+    REAL(ReKi)   ::  xtemp
+    REAL(ReKi)   ::  ytemp
     
-    REAL, DIMENSION(2)      ::   filter1
-    REAL, DIMENSION(2)      ::   filter2
-    REAL, ALLOCATABLE       ::   F1_vector (:)
-    REAL, ALLOCATABLE       ::   F2_vector (:)
-    !REAL                    ::   m%DWDD%ppR                           ! Point_per_R_resoulution
-    REAL                    ::   Domain_R                      ! Domain_size_in_radial_direction
-    REAL                    ::   Domain_X                      ! Domain_size_in_flow_direction
-    !REAL                    ::   TI_original                ! Turbulence_intensity normalized back to ambient wind speed
-    REAL                    ::   k1                            ! Amb turb. coeff.
-    REAL                    ::   k2                            ! Shear layer coeff.
+    REAL(ReKi), DIMENSION(2)      ::   filter1
+    REAL(ReKi), DIMENSION(2)      ::   filter2
+    REAL(ReKi), ALLOCATABLE       ::   F1_vector (:)
+    REAL(ReKi), ALLOCATABLE       ::   F2_vector (:)
+    !REAL(ReKi)                    ::   m%DWDD%ppR                           ! Point_per_R_resoulution
+    REAL(ReKi)                    ::   Domain_R                      ! Domain_size_in_radial_direction
+    REAL(ReKi)                    ::   Domain_X                      ! Domain_size_in_flow_direction
+    !REAL(ReKi)                    ::   TI_original                ! Turbulence_intensity normalized back to ambient wind speed
+    REAL(ReKi)                    ::   k1                            ! Amb turb. coeff.
+    REAL(ReKi)                    ::   k2                            ! Shear layer coeff.
 
     !INTEGER                 ::   m%DWDD%n_x_vector
     !INTEGER                 ::   m%DWDD%n_r_vector
     
     !%%%%% Rolf modification
     INTEGER                 ::   length_F1_vector
-    REAL                    ::   L_ABL_vector(3)
-    REAL                    ::   UW_UU_vector(3)
-    REAL                    ::   L_DEF_vector(3)
-    REAL                    ::   UU_DEF_UU_ABL_vector(3)
-    REAL                    ::   UW_DEF_UU_DEF_vector(3)
-    REAL                    ::   x_ary(3)
-    REAL                    ::   L_ABL
-    REAL                    ::   UW_UU
-    REAL                    ::   L_DEF
-    REAL                    ::   UU_DEF_UU_ABL
-    REAL                    ::   UW_DEF_UU_DEF
-    REAL                    ::   Rotor_fixed_R
-    REAL                    ::   l_star_ABL
-    REAL                    ::   l_star_DEF
-    REAL                    ::   UU_DEF_UU_ABL_fac
-    REAL                    ::   u_star_ABL
-    REAL                    ::   u_star_DEF
-    REAL                    ::   Shear_add_du_dz
-    REAL,ALLOCATABLE        ::   visc_wake(:,:)
-    REAL,ALLOCATABLE        ::   visc_wake1(:,:) 
-    REAL,ALLOCATABLE        ::   visc_wake2(:,:) 
-    REAL                    ::   visc_norm_factor
-    REAL,ALLOCATABLE        ::   alfa_1(:)
-    REAL,ALLOCATABLE        ::   alfa_2(:)
-    REAL,ALLOCATABLE        ::   du_dr_tot(:,:)
+    REAL(ReKi)                    ::   L_ABL_vector(3)
+    REAL(ReKi)                    ::   UW_UU_vector(3)
+    REAL(ReKi)                    ::   L_DEF_vector(3)
+    REAL(ReKi)                    ::   UU_DEF_UU_ABL_vector(3)
+    REAL(ReKi)                    ::   UW_DEF_UU_DEF_vector(3)
+    REAL(ReKi)                    ::   x_ary(3)
+    REAL(ReKi)                    ::   L_ABL
+    REAL(ReKi)                    ::   UW_UU
+    REAL(ReKi)                    ::   L_DEF
+    REAL(ReKi)                    ::   UU_DEF_UU_ABL
+    REAL(ReKi)                    ::   UW_DEF_UU_DEF
+    REAL(ReKi)                    ::   Rotor_fixed_R
+    REAL(ReKi)                    ::   l_star_ABL
+    REAL(ReKi)                    ::   l_star_DEF
+    REAL(ReKi)                    ::   UU_DEF_UU_ABL_fac
+    REAL(ReKi)                    ::   u_star_ABL
+    REAL(ReKi)                    ::   u_star_DEF
+    REAL(ReKi)                    ::   Shear_add_du_dz
+    REAL(ReKi),ALLOCATABLE        ::   visc_wake(:,:)
+    REAL(ReKi),ALLOCATABLE        ::   visc_wake1(:,:) 
+    REAL(ReKi),ALLOCATABLE        ::   visc_wake2(:,:) 
+    REAL(ReKi)                    ::   visc_norm_factor
+    REAL(ReKi),ALLOCATABLE        ::   alfa_1(:)
+    REAL(ReKi),ALLOCATABLE        ::   alfa_2(:)
+    REAL(ReKi),ALLOCATABLE        ::   du_dr_tot(:,:)
     INTEGER,ALLOCATABLE     ::   shear_flag(:)
-    REAL,ALLOCATABLE        ::   One_div_du_dr_DWM(:,:)
-    REAL,ALLOCATABLE        ::   visc_fac(:)
+    REAL(ReKi),ALLOCATABLE        ::   One_div_du_dr_DWM(:,:)
+    REAL(ReKi),ALLOCATABLE        ::   visc_fac(:)
 
-    REAL                    ::    R_WTG                        ! normalized radius
-    REAL                    ::    U0                           ! normalized wind speed
-    REAL                    ::    D_WTG                        ! normalized diameter
-    REAL                    ::    R_length                     ! normalized length in radial direction
-    !REAL                    ::    m%DWDD%X_length                     ! normalized length in axial direction
+    REAL(ReKi)                    ::    R_WTG                        ! normalized radius
+    REAL(ReKi)                    ::    U0                           ! normalized wind speed
+    REAL(ReKi)                    ::    D_WTG                        ! normalized diameter
+    REAL(ReKi)                    ::    R_length                     ! normalized length in radial direction
+   !REAL(ReKi)                    ::    m%DWDD%X_length                     ! normalized length in axial direction
     INTEGER                 ::    np_r                         ! point per radial distance
     !INTEGER                 ::    m%DWDD%np_x                         ! point per axial distance
-    REAL                    ::    delrad                       ! delta r
-    REAL                    ::    delaxi                       ! delta x
+    REAL(ReKi)                    ::    delrad                       ! delta r
+    REAL(ReKi)                    ::    delaxi                       ! delta x
 
-    REAL, ALLOCATABLE       ::    x_vector(:)
-    REAL, ALLOCATABLE       ::    r_vector(:)
+    REAL(ReKi), ALLOCATABLE       ::    x_vector(:)
+    REAL(ReKi), ALLOCATABLE       ::    r_vector(:)
 
-    REAL, ALLOCATABLE       ::    V(:,:)
-    REAL, ALLOCATABLE       ::    visc(:,:)
-    REAL, ALLOCATABLE       ::    visc_DWM(:,:)
-    REAL, ALLOCATABLE       ::    du_dr_DWM(:,:)
-    REAL, ALLOCATABLE       ::    du_dr_total(:,:)
-   !REAL, ALLOCATABLE       ::    m%DWDD%Turb_Stress_DWM(:,:)
-   !REAL, ALLOCATABLE       ::    TI_DWM(:,:)
-   !REAL, ALLOCATABLE       ::    U_face(:,:)
-   !REAL, ALLOCATABLE       ::    VOL_x_jhigh(:,:)
-   !REAL, ALLOCATABLE       ::    VOL_x_jlow (:,:)
-   !REAL, ALLOCATABLE       ::    VOL_r_ihigh(:,:)
-   !REAL, ALLOCATABLE       ::    VOL_r_ilow (:,:)
-    REAL, ALLOCATABLE       ::    r_vec_DWM (:)
-    REAL, ALLOCATABLE       ::    dA_DWM (:)
+    REAL(ReKi), ALLOCATABLE       ::    V(:,:)
+    REAL(ReKi), ALLOCATABLE       ::    visc(:,:)
+    REAL(ReKi), ALLOCATABLE       ::    visc_DWM(:,:)
+    REAL(ReKi), ALLOCATABLE       ::    du_dr_DWM(:,:)
+    REAL(ReKi), ALLOCATABLE       ::    du_dr_total(:,:)
+   !REAL(ReKi), ALLOCATABLE       ::    m%DWDD%Turb_Stress_DWM(:,:)
+   !REAL(ReKi), ALLOCATABLE       ::    TI_DWM(:,:)
+   !REAL(ReKi), ALLOCATABLE       ::    U_face(:,:)
+   !REAL(ReKi), ALLOCATABLE       ::    VOL_x_jhigh(:,:)
+   !REAL(ReKi), ALLOCATABLE       ::    VOL_x_jlow (:,:)
+   !REAL(ReKi), ALLOCATABLE       ::    VOL_r_ihigh(:,:)
+   !REAL(ReKi), ALLOCATABLE       ::    VOL_r_ilow (:,:)
+    REAL(ReKi), ALLOCATABLE       ::    r_vec_DWM (:)
+    REAL(ReKi), ALLOCATABLE       ::    dA_DWM (:)
 
-    INTEGER                 ::    n_r_vec_DWM
-    INTEGER                 ::    b_loop
-    INTEGER                 ::    b_counter
-    REAL                    ::    dr_DWM
-    REAL                    ::    Def_DWM
-    REAL                    ::    Def_DWM_mixL
-    REAL                    ::    A_total
-    REAL                    ::    k_wiener
+    INTEGER                       ::    n_r_vec_DWM
+    INTEGER                       ::    b_loop
+    INTEGER                       ::    b_counter
+    REAL(ReKi)                    ::    dr_DWM
+    REAL(ReKi)                    ::    Def_DWM
+    REAL(ReKi)                    ::    Def_DWM_mixL
+    REAL(ReKi)                    ::    A_total
+    REAL(ReKi)                    ::    k_wiener
 
-    INTEGER, ALLOCATABLE    ::    counter(:)
-    INTEGER                 ::    i
-    INTEGER                 ::    j
-    INTEGER                 ::    k
-    INTEGER                 ::    ILo
-    INTEGER                 ::    NumEqu
-    INTEGER                 ::    n_xi
-    INTEGER                 ::    n_U_tmp_2
+    INTEGER, ALLOCATABLE          ::    counter(:)
+    INTEGER                       ::    i
+    INTEGER                       ::    j
+    INTEGER                       ::    k
+    INTEGER                       ::    ILo
+    INTEGER                       ::    NumEqu
+    INTEGER                       ::    n_xi
+    INTEGER                       ::    n_U_tmp_2
 
-    REAL, ALLOCATABLE       ::    bin_filter(:)
-    REAL, ALLOCATABLE       ::    xi(:)
-    REAL, ALLOCATABLE       ::    U_tmp_1(:)
-    REAL, ALLOCATABLE       ::    U_tmp_2(:)
-    REAL, ALLOCATABLE       ::    U_tmp(:)
-    REAL, ALLOCATABLE       ::    mat(:,:)
-    REAL, ALLOCATABLE       ::    RHS(:)
-    REAL, ALLOCATABLE       ::    Soln(:)
-    REAL, ALLOCATABLE       ::    AugMat(:,:)
+    REAL(ReKi), ALLOCATABLE       ::    bin_filter(:)
+    REAL(ReKi), ALLOCATABLE       ::    xi(:)
+    REAL(ReKi), ALLOCATABLE       ::    U_tmp_1(:)
+    REAL(ReKi), ALLOCATABLE       ::    U_tmp_2(:)
+    REAL(ReKi), ALLOCATABLE       ::    U_tmp(:)
+    REAL(ReKi), ALLOCATABLE       ::    mat(:,:)
+    REAL(ReKi), ALLOCATABLE       ::    RHS(:)
+    REAL(ReKi), ALLOCATABLE       ::    Soln(:)
+    REAL(ReKi), ALLOCATABLE       ::    AugMat(:,:)
 
-    REAL                    ::    LHS1
-    REAL                    ::    LHS2
-    REAL                    ::    LHS3
-    REAL                    ::    LHS11
-    REAL                    ::    LHS12
-    REAL                    ::    LHS13
-    REAL                    ::    LHS21
-    REAL                    ::    LHS22
-    REAL                    ::    LHS23
-    REAL                    ::    LHS31
-    REAL                    ::    LHS41
-    REAL                    ::    LHS32
-    REAL                    ::    LHS33
-    REAL                    ::    LHS43
+    REAL(ReKi)                    ::    LHS1
+    REAL(ReKi)                    ::    LHS2
+    REAL(ReKi)                    ::    LHS3
+    REAL(ReKi)                    ::    LHS11
+    REAL(ReKi)                    ::    LHS12
+    REAL(ReKi)                    ::    LHS13
+    REAL(ReKi)                    ::    LHS21
+    REAL(ReKi)                    ::    LHS22
+    REAL(ReKi)                    ::    LHS23
+    REAL(ReKi)                    ::    LHS31
+    REAL(ReKi)                    ::    LHS41
+    REAL(ReKi)                    ::    LHS32
+    REAL(ReKi)                    ::    LHS33
+    REAL(ReKi)                    ::    LHS43
     
-    REAL,ALLOCATABLE        ::    main_diagonal(:)
-    REAL,ALLOCATABLE        ::    sub_diagonal(:)
-    REAL,ALLOCATABLE        ::    sup_diagonal(:)
+    REAL(ReKi),ALLOCATABLE        ::    main_diagonal(:)
+    REAL(ReKi),ALLOCATABLE        ::    sub_diagonal(:)
+    REAL(ReKi),ALLOCATABLE        ::    sup_diagonal(:)
       
     m%DWDD%ppR       = p%p_p_r
     Domain_R  = p%r_domain       !10.0  domain size in R [R]
@@ -911,7 +910,7 @@ SUBROUTINE calculate_wake(m, p, y, r_w, U_w, element_num, U, b)
     l_star_DEF     = L_DEF / Rotor_fixed_R;
     
     !%%%%% Normalize UU_160m to neutral condition
-    UU_DEF_UU_ABL_fac = InterpBin( p%hub_height, x_ary, (/0.63044, 0.57982, 0.5287/), ILo, size(x_ary) )
+    UU_DEF_UU_ABL_fac = InterpBin( p%hub_height, x_ary, (/0.63044_ReKi, 0.57982_ReKi, 0.5287_ReKi/), ILo, size(x_ary) )
     UU_DEF_UU_ABL     = UU_DEF_UU_ABL / UU_DEF_UU_ABL_fac
     
     !%%%%% CALCULATE u* according to:
@@ -971,7 +970,7 @@ SUBROUTINE calculate_wake(m, p, y, r_w, U_w, element_num, U, b)
        DO I = 1,m%DWDD%n_r_vector
            visc_wake1(j-1,I)     = F2_vector(j-1)* k2 *( r_vector(b(j-1))/R_WTG )**2 * ABS(du_dr_DWM(j-1,I));
            visc_wake2(j-1,I)     = F2_vector(j-1)* k2 *( r_vector(b(j-1))/R_WTG )    * ( 1 - min_of_array( U(j-1,:),SIZE(U(j-1,:)) ) );
-           visc_wake (j-1,I)     = max_of_TwoNum( visc_wake1(j-1,I),visc_wake2(j-1,I) );
+           visc_wake (j-1,I)     = max( visc_wake1(j-1,I),visc_wake2(j-1,I) );
        END DO
        
        ! %%% Atmospheric eddy visc as u*l*, yields total eddy viscosity
@@ -1012,7 +1011,7 @@ SUBROUTINE calculate_wake(m, p, y, r_w, U_w, element_num, U, b)
        k_wiener                 = 2*Shear_add_du_dz * delrad**2;
        DO I = 1,m%DWDD%n_r_vector
            One_div_du_dr_DWM(j-1,I) = du_dr_DWM(j-1,I) / (du_dr_DWM(j-1,I)**2 + k_wiener)
-           visc_fac(I)              = max_of_TwoNum(1.0, (du_dr_tot(j-1,I) * ABS(One_div_du_dr_DWM(j-1,I))))
+           visc_fac(I)              = max(1.0_ReKi, (du_dr_tot(j-1,I) * ABS(One_div_du_dr_DWM(j-1,I))))
            visc(j-1,I)              = visc(j-1,I) * visc_fac(I)
        END DO
        
@@ -1198,15 +1197,15 @@ SUBROUTINE Thomas_diagonal (lowerDia, mainDia, upperDia, RightHS, SolnVec, NumEq
 
     INTEGER  ::   NumEq
     
-    REAL     ::   lowerDia(NumEq)
-    REAL     ::   mainDia(NumEq)
-    REAL     ::   upperDia(NumEq)
-    REAL     ::   RightHS(NumEq)
-    REAL     ::   SolnVec(NumEq)
+    REAL(ReKi)     ::   lowerDia(NumEq)
+    REAL(ReKi)     ::   mainDia(NumEq)
+    REAL(ReKi)     ::   upperDia(NumEq)
+    REAL(ReKi)     ::   RightHS(NumEq)
+    REAL(ReKi)     ::   SolnVec(NumEq)
     
-    REAL     ::   cp_vec(NumEq)
-    REAL     ::   dp_vec(NumEq)
-    REAL     ::   temp
+    REAL(ReKi)     ::   cp_vec(NumEq)
+    REAL(ReKi)     ::   dp_vec(NumEq)
+    REAL(ReKi)     ::   temp
     INTEGER  ::   I
     
     ! initialize c-prime and d-prime
@@ -1235,17 +1234,17 @@ SUBROUTINE create_F1_filter (F1_vector, filter1, length_F1_vector,np_x,X_length)
 !.............................................................................................
 ! This function returns the F1 filter function
 !.............................................................................................
-    REAL,ALLOCATABLE   ::     F1_vector(:)
-    REAL(ReKi)         ::     filter1(2)
-    INTEGER            ::     length_F1_vector
-    INTEGER            ::     np_x
-    REAL(ReKi)         ::     X_length
+    REAL(ReKi),ALLOCATABLE   ::     F1_vector(:)
+    REAL(ReKi)               ::     filter1(2)
+    INTEGER                  ::     length_F1_vector
+    INTEGER                  ::     np_x
+    REAL(ReKi)               ::     X_length
     
-    INTEGER            ::     length_F1_vector_1
-    INTEGER            ::     length_F1_vector_2
-    REAL,ALLOCATABLE   ::     F1_vector_1(:)
-    REAL,ALLOCATABLE   ::     F1_vector_2(:)
-    INTEGER            ::     I
+    INTEGER                  ::     length_F1_vector_1
+    INTEGER                  ::     length_F1_vector_2
+    REAL(ReKi),ALLOCATABLE   ::     F1_vector_1(:)
+    REAL(ReKi),ALLOCATABLE   ::     F1_vector_2(:)
+    INTEGER                  ::     I
     
     length_F1_vector_1 = floor(filter1(2)*np_x/2)
     length_F1_vector_2 = floor(X_length*np_x/2)
@@ -1267,21 +1266,21 @@ SUBROUTINE create_F2_filter (F2_vector, filter2, np_x, length_F1_vector)
 !.............................................................................................
 ! This function returns the F2 filter function
 !.............................................................................................
-    REAL,ALLOCATABLE   ::    F2_vector(:)
-    REAL               ::    filter2(2)
+    REAL(ReKi),ALLOCATABLE   ::    F2_vector(:)
+    REAL(ReKi)               ::    filter2(2)
     INTEGER            ::    np_x
     INTEGER            ::    length_F1_vector
     
-    REAL,ALLOCATABLE   ::    F2_vector_x(:)
-    REAL,ALLOCATABLE   ::    F2_vector_1(:)
-    REAL,ALLOCATABLE   ::    F2_vector_2(:)
+    REAL(ReKi),ALLOCATABLE   ::    F2_vector_x(:)
+    REAL(ReKi),ALLOCATABLE   ::    F2_vector_1(:)
+    REAL(ReKi),ALLOCATABLE   ::    F2_vector_2(:)
     INTEGER            ::    length_F2_vector_x
     INTEGER            ::    length_F2_vector_1
     INTEGER            ::    length_F2_vector_2
     INTEGER            ::    length_F2_vector
     INTEGER            ::    I
     
-    length_F2_vector_x = floor(( REAL(length_F1_vector) * (1/REAL(np_x)) - (2+1/REAL(np_x)) ) / (1/REAL(np_x)) + 1)
+    length_F2_vector_x = floor(( REAL(length_F1_vector,ReKi) * (1/REAL(np_x,ReKi)) - (2+1/REAL(np_x,ReKi)) ) / (1/REAL(np_x,ReKi)) + 1)
     length_F2_vector_1 = 2*np_x
     length_F2_vector_2 = length_F2_vector_x
     length_F2_vector   = length_F2_vector_1 + length_F2_vector_2
@@ -1291,7 +1290,7 @@ SUBROUTINE create_F2_filter (F2_vector, filter2, np_x, length_F1_vector)
     ALLOCATE ( F2_vector_2(length_F2_vector_2) )
     ALLOCATE ( F2_vector  (length_F2_vector  ) )
     
-    F2_vector_x = ( (length_F1_vector * (1/REAL(np_x)) - (2+1/REAL(np_x)))   /(length_F2_vector_x-1 ) )*[(i,i=1,length_F2_vector_x)]+(2+1/REAL(np_x)-( (length_F1_vector * (1/REAL(np_x)) - (2+1/REAL(np_x)))   /(length_F2_vector_x-1 ) ))
+    F2_vector_x = ( (length_F1_vector * (1/REAL(np_x,ReKi)) - (2+1/REAL(np_x,ReKi)))   /(length_F2_vector_x-1 ) )*[(i,i=1,length_F2_vector_x)]+(2+1/REAL(np_x,ReKi)-( (length_F1_vector * (1/REAL(np_x,ReKi)) - (2+1/REAL(np_x,ReKi)))   /(length_F2_vector_x-1 ) ))
     F2_vector_1 = filter2(1)
     
     DO I = 1,length_F2_vector_2
@@ -1430,17 +1429,17 @@ FUNCTION filter_velocity (OS,m,p,u,x,xd,z,y,timestep,y_0,z_0,wake_radius)
 
     REAL(DbKi)   ::  timestep                     ! upper limit = usable time + grid width /  mean wind speed              %%% will change wrt wind speed  
                                                   ! = second / 0.05    timestep >= 1
-    REAL         ::  y_0                          ! wake center point
-    REAL         ::  z_0
+    REAL(ReKi)         ::  y_0                          ! wake center point
+    REAL(ReKi)         ::  z_0
     INTEGER      ::  wake_radius                  ! b(:) in cal_mixl
-    REAL         ::  filter_velocity (3)          ! only v,w components
+    REAL(ReKi)        ::  filter_velocity (3)          ! only v,w components
     
     INTEGER      ::  number_counter               ! counter : how many points are in the circle
     INTEGER      ::  radius_length                ! wake radius (meters)
     INTEGER      ::  y_axis                       
     INTEGER      ::  z_axis
-    REAL         ::  temp_filter_velocity (3)     ! interpolation function, has u,v,w three components
-    REAL         ::  temp_wind_velocity (3)
+    REAL(ReKi)         ::  temp_filter_velocity (3)     ! interpolation function, has u,v,w three components
+    REAL(ReKi)         ::  temp_wind_velocity (3)
     
     INTEGER( IntKi )                   :: ErrStat           ! Error status of the operation
     CHARACTER                          :: ErrMsg            ! Error message if ErrStat /= ErrID_None
@@ -1520,26 +1519,26 @@ SUBROUTINE Get_wake_center ( OS, m, p, y, u, x, xd, z, wakewidth, wake_center )
     TYPE(DWM_DiscreteStateType),   INTENT(INOUT)  :: xd          ! discrete states
     TYPE(DWM_ConstraintStateType), INTENT(INOUT)  :: z           ! constraint states
     
-    REAL, ALLOCATABLE,             INTENT(INOUT)  ::   wake_center (:,:,:)  !bjj: this is actually y%wake_position
+    REAL(ReKi), ALLOCATABLE,             INTENT(INOUT)  ::   wake_center (:,:,:)  !bjj: this is actually y%wake_position
     INTEGER, ALLOCATABLE,          INTENT(INOUT)  ::   wakewidth(:)
                                                                          
        ! local variables
 
-    REAL                  ::   Modified_U
+    REAL(ReKi)                  ::   Modified_U
     INTEGER               ::   release_time
     INTEGER               ::   flying_time
     INTEGER               ::   simulation_time_length
     REAL(DbKi)            ::   DWM_time_step
-    REAL                  ::   temp_center_wake (3)
-    REAL                  ::   temp_velocity (3)
-    REAL                  ::   U_Scale_Factor
-    REAL                  ::   U_factor
-    REAL                  ::   x_step
+    REAL(ReKi)                  ::   temp_center_wake (3)
+    REAL(ReKi)                  ::   temp_velocity (3)
+    REAL(ReKi)                  ::   U_Scale_Factor
+    REAL(ReKi)                  ::   U_factor
+    REAL(ReKi)                  ::   x_step
     
     INTEGER( IntKi )                   :: ErrStat           ! Error status of the operation
     CHARACTER                          :: ErrMsg            ! Error message if ErrStat /= ErrID_None
     
-    real  :: test_1, test_2
+    real(ReKi)  :: test_1, test_2
     
     !-------------------------------------------------------------
     !!m%DWDD%n_x_vector = 1700
@@ -1582,7 +1581,7 @@ SUBROUTINE Get_wake_center ( OS, m, p, y, u, x, xd, z, wakewidth, wake_center )
     DO release_time = 1,simulation_time_length,1               ! wake center position at turbine plane
        wake_center (release_time,1,1) = 0
        wake_center (release_time,1,2) = 0
-       wake_center (release_time,1,3) = REAL(p%hub_height)
+       wake_center (release_time,1,3) = REAL(p%hub_height,ReKi)
     END DO
     
     x_step = Modified_U * (DWM_time_step*m%meandering_data%scale_factor)
@@ -1677,19 +1676,19 @@ FUNCTION shifted_velocity( ZTime, p, m, y, z, upwind_mean_u, Uwake, WakeCenter,s
     REAL(ReKi), intent(in)       ::   spacing                       ! the distance from the downstream turbine to the upstream turbine
     REAL(ReKi), intent(in)       ::   angle                         ! the angle between the investigated turbine and the line connecting the upwind turbine and wind origin
     
-    REAL       ::   shifted_velocity                   ! the output
+    REAL(ReKi)       ::   shifted_velocity                   ! the output
                                                   !   the velocity at a certain point
     
-    REAL       ::   distance                      ! the distance from the point to the meandered wake center
-    REAL       ::   y0                            ! wake center position on y axis
-    REAL       ::   z0                            ! wake center position on z axis
-    REAL       ::   unit                          ! single unit length  R/ppR
-    REAL       ::   scale_factor
+    REAL(ReKi)       ::   distance                      ! the distance from the point to the meandered wake center
+    REAL(ReKi)       ::   y0                            ! wake center position on y axis
+    REAL(ReKi)       ::   z0                            ! wake center position on z axis
+    REAL(ReKi)       ::   unit                          ! single unit length  R/ppR
+    REAL(ReKi)       ::   scale_factor
     INTEGER    ::   p1
     INTEGER    ::   p2
     INTEGER    ::   time_position                 ! to define which plane's wake center is used
-    REAL       ::   Yshifted
-    REAL       ::   Zshifted
+    REAL(ReKi)       ::   Yshifted
+    REAL(ReKi)       ::   Zshifted
     
     
     !ALLOCATE  (Uwake(NINT( m%DWDD%ppR*Rdomain ))) ! the axis symmetrical velocity
@@ -1734,22 +1733,22 @@ SUBROUTINE smooth_out_wake(m, p, Uvelocity,Uwake_center,wake_array,spacing,angle
     TYPE(DWM_ParameterType),         INTENT(IN   )   :: p           ! Parameters
     TYPE(DWM_MiscVarType),           INTENT(INOUT)   :: m
     
-    REAL,ALLOCATABLE   ::   Uvelocity(:,:)
-    REAL,ALLOCATABLE   ::   Uwake_center(:,:,:)
-    REAL               ::   wake_array(:)
-    REAL               ::   spacing   ! the spacing between two turbines
-    REAL               ::   angle     ! the angle between the downwind turbine and the line conneting the upwind(investigated) turbine and the wind origin
-    REAL               ::   velocity_matrix(:,:)      ! the velocity matrix that store the velocity of the downstream turbine plane
+    REAL(ReKi),ALLOCATABLE   ::   Uvelocity(:,:)
+    REAL(ReKi),ALLOCATABLE   ::   Uwake_center(:,:,:)
+    REAL(ReKi)               ::   wake_array(:)
+    REAL(ReKi)               ::   spacing   ! the spacing between two turbines
+    REAL(ReKi)               ::   angle     ! the angle between the downwind turbine and the line conneting the upwind(investigated) turbine and the wind origin
+    REAL(ReKi)               ::   velocity_matrix(:,:)      ! the velocity matrix that store the velocity of the downstream turbine plane
     
     INTEGER,ALLOCATABLE  ::   counter_array(:)
-    REAL,ALLOCATABLE     ::   velocity_array(:)
+    REAL(ReKi),ALLOCATABLE     ::   velocity_array(:)
     !INTEGER              ::   m%SmoothOut%length_velocity_array     ! the length of velocity_array
     INTEGER              ::   low
     INTEGER              ::   high
     INTEGER              ::   i,j,k,n
     INTEGER              ::   counter
-    REAL                 ::   y                         ! y coordinate
-    REAL                 ::   z                         ! z coordinate
+    REAL(ReKi)                 ::   y                         ! y coordinate
+    REAL(ReKi)                 ::   z                         ! z coordinate
     
     !m%SmoothOut%length_velocity_array = NINT(1.2*R)
     
@@ -1833,24 +1832,24 @@ FUNCTION smooth_wake_shifted_velocity( m, p, y_coor, z_coor, Uwake, WakeCenter,s
     TYPE(DWM_ParameterType),         INTENT(IN   )   :: p           ! Parameters
     TYPE(DWM_MiscVarType),           INTENT(INOUT)   :: m
 
-    REAL       ::   y_coor,z_coor                           ! point location on the y,z axis
-    REAL       ::   Uwake(:)                      ! axial velocity of the wake at the downstream turbine plane
-    REAL       ::   WakeCenter(:,:,:)             ! wake_center
-    REAL       ::   spacing                       ! the distance from the downstream turbine to the upstream turbine
+    REAL(ReKi)       ::   y_coor,z_coor                           ! point location on the y,z axis
+    REAL(ReKi)       ::   Uwake(:)                      ! axial velocity of the wake at the downstream turbine plane
+    REAL(ReKi)       ::   WakeCenter(:,:,:)             ! wake_center
+    REAL(ReKi)       ::   spacing                       ! the distance from the downstream turbine to the upstream turbine
     INTEGER    ::   time_position                 ! to define which plane's wake center is used
-    REAL       ::   angle                         ! the angle between the downwind turbine and the line conneting the upwind(investigated) turbine and the wind origin
+    REAL(ReKi)       ::   angle                         ! the angle between the downwind turbine and the line conneting the upwind(investigated) turbine and the wind origin
     
-    REAL       ::   smooth_wake_shifted_velocity  ! the output
+    REAL(ReKi)       ::   smooth_wake_shifted_velocity  ! the output
                                                   !   the velocity at a certain point
-    REAL       ::   Yshifted
-    REAL       ::   Zshifted
+    REAL(ReKi)       ::   Yshifted
+    REAL(ReKi)       ::   Zshifted
     
     INTEGER    ::   p1
     INTEGER    ::   p2
-    REAL       ::   distance                      ! the distance from the point to the meandered wake center
-    REAL       ::   y0                            ! wake center position on y axis
-    REAL       ::   z0                            ! wake center position on z axis
-    REAL       ::   unit                          ! single unit length  R/ppR
+    REAL(ReKi)       ::   distance                      ! the distance from the point to the meandered wake center
+    REAL(ReKi)       ::   y0                            ! wake center position on y axis
+    REAL(ReKi)       ::   z0                            ! wake center position on z axis
+    REAL(ReKi)       ::   unit                          ! single unit length  R/ppR
     
     y0 = WakeCenter(time_position,FLOOR(spacing*p%p_p_r/m%meandering_data%scale_factor)+1,2) !+ 2*P%RotorR*spacing*TAN(m%skew_angle) 
     z0 = WakeCenter(time_position,FLOOR(spacing*p%p_p_r/m%meandering_data%scale_factor)+1,3) !!- REAL(p%TurbRefHt-p%hub_height)
@@ -1889,13 +1888,13 @@ FUNCTION TI_downstream_total (m, p, y, spacing,angle,velocity_matrix)   ! name s
     TYPE(DWM_MiscVarType),           INTENT(INOUT)   :: m
     TYPE(DWM_OutputType),            INTENT(INOUT)   :: y
     
-    REAL             ::       TI_downstream_total     ! TI of a downstream turbine
-    REAL             ::       spacing                 ! the spacing between the downwind turbine and this upwind turbine
-    REAL             ::       angle                   ! the angle between the downwind turbine and the line connecting this upwind turbine and the wind direction
-    REAL             ::       velocity_matrix(:,:)    ! the velocity matrix at the certain downswind turbine
+    REAL(ReKi)             ::       TI_downstream_total     ! TI of a downstream turbine
+    REAL(ReKi)             ::       spacing                 ! the spacing between the downwind turbine and this upwind turbine
+    REAL(ReKi)             ::       angle                   ! the angle between the downwind turbine and the line connecting this upwind turbine and the wind direction
+    REAL(ReKi)             ::       velocity_matrix(:,:)    ! the velocity matrix at the certain downswind turbine
     
     ! local variables
-    REAL, ALLOCATABLE  ::  TI_downstream_matrix(:,:)
+    REAL(ReKi), ALLOCATABLE  ::  TI_downstream_matrix(:,:)
     INTEGER            ::  i,j,k
     INTEGER            ::  cross_plane_position_ds   ! the cross plane position which to be investigated in term of the flying time
     INTEGER            ::  cross_plane_position_TI   ! the cross plane position which to be investigated in term of the m%DWDD%n_x_vector
@@ -1903,25 +1902,25 @@ FUNCTION TI_downstream_total (m, p, y, spacing,angle,velocity_matrix)   ! name s
     INTEGER            ::  counter1
     INTEGER            ::  counter2
     INTEGER            ::  initial_timestep
-    REAL               ::  y_axis_turbine
-    REAL               ::  z_axis_turbine
-    REAL               ::  distance                  ! the distance between one point to the meandered wake center
-    REAL               ::  TI_downstream_node        ! the TI at a specfic point in the inbestigated cross plane
-    REAL               ::  TI_node_temp
-    REAL               ::  TI_node
-    REAL               ::  TI_accumulation
-    REAL               ::  TI_apprant_accumulation
-    REAl               ::  TI_average                ! THE AVERAGE TI OF THE CROSS PLANE
-    REAL               ::  TI_apprant                ! The TI due to the meadering
-    REAL               ::  HubHt 
-    REAL               ::  wake_center_y
-    REAL               ::  wake_center_z
-    REAL               ::  Rscale
-    REAL               ::  y_coor
-    REAL               ::  z_coor  
-    REAL               ::  zero_spacing
-    REAL               ::  temp1,temp2,temp3
-    REAL               ::       c_uw
+    REAL(ReKi)               ::  y_axis_turbine
+    REAL(ReKi)               ::  z_axis_turbine
+    REAL(ReKi)               ::  distance                  ! the distance between one point to the meandered wake center
+    REAL(ReKi)               ::  TI_downstream_node        ! the TI at a specfic point in the inbestigated cross plane
+    REAL(ReKi)               ::  TI_node_temp
+    REAL(ReKi)               ::  TI_node
+    REAL(ReKi)               ::  TI_accumulation
+    REAL(ReKi)               ::  TI_apprant_accumulation
+    REAl(ReKi)               ::  TI_average                ! THE AVERAGE TI OF THE CROSS PLANE
+    REAL(ReKi)               ::  TI_apprant                ! The TI due to the meadering
+    REAL(ReKi)               ::  HubHt 
+    REAL(ReKi)               ::  wake_center_y
+    REAL(ReKi)               ::  wake_center_z
+    REAL(ReKi)               ::  Rscale
+    REAL(ReKi)               ::  y_coor
+    REAL(ReKi)               ::  z_coor  
+    REAL(ReKi)               ::  zero_spacing
+    REAL(ReKi)               ::  temp1,temp2,temp3
+    REAL(ReKi)               ::       c_uw
     
    !-------------------------------------------------------------------------------------------------
    ! calculate the TI at each node at the downstream turbine plane from the wake deficit calculation
@@ -1979,7 +1978,7 @@ FUNCTION TI_downstream_total (m, p, y, spacing,angle,velocity_matrix)   ! name s
        END DO
     END DO
     
-    TI_average = TI_accumulation / REAL(counter1) 
+    TI_average = TI_accumulation / REAL(counter1,ReKi) 
    
    !-------------------------------------------------------------------------------------------------
    ! calculate the apprant TI due to the meadering
@@ -2002,7 +2001,7 @@ FUNCTION TI_downstream_total (m, p, y, spacing,angle,velocity_matrix)   ! name s
       END DO
     END DO
     
-    TI_apprant = ((TI_apprant_accumulation / REAL(counter2))**0.5)
+    TI_apprant = ((TI_apprant_accumulation / REAL(counter2,ReKi))**0.5)
   
     
    !-------------------------------------------------------------------------------------------------
@@ -2041,13 +2040,13 @@ FUNCTION smallscale_TI (m, p, y, spacing,angle,velocity_matrix)
     TYPE(DWM_MiscVarType),           INTENT(INOUT)   :: m
     TYPE(DWM_OutputType),            INTENT(INOUT)   :: y
     
-    REAL             ::       spacing                 ! the spacing between the downwind turbine and this upwind turbine
-    REAL             ::       angle                   ! the angle between the downwind turbine and the line connecting this upwind turbine and the wind direction
-    REAL             ::       velocity_matrix(:,:)    ! the velocity matrix at the certain downswind turbine
-    REAL             ::       smallscale_TI
+    REAL(ReKi)             ::       spacing                 ! the spacing between the downwind turbine and this upwind turbine
+    REAL(ReKi)             ::       angle                   ! the angle between the downwind turbine and the line connecting this upwind turbine and the wind direction
+    REAL(ReKi)             ::       velocity_matrix(:,:)    ! the velocity matrix at the certain downswind turbine
+    REAL(ReKi)             ::       smallscale_TI
     
     ! local variables
-    REAL, ALLOCATABLE  ::  TI_downstream_matrix(:,:)
+    REAL(ReKi), ALLOCATABLE  ::  TI_downstream_matrix(:,:)
     INTEGER            ::  i,j,k
     INTEGER            ::  cross_plane_position_ds   ! the cross plane position which to be investigated in term of the flying time
     INTEGER            ::  cross_plane_position_TI   ! the cross plane position which to be investigated in term of the m%DWDD%n_x_vector
@@ -2055,24 +2054,24 @@ FUNCTION smallscale_TI (m, p, y, spacing,angle,velocity_matrix)
     INTEGER            ::  counter1
     INTEGER            ::  counter2
     INTEGER            ::  initial_timestep
-    REAL               ::  y_axis_turbine
-    REAL               ::  z_axis_turbine
-    REAL               ::  distance                  ! the distance between one point to the meandered wake center
-    REAL               ::  TI_downstream_node        ! the TI at a specfic point in the inbestigated cross plane
-    REAL               ::  TI_node_temp
-    REAL               ::  TI_node
-    REAL               ::  TI_accumulation
-    REAL               ::  TI_apprant_accumulation
-    REAl               ::  TI_average                ! THE AVERAGE TI OF THE CROSS PLANE
-    REAL               ::  TI_apprant                ! The TI due to the meadering
-    REAL               ::  HubHt 
-    REAL               ::  wake_center_y
-    REAL               ::  wake_center_z
-    REAL               ::  Rscale
-    REAL               ::  y_coor
-    REAL               ::  z_coor  
-    REAL               ::  zero_spacing
-    REAL               ::  temp1,temp2,temp3
+    REAL(ReKi)               ::  y_axis_turbine
+    REAL(ReKi)               ::  z_axis_turbine
+    REAL(ReKi)               ::  distance                  ! the distance between one point to the meandered wake center
+    REAL(ReKi)               ::  TI_downstream_node        ! the TI at a specfic point in the inbestigated cross plane
+    REAL(ReKi)               ::  TI_node_temp
+    REAL(ReKi)               ::  TI_node
+    REAL(ReKi)               ::  TI_accumulation
+    REAL(ReKi)               ::  TI_apprant_accumulation
+    REAl(ReKi)               ::  TI_average                ! THE AVERAGE TI OF THE CROSS PLANE
+    REAL(ReKi)               ::  TI_apprant                ! The TI due to the meadering
+    REAL(ReKi)               ::  HubHt 
+    REAL(ReKi)               ::  wake_center_y
+    REAL(ReKi)               ::  wake_center_z
+    REAL(ReKi)               ::  Rscale
+    REAL(ReKi)               ::  y_coor
+    REAL(ReKi)               ::  z_coor  
+    REAL(ReKi)               ::  zero_spacing
+    REAL(ReKi)               ::  temp1,temp2,temp3
     
    !-------------------------------------------------------------------------------------------------
    ! calculate the TI at each node at the downstream turbine plane from the wake deficit calculation
@@ -2129,7 +2128,7 @@ FUNCTION smallscale_TI (m, p, y, spacing,angle,velocity_matrix)
        END DO
     END DO
     
-    TI_average = TI_accumulation / REAL(counter1)
+    TI_average = TI_accumulation / REAL(counter1, ReKi)
     
     smallscale_TI = TI_average * 100
     
@@ -2753,13 +2752,14 @@ FUNCTION min_of_array(ary, ary_length)
 !............................................................................
     
     INTEGER ::    ary_length
-    REAL    ::    ary(ary_length)
-    REAL    ::    min_of_array
+    REAL(ReKi)    ::    ary(ary_length)
+    REAL(ReKi)    ::    min_of_array
     INTEGER ::    I
     
-    min_of_array = 10000.00
+
+    min_of_array = ary(1) 
     
-    DO I = 1,ary_length
+    DO I = 2,ary_length
         IF (ary(I) < min_of_array) THEN
             min_of_array = ary(I)
         END IF
@@ -2778,34 +2778,15 @@ FUNCTION max_of_array(ary, ary_length)
     REAL    ::    max_of_array
     INTEGER ::    I
     
-    max_of_array = -10000.00
+    max_of_array = ary(1)
     
-    DO I = 1,ary_length
+    DO I = 2,ary_length
         IF (ary(I) > max_of_array) THEN
             max_of_array = ary(I)
         END IF
     END DO
 
 END FUNCTION max_of_array
-
-!------------------------------------------------------------------------------------------------ 
-FUNCTION max_of_TwoNum(Num1, Num2)
-!............................................................................
-! This routine is called to return the maximum value of two numbers
-!............................................................................
-
-    REAL   ::    Num1
-    REAL   ::    Num2
-    REAL   ::    max_of_TwoNum
-    
-    !IF ( Num1 > Num2 .OR. EqualRealNos( Num1, Num2 ) ) THEN
-    IF (Num1 > Num2 .OR. Num1 == Num2) THEN              ! 8.4.2014 to check
-        max_of_TwoNum = Num1
-    ELSE
-        max_of_TwoNum = Num2
-    END IF
-    
-END FUNCTION max_of_TwoNum
 
 !------------------------------------------------------------------------------------------------ 
 FUNCTION rotation_lateral_offset(x_spacing)
@@ -2831,12 +2812,12 @@ FUNCTION local_skew_angle(yaw_angle, tilde_ct, x_spacing, wake_width, ppr)
 ! This routine is called to return the local skew angle at a certain downstream location
 !............................................................................
     
-    REAL     ::     yaw_angle
-    REAL     ::     tilde_ct
-    REAL     ::     x_spacing
+    REAL(ReKi)     ::     yaw_angle
+    REAL(ReKi)     ::     tilde_ct
+    REAL(ReKi)     ::     x_spacing
     INTEGER  ::     wake_width
-    REAL     ::     ppr
-    REAL     ::     local_skew_angle
+    REAL(ReKi)     ::     ppr
+    REAL(ReKi)     ::     local_skew_angle
     
     IF ( ABS(yaw_angle) > 0.000001 ) THEN
         local_skew_angle = (ppr/wake_width)**2 *COS(yaw_angle)**2 *SIN(yaw_angle) *tilde_ct/2
