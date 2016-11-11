@@ -3,7 +3,7 @@
 ! WARNING This file is generated automatically by the FAST registry.
 ! Do not edit.  Your changes to this file will be lost.
 !
-! FAST Registry (v3.02.00, 7-Jul-2016)
+! FAST Registry (v3.02.00, 23-Jul-2016)
 !*********************************************************************************************************************************
 ! ServoDyn_Types
 !.................................................................................................................................
