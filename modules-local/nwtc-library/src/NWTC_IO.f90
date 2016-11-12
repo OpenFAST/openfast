@@ -33,7 +33,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               
-          ProgDesc( 'NWTC Subroutine Library', 'v2.10.00', '27-Aug-2016')    !< The name, version, and date of the NWTC Subroutine Library
+          ProgDesc( 'NWTC Subroutine Library', 'v2.11.00', '12-Nov-2016')    !< The name, version, and date of the NWTC Subroutine Library
 
       !> This type stores a linked list of file names, used in MLB-style input file parsing (currently used in AirfoilInfo)
    TYPE, PUBLIC   :: FNlist_Type                                
@@ -165,6 +165,16 @@ MODULE NWTC_IO
       MODULE PROCEDURE ReadR16Var    ! 16-byte real
    END INTERFACE
 
+      !> \copydoc nwtc_io::readivarwdefault
+   INTERFACE ReadVarWDefault
+      !MODULE PROCEDURE ReadCVar
+      MODULE PROCEDURE ReadIVarWDefault
+      !MODULE PROCEDURE ReadLVar
+      MODULE PROCEDURE ReadR4VarWDefault     ! 4-byte real
+      MODULE PROCEDURE ReadR8VarWDefault     ! 8-byte real
+      MODULE PROCEDURE ReadR16VarWDefault    ! 16-byte real
+   END INTERFACE
+   
       !> \copydoc nwtc_io::readcary
    INTERFACE ReadAry
       MODULE PROCEDURE ReadCAry
@@ -5250,6 +5260,7 @@ CONTAINS
    END SUBROUTINE ReadIAry
 !=======================================================================
 !> \copydoc nwtc_io::readcvar
+!! WARNING: this routine limits the size of the number being read to 30 characters   
    SUBROUTINE ReadIVar ( UnIn, Fil, Var, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
 
 
@@ -5295,6 +5306,55 @@ CONTAINS
 
    RETURN
    END SUBROUTINE ReadIVar
+!=======================================================================
+!> This routine reads a scalar variable from the next line of the input file.
+!! Use ReadVarWDefault (nwtc_io::readvarwdefault) instead of directly calling a specific routine in the generic interface.    
+!! WARNING: this routine limits the size of the number being read to 30 characters   
+   SUBROUTINE ReadIVarWDefault ( UnIn, Fil, Var, VarName, VarDescr, VarDefault, ErrStat, ErrMsg, UnEc )
+
+      ! Argument declarations:
+
+   INTEGER,        INTENT(OUT)         :: Var                                             !< variable being read
+   INTEGER,        INTENT(IN)          :: VarDefault                                      !< default value of variable being read
+   INTEGER,        INTENT(IN)          :: UnIn                                            !< I/O unit for input file.
+   INTEGER,        INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   INTEGER(IntKi), INTENT(OUT)         :: ErrStat                                         !< Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT)         :: ErrMsg                                          !< Error message
+
+   CHARACTER(*),   INTENT(IN)          :: Fil                                             !< Name of the input file.
+   CHARACTER(*),   INTENT(IN)          :: VarDescr                                        !< Text string describing the variable.
+   CHARACTER(*),   INTENT(IN)          :: VarName                                         !< Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                             :: IOS                                             ! I/O status returned from the read statement.
+
+   CHARACTER(30)                       :: Word                                            ! String to hold the first word on the line.
+
+
+   CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )   
+   IF ( ErrStat >= AbortErrLev ) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
+
+   CALL Conv2UC( Word )
+   IF ( INDEX(Word, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the DEFAULT value
+      READ (Word,*,IOSTAT=IOS)  Var
+
+      CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
+
+      IF (ErrStat >= AbortErrLev) RETURN
+   ELSE
+      Var = VarDefault
+   END IF   
+
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_IntFrmt)  Var, VarName, VarDescr
+   END IF
+
+
+   RETURN
+   END SUBROUTINE ReadIVarWDefault
 !=======================================================================
 !> \copydoc nwtc_io::readcary
    SUBROUTINE ReadLAry ( UnIn, Fil, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
@@ -5885,6 +5945,54 @@ CONTAINS
    RETURN
    END SUBROUTINE ReadR4Var
 !=======================================================================
+!> \copydoc nwtc_io::readivarwdefault
+   SUBROUTINE ReadR4VarWDefault ( UnIn, Fil, Var, VarName, VarDescr, VarDefault, ErrStat, ErrMsg, UnEc )
+
+      ! Argument declarations:
+
+   REAL(SiKi),    INTENT(OUT)         :: Var                                             ! Variable being read
+   REAL(SiKi),    INTENT(IN )         :: VarDefault                                      ! Default value for variable being read
+
+   INTEGER(IntKi),INTENT(OUT)         :: ErrStat                                         ! Error status; if present, program does not abort on error
+   CHARACTER(*),  INTENT(OUT)         :: ErrMsg                                          ! Error message
+
+   INTEGER,       INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
+   INTEGER,       INTENT(IN), OPTIONAL:: UnEc                                            ! I/O unit for echo file. If present and > 0, write to UnEc
+
+   CHARACTER( *), INTENT(IN)          :: Fil                                             ! Name of the input file.
+   CHARACTER( *), INTENT(IN)          :: VarDescr                                        ! Text string describing the variable.
+   CHARACTER( *), INTENT(IN)          :: VarName                                         ! Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                            :: IOS                                             ! I/O status returned from the read statement.
+   CHARACTER(30)                      :: Word                                            ! String to hold the first word on the line.
+
+
+   CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
+
+   
+   CALL Conv2UC( Word )
+   IF ( INDEX(Word, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the DEFAULT value
+      READ (Word,*,IOSTAT=IOS)  Var
+
+      CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
+
+      IF (ErrStat >= AbortErrLev) RETURN
+   ELSE
+      Var = VarDefault
+   END IF   
+   
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_ReFrmt)  Var, VarName, VarDescr
+   END IF
+
+   RETURN
+   END SUBROUTINE ReadR4VarWDefault
+!=======================================================================
 !> \copydoc nwtc_io::readcvar
 !! WARNING: this routine limits the size of the number being read to 30 characters   
    SUBROUTINE ReadR8Var ( UnIn, Fil, Var, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
@@ -5930,6 +6038,54 @@ CONTAINS
 
    RETURN
    END SUBROUTINE ReadR8Var
+!=======================================================================
+!> \copydoc nwtc_io::readr4varwdefault
+   SUBROUTINE ReadR8VarWDefault ( UnIn, Fil, Var, VarName, VarDescr, VarDefault, ErrStat, ErrMsg, UnEc )
+
+      ! Argument declarations:
+
+   REAL(R8Ki),    INTENT(OUT)         :: Var                                             !< Variable being read
+   REAL(R8Ki),    INTENT(IN )         :: VarDefault                                      !< Default value for variable being read
+
+   INTEGER(IntKi),INTENT(OUT)         :: ErrStat                                         !< Error status; if present, program does not abort on error
+   CHARACTER(*),  INTENT(OUT)         :: ErrMsg                                          !< Error message
+
+   INTEGER,       INTENT(IN)          :: UnIn                                            !< I/O unit for input file.
+   INTEGER,       INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+
+   CHARACTER( *), INTENT(IN)          :: Fil                                             !< Name of the input file.
+   CHARACTER( *), INTENT(IN)          :: VarDescr                                        !< Text string describing the variable.
+   CHARACTER( *), INTENT(IN)          :: VarName                                         !< Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                            :: IOS                                             ! I/O status returned from the read statement.
+   CHARACTER(30)                      :: Word                                            ! String to hold the first word on the line.
+
+
+   CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
+
+   
+   CALL Conv2UC( Word )
+   IF ( INDEX(Word, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the DEFAULT value
+      READ (Word,*,IOSTAT=IOS)  Var
+
+      CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
+
+      IF (ErrStat >= AbortErrLev) RETURN
+   ELSE
+      Var = VarDefault
+   END IF   
+   
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_ReFrmt)  Var, VarName, VarDescr
+   END IF
+
+   RETURN
+   END SUBROUTINE ReadR8VarWDefault
 !=======================================================================
 !> \copydoc nwtc_io::readcvar
 !! WARNING: this routine limits the size of the number being read to 30 characters   
@@ -5982,6 +6138,54 @@ CONTAINS
 
    RETURN
    END SUBROUTINE ReadR16Var
+!=======================================================================
+!> \copydoc nwtc_io::readr4varwdefault
+   SUBROUTINE ReadR16VarWDefault ( UnIn, Fil, Var, VarName, VarDescr, VarDefault, ErrStat, ErrMsg, UnEc )
+
+      ! Argument declarations:
+
+   REAL(QuKi),    INTENT(OUT)         :: Var                                             !< Variable being read
+   REAL(QuKi),    INTENT(IN )         :: VarDefault                                      !< Default value for variable being read
+
+   INTEGER(IntKi),INTENT(OUT)         :: ErrStat                                         !< Error status; if present, program does not abort on error
+   CHARACTER(*),  INTENT(OUT)         :: ErrMsg                                          !< Error message
+
+   INTEGER,       INTENT(IN)          :: UnIn                                            !< I/O unit for input file.
+   INTEGER,       INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+
+   CHARACTER( *), INTENT(IN)          :: Fil                                             !< Name of the input file.
+   CHARACTER( *), INTENT(IN)          :: VarDescr                                        !< Text string describing the variable.
+   CHARACTER( *), INTENT(IN)          :: VarName                                         !< Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                            :: IOS                                             ! I/O status returned from the read statement.
+   CHARACTER(30)                      :: Word                                            ! String to hold the first word on the line.
+
+
+   CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
+
+   
+   CALL Conv2UC( Word )
+   IF ( INDEX(Word, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the DEFAULT value
+      READ (Word,*,IOSTAT=IOS)  Var
+
+      CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
+
+      IF (ErrStat >= AbortErrLev) RETURN
+   ELSE
+      Var = VarDefault
+   END IF   
+   
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_ReFrmt)  Var, VarName, VarDescr
+   END IF
+
+   RETURN
+   END SUBROUTINE ReadR16VarWDefault
 !=======================================================================
 !> This routine reads a string from the next line of the input file.
    SUBROUTINE ReadStr ( UnIn, Fil, CharVar, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
