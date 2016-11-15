@@ -494,7 +494,7 @@ SUBROUTINE IfW_HAWCWind_CalcOutput(Time, PositionXYZ, p, Velocity, DiskVel, Misc
    TYPE(IfW_HAWCWind_ParameterType),         INTENT(IN   )  :: p                 !< Parameters
    REAL(ReKi),                               INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
    REAL(ReKi),                               INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
-   TYPE(IfW_HAWCWind_MiscVarType),           INTENT(  OUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
+   TYPE(IfW_HAWCWind_MiscVarType),           INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
       ! Error handling
    INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< error status
