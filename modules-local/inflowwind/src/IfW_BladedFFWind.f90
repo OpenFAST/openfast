@@ -16,7 +16,7 @@ MODULE IfW_BladedFFWind
 !!
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015-2106  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
