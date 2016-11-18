@@ -1384,7 +1384,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOu
             ! This is a 4-byte real, so we can't use the library read routines.
          READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! dz, in meters [4-byte REAL]
             IF ( TmpErrStat /= 0 )  THEN
-               CALL SetErrStat( ErrID_Fatal, ' Error reading dz in the binary tower file "'//TRIM( InitData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
+               CALL SetErrStat( ErrID_Fatal, ' Error reading dz in the binary tower file "'//TRIM( TwrFile )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
             ENDIF
 
@@ -1397,7 +1397,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOu
             ! This is a 4-byte real, so we can't use the library read routines.
          READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! dx, in meters [4-byte REAL]
             IF ( TmpErrStat /= 0 )  THEN
-               CALL SetErrStat( ErrID_Fatal, ' Error reading dx in the binary tower file "'//TRIM( InitData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
+               CALL SetErrStat( ErrID_Fatal, ' Error reading dx in the binary tower file "'//TRIM( TwrFile )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
             ENDIF
 
@@ -1410,12 +1410,12 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOu
             ! This is a 4-byte real, so we can't use the library read routines.
          READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! Zmax, in meters [4-byte REAL]
             IF ( TmpErrStat /= 0 )  THEN
-               CALL SetErrStat( ErrID_Fatal, ' Error reading Zmax in the binary tower file "'//TRIM( InitData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
+               CALL SetErrStat( ErrID_Fatal, ' Error reading Zmax in the binary tower file "'//TRIM( TwrFile )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
             ENDIF
 
             IF ( ABS(Dum_Real4/ParamData%GridBase-1) > TOL ) THEN
-               CALL SetErrStat( ErrID_Fatal, ' Height in the FF binary file does not match the tower file "'//TRIM( InitData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
+               CALL SetErrStat( ErrID_Fatal, ' Height in the FF binary file does not match the tower file "'//TRIM( TwrFile )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
             ENDIF
 
@@ -1423,7 +1423,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOu
             ! This is a 4-byte integer, so we can't use the library read routines.
          READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Int4                ! NumOutSteps [4-byte INTEGER]
             IF ( TmpErrStat /= 0 )  THEN
-               CALL SetErrStat( ErrID_Fatal, ' Error reading NumOutSteps in the binary tower file "'//TRIM( InitData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
+               CALL SetErrStat( ErrID_Fatal, ' Error reading NumOutSteps in the binary tower file "'//TRIM( TwrFile )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
             ENDIF
 
@@ -1436,7 +1436,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOu
             ! This is a 4-byte integer, so we can't use the library read routines.
          READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Int4                ! NumZ      [4-byte INTEGER]
             IF ( TmpErrStat /= 0 )  THEN
-               CALL SetErrStat( ErrID_Fatal, ' Error reading NumZ in the binary tower file "'//TRIM( InitData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
+               CALL SetErrStat( ErrID_Fatal, ' Error reading NumZ in the binary tower file "'//TRIM( TwrFile )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
             ENDIF
             ParamData%NTGrids = Dum_Int4
@@ -1445,7 +1445,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOu
             ! This is a 4-byte real, so we can't use the library read routines.
          READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! UHub      [4-byte REAL]
             IF ( TmpErrStat /= 0 )  THEN
-               CALL SetErrStat( ErrID_Fatal, ' Error reading UHub in the binary tower file "'//TRIM( InitData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
+               CALL SetErrStat( ErrID_Fatal, ' Error reading UHub in the binary tower file "'//TRIM( TwrFile )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
             ENDIF
 
@@ -1460,7 +1460,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOu
                ! Read the TI values fromthe tower file: 4-byte reals.
                
                !bjj: not sure you can call this routine to read from a binary file...
-            !CALL ReadVar( UnitWind, TRIM(InitData%WindFileName), TI(IC), 'TI('//TRIM(Num2LStr(IC))//')', 'TI value for u,v, or w', TmpErrStat, TmpErrMsg )
+            !CALL ReadVar( UnitWind, TRIM(TwrFile), TI(IC), 'TI('//TRIM(Num2LStr(IC))//')', 'TI value for u,v, or w', TmpErrStat, TmpErrMsg )
             !IF (TmpErrStat /= ErrID_None) THEN
             !   ParamData%NTGrids  = 0
             !   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
@@ -1472,7 +1472,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOu
             IF (TmpErrStat /= 0) THEN
                ParamData%NTGrids  = 0
                CALL SetErrStat( ErrID_Fatal, ' Error reading TI('//TRIM(Num2LStr(IC))//') in the binary tower file "' &
-                               //TRIM( InitData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
+                               //TRIM( TwrFile )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
             ENDIF
          
