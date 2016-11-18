@@ -1373,7 +1373,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOu
       ! Open the file
       !-------------------------------------------------------------------------------------------------
 
-      CALL OpenBInpFile (UnitWind, TRIM(InitData%WindFileName), TmpErrStat, TmpErrMsg)
+      CALL OpenBInpFile (UnitWind, TRIM(TwrFile), TmpErrStat, TmpErrMsg)
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) RETURN
 
