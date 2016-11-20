@@ -323,7 +323,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOu
 
       IF ( ParamData%Periodic ) THEN
          WRITE(InitData%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Time range (s):              [ '// &
-                     TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(ParamData%TotalTime))
+                     TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(ParamData%TotalTime))//' ]'
       ELSE  ! Shift the time range to compensate for the shifting of the wind grid
          WRITE(InitData%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Time range (s):              [ '// &
                      TRIM(Num2LStr(-ParamData%InitXPosition*ParamData%InvMFFWS))//' : '// &
