@@ -1255,7 +1255,7 @@ SUBROUTINE FAST_ProgStart(ThisProgVer)
    CALL DispCopyrightLicense( ThisProgVer )
 
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM(GetNVD(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
    
 END SUBROUTINE FAST_ProgStart
 !----------------------------------------------------------------------------------------------------------------------------------
