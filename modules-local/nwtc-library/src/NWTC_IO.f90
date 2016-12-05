@@ -3094,7 +3094,7 @@ CONTAINS
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
       INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
 
-      CHARACTER(20)                          :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(200)                         :: Words       (2)               ! The two "words" parsed from the line.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseChVar'
 
