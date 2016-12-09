@@ -107,6 +107,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    TYPE(FAST_ExternInitType), OPTIONAL, INTENT(IN) :: ExternInitData !< Initialization input data from an external source (Simulink)
    
    ! local variables      
+   CHARACTER(1024)                         :: InputFile           !< A CHARACTER string containing the name of the primary FAST input file
+
    TYPE(ED_InitInputType)                  :: InitInData_ED       ! Initialization input data
    TYPE(ED_InitOutputType)                 :: InitOutData_ED      ! Initialization output data
    
@@ -196,29 +198,33 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    m_FAST%NextJacCalcTime = m_FAST%t_global                             ! We want to calculate the Jacobian on the first step
    
    
-      ! ... Initialize NWTC Library (open console, set pi constants) ...
-   CALL NWTC_Init( ProgNameIN=FAST_ver%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
+      ! Init NWTC_Library, display copyright and version information:
+   CALL FAST_ProgStart( FAST_Ver )
+   !call DispNVD( FAST_Ver )
 
    
-      ! set turbine reference position for graphics output
-   if (PRESENT(ExternInitData)) then
-      p_FAST%TurbinePos = ExternInitData%TurbinePos
-   else
-      p_FAST%TurbinePos = 0.0_ReKi
-   end if
-   
-   
-      ! ... Open and read input files, initialize global parameters. ...
    IF (PRESENT(InFile)) THEN
-      IF (PRESENT(ExternInitData)) THEN
-         CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2, InFile, ExternInitData%TMax, ExternInitData%TurbineID )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)         
-      ELSE         
-         CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2, InFile )                       ! We have the name of the input file from somewhere else (e.g. Simulink)
-      END IF
+      p_FAST%UseDWM = .FALSE.
+      InputFile = InFile
    ELSE
-      CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2 )
+      CALL GetInputFileName(InputFile,p_FAST%UseDWM,ErrStat2,ErrMsg2)            
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
    END IF
    
+   ! ... Open and read input files ...
+   ! also, set turbine reference position for graphics output
+   if (PRESENT(ExternInitData)) then
+      p_FAST%TurbinePos = ExternInitData%TurbinePos
+      CALL FAST_Init( p_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, ExternInitData%TurbineID )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)         
+   else
+      p_FAST%TurbinePos = 0.0_ReKi
+      CALL FAST_Init( p_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2 )                       ! We have the name of the input file from somewhere else (e.g. Simulink)
+   end if
+         
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -1202,13 +1208,14 @@ CONTAINS
 END SUBROUTINE FAST_InitializeAll
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This function returns a string describing the glue code and some of the compilation options we're using.
-FUNCTION GetVersion()
+FUNCTION GetVersion(ThisProgVer)
 
    ! Passed Variables:
 
-   CHARACTER(1024)  :: GetVersion                      !< String containing a description of the compiled precision.
+   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
+   CHARACTER(1024)                 :: GetVersion      !< String containing a description of the compiled precision.
 
-   GetVersion = TRIM(GetNVD(FAST_Ver))//', compiled'
+   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled'
 
    IF ( Cmpl4SFun )  THEN     ! FAST has been compiled as an S-Function for Simulink
       GetVersion = TRIM(GetVersion)//' as a DLL S-Function for Simulink'
@@ -1235,9 +1242,69 @@ FUNCTION GetVersion()
    RETURN
 END FUNCTION GetVersion
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine is called at the start (or restart) of a FAST program (or FAST.Farm). It initializes the NWTC subroutine library,
+!! displays the copyright notice, and displays some version information (including addressing scheme and precision).
+SUBROUTINE FAST_ProgStart(ThisProgVer)
+   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
+
+   
+      ! ... Initialize NWTC Library (open console, set pi constants) ...
+   CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
+   
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( ThisProgVer )
+
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   
+END SUBROUTINE FAST_ProgStart
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine gets the name of the FAST input file from the command line. It also returns a logical indicating if this there
+!! was a "DWM" argument after the file name.
+SUBROUTINE GetInputFileName(InputFile,UseDWM,ErrStat,ErrMsg)
+   CHARACTER(*),             INTENT(OUT)           :: InputFile         !< A CHARACTER string containing the name of the primary FAST input file (if not present, we'll get it from the command line)
+   LOGICAL,                  INTENT(OUT)           :: UseDWM            !< whether the last argument from the command line is "DWM"
+   INTEGER(IntKi),           INTENT(OUT)           :: ErrStat           !< Error status
+   CHARACTER(*),             INTENT(OUT)           :: ErrMsg            !< Error message
+   
+   INTEGER(IntKi)                                  :: ErrStat2          ! local error stat
+   CHARACTER(1024)                                 :: LastArg           ! A second command-line argument that will allow DWM module to be used in AeroDyn
+   
+   ErrStat = ErrID_None
+   ErrMsg = ''
+   
+   UseDWM = .FALSE.  ! by default, we're not going to use the DWM module
+   InputFile = ""  ! initialize to empty string to make sure it's input from the command line
+   CALL CheckArgs( InputFile, ErrStat2, LastArg )  ! if ErrStat2 /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
+      
+   IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'The required input file was not specified on the command line.'
+
+         !bjj:  if people have compiled themselves, they should be able to figure out the file name, right?         
+      IF (BITS_IN_ADDR==32) THEN
+         CALL NWTC_DisplaySyntax( InputFile, 'FAST_Win32.exe' )
+      ELSEIF( BITS_IN_ADDR == 64) THEN
+         CALL NWTC_DisplaySyntax( InputFile, 'FAST_x64.exe' )
+      ELSE
+         CALL NWTC_DisplaySyntax( InputFile, 'FAST.exe' )
+      END IF
+         
+      RETURN
+   END IF            
+      
+   IF (LEN_TRIM(LastArg) > 0) THEN ! see if DWM was specified as the second option
+      CALL Conv2UC( LastArg )
+      IF ( TRIM(LastArg) == "DWM" ) THEN
+         UseDWM    = .TRUE.
+      END IF
+   END IF   
+   
+END SUBROUTINE GetInputFileName
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine checks for command-line arguments, gets the root name of the input files
 !! (including full path name), and creates the names of the output files.
-SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbID  )
+SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, TurbID  )
 
       IMPLICIT                        NONE
 
@@ -1248,15 +1315,13 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbI
    REAL(DbKi),               INTENT(IN)            :: t_initial         !< the beginning time of the simulation
    INTEGER(IntKi),           INTENT(OUT)           :: ErrStat           !< Error status
    CHARACTER(*),             INTENT(OUT)           :: ErrMsg            !< Error message
-   CHARACTER(*),             INTENT(IN), OPTIONAL  :: InFile            !< A CHARACTER string containing the name of the primary FAST input file (if not present, we'll get it from the command line)
+   CHARACTER(*),             INTENT(IN)            :: InputFile         !< A CHARACTER string containing the name of the primary FAST input file (if not present, we'll get it from the command line)
    REAL(DbKi),               INTENT(IN), OPTIONAL  :: TMax              !< the length of the simulation (from Simulink)
    INTEGER(IntKi),           INTENT(IN), OPTIONAL  :: TurbID            !< an ID for naming the tubine output file
       ! Local variables
 
    INTEGER                      :: i                                    ! loop counter
    !CHARACTER(1024)              :: DirName                              ! A CHARACTER string containing the path of the current working directory
-   CHARACTER(1024)              :: LastArg                              ! A second command-line argument that will allow DWM module to be used in AeroDyn
-   CHARACTER(1024)              :: InputFile                            ! A CHARACTER string containing the name of the primary FAST input file
 
 
    CHARACTER(*), PARAMETER      :: RoutineName = "FAST_Init"
@@ -1268,52 +1333,11 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbI
    ErrStat = ErrID_None
    ErrMsg = ''
 
-      ! Display the copyright notice
-   CALL DispCopyrightLicense( FAST_Ver )
-
-
-      ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetVersion()//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
-
-   !...............................................................................................................................
-   ! Get the name of the input file from the command line if it isn't an input to this routine
-   ! and set the root name of the output files based on the input file name
-   !...............................................................................................................................
-
-   p%UseDWM = .FALSE.  ! by default, we're not going to use the DWM module
    
-   IF ( PRESENT(InFile) ) THEN
-      InputFile = InFile
-      p%UseDWM  = .FALSE.
-   ELSE ! get it from the command line
-      InputFile = ""  ! initialize to empty string to make sure it's input from the command line
-      CALL CheckArgs( InputFile, ErrStat2, LastArg )  ! if ErrStat2 /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
-      
-      IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
-         CALL SetErrStat( ErrID_Fatal, 'The required input file was not specified on the command line.', ErrStat, ErrMsg, RoutineName )
-
-            !bjj:  if people have compiled themselves, they should be able to figure out the file name, right?         
-         IF (BITS_IN_ADDR==32) THEN
-            CALL NWTC_DisplaySyntax( InputFile, 'FAST_Win32.exe' )
-         ELSEIF( BITS_IN_ADDR == 64) THEN
-            CALL NWTC_DisplaySyntax( InputFile, 'FAST_x64.exe' )
-         ELSE
-            CALL NWTC_DisplaySyntax( InputFile, 'FAST.exe' )
-         END IF
+   !...............................................................................................................................
+   ! Set the root name of the output files based on the input file name
+   !...............................................................................................................................
          
-         RETURN
-      END IF            
-      
-      IF (LEN_TRIM(LastArg) > 0) THEN ! see if DWM was specified as the second option
-         CALL Conv2UC( LastArg )
-         IF ( TRIM(LastArg) == "DWM" ) THEN
-            p%UseDWM    = .TRUE.
-         END IF
-      END IF
-            
-   END IF
-      
-
       ! Determine the root name of the primary file (will be used for output files)
    CALL GetRoot( InputFile, p%OutFileRoot )
    IF ( Cmpl4SFun )  p%OutFileRoot = TRIM( p%OutFileRoot )//'.SFunc'
@@ -1620,7 +1644,7 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_BD, Init
    !......................................................
    ! Set the description lines to be printed in the output file
    !......................................................
-   y_FAST%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion())
+   y_FAST%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(FAST_Ver))
    y_FAST%FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
    y_FAST%FileDescLines(3)  = 'Description from the FAST input file: '//TRIM(p_FAST%FTitle)
    
@@ -6215,12 +6239,10 @@ SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, Check
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-      ! Display the copyright notice
-   CALL DispCopyrightLicense( FAST_Ver )
-
-      ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetVersion()//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+      ! Init NWTC_Library, display copyright and version information:
+   CALL FAST_ProgStart( FAST_Ver )
    
+      ! Restore data from checkpoint file
    Unit = -1         
    DO i_turb = 1,NumTurbines
       CALL FAST_RestoreFromCheckpoint_T(t_initial_out, n_t_global, NumTurbines_out, Turbine(i_turb), CheckpointRoot, ErrStat2, ErrMsg2, Unit )
