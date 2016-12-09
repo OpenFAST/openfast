@@ -1,6 +1,32 @@
 BeamDyn Change Log
 
 ================================================================================
+v1.05.00 9-Dec-2016 Envision Energy USA, Ltd.
+- added a check that the values for the damping are similar
+- bug fix: the P_d portion of the stiffness matrix (Eq 5.43 in the BeamDyn manual) was implemented with incorrect indices, so the (4:6,1:3) entry
+  was getting overwritten by what should have been the (4:6,4:6) entry of that matrix. This does not seem to affect the 5MW model results; however
+  the (5,1) entries of the 6x6 submatrices that make up the stiffness matrix reported in the BeamDyn summary file
+- cleaned up the code:
+  + Created new routines to isolate more of the code in the BD_Init routine.
+  + added some comments
+  + removed unused variables
+  + changed BD_ElasticForce() and BD_DissipativeForce() so that we don't have to create temporary variables that don't get used when they are called when fact=.false.
+  + replaced BD_Tilde() with SkewSymMat() and/or cross_product() from the NWTC Library
+  + redimensioned several arrays so they can be indexed easier (This appears to be working, but I [adp] have not tested with multiple elements.  
+    There is potential that the multiple element handling is now broken, but I don't have a test case for that right now.)
+  + added some local variables to miscVar data type
+  + reordered some loops for efficiency
+  + removed some routines that were only calling another subroutine without actually doing anything  
+    Bypassed several subroutines that were only passing to another subroutine without actually doing anything.
+  + added BD_TrapezoidalPointWeight routine to initialize the trapezoidal quadrature points and weights in the same routine.
+  + I also renamed some local variables to match the parameter-type versions of the same variable.
+  + Removed many ErrStat/ErrMsg arguments that weren't used.
+  + Added parameters for GAUSS or TRAP quadrature instead of always checking for integers 1 or 2
+  + Replaced flags in BD_CrvCompose with compile-time parameters for easier reading of code
+  + Modified BD_ComputeIniNodalPosition so it uses the same indexing order as SP_Coef, allowing us to get rid of a temporary matrix holding the transpose of SP_Coef
+  + BD_ComputeIniCoef was computing and factoring the coefficient matrix 3 more times than necessary so I rearranged some of the code to avoid that.
+
+================================================================================
 v1.01.04 26-Jul-2016
 - added the full finite-element mass and stiffness matrices of the blade model at time zero to the summary file
 - fixed a problem in BeamDyn whereby its velocities were initialized incorrectly when ElastoDyn was initialized
