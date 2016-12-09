@@ -22,7 +22,6 @@ Source\FAST_Library.h
 Source\FAST_Prog.c
 
 Source\dependencies\ElastoDyn\*
-Source\dependencies\BeamDyn\*
 Source\dependencies\AeroDyn\*
 Source\dependencies\AeroDyn14\*
 Source\dependencies\InflowWind\*
@@ -49,6 +48,7 @@ subs\AeroDyn\Source\dependencies\BEMT\*
 subs\AeroDyn\Source\dependencies\UnsteadyAero\*
 subs\ServoDyn\source\ServoDyn\*
 subs\ServoDyn\source\TMD\*
+subs\BeamDyn\source\*
 
 Source\dependencies\Registry\*
 

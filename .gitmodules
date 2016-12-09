@@ -13,3 +13,6 @@
 [submodule "subs/ServoDyn"]
 	path = subs/ServoDyn
 	url = https://github.com/NWTC/ServoDyn
+[submodule "subs/BeamDyn"]
+	path = subs/BeamDyn
+	url = https://github.com/NWTC/BeamDyn
