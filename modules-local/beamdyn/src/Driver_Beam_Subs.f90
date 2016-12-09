@@ -144,7 +144,7 @@ module BeamDyn_driver_subs
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(6),"InitInputData%IniRootVel(3)", "angular velocity vector Z",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   InitInputData%RootVel(1:3) = MATMUL(BD_Tilde_SP(InitInputData%RootVel(4:6)),InitInputData%GlbPos(:))
+   InitInputData%RootVel(1:3) = cross_product(InitInputData%RootVel(4:6),InitInputData%GlbPos(:))
    if (ErrStat >= AbortErrLev) then
        call cleanup()
        return

@@ -23,7 +23,7 @@ MODULE BeamDyn_IO
 
    IMPLICIT NONE
 
-   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.01.04','26-Jul-2016')
+   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.02.00','9-Dec-2016')
 
 
 ! ===================================================================================================
@@ -653,7 +653,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
           InputFileData%refine = 1
-      ELSE ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTBeam
+      ELSE ! If it's not "default", read this variable
          READ( Line, *, IOSTAT=IOS) InputFileData%refine
             CALL CheckIOS ( IOS, InputFile, 'refine', NumType, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -665,7 +665,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
           InputFileData%n_fact = 5
-      ELSE ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTBeam
+      ELSE ! If it's not "default", read this variable
          READ( Line, *, IOSTAT=IOS) InputFileData%n_fact
             CALL CheckIOS ( IOS, InputFile, 'n_fact', NumType, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -692,7 +692,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
           InputFileData%NRMax = 10
-      ELSE ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTBeam
+      ELSE ! If it's not "default", read this variable;
          READ( Line, *, IOSTAT=IOS) InputFileData%NRMax
             CALL CheckIOS ( IOS, InputFile, 'NRMax', NumType, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -708,7 +708,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
           InputFileData%stop_tol = 1.0D-05
-      ELSE ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTBeam
+      ELSE ! If it's not "default", read this variable;
          READ( Line, *, IOSTAT=IOS) InputFileData%stop_tol
             CALL CheckIOS ( IOS, InputFile, 'stop_tol', NumType, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -781,10 +781,10 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
    DO i=1,InputFileData%kp_total
        CALL ReadAry( UnIn, InputFile, TmpReAry, 4, 'kp_coordinate', 'Key point coordinates and initial twist', ErrStat2, ErrMsg2, UnEc )       
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       InputFileData%kp_coordinate(i,2) =  TmpReAry(1)
-       InputFileData%kp_coordinate(i,3) =  TmpReAry(2)
-       InputFileData%kp_coordinate(i,1) =  TmpReAry(3)
-       InputFileData%kp_coordinate(i,4) = -TmpReAry(4)
+       InputFileData%kp_coordinate(i,2) =  TmpReAry(1) ! x
+       InputFileData%kp_coordinate(i,3) =  TmpReAry(2) ! y
+       InputFileData%kp_coordinate(i,1) =  TmpReAry(3) ! z
+       InputFileData%kp_coordinate(i,4) = -TmpReAry(4) ! initial twist
    ENDDO
    
    
@@ -929,7 +929,8 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
       call cleanup()
       return
    end if
-            
+           
+!FIXME: any reason not to use a logical for this? 
    CALL ReadVar(UnIn,BldFile,BladeInputFileData%damp_flag,'damp_flag','Damping flag',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
@@ -948,7 +949,8 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
          call cleanup()
          return
       end if
-      
+
+      ! Change to BD coordinates      
    BladeInputFileData%beta(1) = temp6(3)
    BladeInputFileData%beta(2) = temp6(1)
    BladeInputFileData%beta(3) = temp6(2)
@@ -1396,7 +1398,18 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    if (InputFileData%UsePitchAct) then
       if ( EqualRealNos(InputFileData%pitchJ, 0.0_BDKi) ) call SetErrStat(ErrID_Fatal,'Pitch actuator inertia must not be 0.',ErrStat,ErrMsg,RoutineName)
    end if
-   
+  
+
+      ! Check that the values for the damping are similar.
+      !  According to Qi, the damping values mu1 .. mu6 should be of the same order of magnitude.  If they aren't, BeamDyn will likely fail badly.
+      !  Will assume for moment that they must be within a factor of 5 of the first value given.
+   DO j=1,6
+      IF ( maxval( abs(InputFileData%InpBl%beta / InputFileData%InpBl%beta(J) ) ) > 5.0_R8Ki ) THEN
+         call SetErrStat( ErrID_Warn,'Damping values in blade file are not of same order of magnitude! BeamDyn will likely not converge!', ErrStat, ErrMsg, RoutineName )
+      ENDIF
+   ENDDO
+
+ 
    DO j=1,InputFileData%InpBl%station_total   
       DO i=2,3
          IF ( .not. EqualRealNos( InputFileData%InpBl%mass0(i,i,j), InputFileData%InpBl%mass0(1,1,j) ) ) then
@@ -1504,19 +1517,17 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    temp_glbp(3) = p%GlbPos(1)
    
       ! tip motions:   
-   temp_vec = MATMUL(p%GlbRot, p%uuN0( (p%node_elem*p%dof_node-5):(p%node_elem*p%dof_node-3),p%elem_total) )
+   temp_vec = MATMUL(p%GlbRot, p%uuN0( 1:3,p%node_elem,p%elem_total) )
    temp_tip0(1) = temp_vec(2)
    temp_tip0(2) = temp_vec(3)
    temp_tip0(3) = temp_vec(1)
    temp_ini(:) = temp_glbp(:) + temp_tip0(:)
    temp_roott(:) = temp_glbp(:) + m%u2%RootMotion%TranslationDisp(:,1)
    temp33_2=TRANSPOSE(m%u2%RootMotion%Orientation(1:3,1:3,1))  ! possible type conversion here
-   CALL BD_CrvExtractCrv(temp33_2,temp_vec,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvCompose(temp_cc,temp_vec,temp_glb,2,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvMatrixR(temp_cc,temp_R,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvExtractCrv(temp33_2,temp_vec)     !,ErrStat2,ErrMsg2)
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvCompose(temp_cc,temp_vec,temp_glb,FLAG_R1R2T) ! temp_cc = temp_vec composed with temp_glb^-
+   CALL BD_CrvMatrixR(temp_cc,temp_R) ! returns temp_R (the transpose of the DCM orientation matrix)
    temp_vec = MATMUL(temp_R,temp_tip0)
    temp_cur = temp_roott + temp_vec
    temp_vec = y%BldMotion%TranslationDisp(1:3,p%node_elem*p%elem_total) - (temp_cur(:) - temp_ini(:))
@@ -1525,21 +1536,19 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    AllOuts( TipTDyr ) = temp_vec(2)
    AllOuts( TipTDzr ) = temp_vec(3)
    !
-   temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0( (p%node_elem*p%dof_node-2):(p%node_elem*p%dof_node),p%elem_total) )
+   temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0( 4:6,p%node_elem,p%elem_total) )
    temp_vec2   = temp_vec
    temp_vec(1) = temp_vec2(2)
    temp_vec(2) = temp_vec2(3)
    temp_vec(3) = temp_vec2(1)
-   CALL BD_CrvCompose(temp_vec2,temp_vec,temp_glb,0,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,0,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvCompose(temp_vec2,temp_vec,temp_glb,FLAG_R1R2) ! temp_vec2 = temp_vec composed with temp_glb
+   CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,FLAG_R1R2)  ! temp_vec = temp_cc composed with temp_vec2
    temp_cur(:) = 0.0_BDKi
    temp33_2=TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,p%node_elem*p%elem_total)) ! possible type conversion here   
-   CALL BD_CrvExtractCrv(temp33_2,temp_cur,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvCompose(temp_vec2,temp_cur,temp_vec,2,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvExtractCrv(temp33_2,temp_cur)     !,ErrStat2,ErrMsg2)
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvCompose(temp_vec2,temp_cur,temp_vec,FLAG_R1R2T) ! temp_vec2 = temp_cur composed with temp_vec^-
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_vec(:) = MATMUL(m%u2%RootMotion%Orientation(1:3,1:3,1),temp_vec2)
    AllOuts( TipRDxr ) = temp_vec(1)
    AllOuts( TipRDyr ) = temp_vec(2)
@@ -1594,7 +1603,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       AllOuts( NMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NMl( beta,3 ) ) = temp_vec(3)
       !
-      temp_vec = MATMUL(p%GlbRot, p%uuN0( (node_no*p%dof_node-5):(node_no*p%dof_node-3),elem_no) )
+      temp_vec = MATMUL(p%GlbRot, p%uuN0( 1:3,node_no,elem_no) )
       temp_tip0(1) = temp_vec(2)
       temp_tip0(2) = temp_vec(3)
       temp_tip0(3) = temp_vec(1)
@@ -1607,20 +1616,17 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       AllOuts( NTDr( beta,2 ) ) = temp_vec(2)
       AllOuts( NTDr( beta,3 ) ) = temp_vec(3)
       !
-      temp_vec = MATMUL(p%GlbRot, p%uuN0( (node_no*p%dof_node-2):(node_no*p%dof_node),elem_no) )
+      temp_vec = MATMUL(p%GlbRot, p%uuN0( 4:6,node_no,elem_no) )
       temp_vec2 = temp_vec
       temp_vec(1) = temp_vec2(2)
       temp_vec(2) = temp_vec2(3)
       temp_vec(3) = temp_vec2(1)
-      CALL BD_CrvCompose(temp_vec2,temp_vec,temp_glb,0,ErrStat2,ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,0,ErrStat2,ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL BD_CrvCompose(temp_vec2,temp_vec,temp_glb,FLAG_R1R2) ! temp_vec2 = temp_vec composed with temp_glb
+      CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,FLAG_R1R2) ! temp_vec = temp_cc composed with temp_vec2
       temp33_2 = TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,temp_id)) ! possible type conversion here
-      CALL BD_CrvExtractCrv(temp33_2,temp_cur,ErrStat2,ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL BD_CrvCompose(temp_vec2,temp_cur,temp_vec,2,ErrStat2,ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL BD_CrvExtractCrv(temp33_2,temp_cur)     !,ErrStat2,ErrMsg2)
+!         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL BD_CrvCompose(temp_vec2,temp_cur,temp_vec,FLAG_R1R2T)  ! temp_vec2 = temp_cur composed with temp_vec^-
       temp_vec = MATMUL(m%u2%RootMotion%Orientation(1:3,1:3,1),temp_vec2)
       AllOuts( NRDr( beta,1 ) ) = temp_vec(1)
       AllOuts( NRDr( beta,2 ) ) = temp_vec(2) 
@@ -1715,7 +1721,6 @@ SUBROUTINE BD_PrintSum( p, u, y, x, m, RootName, ErrStat, ErrMsg )
 
    INTEGER(IntKi)               :: I                                               ! Index for the nodes
    INTEGER(IntKi)               :: j, k                                            ! Generic index
-   INTEGER(IntKi)               :: temp_id                                         ! Generic index
    INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
 
    CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,1(:,F13.3))'                ! Format for outputting mass and modal data.
@@ -1769,9 +1774,9 @@ SUBROUTINE BD_PrintSum( p, u, y, x, m, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(A,1ES18.5)' ) 'Convergence parameter:', p%tol
    WRITE (UnSu,'(A,I4)' ) 'Factorization frequency in Newton-Ralphson solution:', p%n_fact
 
-   IF(p%quadrature .EQ. 1) THEN
+   IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
        WRITE (UnSu,'(A)')  'Quadrature method: Gauss quadrature' 
-   ELSEIF(p%quadrature .EQ. 2) THEN
+   ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
        WRITE (UnSu,'(A)')  'Quadrature method: Trapezoidal quadrature' 
        WRITE (UnSu,'(A,I4)' ) 'FE mesh refinement factor:', p%refine
    ENDIF
@@ -1787,8 +1792,7 @@ SUBROUTINE BD_PrintSum( p, u, y, x, m, RootName, ErrStat, ErrMsg )
        WRITE (UnSu, '(2x,A,1x,A)') 'Node', 'Global node' 
        WRITE (UnSu, '(2x,A,1x,A)') '----', '-----------' 
        DO j = 1, p%node_elem
-           temp_id = (j-1)*p%dof_node
-           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uuN0(temp_id+1:temp_id+3,i)
+           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uuN0(1:3,j,i)
            k=k+1
        ENDDO
        k = k-1
@@ -1800,25 +1804,24 @@ SUBROUTINE BD_PrintSum( p, u, y, x, m, RootName, ErrStat, ErrMsg )
        WRITE (UnSu, '(2x,A,1x,A)') 'Node', 'Global node' 
        WRITE (UnSu, '(2x,A,1x,A)') '----', '-----------' 
        DO j = 1, p%node_elem
-           temp_id = (j-1)*p%dof_node
-           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uuN0(temp_id+4:temp_id+6,i)
+           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uuN0(4:6,j,i)
            k=k+1
        ENDDO
        k = k-1
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Quadrature point position vectors'
-   IF(p%quadrature .EQ. 1) THEN
+   IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
        DO i=2,p%ngp*p%elem_total + 1
            WRITE(UnSu,'(I4,3ES18.5)') i-1,p%Gauss(1:3,i)
        ENDDO
-   ELSEIF(p%quadrature .EQ. 2) THEN
+   ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
        DO i=1,p%ngp
            WRITE(UnSu,'(I4,3ES18.5)') i,p%Gauss(1:3,i)
        ENDDO
    ENDIF
    WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at quadrature points'
-   IF(p%quadrature .EQ. 1) THEN
+   IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
        DO i=1,p%ngp*p%elem_total
            WRITE (UnSu,'(/,A,I4)')  'Gauss point number: ',i
            DO j=1,6
@@ -1829,7 +1832,7 @@ SUBROUTINE BD_PrintSum( p, u, y, x, m, RootName, ErrStat, ErrMsg )
                WRITE(UnSu,'(6ES15.5)') p%Mass0_GL(j,1:6,i)
            ENDDO
        ENDDO
-   ELSEIF(p%quadrature .EQ. 2) THEN
+   ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
        DO i=1,p%ngp
            WRITE (UnSu,'(/,A,I4)')  'Quadrature point number: ',i
            DO j=1,6
@@ -1844,26 +1847,22 @@ SUBROUTINE BD_PrintSum( p, u, y, x, m, RootName, ErrStat, ErrMsg )
 
    WRITE (UnSu,'(/,A)')  'Initial displacement'
    DO i=1,p%node_total
-       temp_id = (i - 1)*p%dof_node
-       WRITE(UnSu,'(I4,3ES18.5)') i,x%q(temp_id+1:temp_id+3)
+       WRITE(UnSu,'(I4,3ES18.5)') i,x%q(1:3,i)
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Initial rotation'
    DO i=1,p%node_total
-       temp_id = (i - 1)*p%dof_node
-       WRITE(UnSu,'(I4,3ES18.5)') i,x%q(temp_id+4:temp_id+6)
+       WRITE(UnSu,'(I4,3ES18.5)') i,x%q(4:6,i)
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Initial velocity'
    DO i=1,p%node_total
-       temp_id = (i - 1)*p%dof_node
-       WRITE(UnSu,'(I4,3ES18.5)') i,x%dqdt(temp_id+1:temp_id+3)
+       WRITE(UnSu,'(I4,3ES18.5)') i,x%dqdt(1:3,i)
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Initial angular velocity'
    DO i=1,p%node_total
-       temp_id = (i - 1)*p%dof_node
-       WRITE(UnSu,'(I4,3ES18.5)') i,x%dqdt(temp_id+4:temp_id+6)
+       WRITE(UnSu,'(I4,3ES18.5)') i,x%dqdt(4:6,i)
    ENDDO
 
          

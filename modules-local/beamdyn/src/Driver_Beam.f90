@@ -61,11 +61,11 @@ PROGRAM BeamDyn_Driver_Program
 
 
    ! local variables
-   Integer(IntKi)                          :: i               ! counter for various loops
-   REAL(R8Ki)                              :: start, finish
-   REAL(BDKi) , DIMENSION(:), ALLOCATABLE  :: IniVelo         ! Initial Position Vector between origins of Global and blade frames [-]
+   Integer(IntKi)                   :: i               ! counter for various loops
+   REAL(R8Ki)                       :: start, finish
+   REAL(BDKi) ,        ALLOCATABLE  :: IniVelo(:,:)        ! Initial Position Vector between origins of Global and blade frames [-]
    
-   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'BeamDyn Driver', 'v1.00.02', '5-Apr-2016' )  ! The version number of this program.
+   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'BeamDyn Driver', 'v1.00.03', '9-Dec-2016' )  ! The version number of this program.
    
    ! -------------------------------------------------------------------------
    ! Initialization of library (especially for screen output)
@@ -86,6 +86,7 @@ PROGRAM BeamDyn_Driver_Program
       CALL CheckError()
    BD_InitInput%RootName         = TRIM(BD_Initinput%InputFile)
    BD_InitInput%RootDisp(:)      = 0.0_R8Ki
+   BD_InitInput%RootOri(:,:)     = 0.0_R8Ki
    BD_InitInput%RootOri(1:3,1:3) = BD_InitInput%GlbRot(1:3,1:3)
    t_global = t_initial
    n_t_final = ((t_final - t_initial) / dt_global )
@@ -116,7 +117,7 @@ PROGRAM BeamDyn_Driver_Program
       CALL CheckError()
 
 !bjj: this is the driver's hack to get initial velocities for the input-output solve      
-   CALL AllocAry(IniVelo,BD_Parameter%dof_total,'IniVelo',ErrStat,ErrMsg); 
+   CALL AllocAry(IniVelo,BD_Parameter%dof_node,BD_Parameter%node_total,'IniVelo',ErrStat,ErrMsg); 
       CALL CheckError()
    IniVelo = BD_ContinuousState%dqdt
    
@@ -215,7 +216,6 @@ CONTAINS
          
    end subroutine CheckError
 
-END PROGRAM BeamDyn_Driver_Program
 
 
 
@@ -230,7 +230,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
    TYPE(BD_InputType),     INTENT(INOUT) :: u
    TYPE(BD_ParameterType), INTENT(IN   ) :: p
    TYPE(BD_InitInputType), INTENT(IN   ) :: InitInput
-   REAL(BDKi),             INTENT(IN   ) :: IniVelo(*)
+   REAL(BDKi),             INTENT(IN   ) :: IniVelo(:,:)
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat          ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg           ! Error message if ErrStat /= ErrID_None
                                          
@@ -241,7 +241,6 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
    REAL(BDKi)                            :: temp_R(3,3)
    REAL(BDKi)                            :: temp_r0(3)
    REAL(BDKi)                            :: temp_theta(3)
-   REAL(BDKi)                            :: temp33(3,3)
    
    ! ----------------------------------------------------------------------
 
@@ -255,9 +254,9 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
    temp_r0(2) = p%GlbPos(3)
    temp_r0(3) = p%GlbPos(1)
 
-   temp_theta(1) = IniVelo(5)*t
-   temp_theta(2) = IniVelo(6)*t
-   temp_theta(3) = IniVelo(4)*t
+   temp_theta(1) = IniVelo(5,1)*t
+   temp_theta(2) = IniVelo(6,1)*t
+   temp_theta(3) = IniVelo(4,1)*t
    temp_vec(:) = 0.0_BDKi
    temp_vec(:) = 4.0_BDKi*TAN(temp_theta(:)/4.0_BDKi)
    ! gather point forces and line forces
@@ -269,8 +268,6 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
        u%RootMotion%Orientation(i,i,1) = 1.0_BDKi
        u%HubMotion%Orientation (i,i,1) = 1.0_BDKi
    ENDDO
-   temp33=u%RootMotion%Orientation(:,:,1) !possible type conversion
-   CALL BD_CrvMatrixR(temp_vec,temp33,ErrStat,ErrMsg)
    temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
    u%RootMotion%Orientation(:,:,1)   = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
    u%RootMotion%TranslationDisp(:,:) = 0.0_BDKi
@@ -279,19 +276,19 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
 
    ! Calculate root translational and angular velocities
    u%RootMotion%RotationVel(:,:) = 0.0_BDKi
-   u%RootMotion%RotationVel(1,1) = IniVelo(5)
-   u%RootMotion%RotationVel(2,1) = IniVelo(6)
-   u%RootMotion%RotationVel(3,1) = IniVelo(4)
+   u%RootMotion%RotationVel(1,1) = IniVelo(5,1)
+   u%RootMotion%RotationVel(2,1) = IniVelo(6,1)
+   u%RootMotion%RotationVel(3,1) = IniVelo(4,1)
    u%RootMotion%TranslationVel(:,:) = 0.0_BDKi
-   u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr)
+   u%RootMotion%TranslationVel(:,1) = MATMUL(SkewSymMat(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr)
    ! END Calculate root translational and angular velocities
 
 
    ! Calculate root translational and angular accelerations
    u%RootMotion%TranslationAcc(:,:) = 0.0_BDKi
    u%RootMotion%RotationAcc   (:,:) = 0.0_BDKi
-   u%RootMotion%TranslationAcc(:,1) = MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)), &
-               MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr))
+   u%RootMotion%TranslationAcc(:,1) = MATMUL(SkewSymMat(real(u%RootMotion%RotationVel(:,1),BDKi)), &
+               MATMUL(SkewSymMat(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr))
    ! END Calculate root translational and angular accelerations
 
    u%PointLoad%Force(:,:)  = 0.0_ReKi
@@ -317,3 +314,4 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_InputSolve
 
+END PROGRAM BeamDyn_Driver_Program
