@@ -24,7 +24,7 @@ Source\FAST_Prog.c
 Source\dependencies\ElastoDyn\*
 Source\dependencies\AeroDyn\*
 Source\dependencies\AeroDyn14\*
-Source\dependencies\InflowWind\*
+
 Source\dependencies\OpenFOAM\*
 Source\dependencies\HydroDyn\*
 Source\dependencies\SubDyn\*
@@ -49,6 +49,8 @@ subs\AeroDyn\Source\dependencies\UnsteadyAero\*
 subs\ServoDyn\source\ServoDyn\*
 subs\ServoDyn\source\TMD\*
 subs\BeamDyn\source\*
+subs\InflowWind\source\*
+subs\InflowWind\source\Registry\*
 
 Source\dependencies\Registry\*
 
