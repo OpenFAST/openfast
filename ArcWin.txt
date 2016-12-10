@@ -14,11 +14,13 @@ bin\FAST_Library_x64.lib
 bin\FAST_SFunc.mexw32
 bin\FAST_SFunc.mexw64
 
-Compiling\VisualStudio\FAST_Project.vfproj
-Compiling\VisualStudio\RunRegistry.bat
 
-Simulink\VisualStudio\FAST_Library.vfproj
-
+Compiling\VisualStudio\FASTlib\FASTlib.vfproj
+Compiling\VisualStudio\FASTlib\RunRegistry.bat
+Compiling\VisualStudio\FAST\FAST.sln
+Compiling\VisualStudio\FAST\FAST.vfproj
+Compiling\VisualStudio\FAST_Library\FAST_Library.sln
+Compiling\VisualStudio\FAST_Library\FAST_Library.vfproj
 
 CertTest\DateTime.exe
 CertTest\Update.bat

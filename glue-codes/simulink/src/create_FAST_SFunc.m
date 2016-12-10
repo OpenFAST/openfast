@@ -1,11 +1,15 @@
-%% 32-bit Matlab:
-% mex -L../../bin -lFAST_Library_Win32 ...
-%     LINKFLAGS='$LINKFLAGS /STACK:999999999 /LARGEADDRESSAWARE' ...
-%     -I../../Source -I../../Source/dependencies/OpenFOAM -outdir ../../bin COMPFLAGS='$COMPFLAGS /MT' FAST_SFunc.c
 
-%% 64-bit Matlab:
-mex -v -L../../bin -lFAST_Library_x64 ...
-    -I../../Source -I../../Source/dependencies/OpenFOAM -outdir ../../bin COMPFLAGS='$COMPFLAGS /MT' FAST_SFunc.c
+switch computer('arch')
+    case 'win64'
+        mex -v -L../../bin -lFAST_Library_x64 ...
+            -I../../Source -I../../Source/dependencies/OpenFOAM -outdir ../../bin COMPFLAGS='$COMPFLAGS /MT' FAST_SFunc.c        
+    case 'win32'
+        mex -L../../bin -lFAST_Library_Win32 ...
+            LINKFLAGS='$LINKFLAGS /LARGEADDRESSAWARE' ...
+            -I../../Source -I../../Source/dependencies/OpenFOAM -outdir ../../bin COMPFLAGS='$COMPFLAGS /MT' FAST_SFunc.c
+    otherwise
+        error('Unexpected computer architecture type.')
+end
 
 %%
  %addpath('C:\Users\bjonkman\Documents\CAETools\FASTv8\bin');
