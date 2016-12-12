@@ -49,5 +49,4 @@ function(set_registry_includes modules_location)
       ${FAST_REGISTRY_INCLUDES} -I ${CMAKE_SOURCE_DIR}/${modules_location}/${IDIR}/src
       CACHE INTERNAL "Registry includes paths")
   endforeach(IDIR IN ITEMS ${ARGN})
-  message(STATUS ${modules_location})
 endfunction(set_registry_includes reg_inc_var)
