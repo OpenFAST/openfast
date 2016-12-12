@@ -1,8 +1,0 @@
-ChangeLog.txt
-Disclaimer.txt
-License.txt
-Notice.txt
-
-SourceFiles.txt
-
-source\dependencies\lapack\NWTC_LAPACK.f90
