@@ -11,6 +11,7 @@ set(NWTCLIBS_SOURCES
   src/NWTC_Library.f90
   src/NWTC_Num.f90
   src/SingPrec.f90
+  src/NWTC_Library_Types.f90
 
   # NetLib sources
   src/NetLib/Dierckx_FitPack/dierckx_fitpack.f

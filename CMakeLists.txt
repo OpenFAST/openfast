@@ -34,7 +34,14 @@ add_subdirectory(modules-local/fast-registry)
 #
 set(FAST_MODULES_LOCAL
   nwtc-library
-  aerodyn)
+  inflowwind
+  aerodyn
+  servodyn
+  elastodyn
+  beamdyn
+  subdyn
+  hydrodyn
+  )
 
 set(FAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
 set_registry_includes("modules-local" ${FAST_MODULES_LOCAL})
