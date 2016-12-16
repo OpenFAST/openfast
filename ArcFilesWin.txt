@@ -1,6 +1,0 @@
-bin\InflowWind_Driver_Win32.exe
-
-Compiling/VisualStudio/InflowWind_Driver.vfproj
-
-
-
