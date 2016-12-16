@@ -1,4 +1,0 @@
-bin\SubDyn_win32.exe
-bin\Registry_win32.exe
-Compiling\Visual Studio\SubDyn.vfproj
-Compiling\Visual Studio\RunRegistry.bat
