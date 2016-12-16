@@ -1,6 +1,0 @@
-HydroDyn
-
-Copyright (c) 2015  National Renewable Energy Laboratory
-
-This product indludes software developed at
-National Renewable Energy Laboratory (http://www.nrel.gov, wind.nrel.gov)
