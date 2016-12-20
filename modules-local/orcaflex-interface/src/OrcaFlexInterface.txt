@@ -1,0 +1,79 @@
+###################################################################################################################################
+# Registry for OrcaFlexInterface in the FAST Modularization Framework
+# This Registry file is used to create MODULE OrcaFlexInterface_Types  which contains all of the user-defined types needed in OrcaFlexInterface.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>   <ModuleName/ModName>   <TypeName>   <FieldType>   <FieldName>   <Dims>   <IO>   <DNAME>   <DESCRIP>   <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# File last committed $Date: 2015-06-17 22:15:31 -0600 (Wed, 17 Jun 2015) $
+# (File) Revision #: $Rev: 1037 $
+# URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/OrcaFlexCoupling/Source/OrcaFlexInterface_Registry.txt $
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include   Registry_NWTC_Library.txt
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+typedef  OrcaFlexInterface/Orca  InitInputType  CHARACTER(1024) InputFile       - - - "Name of the input file; remove if there is no file" -
+typedef  ^                       ^              CHARACTER(1024) RootName        - - - "RootName for writing output files (echo file)" -
+typedef  ^                       ^              ReKi            TMax            - - - "Maximum Time"          seconds
+
+# Define outputs from the initialization routine here:
+typedef   ^   InitOutputType ProgDesc   Ver   -   -   -   "This module's name, version, and date"   -
+typedef   ^   ^               CHARACTER(ChanLen)   WriteOutputHdr   {:} -  -     "Names of the output-to-file channels"   -
+typedef   ^   ^               CHARACTER(ChanLen)   WriteOutputUnt   {:} -  -     "Units of the output-to-file channels"   -
+
+
+# Inputfile information
+typedef   ^   Orca_InputFile  CHARACTER(1024)   DLL_FileName         -  -  -     "Name of the DLL file"   -
+typedef   ^   ^               CHARACTER(1024)   DLL_InitProcName     -  -  -     "Name of the DLL procedure to call during initialisation"   -
+typedef   ^   ^               CHARACTER(1024)   DLL_CalcProcName     -  -  -     "Name of the DLL procedure to call during CalcOutput"       -
+typedef   ^   ^               CHARACTER(1024)   DLL_EndProcName      -  -  -     "Name of the DLL procedure to call during End"              -
+typedef   ^   ^               CHARACTER(1024)   DirRoot              -  -  -     "Directory and rootname of simulation input file" -
+
+
+
+
+
+# Define "other" states here:
+# note that some of the "miscVars" are associated with time, but due to the nature of calling the DLL only once per time step, I have
+# chosen not to place them in other states
+typedef  ^  OtherStateType    SiKi              DummyOtherState    - - -  "Remove if you have OtherStates"    -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef  ^  MiscVarType       ReKi              PtfmAM               {6}{6} - -  "Added mass matrix results from OrcaFlex"    -
+typedef  ^  ^                 ReKi              PtfmFt               {6}    - -  "Force/moment results from OrcaFlex"         -
+typedef  ^  ^                 ReKi              F_PtfmAM             {6}   -  -  "Force/moment results calculated from the added mass and accel"   -
+typedef  ^  ^                 ReKi              AllOuts              :  -  -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
+typedef  ^  ^                 DbKi              LastTimeStep         -  -  -     "The last timestep called"                   -
+
+
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef  ^  ParameterType     DbKi              DT                   -  -  -     "Time step for continuous state integration & discrete state update"       seconds
+typedef  ^  ^                 DLL_Type          DLL_Orca             -  -  -     "Info for the OrcaFlex DLL"                                                -
+typedef  ^  ^                 CHARACTER(1024)   SimNamePath          -  -  -     "Path with simulation rootname with null end character for passing to C"   -
+typedef  ^  ^                 IntKi             SimNamePathLen       -  -  -     "Length of SimNamePath (including null char)"                              -
+typedef  ^  ^                 IntKi             NumOuts              -  0  -     "Number of parameters in the output list (number of outputs requested)"    -
+typedef  ^  ^                 OutParmType       OutParam            {:} -  -     "Names and units (and other characteristics) of all requested output parameters"    -
+
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+typedef  ^  InputType         MeshType          PtfmMesh             -  -  -  "Displacements at the platform reference point" -
+
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+typedef  ^  OutputType        MeshType          PtfmMesh             -  -  -  "Loads at the platform reference point"         -
+typedef  ^  OutputType        ReKi              WriteOutput          :  -  -  "Array with values to output to file"           -
+
+
+
+typedef  ^  ContinuousStateType  ReKi  Dummy             -  -  -  "Dummy placeholder" -
+typedef  ^  DiscreteStateType    ReKi  Dummy             -  -  -  "Dummy placeholder" -
+typedef  ^  ConstraintStateType  ReKi  DummyConstrState  -  -  -  "Dummy placeholder" -
