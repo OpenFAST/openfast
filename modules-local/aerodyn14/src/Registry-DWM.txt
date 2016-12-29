@@ -1,0 +1,274 @@
+##################################################################################################################################
+# Registry for DWM
+# Entries are of the form
+# keyword <modulename/modname> <TypeBeingDefined> <FieldType> <FieldName> <Dims> <InitialValue> <Ctrl> "<DESCRIP>" "<UNITS>"
+##################################################################################################################################
+include	Registry_NWTC_Library.txt
+usefrom	InflowWind.txt
+
+# CalVelScale_data
+typedef  DWM/DWM              CVSD         IntKi    counter                      - 0 -  "" -
+typedef  ^                    ^            Reki     Denominator                  - 0.0 -  "" -
+typedef  ^                    ^            ^        Numerator                    - 0.0 -  "" -
+
+# turbine_average_velocity_data
+typedef  DWM/DWM  turbine_average_velocity_data     Reki     average_velocity_array_temp  : - -  "the average velocity of the whole blade sections in a specific time step" -
+typedef  ^                    ^                     ^        average_velocity_array       : - -  "" -
+typedef  ^                    ^                     ^        swept_area                   : - -  "" m2
+typedef  ^                    ^                     IntKi    time_step_velocity           - -1 - "" -
+typedef  ^                    ^                     ^        time_step_velocity_array     : - -  "" -
+typedef  ^                    ^                     ^        time_step_pass_velocity      - -1 - "" -
+typedef  ^                    ^                     ^        time_step_force              - -1 - "" -
+
+# DWM_Wake_Deficit_Data
+typedef  ^         DWM_Wake_Deficit_Data   IntKi    np_x                         - - -  "point per axial distance" -
+typedef  ^                    ^            Reki     X_length                     - - -  "normalized length in axial direction" -
+typedef  ^                    ^            Reki     Turb_Stress_DWM             :: - -  "" -
+typedef  ^                    ^            IntKi    n_x_vector                   - - -  "" -
+typedef  ^                    ^            IntKi    n_r_vector                   - - -  "" -
+typedef  ^                    ^            Reki     ppR                          - - -  "Point_per_R_resoulution" -
+
+# meandering_data
+typedef  DWM/DWM              MeanderData  IntKi     scale_factor                 - - -  "" -
+#typedef  ^                    ^            ^        release_time                 - - -  "" -
+#typedef  ^                    ^            ^        flying_time                  - - -  "" -
+#typedef  ^                    ^            ^        simulation_time_length       - - -  "" -
+typedef  ^                    ^            ^         moving_time                  - - -  "" -
+#typedef  ^                    ^           Reki      DWM_time_step                - - -  "" -
+#typedef  ^                    ^            ^        temp_center_wake             3 - -  "" -
+#typedef  ^                    ^            ^        temp_velocity                3 - -  "" -
+#typedef  ^                    ^            ^        U_Scale_Factor               - - -  "" -
+#typedef  ^                    ^            ^        U_factor                     - - -  "" -
+
+
+# RTPD
+typedef  DWM/DWM   read_turbine_position_data  IntKi          SimulationOrder_index        - - -  "" -
+typedef  ^                    ^                ^              Turbine_sort_order           : - -  "" -
+typedef  ^                    ^                ^              WT_index                     - - -  "wind turbine index in the wind farm" -
+typedef  ^                    ^                ^              TurbineInfluenceData        :: - -  "" -
+typedef  ^                    ^                ^              upwind_turbine_index         : - -  "the upwind turbines that affecting this turbine" -
+typedef  ^                    ^                ^              downwind_turbine_index       : - -  "" -
+typedef  ^                    ^                ^              upwindturbine_number         - - -  "the number of upwind turbines affecting the downwind turbine" -
+typedef  ^                    ^                ^              downwindturbine_number       - - -  "" -
+typedef  ^                    ^                Reki           turbine_windorigin_length    : - -  "" -
+typedef  ^                    ^                ^              upwind_turbine_projected_distance    : - -  "the projected distance between two turbines" -
+typedef  ^                    ^                ^              downwind_turbine_projected_distance  : - -  "" -
+typedef  ^                    ^                ^              turbine_angle               :: - -  "" -
+typedef  ^                    ^                ^              upwind_align_angle           : - -  "the angle beween the line connecting the upwind turbine and this turbine and the wind direction vector" -
+typedef  ^                    ^                ^              downwind_align_angle         : - -  "" -
+typedef  ^                    ^                ^              upwind_turbine_Xcoor         : - -  "the coordinate of the upwind turbine which affects this investigated turbine" -
+typedef  ^                    ^                ^              upwind_turbine_Ycoor         : - -  "" -
+typedef  ^                    ^                ^              wind_farm_Xcoor              : - -  "the coordinates of all the turbines in the wind farm" -
+typedef  ^                    ^                ^              wind_farm_Ycoor              : - -  "" -
+typedef  ^                    ^                ^              downwind_turbine_Xcoor       : - -  "the coordinate of the downwind turbine which is affected by this investigated turbine" -
+typedef  ^                    ^                ^              downwind_turbine_Ycoor       : - -  "" -
+
+
+# weighting_method
+typedef  DWM/DWM              WeiMethod    Reki     sweptarea                    : - -  "" -
+typedef  ^                    ^            ^        weighting_denominator        - - -  "" -
+
+# TI_downstream_data
+typedef  DWM/DWM              TIDownstream Reki     TI_downstream_matrix        :: - -  "" -
+typedef  ^                    ^            IntKi    i                            - - -  "" -
+typedef  ^                    ^            ^        j                            - - -  "" -
+typedef  ^                    ^            ^        k                            - - -  "" -
+typedef  ^                    ^            ^        cross_plane_position_ds      - - -  "the cross plane position which to be investigated in term of the flying time" -
+typedef  ^                    ^            ^        cross_plane_position_TI      - - -  "the cross plane position which to be investigated in term of the n_x_vector" -
+typedef  ^                    ^            ^        distance_index               - - -  "the index of the distance in the TI axisymmetric array" -
+typedef  ^                    ^            ^        counter1                     - - -  "" -
+typedef  ^                    ^            ^        counter2                     - - -  "" -
+typedef  ^                    ^            ^        initial_timestep             - - -  "" -
+typedef  ^                    ^            Reki     y_axis_turbine               - - -  "" -
+typedef  ^                    ^            ^        z_axis_turbine               - - -  "" -
+typedef  ^                    ^            ^        distance                     - - -  "the distance between one point to the meandered wake center" -
+typedef  ^                    ^            ^        TI_downstream_node           - - -  "the TI at a specfic point in the inbestigated cross plane" -
+typedef  ^                    ^            ^        TI_node_temp                 - - -  "" -
+typedef  ^                    ^            ^        TI_node                      - - -  "" -
+typedef  ^                    ^            ^        TI_accumulation              - - -  "" -
+typedef  ^                    ^            ^        TI_apprant_accumulation      - - -  "" -
+typedef  ^                    ^            ^        TI_average                   - - -  "THE AVERAGE TI OF THE CROSS PLANE" -
+typedef  ^                    ^            ^        TI_apprant                   - - -  "The TI due to the meadering" -
+typedef  ^                    ^            ^        HubHt                        - - -  "" -
+typedef  ^                    ^            ^        wake_center_y                - - -  "" -
+typedef  ^                    ^            ^        wake_center_z                - - -  "" -
+typedef  ^                    ^            ^        Rscale                       - - -  "" -
+typedef  ^                    ^            ^        y                            - - -  "" -
+typedef  ^                    ^            ^        z                            - - -  "" -
+typedef  ^                    ^            ^        zero_spacing                 - - -  "" -
+typedef  ^                    ^            ^        temp1                        - - -  "" -
+typedef  ^                    ^            ^        temp2                        - - -  "" -
+typedef  ^                    ^            ^        temp3                        - - -  "" -
+
+# Turbulence_KS
+typedef  DWM/DWM              TurbKaimal   IntKi    fs                           - - -  "sample frequency" -
+typedef  ^                    ^            ^        temp_n                       - - -  "" -
+typedef  ^                    ^            ^        i                            - - -  "" -
+typedef  ^                    ^            Reki     low_f                        - - -  "lower bound of frequency range" -
+typedef  ^                    ^            ^        high_f                       - - -  "upper bound of frequency range" -
+typedef  ^                    ^            ^        lk_facor                     - - -  "turbulence length-scale" -
+typedef  ^                    ^            ^        STD                          - - -  "standard deviation of the turbulence" -
+
+# shinozuka_data
+typedef  DWM/DWM              Shinozuka    Reki     f_syn                        : - -  "frequency series" -
+typedef  ^                    ^            ^        t_syn                        : - -  "time series" -
+typedef  ^                    ^            ^        phi                          : - -  "random phase angle" -
+typedef  ^                    ^            ^        p_k                          : - -  "" -
+typedef  ^                    ^            ^        a_k                          : - -  "" -
+typedef  ^                    ^            IntKi    num_points                   - - -  "total number of points" -
+typedef  ^                    ^            ^        ILo                          - - -  "" -
+typedef  ^                    ^            ^        i                            - - -  "" -
+typedef  ^                    ^            ^        j                            - - -  "" -
+typedef  ^                    ^            Reki     dt                           - - -  "time step" -
+typedef  ^                    ^            ^        t_min                        - - -  "" -
+typedef  ^                    ^            ^        t_max                        - - -  "" -
+typedef  ^                    ^            ^        df                           - - -  "frequency step" -
+
+# smooth_out_wake_data
+typedef  ^        smooth_out_wake_data     IntKi    length_velocity_array        - - -  "the length of velocity_array" -
+
+# smooth_wake_shifted_velocity_data
+typedef  DWM/DWM              SWSV         IntKi    p1                           - - -  "" -
+typedef  ^                    ^            ^        p2                           - - -  "" -
+typedef  ^                    ^            Reki     distance                     - - -  "the distance from the point to the meandered wake center" -
+typedef  ^                    ^            ^        y0                           - - -  "wake center position on y axis" -
+typedef  ^                    ^            ^        z0                           - - -  "wake center position on z axis" -
+typedef  ^                    ^            ^        unit                         - - -  "single unit length  R/ppR" -
+
+# Upwind_result
+typedef  DWM/DWM        read_upwind_result   Reki  upwind_U                 :: - -  "" -
+typedef  ^                    ^              ^     upwind_wakecenter      :::: - -  "" -
+typedef  ^                    ^              ^     upwind_meanU              : - -  "" -
+typedef  ^                    ^              ^     upwind_TI                 : - -  "" -
+typedef  ^                    ^              ^     upwind_small_TI           : - -  "" -
+typedef  ^                    ^              ^     upwind_smoothWake        :: - -  "" -
+typedef  ^                    ^              ^     velocity_aerodyn          : - -  "" -
+typedef  ^                    ^              ^     TI_downstream             : - -  "" -
+typedef  ^                    ^              ^     small_scale_TI_downstream : - -  "" -
+typedef  ^                    ^              ^     smoothed_velocity_array  :: - -  "" -
+typedef  ^                    ^              ^     vel_matrix              ::: - -  "The smoothed out wake velocity matrix for n downwind turbine" -
+
+# wake_meandered_center
+typedef  DWM/DWM        wake_meandered_center   IntKi  wake_width                   : - -  "wake width" -
+
+# DWM_turbine_blade
+typedef  DWM/DWM        DWM_turbine_blade       IntKi  Aerodyn_turbine_num          - - -  "" -
+typedef  ^                    ^                   ^    Blade_index                  - - -  " the index of Aerodyn Blade" -
+typedef  ^                    ^                   ^    Element_index                - - -  " the index of Aerodyn Element" -
+
+
+##################  Registry for DWM ###############
+# ..... PARAMETERS .........................
+# DWM_Parameters
+typedef  DWM/DWM         ParameterType         Reki                        velocityU                     : - -  "the wake velocity profile @ the downstream turbine plane" -
+typedef  ^                    ^                  ^                         smoothed_wake                 : - -  "" -
+typedef  ^                    ^                  ^                         WakePosition                ::: - -  "meandered wake center" -
+typedef  ^                    ^               IntKi                        WakePosition_1                - - -  "size of the WakePosition" -
+typedef  ^                    ^                  ^                         WakePosition_2                - - -  "size of the WakePosition" -
+typedef  ^                    ^                  ^                         smooth_flag                   - - -  "Whether or not use the smoothed out upstream wake profile (1-yes, 0-no)" -
+typedef  ^                    ^                  ^                         p_p_r                         - - -  "" -
+typedef  ^                    ^                  ^                         NumWT                         - - -  "Number of wind turbines" -
+typedef  ^                    ^                  ^                         Tinfluencer                   - - -  "" -
+typedef  ^                    ^                Reki                        RotorR                        - - -  "Rotor radius" -
+typedef  ^                    ^                  ^                         r_domain                      - - -  "" -
+typedef  ^                    ^                  ^                         x_domain                      - - -  "" -
+typedef  ^                    ^                  ^                         Uambient                      - - -  "The ambient wind velocity" -
+typedef  ^                    ^                  ^                         TI_amb                        - - -  "Ambient turbulence intensity" %
+typedef  ^                    ^                  ^                         TI_wake                       - - -  "" -
+typedef  ^                    ^                  ^                         hub_height                    - - -  "" -
+typedef  ^                    ^                  ^                         length_velocityU              - - -  "" -
+typedef  ^                    ^                  ^                         WFLowerBd                     - - -  "The lower bound height of the wind file" -
+typedef  ^                    ^                  ^                         Wind_file_Mean_u              - - -  "The mean velocity of the first turbine" -
+typedef  ^                    ^                  ^                         Winddir                       - - -  "" -
+typedef  ^                    ^                  ^                         air_density                   - - -  "air density" -
+typedef  ^                    ^                  ^                         RR                            - - -  "" -
+typedef  ^                    ^                  ^                         ElementRad                    : - -  " the element node radius" -
+typedef  ^                    ^                IntKi                       Bnum                          - - -  " the number of blade" -
+typedef  ^                    ^                  ^                         ElementNum                    - - -  " the number of element" -
+typedef  ^                    ^               read_turbine_position_data   RTPD
+typedef	^	         ParameterType	InflowWind_ParameterType	IfW	-	-	-		-
+
+# ....... OtherStateType ............
+# DWM_OtherStateType
+typedef	 ^	         OtherStateType	InflowWind_OtherStateType	IfW	-	-	-		-
+
+# ....... OtherStateType ............
+# DWM_MiscVarType
+typedef  ^           MiscVarType         InflowWind_MiscVarType             IfW	-	-	-		-
+typedef  DWM/DWM              ^                Reki                         position_y                   - - -  "the y position of the blade node" -
+typedef  ^                    ^                 ^                           position_z                   - - -  "the z position of the blade node" -
+typedef  ^                    ^                 ^                           velocity_wake_mean           - - -  "" -
+typedef  ^                    ^                 ^                           shifted_velocity_Aerodyn     - - -  "" -
+typedef  ^                    ^                 ^                           U_velocity                   - - -  " the u component velocity of blade" -
+typedef  ^                    ^                 ^                           V_velocity                   - - -  " the v component velocity of blade" -
+typedef  ^                    ^                 ^                           Nforce                      :: - -  " the normal force" -
+typedef  ^                    ^                 ^                           blade_dr                     : - -  " blade dr" -
+typedef  ^                    ^                 ^                           NacYaw                       - - -  "" -
+typedef  ^                    ^                 ^                           TI_original                  - - -  "" -
+typedef  ^                    ^           turbine_average_velocity_data     TAVD
+typedef  ^                    ^                CVSD                         CalVelScale_data
+typedef  ^                    ^                MeanderData                  meandering_data
+typedef  ^                    ^                WeiMethod                    weighting_method
+typedef  ^                    ^                TIDownstream                 TI_downstream_data
+typedef  ^                    ^                TurbKaimal                   Turbulence_KS
+typedef  ^                    ^                Shinozuka                    shinozuka_data
+typedef  ^                    ^           smooth_out_wake_data              SmoothOut
+typedef  ^                    ^                SWSV                         smooth_wake_shifted_velocity_data
+typedef  ^                    ^                DWM_Wake_Deficit_Data        DWDD
+typedef  ^                    ^                Reki                         ct_tilde                     - - - "the tilde Ct" -
+typedef  ^                    ^                  ^                          FAST_Time                     - - -  "FAST simulation time" -
+typedef  ^                    ^                IntKi                        SDtimestep                   - 0 -  "" -
+typedef  ^                    ^                DWM_turbine_blade            DWM_tb
+typedef  ^                    ^                wake_meandered_center        WMC
+
+# ........ Input ............
+# DWM_InputType
+typedef  DWM/DWM          InputType            read_upwind_result           Upwind_result
+typedef	^	          InputType	InflowWind_InputType	IfW	-	-	-		-
+
+# ........ Output ............
+# DWM_OutputType
+
+typedef  DWM/DWM          OutputType           Reki                         turbine_thrust_force         : - -  "" N
+typedef  ^                    ^                  ^                          induction_factor             : - -  "" -
+typedef  ^                    ^                  ^                          r_initial                    : - -  "scaled rotor radius" -
+typedef  ^                    ^                  ^                          U_initial                    : - -  "scaled velocity at the rotor" -
+typedef  ^                    ^                  ^                          Mean_FFWS_array              : - -  "Mean velocity of each section on the blade" -
+typedef  ^                    ^                  ^                          Mean_FFWS                    - - -  "Mean (total) wind speed at the hub height" m/s
+typedef  ^                    ^                  ^                          TI                           - - -  "the turbulence intensity of the turbine" -
+typedef  ^                    ^                  ^                          TI_downstream                - - -  "the TI of a downstream turbine before normalization" -
+typedef  ^                    ^                  ^                          wake_u                      :: - -  "wake velocity" -
+typedef  ^                    ^                  ^                          wake_position              ::: - -  "wake center position" m
+typedef  ^                    ^                  ^                          smoothed_velocity_array     :: - -  "smoothed out upstream axisymetric wake profile" -
+typedef  ^                    ^                  ^                          AtmUscale                    - - -  "atmospheric velocity scale before introducing TI" -
+typedef  ^                    ^                  ^                          du_dz_ABL                    - - -  "atmosperic shear gradient" -
+typedef  ^                    ^                  ^                          total_SDgenpwr               - 0.0 - "" -
+typedef  ^                    ^                  ^                          mean_SDgenpwr                - - -  "" -
+typedef  ^                    ^                  ^                          avg_ct                       - - -  "average Ct over the rotor" -
+typedef	^	          OutputType	  InflowWind_OutputType	IfW	-	-	-		-
+
+#.......... ContinuousStateType ......
+# DWM_ContinuousStateType
+typedef DWM/DWM       ContinuousStateType      Reki                         dummy                        - - - "" -
+typedef	^	      ContinuousStateType      InflowWind_ContinuousStateType	IfW	-	-	-		-
+
+#.......... DiscreteStateType ......
+# DWM_DiscreteStateType
+typedef DWM/DWM       DiscreteStateType        Reki                         dummy                        - - - "" -
+typedef	^	      DiscreteStateType	InflowWind_DiscreteStateType	IfW	-	-	-		-
+
+#.......... ConstraintStateType ......
+# DWM_ConstraintStateType
+typedef DWM/DWM       ConstraintStateType      Reki                         dummy                        - - - "" -
+typedef	^	      ConstraintStateType	InflowWind_ConstraintStateType	IfW	-	-	-		-
+
+
+#.......... InitInputType ......
+# DWM_InitInputType
+typedef DWM/DWM       InitInputType            Reki                         dummy                        - - - "" -
+typedef	^	      InitInputType	InflowWind_InitInputType	  IfW	-	-	-		-
+
+#.......... InitOutputType ......
+# DWM_InitOutputType
+typedef DWM/DWM       InitOutputType           Reki                         dummy                        - - - "" -
+typedef	^	      InitOutputType	InflowWind_InitOutputType	IfW	-	-	-		-
