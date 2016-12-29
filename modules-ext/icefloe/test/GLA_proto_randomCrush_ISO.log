@@ -1,0 +1,33 @@
+ Running: IceFloeConsole, v1.00.00, December-2013
+ This run started on: 28-Oct-2014 at 14:25:32
+
+ Input file read complete.
+
+ Load time series duration = 600 sec
+
+ Setting common ice flow input parameters
+ Ice type = 1
+ Ice thickness = 1 meters
+ Ice velocity = 0.2 m/s
+ Ice direction = 0 degrees
+ Time step = 0.1 sec
+ Tower diameter = 5 meters
+ Random seed = 123
+
+ Setting common ice crushing input parameters
+ Reference ice strength = 2.20000E+06 Pascals
+ Reference ice thickness = 1 meters
+ Exponent for static load = -0.16
+
+ Setting parameters for random crushing loads time series
+ coeffPSD_b = 1.34
+ coeffPSD_Ks = 3.24
+ crushLoadCOV = 0.25
+ stdLoadMult (number of std devs) = 4
+ Frequency step = 1.00000E-03 Hz
+** Global crushing load is: 8.50271E+06 Newtons.
+** Mean crushing load is: 4.25136E+06 Newtons.
+** Stdev of crushing load is: 1.06284E+06 Newtons.
+
+ Random continuous ice crushing via ISO/Karna initialized
+

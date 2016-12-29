@@ -1,0 +1,29 @@
+ Running: IceFloeConsole, v1.00.00, December-2013
+ This run started on: 28-Oct-2014 at 14:25:27
+
+ Input file read complete.
+
+ Load time series duration = 600 sec
+
+ Setting common ice flow input parameters
+ Ice type = 3
+ Ice thickness = 1 meters
+ Ice velocity = 0.2 m/s
+ Ice direction = 0 degrees
+ Time step = 0.1 sec
+ Tower diameter = 5 meters
+ Random seed = 123
+
+ Setting common ice crushing input parameters
+ Reference ice strength = 2.20000E+06 Pascals
+ Reference ice thickness = 1 meters
+ Exponent for static load = -0.16
+
+ Setting ice crushing loads with frequency lock-in parameteres per ISO
+ Tower fundamental frequency = 0.33 Hz
+ Sawtooth rise time fraction = 0.8
+ Minimum load fraction (of max) = 0.6
+** Global crushing load is: 8.50271E+06 Newtons.
+
+ Frequency lock-in ice crushing loads via ISO initialized
+

@@ -1,0 +1,77 @@
+##################################################################################################################################
+# Registry for the DNV KEMA Ice Loading, creates MODULE IceFloe_Types
+# Module IceFloe_Types contains all of the user-defined types needed in IceFloe. It also contains copy, destroy, pack, and
+# unpack routines associated with each defined data types.
+##################################################################################################################################
+# Entries are of the form
+# keyword <modulename/modname> <TypeBeingDefined> <FieldType> <FieldName> <Dims> <InitialValue> <Ctrl> "<DESCRIP>" "<UNITS>"
+##################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include Registry_NWTC_Library.txt
+
+
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+# e.g., the name of the input file, the file root name, etc.
+typedef IceFloe InitInputType CHARACTER(1024) InputFile - - - "Name of the input file" -
+typedef IceFloe InitInputType ReKi            simLength - - - "Duration of simulation" sec
+typedef    ^        ^         ReKi            MSL2SWL   - - - "Offset between still-water level and mean sea level" m
+typedef    ^        ^         ReKi            gravity   - - - "Gravitational acceleration" "m/s^2"
+typedef    ^        ^         character(1024) RootName  - - - "Output file root name"
+
+# Define outputs that the initialization routine may need here:
+# e.g., the name of the input file, the file root name, etc.
+typedef IceFloe InitOutputType   CHARACTER(ChanLen)   WriteOutputHdr {:}   -  -  "Names of the output-to-file channels" -
+typedef IceFloe InitOutputType   CHARACTER(ChanLen)   WriteOutputUnt {:}   -  -  "Units of the output-to-file channels" -
+typedef IceFloe InitOutputType   ProgDesc             Ver             -    -  -  "This module's name, version, and date"   -
+
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef IceFloe ContinuousStateType SiKi DummyContStateVar    - - - "None currently used" -
+
+# Define discrete (nondifferentiable) states here:
+typedef IceFloe DiscreteStateType SiKi DummyDiscStateVar   - - - "None currently used" -
+
+# Define constraint states here:
+typedef IceFloe ConstraintStateType SiKi DummyConstrStateVar   - - - "None currently used" -
+
+# Define any other states, including integer or logical states here:
+typedef   IceFloe         OtherStateType      IntKi    DummyOtherState - - - "Remove this variable if you have other states" -
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef    IceFloe       MiscVarType          IntKi     DummyMiscVar - - -  "Remove this variable if you have misc/optimization variables" -
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef IceFloe ParameterType ReKi loadSeries {:}{:}    - - -  "precalculated time series of ice loads for each leg" N
+typedef      ^        ^       ^   iceVel               - - -  "ice floe velocity" m/s
+typedef      ^        ^       ^   iceDirection         - - -  "ice floe direction" degrees
+typedef      ^        ^       ^   minStrength          - - -  "minimum dynamic ice strength" Pa
+typedef      ^        ^       ^   minStrengthNegVel    - - -  "minimum dynamic ice strength for negative velocity" Pa
+typedef      ^        ^       ^   defaultArea          - - -  "structure width to use in cpld crushin" m
+typedef      ^        ^       ^   crushArea            - - -  "cross sectional area of ice against tower" m^2
+typedef      ^        ^       ^   coeffStressRate      - - -  "coefficient to calc stress rate from relative vellocity" Pa/m
+typedef      ^        ^       ^   C(4)                 - - -  "coefficient of cubic transition curve for negative stress rates" -
+typedef      ^        ^       ^   dt                   - - -  "time step" sec
+typedef      ^        ^       ^   rampTime             - - -  "load ramp up time" sec
+typedef      ^        ^       ^   legX {:}             - - -  "x position of each leg relative to structure center" m
+typedef      ^        ^       ^   legY {:}             - - -  "y position of each leg relative to structure center" m
+typedef      ^        ^       ^   ks   {:}             - - -  "shelter factor due to upstream leg" -
+typedef      ^        ^     IntKi numLegs              - - -  "Number of tower legs (=1 for monopile)" -
+typedef      ^        ^     IntKi iceType              - - -  "Type of ice Floe: flex, crush, etc." -
+typedef      ^        ^     IntKi logUnitNum           - - -  "Unit number for log file"
+typedef      ^        ^     Logical singleLoad         - - -  "Flag for load application at single point vs multiple legs"
+typedef      ^        ^     Logical initFlag           - - -  "Flag for successful initialization"
+
+# ..... Inputs ....................................................................................................................
+# Define inputs that are not on this mesh here:
+typedef IceFloe    InputType  MeshType  iceMesh        - - - "Horizontal velocities on support structure leg(s) at water line" -
+
+# ..... Outputs ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+typedef IceFloe   OutputType  MeshType  iceMesh        - - - "Horizontal forces and torsional moment(s) on support structure leg(s) at water line" -
+typedef IceFloe   OutputType  ReKi      WriteOutput  {:} - - "Data to be written to an output file: see WriteOutputHdr for names of each variable"  "see WriteOutputUnt"

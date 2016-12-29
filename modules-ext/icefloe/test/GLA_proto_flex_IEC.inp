@@ -1,0 +1,40 @@
+! Ice flexural failure per IEC test case for IceFloe
+!
+!  Model selection and general inputs
+!
+timeStep           0.10
+rampTime           1.0
+duration           600.0
+randomSeed         123
+!
+!  General ice property inputs
+!
+iceThickness       1.0
+iceVelocity        0.2
+iceDirection       0.0
+refIceStrength     2200000.0
+flexStrength       700000.0
+iceModulus         8000000000.0
+iceDensity         916.2
+waterDensity       999.8
+!
+!  Tower configuration inputs
+!
+towerDiameter      5.0
+towerFrequency     0.33
+towerConeAngle     60.0
+rubbleHeight       3.0
+twrConeTopDiam     1.5
+!
+!  Inputs common to loading by ice flexural failure
+!
+ice2twrFriction    0.15
+includeHb          1
+includeHr          1
+!
+!  Inputs for ice flexural failure via IEC method (Ralston)
+!
+iceType            7
+rideUpThickness    2.5
+freqParamK         5.0
+numLegs            1.0
