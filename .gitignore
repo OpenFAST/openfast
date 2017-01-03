@@ -27,3 +27,6 @@
 *.exe
 *.out
 *.app
+
+# CMake specific files
+build/**/*
