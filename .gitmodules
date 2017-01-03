@@ -1,0 +1,3 @@
+[submodule "modules-ext/map"]
+	path = modules-ext/map
+	url = https://bitbucket.org/mmasciola/map-plus-plus.git
