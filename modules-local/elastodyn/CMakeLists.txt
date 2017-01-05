@@ -12,3 +12,8 @@ set(ED_SOURCES
 
 add_library(elastodynlib ${ED_SOURCES})
 target_link_libraries(elastodynlib servodynlib nwtclibs)
+
+install(TARGETS elastodynlib
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)

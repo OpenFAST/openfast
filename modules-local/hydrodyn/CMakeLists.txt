@@ -50,3 +50,8 @@ target_link_libraries(hydrodyn hydrodynlib nwtclibs)
 #add_executable(ss_radiation
 #  src/SS_Radiation_DriverCode.f90)
 #target_link_libraries(ss_radiation hydrodynlib nwtclibs)
+
+install(TARGETS hydrodynlib hydrodyn
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)

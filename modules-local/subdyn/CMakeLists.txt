@@ -18,3 +18,8 @@ set(SUBDYN_DRIVER_SOURCES
 
 add_executable(subdyn ${SUBDYN_DRIVER_SOURCES})
 target_link_libraries(subdyn subdynlib nwtclibs)
+
+install(TARGETS subdynlib subdyn
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)

@@ -20,8 +20,13 @@ target_link_libraries(servodynlib nwtclibs)
 
 add_executable(servodyn
   src/ServoDyn_Driver.f90)
-target_link_libraries(servodyn servodynlib nwtclibs)
+target_link_libraries(servodyn servodynlib nwtclibs ${CMAKE_DL_LIBS})
 
 add_executable(TMD
   src/TMD_Driver.f90)
-target_link_libraries(TMD servodynlib nwtclibs)
+target_link_libraries(TMD servodynlib nwtclibs ${CMAKE_DL_LIBS})
+
+install(TARGETS servodynlib servodyn TMD
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)

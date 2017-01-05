@@ -12,3 +12,8 @@ set(BD_SOURCES
 
 add_library(beamdynlib ${BD_SOURCES})
 target_link_libraries(beamdynlib nwtclibs)
+
+install(TARGETS beamdynlib
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)

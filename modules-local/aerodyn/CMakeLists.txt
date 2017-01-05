@@ -35,4 +35,9 @@ set(AD_DRIVER_SOURCES
   AeroDyn_Driver_Types.f90)
 
 add_executable(aerodyn ${AD_DRIVER_SOURCES})
-target_link_libraries(aerodyn aerodynlib)
+target_link_libraries(aerodyn aerodynlib nwtclibs ${CMAKE_DL_LIBS})
+
+install(TARGETS aerodyn aerodynlib
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)

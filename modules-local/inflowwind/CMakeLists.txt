@@ -31,8 +31,14 @@ add_library(ifwlib ${IFW_SOURCES})
 target_link_libraries(ifwlib nwtclibs)
 
 set(IFW_DRIVER_SOURCES
+  src/InflowWind_Driver_Types.f90
   src/InflowWind_Driver_Subs.f90
   src/InflowWind_Driver.f90)
 
-# add_executable(inflowwind ${IFW_DRIVER_SOURCES})
-# target_link_libraries(inflowwind ifwlib)
+add_executable(inflowwind ${IFW_DRIVER_SOURCES})
+target_link_libraries(inflowwind ifwlib ${CMAKE_DL_LIBS})
+
+install(TARGETS inflowwind ifwlib
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
