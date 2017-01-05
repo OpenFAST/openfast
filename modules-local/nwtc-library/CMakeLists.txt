@@ -39,7 +39,7 @@ endif (FCNAME MATCHES "gfortran.*")
 
 if (NWTC_SYS_FILE)
   message("-- Setting system file as: ${NWTC_SYS_FILE}")
-  list(APPEND NWTCLIBS_SOURCES ${SYS_FILE})
+  list(APPEND NWTCLIBS_SOURCES ${NWTC_SYS_FILE})
 else (NWTC_SYS_FILE)
   message(FATAL_ERROR "Cannot determine system file used with NWTC_Library")
 endif (NWTC_SYS_FILE)
