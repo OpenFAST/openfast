@@ -1286,6 +1286,8 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
       m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
 #endif
       theta(3) = 0.0_ReKi  
+      m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+      
       orientation = EulerConstruct( theta )
       orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k)
             
@@ -1807,7 +1809,7 @@ SUBROUTINE ADTwr_CalcOutput(p, u, m, y, ErrStat, ErrMsg )
    
    do j=1,p%NumTwrNds
       
-      V_rel = u%InflowOnTower(:,j) - u%TowerMotion%TranslationDisp(:,j) ! relative wind speed at tower node
+      V_rel = u%InflowOnTower(:,j) - u%TowerMotion%TranslationVel(:,j) ! relative wind speed at tower node
    
       tmp   = u%TowerMotion%Orientation(1,:,j)
       VL(1) = dot_product( V_Rel, tmp )            ! relative local x-component of wind speed of the jth node in the tower
@@ -2562,6 +2564,8 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       call AD_DestroyConstrState( z_m, ErrStat2, ErrMsg2 ) ! we don't need this any more      
       
    END IF
+   
+   call cleanup()
 contains
    subroutine cleanup()
       m%BEMT%UseFrozenWake = .false.
@@ -2972,9 +2976,12 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
       
    END IF
 
-      
+   call cleanup()
+   
 contains
    subroutine cleanup()
+      m%BEMT%UseFrozenWake = .false.
+   
       call AD_DestroyOutput(            y_p, ErrStat2, ErrMsg2 )
       call AD_DestroyOutput(            y_m, ErrStat2, ErrMsg2 )
       call AD_DestroyConstrState(       z_p, ErrStat2, ErrMsg2 )

@@ -164,6 +164,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    INTEGER(IntKi)                          :: IceDim              ! dimension we're pre-allocating for number of IceDyn legs/instances
    INTEGER(IntKi)                          :: I                   ! generic loop counter
    INTEGER(IntKi)                          :: k                   ! blade loop counter
+   logical                                 :: CallStart
    
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
                                            
@@ -197,11 +198,20 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    m_FAST%calcJacobian    = .TRUE.                                      ! we need to calculate the Jacobian
    m_FAST%NextJacCalcTime = m_FAST%t_global                             ! We want to calculate the Jacobian on the first step
    
+   if (present(ExternInitData)) then
+      CallStart = .not. ExternInitData%FarmIntegration ! .and. ExternInitData%TurbineID == 1
+   else
+      CallStart = .true.
+   end if
+   
+   
    
       ! Init NWTC_Library, display copyright and version information:
-   CALL FAST_ProgStart( FAST_Ver )
-   !call DispNVD( FAST_Ver )
-
+   if (CallStart) then
+      CALL FAST_ProgStart( FAST_Ver )
+   else
+      CALL DispNVD( FAST_Ver )
+   end if
    
    IF (PRESENT(InFile)) THEN
       p_FAST%UseDWM = .FALSE.
@@ -501,14 +511,23 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       ! lidar        
       InitInData_IfW%lidar%Tmax                   = p_FAST%TMax
       InitInData_IfW%lidar%HubPosition            = ED%Output(1)%HubPtMotion%Position(:,1) 
-         ! bjj: these should come from an InflowWind input file; I'm hard coding them here for now
       IF ( PRESENT(ExternInitData) ) THEN
+         InitInData_IfW%Use4Dext = ExternInitData%FarmIntegration
+
+         if (InitInData_IfW%Use4Dext) then
+            InitInData_IfW%FDext%n      = ExternInitData%windGrid_n
+            InitInData_IfW%FDext%delta  = ExternInitData%windGrid_delta
+            InitInData_IfW%FDext%pZero  = ExternInitData%windGrid_pZero
+         end if
+         
+         ! bjj: these lidar inputs should come from an InflowWind input file; I'm hard coding them here for now
          InitInData_IfW%lidar%SensorType          = ExternInitData%SensorType   
          InitInData_IfW%lidar%LidRadialVel        = ExternInitData%LidRadialVel   
          InitInData_IfW%lidar%RotorApexOffsetPos  = 0.0         
          InitInData_IfW%lidar%NumPulseGate        = 0
       ELSE
          InitInData_IfW%lidar%SensorType          = SensorType_None
+         InitInData_IfW%Use4Dext                  = .false.
       END IF
                                      
       CALL InflowWind_Init( InitInData_IfW, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR),  &
@@ -3208,7 +3227,7 @@ SUBROUTINE AD_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrSta
    RETURN
 END SUBROUTINE AD_SetInitInput
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This module sets the number of subcycles (substeps) for modules at initialization, checking to make sure that their requested 
+!> This routine sets the number of subcycles (substeps) for modules at initialization, checking to make sure that their requested 
 !! time step is valid.
 SUBROUTINE SetModuleSubstepTime(ModuleID, p_FAST, y_FAST, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(IN   ) :: ModuleID            !< ID of the module to check time step and set
