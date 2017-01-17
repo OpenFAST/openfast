@@ -2978,6 +2978,8 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    
 contains
    subroutine cleanup()
+      m%BEMT%UseFrozenWake = .false.
+   
       call AD_DestroyOutput(            y_p, ErrStat2, ErrMsg2 )
       call AD_DestroyOutput(            y_m, ErrStat2, ErrMsg2 )
       call AD_DestroyConstrState(       z_p, ErrStat2, ErrMsg2 )
