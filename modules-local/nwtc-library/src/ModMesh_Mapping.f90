@@ -25,9 +25,9 @@
 !! -  Sprague, Michael A.; Jonkman, Jason M.; and Jonkman, Bonnie J., "FAST Modular Framework for Wind Turbine Simulation: New 
 !!    Algorithms and Numerical Examples." Proceedings of the 53rd Aerospace Sciences Meeting, 2015, also published in tech report 
 !!    NREL/CP-2C00-63203, National Renewable Energy Laboratory, Golden, CO.  http://www.nrel.gov/docs/fy16osti/63203.pdf
-!! -  Jonkman, Jason M.; Jonkman, Bonnie J.; and Sprague, Michael A., "FAST Modular Framework for Wind Turbine Simulation:  
-!!    Full-System Linearization.", TORQUE 2016  
-!!    also published in tech report NREL/XX-XXXX-XXXXX, National Renewable Energy Laboratory, Golden, CO.  
+!! -  Jonkman, Jason M. and Jonkman, Bonnie J., "FAST Modular Framework for Wind Turbine Simulation:  
+!!    Full-System Linearization.", J. Phys.: Conf. Ser. 753 082010,  also published in tech report 
+!!    NREL/CP-5000-67015, National Renewable Energy Laboratory, Golden, CO. http://www.nrel.gov/docs/fy17osti/67015.pdf 
    
 !**********************************************************************************************************************************
 MODULE ModMesh_Mapping
