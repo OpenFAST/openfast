@@ -194,7 +194,7 @@ PROGRAM HydroDynDriver
       
          ! Open the WAMIT inputs data file
       CALL GetNewUnit( UnWAMITInp ) 
-      CALL OpenFOutFile ( UnWAMITInp, drvrInitInp%WAMITInputsFile, ErrStat, ErrMsg ) 
+      CALL OpenFInFile ( UnWAMITInp, drvrInitInp%WAMITInputsFile, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) STOP
       
       
@@ -224,7 +224,7 @@ PROGRAM HydroDynDriver
       
          ! Open the Morison inputs data file
       CALL GetNewUnit( UnMorisonInp )
-      CALL OpenFOutFile ( UnMorisonInp, drvrInitInp%MorisonInputsFile, ErrStat, ErrMsg ) 
+      CALL OpenFInFile ( UnMorisonInp, drvrInitInp%MorisonInputsFile, ErrStat, ErrMsg ) 
          IF (ErrStat >=AbortErrLev) STOP
       
       
