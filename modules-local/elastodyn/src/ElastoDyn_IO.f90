@@ -5093,7 +5093,8 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, ErrStat, ErrMsg )
       ! TeetCDmp isn't allowed to be non-zero in this verison.
       IF (.NOT. EqualRealNos( InputFileData%TeetCDmp, 0.0_ReKi )) &
          CALL SetErrStat( ErrID_Fatal, 'TeetCDmp must be 0 in this version of ElastoDyn.',ErrStat,ErrMsg,RoutineName)
-      
+   ELSE
+      InputFileData%Delta3 = 0.0_ReKi
    ENDIF
 
       ! check these angles for appropriate ranges:
