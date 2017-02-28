@@ -1,7 +1,7 @@
 Building the Documentation
 ==========================
 
-This document describes how to build Nalu's documentation.
+This document describes how to build the OpenFAST documentation.
 The documentation is based on the use of Doxygen, Sphinx,
 and Doxylink. Therefore we will need to install these tools
 as well as many extensions of Sphinx that are utilized.
@@ -13,7 +13,7 @@ Install CMake, Doxygen, Sphinx, Doxylink, and the
 extensions used. Doxygen uses the ``dot`` application
 installed with GraphViz. Sphinx uses a combination
 of extensions installed with ``pip install`` as well as some
-that come with Nalu located in the ``_extensions``
+that come with OpenFAST located in the ``_extensions``
 directory. Using Homebrew on Mac OS X, 
 this would look something like:
 
@@ -30,7 +30,7 @@ this would look something like:
 Run CMake Configure
 -------------------
 
-In the Nalu repository checkout, create a ``mybuild`` directory.
+In the OpenFAST repository checkout, create a ``mybuild`` directory.
 Change to the build directory and run CMake with ``BUILD_DOCUMENTATION``
 on. For example:
 
