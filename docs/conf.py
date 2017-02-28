@@ -105,7 +105,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenFAST'
-copyright = u'2017, Sandia National Labs'
+copyright = u'2017, National Renewable Energy Laboratory'
 author = u'OpenFAST Team'
 
 # The version info for the project you're documenting, acts as replacement for
