@@ -36,11 +36,7 @@ on. For example:
 
 ::
 
-  cmake -DTrilinos_DIR:PATH=`spack location -i nalu-trilinos` \
-  -DYAML_DIR:PATH=`spack location -i yaml-cpp` \
-  -DENABLE_INSTALL:BOOL=ON -DCMAKE_BUILD_TYPE=RELEASE \
-  -DBUILD_DOCUMENTATION:BOOL=ON \
-  ..
+  cmake -DBUILD_DOCUMENTATION:BOOL=ON ..
 
 If all of the main tools are found successfully, CMake should configure with the ability
 to build the documentation. If Sphinx or Doxygen aren't found, the configure will skip
