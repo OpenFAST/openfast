@@ -3,13 +3,22 @@
 
 OpenFAST Documentation 
 ======================
+
+This page is under construction. Our intention is that this page will eventually host documents on compiling OpenFAST, theory behind OpenFAST, software-development requirements, reporting issues, etc.
+
+Please contact Michael.A.Sprague@NREL.gov with questions regarding the OpenFAST development plan.
+
+For possible bugs, enhancement requests, or code questions, please submit an issues at the OpenFAST Github repository https://github.com/OpenFAST/OpenFAST
+
+Users may find the established FAST8 can be found through the NWTC Information Portal: https://nwtc.nrel.gov/
+
 .. toctree::
    :maxdepth: 2
 
-   OpenFAST Homepage <https://github.com/OpenFAST/OpenFAST>
-   OpenFAST Github Homepage <https://github.com/OpenFAST/OpenFAST>
-   Building This Documentation <source/build_doc.rst>
-   Installation on Mac OS X <source/install_mac.rst>
-   Installation on Linux <source/install_linux.rst>
+   OpenFAST Github Organization Page <https://github.com/OpenFAST>
+   OpenFAST Github Repository <https://github.com/OpenFAST/OpenFAST>
+   Installing OpenFAST  <source/install.rst>
+   Module Documentation <source/module.rst>
    Source Code Documentation <source/code.rst>
+   Building this Documentation Locally <source/build_doc.rst>
 

@@ -1,10 +1,12 @@
 Building the Documentation
 ==========================
 
-This document describes how to build the OpenFAST documentation.
+This document describes how to build the OpenFAST documentation on your local   machine.  Documentation is automatically built and updated on readthedocs when  new material is pushed to the github repo. However, while developing            documentation, one should build locally to see changes quickly, and without the need to push your changes to see them on readthedocs.
+
 The documentation is based on the use of Doxygen, Sphinx,
-and Doxylink. Therefore we will need to install these tools
-as well as many extensions of Sphinx that are utilized.
+and Doxylink. Therefore users will need to install these tools
+as well as several extensions of Sphinx that are utilized.
+
 
 Install the Tools
 -----------------
