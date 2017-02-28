@@ -26,6 +26,7 @@ this would look something like:
   pip install sphinx
   pip install sphinxcontrib-doxylink
   pip install sphinxcontrib-bibtex
+  pip install sphinx_rtd_theme
 
 Run CMake Configure
 -------------------
