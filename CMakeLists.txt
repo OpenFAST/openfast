@@ -20,6 +20,8 @@ project(OpenFAST Fortran C)
 include(${CMAKE_SOURCE_DIR}/cmake/FastCmakeUtils.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/FastFortranOptions.cmake)
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
@@ -98,5 +100,10 @@ endforeach(IDIR IN ITEMS ${FAST_MODULES_LOCAL})
 foreach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules-ext/${IDIR}")
 endforeach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
+
+option(BUILD_DOCUMENTATION "Build documentation." OFF)
+if(BUILD_DOCUMENTATION)
+   add_subdirectory(docs)
+endif()
 
 add_subdirectory(glue-codes)
