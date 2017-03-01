@@ -1,5 +1,5 @@
-Building the Documentation
-==========================
+Building this Documentation Locally
+===================================
 
 This document describes how to build the OpenFAST documentation on your local   machine.  Documentation is automatically built and updated on readthedocs when  new material is pushed to the github repo. However, while developing            documentation, one should build locally to see changes quickly, and without the need to push your changes to see them on readthedocs.
 
@@ -30,25 +30,34 @@ this would look something like:
   pip install sphinxcontrib-bibtex
   pip install sphinx_rtd_theme
 
-Run CMake Configure
--------------------
+Run CMake Configure and Make the Docs
+-------------------------------------
 
-In the OpenFAST repository checkout, create a ``mybuild`` directory.
-Change to the build directory and run CMake with ``BUILD_DOCUMENTATION``
-on. For example:
+In the OpenFAST repository checkout, create a ``mydocbuild`` directory.  Change
+to the build directory and run CMake with ``BUILD_DOCUMENTATION`` on.  If all
+of the main tools are found successfully, CMake should configure with the
+ability to build the documentation. If Sphinx or Doxygen aren't found, the
+configure will skip the documentation.
+
+Issue the command ``make docs`` which should first build the Doxygen
+documentation and then the Sphinx documentation. If this completes
+successfully, the entry point to the documentation should be in
+``mydocbuild/docs/html/index.html``.
+
+For example, from the OpenFAST directory:
 
 ::
 
-  cmake -DBUILD_DOCUMENTATION:BOOL=ON ..
+    mkdir mydocbuild 
+    cd mydocbuild 
+    cmake -DBUILD_DOCUMENTATION:BOOL=ON ..
+    make docs
 
-If all of the main tools are found successfully, CMake should configure with the ability
-to build the documentation. If Sphinx or Doxygen aren't found, the configure will skip
-the documentation.
+If you modify document source files in ``OpenFAST/docs/source``, you can simply update the html files through another ``make`` in ``OpenFAST/mydocbuild``:
 
+::
 
-Make the Docs
--------------
+    make docs
+   
 
-Issue the command ``make docs`` which should first build the Doxygen documentation and
-then the Sphinx documentation. If this completes successfully, the entry point to
-the documentation should be in ``mybuild/docs/html/index.html``.
+ 
