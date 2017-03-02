@@ -8687,7 +8687,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
    !.......................................................
       
    CALL MeshCreate( BlankMesh = y%TowerLn2Mesh           &
-                    , IOS             = COMPONENT_INPUT  &
+                    , IOS             = COMPONENT_OUTPUT  &
                     , NNodes          = p%TwrNodes + 2   &
                     , TranslationDisp = .TRUE.           &
                     , Orientation     = .TRUE.           &
