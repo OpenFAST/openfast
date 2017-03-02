@@ -3758,6 +3758,10 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       END IF
    InputFileData%Delta3 = InputFileData%Delta3*D2R
 
+   IF ( InputFileData%NumBl /= 2_IntKi )  THEN
+      InputFileData%Delta3 = 0.0_ReKi
+   END IF
+   
       ! AzimB1Up - Azimuth value to use for I/O when blade 1 points up (degrees) (read from file in degrees and converted to radians here):
    CALL ReadVar( UnIn, InputFile, InputFileData%AzimB1Up, "AzimB1Up", "Azimuth value to use for I/O when blade 1 points up (degrees)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -5093,7 +5097,6 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, ErrStat, ErrMsg )
       ! TeetCDmp isn't allowed to be non-zero in this verison.
       IF (.NOT. EqualRealNos( InputFileData%TeetCDmp, 0.0_ReKi )) &
          CALL SetErrStat( ErrID_Fatal, 'TeetCDmp must be 0 in this version of ElastoDyn.',ErrStat,ErrMsg,RoutineName)
-      
    ENDIF
 
       ! check these angles for appropriate ranges:

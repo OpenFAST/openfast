@@ -193,6 +193,7 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha_circ, 
    
    if (tmpRoot < 0.0_ReKi) then
       Get_f_from_Lookup = 1.0_ReKi
+      !TODO: Should tmpRoot = 0.0 instead so that we can still solve the equations below instead of returning 2/28/2017 GJH
       return
    end if
    
@@ -503,9 +504,9 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
 
    
    
-
-   k_alpha  = 1.0_ReKi / ( (1.0_ReKi - M) + (C_nalpha/2.0_ReKi) * M**2 * beta_M * (A1*b1 + A2*b2) / 2.0  )                 ! Eqn 1.12a
-   k_q      = 1.0_ReKi / ( (1.0_ReKi - M) + C_nalpha            * M**2 * beta_M * (A1*b1 + A2*b2) / 2.0  )                 ! Eqn 1.12b
+!TODO: The next two equations we should remove the / 2.0  GJH 2/28/2017
+   k_alpha  = 1.0_ReKi / ( (1.0_ReKi - M) + (C_nalpha/2.0_ReKi) * M**2 * beta_M * (A1*b1 + A2*b2) )                 ! Eqn 1.12a
+   k_q      = 1.0_ReKi / ( (1.0_ReKi - M) + C_nalpha            * M**2 * beta_M * (A1*b1 + A2*b2) )                 ! Eqn 1.12b
    T_alpha  = T_I * k_alpha * 0.75                                                 ! Eqn 1.11a -RRD 9/28 added *0.75 that seemed to be missing
    T_q      = T_I * k_q * 0.75                                                     ! Eqn 1.11b -RRD 9/28 added *0.75
       
@@ -563,6 +564,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       X3              = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X3_minus1(i,j), A1*(q_f_cur - q_f_minus1), 0.0_ReKi )
       X4              = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X4_minus1(i,j), A2*(q_f_cur - q_f_minus1), 0.0_ReKi )
       Cn_q_circ       = C_nalpha_circ*q_f_cur/2.0 - X3 - X4  
+      ! TODO: Why does the Cn_q_circ appear in the following equation GJH 2/28/2017
       Cn_alpha_q_circ = Cn_alpha_q_circ + Cn_q_circ
    else
       Cn_q_circ       = 0.0
@@ -614,14 +616,13 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       Cn_prime_diff = Cn_prime - xd%Cn_prime_minus1(i,j)
    end if
    
+!TODO: GJH 2/28/2017 need to change the #ifndef to #ifdef
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  
 ! This code is taken from ADv14 but doesn't reflect the original intent of the UA theory document
-#ifndef TEST_THEORY
+#ifdef TEST_THEORY
    IF ( alpha_filt_cur * Cn_prime_diff < 0. ) THEN
-
       T_f   = T_f0*1.5
    ELSE
-
       T_f   = T_f0
    ENDIF
 #endif   
@@ -1568,6 +1569,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             end if
             
             k2_hat = 2*(Cn_prime-Cn1) + fprimeprime_c - f
+            ! TODO: why did we comment out the sin() term below?  GJH 2/28/2017
             y%Cc   = k1_hat + Cc_pot*sqrt(fprimeprime_c)*fprimeprime_c**k2_hat !*sin(alpha_e + alpha0)
             
          end if
