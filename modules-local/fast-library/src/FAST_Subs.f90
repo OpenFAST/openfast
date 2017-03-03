@@ -4767,8 +4767,8 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
    NumBl = 0
    if (allocated(ED%Output)) then
       if (allocated(ED%Output(1)%BladeRootMotion)) then
-+         NumBl = SIZE(ED%Output(1)%BladeRootMotion)      
-+     end if
+         NumBl = SIZE(ED%Output(1)%BladeRootMotion)      
+     end if
    end if
    
    
