@@ -202,6 +202,7 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
 
    REAL(ReKi)                                                  :: Interp4D(3)       !< The interpolated UVW from m%V
    
+   CHARACTER(*), PARAMETER                                     :: RoutineName = 'Interp4D'   
 
       ! Local variables
 
@@ -238,8 +239,9 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
    i=4      
       Tmp = (Time - m%TgridStart) / p%delta(i)
       Indx_Lo(i) = INT( Tmp ) + 1     ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
-      isopc(i) = 2.0_ReKi * (Tmp - REAL(Indx_Lo(i) - 1_IntKi, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1         
-
+     !isopc(i) = 2.0_ReKi * (Tmp - REAL(Indx_Lo(i) - 1_IntKi, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1         
+      isopc(i) = -1.0_ReKi ! For consistency, we're not going to interpolate in time; this is because we can't interpolate the last time grid in FAST.Farm anyway
+      
    !-------------------------------------------------------------------------------------------------
    ! to verify that we don't extrapolate, make sure isopc is bound between -1 and 1 (effectively nearest neighbor)
    !-------------------------------------------------------------------------------------------------            
@@ -254,6 +256,8 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
    DO i=1,size(p%n)   
       IF (Indx_Lo(i) <= 0) THEN
          Indx_Lo(i) = 1
+         CALL SetErrStat(ErrID_Fatal,'Outside the grid bounds.',ErrStat,ErrMsg,RoutineName) !BJJ: check that this isn't too restrictive, especially in time
+         RETURN
       ELSEIF (Indx_Lo(i) >= p%n(i) ) THEN
          Indx_Lo(i) = max( p%n(i) - 1, 1 )           ! make sure it's a valid index
       END IF      

@@ -192,4 +192,4 @@ typedef  ^                       ^              lidar_OutputType     lidar      
 typedef  ^                    ContinuousStateType  ReKi              DummyContState    -     -     -     "Remove this variable if you have continuous states"     -
 typedef  ^                    DiscreteStateType    ReKi              DummyDiscState    -     -     -     "Remove this variable if you have discrete states"       -
 typedef  ^                    ConstraintStateType  ReKi              DummyConstrState  -     -     -     "Remove this variable if you have constraint states"     -
-typedef  ^                    OtherStateType       ReKi              DummyConstrState  -     -     -     "Remove this variable if you have constraint states"     -
+typedef  ^                    OtherStateType       ReKi              DummyOtherState   -     -     -     "Remove this variable if you have other states"     -

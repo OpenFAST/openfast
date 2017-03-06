@@ -967,7 +967,7 @@ SUBROUTINE InflowWind_ValidateInput( InitInp, InputFileData, ErrStat, ErrMsg )
          CALL User_ValidateInput()
          
       CASE (FDext_WindNumber)
-            
+         IF ( .not. InitInp%Use4Dext) call SetErrStat(ErrID_Fatal,'4D external wind file is valid only with FAST.Farm',ErrStat,ErrMsg,RoutineName)
       CASE DEFAULT  ! keep this check to make sure that all new wind types have been accounted for
          CALL SetErrStat(ErrID_Fatal,' Undefined wind type.',ErrStat,ErrMsg,RoutineName)
 

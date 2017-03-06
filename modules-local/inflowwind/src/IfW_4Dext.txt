@@ -13,7 +13,7 @@ include Registry_NWTC_Library.txt
 #########################
 
 typedef IfW_4Dext/IfW_4Dext   InitInputType       IntKi     n      4     -     -     "number of grid points in the x, y, z, and t directions"                     -
-typedef  ^                    InitInputType       ReKi      delta  4     -     -     "size between 2 consecutive grid points in each grid direction"                     -
+typedef  ^                    InitInputType       ReKi      delta  4     -     -     "size between 2 consecutive grid points in each grid direction"  "m,m,m,s"
 typedef  ^                    InitInputType       ReKi      pZero  3     -     -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
 
 
@@ -31,7 +31,7 @@ typedef    ^              MiscVarType          ReKi     TgridStart -     - -  "t
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType       IntKi     n      4     -     -     "number of evenly-spaced grid points in the x, y, z, and t directions"      -
-typedef  ^                    ParameterType       ReKi      delta  4     -     -     "size between 2 consecutive grid points in each grid direction"             -
+typedef  ^                    ParameterType       ReKi      delta  4     -     -     "size between 2 consecutive grid points in each grid direction"            "m,m,m,s"
 typedef  ^                    ParameterType       ReKi      pZero  3     -     -     "fixed position of the XYZ grid (i.e., XYZ coordinates of m%V(:,1,1,1,:))" "m"
 
 

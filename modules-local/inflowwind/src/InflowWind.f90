@@ -201,14 +201,17 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
                         
       ELSE
                   
-            !bjj: this is basically all it would take, no?
          CALL InflowWind_CopyInputFile( InitInp%PassedFileData, InputFileData, MESH_NEWCOPY, TmpErrStat, TmpErrMsg )
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)          
          
       ENDIF
 
          ! let's tell InflowWind if an external module (e.g., FAST.Farm) is going to set the velocity grids.
-      IF ( InitInp%Use4Dext) InputFileData%WindType = FDext_WindNumber      
+      IF ( InitInp%Use4Dext) then
+         InputFileData%WindType = FDext_WindNumber      
+         InputFileData%PropagationDir = 0.0_ReKi ! wind is in XYZ coordinates (already rotated if necessary), so don't rotate it again
+      END IF
+      
       
          ! initialize sensor data:   
       CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
