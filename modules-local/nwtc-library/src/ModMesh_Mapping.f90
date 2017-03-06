@@ -457,8 +457,8 @@ SUBROUTINE Transfer_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
    TYPE(MeshType),         INTENT(IN   ) ::  Src      !< source mesh
    TYPE(MeshType),         INTENT(INOUT) ::  Dest     !< destination mesh
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping data structure
 
@@ -596,8 +596,8 @@ SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
    TYPE(MeshType),         INTENT(IN   ) ::  Src      !  source mesh
    TYPE(MeshType),         INTENT(IN   ) ::  Dest     !  destination mesh
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !  a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !  a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !  a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !  a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !  mapping data structure
 
@@ -2104,8 +2104,8 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    ! local variables
 
@@ -2211,8 +2211,8 @@ SUBROUTINE Linearize_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    INTEGER(IntKi),            INTENT(  OUT) :: ErrStat   ! Error status of the operation
    CHARACTER(*),              INTENT(  OUT) :: ErrMsg    ! Error message if ErrStat /= ErrID_None
                               
-   TYPE(MeshType),OPTIONAL,   INTENT(IN   ) :: SrcDisp   ! a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,   INTENT(IN   ) :: DestDisp  ! a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,   INTENT(IN   ) :: SrcDisp   ! a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,   INTENT(IN   ) :: DestDisp  ! a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    ! local variables
 
@@ -3312,8 +3312,8 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
    TYPE(MeshType),         INTENT(IN   ) ::  Src      !< source Line2 mesh
    TYPE(MeshType),         INTENT(INOUT) ::  Dest     !< destination Line2 mesh
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping between Src and Dest meshes
 
@@ -3486,8 +3486,8 @@ SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
    TYPE(MeshType),         INTENT(IN   ) :: Src       !< source Line2 mesh
    TYPE(MeshType),         INTENT(IN   ) :: Dest      !< destination mesh
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping between Src and Dest meshes
 
