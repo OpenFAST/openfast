@@ -37,6 +37,7 @@ typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
+typedef	^	InitOutputType	ReKi	FluidDens	-	-	-	"Fluid density"	kg/m^3
 typedef	^	InitOutputType	AD_BladeShape	BladeShape	{:}	-	-	"airfoil coordinates for each blade"	m
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the outputs used in linearization"	-
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_z	{:}	-	-	"Names of the constraint states used in linearization"	-
@@ -65,8 +66,13 @@ typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type tower influence on wind based
 typedef	^	AD_InputFile	LOGICAL	TwrShadow	-	-	-	"Calculate tower influence on wind based on downstream tower shadow?"	-
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
+typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
 typedef	^	AD_InputFile	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
+typedef	^	AD_InputFile	ReKi	FluidDens	-	-	-	"Fluid density"	kg/m^3
 typedef	^	AD_InputFile	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
+typedef	^	AD_InputFile	ReKi	Patm 	-	-	-	"Atmospheric pressure" Pa
+typedef	^	AD_InputFile	ReKi	Pvap 	-	-	-	"Vapour pressure" Pa
+typedef	^	AD_InputFile	ReKi	FluidDepth -	-	-	"Submerged hub depth" m
 typedef	^	AD_InputFile	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
 typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} [used only when WakeMod=1]"	-
 typedef	^	AD_InputFile	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [used only when WakeMod=1]"	flag
@@ -133,6 +139,7 @@ typedef	^	MiscVarType	ReKi	V_dot_x	-	-	-
 typedef	^	MiscVarType	MeshType	HubLoad	-	-	-	"mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only)"	-
 typedef	^	MiscVarType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to the MiscVar%HubLoad mesh"
 
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -142,13 +149,18 @@ typedef	^	ParameterType	IntKi	TwrPotent	-	-	-	"Type tower influence on wind base
 typedef	^	ParameterType	LOGICAL	TwrShadow	-	-	-	"Calculate tower influence on wind based on downstream tower shadow?"	-
 typedef	^	ParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	ParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
+typedef	^	ParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us to check cavitation"- 
 typedef	^	ParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	ParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
 typedef	^	ParameterType	IntKi	NumTwrNds	-	-	-	"Number of nodes on the tower"	-
 typedef	^	ParameterType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 typedef	^	ParameterType	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
+typedef	^	ParameterType	ReKi	FluidDens	-	-	-	"Fluid density"	kg/m^3
 typedef	^	ParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
+typedef	^	ParameterType	ReKi	Patm	-	-	-	"Atmospheric pressure"	Pa
+typedef	^	ParameterType	ReKi	Pvap	-	-	-	"Vapour pressure"	Pa
+typedef	^	ParameterType	ReKi	FluidDepth	-	-	-	"Depth of water to hub center"	m
 typedef	^	ParameterType	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
 typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
@@ -178,5 +190,7 @@ typedef	^	InputType	ReKi	InflowOnTower	{:}{:}			"U,V,W at nodes on the tower"	m/
 # Define outputs that are contained on the mesh here:
 typedef	^	OutputType	MeshType	TowerLoad	-	-	-	"loads on the tower"	-
 typedef	^	OutputType	MeshType	BladeLoad	{:}	-	-	"loads on each blade"	-
+typedef	^	OutputType	MeshType	SigmaCavitCrit	{:}	-	-	"Critical cavitation number "	-
+typedef	^	OutputType	MeshType	SigmaCavit  {:}	-	-	" Cavitation number at node "	-
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
