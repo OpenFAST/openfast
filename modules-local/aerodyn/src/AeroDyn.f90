@@ -867,6 +867,8 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    p%AirDens          = InputFileData%AirDens          
    p%KinVisc          = InputFileData%KinVisc
    p%SpdSound         = InputFileData%SpdSound
+   p%Patm             = InputFileData%Patm
+   p%Pvap             = InputFileData%Pvap
    
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
   !p%BEMT    ! set in call to BEMT_Init()
@@ -1699,7 +1701,11 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%numBlades        = p%NumBlades
    
    InitInp%airDens          = InputFileData%AirDens 
-   InitInp%kinVisc          = InputFileData%KinVisc                  
+   InitInp%kinVisc          = InputFileData%KinVisc
+   InitInp%Patm             = InputFileData%Patm 
+   InitInp%Pvap             = InputFileData%Pvap
+   InitInp%FluidDepth       = InputFileData%FluidDepth
+   InitInp%CavitCheck       = InputFileData%CavitCheck
    InitInp%skewWakeMod      = InputFileData%SkewMod
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
@@ -1752,6 +1758,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%UAMod    = InputFileData%UAMod
    InitInp%Flookup  = InputFileData%Flookup
    InitInp%a_s      = InputFileData%SpdSound
+   InitInp%CavitCheck = InputFileData%CavitCheck
    
    if (ErrStat >= AbortErrLev) then
       call cleanup()
