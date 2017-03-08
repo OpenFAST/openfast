@@ -51,7 +51,7 @@ typedef   ^                     ^                ReKi                x_cp_bar   
 typedef   ^                     ^                ReKi                UACutout    -  -  - "" =
 typedef   ^                     ^                ReKi                filtCutOff  -  -  - "low pass filter cut-off frequency for the pitching rate and accelerations"       Hz
 # The following derived type stores data for an airfoil at a single combination of Re and control setting.
-typedef	AirfoilInfo/AFI	AFI_Table_Type	ReKi	Alpha   	{:}	-	-	"Angle-of-attack vector that matches the Coefs matrix" rad
+typedef	AirfoilInfo/AFI	AFI_Table_Type	ReKi	Alpha   	{:}	-	-	"Angle-of-attack vector that matches the Coefs matrix"
 typedef	^	^	ReKi	Coefs	{:}{:}	-	-	"Airfoil coefficients for Cd, Cl,  and maybe Cm and/or Cpmin"	-
 typedef	^	^	ReKi	SplineCoefs	{:}{:}{:}	-	-	"Spline coefficients for Cd, Cl,  and maybe Cm and/or Cpmin"	-
 typedef	^	^	ReKi	BEMT_Spline	{:}{:}{:}{:}	-	-	"Spline coefficients for Cd, Cl for the two bounding Re when doing BEM"	-
@@ -94,6 +94,8 @@ typedef	^	^	INTEGER	NumCpminAoAkts	-	-	-	"The number of angle-of-attack knots fo
 typedef	^	^	INTEGER	NumCpminReKts	-	-	-	"The number of log(Re) knots for 2D splines of Cpmin"	-
 typedef	^	^	INTEGER	NumTabs	-	-	-	"The number of airfoil tables in the airfoil file"	-
 typedef	^	^	AFI_Table_Type	Table	{:}	-	-	"The tables of airfoil data for given Re and control setting"	-
+typedef	^	^	INTEGER	ColCpmin	-	-	-	"Column number for Cpmin"	-
+typedef	^	^	INTEGER	ColCm	-	-	-	"Column number for Cpmin"	-
 
 # ..... Initialization data .......................................................................................................
 # The following derived type stores information that comes from the calling module (say, AeroDyn):
