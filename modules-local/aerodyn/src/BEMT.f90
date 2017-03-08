@@ -208,7 +208,11 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    
   !p%DT               = InitInp%DT                             
    p%airDens          = InitInp%airDens          
-   p%kinVisc          = InitInp%kinVisc          
+   p%kinVisc          = InitInp%kinVisc    
+   p%Patm             = InitInp%Patm  
+   p%Pvap             = InitInp%Pvap 
+   p%CavitCheck       = InitInp%CavitCheck
+   p%FluidDepth       = InitInp%FluidDepth
    p%skewWakeMod      = InitInp%skewWakeMod     
    p%useTipLoss       = InitInp%useTipLoss       
    p%useHubLoss       = InitInp%useHubLoss 
@@ -219,6 +223,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%numReIterations  = InitInp%numReIterations  
    p%maxIndIterations = InitInp%maxIndIterations 
    p%aTol             = InitInp%aTol
+   p%InCol_Cpmin      = InitInp%InCol_Cpmin
    
 end subroutine BEMT_SetParameters
 
@@ -465,6 +470,9 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    call allocAry( y%Cm, p%numBladeNodes, p%numBlades, 'y%Cm', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cl, p%numBladeNodes, p%numBlades, 'y%Cl', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cd, p%numBladeNodes, p%numBlades, 'y%Cd', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cpmin, p%numBladeNodes, p%numBlades, 'y%Cpmin', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%SigmaCavit, p%numBladeNodes, p%numBlades, 'y%SigmaCavit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%SigmaCavitCrit, p%numBladeNodes, p%numBlades, 'y%SigmaCavitCrit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
    if (ErrStat >= AbortErrLev) RETURN
    
@@ -724,6 +732,12 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
             if ( EqualRealNos(C_nalpha, 0.0_ReKi) .and. OtherState%UA_Flag(i,j) ) then
                OtherState%UA_Flag(i,j) = .false.
                call WrScr( 'Warning: Turning off Unsteady Aerodynamics because C_nalpha is 0.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
+            end if
+            
+             if ( p%CavitCheck ) then     !Turn off unsteady aerodynamics if we are doing a cavitation check
+             OtherState%UA_Flag(i,j) = .false.
+               call WrScr( 'Warning: Turning off Unsteady Aerodynamics because doing cavitation check' )
+               call WrScr( 'To run Unsteady Aerodynamics, set CavitCheck to FALSE in input file' )
             end if
             
          end do
@@ -1082,7 +1096,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
 
   
    real(ReKi)                     :: Re, fzero
-   real(ReKi)                     :: Rtip ! maximum rlocal value for node j over all blades
+   real(ReKi)                     :: Rtip,SigmaCavitCrit, SigmaCavit ! maximum rlocal value for node j over all blades
 
    integer(IntKi)                 :: i                                               ! Generic index
    integer(IntKi)                 :: j                                               ! Loops through nodes / elements
@@ -1238,7 +1252,32 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                                          y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), errStat2, errMsg2 ) 
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
                if (errStat >= AbortErrLev) return 
+               
+               
+               
+                if ( p%CavitCheck ) then    ! This calculates the cavitation number for the airfoil at the node in quesiton, and compares to the critical cavitation number based on the vapour pressure and submerged depth
+ 
+                SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * y%Vrel(i,j)**2) ! Critical value of Sigma, cavitation if we go over this
+                SigmaCavit= -1* y%Cpmin(i,j)  ! Actual cavitation number on blade node j                                               
+                                                 
+               if (SigmaCavitCrit < SigmaCavit) then     
+                   call WrScr( NewLine//'FAILED CAVITATION CHECK'//' Node # = '//trim(num2lstr(i)//'Blade # = '//trim(num2lstr(j))))  
+               end if 
+                                        
+               if (y%Vrel(i,j) == 0) then   !if Vrel = 0 in certain cases when Prandtls tip and hub loss factors are used, use the relative verlocity without induction
+                       SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * (sqrt((Vx**2 + Vy**2)))**2) ! Critical value of Sigma, cavitation if we go over this
+               end if
+               
+                  y%SigmaCavit(i,j)= SigmaCavit                 
+                  y%SigmaCavitCrit(i,j)=SigmaCavitCrit  
+                  
+              end if 
+               
          end if
+
+
+
+
 
          
             ! Compute Cx, Cy given Cl, Cd and phi
