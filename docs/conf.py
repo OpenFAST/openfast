@@ -75,13 +75,15 @@ if readTheDocs:
     doxylink = {
         'openfast' : (
           os.path.join(builddir, '..', '..', 'openfast.tag'),
-          os.path.join('..', '..', 'doxygen', 'html'))
+          os.path.join('html')
+        )
     }
 else:
     doxylink = {
         'openfast' : (
           os.path.join(builddir, '..', 'openfast.tag'),
-          os.path.join('..', 'doxygen', 'html'))
+          os.path.join('html')
+        )
     }
 
 # Add any paths that contain templates here, relative to this directory.
