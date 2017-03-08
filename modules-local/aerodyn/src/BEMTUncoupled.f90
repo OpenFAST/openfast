@@ -168,8 +168,8 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
    
    Cl = IntAFCoefs(1)
    Cd = IntAFCoefs(2)
-   Cm = IntAFCoefs(0)
-    Cpmin = IntAFCoefs(0)
+   Cm = IntAFCoefs(3)
+    Cpmin = IntAFCoefs(4)
            
       IF ( AFInfo%ColCm > 2 )  THEN           ! If there is Cm data, it is in column 3
            Cm = IntAFCoefs(3)
