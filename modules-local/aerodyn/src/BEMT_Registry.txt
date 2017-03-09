@@ -54,8 +54,8 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     zTip                            {:}        -         -        "Distance to blade tip, measured along the blade" m
 typedef   ^                            ^                             INTEGER                  UAMod                           -          -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -          -         -        "logical flag indicating whether to use UnsteadyAero"        -
-typedef   ^                            ^                             LOGICAL                  CavitCheck                      -          -         -        "logical flag indicating whether to check for cavitation"        -
 typedef   ^                            ^                             LOGICAL                  Flookup                         -          -         -        "Use table lookup for f' and f'' "    -
+typedef   ^                            ^                             LOGICAL                  CavitCheck                      -          -         -        "logical flag indicating whether to check for cavitation"        -
 typedef   ^                            ^                             ReKi                     a_s                             -          -         -        "speed of sound"        m/s
 typedef   ^                            ^                             INTEGER                  InCol_Cpmin                             -          -         -        "InCol_Cpmin"        -
 #
@@ -85,9 +85,10 @@ typedef   ^                            ConstraintStateType           ReKi       
 #
 typedef   ^                            OtherStateType                UA_OtherStateType        UA                                  -           -         -        "other states for UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         {:}{:}          -         -        "logical flag indicating whether to use UnsteadyAero"        -
--typedef   ^                            ^                             LOGICAL                  ValidPhi                        {:}{:}          -         -        "set to indicate when there is no valid Phi for this node at this time (temporarially turn off induction when this is false)" -
--typedef   ^                            OtherStateType                Logical                  nodesInitialized                -               -         -        "the node states have been initialized properly" -
+typedef   ^                            ^                             LOGICAL                  ValidPhi                        {:}{:}          -         -        "set to indicate when there is no valid Phi for this node at this time (temporarially turn off induction when this is false)" -
+typedef   ^                            OtherStateType                Logical                  nodesInitialized                -               -         -        "the node states have been initialized properly" -
 typedef   ^                            ^                             LOGICAL                  CavitCheck                      {:}{:}          -         -        "logical flag indicating whether to check for cavitation"        -
+
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
@@ -148,16 +149,16 @@ typedef   ^                            ^                             ReKi       
 # Define outputs that are contained on the mesh here:
 typedef   ^                            OutputType                    ReKi                     Vrel                            {:}{:}         -         -         "Total local relative velocity" m/s
 typedef   ^                            ^                             ReKi                     phi                             {:}{:}         -         -         "angle between the plane of rotation and the direction of the local wind" rad
-typedef   ^                            ^                             ReKi                     axInduction                     {:}{:}         -         -         "Distributed viscous drag loads"   -
-typedef   ^                            ^                             ReKi                     tanInduction                    {:}{:}         -         -         "Distributed inertial loads"   -
-typedef   ^                            ^                             ReKi                     Re                              {:}{:}         -         -         "Distributed inertial loads"   -
-typedef   ^                            ^                             ReKi                     AOA                             {:}{:}         -         -         "Distributed inertial loads"   -
+typedef   ^                            ^                             ReKi                     axInduction                     {:}{:}         -         -         "axial induction"   -
+typedef   ^                            ^                             ReKi                     tanInduction                    {:}{:}         -         -         "tangential induction"   -
+typedef   ^                            ^                             ReKi                     Re                              {:}{:}         -         -         "Reynold's number"   -
+typedef   ^                            ^                             ReKi                     AOA                             {:}{:}         -         -         "angle of attack"   rad
 typedef   ^                            ^                             ReKi                     Cx                              {:}{:}         -         -         "normal force coefficient (normal to the plane, not chord) of the jth node in the kth blade"   -
 typedef   ^                            ^                             ReKi                     Cy                              {:}{:}         -         -         "tangential force coefficient (tangential to the plane, not chord) of the jth node in the kth blade"   -
 typedef   ^                            ^                             ReKi                     Cm                              {:}{:}         -         -         "pitching moment coefficient of the jth node in the kth blade"   -
-typedef   ^                            ^                             ReKi                     Cl                              {:}{:}         -         -         "Distributed inertial loads"   -
-typedef   ^                            ^                             ReKi                     Cd                              {:}{:}         -         -         "Distributed inertial loads"   -
-typedef   ^                            ^                             ReKi                     chi                             {:}{:}         -         -         "Distributed inertial loads"   -
+typedef   ^                            ^                             ReKi                     Cl                              {:}{:}         -         -         "lift coefficient"   -
+typedef   ^                            ^                             ReKi                     Cd                              {:}{:}         -         -         "drag coefficient"   -
+typedef   ^                            ^                             ReKi                     chi                             {:}{:}         -         -         "wake skew angle"   rad
 typedef   ^                            ^                             ReKi                     Cpmin                           {:}{:}         -         -         "min Cpressure"   -
 typedef   ^                            ^                             ReKi                     SigmaCavitCrit                  {:}{:}         -         -         "critical cavitation number-  inception value (above which cavit will occur)"   -
 typedef   ^                            ^                             ReKi                     SigmaCavit                      {:}{:}         -         -         "cavitation nubmer at node "   -
