@@ -1701,9 +1701,9 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%numBlades        = p%NumBlades
    
    InitInp%airDens          = InputFileData%AirDens 
-   InitInp%kinVisc          = InputFileData%KinVisc
-   InitInp%Patm             = InputFileData%Patm 
+   InitInp%kinVisc          = InputFileData%KinVisc   
    InitInp%Pvap             = InputFileData%Pvap
+   InitInp%Patm             = InputFileData%Patm 
    InitInp%FluidDepth       = InputFileData%FluidDepth
    InitInp%CavitCheck       = InputFileData%CavitCheck
    InitInp%skewWakeMod      = InputFileData%SkewMod
