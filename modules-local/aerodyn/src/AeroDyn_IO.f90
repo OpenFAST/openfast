@@ -2,6 +2,8 @@
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
+    
+    
 !    This file is part of AeroDyn.
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,12 +27,12 @@ MODULE AeroDyn_IO
  
    use NWTC_Library
    use AeroDyn_Types
-   use BEMTUncoupled, only : SkewMod_Uncoupled, SkewMod_PittPeters
+   use BEMTUncoupled, only : SkewMod_Uncoupled, SkewMod_PittPeters, VelocityIsZero
 
    
    implicit none
    
-   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.03.00', '27-Jul-2016' )
+   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.04.00', '29-Oct-2016' )
    character(*),   parameter  :: AD_Nickname = 'AD'
       
 ! ===================================================================================================
@@ -1400,23 +1402,26 @@ MODULE AeroDyn_IO
                                      B2N1Curve,B2N2Curve,B2N3Curve,B2N4Curve,B2N5Curve,B2N6Curve,B2N7Curve,B2N8Curve,B2N9Curve, &
                                      B3N1Curve,B3N2Curve,B3N3Curve,B3N4Curve,B3N5Curve,B3N6Curve,B3N7Curve,B3N8Curve,B3N9Curve  &
                                    /), (/9, 3/) )
+    
     INTEGER,  PARAMETER          :: BNCl(9, 3) = RESHAPE( (/ &    ! lift force coefficient
                                      B1N1Cl,B1N2Cl,B1N3Cl,B1N4Cl,B1N5Cl,B1N6Cl,B1N7Cl,B1N8Cl,B1N9Cl, &
                                      B2N1Cl,B2N2Cl,B2N3Cl,B2N4Cl,B2N5Cl,B2N6Cl,B2N7Cl,B2N8Cl,B2N9Cl, &
                                      B3N1Cl,B3N2Cl,B3N3Cl,B3N4Cl,B3N5Cl,B3N6Cl,B3N7Cl,B3N8Cl,B3N9Cl  &
                                    /), (/9, 3/) )
+    
     INTEGER,  PARAMETER          :: BNCd(9, 3) = RESHAPE( (/ &    ! drag force coefficient
                                      B1N1Cd,B1N2Cd,B1N3Cd,B1N4Cd,B1N5Cd,B1N6Cd,B1N7Cd,B1N8Cd,B1N9Cd, &
                                      B2N1Cd,B2N2Cd,B2N3Cd,B2N4Cd,B2N5Cd,B2N6Cd,B2N7Cd,B2N8Cd,B2N9Cd, &
                                      B3N1Cd,B3N2Cd,B3N3Cd,B3N4Cd,B3N5Cd,B3N6Cd,B3N7Cd,B3N8Cd,B3N9Cd  &
                                    /), (/9, 3/) )
+    
     INTEGER,  PARAMETER          :: BNCm(9, 3) = RESHAPE( (/ &    ! pitching moment coefficient
                                      B1N1Cm,B1N2Cm,B1N3Cm,B1N4Cm,B1N5Cm,B1N6Cm,B1N7Cm,B1N8Cm,B1N9Cm, &
                                      B2N1Cm,B2N2Cm,B2N3Cm,B2N4Cm,B2N5Cm,B2N6Cm,B2N7Cm,B2N8Cm,B2N9Cm, &
                                      B3N1Cm,B3N2Cm,B3N3Cm,B3N4Cm,B3N5Cm,B3N6Cm,B3N7Cm,B3N8Cm,B3N9Cm  &
                                    /), (/9, 3/) )
-     
-    INTEGER,  PARAMETER          :: BNCpmin(9, 3) = RESHAPE( (/ &    ! pressure coefficient
+    
+        INTEGER,  PARAMETER          :: BNCpmin(9, 3) = RESHAPE( (/ &    ! pressure coefficient
                                      B1N1Cpmin,B1N2Cpmin,B1N3Cpmin,B1N4Cpmin,B1N5Cpmin,B1N6Cpmin,B1N7Cpmin,B1N8Cpmin,B1N9Cpmin, &
                                      B2N1Cpmin,B2N2Cpmin,B2N3Cpmin,B2N4Cpmin,B2N5Cpmin,B2N6Cpmin,B2N7Cpmin,B2N8Cpmin,B2N9Cpmin, &
                                      B3N1Cpmin,B3N2Cpmin,B3N3Cpmin,B3N4Cpmin,B3N5Cpmin,B3N6Cpmin,B3N7Cpmin,B3N8Cpmin,B3N9Cpmin  &
@@ -1433,7 +1438,7 @@ MODULE AeroDyn_IO
                                      B2N1SgCav,B2N2SgCav,B2N3SgCav,B2N4SgCav,B2N5SgCav,B2N6SgCav,B2N7SgCav,B2N8SgCav,B2N9SgCav, &
                                      B3N1SgCav,B3N2SgCav,B3N3SgCav,B3N4SgCav,B3N5SgCav,B3N6SgCav,B3N7SgCav,B3N8SgCav,B3N9SgCav  &
                                    /), (/9, 3/) )   
-                                     
+   
     INTEGER,  PARAMETER          :: BNCx(9, 3) = RESHAPE( (/ &    ! normal force (to plane) coefficient
                                      B1N1Cx,B1N2Cx,B1N3Cx,B1N4Cx,B1N5Cx,B1N6Cx,B1N7Cx,B1N8Cx,B1N9Cx, &
                                      B2N1Cx,B2N2Cx,B2N3Cx,B2N4Cx,B2N5Cx,B2N6Cx,B2N7Cx,B2N8Cx,B2N9Cx, &
@@ -1674,24 +1679,25 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, indx, ErrStat, ErrMsg )
          m%AllOuts( BNAxInd(beta,k) ) = m%BEMT_y%axInduction(j,k)
          m%AllOuts( BNTnInd(beta,k) ) = m%BEMT_y%tanInduction(j,k)
 
-         m%AllOuts( BNAlpha(beta,k) ) = (m%BEMT_y%phi(j,k) - m%BEMT_u(indx)%theta(j,k))*R2D         
+         m%AllOuts( BNAlpha(beta,k) ) = Rad2M180to180Deg( m%BEMT_y%phi(j,k) - m%BEMT_u(indx)%theta(j,k) )         
          m%AllOuts( BNTheta(beta,k) ) = m%BEMT_u(indx)%theta(j,k)*R2D         
          m%AllOuts( BNPhi(  beta,k) ) = m%BEMT_y%phi(j,k)*R2D         
          m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D         
          
          !m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cl(j,k)         
          !m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cd(j,k)   
-         cp=cos(m%BEMT_y%phi(j,k))
-         sp=sin(m%BEMT_y%phi(j,k))
-         m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cx(j,k)*cp + m%BEMT_y%Cy(j,k)*sp         
-         m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cx(j,k)*sp - m%BEMT_y%Cy(j,k)*cp           
-         m%AllOuts( BNCm(   beta,k) ) = m%BEMT_y%Cm(j,k)  
-         m%AllOuts( BNCx(   beta,k) ) = m%BEMT_y%Cx(j,k)  
-         m%AllOuts( BNCy(   beta,k) ) = m%BEMT_y%Cy(j,k) 
          
          m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k)
          m%AllOuts( BNSigCr(   beta,k) ) = m%BEMT_y%SigmaCavitCrit(j,k)
          m%AllOuts( BNSgCav(   beta,k) ) = m%BEMT_y%SigmaCavit(j,k)
+         
+         cp=cos(m%BEMT_y%phi(j,k))
+         sp=sin(m%BEMT_y%phi(j,k))
+         m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cx(j,k)*cp + m%BEMT_y%Cy(j,k)*sp         
+         m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cx(j,k)*sp - m%BEMT_y%Cy(j,k)*cp           
+         m%AllOuts( BNCm(   beta,k) ) = m%BEMT_y%Cm(j,k)  
+         m%AllOuts( BNCx(   beta,k) ) = m%BEMT_y%Cx(j,k)  
+         m%AllOuts( BNCy(   beta,k) ) = m%BEMT_y%Cy(j,k)  
          
          ct=cos(m%BEMT_u(indx)%theta(j,k))
          st=sin(m%BEMT_u(indx)%theta(j,k))
@@ -2013,11 +2019,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%FrozenWake, "FrozenWake", "Assume frozen wake during linearization? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-            ! CavitCheck - Perform cavitation check? (flag):
+            
+      ! CavitCheck - Perform cavitation check? (flag):
    CALL ReadVar( UnIn, InputFile, InputFileData%CavitCheck, "CavitCheck", "Perform cavitation check? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-                   
+      
+      
       ! Return on error at end of section
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL Cleanup()
@@ -2029,16 +2037,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
       ! AirDens - Air density (kg/m^3):
-   CALL ReadVar( UnIn, InputFile, InputFileData%FluidDens, "FluidDens", "Air density (kg/m^3)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, InputFileData%AirDens, "AirDens", "Air density (kg/m^3)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      InputFileData%AirDens= InputFileData%FluidDens
 
       ! KinVisc - Kinematic air viscosity (m^2/s):
    CALL ReadVar( UnIn, InputFile, InputFileData%KinVisc, "KinVisc", "Kinematic air viscosity (m^2/s)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-        ! Patm - Atmospheric pressure (Pa):
+         ! Patm - Atmospheric pressure (Pa):
    CALL ReadVar( UnIn, InputFile, InputFileData%Patm, "Patm", "Atmospheric pressure (Pa)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
@@ -2052,9 +2058,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%FluidDepth, "FluidDepth", "Water depth above mid-hub height (MHK only, for cavitation check) (m)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-     ! call WrScr( NewLine//'FluidDepth_input '//trim(num2lstr(InputFileData%FluidDepth)) )
-      
-             ! SpdSound - Speed of sound (m/s):
+
+      ! SpdSound - Speed of sound (m/s):
    CALL ReadVar( UnIn, InputFile, InputFileData%SpdSound, "SpdSound", "Speed of sound (m/s)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
@@ -2126,12 +2131,12 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadCom( UnIn, InputFile, 'Section Header: Beddoes-Leishman Unsteady Airfoil Aerodynamics Options', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez’s variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%UAMod, "UAMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez’s variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
+      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
+   CALL ReadVar( UnIn, InputFile, InputFileData%UAMod, "UAMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! FLookup - Flag to indicate whether a lookup for f’ will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%FLookup, "FLookup", "Flag to indicate whether a lookup for f’ will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag)", ErrStat2, ErrMsg2, UnEc)
+      ! FLookup - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag):
+   CALL ReadVar( UnIn, InputFile, InputFileData%FLookup, "FLookup", "Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    
       ! UACutout - Angle-of-attach beyond which unsteady aerodynamics are disabled (deg)
@@ -2169,21 +2174,11 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-      ! InCol_Cpmin - The column in the airfoil tables that contains the pressure coefficient; use zero if there is no Cpmin column (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%InCol_Cpmin, "InCol_Cpmin", "The column in the airfoil tables that contains the pressure coefficient; use zero if there is no Cpmin column (-)", ErrStat2, ErrMsg2, UnEc)
+      ! InCol_Cpmin - The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column (-):
+   CALL ReadVar( UnIn, InputFile, InputFileData%InCol_Cpmin, "InCol_Cpmin", "The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) RETURN
-      
-           
-      
-      !if statement in case there is no Cpmin data, we warn the user                
-                  if (InputFileData%InCol_Cpmin == 0 .and.  InputFileData%CavitCheck== .true.) then  
-                      InputFileData%CavitCheck = .false.
-                    call WrScr( NewLine//'  Warning: No Cpmin data. Cavitation check NOT performed.................')
-                  end if
-                  
-                  
-       
+
       ! NumAFfiles - Number of airfoil files used (-):
    CALL ReadVar( UnIn, InputFile, InputFileData%NumAFfiles, "NumAFfiles", "Number of airfoil files used (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2649,7 +2644,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
          case (1)
             Msg = 'baseline model (original)'
          case (2)
-            Msg = 'Gonzalez’s variant (changes in Cn, Cc, and Cm)'
+            Msg = "Gonzalez's variant (changes in Cn, Cc, and Cm)"
          case (3)
             Msg = 'Minemma/Pierce variant (changes in Cc and Cm)'      
          !case (4)
@@ -2714,7 +2709,6 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
 RETURN
 END SUBROUTINE AD_PrintSum
 !----------------------------------------------------------------------------------------------------------------------------------
-
 
 
 !**********************************************************************************************************************************
@@ -3361,7 +3355,6 @@ END SUBROUTINE SetOutParam
 !----------------------------------------------------------------------------------------------------------------------------------
 !End of code generated by Matlab script
 !**********************************************************************************************************************************
-
 
 
 END MODULE AeroDyn_IO
