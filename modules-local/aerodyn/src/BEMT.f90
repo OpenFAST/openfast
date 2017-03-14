@@ -749,7 +749,8 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
               call SetErrStat( ErrID_Fatal, 'Turn off Unsteady Aerodynamics to do a cavitation check', ErrStat, ErrMsg, RoutineName )
             end if
             
-              
+                  
+             
             
          end do
       end do
@@ -1273,13 +1274,13 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
             
                
                
-
+             !Check to make sure there is cavitaiton data
              if ( p%CavitCheck .and. y%Cpmin(i,j)==0) then
              call SetErrStat( ErrID_Fatal, 'No Cpmin data for cavitation check', ErrStat, ErrMsg, RoutineName )
              end if
              
-                     
-              if ( p%CavitCheck ) then            ! This calculates the cavitation number for the airfoil at the node in quesiton, and compares to the critical cavitation number based on the vapour pressure and submerged depth
+              !Calculate the cavitation number for the airfoil at the node in quesiton, and compare to the critical cavitation number based on the vapour pressure and submerged depth       
+              if ( p%CavitCheck ) then   
                                
                 SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * y%Vrel(i,j)**2) ! Critical value of Sigma, cavitation if we go over this
                 SigmaCavit= -1* y%Cpmin(i,j)  ! Actual cavitation number on blade node j                                               
