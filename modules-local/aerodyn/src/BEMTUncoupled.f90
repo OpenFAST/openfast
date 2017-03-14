@@ -166,12 +166,12 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
                                           , AFInfo%Table(1)%SplineCoefs &
                                           , ErrStat, ErrMsg )
    
-  Cl = IntAFCoefs(1)
-   Cd = IntAFCoefs(2)
-   Cm = IntAFCoefs(3)
-   Cpmin = IntAFCoefs(4)
-           
-      IF ( AFInfo%ColCm > 2 )  THEN           ! If there is Cm data, it is in column 3
+    Cl = IntAFCoefs(1)
+    Cd = IntAFCoefs(2)
+!    Cm = IntAFCoefs(3)
+   ! Cpmin = IntAFCoefs(4)
+     
+           IF ( AFInfo%ColCm > 2 )  THEN           ! If there is Cm data, it is in column 3
            Cm = IntAFCoefs(3)
          
          IF ( AFInfo%ColCpmin > 2 )  THEN           
@@ -182,7 +182,7 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
              Cpmin = IntAFCoefs(3)
     END IF  
       
-   
+     
        
 end subroutine ComputeSteadyAirfoilCoefs
    
