@@ -749,11 +749,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
               call SetErrStat( ErrID_Fatal, 'Turn off Unsteady Aerodynamics to do a cavitation check', ErrStat, ErrMsg, RoutineName )
             end if
             
-                        
-             
-            
-             call WrScr ('  p%InCol_Cpmin='//trim(num2lstr((p%InCol_Cpmin)))) 
-             
+              
             
          end do
       end do
