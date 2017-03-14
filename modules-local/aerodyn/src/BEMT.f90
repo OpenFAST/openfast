@@ -163,6 +163,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%numBlades      = InitInp%numBlades    
    p%UA_Flag        = InitInp%UA_Flag
    p%CavitCheck     = InitInp%CavitCheck
+  
      
    
    allocate ( p%chord(p%numBladeNodes, p%numBlades), STAT = errStat2 )
@@ -211,7 +212,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
   !p%DT               = InitInp%DT                             
    p%airDens          = InitInp%airDens          
    p%kinVisc          = InitInp%kinVisc  
-    p%Patm             = InitInp%Patm  
+   p%Patm             = InitInp%Patm  
    p%Pvap             = InitInp%Pvap 
    p%CavitCheck       = InitInp%CavitCheck
    p%FluidDepth       = InitInp%FluidDepth
@@ -226,6 +227,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%maxIndIterations = InitInp%maxIndIterations 
    p%aTol             = InitInp%aTol
    p%InCol_Cpmin      = InitInp%InCol_Cpmin
+   
    
 end subroutine BEMT_SetParameters
 
@@ -719,6 +721,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    write (69,'(A)')    ' '
    
 #endif
+ 
 
       do j = 1,p%numBlades
          do i = 1,p%numBladeNodes ! Loop over blades and nodes
@@ -740,12 +743,17 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
                call WrScr( 'Warning: Turning off Unsteady Aerodynamics because C_nalpha is 0.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
             end if
             
-            if ( p%CavitCheck ) then
+            
+            if ( p%CavitCheck .and. OtherState%UA_Flag(i,j)) then
              OtherState%UA_Flag(i,j) = .false.
-               call WrScr( 'Warning: Turning off Unsteady Aerodynamics because doing cavitation check' )
-               call WrScr( 'To run Unsteady Aerodynamics, set CavitCheck to FALSE in input file' )
+              call SetErrStat( ErrID_Fatal, 'Turn off Unsteady Aerodynamics to do a cavitation check', ErrStat, ErrMsg, RoutineName )
             end if
             
+                        
+             
+            
+             call WrScr ('  p%InCol_Cpmin='//trim(num2lstr((p%InCol_Cpmin)))) 
+             
             
          end do
       end do
@@ -1186,7 +1194,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
             !  local velocities and twist angle
          Vx    = u%Vx(i,j)
          Vy    = u%Vy(i,j)
-         theta = u%theta(i,j)
+         !theta = u%theta(i,j)
          
          
          
@@ -1263,15 +1271,20 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
          else 
                ! TODO: When we start using Re, should we use the uninduced Re since we used uninduced Re to solve for the inductions!? Probably this won't change, instead create a Re loop up above.
             call ComputeSteadyAirfoilCoefs( y%AOA(i,j), y%Re(i,j),  AFInfo(p%AFindx(i,j)), &
-                                         y%Cl(i,j), y%Cd(i,j), y%Cd(i,j), y%Cpmin(i,j),  errStat2, errMsg2 ) 
+                                         y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), y%Cpmin(i,j),  errStat2, errMsg2 ) 
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
                if (errStat >= AbortErrLev) return 
+            
                
                
+
+             if ( p%CavitCheck .and. y%Cpmin(i,j)==0) then
+             call SetErrStat( ErrID_Fatal, 'No Cpmin data for cavitation check', ErrStat, ErrMsg, RoutineName )
+             end if
+             
                      
-              if ( p%CavitCheck ) then
-             ! This calculates the cavitation number for the airfoil at the node in quesiton, and compares to the critical cavitation number based on the vapour pressure and submerged depth
-                   
+              if ( p%CavitCheck ) then            ! This calculates the cavitation number for the airfoil at the node in quesiton, and compares to the critical cavitation number based on the vapour pressure and submerged depth
+                               
                 SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * y%Vrel(i,j)**2) ! Critical value of Sigma, cavitation if we go over this
                 SigmaCavit= -1* y%Cpmin(i,j)  ! Actual cavitation number on blade node j                                               
                                   
@@ -1290,7 +1303,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                   y%SigmaCavitCrit(i,j)=SigmaCavitCrit  
                   
               end if 
-               
+            
                
          end if
 
@@ -1985,5 +1998,8 @@ end subroutine BEMT_UnCoupledSolve
 
 
 
-end module BEMT
+    end module BEMT
+    
+    
+    
     
