@@ -93,6 +93,7 @@ contains
         W = sqrt((Vx*(1-axInduction))**2 + (Vy*(1+tanInduction))**2)
     !end if
 
+
     Re = airDens * W * chord / mu
     if ( EqualRealNos(Re, 0.0_ReKi) ) Re = 0.001  ! Do this to avoid a singularity when we take log(Re) in the airfoil lookup.
 
