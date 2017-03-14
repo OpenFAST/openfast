@@ -93,7 +93,6 @@ contains
         W = sqrt((Vx*(1-axInduction))**2 + (Vy*(1+tanInduction))**2)
     !end if
 
-
     Re = airDens * W * chord / mu
     if ( EqualRealNos(Re, 0.0_ReKi) ) Re = 0.001  ! Do this to avoid a singularity when we take log(Re) in the airfoil lookup.
 
@@ -167,23 +166,27 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
                                           , AFInfo%Table(1)%SplineCoefs &
                                           , ErrStat, ErrMsg )
    
+  
     Cl = IntAFCoefs(1)
     Cd = IntAFCoefs(2)
-!    Cm = IntAFCoefs(3)
-   ! Cpmin = IntAFCoefs(4)
+   
      
-           IF ( AFInfo%ColCm > 2 )  THEN           ! If there is Cm data, it is in column 3
+          IF ( AFInfo%InCol_Cm > 0 )  THEN           ! If there is Cm data, it is in column 3
            Cm = IntAFCoefs(3)
          
-         IF ( AFInfo%ColCpmin > 2 )  THEN           
+         IF ( AFInfo%InCol_Cpmin > 0 )  THEN           
          Cpmin = IntAFCoefs(4)
-         END IF
+        END IF
          
-    ELSE IF ( AFInfo%ColCpmin > 2 )  THEN       ! If there is Cpmin data and no Cm data, Cpmin is in column 3
+   ELSE IF ( AFInfo%InCol_Cpmin > 0 )  THEN       ! If there is Cpmin data and no Cm data, Cpmin is in column 3
              Cpmin = IntAFCoefs(3)
     END IF  
+    
       
      
+
+          
+      
        
 end subroutine ComputeSteadyAirfoilCoefs
    
