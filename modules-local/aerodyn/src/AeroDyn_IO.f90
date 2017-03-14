@@ -1684,8 +1684,8 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, indx, ErrStat, ErrMsg )
          m%AllOuts( BNPhi(  beta,k) ) = m%BEMT_y%phi(j,k)*R2D         
          m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D         
          
-         !m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cl(j,k)         
-         !m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cd(j,k)   
+         m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cl(j,k)         
+         m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cd(j,k)   
          
          m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k)
          m%AllOuts( BNSigCr(   beta,k) ) = m%BEMT_y%SigmaCavitCrit(j,k)
@@ -2044,25 +2044,23 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%KinVisc, "KinVisc", "Kinematic air viscosity (m^2/s)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-         ! Patm - Atmospheric pressure (Pa):
+    ! SpdSound - Speed of sound (m/s):
+   CALL ReadVar( UnIn, InputFile, InputFileData%SpdSound, "SpdSound", "Speed of sound (m/s)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+     ! Patm - Atmospheric pressure (Pa):
    CALL ReadVar( UnIn, InputFile, InputFileData%Patm, "Patm", "Atmospheric pressure (Pa)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
            
-             ! Pvap - Vapour pressure of fluid (Pa):
+     ! Pvap - Vapour pressure of fluid (Pa):
    CALL ReadVar( UnIn, InputFile, InputFileData%Pvap, "Pvap", "Vapour pressure of fluid (Pa)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-           
-        ! FluidDepth - Water depth above mid-hub height (m) - used for caviation check:
+                 
+      ! FluidDepth - Water depth above mid-hub height (m) - used for caviation check:
    CALL ReadVar( UnIn, InputFile, InputFileData%FluidDepth, "FluidDepth", "Water depth above mid-hub height (MHK only, for cavitation check) (m)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-
-      ! SpdSound - Speed of sound (m/s):
-   CALL ReadVar( UnIn, InputFile, InputFileData%SpdSound, "SpdSound", "Speed of sound (m/s)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
+         
       ! Return on error at end of section
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL Cleanup()
@@ -2177,6 +2175,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       ! InCol_Cpmin - The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column (-):
    CALL ReadVar( UnIn, InputFile, InputFileData%InCol_Cpmin, "InCol_Cpmin", "The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    
+      
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! NumAFfiles - Number of airfoil files used (-):
