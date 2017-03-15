@@ -29,7 +29,7 @@ typedef  ^               ParameterType         CHARACTER(1024) FTitle          -
 typedef  ^               ParameterType         CHARACTER(1024) OutFileRoot     -    - - "The root name derived from the primary FAST.Farm input file" -
 typedef  ^               ParameterType         INTEGER         n_ChkptTime     -    - - "Number of time steps between writing checkpoint files"	-
 typedef  ^               ParameterType         DbKi            TStart          -    - - "Time to begin tabular output" s
-typedef  ^               ParameterType         IntKi           n_TMax_m1       -    - - "Number of the time step of TMax - dt (the end time of the simulation)" -
+typedef  ^               ParameterType         IntKi           n_TMax          -    - - "Number of the time step of TMax (the end time of the simulation)" -
 # parameters for data output to files:
 typedef  ^               ParameterType         LOGICAL         WrBinOutFile    -    - - "Write a binary output file? (.outb)" -
 typedef  ^               ParameterType         LOGICAL         WrTxtOutFile    -    - - "Write a text (formatted) output file? (.out)" -
@@ -39,15 +39,17 @@ typedef  ^               ParameterType         CHARACTER(20)   OutFmt_t        -
 typedef  ^               ParameterType         IntKi           FmtWidth        -    - - "width of the time OutFmt specifier" -
 typedef  ^               ParameterType         IntKi           TChanLen        -    - - "width of the time channel" -
 typedef  ^               ParameterType         LOGICAL         WrDisWind       -    - - "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.?" -
-typedef  ^               ParameterType         IntKi           NOutDisWindXY   -    - - "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk [0 to 99]" -
+typedef  ^               ParameterType         IntKi           NOutDisWindXY   -    - - "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^               ParameterType         ReKi            OutDisWindZ    {:}   - - "Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXY]" meters
-typedef  ^               ParameterType         IntKi           NOutDisWindYZ   -    - - "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk [0 to 99]" -
+typedef  ^               ParameterType         IntKi           NOutDisWindYZ   -    - - "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^               ParameterType         ReKi            OutDisWindX    {:}   - - "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindYZ]" meters
-typedef  ^               ParameterType         IntKi           NOutDisWindXZ   -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 99]" -
+typedef  ^               ParameterType         IntKi           NOutDisWindXZ   -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^               ParameterType         ReKi            OutDisWindY    {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
-typedef  ^               ParameterType         IntKi           NOutDist        -    - - "Number of downstream distances for wake output for an individual rotor [0 to 99]" -
+typedef  ^               ParameterType         IntKi           NOutRadii       -    - - "Number of radial nodes for wake output for an individual rotor [0 to 20]" -
+typedef  ^               ParameterType         IntKi           OutRadii       {:}   - - "List of radial nodes for wake output for an individual rotor [1 to NOutRadii]" -
+typedef  ^               ParameterType         IntKi           NOutDist        -    - - "Number of downstream distances for wake output for an individual rotor [0 to 9]" -
 typedef  ^               ParameterType         ReKi            OutDist        {:}   - - "List of downstream distances for wake output for an individual rotor [1 to NOutDist]" meters
-typedef  ^               ParameterType         IntKi           NWindVel        -    - - "Number of points for wind output [0 to 99]" -
+typedef  ^               ParameterType         IntKi           NWindVel        -    - - "Number of points for wind output [0 to 9]" -
 typedef  ^               ParameterType         ReKi            WindVelX       {:}   - - "List of coordinates in the X direction for wind output [1 to NWindVel]" meters
 typedef  ^               ParameterType         ReKi            WindVelY       {:}   - - "List of coordinates in the Y direction for wind output [1 to NWindVel]" meters
 typedef  ^               ParameterType         ReKi            WindVelZ       {:}   - - "List of coordinates in the Z direction for wind output [1 to NWindVel]" meters
