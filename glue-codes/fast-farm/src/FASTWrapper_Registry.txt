@@ -78,7 +78,7 @@ typedef      ^            ParameterType       ReKi       p_ref_Turbine          
 # Define inputs that are contained on the mesh here:
 typedef      ^            InputType           SiKi       FromSC_Global            {:}     -      -      "Global (turbine-independent) commands from the super controller"      "(various units)"
 typedef      ^            InputType           SiKi       FromSC_Turbine           {:}     -      -      "Turbine-dependent commands from the super controller from the super controller"      "(various units)"
-typedef      ^            InputType           ReKi       V_high_dist    {:}{:}{:}{:}{:}   -      -      "UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step"      "(m/s)"
+typedef      ^            InputType           ReKi       Vdist_High     {:}{:}{:}{:}{:}   -      -      "UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step"      "(m/s)"
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
