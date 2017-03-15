@@ -33,7 +33,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               
-          ProgDesc( 'NWTC Subroutine Library', 'v2.11.01', '7-Feb-2017')    !< The name, version, and date of the NWTC Subroutine Library
+          ProgDesc( 'NWTC Subroutine Library', 'v2.11.02', '13-Mar-2017')    !< The name, version, and date of the NWTC Subroutine Library
 
       !> This type stores a linked list of file names, used in MLB-style input file parsing (currently used in AirfoilInfo)
    TYPE, PUBLIC   :: FNlist_Type                                
@@ -6743,7 +6743,7 @@ CONTAINS
    DO IC=1,NumOutChans                    ! Loop through the output channels
 
       IF ( ColMax(IC) == ColMin(IC) ) THEN
-         ColScl(IC) = 1
+         ColScl(IC) = IntRng/SQRT(EPSILON(1.0_SiKi))
       ELSE
          ColScl(IC) = IntRng/REAL( ColMax(IC) - ColMin(IC), SiKi )
       ENDIF
