@@ -193,18 +193,23 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    m_FAST%UsrTime1 = MAX( 0.0_ReKi, m_FAST%UsrTime1 )                   ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
    
 
-   AbortErrLev            = ErrID_Fatal                                 ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
    m_FAST%t_global        = t_initial - 20.                             ! initialize this to a number < t_initial for error message in ProgAbort
    m_FAST%calcJacobian    = .TRUE.                                      ! we need to calculate the Jacobian
    m_FAST%NextJacCalcTime = m_FAST%t_global                             ! We want to calculate the Jacobian on the first step
-   
+   p_FAST%TDesc           = ''
+
    if (present(ExternInitData)) then
       CallStart = .not. ExternInitData%FarmIntegration ! .and. ExternInitData%TurbineID == 1
+      if (ExternInitData%TurbineID > 0) p_FAST%TDesc = 'T'//trim(num2lstr(ExternInitData%TurbineID))
    else
       CallStart = .true.
    end if
    
-   
+   if (CallStart) then ! if we don't call the start data (e.g., from FAST.Farm), we won't override AbortErrLev either 
+      AbortErrLev         = ErrID_Fatal                                 ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
+   end if
+      
+         
    
       ! Init NWTC_Library, display copyright and version information:
    if (CallStart) then
@@ -229,7 +234,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! also, set turbine reference position for graphics output
    if (PRESENT(ExternInitData)) then
       p_FAST%TurbinePos = ExternInitData%TurbinePos
-      CALL FAST_Init( p_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, ExternInitData%TurbineID )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)         
+      
+      if (ExternInitData%FarmIntegration) then ! we're integrating with FAST.Farm
+         CALL FAST_Init( p_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, OverrideAbortLev=.false., RootName=ExternInitData%RootName )         
+      else
+         CALL FAST_Init( p_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, ExternInitData%TurbineID )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)         
+      end if
+      
    else
       p_FAST%TurbinePos = 0.0_ReKi
       CALL FAST_Init( p_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2 )                       ! We have the name of the input file from somewhere else (e.g. Simulink)
@@ -392,7 +403,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
-        
+     
    ALLOCATE( AD%Input( p_FAST%InterpOrder+1 ), AD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating AD%Input and AD%InputTimes.",ErrStat,ErrMsg,RoutineName)
@@ -1323,7 +1334,7 @@ END SUBROUTINE GetInputFileName
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine checks for command-line arguments, gets the root name of the input files
 !! (including full path name), and creates the names of the output files.
-SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, TurbID  )
+SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, TurbID, OverrideAbortLev, RootName )
 
       IMPLICIT                        NONE
 
@@ -1335,14 +1346,17 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
    INTEGER(IntKi),           INTENT(OUT)           :: ErrStat           !< Error status
    CHARACTER(*),             INTENT(OUT)           :: ErrMsg            !< Error message
    CHARACTER(*),             INTENT(IN)            :: InputFile         !< A CHARACTER string containing the name of the primary FAST input file (if not present, we'll get it from the command line)
-   REAL(DbKi),               INTENT(IN), OPTIONAL  :: TMax              !< the length of the simulation (from Simulink)
+   REAL(DbKi),               INTENT(IN), OPTIONAL  :: TMax              !< the length of the simulation (from Simulink or FAST.Farm)
    INTEGER(IntKi),           INTENT(IN), OPTIONAL  :: TurbID            !< an ID for naming the tubine output file
+   LOGICAL,                  INTENT(IN), OPTIONAL  :: OverrideAbortLev  !< whether or not we should override the abort error level (e.g., FAST.Farm)
+   CHARACTER(*),             INTENT(IN), OPTIONAL  :: RootName          !< A CHARACTER string containing the root name of FAST output files, overriding normal naming convention
       ! Local variables
 
    INTEGER                      :: i                                    ! loop counter
    !CHARACTER(1024)              :: DirName                              ! A CHARACTER string containing the path of the current working directory
 
 
+   LOGICAL                      :: OverrideAbortErrLev  
    CHARACTER(*), PARAMETER      :: RoutineName = "FAST_Init"
    
    INTEGER(IntKi)               :: ErrStat2
@@ -1351,22 +1365,33 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
       ! Initialize some variables
    ErrStat = ErrID_None
    ErrMsg = ''
+   
+   IF (PRESENT(OverrideAbortLev)) THEN
+      OverrideAbortErrLev = OverrideAbortLev
+   ELSE
+      OverrideAbortErrLev = .true.
+   END IF
+   
 
    
    !...............................................................................................................................
    ! Set the root name of the output files based on the input file name
    !...............................................................................................................................
-         
-      ! Determine the root name of the primary file (will be used for output files)
-   CALL GetRoot( InputFile, p%OutFileRoot )
-   IF ( Cmpl4SFun )  p%OutFileRoot = TRIM( p%OutFileRoot )//'.SFunc'
-   IF ( PRESENT(TurbID) ) THEN
-      IF ( TurbID > 0 ) THEN
-         p%OutFileRoot = TRIM( p%OutFileRoot )//'.T'//TRIM(Num2LStr(TurbID))
-      END IF
-   END IF
    
-      
+   if (present(RootName)) then
+      p%OutFileRoot = RootName
+   else         
+         ! Determine the root name of the primary file (will be used for output files)
+      CALL GetRoot( InputFile, p%OutFileRoot )
+      IF ( Cmpl4SFun )  p%OutFileRoot = TRIM( p%OutFileRoot )//'.SFunc'
+      IF ( PRESENT(TurbID) ) THEN
+         IF ( TurbID > 0 ) THEN
+            p%OutFileRoot = TRIM( p%OutFileRoot )//'.T'//TRIM(Num2LStr(TurbID))
+         END IF
+      END IF
+   
+   end if
+   
    
    !...............................................................................................................................
    ! Initialize the module name/date/version info:
@@ -1415,12 +1440,13 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
    !...............................................................................................................................
    ! Read the primary file for the glue code:
    !...............................................................................................................................
-   CALL FAST_ReadPrimaryFile( InputFile, p, ErrStat2, ErrMsg2 )
+   CALL FAST_ReadPrimaryFile( InputFile, p, OverrideAbortErrLev, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       
       ! overwrite TMax if necessary)
    IF (PRESENT(TMax)) THEN
-      p%TMax = MAX( TMax, p%TMax )
+      p%TMax = TMax
+      !p%TMax = MAX( TMax, p%TMax )
    END IF
    
    IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1975,13 +2001,14 @@ END SUBROUTINE FAST_InitOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads in the primary FAST input file, does some validation, and places the values it reads in the
 !!   parameter structure (p). It prints to an echo file if requested.
-SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
+SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, OverrideAbortErrLev, ErrStat, ErrMsg )
 
    IMPLICIT                        NONE
 
       ! Passed variables
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
    CHARACTER(*),             INTENT(IN)    :: InputFile                       !< Name of the file containing the primary input data
+   LOGICAL,                  INTENT(IN)    :: OverrideAbortErrLev             !< Determines if we should override AbortErrLev
    INTEGER(IntKi),           INTENT(OUT)   :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(OUT)   :: ErrMsg                          !< Error message
 
@@ -2108,22 +2135,24 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
          RETURN        
       end if
 
+      IF (OverrideAbortErrLev) THEN
       ! Let's set the abort level here.... knowing that everything before this aborted only on FATAL errors!
-      CALL Conv2UC( AbortLevel ) !convert to upper case
-      SELECT CASE( TRIM(AbortLevel) )
-         CASE ( "WARNING" )
-            AbortErrLev = ErrID_Warn
-         CASE ( "SEVERE" )
-            AbortErrLev = ErrID_Severe
-         CASE ( "FATAL" )
-            AbortErrLev = ErrID_Fatal
-         CASE DEFAULT
-            CALL SetErrStat( ErrID_Fatal, 'Invalid AbortLevel specified in FAST input file. '// &
-                             'Valid entries are "WARNING", "SEVERE", or "FATAL".',ErrStat,ErrMsg,RoutineName)
-            call cleanup()
-            RETURN
-      END SELECT
-
+         CALL Conv2UC( AbortLevel ) !convert to upper case
+         SELECT CASE( TRIM(AbortLevel) )
+            CASE ( "WARNING" )
+               AbortErrLev = ErrID_Warn
+            CASE ( "SEVERE" )
+               AbortErrLev = ErrID_Severe
+            CASE ( "FATAL" )
+               AbortErrLev = ErrID_Fatal
+            CASE DEFAULT
+               CALL SetErrStat( ErrID_Fatal, 'Invalid AbortLevel specified in FAST input file. '// &
+                                'Valid entries are "WARNING", "SEVERE", or "FATAL".',ErrStat,ErrMsg,RoutineName)
+               call cleanup()
+               RETURN
+         END SELECT
+      END IF
+      
 
       ! TMax - Total run time (s):
    CALL ReadVar( UnIn, InputFile, p%TMax, "TMax", "Total run time (s)", ErrStat2, ErrMsg2, UnEc)
@@ -3564,7 +3593,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    ErrMsg  = ""
    
    
-   CALL SimStatus_FirstTime( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, p_FAST%TMax )
+   CALL SimStatus_FirstTime( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )
 
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
@@ -4437,7 +4466,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    IF ( MOD( n_t_global + 1, p_FAST%n_SttsTime ) == 0 ) THEN
       
       if (.not. Cmpl4SFun) then   
-         CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax )
+         CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )
       end if
       
    ENDIF   
@@ -4782,6 +4811,7 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_AllMeshes'
+   
    
    NumBl = 0
    if (allocated(ED%Output)) then
@@ -5709,7 +5739,7 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    !  Write simulation times and stop
    !............................................................................................................................
 
-   CALL RunTimes( m_FAST%StrtTime, m_FAST%UsrTime1, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global )
+   CALL RunTimes( m_FAST%StrtTime, m_FAST%UsrTime1, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, DescStrIn=p_FAST%TDesc )
 
    if (StopTheProgram) then
 #if (defined COMPILE_SIMULINK || defined COMPILE_LABVIEW)

@@ -1,0 +1,103 @@
+###################################################################################################################################
+# Registry for FAST_Farm in the FAST Modularization Framework
+# This Registry file is used to create MODULE FAST_Farm_Types, which contains all of the user-defined types needed in fast_farm.
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.
+#
+# Entries are of the form
+# keyword <ModuleName/ModName> <TypeName>    <FieldType>    <FieldName>  <Dims>  <IO> <DNAME> <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value from the previous line.
+# See NWTC Programmer's Handbook at https://nwtc.nrel.gov/FAST-Developers for further information on the format/contents of this file.
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include Registry_NWTC_Library.txt
+usefrom FASTWrapper_Registry.txt
+usefrom WakeDynamics_Registry.txt
+usefrom AWAE_Registry.txt
+
+# ..... Parameters ................................................................................................................
+typedef  FAST_Farm/Farm  ParameterType         DbKi            DT              -    - - "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step" seconds
+typedef  ^               ParameterType         DbKi            DT_high         -    - - "High-resolution time step"  seconds
+typedef  ^               ParameterType         DbKi            TMax            -    - - "Total run time" seconds
+typedef  ^               ParameterType         IntKi           n_high_low      -    - - "Number of high-resolution time steps per low-resolution time step"      -
+typedef  ^               ParameterType         IntKi           NumTurbines     -    - - "Number of turbines in the simulation" -
+typedef  ^               ParameterType         CHARACTER(1024) WindFilePath    -    - - "Path name of wind data files from ABLSolver precursor" -
+typedef  ^               ParameterType         ReKi            WT_Position   {:}{:} - - "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
+typedef  ^               ParameterType         CHARACTER(1024) WT_FASTInFile {:}    - - "Name of input file for each turbine" -
+typedef  ^               ParameterType         CHARACTER(1024) FTitle          -    - - "The description line from the primary FAST.Farm input file" -
+typedef  ^               ParameterType         CHARACTER(1024) OutFileRoot     -    - - "The root name derived from the primary FAST.Farm input file" -
+typedef  ^               ParameterType         INTEGER         n_ChkptTime     -    - - "Number of time steps between writing checkpoint files"	-
+typedef  ^               ParameterType         DbKi            TStart          -    - - "Time to begin tabular output" s
+typedef  ^               ParameterType         IntKi           n_TMax_m1       -    - - "Number of the time step of TMax - dt (the end time of the simulation)" -
+# parameters for data output to files:
+typedef  ^               ParameterType         LOGICAL         WrBinOutFile    -    - - "Write a binary output file? (.outb)" -
+typedef  ^               ParameterType         LOGICAL         WrTxtOutFile    -    - - "Write a text (formatted) output file? (.out)" -
+typedef  ^               ParameterType         CHARACTER(1)    Delim           -    - - "Delimiter between columns of text output file (.out): space or tab" -
+typedef  ^               ParameterType         CHARACTER(20)   OutFmt          -    - - "Format used for text tabular output (except time); resulting field should be 10 characters" -
+typedef  ^               ParameterType         CHARACTER(20)   OutFmt_t        -    - - "Format used for time channel in text tabular output; resulting field should be 10 characters" -
+typedef  ^               ParameterType         IntKi           FmtWidth        -    - - "width of the time OutFmt specifier" -
+typedef  ^               ParameterType         IntKi           TChanLen        -    - - "width of the time channel" -
+typedef  ^               ParameterType         LOGICAL         WrDisWind       -    - - "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.?" -
+typedef  ^               ParameterType         IntKi           NOutDisWindXY   -    - - "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk [0 to 99]" -
+typedef  ^               ParameterType         ReKi            OutDisWindZ    {:}   - - "Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXY]" meters
+typedef  ^               ParameterType         IntKi           NOutDisWindYZ   -    - - "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk [0 to 99]" -
+typedef  ^               ParameterType         ReKi            OutDisWindX    {:}   - - "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindYZ]" meters
+typedef  ^               ParameterType         IntKi           NOutDisWindXZ   -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 99]" -
+typedef  ^               ParameterType         ReKi            OutDisWindY    {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
+typedef  ^               ParameterType         IntKi           NOutDist        -    - - "Number of downstream distances for wake output for an individual rotor [0 to 99]" -
+typedef  ^               ParameterType         ReKi            OutDist        {:}   - - "List of downstream distances for wake output for an individual rotor [1 to NOutDist]" meters
+typedef  ^               ParameterType         IntKi           NWindVel        -    - - "Number of points for wind output [0 to 99]" -
+typedef  ^               ParameterType         ReKi            WindVelX       {:}   - - "List of coordinates in the X direction for wind output [1 to NWindVel]" meters
+typedef  ^               ParameterType         ReKi            WindVelY       {:}   - - "List of coordinates in the Y direction for wind output [1 to NWindVel]" meters
+typedef  ^               ParameterType         ReKi            WindVelZ       {:}   - - "List of coordinates in the Z direction for wind output [1 to NWindVel]" meters
+typedef	^	             ParameterType	        OutParmType	   OutParam	      {:}	- - "Names and units (and other characteristics) of all requested output parameters"	-
+typedef  ^               ParameterType         IntKi           NumOuts         -    - - "Number of user-requested outputs" -
+typedef  ^               ParameterType         IntKi           UnOu            -    - - "File unit for Fast.Farm output data" -
+# ..... FAST MiscVar data .......................................................................................................
+typedef	^	             MiscVarType	        ReKi	         AllOuts	      {:}	- - "An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
+
+# ..... FASTWrapper data .......................................................................................................
+typedef    ^    FASTWrapper_Data  FWrap_ContinuousStateType x             -   -         -   "Continuous states"
+typedef    ^    ^                 FWrap_DiscreteStateType   xd            -   -         -   "Discrete states"
+typedef    ^    ^                 FWrap_ConstraintStateType z             -   -         -   "Constraint states"
+typedef    ^    ^                 FWrap_OtherStateType      OtherSt       -   -         -   "Other states"
+typedef    ^    ^                 FWrap_ParameterType       p             -   -         -   "Parameters"
+typedef    ^    ^                 FWrap_InputType           u             -   -         -   "System inputs"
+typedef    ^    ^                 FWrap_OutputType          y             -   -         -   "System outputs"
+typedef    ^    ^                 FWrap_MiscVarType         m             -   -         -   "Misc/optimization variables"
+typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has FWrap_Init been called"
+
+# ..... WakeDynamics data .......................................................................................................
+typedef    ^    WakeDynamics_Data WD_ContinuousStateType    x             -   -         -   "Continuous states"
+typedef    ^    ^                 WD_DiscreteStateType      xd            -   -         -   "Discrete states"
+typedef    ^    ^                 WD_ConstraintStateType    z             -   -         -   "Constraint states"
+typedef    ^    ^                 WD_OtherStateType         OtherSt       -   -         -   "Other states"
+typedef    ^    ^                 WD_ParameterType          p             -   -         -   "Parameters"
+typedef    ^    ^                 WD_InputType              u             -   -         -   "System inputs"
+typedef    ^    ^                 WD_OutputType             y             -   -         -   "System outputs"
+typedef    ^    ^                 WD_MiscVarType            m             -   -         -   "Misc/optimization variables"
+typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has WD_Init been called"
+
+# ..... AWAE data .......................................................................................................
+typedef    ^    AWAE_Data         AWAE_ContinuousStateType  x             -   -         -   "Continuous states"
+typedef    ^    ^                 AWAE_DiscreteStateType    xd            -   -         -   "Discrete states"
+typedef    ^    ^                 AWAE_ConstraintStateType  z             -   -         -   "Constraint states"
+typedef    ^    ^                 AWAE_OtherStateType       OtherSt       -   -         -   "Other states"
+typedef    ^    ^                 AWAE_ParameterType        p             -   -         -   "Parameters"
+typedef    ^    ^                 AWAE_InputType            u             -   -         -   "System inputs"
+typedef    ^    ^                 AWAE_OutputType           y             -   -         -   "System outputs"
+typedef    ^    ^                 AWAE_MiscVarType          m             -   -         -   "Misc/optimization variables"
+typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has AWAE_Init been called"
+
+
+# ..... All submodules' variables.................................................................................................
+typedef    ^   All_FastFarm_Data  Farm_ParameterType        p          -   -   -   "FAST.Farm parameter data" -
+typedef    ^   All_FastFarm_Data  Farm_MiscVarType          m          -   -   -   "FAST.Farm misc var data" -
+typedef    ^   All_FastFarm_Data  FASTWrapper_Data          FWrap     {:}  -   -   "FASTWrapper data (one instance per turbine)" -
+typedef    ^   All_FastFarm_Data  WakeDynamics_Data         WD        {:}  -   -   "WakeDynamics (WD) data" -
+typedef    ^   All_FastFarm_Data  AWAE_Data                 AWAE       -   -   -   "Ambient Wind & Array Effects (AWAE) data" -
+
+
+# ..... FAST.Farm data ................................................................................................................
+#

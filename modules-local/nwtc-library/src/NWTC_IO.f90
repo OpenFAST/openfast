@@ -7679,6 +7679,250 @@ CONTAINS
    
       RETURN
    END SUBROUTINE WrVTK_footer
+   
 !=======================================================================
-
+!> This routine reads the header for a vtk, ascii, structured_points dataset file,
+!! including all the information about the structured points.  It tries to open a 
+!! text file for reading and returns the Unit number of the opened file.
+!! The caller is responsible for closing the file unit!
+   SUBROUTINE ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
+   
+      CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file     
+      CHARACTER(1024) , INTENT(  OUT)        :: descr                !< Line describing the contents of the file
+      INTEGER(IntKi)  , INTENT(  OUT)        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
+      REAL(ReKi)      , INTENT(  OUT)        :: origin(3)            !< the lower-left corner of the 3D grid (X0,Y0,Z0)
+      REAL(ReKi)      , INTENT(  OUT)        :: gridSpacing(3)       !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
+      CHARACTER(1024) , INTENT(  OUT)        :: vecLabel
+      INTEGER(IntKi)  , INTENT(  OUT)        :: Un                   !< unit number of opened file
+      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
+      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
+   
+      INTEGER(IntKi)              :: ErrStat2              ! local error level/status of OpenFOutFile operation
+      CHARACTER(ErrMsgLen)        :: ErrMsg2              ! local message when error occurs   
+      CHARACTER(1024)             :: Line, Line2              ! one line of the file
+      CHARACTER(1024)             :: formatLbl
+      CHARACTER(*), PARAMETER     :: RoutineName = 'ReadVTK_SP_info'
+      INTEGER(IntKi)              :: sz, nPts
+      
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+      
+      CALL GetNewUnit( Un, ErrStat, ErrMsg )      
+      CALL OpenFInpFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
+         if (ErrStat >= AbortErrLev) return
+      
+       CALL ReadCom( Un, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, 0 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+      CALL ReadStr( Un, FileName, descr, 'descr', 'File Description line', ErrStat2, ErrMsg2, 0 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+      formatLbl = ""   
+      CALL ReadStr( Un, FileName, formatLbl, 'formatLbl', 'ASCII label', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call Conv2UC(formatLbl)
+      if (INDEX(formatLbl, "ASCII" ) == 0 ) THEN ! If this line doesn't contain the word ASCII, we have a bad file header
+         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find ASCII label', ErrStat, ErrMsg, RoutineName )
+      end if  
+      Line = ""
+      CALL ReadStr( Un, FileName, Line, "dataset", "DATASET STRUCTURED_POINTS", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DATASET" ) == 0 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
+        CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find DATASET label', ErrStat, ErrMsg, RoutineName )
+      END IF 
+      IF ( INDEX(Line, "STRUCTURED_POINTS" ) == 0 ) THEN ! If this line doesn't also contain the word structured_points, we have a bad file header
+         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find STRUCTURED_POINTS label', ErrStat, ErrMsg, RoutineName )
+      end if
+        
+         ! Dimensions
+      Line = ""
+      CALL ReadStr( Un, FileName, Line, "Dimensions", "DIMENSIONS data", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      Line = trim(Line)
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DIMENSIONS" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
+         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find DIMENSIONS label', ErrStat, ErrMsg, RoutineName )
+      ELSE
+         sz = len(Line)
+         Line = Line(12:sz)
+         READ(Line,*)  dims
+      END IF 
+      
+         ! Origin
+      Line = ""
+      CALL ReadStr( Un, FileName, Line, "Origin", "ORIGIN data", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      Line = trim(Line)
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "ORIGIN" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
+         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find ORIGIN label', ErrStat, ErrMsg, RoutineName )
+      ELSE
+         sz = len(Line)
+         Line = Line(8:sz)
+         READ(Line,*)  origin
+      END IF 
+      
+         ! Spacing      
+      Line = ""
+      CALL ReadStr( Un, FileName, Line, "gridSpacing", "SPACING data", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      Line = trim(Line)
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "SPACING" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
+         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find SPACING label', ErrStat, ErrMsg, RoutineName )
+      ELSE
+         sz = len(Line)
+         Line = Line(9:sz)
+         READ(Line,*)  gridSpacing
+      END IF 
+      
+         ! Point Data
+      Line = ""
+      CALL ReadStr( Un, FileName, Line, "Point_Data", "POINT_DATA", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      Line = trim(Line)
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "POINT_DATA" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
+         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find POINT_DATA label', ErrStat, ErrMsg, RoutineName )
+      ELSE
+         sz = len(Line)
+         Line = Line(12:sz)
+         READ(Line,*)  nPts
+      END IF 
+      
+         ! Vector Label
+      Line = ""
+      CALL ReadStr( Un, FileName, Line, "Vectors", "VECTORS label", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      Line = trim(Line)
+      Line2 = Line
+      CALL Conv2UC( Line2 )
+      IF ( INDEX(Line2, "VECTORS" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
+         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find VECTORS label', ErrStat, ErrMsg, RoutineName )
+      ELSE
+         sz = INDEX(Line2, "FLOAT" )
+         vecLabel = Line(9:sz-2)
+         
+      END IF 
+      
+      IF ( ErrStat >= AbortErrLev ) THEN
+         close(Un)
+         RETURN
+      END IF
+      
+      RETURN
+   END SUBROUTINE ReadVTK_SP_info
+   
+!=======================================================================
+!> This routine reads the vector data for a vtk, ascii, structured_points dataset file,
+!! The Unit number of the  file is already assumed to be valid via a previous call to
+!! ReadVTK_SP_info.  
+   SUBROUTINE ReadVTK_SP_vectors( FileName, Un, dims, gridVals, ErrStat, ErrMsg ) 
+   
+      CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file     
+      INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of opened file
+      INTEGER(IntKi)  , INTENT(IN   )        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
+      REAL(ReKi)      , ALLOCATABLE, INTENT(  OUT)        :: gridVals(:,:,:,:)    !< 3D array of data, size (nX,nY,nZ)
+      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
+      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
+   
+      INTEGER(IntKi)                         :: ErrStat2             ! local error level/status of OpenFOutFile operation
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2                   ! local message when error occurs   
+      CHARACTER(1024)                        :: Line, Line2              ! one line of the file
+      CHARACTER(1024)                        :: formatLbl
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ReadVTK_SP_vectors'
+      INTEGER(IntKi)                         :: sz, nPts,i,j,k
+      
+      ALLOCATE(gridVals(3,dims(1),dims(2),dims(3)), STAT=ErrStat )
+      if ( ErrStat /= 0 ) then
+         ErrStat = ErrID_Fatal     
+         ErrMsg = 'Error allocating memory for the gridVals Array.'
+         close(Un)
+         return
+      end if
+      
+      do k=1,dims(3)
+         do j=1,dims(2)
+            do i=1,dims(1)
+               Line = ""
+               CALL ReadStr( Un, FileName, Line, "Vector data", "Vector data", ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  if (ErrStat >= AbortErrLev ) then
+                     close(Un)
+                     return
+                  end if                
+               READ(Line,*)  gridVals(:,i,j,k)
+            end do
+         end do
+      end do
+      close(Un)
+   END SUBROUTINE ReadVTK_SP_vectors
+   
+!=======================================================================
+!> This routine writes out the heading for an vtk, ascii, structured_points dataset file .
+!! It tries to open a text file for writing and returns the Unit number of the opened file.
+   SUBROUTINE WrVTK_SP_header( FileName, descr, Un, ErrStat, ErrMsg ) 
+   
+      CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file     
+      CHARACTER(*)    , INTENT(IN   )        :: descr                !< Line describing the contents of the file
+      INTEGER(IntKi)  , INTENT(  OUT)        :: Un                   !< unit number of opened file
+      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
+      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
+   
+      CALL GetNewUnit( Un, ErrStat, ErrMsg )      
+      CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
+         if (ErrStat >= AbortErrLev) return
+      
+      WRITE(Un,'(A)')  '# vtk DataFile Version 3.0'
+      WRITE(Un,'(A)')  trim(descr)
+      WRITE(Un,'(A)')  'ASCII'
+      WRITE(Un,'(A)')  'DATASET STRUCTURED_POINTS'
+      
+      RETURN
+   END SUBROUTINE WrVTK_SP_header
+   
+   
+   
+   SUBROUTINE WrVTK_SP_vectors( Un, dataDescr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg ) 
+   
+      INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of previously opened file (via call to WrVTK_SP_header)
+      CHARACTER(*)    , INTENT(IN   )        :: dataDescr            !< Short label describing the vector data
+      INTEGER(IntKi)  , INTENT(IN   )        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
+      REAL(ReKi)      , INTENT(IN   )        :: origin(3)            !< the lower-left corner of the 3D grid (X0,Y0,Z0)
+      REAL(ReKi)      , INTENT(IN   )        :: gridSpacing(3)       !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
+      REAL(ReKi)      , INTENT(IN   )        :: gridVals(:,:,:,:)      !< 3D array of data, size (nX,nY,nZ)
+      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
+      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
+ 
+      INTEGER(IntKi)                         :: nPts                 ! Total number of grid points 
+      
+      if ( .not. (Un > 0) ) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'WrVTK_SP_points: Invalid file unit, be sure to call WrVTK_SP_header prior to calling WrVTK_SP_points.'
+         return
+      end if
+   
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+      nPts    = dims(1)*dims(2)*dims(3)
+      
+      ! Note: gridVals must be stored such that the left-most dimension is X and the right-most dimension is Z
+      WRITE(Un,'(A,3(i5,X))')    'DIMENSIONS ',  dims
+      WRITE(Un,'(A,3(f10.2,X))') 'ORIGIN '    ,  origin
+      WRITE(Un,'(A,3(f10.2,X))') 'SPACING '   ,  gridSpacing
+      WRITE(Un,'(A,i5)')         'POINT_DATA ',  nPts
+      WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
+      WRITE(Un,'(3(f10.2,X))')   gridVals
+      close(Un)
+      RETURN
+      
+   END SUBROUTINE WrVTK_SP_vectors
+   
 END MODULE NWTC_IO
