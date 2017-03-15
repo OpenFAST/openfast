@@ -211,7 +211,7 @@ subroutine LowResGridCalcOutput(t, u, p, y, m, errStat, errMsg)
       
          y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,0,nt), Vsum_low )
          y%TI_amb(nt)       = 0.0_ReKi
-         do nw=1,m%N_wind(np,nt)
+         do nw=1,m%N_wind(0,nt)
             y%TI_amb(nt) = y%TI_amb(nt) + TwoNorm( m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)) - Vsum_low )**2
          end do
          y%TI_amb(nt) = sqrt(y%TI_amb(nt)/(3.0*m%N_wind(0,nt)))/Vave_amb_low_norm
