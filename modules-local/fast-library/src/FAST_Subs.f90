@@ -200,22 +200,21 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
    if (present(ExternInitData)) then
       CallStart = .not. ExternInitData%FarmIntegration ! .and. ExternInitData%TurbineID == 1
-      if (ExternInitData%TurbineID > 0) p_FAST%TDesc = 'T'//trim(num2lstr(ExternInitData%TurbineID))
+      if (ExternInitData%TurbineID > 0) p_FAST%TDesc = 'T'//trim(num2lstr(ExternInitData%TurbineID)) 
    else
       CallStart = .true.
    end if
-   
-   if (CallStart) then ! if we don't call the start data (e.g., from FAST.Farm), we won't override AbortErrLev either 
-      AbortErrLev         = ErrID_Fatal                                 ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
-   end if
-      
-         
+           
    
       ! Init NWTC_Library, display copyright and version information:
    if (CallStart) then
+      AbortErrLev = ErrID_Fatal                                 ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
       CALL FAST_ProgStart( FAST_Ver )
+      p_FAST%WrSttsTime = .TRUE.
    else
+      ! if we don't call the start data (e.g., from FAST.Farm), we won't override AbortErrLev either 
       CALL DispNVD( FAST_Ver )
+      p_FAST%WrSttsTime = .FALSE.
    end if
    
    IF (PRESENT(InFile)) THEN
@@ -3132,7 +3131,7 @@ SUBROUTINE WrVTK_Ground ( RefPoint, HalfLengths, FileRootName, ErrStat, ErrMsg )
    ! write the data that potentially changes each time step:
    !.................................................................
       
-   ! PolyData (.vtp) � Serial vtkPolyData (unstructured) file
+   ! PolyData (.vtp) - Serial vtkPolyData (unstructured) file
    FileName = TRIM(FileRootName)//'.vtp'
       
    call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat2, ErrMsg2 )    
@@ -3592,8 +3591,10 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   IF (p_FAST%WrSttsTime) then
+      CALL SimStatus_FirstTime( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )
+   END IF
    
-   CALL SimStatus_FirstTime( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )
 
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
@@ -4463,13 +4464,15 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !! Display simulation status every SttsTime-seconds (i.e., n_SttsTime steps):
    !----------------------------------------------------------------------------------------   
       
-   IF ( MOD( n_t_global + 1, p_FAST%n_SttsTime ) == 0 ) THEN
+   IF (p_FAST%WrSttsTime) then
+      IF ( MOD( n_t_global + 1, p_FAST%n_SttsTime ) == 0 ) THEN
       
-      if (.not. Cmpl4SFun) then   
-         CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )
-      end if
+         if (.not. Cmpl4SFun) then   
+            CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )
+         end if
       
-   ENDIF   
+      ENDIF
+   ENDIF
      
 END SUBROUTINE FAST_Solution
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -5240,7 +5243,7 @@ SUBROUTINE WrVTK_WaveElev(t_global, p_FAST, y_FAST, HD)
    ! write the data that potentially changes each time step:
    !.................................................................
       
-   ! PolyData (.vtp) � Serial vtkPolyData (unstructured) file
+   ! PolyData (.vtp) - Serial vtkPolyData (unstructured) file
    FileName = TRIM(p_FAST%OutFileRoot)//'.WaveSurface.t'//TRIM(Num2LStr(y_FAST%VTK_count))//'.vtp'
       
    call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat2, ErrMsg2 )    
@@ -5739,7 +5742,10 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    !  Write simulation times and stop
    !............................................................................................................................
 
-   CALL RunTimes( m_FAST%StrtTime, m_FAST%UsrTime1, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, DescStrIn=p_FAST%TDesc )
+   IF (p_FAST%WrSttsTime) THEN
+      CALL RunTimes( m_FAST%StrtTime, m_FAST%UsrTime1, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, DescStrIn=p_FAST%TDesc )
+   END IF
+   
 
    if (StopTheProgram) then
 #if (defined COMPILE_SIMULINK || defined COMPILE_LABVIEW)
