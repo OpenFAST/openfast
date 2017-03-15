@@ -646,21 +646,21 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       m%b(0)     = p%dr * ( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)  ) / dx + m%vt_tot(0,i-1)/p%dr
       m%c(0)     = -m%vt_tot(0,i-1)/p%dr
       m%c(p%NumRadii-1) = 0.0_ReKi
-      m%d(0)     = (p%dr * (xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)) / dx - m%vt_tot(0,i-1)/p%dr  ) * xd%Vx_wake(0,i) + ( m%vt_tot(0,i-1)/p%dr ) * xd%Vx_wake(1,i) 
+      m%d(0)     = (p%dr * (xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)) / dx - m%vt_tot(0,i-1)/p%dr  ) * xd%Vx_wake(0,i-1) + ( m%vt_tot(0,i-1)/p%dr ) * xd%Vx_wake(1,i-1) 
       
       do j = p%NumRadii-1, 1, -1 
          
          if (j <= p%NumRadii-2) then
             m%dvtdr(j) = ( m%vt_tot(j+1,i-1) - m%vt_tot(j-1,i-1) ) / (2_ReKi*p%dr)
             m%c(j) = real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi+2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi
-            m%d(j) =    ( real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi-2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi) * xd%Vx_wake(j-1,i) &
-                    + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/dx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i) &
-                    + (-real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi + (1_ReKi+2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) + real(j,ReKi)*m%dvtdr(j)/4.0_ReKi ) * xd%Vx_wake(j+1,i)
+            m%d(j) =    ( real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi-2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi) * xd%Vx_wake(j-1,i-1) &
+                    + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/dx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i-1) &
+                    + (-real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi + (1_ReKi+2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) + real(j,ReKi)*m%dvtdr(j)/4.0_ReKi ) * xd%Vx_wake(j+1,i-1)
              
          else
             m%dvtdr(j) = 0.0_ReKi
-            m%d(j) = ( real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi-2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi) * xd%Vx_wake(j-1,i) &
-                    + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/dx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i) 
+            m%d(j) = ( real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi-2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi) * xd%Vx_wake(j-1,i-1) &
+                    + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/dx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i-1) 
                     
          end if  
          
@@ -703,10 +703,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          end if  
       do j = 1,p%NumRadii-1
             ! NOTE: xd%Vr_wake(0,:) was initialized to 0 and remains 0.
-            !  Vr_wake is for the                [n+1]        ,          [n]                  , and           [n]              increments
-         xd%Vr_wake(j,i) = real(j-1,ReKi)*(  xd%Vr_wake(j-1,i)     + xd%Vr_wake(j-1,i-1) )/real(j,ReKi) - xd%Vr_wake(j,i-1)    &
-            !  Vx_wake is for the                           [n+1]      ,      [n+1]        ,      [n]          , and  [n]             increments             
-                           - real(2*j-1,ReKi)*p%dr * (  xd%Vx_wake(j,i) + xd%Vx_wake(j-1,i) - xd%Vx_wake(j,i-1) - xd%Vx_wake(j-1,i-1)    )  / dx
+         xd%Vr_wake(j,i) = real(  j-1,ReKi)*(  xd%Vr_wake(j-1,i)  )/real(j,ReKi) &
+            !  Vx_wake is for the                         [n+1]       ,      [n+1]        ,      [n]          , and    [n]        increments             
+                         - real(2*j-1,ReKi)*p%dr * (  xd%Vx_wake(j,i) + xd%Vx_wake(j-1,i) - xd%Vx_wake(j,i-1) - xd%Vx_wake(j-1,i-1)  ) / ( real(4*j,ReKi) * dx )
       end do  
    end do ! i = 1,p%NumPlanes-1 
  
@@ -818,7 +817,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       xd%Vr_wake(j,0) = 0.0_ReKi
    end do
    
-   
+!Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
    
    call Cleanup()
    
@@ -860,7 +859,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'WD_CalcOutput'
-   real(ReKi)                                   :: correction(3)
+   real(ReKi)                                   :: correction(3), xxdisk(3), yydisk(3), xydisknorm, tmp_xhat_disk(3)
    real(ReKi)                                   :: x_plane
    errStat = ErrID_None
    errMsg  = ""
@@ -870,6 +869,13 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       ! Check if we are fully initialized
    if ( OtherState%firstPass ) then
       ! TODO: This entire block needs to be reviewed
+                 
+      ! Define a temparary version that is the horizontal component of u%xhat_disk (used to initialize all downwind wake planes).
+      xxdisk = (/u%xhat_disk(1), 0.0, 0.0/)
+      yydisk = (/0.0, u%xhat_disk(2), 0.0/)
+      xydisknorm = TwoNorm(xxdisk + yydisk)
+      tmp_xhat_disk = ( xxdisk + yydisk ) / xydisknorm
+       
       do i = 0, p%NumPlanes - 1
          x_plane = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
        
@@ -880,8 +886,13 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                return
             end if
       
-         y%p_plane     (:,i) = u%p_hub(:) + x_plane*u%xhat_disk(:) + correction
-         y%xhat_plane  (:,i) = u%xhat_disk(:)
+         y%p_plane     (:,i) = u%p_hub(:) + x_plane*tmp_xhat_disk(:) + correction
+
+         if ( i == 0 ) then
+            y%xhat_plane   (:,i) = u%xhat_disk(:)
+         else
+            y%xhat_plane   (:,i) = tmp_xhat_disk(:)
+         end if         
          
             ! NOTE: Since we are in firstPass=T, then xd%Vx_wake is already set to zero, so just pass that into WakeDiam
          y%D_wake(i)  =  WakeDiam( p%Mod_WakeDiam, p%NumRadii, p%dr, p%r, xd%Vx_wake(:,i), u%Vx_wind_disk, u%D_rotor, p%C_WakeDiam)
@@ -1007,13 +1018,19 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, errStat, errMsg)
    integer(IntKi) :: i
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
-   real(ReKi)     :: tmpVel, correctionA(3), correction(3), xydisk(3), yxdisk(3), xxdisk(3), yydisk(3), xydisknorm
+   real(ReKi)     :: correction(3), xxdisk(3), yydisk(3), xydisknorm, tmp_xhat_disk(3)
    ! Note, all of these states will have been set to zero in the WD_Init routine
    
      
    ErrStat = ErrID_None
    ErrMsg = ""
-      
+   
+   ! Define a temparary version that is the horizontal component of u%xhat_disk (used to initialize all downwind wake planes).
+   xxdisk = (/u%xhat_disk(1), 0.0, 0.0/)
+   yydisk = (/0.0, u%xhat_disk(2), 0.0/)
+   xydisknorm = TwoNorm(xxdisk + yydisk)
+   tmp_xhat_disk = ( xxdisk + yydisk ) / xydisknorm   
+   
    do i = 0, numPlanes - 1
       xd%x_plane     (i)   = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
       xd%YawErr_filt (i)   = u%YawErr
@@ -1027,8 +1044,14 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, errStat, errMsg)
       
       !correction = ( p%C_HWkDfl_x + p%C_HWkDfl_xY*u%YawErr )*xd%x_plane(i) + correctionA
       
-      xd%p_plane     (:,i) = u%p_hub(:) + xd%x_plane(i)*u%xhat_disk(:) + correction
-      xd%xhat_plane  (:,i) = u%xhat_disk(:)
+      xd%p_plane     (:,i) = u%p_hub(:) + xd%x_plane(i)*tmp_xhat_disk(:) + correction
+      
+      if ( i == 0 ) then
+          xd%xhat_plane (:,i) = u%xhat_disk(:)
+      else
+          xd%xhat_plane (:,i) = tmp_xhat_disk
+      end if
+      
       xd%Vx_wind_disk_filt(i) = u%Vx_wind_disk
       xd%TI_amb_filt      (i) = u%TI_amb
       xd%D_rotor_filt     (i) = u%D_rotor
