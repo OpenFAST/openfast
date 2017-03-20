@@ -1273,14 +1273,32 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                if (errStat >= AbortErrLev) return 
             
                
-               
-             !Check to make sure there is cavitaiton data
-             if ( p%CavitCheck .and. y%Cpmin(i,j)==0) then
-             call SetErrStat( ErrID_Fatal, 'No Cpmin data for cavitation check', ErrStat, ErrMsg, RoutineName )
-             end if
+            
              
               !Calculate the cavitation number for the airfoil at the node in quesiton, and compare to the critical cavitation number based on the vapour pressure and submerged depth       
               if ( p%CavitCheck ) then   
+                  
+                 
+             !Check to make sure there is cavitaiton data
+             if ( y%Cpmin(i,j)==0) then
+             call SetErrStat( ErrID_Fatal, 'No Cpmin data for cavitation check', ErrStat, ErrMsg, RoutineName )
+             end if
+             
+             !Make sure input parameters make sense    
+             if (p%FluidDepth<0) then
+               call SetErrStat( ErrID_Fatal, 'Vapour pressure (FluidDepth) cannot be negative', ErrStat, ErrMsg, RoutineName )
+             end if
+             
+                !Make sure input parameters make sense    
+             if (p%Pvap<0) then
+               call SetErrStat( ErrID_Fatal, 'Vapour pressure (Pvap) cannot be negative', ErrStat, ErrMsg, RoutineName )
+             end if
+             
+                  !Make sure input parameters make sense    
+             if (p%Patm<0) then
+               call SetErrStat( ErrID_Fatal, 'Atmospheric pressure (Patm) cannot be negative', ErrStat, ErrMsg, RoutineName )
+            end if
+                   
                                
                 SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * y%Vrel(i,j)**2) ! Critical value of Sigma, cavitation if we go over this
                 SigmaCavit= -1* y%Cpmin(i,j)  ! Actual cavitation number on blade node j                                               
