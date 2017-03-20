@@ -7684,7 +7684,7 @@ CONTAINS
 !> This routine reads the header for a vtk, ascii, structured_points dataset file,
 !! including all the information about the structured points.  It tries to open a 
 !! text file for reading and returns the Unit number of the opened file.
-!! The caller is responsible for closing the file unit!
+!! The caller is responsible for closing the file unit unless caller set Un = -1!
    SUBROUTINE ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
    
       CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file     
@@ -7693,7 +7693,7 @@ CONTAINS
       REAL(ReKi)      , INTENT(  OUT)        :: origin(3)            !< the lower-left corner of the 3D grid (X0,Y0,Z0)
       REAL(ReKi)      , INTENT(  OUT)        :: gridSpacing(3)       !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
       CHARACTER(1024) , INTENT(  OUT)        :: vecLabel
-      INTEGER(IntKi)  , INTENT(  OUT)        :: Un                   !< unit number of opened file
+      INTEGER(IntKi)  , INTENT(INOUT)        :: Un                   !< unit number of opened file
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
@@ -7703,9 +7703,16 @@ CONTAINS
       CHARACTER(1024)             :: formatLbl
       CHARACTER(*), PARAMETER     :: RoutineName = 'ReadVTK_SP_info'
       INTEGER(IntKi)              :: sz, nPts
+      LOGICAL                     :: closeOnReturn
       
       ErrStat = ErrID_None
       ErrMsg  = ''
+      
+      IF (Un == -1 ) THEN
+         closeOnReturn = .TRUE.
+      ELSE
+         closeOnReturn = .FALSE.
+      END IF
       
       CALL GetNewUnit( Un, ErrStat, ErrMsg )      
       CALL OpenFInpFile ( Un, TRIM(FileName), ErrStat, ErrMsg )
@@ -7812,8 +7819,9 @@ CONTAINS
          
       END IF 
       
-      IF ( ErrStat >= AbortErrLev ) THEN
+      IF ( (ErrStat >= AbortErrLev) .or. closeOnReturn ) THEN        
          close(Un)
+         Un = -1
          RETURN
       END IF
       
@@ -7829,7 +7837,7 @@ CONTAINS
       CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file     
       INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of opened file
       INTEGER(IntKi)  , INTENT(IN   )        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
-      REAL(ReKi)      , ALLOCATABLE, INTENT(  OUT)        :: gridVals(:,:,:,:)    !< 3D array of data, size (nX,nY,nZ)
+      REAL(ReKi)      , INTENT(  OUT)        :: gridVals(:,:,:,:)    !< 3D array of data, size (nX,nY,nZ), must be pre-allocated
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
@@ -7840,25 +7848,19 @@ CONTAINS
       CHARACTER(*), PARAMETER                :: RoutineName = 'ReadVTK_SP_vectors'
       INTEGER(IntKi)                         :: sz, nPts,i,j,k
       
-      ALLOCATE(gridVals(3,dims(1),dims(2),dims(3)), STAT=ErrStat )
-      if ( ErrStat /= 0 ) then
-         ErrStat = ErrID_Fatal     
-         ErrMsg = 'Error allocating memory for the gridVals Array.'
-         close(Un)
-         return
-      end if
+      
       
       do k=1,dims(3)
          do j=1,dims(2)
             do i=1,dims(1)
-               Line = ""
-               CALL ReadStr( Un, FileName, Line, "Vector data", "Vector data", ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  if (ErrStat >= AbortErrLev ) then
-                     close(Un)
-                     return
-                  end if                
-               READ(Line,*)  gridVals(:,i,j,k)
+               !Line = ""
+               !CALL ReadStr( Un, FileName, Line, "Vector data", "Vector data", ErrStat2, ErrMsg2 )
+               !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               !   if (ErrStat >= AbortErrLev ) then
+               !      close(Un)
+               !      return
+               !   end if                
+               READ(Un,*)  gridVals(:,i,j,k)
             end do
          end do
       end do
@@ -7890,7 +7892,7 @@ CONTAINS
    
    
    
-   SUBROUTINE WrVTK_SP_vectors( Un, dataDescr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg ) 
+   SUBROUTINE WrVTK_SP_vectors3D( Un, dataDescr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg ) 
    
       INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of previously opened file (via call to WrVTK_SP_header)
       CHARACTER(*)    , INTENT(IN   )        :: dataDescr            !< Short label describing the vector data
@@ -7923,6 +7925,39 @@ CONTAINS
       close(Un)
       RETURN
       
-   END SUBROUTINE WrVTK_SP_vectors
+   END SUBROUTINE WrVTK_SP_vectors3D
+   SUBROUTINE WrVTK_SP_vectors2D( Un, dataDescr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg ) 
    
+      INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of previously opened file (via call to WrVTK_SP_header)
+      CHARACTER(*)    , INTENT(IN   )        :: dataDescr            !< Short label describing the vector data
+      INTEGER(IntKi)  , INTENT(IN   )        :: dims(2)              !< dimension of the 3D grid (nX,nY,nZ)
+      REAL(ReKi)      , INTENT(IN   )        :: origin(2)            !< the lower-left corner of the 3D grid (X0,Y0,Z0)
+      REAL(ReKi)      , INTENT(IN   )        :: gridSpacing(2)       !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
+      REAL(ReKi)      , INTENT(IN   )        :: gridVals(:,:,:)      !< 3D array of data, size (nX,nY,nZ)
+      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
+      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
+ 
+      INTEGER(IntKi)                         :: nPts                 ! Total number of grid points 
+      
+      if ( .not. (Un > 0) ) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'WrVTK_SP_points: Invalid file unit, be sure to call WrVTK_SP_header prior to calling WrVTK_SP_points.'
+         return
+      end if
+   
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+      nPts    = dims(1)*dims(2)
+      
+      ! Note: gridVals must be stored such that the left-most dimension is X and the right-most dimension is Z
+      WRITE(Un,'(A,2(i5,X))')    'DIMENSIONS ',  dims
+      WRITE(Un,'(A,2(f10.2,X))') 'ORIGIN '    ,  origin
+      WRITE(Un,'(A,2(f10.2,X))') 'SPACING '   ,  gridSpacing
+      WRITE(Un,'(A,i5)')         'POINT_DATA ',  nPts
+      WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
+      WRITE(Un,'(3(f10.2,X))')   gridVals
+      close(Un)
+      RETURN
+      
+   END SUBROUTINE WrVTK_SP_vectors2D
 END MODULE NWTC_IO

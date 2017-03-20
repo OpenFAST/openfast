@@ -38,13 +38,6 @@ typedef  ^               ParameterType         CHARACTER(20)   OutFmt          -
 typedef  ^               ParameterType         CHARACTER(20)   OutFmt_t        -    - - "Format used for time channel in text tabular output; resulting field should be 10 characters" -
 typedef  ^               ParameterType         IntKi           FmtWidth        -    - - "width of the time OutFmt specifier" -
 typedef  ^               ParameterType         IntKi           TChanLen        -    - - "width of the time channel" -
-typedef  ^               ParameterType         LOGICAL         WrDisWind       -    - - "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.?" -
-typedef  ^               ParameterType         IntKi           NOutDisWindXY   -    - - "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk [0 to 9]" -
-typedef  ^               ParameterType         ReKi            OutDisWindZ    {:}   - - "Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXY]" meters
-typedef  ^               ParameterType         IntKi           NOutDisWindYZ   -    - - "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk [0 to 9]" -
-typedef  ^               ParameterType         ReKi            OutDisWindX    {:}   - - "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindYZ]" meters
-typedef  ^               ParameterType         IntKi           NOutDisWindXZ   -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
-typedef  ^               ParameterType         ReKi            OutDisWindY    {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
 typedef  ^               ParameterType         IntKi           NOutRadii       -    - - "Number of radial nodes for wake output for an individual rotor [0 to 20]" -
 typedef  ^               ParameterType         IntKi           OutRadii       {:}   - - "List of radial nodes for wake output for an individual rotor [1 to NOutRadii]" -
 typedef  ^               ParameterType         IntKi           NOutDist        -    - - "Number of downstream distances for wake output for an individual rotor [0 to 9]" -
@@ -56,9 +49,17 @@ typedef  ^               ParameterType         ReKi            WindVelZ       {:
 typedef	^	             ParameterType	        OutParmType	   OutParam	      {:}	- - "Names and units (and other characteristics) of all requested output parameters"	-
 typedef  ^               ParameterType         IntKi           NumOuts         -    - - "Number of user-requested outputs" -
 typedef  ^               ParameterType         IntKi           UnOu            -    - - "File unit for Fast.Farm output data" -
+#typedef  ^               ParameterType         ReKi            dX_low          -    - - "The spacing of the low-resolution nodes in X direction" m
+#typedef  ^               ParameterType         ReKi            dY_low          -    - - "The spacing of the low-resolution nodes in Y direction" m
+#typedef  ^               ParameterType         ReKi            dZ_low          -    - - "The spacing of the low-resolution nodes in Z direction" m
+#typedef  ^               ParameterType         IntKi           nX_low          -    - - "Number of low-resolution spatial nodes in X direction" -
+#typedef  ^               ParameterType         IntKi           nY_low          -    - - "Number of low-resolution spatial nodes in Y direction" -
+#typedef  ^               ParameterType         IntKi           nZ_low          -    - - "Number of low-resolution spatial nodes in Z direction" -
+#typedef  ^               ParameterType         ReKi            X0_low          -    - - "X-component of the origin of the low-resolution spatial domain" m
+#typedef  ^               ParameterType         ReKi            Y0_low          -    - - "Y-component of the origin of the low-resolution spatial domain" m
+#typedef  ^               ParameterType         ReKi            Z0_low          -    - - "Z-component of the origin of the low-resolution spatial domain" m
 # ..... FAST MiscVar data .......................................................................................................
 typedef	^	             MiscVarType	        ReKi	         AllOuts	      {:}	- - "An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
-
 # ..... FASTWrapper data .......................................................................................................
 typedef    ^    FASTWrapper_Data  FWrap_ContinuousStateType x             -   -         -   "Continuous states"
 typedef    ^    ^                 FWrap_DiscreteStateType   xd            -   -         -   "Discrete states"

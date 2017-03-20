@@ -37,11 +37,14 @@ MODULE FAST_Farm_Subs
    IMPLICIT NONE
 
 
-   TYPE(ProgDesc), PARAMETER  :: Farm_Ver = ProgDesc( 'FAST.Farm', 'v1.00.00', '4-Feb-2017' ) !< module date/version information   
+!   TYPE(ProgDesc), PARAMETER  :: Farm_Ver = ProgDesc( 'FAST.Farm', 'v1.00.00', '4-Feb-2017' ) !< module date/version information   
    integer, parameter :: maxOutputPoints = 9
    
    CONTAINS
 
+
+
+   
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to call Init routine for each module. This routine sets all of the init input data for each module. The initialization algorithm is: \n
 !!   -  Read-In Input File
@@ -97,7 +100,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    ! step 1: read input file
    !...............................................................................................................................  
       
-   call Farm_ReadPrimaryFile( InputFile, farm%p, WD_InitInput%InputFileData, OutList, ErrStat2, ErrMsg2 )
+   call Farm_ReadPrimaryFile( InputFile, farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, OutList, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -107,7 +110,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    !...............................................................................................................................  
    ! step 2: validate input & set parameters
    !...............................................................................................................................  
-   call Farm_ValidateInput( farm%p, WD_InitInput%InputFileData, ErrStat2, ErrMsg2 )
+   call Farm_ValidateInput( farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -151,14 +154,14 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       ! a. CALL AWAE_Init
    
    AWAE_InitInput%InputFileData%dr           = WD_InitInput%InputFileData%dr
-   AWAE_InitInput%InputFileData%dt_high      = farm%p%dt_high
+   AWAE_InitInput%InputFileData%dt           = farm%p%dt 
    AWAE_InitInput%InputFileData%NumTurbines  = farm%p%NumTurbines
    AWAE_InitInput%InputFileData%NumRadii     = WD_InitInput%InputFileData%NumRadii
    AWAE_InitInput%InputFileData%NumPlanes    = WD_InitInput%InputFileData%NumPlanes
    AWAE_InitInput%InputFileData%WindFilePath = farm%p%WindFilePath
    AWAE_InitInput%n_high_low                 = farm%p%n_high_low
    AWAE_InitInput%NumDT                      = farm%p%n_TMax
-   
+      
    call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
                    farm%AWAE%m, farm%p%DT, AWAE_InitOutput, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -219,14 +222,15 @@ END SUBROUTINE Farm_Initialize
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads in the primary FAST.Farm input file, does some validation, and places the values it reads in the
 !!   parameter structure (p). It prints to an echo file if requested.
-SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, OutList, ErrStat, ErrMsg )
+SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList, ErrStat, ErrMsg )
 
 
       ! Passed variables
    TYPE(Farm_ParameterType),       INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
    CHARACTER(*),                   INTENT(IN   ) :: InputFile                       !< Name of the file containing the primary input data
    TYPE(WD_InputFileType),         INTENT(  OUT) :: WD_InitInp                      !< input-file data for WakeDynamics module
-   CHARACTER(ChanLenFF),ALLOCATABLE, INTENT(  OUT) :: OutList(:)                         !< list of user-requested output channels
+   TYPE(AWAE_InputFileType),       INTENT(  OUT) :: AWAE_InitInp                    !< input-file data for AWAE module
+   CHARACTER(ChanLenFF),ALLOCATABLE, INTENT(  OUT) :: OutList(:)                    !< list of user-requested output channels
    INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),                   INTENT(  OUT) :: ErrMsg                          !< Error message
 
@@ -272,8 +276,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, OutList, ErrStat, Err
          RETURN        
       end if
 ! TODO: Fix this! GJH 3/13/2017
-   ALLOCATE ( OutList(MaxOutPts) , STAT=ErrStat )   
-   !CALL AllocAry( OutList, MaxOutPts, "ElastoDyn Input File's Outlist", ErrStat2, ErrMsg2 )
+   !ALLOCATE ( OutList(MaxOutPts) , STAT=ErrStat )   
+   CALL AllocAry( OutList, MaxOutPts, "FAST.Farm's Input File's Outlist", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -687,18 +691,18 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, OutList, ErrStat, Err
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       ! WrDisWind - Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag):
-   CALL ReadVar( UnIn, InputFile, p%WrDisWind, "WrDisWind", "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisWind, "WrDisWind", "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       ! NOutDisWindXY - Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, p%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if
      
-      call allocAry( p%OutDisWindZ, p%NOutDisWindXY, "OutDisWindZ", ErrStat2, ErrMsg2 )
+      call allocAry( AWAE_InitInp%OutDisWindZ, AWAE_InitInp%NOutDisWindXY, "OutDisWindZ", ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if ( ErrStat >= AbortErrLev ) then
             call cleanup()
@@ -706,7 +710,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, OutList, ErrStat, Err
          end if
       
       ! OutDisWindZ - Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXY] [unused for NOutDisWindXY=0]:
-   CALL ReadAry( UnIn, InputFile, p%OutDisWindZ, p%NOutDisWindXY, "OutDisWindZ", "Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXY] [unused for NOutDisWindXY=0]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadAry( UnIn, InputFile, AWAE_InitInp%OutDisWindZ, AWAE_InitInp%NOutDisWindXY, "OutDisWindZ", "Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXY] [unused for NOutDisWindXY=0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -714,14 +718,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, OutList, ErrStat, Err
       end if
       
       ! NOutDisWindYZ - Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, p%NOutDisWindYZ, "NOutDisWindYZ", "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindYZ, "NOutDisWindYZ", "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if
      
-      call allocAry( p%OutDisWindX, p%NOutDisWindYZ, "OutDisWindX", ErrStat2, ErrMsg2 )
+      call allocAry( AWAE_InitInp%OutDisWindX, AWAE_InitInp%NOutDisWindYZ, "OutDisWindX", ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if ( ErrStat >= AbortErrLev ) then
             call cleanup()
@@ -729,7 +733,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, OutList, ErrStat, Err
          end if
       
       ! OutDisWindX - X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindYZ] [unused for NOutDisWindYZ=0]:
-   CALL ReadAry( UnIn, InputFile, p%OutDisWindX, p%NOutDisWindYZ, "OutDisWindX", "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindYZ] [unused for NOutDisWindYZ=0]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadAry( UnIn, InputFile, AWAE_InitInp%OutDisWindX, AWAE_InitInp%NOutDisWindYZ, "OutDisWindX", "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindYZ] [unused for NOutDisWindYZ=0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -737,14 +741,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, OutList, ErrStat, Err
       end if      
       
       ! NOutDisWindXZ - Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, p%NOutDisWindXZ, "NOutDisWindXZ", "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXZ, "NOutDisWindXZ", "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if
       
-      call allocAry( p%OutDisWindY, p%NOutDisWindXZ, "OutDisWindY", ErrStat2, ErrMsg2 )
+      call allocAry( AWAE_InitInp%OutDisWindY, AWAE_InitInp%NOutDisWindXZ, "OutDisWindY", ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if ( ErrStat >= AbortErrLev ) then
             call cleanup()
@@ -752,7 +756,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, OutList, ErrStat, Err
          end if
       
       ! OutDisWindY - Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXZ] [unused for NOutDisWindXZ=0]:
-   CALL ReadAry( UnIn, InputFile, p%OutDisWindY, p%NOutDisWindXZ, "OutDisWindY", "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXZ] [unused for NOutDisWindXZ=0]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadAry( UnIn, InputFile, AWAE_InitInp%OutDisWindY, AWAE_InitInp%NOutDisWindXZ, "OutDisWindY", "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain (m) [1 to NOutDisWindXZ] [unused for NOutDisWindXZ=0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -957,10 +961,11 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE Farm_ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Farm_ValidateInput( p, WD_InitInp, ErrStat, ErrMsg )
+SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
       ! Passed variables
    TYPE(Farm_ParameterType), INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
    TYPE(WD_InputFileType),   INTENT(IN   ) :: WD_InitInp                      !< input-file data for WakeDynamics module
+   TYPE(AWAE_InputFileType), INTENT(IN   ) :: AWAE_InitInp                    !< input-file data for AWAE module
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
@@ -1012,9 +1017,9 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, ErrStat, ErrMsg )
    IF (p%TStart < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TStart must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (.not. p%WrBinOutFile .and. .not. p%WrTxtOutFile) CALL SetErrStat( ErrID_Fatal, "FAST.Farm's OutFileFmt must be 1, 2, or 3.",ErrStat,ErrMsg,RoutineName)
 
-   if (p%NOutDisWindXY < 0 .or. p%NOutDisWindXY > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
-   if (p%NOutDisWindYZ < 0 .or. p%NOutDisWindYZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindYZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
-   if (p%NOutDisWindXZ < 0 .or. p%NOutDisWindXZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
+   if (AWAE_InitInp%NOutDisWindXY < 0 .or. AWAE_InitInp%NOutDisWindXY > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
+   if (AWAE_InitInp%NOutDisWindYZ < 0 .or. AWAE_InitInp%NOutDisWindYZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindYZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
+   if (AWAE_InitInp%NOutDisWindXZ < 0 .or. AWAE_InitInp%NOutDisWindXZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (p%NOutDist < 0 .or. p%NOutDist > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDist must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (p%NWindVel < 0 .or. p%NWindVel > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NWindVel must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (p%NOutRadii < 0 .or. p%NOutRadii > 20 ) then
@@ -1319,6 +1324,7 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    ! Write Output to File
    !.......................................................................................
    
+   ! TODO: Copy output handling here
    
 end subroutine FARM_InitialCO
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1403,7 +1409,12 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_CalcOutput'
    INTEGER(IntKi)                          :: i,j,k                           ! Loop counters
-      
+   CHARACTER(1024)                         :: FileName
+   CHARACTER(1024)                         :: descr                ! Line describing the contents of the file
+   CHARACTER(1024)                         :: vecLabel
+   INTEGER(IntKi)                          :: n
+   INTEGER(IntKi)                          :: Un                   ! unit number of opened file   
+   
    ErrStat = ErrID_None
    ErrMsg = ""
    
@@ -1454,48 +1465,16 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    !.......................................................................................
    ! Write Output to File
    !.......................................................................................
+      ! NOTE: Visualization data is output via the AWAE module
    
+      ! TODO: Encapsulate all of this into a subroutine call
       !--------------------
-      ! 1. If requested write visualization data
+      ! If requested write output channel data
    
-   if ( farm%p%WrDisWind ) then
-         ! XY plane slices
-      do k = 1,farm%p%NOutDisWindXY
-         do j = 0,farm%AWAE%p%nY_low
-            do i = 0,farm%AWAE%p%nX_low
-               ! Generate an XY slice of data by interpolating the disturbed low resolution wind grid data
-      !         p%OutDisWindZ(k)
-            end do
-         end do
-            ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n>.vtk
-      !   call WriteVizOutputSlice(p%WindFilePath, "DisXY", k, n, m%outVizPlane)
-      end do
-         ! YZ plane slices
-      do k = 1,farm%p%NOutDisWindYZ
-         do j = 0,farm%AWAE%p%nZ_low
-            do i = 0,farm%AWAE%p%nY_low
-     !          p%OutDisWindX(k)
-            end do
-         end do
-            ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n>.vtk
-    !     call WriteVizOutputSlice(p%WindFilePath, "DisYZ", k, n, m%outVizPlane)
-      end do
-         ! XZ plane slices
-      do k = 1,farm%p%NOutDisWindXZ
-         do j = 0,farm%AWAE%p%nZ_low
-            do i = 0,farm%AWAE%p%nX_low
-                  ! 
-    !           m%outVizPlane(1,i,j) = InterpBin( p%OutDisWindY(k), Yarr, farm%AWAE%m%Vdist_low(1,i,:,j), ILo, farm%AWAE%p%nY_low ) !( XVal, XAry, YAry, ILo, AryLen )
-    !           m%outVizPlane(2,i,j) = InterpBin( p%OutDisWindY(k), Yarr, farm%AWAE%m%Vdist_low(2,i,:,j), ILo, farm%AWAE%p%nY_low ) !( XVal, XAry, YAry, ILo, AryLen )
-    !           m%outVizPlane(3,i,j) = InterpBin( p%OutDisWindY(k), Yarr, farm%AWAE%m%Vdist_low(3,i,:,j), ILo, farm%AWAE%p%nY_low ) !( XVal, XAry, YAry, ILo, AryLen )
-                        
-            end do
-         end do
-            ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n>.vtk
-    !     call WriteVizOutputSlice(p%WindFilePath, "DisXZ", k, n, m%outVizPlane)
-      end do
+   
+   
 
-   end if
+   
    
    
 end subroutine FARM_CalcOutput

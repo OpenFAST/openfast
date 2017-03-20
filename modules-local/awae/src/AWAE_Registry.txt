@@ -13,15 +13,25 @@
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include Registry_NWTC_Library.txt
 
-param     AWAE/AWAE   unused              INTEGER         MAX_WAKE_VOL_PTS    -  1000    -         "The maximum supported number grid points located within a single wake plane volume."    -
+# ..... Constants .......................................................................................................
+param	AWAE/AWAE            -               INTEGER         XYSlice     - 1 -  "Extract an XY slice of data from the 3D grid" -
+param	^                    -               INTEGER         YZSlice     - 2 -  "Extract an YZ slice of data from the 3D grid" -
+param	^                    -               INTEGER         XZSlice     - 3 -  "Extract an XZ slice of data from the 3D grid" -
+
 # ..... InputFile Data .......................................................................................................
 typedef   AWAE/AWAE   AWAE_InputFileType  ReKi            dr             - - -  "Radial increment of radial finite-difference grid [>0.0]" m
-#typedef   ^           AWAE_InputFileType  DbKi            dt             - - -  "Low-resolution (FAST.Farm driver/glue code) time step" s
-typedef   ^           AWAE_InputFileType  DbKi            dt_high        - - -  "High-resolution time step" s
+typedef   ^           AWAE_InputFileType  DbKi            dt             - - -  "Low-resolution (FAST.Farm driver/glue code) time step" s
 typedef   ^           AWAE_InputFileType  IntKi           NumTurbines    - - -  "Number of wind turbines in the farm [>=1]" -
 typedef   ^           AWAE_InputFileType  IntKi           NumRadii       - - -  "Number of radii in the radial finite-difference grid  [>=2]" -
 typedef   ^           AWAE_InputFileType  IntKi           NumPlanes      - - -  "Number of wake planes downwind of the rotor where the wake is propagated [>=2]" -
-typedef   ^           AWAE_InputFileType  CHARACTER(1024) WindFilePath   - - -  "Path name of wind data files from ABLSolver precursor" -
+typedef   ^           AWAE_InputFileType  CHARACTER(1024) WindFilePath   - - -  "Path name to the Root folder containing the wind data files from ABLSolver precursor" -
+typedef  ^            AWAE_InputFileType  LOGICAL         WrDisWind          -    - - "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.?" -
+typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindXY      -    - - "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk [0 to 9]" -
+typedef  ^            AWAE_InputFileType  ReKi            OutDisWindZ       {:}   - - "Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXY]" meters
+typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindYZ      -    - - "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk [0 to 9]" -
+typedef  ^            AWAE_InputFileType  ReKi            OutDisWindX       {:}   - - "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindYZ]" meters
+typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindXZ      -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
+typedef  ^            AWAE_InputFileType  ReKi            OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
 
 
 # ..... Initialization data .......................................................................................................
@@ -33,8 +43,9 @@ typedef   ^ InitInputType  IntKi              NumDT            -  - -   "Number 
 
 
 # Define outputs from the initialization routine here:
-typedef   ^ InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
-typedef   ^ InitOutputType CHARACTER(ChanLen) WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
+#typedef   ^ InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
+#typedef   ^ InitOutputType CHARACTER(ChanLen) WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
+typedef   ^ InitOutputType CHARACTER(1024)    WindFilePath     -  - -  "Path name to the Root folder containing the wind data files from ABLSolver precursor" -
 typedef   ^ InitOutputType ProgDesc           Ver              -  - -   "This module's name, version, and date"      -
 typedef   ^ InitOutputType ReKi               X0_high         {:} - -   "X-component of the origin of the high-resolution spatial domain for each turbine" m
 typedef   ^ InitOutputType ReKi               Y0_high         {:} - -   "Y-component of the origin of the high-resolution spatial domain for each turbine" m
@@ -45,6 +56,15 @@ typedef   ^ InitOutputType ReKi               dZ_high         {:} - -   "Z-compo
 typedef   ^ InitOutputType IntKi              nX_high          -  - -   "Number of high-resolution spatial nodes in X direction " -
 typedef   ^ InitOutputType IntKi              nY_high          -  - -   "Number of high-resolution spatial nodes in Y direction" -
 typedef   ^ InitOutputType IntKi              nZ_high          -  - -   "Number of high-resolution spatial nodes in Z direction" -
+typedef   ^ InitOutputType ReKi               dX_low           -  - -   "The spacing of the low-resolution nodes in X direction" m
+typedef   ^ InitOutputType ReKi               dY_low           -  - -   "The spacing of the low-resolution nodes in Y direction" m
+typedef   ^ InitOutputType ReKi               dZ_low           -  - -   "The spacing of the low-resolution nodes in Z direction" m
+typedef   ^ InitOutputType IntKi              nX_low           -  - -   "Number of low-resolution spatial nodes in X direction" -
+typedef   ^ InitOutputType IntKi              nY_low           -  - -   "Number of low-resolution spatial nodes in Y direction" -
+typedef   ^ InitOutputType IntKi              nZ_low           -  - -   "Number of low-resolution spatial nodes in Z direction" -
+typedef   ^ InitOutputType ReKi               X0_low           -  - -   "X-component of the origin of the low-resolution spatial domain" m
+typedef   ^ InitOutputType ReKi               Y0_low           -  - -   "Y-component of the origin of the low-resolution spatial domain" m
+typedef   ^ InitOutputType ReKi               Z0_low           -  - -   "Z-component of the origin of the low-resolution spatial domain" m
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -74,12 +94,15 @@ typedef   ^ MiscVarType    ReKi     Vr_wake      {:}       - - "" m/s
 typedef   ^ MiscVarType    IntKi    nx_wind      {:}{:}{:}    - - "" -     
 typedef   ^ MiscVarType    IntKi    ny_wind      {:}{:}{:}    - - "" -     
 typedef   ^ MiscVarType    IntKi    nz_wind      {:}{:}{:}    - - "" -     
+typedef	^	MiscVarType	   ReKi	   outVizXYPlane  {:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
+typedef	^	MiscVarType	   ReKi	   outVizYZPlane  {:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
+typedef	^	MiscVarType	   ReKi	   outVizXZPlane  {:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
  
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef   ^ ParameterType  CHARACTER(1024)  WindFileRoot       -  - -   "Root name of wind data files from ABLSolver precursor" -
+typedef   ^ ParameterType  CHARACTER(1024)  WindFilePath       -  - -   "Path name to the Root folder containing the wind data files from ABLSolver precursor" -
 typedef   ^ ParameterType  IntKi            NumTurbines        -  - -   "Number of wind turbines in the farm [>=1]" -
 typedef   ^ ParameterType  IntKi            NumRadii           -  - -   "Number of radii in the radial finite-difference grid  [>=2]" -
 typedef   ^ ParameterType  IntKi            NumPlanes          -  - -   "Number of wake planes downwind of the rotor where the wake is propagated [>=2]" -
@@ -87,6 +110,18 @@ typedef   ^ ParameterType  ReKi             r                 {:} - -   "Discret
 typedef   ^ ParameterType  IntKi            nX_low             -  - -   "Number of low-resolution spatial nodes in X direction" -
 typedef   ^ ParameterType  IntKi            nY_low             -  - -   "Number of low-resolution spatial nodes in Y direction" -
 typedef   ^ ParameterType  IntKi            nZ_low             -  - -   "Number of low-resolution spatial nodes in Z direction" -
+typedef   ^ ParameterType  ReKi             dX_low           -  - -   "The spacing of the low-resolution nodes in X direction" m
+typedef   ^ ParameterType  ReKi             dY_low           -  - -   "The spacing of the low-resolution nodes in Y direction" m
+typedef   ^ ParameterType  ReKi             dZ_low           -  - -   "The spacing of the low-resolution nodes in Z direction" m
+typedef   ^ ParameterType  ReKi             X0_low           -  - -   "X-component of the origin of the low-resolution spatial domain" m
+typedef   ^ ParameterType  ReKi             Y0_low           -  - -   "Y-component of the origin of the low-resolution spatial domain" m
+typedef   ^ ParameterType  ReKi             Z0_low           -  - -   "Z-component of the origin of the low-resolution spatial domain" m
+typedef   ^ ParameterType  ReKi             X0_high         {:} - -   "X-component of the origin of the high-resolution spatial domain for each turbine" m
+typedef   ^ ParameterType  ReKi             Y0_high         {:} - -   "Y-component of the origin of the high-resolution spatial domain for each turbine" m
+typedef   ^ ParameterType  ReKi             Z0_high         {:} - -   "Z-component of the origin of the high-resolution spatial domain for each turbine" m
+typedef   ^ ParameterType  ReKi             dX_high         {:} - -   "X-component of the spatial increment of the high-resolution spatial domain for each turbine" m
+typedef   ^ ParameterType  ReKi             dY_high         {:} - -   "Y-component of the spatial increment of the high-resolution spatial domain for each turbine" m
+typedef   ^ ParameterType  ReKi             dZ_high         {:} - -   "Z-component of the spatial increment of the high-resolution spatial domain for each turbine" m
 typedef   ^ ParameterType  IntKi            nX_high            -  - -   "Number of high-resolution spatial nodes in X direction " -
 typedef   ^ ParameterType  IntKi            nY_high            -  - -   "Number of high-resolution spatial nodes in Y direction" -
 typedef   ^ ParameterType  IntKi            nZ_high            -  - -   "Number of high-resolution spatial nodes in Z direction" -
@@ -95,11 +130,19 @@ typedef   ^ ParameterType  IntKi            Grid_high          {:}{:}{:} - -   "
 typedef   ^ ParameterType  IntKi            n_high_low         -  - -   "Number of high-resolution time steps per low" -
 typedef   ^ ParameterType  IntKi            n_wind_max         -  - -   "Maximun predicted number of low-resolution grid points found in any single wake plane volume" -
 typedef   ^ ParameterType  IntKi            n_wind_min         -  - -   "Minimum required number of low-resolution grid points found in any single wake plane volume" -
-#                                         
+typedef   ^ ParameterType  DbKi             dt                 -  - -   "Low-resolution (FAST.Farm driver/glue code) time step" s
 # parameters for output  
-typedef   ^ ParameterType  IntKi            NumOuts            -  - -   "Number of parameters in the output list (number of outputs requested)"      -
+#typedef   ^ ParameterType  IntKi            NumOuts            -  - -   "Number of parameters in the output list (number of outputs requested)"      -
+typedef  ^  ParameterType  LOGICAL          WrDisWind          -    - - "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.?" -
+typedef  ^  ParameterType  IntKi            NOutDisWindXY      -    - - "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk [0 to 9]" -
+typedef  ^  ParameterType  ReKi             OutDisWindZ       {:}   - - "Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXY]" meters
+typedef  ^  ParameterType  IntKi            NOutDisWindYZ      -    - - "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk [0 to 9]" -
+typedef  ^  ParameterType  ReKi             OutDisWindX       {:}   - - "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindYZ]" meters
+typedef  ^  ParameterType  IntKi            NOutDisWindXZ      -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
+typedef  ^  ParameterType  ReKi             OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
+
 typedef   ^ ParameterType  CHARACTER(1024)  OutFileRoot        -  - -   "The root name derived from the primary FAST.Farm input file" -
-typedef   ^ ParameterType  OutParmType      OutParam          {:} - -   "Names and units (and other characteristics) of all requested output parameters"      -
+#typedef   ^ ParameterType  OutParmType      OutParam          {:} - -   "Names and units (and other characteristics) of all requested output parameters"      -
 
 
 # ..... Outputs ....................................................................................................................

@@ -9561,7 +9561,11 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
    INTEGER(IntKi)                   :: indxLast                                        ! The index of the last value to be written to an array
    INTEGER(IntKi)                   :: indxNext                                        ! The index of the next value to be written to an array
    INTEGER(IntKi)                   :: NumOuts                                         ! number of channels to be written to the output file(s)
-   CHARACTER(1024)	               :: FileDescLines(3)
+   CHARACTER(1024)                  :: FileDescLines(3)
+   
+   
+   
+   
    
    
    if ( (farm%p%NumOuts == 0) ) then ! .or. .not. ( (farm%p%WrTxtOutFile) .or. (farm%p%WrBinOutFile) ) ) then
@@ -9574,6 +9578,8 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
          ErrMsg  = ' Error allocating memory for the Fast.Farm AllOuts array.'
          RETURN
       ENDIF   
+      
+      
    farm%m%AllOuts = 0.0_ReKi
    
    FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetNVD(Farm_Ver))
@@ -9627,6 +9633,7 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
 
   ! END IF
 
+      ! TODO: Add binary
    !......................................................
    ! Allocate data for binary output file
    !......................................................

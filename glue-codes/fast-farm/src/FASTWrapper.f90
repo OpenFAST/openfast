@@ -441,7 +441,7 @@ SUBROUTINE FWrap_Increment( t, n, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
          
          CALL FAST_Solution_T( t_initial, n_FAST, m%Turbine, ErrStat2, ErrMsg2 )                  
             call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            if (ErrStat > AbortErrLev) return
+            if (ErrStat >= AbortErrLev) return
             
       end do ! n_ss
       
