@@ -1673,6 +1673,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
    do i = 1,p%NumOuts  ! Loop through all selected output channels
       y%WriteOutput(i) = p%OutParam(i)%SignM * AllOuts( p%OutParam(i)%Indx )
+      write(*,*) p%OutParam(i)%SignM, p%OutParam(i)%Indx,  AllOuts( p%OutParam(i)%Indx )
+
    end do             ! i - All selected output channels
 
 
