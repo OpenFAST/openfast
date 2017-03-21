@@ -7848,23 +7848,13 @@ CONTAINS
       CHARACTER(*), PARAMETER                :: RoutineName = 'ReadVTK_SP_vectors'
       INTEGER(IntKi)                         :: sz, nPts,i,j,k
       
+      ErrStat = ErrID_None
+      ErrMsg  = ''
       
-      
-      do k=1,dims(3)
-         do j=1,dims(2)
-            do i=1,dims(1)
-               !Line = ""
-               !CALL ReadStr( Un, FileName, Line, "Vector data", "Vector data", ErrStat2, ErrMsg2 )
-               !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               !   if (ErrStat >= AbortErrLev ) then
-               !      close(Un)
-               !      return
-               !   end if                
-               READ(Un,*)  gridVals(:,i,j,k)
-            end do
-         end do
-      end do
+      READ(Un,*)  gridVals(1:3,1:dims(1),1:dims(2),1:dims(3))
+     
       close(Un)
+      
    END SUBROUTINE ReadVTK_SP_vectors
    
 !=======================================================================
