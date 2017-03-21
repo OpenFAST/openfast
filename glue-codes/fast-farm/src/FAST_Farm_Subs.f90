@@ -42,7 +42,42 @@ MODULE FAST_Farm_Subs
    
    CONTAINS
 
+   subroutine TrilinearInterpRegGrid(V, pt, dims, val)
+   
+      real(ReKi),     intent(in   ) :: V(:,:,:,:)
+      real(ReKi),     intent(in   ) :: pt(3)
+      integer(IntKi), intent(in   ) :: dims(3)
+      real(ReKi),     intent(  out) :: val(3)
+   
+      integer(IntKi) :: x0,x1,y0,y1,z0,z1
+      real(ReKi) :: xd,yd,zd,c00(3),c01(3),c10(3),c11(3),c0(3),c1(3)
+      
+      x0 = floor(pt(1))
 
+      x1 = x0 + 1
+      if (x0 == dims(1)) x1 = x0  ! Handle case where x0 is the last index in the grid, in this case xd = 0.0, so the 2nd term in the interpolation will not contribute
+      xd = pt(1) - x0
+      y0 = floor(pt(2))
+      y1 = y0 + 1
+      if (y0 == dims(2)) y1 = y0  ! Handle case where y0 is the last index in the grid, in this case yd = 0.0, so the 2nd term in the interpolation will not contribute
+      yd = pt(2) - y0
+      z0 = floor(pt(3))
+      z1 = z0 + 1
+      if (z0 == dims(3)) z1 = z0  ! Handle case where z0 is the last index in the grid, in this case zd = 0.0, so the 2nd term in the interpolation will not contribute
+      zd = pt(3) - z0
+      
+
+      c00 = V(:,x0,y0,z0)*(1.0_ReKi-xd) + V(:,x1,y0,z0)*xd
+      c01 = V(:,x0,y0,z1)*(1.0_ReKi-xd) + V(:,x1,y0,z1)*xd
+      c10 = V(:,x0,y1,z0)*(1.0_ReKi-xd) + V(:,x1,y1,z0)*xd
+      c11 = V(:,x0,y1,z1)*(1.0_ReKi-xd) + V(:,x1,y1,z1)*xd
+      
+      c0  = c00*(1.0_ReKi-yd) + c10*yd
+      c1  = c01*(1.0_ReKi-yd) + c11*yd
+      
+      val = c0 *(1.0_ReKi-zd) + c1 *zd
+      
+   end subroutine TrilinearInterpRegGrid
 
    
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -170,6 +205,15 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
          RETURN
       END IF   
 
+   farm%p%X0_Low = AWAE_InitOutput%X0_Low
+   farm%p%Y0_low = AWAE_InitOutput%Y0_low
+   farm%p%Z0_low = AWAE_InitOutput%Z0_low
+   farm%p%nX_Low = AWAE_InitOutput%nX_Low
+   farm%p%nY_low = AWAE_InitOutput%nY_low
+   farm%p%nZ_low = AWAE_InitOutput%nZ_low
+   farm%p%dX_low = AWAE_InitOutput%dX_low
+   farm%p%dY_low = AWAE_InitOutput%dY_low
+   farm%p%dZ_low = AWAE_InitOutput%dZ_low
    
       !-------------------
       ! b. CALL SC_Init
@@ -1412,7 +1456,8 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    CHARACTER(1024)                         :: FileName
    CHARACTER(1024)                         :: descr                ! Line describing the contents of the file
    CHARACTER(1024)                         :: vecLabel
-   INTEGER(IntKi)                          :: n
+   INTEGER(IntKi)                          :: ir, iOutDist, i_plane, iVelPt
+   REAL(ReKi)                              :: vel(3), pt(3)
    INTEGER(IntKi)                          :: Un                   ! unit number of opened file   
    
    ErrStat = ErrID_None
@@ -1470,10 +1515,179 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
       ! TODO: Encapsulate all of this into a subroutine call
       !--------------------
       ! If requested write output channel data
-   
-   
-   
+   if ( farm%p%NumOuts > 0 ) then
+    
+      
+         ! Define the output channel specifying the current simulation time:
+      farm%m%AllOuts(  Time) = REAL( t, ReKi )
 
+      do i_turb = 1, farm%p%NumTurbines
+         
+         !.......................................................................................
+         ! Super controller Outputs
+         !.......................................................................................
+             
+            ! TODO: Add super controller outputs
+
+         !.......................................................................................
+         ! Wind Turbine and its Inflow
+         !.......................................................................................
+
+            ! Orientation of rotor centerline, normal to disk
+         farm%m%AllOuts(RtAxsXT(i_turb)) = farm%FWrap(i_turb)%y%xHat_Disk(1)
+         farm%m%AllOuts(RtAxsYT(i_turb)) = farm%FWrap(i_turb)%y%xHat_Disk(2)
+         farm%m%AllOuts(RtAxsZT(i_turb)) = farm%FWrap(i_turb)%y%xHat_Disk(3)
+         
+            ! Center position of hub, m
+         farm%m%AllOuts(RtPosXT(i_turb)) = farm%FWrap(i_turb)%y%p_hub(1)
+         farm%m%AllOuts(RtPosYT(i_turb)) = farm%FWrap(i_turb)%y%p_hub(2)
+         farm%m%AllOuts(RtPosZT(i_turb)) = farm%FWrap(i_turb)%y%p_hub(3)
+         
+            ! Rotor diameter, m
+         farm%m%AllOuts(RtDiamT(i_turb)) = farm%FWrap(i_turb)%y%D_rotor
+         
+            ! Nacelle-yaw error at the wake planes, deg 
+         farm%m%AllOuts(YawErrT(i_turb)) = farm%FWrap(i_turb)%y%YawErr*R2D
+         
+            ! Ambient turbulence intensity of the wind at the rotor disk, percent
+            ! TODO: Is this really in percent form? GJH 3/21/2017
+         farm%m%AllOuts(TIAmbT(i_turb))  = farm%AWAE%y%TI_amb(i_turb)
+         
+            ! Rotor-disk-averaged ambient wind speed (normal to disk, not including structural motion, local induction or wakes from upstream turbines), m/s
+         farm%m%AllOuts(RtVAmbT(i_turb)) = farm%AWAE%y%Vx_wind_disk(i_turb)
+         
+            ! Rotor-disk-averaged relative wind speed (normal to disk, including structural motion and wakes from upstream turbines, but not including local induction), m/s
+         farm%m%AllOuts(RtVRelT(i_turb)) = farm%FWrap(i_turb)%y%DiskAvg_Vx_Rel
+         
+            ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
+         do ir = 1, farm%p%NOutRadii
+            farm%m%AllOuts(CtTN(ir, i_turb)) = farm%FWrap(i_turb)%y%AzimAvg_Ct(farm%p%OutRadii(ir))
+         end do
+         
+         !.......................................................................................
+         ! Wake (for an Individual Rotor)
+         !.......................................................................................
+         
+            ! Loop over user-requested, downstream distances (OutDist), m   
+         do iOutDist = 1, farm%p%NOutDist
+            
+            if (  farm%p%OutDist(iOutDist) >= farm%WD(i_turb)%xd%x_plane(farm%WD(i_turb)%p%NumPlanes-1) ) then
+               ! TODO: Handle this case. Invalid output
+               
+               farm%m%AllOuts(WkAxsXTD(iOutDist,i_turb)) = 0.0_ReKi
+               farm%m%AllOuts(WkAxsYTD(iOutDist,i_turb)) = 0.0_ReKi
+               farm%m%AllOuts(WkAxsZTD(iOutDist,i_turb)) = 0.0_ReKi
+                                                           
+                  ! Center position of the wake centerline 
+               farm%m%AllOuts(WkPosXTD(iOutDist,i_turb)) = 0.0_ReKi
+               farm%m%AllOuts(WkPosYTD(iOutDist,i_turb)) = 0.0_ReKi
+               farm%m%AllOuts(WkPosZTD(iOutDist,i_turb)) = 0.0_ReKi
+                                                           
+                  ! Advection, deflection, and meandering  
+                  !  of the wake for downstream wake volum 
+               farm%m%AllOuts(WkVelXTD(iOutDist,i_turb)) = 0.0_ReKi
+               farm%m%AllOuts(WkVelYTD(iOutDist,i_turb)) = 0.0_ReKi
+               farm%m%AllOuts(WkVelZTD(iOutDist,i_turb)) = 0.0_ReKi
+                                                           
+                  ! Wake diameter for downstream wake volu 
+               farm%m%AllOuts(WkDiamTD(iOutDist,i_turb)) = 0.0_ReKi
+               
+               do ir = 1, farm%p%NOutRadii
+                  
+                     ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, i_plane, of turbine, i_turb, m/s
+                  farm%m%AllOuts(WkDfVxTND(ir,iOutDist,i_turb)) = 0.0_ReKi
+                  farm%m%AllOuts(WkDfVrTND(ir,iOutDist,i_turb)) = 0.0_ReKi
+               
+                     ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
+                     !  or radial node, OutRadii(ir), and downstream wake volume, i_plane, of turbine, i_turb, m/s
+                  farm%m%AllOuts(EddVisTND(ir,iOutDist,i_turb)) = 0.0_ReKi
+                  farm%m%AllOuts(EddAmbTND(ir,iOutDist,i_turb)) = 0.0_ReKi
+                  farm%m%AllOuts(EddShrTND(ir,iOutDist,i_turb)) = 0.0_ReKi
+                  
+               end do  
+
+            else
+               
+               ! TODO: Verify with Jason that all of this should be within the else block. GJH 
+               
+                  ! Find wake volume which contains the user-requested downstream location.
+               do i_plane = 0, farm%WD(i_turb)%p%NumPlanes-2 
+                  if ( ( farm%p%OutDist(iOutDist) >= farm%WD(i_turb)%xd%x_plane(i_plane) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(i_turb)%xd%x_plane(i_plane+1) ) ) exit
+               end do           
+            
+                  ! Orientation of the wake centerline for downstream wake volume, i_plane, of turbine, i_turb, in the global coordinate system, -
+               farm%m%AllOuts(WkAxsXTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%xhat_plane(1, i_plane) !farm%AWAE%u%xhat_plane(1,i_plane,i_turb)
+               farm%m%AllOuts(WkAxsYTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%xhat_plane(2, i_plane) !farm%AWAE%u%xhat_plane(2,i_plane,i_turb)
+               farm%m%AllOuts(WkAxsZTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%xhat_plane(3, i_plane) !farm%AWAE%u%xhat_plane(3,i_plane,i_turb)
+
+                  ! Center position of the wake centerline for downstream wake volume, i_plane, of turbine, i_turb, in the global coordinate system, m
+               farm%m%AllOuts(WkPosXTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%p_plane(1, i_plane)    !farm%AWAE%u%p_plane(1,i_plane,i_turb)
+               farm%m%AllOuts(WkPosYTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%p_plane(2, i_plane)    !farm%AWAE%u%p_plane(2,i_plane,i_turb)
+               farm%m%AllOuts(WkPosZTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%p_plane(3, i_plane)    !farm%AWAE%u%p_plane(3,i_plane,i_turb)
+
+                  ! Advection, deflection, and meandering velocity (not including the horizontal wake-deflection correction) 
+                  !  of the wake for downstream wake volume, i_plane, of turbine, i_turb, in the global coordinate system, m/s
+               farm%m%AllOuts(WkVelXTD(iOutDist,i_turb)) = farm%AWAE%y%V_plane(1,i_plane,i_turb)
+               farm%m%AllOuts(WkVelYTD(iOutDist,i_turb)) = farm%AWAE%y%V_plane(2,i_plane,i_turb)
+               farm%m%AllOuts(WkVelZTD(iOutDist,i_turb)) = farm%AWAE%y%V_plane(3,i_plane,i_turb)
+
+                  ! Wake diameter for downstream wake volume, i_plane, of turbine, i_turb, m
+               farm%m%AllOuts(WkDiamTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%D_wake(i_plane)  !farm%AWAE%u%D_wake(i_plane,i_turb)
+            
+                  
+               do ir = 1, farm%p%NOutRadii
+                  
+                     ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, i_plane, of turbine, i_turb, m/s
+                  farm%m%AllOuts(WkDfVxTND(ir,iOutDist,i_turb)) = farm%WD(i_turb)%y%Vx_wake(farm%p%OutRadii(ir),i_plane) !farm%AWAE%u%Vx_wake(farm%p%OutRadii(ir),i_plane,i_turb)
+                  farm%m%AllOuts(WkDfVrTND(ir,iOutDist,i_turb)) = farm%WD(i_turb)%y%Vr_wake(farm%p%OutRadii(ir),i_plane) !farm%AWAE%u%Vr_wake(farm%p%OutRadii(ir),i_plane,i_turb)
+               
+                     ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
+                     !  or radial node, OutRadii(ir), and downstream wake volume, i_plane, of turbine, i_turb, m/s
+                  farm%m%AllOuts(EddVisTND(ir,iOutDist,i_turb)) = farm%WD(i_turb)%m%vt_tot(farm%p%OutRadii(ir),i_plane)
+                  farm%m%AllOuts(EddAmbTND(ir,iOutDist,i_turb)) = farm%WD(i_turb)%m%vt_amb(farm%p%OutRadii(ir),i_plane)
+                  farm%m%AllOuts(EddShrTND(ir,iOutDist,i_turb)) = farm%WD(i_turb)%m%vt_shr(farm%p%OutRadii(ir),i_plane)
+                  
+               end do  
+            end if
+         end do
+      end do
+      
+      !.......................................................................................
+      ! Ambient Wind and Array Effects
+      !.......................................................................................
+      
+         ! Loop over user-requested, velocity locations  
+      do iVelPt = 1, farm%p%NWindVel        
+         
+            ! Determine the requested pt in grid coordinates
+         pt = (/farm%p%WindVelX(iVelPt), farm%p%WindVelY(iVelPt),farm%p%WindVelZ(iVelPt)/)
+         pt(1) = (pt(1) - farm%p%X0_low)/ farm%p%dX_low
+         pt(2) = (pt(2) - farm%p%Y0_low)/ farm%p%dY_low
+         pt(3) = (pt(3) - farm%p%Z0_low)/ farm%p%dZ_low
+         
+            ! Ambient wind velocity (not including wakes) for point, pt,  in global coordinates (from the low-resolution domain), m/s
+         call TrilinearInterpRegGrid(farm%AWAE%m%Vamb_low, pt, (/farm%p%nX_low,farm%p%nY_low,farm%p%nZ_low/), vel)
+         farm%m%AllOuts(WVAmbX(iVelPt)) = vel(1)
+         farm%m%AllOuts(WVAmbY(iVelPt)) = vel(2)
+         farm%m%AllOuts(WVAmbZ(iVelPt)) = vel(3)
+         
+            ! Disturbed wind velocity (including wakes) for point, pt,  in global coordinates (from the low-resolution domain), m/s
+         call TrilinearInterpRegGrid(farm%AWAE%m%Vdist_low, pt, (/farm%p%nX_low,farm%p%nY_low,farm%p%nZ_low/), vel)
+         farm%m%AllOuts(WVDisX(iVelPt)) = vel(1)
+         farm%m%AllOuts(WVDisY(iVelPt)) = vel(2)
+         farm%m%AllOuts(WVDisZ(iVelPt)) = vel(3)
+            
+              
+      end do
+      
+      
+
+      
+      call WriteFarmOutputToFile(t, farm, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
+   end if
+   
    
    
    
