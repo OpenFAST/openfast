@@ -239,6 +239,17 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    p%dX_low           = gridSpacing(1)
    p%dY_low           = gridSpacing(2)
    p%dZ_low           = gridSpacing(3)
+   
+   InitOut%X0_Low     = origin(1)
+   InitOut%Y0_low     = origin(2)
+   InitOut%Z0_low     = origin(3) 
+   InitOut%nX_Low     = dims(1)
+   InitOut%nY_low     = dims(2)
+   InitOut%nZ_low     = dims(3) 
+   InitOut%dX_low     = gridSpacing(1)
+   InitOut%dY_low     = gridSpacing(2)
+   InitOut%dZ_low     = gridSpacing(3)
+   
    NumGrid_low        = p%nX_Low*p%nY_Low*p%nZ_Low
    p%n_wind_min = 100
    
