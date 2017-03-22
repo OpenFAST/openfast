@@ -185,7 +185,6 @@ subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
    
-
 ! TODO: Try to skip this and just jump to the correct file location for the vector reads
    FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"
    call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 

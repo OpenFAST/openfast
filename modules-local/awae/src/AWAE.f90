@@ -133,7 +133,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    
       ! read from file the ambient flow for the current time step
    call ReadLowResWindFile(n, p, m%Vamb_Low, errStat, errMsg)
-      if ( errStat > AbortErrLev ) then
+      if ( errStat >= AbortErrLev ) then
          return
       end if
    
@@ -333,7 +333,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       do n_hl=0, p%n_high_low-1
             ! read from file the ambient flow for the current time step
          call ReadHighResWindFile(nt, n+n_hl, p, m%Vamb_high, errStat, errMsg)
-            if ( errStat > AbortErrLev ) then
+            if ( errStat >= AbortErrLev ) then
                return
             end if
             
@@ -473,7 +473,7 @@ subroutine HighResGridCalcOutput2(n, u, p, y, m, errStat, errMsg)
       do n_hl=0, p%n_high_low-1
             ! read from file the ambient flow for the current time step
          call ReadHighResWindFile(nt, n+n_hl, p, m%Vamb_high, errStat, errMsg)
-            if ( errStat > AbortErrLev ) then
+            if ( errStat >= AbortErrLev ) then
                return
             end if
             
@@ -738,7 +738,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    call AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat2, errMsg2)
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   if (errStat2 > AbortErrLev) then      
+   if (errStat2 >= AbortErrLev) then      
          call Cleanup() 
          return
    end if
@@ -1011,7 +1011,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    
    call LowResGridCalcOutput(n, u, p, y, m, errStat2, errMsg2)
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      if (errStat2 > AbortErrLev) then 
+      if (errStat2 >= AbortErrLev) then 
             return
       end if
       
@@ -1019,7 +1019,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    n_high =  n*p%n_high_low
    call HighResGridCalcOutput(n_high, u, p, y, m, errStat2, errMsg2)
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      if (errStat2 > AbortErrLev) then 
+      if (errStat2 >= AbortErrLev) then 
             return
       end if
    
