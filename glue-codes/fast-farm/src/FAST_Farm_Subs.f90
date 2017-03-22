@@ -37,7 +37,7 @@ MODULE FAST_Farm_Subs
    IMPLICIT NONE
 
 
-!   TYPE(ProgDesc), PARAMETER  :: Farm_Ver = ProgDesc( 'FAST.Farm', 'v1.00.00', '4-Feb-2017' ) !< module date/version information   
+    
    integer, parameter :: maxOutputPoints = 9
    
    CONTAINS
@@ -1368,7 +1368,8 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    ! Write Output to File
    !.......................................................................................
    
-   ! TODO: Copy output handling here
+   call Farm_WriteOutput(0.0_DbKi, farm, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
 end subroutine FARM_InitialCO
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1432,88 +1433,23 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       
    
 end subroutine FARM_UpdateStates
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine calculates outputs at each time increment and solves for the inputs at the next step.
-!! The calculate output algorithm: \n
-!!    -  In parallel: 
-!!       1. call WD_CO and transfer y_WD to u_AWAE
-!!       2. call SC_CO and transfer y_SC to u_F
-!!       3. Transfer y_F to u_SC and u_WD
-!!    -  CALL AWAE_CO
-!!    -  Transfer y_AWAE to u_F and u_WD
-!!    -  Write Output to File
-subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
+
+subroutine Farm_WriteOutput(t, farm, ErrStat, ErrMsg)
+
    REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
-
-   INTEGER(IntKi)                          :: i_turb                    
+                
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
-   CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_CalcOutput'
-   INTEGER(IntKi)                          :: i,j,k                           ! Loop counters
-   CHARACTER(1024)                         :: FileName
-   CHARACTER(1024)                         :: descr                ! Line describing the contents of the file
-   CHARACTER(1024)                         :: vecLabel
-   INTEGER(IntKi)                          :: ir, iOutDist, i_plane, iVelPt
+   CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_WriteOutput'
+   INTEGER(IntKi)                          :: i_turb, ir, iOutDist, i_plane, iVelPt  ! Loop counters
    REAL(ReKi)                              :: vel(3), pt(3)
-   INTEGER(IntKi)                          :: Un                   ! unit number of opened file   
    
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   !.......................................................................................
-   ! calculate module outputs and perform some input-output solves (steps 1. and 2. and 3. can be done in parallel,
-   !  but be careful that step 3 doesn't modify the inputs to steps 1 or 2)
-   !.......................................................................................
-   
-      !--------------------
-      ! 1. call WD_CO and transfer y_WD to u_AWAE        
-   
-   DO i_turb = 1,farm%p%NumTurbines
-      
-      call WD_CalcOutput( t, farm%WD(i_turb)%u, farm%WD(i_turb)%p, farm%WD(i_turb)%x, farm%WD(i_turb)%xd, farm%WD(i_turb)%z, &
-                     farm%WD(i_turb)%OtherSt, farm%WD(i_turb)%y, farm%WD(i_turb)%m, ErrStat2, ErrMsg2 )         
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
-               
-   END DO
-   if (ErrStat >= AbortErrLev) return
-
-   call Transfer_WD_to_AWAE(farm)
-   
-      !--------------------
-      ! 2. call SC_CO and transfer y_SC to u_F         
-   
-
-      !--------------------
-      ! 3. Transfer y_F to u_SC and u_WD         
-         
-   call Transfer_FAST_to_WD(farm)
-         
-   !.......................................................................................
-   ! calculate AWAE outputs and perform rest of input-output solves
-   !.......................................................................................
-   
-      !--------------------
-      ! 1. call AWAE_CO 
-   call AWAE_CalcOutput( t, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%y, farm%AWAE%m, ErrStat2, ErrMsg2 )         
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-      !--------------------
-      ! 2. Transfer y_AWAE to u_F  and u_WD   
-   call Transfer_AWAE_to_FAST(farm)      
-   call Transfer_AWAE_to_WD(farm)   
-   
-   
-   !.......................................................................................
-   ! Write Output to File
-   !.......................................................................................
-      ! NOTE: Visualization data is output via the AWAE module
-   
-      ! TODO: Encapsulate all of this into a subroutine call
-      !--------------------
       ! If requested write output channel data
    if ( farm%p%NumOuts > 0 ) then
     
@@ -1687,7 +1623,83 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
    end if
+end subroutine Farm_WriteOutput
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine calculates outputs at each time increment and solves for the inputs at the next step.
+!! The calculate output algorithm: \n
+!!    -  In parallel: 
+!!       1. call WD_CO and transfer y_WD to u_AWAE
+!!       2. call SC_CO and transfer y_SC to u_F
+!!       3. Transfer y_F to u_SC and u_WD
+!!    -  CALL AWAE_CO
+!!    -  Transfer y_AWAE to u_F and u_WD
+!!    -  Write Output to File
+subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
+   REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
+   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
+
+   INTEGER(IntKi)                          :: i_turb                    
+   INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
+   CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_CalcOutput'
    
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   !.......................................................................................
+   ! calculate module outputs and perform some input-output solves (steps 1. and 2. and 3. can be done in parallel,
+   !  but be careful that step 3 doesn't modify the inputs to steps 1 or 2)
+   !.......................................................................................
+   
+      !--------------------
+      ! 1. call WD_CO and transfer y_WD to u_AWAE        
+   
+   DO i_turb = 1,farm%p%NumTurbines
+      
+      call WD_CalcOutput( t, farm%WD(i_turb)%u, farm%WD(i_turb)%p, farm%WD(i_turb)%x, farm%WD(i_turb)%xd, farm%WD(i_turb)%z, &
+                     farm%WD(i_turb)%OtherSt, farm%WD(i_turb)%y, farm%WD(i_turb)%m, ErrStat2, ErrMsg2 )         
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+               
+   END DO
+   if (ErrStat >= AbortErrLev) return
+
+   call Transfer_WD_to_AWAE(farm)
+   
+      !--------------------
+      ! 2. call SC_CO and transfer y_SC to u_F         
+   
+
+      !--------------------
+      ! 3. Transfer y_F to u_SC and u_WD         
+         
+   call Transfer_FAST_to_WD(farm)
+         
+   !.......................................................................................
+   ! calculate AWAE outputs and perform rest of input-output solves
+   !.......................................................................................
+   
+      !--------------------
+      ! 1. call AWAE_CO 
+   call AWAE_CalcOutput( t, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
+                     farm%AWAE%OtherSt, farm%AWAE%y, farm%AWAE%m, ErrStat2, ErrMsg2 )         
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      !--------------------
+      ! 2. Transfer y_AWAE to u_F  and u_WD   
+   call Transfer_AWAE_to_FAST(farm)      
+   call Transfer_AWAE_to_WD(farm)   
+   
+   
+   !.......................................................................................
+   ! Write Output to File
+   !.......................................................................................
+      ! NOTE: Visualization data is output via the AWAE module
+
+   call Farm_WriteOutput(t, farm, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
    
    
