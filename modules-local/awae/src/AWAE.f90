@@ -292,11 +292,11 @@ end subroutine LowResGridCalcOutput
 !> This subroutine 
 !!
 subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
-   integer(IntKi),                 intent(in   )  :: n           !< Current simulation time increment (zero-based)
+   integer(IntKi),                 intent(in   )  :: n           !< Current high-res, simulation time increment (zero-based)
    type(AWAE_InputType),           intent(in   )  :: u           !< Inputs at Time t
    type(AWAE_ParameterType),       intent(in   )  :: p           !< Parameters
    type(AWAE_OutputType),          intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
-                                                               !!   nectivity information does not have to be recalculated)
+                                                                 !!   nectivity information does not have to be recalculated)
    type(AWAE_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
    integer(IntKi),                 intent(  out)  :: errStat     !< Error status of the operation
    character(*),                   intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
@@ -332,7 +332,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       nXYZ_high = 0
       do n_hl=0, p%n_high_low-1
             ! read from file the ambient flow for the current time step
-         call ReadHighResWindFile(nt, n_hl, n, p, m%Vamb_high, errStat, errMsg)
+         call ReadHighResWindFile(nt, n+n_hl, p, m%Vamb_high, errStat, errMsg)
             if ( errStat > AbortErrLev ) then
                return
             end if
@@ -472,7 +472,7 @@ subroutine HighResGridCalcOutput2(n, u, p, y, m, errStat, errMsg)
      ! nXYZ_high = 0
       do n_hl=0, p%n_high_low-1
             ! read from file the ambient flow for the current time step
-         call ReadHighResWindFile(nt, n_hl, n, p, m%Vamb_high, errStat, errMsg)
+         call ReadHighResWindFile(nt, n+n_hl, p, m%Vamb_high, errStat, errMsg)
             if ( errStat > AbortErrLev ) then
                return
             end if
@@ -1015,6 +1015,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
             return
       end if
       
+      ! starting index for the high-res files
    n_high =  n*p%n_high_low
    call HighResGridCalcOutput(n_high, u, p, y, m, errStat2, errMsg2)
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )

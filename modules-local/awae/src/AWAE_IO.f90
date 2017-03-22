@@ -164,11 +164,10 @@ end subroutine ReadLowResWindFile
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine 
 !!
-subroutine ReadHighResWindFile(nt, n_hl, n, p, Vamb_high, errStat, errMsg)
+subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
 
    integer(IntKi),                 intent(in   )  :: nt
-   integer(IntKi),                 intent(in   )  :: n_hl
-   integer(IntKi),                 intent(in   )  :: n
+   integer(IntKi),                 intent(in   )  :: n                       !< high-res time increment
    type(AWAE_ParameterType),       intent(in   )  :: p            !< Parameters
    real(ReKi),                     intent(inout)  :: Vamb_high(:,0:,0:,0:)         !< Array which will contain the low resolution grid of ambient wind velocities
    integer(IntKi),                 intent(  out)  :: errStat      !< Error status of the operation
