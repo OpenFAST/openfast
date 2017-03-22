@@ -152,13 +152,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
          RETURN
       END IF   
       
-      ! Set parameters for output channels:
-   CALL SetOutParam(OutList, farm%p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, sets: p%OutParam.
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF  
+   
       
    
    farm%p%n_high_low = NINT( farm%p%dt / farm%p%dt_high )
@@ -246,6 +240,14 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    ! step 5: Open output file (or set up output file handling)      
    !...............................................................................................................................  
    
+      ! Set parameters for output channels:
+   CALL SetOutParam(OutList, farm, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, sets: p%OutParam.
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF  
+      
    call Farm_InitOutput( farm, ErrStat, ErrMsg )
 
    !...............................................................................................................................
@@ -1497,7 +1499,7 @@ subroutine Farm_WriteOutput(t, farm, ErrStat, ErrMsg)
          
             ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
          do ir = 1, farm%p%NOutRadii
-            farm%m%AllOuts(CtTN(ir, i_turb)) = farm%FWrap(i_turb)%y%AzimAvg_Ct(farm%p%OutRadii(ir))
+            farm%m%AllOuts(CtTN(ir, i_turb)) = farm%FWrap(i_turb)%y%AzimAvg_Ct(farm%p%OutRadii(ir)+1)  ! y%AzimAvg_Ct is a 1-based array but the user specifies 0-based node indices, so we need to add 1
          end do
          
          !.......................................................................................

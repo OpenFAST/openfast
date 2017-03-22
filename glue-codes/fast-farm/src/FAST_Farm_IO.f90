@@ -9551,7 +9551,8 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
    INTEGER,  PARAMETER  :: RtVAmbT(9) =  (/RtVAmbT1,RtVAmbT2,RtVAmbT3,RtVAmbT4,RtVAmbT5,RtVAmbT6,RtVAmbT7,RtVAmbT8,RtVAmbT9/)   
    INTEGER,  PARAMETER  :: RTVRelT(9) =   (/RTVRelT1,RTVRelT2,RTVRelT3,RTVRelT4,RTVRelT5,RTVRelT6,RTVRelT7,RTVRelT8,RTVRelT9/)
 
-   INTEGER,  PARAMETER  :: CtTN(9,20) =    (/CtT1N01,CtT1N02,CtT1N03,CtT1N04,CtT1N05,CtT1N06,CtT1N07,CtT1N08,CtT1N09, CtT1N10, &
+   INTEGER,  PARAMETER  :: CtTN(20,9) = RESHAPE(  & 
+                                           (/CtT1N01,CtT1N02,CtT1N03,CtT1N04,CtT1N05,CtT1N06,CtT1N07,CtT1N08,CtT1N09, CtT1N10, &
                                              CtT1N11,CtT1N12,CtT1N13,CtT1N14,CtT1N15,CtT1N16,CtT1N17,CtT1N18,CtT1N19, CtT1N20, &
                                              CtT2N01,CtT2N02,CtT2N03,CtT2N04,CtT2N05,CtT2N06,CtT2N07,CtT2N08,CtT2N09, CtT2N10, &
                                              CtT2N11,CtT2N12,CtT2N13,CtT2N14,CtT2N15,CtT2N16,CtT2N17,CtT2N18,CtT2N19, CtT2N20, &
@@ -9568,11 +9569,12 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              CtT8N01,CtT8N02,CtT8N03,CtT8N04,CtT8N05,CtT8N06,CtT8N07,CtT8N08,CtT8N09, CtT8N10, &
                                              CtT8N11,CtT8N12,CtT8N13,CtT8N14,CtT8N15,CtT8N16,CtT8N17,CtT8N18,CtT8N19, CtT8N20, &
                                              CtT9N01,CtT9N02,CtT9N03,CtT9N04,CtT9N05,CtT9N06,CtT9N07,CtT9N08,CtT9N09, CtT9N10, &
-                                             CtT9N11,CtT9N12,CtT9N13,CtT9N14,CtT9N15,CtT9N16,CtT9N17,CtT9N18,CtT9N19, CtT9N20/)
+                                             CtT9N11,CtT9N12,CtT9N13,CtT9N14,CtT9N15,CtT9N16,CtT9N17,CtT9N18,CtT9N19, CtT9N20/),   (/20,9/) ) 
    
    
    
-   INTEGER,  PARAMETER  :: WkAxsXTD(9,9) = (/WkAxsXT1D1,WkAxsXT1D2,WkAxsXT1D3,WkAxsXT1D4,WkAxsXT1D5,WkAxsXT1D6,WkAxsXT1D7,WkAxsXT1D8,WkAxsXT1D9, &
+   INTEGER,  PARAMETER  :: WkAxsXTD(9,9) = RESHAPE(  & 
+                                           (/WkAxsXT1D1,WkAxsXT1D2,WkAxsXT1D3,WkAxsXT1D4,WkAxsXT1D5,WkAxsXT1D6,WkAxsXT1D7,WkAxsXT1D8,WkAxsXT1D9, &
                                              WkAxsXT2D1,WkAxsXT2D2,WkAxsXT2D3,WkAxsXT2D4,WkAxsXT2D5,WkAxsXT2D6,WkAxsXT2D7,WkAxsXT2D8,WkAxsXT2D9, &
                                              WkAxsXT3D1,WkAxsXT3D2,WkAxsXT3D3,WkAxsXT3D4,WkAxsXT3D5,WkAxsXT3D6,WkAxsXT3D7,WkAxsXT3D8,WkAxsXT3D9, &
                                              WkAxsXT4D1,WkAxsXT4D2,WkAxsXT4D3,WkAxsXT4D4,WkAxsXT4D5,WkAxsXT4D6,WkAxsXT4D7,WkAxsXT4D8,WkAxsXT4D9, &
@@ -9580,9 +9582,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              WkAxsXT6D1,WkAxsXT6D2,WkAxsXT6D3,WkAxsXT6D4,WkAxsXT6D5,WkAxsXT6D6,WkAxsXT6D7,WkAxsXT6D8,WkAxsXT6D9, &
                                              WkAxsXT7D1,WkAxsXT7D2,WkAxsXT7D3,WkAxsXT7D4,WkAxsXT7D5,WkAxsXT7D6,WkAxsXT7D7,WkAxsXT7D8,WkAxsXT7D9, &
                                              WkAxsXT8D1,WkAxsXT8D2,WkAxsXT8D3,WkAxsXT8D4,WkAxsXT8D5,WkAxsXT8D6,WkAxsXT8D7,WkAxsXT8D8,WkAxsXT8D9, &
-                                             WkAxsXT9D1,WkAxsXT9D2,WkAxsXT9D3,WkAxsXT9D4,WkAxsXT9D5,WkAxsXT9D6,WkAxsXT9D7,WkAxsXT9D8,WkAxsXT9D9/)
+                                             WkAxsXT9D1,WkAxsXT9D2,WkAxsXT9D3,WkAxsXT9D4,WkAxsXT9D5,WkAxsXT9D6,WkAxsXT9D7,WkAxsXT9D8,WkAxsXT9D9/),   (/9,9/) ) 
    
-   INTEGER,  PARAMETER  :: WkAxsYTD(9,9) = (/WkAxsYT1D1,WkAxsYT1D2,WkAxsYT1D3,WkAxsYT1D4,WkAxsYT1D5,WkAxsYT1D6,WkAxsYT1D7,WkAxsYT1D8,WkAxsYT1D9, &
+   INTEGER,  PARAMETER  :: WkAxsYTD(9,9) = RESHAPE(  & 
+                                           (/WkAxsYT1D1,WkAxsYT1D2,WkAxsYT1D3,WkAxsYT1D4,WkAxsYT1D5,WkAxsYT1D6,WkAxsYT1D7,WkAxsYT1D8,WkAxsYT1D9, &
                                              WkAxsYT2D1,WkAxsYT2D2,WkAxsYT2D3,WkAxsYT2D4,WkAxsYT2D5,WkAxsYT2D6,WkAxsYT2D7,WkAxsYT2D8,WkAxsYT2D9, &
                                              WkAxsYT3D1,WkAxsYT3D2,WkAxsYT3D3,WkAxsYT3D4,WkAxsYT3D5,WkAxsYT3D6,WkAxsYT3D7,WkAxsYT3D8,WkAxsYT3D9, &
                                              WkAxsYT4D1,WkAxsYT4D2,WkAxsYT4D3,WkAxsYT4D4,WkAxsYT4D5,WkAxsYT4D6,WkAxsYT4D7,WkAxsYT4D8,WkAxsYT4D9, &
@@ -9590,9 +9593,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              WkAxsYT6D1,WkAxsYT6D2,WkAxsYT6D3,WkAxsYT6D4,WkAxsYT6D5,WkAxsYT6D6,WkAxsYT6D7,WkAxsYT6D8,WkAxsYT6D9, &
                                              WkAxsYT7D1,WkAxsYT7D2,WkAxsYT7D3,WkAxsYT7D4,WkAxsYT7D5,WkAxsYT7D6,WkAxsYT7D7,WkAxsYT7D8,WkAxsYT7D9, &
                                              WkAxsYT8D1,WkAxsYT8D2,WkAxsYT8D3,WkAxsYT8D4,WkAxsYT8D5,WkAxsYT8D6,WkAxsYT8D7,WkAxsYT8D8,WkAxsYT8D9, &
-                                             WkAxsYT9D1,WkAxsYT9D2,WkAxsYT9D3,WkAxsYT9D4,WkAxsYT9D5,WkAxsYT9D6,WkAxsYT9D7,WkAxsYT9D8,WkAxsYT9D9/)
+                                             WkAxsYT9D1,WkAxsYT9D2,WkAxsYT9D3,WkAxsYT9D4,WkAxsYT9D5,WkAxsYT9D6,WkAxsYT9D7,WkAxsYT9D8,WkAxsYT9D9/),   (/9,9/) )
    
-   INTEGER,  PARAMETER  :: WkAxsZTD(9,9) = (/WkAxsZT1D1,WkAxsZT1D2,WkAxsZT1D3,WkAxsZT1D4,WkAxsZT1D5,WkAxsZT1D6,WkAxsZT1D7,WkAxsZT1D8,WkAxsZT1D9, &
+   INTEGER,  PARAMETER  :: WkAxsZTD(9,9) = RESHAPE(  & 
+                                           (/WkAxsZT1D1,WkAxsZT1D2,WkAxsZT1D3,WkAxsZT1D4,WkAxsZT1D5,WkAxsZT1D6,WkAxsZT1D7,WkAxsZT1D8,WkAxsZT1D9, &
                                              WkAxsZT2D1,WkAxsZT2D2,WkAxsZT2D3,WkAxsZT2D4,WkAxsZT2D5,WkAxsZT2D6,WkAxsZT2D7,WkAxsZT2D8,WkAxsZT2D9, &
                                              WkAxsZT3D1,WkAxsZT3D2,WkAxsZT3D3,WkAxsZT3D4,WkAxsZT3D5,WkAxsZT3D6,WkAxsZT3D7,WkAxsZT3D8,WkAxsZT3D9, &
                                              WkAxsZT4D1,WkAxsZT4D2,WkAxsZT4D3,WkAxsZT4D4,WkAxsZT4D5,WkAxsZT4D6,WkAxsZT4D7,WkAxsZT4D8,WkAxsZT4D9, &
@@ -9600,9 +9604,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              WkAxsZT6D1,WkAxsZT6D2,WkAxsZT6D3,WkAxsZT6D4,WkAxsZT6D5,WkAxsZT6D6,WkAxsZT6D7,WkAxsZT6D8,WkAxsZT6D9, &
                                              WkAxsZT7D1,WkAxsZT7D2,WkAxsZT7D3,WkAxsZT7D4,WkAxsZT7D5,WkAxsZT7D6,WkAxsZT7D7,WkAxsZT7D8,WkAxsZT7D9, &
                                              WkAxsZT8D1,WkAxsZT8D2,WkAxsZT8D3,WkAxsZT8D4,WkAxsZT8D5,WkAxsZT8D6,WkAxsZT8D7,WkAxsZT8D8,WkAxsZT8D9, &
-                                             WkAxsZT9D1,WkAxsZT9D2,WkAxsZT9D3,WkAxsZT9D4,WkAxsZT9D5,WkAxsZT9D6,WkAxsZT9D7,WkAxsZT9D8,WkAxsZT9D9/)
+                                             WkAxsZT9D1,WkAxsZT9D2,WkAxsZT9D3,WkAxsZT9D4,WkAxsZT9D5,WkAxsZT9D6,WkAxsZT9D7,WkAxsZT9D8,WkAxsZT9D9/),   (/9,9/) )
 
-   INTEGER,  PARAMETER  :: WkPosXTD(9,9) = (/WkPosXT1D1,WkPosXT1D2,WkPosXT1D3,WkPosXT1D4,WkPosXT1D5,WkPosXT1D6,WkPosXT1D7,WkPosXT1D8,WkPosXT1D9, &
+   INTEGER,  PARAMETER  :: WkPosXTD(9,9) = RESHAPE(  & 
+                                           (/WkPosXT1D1,WkPosXT1D2,WkPosXT1D3,WkPosXT1D4,WkPosXT1D5,WkPosXT1D6,WkPosXT1D7,WkPosXT1D8,WkPosXT1D9, &
                                              WkPosXT2D1,WkPosXT2D2,WkPosXT2D3,WkPosXT2D4,WkPosXT2D5,WkPosXT2D6,WkPosXT2D7,WkPosXT2D8,WkPosXT2D9, &
                                              WkPosXT3D1,WkPosXT3D2,WkPosXT3D3,WkPosXT3D4,WkPosXT3D5,WkPosXT3D6,WkPosXT3D7,WkPosXT3D8,WkPosXT3D9, &
                                              WkPosXT4D1,WkPosXT4D2,WkPosXT4D3,WkPosXT4D4,WkPosXT4D5,WkPosXT4D6,WkPosXT4D7,WkPosXT4D8,WkPosXT4D9, &
@@ -9610,9 +9615,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              WkPosXT6D1,WkPosXT6D2,WkPosXT6D3,WkPosXT6D4,WkPosXT6D5,WkPosXT6D6,WkPosXT6D7,WkPosXT6D8,WkPosXT6D9, &
                                              WkPosXT7D1,WkPosXT7D2,WkPosXT7D3,WkPosXT7D4,WkPosXT7D5,WkPosXT7D6,WkPosXT7D7,WkPosXT7D8,WkPosXT7D9, &
                                              WkPosXT8D1,WkPosXT8D2,WkPosXT8D3,WkPosXT8D4,WkPosXT8D5,WkPosXT8D6,WkPosXT8D7,WkPosXT8D8,WkPosXT8D9, &
-                                             WkPosXT9D1,WkPosXT9D2,WkPosXT9D3,WkPosXT9D4,WkPosXT9D5,WkPosXT9D6,WkPosXT9D7,WkPosXT9D8,WkPosXT9D9/)
+                                             WkPosXT9D1,WkPosXT9D2,WkPosXT9D3,WkPosXT9D4,WkPosXT9D5,WkPosXT9D6,WkPosXT9D7,WkPosXT9D8,WkPosXT9D9/),   (/9,9/) )
    
-   INTEGER,  PARAMETER  :: WkPosYTD(9,9) = (/WkPosYT1D1,WkPosYT1D2,WkPosYT1D3,WkPosYT1D4,WkPosYT1D5,WkPosYT1D6,WkPosYT1D7,WkPosYT1D8,WkPosYT1D9, &
+   INTEGER,  PARAMETER  :: WkPosYTD(9,9) = RESHAPE(  & 
+                                           (/WkPosYT1D1,WkPosYT1D2,WkPosYT1D3,WkPosYT1D4,WkPosYT1D5,WkPosYT1D6,WkPosYT1D7,WkPosYT1D8,WkPosYT1D9, &
                                              WkPosYT2D1,WkPosYT2D2,WkPosYT2D3,WkPosYT2D4,WkPosYT2D5,WkPosYT2D6,WkPosYT2D7,WkPosYT2D8,WkPosYT2D9, &
                                              WkPosYT3D1,WkPosYT3D2,WkPosYT3D3,WkPosYT3D4,WkPosYT3D5,WkPosYT3D6,WkPosYT3D7,WkPosYT3D8,WkPosYT3D9, &
                                              WkPosYT4D1,WkPosYT4D2,WkPosYT4D3,WkPosYT4D4,WkPosYT4D5,WkPosYT4D6,WkPosYT4D7,WkPosYT4D8,WkPosYT4D9, &
@@ -9620,9 +9626,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              WkPosYT6D1,WkPosYT6D2,WkPosYT6D3,WkPosYT6D4,WkPosYT6D5,WkPosYT6D6,WkPosYT6D7,WkPosYT6D8,WkPosYT6D9, &
                                              WkPosYT7D1,WkPosYT7D2,WkPosYT7D3,WkPosYT7D4,WkPosYT7D5,WkPosYT7D6,WkPosYT7D7,WkPosYT7D8,WkPosYT7D9, &
                                              WkPosYT8D1,WkPosYT8D2,WkPosYT8D3,WkPosYT8D4,WkPosYT8D5,WkPosYT8D6,WkPosYT8D7,WkPosYT8D8,WkPosYT8D9, &
-                                             WkPosYT9D1,WkPosYT9D2,WkPosYT9D3,WkPosYT9D4,WkPosYT9D5,WkPosYT9D6,WkPosYT9D7,WkPosYT9D8,WkPosYT9D9/)
+                                             WkPosYT9D1,WkPosYT9D2,WkPosYT9D3,WkPosYT9D4,WkPosYT9D5,WkPosYT9D6,WkPosYT9D7,WkPosYT9D8,WkPosYT9D9/),   (/9,9/) )
    
-   INTEGER,  PARAMETER  :: WkPosZTD(9,9) = (/WkPosZT1D1,WkPosZT1D2,WkPosZT1D3,WkPosZT1D4,WkPosZT1D5,WkPosZT1D6,WkPosZT1D7,WkPosZT1D8,WkPosZT1D9, &
+   INTEGER,  PARAMETER  :: WkPosZTD(9,9) = RESHAPE(  & 
+                                           (/WkPosZT1D1,WkPosZT1D2,WkPosZT1D3,WkPosZT1D4,WkPosZT1D5,WkPosZT1D6,WkPosZT1D7,WkPosZT1D8,WkPosZT1D9, &
                                              WkPosZT2D1,WkPosZT2D2,WkPosZT2D3,WkPosZT2D4,WkPosZT2D5,WkPosZT2D6,WkPosZT2D7,WkPosZT2D8,WkPosZT2D9, &
                                              WkPosZT3D1,WkPosZT3D2,WkPosZT3D3,WkPosZT3D4,WkPosZT3D5,WkPosZT3D6,WkPosZT3D7,WkPosZT3D8,WkPosZT3D9, &
                                              WkPosZT4D1,WkPosZT4D2,WkPosZT4D3,WkPosZT4D4,WkPosZT4D5,WkPosZT4D6,WkPosZT4D7,WkPosZT4D8,WkPosZT4D9, &
@@ -9630,9 +9637,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              WkPosZT6D1,WkPosZT6D2,WkPosZT6D3,WkPosZT6D4,WkPosZT6D5,WkPosZT6D6,WkPosZT6D7,WkPosZT6D8,WkPosZT6D9, &
                                              WkPosZT7D1,WkPosZT7D2,WkPosZT7D3,WkPosZT7D4,WkPosZT7D5,WkPosZT7D6,WkPosZT7D7,WkPosZT7D8,WkPosZT7D9, &
                                              WkPosZT8D1,WkPosZT8D2,WkPosZT8D3,WkPosZT8D4,WkPosZT8D5,WkPosZT8D6,WkPosZT8D7,WkPosZT8D8,WkPosZT8D9, &
-                                             WkPosZT9D1,WkPosZT9D2,WkPosZT9D3,WkPosZT9D4,WkPosZT9D5,WkPosZT9D6,WkPosZT9D7,WkPosZT9D8,WkPosZT9D9/)
+                                             WkPosZT9D1,WkPosZT9D2,WkPosZT9D3,WkPosZT9D4,WkPosZT9D5,WkPosZT9D6,WkPosZT9D7,WkPosZT9D8,WkPosZT9D9/),   (/9,9/) )
    
-   INTEGER,  PARAMETER  :: WkVelXTD(9,9) = (/WkVelXT1D1,WkVelXT1D2,WkVelXT1D3,WkVelXT1D4,WkVelXT1D5,WkVelXT1D6,WkVelXT1D7,WkVelXT1D8,WkVelXT1D9, &
+   INTEGER,  PARAMETER  :: WkVelXTD(9,9) = RESHAPE(  & 
+                                           (/WkVelXT1D1,WkVelXT1D2,WkVelXT1D3,WkVelXT1D4,WkVelXT1D5,WkVelXT1D6,WkVelXT1D7,WkVelXT1D8,WkVelXT1D9, &
                                              WkVelXT2D1,WkVelXT2D2,WkVelXT2D3,WkVelXT2D4,WkVelXT2D5,WkVelXT2D6,WkVelXT2D7,WkVelXT2D8,WkVelXT2D9, &
                                              WkVelXT3D1,WkVelXT3D2,WkVelXT3D3,WkVelXT3D4,WkVelXT3D5,WkVelXT3D6,WkVelXT3D7,WkVelXT3D8,WkVelXT3D9, &
                                              WkVelXT4D1,WkVelXT4D2,WkVelXT4D3,WkVelXT4D4,WkVelXT4D5,WkVelXT4D6,WkVelXT4D7,WkVelXT4D8,WkVelXT4D9, &
@@ -9640,9 +9648,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              WkVelXT6D1,WkVelXT6D2,WkVelXT6D3,WkVelXT6D4,WkVelXT6D5,WkVelXT6D6,WkVelXT6D7,WkVelXT6D8,WkVelXT6D9, &
                                              WkVelXT7D1,WkVelXT7D2,WkVelXT7D3,WkVelXT7D4,WkVelXT7D5,WkVelXT7D6,WkVelXT7D7,WkVelXT7D8,WkVelXT7D9, &
                                              WkVelXT8D1,WkVelXT8D2,WkVelXT8D3,WkVelXT8D4,WkVelXT8D5,WkVelXT8D6,WkVelXT8D7,WkVelXT8D8,WkVelXT8D9, &
-                                             WkVelXT9D1,WkVelXT9D2,WkVelXT9D3,WkVelXT9D4,WkVelXT9D5,WkVelXT9D6,WkVelXT9D7,WkVelXT9D8,WkVelXT9D9/)
+                                             WkVelXT9D1,WkVelXT9D2,WkVelXT9D3,WkVelXT9D4,WkVelXT9D5,WkVelXT9D6,WkVelXT9D7,WkVelXT9D8,WkVelXT9D9/),   (/9,9/) )
    
-   INTEGER,  PARAMETER  :: WkVelYTD(9,9) = (/WkVelYT1D1,WkVelYT1D2,WkVelYT1D3,WkVelYT1D4,WkVelYT1D5,WkVelYT1D6,WkVelYT1D7,WkVelYT1D8,WkVelYT1D9, &
+   INTEGER,  PARAMETER  :: WkVelYTD(9,9) = RESHAPE(  & 
+                                           (/WkVelYT1D1,WkVelYT1D2,WkVelYT1D3,WkVelYT1D4,WkVelYT1D5,WkVelYT1D6,WkVelYT1D7,WkVelYT1D8,WkVelYT1D9, &
                                              WkVelYT2D1,WkVelYT2D2,WkVelYT2D3,WkVelYT2D4,WkVelYT2D5,WkVelYT2D6,WkVelYT2D7,WkVelYT2D8,WkVelYT2D9, &
                                              WkVelYT3D1,WkVelYT3D2,WkVelYT3D3,WkVelYT3D4,WkVelYT3D5,WkVelYT3D6,WkVelYT3D7,WkVelYT3D8,WkVelYT3D9, &
                                              WkVelYT4D1,WkVelYT4D2,WkVelYT4D3,WkVelYT4D4,WkVelYT4D5,WkVelYT4D6,WkVelYT4D7,WkVelYT4D8,WkVelYT4D9, &
@@ -9650,9 +9659,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              WkVelYT6D1,WkVelYT6D2,WkVelYT6D3,WkVelYT6D4,WkVelYT6D5,WkVelYT6D6,WkVelYT6D7,WkVelYT6D8,WkVelYT6D9, &
                                              WkVelYT7D1,WkVelYT7D2,WkVelYT7D3,WkVelYT7D4,WkVelYT7D5,WkVelYT7D6,WkVelYT7D7,WkVelYT7D8,WkVelYT7D9, &
                                              WkVelYT8D1,WkVelYT8D2,WkVelYT8D3,WkVelYT8D4,WkVelYT8D5,WkVelYT8D6,WkVelYT8D7,WkVelYT8D8,WkVelYT8D9, &
-                                             WkVelYT9D1,WkVelYT9D2,WkVelYT9D3,WkVelYT9D4,WkVelYT9D5,WkVelYT9D6,WkVelYT9D7,WkVelYT9D8,WkVelYT9D9/)
+                                             WkVelYT9D1,WkVelYT9D2,WkVelYT9D3,WkVelYT9D4,WkVelYT9D5,WkVelYT9D6,WkVelYT9D7,WkVelYT9D8,WkVelYT9D9/),   (/9,9/) )
    
-   INTEGER,  PARAMETER  :: WkVelZTD(9,9) = (/WkVelZT1D1,WkVelZT1D2,WkVelZT1D3,WkVelZT1D4,WkVelZT1D5,WkVelZT1D6,WkVelZT1D7,WkVelZT1D8,WkVelZT1D9, &
+   INTEGER,  PARAMETER  :: WkVelZTD(9,9) = RESHAPE(  & 
+                                           (/WkVelZT1D1,WkVelZT1D2,WkVelZT1D3,WkVelZT1D4,WkVelZT1D5,WkVelZT1D6,WkVelZT1D7,WkVelZT1D8,WkVelZT1D9, &
                                              WkVelZT2D1,WkVelZT2D2,WkVelZT2D3,WkVelZT2D4,WkVelZT2D5,WkVelZT2D6,WkVelZT2D7,WkVelZT2D8,WkVelZT2D9, &
                                              WkVelZT3D1,WkVelZT3D2,WkVelZT3D3,WkVelZT3D4,WkVelZT3D5,WkVelZT3D6,WkVelZT3D7,WkVelZT3D8,WkVelZT3D9, &
                                              WkVelZT4D1,WkVelZT4D2,WkVelZT4D3,WkVelZT4D4,WkVelZT4D5,WkVelZT4D6,WkVelZT4D7,WkVelZT4D8,WkVelZT4D9, &
@@ -9660,9 +9670,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              WkVelZT6D1,WkVelZT6D2,WkVelZT6D3,WkVelZT6D4,WkVelZT6D5,WkVelZT6D6,WkVelZT6D7,WkVelZT6D8,WkVelZT6D9, &
                                              WkVelZT7D1,WkVelZT7D2,WkVelZT7D3,WkVelZT7D4,WkVelZT7D5,WkVelZT7D6,WkVelZT7D7,WkVelZT7D8,WkVelZT7D9, &
                                              WkVelZT8D1,WkVelZT8D2,WkVelZT8D3,WkVelZT8D4,WkVelZT8D5,WkVelZT8D6,WkVelZT8D7,WkVelZT8D8,WkVelZT8D9, &
-                                             WkVelZT9D1,WkVelZT9D2,WkVelZT9D3,WkVelZT9D4,WkVelZT9D5,WkVelZT9D6,WkVelZT9D7,WkVelZT9D8,WkVelZT9D9/)   
+                                             WkVelZT9D1,WkVelZT9D2,WkVelZT9D3,WkVelZT9D4,WkVelZT9D5,WkVelZT9D6,WkVelZT9D7,WkVelZT9D8,WkVelZT9D9/),   (/9,9/) )   
    
-   INTEGER,  PARAMETER  :: WkDiamTD(9,9) = (/WkDiamT1D1,WkDiamT1D2,WkDiamT1D3,WkDiamT1D4,WkDiamT1D5,WkDiamT1D6,WkDiamT1D7,WkDiamT1D8,WkDiamT1D9, &
+   INTEGER,  PARAMETER  :: WkDiamTD(9,9) = RESHAPE(  & 
+                                           (/WkDiamT1D1,WkDiamT1D2,WkDiamT1D3,WkDiamT1D4,WkDiamT1D5,WkDiamT1D6,WkDiamT1D7,WkDiamT1D8,WkDiamT1D9, &
                                              WkDiamT2D1,WkDiamT2D2,WkDiamT2D3,WkDiamT2D4,WkDiamT2D5,WkDiamT2D6,WkDiamT2D7,WkDiamT2D8,WkDiamT2D9, &
                                              WkDiamT3D1,WkDiamT3D2,WkDiamT3D3,WkDiamT3D4,WkDiamT3D5,WkDiamT3D6,WkDiamT3D7,WkDiamT3D8,WkDiamT3D9, &
                                              WkDiamT4D1,WkDiamT4D2,WkDiamT4D3,WkDiamT4D4,WkDiamT4D5,WkDiamT4D6,WkDiamT4D7,WkDiamT4D8,WkDiamT4D9, &
@@ -9670,10 +9681,11 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                              WkDiamT6D1,WkDiamT6D2,WkDiamT6D3,WkDiamT6D4,WkDiamT6D5,WkDiamT6D6,WkDiamT6D7,WkDiamT6D8,WkDiamT6D9, &
                                              WkDiamT7D1,WkDiamT7D2,WkDiamT7D3,WkDiamT7D4,WkDiamT7D5,WkDiamT7D6,WkDiamT7D7,WkDiamT7D8,WkDiamT7D9, &
                                              WkDiamT8D1,WkDiamT8D2,WkDiamT8D3,WkDiamT8D4,WkDiamT8D5,WkDiamT8D6,WkDiamT8D7,WkDiamT8D8,WkDiamT8D9, &
-                                             WkDiamT9D1,WkDiamT9D2,WkDiamT9D3,WkDiamT9D4,WkDiamT9D5,WkDiamT9D6,WkDiamT9D7,WkDiamT9D8,WkDiamT9D9/) 
+                                             WkDiamT9D1,WkDiamT9D2,WkDiamT9D3,WkDiamT9D4,WkDiamT9D5,WkDiamT9D6,WkDiamT9D7,WkDiamT9D8,WkDiamT9D9/),   (/9,9/) ) 
   
 
-   INTEGER,  PARAMETER  :: WkDfVxTND(20,9,1) = (/WkDfVxT1N01D1,WkDfVxT1N02D1,WkDfVxT1N03D1,WkDfVxT1N04D1,WkDfVxT1N05D1,WkDfVxT1N06D1,WkDfVxT1N07D1,WkDfVxT1N08D1,WkDfVxT1N09D1,WkDfVxT1N10D1, &
+   INTEGER,  PARAMETER  :: WkDfVxTND(20,9,1) = RESHAPE(  & 
+                                               (/WkDfVxT1N01D1,WkDfVxT1N02D1,WkDfVxT1N03D1,WkDfVxT1N04D1,WkDfVxT1N05D1,WkDfVxT1N06D1,WkDfVxT1N07D1,WkDfVxT1N08D1,WkDfVxT1N09D1,WkDfVxT1N10D1, &
                                                  WkDfVxT1N11D1,WkDfVxT1N12D1,WkDfVxT1N13D1,WkDfVxT1N14D1,WkDfVxT1N15D1,WkDfVxT1N16D1,WkDfVxT1N17D1,WkDfVxT1N18D1,WkDfVxT1N19D1,WkDfVxT1N20D1, &
                                                  WkDfVxT1N01D2,WkDfVxT1N02D2,WkDfVxT1N03D2,WkDfVxT1N04D2,WkDfVxT1N05D2,WkDfVxT1N06D2,WkDfVxT1N07D2,WkDfVxT1N08D2,WkDfVxT1N09D2,WkDfVxT1N10D2, &
                                                  WkDfVxT1N11D2,WkDfVxT1N12D2,WkDfVxT1N13D2,WkDfVxT1N14D2,WkDfVxT1N15D2,WkDfVxT1N16D2,WkDfVxT1N17D2,WkDfVxT1N18D2,WkDfVxT1N19D2,WkDfVxT1N20D2, &
@@ -9690,9 +9702,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                                  WkDfVxT1N01D8,WkDfVxT1N02D8,WkDfVxT1N03D8,WkDfVxT1N04D8,WkDfVxT1N05D8,WkDfVxT1N06D8,WkDfVxT1N07D8,WkDfVxT1N08D8,WkDfVxT1N09D8,WkDfVxT1N10D8, &
                                                  WkDfVxT1N11D8,WkDfVxT1N12D8,WkDfVxT1N13D8,WkDfVxT1N14D8,WkDfVxT1N15D8,WkDfVxT1N16D8,WkDfVxT1N17D8,WkDfVxT1N18D8,WkDfVxT1N19D8,WkDfVxT1N20D8, &
                                                  WkDfVxT1N01D9,WkDfVxT1N02D9,WkDfVxT1N03D9,WkDfVxT1N04D9,WkDfVxT1N05D9,WkDfVxT1N06D9,WkDfVxT1N07D9,WkDfVxT1N08D9,WkDfVxT1N09D9,WkDfVxT1N10D9, &
-                                                 WkDfVxT1N11D9,WkDfVxT1N12D9,WkDfVxT1N13D9,WkDfVxT1N14D9,WkDfVxT1N15D9,WkDfVxT1N16D9,WkDfVxT1N17D9,WkDfVxT1N18D9,WkDfVxT1N19D9,WkDfVxT1N20D9/)
+                                                 WkDfVxT1N11D9,WkDfVxT1N12D9,WkDfVxT1N13D9,WkDfVxT1N14D9,WkDfVxT1N15D9,WkDfVxT1N16D9,WkDfVxT1N17D9,WkDfVxT1N18D9,WkDfVxT1N19D9,WkDfVxT1N20D9/),   (/20,9,1/) ) 
      
-   INTEGER,  PARAMETER  :: WkDfVrTND(20,9,1) = (/WkDfVrT1N01D1,WkDfVrT1N02D1,WkDfVrT1N03D1,WkDfVrT1N04D1,WkDfVrT1N05D1,WkDfVrT1N06D1,WkDfVrT1N07D1,WkDfVrT1N08D1,WkDfVrT1N09D1,WkDfVrT1N10D1, &
+   INTEGER,  PARAMETER  :: WkDfVrTND(20,9,1) = RESHAPE(  & 
+                                               (/WkDfVrT1N01D1,WkDfVrT1N02D1,WkDfVrT1N03D1,WkDfVrT1N04D1,WkDfVrT1N05D1,WkDfVrT1N06D1,WkDfVrT1N07D1,WkDfVrT1N08D1,WkDfVrT1N09D1,WkDfVrT1N10D1, &
                                                  WkDfVrT1N11D1,WkDfVrT1N12D1,WkDfVrT1N13D1,WkDfVrT1N14D1,WkDfVrT1N15D1,WkDfVrT1N16D1,WkDfVrT1N17D1,WkDfVrT1N18D1,WkDfVrT1N19D1,WkDfVrT1N20D1, &
                                                  WkDfVrT1N01D2,WkDfVrT1N02D2,WkDfVrT1N03D2,WkDfVrT1N04D2,WkDfVrT1N05D2,WkDfVrT1N06D2,WkDfVrT1N07D2,WkDfVrT1N08D2,WkDfVrT1N09D2,WkDfVrT1N10D2, &
                                                  WkDfVrT1N11D2,WkDfVrT1N12D2,WkDfVrT1N13D2,WkDfVrT1N14D2,WkDfVrT1N15D2,WkDfVrT1N16D2,WkDfVrT1N17D2,WkDfVrT1N18D2,WkDfVrT1N19D2,WkDfVrT1N20D2, &
@@ -9709,9 +9722,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                                  WkDfVrT1N01D8,WkDfVrT1N02D8,WkDfVrT1N03D8,WkDfVrT1N04D8,WkDfVrT1N05D8,WkDfVrT1N06D8,WkDfVrT1N07D8,WkDfVrT1N08D8,WkDfVrT1N09D8,WkDfVrT1N10D8, &
                                                  WkDfVrT1N11D8,WkDfVrT1N12D8,WkDfVrT1N13D8,WkDfVrT1N14D8,WkDfVrT1N15D8,WkDfVrT1N16D8,WkDfVrT1N17D8,WkDfVrT1N18D8,WkDfVrT1N19D8,WkDfVrT1N20D8, &
                                                  WkDfVrT1N01D9,WkDfVrT1N02D9,WkDfVrT1N03D9,WkDfVrT1N04D9,WkDfVrT1N05D9,WkDfVrT1N06D9,WkDfVrT1N07D9,WkDfVrT1N08D9,WkDfVrT1N09D9,WkDfVrT1N10D9, &
-                                                 WkDfVrT1N11D9,WkDfVrT1N12D9,WkDfVrT1N13D9,WkDfVrT1N14D9,WkDfVrT1N15D9,WkDfVrT1N16D9,WkDfVrT1N17D9,WkDfVrT1N18D9,WkDfVrT1N19D9,WkDfVrT1N20D9/)
+                                                 WkDfVrT1N11D9,WkDfVrT1N12D9,WkDfVrT1N13D9,WkDfVrT1N14D9,WkDfVrT1N15D9,WkDfVrT1N16D9,WkDfVrT1N17D9,WkDfVrT1N18D9,WkDfVrT1N19D9,WkDfVrT1N20D9/),   (/20,9,1/) ) 
       
-   INTEGER,  PARAMETER  :: EddVisTND(20,9,1) = (/EddVisT1N01D1,EddVisT1N02D1,EddVisT1N03D1,EddVisT1N04D1,EddVisT1N05D1,EddVisT1N06D1,EddVisT1N07D1,EddVisT1N08D1,EddVisT1N09D1,EddVisT1N10D1, &
+   INTEGER,  PARAMETER  :: EddVisTND(20,9,1) = RESHAPE(  & 
+                                               (/EddVisT1N01D1,EddVisT1N02D1,EddVisT1N03D1,EddVisT1N04D1,EddVisT1N05D1,EddVisT1N06D1,EddVisT1N07D1,EddVisT1N08D1,EddVisT1N09D1,EddVisT1N10D1, &
                                                  EddVisT1N11D1,EddVisT1N12D1,EddVisT1N13D1,EddVisT1N14D1,EddVisT1N15D1,EddVisT1N16D1,EddVisT1N17D1,EddVisT1N18D1,EddVisT1N19D1,EddVisT1N20D1, &
                                                  EddVisT1N01D2,EddVisT1N02D2,EddVisT1N03D2,EddVisT1N04D2,EddVisT1N05D2,EddVisT1N06D2,EddVisT1N07D2,EddVisT1N08D2,EddVisT1N09D2,EddVisT1N10D2, &
                                                  EddVisT1N11D2,EddVisT1N12D2,EddVisT1N13D2,EddVisT1N14D2,EddVisT1N15D2,EddVisT1N16D2,EddVisT1N17D2,EddVisT1N18D2,EddVisT1N19D2,EddVisT1N20D2, &
@@ -9728,9 +9742,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                                  EddVisT1N01D8,EddVisT1N02D8,EddVisT1N03D8,EddVisT1N04D8,EddVisT1N05D8,EddVisT1N06D8,EddVisT1N07D8,EddVisT1N08D8,EddVisT1N09D8,EddVisT1N10D8, &
                                                  EddVisT1N11D8,EddVisT1N12D8,EddVisT1N13D8,EddVisT1N14D8,EddVisT1N15D8,EddVisT1N16D8,EddVisT1N17D8,EddVisT1N18D8,EddVisT1N19D8,EddVisT1N20D8, &
                                                  EddVisT1N01D9,EddVisT1N02D9,EddVisT1N03D9,EddVisT1N04D9,EddVisT1N05D9,EddVisT1N06D9,EddVisT1N07D9,EddVisT1N08D9,EddVisT1N09D9,EddVisT1N10D9, &
-                                                 EddVisT1N11D9,EddVisT1N12D9,EddVisT1N13D9,EddVisT1N14D9,EddVisT1N15D9,EddVisT1N16D9,EddVisT1N17D9,EddVisT1N18D9,EddVisT1N19D9,EddVisT1N20D9/)
+                                                 EddVisT1N11D9,EddVisT1N12D9,EddVisT1N13D9,EddVisT1N14D9,EddVisT1N15D9,EddVisT1N16D9,EddVisT1N17D9,EddVisT1N18D9,EddVisT1N19D9,EddVisT1N20D9/),   (/20,9,1/) ) 
 
-   INTEGER,  PARAMETER  :: EddAmbTND(20,9,1) = (/EddAmbT1N01D1,EddAmbT1N02D1,EddAmbT1N03D1,EddAmbT1N04D1,EddAmbT1N05D1,EddAmbT1N06D1,EddAmbT1N07D1,EddAmbT1N08D1,EddAmbT1N09D1,EddAmbT1N10D1, &
+   INTEGER,  PARAMETER  :: EddAmbTND(20,9,1) = RESHAPE(  & 
+                                               (/EddAmbT1N01D1,EddAmbT1N02D1,EddAmbT1N03D1,EddAmbT1N04D1,EddAmbT1N05D1,EddAmbT1N06D1,EddAmbT1N07D1,EddAmbT1N08D1,EddAmbT1N09D1,EddAmbT1N10D1, &
                                                  EddAmbT1N11D1,EddAmbT1N12D1,EddAmbT1N13D1,EddAmbT1N14D1,EddAmbT1N15D1,EddAmbT1N16D1,EddAmbT1N17D1,EddAmbT1N18D1,EddAmbT1N19D1,EddAmbT1N20D1, &
                                                  EddAmbT1N01D2,EddAmbT1N02D2,EddAmbT1N03D2,EddAmbT1N04D2,EddAmbT1N05D2,EddAmbT1N06D2,EddAmbT1N07D2,EddAmbT1N08D2,EddAmbT1N09D2,EddAmbT1N10D2, &
                                                  EddAmbT1N11D2,EddAmbT1N12D2,EddAmbT1N13D2,EddAmbT1N14D2,EddAmbT1N15D2,EddAmbT1N16D2,EddAmbT1N17D2,EddAmbT1N18D2,EddAmbT1N19D2,EddAmbT1N20D2, &
@@ -9747,9 +9762,10 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                                  EddAmbT1N01D8,EddAmbT1N02D8,EddAmbT1N03D8,EddAmbT1N04D8,EddAmbT1N05D8,EddAmbT1N06D8,EddAmbT1N07D8,EddAmbT1N08D8,EddAmbT1N09D8,EddAmbT1N10D8, &
                                                  EddAmbT1N11D8,EddAmbT1N12D8,EddAmbT1N13D8,EddAmbT1N14D8,EddAmbT1N15D8,EddAmbT1N16D8,EddAmbT1N17D8,EddAmbT1N18D8,EddAmbT1N19D8,EddAmbT1N20D8, &
                                                  EddAmbT1N01D9,EddAmbT1N02D9,EddAmbT1N03D9,EddAmbT1N04D9,EddAmbT1N05D9,EddAmbT1N06D9,EddAmbT1N07D9,EddAmbT1N08D9,EddAmbT1N09D9,EddAmbT1N10D9, &
-                                                 EddAmbT1N11D9,EddAmbT1N12D9,EddAmbT1N13D9,EddAmbT1N14D9,EddAmbT1N15D9,EddAmbT1N16D9,EddAmbT1N17D9,EddAmbT1N18D9,EddAmbT1N19D9,EddAmbT1N20D9/)
+                                                 EddAmbT1N11D9,EddAmbT1N12D9,EddAmbT1N13D9,EddAmbT1N14D9,EddAmbT1N15D9,EddAmbT1N16D9,EddAmbT1N17D9,EddAmbT1N18D9,EddAmbT1N19D9,EddAmbT1N20D9/),   (/20,9,1/) ) 
 
-   INTEGER,  PARAMETER  :: EddShrTND(20,9,1) = (/EddShrT1N01D1,EddShrT1N02D1,EddShrT1N03D1,EddShrT1N04D1,EddShrT1N05D1,EddShrT1N06D1,EddShrT1N07D1,EddShrT1N08D1,EddShrT1N09D1,EddShrT1N10D1, &
+   INTEGER,  PARAMETER  :: EddShrTND(20,9,1) = RESHAPE(  & 
+                                               (/EddShrT1N01D1,EddShrT1N02D1,EddShrT1N03D1,EddShrT1N04D1,EddShrT1N05D1,EddShrT1N06D1,EddShrT1N07D1,EddShrT1N08D1,EddShrT1N09D1,EddShrT1N10D1, &
                                                  EddShrT1N11D1,EddShrT1N12D1,EddShrT1N13D1,EddShrT1N14D1,EddShrT1N15D1,EddShrT1N16D1,EddShrT1N17D1,EddShrT1N18D1,EddShrT1N19D1,EddShrT1N20D1, &
                                                  EddShrT1N01D2,EddShrT1N02D2,EddShrT1N03D2,EddShrT1N04D2,EddShrT1N05D2,EddShrT1N06D2,EddShrT1N07D2,EddShrT1N08D2,EddShrT1N09D2,EddShrT1N10D2, &
                                                  EddShrT1N11D2,EddShrT1N12D2,EddShrT1N13D2,EddShrT1N14D2,EddShrT1N15D2,EddShrT1N16D2,EddShrT1N17D2,EddShrT1N18D2,EddShrT1N19D2,EddShrT1N20D2, &
@@ -9766,7 +9782,7 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v1.00.
                                                  EddShrT1N01D8,EddShrT1N02D8,EddShrT1N03D8,EddShrT1N04D8,EddShrT1N05D8,EddShrT1N06D8,EddShrT1N07D8,EddShrT1N08D8,EddShrT1N09D8,EddShrT1N10D8, &
                                                  EddShrT1N11D8,EddShrT1N12D8,EddShrT1N13D8,EddShrT1N14D8,EddShrT1N15D8,EddShrT1N16D8,EddShrT1N17D8,EddShrT1N18D8,EddShrT1N19D8,EddShrT1N20D8, &
                                                  EddShrT1N01D9,EddShrT1N02D9,EddShrT1N03D9,EddShrT1N04D9,EddShrT1N05D9,EddShrT1N06D9,EddShrT1N07D9,EddShrT1N08D9,EddShrT1N09D9,EddShrT1N10D9, &
-                                                 EddShrT1N11D9,EddShrT1N12D9,EddShrT1N13D9,EddShrT1N14D9,EddShrT1N15D9,EddShrT1N16D9,EddShrT1N17D9,EddShrT1N18D9,EddShrT1N19D9,EddShrT1N20D9/)
+                                                 EddShrT1N11D9,EddShrT1N12D9,EddShrT1N13D9,EddShrT1N14D9,EddShrT1N15D9,EddShrT1N16D9,EddShrT1N17D9,EddShrT1N18D9,EddShrT1N19D9,EddShrT1N20D9/),   (/20,9,1/) ) 
 
    INTEGER,  PARAMETER  :: WVAmbX(9) = (/W1VAmbX, W2VAmbX, W3VAmbX, W4VAmbX, W5VAmbX, W6VAmbX, W7VAmbX, W8VAmbX, W9VAmbX/)
    INTEGER,  PARAMETER  :: WVAmbY(9) = (/W1VAmbY, W2VAmbY, W3VAmbY, W4VAmbY, W5VAmbY, W6VAmbY, W7VAmbY, W8VAmbY, W9VAmbY/)
@@ -9906,6 +9922,8 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
 
 RETURN
 END SUBROUTINE Farm_InitOutput   
+
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine is called at program termination. It writes any additional output files,
@@ -10099,7 +10117,7 @@ END SUBROUTINE WrOutputLine
 !! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
 !! 
 !! This routine was generated by Write_ChckOutLst.m using the parameters listed in OutListParameters.xlsx at 13-Mar-2017 10:34:10.
-SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
+SUBROUTINE SetOutParam(OutList, farm, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    IMPLICIT                        NONE
@@ -10107,7 +10125,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       ! Passed variables
 
    CHARACTER(ChanLenFF),        INTENT(IN)     :: OutList(:)                        !< The list out user-requested outputs
-   TYPE(FARM_ParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
+   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                                !< FAST.Farm data
    INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           !< The error status code
    CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            !< The error message, if an error occurred
 
@@ -10117,6 +10135,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    INTEGER                      :: I                                               ! Generic loop-counting index
    INTEGER                      :: J                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
+   INTEGER                      :: nTurbOut                                        ! min (p%NumTurbines,9), for output handling
    INTEGER                      :: foundList
    LOGICAL                      :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
    LOGICAL                      :: InvalidOutput(0:MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
@@ -12827,10 +12846,7 @@ CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry3(2269) =  (/ &              
                                "(deg)         "/)
 
 
-      ! Initialize values
-   ErrStat = ErrID_None
-   ErrMsg = ""
-   InvalidOutput = .FALSE.
+   
 
       ParamIndxAry(1:3577) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                       CtT1N01 ,       CtT1N02 ,       CtT1N03 ,       CtT1N04 ,       CtT1N05 ,       CtT1N06 ,       CtT1N07 , &
@@ -14183,8 +14199,84 @@ CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry3(2269) =  (/ &              
                                      YawErrT2 ,      YawErrT3 ,      YawErrT4 ,      YawErrT5 ,      YawErrT6 ,      YawErrT7 ,      YawErrT8 , &
                                      YawErrT9 /)
 
+      
+   ! Initialize values
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   InvalidOutput = .FALSE.
+   
 !   ..... Developer must add checking for invalid inputs here: .....
+  
+   nTurbOut = min(farm%p%NumTurbines,9)  ! We only support output for the first 9 turbines, even if the farm has more than 9
+   
+      ! Check Output radii and make sure they are >= 0 and <= Nr-1 : NOTE: This was actually already done during the input file read.
+   do i = 1,farm%p%NOutRadii   
+      if ( (farm%p%OutRadii(i) < 0) .or. (farm%p%OutRadii(i) >= farm%AWAE%p%NumRadii) )  then
+         
+         InvalidOutput( CtTN     (i,:  ) ) = .true.
+         InvalidOutput( WkDfVxTND(i,:,1) ) = .true.
+         InvalidOutput( WkDfVrTND(i,:,1) ) = .true.
+         InvalidOutput( EddVisTND(i,:,1) ) = .true.
+         InvalidOutput( EddAmbTND(i,:,1) ) = .true.
+         InvalidOutput( EddShrTND(i,:,1) ) = .true.
+         
+      end if     
+   end do
+   
+   
+   DO i = farm%p%NOutRadii+1,9  ! Invalid tower nodes
+   
+      InvalidOutput( CtTN     (i,:  ) ) = .true.
+      InvalidOutput( WkDfVxTND(i,:,1) ) = .true.
+      InvalidOutput( WkDfVrTND(i,:,1) ) = .true.
+      InvalidOutput( EddVisTND(i,:,1) ) = .true.
+      InvalidOutput( EddAmbTND(i,:,1) ) = .true.
+      InvalidOutput( EddShrTND(i,:,1) ) = .true.
+      
+   END DO
 
+   do i = nTurbOut+1,9
+      
+      InvalidOutput( RtAxsXT  (i) ) = .true.
+      InvalidOutput( RtAxsYT  (i) ) = .true.
+      InvalidOutput( RtAxsZT  (i) ) = .true.
+      InvalidOutput( RtPosXT  (i) ) = .true.
+      InvalidOutput( RtPosYT  (i) ) = .true.
+      InvalidOutput( RtPosZT  (i) ) = .true.
+      InvalidOutput( RtDiamT  (i) ) = .true.
+      InvalidOutput( YawErrT  (i) ) = .true.
+      InvalidOutput( TIAmbT   (i) ) = .true.
+      InvalidOutput( RtVAmbT  (i) ) = .true.
+      InvalidOutput( RtVRelT  (i) ) = .true.
+      InvalidOutput( CtTN   (:,i) ) = .true.
+      InvalidOutput( WkAxsXTD  (:,i) ) = .true.
+      InvalidOutput( WkAxsYTD  (:,i) ) = .true.
+      InvalidOutput( WkAxsZTD  (:,i) ) = .true.
+      InvalidOutput( WkPosXTD  (:,i) ) = .true.
+      InvalidOutput( WkPosYTD  (:,i) ) = .true.
+      InvalidOutput( WkPosZTD  (:,i) ) = .true.
+      InvalidOutput( WkVelXTD  (:,i) ) = .true.
+      InvalidOutput( WkVelYTD  (:,i) ) = .true.
+      InvalidOutput( WkVelZTD  (:,i) ) = .true.
+      InvalidOutput( WkDiamTD(:,i) ) = .true.
+      
+         ! TODO: Once the following arrays support NumTurbines > 1, then add them back into this section
+      !InvalidOutput( WkDfVxTND(i,:,1) ) = .true.
+      !InvalidOutput( WkDfVrTND(i,:,1) ) = .true.
+      !InvalidOutput( EddVisTND(i,:,1) ) = .true.
+      !InvalidOutput( EddAmbTND(i,:,1) ) = .true.
+      !InvalidOutput( EddShrTND(i,:,1) ) = .true.
+   
+   end do
+   
+      ! Add checks for the OutDist locations based on knowledge of the wind grids
+   !do i = 1,farm%p%NOutDist
+   !   
+   !   InvalidOutput( RtAxsXT  (i) ) = .true.
+   !   
+   !   
+   !end do
+   
 !   ................. End of validity checking .................
 
 
@@ -14193,7 +14285,7 @@ CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry3(2269) =  (/ &              
    ! If a selected output channel is not available in this module, set error flag.
    !-------------------------------------------------------------------------------------------------
 
-   ALLOCATE ( p%OutParam(0:p%NumOuts) , STAT=ErrStat2 )
+   ALLOCATE ( farm%p%OutParam(0:farm%p%NumOuts) , STAT=ErrStat2 )
    IF ( ErrStat2 /= 0_IntKi )  THEN
       CALL SetErrStat( ErrID_Fatal,"Error allocating memory for the fast-farm OutParam array.", ErrStat, ErrMsg, RoutineName )
       RETURN
@@ -14201,18 +14293,18 @@ CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry3(2269) =  (/ &              
 
       ! Set index, name, and units for the time output channel:
 
-   p%OutParam(0)%Indx  = Time
-   p%OutParam(0)%Name  = "Time"    ! OutParam(0) is the time channel by default.
-   p%OutParam(0)%Units = "(s)"
-   p%OutParam(0)%SignM = 1
+   farm%p%OutParam(0)%Indx  = Time
+   farm%p%OutParam(0)%Name  = "Time"    ! OutParam(0) is the time channel by default.
+   farm%p%OutParam(0)%Units = "(s)"
+   farm%p%OutParam(0)%SignM = 1
 
 
       ! Set index, name, and units for all of the output channels.
       ! If a selected output channel is not available by this module set ErrStat = ErrID_Warn.
 
-   DO I = 1,p%NumOuts
+   DO I = 1,farm%p%NumOuts
 
-      p%OutParam(I)%Name  = OutList(I)
+      farm%p%OutParam(I)%Name  = OutList(I)
       OutListTmp          = OutList(I)
 
       ! Reverse the sign (+/-) of the output channel if the user prefixed the
@@ -14221,14 +14313,14 @@ CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry3(2269) =  (/ &              
 
 
       IF      ( INDEX( "-_", OutListTmp(1:1) ) > 0 ) THEN
-         p%OutParam(I)%SignM = -1                         ! ex, "-TipDxc1" causes the sign of TipDxc1 to be switched.
+         farm%p%OutParam(I)%SignM = -1                         ! ex, "-TipDxc1" causes the sign of TipDxc1 to be switched.
          OutListTmp          = OutListTmp(2:)
       ELSE IF ( INDEX( "mM", OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a minus sign because no valid channels start with m or M)
          !CheckOutListAgain   = .TRUE.
-         p%OutParam(I)%SignM = -1
+         farm%p%OutParam(I)%SignM = -1
          OutListTmp          = OutListTmp(2:)
       ELSE
-         p%OutParam(I)%SignM = 1
+         farm%p%OutParam(I)%SignM = 1
       END IF
 
       CALL Conv2UC( OutListTmp )    ! Convert OutListTmp to upper case
@@ -14258,26 +14350,26 @@ CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry3(2269) =  (/ &              
 
 
       IF ( Indx > 0 ) THEN ! we found the channel name
-         p%OutParam(I)%Indx     = ParamIndxAry(Indx)  ! This is the index into the AllOuts array
-         !IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
-         !   p%OutParam(I)%Units = "INVALID"
-         !   p%OutParam(I)%SignM = 0
-         !ELSE
+         farm%p%OutParam(I)%Indx     = ParamIndxAry(Indx)  ! This is the index into the AllOuts array
+         IF ( InvalidOutput( ParamIndxAry(Indx) ) ) THEN  ! but, it isn't valid for these settings
+            farm%p%OutParam(I)%Units = "INVALID"
+            farm%p%OutParam(I)%SignM = 0
+         ELSE
             if (foundList == 1) then
-               p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
+               farm%p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
             else if (foundList == 2 ) then
-               p%OutParam(I)%Units = ParamUnitsAry2(Indx-3577) ! it's a valid output
+               farm%p%OutParam(I)%Units = ParamUnitsAry2(Indx-3577) ! it's a valid output
             else
-               p%OutParam(I)%Units = ParamUnitsAry3(Indx-7154) ! it's a valid output
+               farm%p%OutParam(I)%Units = ParamUnitsAry3(Indx-7154) ! it's a valid output
             end if
             
-        ! END IF
+         END IF
       ELSE ! this channel isn't valid
-         p%OutParam(I)%Indx  = Time                 ! pick any valid channel (I just picked "Time" here because it's universal)
-         p%OutParam(I)%Units = "INVALID"
-         p%OutParam(I)%SignM = 0                    ! multiply all results by zero
+         farm%p%OutParam(I)%Indx  = Time                 ! pick any valid channel (I just picked "Time" here because it's universal)
+         farm%p%OutParam(I)%Units = "INVALID"
+         farm%p%OutParam(I)%SignM = 0                    ! multiply all results by zero
 
-         CALL SetErrStat(ErrID_Fatal, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal, TRIM(farm%p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,RoutineName)
       END IF
 
    END DO
