@@ -13,7 +13,6 @@ if(SPHINX_FOUND)
     set(SPHINX_GENERATOR html)
     file(COPY "conf.py" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
     file(COPY "_static" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    file(COPY "_extensions" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
     file(COPY "openfastlogo.jpg" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
     add_custom_target(sphinx
         COMMAND ${SPHINX_EXECUTABLE} -b ${SPHINX_GENERATOR} 

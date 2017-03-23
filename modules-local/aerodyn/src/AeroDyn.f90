@@ -220,7 +220,52 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    end if
    
    
+   ! set blade properties data
+
    
+   ALLOCATE(InitOut%BladeProps(p%numBlades), STAT = ErrStat2)
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
+      RETURN
+   END IF
+   do k=1,p%numBlades
+      ! allocate space and copy blade data:
+      CALL AllocAry( InitOut%BladeProps(k)%BlSpn,   InputFileData%BladeProps(k)%NumBlNds, 'BlSpn',   ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlSpn(:) = InputFileData%BladeProps(k)%BlSpn(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlCrvAC, InputFileData%BladeProps(k)%NumBlNds, 'BlCrvAC', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlCrvAC(:) = InputFileData%BladeProps(k)%BlCrvAC(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlSwpAC, InputFileData%BladeProps(k)%NumBlNds, 'BlSwpAC', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlSwpAC(:) = InputFileData%BladeProps(k)%BlSwpAC(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlCrvAng,InputFileData%BladeProps(k)%NumBlNds, 'BlCrvAng',ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlCrvAng(:) = InputFileData%BladeProps(k)%BlCrvAng(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlTwist, InputFileData%BladeProps(k)%NumBlNds, 'BlTwist', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlTwist(:) = InputFileData%BladeProps(k)%BlTwist(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlChord, InputFileData%BladeProps(k)%NumBlNds, 'BlChord', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlChord(:) = InputFileData%BladeProps(k)%BlChord(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlAFID,  InputFileData%BladeProps(k)%NumBlNds, 'BlAFID',  ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlAFID(:) = InputFileData%BladeProps(k)%BlAFID(:)
+   end do
+
+   !Tower data
+   ALLOCATE(InitOut%TwrElev(p%NumTwrNds), STAT = ErrStat2)
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrElev.", ErrStat, ErrMsg, RoutineName)
+      RETURN
+   END IF
+   ALLOCATE(InitOut%TwrDiam(p%NumTwrNds), STAT = ErrStat2)
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrDiam.", ErrStat, ErrMsg, RoutineName)
+      RETURN
+   END IF
+   InitOut%TwrElev(:) = InputFileData%TwrElev(:)
+   InitOut%TwrDiam(:) = p%TwrDiam(:)
    
    
 end subroutine AD_SetInitOut

@@ -1,0 +1,15 @@
+openfast_dir=/Users/gvijaya/CurrentProjects/FASTv8Integration/driverProgram/OpenFAST
+yaml_install_dir=$openfast_dir/install/
+hdf5_install_dir=$openfast_dir/install/
+
+EXTRA_ARGS=$@
+
+CC=/usr/local/Cellar/gcc/6.3.0_1/bin/gcc-6 CXX=/usr/local/Cellar/gcc/6.3.0_1/bin/g++-6 FC=gfortran cmake \
+   -DCMAKE_INSTALL_PREFIX=$openfast_dir/install/ \
+   -DBUILD_FAST_CPP_API=ON \
+   -DHAVE_MPI=ON \
+   -DYAML_DIR:PATH=$yaml_install_dir \
+   -DHDF5_DIR:PATH=$hdf5_install_dir \
+   $EXTRA_ARGS \
+../ &> log.cmake
+
