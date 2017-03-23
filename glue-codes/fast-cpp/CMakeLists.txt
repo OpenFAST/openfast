@@ -17,6 +17,20 @@
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_package(MPI REQUIRED)
+find_library(YAML_LIBRARIES NAMES libyaml-cpp.a PATHS ${YAML_DIR}/lib)
+find_path(YAML_INCLUDES yaml.h PATHS ${YAML_DIR}/include/yaml-cpp)
+
+find_library(HDF5_LIBRARIES NAMES libhdf5_hl.a libhdf5.a PATHS ${HDF5_DIR}/lib)
+find_path(HDF5_INCLUDES hdf5.h PATHS ${HDF5_DIR}/include/)
+
+add_library(openfastcpplib
+  src/OpenFAST.cpp)
+target_link_libraries(openfastcpplib
+  openfastlib
+  ${YAML_LIBRARIES}
+  ${HDF5_LIBRARIES} )
+
 add_executable(openfastcpp
   src/FAST_Prog.cpp)
 
@@ -47,6 +61,15 @@ endif(MPI_LINK_FLAGS)
 
 set_property(TARGET openfastcpp PROPERTY LINKER_LANGUAGE CXX)
 
+
+install(TARGETS openfastcpplib 
+  RUNTIME DESTINATION lib
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib)
+
+install(FILES
+  src/OpenFAST.H
+  DESTINATION include)
 
 install(TARGETS openfastcpp
   RUNTIME DESTINATION bin)

@@ -26,9 +26,8 @@ template <typename T> void delete2DArray(T** arr) {
 
 #endif
 
-
 //Constructor
-OpenFAST::OpenFAST():
+fast::OpenFAST::OpenFAST():
 cDriver_Input_from_FAST(NULL),
 cDriver_Output_to_FAST(NULL),
 cDriverSC_Input_from_FAST(NULL),
@@ -38,20 +37,16 @@ nTurbinesProc(0),
 scStatus(false),
 timeZero(false)
 {
-#ifdef HAVE_MPI
   MPI_Comm_rank(MPI_COMM_WORLD, &worldMPIRank);
   MPI_Comm_group(MPI_COMM_WORLD, &worldMPIGroup);
-#else 
-  worldMPIRank = 0;
-#endif
 }
 
-inline bool OpenFAST::checkFileExists(const std::string& name) {
+inline bool fast::OpenFAST::checkFileExists(const std::string& name) {
   struct stat buffer;   
   return (stat (name.c_str(), &buffer) == 0); 
 }
 
-int OpenFAST::init() {
+int fast::OpenFAST::init() {
 
     if (restart == false) {
       ntStart = 0;
@@ -111,7 +106,7 @@ int OpenFAST::init() {
 
 }
 
-int OpenFAST::solution0() {
+int fast::OpenFAST::solution0() {
 
        // set wind speeds at initial locations
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
@@ -142,7 +137,7 @@ int OpenFAST::solution0() {
      return 0;
 }
 
-int OpenFAST::step() {
+int fast::OpenFAST::step() {
 
   if ( (((nt_global - ntStart) % nEveryCheckPoint) == 0 )  && (nt_global != ntStart) ) {
     //sprintf(CheckpointFileRoot, "../../CertTest/Test18.%d", nt_global);
@@ -152,13 +147,9 @@ int OpenFAST::step() {
       checkError(ErrStat, ErrMsg);
     }
     if(scStatus) {
-#ifdef HAVE_MPI
       if (fastMPIRank == 0) {
-#endif
-      sc->writeRestartFile(nt_global);
-#ifdef HAVE_MPI
+          sc->writeRestartFile(nt_global);
       }
-#endif
     }
   }
   /* ******************************
@@ -211,7 +202,7 @@ int OpenFAST::step() {
    return 0;
 }
 
-int OpenFAST::readInputFile(std::string cInterfaceInputFile ) {
+int fast::OpenFAST::readInputFile(std::string cInterfaceInputFile ) {
 
   // Check if the input file exists and call init
   if ( checkFileExists(cInterfaceInputFile) ) {
@@ -277,7 +268,7 @@ int OpenFAST::readInputFile(std::string cInterfaceInputFile ) {
   
 }
 
-int OpenFAST::readInputFile(const YAML::Node & cDriverInp) {
+int fast::OpenFAST::readInputFile(const YAML::Node & cDriverInp) {
 
   nTurbinesGlob = cDriverInp["n_turbines_glob"].as<int>();
 
@@ -322,27 +313,27 @@ int OpenFAST::readInputFile(const YAML::Node & cDriverInp) {
   
 }
 
-void OpenFAST::setRestart(const bool & isRestart) {
+void fast::OpenFAST::setRestart(const bool & isRestart) {
   /* Set whether the simulation is restarted or from scratch */
   restart = isRestart;
 }
 
-void OpenFAST::setTstart(const double & cfdTstart) {
+void fast::OpenFAST::setTstart(const double & cfdTstart) {
   /* Set the end time for the simulation */
   tStart = cfdTstart;
 }
 
-void OpenFAST::setDt(const double & cfdDt) {
+void fast::OpenFAST::setDt(const double & cfdDt) {
   /* Set the time step for the simulation */
   dtFAST = cfdDt;
 }
 
-void OpenFAST::setTend(const double & cfdTend) {
+void fast::OpenFAST::setTend(const double & cfdTend) {
   /* Set the end time for the simulation */
   tEnd = cfdTend;
 }
 
-void OpenFAST::checkError(const int ErrStat, const char * ErrMsg){
+void fast::OpenFAST::checkError(const int ErrStat, const char * ErrMsg){
 
    if (ErrStat != ErrID_None){
 
@@ -354,7 +345,7 @@ void OpenFAST::checkError(const int ErrStat, const char * ErrMsg){
 
 }
 
-void OpenFAST::setOutputsToFAST(OpFM_InputType_t* cDriver_Input_from_FAST, OpFM_OutputType_t* cDriver_Output_to_FAST){
+void fast::OpenFAST::setOutputsToFAST(OpFM_InputType_t* cDriver_Input_from_FAST, OpFM_OutputType_t* cDriver_Output_to_FAST){
    int j;
 
    // routine sets the u-v-w wind speeds used in FAST and the SuperController inputs
@@ -375,7 +366,7 @@ void OpenFAST::setOutputsToFAST(OpFM_InputType_t* cDriver_Input_from_FAST, OpFM_
    return;
 }
 
-void OpenFAST::getVelNodeCoordinates(double *currentCoords, int iNode) {
+void fast::OpenFAST::getVelNodeCoordinates(double *currentCoords, int iNode) {
 
     // Set coordinates at current node of current turbine - Only one turbine for now
     currentCoords[0] = cDriver_Input_from_FAST[0].pxVel[iNode] ;
@@ -384,7 +375,7 @@ void OpenFAST::getVelNodeCoordinates(double *currentCoords, int iNode) {
 
 }
 
-void OpenFAST::getForceNodeCoordinates(double *currentCoords, int iNode) {
+void fast::OpenFAST::getForceNodeCoordinates(double *currentCoords, int iNode) {
 
   // Set coordinates at current node of current turbine - Only one turbine for now
   currentCoords[0] = cDriver_Input_from_FAST[0].pxForce[iNode] ;
@@ -393,7 +384,7 @@ void OpenFAST::getForceNodeCoordinates(double *currentCoords, int iNode) {
 
 }
 
-void OpenFAST::getForceNodeOrientation(double *currentOrientation, int iNode) {
+void fast::OpenFAST::getForceNodeOrientation(double *currentOrientation, int iNode) {
 
     // Set orientation at current node of current turbine - Only one turbine for now
     for(int i=0;i<9;i++) {
@@ -402,7 +393,7 @@ void OpenFAST::getForceNodeOrientation(double *currentOrientation, int iNode) {
 
 }
 
-void OpenFAST::getForce(std::vector<double> & currentForce, int iNode) {
+void fast::OpenFAST::getForce(std::vector<double> & currentForce, int iNode) {
 
   // Set forces at current node of current turbine - Only one turbine for now
   currentForce[0] = -cDriver_Input_from_FAST[0].fx[iNode] ;
@@ -411,14 +402,14 @@ void OpenFAST::getForce(std::vector<double> & currentForce, int iNode) {
 
 }
 
-double OpenFAST::getChord(int iNode) {
+double fast::OpenFAST::getChord(int iNode) {
 
   // Return blade chord/tower diameter at current node of current turbine - Only one turbine for now
   return cDriver_Input_from_FAST[0].forceNodesChord[iNode] ;
 
 }
 
-void OpenFAST::setVelocity(std::vector<double> & currentVelocity, int iNode) {
+void fast::OpenFAST::setVelocity(std::vector<double> & currentVelocity, int iNode) {
 
   // Set velocity at current node of current turbine - Only one turbine for now
   cDriver_Output_to_FAST[0].u[iNode] = currentVelocity[0];
@@ -427,7 +418,7 @@ void OpenFAST::setVelocity(std::vector<double> & currentVelocity, int iNode) {
 
 }
 
-void OpenFAST::computeTorqueThrust(int iTurbGlob, double * torque, double * thrust) {
+void fast::OpenFAST::computeTorqueThrust(int iTurbGlob, double * torque, double * thrust) {
 
     //Compute the torque and thrust based on the forces at the actuator nodes
     double relLoc[] = {0.0,0.0,0.0} ;
@@ -455,7 +446,7 @@ void OpenFAST::computeTorqueThrust(int iTurbGlob, double * torque, double * thru
     }
 }
     
-ActuatorNodeType OpenFAST::getVelNodeType(int iTurbGlob, int iNode) {
+fast::ActuatorNodeType fast::OpenFAST::getVelNodeType(int iTurbGlob, int iNode) {
   // Return the type of velocity node for the given node number. The node ordering (from FAST) is 
   // Node 0 - Hub node
   // Blade 1 nodes
@@ -478,7 +469,7 @@ ActuatorNodeType OpenFAST::getVelNodeType(int iTurbGlob, int iNode) {
   
 }
 
-ActuatorNodeType OpenFAST::getForceNodeType(int iTurbGlob, int iNode) {
+fast::ActuatorNodeType fast::OpenFAST::getForceNodeType(int iTurbGlob, int iNode) {
   // Return the type of actuator force node for the given node number. The node ordering (from FAST) is 
   // Node 0 - Hub node
   // Blade 1 nodes
@@ -501,7 +492,7 @@ ActuatorNodeType OpenFAST::getForceNodeType(int iTurbGlob, int iNode) {
   
 }
 
-void OpenFAST::allocateInputData() {
+void fast::OpenFAST::allocateInputData() {
 	
   //Allocates memory for all the input data to be read from the file
 
@@ -524,7 +515,7 @@ void OpenFAST::allocateInputData() {
   return;
 }
 
-void OpenFAST::readTurbineData(int iTurb, YAML::Node turbNode) {
+void fast::OpenFAST::readTurbineData(int iTurb, YAML::Node turbNode) {
 
   //Read turbine data for a given turbine using the YAML node
   TurbID[iTurb] = turbNode["turb_id"].as<int>();
@@ -543,7 +534,7 @@ void OpenFAST::readTurbineData(int iTurb, YAML::Node turbNode) {
 }
 
 
-void OpenFAST::allocateTurbinesToProcs(YAML::Node cDriverNode) {
+void fast::OpenFAST::allocateTurbinesToProcs(YAML::Node cDriverNode) {
   
   // Allocate turbines to each processor
   
@@ -561,11 +552,10 @@ void OpenFAST::allocateTurbinesToProcs(YAML::Node cDriverNode) {
     }
     turbineSetProcs.insert(turbineMapGlobToProc[iTurb]);
   }
-#ifdef HAVE_MPI  
+
   if ( dryRun ) {
     MPI_Barrier(MPI_COMM_WORLD);  
   }
-#endif
 
   int nProcsWithTurbines=0;
   turbineProcs = new int[turbineSetProcs.size()];
@@ -578,28 +568,26 @@ void OpenFAST::allocateTurbinesToProcs(YAML::Node cDriverNode) {
 	  std::cout << "Proc " << worldMPIRank << " loc iTurb " << iTurb << " glob iTurb " << turbineMapProcToGlob[iTurb] << std::endl ;
 	}
       }
-#ifdef HAVE_MPI
+      
       MPI_Barrier(MPI_COMM_WORLD);  
-#endif
+
     }
 
     nProcsWithTurbines++ ;
   }
     
-#ifdef HAVE_MPI
   // Construct a group containing all procs running atleast 1 turbine in FAST
   MPI_Group_incl(worldMPIGroup, nProcsWithTurbines, turbineProcs, &fastMPIGroup) ;
   int fastMPIcommTag = MPI_Comm_create(MPI_COMM_WORLD, fastMPIGroup, &fastMPIComm);
   if (MPI_COMM_NULL != fastMPIComm) {
     MPI_Comm_rank(fastMPIComm, &fastMPIRank);
   }
-#endif
 
   return ;
 }
 
 
-void OpenFAST::end() {
+void fast::OpenFAST::end() {
 
     // Deallocate types we allocated earlier
   
@@ -643,13 +631,11 @@ void OpenFAST::end() {
 
     }
 
-#ifdef HAVE_MPI
     MPI_Group_free(&fastMPIGroup);
     if (MPI_COMM_NULL != fastMPIComm) {
       MPI_Comm_free(&fastMPIComm);
     }
     MPI_Group_free(&worldMPIGroup);
-#endif    
 
     if(scStatus) {
 
@@ -666,7 +652,7 @@ void OpenFAST::end() {
   }
 
 
-void OpenFAST::loadSuperController(YAML::Node c) {
+void fast::OpenFAST::loadSuperController(YAML::Node c) {
 
   if(c["superController"]) {
     scStatus = c["superController"].as<bool>();
@@ -726,7 +712,7 @@ void OpenFAST::loadSuperController(YAML::Node c) {
 }
 
 
-void OpenFAST::fillScInputsGlob() {
+void fast::OpenFAST::fillScInputsGlob() {
   
   // Fills the global array containing inputs to the supercontroller from all turbines
 
@@ -743,17 +729,15 @@ void OpenFAST::fillScInputsGlob() {
   }
   
   
-#ifdef HAVE_MPI
   if (MPI_COMM_NULL != fastMPIComm) {
     MPI_Allreduce(MPI_IN_PLACE, scInputsGlob[0], numScInputs*nTurbinesGlob, MPI_DOUBLE, MPI_SUM, fastMPIComm) ;
   }
-#endif
   
 
 }
 
 
-void OpenFAST::fillScOutputsLoc() {
+void fast::OpenFAST::fillScOutputsLoc() {
   
   // Fills the local array containing outputs from the supercontroller to each turbine
   
@@ -764,7 +748,6 @@ void OpenFAST::fillScOutputsLoc() {
   }
 
 }
-
 
 
 

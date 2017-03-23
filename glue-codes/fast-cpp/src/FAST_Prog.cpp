@@ -14,7 +14,7 @@ int main() {
   iErr = MPI_Comm_rank( MPI_COMM_WORLD, &rank);
 
   std::string cDriverInputFile="cDriver.i";
-  OpenFAST FAST;
+  fast::OpenFAST FAST;
   try {
     FAST.readInputFile(cDriverInputFile);
   }

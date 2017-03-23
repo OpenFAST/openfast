@@ -103,10 +103,6 @@ foreach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules-ext/${IDIR}")
 endforeach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
 
-if(BUILD_FAST_CPP_API)
-   add_subdirectory("${CMAKE_SOURCE_DIR}/modules-local/fast-cpp-library")
-endif()
-
 option(BUILD_DOCUMENTATION "Build documentation." OFF)
 if(BUILD_DOCUMENTATION)
    add_subdirectory(docs)

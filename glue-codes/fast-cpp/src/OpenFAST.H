@@ -11,10 +11,11 @@
 #include <stdexcept>
 #include "yaml-cpp/yaml.h"
 #include "dlfcn.h"
-#ifdef HAVE_MPI
-  #include "mpi.h"
-#endif
+#include "mpi.h"
 #include "SC.h"
+
+
+namespace fast {
 
 enum ActuatorNodeType {
   HUB = 0,
@@ -77,7 +78,6 @@ class OpenFAST {
   destroy_sc_t * destroy_SuperController;
   SuperController * sc;
 
-#ifdef HAVE_MPI
   int fastMPIGroupSize;
   MPI_Group fastMPIGroup;
   MPI_Comm  fastMPIComm;
@@ -85,7 +85,6 @@ class OpenFAST {
 
   MPI_Group worldMPIGroup;
   int worldMPIRank;
-#endif
 
   int ErrStat;
   char ErrMsg[INTERFACE_STRING_LENGTH];  // make sure this is the same size as IntfStrLen in FAST_Library.f90
@@ -150,5 +149,7 @@ class OpenFAST {
   void fillScOutputsLoc() ;
 
 };
+
+}
 
 #endif
