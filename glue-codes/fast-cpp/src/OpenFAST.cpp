@@ -265,7 +265,8 @@ int fast::OpenFAST::readInputFile(std::string cInterfaceInputFile ) {
   } else {
     throw std::runtime_error("Input file " + cInterfaceInputFile + " does not exist or I cannot access it");
   }
-  
+
+  return 0;
 }
 
 int fast::OpenFAST::readInputFile(const YAML::Node & cDriverInp) {
@@ -732,7 +733,6 @@ void fast::OpenFAST::fillScInputsGlob() {
   if (MPI_COMM_NULL != fastMPIComm) {
     MPI_Allreduce(MPI_IN_PLACE, scInputsGlob[0], numScInputs*nTurbinesGlob, MPI_DOUBLE, MPI_SUM, fastMPIComm) ;
   }
-  
 
 }
 

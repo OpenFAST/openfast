@@ -18,34 +18,24 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(MPI REQUIRED)
-find_library(YAML_LIBRARIES NAMES libyaml-cpp.a PATHS ${YAML_DIR}/lib)
-find_path(YAML_INCLUDES yaml.h PATHS ${YAML_DIR}/include/yaml-cpp)
+find_package(HDF5 REQUIRED)
+find_package(YAMLCPP REQUIRED)
 
-find_library(HDF5_LIBRARIES NAMES libhdf5_hl.a libhdf5.a PATHS ${HDF5_DIR}/lib)
-find_path(HDF5_INCLUDES hdf5.h PATHS ${HDF5_DIR}/include/)
+include_directories(${YAML_INCLUDES})
+include_directories(${HDF5_INCLUDES})
+include_directories(${CMAKE_SOURCE_DIR}/modules-local/fast-library/src/)
+include_directories(${CMAKE_BINARY_DIR}/modules-local/openfoam/)
+include_directories(${CMAKE_BINARY_DIR}/modules-local/supercontroller/)
 
 add_library(openfastcpplib
   src/OpenFAST.cpp)
 target_link_libraries(openfastcpplib
   openfastlib
   ${YAML_LIBRARIES}
-  ${HDF5_LIBRARIES} )
+  ${HDF5_LIBRARIES})
 
 add_executable(openfastcpp
   src/FAST_Prog.cpp)
-
-include_directories(../../modules-local/fast-cpp-library/src/)
-include_directories(../../modules-local/fast-library/src/)
-include_directories(${YAML_INCLUDES}/..)
-include_directories(${HDF5_INCLUDES}/)
-include_directories(${HDF5_INCLUDES}/../../build/modules-local/openfoam/)
-include_directories(${HDF5_INCLUDES}/../../build/modules-local/supercontroller/)
-
-if (HAVE_MPI)
-  add_definitions("-DHAVE_MPI")
-  find_package(MPI REQUIRED)
-  message("MPI_LIBRARIES = ${MPI_LIBRARIES}")
-endif (HAVE_MPI)
 
 target_link_libraries(openfastcpp openfastcpplib openfastlib ${MPI_LIBRARIES})
 
