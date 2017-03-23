@@ -37,7 +37,6 @@ target_link_libraries(openfast_prelib
   orcaflexlib
   extptfm_mckflib
   openfoamtypeslib
-  supercontrollertypeslib  
   feamlib
   moordynlib
   icedynlib
