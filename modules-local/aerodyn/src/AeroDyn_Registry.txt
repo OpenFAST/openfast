@@ -30,6 +30,17 @@ typedef	^	InitInputType	R8Ki	HubOrientation	{3}{3}	-	-	"DCM reference orientatio
 typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
 typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
 
+# This is data defined in the Input File for this module (or could otherwise be passed in)
+# ..... Blade Input file data .....................................................................................................
+typedef	^	AD_BladePropsType	IntKi	NumBlNds	-	-	-	"Number of blade nodes used in the analysis"	-
+typedef	^	AD_BladePropsType	ReKi	BlSpn	{:}	-	-	"Span at blade node"	m
+typedef	^	AD_BladePropsType	ReKi	BlCrvAC	{:}	-	-	"Curve at blade node"	m
+typedef	^	AD_BladePropsType	ReKi	BlSwpAC	{:}	-	-	"Sweep at blade node"	m
+typedef	^	AD_BladePropsType	ReKi	BlCrvAng	{:}	-	-	"Curve angle at blade node"	radians
+typedef	^	AD_BladePropsType	ReKi	BlTwist	{:}	-	-	"Twist at blade node"	radians
+typedef	^	AD_BladePropsType	ReKi	BlChord	{:}	-	-	"Chord at blade node"	m
+typedef	^	AD_BladePropsType	IntKi	BlAFID	{:}	-	-	"ID of Airfoil at blade node"	-
+
 # Define outputs from the initialization routine here:
 typedef	^	AD_BladeShape	SiKi	AirfoilCoords	{:}{:}{:}	-	-	"x-y coordinates for airfoils, relative to node"	m
 # Define outputs from the initialization routine here:
@@ -44,18 +55,11 @@ typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the 
 typedef	^	InitOutputType	LOGICAL	RotFrame_y	{:}	-	-	"Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_z	{:}	-	-	"Flag that tells FAST/MBC3 if the constraint states used in linearization are in the rotating frame (not used for glue)"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
+typedef	^	InitOutputType	AD_BladePropsType	BladeProps	{:}	-	-	"blade property information from blade input files"	-
+typedef	^	InitOutputType	ReKi	TwrElev	{:}	-	-	"Elevation at tower node"	m
+typedef	^	InitOutputType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 
 # ..... Input file data ...........................................................................................................
-# This is data defined in the Input File for this module (or could otherwise be passed in)
-# ..... Blade Input file data .....................................................................................................
-typedef	^	AD_BladePropsType	IntKi	NumBlNds	-	-	-	"Number of blade nodes used in the analysis"	-
-typedef	^	AD_BladePropsType	ReKi	BlSpn	{:}	-	-	"Span at blade node"	m
-typedef	^	AD_BladePropsType	ReKi	BlCrvAC	{:}	-	-	"Curve at blade node"	m
-typedef	^	AD_BladePropsType	ReKi	BlSwpAC	{:}	-	-	"Sweep at blade node"	m
-typedef	^	AD_BladePropsType	ReKi	BlCrvAng	{:}	-	-	"Curve angle at blade node"	radians
-typedef	^	AD_BladePropsType	ReKi	BlTwist	{:}	-	-	"Twist at blade node"	radians
-typedef	^	AD_BladePropsType	ReKi	BlChord	{:}	-	-	"Chord at blade node"	m
-typedef	^	AD_BladePropsType	IntKi	BlAFID	{:}	-	-	"ID of Airfoil at blade node"	-
 
 # ..... Primary Input file data ...................................................................................................
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or "default"}"	s
