@@ -866,9 +866,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    
    p%AirDens          = InputFileData%AirDens          
    p%KinVisc          = InputFileData%KinVisc
-   p%SpdSound         = InputFileData%SpdSound
-   p%Patm             = InputFileData%Patm
-   p%Pvap             = InputFileData%Pvap
+
    
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
   !p%BEMT    ! set in call to BEMT_Init()
@@ -1419,7 +1417,11 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%KinVisc <= 0.0) call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%SpdSound <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-      
+   if (InputFileData%Pvap <= 0.0) call SetErrStat ( ErrID_Fatal, 'The vapour pressure (Pvap) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%Patm <= 0.0) call SetErrStat ( ErrID_Fatal, 'The atmospheric pressure (Patm)  must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%FluidDepth <= 0.0) call SetErrStat ( ErrID_Fatal, 'Fluid depth (FluidDepth) cannot be negative', ErrStat, ErrMsg, RoutineName )
+
+                       
    
       ! BEMT inputs
       ! bjj: these checks should probably go into BEMT where they are used...
@@ -1441,7 +1443,14 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       
       if (.not. InputFileData%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    end if
-           
+   
+        if ( InputFileData%CavitCheck .and. InputFileData%AFAeroMod == 2) then
+              call SetErrStat( ErrID_Fatal, 'Turn off Unsteady Aerodynamics to do a cavitation check', ErrStat, ErrMsg, RoutineName )
+        end if
+        
+     if (InputFileData%InCol_Cpmin == 0 .and. InputFileData%CavitCheck) call SetErrStat( ErrID_Fatal, 'InCol_Cpmin must not be 0 to do a cavitation check.', ErrStat, ErrMsg, RoutineName )
+
+                
    
          ! validate the AFI input data because it doesn't appear to be done in AFI
    if (InputFileData%NumAFfiles  < 1) call SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )   
@@ -1702,10 +1711,6 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    
    InitInp%airDens          = InputFileData%AirDens 
    InitInp%kinVisc          = InputFileData%KinVisc   
-   InitInp%Pvap             = InputFileData%Pvap
-   InitInp%Patm             = InputFileData%Patm 
-   InitInp%FluidDepth       = InputFileData%FluidDepth
-   InitInp%CavitCheck       = InputFileData%CavitCheck
    InitInp%skewWakeMod      = InputFileData%SkewMod
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
@@ -3758,6 +3763,7 @@ FUNCTION CheckBEMTInputPerturbations( p, m ) RESULT(ValidPerturb)
          end do !k=blades
                               
       end if
+      
       
    else ! not UseInduction
       
