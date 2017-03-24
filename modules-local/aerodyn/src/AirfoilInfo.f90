@@ -130,9 +130,9 @@ CONTAINS
          RETURN
       ENDIF
 
-      p%AFInfo( :)%InCol_Cpmin=p%ColCpmin
-      p%AFInfo( :)%InCol_Cm=p%ColCm
-       
+      p%AFInfo( :)%ColCpmin=p%ColCpmin
+      p%AFInfo( :)%ColCm=p%ColCm
+    
 
       DO File=1,InitInput%NumAFfiles
 

@@ -1687,9 +1687,9 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, indx, ErrStat, ErrMsg )
          m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cl(j,k)         
          m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cd(j,k)   
          
-         m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cpmin(j,k)
-         m%AllOuts( BNSigCr(   beta,k) ) = m%BEMT_y%SigmaCavitCrit(j,k)
-         m%AllOuts( BNSgCav(   beta,k) ) = m%BEMT_y%SigmaCavit(j,k)
+         m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT%Cpmin(j,k)
+         m%AllOuts( BNSigCr(   beta,k) ) = m%BEMT%SigmaCavitCrit(j,k)
+         m%AllOuts( BNSgCav(   beta,k) ) = m%BEMT%SigmaCavit(j,k)
          
          cp=cos(m%BEMT_y%phi(j,k))
          sp=sin(m%BEMT_y%phi(j,k))
@@ -2024,6 +2024,9 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%CavitCheck, "CavitCheck", "Perform cavitation check? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+       ! AddedMass - Include added mass effects? (flag):
+!   CALL ReadVar( UnIn, InputFile, InputFileData%AddedMass, "AddedMass", "Include added mass effects? (flag)", ErrStat2, ErrMsg2, UnEc)
+     ! CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
       
       ! Return on error at end of section

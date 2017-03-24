@@ -57,7 +57,6 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            ^                             LOGICAL                  Flookup                         -          -         -        "Use table lookup for f' and f'' "    -
 typedef   ^                            ^                             LOGICAL                  CavitCheck                      -          -         -        "logical flag indicating whether to check for cavitation"        -
 typedef   ^                            ^                             ReKi                     a_s                             -          -         -        "speed of sound"        m/s
-typedef   ^                            ^                             INTEGER                  InCol_Cpmin                             -          -         -        "InCol_Cpmin"        -
 #
 #
 # Define outputs from the initialization routine here:
@@ -87,7 +86,6 @@ typedef   ^                            OtherStateType                UA_OtherSta
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         {:}{:}          -         -        "logical flag indicating whether to use UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  ValidPhi                        {:}{:}          -         -        "set to indicate when there is no valid Phi for this node at this time (temporarially turn off induction when this is false)" -
 typedef   ^                            OtherStateType                Logical                  nodesInitialized                -               -         -        "the node states have been initialized properly" -
-typedef   ^                            ^                             LOGICAL                  CavitCheck                      {:}{:}          -         -        "logical flag indicating whether to check for cavitation"        -
 
 
 # ..... Misc/Optimization variables.................................................................................................
@@ -99,6 +97,9 @@ typedef   ^                            MiscVarType                   UA_OutputTy
 typedef   ^                            MiscVarType                   ReKi                     TnInd_op                       {:}{:}         -         -        "tangential induction at the operating point (for linearization with frozen wake assumption)"
 typedef   ^                            MiscVarType                   ReKi                     AxInd_op                       {:}{:}         -         -        "axial induction at the operating point (for linearization) with frozen wake assumption"
 typedef   ^                            MiscVarType                   Logical                  UseFrozenWake                   -             -         -        "flag set to determine if frozen values of TnInd_op and AxInd_op should be used for this calculation in the linearization process"   
+typedef   ^                            ^                             ReKi                     Cpmin                           {:}{:}         -         -         "min Cpressure"   -
+typedef   ^                            ^                             ReKi                     SigmaCavitCrit                  {:}{:}         -         -         "critical cavitation number-  inception value (above which cavit will occur)"   -
+typedef   ^                            ^                             ReKi                     SigmaCavit                      {:}{:}         -         -         "cavitation nubmer at node "   -
  
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -130,7 +131,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             UA_ParameterType         UA                              -             -         -        "parameters for UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -             -         -        "logical flag indicating whether to use UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  CavitCheck                      -             -         -        "logical flag indicating whether to use cavitation check"  -
-typedef   ^                            ^                             INTEGER                  InCol_Cpmin                             -          -         -        "InCol_Cpmin"        -
 #
 
 #
@@ -159,6 +159,3 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     Cl                              {:}{:}         -         -         "lift coefficient"   -
 typedef   ^                            ^                             ReKi                     Cd                              {:}{:}         -         -         "drag coefficient"   -
 typedef   ^                            ^                             ReKi                     chi                             {:}{:}         -         -         "wake skew angle"   rad
-typedef   ^                            ^                             ReKi                     Cpmin                           {:}{:}         -         -         "min Cpressure"   -
-typedef   ^                            ^                             ReKi                     SigmaCavitCrit                  {:}{:}         -         -         "critical cavitation number-  inception value (above which cavit will occur)"   -
-typedef   ^                            ^                             ReKi                     SigmaCavit                      {:}{:}         -         -         "cavitation nubmer at node "   -

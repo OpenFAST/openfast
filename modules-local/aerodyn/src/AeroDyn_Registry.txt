@@ -153,9 +153,6 @@ typedef	^	ParameterType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
 typedef	^	ParameterType	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	ParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
-typedef	^	ParameterType	ReKi	Patm	-	-	-	"Atmospheric pressure"	Pa
-typedef	^	ParameterType	ReKi	Pvap	-	-	-	"Vapour pressure"	Pa
-typedef	^	ParameterType	ReKi	FluidDepth	-	-	-	"Depth of water to hub center"	m
 typedef	^	ParameterType	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
 typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
@@ -185,7 +182,5 @@ typedef	^	InputType	ReKi	InflowOnTower	{:}{:}			"U,V,W at nodes on the tower"	m/
 # Define outputs that are contained on the mesh here:
 typedef	^	OutputType	MeshType	TowerLoad	-	-	-	"loads on the tower"	-
 typedef	^	OutputType	MeshType	BladeLoad	{:}	-	-	"loads on each blade"	-
-typedef	^	OutputType	MeshType	SigmaCavitCrit	{:}	-	-	"Critical cavitation number "	-
-typedef	^	OutputType	MeshType	SigmaCavit  {:}	-	-	" Cavitation number at node "	-
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
