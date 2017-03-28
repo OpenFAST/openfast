@@ -50,6 +50,12 @@ endif (FPE_TRAP_ENABLED)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
+message("LAPACK_LIBRARIES = ${LAPACK_LIBRARIES}")
+message("BLAS_LIBRARIES = ${BLAS_LIBRARIES}")
+message("LAPACK_LINKER_FLAGS = ${LAPACK_LINKER_FLAGS}")
+message("BLAS_LINKER_FLAGS = ${BLAS_LINKER_FLAGS}")
+
+
 ########################################################################
 # Build rules for FAST Registry
 #

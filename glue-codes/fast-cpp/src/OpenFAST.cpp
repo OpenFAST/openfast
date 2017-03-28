@@ -1,4 +1,4 @@
-#include "OpenFAST.h"
+#include "OpenFAST.H"
 
 #ifndef Contiguous2DArrayHack
 #define Contiguous2DArrayHack
@@ -255,7 +255,9 @@ int fast::OpenFAST::readInputFile(std::string cInterfaceInputFile ) {
 
       if ( !dryRun ) {
 	init();
-	solution0();
+        if (!restart) {
+            solution0();
+        }
       }
       
     } else {

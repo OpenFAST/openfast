@@ -11,6 +11,8 @@
 #include <stdexcept>
 #include "yaml-cpp/yaml.h"
 #include "dlfcn.h"
+#define OMPI_SKIP_MPICXX
+#define MPICH_SKIP_MPICXX
 #include "mpi.h"
 #include "SC.h"
 

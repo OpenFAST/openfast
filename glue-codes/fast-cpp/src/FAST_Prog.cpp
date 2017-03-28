@@ -25,7 +25,7 @@ int main() {
   }
 
   if( !FAST.isDryRun() ) {
-    for (int nt = FAST.get_ntStart(); nt < FAST.get_ntEnd(); nt++) {
+    for (int nt = FAST.get_ntStart(); nt <= FAST.get_ntEnd(); nt++) {
       FAST.step();
       FAST.computeTorqueThrust(0,torque,thrust);
       std::cout.precision(16);
