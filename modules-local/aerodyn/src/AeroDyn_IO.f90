@@ -2064,6 +2064,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%FluidDepth, "FluidDepth", "Water depth above mid-hub height (MHK only, for cavitation check) (m)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
+      
+
       ! Return on error at end of section
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL Cleanup()

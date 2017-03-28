@@ -867,6 +867,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    p%AirDens          = InputFileData%AirDens          
    p%KinVisc          = InputFileData%KinVisc
 
+
    
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
   !p%BEMT    ! set in call to BEMT_Init()
@@ -1445,7 +1446,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    end if
    
         if ( InputFileData%CavitCheck .and. InputFileData%AFAeroMod == 2) then
-              call SetErrStat( ErrID_Fatal, 'Turn off Unsteady Aerodynamics to do a cavitation check', ErrStat, ErrMsg, RoutineName )
+              call SetErrStat( ErrID_Fatal, 'Cannot use unsteady aerodynamics module with a cavitation check', ErrStat, ErrMsg, RoutineName )
         end if
         
      if (InputFileData%InCol_Cpmin == 0 .and. InputFileData%CavitCheck) call SetErrStat( ErrID_Fatal, 'InCol_Cpmin must not be 0 to do a cavitation check.', ErrStat, ErrMsg, RoutineName )
@@ -1710,7 +1711,10 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%numBlades        = p%NumBlades
    
    InitInp%airDens          = InputFileData%AirDens 
-   InitInp%kinVisc          = InputFileData%KinVisc   
+   InitInp%kinVisc          = InputFileData%KinVisc
+   InitInp%Patm             = InputFileData%Patm
+   InitInp%Pvap             = InputFileData%Pvap
+   InitInp%FluidDepth       = InputFileData%FluidDepth
    InitInp%skewWakeMod      = InputFileData%SkewMod
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
@@ -1759,11 +1763,13 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
      end do
   end do
    
-   InitInp%UA_Flag  = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
-   InitInp%UAMod    = InputFileData%UAMod
-   InitInp%Flookup  = InputFileData%Flookup
-   InitInp%a_s      = InputFileData%SpdSound
+   InitInp%UA_Flag    = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   InitInp%UAMod      = InputFileData%UAMod
+   InitInp%Flookup    = InputFileData%Flookup
+   InitInp%a_s        = InputFileData%SpdSound
    InitInp%CavitCheck = InputFileData%CavitCheck
+
+
    
    if (ErrStat >= AbortErrLev) then
       call cleanup()

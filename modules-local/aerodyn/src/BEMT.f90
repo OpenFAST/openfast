@@ -208,10 +208,13 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
       end do
    end do
    
-   
-  !p%DT               = InitInp%DT                             
+     
+    !p%DT               = InitInp%DT                             
    p%airDens          = InitInp%airDens          
    p%kinVisc          = InitInp%kinVisc  
+   p%Patm             = InitInp%Patm  
+   p%Pvap             = InitInp%Pvap 
+   p%FluidDepth       = InitInp%FluidDepth
    p%skewWakeMod      = InitInp%skewWakeMod     
    p%useTipLoss       = InitInp%useTipLoss       
    p%useHubLoss       = InitInp%useHubLoss 
@@ -222,7 +225,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%numReIterations  = InitInp%numReIterations  
    p%maxIndIterations = InitInp%maxIndIterations 
    p%aTol             = InitInp%aTol
-   
+
    
 end subroutine BEMT_SetParameters
 
@@ -769,7 +772,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    !call BEMT_InitOut(p, InitOut,  errStat2, errMsg2)
    !call CheckError( errStat2, errMsg2 )
    
-   call BEMT_AllocOutput(y, p, m, errStat2, errMsg2) !u is sent so we can create sibling meshes
+   call BEMT_AllocOutput(y, p, misc, errStat2, errMsg2) !u is sent so we can create sibling meshes
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       if (errStat >= AbortErrLev) then
          call cleanup()
@@ -1267,7 +1270,8 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                               
                 SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * y%Vrel(i,j)**2) ! Critical value of Sigma, cavitation if we go over this
                 SigmaCavit= -1* m%Cpmin(i,j)  ! Actual cavitation number on blade node j                                               
-                                                                  
+                                                
+                                   
                if (SigmaCavitCrit < SigmaCavit) then     
                    call WrScr( NewLine//'FAILED CAVITATION CHECK'//' Node # = '//trim(num2lstr(i)//'Blade # = '//trim(num2lstr(j))))  
                   
