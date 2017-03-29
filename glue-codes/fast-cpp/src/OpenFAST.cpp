@@ -595,14 +595,12 @@ void fast::OpenFAST::end() {
     // Deallocate types we allocated earlier
   
     if ( !dryRun) {
+      int stopNow;
       for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-          if (iTurb < (nTurbinesProc-1)) {
-              FAST_End(&iTurb,false);
-          } else {
-              FAST_End(&iTurb,true);
-          }
+	stopNow = (iTurb < (nTurbinesProc-1)) ? 0 : 1 ;
+	FAST_End(&iTurb,&stopNow);
       }
-          }
+    }
 
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
       delete[] TurbinePos[iTurb];
@@ -652,7 +650,7 @@ void fast::OpenFAST::end() {
       
     }
 
-  }
+}
 
 
 void fast::OpenFAST::loadSuperController(YAML::Node c) {
