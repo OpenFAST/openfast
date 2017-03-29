@@ -93,11 +93,11 @@ int fast::OpenFAST::init() {
        numVelPtsTwr[iTurb] = cDriver_Output_to_FAST[iTurb].u_Len - numBlades[iTurb]*numVelPtsBlade[iTurb] - 1;
 
 
-       /* if ( isDebug() ) { */
-       /* 	 for (int iNode=0; iNode < get_numVelPts(iTurb); iNode++) { */
-       /* 	   std::cout << "Node " << iNode << " Position = " << cDriver_Input_from_FAST[iTurb].pxVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pyVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pzVel[iNode] << " " << std::endl ; */
-       /* 	 } */
-       /* } */
+       if ( isDebug() ) {
+       	 for (int iNode=0; iNode < get_numVelPts(iTurb); iNode++) {
+       	   std::cout << "Node " << iNode << " Position = " << cDriver_Input_from_FAST[iTurb].pxVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pyVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pzVel[iNode] << " " << std::endl ;
+       	 }
+       }
      }
      
    }
@@ -168,11 +168,11 @@ int fast::OpenFAST::step() {
 
      // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
      // (note OpenFOAM could do subcycling around this step)
-     /* if ( isDebug() ) { */
-     /*   for (int iNode=0; iNode < get_numVelPts(iTurb); iNode++) { */
-     /* 	 std::cout << "Node " << iNode << " Velocity = " << cDriver_Output_to_FAST[iTurb].u[iNode] << " " << cDriver_Output_to_FAST[iTurb].v[iNode] << " " << cDriver_Output_to_FAST[iTurb].w[iNode] << " " << std::endl ; */
-     /*   } */
-     /* } */
+     if ( isDebug() ) {
+       for (int iNode=0; iNode < get_numVelPts(iTurb); iNode++) {
+     	 std::cout << "Node " << iNode << " Velocity = " << cDriver_Output_to_FAST[iTurb].u[iNode] << " " << cDriver_Output_to_FAST[iTurb].v[iNode] << " " << cDriver_Output_to_FAST[iTurb].w[iNode] << " " << std::endl ;
+       }
+     }
 
      FAST_OpFM_Step(&iTurb, &ErrStat, ErrMsg);
      checkError(ErrStat, ErrMsg);
@@ -562,22 +562,24 @@ void fast::OpenFAST::allocateTurbinesToProcs(YAML::Node cDriverNode) {
 
   int nProcsWithTurbines=0;
   turbineProcs = new int[turbineSetProcs.size()];
+  std::ofstream turbineAllocFile;
+  turbineAllocFile.open("turbineAlloc." + std::to_string(worldMPIRank) + ".txt") ;
   for (std::set<int>::const_iterator p = turbineSetProcs.begin(); p != turbineSetProcs.end(); p++) {
     turbineProcs[nProcsWithTurbines] = *p;
 
     if (dryRun) {
       if ( worldMPIRank == turbineProcs[nProcsWithTurbines] ) {
 	for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-	  std::cout << "Proc " << worldMPIRank << " loc iTurb " << iTurb << " glob iTurb " << turbineMapProcToGlob[iTurb] << std::endl ;
+	  turbineAllocFile << "Proc " << worldMPIRank << " loc iTurb " << iTurb << " glob iTurb " << turbineMapProcToGlob[iTurb] << std::endl ;
 	}
       }
-      
-      MPI_Barrier(MPI_COMM_WORLD);  
-
     }
-
+    MPI_Barrier(MPI_COMM_WORLD);  
+  
     nProcsWithTurbines++ ;
   }
+  turbineAllocFile.flush();
+  turbineAllocFile.close() ;
     
   // Construct a group containing all procs running atleast 1 turbine in FAST
   MPI_Group_incl(worldMPIGroup, nProcsWithTurbines, turbineProcs, &fastMPIGroup) ;
