@@ -321,16 +321,9 @@ subroutine FAST_End(iTurb, StopTheProgram) BIND (C, NAME='FAST_End')
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
-   INTEGER(C_INT),         INTENT(IN)    :: StopTheProgram   ! flag indicating if the program should end (false if there are more turbines to end)
+   LOGICAL(C_BOOL),        INTENT(IN)    :: StopTheProgram   ! flag indicating if the program should end (false if there are more turbines to end)
 
-   LOGICAL                               :: sp               ! 4 byte version of 'StopTheProgram'
-   
-   if (StopTheProgram .eq. 1) then
-      sp = .TRUE.
-   else
-      sp = .FALSE.
-   end if
-   CALL ExitThisProgram_T( Turbine(iTurb), ErrID_None, sp)
+   CALL ExitThisProgram_T( Turbine(iTurb), ErrID_None, LOGICAL(StopTheProgram))
    
 end subroutine FAST_End
 !==================================================================================================================================

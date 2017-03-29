@@ -595,10 +595,9 @@ void fast::OpenFAST::end() {
     // Deallocate types we allocated earlier
   
     if ( !dryRun) {
-      int stopNow;
+      bool stopTheProgram = false;
       for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-	stopNow = (iTurb < (nTurbinesProc-1)) ? 0 : 1 ;
-	FAST_End(&iTurb,&stopNow);
+	FAST_End(&iTurb, &stopTheProgram);
       }
     }
 
@@ -650,7 +649,7 @@ void fast::OpenFAST::end() {
       
     }
 
-}
+  }
 
 
 void fast::OpenFAST::loadSuperController(YAML::Node c) {
