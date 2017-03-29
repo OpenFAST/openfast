@@ -19,6 +19,16 @@
 
 namespace fast {
 
+struct globTurbineDataType {
+  int TurbID;
+  std::string FASTInputFileName;
+  std::string FASTRestartFileName;
+  std::vector<double> TurbineBasePos;
+  std::vector<double> TurbineHubPos;
+  int numForcePtsBlade;
+  int numForcePtsTwr;
+};
+
 enum ActuatorNodeType {
   HUB = 0,
   BLADE = 1,
@@ -33,12 +43,13 @@ class OpenFAST {
   bool dryRun;        // If this is true, class will simply go through allocation and deallocation of turbine data
   bool debug;   // Write out extra information if this flags is turned on
   bool timeZero; // Flag to determine whether the Solution0 function has to be called or not.
+  globTurbineDataType *  globTurbineData;
   int nTurbinesProc;
   int nTurbinesGlob;
   bool restart;
   double dtFAST;
   double tMax;
-  float ** TurbinePos;
+  float ** TurbineBasePos;
   int * TurbID;
   char ** FASTInputFileName;
   char ** CheckpointFileRoot;
@@ -105,15 +116,27 @@ class OpenFAST {
   void setTstart(const double & cfdTstart);
   void setDt(const double & cfdDt);
   void setTend(const double & cfdTend);
+
+  void allocateInputData();
   int init();
   int solution0();
   int step();
-  void getVelNodeCoordinates(double *currentCoords, int iNode);
-  void getForceNodeCoordinates(double *currentCoords, int iNode);
-  void getForceNodeOrientation(double *currentOrientation, int iNode);
-  void getForce(std::vector<double> & force, int iNode);
-  double getChord(int iNode);
-  void setVelocity(std::vector<double> & velocity, int iNode);
+  void end();
+
+  int setTurbineProcNo(int iTurbGlob, int procNo) { turbineMapGlobToProc[iTurbGlob] = procNo; }
+  void allocateTurbinesToProcsSimple();
+  void getHubPos(double *currentCoords, int iTurbGlob);
+
+  ActuatorNodeType getVelNodeType(int iTurbGlob, int iNode);
+  void getVelNodeCoordinates(double *currentCoords, int iNode, int iTurbGlob);
+  void setVelocity(std::vector<double> & velocity, int iNode, int iTurbGlob);
+
+  ActuatorNodeType getForceNodeType(int iTurbGlob, int iNode);
+  void getForceNodeCoordinates(double *currentCoords, int iNode, int iTurbGlob);
+  void getForceNodeOrientation(double *currentOrientation, int iNode, int iTurbGlob);
+  void getForce(std::vector<double> & force, int iNode, int iTurbGlob);
+  double getChord(int iNode, int iTurbGlob);
+
   int get_ntStart() { return ntStart; }
   int get_ntEnd() { return ntEnd; }
   bool isDryRun() { return dryRun; }
@@ -122,33 +145,37 @@ class OpenFAST {
   int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; } // Get processor number of a turbine with global id 'iTurbGlob'
   int get_localTurbNo(int iTurbGlob) { return reverseTurbineMapProcToGlob[iTurbGlob]; }
   int get_nTurbinesGlob() { return nTurbinesGlob; } 
-  int get_numBlades(int iTurbLoc) { return numBlades[iTurbLoc]; }
-  int get_numVelPtsBlade(int iTurbLoc) { return numVelPtsBlade[iTurbLoc]; }
-  int get_numVelPtsTwr(int iTurbLoc) { return numVelPtsTwr[iTurbLoc]; }
-  int get_numVelPts(int iTurbLoc) { return 1 + numBlades[iTurbLoc]*numVelPtsBlade[iTurbLoc] + numVelPtsTwr[iTurbLoc]; }
-  int get_numForcePtsBlade(int iTurbLoc) { return numForcePtsBlade[iTurbLoc]; }
-  int get_numForcePtsTwr(int iTurbLoc) { return numForcePtsTwr[iTurbLoc]; }
-  int get_numForcePts(int iTurbLoc) { return 1 + numBlades[iTurbLoc]*numForcePtsBlade[iTurbLoc] + numForcePtsTwr[iTurbLoc]; }
-  void computeTorqueThrust(int iTurGlob, double * torque, double * thrust);
-  ActuatorNodeType getVelNodeType(int iTurbGlob, int iNode);
-  ActuatorNodeType getForceNodeType(int iTurbGlob, int iNode);
-  void end();
+
+  int get_numBlades(int iTurbGlob) { return get_numBladesLoc(get_localTurbNo(iTurbGlob)); }
+  int get_numVelPtsBlade(int iTurbGlob) { return get_numVelPtsBladeLoc(get_localTurbNo(iTurbGlob)); }
+  int get_numVelPtsTwr(int iTurbGlob) { return get_numVelPtsTwrLoc(get_localTurbNo(iTurbGlob)); }
+  int get_numVelPts(int iTurbGlob) { return get_numVelPtsLoc(get_localTurbNo(iTurbGlob)); }
+  int get_numForcePtsBlade(int iTurbGlob) { return get_numForcePtsBladeLoc(get_localTurbNo(iTurbGlob)); }
+  int get_numForcePtsTwr(int iTurbGlob) { return get_numForcePtsTwrLoc(get_localTurbNo(iTurbGlob)); }
+  int get_numForcePts(int iTurbGlob) { return get_numForcePtsLoc(get_localTurbNo(iTurbGlob)); }
+
+  void computeTorqueThrust(int iTurbGlob, double * torque, double * thrust);
 
  private:
 
   void checkError(const int ErrStat, const char * ErrMsg);
-  void setOutputsToFAST(OpFM_InputType_t* cDriver_Input_from_FAST, OpFM_OutputType_t* cDriver_Output_to_FAST) ;
-
-  int cDriverRestart();
   inline bool checkFileExists(const std::string& name);
 
   void readTurbineData(int iTurb, YAML::Node turbNode);
-  void allocateInputData();
-  void allocateTurbinesToProcs(YAML::Node cDriverNode);
+
+  int get_numBladesLoc(int iTurbLoc) { return numBlades[iTurbLoc]; }
+  int get_numVelPtsBladeLoc(int iTurbLoc) { return numVelPtsBlade[iTurbLoc]; }
+  int get_numVelPtsTwrLoc(int iTurbLoc) { return numVelPtsTwr[iTurbLoc]; }
+  int get_numVelPtsLoc(int iTurbLoc) { return 1 + numBlades[iTurbLoc]*numVelPtsBlade[iTurbLoc] + numVelPtsTwr[iTurbLoc]; }
+  int get_numForcePtsBladeLoc(int iTurbLoc) { return numForcePtsBlade[iTurbLoc]; }
+  int get_numForcePtsTwrLoc(int iTurbLoc) { return numForcePtsTwr[iTurbLoc]; }
+  int get_numForcePtsLoc(int iTurbLoc) { return 1 + numBlades[iTurbLoc]*numForcePtsBlade[iTurbLoc] + numForcePtsTwr[iTurbLoc]; }
+
   void loadSuperController(YAML::Node c);
-  
   void fillScInputsGlob() ;
   void fillScOutputsLoc() ;
+
+  void setOutputsToFAST(OpFM_InputType_t* cDriver_Input_from_FAST, OpFM_OutputType_t* cDriver_Output_to_FAST) ; // An example to set velocities at the Aerodyn nodes
 
 };
 

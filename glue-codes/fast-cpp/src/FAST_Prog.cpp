@@ -24,6 +24,18 @@ int main() {
     return 1;
   }
 
+  FAST.allocateTurbinesToProcsSimple(); 
+  // Or allocate turbines to procs by calling "setTurbineProcNo(iTurbGlob, procId)" for turbine.
+  FAST.allocateInputData(); // Allocate memory for all inputs that are dependent on the number of turbines
+
+  if ( !FAST.isDryRun() ) {
+    FAST.init();
+    // Set velocity at the aerodyn nodes here if necessary
+    if (FAST.isTimeZero()) {
+      FAST.solution0();
+    }
+  }
+
   if( !FAST.isDryRun() ) {
     for (int nt = FAST.get_ntStart(); nt <= FAST.get_ntEnd(); nt++) {
       FAST.step();
