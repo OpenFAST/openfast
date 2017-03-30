@@ -31,7 +31,7 @@ add_library(maplib
   )
 target_link_libraries(maplib mapcpplib nwtclibs)
 
-install(TARGETS maplib
+install(TARGETS maplib mapcpplib 
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)
