@@ -103,8 +103,8 @@ subroutine WriteDisWindFiles( n, p, y, m, errStat, errMsg )
    CHARACTER(*),   PARAMETER               :: RoutineName = 'WriteDisWindFiles'
    INTEGER(IntKi)                          :: nt, n_hl, n_high 
    
-   
-   FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Dis.t"//trim(num2lstr(n))//".vtk"
+   !FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Dis.t"//trim(num2lstr(n))//".vtk"
+   FileName = trim(p%OutFileRoot)//"_Low_Dis.t"//trim(num2lstr(n))//".vtk"
    call WrVTK_SP_header( FileName, "Low resolution disturbed wind for low-resolution timestep "//trim(num2lstr(n)), Un, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -113,18 +113,20 @@ subroutine WriteDisWindFiles( n, p, y, m, errStat, errMsg )
       if (ErrStat >= AbortErrLev) return
     
    do nt= 1,p%NumTurbines
-      do n_hl = 1,p%n_high_low
+      do n_hl = 0,p%n_high_low-1  ! TODO: Put this back this is only for debugging
          n_high = n_hl + p%n_high_low*n
-      FileName = trim(p%WindFilePath)//trim(PathSep)//"High"//trim(PathSep)//"Dis.t"//trim(num2lstr(n_high))//".vtk"
+      !FileName = trim(p%WindFilePath)//trim(PathSep)//"High"//trim(PathSep)//"Dis.t"//trim(num2lstr(n_high))//".vtk"
+      FileName = trim(p%OutFileRoot)//"_High_T"//trim(num2lstr(nt))//"_Dis.t"//trim(num2lstr(n_high))//".vtk"
       call WrVTK_SP_header( FileName, "High resolution disturbed wind for high-resolution timestep "//trim(num2lstr(n_high)), Un, errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-      call WrVTK_SP_vectors3D( Un, "HighDis", (/p%nX_high,p%nY_high,p%nZ_high/), (/p%X0_high,p%Y0_high,p%Z0_high/), (/p%dX_high,p%dY_high,p%dZ_high/), y%Vdist_high(:,:,:,:,n_hl,nt), errStat2, errMsg2 )
+      call WrVTK_SP_vectors3D( Un, "HighDis", (/p%nX_high,p%nY_high,p%nZ_high/), (/p%X0_high,p%Y0_high,p%Z0_high/), (/p%dX_high,p%dY_high,p%dZ_high/), y%Vdist_high(nt)%data(:,:,:,:,n_hl), errStat2, errMsg2 )
          call SetErrStat(ErrStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       end do   
    end do
-   
+
+
 end subroutine WriteDisWindFiles
 
 
