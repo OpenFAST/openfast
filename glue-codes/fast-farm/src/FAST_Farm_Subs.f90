@@ -159,14 +159,14 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
             
          ! let's make sure the FAST DT is an exact integer divisor of dt_high 
          ! (i'm doing this outside of Farm_ValidateInput so we know that dt/=0 before computing n_high_low):
-      IF ( .NOT. EqualRealNos( real(farm%p%dt,SiKi), real(farm%p%dt_high,SiKi) * farm%p%n_high_low )  ) THEN
-         CALL SetErrStat(ErrID_Fatal, "dt_high ("//TRIM(Num2LStr(farm%p%dt_high))//" s) must be an integer divisor of dt (" &
+      IF ( .NOT. EqualRealNos( real(farm%p%DT,SiKi), real(farm%p%DT_high,SiKi) * farm%p%n_high_low )  ) THEN
+         CALL SetErrStat(ErrID_Fatal, "DT_high ("//TRIM(Num2LStr(farm%p%dt_high))//" s) must be an integer divisor of DT (" &
                         //TRIM(Num2LStr(farm%p%dt))//" s).", ErrStat, ErrMsg, RoutineName ) 
       END IF
       
    farm%p%TChanLen = max( 10, int(log10(farm%p%TMax))+7 )
    farm%p%OutFmt_t = 'F'//trim(num2lstr( farm%p%TChanLen ))//'.4' ! 'F10.4'    
-   farm%p%n_TMax  = FLOOR( ( farm%p%TMax / farm%p%DT ) ) + 1  ! We're going to go from step 0 to n_TMax 
+   farm%p%n_TMax  = FLOOR( ( farm%p%TMax / farm%p%DT ) ) + 1  ! We're going to go from step 0 to (n_TMax - 1)
                    ! [note that FAST uses the ceiling function, so it might think we're doing one more step than FAST.Farm; 
                    ! This difference will be a problem only if FAST thinks it's doing FEWER timesteps than FAST.Farm does.]
    
@@ -190,7 +190,8 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    AWAE_InitInput%InputFileData%WindFilePath = farm%p%WindFilePath
    AWAE_InitInput%n_high_low                 = farm%p%n_high_low
    AWAE_InitInput%NumDT                      = farm%p%n_TMax
-      
+   AWAE_InitInput%OutFileRoot                = farm%p%OutFileRoot
+   
    call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
                    farm%AWAE%m, farm%p%DT, AWAE_InitOutput, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -738,7 +739,12 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       
       ! WrDisWind - Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag):
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisWind, "WrDisWind", "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+    
+          ! WrDisWind - Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag):
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisSkp, "WrDisSkp", "Number of time steps to skip between vtk outputs [must be greater or equal to zero]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
       
       ! NOutDisWindXY - Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk (-) [0 to 9]:
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
@@ -1025,6 +1031,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    ErrMsg  = ""
    
    IF (p%DT <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT must be positive.',ErrStat,ErrMsg,RoutineName)
+   IF (p%DT_high <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_high must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (p%TMax < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TMax must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (p%NumTurbines < 1) CALL SetErrStat(ErrID_Fatal,'FAST.Farm requires at least 1 turbine. Set NumTurbines > 0.',ErrStat,ErrMsg,RoutineName)
    
@@ -1062,11 +1069,12 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
    IF (p%TStart < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TStart must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (.not. p%WrBinOutFile .and. .not. p%WrTxtOutFile) CALL SetErrStat( ErrID_Fatal, "FAST.Farm's OutFileFmt must be 1, 2, or 3.",ErrStat,ErrMsg,RoutineName)
-
+   if (AWAE_InitInp%WrDisSkp < 0) CALL SetErrStat(ErrID_Fatal,'WrDisSkp must not be negative.',ErrStat,ErrMsg,RoutineName)
    if (AWAE_InitInp%NOutDisWindXY < 0 .or. AWAE_InitInp%NOutDisWindXY > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (AWAE_InitInp%NOutDisWindYZ < 0 .or. AWAE_InitInp%NOutDisWindYZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindYZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (AWAE_InitInp%NOutDisWindXZ < 0 .or. AWAE_InitInp%NOutDisWindXZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (p%NOutDist < 0 .or. p%NOutDist > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDist must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
+   ! TODO : add check that OutDist values >= 0
    if (p%NWindVel < 0 .or. p%NWindVel > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NWindVel must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (p%NOutRadii < 0 .or. p%NOutRadii > 20 ) then
       CALL SetErrStat( ErrID_Fatal, 'NOutRadii must be in the range [0, 20].', ErrStat, ErrMsg, RoutineName )
@@ -1818,7 +1826,7 @@ SUBROUTINE Transfer_AWAE_to_FAST(farm)
    
    DO i_turb = 1,farm%p%NumTurbines
          ! allocated in FAST's IfW initialization as 3,x,y,z,t
-      farm%FWrap(i_turb)%u%Vdist_High = farm%AWAE%y%Vdist_High(:,:,:,:,:,i_turb)
+      farm%FWrap(i_turb)%u%Vdist_High = farm%AWAE%y%Vdist_High(i_turb)%data
    END DO
    
 END SUBROUTINE Transfer_AWAE_to_FAST
