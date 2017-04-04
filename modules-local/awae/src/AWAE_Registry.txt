@@ -18,6 +18,8 @@ param	AWAE/AWAE            -               INTEGER         XYSlice     - 1 -  "E
 param	^                    -               INTEGER         YZSlice     - 2 -  "Extract an YZ slice of data from the 3D grid" -
 param	^                    -               INTEGER         XZSlice     - 3 -  "Extract an XZ slice of data from the 3D grid" -
 
+# ..... Wind 3D Data .......................................................................................................
+typedef   AWAE/AWAE   AWAE_HighWindGrid       ReKi            data         {:}{:}{:}{:}{:} - - "UVW components of wind data across the high-res regularly-spaced grid" m/s
 # ..... InputFile Data .......................................................................................................
 typedef   AWAE/AWAE   AWAE_InputFileType  ReKi            dr             - - -  "Radial increment of radial finite-difference grid [>0.0]" m
 typedef   ^           AWAE_InputFileType  DbKi            dt             - - -  "Low-resolution (FAST.Farm driver/glue code) time step" s
@@ -32,7 +34,7 @@ typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindYZ      -  
 typedef  ^            AWAE_InputFileType  ReKi            OutDisWindX       {:}   - - "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindYZ]" meters
 typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindXZ      -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^            AWAE_InputFileType  ReKi            OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
-
+typedef  ^            AWAE_InputFileType  IntKi           WrDisSkp           -  - -   "Number of time steps to skip between vtk outputs" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -40,6 +42,7 @@ typedef  ^            AWAE_InputFileType  ReKi            OutDisWindY       {:} 
 typedef   ^ InitInputType  AWAE_InputFileType InputFileData    -  - -   "FAST.Farm input-file data for AWAE module" -
 typedef   ^ InitInputType  IntKi              n_high_low       -  - -   "Number of high-resolution time steps per low" -
 typedef   ^ InitInputType  IntKi              NumDT            -  - -   "Number of low-resolution (FAST.Farm driver/glue code) time steps" -
+typedef  ^  InitInputType  CHARACTER(1024)    OutFileRoot      -  - -   "The root name derived from the primary FAST.Farm input file" -
 
 
 # Define outputs from the initialization routine here:
@@ -133,6 +136,7 @@ typedef   ^ ParameterType  IntKi            n_wind_min         -  - -   "Minimum
 typedef   ^ ParameterType  DbKi             dt                 -  - -   "Low-resolution (FAST.Farm driver/glue code) time step" s
 # parameters for output  
 #typedef   ^ ParameterType  IntKi            NumOuts            -  - -   "Number of parameters in the output list (number of outputs requested)"      -
+typedef  ^  ParameterType  IntKi            WrDisSkp1           -  - -   "Number of time steps to skip plus one" -
 typedef  ^  ParameterType  LOGICAL          WrDisWind          -    - - "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.?" -
 typedef  ^  ParameterType  IntKi            NOutDisWindXY      -    - - "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^  ParameterType  ReKi             OutDisWindZ       {:}   - - "Z coordinates of XY planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXY]" meters
@@ -140,14 +144,14 @@ typedef  ^  ParameterType  IntKi            NOutDisWindYZ      -    - - "Number 
 typedef  ^  ParameterType  ReKi             OutDisWindX       {:}   - - "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindYZ]" meters
 typedef  ^  ParameterType  IntKi            NOutDisWindXZ      -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^  ParameterType  ReKi             OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
-
+typedef   ^ ParameterType  IntKi            UnOu               -   - -  "Diagnostics output file unit number"
 typedef   ^ ParameterType  CHARACTER(1024)  OutFileRoot        -  - -   "The root name derived from the primary FAST.Farm input file" -
 #typedef   ^ ParameterType  OutParmType      OutParam          {:} - -   "Names and units (and other characteristics) of all requested output parameters"      -
 
 
 # ..... Outputs ....................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef   ^ OutputType     ReKi       Vdist_High   {:}{:}{:}{:}{:}{:}     -      -      "Wind velocity of disturbed wind (ambient + wakes) across each high-resolution domain around a turbine for each high-resolution step within a low-resolution step"      m/s
+typedef   ^ OutputType     AWAE_HighWindGrid Vdist_High   {:}     -      -      "Wind velocity of disturbed wind (ambient + wakes) across each high-resolution domain around a turbine for each high-resolution step within a low-resolution step"      m/s
 typedef   ^ OutputType     ReKi       V_plane      {:}{:}{:}              -      -      "Advection, deflection, and meandering velocity of wake planes for each turbine"      m/s
 typedef   ^ OutputType     ReKi       TI_amb       {:}                    -      -      "Ambient turbulence intensity of wind at rotor disk for each turbine"      -
 typedef   ^ OutputType     ReKi       Vx_wind_disk {:}                    -      -      "Rotor-disk-averaged ambient wind speed, normal to disk, for each turbine"      m/s
