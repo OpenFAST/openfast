@@ -25,6 +25,7 @@ add_library(icedynlib
 target_link_libraries(icedynlib nwtclibs)
 
 install(TARGETS icedynlib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)

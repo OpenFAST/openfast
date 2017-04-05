@@ -33,12 +33,14 @@ add_library(openfastcpplib
 target_link_libraries(openfastcpplib
   openfastlib
   ${YAML_LIBRARIES}
-  ${HDF5_LIBRARIES})
+  ${HDF5_LIBRARIES}
+  ${CMAKE_DL_LIBS})
 
 add_executable(openfastcpp
   src/FAST_Prog.cpp)
 
-target_link_libraries(openfastcpp openfastcpplib openfastlib ${MPI_LIBRARIES})
+target_link_libraries(openfastcpp openfastcpplib openfastlib
+  ${MPI_LIBRARIES} ${CMAKE_DL_LIBS})
 
 if(MPI_COMPILE_FLAGS)
   set_target_properties(openfastcpp PROPERTIES
@@ -52,8 +54,8 @@ endif(MPI_LINK_FLAGS)
 
 set_property(TARGET openfastcpp PROPERTY LINKER_LANGUAGE CXX)
 
-
-install(TARGETS openfastcpplib 
+install(TARGETS openfastcpplib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)

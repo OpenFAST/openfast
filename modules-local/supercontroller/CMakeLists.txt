@@ -25,6 +25,7 @@ add_library(scfastlib
 target_link_libraries(scfastlib sctypeslib openfast_prelib nwtclibs)
 
 install(TARGETS sctypeslib scfastlib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
