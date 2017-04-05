@@ -29,6 +29,7 @@ add_library(beamdynlib ${BD_SOURCES})
 target_link_libraries(beamdynlib nwtclibs)
 
 install(TARGETS beamdynlib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

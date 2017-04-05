@@ -37,6 +37,7 @@ add_executable(orca_driver
 target_link_libraries(orca_driver orcaflexlib)
 
 install(TARGETS orcaflexlib orca_driver
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

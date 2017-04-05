@@ -27,6 +27,7 @@ add_library(moordynlib ${MOORDYN_LIBS_SOURCES})
 target_link_libraries(moordynlib nwtclibs)
 
 install(TARGETS moordynlib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)

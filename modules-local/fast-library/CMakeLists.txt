@@ -59,6 +59,7 @@ target_link_libraries(openfastlib
   openfast_postlib openfast_prelib scfastlib foamfastlib)
 
 install(TARGETS openfastlib openfast_prelib openfast_postlib
+  EXPORT ${CMAKE_PROJECT_NAME}Libraries
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)

@@ -50,12 +50,6 @@ endif (FPE_TRAP_ENABLED)
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
-message("LAPACK_LIBRARIES = ${LAPACK_LIBRARIES}")
-message("BLAS_LIBRARIES = ${BLAS_LIBRARIES}")
-message("LAPACK_LINKER_FLAGS = ${LAPACK_LINKER_FLAGS}")
-message("BLAS_LINKER_FLAGS = ${BLAS_LINKER_FLAGS}")
-
-
 ########################################################################
 # Build rules for FAST Registry
 #
@@ -115,3 +109,32 @@ if(BUILD_DOCUMENTATION)
 endif()
 
 add_subdirectory(glue-codes)
+
+# Install fortran .mod files also to installation directory
+install(CODE
+  "EXECUTE_PROCESS (COMMAND \"${CMAKE_COMMAND}\" -E copy_directory \"${CMAKE_Fortran_MODULE_DIRECTORY}\" \"${CMAKE_INSTALL_PREFIX}/include/openfast/\")")
+
+# Install the library dependency information
+install(EXPORT OpenFASTLibraries
+  DESTINATION lib/cmake/OpenFAST
+  FILE OpenFASTLibraries.cmake)
+
+# Create OpenFAST config so that other codes can find OpenFAST
+include(CMakePackageConfigHelpers)
+
+set(INCLUDE_INSTALL_DIR include/)
+set(LIB_INSTALL_DIR lib/)
+set(FTNMOD_INSTALL_DIR include/openfast/)
+if (BUILD_FAST_CPP_API)
+  set(OpenFAST_HAS_CXX_API TRUE)
+else()
+  set(OpenFAST_HAS_CXX_API FALSE)
+endif()
+
+configure_package_config_file(
+  cmake/OpenFASTConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
+  INSTALL_DESTINATION lib/cmake/OpenFAST
+  PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR FTNMOD_INSTALL_DIR)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
+  DESTINATION lib/cmake/OpenFAST)

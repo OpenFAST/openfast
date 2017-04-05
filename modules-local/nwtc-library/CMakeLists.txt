@@ -63,5 +63,6 @@ add_library(nwtclibs ${NWTCLIBS_SOURCES})
 target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
 
 install(TARGETS nwtclibs
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
