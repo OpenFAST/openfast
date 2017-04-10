@@ -756,14 +756,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%WrDisWind        = InitInp%InputFileData%WrDisWind
    p%WrDisSkp1        = InitInp%InputFileData%WrDisSkp + 1
    
-   CALL GetNewUnit( p%UnOu, ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-   CALL OpenFOutFile ( p%UnOu, TRIM(p%OutFileRoot)//'_Debug.out', ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) RETURN      
-      
-   call GeneratePlaneOutputsHdr(p)
-   
    call allocAry( p%OutDisWindZ, p%NOutDisWindXY, "OutDisWindZ", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
@@ -1013,7 +1005,6 @@ subroutine AWAE_End( u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 
          ! Close files here:
 
-      close(p%UnOu)
 
          ! Destroy the input data:
 
@@ -1119,9 +1110,6 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    errMsg  = ""
    n = int(t / p%dt)
    
-! DEBUG INFO
-   call GeneratePlaneOutputs(n,1,u,p)
-! END DEBUG
    call LowResGridCalcOutput(n, u, p, y, m, errStat2, errMsg2)
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
       if (errStat2 >= AbortErrLev) then 
