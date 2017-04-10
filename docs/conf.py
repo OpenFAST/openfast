@@ -21,7 +21,7 @@ import sys
 import subprocess
 import re
 
-sys.path.append(os.path.abspath('_extensions/'))
+#sys.path.append(os.path.abspath('_extensions/'))
 
 readTheDocs = os.environ.get('READTHEDOCS', None) == 'True'
 sourcedir = sys.argv[-2]
@@ -57,18 +57,11 @@ if readTheDocs:
 # ones.
 extensions = [
               'sphinx.ext.autodoc',
-              'sphinx.ext.todo',
               'sphinx.ext.autosummary',
               'sphinx.ext.mathjax',
-              'sphinxcontrib.doxylink',
-              'fix_equation_ref',
               'sphinx.ext.intersphinx',
+              'sphinxcontrib.doxylink',
               'sphinxcontrib.bibtex',
-              'numfig',
-              'numsec',
-              'figtable',
-              'singlehtml_toc',
-              'singletext',
              ]
 
 autodoc_default_flags = ['members','show-inheritance','undoc-members']
@@ -82,13 +75,15 @@ if readTheDocs:
     doxylink = {
         'openfast' : (
           os.path.join(builddir, '..', '..', 'openfast.tag'),
-          os.path.join('..', '..', 'doxygen', 'html'))
+          os.path.join('html')
+        )
     }
 else:
     doxylink = {
         'openfast' : (
           os.path.join(builddir, '..', 'openfast.tag'),
-          os.path.join('..', 'doxygen', 'html'))
+          os.path.join('html')
+        )
     }
 
 # Add any paths that contain templates here, relative to this directory.
