@@ -9869,7 +9869,26 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
          WRITE (farm%p%UnOu,'(A14)',ADVANCE='NO')  farm%p%Delim//farm%p%OutParam(I)%Name
         ! CALL WrFileNR ( farm%p%UnOu, farm%p%Delim//farm%p%OutParam(I)%Name )
       ENDDO ! I
+!============================================================
+! DEBUG OUTPUTS HERE
 
+      DO I = 1,farm%WD(1)%p%NumPlanes-2  ! Loop through all selected output channels
+
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEX'//trim(num2lstr(I))
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEY'//trim(num2lstr(I))
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEZ'//trim(num2lstr(I))  
+
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'XPLANE'//trim(num2lstr(I))
+
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'VPLANEX'//trim(num2lstr(I))
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'VPLANEY'//trim(num2lstr(I))
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'VPLANEZ'//trim(num2lstr(I))
+
+      ENDDO             ! I - All selected output channels
+      
+      
+! END DEBUG OUTPUTS 
+!============================================================
       WRITE (farm%p%UnOu,'()')
 
          !......................................................
@@ -9883,6 +9902,27 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
          !CALL WrFileNR ( farm%p%UnOu, farm%p%Delim//farm%p%OutParam(I)%Units )
       ENDDO ! I
 
+!============================================================
+! DEBUG OUTPUTS HERE
+
+      DO I = 1,farm%WD(1)%p%NumPlanes-2  ! Loop through all selected output channels
+
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
+
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '      (m)     '
+
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
+         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
+
+      ENDDO             ! I - All selected output channels
+      
+      
+! END DEBUG OUTPUTS 
+!============================================================
+      
       WRITE (farm%p%UnOu,'()')
 
   ! END IF
@@ -10001,7 +10041,7 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
    CHARACTER(200)                          :: Frmt                                      ! A string to hold a format specifier
    CHARACTER(farm%p%TChanLen)              :: TmpStr                                    ! temporary string to print the time output as text 
    CHARACTER(ChanLenFF)                    :: TmpStr2                                    ! temporary string to print the output as text 
-   INTEGER(IntKi)                          :: I                                         ! loop counter
+   INTEGER(IntKi)                          :: I, J                                      ! loop counter
    REAL(ReKi)                              :: val
    
    ErrStat = ErrID_None
@@ -10026,6 +10066,28 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
      
       ENDDO             ! I - All selected output channels
       
+!============================================================
+! DEBUG OUTPUTS HERE
+
+      DO I = 1,farm%WD(1)%p%NumPlanes-2  ! Loop through all selected output channels
+
+         DO J = 1,3
+            WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%WD(1)%y%p_plane(J,I)
+            CALL WrFileNR( farm%p%UnOu, TmpStr2 )
+         ENDDO
+
+         WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%WD(1)%xd%x_plane(I)
+         CALL WrFileNR( farm%p%UnOu, TmpStr2 )
+
+         DO J = 1,3
+            WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%AWAE%y%V_plane(J,I,1)
+            CALL WrFileNR( farm%p%UnOu, TmpStr2 )
+         ENDDO
+      ENDDO             ! I - All selected output channels
+      
+      
+! END DEBUG OUTPUTS 
+!============================================================
          ! write a new line (advance to the next line)
       WRITE (farm%p%UnOu,'()')
 
