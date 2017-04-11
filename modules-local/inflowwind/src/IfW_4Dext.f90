@@ -200,7 +200,7 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
    INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< Error status
    CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
-   REAL(ReKi)                                                  :: Interp4D(3)       !< The interpolated UVW from m%V
+   REAL(SiKi)                                                  :: Interp4D(3)       !< The interpolated UVW from m%V
    
    CHARACTER(*), PARAMETER                                     :: RoutineName = 'Interp4D'   
 
@@ -212,9 +212,9 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
    INTEGER(IntKi)                      :: Indx_Lo(4)                                ! index associated with lower bound of dimension 1-4 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))
    INTEGER(IntKi)                      :: Indx_Hi(4)                                ! index associated with upper bound of dimension 1-4 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))   
    
-   REAL(ReKi)                           :: isopc(4)                                 ! isoparametric coordinates 
-   REAL(ReKi)                           :: N(16)                                    ! size 2^n
-   REAL(ReKi)                           :: u(16)                                    ! size 2^n
+   REAL(SiKi)                           :: isopc(4)                                 ! isoparametric coordinates 
+   REAL(SiKi)                           :: N(16)                                    ! size 2^n
+   REAL(SiKi)                           :: u(16)                                    ! size 2^n
    REAL(ReKi)                           :: Tmp                                      ! temporary fraction of distance between two grid points
    
    
