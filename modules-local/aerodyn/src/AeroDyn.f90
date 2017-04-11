@@ -2019,7 +2019,7 @@ SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_towe
    
    TwrClrnc = TwoNorm(r_TowerBlade) - 0.5_ReKi*TwrDiam
    if ( TwrClrnc <= 0.0_ReKi ) then
-      call SetErrStat(ErrID_Severe, "Tower strike.", ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Tower strike.", ErrStat, ErrMsg, RoutineName)
    end if
    
    
