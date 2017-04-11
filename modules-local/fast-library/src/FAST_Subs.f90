@@ -4627,7 +4627,9 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADO
          ! Write data to array for binary output file
 
       IF ( y_FAST%n_Out == y_FAST%NOutSteps ) THEN
-         CALL ProgWarn( 'Not all data could be written to the binary output file.' )
+         ErrStat = ErrID_Warn
+         ErrMsg = 'Not all data could be written to the binary output file.'
+         !CALL ProgWarn( 'Not all data could be written to the binary output file.' )
          !this really would only happen if we have an error somewhere else, right?
          !otherwise, we could allocate a new, larger array and move existing data
       ELSE
