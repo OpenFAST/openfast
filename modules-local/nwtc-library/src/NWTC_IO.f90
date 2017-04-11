@@ -7906,12 +7906,12 @@ CONTAINS
       nPts    = dims(1)*dims(2)*dims(3)
       
       ! Note: gridVals must be stored such that the left-most dimension is X and the right-most dimension is Z
-      WRITE(Un,'(A,3(i5,X))')    'DIMENSIONS ',  dims
-      WRITE(Un,'(A,3(f10.2,X))') 'ORIGIN '    ,  origin
-      WRITE(Un,'(A,3(f10.2,X))') 'SPACING '   ,  gridSpacing
+      WRITE(Un,'(A,3(i5,1X))')    'DIMENSIONS ',  dims
+      WRITE(Un,'(A,3(f10.2,1X))') 'ORIGIN '    ,  origin
+      WRITE(Un,'(A,3(f10.2,1X))') 'SPACING '   ,  gridSpacing
       WRITE(Un,'(A,i5)')         'POINT_DATA ',  nPts
       WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
-      WRITE(Un,'(3(f10.2,X))')   gridVals
+      WRITE(Un,'(3(f10.2,1X))')   gridVals
       close(Un)
       RETURN
       
@@ -7940,12 +7940,12 @@ CONTAINS
       nPts    = dims(1)*dims(2)
       
       ! Note: gridVals must be stored such that the left-most dimension is X and the right-most dimension is Z
-      WRITE(Un,'(A,2(i5,X))')    'DIMENSIONS ',  dims
-      WRITE(Un,'(A,2(f10.2,X))') 'ORIGIN '    ,  origin
-      WRITE(Un,'(A,2(f10.2,X))') 'SPACING '   ,  gridSpacing
+      WRITE(Un,'(A,2(i5,1X))')    'DIMENSIONS ',  dims
+      WRITE(Un,'(A,2(f10.2,1X))') 'ORIGIN '    ,  origin
+      WRITE(Un,'(A,2(f10.2,1X))') 'SPACING '   ,  gridSpacing
       WRITE(Un,'(A,i5)')         'POINT_DATA ',  nPts
       WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
-      WRITE(Un,'(3(f10.2,X))')   gridVals
+      WRITE(Un,'(3(f10.2,1X))')   gridVals
       close(Un)
       RETURN
       
