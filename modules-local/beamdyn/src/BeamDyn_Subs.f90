@@ -443,7 +443,7 @@ SUBROUTINE BD_TrapezoidalPointWeight(p, InputFileData)
 
 
       ! compute the trapezoidal quadrature weights, p%GLw:
-   id1 = InputFileData%kp_member(1)             !adp: Why is this only checking the first member (size(kp_member) will be number of GL points)????
+   id1 = InputFileData%InpBl%station_total
    temp_id0 = (id0 - 1)*p%refine + 1            ! Starting index in GL --> always going to be 1
    temp_id1 = (id1 - 1)*p%refine + 1            ! ending index in GL --> will be  size(p%GL)
    denom = p%GL(temp_id1) - p%GL(temp_id0)      ! This is the range of GL --> for single member, is always == 2
