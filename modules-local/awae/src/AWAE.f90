@@ -269,8 +269,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       
       do np = 0, maxPln !p%NumPlanes-2
          if ( (u%D_wake(np,nt) > 0.0_ReKi) .and.  (m%N_wind(np,nt) < p%n_wind_min) ) then
-            !TODO Change this back to fatal
-            call SetErrStat( ErrID_Warn, 'The number of points in the wake volume #'//trim(num2lstr(np))//' for turbine '//trim(num2lstr(nt))//' is '//trim(num2lstr(m%N_wind(np,nt)))//', which is less than the minimum threshold, '//trim(num2lstr(p%n_wind_min))//'.', errStat, errMsg, RoutineName )
+            call SetErrStat( ErrID_Fatal, 'The number of points in the wake volume #'//trim(num2lstr(np))//' for turbine '//trim(num2lstr(nt))//' is '//trim(num2lstr(m%N_wind(np,nt)))//', which is less than the minimum threshold, '//trim(num2lstr(p%n_wind_min))//'.', errStat, errMsg, RoutineName )
             return     
          else if ( m%N_wind(np,nt) > 0  ) then            
             Vsum_low = 0.0_ReKi
@@ -317,13 +316,20 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: Vsum_low(3)
    integer(IntKi)      :: ILo
    integer(IntKi)      :: maxPln
+   integer(IntKi)      :: n_high_low
    character(*), parameter   :: RoutineName = 'HighResGridCalcOutput'
    errStat = ErrID_None
    errMsg  = ""
 
    
    maxPln =  p%NumPlanes-2 !min(n,p%NumPlanes-2)
-            
+     
+      ! We only need one high res file for that last simulation time
+   if ( n == (p%NumDT-1) ) then
+      n_high_low = 1
+   else
+      n_high_low = p%n_high_low
+   end if
    
    
       ! Loop over the entire grid of low resolution ambient wind data to compute:
@@ -332,7 +338,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
    do nt = 1,p%NumTurbines
       nXYZ_high = 0
-      do n_hl=0, p%n_high_low-1
+      do n_hl=0, n_high_low-1
             ! read from file the ambient flow for the current time step
          call ReadHighResWindFile(nt, n+n_hl, p, m%Vamb_high, errStat, errMsg)
             if ( errStat >= AbortErrLev ) then
@@ -418,7 +424,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                   end do
                      ! [I - XX']V = V - (V dot X)X
                   Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane 
-                  do n_hl=0, p%n_high_low-1
+                  do n_hl=0, n_high_low-1
                      y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) + Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp)
                   end do
                      
@@ -431,247 +437,8 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    
    
 end subroutine HighResGridCalcOutput
+  
 
-subroutine HighResGridCalcOutput2(n, u, p, y, m, errStat, errMsg)
-   integer(IntKi),                 intent(in   )  :: n           !< Current simulation time increment (zero-based)
-   type(AWAE_InputType),           intent(in   )  :: u           !< Inputs at Time t
-   type(AWAE_ParameterType),       intent(in   )  :: p           !< Parameters
-   type(AWAE_OutputType),          intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
-                                                               !!   nectivity information does not have to be recalculated)
-   type(AWAE_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
-   integer(IntKi),                 intent(  out)  :: errStat     !< Error status of the operation
-   character(*),                   intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
-   
-   integer(IntKi)      :: nx, ny, nz, nt, nt2, np, nw, nx_high, ny_high, nz_high, n_hl !< loop counters
-   integer(IntKi)      :: nXYZ_high, n_wake       !< accumulating counters
-   real(ReKi)          :: xhatBar_plane(3)       !< 
-   real(ReKi)          :: tmp_xhatBar_plane
-   real(ReKi)          :: x_end_plane
-   real(ReKi)          :: x_start_plane
-   real(ReKi)          :: r_vec_plane(3)
-   real(ReKi)          :: r_tmp_plane
-   real(ReKi)          :: Vx_wake_tmp
-   real(ReKi)          :: Vr_wake_tmp(3)
-   real(ReKi)          :: Vr_term(3)
-   real(ReKi)          :: Vx_term
-   real(ReKi)          :: Vsum_low(3)
-   integer(IntKi)      :: ILo
-   character(*), parameter   :: RoutineName = 'HighResGridCalcOutput'
-   errStat = ErrID_None
-   errMsg  = ""
-
-   
-   
-            
-   
-   
-      ! Loop over the entire grid of low resolution ambient wind data to compute:
-      !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
-   
-   
-   
-   do nt = 1,p%NumTurbines
-     ! nXYZ_high = 0
-      do n_hl=0, p%n_high_low-1
-            ! read from file the ambient flow for the current time step
-         call ReadHighResWindFile(nt, n+n_hl, p, m%Vamb_high, errStat, errMsg)
-            if ( errStat >= AbortErrLev ) then
-               return
-            end if
-            
-            ! set the disturbed flow equal to the ambient flow for this time step
-         y%Vdist_high(nt)%data(:,:,:,:,n_hl) = m%Vamb_high(:,:,:,:)
-      end do
-      
-      !$omp parallel &
-      !$omp& private(nz_high,ny_high,nx_high,nXYZ_high,n_wake,xhatBar_plane,nt2), &
-      !$omp& private(x_end_plane,np,ILo,x_start_plane,r_vec_plane,r_tmp_plane,tmp_xhatBar_plane), &
-      !$omp& private(Vx_wake_tmp,Vr_wake_tmp,Vr_term,Vx_term,n_hl ), & 
-      !$omp& shared(nt,p%nX_high,p%nY_high,p%nZ_high,u%xhat_plane,p%Grid_high,u%p_plane,m%rhat_plane), &
-      !$omp& shared(p%NumRadii,m%Vx_wake,m%Vr_wake,p%r,u%Vx_wake,u%Vr_wake,m%xhat_plane,y%Vdist_high), &
-      !$omp& collapse(3)
-      do nz_high=0, p%nZ_high-1 
-         do ny_high=0, p%nY_high-1
-            do nx_high=0, p%nX_high-1
-         
-               nXYZ_high =  nz_high*p%nX_high*p%nZ_high + ny_high*p%nX_high + nx_high !  nXYZ_high + 1
-               n_wake = 0
-               xhatBar_plane = 0.0_ReKi
-            
-               do nt2 = 1,p%NumTurbines
-                  if (nt /= nt2) then  
-                     
-                     x_end_plane = dot_product(u%xhat_plane(:,0,nt2), (p%Grid_high(:,nXYZ_high,nt2) - u%p_plane(:,0,nt2)) )
-               
-                     do np = 0, p%NumPlanes-2
-                  
-                           ! Reset interpolation counter
-                        ILo = 0
-                  
-                           ! Construct the endcaps of the current wake plane volume
-                        x_start_plane = x_end_plane
-                        x_end_plane = dot_product(u%xhat_plane(:,np+1,nt2), (p%Grid_high(:,nXYZ_high,nt2) - u%p_plane(:,np+1,nt2)) )
-                  
-                           ! test if the point is within the endcaps of the wake volume
-                        if ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) then
-                           r_vec_plane = p%Grid_high(:,nXYZ_high,nt2) - u%p_plane(:,np,nt2) - x_start_plane*u%xhat_plane(:,np,nt2)
-                           r_tmp_plane = TwoNorm( r_vec_plane )
-                     
-                              ! test if the point is within radial finite-difference grid
-                           if ( r_tmp_plane <= p%r(p%numRadii-1) ) then
-                        
-                              n_wake = n_wake + 1
-                             ! m%r_plane(n_wake) = r_tmp_plane   ! Why do we need this??  GJH
-                        
-                              if ( EqualRealNos(r_tmp_plane, 0.0_ReKi) ) then         
-                                 m%rhat_plane(:,n_wake) = 0.0_ReKi
-                              else
-                                 m%rhat_plane(:,n_wake) = ( r_vec_plane  ) / r_tmp_plane
-                              end if
-                                                                        
-                           ! given r_tmp_plane and Vx_wake at p%dr increments, find value of m%Vx_wake(@r_tmp_plane) using interpolation 
-                              m%Vx_wake(n_wake) = InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np,nt2), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
-                              m%Vr_wake(n_wake) = InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np,nt2), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
-                                              
-                              m%xhat_plane(:,n_wake) = u%xhat_plane(:,np,nt2)
-                              xhatBar_plane = xhatBar_plane + abs(m%Vx_wake(n_wake))*m%xhat_plane(:,n_wake)    
-                              
-                           end if  ! if the point is within radial finite-difference grid
- 
-                           exit
-                        end if  ! if the point is within the endcaps of the wake volume                 
-                     end do     ! np = 0, p%NumPlanes-2
-                  end if    ! nt /= nt2          
-               end do        ! nt2 = 1,p%NumTurbines
-               if (n_wake > 0) then
-                  
-                  tmp_xhatBar_plane = TwoNorm(xhatBar_plane)
-                  if ( EqualRealNos(tmp_xhatBar_plane, 0.0_ReKi) ) then
-                     xhatBar_plane = 0.0_ReKi
-                  else
-                     xhatBar_plane = xhatBar_plane / tmp_xhatBar_plane
-                  end if
-                  
-                  Vx_wake_tmp   = 0.0_ReKi
-                  Vr_wake_tmp   = 0.0_ReKi
-                  do nw = 1,n_wake 
-                     Vr_term     = m%Vx_wake(nw)*m%xhat_plane(:,nw) + m%Vr_wake(nw)*m%rhat_plane(:,nw)
-                     Vx_term     = dot_product( xhatBar_plane, Vr_term )
-                     Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
-                     Vr_wake_tmp = Vr_wake_tmp + Vr_term
-                  end do
-                     ! [I - XX']V = V - (V dot X)X
-                  Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane 
-                  do n_hl=0, p%n_high_low-1
-                     y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) + Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp)
-                  end do
-                     
-               end if  ! (n_wake > 0)
-            
-            end do ! nx_high=0, p%nX_high-1
-         end do    ! ny_high=0, p%nY_high-1
-   end do       ! nz_high=0, p%nZ_high-1
-   !$omp end parallel
-   end do          ! nt = 1,p%NumTurbines
-
-   
-   end subroutine HighResGridCalcOutput2
-   
-subroutine GeneratePlaneOutputsHdr(p)
-
-   type(AWAE_ParameterType),       intent(in) :: p             !< Parameters
-
-   CHARACTER(14)              :: TmpStr                                    ! temporary string to print the time output as text 
-   CHARACTER(14)                    :: TmpStr2                                    ! temporary string to print the output as text 
-   INTEGER(IntKi)                          :: I  ,j                                       ! loop counter
-   
-      ! Write time-series channel data
-   
-      WRITE( TmpStr, '(A14)' ) "Time"
-      CALL WrFileNR( p%UnOu, TmpStr )
-
-            ! Generate fast.farm output file
-      DO I = 1,p%NumPlanes-2  ! Loop through all selected output channels
-
-         WRITE( TmpStr2, '(A14)' ) "P_PlaneX"//trim(num2lstr(I))
-         CALL WrFileNR( p%UnOu, TmpStr2 )
-         WRITE( TmpStr2, '(A14)' ) "P_PlaneY"//trim(num2lstr(I))
-         CALL WrFileNR( p%UnOu, TmpStr2 )
-         WRITE( TmpStr2, '(A14)' ) "P_PlaneZ"//trim(num2lstr(I))
-         CALL WrFileNR( p%UnOu, TmpStr2 )
-     
-      ENDDO             ! I - All selected output channels
-      
-         ! write a new line (advance to the next line)
-      WRITE (p%UnOu,'()')
-
-   
-   end subroutine GeneratePlaneOutputsHdr
-   
-subroutine GeneratePlaneOutputs(n,nt,u,p)
-   integer(IntKi),                 intent(in) :: n             !< time step increment
-   integer(IntKi),                 intent(in) :: nt            !< turbine index
-   type(AWAE_InputType),           intent(in) :: u             !< An initial guess for the input; input mesh must be defined
-   type(AWAE_ParameterType),       intent(in) :: p             !< Parameters
-
-   CHARACTER(14)              :: TmpStr                                    ! temporary string to print the time output as text 
-   CHARACTER(14)                    :: TmpStr2                                    ! temporary string to print the output as text 
-   INTEGER(IntKi)                          :: I  ,j                                       ! loop counter
-   
-      ! Write time-series channel data
-   
-      WRITE( TmpStr, '(F14.2)' ) n*p%dt
-      CALL WrFileNR( p%UnOu, TmpStr )
-
-            ! Generate fast.farm output file
-      DO I = 1,p%NumPlanes-2  ! Loop through all selected output channels
-
-         do j = 1,3
-         WRITE( TmpStr2, '(F14.2)' ) u%p_plane(j,I,nt)
-         CALL WrFileNR( p%UnOu, TmpStr2 )
-      end do
-     
-      ENDDO             ! I - All selected output channels
-      
-         ! write a new line (advance to the next line)
-      WRITE (p%UnOu,'()')
-
-   
-end subroutine GeneratePlaneOutputs
-   
-   
-!----------------------------------------------------------------------------------------------------------------------------------   
-!> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
-!! FAST or Wind_AmbientAndArray_Driver)   
-subroutine AWAE_SetInitOut(p, InputInp, InitOut, errStat, errMsg)
-
-   type(AWAE_InitOutputType),       intent(  out)  :: InitOut          !< Initialization output data
-   type(AWAE_InitInputType),        intent(in   )  :: InputInp         !< Initialization input  data 
-   type(AWAE_ParameterType),        intent(in   )  :: p                !< Parameters
-   integer(IntKi),                 intent(  out)  :: errStat          !< Error status of the operation
-   character(*),                   intent(  out)  :: errMsg           !< Error message if errStat /= ErrID_None
-
-
-      ! Local variables
-   integer(intKi)                               :: ErrStat2          ! temporary Error status
-   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
-   character(*), parameter                      :: RoutineName = 'AWAE_SetInitOut'
-   
-   
-   
-   integer(IntKi)                               :: i, j, k, f
-   integer(IntKi)                               :: NumCoords
-
-      ! Initialize variables for this routine
-
-   errStat = ErrID_None
-   errMsg  = ""
-
-      ! Set output data
-   
-   InitOut%Ver = AWAE_Ver
- 
-end subroutine AWAE_SetInitOut
 
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine is called at the start of the simulation to perform initialization steps.
@@ -750,11 +517,12 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%WindFilePath     = InitInp%InputFileData%WindFilePath ! TODO: Make sure this wasn't specified with the trailing folder separator
    p%n_high_low       = InitInp%n_high_low
    p%dt               = InitInp%InputFileData%dt
+   p%NumDT            = InitInp%NumDT
    p%NOutDisWindXY    = InitInp%InputFileData%NOutDisWindXY
    p%NOutDisWindYZ    = InitInp%InputFileData%NOutDisWindYZ
    p%NOutDisWindXZ    = InitInp%InputFileData%NOutDisWindXZ
    p%WrDisWind        = InitInp%InputFileData%WrDisWind
-   p%WrDisSkp1        = InitInp%InputFileData%WrDisSkp + 1
+   p%WrDisSkp1        = nint(InitInp%InputFileData%WrDisDT / p%dt)
    
    call allocAry( p%OutDisWindZ, p%NOutDisWindXY, "OutDisWindZ", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -807,6 +575,8 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          call Cleanup() 
          return
    end if
+   
+   InitOut%Ver = AWAE_Ver
    
       ! Test the request output wind locations against grid information
    if (p%WrDisWind) then
@@ -1108,7 +878,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    
    errStat = ErrID_None
    errMsg  = ""
-   n = int(t / p%dt)
+   n = nint(t / p%dt)
    
    call LowResGridCalcOutput(n, u, p, y, m, errStat2, errMsg2)
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
@@ -1134,8 +904,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
       
       call ExtractSlice( XYSlice, p%OutDisWindZ(k), p%Z0_low, p%nZ_low, p%nX_low, p%nY_low, p%dZ_low, m%Vdist_low, m%outVizXYPlane)        
          ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n>.vtk
-      !FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"DisXY"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
-      FileName = trim(p%OutFileRoot)//"_Low_DisXY"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
+      FileName = trim(p%OutFileRoot)//".Low.DisXY"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
       call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XY Slice at Z= "//trim(num2lstr(p%OutDisWindZ(k))), Un, ErrStat2, ErrMsg2 ) 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
@@ -1149,8 +918,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    do k = 1,p%NOutDisWindYZ
       call ExtractSlice( YZSlice, p%OutDisWindX(k), p%X0_low, p%nX_low, p%nY_low, p%nZ_low, p%dX_low, m%Vdist_low, m%outVizYZPlane)        
          ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n>.vtk
-      !FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"DisYZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
-      FileName = trim(p%OutFileRoot)//"_Low_DisYZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
+      FileName = trim(p%OutFileRoot)//".Low.DisYZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
       call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of YZ Slice at X= "//trim(num2lstr(p%OutDisWindX(k))), Un, ErrStat2, ErrMsg2 ) 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
@@ -1163,8 +931,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    do k = 1,p%NOutDisWindXZ
       call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low, m%outVizXZPlane)        
          ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n>.vtk
-      !FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"DisXZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
-      FileName = trim(p%OutFileRoot)//"_Low_DisXZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
+      FileName = trim(p%OutFileRoot)//".Low.DisXZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
       call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at Y= "//trim(num2lstr(p%OutDisWindY(k))), Un, ErrStat2, ErrMsg2 ) 
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return

@@ -7909,7 +7909,7 @@ CONTAINS
       WRITE(Un,'(A,3(i5,1X))')    'DIMENSIONS ',  dims
       WRITE(Un,'(A,3(f10.2,1X))') 'ORIGIN '    ,  origin
       WRITE(Un,'(A,3(f10.2,1X))') 'SPACING '   ,  gridSpacing
-      WRITE(Un,'(A,i5)')         'POINT_DATA ',  nPts
+      WRITE(Un,'(A,i15)')         'POINT_DATA ',  nPts
       WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
       WRITE(Un,'(3(f10.2,1X))')   gridVals
       close(Un)
@@ -7943,7 +7943,7 @@ CONTAINS
       WRITE(Un,'(A,2(i5,1X))')    'DIMENSIONS ',  dims
       WRITE(Un,'(A,2(f10.2,1X))') 'ORIGIN '    ,  origin
       WRITE(Un,'(A,2(f10.2,1X))') 'SPACING '   ,  gridSpacing
-      WRITE(Un,'(A,i5)')         'POINT_DATA ',  nPts
+      WRITE(Un,'(A,i15)')         'POINT_DATA ',  nPts
       WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
       WRITE(Un,'(3(f10.2,1X))')   gridVals
       close(Un)

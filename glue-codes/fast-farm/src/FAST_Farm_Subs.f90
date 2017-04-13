@@ -742,7 +742,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
     
           ! WrDisWind - Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag):
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisSkp, "WrDisSkp", "Number of time steps to skip between vtk outputs [must be greater or equal to zero]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisDT, "WrDisDT", "The time between vtk outputs [must be a multiple of the low resolution time step]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       
@@ -1017,7 +1017,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
       ! Passed variables
    TYPE(Farm_ParameterType), INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
    TYPE(WD_InputFileType),   INTENT(IN   ) :: WD_InitInp                      !< input-file data for WakeDynamics module
-   TYPE(AWAE_InputFileType), INTENT(IN   ) :: AWAE_InitInp                    !< input-file data for AWAE module
+   TYPE(AWAE_InputFileType), INTENT(INOUT) :: AWAE_InitInp                    !< input-file data for AWAE module
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
@@ -1026,6 +1026,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
    CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
    CHARACTER(*),   PARAMETER     :: RoutineName = 'Farm_ValidateInput'
+   INTEGER(IntKi)                :: n_disDT_dt
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1069,7 +1070,19 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
    IF (p%TStart < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TStart must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (.not. p%WrBinOutFile .and. .not. p%WrTxtOutFile) CALL SetErrStat( ErrID_Fatal, "FAST.Farm's OutFileFmt must be 1, 2, or 3.",ErrStat,ErrMsg,RoutineName)
-   if (AWAE_InitInp%WrDisSkp < 0) CALL SetErrStat(ErrID_Fatal,'WrDisSkp must not be negative.',ErrStat,ErrMsg,RoutineName)
+   
+   if (AWAE_InitInp%WrDisDT < p%dt) CALL SetErrStat(ErrID_Fatal,'WrDisDT must greater than or equal to dt.',ErrStat,ErrMsg,RoutineName)
+   
+      ! let's make sure the FAST DT is an exact integer divisor of AWAE_InitInp%WrDisDT 
+   n_disDT_dt = nint( AWAE_InitInp%WrDisDT / p%DT )
+      ! (i'm doing this outside of Farm_ValidateInput so we know that dt/=0 before computing n_high_low):
+   IF ( .NOT. EqualRealNos( real(p%DT,SiKi)* n_disDT_dt, real(AWAE_InitInp%WrDisDT,SiKi)  )  ) THEN
+      CALL SetErrStat(ErrID_Fatal, "dt ("//TRIM(Num2LStr(p%DT))//" s) must be an integer divisor of WrDisDT (" &
+                     //TRIM(Num2LStr(AWAE_InitInp%WrDisDT))//" s).", ErrStat, ErrMsg, RoutineName ) 
+   END IF
+   AWAE_InitInp%WrDisDT =  p%DT * n_disDT_dt
+   
+   
    if (AWAE_InitInp%NOutDisWindXY < 0 .or. AWAE_InitInp%NOutDisWindXY > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (AWAE_InitInp%NOutDisWindYZ < 0 .or. AWAE_InitInp%NOutDisWindYZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindYZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (AWAE_InitInp%NOutDisWindXZ < 0 .or. AWAE_InitInp%NOutDisWindXZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
@@ -1090,11 +1103,11 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    
    
       ! Check that OutFmt is a valid format specifier and will fit over the column headings
-   CALL ChkRealFmtStr( p%OutFmt, 'OutFmt', p%FmtWidth, ErrStat2, ErrMsg2 ) !this sets p%FmtWidth!
+  CALL ChkRealFmtStr( p%OutFmt, 'OutFmt', p%FmtWidth, ErrStat2, ErrMsg2 ) !this sets p%FmtWidth!
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
-   IF ( p%FmtWidth /= ChanLen ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
-         TRIM(Num2LStr(p%FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLen))//' characters.', ErrStat, ErrMsg, RoutineName )
+   IF ( p%FmtWidth /= ChanLenFF ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
+         TRIM(Num2LStr(p%FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLenFF))//' characters.', ErrStat, ErrMsg, RoutineName )
       
    
 END SUBROUTINE Farm_ValidateInput

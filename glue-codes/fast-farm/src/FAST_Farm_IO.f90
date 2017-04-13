@@ -9872,7 +9872,7 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
 !============================================================
 ! DEBUG OUTPUTS HERE
 
-      DO I = 1,farm%WD(1)%p%NumPlanes-2  ! Loop through all selected output channels
+      DO I = 0,farm%WD(1)%p%NumPlanes-1  ! Loop through all selected output channels
 
          WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEX'//trim(num2lstr(I))
          WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEY'//trim(num2lstr(I))
@@ -9905,7 +9905,7 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
 !============================================================
 ! DEBUG OUTPUTS HERE
 
-      DO I = 1,farm%WD(1)%p%NumPlanes-2  ! Loop through all selected output channels
+      DO I = 0,farm%WD(1)%p%NumPlanes-1  ! Loop through all selected output channels
 
          WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
          WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
@@ -10069,7 +10069,7 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
 !============================================================
 ! DEBUG OUTPUTS HERE
 
-      DO I = 1,farm%WD(1)%p%NumPlanes-2  ! Loop through all selected output channels
+      DO I = 0,farm%WD(1)%p%NumPlanes-1  ! Loop through all selected output channels
 
          DO J = 1,3
             WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%WD(1)%y%p_plane(J,I)
@@ -13903,7 +13903,7 @@ SUBROUTINE SetOutParam(OutList, farm, ErrStat, ErrMsg )
          farm%p%OutParam(I)%SignM = -1                         ! ex, "-TipDxc1" causes the sign of TipDxc1 to be switched.
          OutListTmp          = OutListTmp(2:)
       ELSE IF ( INDEX( "mM", OutListTmp(1:1) ) > 0 ) THEN ! We'll assume this is a minus sign because no valid channels start with m or M)
-         !CheckOutListAgain   = .TRUE.
+         CheckOutListAgain   = .TRUE.
          farm%p%OutParam(I)%SignM = -1
          OutListTmp          = OutListTmp(2:)
       ELSE

@@ -37,56 +37,6 @@ MODULE AWAE_IO
    
    contains
 
-!----------------------------------------------------------------------------------------------------------------------------------   
-!> This subroutine 
-!!
-subroutine ScanDir(dir, listingName)
-   character(*), intent(in ) :: dir
-   character(*), intent(in ) :: listingName
-#if _WIN32
-   call system('dir "'//trim(dir)//'" /B /A:-D-S-H > '//trim(listingName))
-#else
-   call system('ls '//trim(dir)//' > '//trim(listingName))
-#endif
-end subroutine ScanDir
-   
-subroutine ReadLowResWindFileHeaders(p, errStat, errMsg)
-   type(AWAE_ParameterType),       intent(in   )  :: p            !< Parameters
-   integer(IntKi),                 intent(  out)  :: errStat      !< Error status of the operation
-   character(*),                   intent(  out)  :: errMsg       !< Error message if errStat /= ErrID_None
-   
-   real :: r
-   integer :: Un, i,reason,nFiles
-   character(LEN=100), dimension(:), allocatable :: fileNames
-
-   errStat = ErrID_None
-   errMsg  = ""
-
-   ! get the files
-   call ScanDir(trim(p%WindFilePath)//'\Low\','dirContents.txt')
-   CALL GetNewUnit( Un, ErrStat, ErrMsg )
-   CALL OpenFOutFile ( Un, 'dirContents.txt', ErrStat, ErrMsg )
-
-   !how many
-   nFiles = 0
-   do
-      read(Un,FMT='(a)',iostat=reason) r
-      if (reason/=0) EXIT
-      nFiles = nFiles+1
-   end do
-  
-   allocate(fileNames(nFiles))
-   rewind(Un)
-   do i = 1,nFiles
-      read(Un,'(a)') fileNames(i)
-      
-   end do
-   close(Un)
-   
-!==============================================================================
-    
-end subroutine ReadLowResWindFileHeaders  
-   
 
 subroutine WriteDisWindFiles( n, p, y, m, errStat, errMsg )
    integer(IntKi),             intent(in   ) :: n            !<  Low-resolution time step increment
@@ -101,10 +51,10 @@ subroutine WriteDisWindFiles( n, p, y, m, errStat, errMsg )
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'WriteDisWindFiles'
-   INTEGER(IntKi)                          :: nt, n_hl, n_high 
+   INTEGER(IntKi)                          :: nt, n_high 
    
-   !FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Dis.t"//trim(num2lstr(n))//".vtk"
-   FileName = trim(p%OutFileRoot)//"_Low_Dis.t"//trim(num2lstr(n))//".vtk"
+
+   FileName = trim(p%OutFileRoot)//".Low.Dis.t"//trim(num2lstr(n))//".vtk"
    call WrVTK_SP_header( FileName, "Low resolution disturbed wind for low-resolution timestep "//trim(num2lstr(n)), Un, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -113,17 +63,17 @@ subroutine WriteDisWindFiles( n, p, y, m, errStat, errMsg )
       if (ErrStat >= AbortErrLev) return
     
    do nt= 1,p%NumTurbines
-      do n_hl = 0,p%n_high_low-1  ! TODO: Put this back this is only for debugging
-         n_high = n_hl + p%n_high_low*n
-      !FileName = trim(p%WindFilePath)//trim(PathSep)//"High"//trim(PathSep)//"Dis.t"//trim(num2lstr(n_high))//".vtk"
-      FileName = trim(p%OutFileRoot)//"_High_T"//trim(num2lstr(nt))//"_Dis.t"//trim(num2lstr(n_high))//".vtk"
+       ! We are only writing out the first of the high res data for a given low res time step
+      n_high = p%n_high_low*n
+     
+      FileName = trim(p%OutFileRoot)//".HighT"//trim(num2lstr(nt))//".Dis.t"//trim(num2lstr(n_high))//".vtk"
       call WrVTK_SP_header( FileName, "High resolution disturbed wind for high-resolution timestep "//trim(num2lstr(n_high)), Un, errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-      call WrVTK_SP_vectors3D( Un, "HighDis", (/p%nX_high,p%nY_high,p%nZ_high/), (/p%X0_high,p%Y0_high,p%Z0_high/), (/p%dX_high,p%dY_high,p%dZ_high/), y%Vdist_high(nt)%data(:,:,:,:,n_hl), errStat2, errMsg2 )
+      call WrVTK_SP_vectors3D( Un, "HighDis", (/p%nX_high,p%nY_high,p%nZ_high/), (/p%X0_high,p%Y0_high,p%Z0_high/), (/p%dX_high,p%dY_high,p%dZ_high/), y%Vdist_high(nt)%data(:,:,:,:,0), errStat2, errMsg2 )
          call SetErrStat(ErrStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-      end do   
+       
    end do
 
 

@@ -564,8 +564,6 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       X3              = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X3_minus1(i,j), A1*(q_f_cur - q_f_minus1), 0.0_ReKi )
       X4              = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X4_minus1(i,j), A2*(q_f_cur - q_f_minus1), 0.0_ReKi )
       Cn_q_circ       = C_nalpha_circ*q_f_cur/2.0 - X3 - X4  
-      ! TODO: Why does the Cn_q_circ appear in the following equation GJH 2/28/2017
-      Cn_alpha_q_circ = Cn_alpha_q_circ + Cn_q_circ
    else
       Cn_q_circ       = 0.0
    end if
@@ -675,7 +673,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
     
    if ( p%UAMod == 2 ) then
          ! use equation 1.37
-      Cn_FS   = Cn_alpha_q_nc + Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(fprimeprime) ) / 3.0_ReKi  )**2
+      Cn_FS   = Cn_alpha_q_nc + Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(fprimeprime) ) / 3.0_ReKi  )**2 + Cn_q_circ
    else
          ! use equation 1.36
       Cn_FS   = Cn_alpha_q_nc + Cn_alpha_q_circ *  ( (1.0_ReKi + sqrt(fprimeprime)          ) / 2.0_ReKi )**2

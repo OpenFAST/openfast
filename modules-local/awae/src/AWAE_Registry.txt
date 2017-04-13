@@ -34,7 +34,7 @@ typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindYZ      -  
 typedef  ^            AWAE_InputFileType  ReKi            OutDisWindX       {:}   - - "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindYZ]" meters
 typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindXZ      -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^            AWAE_InputFileType  ReKi            OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
-typedef  ^            AWAE_InputFileType  IntKi           WrDisSkp           -  - -   "Number of time steps to skip between vtk outputs" -
+typedef  ^            AWAE_InputFileType  DbKi            WrDisDT           -  - -   "The time between vtk outputs [must be a multiple of the low resolution time step]" s
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -48,7 +48,6 @@ typedef  ^  InitInputType  CHARACTER(1024)    OutFileRoot      -  - -   "The roo
 # Define outputs from the initialization routine here:
 #typedef   ^ InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
 #typedef   ^ InitOutputType CHARACTER(ChanLen) WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
-typedef   ^ InitOutputType CHARACTER(1024)    WindFilePath     -  - -  "Path name to the Root folder containing the wind data files from ABLSolver precursor" -
 typedef   ^ InitOutputType ProgDesc           Ver              -  - -   "This module's name, version, and date"      -
 typedef   ^ InitOutputType ReKi               X0_high         {:} - -   "X-component of the origin of the high-resolution spatial domain for each turbine" m
 typedef   ^ InitOutputType ReKi               Y0_high         {:} - -   "Y-component of the origin of the high-resolution spatial domain for each turbine" m
@@ -134,6 +133,7 @@ typedef   ^ ParameterType  IntKi            n_high_low         -  - -   "Number 
 typedef   ^ ParameterType  IntKi            n_wind_max         -  - -   "Maximun predicted number of low-resolution grid points found in any single wake plane volume" -
 typedef   ^ ParameterType  IntKi            n_wind_min         -  - -   "Minimum required number of low-resolution grid points found in any single wake plane volume" -
 typedef   ^ ParameterType  DbKi             dt                 -  - -   "Low-resolution (FAST.Farm driver/glue code) time step" s
+typedef   ^ ParameterType  IntKi            NumDT              -  - -   "Number of low-resolution (FAST.Farm driver/glue code) time steps" -
 # parameters for output  
 #typedef   ^ ParameterType  IntKi            NumOuts            -  - -   "Number of parameters in the output list (number of outputs requested)"      -
 typedef  ^  ParameterType  IntKi            WrDisSkp1           -  - -   "Number of time steps to skip plus one" -
@@ -144,7 +144,6 @@ typedef  ^  ParameterType  IntKi            NOutDisWindYZ      -    - - "Number 
 typedef  ^  ParameterType  ReKi             OutDisWindX       {:}   - - "X coordinates of YZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindYZ]" meters
 typedef  ^  ParameterType  IntKi            NOutDisWindXZ      -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^  ParameterType  ReKi             OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
-typedef   ^ ParameterType  IntKi            UnOu               -   - -  "Diagnostics output file unit number"
 typedef   ^ ParameterType  CHARACTER(1024)  OutFileRoot        -  - -   "The root name derived from the primary FAST.Farm input file" -
 #typedef   ^ ParameterType  OutParmType      OutParam          {:} - -   "Names and units (and other characteristics) of all requested output parameters"      -
 
