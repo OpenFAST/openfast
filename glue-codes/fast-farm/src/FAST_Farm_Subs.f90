@@ -740,10 +740,10 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       ! WrDisWind - Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag):
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisWind, "WrDisWind", "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
-    
-          ! WrDisWind - Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag):
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisDT, "WrDisDT", "The time between vtk outputs [must be a multiple of the low resolution time step]", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+     if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if            
 
       
       ! NOutDisWindXY - Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk (-) [0 to 9]:
@@ -814,7 +814,18 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          call cleanup()
          RETURN        
       end if      
-                  
+      
+      
+          ! WrDisDT - Time step for disturbed wind visualization output (s) or DEFAULT [DEFAULT=DT]:
+   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrDisDT, "WrDisDT", &
+      "Time step for disturbed wind visualization output (s) or DEFAULT [DEFAULT=DT]", &
+      p%DT, ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if            
+                
       
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )
