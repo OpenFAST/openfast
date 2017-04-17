@@ -10,7 +10,7 @@ Please contact Michael.A.Sprague@NREL.gov with questions regarding the OpenFAST 
 
 For possible bugs, enhancement requests, or code questions, please submit an issues at the OpenFAST Github repository https://github.com/OpenFAST/OpenFAST
 
-Users may find the established FAST8 can be found through the NWTC Information Portal: https://nwtc.nrel.gov/
+Users may find the established FAST8 through the NWTC Information Portal: https://nwtc.nrel.gov/
 
 .. toctree::
    :maxdepth: 2
