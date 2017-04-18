@@ -1541,7 +1541,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    temp_vec(1) = temp_vec2(2)
    temp_vec(2) = temp_vec2(3)
    temp_vec(3) = temp_vec2(1)
-   CALL BD_CrvCompose(temp_vec2,temp_vec,temp_glb,FLAG_R1R2) ! temp_vec2 = temp_vec composed with temp_glb
+   CALL BD_CrvCompose(temp_vec2,temp_glb,temp_vec,FLAG_R1R2) ! temp_vec2 = temp_glb composed with temp_vec
    CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,FLAG_R1R2)  ! temp_vec = temp_cc composed with temp_vec2
    temp_cur(:) = 0.0_BDKi
    temp33_2=TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,p%node_elem*p%elem_total)) ! possible type conversion here   
@@ -1621,7 +1621,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       temp_vec(1) = temp_vec2(2)
       temp_vec(2) = temp_vec2(3)
       temp_vec(3) = temp_vec2(1)
-      CALL BD_CrvCompose(temp_vec2,temp_vec,temp_glb,FLAG_R1R2) ! temp_vec2 = temp_vec composed with temp_glb
+      CALL BD_CrvCompose(temp_vec2,temp_glb,temp_vec,FLAG_R1R2) ! temp_vec2 = temp_glb composed with temp_vec
       CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,FLAG_R1R2) ! temp_vec = temp_cc composed with temp_vec2
       temp33_2 = TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,temp_id)) ! possible type conversion here
       CALL BD_CrvExtractCrv(temp33_2,temp_cur)     !,ErrStat2,ErrMsg2)
