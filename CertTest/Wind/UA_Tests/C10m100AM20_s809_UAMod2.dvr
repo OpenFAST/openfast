@@ -1,0 +1,25 @@
+UnsteadyAero Driver file for Unit C10m100AM20_s809.   
+Compatible with UnsteadyAero v2.00.00a-gjh
+FALSE         Echo                - Echo the input file data (flag)
+---------------------- ENVIRONMENTAL CONDITIONS -------------------------------
+     340.29   SpdSound            - Speed of sound (m/s)
+---------------------- UNSTEADYAERO -------------------------------------------
+"C10m100AM20_s809_UAMod2"    OutRootName         - The name which prefixes all UnsteadyAero generated files (quoted string)
+      34.29   InflowVel           - Inflow velocity (m/s)
+          1   Re                  - Reynolds number in millions (-)
+          2   UAMod               - Unsteady Aero Model Switch: 1- Baseline model (Original Leishman-Beddoes) ; 2 – Gonzalez’s variant (changes in Cn,Cc,Cm); 3- Minemma/Pierce variant (changes in Cc and Cm)
+TRUE          Flookup             – Flag to indicate whether a lookup for f’ will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files
+------------------- AIRFOIL PROPERTIES ----------------------------------------
+"S809_AD15.dat"    AirFoil1     - Airfoil table
+      0.457   Chord               - Chord length (m)
+TRUE        UseCm               - Use Cm data in airfoil table
+------------------- SIMULATION CONTROL ----------------------------------------
+          1   SimMod              - Simulation model [ 1 - use reduced frequency model, 2 - use time series data stored in the TimeInputs file and ignore the remaining parameters ]
+          3   NCycles             - Number of angle-of-attack oscillations (cosine function) over the length of the simulation (-)
+        720   StepsPerCycle       - Number of timesteps per cycle (-)
+        1.2063   Frequency           - Frequency for the airfoil oscillations (Hz)
+      10.6836   Amplitude           - Amplitude of the oscillations (deg)
+          18.7768   Mean                - Cycle mean (deg)
+       -180   Phase               - Initial phase (num steps)
+""    InputsFile          - Time series data in an ASCII input file (whitespace-separated data).  First row specifies number of time values in file (rows). First column is time (sec), second column is angle-of-attack (deg)
+"END"         of driver input file
