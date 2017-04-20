@@ -5192,7 +5192,7 @@ SUBROUTINE WrVTK_WaveElev(t_global, p_FAST, y_FAST, HD)
    !.................................................................
       
    ! PolyData (.vtp) � Serial vtkPolyData (unstructured) file
-   FileName = TRIM(p_FAST%OutFileRoot)//'.WaveSurface.t'//TRIM(Num2LStr(y_FAST%VTK_count))//'.vtp'
+   FileName = TRIM(p_FAST%OutFileRoot)//'.WaveSurface.'//TRIM(Num2LStr(y_FAST%VTK_count))//'.vtp'
       
    call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat2, ErrMsg2 )    
       if (ErrStat2 >= AbortErrLev) return
