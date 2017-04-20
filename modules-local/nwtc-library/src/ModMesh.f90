@@ -319,7 +319,7 @@ SUBROUTINE MeshWrVTK ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, Err
    !.................................................................
       
    ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
-   FileName = TRIM(FileRootName)//'.t'//TRIM(Num2LStr(VTKcount))//'.vtp'
+   FileName = TRIM(FileRootName)//'.'//TRIM(Num2LStr(VTKcount))//'.vtp'
       
    call WrVTK_header( trim(FileName), M%Nnodes, M%ElemTable(ELEMENT_LINE2)%nelem, 0, Un, ErrStat2, ErrMsg2 )    
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -568,7 +568,7 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFie
    !.................................................................
       
    ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
-   FileName = TRIM(FileRootName)//'.t'//TRIM(Num2LStr(VTKcount))//'.vtp'
+   FileName = TRIM(FileRootName)//'.'//TRIM(Num2LStr(VTKcount))//'.vtp'
        
       ! Write a VTP mesh file (Polygonal VTK file) with positions and polygons (surfaces)
       ! (note alignment of WRITE statements to make sure spaces are lined up in XML file)
@@ -759,7 +759,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    !.................................................................
       
    ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
-   FileName = TRIM(FileRootName)//'.t'//TRIM(Num2LStr(VTKcount))//'.vtp'
+   FileName = TRIM(FileRootName)//'.'//TRIM(Num2LStr(VTKcount))//'.vtp'
       
       ! Write a VTP mesh file (Polygonal VTK file) with positions and polygons (surfaces)
       ! (note alignment of WRITE statements to make sure spaces are lined up in XML file)
