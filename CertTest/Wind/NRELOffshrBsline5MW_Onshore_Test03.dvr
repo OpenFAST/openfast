@@ -1,0 +1,25 @@
+-----  AeroDyn Driver v1.00.x Input File  --------------------------------------
+NRELOffshrBsline5MW_Onshore_AeroDyn15.dat
+-----  Input Configuration  ----------------------------------------------------
+FALSE          Echo            -  Echo input parameters to "<rootname>.ech"?
+"NRELOffshrBsline5MW_Onshore_AeroDyn15_Test03.dat"    AD_InputFile    -  Name of the primary AeroDyn input file
+-----  Turbine Data  -----------------------------------------------------------
+          3   NumBlades       - Number of blades (-)
+        1.5   HubRad          - Hub radius (m)
+    90        HubHt           - Hub height (m)
+    -5.0191   Overhang        - Overhang (m)
+         -5   ShftTilt        - Shaft tilt (deg)
+        -2.5  Precone         - Blade precone (deg)
+-----  I/O Settings  -----------------------------------------------------------
+""            OutFileRoot     - Root name for any output files (use "" for .dvr rootname) (-)
+True          TabDel          - When generating formatted output (OutForm=True), make output tab-delimited (fixed-width otherwise) (flag)
+"ES15.6E3"    OutFmt          - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
+True          Beep            - Beep on exit (flag)
+-----  Combined-Case Analysis  -------------------------------------------------
+         3    NumCases        - Number of cases to run
+WndSpeed       ShearExp       RotSpd        Pitch            Yaw           dT             Tmax
+(m/s)            (-)          (rpm)         (deg)           (deg)          (s)            (s)
+7.0000000E+00  0.0000000E+00  12.1     0.0000000E+00  2.0000000E+01       0.138          12.7935     
+7.0000000E+00  0.0000000E+00  12.1     0.0000000E+00  2.0000000E+01       0.0138         12.7935        
+7.0000000E+00  0.0000000E+00  12.1     0.0000000E+00  2.0000000E+01       0.00138        12.7935 
+                     

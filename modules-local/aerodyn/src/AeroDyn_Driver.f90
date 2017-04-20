@@ -73,7 +73,7 @@ program AeroDyn_Driver
    
    
    do iCase = 1, DvrData%NumCases
-      call WrScr( NewLine//'Running case '//trim(num2lstr(iCase))//' of '//trim(num2lstr(DvrData%NumCases))//'.' )
+      call WrScr( NewLine//'Running case'//trim(num2lstr(iCase))//' of '//trim(num2lstr(DvrData%NumCases))//'.' )
    
       
       !dT = TwoPi/DvrData%Cases(iCase)%RotSpeed / DvrData%NumSect ! sec

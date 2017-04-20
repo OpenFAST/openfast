@@ -1,0 +1,38 @@
+-----  AeroDyn Driver v1.00.x Input File  --------------------------------------
+NREL_MHK_blade.dat            NREL S814 MHK blade tested at Strathclyde University, R Murray
+-----  Input Configuration  ----------------------------------------------------
+FALSE          Echo            -  Echo input parameters to "<rootname>.ech"?
+"NREL_MHK_input.dat"          AD_InputFile    -  Name of the primary AeroDyn input file
+-----  Turbine Data  -----------------------------------------------------------
+          3   NumBlades       - Number of blades (-)
+        .089  HubRad          - Hub radius (m)
+        1     HubHt           - Hub height (m)
+         0    Overhang        - Overhang (m)
+         0    ShftTilt        - Shaft tilt (deg)
+         0    Precone         - Blade precone (deg)
+-----  I/O Settings  -----------------------------------------------------------
+""            OutFileRoot     - Root name for any output files (use "" for .dvr rootname) (-)
+True          TabDel          - When generating formatted output (OutForm=True), make output tab-delimited (fixed-width otherwise) (flag)
+"ES15.6E3"    OutFmt          - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
+True          Beep            - Beep on exit (flag)
+-----  Combined-Case Analysis  -------------------------------------------------
+         14    NumCases        - Number of cases to run
+FlowSpeed       ShearExp       RotSpd        Pitch            Yaw           dT             Tmax
+(m/s)            (-)          (rpm)         (deg)           (deg)          (s)            (s)
+1.0000000E+00  0.0000000E+00  60.0      1.7500000E+00  0.0000000E+01       0.500          5.600    
+1.0000000E+00  0.0000000E+00  70.0      1.7500000E+00  0.0000000E+01       0.500          5.600  
+1.0000000E+00  0.0000000E+00  75.0      1.7500000E+00  0.0000000E+01       0.500          5.600    
+1.0000000E+00  0.0000000E+00  78.0      1.7500000E+00  0.0000000E+01       0.500          5.600   
+1.0000000E+00  0.0000000E+00  80.0      1.7500000E+00  0.0000000E+01       0.500          5.600   
+1.0000000E+00  0.0000000E+00  83.0      1.7500000E+00  0.0000000E+01       0.500          5.600   
+1.0000000E+00  0.0000000E+00  90.0      1.7500000E+00  0.0000000E+01       0.500          5.600     
+1.0000000E+00  0.0000000E+00  95.0      1.7500000E+00  0.0000000E+01       0.500          5.600     
+1.0000000E+00  0.0000000E+00  100.0     1.7500000E+00  0.0000000E+01       0.500          5.600     
+1.0000000E+00  0.0000000E+00  115.0     1.7500000E+00  0.0000000E+01       0.500          5.600   
+1.0000000E+00  0.0000000E+00  125.0     1.7500000E+00  0.0000000E+01       0.500          5.600  
+1.0000000E+00  0.0000000E+00  135.0     1.7500000E+00  0.0000000E+01       0.500          5.600  
+1.0000000E+00  0.0000000E+00  150.0     1.7500000E+00  0.0000000E+01       0.500          5.600   
+1.0000000E+00  0.0000000E+00  170.0     1.7500000E+00  0.0000000E+01       0.500          5.600   
+
+
+    

@@ -65,8 +65,12 @@ typedef	^	AD_InputFile	IntKi	TwrPotent	-	-	-	"Type tower influence on wind based
 typedef	^	AD_InputFile	LOGICAL	TwrShadow	-	-	-	"Calculate tower influence on wind based on downstream tower shadow?"	-
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
+typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
 typedef	^	AD_InputFile	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	AD_InputFile	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
+typedef	^	AD_InputFile	ReKi	Patm 	-	-	-	"Atmospheric pressure" Pa
+typedef	^	AD_InputFile	ReKi	Pvap 	-	-	-	"Vapour pressure" Pa
+typedef	^	AD_InputFile	ReKi	FluidDepth -	-	-	"Submerged hub depth" m
 typedef	^	AD_InputFile	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
 typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} [used only when WakeMod=1]"	-
 typedef	^	AD_InputFile	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [used only when WakeMod=1]"	flag

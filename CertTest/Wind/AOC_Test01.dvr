@@ -1,0 +1,25 @@
+-----  AeroDyn Driver v1.00.x Input File  --------------------------------------
+AOC_AeroDyn.dat
+-----  Input Configuration  ----------------------------------------------------
+FALSE         Echo            -  Echo input parameters to "<rootname>.ech"?
+"AOC_AeroDyn_Test01.dat"    AD_InputFile    -  Name of the primary AeroDyn input file
+-----  Turbine Data  -----------------------------------------------------------
+          3   NumBlades       - Number of blades (-)
+        0.28  HubRad          - Hub radius (m)
+    25        HubHt           - Hub height (m)
+    1.341     Overhang        - Overhang (m)
+        0     ShftTilt        - Shaft tilt (deg)
+        6     Precone         - Blade precone (deg)
+-----  I/O Settings  -----------------------------------------------------------
+""            OutFileRoot     - Root name for any output files (use "" for .dvr rootname) (-)
+True          TabDel          - When generating formatted output (OutForm=True), make output tab-delimited (fixed-width otherwise) (flag)
+"ES15.6E3"    OutFmt          - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
+True          Beep            - Beep on exit (flag)
+-----  Combined-Case Analysis  -------------------------------------------------
+         3    NumCases        - Number of cases to run
+WndSpeed       ShearExp       RotSpd        Pitch            Yaw           dT             Tmax
+(m/s)            (-)          (rpm)         (deg)           (deg)          (s)            (s)
+11.0000000E+00  0.0000000E+00  64.14     0.0000000E+00  -1.5000000E+01       0.05          4     
+11.0000000E+00  0.0000000E+00  64.14     0.0000000E+00  -1.5000000E+01       0.005         4        
+11.0000000E+00  0.0000000E+00  64.14     0.0000000E+00  -1.5000000E+01       0.0005        4 
+                     
