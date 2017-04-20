@@ -171,22 +171,19 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
     Cd = IntAFCoefs(2)
    
      
-          IF ( AFInfo%ColCm > 0 )  THEN           ! If there is Cm data, it is in column 3
+     IF ( AFInfo%ColCm > 0 )  THEN           ! If there is Cm data, it is in column 3
            Cm = IntAFCoefs(3)
          
-         IF ( AFInfo%ColCpmin > 0 )  THEN           
-         Cpmin = IntAFCoefs(4)
+     IF ( AFInfo%ColCpmin > 0 )  THEN           
+           Cpmin = IntAFCoefs(4)
         END IF
          
-   ELSE IF ( AFInfo%ColCpmin > 0 )  THEN       ! If there is Cpmin data and no Cm data, Cpmin is in column 3
-             Cpmin = IntAFCoefs(3)
-    END IF  
-    
-   
-
-          
+     ELSE IF ( AFInfo%ColCpmin > 0 )  THEN       ! If there is Cpmin data and no Cm data, Cpmin is in column 3
+           Cpmin = IntAFCoefs(3)
+     END IF  
       
-       
+
+             
 end subroutine ComputeSteadyAirfoilCoefs
    
 !----------------------------------------------------------------------------------------------------------------------------------  
