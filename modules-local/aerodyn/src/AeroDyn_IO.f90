@@ -3274,7 +3274,114 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
 
 !   ..... Developer must add checking for invalid inputs here: .....
-
+!bjj: do we want to avoid outputting this if we haven't used tower aero?
+   
+   if ( p%TwrPotent == TwrPotent_none .and. .not. p%TwrShadow ) then
+      
+         ! BNClrnc is set only when we're computing the tower influence
+      do I = 1,MaxBl  ! all blades (need to do this in a loop because we need the index of InvalidOutput to be an array of rank one)
+         InvalidOutput( BNClrnc(:,i) ) = .true.  
+      end do
+      
+   end if
+      
+   
+   DO i = p%NTwOuts+1,9  ! Invalid tower nodes
+   
+      InvalidOutput( TwNVUnd(:,i) ) = .true.
+      InvalidOutput( TwNSTV( :,i) ) = .true.
+      InvalidOutput( TwNVRel(  i) ) = .true.
+      InvalidOutput( TwNDynP(  i) ) = .true.
+      InvalidOutput( TwNRe(    i) ) = .true.
+      InvalidOutput( TwNM(     i) ) = .true.
+      InvalidOutput( TwNFdx(   i) ) = .true.
+      InvalidOutput( TwNFdy(   i) ) = .true.
+      
+   END DO
+   
+   DO I = p%NumBlades+1,MaxBl  ! Invalid blades
+      
+      InvalidOutput( BAzimuth( i) ) = .true.
+      InvalidOutput( BPitch(   i) ) = .true.
+      InvalidOutput( BNVUndx(:,i) ) = .true.
+      InvalidOutput( BNVUndy(:,i) ) = .true.
+      InvalidOutput( BNVUndz(:,i) ) = .true.
+      InvalidOutput( BNVDisx(:,i) ) = .true.
+      InvalidOutput( BNVDisy(:,i) ) = .true.
+      InvalidOutput( BNVDisz(:,i) ) = .true.
+      InvalidOutput( BNSTVx( :,i) ) = .true.
+      InvalidOutput( BNSTVy( :,i) ) = .true.
+      InvalidOutput( BNSTVz( :,i) ) = .true.
+      InvalidOutput( BNVRel( :,i) ) = .true.
+      InvalidOutput( BNDynP( :,i) ) = .true.
+      InvalidOutput( BNRe(   :,i) ) = .true.
+      InvalidOutput( BNM(    :,i) ) = .true.
+      InvalidOutput( BNVIndx(:,i) ) = .true.
+      InvalidOutput( BNVIndy(:,i) ) = .true.
+      InvalidOutput( BNAxInd(:,i) ) = .true.
+      InvalidOutput( BNTnInd(:,i) ) = .true.
+      InvalidOutput( BNAlpha(:,i) ) = .true.
+      InvalidOutput( BNTheta(:,i) ) = .true.
+      InvalidOutput( BNPhi(  :,i) ) = .true.
+      InvalidOutput( BNCurve(:,i) ) = .true.
+      InvalidOutput( BNCl(   :,i) ) = .true.
+      InvalidOutput( BNCd(   :,i) ) = .true.
+      InvalidOutput( BNCm(   :,i) ) = .true.
+      InvalidOutput( BNCx(   :,i) ) = .true.
+      InvalidOutput( BNCy(   :,i) ) = .true.
+      InvalidOutput( BNCn(   :,i) ) = .true.
+      InvalidOutput( BNCt(   :,i) ) = .true.
+      InvalidOutput( BNFl(   :,i) ) = .true.
+      InvalidOutput( BNFd(   :,i) ) = .true.
+      InvalidOutput( BNMm(   :,i) ) = .true.
+      InvalidOutput( BNFx(   :,i) ) = .true.
+      InvalidOutput( BNFy(   :,i) ) = .true.
+      InvalidOutput( BNFn(   :,i) ) = .true.
+      InvalidOutput( BNFt(   :,i) ) = .true.
+      InvalidOutput( BNClrnc(:,i) ) = .true.
+               
+   END DO
+      
+   DO I = p%NBlOuts+1,9  ! Invalid blade nodes
+      
+      InvalidOutput( BNVUndx(i,:) ) = .true.
+      InvalidOutput( BNVUndy(i,:) ) = .true.
+      InvalidOutput( BNVUndz(i,:) ) = .true.
+      InvalidOutput( BNVDisx(i,:) ) = .true.
+      InvalidOutput( BNVDisy(i,:) ) = .true.
+      InvalidOutput( BNVDisz(i,:) ) = .true.
+      InvalidOutput( BNSTVx( i,:) ) = .true.
+      InvalidOutput( BNSTVy( i,:) ) = .true.
+      InvalidOutput( BNSTVz( i,:) ) = .true.
+      InvalidOutput( BNVRel( i,:) ) = .true.
+      InvalidOutput( BNDynP( i,:) ) = .true.
+      InvalidOutput( BNRe(   i,:) ) = .true.
+      InvalidOutput( BNM(    i,:) ) = .true.
+      InvalidOutput( BNVIndx(i,:) ) = .true.
+      InvalidOutput( BNVIndy(i,:) ) = .true.
+      InvalidOutput( BNAxInd(i,:) ) = .true.
+      InvalidOutput( BNTnInd(i,:) ) = .true.
+      InvalidOutput( BNAlpha(i,:) ) = .true.
+      InvalidOutput( BNTheta(i,:) ) = .true.
+      InvalidOutput( BNPhi(  i,:) ) = .true.
+      InvalidOutput( BNCurve(i,:) ) = .true.
+      InvalidOutput( BNCl(   i,:) ) = .true.
+      InvalidOutput( BNCd(   i,:) ) = .true.
+      InvalidOutput( BNCm(   i,:) ) = .true.
+      InvalidOutput( BNCx(   i,:) ) = .true.
+      InvalidOutput( BNCy(   i,:) ) = .true.
+      InvalidOutput( BNCn(   i,:) ) = .true.
+      InvalidOutput( BNCt(   i,:) ) = .true.
+      InvalidOutput( BNFl(   i,:) ) = .true.
+      InvalidOutput( BNFd(   i,:) ) = .true.
+      InvalidOutput( BNMm(   i,:) ) = .true.
+      InvalidOutput( BNFx(   i,:) ) = .true.
+      InvalidOutput( BNFy(   i,:) ) = .true.
+      InvalidOutput( BNFn(   i,:) ) = .true.
+      InvalidOutput( BNFt(   i,:) ) = .true.
+      InvalidOutput( BNClrnc(i,:) ) = .true.
+         
+   END DO   
 !   ................. End of validity checking .................
 
 
