@@ -1181,8 +1181,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
             !  local velocities and twist angle
          Vx    = u%Vx(i,j)
          Vy    = u%Vy(i,j)
-         !theta = u%theta(i,j)
-         
+              
          
          
             ! Set the active blade element for UnsteadyAero
@@ -1265,26 +1264,26 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                
             
              
-              !Calculate the cavitation number for the airfoil at the node in quesiton, and compare to the critical cavitation number based on the vapour pressure and submerged depth       
+              ! Calculate the cavitation number for the airfoil at the node in quesiton, and compare to the critical cavitation number based on the vapour pressure and submerged depth       
               if ( p%CavitCheck ) then   
-                              
-                SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * y%Vrel(i,j)**2) ! Critical value of Sigma, cavitation if we go over this
-                SigmaCavit= -1* m%Cpmin(i,j)  ! Actual cavitation number on blade node j                                               
-                                                
-                                   
-               if (SigmaCavitCrit < SigmaCavit) then     
-                   call WrScr( NewLine//'FAILED CAVITATION CHECK'//' Node # = '//trim(num2lstr(i)//'Blade # = '//trim(num2lstr(j))))  
-                  
-               end if 
-                                        
-               if (y%Vrel(i,j) == 0) then   !if Vrel = 0 in certain cases when Prandtls tip and hub loss factors are used, use the relative verlocity without induction
-                       SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * (sqrt((Vx**2 + Vy**2)))**2) ! Critical value of Sigma, cavitation if we go over this
-                                   
-               end if
+                  SigmaCavit= -1* m%Cpmin(i,j)  ! Cavitation number on blade node j                                               
+        
+              if ( EqualRealNos( y%Vrel(i,j), 0.0_ReKi ) ) then     !if Vrel = 0 in certain cases when Prandtls tip and hub loss factors are used, use the relative verlocity without induction
+              if ( EqualRealNos( Vx, 0.0_ReKi )  .and. EqualRealNos( Vy, 0.0_ReKi ) ) call SetErrStat( ErrID_Fatal, 'Velocity can not be zero for cavitation check, turn off Prandtls tip loss', ErrStat, ErrMsg, RoutineName )
+                 SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * (sqrt((Vx**2 + Vy**2)))**2) ! Critical value of Sigma, cavitation if we go over this
+             
+              else
+                  SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * y%Vrel(i,j)**2) ! Critical value of Sigma, cavitation if we go over this
+              end if
+                       
                
+               if (SigmaCavitCrit < SigmaCavit) then     
+                   call WrScr( NewLine//'Cavitation occured at node # = '//trim(num2lstr(i)//'and blade # = '//trim(num2lstr(j))))  
+               end if 
+                     
                   m%SigmaCavit(i,j)= SigmaCavit                 
                   m%SigmaCavitCrit(i,j)=SigmaCavitCrit  
-                  
+                                                     
               end if 
          end if
 
