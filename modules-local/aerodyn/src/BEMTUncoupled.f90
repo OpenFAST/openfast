@@ -129,14 +129,14 @@ end subroutine Transform_ClCd_to_CxCy
 
 !----------------------------------------------------------------------------------------------------------------------------------  
 subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
-                      Cl, Cd, Cm, Cpmin, errStat, errMsg )
+                      Cl, Cd, Cm, errStat, errMsg )
 ! This routine is called from BEMTU_InductionWithResidual and possibly BEMT_CalcOutput.
 ! Determine the Cl, Cd, Cm, coeficients for a given angle of attack
 !..................................................................................................................................
    real(ReKi),             intent(in   ) :: AOA
    real(ReKi),             intent(in   ) :: Re           ! Unused in the current version!     
    type(AFInfoType),       intent(in   ) :: AFInfo
-   real(ReKi),             intent(  out) :: Cl, Cd, Cm, Cpmin
+   real(ReKi),             intent(  out) :: Cl, Cd, Cm
    integer(IntKi),         intent(  out) :: errStat       ! Error status of the operation
    character(*),           intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None 
    
@@ -166,24 +166,12 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
                                           , AFInfo%Table(1)%SplineCoefs &
                                           , ErrStat, ErrMsg )
    
-  
-    Cl = IntAFCoefs(1)
-    Cd = IntAFCoefs(2)
-   
+   Cl = IntAFCoefs(1)
+   Cd = IntAFCoefs(2)
+   Cm = IntAFCoefs(3)
      
-     IF ( AFInfo%ColCm > 0 )  THEN           ! If there is Cm data, it is in column 3
-           Cm = IntAFCoefs(3)
-         
-     IF ( AFInfo%ColCpmin > 0 )  THEN           
-           Cpmin = IntAFCoefs(4)
-        END IF
-         
-     ELSE IF ( AFInfo%ColCpmin > 0 )  THEN       ! If there is Cpmin data and no Cm data, Cpmin is in column 3
-           Cpmin = IntAFCoefs(3)
-     END IF  
-      
-
-             
+   
+       
 end subroutine ComputeSteadyAirfoilCoefs
    
 !----------------------------------------------------------------------------------------------------------------------------------  
@@ -267,7 +255,7 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
    
    real(ReKi)                            :: fzero
 
-   real(ReKi)                            :: Cl, Cd, Cx, Cy, Cm, Cpmin
+   real(ReKi)                            :: Cl, Cd, Cx, Cy, Cm
    
    
    ErrStat = ErrID_None
@@ -287,7 +275,7 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
       tanInduction =  0.0_ReKi
    else !if ( (.NOT. VelocityIsZero(Vx)) .AND. (.NOT. VelocityIsZero(Vy)) ) then 
 
-      call ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, Cl, Cd, Cm, Cpmin, errStat2, errMsg2 )       !bjj: would be nice if this could be done outside this routine (so we don't copy AFInfo so much)
+      call ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, Cl, Cd, Cm, errStat2, errMsg2 )       !bjj: would be nice if this could be done outside this routine (so we don't copy AFInfo so much)
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
          if (ErrStat >= AbortErrLev) return
       

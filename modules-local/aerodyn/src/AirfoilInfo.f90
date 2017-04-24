@@ -110,7 +110,6 @@ CONTAINS
       p%ColCd    = 2  
       p%ColCm    = 0 ! These may or may not be used; initialize to zero in case they aren't used
       p%ColCpmin = 0 ! These may or may not be used; initialize to zero in case they aren't used
-      
       IF ( InitInput%InCol_Cm > 0 )  THEN
          p%ColCm = 3
          IF ( InitInput%InCol_Cpmin > 0 )  THEN
@@ -120,8 +119,8 @@ CONTAINS
             p%ColCpmin = 3
       END IF      
       NumCoefs = MAX(p%ColCd, p%ColCm,p%ColCpmin) ! number of non-zero coefficient columns
+
       
-              
          ! Process the airfoil files.
 
       ALLOCATE ( p%AFInfo( InitInput%NumAFfiles ), STAT=ErrStat2 )
@@ -130,9 +129,6 @@ CONTAINS
          RETURN
       ENDIF
 
-      p%AFInfo( :)%ColCpmin=p%ColCpmin
-      p%AFInfo( :)%ColCm=p%ColCm
-    
 
       DO File=1,InitInput%NumAFfiles
 
@@ -500,7 +496,6 @@ CONTAINS
       TYPE (AFInfoType), INTENT(INOUT)        :: AFInfo                        ! The derived type for holding the constant parameters for this airfoil.
 
 
-       
          ! Local declarations.
 
       REAL(ReKi)                              :: Coords   (2)                  ! An array to hold data from the airfoil-shape table.
@@ -810,8 +805,6 @@ CONTAINS
             CALL Cleanup()
             RETURN
          ENDIF
-         
-    
 
          DO Row=1,AFInfo%Table(Table)%NumAlf
 
