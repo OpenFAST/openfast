@@ -32,7 +32,6 @@ add_library(openfastcpplib
   src/OpenFAST.cpp)
 target_link_libraries(openfastcpplib
   openfastlib
-  ${YAML_LIBRARIES}
   ${HDF5_LIBRARIES}
   ${CMAKE_DL_LIBS})
 
@@ -40,7 +39,7 @@ add_executable(openfastcpp
   src/FAST_Prog.cpp)
 
 target_link_libraries(openfastcpp openfastcpplib openfastlib
-  ${MPI_LIBRARIES} ${CMAKE_DL_LIBS})
+  ${MPI_LIBRARIES} ${YAML_LIBRARIES} ${CMAKE_DL_LIBS})
 
 if(MPI_COMPILE_FLAGS)
   set_target_properties(openfastcpp PROPERTIES
