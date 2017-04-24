@@ -93,7 +93,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    errMsg  = ""
    
    InitOut%AirDens = p%AirDens
-   
+
    call AllocAry( InitOut%WriteOutputHdr, p%numOuts, 'WriteOutputHdr', errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    
@@ -102,7 +102,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
 
    if (ErrStat >= AbortErrLev) return
       
-   
+
 #ifdef DBG_OUTS
    ! Loop over blades and nodes to populate the output channel names and units
    
@@ -220,7 +220,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    end if
    
    
-   
+
    
    
 end subroutine AD_SetInitOut
@@ -278,10 +278,15 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    call DispNVD( AD_Ver )
    
-   
+  
    p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we know how many blade files to read
    !bjj: note that we haven't validated p%NumBlades before using it below!
    p%RootName  = TRIM(InitInp%RootName)//'.AD'
+   
+ 
+
+
+  
    
       ! Read the primary AeroDyn input file
    call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, p%NumBlades, UnEcho, ErrStat2, ErrMsg2 )   
@@ -442,7 +447,14 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( m%WithoutSweepPitchTwist, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%WithoutSweepPitchTwist', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      
+   
+  call allocAry( m%SigmaCavit, p%NumBlNds, p%numBlades, 'm%SigmaCavit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call allocAry( m%SigmaCavitCrit, p%NumBlNds, p%numBlades, 'm%SigmaCavitCrit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( m%Cpmin, p%NumBlNds, p%numBlades, 'm%Cpmin', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+   m%SigmaCavit=0.0_ReKi      !Init to zero for output files in case a cavit check isnt done but output is requested 
+   m%SigmaCavitCrit=0.0_ReKi
+   
          ! arrays for output
 #ifdef DBG_OUTS
    allocate( m%AllOuts(0:p%NumOuts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
@@ -507,8 +519,7 @@ end if
       m%X_Twr = 0.0_ReKi
       m%Y_Twr = 0.0_ReKi
    end if
-   
-   
+ 
    
 end subroutine Init_MiscVars
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -845,6 +856,9 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    p%TwrPotent        = InputFileData%TwrPotent
    p%TwrShadow        = InputFileData%TwrShadow
    p%TwrAero          = InputFileData%TwrAero
+   p%CavitCheck       = InputFileData%CavitCheck
+  
+
    
    if (InitInp%Linearize) then
       p%FrozenWake = InputFileData%FrozenWake 
@@ -866,6 +880,10 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    
    p%AirDens          = InputFileData%AirDens          
    p%KinVisc          = InputFileData%KinVisc
+   p%Patm             = InputFileData%Patm
+   p%Pvap             = InputFileData%Pvap
+   p%FluidDepth       = InputFileData%FluidDepth
+   p%SpdSound         = InputFileData%SpdSound
 
 
    
@@ -1029,7 +1047,7 @@ end subroutine AD_UpdateStates
 !! The descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 !! for a complete description of each output parameter.
 subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
+! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
@@ -1050,14 +1068,17 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer(intKi)                               :: i
+   integer(intKi)                               :: j
+
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'AD_CalcOutput'
-   
-   
+   real(ReKi)                                   :: SigmaCavitCrit, SigmaCavit
+
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   
    
    call SetInputs(p, u, m, indx, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1069,12 +1090,33 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                   
    call SetOutputsFromBEMT(p, m, y )
-                          
+                      
    if ( p%TwrAero ) then
       call ADTwr_CalcOutput(p, u, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    end if
-         
+   
+   if ( p%CavitCheck ) then      ! Calculate the cavitation number for the airfoil at the node in quesiton, and compare to the critical cavitation number based on the vapour pressure and submerged depth       
+      do j = 1,p%numBlades ! Loop through all blades
+         do i = 1,p%NumBlNds  ! Loop through all nodes
+                     
+      if ( EqualRealNos( m%BEMT_y%Vrel(i,j), 0.0_ReKi ) ) call SetErrStat( ErrID_Fatal, 'Vrel cannot be zero to do a cavitaition check', ErrStat, ErrMsg, RoutineName)       
+      
+      SigmaCavit= -1* m%BEMT%Cpmin(i,j) ! Local cavitation number on node j                                               
+      SigmaCavitCrit= ( ( p%Patm + ( p%Gravity * (p%FluidDepth - (  u%BladeMotion(j)%Position(3,i) + u%BladeMotion(j)%TranslationDisp(3,i) - u%HubMotion%Position(3,1))) * p%airDens)  - p%Pvap ) / ( 0.5_ReKi * p%airDens * m%BEMT_y%Vrel(i,j)**2)) ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
+                                                                  
+         if (SigmaCavitCrit < SigmaCavit) then     
+              call WrScr( NewLine//'Cavitation occured at blade '//trim(num2lstr(j))//' and node '//trim(num2lstr(i))//'.' )
+         end if 
+                     
+      m%SigmaCavit(i,j)= SigmaCavit                 
+      m%SigmaCavitCrit(i,j)=SigmaCavitCrit  
+                           
+   end do   ! p%NumBlNds
+     end do  ! p%numBlades
+       end if   ! Cavitation check
+      
+
    !-------------------------------------------------------   
    !     get values to output to file:  
    !-------------------------------------------------------   
@@ -1100,9 +1142,10 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       end do             ! i - All selected output channels
       
    end if
+
    
-   
-   
+ 
+
 end subroutine AD_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
@@ -1709,12 +1752,8 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
       ! set initialization data here:   
    Interval                 = p%DT   
    InitInp%numBlades        = p%NumBlades
-   
    InitInp%airDens          = InputFileData%AirDens 
    InitInp%kinVisc          = InputFileData%KinVisc
-   InitInp%Patm             = InputFileData%Patm
-   InitInp%Pvap             = InputFileData%Pvap
-   InitInp%FluidDepth       = InputFileData%FluidDepth
    InitInp%skewWakeMod      = InputFileData%SkewMod
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
@@ -1767,10 +1806,9 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%UAMod      = InputFileData%UAMod
    InitInp%Flookup    = InputFileData%Flookup
    InitInp%a_s        = InputFileData%SpdSound
-   InitInp%CavitCheck = InputFileData%CavitCheck
-
-
    
+   
+ 
    if (ErrStat >= AbortErrLev) then
       call cleanup()
       return
