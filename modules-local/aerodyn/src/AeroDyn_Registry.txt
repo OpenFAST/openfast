@@ -136,6 +136,10 @@ typedef	^	MiscVarType	ReKi	V_DiskAvg	{3}	-	-	"disk-average relative wind speed"	
 typedef	^	MiscVarType	ReKi	V_dot_x	-	-	-
 typedef	^	MiscVarType	MeshType	HubLoad	-	-	-	"mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only)"	-
 typedef	^	MiscVarType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to the MiscVar%HubLoad mesh"
+typedef	^	MiscVarType	ReKi	SigmaCavitCrit	{:}{:}	-	-	 "critical cavitation number-  inception value (above which cavit will occur)"   -
+typedef	^	MiscVarType	ReKi	SigmaCavit	{:}{:}	-	-	  "cavitation nubmer at node "   -
+typedef	^	MiscVarType	ReKi	Cpmin	{:}{:}	-	-	   "min Cpressure"   -
+
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -146,6 +150,7 @@ typedef	^	ParameterType	IntKi	TwrPotent	-	-	-	"Type tower influence on wind base
 typedef	^	ParameterType	LOGICAL	TwrShadow	-	-	-	"Calculate tower influence on wind based on downstream tower shadow?"	-
 typedef	^	ParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	ParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
+typedef	^	ParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
 typedef	^	ParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	ParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
 typedef	^	ParameterType	IntKi	NumTwrNds	-	-	-	"Number of nodes on the tower"	-
@@ -154,6 +159,10 @@ typedef	^	ParameterType	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	ParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	ParameterType	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
+typedef	^	ParameterType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
+typedef   ^  ParameterType  ReKi    Patm     -   -   -   "Atmospheric pressure" Pa
+typedef   ^  ParameterType  ReKi    Pvap      -   -   -  "Vapour pressure" Pa
+typedef   ^  ParameterType  ReKi    FluidDepth -  -   -    "Submerged hub height" m
 typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 # parameters for output
