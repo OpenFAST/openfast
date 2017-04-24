@@ -1684,16 +1684,16 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, indx, ErrStat, ErrMsg )
          m%AllOuts( BNPhi(  beta,k) ) = m%BEMT_y%phi(j,k)*R2D         
          m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D         
          
-         m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cl(j,k)         
-         m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cd(j,k)   
+         !m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cl(j,k)         
+         !m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cd(j,k)   
          
          m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT%Cpmin(j,k)
-         m%AllOuts( BNSigCr(   beta,k) ) = m%BEMT%SigmaCavitCrit(j,k)
-         m%AllOuts( BNSgCav(   beta,k) ) = m%BEMT%SigmaCavit(j,k)
+         m%AllOuts( BNSigCr(   beta,k) ) = m%SigmaCavitCrit(j,k)
+         m%AllOuts( BNSgCav(   beta,k) ) = m%SigmaCavit(j,k)
          
          cp=cos(m%BEMT_y%phi(j,k))
          sp=sin(m%BEMT_y%phi(j,k))
-         m%AllOuts( BNCpmin(   beta,k) ) = m%BEMT_y%Cx(j,k)*cp + m%BEMT_y%Cy(j,k)*sp         
+         m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cx(j,k)*cp + m%BEMT_y%Cy(j,k)*sp         
          m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cx(j,k)*sp - m%BEMT_y%Cy(j,k)*cp           
          m%AllOuts( BNCm(   beta,k) ) = m%BEMT_y%Cm(j,k)  
          m%AllOuts( BNCx(   beta,k) ) = m%BEMT_y%Cx(j,k)  
@@ -1826,7 +1826,6 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
          RETURN
       END IF
       
-
       ! get the blade input-file data
       
    ALLOCATE( InputFileData%BladeProps( NumBlades ), STAT = ErrStat2 )
