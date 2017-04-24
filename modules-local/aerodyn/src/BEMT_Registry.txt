@@ -34,9 +34,6 @@ typedef   BEMT/BEMT                    InitInputType                 ReKi       
 typedef   ^                            ^                             INTEGER                  numBlades                       -          -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s
-typedef   ^                            ^                             ReKi                     Patm                            -          -         -        "Atmospheric pressure" Pa
-typedef   ^                            ^                             ReKi                     Pvap                            -          -         -        "Vapour pressure" Pa
-typedef   ^                            ^                             ReKi                     FluidDepth                      -          -         -        "Submerged hub height" m
 typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled}"  -
 typedef   ^                            ^                             ReKi                     aTol                            -          -         -        "Tolerance for the induction solution" -
 typedef   ^                            ^                             LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
@@ -55,7 +52,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER                  UAMod                           -          -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -          -         -        "logical flag indicating whether to use UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  Flookup                         -          -         -        "Use table lookup for f' and f'' "    -
-typedef   ^                            ^                             LOGICAL                  CavitCheck                      -          -         -        "logical flag indicating whether to check for cavitation"        -
 typedef   ^                            ^                             ReKi                     a_s                             -          -         -        "speed of sound"        m/s
 #
 #
@@ -98,9 +94,7 @@ typedef   ^                            MiscVarType                   ReKi       
 typedef   ^                            MiscVarType                   ReKi                     AxInd_op                       {:}{:}         -         -        "axial induction at the operating point (for linearization) with frozen wake assumption"
 typedef   ^                            MiscVarType                   Logical                  UseFrozenWake                   -             -         -        "flag set to determine if frozen values of TnInd_op and AxInd_op should be used for this calculation in the linearization process"   
 typedef   ^                            ^                             ReKi                     Cpmin                           {:}{:}         -         -         "min Cpressure"   -
-typedef   ^                            ^                             ReKi                     SigmaCavitCrit                  {:}{:}         -         -         "critical cavitation number-  inception value (above which cavit will occur)"   -
-typedef   ^                            ^                             ReKi                     SigmaCavit                      {:}{:}         -         -         "cavitation nubmer at node "   -
- 
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -110,9 +104,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -             -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -             -         -        "Kinematic air viscosity"       m^2/s
-typedef   ^                            ^                             ReKi                     Patm                            -             -         -        "Atmospheric pressure" Pa
-typedef   ^                            ^                             ReKi                     Pvap                            -             -         -        "Vapour pressure" Pa
-typedef   ^                            ^                             ReKi                     FluidDepth                      -             -         -        "Submerged hub height" m
 typedef   ^                            ^                             INTEGER                  skewWakeMod                     -             -         -        "Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled}"  -
 typedef   ^                            ^                             ReKi                     aTol                            -             -         -        "Tolerance for the induction solution" -
 typedef   ^                            ^                             LOGICAL                  useTipLoss                      -             -         -        "Use the Prandtl tip-loss model?  [flag]"        -
