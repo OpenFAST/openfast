@@ -1,44 +1,30 @@
 #include "OpenFAST.H"
 
-#ifndef Contiguous2DArrayHack
-#define Contiguous2DArrayHack
-
-// Neat hack from http://stackoverflow.com/questions/21943621/how-to-create-a-contiguous-2d-array-in-c to allocate and deallocate contiguous 2D arrays in C++
-
-  /* double **dPtr = create2DArray<double>(10,10); */
-  /* dPtr[0][0] = 10;  // for example */
-  /* delete2DArray(dPtr);  // free the memory */
-
-template <typename T> T** create2DArray(unsigned nrows, unsigned ncols) {
-
-  T** ptr = new T*[nrows];  // allocate pointers
-  T* pool = new T[nrows*ncols];  // allocate pool
-  for (unsigned i = 0; i < nrows; ++i, pool += ncols )
-    ptr[i] = pool;
-  return ptr;
+//Constructor 
+fast::fastInputs::fastInputs():
+nTurbinesGlob(0),
+dryRun(false),
+debug(false),
+tStart(-1.0),
+nEveryCheckPoint(-1),
+tMax(0.0),
+dtFAST(0.0),
+scStatus(false),
+scLibFile(""),
+numScInputs(0),
+numScOutputs(0)
+{
+  //Nothing to do here
 }
 
-template <typename T> void delete2DArray(T** arr) {
-
-  delete [] arr[0];  // remove the pool
-  delete [] arr;     // remove the pointers
-}
-
-#endif
 
 //Constructor
 fast::OpenFAST::OpenFAST():
-cDriver_Input_from_FAST(NULL),
-cDriver_Output_to_FAST(NULL),
-cDriverSC_Input_from_FAST(NULL),
-cDriverSC_Output_to_FAST(NULL),
 nTurbinesGlob(0),
 nTurbinesProc(0),
 scStatus(false),
-timeZero(false)
+restart(false)
 {
-  MPI_Comm_rank(MPI_COMM_WORLD, &worldMPIRank);
-  MPI_Comm_group(MPI_COMM_WORLD, &worldMPIGroup);
 }
 
 inline bool fast::OpenFAST::checkFileExists(const std::string& name) {
@@ -46,35 +32,19 @@ inline bool fast::OpenFAST::checkFileExists(const std::string& name) {
   return (stat (name.c_str(), &buffer) == 0); 
 }
 
-int fast::OpenFAST::init() {
+void fast::OpenFAST::init() {
 
-    if (restart == false) {
-      ntStart = 0;
-      nt_global = ntStart;
-      ntEnd = int((tEnd - tStart)/dtFAST);
-      timeZero = true;
-    }
+  allocateMemory();
 
-   // Allocate memory for Turbine datastructure for all turbines
-   FAST_AllocateTurbines(&nTurbinesProc, &ErrStat, ErrMsg);
-
-   // Allocate memory for OpFM Input types in FAST
-
-   cDriver_Input_from_FAST = new OpFM_InputType_t[nTurbinesProc] ;
-   cDriver_Output_to_FAST = new OpFM_OutputType_t[nTurbinesProc] ;
-
-   cDriverSC_Input_from_FAST = new SC_InputType_t[nTurbinesProc] ;
-   cDriverSC_Output_to_FAST = new SC_OutputType_t[nTurbinesProc] ;
-
+  if (!dryRun) {
    // If restart 
    if (restart == true) {
 
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
        /* note that this will set nt_global inside the FAST library */
-       FAST_OpFM_Restart(&iTurb, CheckpointFileRoot[iTurb], &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &ntStart, &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &cDriverSC_Input_from_FAST[iTurb], &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
+       FAST_OpFM_Restart(&iTurb, CheckpointFileRoot[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &ntStart, &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &cDriverSC_Input_from_FAST[iTurb], &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
        nt_global = ntStart;
-       ntEnd = int((tEnd - tStart)/dtFAST) + ntStart;
      }
 
      if(scStatus) {
@@ -86,31 +56,35 @@ int fast::OpenFAST::init() {
      
       // this calls the Init() routines of each module
 
+     forceNodeVel.resize(nTurbinesProc);
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-       FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb], &TurbID[iTurb], &numScOutputs, &numScInputs, &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb], &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &cDriverSC_Input_from_FAST[iTurb], &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
+       FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &numScOutputs, &numScInputs, &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &cDriverSC_Input_from_FAST[iTurb], &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
        
        numVelPtsTwr[iTurb] = cDriver_Output_to_FAST[iTurb].u_Len - numBlades[iTurb]*numVelPtsBlade[iTurb] - 1;
 
+       int nfPts = get_numForcePtsLoc(iTurb);
+       forceNodeVel[iTurb].resize(nfPts) ;
+       for (int k = 0; k < nfPts; k++) forceNodeVel[iTurb][k].resize(3) ;
 
        if ( isDebug() ) {
-       	 for (int iNode=0; iNode < get_numVelPts(iTurb); iNode++) {
+       	 for (int iNode=0; iNode < get_numVelPtsLoc(iTurb); iNode++) {
        	   std::cout << "Node " << iNode << " Position = " << cDriver_Input_from_FAST[iTurb].pxVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pyVel[iNode] << " " << cDriver_Input_from_FAST[iTurb].pzVel[iNode] << " " << std::endl ;
        	 }
        }
      }
      
    }
-   
-   return 0;
+  }
 
 }
 
-int fast::OpenFAST::solution0() {
+void fast::OpenFAST::solution0() {
 
+  if (!dryRun) {
        // set wind speeds at initial locations
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-        setOutputsToFAST(&cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb]);
+        setOutputsToFAST(cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
     }
      
      if(scStatus) {
@@ -131,13 +105,11 @@ int fast::OpenFAST::solution0() {
      if (scStatus) {
        fillScInputsGlob(); // Update inputs to super controller
      }
+  }
 
-     timeZero = false; // Turn the flag to compute solution0 off
-
-     return 0;
 }
 
-int fast::OpenFAST::step() {
+void fast::OpenFAST::step() {
 
   /* ******************************
      set inputs from this code and call FAST:
@@ -151,7 +123,7 @@ int fast::OpenFAST::step() {
    for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
 
      //  set wind speeds at original locations 
-     setOutputsToFAST(&cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb]);
+     setOutputsToFAST(cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
 
      // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
      // (note OpenFOAM could do subcycling around this step)
@@ -189,8 +161,8 @@ int fast::OpenFAST::step() {
   if ( (((nt_global - ntStart) % nEveryCheckPoint) == 0 )  && (nt_global != ntStart) ) {
     //sprintf(CheckpointFileRoot, "../../CertTest/Test18.%d", nt_global);
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-      sprintf(CheckpointFileRoot[iTurb], " "); // if blank, it will use FAST convention <RootName>.nt_global
-      FAST_CreateCheckpoint(&iTurb, CheckpointFileRoot[iTurb], &ErrStat, ErrMsg);
+      CheckpointFileRoot[iTurb] = " "; // if blank, it will use FAST convention <RootName>.nt_global
+      FAST_CreateCheckpoint(&iTurb, CheckpointFileRoot[iTurb].data(), &ErrStat, ErrMsg);
       checkError(ErrStat, ErrMsg);
     }
     if(scStatus) {
@@ -200,132 +172,44 @@ int fast::OpenFAST::step() {
     }
   }
 
-   return 0;
 }
 
-int fast::OpenFAST::readInputFile(std::string cInterfaceInputFile ) {
+void fast::OpenFAST::setInputs(const fast::fastInputs & fi ) {
 
-  // Check if the input file exists and call init
-  if ( checkFileExists(cInterfaceInputFile) ) {
 
-    YAML::Node cDriverInp = YAML::LoadFile(cInterfaceInputFile);
-    
-    nTurbinesGlob = cDriverInp["nTurbinesGlob"].as<int>();
+  mpiComm = fi.comm;
+
+  MPI_Comm_rank(mpiComm, &worldMPIRank);
+  MPI_Comm_group(mpiComm, &worldMPIGroup);
+
+  nTurbinesGlob = fi.nTurbinesGlob;
 
     if (nTurbinesGlob > 0) {
       
-      if(cDriverInp["dryRun"]) {
-	dryRun = cDriverInp["dryRun"].as<bool>();
-      } else {
-	dryRun = false;
-      }
+      dryRun = fi.dryRun;
       
-      if(cDriverInp["debug"]) {
-	debug = cDriverInp["debug"].as<bool>();
-      } else {
-	debug = false;
-      }
+      debug = fi.debug;
 
-      restart = cDriverInp["restart"].as<bool>();
-      tStart = cDriverInp["tStart"].as<double>();
-      tEnd = cDriverInp["tEnd"].as<double>();
-      tMax = cDriverInp["tMax"].as<double>();
-      nEveryCheckPoint = cDriverInp["nEveryCheckPoint"].as<int>();
+      tStart = fi.tStart;
+      nEveryCheckPoint = fi.nEveryCheckPoint;
+      tMax = fi.tMax;
+      loadSuperController(fi);
+      dtFAST = fi.dtFAST;
+      
+      ntStart = int(tStart/dtFAST);
+      
+      nt_global = ntStart;
+      if (ntStart > 0) {
+	restart = true ;
+      } 
 
-      loadSuperController(cDriverInp);
+      globTurbineData.resize(nTurbinesGlob);
+      globTurbineData = fi.globTurbineData;
 
-      if (restart == false) {
-	ntStart = 0;
-	nt_global = ntStart;
-	dtFAST = cDriverInp["dtFAST"].as<double>();
-	ntEnd = int((tEnd - tStart)/dtFAST);
-      }
-
-      globTurbineData = new globTurbineDataType[nTurbinesGlob];
-
-      for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-	if (cDriverInp["Turbine" + std::to_string(iTurb)]) {
-	  readTurbineData(iTurb, cDriverInp["Turbine" + std::to_string(iTurb)] );
-	} else {
-	  throw std::runtime_error("Node for Turbine" + std::to_string(iTurb) + " not present in input file");
-	}
-      }
-     
     } else {
       throw std::runtime_error("Number of turbines < 0 ");
     }
     
-  } else {
-    throw std::runtime_error("Input file " + cInterfaceInputFile + " does not exist or I cannot access it");
-  }
-
-  return 0;
-}
-
-int fast::OpenFAST::readInputFile(const YAML::Node & cDriverInp) {
-
-  nTurbinesGlob = cDriverInp["n_turbines_glob"].as<int>();
-
-  if (nTurbinesGlob > 0) {
-    
-    if(cDriverInp["dry_run"]) {
-      dryRun = cDriverInp["dry_run"].as<bool>();
-    } else {
-      dryRun = false;
-    }
-    
-    if(cDriverInp["debug"]) {
-      debug = cDriverInp["debug"].as<bool>();
-    } else {
-      debug = false;
-    }
-
-    /* restart - Has to come from cfd solver */ 
-    /* tStart - Has to come from cfd solver */
-    /* tEnd - Has to come from cfd solver */
-    /* dtFAST - Has to come from cfd solver */
-    tMax = cDriverInp["tMax"].as<double>(); // tMax is the total duration to which you want to run FAST. This should be the same as the end time given in the FAST fst file. Choose this carefully as FAST writes the output file only at this point if you choose the binary file output.
-    nEveryCheckPoint = cDriverInp["n_every_checkpoint"].as<int>();
-    
-    loadSuperController(cDriverInp);
-    
-    globTurbineData = new globTurbineDataType[nTurbinesGlob];
-    for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-      if (cDriverInp["Turbine" + std::to_string(iTurb)]) {
-      	readTurbineData(iTurb, cDriverInp["Turbine" + std::to_string(iTurb)] );
-      } else {
-      	throw std::runtime_error("Node for Turbine" + std::to_string(iTurb) + " not present in input file");
-      	return 1;
-      }
-    }
-    
-  } else {
-    throw std::runtime_error("Number of turbines < 0 ");
-    return 1;
-  }
-  
-  return 0;
-  
-}
-
-void fast::OpenFAST::setRestart(const bool & isRestart) {
-  /* Set whether the simulation is restarted or from scratch */
-  restart = isRestart;
-}
-
-void fast::OpenFAST::setTstart(const double & cfdTstart) {
-  /* Set the end time for the simulation */
-  tStart = cfdTstart;
-}
-
-void fast::OpenFAST::setDt(const double & cfdDt) {
-  /* Set the time step for the simulation */
-  dtFAST = cfdDt;
-}
-
-void fast::OpenFAST::setTend(const double & cfdTend) {
-  /* Set the end time for the simulation */
-  tEnd = cfdTend;
 }
 
 void fast::OpenFAST::checkError(const int ErrStat, const char * ErrMsg){
@@ -340,28 +224,24 @@ void fast::OpenFAST::checkError(const int ErrStat, const char * ErrMsg){
 
 }
 
-void fast::OpenFAST::setOutputsToFAST(OpFM_InputType_t* cDriver_Input_from_FAST, OpFM_OutputType_t* cDriver_Output_to_FAST){
-   int j;
+void fast::OpenFAST::setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, OpFM_OutputType_t cDriver_Output_to_FAST){
 
    // routine sets the u-v-w wind speeds used in FAST and the SuperController inputs
 
-   for (j = 0; j < cDriver_Output_to_FAST->u_Len; j++){
-      cDriver_Output_to_FAST->u[j] = (float) 10.0*pow((cDriver_Input_from_FAST->pzVel[j] / 90.0), 0.2); // 0.2 power law wind profile using reference 10 m/s at 90 meters
-      cDriver_Output_to_FAST->v[j] = 0.0;
-      cDriver_Output_to_FAST->w[j] = 0.0;
+   for (int j = 0; j < cDriver_Output_to_FAST.u_Len; j++){
+      cDriver_Output_to_FAST.u[j] = (float) 10.0*pow((cDriver_Input_from_FAST.pzVel[j] / 90.0), 0.2); // 0.2 power law wind profile using reference 10 m/s at 90 meters
+      cDriver_Output_to_FAST.v[j] = 0.0;
+      cDriver_Output_to_FAST.w[j] = 0.0;
    }
 
    // call supercontroller
-
-   for (j = 0; j < cDriver_Output_to_FAST->SuperController_Len; j++){
-      cDriver_Output_to_FAST->SuperController[j] = (float) j; // set it somehow.... (would be set from the SuperController outputs)
+   for (int j = 0; j < cDriver_Output_to_FAST.SuperController_Len; j++){
+      cDriver_Output_to_FAST.SuperController[j] = (float) j; // set it somehow.... (would be set from the SuperController outputs)
    }
 
-
-   return;
 }
 
-void fast::OpenFAST::getHubPos(double *currentCoords, int iTurbGlob) {
+void fast::OpenFAST::getHubPos(std::vector<double> & currentCoords, int iTurbGlob) {
 
   // Get hub position of Turbine 'iTurbGlob'
   currentCoords[0] = globTurbineData[iTurbGlob].TurbineHubPos[0] ;
@@ -370,7 +250,7 @@ void fast::OpenFAST::getHubPos(double *currentCoords, int iTurbGlob) {
   
 }
 
-void fast::OpenFAST::getVelNodeCoordinates(double *currentCoords, int iNode, int iTurbGlob) {
+void fast::OpenFAST::getVelNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob) {
 
   // Set coordinates at current node of current turbine 
   int iTurbLoc = get_localTurbNo(iTurbGlob);
@@ -381,7 +261,7 @@ void fast::OpenFAST::getVelNodeCoordinates(double *currentCoords, int iNode, int
   
 }
 
-void fast::OpenFAST::getForceNodeCoordinates(double *currentCoords, int iNode, int iTurbGlob) {
+void fast::OpenFAST::getForceNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob) {
 
   // Set coordinates at current node of current turbine 
   int iTurbLoc = get_localTurbNo(iTurbGlob);
@@ -391,7 +271,7 @@ void fast::OpenFAST::getForceNodeCoordinates(double *currentCoords, int iNode, i
 
 }
 
-void fast::OpenFAST::getForceNodeOrientation(double *currentOrientation, int iNode, int iTurbGlob) {
+void fast::OpenFAST::getForceNodeOrientation(std::vector<double> & currentOrientation, int iNode, int iTurbGlob) {
 
   // Set orientation at current node of current turbine 
   int iTurbLoc = get_localTurbNo(iTurbGlob);
@@ -433,7 +313,98 @@ void fast::OpenFAST::setVelocity(std::vector<double> & currentVelocity, int iNod
 
 }
 
-void fast::OpenFAST::computeTorqueThrust(int iTurbGlob, double * torque, double * thrust) {
+void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
+
+  // Interpolates the velocity from the force nodes to the velocity nodes
+  
+  for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+    // Hub location
+    cDriver_Output_to_FAST[iTurb].u[0] = forceNodeVel[iTurb][0][0];
+    cDriver_Output_to_FAST[iTurb].v[0] = forceNodeVel[iTurb][0][1];
+    cDriver_Output_to_FAST[iTurb].w[0] = forceNodeVel[iTurb][0][2];
+
+    // Do the blades first
+    int nBlades = get_numBladesLoc(iTurb);
+    for(int iBlade=0; iBlade < nBlades; iBlade++) {
+
+      // Create interpolating parameter - Distance from hub
+      int nForcePtsBlade = get_numForcePtsBladeLoc(iTurb);
+      std::vector<double> rDistForce(nForcePtsBlade) ;
+      for(int j=0; j < nForcePtsBlade; j++) {
+	int iNodeForce = 1 + iBlade * nForcePtsBlade + j ; //The number of actuator force points is always the same for all blades
+	rDistForce[j] = sqrt( 
+                             (cDriver_Input_from_FAST[iTurb].pxForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pxForce[0])*(cDriver_Input_from_FAST[iTurb].pxForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pxForce[0])  
+		           + (cDriver_Input_from_FAST[iTurb].pyForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pyForce[0])*(cDriver_Input_from_FAST[iTurb].pyForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pyForce[0])  
+		           + (cDriver_Input_from_FAST[iTurb].pzForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pzForce[0])*(cDriver_Input_from_FAST[iTurb].pzForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pzForce[0])  			
+			    );
+      }
+
+      // Interpolate to the velocity nodes
+      int nVelPtsBlade = get_numVelPtsBladeLoc(iTurb);
+      for(int j=0; j < nVelPtsBlade; j++) {
+	int iNodeVel = 1 + iBlade * nVelPtsBlade + j ; //Assumes the same number of velocity (Aerodyn) nodes for all blades
+	double rDistVel = sqrt( 
+			      (cDriver_Input_from_FAST[iTurb].pxVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pxVel[0])*(cDriver_Input_from_FAST[iTurb].pxVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pxVel[0])  
+		            + (cDriver_Input_from_FAST[iTurb].pyVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pyVel[0])*(cDriver_Input_from_FAST[iTurb].pyVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pyVel[0])  
+		            + (cDriver_Input_from_FAST[iTurb].pzVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pzVel[0])*(cDriver_Input_from_FAST[iTurb].pzVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pzVel[0])  			
+			      );
+	//Find nearest two force nodes
+	int jForceLower = 0;
+	while (  ((rDistForce[jForceLower]-rDistVel)*(rDistForce[jForceLower+1]-rDistVel) >  0) && (jForceLower < (nForcePtsBlade-1)  ) ) {
+	  jForceLower = jForceLower + 1;
+	}
+	int iNodeForceLower = 1 + iBlade * nForcePtsBlade + jForceLower ; 
+	double rInterp = (rDistVel - rDistForce[jForceLower])/(rDistForce[jForceLower+1]-rDistForce[jForceLower]);
+	cDriver_Output_to_FAST[iTurb].u[iNodeVel] = forceNodeVel[iTurb][iNodeForceLower][0] + rInterp * (forceNodeVel[iTurb][iNodeForceLower+1][0] - forceNodeVel[iTurb][iNodeForceLower][0] );
+	cDriver_Output_to_FAST[iTurb].v[iNodeVel] = forceNodeVel[iTurb][iNodeForceLower][1] + rInterp * (forceNodeVel[iTurb][iNodeForceLower+1][1] - forceNodeVel[iTurb][iNodeForceLower][1] );
+	cDriver_Output_to_FAST[iTurb].w[iNodeVel] = forceNodeVel[iTurb][iNodeForceLower][2] + rInterp * (forceNodeVel[iTurb][iNodeForceLower+1][2] - forceNodeVel[iTurb][iNodeForceLower][2] );
+      }
+    }
+
+    // Now the tower if present and used
+    int nVelPtsTower = get_numVelPtsTwrLoc(iTurb);
+    if ( nVelPtsTower > 0 ) {
+
+      // Create interpolating parameter - Distance from first node from ground
+      int nForcePtsTower = get_numForcePtsTwrLoc(iTurb);
+      std::vector<double> hDistForce(nForcePtsTower) ;
+      int iNodeBotTowerForce = 1 + nBlades * get_numForcePtsBladeLoc(iTurb); // The number of actuator force points is always the same for all blades
+      for(int j=0; j < nForcePtsTower; j++) {
+	int iNodeForce = iNodeBotTowerForce + j ; 
+	hDistForce[j] = sqrt( 
+			     (cDriver_Input_from_FAST[iTurb].pxForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pxForce[iNodeBotTowerForce])*(cDriver_Input_from_FAST[iTurb].pxForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pxForce[iNodeBotTowerForce])  
+                           + (cDriver_Input_from_FAST[iTurb].pyForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pyForce[iNodeBotTowerForce])*(cDriver_Input_from_FAST[iTurb].pyForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pyForce[iNodeBotTowerForce])  
+			   + (cDriver_Input_from_FAST[iTurb].pzForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pzForce[iNodeBotTowerForce])*(cDriver_Input_from_FAST[iTurb].pzForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pzForce[iNodeBotTowerForce])	
+			    );
+      }
+      
+      
+      int iNodeBotTowerVel = 1 + nBlades * get_numVelPtsBladeLoc(iTurb); // Assumes the same number of velocity (Aerodyn) nodes for all blades
+      for(int j=0; j < nVelPtsTower; j++) {
+	int iNodeVel = iNodeBotTowerVel + j ; 
+	double hDistVel = sqrt( 
+			       (cDriver_Input_from_FAST[iTurb].pxVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pxVel[iNodeBotTowerVel])*(cDriver_Input_from_FAST[iTurb].pxVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pxVel[iNodeBotTowerVel])  
+                             + (cDriver_Input_from_FAST[iTurb].pyVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pyVel[iNodeBotTowerVel])*(cDriver_Input_from_FAST[iTurb].pyVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pyVel[iNodeBotTowerVel])  
+                             + (cDriver_Input_from_FAST[iTurb].pzVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pzVel[iNodeBotTowerVel])*(cDriver_Input_from_FAST[iTurb].pzVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pzVel[iNodeBotTowerVel])  			
+	                      );
+	//Find nearest two force nodes
+	int jForceLower = 0;
+	while (  ((hDistForce[jForceLower]-hDistVel)*(hDistForce[jForceLower+1]-hDistVel) >  0) && (jForceLower < (nForcePtsTower-1)  ) ) {
+	  jForceLower = jForceLower + 1;
+	}
+	int iNodeForceLower = iNodeBotTowerForce + jForceLower ; 
+	double rInterp = (hDistVel - hDistForce[jForceLower])/(hDistForce[jForceLower+1]-hDistForce[jForceLower]);
+	cDriver_Output_to_FAST[iTurb].u[iNodeVel] = forceNodeVel[iTurb][iNodeForceLower][0] + rInterp * (forceNodeVel[iTurb][iNodeForceLower+1][0] - forceNodeVel[iTurb][iNodeForceLower][0] );
+	cDriver_Output_to_FAST[iTurb].v[iNodeVel] = forceNodeVel[iTurb][iNodeForceLower][1] + rInterp * (forceNodeVel[iTurb][iNodeForceLower+1][1] - forceNodeVel[iTurb][iNodeForceLower][1] );
+	cDriver_Output_to_FAST[iTurb].w[iNodeVel] = forceNodeVel[iTurb][iNodeForceLower][2] + rInterp * (forceNodeVel[iTurb][iNodeForceLower+1][2] - forceNodeVel[iTurb][iNodeForceLower][2] );
+      }
+    }    
+    
+  }
+  
+}
+
+void fast::OpenFAST::computeTorqueThrust(int iTurbGlob, std::vector<double> & torque, std::vector<double> & thrust) {
 
     //Compute the torque and thrust based on the forces at the actuator nodes
     double relLoc[] = {0.0,0.0,0.0} ;
@@ -509,7 +480,7 @@ fast::ActuatorNodeType fast::OpenFAST::getForceNodeType(int iTurbGlob, int iNode
   
 }
 
-void fast::OpenFAST::allocateInputData() {
+void fast::OpenFAST::allocateMemory() {
 	
   for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
     if (dryRun) {
@@ -524,59 +495,48 @@ void fast::OpenFAST::allocateInputData() {
     }
     turbineSetProcs.insert(turbineMapGlobToProc[iTurb]);
   }
-  if ( dryRun ) {
-    MPI_Barrier(MPI_COMM_WORLD);  
-  }
 
   int nProcsWithTurbines=0;
-  turbineProcs = new int[turbineSetProcs.size()];
-  std::ofstream turbineAllocFile;
-  turbineAllocFile.open("turbineAlloc." + std::to_string(worldMPIRank) + ".txt") ;
+  turbineProcs.resize(turbineSetProcs.size());
   for (std::set<int>::const_iterator p = turbineSetProcs.begin(); p != turbineSetProcs.end(); p++) {
     turbineProcs[nProcsWithTurbines] = *p;
 
     if (dryRun) {
       if ( worldMPIRank == turbineProcs[nProcsWithTurbines] ) {
 	for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-	  turbineAllocFile << "Proc " << worldMPIRank << " loc iTurb " << iTurb << " glob iTurb " << turbineMapProcToGlob[iTurb] << std::endl ;
+	  std::cout << "Proc " << worldMPIRank << " loc iTurb " << iTurb << " glob iTurb " << turbineMapProcToGlob[iTurb] << std::endl ;
 	}
       }
-      MPI_Barrier(MPI_COMM_WORLD);  
     }
 
     nProcsWithTurbines++ ;
   }
-  turbineAllocFile.flush();
-  turbineAllocFile.close() ;
     
   // Construct a group containing all procs running atleast 1 turbine in FAST
-  MPI_Group_incl(worldMPIGroup, nProcsWithTurbines, turbineProcs, &fastMPIGroup) ;
-  int fastMPIcommTag = MPI_Comm_create(MPI_COMM_WORLD, fastMPIGroup, &fastMPIComm);
+  MPI_Group_incl(worldMPIGroup, nProcsWithTurbines, &turbineProcs[0], &fastMPIGroup) ;
+  int fastMPIcommTag = MPI_Comm_create(mpiComm, fastMPIGroup, &fastMPIComm);
   if (MPI_COMM_NULL != fastMPIComm) {
     MPI_Comm_rank(fastMPIComm, &fastMPIRank);
   }
 
-  //Allocates memory for all the input data to be read from the file
-
-  TurbID = new int[nTurbinesProc];
-  TurbineBasePos = new float* [nTurbinesProc];
-  FASTInputFileName = new char * [nTurbinesProc];
-  CheckpointFileRoot = new char * [nTurbinesProc];
-  numBlades = new int[nTurbinesProc];
-  numForcePtsBlade = new int[nTurbinesProc];
-  numForcePtsTwr = new int[nTurbinesProc];
-  numVelPtsBlade = new int[nTurbinesProc];
-  numVelPtsTwr = new int[nTurbinesProc];
+  TurbID.resize(nTurbinesProc);
+  TurbineBasePos.resize(nTurbinesProc);
+  FASTInputFileName.resize(nTurbinesProc);
+  CheckpointFileRoot.resize(nTurbinesProc);
+  numBlades.resize(nTurbinesProc);
+  numForcePtsBlade.resize(nTurbinesProc);
+  numForcePtsTwr.resize(nTurbinesProc);
+  numVelPtsBlade.resize(nTurbinesProc);
+  numVelPtsTwr.resize(nTurbinesProc);
   
   for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-    TurbineBasePos[iTurb] = new float[3];
-    FASTInputFileName[iTurb] = new char[INTERFACE_STRING_LENGTH];
-    CheckpointFileRoot[iTurb] = new char[INTERFACE_STRING_LENGTH];
+    
+    TurbineBasePos[iTurb].resize(3);
 
     int globProc = turbineMapProcToGlob[iTurb];
     TurbID[iTurb] = globTurbineData[globProc].TurbID;
-    std::strcpy(FASTInputFileName[iTurb], globTurbineData[globProc].FASTInputFileName.c_str()) ;
-    std::strcpy(CheckpointFileRoot[iTurb], globTurbineData[globProc].FASTRestartFileName.c_str() );
+    FASTInputFileName[iTurb] = globTurbineData[globProc].FASTInputFileName ;
+    CheckpointFileRoot[iTurb] = globTurbineData[globProc].FASTRestartFileName ;
     for(int i=0;i<3;i++) {
       TurbineBasePos[iTurb][i] = globTurbineData[globProc].TurbineBasePos[i];
     }
@@ -585,65 +545,74 @@ void fast::OpenFAST::allocateInputData() {
 
   }
 
-  return;
+  // Allocate memory for Turbine datastructure for all turbines
+  FAST_AllocateTurbines(&nTurbinesProc, &ErrStat, ErrMsg);
+  
+  // Allocate memory for OpFM Input types in FAST
+  cDriver_Input_from_FAST.resize(nTurbinesProc) ;
+  cDriver_Output_to_FAST.resize(nTurbinesProc) ;
+  
+  cDriverSC_Input_from_FAST.resize(nTurbinesProc) ;
+  cDriverSC_Output_to_FAST.resize(nTurbinesProc) ;
+
 }
 
-void fast::OpenFAST::readTurbineData(int iTurb, YAML::Node turbNode) {
+// void fast::OpenFAST::readTurbineData(int iTurb, YAML::Node turbNode) {
 
-  //Read turbine data for a given turbine using the YAML node
-  if (turbNode["turb_id"]) {
-    globTurbineData[iTurb].TurbID = turbNode["turb_id"].as<int>();
-  } else {
-    std::cerr << "turb_id not present for Turbine " << iTurb << " in the input file" << std::endl;
-  }
+//   //Read turbine data for a given turbine using the YAML node
+//   if (turbNode["turb_id"]) {
+//     globTurbineData[iTurb].TurbID = turbNode["turb_id"].as<int>();
+//   } else {
+//     std::cerr << "turb_id not present for Turbine " << iTurb << " in the input file" << std::endl;
+//   }
 
-  if (turbNode["FAST_input_filename"]) {
-    globTurbineData[iTurb].FASTInputFileName = turbNode["FAST_input_filename"].as<std::string>();
-  } else {
-    std::cerr << "FAST_input_filename not present for Turbine " << iTurb << " in the input file" << std::endl;
-  }
+//   if (turbNode["FAST_input_filename"]) {
+//     globTurbineData[iTurb].FASTInputFileName = turbNode["FAST_input_filename"].as<std::string>();
+//   } else {
+//     std::cerr << "FAST_input_filename not present for Turbine " << iTurb << " in the input file" << std::endl;
+//   }
 
-  if (turbNode["restart_filename"]) {
-    globTurbineData[iTurb].FASTRestartFileName = turbNode["restart_filename"].as<std::string>();
-  } else {
-    std::cerr << " not present for Turbine " << iTurb << " in the input file" << std::endl;
-  }
+//   if (turbNode["restart_filename"]) {
+//     globTurbineData[iTurb].FASTRestartFileName = turbNode["restart_filename"].as<std::string>();
+//   } else {
+//     std::cerr << " not present for Turbine " << iTurb << " in the input file" << std::endl;
+//   }
 
-  if (turbNode["turbine_base_pos"].IsSequence() ) {
-    globTurbineData[iTurb].TurbineBasePos = turbNode["turbine_base_pos"].as<std::vector<double> >() ;
-  } else {
-    std::cerr << "turbine_base_pos not present for Turbine " << iTurb << " in the input file" << std::endl;
-  }
+//   if (turbNode["turbine_base_pos"].IsSequence() ) {
+//     globTurbineData[iTurb].TurbineBasePos = turbNode["turbine_base_pos"].as<std::vector<double> >() ;
+//   } else {
+//     std::cerr << "turbine_base_pos not present for Turbine " << iTurb << " in the input file" << std::endl;
+//   }
 
-  if (turbNode["turbine_hub_pos"].IsSequence() ) {
-    globTurbineData[iTurb].TurbineHubPos = turbNode["turbine_hub_pos"].as<std::vector<double> >() ;
-  } else {
-    std::cerr << "turbine_hub_pos not present for Turbine " << iTurb << " in the input file" << std::endl;
-  }
+//   if (turbNode["turbine_hub_pos"].IsSequence() ) {
+//     globTurbineData[iTurb].TurbineHubPos = turbNode["turbine_hub_pos"].as<std::vector<double> >() ;
+//   } else {
+//     std::cerr << "turbine_hub_pos not present for Turbine " << iTurb << " in the input file" << std::endl;
+//   }
 
-  if (turbNode["num_force_pts_blade"]) {
-    globTurbineData[iTurb].numForcePtsBlade = turbNode["num_force_pts_blade"].as<int>();
-  } else {
-    std::cout << "num_force_pts_blade not present for Turbine " << iTurb << " in the input file" << std::endl;
-    std::cout << "  ... proceeding anyway. Will fail if you want CFD integration" << std::endl ;
-  }
+//   if (turbNode["num_force_pts_blade"]) {
+//     globTurbineData[iTurb].numForcePtsBlade = turbNode["num_force_pts_blade"].as<int>();
+//   } else {
+//     std::cout << "num_force_pts_blade not present for Turbine " << iTurb << " in the input file" << std::endl;
+//     std::cout << "  ... proceeding anyway. Will fail if you want CFD integration" << std::endl ;
+//   }
 
-  if (turbNode["num_force_pts_tower"]) {
-    globTurbineData[iTurb].numForcePtsTwr = turbNode["num_force_pts_tower"].as<int>();
-  } else {
-    std::cout << "num_force_pts_tower not present for Turbine " << iTurb << " in the input file" << std::endl;
-    std::cout << "  ... proceeding anyway. Will fail if you want CFD integration" << std::endl ;
-  }
+//   if (turbNode["num_force_pts_tower"]) {
+//     globTurbineData[iTurb].numForcePtsTwr = turbNode["num_force_pts_tower"].as<int>();
+//   } else {
+//     std::cout << "num_force_pts_tower not present for Turbine " << iTurb << " in the input file" << std::endl;
+//     std::cout << "  ... proceeding anyway. Will fail if you want CFD integration" << std::endl ;
+//   }
 
-  return ;
-}
+//   return ;
+// }
 
 
 void fast::OpenFAST::allocateTurbinesToProcsSimple() {
   
   // Allocate turbines to each processor - round robin fashion
   int nProcs ;
-  MPI_Comm_size(MPI_COMM_WORLD, &nProcs);
+  MPI_Comm_size(mpiComm, &nProcs);
   for(int j = 0; j < nTurbinesGlob; j++)  turbineMapGlobToProc[j] = j % nProcs ;
   
 }
@@ -657,36 +626,6 @@ void fast::OpenFAST::end() {
       for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
 	FAST_End(&iTurb, &stopTheProgram);
       }
-    }
-
-    for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-      delete[] TurbineBasePos[iTurb];
-      delete[] FASTInputFileName[iTurb];
-      delete[] CheckpointFileRoot[iTurb];
-    }
-    delete[] TurbineBasePos;
-    delete[] FASTInputFileName;
-    delete[] CheckpointFileRoot;
-    delete[] TurbID;
-    delete[] numBlades;
-    delete[] numVelPtsBlade;
-    delete[] numVelPtsTwr;
-    delete[] numForcePtsBlade;
-    delete[] numForcePtsTwr;
-    
-    if ( !dryRun ) {
-      delete[] cDriver_Input_from_FAST;
-      delete[] cDriver_Output_to_FAST;
-
-      if (scStatus) {
-	delete[] cDriverSC_Input_from_FAST;
-	delete[] cDriverSC_Output_to_FAST;
-	
-	delete2DArray(scInputsGlob);
-	delete2DArray(scOutputsGlob);
-	
-      }
-
     }
 
     MPI_Group_free(&fastMPIGroup);
@@ -710,11 +649,12 @@ void fast::OpenFAST::end() {
   }
 
 
-void fast::OpenFAST::loadSuperController(YAML::Node c) {
+void fast::OpenFAST::loadSuperController(const fast::fastInputs & fi) {
 
-  if(c["superController"]) {
-    scStatus = c["superController"].as<bool>();
-    scLibFile = c["scLibFile"].as<std::string>();
+  if(fi.scStatus) {
+
+    scStatus = fi.scStatus;
+    scLibFile = fi.scLibFile;
 
     // open the library
     scLibHandle = dlopen(scLibFile.c_str(), RTLD_LAZY);
@@ -742,18 +682,18 @@ void fast::OpenFAST::loadSuperController(YAML::Node c) {
 
     sc = create_SuperController() ;
 
-    numScInputs = c["numScInputs"].as<int>();
-    numScOutputs = c["numScOutputs"].as<int>();
+    numScInputs = fi.numScInputs;
+    numScOutputs = fi.numScOutputs;
 
     if ( (numScInputs > 0) && (numScOutputs > 0)) {
-      scOutputsGlob = create2DArray<double>(nTurbinesGlob, numScOutputs);
-      scInputsGlob = create2DArray<double>(nTurbinesGlob, numScInputs);
+      scOutputsGlob.resize(nTurbinesGlob*numScOutputs) ;
+      scInputsGlob.resize(nTurbinesGlob*numScInputs) ;
       for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
 	for(int iInput=0; iInput < numScInputs; iInput++) {
-	  scInputsGlob[iTurb][iInput] = 0.0 ; // Initialize to zero
+	  scInputsGlob[iTurb*numScInputs + iInput] = 0.0 ; // Initialize to zero
 	}
 	for(int iOutput=0; iOutput < numScOutputs; iOutput++) {
-	  scOutputsGlob[iTurb][iOutput] = 0.0 ; // Initialize to zero
+	  scOutputsGlob[iTurb*numScOutputs + iOutput] = 0.0 ; // Initialize to zero
 	}
       }
 
@@ -776,19 +716,18 @@ void fast::OpenFAST::fillScInputsGlob() {
 
   for(int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
     for(int iInput=0; iInput < numScInputs; iInput++) {
-      scInputsGlob[iTurb][iInput] = 0.0; // Initialize to zero 
+      scInputsGlob[iTurb*numScInputs + iInput] = 0.0; // Initialize to zero 
     }
   }
   
   for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
     for(int iInput=0; iInput < numScInputs; iInput++) {
-      scInputsGlob[turbineMapProcToGlob[iTurb]][iInput] = cDriverSC_Input_from_FAST[iTurb].toSC[iInput] ;
+      scInputsGlob[turbineMapProcToGlob[iTurb]*numScInputs + iInput] = cDriverSC_Input_from_FAST[iTurb].toSC[iInput] ;
     }
   }
   
-  
   if (MPI_COMM_NULL != fastMPIComm) {
-    MPI_Allreduce(MPI_IN_PLACE, scInputsGlob[0], numScInputs*nTurbinesGlob, MPI_DOUBLE, MPI_SUM, fastMPIComm) ;
+    MPI_Allreduce(MPI_IN_PLACE, scInputsGlob.data(), numScInputs*nTurbinesGlob, MPI_DOUBLE, MPI_SUM, fastMPIComm) ;
   }
 
 }
@@ -800,7 +739,7 @@ void fast::OpenFAST::fillScOutputsLoc() {
   
   for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
     for(int iOutput=0; iOutput < numScOutputs; iOutput++) {
-      cDriverSC_Output_to_FAST[iTurb].fromSC[iOutput] = scOutputsGlob[turbineMapProcToGlob[iTurb]][iOutput] ;
+      cDriverSC_Output_to_FAST[iTurb].fromSC[iOutput] = scOutputsGlob[turbineMapProcToGlob[iTurb]*numScOutputs + iOutput] ;
     }
   }
 

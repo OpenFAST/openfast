@@ -29,9 +29,9 @@ class SuperController {
 
   virtual void init(int n, int numScInputs, int numScOutputs);
   
-  virtual void calcOutputs(double ** scOutputsGlob) ;
+  virtual void calcOutputs(std::vector<double> & scOutputsGlob) ;
 
-  virtual void updateStates(double ** scInputsGlob) ;
+  virtual void updateStates(std::vector<double> & scInputsGlob) ;
 
   virtual int writeRestartFile(int n_t_global);
 
