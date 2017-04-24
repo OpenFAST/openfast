@@ -176,13 +176,12 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
          
      IF ( AFInfo%ColCpmin > 0 )  THEN           
            Cpmin = IntAFCoefs(4)
-        END IF
+     END IF
          
      ELSE IF ( AFInfo%ColCpmin > 0 )  THEN       ! If there is Cpmin data and no Cm data, Cpmin is in column 3
            Cpmin = IntAFCoefs(3)
      END IF  
       
-
              
 end subroutine ComputeSteadyAirfoilCoefs
    
