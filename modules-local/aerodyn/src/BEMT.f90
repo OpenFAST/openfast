@@ -162,7 +162,6 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%numBladeNodes  = InitInp%numBladeNodes 
    p%numBlades      = InitInp%numBlades    
    p%UA_Flag        = InitInp%UA_Flag
-   p%CavitCheck     = InitInp%CavitCheck
   
      
    
@@ -212,9 +211,6 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
     !p%DT               = InitInp%DT                             
    p%airDens          = InitInp%airDens          
    p%kinVisc          = InitInp%kinVisc  
-   p%Patm             = InitInp%Patm  
-   p%Pvap             = InitInp%Pvap 
-   p%FluidDepth       = InitInp%FluidDepth
    p%skewWakeMod      = InitInp%skewWakeMod     
    p%useTipLoss       = InitInp%useTipLoss       
    p%useHubLoss       = InitInp%useHubLoss 
@@ -225,6 +221,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%numReIterations  = InitInp%numReIterations  
    p%maxIndIterations = InitInp%maxIndIterations 
    p%aTol             = InitInp%aTol
+  
 
    
 end subroutine BEMT_SetParameters
@@ -474,9 +471,7 @@ subroutine BEMT_AllocOutput( y, p, m, errStat, errMsg )
    call allocAry( y%Cl, p%numBladeNodes, p%numBlades, 'y%Cl', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cd, p%numBladeNodes, p%numBlades, 'y%Cd', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( m%Cpmin, p%numBladeNodes, p%numBlades, 'm%Cpmin', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call allocAry( m%SigmaCavit, p%numBladeNodes, p%numBlades, 'm%SigmaCavit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call allocAry( m%SigmaCavitCrit, p%numBladeNodes, p%numBlades, 'm%SigmaCavitCrit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-  
+
    
    if (ErrStat >= AbortErrLev) RETURN
    
@@ -495,6 +490,7 @@ subroutine BEMT_AllocOutput( y, p, m, errStat, errMsg )
    y%AOA = 0.0_ReKi   
    y%Cl = 0.0_ReKi
    y%Cd = 0.0_ReKi  
+    
  
    
 end subroutine BEMT_AllocOutput
@@ -1098,7 +1094,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
 
   
    real(ReKi)                     :: Re, fzero, theta, Vx, Vy
-   real(ReKi)                     :: Rtip, SigmaCavitCrit, SigmaCavit ! maximum rlocal value for node j over all blades
+   real(ReKi)                     :: Rtip! maximum rlocal value for node j over all blades
 
    integer(IntKi)                 :: i                                               ! Generic index
    integer(IntKi)                 :: j                                               ! Loops through nodes / elements
@@ -1261,30 +1257,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
                if (errStat >= AbortErrLev) return 
             
-               
-            
-             
-              ! Calculate the cavitation number for the airfoil at the node in quesiton, and compare to the critical cavitation number based on the vapour pressure and submerged depth       
-              if ( p%CavitCheck ) then   
-                  SigmaCavit= -1* m%Cpmin(i,j)  ! Cavitation number on blade node j                                               
-        
-              if ( EqualRealNos( y%Vrel(i,j), 0.0_ReKi ) ) then     !if Vrel = 0 in certain cases when Prandtls tip and hub loss factors are used, use the relative verlocity without induction
-              if ( EqualRealNos( Vx, 0.0_ReKi )  .and. EqualRealNos( Vy, 0.0_ReKi ) ) call SetErrStat( ErrID_Fatal, 'Velocity can not be zero for cavitation check, turn off Prandtls tip loss', ErrStat, ErrMsg, RoutineName )
-                 SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * (sqrt((Vx**2 + Vy**2)))**2) ! Critical value of Sigma, cavitation if we go over this
-             
-              else
-                  SigmaCavitCrit= ( ( p%Patm + ( 9.81_ReKi * (p%FluidDepth - ( u%rlocal(i,j))* cos(u%psi(j) )) * p%airDens))  - p%Pvap ) / ( 0.5_ReKi * p%airDens * y%Vrel(i,j)**2) ! Critical value of Sigma, cavitation if we go over this
-              end if
-                       
-               
-               if (SigmaCavitCrit < SigmaCavit) then     
-                   call WrScr( NewLine//'Cavitation occured at node # = '//trim(num2lstr(i)//'and blade # = '//trim(num2lstr(j))))  
-               end if 
-                     
-                  m%SigmaCavit(i,j)= SigmaCavit                 
-                  m%SigmaCavitCrit(i,j)=SigmaCavitCrit  
-                                                     
-              end if 
+                             
          end if
 
          
