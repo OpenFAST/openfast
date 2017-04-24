@@ -28,8 +28,15 @@ set(BD_SOURCES
 add_library(beamdynlib ${BD_SOURCES})
 target_link_libraries(beamdynlib nwtclibs)
 
-install(TARGETS beamdynlib
-  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+
+set(BD_DRIVER_SOURCES
+  src/Driver_Beam.f90
+  src/Driver_Beam_Subs.f90)
+
+add_executable(beamdyn_driver ${BD_DRIVER_SOURCES})
+target_link_libraries(beamdyn_driver beamdynlib nwtclibs ${CMAKE_DL_LIBS})
+
+install(TARGETS beamdyn_driver beamdynlib
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
