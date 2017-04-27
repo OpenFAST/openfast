@@ -1093,7 +1093,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
       ! Local variables:
 
   
-   real(ReKi)                     :: Re, fzero, theta, Vx, Vy
+   real(ReKi)                     :: Re, fzero
    real(ReKi)                     :: Rtip! maximum rlocal value for node j over all blades
 
    integer(IntKi)                 :: i                                               ! Generic index
