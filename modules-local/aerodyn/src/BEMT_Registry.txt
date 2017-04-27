@@ -121,7 +121,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     zHub                            {:}           -         -        "Distance to hub for each blade" m
 typedef   ^                            ^                             UA_ParameterType         UA                              -             -         -        "parameters for UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -             -         -        "logical flag indicating whether to use UnsteadyAero"        -
-typedef   ^                            ^                             LOGICAL                  CavitCheck                      -             -         -        "logical flag indicating whether to use cavitation check"  -
 #
 
 #
