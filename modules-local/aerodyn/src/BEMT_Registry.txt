@@ -83,6 +83,7 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            ^                             LOGICAL                  ValidPhi                        {:}{:}          -         -        "set to indicate when there is no valid Phi for this node at this time (temporarially turn off induction when this is false)" -
 typedef   ^                            OtherStateType                Logical                  nodesInitialized                -               -         -        "the node states have been initialized properly" -
 
+
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
@@ -92,7 +93,8 @@ typedef   ^                            MiscVarType                   UA_OutputTy
 typedef   ^                            MiscVarType                   ReKi                     TnInd_op                       {:}{:}         -         -        "tangential induction at the operating point (for linearization with frozen wake assumption)"
 typedef   ^                            MiscVarType                   ReKi                     AxInd_op                       {:}{:}         -         -        "axial induction at the operating point (for linearization) with frozen wake assumption"
 typedef   ^                            MiscVarType                   Logical                  UseFrozenWake                   -             -         -        "flag set to determine if frozen values of TnInd_op and AxInd_op should be used for this calculation in the linearization process"   
- 
+typedef   ^                            ^                             ReKi                     Cpmin                           {:}{:}         -         -         "min Cpressure"   -
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -119,6 +121,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     zHub                            {:}           -         -        "Distance to hub for each blade" m
 typedef   ^                            ^                             UA_ParameterType         UA                              -             -         -        "parameters for UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -             -         -        "logical flag indicating whether to use UnsteadyAero"        -
+typedef   ^                            ^                             LOGICAL                  CavitCheck                      -             -         -        "logical flag indicating whether to use cavitation check"  -
 #
 
 #
