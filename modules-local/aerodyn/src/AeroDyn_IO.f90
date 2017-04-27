@@ -32,7 +32,7 @@ MODULE AeroDyn_IO
    
    implicit none
    
-   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.04.00', '29-Oct-2016' )
+   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.04.00', '25-Apr-2017' )
    character(*),   parameter  :: AD_Nickname = 'AD'
       
 ! ===================================================================================================
