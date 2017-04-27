@@ -169,7 +169,8 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
   
     Cl = IntAFCoefs(1)
     Cd = IntAFCoefs(2)
-   
+    Cm = 0.0_Reki  !Set these to zero unless there is data to be read in
+    Cpmin = 0.0_Reki
      
      IF ( AFInfo%ColCm > 0 )  THEN           ! If there is Cm data, it is in column 3
            Cm = IntAFCoefs(3)
