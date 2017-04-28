@@ -77,6 +77,7 @@ class OpenFAST {
   int nTurbinesProc;
   int nTurbinesGlob;
   bool restart;
+  bool timeZero;
   double dtFAST;
   double tMax;
   std::vector<std::vector<float>> TurbineBasePos;
@@ -152,6 +153,7 @@ class OpenFAST {
   void setTurbineProcNo(int iTurbGlob, int procNo) { turbineMapGlobToProc[iTurbGlob] = procNo; }
   void allocateTurbinesToProcsSimple();
   void getHubPos(std::vector<double> & currentCoords, int iTurbGlob);
+  void getHubShftDir(std::vector<double> & hubShftVec, int iTurbGlob);
 
   ActuatorNodeType getVelNodeType(int iTurbGlob, int iNode);
   void getVelNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob);
@@ -167,6 +169,7 @@ class OpenFAST {
   bool isDryRun() { return dryRun; }
   bool isDebug() { return debug; }
   bool isRestart() { return restart; }
+  bool isTimeZero() { return timeZero; }
   int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; } // Get processor number of a turbine with global id 'iTurbGlob'
   int get_localTurbNo(int iTurbGlob) { return reverseTurbineMapProcToGlob[iTurbGlob]; }
   int get_nTurbinesGlob() { return nTurbinesGlob; } 

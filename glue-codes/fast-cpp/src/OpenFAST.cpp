@@ -23,7 +23,8 @@ fast::OpenFAST::OpenFAST():
 nTurbinesGlob(0),
 nTurbinesProc(0),
 scStatus(false),
-restart(false)
+restart(false),
+timeZero(false)
 {
 }
 
@@ -61,6 +62,8 @@ void fast::OpenFAST::init() {
        FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &numScOutputs, &numScInputs, &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &cDriverSC_Input_from_FAST[iTurb], &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
        
+       timeZero = true;
+
        numVelPtsTwr[iTurb] = cDriver_Output_to_FAST[iTurb].u_Len - numBlades[iTurb]*numVelPtsBlade[iTurb] - 1;
 
        int nfPts = get_numForcePtsLoc(iTurb);
@@ -101,6 +104,8 @@ void fast::OpenFAST::solution0() {
        checkError(ErrStat, ErrMsg);
 
      }
+
+     timeZero = false;
 
      if (scStatus) {
        fillScInputsGlob(); // Update inputs to super controller
@@ -249,6 +254,17 @@ void fast::OpenFAST::getHubPos(std::vector<double> & currentCoords, int iTurbGlo
   currentCoords[2] = globTurbineData[iTurbGlob].TurbineHubPos[2] ;
   
 }
+
+void fast::OpenFAST::getHubShftDir(std::vector<double> & hubShftVec, int iTurbGlob) {
+
+  // Get hub shaft direction of current turbine - pointing downwind
+  int iTurbLoc = get_localTurbNo(iTurbGlob);
+  hubShftVec[0] = cDriver_Input_from_FAST[iTurbLoc].pOrientation[0] ;
+  hubShftVec[1] = cDriver_Input_from_FAST[iTurbLoc].pOrientation[3] ;
+  hubShftVec[2] = cDriver_Input_from_FAST[iTurbLoc].pOrientation[6] ;
+
+}
+
 
 void fast::OpenFAST::getVelNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob) {
 
