@@ -3,7 +3,7 @@ FAST Certification Test #01: AWT-27CR2 with many DOFs with fixed yaw error and s
 ---------------------- SIMULATION CONTROL --------------------------------------
 False         Echo            - Echo input data to <RootName>.ech (flag)
 "FATAL"       AbortLevel      - Error level when simulation should abort (string) {"WARNING", "SEVERE", "FATAL"}
-          5   TMax            - Total run time (s)
+         20   TMax            - Total run time (s)
       0.004   DT              - Recommended module time step (s)
           1   InterpOrder     - Interpolation order for input/output time history (-) {1=linear, 2=quadratic}
           0   NumCrctn        - Number of correction iterations (-) {0=explicit calculation, i.e., no corrections}
@@ -35,7 +35,7 @@ True          SumPrint        - Print summary data to "<RootName>.sum" (flag)
           2   SttsTime        - Amount of time between screen status messages (s)
       99999   ChkptTime       - Amount of time between creating checkpoint files for potential restart (s)
        0.02   DT_Out          - Time step for tabular output (s) (or "default")
-          5   TStart          - Time to begin tabular output (s)
+         10   TStart          - Time to begin tabular output (s)
           3   OutFileFmt      - Format for tabular (time-marching) output file (switch) {1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both}
 True          TabDelim        - Use tab delimiters in text tabular output file? (flag) {uses spaces if false}
 "ES10.3E2"    OutFmt          - Format used for text tabular output, excluding the time channel.  Resulting field should be 10 characters. (quoted string)
