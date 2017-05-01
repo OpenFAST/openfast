@@ -42,6 +42,36 @@ execute_process(
   ${CMAKE_CURRENT_SOURCE_DIR}/AWT27
   ${CMAKE_CURRENT_BINARY_DIR}/AWT27
 )
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${CMAKE_CURRENT_SOURCE_DIR}/AOC
+  ${CMAKE_CURRENT_BINARY_DIR}/AOC
+)
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${CMAKE_CURRENT_SOURCE_DIR}/UAE_VI
+  ${CMAKE_CURRENT_BINARY_DIR}/UAE_VI
+)
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${CMAKE_CURRENT_SOURCE_DIR}/WP_Baseline
+  ${CMAKE_CURRENT_BINARY_DIR}/WP_Baseline
+)
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${CMAKE_CURRENT_SOURCE_DIR}/SWRT
+  ${CMAKE_CURRENT_BINARY_DIR}/SWRT
+)
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${CMAKE_CURRENT_SOURCE_DIR}/pitch.ipt
+  ${CMAKE_CURRENT_BINARY_DIR}/pitch.ipt
+)
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${CMAKE_CURRENT_SOURCE_DIR}/spd_trq.dat
+  ${CMAKE_CURRENT_BINARY_DIR}/spd_trq.dat
+)
 
 # Add tests in list
 include(${CMAKE_CURRENT_SOURCE_DIR}/CTestList.cmake)
