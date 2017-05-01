@@ -30,6 +30,7 @@
 
 # CMake specific files
 build/**/*
+install/*
 
 # Visual Studio specific files
 vs-build
