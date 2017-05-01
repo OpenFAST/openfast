@@ -18,10 +18,10 @@ endfunction(add_test_r)
 # Regression tests
 #===============================================================================
 
-#add_test_r(Test01)
-#add_test_r(Test02)
-#add_test_r(Test03)
-#add_test_r(Test04)
+add_test_r(Test01)
+add_test_r(Test02)
+add_test_r(Test03)
+add_test_r(Test04)
 add_test_r(Test05)
 add_test_r(Test06)
 add_test_r(Test07)
