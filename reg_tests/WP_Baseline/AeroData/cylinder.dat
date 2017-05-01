@@ -1,0 +1,18 @@
+Round Root Section
+File:  WTCRound.dat
+1         Number of airfoil tables in this file
+ 0.0      Table ID parameter
+14.0      Stall angle (deg)
+ 0.0      No longer used, enter zero
+ 0.0      No longer used, enter zero
+ 0.0      No longer used, enter zero
+ 0.0      Zero lift angle of attack (deg)
+ 0.0      Cn slope for zero lift (dimensionless)
+ 0.0      Cn at stall value for positive angle of attack
+ 0.0      Cn at stall value for negative angle of attack
+ 0.0      Angle of attack for minimum CD (deg)
+ 1.0      Minimum CD value
+-180.0    0.0   0.5   0.0
+   0.0    0.0   0.5   0.0
+ 180.0    0.0   0.5   0.0
+ 

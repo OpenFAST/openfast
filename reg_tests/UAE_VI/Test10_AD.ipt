@@ -1,0 +1,51 @@
+--------- AeroDyn v14.04.* INPUT FILE -------------------------------------------------------------------------
+UAE Phase VI (Ames) aerodynamic parameters for FAST certification test #10.
+"STEADY"      StallMod     - Dynamic stall included [BEDDOES or STEADY] (unquoted string)
+"USE_CM"      UseCm        - Use aerodynamic pitching moment model? [USE_CM or NO_CM] (unquoted string)
+"EQUIL"       InfModel     - Inflow model [DYNIN or EQUIL] (unquoted string)
+"SWIRL"       IndModel     - Induction-factor model [NONE or WAKE or SWIRL] (unquoted string)
+      0.005   AToler       - Induction-factor tolerance (convergence criteria) (-)
+"PRANDtl"     TLModel      - Tip-loss model (EQUIL only) [PRANDtl, GTECH, or NONE] (unquoted string)
+"PRANDtl"     HLModel      - Hub-loss model (EQUIL only) [PRANdtl or NONE] (unquoted string)
+          0   TwrShad      - Tower-shadow velocity deficit (-)
+        0.4   ShadHWid     - Tower-shadow half width (m)
+      1.401   T_Shad_Refpt - Tower-shadow reference point (m)
+      1.246   AirDens      - Air density (kg/m^3)
+ 1.4639E-05   KinVisc      - Kinematic air viscosity [CURRENTLY IGNORED] (m^2/sec)
+      0.004   DTAero       - Time interval for aerodynamic calculations (sec)
+         10   NumFoil      - Number of airfoil files (-)
+"AeroData/cylinder.dat"    FoilNm      - Names of the airfoil files [NumFoil lines] (quoted strings)
+"AeroData/Mod_S809_129.dat"
+"AeroData/Mod_S809_185.dat"
+"AeroData/Mod_S809_242.dat"
+"AeroData/Mod_S809_298.dat"
+"AeroData/Mod_S809_354.dat"
+"AeroData/Mod_S809_410.dat"
+"AeroData/Mod_S809_600.dat"
+"AeroData/Mod_S809_800.dat"
+"AeroData/Mod_S809_Outboard.dat"
+         21   BldNodes    - Number of blade nodes used for analysis (-)
+RNodes         AeroTwst       DRNodes        Chord          NFoil          PrnElm
+5.6800000E-01  0.0000000E+00  2.7210000E-01  2.1900000E-01          1      NOPRINT 
+8.8010000E-01  -9.8000000E-02  3.5200000E-01  1.8100000E-01          1      NOPRINT 
+1.2321000E+00  1.9423000E+01  3.5200000E-01  7.1400000E-01          3      NOPRINT 
+1.5087000E+00  1.4318000E+01  2.0120000E-01  7.1100000E-01          4      NOPRINT 
+1.7099000E+00  1.0971000E+01  2.0120000E-01  6.9100000E-01          5      NOPRINT 
+1.9278000E+00  8.2440000E+00  2.3470000E-01  6.6800000E-01          6      NOPRINT 
+2.1457000E+00  6.1640000E+00  2.0120000E-01  6.4700000E-01          7      NOPRINT 
+2.3469000E+00  4.6890000E+00  2.0120000E-01  6.2700000E-01          7      NOPRINT 
+2.5480000E+00  3.4990000E+00  2.0120000E-01  6.0600000E-01          8      NOPRINT 
+2.7660000E+00  2.4780000E+00  2.3490000E-01  5.8400000E-01          8      NOPRINT 
+2.9840000E+00  1.6860000E+00  2.0100000E-01  5.6100000E-01          8      NOPRINT 
+3.1850000E+00  1.1150000E+00  2.0120000E-01  5.4200000E-01          8      NOPRINT 
+3.3862000E+00  6.6600000E-01  2.0120000E-01  5.2200000E-01          8      NOPRINT 
+3.6041000E+00  2.6700000E-01  2.3470000E-01  4.9900000E-01          8      NOPRINT 
+3.8220000E+00  -7.9000000E-02  2.0120000E-01  4.7800000E-01          8      NOPRINT 
+4.0232000E+00  -3.8100000E-01  2.0120000E-01  4.5700000E-01          9      PRINT 
+4.2244000E+00  -6.7900000E-01  2.0120000E-01  4.3700000E-01          9      NOPRINT 
+4.4004000E+00  -9.3300000E-01  1.5090000E-01  4.1900000E-01          9      NOPRINT 
+4.5764000E+00  -1.1840000E+00  2.0120000E-01  4.0100000E-01         10      NOPRINT 
+4.7776000E+00  -1.4660000E+00  2.0120000E-01  3.8100000E-01         10      NOPRINT 
+4.9536000E+00  -1.7110000E+00  1.5090000E-01  3.6300000E-01         10      NOPRINT 
+
+
