@@ -31,5 +31,17 @@ endif()
 
 message("-- Using test tolerance of ${TOLERANCE} --")
 
+# Create symlinks to mesh and xml directories
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${CMAKE_CURRENT_SOURCE_DIR}/5MW_Baseline
+  ${CMAKE_CURRENT_BINARY_DIR}/5MW_Baseline
+)
+execute_process(
+  COMMAND ${CMAKE_COMMAND} -E create_symlink
+  ${CMAKE_CURRENT_SOURCE_DIR}/AWT27
+  ${CMAKE_CURRENT_BINARY_DIR}/AWT27
+)
+
 # Add tests in list
 include(${CMAKE_CURRENT_SOURCE_DIR}/CTestList.cmake)
