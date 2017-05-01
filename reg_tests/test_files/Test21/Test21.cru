@@ -1,0 +1,81 @@
+-----  Crunch v3.01.00d Input File  --------------------------------------------
+Input file for generating statistics for FAST certification Test #21.
+-----  Job Options  ------------------------------------------------------------
+False          Echo:               The flag for echoing input to <root>.ech.
+True           Out_Stats:          The flag for outputting statistics.
+False          Out_Data:           The flag for outputting modified data.
+True           TabDelim:           The flag for using tab-delimited output (best for spreadsheets).
+"F15.4"        RealFmt:            The numerical-output format specifier.  See manual for limitations.
+False          Aggregate:          The flag to output aggregate-analysis files.  Use false to generate separate analysis files for each input file.
+"Aggregate"    AggRoot             The root name of the aggregate-analysis files, if aggregates were specified above.
+-----  Input-Data Layout  ------------------------------------------------------
+True           FASTbin:            The flag that indicates if the input files are in FAST binary form.  Considered traditionally formatted if FALSE.  All records will be processed.
+7              CTRow:              The row with the channel titles on it (zero if no titles are available of if titles are specified below).
+8              CURow:              The row with the channel units on it (zero if no units are available of if units are specified below).
+9              FDRow               The first row of data.
+0              NumRecs:            The number of data records to read from each file (0 to automatically determine which rows to read).
+0.0, 0.0       TStart, TEnd:       The start and end times (enter zeros if you want to use all the data records in the file).
+-----  Channel Information  ----------------------------------------------------
+0              NumInCols:          The total number of channels in each input file.
+0              NumCols:            The number channels to be used from the input files.
+ChanTitle  ChanUnits    OrigChan #  Scale  Offset     NumCols rows of data follow.  Title and units strings must be 10 characters or less.
+-----  Filtering  --------------------------------------------------------------
+0              NumFilt:            The output channels are to be modified by the IIR filter.
+0              FiltCols:           The list of channels to filter.  Ignored if NumFilt is zero.
+0              FiltType:           The type of filter (1-LowPass, 2-HighPass, 3-BandPass)
+0.0            LoCut:              The low cutoff frequency (ignored for low-pass filters)
+0.0            HiCut:              The high cutoff frequency (ignored for high-pass filters)
+-----  Calculated Channels  ----------------------------------------------------
+0              NumCChan:           The number calculated channels to generate.
+1234567890     Seed:               The integer seed for the random number generator (-2,147,483,648 to 2,147,483,647)
+Col_Title  Units  Equation         Put each field in double quotes.  Titles and units are limited to 10 characters.  NumCChan rows of data follow.
+-----  Moving Averages  --------------------------------------------------------
+0              NumMA:              Number of channels that will have moving averages generated for them.
+Title   Channel #   Averaging Period
+-----  Time and Wind Speed  ----------------------------------------------------
+1              TimeCol:            The channel containing time.
+0              WS_Col:             The primary wind-speed channels (used for mean wind speed and turbulence intensity, 0 for none)
+-----  Load Roses  -------------------------------------------------------------
+0              NumRoses:           Number of load-rose channel pairs.
+RoseTitle   0-DegreeLoad   90-DegreeLoad   #Sectors       RoseTitle in quotes and up to 8 characters.  NumRoses rows of data follow.
+-----  Azimuth Averages  -------------------------------------------------------
+0              NumAACols:          Number of channels to be azimuth averaged.  Next four lines ignored if 0.
+0              AA_Cols(:):         List of channels for azimuth averages.
+36             NumAABins:          The number of azimuth bins.
+2              AzimCol:            The azimuth channel.
+True           Out_AA:             The flag for outputting azimuth averages.
+-----  Crosstalk  --------------------------------------------------------------
+0              NumXT:              Number of pairs of columns that will have their crosstalk removed.
+OutCol#1   OutCol#2   XT(1,1)   XT(1,2)   XT(2,1)   XT(2,2)         NumXT rows of data follow.
+-----  Peak Finding  -----------------------------------------------------------
+0              NumPFCols:          Number of output columns to be modified by the peak finder.  Next line ignored if zero.
+0              PF_Cols(:):         The list of channels to be modified by the peak finder.
+-----  Peak and Valley Listing  ------------------------------------------------
+0              NumPLCh:            Number of channels that will have their peaks/valleys listed to a file.  Next three lines ignored if zero.
+2              PL_Meth:            The method of identifying peaks (1: slope change, 2: thresholds).
+True           WrPLtime:           The flag to include the time in the peak-list file(s)?
+Channel   WriteTroughs?   TroughThresh   WritePeaks?   PeakThresh        NumPLCh rows of data follow.
+-----  Probablity Mass  --------------------------------------------------------
+0              NumPMF:             The number of channels that will have PMFs generated for them.  Next two lines ignored if zero.
+0              NumPMFBins:         The number of bins to use for the PMF.
+Column#   Minimum   Maximum        If Min=Max=0, autocalculate them.  NumPMF rows of data follow.
+-----  Rainflow Cycles  --------------------------------------------------------
+0              NumRFCols:          The number of RF channels.  Next six lines ignored if zero.
+0              RF_Per:             Number of seconds in the rainflow counting period.
+True           RF_Norm:            The flag for normalizing rainflow cycle counts by bin width.
+True           RFZC_Blank:         The flag to specify the generation of spaces in tab-delimited output files where counts are zero.
+0              NumRFRBins:         The number of rainflow range bins.  Use "0" to output the actual cycles instead of binned cycles.
+0              NumRFMBins:         The number of rainflow means bins.  Use "1" to output ranges only.
+Column#   Half-CycleMult   MaxRange   MinMean   MaxMean      MaxRange not use when NumRFRBins=0. MinMean, MaxMean not used when NumRFMBins=1.  NumRFCols rows of data follow.
+-----  Extreme Events  ---------------------------------------------------------
+0              NumEEGrps:          The number of groups of parameters that will have their extreme events recorded.
+GroupTitle(100 char max)   #ExtCols   ColList(#ExtCols long)   #InfCols(may be 0)   ColList(#InfCols long)     NumEEGrps rows of data follow.
+-----  Summary Files  ----------------------------------------------------------
+0              NumSFCols:          The number of channels to have statistics put in separate summary files.  Next line ignored if zero.
+0              SF_Cols(:):         The list of summary-file channels.
+-----  Statistical Extrapolation  ----------------------------------------------
+0              NumESCols:          The number channels for statistical extrapolation.
+Col#   HoursToExtrapolateTo   QuantileDesired             NumESCols rows of data follow.
+-----  Input Files  ------------------------------------------------------------
+1              NumFiles:           The number of input files to read.
+Test21.outb

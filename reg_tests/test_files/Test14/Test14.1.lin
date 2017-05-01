@@ -1,0 +1,119 @@
+
+Linearized model: Predictions were generated on 03-Nov-2016 at 13:36:41 using FAST (v8.17.00a-bjj, 27-Aug-2016), compiled as a 32-bit application using single precision
+ linked with  NWTC Subroutine Library (v2.10.00, 27-Aug-2016); ElastoDyn (v1.04.00a-bjj, 26-Jul-2016)
+
+Description from the FAST input file: FAST Certification Test #14: WindPACT 1.5 MW Baseline with stationary linearization in a vacuum
+
+Simulation information:
+   Simulation time:                     0.0000 s
+   Rotor Speed:                         0.0000 rad/s
+   Azimuth:                             0.0000 rad
+   Number of continuous states:        30
+   Number of discrete states:           0
+   Number of constraint states:         0
+   Number of inputs:                    0
+   Number of outputs:                   0
+   Jacobians included in this file?    No
+
+Order of continuous states:
+   Row/Column Operating Point                     Rotating Frame? Description
+   ---------- ---------------                     --------------- -----------
+          1    0.000E+00                                 F        ED 1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m
+          2    0.000E+00                                 F        ED 1st tower side-to-side bending mode DOF (internal DOF index = DOF_TSS1), m
+          3    0.000E+00                                 F        ED 2nd tower fore-aft bending mode DOF (internal DOF index = DOF_TFA2), m
+          4    0.000E+00                                 F        ED 2nd tower side-to-side bending mode DOF (internal DOF index = DOF_TSS2), m
+          5    4.712E+00                                 F        ED Variable speed generator DOF (internal DOF index = DOF_GeAz), rad
+          6    0.000E+00                                 F        ED Drivetrain rotational-flexibility DOF (internal DOF index = DOF_DrTr), rad
+          7    0.000E+00                                 T        ED 1st flapwise bending-mode DOF of blade 1 (internal DOF index = DOF_BF(1,1)), m
+          8    0.000E+00                                 T        ED 1st flapwise bending-mode DOF of blade 2 (internal DOF index = DOF_BF(2,1)), m
+          9    0.000E+00                                 T        ED 1st flapwise bending-mode DOF of blade 3 (internal DOF index = DOF_BF(3,1)), m
+         10    0.000E+00                                 T        ED 1st edgewise bending-mode DOF of blade 1 (internal DOF index = DOF_BE(1,1)), m
+         11    0.000E+00                                 T        ED 1st edgewise bending-mode DOF of blade 2 (internal DOF index = DOF_BE(2,1)), m
+         12    0.000E+00                                 T        ED 1st edgewise bending-mode DOF of blade 3 (internal DOF index = DOF_BE(3,1)), m
+         13    0.000E+00                                 T        ED 2nd flapwise bending-mode DOF of blade 1 (internal DOF index = DOF_BF(1,2)), m
+         14    0.000E+00                                 T        ED 2nd flapwise bending-mode DOF of blade 2 (internal DOF index = DOF_BF(2,2)), m
+         15    0.000E+00                                 T        ED 2nd flapwise bending-mode DOF of blade 3 (internal DOF index = DOF_BF(3,2)), m
+         16    0.000E+00                                 F        ED First time derivative of 1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m/s
+         17    0.000E+00                                 F        ED First time derivative of 1st tower side-to-side bending mode DOF (internal DOF index = DOF_TSS1), m/s
+         18    0.000E+00                                 F        ED First time derivative of 2nd tower fore-aft bending mode DOF (internal DOF index = DOF_TFA2), m/s
+         19    0.000E+00                                 F        ED First time derivative of 2nd tower side-to-side bending mode DOF (internal DOF index = DOF_TSS2), m/s
+         20    0.000E+00                                 F        ED First time derivative of Variable speed generator DOF (internal DOF index = DOF_GeAz), rad/s
+         21    0.000E+00                                 F        ED First time derivative of Drivetrain rotational-flexibility DOF (internal DOF index = DOF_DrTr), rad/s
+         22    0.000E+00                                 T        ED First time derivative of 1st flapwise bending-mode DOF of blade 1 (internal DOF index = DOF_BF(1,1)), m/s
+         23    0.000E+00                                 T        ED First time derivative of 1st flapwise bending-mode DOF of blade 2 (internal DOF index = DOF_BF(2,1)), m/s
+         24    0.000E+00                                 T        ED First time derivative of 1st flapwise bending-mode DOF of blade 3 (internal DOF index = DOF_BF(3,1)), m/s
+         25    0.000E+00                                 T        ED First time derivative of 1st edgewise bending-mode DOF of blade 1 (internal DOF index = DOF_BE(1,1)), m/s
+         26    0.000E+00                                 T        ED First time derivative of 1st edgewise bending-mode DOF of blade 2 (internal DOF index = DOF_BE(2,1)), m/s
+         27    0.000E+00                                 T        ED First time derivative of 1st edgewise bending-mode DOF of blade 3 (internal DOF index = DOF_BE(3,1)), m/s
+         28    0.000E+00                                 T        ED First time derivative of 2nd flapwise bending-mode DOF of blade 1 (internal DOF index = DOF_BF(1,2)), m/s
+         29    0.000E+00                                 T        ED First time derivative of 2nd flapwise bending-mode DOF of blade 2 (internal DOF index = DOF_BF(2,2)), m/s
+         30    0.000E+00                                 T        ED First time derivative of 2nd flapwise bending-mode DOF of blade 3 (internal DOF index = DOF_BF(3,2)), m/s
+
+Order of continuous state derivatives:
+   Row/Column Operating Point                     Rotating Frame? Description
+   ---------- ---------------                     --------------- -----------
+          1    0.000E+00                                 F        First time derivative of ED 1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m/s
+          2    0.000E+00                                 F        First time derivative of ED 1st tower side-to-side bending mode DOF (internal DOF index = DOF_TSS1), m/s
+          3    0.000E+00                                 F        First time derivative of ED 2nd tower fore-aft bending mode DOF (internal DOF index = DOF_TFA2), m/s
+          4    0.000E+00                                 F        First time derivative of ED 2nd tower side-to-side bending mode DOF (internal DOF index = DOF_TSS2), m/s
+          5    0.000E+00                                 F        First time derivative of ED Variable speed generator DOF (internal DOF index = DOF_GeAz), rad/s
+          6    0.000E+00                                 F        First time derivative of ED Drivetrain rotational-flexibility DOF (internal DOF index = DOF_DrTr), rad/s
+          7    0.000E+00                                 T        First time derivative of ED 1st flapwise bending-mode DOF of blade 1 (internal DOF index = DOF_BF(1,1)), m/s
+          8    0.000E+00                                 T        First time derivative of ED 1st flapwise bending-mode DOF of blade 2 (internal DOF index = DOF_BF(2,1)), m/s
+          9    0.000E+00                                 T        First time derivative of ED 1st flapwise bending-mode DOF of blade 3 (internal DOF index = DOF_BF(3,1)), m/s
+         10    0.000E+00                                 T        First time derivative of ED 1st edgewise bending-mode DOF of blade 1 (internal DOF index = DOF_BE(1,1)), m/s
+         11    0.000E+00                                 T        First time derivative of ED 1st edgewise bending-mode DOF of blade 2 (internal DOF index = DOF_BE(2,1)), m/s
+         12    0.000E+00                                 T        First time derivative of ED 1st edgewise bending-mode DOF of blade 3 (internal DOF index = DOF_BE(3,1)), m/s
+         13    0.000E+00                                 T        First time derivative of ED 2nd flapwise bending-mode DOF of blade 1 (internal DOF index = DOF_BF(1,2)), m/s
+         14    0.000E+00                                 T        First time derivative of ED 2nd flapwise bending-mode DOF of blade 2 (internal DOF index = DOF_BF(2,2)), m/s
+         15    0.000E+00                                 T        First time derivative of ED 2nd flapwise bending-mode DOF of blade 3 (internal DOF index = DOF_BF(3,2)), m/s
+         16   -1.565E-01                                 F        First time derivative of ED First time derivative of 1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m/s/s
+         17   -1.327E-03                                 F        First time derivative of ED First time derivative of 1st tower side-to-side bending mode DOF (internal DOF index = DOF_TSS1), m/s/s
+         18   -2.590E-01                                 F        First time derivative of ED First time derivative of 2nd tower fore-aft bending mode DOF (internal DOF index = DOF_TFA2), m/s/s
+         19   -4.475E-04                                 F        First time derivative of ED First time derivative of 2nd tower side-to-side bending mode DOF (internal DOF index = DOF_TSS2), m/s/s
+         20    2.060E-06                                 F        First time derivative of ED First time derivative of Variable speed generator DOF (internal DOF index = DOF_GeAz), rad/s/s
+         21   -5.200E-03                                 F        First time derivative of ED First time derivative of Drivetrain rotational-flexibility DOF (internal DOF index = DOF_DrTr), rad/s/s
+         22    8.613E+00                                 T        First time derivative of ED First time derivative of 1st flapwise bending-mode DOF of blade 1 (internal DOF index = DOF_BF(1,1)), m/s/s
+         23    4.987E+00                                 T        First time derivative of ED First time derivative of 1st flapwise bending-mode DOF of blade 2 (internal DOF index = DOF_BF(2,1)), m/s/s
+         24   -3.199E+00                                 T        First time derivative of ED First time derivative of 1st flapwise bending-mode DOF of blade 3 (internal DOF index = DOF_BF(3,1)), m/s/s
+         25    1.848E+00                                 T        First time derivative of ED First time derivative of 1st edgewise bending-mode DOF of blade 1 (internal DOF index = DOF_BE(1,1)), m/s/s
+         26   -1.807E+01                                 T        First time derivative of ED First time derivative of 1st edgewise bending-mode DOF of blade 2 (internal DOF index = DOF_BE(2,1)), m/s/s
+         27    1.832E+01                                 T        First time derivative of ED First time derivative of 1st edgewise bending-mode DOF of blade 3 (internal DOF index = DOF_BE(3,1)), m/s/s
+         28   -6.987E+00                                 T        First time derivative of ED First time derivative of 2nd flapwise bending-mode DOF of blade 1 (internal DOF index = DOF_BF(1,2)), m/s/s
+         29   -5.420E+00                                 T        First time derivative of ED First time derivative of 2nd flapwise bending-mode DOF of blade 2 (internal DOF index = DOF_BF(2,2)), m/s/s
+         30    1.090E+00                                 T        First time derivative of ED First time derivative of 2nd flapwise bending-mode DOF of blade 3 (internal DOF index = DOF_BF(3,2)), m/s/s
+
+
+Linearized state matrices:
+
+A: 30 x 30
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00  0.000E+00
+    0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  0.000E+00  1.000E+00
+   -7.156E+00 -1.186E-03  1.329E+02 -5.563E-02 -1.793E-07 -2.321E+02  4.929E-01  3.210E-01  3.386E-01  3.020E-01  3.073E-01  7.510E-02 -2.073E+00 -1.597E+00 -1.657E+00 -7.304E-02 -1.221E-05  4.525E-01 -1.905E-04  0.000E+00 -4.145E-01  4.958E-03  3.198E-03  3.373E-03  3.029E-03  3.064E-03  7.518E-04 -6.901E-03 -5.294E-03 -5.492E-03
+   -1.294E-03 -6.865E+00 -1.439E+00  1.432E+02  6.262E-08  6.610E+02  7.559E-02 -2.988E-02 -4.488E-02 -9.848E-01  4.980E-01  4.873E-01 -2.593E-01  1.078E-01  1.477E-01 -1.534E-05 -7.012E-02 -4.921E-03  4.875E-01  0.000E+00  1.180E+00  7.614E-04 -3.045E-04 -4.485E-04 -9.889E-03  5.000E-03  4.894E-03 -8.643E-04  3.609E-04  4.905E-04
+    2.148E-01 -2.538E-03 -3.334E+02 -1.425E-01 -1.480E-07 -2.050E+01  2.727E-01 -8.960E-02 -7.633E-02  1.802E-01  2.949E-02 -1.460E-01 -8.095E-01  1.787E-01  1.334E-01  1.643E-03 -2.622E-05 -1.140E+00 -4.880E-04  0.000E+00 -3.660E-02  2.734E-03 -8.942E-04 -7.625E-04  1.804E-03  2.911E-04 -1.456E-03 -2.692E-03  5.947E-04  4.448E-04
+   -1.923E-04  2.332E-01 -1.436E-01 -3.448E+02  3.336E-08  1.694E+03  8.133E-03  1.453E-02 -2.258E-02 -1.061E-01  6.560E-02  4.059E-02 -2.790E-02 -3.660E-02  6.414E-02 -1.322E-06  1.801E-03 -4.869E-04 -1.179E+00  0.000E+00  3.024E+00  8.192E-05  1.445E-04 -2.257E-04 -1.066E-03  6.580E-04  4.083E-04 -9.300E-05 -1.210E-04  2.128E-04
+    1.074E-06  9.464E-04  9.315E-04  1.276E+00 -1.439E-10  1.364E+04 -5.118E-05 -4.740E-05  9.805E-05  6.675E-04 -3.830E-04 -2.848E-04  1.756E-04  1.107E-04 -2.839E-04  9.137E-09  1.186E-05  3.170E-06  4.364E-03  0.000E+00  2.436E+01 -5.155E-07 -4.695E-07  9.798E-07  6.703E-06 -3.843E-06 -2.863E-06  5.852E-07  3.647E-07 -9.418E-07
+   -2.768E-02  8.228E-02 -1.357E+00  1.110E+02  3.586E-06 -2.636E+04  3.440E-01  3.424E-01  3.554E-01 -4.571E+00 -4.671E+00 -4.665E+00 -8.150E-01 -8.154E-01 -8.493E-01 -2.768E-04  1.031E-03 -4.605E-03  3.795E-01  0.000E+00 -4.707E+01  3.446E-03  3.422E-03  3.550E-03 -4.576E-02 -4.669E-02 -4.662E-02 -2.710E-03 -2.704E-03 -2.819E-03
+    2.336E+01  3.581E+00  7.104E+03  2.134E+02  4.725E+00  1.373E+05 -7.124E+01 -3.115E+00 -3.450E+00  5.062E+01  5.044E+01  5.537E+01  4.811E+01  1.137E+01  1.252E+01  2.452E-01  3.591E-02  2.427E+01  7.257E-01  0.000E+00  2.451E+02 -7.189E-01 -3.111E-02 -3.441E-02  5.068E-01  5.042E-01  5.533E-01  1.595E-01  3.765E-02  4.149E-02
+    1.476E+01 -1.521E+00 -2.332E+03  3.743E+02 -6.818E+00  1.363E+05 -3.072E+00 -6.515E+01 -4.997E+00  5.307E+01  5.513E+01  5.159E+01  7.872E+00  2.536E+01  1.306E+01  1.414E-01 -1.330E-02 -8.001E+00  1.288E+00  0.000E+00  2.433E+02 -3.081E-02 -6.484E-01 -4.988E-02  5.313E-01  5.501E-01  5.157E-01  2.619E-02  8.431E-02  4.334E-02
+    1.558E+01 -2.022E+00 -1.992E+03 -5.857E+02  2.093E+00  1.413E+05 -3.401E+00 -4.996E+00 -6.511E+01  5.233E+01  5.247E+01  5.465E+01  8.918E+00  1.330E+01  2.537E+01  1.503E-01 -2.222E-02 -6.836E+00 -2.006E+00  0.000E+00  2.524E+02 -3.410E-02 -4.991E-02 -6.479E-01  5.238E-01  5.244E-01  5.471E-01  2.967E-02  4.411E-02  8.443E-02
+    4.830E+00 -1.563E+01  1.568E+03 -9.328E+02 -2.101E+01 -6.063E+05  1.628E+01  1.768E+01  1.744E+01 -3.791E+02 -2.339E+02 -2.329E+02  1.847E+01 -4.099E+01 -4.020E+01  5.089E-02 -1.566E-01  5.359E+00 -3.171E+00  0.000E+00 -1.083E+03  1.634E-01  1.767E-01  1.742E-01 -3.800E+00 -2.337E+00 -2.328E+00  6.162E-02 -1.359E-01 -1.335E-01
+    4.816E+00  7.882E+00  2.544E+02  5.747E+02  9.508E+00 -6.186E+05  1.673E+01  1.775E+01  1.746E+01 -2.335E+02 -3.775E+02 -2.354E+02 -3.876E+01  1.439E+01 -4.076E+01  4.846E-02  7.944E-02  8.664E-01  1.957E+00  0.000E+00 -1.105E+03  1.676E-01  1.779E-01  1.744E-01 -2.337E+00 -3.771E+00 -2.353E+00 -1.289E-01  4.769E-02 -1.353E-01
+    1.180E+00  7.756E+00 -1.262E+03  3.586E+02  1.150E+01 -6.177E+05  1.837E+01  1.717E+01  1.780E+01 -2.325E+02 -2.354E+02 -3.777E+02 -4.403E+01 -4.084E+01  1.387E+01  8.884E-03  7.729E-02 -4.323E+00  1.216E+00  0.000E+00 -1.103E+03  1.841E-01  1.716E-01  1.770E-01 -2.328E+00 -2.353E+00 -3.773E+00 -1.464E-01 -1.354E-01  4.584E-02
+   -2.289E+01 -2.843E+00 -4.867E+03 -1.695E+02 -3.758E+00 -7.438E+04  1.566E+01  1.842E+00  2.088E+00  1.342E+01 -2.669E+01 -3.036E+01 -5.736E+02 -7.896E+00 -8.748E+00 -2.361E-01 -2.851E-02 -1.662E+01 -5.762E-01  0.000E+00 -1.328E+02  1.540E-01  1.839E-02  2.082E-02  1.342E-01 -2.669E-01 -3.033E-01 -1.911E+00 -2.614E-02 -2.897E-02
+   -1.744E+01  1.245E+00  1.057E+03 -2.162E+02  4.662E+00 -7.421E+04  2.616E+00  1.001E+01  3.068E+00 -2.811E+01  1.051E+01 -2.806E+01 -7.886E+00 -5.600E+02 -9.106E+00 -1.705E-01  1.126E-02  3.639E+00 -7.444E-01  0.000E+00 -1.325E+02  2.625E-02  1.015E-01  3.062E-02 -2.814E-01  1.053E-01 -2.805E-01 -2.624E-02 -1.856E+00 -3.021E-02
+   -1.809E+01  1.557E+00  7.857E+02  3.834E+02 -9.043E-01 -7.738E+04  2.883E+00  3.014E+00  1.003E+01 -2.761E+01 -2.804E+01  1.015E+01 -8.740E+00 -9.110E+00 -5.602E+02 -1.775E-01  1.683E-02  2.713E+00  1.313E+00  0.000E+00 -1.382E+02  2.893E-02  3.009E-02  1.016E-01 -2.764E-01 -2.803E-01  1.013E-01 -2.908E-02 -3.020E-02 -1.857E+00

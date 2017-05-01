@@ -1,0 +1,40 @@
+--------- AeroDyn v14.04.* INPUT FILE -------------------------------------------------------------------------
+AWT-27CR aerodynamic parameters for FAST certification test #3.
+"BEDDOES"     StallMod     - Dynamic stall included [BEDDOES or STEADY] (unquoted string)
+"NO_CM"       UseCm        - Use aerodynamic pitching moment model? [USE_CM or NO_CM] (unquoted string)
+"EQUIL"       InfModel     - Inflow model [DYNIN or EQUIL] (unquoted string)
+"SWIRL"       IndModel     - Induction-factor model [NONE or WAKE or SWIRL] (unquoted string)
+      0.005   AToler       - Induction-factor tolerance (convergence criteria) (-)
+"PRANDtl"     TLModel      - Tip-loss model (EQUIL only) [PRANDtl, GTECH, or NONE] (unquoted string)
+"NONE"        HLModel      - Hub-loss model (EQUIL only) [PRANdtl or NONE] (unquoted string)
+        0.3   TwrShad      - Tower-shadow velocity deficit (-)
+          1   ShadHWid     - Tower-shadow half width (m)
+      2.432   T_Shad_Refpt - Tower-shadow reference point (m)
+      1.225   AirDens      - Air density (kg/m^3)
+ 1.4639E-05   KinVisc      - Kinematic air viscosity [CURRENTLY IGNORED] (m^2/sec)
+      0.004   DTAero       - Time interval for aerodynamic calculations (sec)
+         10   NumFoil      - Number of airfoil files (-)
+"AeroData/AWT27_05.dat"    FoilNm      - Names of the airfoil files [NumFoil lines] (quoted strings)
+"AeroData/AWT27_15.dat"
+"AeroData/AWT27_25.dat"
+"AeroData/AWT27_35.dat"
+"AeroData/AWT27_45.dat"
+"AeroData/AWT27_55.dat"
+"AeroData/AWT27_65.dat"
+"AeroData/AWT27_75.dat"
+"AeroData/AWT27_85.dat"
+"AeroData/AWT27_95.dat"
+         10   BldNodes    - Number of blade nodes used for analysis (-)
+RNodes         AeroTwst       DRNodes        Chord          NFoil          PrnElm
+1.8126500E+00  5.8000000E+00  1.2573000E+00  8.5900000E-01          1      NOPRINT
+3.0699500E+00  5.2000000E+00  1.2573000E+00  1.0450000E+00          2      NOPRINT
+4.3272500E+00  4.6600000E+00  1.2573000E+00  1.1450000E+00          3      NOPRINT
+5.5845500E+00  3.7300000E+00  1.2573000E+00  1.1240000E+00          4      NOPRINT
+6.8418500E+00  2.6400000E+00  1.2573000E+00  1.0540000E+00          5      NOPRINT
+8.0991500E+00  1.5900000E+00  1.2573000E+00  9.7600000E-01          6      NOPRINT
+9.3564500E+00  7.3000000E-01  1.2573000E+00  8.8500000E-01          7      NOPRINT
+1.0613750E+01  2.3000000E-01  1.2573000E+00  7.7500000E-01          8      NOPRINT
+1.1871050E+01  8.0000000E-02  1.2573000E+00  6.5100000E-01          9      NOPRINT
+1.3128350E+01  3.0000000E-02  1.2573000E+00  4.9300000E-01         10      NOPRINT
+
+
