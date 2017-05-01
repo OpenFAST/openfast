@@ -1,0 +1,49 @@
+NREL 5.0 MW offshore baseline tower aerodynamic properties for OC3 Tripod.
+Used with AeroDyn 14 tower influence feature.
+  23        NTwrHt              - Number of tower input height stations listed (-)
+  16        NTwrRe              - Number of tower Re values (-)
+   1        NTwrCD              - Number of tower CD columns (-) Note: For current version, this MUST be 1.
+   0.0      Tower_Wake_Constant - Tower wake constant (-) {0.0: full potential flow, 0.1: Bak model}
+---------------------- DISTRIBUTED TOWER PROPERTIES ----------------------------
+TwrHtFr(-) TwrWid(m) NTwrCDCol(must be 1)
+ 0.00000     5.700       1
+ 0.02222     5.700       1
+ 0.04444     5.700       1
+ 0.06667     5.700       1
+ 0.08889     5.700       1
+ 0.11111     5.700       1
+ 0.15000     5.700       1
+ 0.20000     5.700       1
+ 0.25000     5.687       1
+ 0.30556     5.673       1
+ 0.36111     5.658       1
+ 0.41667     5.644       1
+ 0.47222     5.629       1
+ 0.52778     5.615       1
+ 0.58333     5.601       1
+ 0.63889     5.586       1
+ 0.69444     5.572       1
+ 0.75000     5.558       1
+ 0.80556     5.543       1
+ 0.86111     5.529       1
+ 0.91667     5.514       1
+ 0.97333     5.500       1
+ 1.00000     5.500       1
+---------------------- Cd v. Re PROPERTIES -------------------------------------
+ TwrRe  TwrCD
+ 0.010   1.11
+ 0.020   1.20
+ 0.122   1.20
+ 0.200   1.17
+ 0.300   0.90
+ 0.400   0.54
+ 0.500   0.31
+ 1.000   0.38
+ 1.500   0.46
+ 2.000   0.53
+ 2.500   0.57
+ 3.000   0.61
+ 3.500   0.64
+ 4.000   0.67
+ 5.000   0.70
+10.000   0.70

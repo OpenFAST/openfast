@@ -1,0 +1,66 @@
+TurbSim Input File. Valid for TurbSim v1.50; 17-May-2010; Example file that can be used with simulations for the NREL 5MW Baseline Turbine; note that UsableTime has been decreased in this file so that the file distributed with the FAST CertTest isn't as large
+
+---------Runtime Options-----------------------------------
+13428          RandSeed1       - First random seed  (-2147483648 to 2147483647)
+RanLux         RandSeed2       - Second random seed (-2147483648 to 2147483647) for intrinsic pRNG, or an alternative pRNG: "RanLux" or "RNSNLW"
+False          WrBHHTP         - Output hub-height turbulence parameters in binary form?  (Generates RootName.bin)
+False          WrFHHTP         - Output hub-height turbulence parameters in formatted form?  (Generates RootName.dat)
+False          WrADHH          - Output hub-height time-series data in AeroDyn form?  (Generates RootName.hh)
+True           WrADFF          - Output full-field time-series data in TurbSim/AeroDyn form? (Generates RootName.bts)
+False          WrBLFF          - Output full-field time-series data in BLADED/AeroDyn form?  (Generates RootName.wnd)
+True           WrADTWR         - Output tower time-series data? (Generates RootName.twr)
+False          WrFMTFF         - Output full-field time-series data in formatted (readable) form?  (Generates RootName.u, RootName.v, RootName.w)
+False          WrACT           - Output coherent turbulence time steps in AeroDyn form? (Generates RootName.cts)
+True           Clockwise       - Clockwise rotation looking downwind? (used only for full-field binary files - not necessary for AeroDyn)
+0              ScaleIEC        - Scale IEC turbulence models to exact target standard deviation? [0=no additional scaling; 1=use hub scale uniformly; 2=use individual scales]
+
+--------Turbine/Model Specifications-----------------------
+ 31            NumGrid_Z       - Vertical grid-point matrix dimension
+ 31            NumGrid_Y       - Horizontal grid-point matrix dimension
+  0.05         TimeStep        - Time step [seconds]
+630.0          AnalysisTime    - Length of analysis time series [seconds]
+ 60.0          UsableTime      - Usable length of output time series [seconds] (program will add GridWidth/MeanHHWS seconds) [bjj: was 630]
+ 90.0          HubHt           - Hub height [m] (should be > 0.5*GridHeight)
+145.0          GridHeight      - Grid height [m]
+145.0          GridWidth       - Grid width [m] (should be >= 2*(RotorRadius+ShaftLength))
+  0            VFlowAng        - Vertical mean flow (uptilt) angle [degrees]
+  0            HFlowAng        - Horizontal mean flow (skew) angle [degrees]
+
+--------Meteorological Boundary Conditions-------------------
+IECKAI         TurbModel       - Turbulence model ("IECKAI"=Kaimal, "IECVKM"=von Karman, "GP_LLJ", "NWTCUP", "SMOOTH", "WF_UPW", "WF_07D", "WF_14D", or "NONE")
+"1-ed3"        IECstandard     - Number of IEC 61400-x standard (x=1,2, or 3 with optional 61400-1 edition number (i.e. "1-Ed2") )
+"B"            IECturbc        - IEC turbulence characteristic ("A", "B", "C" or the turbulence intensity in percent) ("KHTEST" option with NWTCUP, not used for other models)
+NTM            IEC_WindType    - IEC turbulence type ("NTM"=normal, "xETM"=extreme turbulence, "xEWM1"=extreme 1-year wind, "xEWM50"=extreme 50-year wind, where x=wind turbine class 1, 2, or 3)
+default        ETMc            - IEC Extreme turbulence model "c" parameter [m/s]
+PL             WindProfileType - Wind profile type ("JET"=Low-level jet,"LOG"=Logarithmic,"PL"=Power law, or "default", or "USR"=User-defined)
+ 90.           RefHt           - Height of the reference wind speed [m]
+ 12.0          URef            - Mean (total) wind speed at the reference height [m/s]
+default        ZJetMax         - Jet height [m] (used only for JET wind profile, valid 70-490 m)
+default        PLExp           - Power law exponent [-] (or "default")
+default        Z0              - Surface roughness length [m] (or "default")
+
+--------Non-IEC Meteorological Boundary Conditions------------
+default        Latitude        - Site latitude [degrees] (or "default")
+0.05           RICH_NO         - Gradient Richardson number
+default        UStar           - Friction or shear velocity [m/s] (or "default")
+default        ZI              - Mixing layer depth [m] (or "default")
+default        PC_UW           - Hub mean u'w' Reynolds stress [(m/s)^2] (or "default")
+default        PC_UV           - Hub mean u'v' Reynolds stress [(m/s)^2] (or "default")
+default        PC_VW           - Hub mean v'w' Reynolds stress [(m/s)^2] (or "default")
+default        IncDec1         - u-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
+default        IncDec2         - v-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
+default        IncDec3         - w-component coherence parameters (e.g. "10.0  0.3e-3" in quotes) (or "default")
+default        CohExp          - Coherence exponent (or "default")
+
+--------Coherent Turbulence Scaling Parameters-------------------
+"M:\coh_events\eventdata"  CTEventPath     -   Name of the path where event data files are located
+"Random"       CTEventFile     - Type of event files ("random", "les" or "dns")
+true           Randomize       - Randomize disturbance scale and location? (true/false)
+ 1.0           DistScl         - Disturbance scale (ratio of dataset height to rotor disk).
+ 0.5           CTLy            - Fractional location of tower centerline from right (looking downwind) to left side of the dataset.
+ 0.5           CTLz            - Fractional location of hub height from the bottom of the dataset.
+10.0           CTStartTime     - Minimum start time for coherent structures in RootName.cts [seconds]
+
+==================================================
+NOTE: Do not add or remove any lines in this file!
+==================================================

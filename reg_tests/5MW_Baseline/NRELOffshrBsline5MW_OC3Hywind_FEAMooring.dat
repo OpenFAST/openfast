@@ -1,0 +1,77 @@
+---------------------- FAST MOORING FILE --------------------------------------
+NREL 5.0 MW offshore baseline floating platform input properties for the OC3-Hywind spar-buoy.
+---------------------- SIMULATION CONTROL --------------------------------------
+False         Echo         - Echo input data to <RootName>.ech (flag)
+  default     DT           - Communication interval for module (s)
+      3       NumLines     - Number of lines
+     20       NumElem      - Total number of elements per line
+  default     Gravity      - Gravitational acceleration (m/s^2)
+  default     WtrDens      - Water density (kg/m^3)
+    100       MaxIter      - Maximum number of static iterations
+    1e-4      Eps          - Static iteration tolerance
+---------------------- MOORING LINES 1 -------------------------------------------
+  384.243E6       LEAStiff     - Axial stiffness
+   77.7           LMassDen     - Mass per unit length of the element
+   6.521          LDMassDen    - Displaced mass per unit length of the element
+0  6.47           LineCI       - The inertia force per unit length / unit accel.
+   46.13          LineCD       - The drag force per unit length / unit relative vel squared.
+  902.2           LUnstrLen    - Unstretched length
+    1.0E4         BottmStiff   - Seabed stiffness
+  853.87          LRadAnch
+    0.0           LAngAnch
+  320.0           LDpthAnch
+    5.2           LRadFair
+    0.0           LAngFair
+   70.0           LDrftFair
+ 9E5   4.7E5         Tension      - Initial top tension
+    1.0E10        GSL21        - The linear spring stiffness in x-direction between mooring & platform
+    1.0E10        GSL22        - The linear spring stiffness in y-direction between mooring & platform
+    1.0E10        GSL23        - The linear spring stiffness in z-direction between mooring & platform
+---------------------- MOORING LINES 2 -------------------------------------------
+  384.243E6       LEAStiff     - Axial stiffness
+   77.7           LMassDen     - Mass per unit length of the element
+   6.521          LDMassDen    - Displaced mass per unit length of the element
+0  6.47           LineCI       - The inertia force per unit length / unit accel.
+   46.13          LineCD       - The drag force per unit length / unit relative vel squared.
+  902.2           LUnstrLen    - Unstretched length
+    1.0E4         BottmStiff   - Seabed stiffness
+  853.87          LRadAnch
+  120.0           LAngAnch
+  320.0           LDpthAnch
+    5.2           LRadFair
+  120.0           LAngFair
+   70.0           LDrftFair
+ 9E5   4.7E5         Tension      - Initial top tension
+    1.0E10        GSL21        - The linear spring stiffness in x-direction between mooring & platform
+    1.0E10        GSL22        - The linear spring stiffness in y-direction between mooring & platform
+    1.0E10        GSL23        - The linear spring stiffness in z-direction between mooring & platform
+---------------------- MOORING LINES 3 -------------------------------------------
+  384.243E6       LEAStiff     - Axial stiffness
+   77.7           LMassDen     - Mass per unit length of the element
+   6.521          LDMassDen    - Displaced mass per unit length of the element
+0  6.47           LineCI       - The inertia force per unit length / unit accel.
+   46.13          LineCD       - The drag force per unit length / unit relative vel squared.
+  902.2           LUnstrLen    - Unstretched length
+    1.0E4         BottmStiff   - Seabed stiffness
+  853.87          LRadAnch
+  240.0           LAngAnch
+  320.0           LDpthAnch
+    5.2           LRadFair
+  240.0           LAngFair
+   70.0           LDrftFair
+ 9E5   4.7E5         Tension      - Initial top tension
+    1.0E10        GSL21        - The linear spring stiffness in x-direction between mooring & platform
+    1.0E10        GSL22        - The linear spring stiffness in y-direction between mooring & platform
+    1.0E10        GSL23        - The linear spring stiffness in z-direction between mooring & platform
+---------------------- OUTPUT --------------------------------------------------
+True          SumPrint     - Print summary data to <RootName>.sum (flag) (currently unused)
+          1   OutFile      - Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (currently unused)
+True          TabDelim     - Use tab delimiters in text tabular output file? (flag) (currently unused)
+"ES10.3E2"    OutFmt       - Format used for text tabular output (except time).  Resulting field should be 10 characters. (quoted string) (currently unused)
+          5   TStart       - Time to begin tabular output (s) (currently unused)
+              OutList      - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+"FairT1, AnchT1"
+"FairT2, AnchT2"
+"FairT3, AnchT3"
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------------------------------------------------------------------------

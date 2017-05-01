@@ -1,0 +1,33 @@
+--------------------------------------------------------------------------------
+---------------------- FAST 2 ADAMS PREPROCESSOR, ADAMS-SPECIFIC DATA FILE -----
+NREL 5.0 MW offshore baseline ADAMS-specific input properties.
+---------------------- FEATURE FLAGS -------------------------------------------
+True        SaveGrphcs  - Save GRAPHICS output (flag)
+False       MakeLINacf  - Make an ADAMS/LINEAR control / command file (flag)
+---------------------- DAMPING PARAMETERS --------------------------------------
+   0.01     CRatioTGJ   - Ratio of damping to stiffness for the tower torsion     deflection  (-)
+   0.01     CRatioTEA   - Ratio of damping to stiffness for the tower extensional deflection  (-)
+   0.01     CRatioBGJ   - Ratio of damping to stiffness for the blade torsion     deflections (-)
+   0.01     CRatioBEA   - Ratio of damping to stiffness for the blade extensional deflections (-)
+---------------------- BLADE PITCH ACTUATOR PARAMETERS -------------------------
+ 971.350E6  BPActrSpr   - Blade pitch actuator spring stiffness constant (N-m/rad)
+   0.206E6  BPActrDmp   - Blade pitch actuator damping          constant (N-m/(rad/s))
+---------------------- GRAPHICS PARAMETERS -------------------------------------
+  20        NSides      - Number of sides used in GRAPHICS CYLINDER and FRUSTUM statements (-)
+   3.000    TwrBaseRad  - Tower base radius used for linearly tapered tower GRAPHICS CYLINDERs (m)
+   1.935    TwrTopRad   - Tower top  radius used for linearly tapered tower GRAPHICS CYLINDERs (m)
+   7.0      NacLength   - Length of nacelle used for the nacelle GRAPHICS (m)
+   1.75     NacRadBot   - Bottom (opposite rotor) radius of nacelle FRUSTUM used for the nacelle GRAPHICS (m)
+   1.75     NacRadTop   - Top    (rotor end)      radius of nacelle FRUSTUM used for the nacelle GRAPHICS (m)
+   1.0      GBoxLength  - Length, width, and height of the gearbox BOX for gearbox GRAPHICS (m)
+   2.39     GenLength   - Length of the generator CYLINDER used for generator GRAPHICS (m)
+   1.195    HSSLength   - Length of the high-speed shaft CYLINDER used for HSS GRAPHICS (m)
+   4.78     LSSLength   - Length of the low-speed shaft CYLINDER used for LSS GRAPHICS (m)
+   0.75     GenRad      - Radius of the generator CYLINDER used for generator GRAPHICS (m)
+   0.2      HSSRad      - Radius of the high-speed shaft CYLINDER used for HSS GRAPHICS (m)
+   0.4      LSSRad      - Radius of the low -speed shaft CYLINDER used for LSS GRAPHICS (m)
+   0.875    HubCylRad   - Radius of hub CYLINDER used for hub GRAPHICS (m)
+   0.18     ThkOvrChrd  - Ratio of blade thickness to blade chord used for blade element BOX GRAPHICS (-)
+   0.0      BoomRad     - Radius of the tail boom CYLINDER used for tail boom GRAPHICS (m)
+
+

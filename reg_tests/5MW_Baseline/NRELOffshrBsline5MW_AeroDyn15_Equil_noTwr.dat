@@ -1,0 +1,62 @@
+------- AERODYN v15.03.* INPUT FILE ------------------------------------------------
+NREL 5.0 MW offshore baseline aerodynamic input properties.
+======  General Options  ============================================================================
+False         Echo               - Echo the input to "<rootname>.AD.ech"?  (flag)
+"default"     DTAero             - Time interval for aerodynamic calculations {or "default"} (s)
+          1   WakeMod            - Type of wake/induction model (switch) {0=none, 1=BEMT}
+          2   AFAeroMod          - Type of blade airfoil aerodynamics model (switch) {1=steady model, 2=Beddoes-Leishman unsteady model}
+          0   TwrPotent          - Type tower influence on wind based on potential flow around the tower (switch) {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}
+False         TwrShadow          – Calculate tower influence on wind based on downstream tower shadow? (flag)
+False         TwrAero            - Calculate tower aerodynamic loads? (flag)
+False         FrozenWake         - Assume frozen wake during linearization? (flag) [used only when WakeMod=1 and when linearizing]
+======  Environmental Conditions  ===================================================================
+      1.225   AirDens            - Air density (kg/m^3)
+  1.464E-05   KinVisc            - Kinematic air viscosity (m^2/s)
+        335   SpdSound           - Speed of sound (m/s)
+======  Blade-Element/Momentum Theory Options  ====================================================== [used only when WakeMod=1]
+          2   SkewMod            - Type of skewed-wake correction model (switch) {1=uncoupled, 2=Pitt/Peters, 3=coupled} [used only when WakeMod=1]
+True          TipLoss            - Use the Prandtl tip-loss model? (flag) [used only when WakeMod=1]
+True          HubLoss            - Use the Prandtl hub-loss model? (flag) [used only when WakeMod=1]
+true          TanInd             - Include tangential induction in BEMT calculations? (flag) [used only when WakeMod=1]
+False         AIDrag             - Include the drag term in the axial-induction calculation? (flag) [used only when WakeMod=1]
+False         TIDrag             - Include the drag term in the tangential-induction calculation? (flag) [used only when WakeMod=1 and TanInd=TRUE]
+"Default"     IndToler           - Convergence tolerance for BEMT nonlinear solve residual equation {or "default"} (-) [used only when WakeMod=1]
+        100   MaxIter            - Maximum number of iteration steps (-) [used only when WakeMod=1]
+======  Beddoes-Leishman Unsteady Airfoil Aerodynamics Options  ===================================== [used only when AFAeroMod=2]
+          3   UAMod              - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez’s variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAeroMod=2]
+True          FLookup            - Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files (flag) [used only when AFAeroMod=2]
+======  Airfoil Information =========================================================================
+          1   InCol_Alfa         - The column in the airfoil tables that contains the angle of attack (-)
+          2   InCol_Cl           - The column in the airfoil tables that contains the lift coefficient (-)
+          3   InCol_Cd           - The column in the airfoil tables that contains the drag coefficient (-)
+          4   InCol_Cm           - The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column (-)
+          0   InCol_Cpmin        - The column in the airfoil tables that contains the Cpmin coefficient; use zero if there is no Cpmin column (-)
+          8   NumAFfiles         - Number of airfoil files used (-)
+"Airfoils/Cylinder1.dat"    AFNames            - Airfoil file names (NumAFfiles lines) (quoted strings)
+"Airfoils/Cylinder2.dat"
+"Airfoils/DU40_A17.dat"
+"Airfoils/DU35_A17.dat"
+"Airfoils/DU30_A17.dat"
+"Airfoils/DU25_A17.dat"
+"Airfoils/DU21_A17.dat"
+"Airfoils/NACA64_A17.dat"
+======  Rotor/Blade Properties  =====================================================================
+True          UseBlCm            - Include aerodynamic pitching moment in calculations?  (flag)
+"NRELOffshrBsline5MW_AeroDyn_blade.dat"    ADBlFile(1)        - Name of file containing distributed aerodynamic properties for Blade #1 (-)
+"NRELOffshrBsline5MW_AeroDyn_blade.dat"    ADBlFile(2)        - Name of file containing distributed aerodynamic properties for Blade #2 (-) [unused if NumBl < 2]
+"NRELOffshrBsline5MW_AeroDyn_blade.dat"    ADBlFile(3)        - Name of file containing distributed aerodynamic properties for Blade #3 (-) [unused if NumBl < 3]
+======  Tower Influence and Aerodynamics ============================================================= [used only when TwrPotent/=0, TwrShadow=True, or TwrAero=True]
+          2   NumTwrNds         - Number of tower nodes used in the analysis  (-) [used only when TwrPotent/=0, TwrShadow=True, or TwrAero=True]
+TwrElev        TwrDiam        TwrCd
+(m)              (m)           (-)
+ 0.0            6.0            0.0
+87.600          3.870           0
+======  Outputs  ====================================================================================
+True          SumPrint            - Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?  (flag)
+          0   NBlOuts             - Number of blade node outputs [0 - 9] (-)
+ 1, 9, 19     BlOutNd             - Blade nodes whose values will be output  (-)
+          0   NTwOuts             - Number of tower node outputs [0 - 9]  (-)
+ 1, 2, 3, 4, 5     TwOutNd             - Tower nodes whose values will be output  (-)
+                   OutList             - The next line(s) contains a list of output parameters.  See OutListParameters.xlsx for a listing of available output channels, (-)
+END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+---------------------------------------------------------------------------------------

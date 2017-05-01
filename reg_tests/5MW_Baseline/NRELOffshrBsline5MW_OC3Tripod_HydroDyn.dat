@@ -1,0 +1,269 @@
+------- HydroDyn v2.03.* Input File --------------------------------------------
+NREL 5.0 MW offshore fixed-bottom HydroDyn input properties for the OC3 Tripod.
+FALSE            Echo           - Echo the input file data (flag)
+---------------------- ENVIRONMENTAL CONDITIONS --------------------------------
+          1025   WtrDens        - Water density (kg/m^3)
+            45   WtrDpth        - Water depth (meters)
+             0   MSL2SWL        - Offset between still-water level and mean sea level (meters) [positive upward; unused when WaveMod = 6; must be zero if PotMod=1 or 2]
+---------------------- WAVES ---------------------------------------------------
+"1P0.0"          WaveMod        - Incident wave kinematics model {0: none=still water, 1: regular (periodic), 1P#: regular with user-specified phase, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular), 3: White noise spectrum (irregular), 4: user-defined spectrum from routine UserWaveSpctrm (irregular), 5: Externally generated wave-elevation time series, 6: Externally generated full wave-kinematics time series [option 6 is invalid for PotMod/=0]} (switch)
+             0   WaveStMod      - Model for stretching incident wave kinematics to instantaneous free surface {0: none=no stretching, 1: vertical stretching, 2: extrapolation stretching, 3: Wheeler stretching} (switch) [unused when WaveMod=0 or when PotMod/=0]
+          3630   WaveTMax       - Analysis time for incident wave calculations (sec) [unused when WaveMod=0; determines WaveDOmega=2Pi/WaveTMax in the IFFT]
+          0.25   WaveDT         - Time step for incident wave calculations     (sec) [unused when WaveMod=0; 0.1<=WaveDT<=1.0 recommended; determines WaveOmegaMax=Pi/WaveDT in the IFFT]
+             8   WaveHs         - Significant wave height of incident waves (meters) [used only when WaveMod=1, 2, or 3]
+            10   WaveTp         - Peak-spectral period of incident waves       (sec) [used only when WaveMod=1 or 2]
+"DEFAULT"        WavePkShp      - Peak-shape parameter of incident wave spectrum (-) or DEFAULT (string) [used only when WaveMod=2; use 1.0 for Pierson-Moskowitz]
+             0   WvLowCOff      - Low  cut-off frequency or lower frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s) [unused when WaveMod=0, 1, or 6]
+           500   WvHiCOff       - High cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s) [unused when WaveMod=0, 1, or 6]
+             0   WaveDir        - Incident wave propagation heading direction                         (degrees) [unused when WaveMod=0 or 6]
+             0   WaveDirMod     - Directional spreading function {0: none, 1: COS2S}                  (-)       [only used when WaveMod=2,3, or 4]
+             1   WaveDirSpread  - Wave direction spreading coefficient ( > 0 )                        (-)       [only used when WaveMod=2,3, or 4 and WaveDirMod=1]
+             1   WaveNDir       - Number of wave directions                                           (-)       [only used when WaveMod=2,3, or 4 and WaveDirMod=1; odd number only]
+             0   WaveDirRange   - Range of wave directions (full range: WaveDir +/- 1/2*WaveDirRange) (degrees) [only used when WaveMod=2,3,or 4 and WaveDirMod=1]
+     123456789   WaveSeed(1)    - First  random seed of incident waves [-2147483648 to 2147483647]    (-)       [unused when WaveMod=0, 5, or 6]
+    1011121314   WaveSeed(2)    - Second random seed of incident waves [-2147483648 to 2147483647]    (-)       [unused when WaveMod=0, 5, or 6]
+False            WaveNDAmp      - Flag for normally distributed amplitudes                            (flag)    [only used when WaveMod=2, 3, or 4]
+""               WvKinFile      - Root name of externally generated wave data file(s)        (quoted string)    [used only when WaveMod=5 or 6]
+             1   NWaveElev      - Number of points where the incident wave elevations can be computed (-)       [maximum of 9 output locations]
+             0   WaveElevxi     - List of xi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]
+             0   WaveElevyi     - List of yi-coordinates for points where the incident wave elevations can be output (meters) [NWaveElev points, separated by commas or white space; usused if NWaveElev = 0]
+---------------------- 2ND-ORDER WAVES ----------------------------------------- [unused with WaveMod=0 or 6]
+False            WvDiffQTF      - Full difference-frequency 2nd-order wave kinematics (flag)
+False            WvSumQTF       - Full summation-frequency  2nd-order wave kinematics (flag)
+             0   WvLowCOffD     - Low  frequency cutoff used in the difference-frequencies (rad/s) [Only used with a difference-frequency method]
+           3.5   WvHiCOffD      - High frequency cutoff used in the difference-frequencies (rad/s) [Only used with a difference-frequency method]
+           0.1   WvLowCOffS     - Low  frequency cutoff used in the summation-frequencies  (rad/s) [Only used with a summation-frequency  method]
+           3.5   WvHiCOffS      - High frequency cutoff used in the summation-frequencies  (rad/s) [Only used with a summation-frequency  method]
+---------------------- CURRENT ------------------------------------------------- [unused with WaveMod=6]
+             0   CurrMod        - Current profile model {0: none=no current, 1: standard, 2: user-defined from routine UserCurrent} (switch)
+             0   CurrSSV0       - Sub-surface current velocity at still water level  (m/s) [used only when CurrMod=1]
+"DEFAULT"        CurrSSDir      - Sub-surface current heading direction (degrees) or DEFAULT (string) [used only when CurrMod=1]
+            20   CurrNSRef      - Near-surface current reference depth            (meters) [used only when CurrMod=1]
+             0   CurrNSV0       - Near-surface current velocity at still water level (m/s) [used only when CurrMod=1]
+             0   CurrNSDir      - Near-surface current heading direction         (degrees) [used only when CurrMod=1]
+             0   CurrDIV        - Depth-independent current velocity                 (m/s) [used only when CurrMod=1]
+             0   CurrDIDir      - Depth-independent current heading direction    (degrees) [used only when CurrMod=1]
+---------------------- FLOATING PLATFORM --------------------------------------- [unused with WaveMod=6]
+             0   PotMod         - Potential-flow model {0: none=no potential flow, 1: frequency-to-time-domain transforms based on WAMIT output, 2: fluid-impulse theory (FIT)} (switch)
+"unused"         PotFile        - Root name of potential-flow model data; WAMIT output files containing the linear, nondimensionalized, hydrostatic restoring matrix (.hst), frequency-dependent hydrodynamic added mass matrix and damping matrix (.1), and frequency- and direction-dependent wave excitation force vector per unit wave amplitude (.3) (quoted string) [MAKE SURE THE FREQUENCIES INHERENT IN THESE WAMIT FILES SPAN THE PHYSICALLY-SIGNIFICANT RANGE OF FREQUENCIES FOR THE GIVEN PLATFORM; THEY MUST CONTAIN THE ZERO- AND INFINITE-FREQUENCY LIMITS!]
+             1   WAMITULEN      - Characteristic body length scale used to redimensionalize WAMIT output (meters) [only used when PotMod=1]
+             0   PtfmVol0       - Displaced volume of water when the platform is in its undisplaced position (m^3) [only used when PotMod=1; USE THE SAME VALUE COMPUTED BY WAMIT AS OUTPUT IN THE .OUT FILE!]
+             0   PtfmCOBxt      - The xt offset of the center of buoyancy (COB) from the platform reference point (meters)  [only used when PotMod=1]
+             0   PtfmCOByt      - The yt offset of the center of buoyancy (COB) from the platform reference point (meters)  [only used when PotMod=1]
+             1   RdtnMod        - Radiation memory-effect model {0: no memory-effect calculation, 1: convolution, 2: state-space} (switch) [only used when PotMod=1; STATE-SPACE REQUIRES *.ss INPUT FILE]
+            60   RdtnTMax       - Analysis time for wave radiation kernel calculations (sec) [only used when PotMod=1; determines RdtnDOmega=Pi/RdtnTMax in the cosine transform; MAKE SURE THIS IS LONG ENOUGH FOR THE RADIATION IMPULSE RESPONSE FUNCTIONS TO DECAY TO NEAR-ZERO FOR THE GIVEN PLATFORM!]
+         0.025   RdtnDT         - Time step for wave radiation kernel calculations (sec) [only used when PotMod=1; DT<=RdtnDT<=0.1 recommended; determines RdtnOmegaMax=Pi/RdtnDT in the cosine transform]
+---------------------- 2ND-ORDER FLOATING PLATFORM FORCES ---------------------- [unused with WaveMod=0 or 6, or PotMod=0 or 2]
+             0   MnDrift        - Mean-drift 2nd-order forces computed                                       {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero]
+             0   NewmanApp      - Mean- and slow-drift 2nd-order forces computed with Newman's approximation {0: None; [7, 8, 9, 10, 11, or 12]: WAMIT file to use} [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero. Used only when WaveDirMod=0]
+             0   DiffQTF        - Full difference-frequency 2nd-order forces computed with full QTF          {0: None; [10, 11, or 12]: WAMIT file to use}          [Only one of MnDrift, NewmanApp, or DiffQTF can be non-zero]
+             0   SumQTF         - Full summation -frequency 2nd-order forces computed with full QTF          {0: None; [10, 11, or 12]: WAMIT file to use}
+---------------------- FLOATING PLATFORM FORCE FLAGS  -------------------------- [unused with WaveMod=6]
+True             PtfmSgF        - Platform horizontal surge translation force (flag) or DEFAULT
+True             PtfmSwF        - Platform horizontal sway translation force (flag) or DEFAULT
+True             PtfmHvF        - Platform vertical heave translation force (flag) or DEFAULT
+True             PtfmRF         - Platform roll tilt rotation force (flag) or DEFAULT
+True             PtfmPF         - Platform pitch tilt rotation force (flag) or DEFAULT
+True             PtfmYF         - Platform yaw rotation force (flag) or DEFAULT
+---------------------- PLATFORM ADDITIONAL STIFFNESS AND DAMPING  --------------
+             0             0             0             0             0             0   AddF0    - Additional preload (N, N-m)
+             0             0             0             0             0             0   AddCLin  - Additional linear stiffness (N/m, N/rad, N-m/m, N-m/rad)
+             0             0             0             0             0             0
+             0             0             0             0             0             0
+             0             0             0             0             0             0
+             0             0             0             0             0             0
+             0             0             0             0             0             0
+             0             0             0             0             0             0   AddBLin  - Additional linear damping(N/(m/s), N/(rad/s), N-m/(m/s), N-m/(rad/s))
+             0             0             0             0             0             0
+             0             0        882607             0             0             0
+             0             0             0             0             0             0
+             0             0             0             0             0             0
+             0             0             0             0             0             0
+             0             0             0             0             0             0   AddBQuad - Additional quadratic drag(N/(m/s)^2, N/(rad/s)^2, N-m(m/s)^2, N-m/(rad/s)^2)
+             0             0             0             0             0             0
+             0             0             0             0             0             0
+             0             0             0             0             0             0
+             0             0             0             0             0             0
+             0             0             0             0             0             0
+---------------------- AXIAL COEFFICIENTS --------------------------------------
+             1   NAxCoef        - Number of axial coefficients (-)
+AxCoefID  AxCd     AxCa     AxCp
+   (-)    (-)      (-)      (-)
+    1     1.00     1.00     1.00
+---------------------- MEMBER JOINTS -------------------------------------------
+            55   NJoints        - Number of joints (-)   [must be exactly 0 or at least 2]
+JointID   Jointxi     Jointyi     Jointzi  JointAxID   JointOvrlp   [JointOvrlp= 0: do nothing at joint, 1: eliminate overlaps by calculating super member]
+   (-)     (m)         (m)         (m)        (-)       (switch)
+    1   -24.80250     0.00000   -45.00000      1            0
+    2    12.40125    21.47960   -45.00000      1            0
+    3    12.40125   -21.47960   -45.00000      1            0
+    4   -24.80250     0.00000   -42.97930      1            0
+    5    12.40125    21.47960   -42.97930      1            0
+    6    12.40125   -21.47960   -42.97930      1            0
+    7   -24.80250     0.00000   -41.14260      1            0
+    8    12.40125    21.47960   -41.14260      1            0
+    9    12.40125   -21.47960   -41.14260      1            0
+   10   -24.80250     0.00000   -39.30610      1            0
+   11    12.40125    21.47960   -39.30610      1            0
+   12    12.40125   -21.47960   -39.30610      1            0
+   13    -6.20062    10.73980   -42.97930      1            0
+   14    12.40125     0.00000   -42.97930      1            0
+   15    -6.20062   -10.73980   -42.97930      1            0
+   16   -12.40125     0.00000   -36.66545      1            0
+   17     6.20062    10.73980   -36.66545      1            0
+   18     6.20062   -10.73980   -36.66545      1            0
+   19   -12.40172     0.00000   -19.65380      1            0
+   20     6.20086    10.74021   -19.65380      1            0
+   21     6.20086   -10.74021   -19.65380      1            0
+   22   -24.80250     0.00000   -34.07060      1            0
+   23    12.40125    21.47960   -34.07060      1            0
+   24    12.40125   -21.47960   -34.07060      1            0
+   25     0.00000     0.00000   -34.71330      1            0
+   26    -6.31009     0.00000   -10.00000      1            0
+   27     3.15504     5.46470   -10.00000      1            0
+   28     3.15504    -5.46470   -10.00000      1            0
+   29    -5.04807     0.00000    -8.00000      1            0
+   30     2.52404     4.37176    -8.00000      1            0
+   31     2.52404    -4.37176    -8.00000      1            0
+   32    -3.78605     0.00000    -6.00000      1            0
+   33     1.89303     3.27882    -6.00000      1            0
+   34     1.89303    -3.27882    -6.00000      1            0
+   35    -2.52404     0.00000    -4.00000      1            0
+   36     1.26202     2.18588    -4.00000      1            0
+   37     1.26202    -2.18588    -4.00000      1            0
+   38    -1.26202     0.00000    -2.00000      1            0
+   39     0.63101     1.09294    -2.00000      1            0
+   40     0.63101    -1.09294    -2.00000      1            0
+   41     0.00000     0.00000   -32.18830      1            0
+   42     0.00000     0.00000   -10.00000      1            0
+   43     0.00000     0.00000    -8.00000      1            0
+   44     0.00000     0.00000    -6.00000      1            0
+   45     0.00000     0.00000    -4.00000      1            0
+   46     0.00000     0.00000    -2.00000      1            0
+   47     0.00000     0.00000     0.00000      1            0
+   48     0.00000     0.00000     2.00000      1            0
+   49     0.00000     0.00000     4.00000      1            0
+   50     0.00000     0.00000     6.00000      1            0
+   51     0.00000     0.00000     8.00000      1            0
+   52     0.00000     0.00000    10.00000      1            0
+   53   -24.80250     0.00000   -50.00000      1            0
+   54    12.40125    21.47960   -50.00000      1            0
+   55    12.40125   -21.47960   -50.00000      1            0
+---------------------- MEMBER CROSS-SECTION PROPERTIES -------------------------
+             8   NPropSets      - Number of member property sets (-)
+PropSetID    PropD         PropThck
+   (-)        (m)            (m)
+    1        3.15000        0.03500
+    2        3.15000        0.04500
+    3        1.87500        0.02500
+    4        2.47500        0.03500
+    5        1.20000        0.02500
+    6        3.14188        0.05000
+    7        3.40000        0.05000
+    8        5.70000        0.05000
+---------------------- SIMPLE HYDRODYNAMIC COEFFICIENTS (model 1) --------------
+     SimplCd    SimplCdMG    SimplCa    SimplCaMG    SimplCp    SimplCpMG   SimplAxCa  SimplAxCaMG  SimplAxCp   SimplAxCpMG
+       (-)         (-)         (-)         (-)         (-)         (-)         (-)         (-)         (-)         (-)
+       1.00        0.00        1.00        0.00        1.00        0.00        1.00        0.00        1.00        0.00 
+---------------------- DEPTH-BASED HYDRODYNAMIC COEFFICIENTS (model 2) ---------
+             0   NCoefDpth       - Number of depth-dependent coefficients (-)
+Dpth      DpthCd   DpthCdMG   DpthCa   DpthCaMG       DpthCp   DpthCpMG   DpthAxCa   DpthAxCaMG       DpthAxCp   DpthAxCpMG
+(m)       (-)      (-)        (-)      (-)            (-)      (-)          (-)        (-)              (-)         (-)
+---------------------- MEMBER-BASED HYDRODYNAMIC COEFFICIENTS (model 3) --------
+             0   NCoefMembers       - Number of member-based coefficients (-)
+MemberID    MemberCd1     MemberCd2    MemberCdMG1   MemberCdMG2    MemberCa1     MemberCa2    MemberCaMG1   MemberCaMG2    MemberCp1     MemberCp2    MemberCpMG1   MemberCpMG2   MemberAxCa1   MemberAxCa2  MemberAxCaMG1 MemberAxCaMG2  MemberAxCp1  MemberAxCp2   MemberAxCpMG1   MemberAxCpMG2
+   (-)         (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)           (-)
+-------------------- MEMBERS -------------------------------------------------
+            60   NMembers       - Number of members (-)
+MemberID  MJointID1  MJointID2  MPropSetID1  MPropSetID2  MDivSize   MCoefMod  PropPot   [MCoefMod=1: use simple coeff table, 2: use depth-based coeff table, 3: use member-based coeff table] [ PropPot/=0 if member is modeled with potential-flow theory]
+  (-)        (-)        (-)         (-)          (-)        (m)      (switch)   (flag)
+    1         1          4           1            1         1.0000      1        FALSE
+    2         2          5           1            1         1.0000      1        FALSE
+    3         3          6           1            1         1.0000      1        FALSE
+    4         4          7           2            2         1.0000      1        FALSE
+    5         5          8           2            2         1.0000      1        FALSE
+    6         6          9           2            2         1.0000      1        FALSE
+    7         7         10           2            2         1.0000      1        FALSE
+    8         8         11           2            2         1.0000      1        FALSE
+    9         9         12           2            2         1.0000      1        FALSE
+   10        10         22           2            2         1.0000      1        FALSE
+   11        11         23           2            2         1.0000      1        FALSE
+   12        12         24           2            2         1.0000      1        FALSE
+   13         7         16           3            3         1.0000      1        FALSE
+   14        16         41           3            3         1.0000      1        FALSE
+   15         8         17           3            3         1.0000      1        FALSE
+   16        17         41           3            3         1.0000      1        FALSE
+   17         9         18           3            3         1.0000      1        FALSE
+   18        18         41           3            3         1.0000      1        FALSE
+   19        10         19           4            4         1.0000      1        FALSE
+   20        19         26           4            4         1.0000      1        FALSE
+   21        11         20           4            4         1.0000      1        FALSE
+   22        20         27           4            4         1.0000      1        FALSE
+   23        12         21           4            4         1.0000      1        FALSE
+   24        21         28           4            4         1.0000      1        FALSE
+   25        26         29           4            4         1.0000      1        FALSE
+   26        29         32           4            4         1.0000      1        FALSE
+   27        32         35           4            4         1.0000      1        FALSE
+   28        35         38           4            4         1.0000      1        FALSE
+   29        38         47           4            4         1.0000      1        FALSE
+   30        27         30           4            4         1.0000      1        FALSE
+   31        30         33           4            4         1.0000      1        FALSE
+   32        33         36           4            4         1.0000      1        FALSE
+   33        36         39           4            4         1.0000      1        FALSE
+   34        39         47           4            4         1.0000      1        FALSE
+   35        28         31           4            4         1.0000      1        FALSE
+   36        31         34           4            4         1.0000      1        FALSE
+   37        34         37           4            4         1.0000      1        FALSE
+   38        37         40           4            4         1.0000      1        FALSE
+   39        40         47           4            4         1.0000      1        FALSE
+   40         4         13           5            5         1.0000      1        FALSE
+   41        13          5           5            5         1.0000      1        FALSE
+   42         5         14           5            5         1.0000      1        FALSE
+   43        14          6           5            5         1.0000      1        FALSE
+   44         6         15           5            5         1.0000      1        FALSE
+   45        15          4           5            5         1.0000      1        FALSE
+   46        25         41           6            7         1.0000      1        FALSE
+   47        41         42           7            8         1.0000      1        FALSE
+   48        42         43           8            8         1.0000      1        FALSE
+   49        43         44           8            8         1.0000      1        FALSE
+   50        44         45           8            8         1.0000      1        FALSE
+   51        45         46           8            8         1.0000      1        FALSE
+   52        46         47           8            8         1.0000      1        FALSE
+   53        47         48           8            8         1.0000      1        FALSE
+   54        48         49           8            8         1.0000      1        FALSE
+   55        49         50           8            8         1.0000      1        FALSE
+   56        50         51           8            8         1.0000      1        FALSE
+   57        51         52           8            8         1.0000      1        FALSE
+   58        53          1           1            1         1.0000      1        FALSE
+   59        54          2           1            1         1.0000      1        FALSE
+   60        55          3           1            1         1.0000      1        FALSE
+---------------------- FILLED MEMBERS ------------------------------------------
+             0   NFillGroups     - Number of filled member groups (-) [If FillDens = DEFAULT, then FillDens = WtrDens; FillFSLoc is related to MSL2SWL]
+FillNumM FillMList             FillFSLoc     FillDens
+(-)      (-)                   (m)           (kg/m^3)
+---------------------- MARINE GROWTH -------------------------------------------
+             0   NMGDepths      - Number of marine-growth depths specified (-)
+MGDpth     MGThck       MGDens
+(m)        (m)         (kg/m^3)
+---------------------- MEMBER OUTPUT LIST --------------------------------------
+             1   NMOutputs      - Number of member outputs (-) [must be < 10]
+MemberID   NOutLoc    NodeLocs [NOutLoc < 10; node locations are normalized distance from the start of the member, and must be >=0 and <= 1] [unused if NMOutputs=0]
+  (-)        (-)        (-)
+   19          1        1.000
+---------------------- JOINT OUTPUT LIST ---------------------------------------
+             0   NJOutputs      - Number of joint outputs [Must be < 10]
+   0           JOutLst        - List of JointIDs which are to be output (-)[unused if NJOutputs=0]
+---------------------- OUTPUT --------------------------------------------------
+True             HDSum          - Output a summary file [flag]
+False            OutAll         - Output all user-specified member and joint loads (only at each member end, not interior locations) [flag]
+             2   OutSwtch       - Output requested channels to: [1=Hydrodyn.out, 2=GlueCode.out, 3=both files]
+"ES11.4e2"       OutFmt         - Output format for numerical results (quoted string) [not checked for validity!]
+"A11"            OutSFmt        - Output format for header strings (quoted string) [not checked for validity!]
+---------------------- OUTPUT CHANNELS -----------------------------------------
+"Wave1Elev"               - Wave elevation at (  0,  0)
+"M1N1Vxi,    M1N1Vzi"     - Longitudinal and vertical wave particle velocities at output joint 1 == mesh node 19
+"M1N1Axi,    M1N1Azi"     - Longitudinal and vertical wave particle accelerations at output joint 1 == mesh node 19
+"M1N1FDxi,   M1N1FDzi"    - Viscous drag loads at member 19, mesh node 19
+"M1N1FIxi,   M1N1FIzi"    - Inertia loads at member 19, mesh node 19
+"M1N1FAxi,   M1N1FAzi"    - Added mass loads at member 19, mesh node 19
+END of output channels and end of file. (the word "END" must appear in the first 3 columns of this line)

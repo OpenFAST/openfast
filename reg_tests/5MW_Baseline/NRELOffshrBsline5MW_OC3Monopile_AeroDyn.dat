@@ -1,0 +1,47 @@
+--------- AeroDyn v14.04.* INPUT FILE -------------------------------------------------------------------------
+NREL 5.0 MW offshore baseline aerodynamic input properties, with OC3 Monopile tower
+"BEDDOES"     StallMod     - Dynamic stall included [BEDDOES or STEADY] (unquoted string)
+"USE_CM"      UseCm        - Use aerodynamic pitching moment model? [USE_CM or NO_CM] (unquoted string)
+"EQUIL"       InfModel     - Inflow model [DYNIN or EQUIL] (unquoted string)
+"SWIRL"       IndModel     - Induction-factor model [NONE or WAKE or SWIRL] (unquoted string)
+      0.005   AToler       - Induction-factor tolerance (convergence criteria) (-)
+"PRANDtl"     TLModel      - Tip-loss model (EQUIL only) [PRANDtl, GTECH, or NONE] (unquoted string)
+"PRANDtl"     HLModel      - Hub-loss model (EQUIL only) [PRANdtl or NONE] (unquoted string)
+"NEWTOWER"    TwrShad        - INSTEAD OF:   0.0      TwrShad     - Tower-shadow velocity deficit (-)
+True          TwrPotent      - Calculate tower potential flow (flag)  INSTEAD OF  9999.9      ShadHWid    - Tower-shadow half width (m)
+False         TwrShadow      - Calculate tower shadow (flag)          INSTEAD OF  9999.9      T_Shad_Refpt- Tower-shadow reference point (m)
+"NRELOffshrBsline5MW_OC3Monopile_AeroDyn_Tower.dat"    TwrFile        - Tower drag file name (quoted string)
+True          CalcTwrAero    - Calculate aerodynamic drag of the tower at the ElastoDyn nodes.  TwrPotent must be true.
+      1.225   AirDens        - Air density (kg/m^3)
+  1.464E-05   KinVisc      - Kinematic air viscosity [CURRENTLY IGNORED] (m^2/sec)
+"default"     DTAero       - Time interval for aerodynamic calculations (sec)
+          8   NumFoil      - Number of airfoil files (-)
+"AeroData/Cylinder1.dat"    FoilNm      - Names of the airfoil files [NumFoil lines] (quoted strings)
+"AeroData/Cylinder2.dat"
+"AeroData/DU40_A17.dat"
+"AeroData/DU35_A17.dat"
+"AeroData/DU30_A17.dat"
+"AeroData/DU25_A17.dat"
+"AeroData/DU21_A17.dat"
+"AeroData/NACA64_A17.dat"
+         17   BldNodes    - Number of blade nodes used for analysis (-)
+RNodes         AeroTwst       DRNodes        Chord          NFoil          PrnElm
+2.8667000E+00  1.3308000E+01  2.7333000E+00  3.5420000E+00          1      NOPRINT 
+5.6000000E+00  1.3308000E+01  2.7333000E+00  3.8540000E+00          1      NOPRINT 
+8.3333000E+00  1.3308000E+01  2.7333000E+00  4.1670000E+00          2      NOPRINT 
+1.1750000E+01  1.3308000E+01  4.1000000E+00  4.5570000E+00          3      NOPRINT 
+1.5850000E+01  1.1480000E+01  4.1000000E+00  4.6520000E+00          4      NOPRINT 
+1.9950000E+01  1.0162000E+01  4.1000000E+00  4.4580000E+00          4      NOPRINT 
+2.4050000E+01  9.0110000E+00  4.1000000E+00  4.2490000E+00          5      NOPRINT 
+2.8150000E+01  7.7950000E+00  4.1000000E+00  4.0070000E+00          6      NOPRINT 
+3.2250000E+01  6.5440000E+00  4.1000000E+00  3.7480000E+00          6      NOPRINT 
+3.6350000E+01  5.3610000E+00  4.1000000E+00  3.5020000E+00          7      NOPRINT 
+4.0450000E+01  4.1880000E+00  4.1000000E+00  3.2560000E+00          7      NOPRINT 
+4.4550000E+01  3.1250000E+00  4.1000000E+00  3.0100000E+00          8      NOPRINT 
+4.8650000E+01  2.3190000E+00  4.1000000E+00  2.7640000E+00          8      NOPRINT 
+5.2750000E+01  1.5260000E+00  4.1000000E+00  2.5180000E+00          8      NOPRINT 
+5.6166700E+01  8.6300000E-01  2.7333000E+00  2.3130000E+00          8      NOPRINT 
+5.8900000E+01  3.7000000E-01  2.7333000E+00  2.0860000E+00          8      NOPRINT 
+6.1633300E+01  1.0600000E-01  2.7333000E+00  1.4190000E+00          8      NOPRINT 
+
+
