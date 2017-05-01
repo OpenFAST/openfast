@@ -5,11 +5,8 @@ import sys, os
 if __name__=="__main__":
     fin1 = sys.argv[1]
     fin2 = sys.argv[2]
+    maxTol = sys.argv[3]
 
-    print(fin1)
-    print(fin2)
-
-    maxTol = 1e-10;
     try:
         d1, i1 = fast_io.load_binary_output(fin1)
     except:

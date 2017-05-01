@@ -2,15 +2,16 @@
 
 determine_pass_fail() {
   diffAnywhere=0
-  logFileName=$1
-  goldLogFileName=$2
+  testSolution=$1
+  truthSolution=$2
+  tolerance=$3
 
-  if [ ! -f ${logFileName} ]; then
+  if [ ! -f $testSolution ]; then
     diffAnywhere=1
-  elif [ ! -f ${goldLogFileName} ]; then
+  elif [ ! -f $truthSolution ]; then
     diffAnywhere=1
   else
-    python `pwd`/../../reg_tests/compareTwoFASTruns.py $logFileName $goldLogFileName
+    python `pwd`/../../reg_tests/compareTwoFASTruns.py $testSolution $truthSolution $tolerance
     if [ $? -ne 0 ]; then
       diffAnywhere=1
     fi
@@ -22,15 +23,14 @@ main() {
   testName=$1
   testSolution=$2
   truthSolution=`pwd`/../../reg_tests/test_files/$testName/$testName.outb
+  tolerance=$3
 
-  determine_pass_fail $testSolution $truthSolution
+  determine_pass_fail $testSolution $truthSolution $tolerance
   passStatus="$?"
 
   if [ ${passStatus} -eq 0 ]; then
-    echo -e "..${testName}........... PASSED":" " ${performanceTime} " s"
     exit 0
   else
-    echo -e "..${testName}........... FAILED":" " ${performanceTime} " s" " max diff: " ${maxSolutionDiff}
     exit 1
   fi
 }
