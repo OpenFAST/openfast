@@ -31,7 +31,7 @@ endif()
 
 message("-- Using test tolerance of ${TOLERANCE} --")
 
-# Create symlinks to mesh and xml directories
+# Create symlinks to CertTest required data directories
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink
   ${CMAKE_CURRENT_SOURCE_DIR}/5MW_Baseline
