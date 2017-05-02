@@ -1,7 +1,7 @@
 ------- FAST v8.17.* INPUT FILE ------------------------------------------------
 FAST Certification Test #02: AWT-27CR2 with many DOFs with startup and shutdown and steady wind
 ---------------------- SIMULATION CONTROL --------------------------------------
-True         Echo            - Echo input data to <RootName>.ech (flag)
+False         Echo            - Echo input data to <RootName>.ech (flag)
 "FATAL"       AbortLevel      - Error level when simulation should abort (string) {"WARNING", "SEVERE", "FATAL"}
          20   TMax            - Total run time (s)
       0.004   DT              - Recommended module time step (s)
