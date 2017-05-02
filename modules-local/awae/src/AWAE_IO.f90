@@ -38,8 +38,9 @@ MODULE AWAE_IO
    contains
 
 
-subroutine WriteDisWindFiles( n, p, y, m, errStat, errMsg )
+subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
    integer(IntKi),             intent(in   ) :: n            !<  Low-resolution time step increment
+   integer(IntKi),             intent(in   ) :: WrDisSkp1    !<  Number of low resolution time step increments per one output increment
    type(AWAE_ParameterType),   intent(in   ) :: p            !< Parameters
    type(AWAE_OutputType),   intent(in   ) :: y            !< Outputs
    type(AWAE_MiscVarType),     intent(inout) :: m            !< Misc/optimization variables
@@ -54,7 +55,7 @@ subroutine WriteDisWindFiles( n, p, y, m, errStat, errMsg )
    INTEGER(IntKi)                          :: nt, n_high 
    
 
-   FileName = trim(p%OutFileRoot)//".Low.Dis.t"//trim(num2lstr(n))//".vtk"
+   FileName = trim(p%OutFileRoot)//".Low.Dis.t"//trim(num2lstr(nint(n/WrDisSkp1)))//".vtk"
    call WrVTK_SP_header( FileName, "Low resolution disturbed wind for low-resolution timestep "//trim(num2lstr(n)), Un, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -66,7 +67,7 @@ subroutine WriteDisWindFiles( n, p, y, m, errStat, errMsg )
        ! We are only writing out the first of the high res data for a given low res time step
       n_high = p%n_high_low*n
      
-      FileName = trim(p%OutFileRoot)//".HighT"//trim(num2lstr(nt))//".Dis.t"//trim(num2lstr(n_high))//".vtk"
+      FileName = trim(p%OutFileRoot)//".HighT"//trim(num2lstr(nt))//".Dis.t"//trim(num2lstr(nint(n/WrDisSkp1)))//".vtk"
       call WrVTK_SP_header( FileName, "High resolution disturbed wind for high-resolution timestep "//trim(num2lstr(n_high)), Un, errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return

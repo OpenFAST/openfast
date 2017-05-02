@@ -579,8 +579,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    InitOut%Ver = AWAE_Ver
    
       ! Test the request output wind locations against grid information
-   if (p%WrDisWind) then
-     
+   
          ! XY plane slices
       do i = 1,p%NOutDisWindXY        
          gridLoc = (p%OutDisWindZ(i) - p%Z0_low) / p%dZ_low
@@ -608,7 +607,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          call Cleanup() 
          return
       end if
-   end if
+  
    
    !interval = InitOut%dt
    
@@ -893,18 +892,19 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
       if (errStat2 >= AbortErrLev) then 
             return
       end if
-! TODO: Make a skipFactor in the input file and use that factor instead of a hardcoded factor
+! TODO: Should we introduce another parameter which indicates whether we are even generating any of the following outputs?
+!       i.e., p%NOutDisWindXY > 0 .or. p%NOutDisWindXZ > 0 .or. p%NOutDisWindYZ > 0 .or. p%WrDisWind
    if (mod(n,p%WrDisSkp1) == 0) then
-   if ( p%WrDisWind  ) then
-      call WriteDisWindFiles( n, p, y, m, ErrStat2, ErrMsg2 )
-   end if
+      if ( p%WrDisWind  ) then
+         call WriteDisWindFiles( n, p%WrDisSkp1, p, y, m, ErrStat2, ErrMsg2 )
+      end if
    
-      ! XY plane slices
-   do k = 1,p%NOutDisWindXY
+         ! XY plane slices
+      do k = 1,p%NOutDisWindXY
       
          call ExtractSlice( XYSlice, p%OutDisWindZ(k), p%Z0_low, p%nZ_low, p%nX_low, p%nY_low, p%dZ_low, m%Vdist_low, m%outVizXYPlane(:,:,:,1))        
-            ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n>.vtk
-         FileName = trim(p%OutFileRoot)//".Low.DisXY"//trim(num2lstr(k))//".t"//trim(num2lstr(n/p%WrDisSkp1))//".vtk"
+            ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n/p%WrDisSkp1>.vtk
+         FileName = trim(p%OutFileRoot)//".Low.DisXY"//trim(num2lstr(k))//".t"//trim(num2lstr(nint(n/p%WrDisSkp1)))//".vtk"
          call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XY Slice at Z= "//trim(num2lstr(p%OutDisWindZ(k))), Un, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
@@ -917,8 +917,8 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          ! YZ plane slices
       do k = 1,p%NOutDisWindYZ
          call ExtractSlice( YZSlice, p%OutDisWindX(k), p%X0_low, p%nX_low, p%nY_low, p%nZ_low, p%dX_low, m%Vdist_low, m%outVizYZPlane(:,:,:,1))        
-            ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n>.vtk
-         FileName = trim(p%OutFileRoot)//".Low.DisYZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n/p%WrDisSkp1))//".vtk"
+            ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n/p%WrDisSkp1>.vtk
+         FileName = trim(p%OutFileRoot)//".Low.DisYZ"//trim(num2lstr(k))//".t"//trim(num2lstr(nint(n/p%WrDisSkp1)))//".vtk"
          call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of YZ Slice at X= "//trim(num2lstr(p%OutDisWindX(k))), Un, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
@@ -930,8 +930,8 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
          ! XZ plane slices
       do k = 1,p%NOutDisWindXZ
          call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low, m%outVizXZPlane(:,:,:,1))        
-            ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n>.vtk
-         FileName = trim(p%OutFileRoot)//".Low.DisXZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n/p%WrDisSkp1))//".vtk"
+            ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n/p%WrDisSkp1>.vtk
+         FileName = trim(p%OutFileRoot)//".Low.DisXZ"//trim(num2lstr(k))//".t"//trim(num2lstr(nint(n/p%WrDisSkp1)))//".vtk"
          call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at Y= "//trim(num2lstr(p%OutDisWindY(k))), Un, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
