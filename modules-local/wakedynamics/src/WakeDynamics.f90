@@ -597,7 +597,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
       ! We are going to update Vx_Wake
       ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1]
-   do i = p%NumPlanes-1, 1, -1  
+   do i = min(n+2,p%NumPlanes-1), 1, -1  
       
       lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
 
@@ -609,7 +609,12 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       V_planeDT(1)            =  u%V_plane   (1,i-1)*p%DT
       V_planeDT(2)            =  u%V_plane   (2,i-1)*p%DT
       V_planeDT(3)            =  u%V_plane   (3,i-1)*p%DT
-      dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT)
+      if ( (i==(n+2)) .and. (n < p%NumPlanes-2) ) then
+         dx = xd%Vx_wind_disk_filt(i-1)*p%DT
+      else
+         dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT)
+      end if
+      
       if ( EqualRealNos(dx, 0.0_ReKi) .or. dx < 0.0_ReKi) then
          ! TEST: E2
          call SetErrStat(ErrID_FATAL, 'Downwind advection speed of a wake plane is not positive, i.e., dot_product(xd%xhat_plane(:,i-1),V_planeDT)<= 0', errStat, errMsg, RoutineName)   
@@ -671,9 +676,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       end do ! j = 1,p%NumRadii-1
    
          ! Update these states to [n+1]
-      
-      
-      xd%x_plane     (i) = xd%x_plane    (i-1) + dx   ! dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT), where V_planeDT is V_plane(:,i-1)*p*DT
+
+      xd%x_plane     (i) = xd%x_plane    (i-1) + dx   ! dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT), where V_planeDT is V_plane(:,i-1)*p*DT,  for i<>n+2 or n>= NumPlanes-2   
       xd%YawErr_filt (i) = xd%YawErr_filt(i-1)
       xd%xhat_plane(:,i) = xd%xhat_plane(:,i-1)
       
@@ -686,9 +690,12 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
             call Cleanup()
             return
          end if
-      
-      xd%p_plane        (:,i) = xd%p_plane(:,i-1) + V_planeDT + dy_HWkDfl    
-      
+      if ( (i==(n+2)) .and. (n < p%NumPlanes-2) ) then
+         xd%p_plane        (:,i) = xd%p_plane(:,i-1) + dx*xd%xhat_plane(:,i-1) + dy_HWkDfl    
+      else        
+         xd%p_plane        (:,i) = xd%p_plane(:,i-1) + V_planeDT + dy_HWkDfl    
+      end if
+         
       xd%Vx_wind_disk_filt(i) = xd%Vx_wind_disk_filt(i-1)
       xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)
       xd%D_rotor_filt     (i) = xd%D_rotor_filt(i-1)
@@ -707,7 +714,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
             !  Vx_wake is for the                         [n+1]       ,      [n+1]        ,      [n]          , and    [n]        increments             
                          - real(2*j-1,ReKi)*p%dr * (  xd%Vx_wake(j,i) + xd%Vx_wake(j-1,i) - xd%Vx_wake(j,i-1) - xd%Vx_wake(j-1,i-1)  ) / ( real(4*j,ReKi) * dx )
       end do  
-   end do ! i = 1,p%NumPlanes-1 
+   end do ! i = 1,min(n+2,p%NumPlanes-1) 
  
       ! Update states at disk-plane to [n+1] 
       
@@ -752,7 +759,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
    
 ! TODO: This is a new 3D wake plane crossing check and I'm not sure this is the most efficient implemenation.
-   do i = 1,p%NumPlanes-1
+   do i = 1,min(n+2,p%NumPlanes-1)
       if ( xd%x_plane(i) - xd%x_plane(i-1) <= 0.0_ReKi ) then
          call SetErrStat(ErrID_FATAL, 'In a 1D sense, wake plane '//trim(num2lstr(i-1))//' is further downstream than wake plane '//trim(num2lstr(i)), errStat, errMsg, RoutineName)   
          call Cleanup()
@@ -855,7 +862,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 
 
    integer, parameter                           :: indx = 1  
-   integer(intKi)                               :: i, j
+   integer(intKi)                               :: n, i, j
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'WD_CalcOutput'
@@ -864,7 +871,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    errStat = ErrID_None
    errMsg  = ""
 
-   
+   n = nint(t/p%DT)
    
       ! Check if we are fully initialized
    if ( OtherState%firstPass ) then
@@ -876,7 +883,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       xydisknorm = TwoNorm(xxdisk + yydisk)
       tmp_xhat_disk = ( xxdisk + yydisk ) / xydisknorm
        
-      do i = 0, p%NumPlanes - 1
+      do i = 0, min(n+1,p%NumPlanes-1)
          x_plane = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
        
          correction = GetYawCorrection(u%YawErr, u%xhat_disk, x_plane, p,  errStat2, errMsg2)
@@ -922,7 +929,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       y%xhat_plane = xd%xhat_plane
       y%Vx_wake    = xd%Vx_wake
       y%Vr_wake    = xd%Vr_wake
-      do i = 0, p%NumPlanes - 1
+      do i = 0, min(n+1,p%NumPlanes-1)
          
          y%D_wake(i)  =  WakeDiam( p%Mod_WakeDiam, p%NumRadii, p%dr, p%r, xd%Vx_wake(:,i), xd%Vx_wind_disk_filt(i), xd%D_rotor_filt(i), p%C_WakeDiam)
          if ( y%p_plane     (3,i) < 0.0_ReKi ) then
@@ -1031,7 +1038,7 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, errStat, errMsg)
    xydisknorm = TwoNorm(xxdisk + yydisk)
    tmp_xhat_disk = ( xxdisk + yydisk ) / xydisknorm   
    
-   do i = 0, numPlanes - 1
+   do i = 0, 1
       xd%x_plane     (i)   = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
       xd%YawErr_filt (i)   = u%YawErr
       
@@ -1264,14 +1271,14 @@ subroutine WD_TEST_UpdateStates(errStat, errMsg)
    
    type(WD_InitOutputType)      :: initOut                         !< Input data for initialization routine
    
-   integer(IntKi)  :: i
+   integer(IntKi)  :: i,n
    real(DbKi) :: t
    
       ! Set up the initialization inputs
    call WD_TEST_SetGoodInitInpData(interval, InitInp)
 
    call WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, interval, InitOut, errStat, errMsg )
-   
+   n = 0
       ! Set up the inputs
    u%xhat_disk(1) = 1.0_ReKi
    u%xhat_disk(2) = 0.0_ReKi
@@ -1279,7 +1286,7 @@ subroutine WD_TEST_UpdateStates(errStat, errMsg)
    u%p_hub(1)     = 10.0_ReKi
    u%p_hub(2)     = 20.0_ReKi
    u%p_hub(3)     = 50.0_ReKi
-   do i=0,p%NumPlanes-1
+   do i=0,min(n+1,p%NumPlanes-1)
       u%V_plane(1,i)  = 5 + .5*i
       u%V_plane(2,i)  = 1 + .1*i
       u%V_plane(3,i)  = 1 + .3*i

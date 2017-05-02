@@ -91,14 +91,21 @@ typedef   ^ MiscVarType    IntKi    N_wind       {:}{:}    - -  "Number of grid 
 typedef   ^ MiscVarType    ReKi     xhat_plane   {:}{:} - -  "Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain" -
 #typedef  ^ MiscVarType    ReKi     r_plane      {:}{:}       - - "" m
 typedef   ^ MiscVarType    ReKi     rhat_plane   {:}{:}    - -  "" -
+typedef   ^ MiscVarType    Logical  parallelFlag   {:}{:}    - -  "" -
+typedef   ^ MiscVarType    ReKi     r_s   {:}{:}    - -  "" -
+typedef   ^ MiscVarType    ReKi     r_e   {:}{:}    - -  "" -
+typedef   ^ MiscVarType    ReKi     rhat_s   {:}{:}{:}    - -  "" -
+typedef   ^ MiscVarType    ReKi     rhat_e   {:}{:}{:}    - -  "" -
+typedef   ^ MiscVarType    ReKi     phat_cs   {:}{:}{:}    - -  "" -
+typedef   ^ MiscVarType    ReKi     phat_ce   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     Vx_wake      {:}       - - "" m/s
 typedef   ^ MiscVarType    ReKi     Vr_wake      {:}       - - "" m/s
 typedef   ^ MiscVarType    IntKi    nx_wind      {:}{:}{:}    - - "" -     
 typedef   ^ MiscVarType    IntKi    ny_wind      {:}{:}{:}    - - "" -     
 typedef   ^ MiscVarType    IntKi    nz_wind      {:}{:}{:}    - - "" -     
-typedef	^	MiscVarType	   ReKi	   outVizXYPlane  {:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
-typedef	^	MiscVarType	   ReKi	   outVizYZPlane  {:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
-typedef	^	MiscVarType	   ReKi	   outVizXZPlane  {:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
+typedef	^	MiscVarType	   ReKi	   outVizXYPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
+typedef	^	MiscVarType	   ReKi	   outVizYZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
+typedef	^	MiscVarType	   ReKi	   outVizXZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
  
 
 # ..... Parameters ................................................................................................................

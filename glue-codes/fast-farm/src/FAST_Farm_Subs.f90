@@ -41,7 +41,8 @@ MODULE FAST_Farm_Subs
    integer, parameter :: maxOutputPoints = 9
    
    CONTAINS
-
+ 
+   
    subroutine TrilinearInterpRegGrid(V, pt, dims, val)
    
       real(ReKi),     intent(in   ) :: V(:,:,:,:)
@@ -737,17 +738,23 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    CALL ReadCom( UnIn, InputFile, 'Section Header: Visualization', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
-      ! WrDisWind - Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag):
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisWind, "WrDisWind", "Write disturbed wind data to <WindFilePath>/Low/Dis.t<n>.vtk etc.? (flag)", ErrStat2, ErrMsg2, UnEc)
+      ! WrDisWind - Write disturbed wind data to <OutFileRoot>.Low.Dis.t<n/n_low-out>.vtk etc.? (flag):
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisWind, "WrDisWind", "Write disturbed wind data to <OutFileRoot>.Low.Dis.t<n/n_low-out>.vtk etc.? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+    
+          ! WrDisWind - Write disturbed wind data to vtk files? (flag):
+   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrDisDT, "WrDisDT", &
+      "The time between vtk outputs [must be a multiple of the low resolution time step]", &
+      p%DT, ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
      if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if            
 
       
-      ! NOutDisWindXY - Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXY.<n_out>.t<n>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
+      ! NOutDisWindXY - Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -769,8 +776,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if
       
-      ! NOutDisWindYZ - Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindYZ, "NOutDisWindYZ", "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisYZ.<n_out>.t<n>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
+      ! NOutDisWindYZ - Number of YZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisYZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindYZ, "NOutDisWindYZ", "Number of YZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisYZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -792,8 +799,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if      
       
-      ! NOutDisWindXZ - Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk (-) [0 to 9]:
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXZ, "NOutDisWindXZ", "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
+      ! NOutDisWindXZ - Number of XZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low/DisXZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXZ, "NOutDisWindXZ", "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low/DisXZ.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -1082,14 +1089,13 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    IF (p%TStart < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TStart must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (.not. p%WrBinOutFile .and. .not. p%WrTxtOutFile) CALL SetErrStat( ErrID_Fatal, "FAST.Farm's OutFileFmt must be 1, 2, or 3.",ErrStat,ErrMsg,RoutineName)
    
-   if (AWAE_InitInp%WrDisDT < p%dt) CALL SetErrStat(ErrID_Fatal,'WrDisDT must greater than or equal to dt.',ErrStat,ErrMsg,RoutineName)
+   if (AWAE_InitInp%WrDisDT < p%DT) CALL SetErrStat(ErrID_Fatal,'WrDisDT must greater than or equal to dt.',ErrStat,ErrMsg,RoutineName)
    
       ! let's make sure the FAST DT is an exact integer divisor of AWAE_InitInp%WrDisDT 
    n_disDT_dt = nint( AWAE_InitInp%WrDisDT / p%DT )
       ! (i'm doing this outside of Farm_ValidateInput so we know that dt/=0 before computing n_high_low):
    IF ( .NOT. EqualRealNos( real(p%DT,SiKi)* n_disDT_dt, real(AWAE_InitInp%WrDisDT,SiKi)  )  ) THEN
-      CALL SetErrStat(ErrID_Fatal, "dt ("//TRIM(Num2LStr(p%DT))//" s) must be an integer divisor of WrDisDT (" &
-                     //TRIM(Num2LStr(AWAE_InitInp%WrDisDT))//" s).", ErrStat, ErrMsg, RoutineName ) 
+      CALL SetErrStat(ErrID_Fatal, "WrDisDT ("//TRIM(Num2LStr(AWAE_InitInp%WrDisDT))//" s) must be an integer multiple of dt ("//TRIM(Num2LStr(p%DT))//" s).", ErrStat, ErrMsg, RoutineName ) 
    END IF
    AWAE_InitInp%WrDisDT =  p%DT * n_disDT_dt
    
@@ -1097,8 +1103,17 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    if (AWAE_InitInp%NOutDisWindXY < 0 .or. AWAE_InitInp%NOutDisWindXY > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXY must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (AWAE_InitInp%NOutDisWindYZ < 0 .or. AWAE_InitInp%NOutDisWindYZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindYZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (AWAE_InitInp%NOutDisWindXZ < 0 .or. AWAE_InitInp%NOutDisWindXZ > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDisWindXZ must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
-   if (p%NOutDist < 0 .or. p%NOutDist > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NOutDist must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
-   ! TODO : add check that OutDist values >= 0
+   if (p%NOutDist < 0 .or. p%NOutDist > maxOutputPoints ) then
+      CALL SetErrStat( ErrID_Fatal, 'NOutDist must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
+   else
+      do i=1,p%NOutDist
+         if (p%OutDist(i) <  0.0_ReKi) then
+            CALL SetErrStat( ErrID_Fatal, 'OutDist values must greater than or equal to zero.', ErrStat, ErrMsg, RoutineName )
+            exit
+         end if
+      end do      
+   end if
+
    if (p%NWindVel < 0 .or. p%NWindVel > maxOutputPoints ) CALL SetErrStat( ErrID_Fatal, 'NWindVel must be in the range [0, 9].', ErrStat, ErrMsg, RoutineName )
    if (p%NOutRadii < 0 .or. p%NOutRadii > 20 ) then
       CALL SetErrStat( ErrID_Fatal, 'NOutRadii must be in the range [0, 20].', ErrStat, ErrMsg, RoutineName )
@@ -1136,7 +1151,7 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
    ! local variables
    type(WD_InitOutputType)                 :: WD_InitOut
 
-   INTEGER(IntKi)                          :: i_turb                          ! loop counter for rotor number
+   INTEGER(IntKi)                          :: nt                          ! loop counter for rotor number
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'Farm_InitWD'
@@ -1154,20 +1169,20 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
       ! Initialize each instance of WD
       !................                  
       
-      DO i_turb = 1,farm%p%NumTurbines
+      DO nt = 1,farm%p%NumTurbines
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          ! initialization can be done in parallel (careful for FWrap_InitInp, though)
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++         
          
-         WD_InitInp%RootName    = trim(farm%p%OutFileRoot)//'.T'//num2lstr(i_turb)
-         WD_InitInp%TurbNum     = i_turb
+         WD_InitInp%RootName    = trim(farm%p%OutFileRoot)//'.T'//num2lstr(nt)
+         WD_InitInp%TurbNum     = nt
          
             ! note that WD_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt here:
-         call WD_Init( WD_InitInp, farm%WD(i_turb)%u, farm%WD(i_turb)%p, farm%WD(i_turb)%x, farm%WD(i_turb)%xd, farm%WD(i_turb)%z, &
-                          farm%WD(i_turb)%OtherSt, farm%WD(i_turb)%y, farm%WD(i_turb)%m, farm%p%dt, WD_InitOut, ErrStat2, ErrMsg2 )
+         call WD_Init( WD_InitInp, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
+                          farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, farm%p%dt, WD_InitOut, ErrStat2, ErrMsg2 )
          
-         farm%WD(i_turb)%IsInitialized = .true.
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+         farm%WD(nt)%IsInitialized = .true.
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
             if (ErrStat >= AbortErrLev) then
                call cleanup()
                return
@@ -1198,7 +1213,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
    type(FWrap_InitInputType)               :: FWrap_InitInp
    type(FWrap_InitOutputType)              :: FWrap_InitOut
 
-   INTEGER(IntKi)                          :: i_turb                          ! loop counter for rotor number
+   INTEGER(IntKi)                          :: nt                          ! loop counter for rotor number
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'Farm_InitFAST'
@@ -1226,33 +1241,33 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
       FWrap_InitInp%nY_high       = AWAE_InitOutput%nY_high
       FWrap_InitInp%nZ_high       = AWAE_InitOutput%nZ_high
       
-      DO i_turb = 1,farm%p%NumTurbines
+      DO nt = 1,farm%p%NumTurbines
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          ! initialization can be done in parallel (careful for FWrap_InitInp, though)
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++         
          
-         FWrap_InitInp%FASTInFile    = farm%p%WT_FASTInFile(i_turb)
-         FWrap_InitInp%p_ref_Turbine = farm%p%WT_Position(:,i_turb)
-         FWrap_InitInp%TurbNum       = i_turb
-         FWrap_InitInp%RootName      = trim(farm%p%OutFileRoot)//'.T'//num2lstr(i_turb)
+         FWrap_InitInp%FASTInFile    = farm%p%WT_FASTInFile(nt)
+         FWrap_InitInp%p_ref_Turbine = farm%p%WT_Position(:,nt)
+         FWrap_InitInp%TurbNum       = nt
+         FWrap_InitInp%RootName      = trim(farm%p%OutFileRoot)//'.T'//num2lstr(nt)
          
          
-         FWrap_InitInp%p_ref_high(1) = AWAE_InitOutput%X0_high(i_turb)
-         FWrap_InitInp%p_ref_high(2) = AWAE_InitOutput%Y0_high(i_turb)
-         FWrap_InitInp%p_ref_high(3) = AWAE_InitOutput%Z0_high(i_turb)
+         FWrap_InitInp%p_ref_high(1) = AWAE_InitOutput%X0_high(nt)
+         FWrap_InitInp%p_ref_high(2) = AWAE_InitOutput%Y0_high(nt)
+         FWrap_InitInp%p_ref_high(3) = AWAE_InitOutput%Z0_high(nt)
 
-         FWrap_InitInp%dX_high       = AWAE_InitOutput%dX_high(i_turb)
-         FWrap_InitInp%dY_high       = AWAE_InitOutput%dY_high(i_turb)
-         FWrap_InitInp%dZ_high       = AWAE_InitOutput%dZ_high(i_turb)
+         FWrap_InitInp%dX_high       = AWAE_InitOutput%dX_high(nt)
+         FWrap_InitInp%dY_high       = AWAE_InitOutput%dY_high(nt)
+         FWrap_InitInp%dZ_high       = AWAE_InitOutput%dZ_high(nt)
          
          
             ! note that FWrap_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt here:
-         call FWrap_Init( FWrap_InitInp, farm%FWrap(i_turb)%u, farm%FWrap(i_turb)%p, farm%FWrap(i_turb)%x, farm%FWrap(i_turb)%xd, farm%FWrap(i_turb)%z, &
-                          farm%FWrap(i_turb)%OtherSt, farm%FWrap(i_turb)%y, farm%FWrap(i_turb)%m, farm%p%dt, FWrap_InitOut, ErrStat2, ErrMsg2 )
+         call FWrap_Init( FWrap_InitInp, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
+                          farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, farm%p%dt, FWrap_InitOut, ErrStat2, ErrMsg2 )
          
-         farm%FWrap(i_turb)%IsInitialized = .true.
+         farm%FWrap(nt)%IsInitialized = .true.
          
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
             if (ErrStat >= AbortErrLev) then
                call cleanup()
                return
@@ -1286,7 +1301,7 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
-   INTEGER(IntKi)                          :: i_turb                    
+   INTEGER(IntKi)                          :: nt                    
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_InitialCO'
@@ -1329,20 +1344,20 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
       !--------------------
       ! 2c. transfer y_SC to u_F         
    
-   !DO i_turb = 1,farm%p%NumTurbines
-   !   farm%FWrap(i_turb)%u%FromSC_Global =
-   !   farm%FWrap(i_turb)%u%FromSC_Turbine =
+   !DO nt = 1,farm%p%NumTurbines
+   !   farm%FWrap(nt)%u%FromSC_Global =
+   !   farm%FWrap(nt)%u%FromSC_Turbine =
    !END DO
    
    !.......................................................................................
    ! CALL F_t0 (can be done in parallel)
    !.......................................................................................
          
-   DO i_turb = 1,farm%p%NumTurbines
+   DO nt = 1,farm%p%NumTurbines
       
-      call FWrap_t0( farm%FWrap(i_turb)%u, farm%FWrap(i_turb)%p, farm%FWrap(i_turb)%x, farm%FWrap(i_turb)%xd, farm%FWrap(i_turb)%z, &
-                     farm%FWrap(i_turb)%OtherSt, farm%FWrap(i_turb)%y, farm%FWrap(i_turb)%m, ErrStat2, ErrMsg2 )         
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+      call FWrap_t0( farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
+                     farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStat2, ErrMsg2 )         
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
                
    END DO
    if (ErrStat >= AbortErrLev) return
@@ -1354,8 +1369,8 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
       !--------------------
       ! 1.  Transfer y_F to u_SC     
    
-   !DO i_turb = 1,farm%p%NumTurbines   
-   !   = farm%FWrap(i_turb)%y%ToSC_Turbine   
+   !DO nt = 1,farm%p%NumTurbines   
+   !   = farm%FWrap(nt)%y%ToSC_Turbine   
    !END DO
    
       !--------------------
@@ -1367,11 +1382,11 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    ! CALL WD_CO (can be done in parallel)
    !.......................................................................................
    
-   DO i_turb = 1,farm%p%NumTurbines
+   DO nt = 1,farm%p%NumTurbines
       
-      call WD_CalcOutput( 0.0_DbKi, farm%WD(i_turb)%u, farm%WD(i_turb)%p, farm%WD(i_turb)%x, farm%WD(i_turb)%xd, farm%WD(i_turb)%z, &
-                     farm%WD(i_turb)%OtherSt, farm%WD(i_turb)%y, farm%WD(i_turb)%m, ErrStat2, ErrMsg2 )         
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+      call WD_CalcOutput( 0.0_DbKi, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
+                     farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
                
    END DO
    if (ErrStat >= AbortErrLev) return
@@ -1402,7 +1417,7 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    ! Write Output to File
    !.......................................................................................
    
-   call Farm_WriteOutput(0.0_DbKi, farm, ErrStat2, ErrMsg2)
+   call Farm_WriteOutput(0, 0.0_DbKi, farm, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
 end subroutine FARM_InitialCO
@@ -1422,7 +1437,7 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
-   INTEGER(IntKi)                          :: i_turb                    
+   INTEGER(IntKi)                          :: nt                    
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_UpdateStates'
@@ -1439,11 +1454,11 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       !--------------------
       ! 1. CALL WD_US         
    
-   DO i_turb = 1,farm%p%NumTurbines
+   DO nt = 1,farm%p%NumTurbines
       
-      call WD_UpdateStates( t, n, farm%WD(i_turb)%u, farm%WD(i_turb)%p, farm%WD(i_turb)%x, farm%WD(i_turb)%xd, farm%WD(i_turb)%z, &
-                     farm%WD(i_turb)%OtherSt, farm%WD(i_turb)%m, ErrStat2, ErrMsg2 )         
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+      call WD_UpdateStates( t, n, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
+                     farm%WD(nt)%OtherSt, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
                
    END DO
    if (ErrStat >= AbortErrLev) return
@@ -1456,11 +1471,11 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       !--------------------
       ! 3. CALL F_Increment         
          
-   DO i_turb = 1,farm%p%NumTurbines
+   DO nt = 1,farm%p%NumTurbines
       
-      call FWrap_Increment( t, n, farm%FWrap(i_turb)%u, farm%FWrap(i_turb)%p, farm%FWrap(i_turb)%x, farm%FWrap(i_turb)%xd, farm%FWrap(i_turb)%z, &
-                     farm%FWrap(i_turb)%OtherSt, farm%FWrap(i_turb)%y, farm%FWrap(i_turb)%m, ErrStat2, ErrMsg2 )         
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+      call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
+                     farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStat2, ErrMsg2 )         
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
                
    END DO
    if (ErrStat >= AbortErrLev) return
@@ -1468,8 +1483,8 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    
 end subroutine FARM_UpdateStates
 
-subroutine Farm_WriteOutput(t, farm, ErrStat, ErrMsg)
-
+subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
+   INTEGER(IntKi),           INTENT(IN   ) :: n                               !< Time step increment number
    REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
@@ -1478,8 +1493,11 @@ subroutine Farm_WriteOutput(t, farm, ErrStat, ErrMsg)
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_WriteOutput'
-   INTEGER(IntKi)                          :: i_turb, ir, iOutDist, i_plane, iVelPt  ! Loop counters
+   INTEGER(IntKi)                          :: nt, ir, iOutDist, np, iVelPt  ! Loop counters
    REAL(ReKi)                              :: vel(3), pt(3)
+   REAL(ReKi)                              :: vec_interp(3)
+   REAL(ReKi)                              :: norm2_vec, delta, deltad
+   
    
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1491,7 +1509,7 @@ subroutine Farm_WriteOutput(t, farm, ErrStat, ErrMsg)
          ! Define the output channel specifying the current simulation time:
       farm%m%AllOuts(  Time) = REAL( t, ReKi )
 
-      do i_turb = 1, farm%p%NumTurbines
+      do nt = 1, farm%p%NumTurbines
          
          !.......................................................................................
          ! Super controller Outputs
@@ -1504,34 +1522,33 @@ subroutine Farm_WriteOutput(t, farm, ErrStat, ErrMsg)
          !.......................................................................................
 
             ! Orientation of rotor centerline, normal to disk
-         farm%m%AllOuts(RtAxsXT(i_turb)) = farm%FWrap(i_turb)%y%xHat_Disk(1)
-         farm%m%AllOuts(RtAxsYT(i_turb)) = farm%FWrap(i_turb)%y%xHat_Disk(2)
-         farm%m%AllOuts(RtAxsZT(i_turb)) = farm%FWrap(i_turb)%y%xHat_Disk(3)
+         farm%m%AllOuts(RtAxsXT(nt)) = farm%FWrap(nt)%y%xHat_Disk(1)
+         farm%m%AllOuts(RtAxsYT(nt)) = farm%FWrap(nt)%y%xHat_Disk(2)
+         farm%m%AllOuts(RtAxsZT(nt)) = farm%FWrap(nt)%y%xHat_Disk(3)
          
             ! Center position of hub, m
-         farm%m%AllOuts(RtPosXT(i_turb)) = farm%FWrap(i_turb)%y%p_hub(1)
-         farm%m%AllOuts(RtPosYT(i_turb)) = farm%FWrap(i_turb)%y%p_hub(2)
-         farm%m%AllOuts(RtPosZT(i_turb)) = farm%FWrap(i_turb)%y%p_hub(3)
+         farm%m%AllOuts(RtPosXT(nt)) = farm%FWrap(nt)%y%p_hub(1)
+         farm%m%AllOuts(RtPosYT(nt)) = farm%FWrap(nt)%y%p_hub(2)
+         farm%m%AllOuts(RtPosZT(nt)) = farm%FWrap(nt)%y%p_hub(3)
          
             ! Rotor diameter, m
-         farm%m%AllOuts(RtDiamT(i_turb)) = farm%FWrap(i_turb)%y%D_rotor
+         farm%m%AllOuts(RtDiamT(nt)) = farm%FWrap(nt)%y%D_rotor
          
             ! Nacelle-yaw error at the wake planes, deg 
-         farm%m%AllOuts(YawErrT(i_turb)) = farm%FWrap(i_turb)%y%YawErr*R2D
+         farm%m%AllOuts(YawErrT(nt)) = farm%FWrap(nt)%y%YawErr*R2D
          
             ! Ambient turbulence intensity of the wind at the rotor disk, percent
-            ! TODO: Is this really in percent form? GJH 3/21/2017
-         farm%m%AllOuts(TIAmbT(i_turb))  = farm%AWAE%y%TI_amb(i_turb)
+         farm%m%AllOuts(TIAmbT(nt))  = farm%AWAE%y%TI_amb(nt)*100.0_ReKi 
          
             ! Rotor-disk-averaged ambient wind speed (normal to disk, not including structural motion, local induction or wakes from upstream turbines), m/s
-         farm%m%AllOuts(RtVAmbT(i_turb)) = farm%AWAE%y%Vx_wind_disk(i_turb)
+         farm%m%AllOuts(RtVAmbT(nt)) = farm%AWAE%y%Vx_wind_disk(nt)
          
             ! Rotor-disk-averaged relative wind speed (normal to disk, including structural motion and wakes from upstream turbines, but not including local induction), m/s
-         farm%m%AllOuts(RtVRelT(i_turb)) = farm%FWrap(i_turb)%y%DiskAvg_Vx_Rel
+         farm%m%AllOuts(RtVRelT(nt)) = farm%FWrap(nt)%y%DiskAvg_Vx_Rel
          
             ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
          do ir = 1, farm%p%NOutRadii
-            farm%m%AllOuts(CtTN(ir, i_turb)) = farm%FWrap(i_turb)%y%AzimAvg_Ct(farm%p%OutRadii(ir)+1)  ! y%AzimAvg_Ct is a 1-based array but the user specifies 0-based node indices, so we need to add 1
+            farm%m%AllOuts(CtTN(ir, nt)) = farm%FWrap(nt)%y%AzimAvg_Ct(farm%p%OutRadii(ir)+1)  ! y%AzimAvg_Ct is a 1-based array but the user specifies 0-based node indices, so we need to add 1
          end do
          
          !.......................................................................................
@@ -1541,38 +1558,38 @@ subroutine Farm_WriteOutput(t, farm, ErrStat, ErrMsg)
             ! Loop over user-requested, downstream distances (OutDist), m   
          do iOutDist = 1, farm%p%NOutDist
             
-            if (  farm%p%OutDist(iOutDist) >= farm%WD(i_turb)%xd%x_plane(farm%WD(i_turb)%p%NumPlanes-1) ) then
+            if (  farm%p%OutDist(iOutDist) >= farm%WD(nt)%xd%x_plane(min(farm%WD(nt)%p%NumPlanes-1,n+1)) ) then
                ! TODO: Handle this case. Invalid output
                
-               farm%m%AllOuts(WkAxsXTD(iOutDist,i_turb)) = 0.0_ReKi
-               farm%m%AllOuts(WkAxsYTD(iOutDist,i_turb)) = 0.0_ReKi
-               farm%m%AllOuts(WkAxsZTD(iOutDist,i_turb)) = 0.0_ReKi
+               farm%m%AllOuts(WkAxsXTD(iOutDist,nt)) = 0.0_ReKi
+               farm%m%AllOuts(WkAxsYTD(iOutDist,nt)) = 0.0_ReKi
+               farm%m%AllOuts(WkAxsZTD(iOutDist,nt)) = 0.0_ReKi
                                                            
                   ! Center position of the wake centerline 
-               farm%m%AllOuts(WkPosXTD(iOutDist,i_turb)) = 0.0_ReKi
-               farm%m%AllOuts(WkPosYTD(iOutDist,i_turb)) = 0.0_ReKi
-               farm%m%AllOuts(WkPosZTD(iOutDist,i_turb)) = 0.0_ReKi
+               farm%m%AllOuts(WkPosXTD(iOutDist,nt)) = 0.0_ReKi
+               farm%m%AllOuts(WkPosYTD(iOutDist,nt)) = 0.0_ReKi
+               farm%m%AllOuts(WkPosZTD(iOutDist,nt)) = 0.0_ReKi
                                                            
                   ! Advection, deflection, and meandering  
                   !  of the wake for downstream wake volum 
-               farm%m%AllOuts(WkVelXTD(iOutDist,i_turb)) = 0.0_ReKi
-               farm%m%AllOuts(WkVelYTD(iOutDist,i_turb)) = 0.0_ReKi
-               farm%m%AllOuts(WkVelZTD(iOutDist,i_turb)) = 0.0_ReKi
+               farm%m%AllOuts(WkVelXTD(iOutDist,nt)) = 0.0_ReKi
+               farm%m%AllOuts(WkVelYTD(iOutDist,nt)) = 0.0_ReKi
+               farm%m%AllOuts(WkVelZTD(iOutDist,nt)) = 0.0_ReKi
                                                            
                   ! Wake diameter for downstream wake volu 
-               farm%m%AllOuts(WkDiamTD(iOutDist,i_turb)) = 0.0_ReKi
+               farm%m%AllOuts(WkDiamTD(iOutDist,nt)) = 0.0_ReKi
                
                do ir = 1, farm%p%NOutRadii
                   
-                     ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, i_plane, of turbine, i_turb, m/s
-                  farm%m%AllOuts(WkDfVxTND(ir,iOutDist,i_turb)) = 0.0_ReKi
-                  farm%m%AllOuts(WkDfVrTND(ir,iOutDist,i_turb)) = 0.0_ReKi
+                     ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                  farm%m%AllOuts(WkDfVxTND(ir,iOutDist,nt)) = 0.0_ReKi
+                  farm%m%AllOuts(WkDfVrTND(ir,iOutDist,nt)) = 0.0_ReKi
                
                      ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
-                     !  or radial node, OutRadii(ir), and downstream wake volume, i_plane, of turbine, i_turb, m/s
-                  farm%m%AllOuts(EddVisTND(ir,iOutDist,i_turb)) = 0.0_ReKi
-                  farm%m%AllOuts(EddAmbTND(ir,iOutDist,i_turb)) = 0.0_ReKi
-                  farm%m%AllOuts(EddShrTND(ir,iOutDist,i_turb)) = 0.0_ReKi
+                     !  or radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                  farm%m%AllOuts(EddVisTND(ir,iOutDist,nt)) = 0.0_ReKi
+                  farm%m%AllOuts(EddAmbTND(ir,iOutDist,nt)) = 0.0_ReKi
+                  farm%m%AllOuts(EddShrTND(ir,iOutDist,nt)) = 0.0_ReKi
                   
                end do  
 
@@ -1581,41 +1598,54 @@ subroutine Farm_WriteOutput(t, farm, ErrStat, ErrMsg)
                ! TODO: Verify with Jason that all of this should be within the else block. GJH 
                
                   ! Find wake volume which contains the user-requested downstream location.
-               do i_plane = 0, farm%WD(i_turb)%p%NumPlanes-2 
-                  if ( ( farm%p%OutDist(iOutDist) >= farm%WD(i_turb)%xd%x_plane(i_plane) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(i_turb)%xd%x_plane(i_plane+1) ) ) exit
-               end do           
-            
-                  ! Orientation of the wake centerline for downstream wake volume, i_plane, of turbine, i_turb, in the global coordinate system, -
-               farm%m%AllOuts(WkAxsXTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%xhat_plane(1, i_plane) !farm%AWAE%u%xhat_plane(1,i_plane,i_turb)
-               farm%m%AllOuts(WkAxsYTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%xhat_plane(2, i_plane) !farm%AWAE%u%xhat_plane(2,i_plane,i_turb)
-               farm%m%AllOuts(WkAxsZTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%xhat_plane(3, i_plane) !farm%AWAE%u%xhat_plane(3,i_plane,i_turb)
+               do np = 0, min(farm%WD(nt)%p%NumPlanes-2 , n)
+                  if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%xd%x_plane(np) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%xd%x_plane(np+1) ) ) then
+                     delta = ( farm%p%OutDist(iOutDist) - farm%WD(nt)%xd%x_plane(np) ) / ( farm%WD(nt)%xd%x_plane(np+1) - farm%WD(nt)%xd%x_plane(np) )
+                     deltad = (1.0_ReKi-delta)
+                     exit
+                  end if
+                  
+               end do  
+               vec_interp       =  delta*farm%WD(nt)%y%xhat_plane(:, np+1) + deltad*farm%WD(nt)%y%xhat_plane(:, np)
+               norm2_vec        =  TwoNorm( vec_interp ) 
+                  ! Orientation of the wake centerline for downstream wake volume, np, of turbine, nt, in the global coordinate system, -
+               farm%m%AllOuts(WkAxsXTD(iOutDist,nt)) = vec_interp(1)/norm2_vec
+               farm%m%AllOuts(WkAxsYTD(iOutDist,nt)) = vec_interp(2)/norm2_vec
+               farm%m%AllOuts(WkAxsZTD(iOutDist,nt)) = vec_interp(3)/norm2_vec 
 
-                  ! Center position of the wake centerline for downstream wake volume, i_plane, of turbine, i_turb, in the global coordinate system, m
-               farm%m%AllOuts(WkPosXTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%p_plane(1, i_plane)    !farm%AWAE%u%p_plane(1,i_plane,i_turb)
-               farm%m%AllOuts(WkPosYTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%p_plane(2, i_plane)    !farm%AWAE%u%p_plane(2,i_plane,i_turb)
-               farm%m%AllOuts(WkPosZTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%p_plane(3, i_plane)    !farm%AWAE%u%p_plane(3,i_plane,i_turb)
+               if ( farm%AWAE%m%parallelFlag(np,nt) ) then
+                  vec_interp       =  delta*farm%WD(nt)%y%p_plane(:, np+1) + deltad*farm%WD(nt)%y%p_plane(:, np)
+               else
+                  vec_interp = delta*farm%AWAE%m%rhat_e(:,np,nt) + deltad*farm%AWAE%m%rhat_s(:,np,nt)
+                  vec_interp = delta*farm%AWAE%m%phat_ce(:,np,nt) + deltad*farm%AWAE%m%phat_cs(:,np,nt) + ( delta*farm%AWAE%m%r_e(np,nt) + deltad*farm%AWAE%m%r_s(np,nt) )* vec_interp / TwoNorm(vec_interp)
+               end if
+               
+                  ! Center position of the wake centerline for downstream wake volume, np, of turbine, nt, in the global coordinate system, m
+               farm%m%AllOuts(WkPosXTD(iOutDist,nt)) = vec_interp(1)
+               farm%m%AllOuts(WkPosYTD(iOutDist,nt)) = vec_interp(2)
+               farm%m%AllOuts(WkPosZTD(iOutDist,nt)) = vec_interp(3)
 
                   ! Advection, deflection, and meandering velocity (not including the horizontal wake-deflection correction) 
-                  !  of the wake for downstream wake volume, i_plane, of turbine, i_turb, in the global coordinate system, m/s
-               farm%m%AllOuts(WkVelXTD(iOutDist,i_turb)) = farm%AWAE%y%V_plane(1,i_plane,i_turb)
-               farm%m%AllOuts(WkVelYTD(iOutDist,i_turb)) = farm%AWAE%y%V_plane(2,i_plane,i_turb)
-               farm%m%AllOuts(WkVelZTD(iOutDist,i_turb)) = farm%AWAE%y%V_plane(3,i_plane,i_turb)
+                  !  of the wake for downstream wake volume, np, of turbine, nt, in the global coordinate system, m/s
+               farm%m%AllOuts(WkVelXTD(iOutDist,nt)) = farm%AWAE%y%V_plane(1,np,nt)
+               farm%m%AllOuts(WkVelYTD(iOutDist,nt)) = farm%AWAE%y%V_plane(2,np,nt)
+               farm%m%AllOuts(WkVelZTD(iOutDist,nt)) = farm%AWAE%y%V_plane(3,np,nt)
 
-                  ! Wake diameter for downstream wake volume, i_plane, of turbine, i_turb, m
-               farm%m%AllOuts(WkDiamTD(iOutDist,i_turb)) = farm%WD(i_turb)%y%D_wake(i_plane)  !farm%AWAE%u%D_wake(i_plane,i_turb)
+                  ! Wake diameter for downstream wake volume, np, of turbine, nt, m
+               farm%m%AllOuts(WkDiamTD(iOutDist,nt)) = delta*farm%WD(nt)%y%D_wake(np+1) + deltad*farm%WD(nt)%y%D_wake(np)  !farm%AWAE%u%D_wake(np,nt)
             
                   
                do ir = 1, farm%p%NOutRadii
                   
-                     ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, i_plane, of turbine, i_turb, m/s
-                  farm%m%AllOuts(WkDfVxTND(ir,iOutDist,i_turb)) = farm%WD(i_turb)%y%Vx_wake(farm%p%OutRadii(ir),i_plane) !farm%AWAE%u%Vx_wake(farm%p%OutRadii(ir),i_plane,i_turb)
-                  farm%m%AllOuts(WkDfVrTND(ir,iOutDist,i_turb)) = farm%WD(i_turb)%y%Vr_wake(farm%p%OutRadii(ir),i_plane) !farm%AWAE%u%Vr_wake(farm%p%OutRadii(ir),i_plane,i_turb)
+                     ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                  farm%m%AllOuts(WkDfVxTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np)
+                  farm%m%AllOuts(WkDfVrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np)
                
                      ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
-                     !  or radial node, OutRadii(ir), and downstream wake volume, i_plane, of turbine, i_turb, m/s
-                  farm%m%AllOuts(EddVisTND(ir,iOutDist,i_turb)) = farm%WD(i_turb)%m%vt_tot(farm%p%OutRadii(ir),i_plane)
-                  farm%m%AllOuts(EddAmbTND(ir,iOutDist,i_turb)) = farm%WD(i_turb)%m%vt_amb(farm%p%OutRadii(ir),i_plane)
-                  farm%m%AllOuts(EddShrTND(ir,iOutDist,i_turb)) = farm%WD(i_turb)%m%vt_shr(farm%p%OutRadii(ir),i_plane)
+                     !  or radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                  farm%m%AllOuts(EddVisTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np)
+                  farm%m%AllOuts(EddAmbTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np)
+                  farm%m%AllOuts(EddShrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np)
                   
                end do  
             end if
@@ -1675,11 +1705,11 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
-   INTEGER(IntKi)                          :: i_turb                    
+   INTEGER(IntKi)                          :: nt                    
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_CalcOutput'
-   
+   INTEGER(IntKi)                          :: n                               ! time step increment number
    ErrStat = ErrID_None
    ErrMsg = ""
    
@@ -1691,11 +1721,11 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
       !--------------------
       ! 1. call WD_CO and transfer y_WD to u_AWAE        
    
-   DO i_turb = 1,farm%p%NumTurbines
+   DO nt = 1,farm%p%NumTurbines
       
-      call WD_CalcOutput( t, farm%WD(i_turb)%u, farm%WD(i_turb)%p, farm%WD(i_turb)%x, farm%WD(i_turb)%xd, farm%WD(i_turb)%z, &
-                     farm%WD(i_turb)%OtherSt, farm%WD(i_turb)%y, farm%WD(i_turb)%m, ErrStat2, ErrMsg2 )         
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+      call WD_CalcOutput( t, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
+                     farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
                
    END DO
    if (ErrStat >= AbortErrLev) return
@@ -1731,8 +1761,8 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    ! Write Output to File
    !.......................................................................................
       ! NOTE: Visualization data is output via the AWAE module
-
-   call Farm_WriteOutput(t, farm, ErrStat2, ErrMsg2)
+   n = nint(t/farm%p%DT)
+   call Farm_WriteOutput(n, t, farm, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
    
@@ -1751,7 +1781,7 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
-   INTEGER(IntKi)                          :: i_turb                    
+   INTEGER(IntKi)                          :: nt                    
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_End'
@@ -1778,11 +1808,11 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
       ! 2. end WakeDynamics
    if (allocated(farm%WD)) then
       
-      DO i_turb = 1,farm%p%NumTurbines
-         if (farm%WD(i_turb)%IsInitialized) then      
-            call WD_End( farm%WD(i_turb)%u, farm%WD(i_turb)%p, farm%WD(i_turb)%x, farm%WD(i_turb)%xd, farm%WD(i_turb)%z, &
-                         farm%WD(i_turb)%OtherSt, farm%WD(i_turb)%y, farm%WD(i_turb)%m, ErrStat2, ErrMsg2 )         
-               call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+      DO nt = 1,farm%p%NumTurbines
+         if (farm%WD(nt)%IsInitialized) then      
+            call WD_End( farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
+                         farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStat2, ErrMsg2 )         
+               call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
          end if      
       END DO
       
@@ -1797,11 +1827,11 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
       ! 4. End each instance of FAST (each instance of FAST can be done in parallel, too)   
    if (allocated(farm%FWrap)) then
       
-      DO i_turb = 1,farm%p%NumTurbines
-         if (farm%FWrap(i_turb)%IsInitialized) then
-            CALL FWrap_End( farm%FWrap(i_turb)%u, farm%FWrap(i_turb)%p, farm%FWrap(i_turb)%x, farm%FWrap(i_turb)%xd, farm%FWrap(i_turb)%z, &
-                            farm%FWrap(i_turb)%OtherSt, farm%FWrap(i_turb)%y, farm%FWrap(i_turb)%m, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+      DO nt = 1,farm%p%NumTurbines
+         if (farm%FWrap(nt)%IsInitialized) then
+            CALL FWrap_End( farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
+                            farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
          end if
       END DO
       
@@ -1811,21 +1841,21 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    ! close output file
    !.......................................................................................
    call Farm_EndOutput( farm, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(i_turb))//':'//RoutineName)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':'//RoutineName)
 end subroutine FARM_End
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Transfer_FAST_to_WD(farm)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
 
-   integer(intKi)  :: i_turb
+   integer(intKi)  :: nt
    
-   DO i_turb = 1,farm%p%NumTurbines   
-      farm%WD(i_turb)%u%xhat_disk      = farm%FWrap(i_turb)%y%xHat_Disk       ! Orientation of rotor centerline, normal to disk
-      farm%WD(i_turb)%u%p_hub          = farm%FWrap(i_turb)%y%p_hub           ! Center position of hub, m
-      farm%WD(i_turb)%u%D_rotor        = farm%FWrap(i_turb)%y%D_rotor         ! Rotor diameter, m
-      farm%WD(i_turb)%u%Vx_rel_disk    = farm%FWrap(i_turb)%y%DiskAvg_Vx_Rel  ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
-      farm%WD(i_turb)%u%Ct_azavg       = farm%FWrap(i_turb)%y%AzimAvg_Ct      ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
-      farm%WD(i_turb)%u%YawErr         = farm%FWrap(i_turb)%y%YawErr          ! Nacelle-yaw error at the wake planes, rad   
+   DO nt = 1,farm%p%NumTurbines   
+      farm%WD(nt)%u%xhat_disk      = farm%FWrap(nt)%y%xHat_Disk       ! Orientation of rotor centerline, normal to disk
+      farm%WD(nt)%u%p_hub          = farm%FWrap(nt)%y%p_hub           ! Center position of hub, m
+      farm%WD(nt)%u%D_rotor        = farm%FWrap(nt)%y%D_rotor         ! Rotor diameter, m
+      farm%WD(nt)%u%Vx_rel_disk    = farm%FWrap(nt)%y%DiskAvg_Vx_Rel  ! Rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk, m/s
+      farm%WD(nt)%u%Ct_azavg       = farm%FWrap(nt)%y%AzimAvg_Ct      ! Azimuthally averaged thrust force coefficient (normal to disk), distributed radially, -
+      farm%WD(nt)%u%YawErr         = farm%FWrap(nt)%y%YawErr          ! Nacelle-yaw error at the wake planes, rad   
    END DO
    
 END SUBROUTINE Transfer_FAST_to_WD
@@ -1833,12 +1863,12 @@ END SUBROUTINE Transfer_FAST_to_WD
 SUBROUTINE Transfer_AWAE_to_WD(farm)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
 
-   integer(intKi)  :: i_turb
+   integer(intKi)  :: nt
    
-   DO i_turb = 1,farm%p%NumTurbines
-      farm%WD(i_turb)%u%V_plane      = farm%AWAE%y%V_plane(:,:,i_turb)   ! Advection, deflection, and meandering velocity of wake planes, m/s
-      farm%WD(i_turb)%u%Vx_wind_disk = farm%AWAE%y%Vx_wind_disk(i_turb)  ! Rotor-disk-averaged ambient wind speed, normal to planes, m/s
-      farm%WD(i_turb)%u%TI_amb       = farm%AWAE%y%TI_amb(i_turb)        ! Ambient turbulence intensity of wind at rotor disk
+   DO nt = 1,farm%p%NumTurbines
+      farm%WD(nt)%u%V_plane      = farm%AWAE%y%V_plane(:,:,nt)   ! Advection, deflection, and meandering velocity of wake planes, m/s
+      farm%WD(nt)%u%Vx_wind_disk = farm%AWAE%y%Vx_wind_disk(nt)  ! Rotor-disk-averaged ambient wind speed, normal to planes, m/s
+      farm%WD(nt)%u%TI_amb       = farm%AWAE%y%TI_amb(nt)        ! Ambient turbulence intensity of wind at rotor disk
    END DO
    
 END SUBROUTINE Transfer_AWAE_to_WD
@@ -1846,11 +1876,11 @@ END SUBROUTINE Transfer_AWAE_to_WD
 SUBROUTINE Transfer_AWAE_to_FAST(farm)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
 
-   integer(intKi)  :: i_turb
+   integer(intKi)  :: nt
    
-   DO i_turb = 1,farm%p%NumTurbines
+   DO nt = 1,farm%p%NumTurbines
          ! allocated in FAST's IfW initialization as 3,x,y,z,t
-      farm%FWrap(i_turb)%u%Vdist_High = farm%AWAE%y%Vdist_High(i_turb)%data
+      farm%FWrap(nt)%u%Vdist_High = farm%AWAE%y%Vdist_High(nt)%data
    END DO
    
 END SUBROUTINE Transfer_AWAE_to_FAST
@@ -1858,14 +1888,14 @@ END SUBROUTINE Transfer_AWAE_to_FAST
 SUBROUTINE Transfer_WD_to_AWAE(farm)
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
 
-   integer(intKi)  :: i_turb
+   integer(intKi)  :: nt
    
-   DO i_turb = 1,farm%p%NumTurbines   
-      farm%AWAE%u%xhat_plane(:,:,i_turb) = farm%WD(i_turb)%y%xhat_plane     ! Orientations of wake planes, normal to wake planes, for each turbine
-      farm%AWAE%u%p_plane(:,:,i_turb)    = farm%WD(i_turb)%y%p_plane        ! Center positions of wake planes for each turbine
-      farm%AWAE%u%Vx_wake(:,:,i_turb)    = farm%WD(i_turb)%y%Vx_wake        ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%Vr_wake(:,:,i_turb)    = farm%WD(i_turb)%y%Vr_wake        ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
-      farm%AWAE%u%D_wake(:,i_turb)       = farm%WD(i_turb)%y%D_wake         ! Wake diameters at wake planes for each turbine      
+   DO nt = 1,farm%p%NumTurbines   
+      farm%AWAE%u%xhat_plane(:,:,nt) = farm%WD(nt)%y%xhat_plane     ! Orientations of wake planes, normal to wake planes, for each turbine
+      farm%AWAE%u%p_plane(:,:,nt)    = farm%WD(nt)%y%p_plane        ! Center positions of wake planes for each turbine
+      farm%AWAE%u%Vx_wake(:,:,nt)    = farm%WD(nt)%y%Vx_wake        ! Axial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%Vr_wake(:,:,nt)    = farm%WD(nt)%y%Vr_wake        ! Radial wake velocity deficit at wake planes, distributed radially, for each turbine
+      farm%AWAE%u%D_wake(:,nt)       = farm%WD(nt)%y%D_wake         ! Wake diameters at wake planes for each turbine      
    END DO
    
 END SUBROUTINE Transfer_WD_to_AWAE
