@@ -1521,7 +1521,7 @@ subroutine Farm_WriteOutput(t, farm, ErrStat, ErrMsg)
          
             ! Ambient turbulence intensity of the wind at the rotor disk, percent
             ! TODO: Is this really in percent form? GJH 3/21/2017
-         farm%m%AllOuts(TIAmbT(i_turb))  = farm%AWAE%y%TI_amb(i_turb)
+         farm%m%AllOuts(TIAmbT(i_turb))  = farm%AWAE%y%TI_amb(i_turb)*100.0_ReKi
          
             ! Rotor-disk-averaged ambient wind speed (normal to disk, not including structural motion, local induction or wakes from upstream turbines), m/s
          farm%m%AllOuts(RtVAmbT(i_turb)) = farm%AWAE%y%Vx_wind_disk(i_turb)
