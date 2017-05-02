@@ -31,10 +31,13 @@ def load_output(filename):
 
     assert os.path.isfile(filename), "File, %s, does not exists" % filename
     with open(filename, 'r') as f:
-        try:
-            f.readline()
-        except UnicodeDecodeError:
+        if "outb" in filename:
             return load_binary_output(filename)
+        elif "out" in filename:
+            try:
+                print f.readline()
+            except UnicodeDecodeError:
+                return load_binary_output(filename)
     return load_ascii_output(filename)
 
 def load_ascii_output(filename):
@@ -155,7 +158,7 @@ if __name__=="__main__":
     for j in range(39):
         types.append('f8')
     print type(i['attribute_names'])
-    
+
     print np.dtype({'names':tuple(i['attribute_names']), 'formats': tuple(types) })
     print type(d)
     print np.array(d,dtype=np.dtype({'names':tuple(i['attribute_names']), 'formats': tuple(types) }))
@@ -163,5 +166,3 @@ if __name__=="__main__":
     print i
     print len(i['attribute_names'])
     print np.shape(d)
-
-

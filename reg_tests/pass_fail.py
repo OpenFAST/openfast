@@ -1,6 +1,6 @@
 import sys, os
 import numpy as np
-from fast_io import load_binary_output
+from fast_io import load_output
 
 def exitWithError(error):
     print error
@@ -29,8 +29,8 @@ except ValueError:
 
 # parse the FAST solution files
 try:
-    dict1, info1 = load_binary_output(solutionFile1)
-    dict2, info2 = load_binary_output(solutionFile2)
+    dict1, info1 = load_output(solutionFile1)
+    dict2, info2 = load_output(solutionFile2)
 except Exception as e:
     exitWithError("Error: {}".format(e))
 
