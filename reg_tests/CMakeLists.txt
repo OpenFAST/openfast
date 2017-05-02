@@ -33,7 +33,6 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "")
     else()
       set(TOLERANCE 0.0000001) # Linux default
     endif()
-  endif()
 
   # Windows
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
