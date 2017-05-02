@@ -1,19 +1,19 @@
 #===============================================================================
-# Functions for adding tests / Categories of tests
+# Functions defining available test types
 #===============================================================================
 
 # Standard regression test
 function(add_test_r testname )
-    add_test(
-      ${testname} bash -c "
-        cp ${CMAKE_CURRENT_SOURCE_DIR}/test_files/${testname}/*.fst . &&
-        ${CMAKE_INSTALL_PREFIX}/bin/openfast ${testname}.fst > ${testname}.log &&
-        ${CMAKE_CURRENT_SOURCE_DIR}/pass_fail.sh ${testname} ${CMAKE_BINARY_DIR}/reg_tests/${testname}.outb ${TOLERANCE}
-      "
-    )
+  add_test(
+    ${testname} bash -c "
+      cp ${CMAKE_CURRENT_SOURCE_DIR}/test_files/${testname}/*.fst . &&
+      ${CMAKE_INSTALL_PREFIX}/bin/openfast ${testname}.fst > ${testname}.log &&
+      ${CMAKE_CURRENT_SOURCE_DIR}/pass_fail.sh ${testname} ${CMAKE_BINARY_DIR}/reg_tests/${testname}.outb ${TOLERANCE}
+    "
+  )
 
-    # limit each test to ~15 minutes: 1000s
-    set_tests_properties(${testname} PROPERTIES TIMEOUT 1000 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "regression")
+  # limit each test to ~15 minutes: 1000s
+  set_tests_properties(${testname} PROPERTIES TIMEOUT 1000 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "regression")
 endfunction(add_test_r)
 
 #===============================================================================
