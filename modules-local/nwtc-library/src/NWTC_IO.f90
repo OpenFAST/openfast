@@ -7728,7 +7728,7 @@ CONTAINS
       CALL ReadStr( Un, FileName, formatLbl, 'formatLbl', 'ASCII label', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       call Conv2UC(formatLbl)
-      if (INDEX(formatLbl, "ASCII" ) == 0 ) THEN ! If this line doesn't contain the word ASCII, we have a bad file header
+      if (INDEX(formatLbl, "ASCII" ) /= 1 ) THEN ! If this line doesn't contain the word ASCII, we have a bad file header
          CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find ASCII label', ErrStat, ErrMsg, RoutineName )
       end if  
       Line = ""
@@ -7736,7 +7736,7 @@ CONTAINS
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
       CALL Conv2UC( Line )
-      IF ( INDEX(Line, "DATASET" ) == 0 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
+      IF ( INDEX(Line, "DATASET" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find DATASET label', ErrStat, ErrMsg, RoutineName )
       END IF 
       IF ( INDEX(Line, "STRUCTURED_POINTS" ) == 0 ) THEN ! If this line doesn't also contain the word structured_points, we have a bad file header
@@ -7815,8 +7815,11 @@ CONTAINS
          CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find VECTORS label', ErrStat, ErrMsg, RoutineName )
       ELSE
          sz = INDEX(Line2, "FLOAT" )
-         vecLabel = Line(9:sz-2)
-         
+         IF ( sz == 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Invalid VECTORS datatype.  Must be set to float.', ErrStat, ErrMsg, RoutineName )
+         ELSE        
+            vecLabel = Line(9:sz-2)
+         END IF
       END IF 
       
       IF ( (ErrStat >= AbortErrLev) .or. closeOnReturn ) THEN        
