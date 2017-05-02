@@ -1109,7 +1109,7 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    else
       do i=1,p%NOutDist
          if (p%OutDist(i) <  0.0_ReKi) then
-            CALL SetErrStat( ErrID_Fatal, 'OutDist values must greater than or equal to zero.', ErrStat, ErrMsg, RoutineName )
+            CALL SetErrStat( ErrID_Fatal, 'OutDist values must be greater than or equal to zero.', ErrStat, ErrMsg, RoutineName )
             exit
          end if
       end do      
@@ -1618,7 +1618,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
                   vec_interp       =  delta*farm%WD(nt)%y%p_plane(:, np+1) + deltad*farm%WD(nt)%y%p_plane(:, np)
                else
                   vec_interp = delta*farm%AWAE%m%rhat_e(:,np,nt) + deltad*farm%AWAE%m%rhat_s(:,np,nt)
-                  vec_interp = delta*farm%AWAE%m%phat_ce(:,np,nt) + deltad*farm%AWAE%m%phat_cs(:,np,nt) + ( delta*farm%AWAE%m%r_e(np,nt) + deltad*farm%AWAE%m%r_s(np,nt) )* vec_interp / TwoNorm(vec_interp)
+                  vec_interp = delta*farm%AWAE%m%p_ce(:,np,nt) + deltad*farm%AWAE%m%p_cs(:,np,nt) + ( delta*farm%AWAE%m%r_e(np,nt) + deltad*farm%AWAE%m%r_s(np,nt) )* vec_interp / TwoNorm(vec_interp)
                end if
                
                   ! Center position of the wake centerline for downstream wake volume, np, of turbine, nt, in the global coordinate system, m
