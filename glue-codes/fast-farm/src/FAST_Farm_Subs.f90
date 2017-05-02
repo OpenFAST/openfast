@@ -292,6 +292,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    INTEGER(IntKi)                :: OutFileFmt                                ! An integer that indicates what kind of tabular output should be generated (1=text, 2=binary, 3=both)
    INTEGER(IntKi)                :: NLinTimes                                 ! An integer that indicates how many times to linearize
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
+   LOGICAL                       :: SumPrint                                  ! Determines if a summary file should be written
    LOGICAL                       :: TabDelim                                  ! Determines if text output should be delimited by tabs (true) or space (false)
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
 
@@ -741,13 +742,10 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       ! WrDisWind - Write disturbed wind data to <OutFileRoot>.Low.Dis.t<n/n_low-out>.vtk etc.? (flag):
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%WrDisWind, "WrDisWind", "Write disturbed wind data to <OutFileRoot>.Low.Dis.t<n/n_low-out>.vtk etc.? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
-    
-          ! WrDisWind - Write disturbed wind data to vtk files? (flag):
-   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrDisDT, "WrDisDT", &
-      "The time between vtk outputs [must be a multiple of the low resolution time step]", &
-      p%DT, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
       
       ! NOutDisWindXY - Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]:
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%NOutDisWindXY, "NOutDisWindXY", "Number of XY planes for output of disturbed wind data across the low-resolution domain to <OutFileRoot>.Low.DisXY.<n_out>.t<n/n_low-out>.vtk (-) [0 to 9]", ErrStat2, ErrMsg2, UnEc)
@@ -818,6 +816,16 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if      
                   
+          ! WrDisDT -The time between vtk outputs [must be a multiple of the low resolution time step]:
+   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%WrDisDT, "WrDisDT", &
+      "The time between vtk outputs [must be a multiple of the low resolution time step]", &
+      p%DT, ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
       
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )
@@ -827,6 +835,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if
 
+      ! SumPrint - Print summary data to <RootName>.sum? (flag):
+   CALL ReadVar( UnIn, InputFile, SumPrint, "SumPrint", "Print summary data to <RootName>.sum? (flag)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
       ! ChkptTime - Amount of time between creating checkpoint files for potential restart (s) [>0.0]:
    CALL ReadVar( UnIn, InputFile, TmpTime, "ChkptTime", "Amount of time between creating checkpoint files for potential restart (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
