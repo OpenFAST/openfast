@@ -658,7 +658,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    
    if ( p%NOutDisWindXY > 0 ) then
-      ALLOCATE ( m%OutVizXYPlane(3,p%nX_low, p%nY_low) , STAT=ErrStat )
+      ALLOCATE ( m%OutVizXYPlane(3,p%nX_low, p%nY_low,1) , STAT=ErrStat )
       IF ( ErrStat /= 0 )  THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' Error allocating memory for the Fast.Farm OutVizXYPlane arrays.'
@@ -666,7 +666,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ENDIF   
    end if
    if ( p%NOutDisWindYZ > 0 ) then
-      ALLOCATE ( m%OutVizYZPlane(3,p%nY_low, p%nZ_low) , STAT=ErrStat )
+      ALLOCATE ( m%OutVizYZPlane(3,p%nY_low, p%nZ_low,1) , STAT=ErrStat )
       IF ( ErrStat /= 0 )  THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' Error allocating memory for the Fast.Farm OutVizYZPlane arrays.'
@@ -674,7 +674,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ENDIF   
    end if
    if ( p%NOutDisWindXZ > 0 ) then
-      ALLOCATE ( m%OutVizXZPlane(3,p%nX_low, p%nZ_low) , STAT=ErrStat )
+      ALLOCATE ( m%OutVizXZPlane(3,p%nX_low, p%nZ_low,1) , STAT=ErrStat )
       IF ( ErrStat /= 0 )  THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' Error allocating memory for the Fast.Farm OutVizXZPlane arrays.'
@@ -902,44 +902,44 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
       ! XY plane slices
    do k = 1,p%NOutDisWindXY
       
-      call ExtractSlice( XYSlice, p%OutDisWindZ(k), p%Z0_low, p%nZ_low, p%nX_low, p%nY_low, p%dZ_low, m%Vdist_low, m%outVizXYPlane)        
-         ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n>.vtk
-      FileName = trim(p%OutFileRoot)//".Low.DisXY"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
-      call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XY Slice at Z= "//trim(num2lstr(p%OutDisWindZ(k))), Un, ErrStat2, ErrMsg2 ) 
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      call WrVTK_SP_vectors2D( Un, "DisXY", (/p%nX_low,p%nY_low/), (/p%X0_low,p%Y0_low/), (/p%dX_low,p%dY_low/), m%outVizXYPlane, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-   end do
+         call ExtractSlice( XYSlice, p%OutDisWindZ(k), p%Z0_low, p%nZ_low, p%nX_low, p%nY_low, p%dZ_low, m%Vdist_low, m%outVizXYPlane(:,:,:,1))        
+            ! Create the output vtk file with naming <WindFilePath>/Low/DisXY<k>.t<n>.vtk
+         FileName = trim(p%OutFileRoot)//".Low.DisXY"//trim(num2lstr(k))//".t"//trim(num2lstr(n/p%WrDisSkp1))//".vtk"
+         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XY Slice at Z= "//trim(num2lstr(p%OutDisWindZ(k))), Un, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         call WrVTK_SP_vectors3D( Un, "DisXY", (/p%nX_low,p%nY_low,1_IntKi/), (/p%X0_low,p%Y0_low,p%OutDisWindZ(k)/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXYPlane, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end do
       
    
-      ! YZ plane slices
-   do k = 1,p%NOutDisWindYZ
-      call ExtractSlice( YZSlice, p%OutDisWindX(k), p%X0_low, p%nX_low, p%nY_low, p%nZ_low, p%dX_low, m%Vdist_low, m%outVizYZPlane)        
-         ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n>.vtk
-      FileName = trim(p%OutFileRoot)//".Low.DisYZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
-      call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of YZ Slice at X= "//trim(num2lstr(p%OutDisWindX(k))), Un, ErrStat2, ErrMsg2 ) 
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      call WrVTK_SP_vectors2D( Un, "DisYZ", (/p%nY_low,p%nZ_low/), (/p%Y0_low,p%Z0_low/), (/p%dY_low,p%dZ_low/), m%outVizYZPlane, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-   end do
+         ! YZ plane slices
+      do k = 1,p%NOutDisWindYZ
+         call ExtractSlice( YZSlice, p%OutDisWindX(k), p%X0_low, p%nX_low, p%nY_low, p%nZ_low, p%dX_low, m%Vdist_low, m%outVizYZPlane(:,:,:,1))        
+            ! Create the output vtk file with naming <WindFilePath>/Low/DisYZ<k>.t<n>.vtk
+         FileName = trim(p%OutFileRoot)//".Low.DisYZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n/p%WrDisSkp1))//".vtk"
+         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of YZ Slice at X= "//trim(num2lstr(p%OutDisWindX(k))), Un, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         call WrVTK_SP_vectors3D( Un, "DisYZ", (/1,p%nY_low,p%nZ_low/), (/p%OutDisWindX(k),p%Y0_low,p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizYZPlane, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end do
       
-      ! XZ plane slices
-   do k = 1,p%NOutDisWindXZ
-      call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low, m%outVizXZPlane)        
-         ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n>.vtk
-      FileName = trim(p%OutFileRoot)//".Low.DisXZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n))//".vtk"
-      call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at Y= "//trim(num2lstr(p%OutDisWindY(k))), Un, ErrStat2, ErrMsg2 ) 
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-      call WrVTK_SP_vectors2D( Un, "DisXZ", (/p%nX_low,p%nZ_low/), (/p%X0_low,p%Z0_low/), (/p%dX_low,p%dZ_low/), m%outVizXZPlane, ErrStat2, ErrMsg2 )
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-   end do
-end if
+         ! XZ plane slices
+      do k = 1,p%NOutDisWindXZ
+         call ExtractSlice( XZSlice, p%OutDisWindY(k), p%Y0_low, p%nY_low, p%nX_low, p%nZ_low, p%dY_low, m%Vdist_low, m%outVizXZPlane(:,:,:,1))        
+            ! Create the output vtk file with naming <WindFilePath>/Low/DisXZ<k>.t<n>.vtk
+         FileName = trim(p%OutFileRoot)//".Low.DisXZ"//trim(num2lstr(k))//".t"//trim(num2lstr(n/p%WrDisSkp1))//".vtk"
+         call WrVTK_SP_header( FileName, "Low resolution, disturbed wind of XZ Slice at Y= "//trim(num2lstr(p%OutDisWindY(k))), Un, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         call WrVTK_SP_vectors3D( Un, "DisXZ", (/p%nX_low,1,p%nZ_low/), (/p%X0_low,p%OutDisWindY(k),p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%outVizXZPlane, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end do
+   end if
 
 end subroutine AWAE_CalcOutput
 

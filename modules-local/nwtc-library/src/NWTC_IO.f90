@@ -7916,38 +7916,5 @@ CONTAINS
       RETURN
       
    END SUBROUTINE WrVTK_SP_vectors3D
-   SUBROUTINE WrVTK_SP_vectors2D( Un, dataDescr, dims, origin, gridSpacing, gridVals, ErrStat, ErrMsg ) 
    
-      INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of previously opened file (via call to WrVTK_SP_header)
-      CHARACTER(*)    , INTENT(IN   )        :: dataDescr            !< Short label describing the vector data
-      INTEGER(IntKi)  , INTENT(IN   )        :: dims(2)              !< dimension of the 3D grid (nX,nY,nZ)
-      REAL(ReKi)      , INTENT(IN   )        :: origin(2)            !< the lower-left corner of the 3D grid (X0,Y0,Z0)
-      REAL(ReKi)      , INTENT(IN   )        :: gridSpacing(2)       !< spacing between grid points in each of the 3 directions (dX,dY,dZ)
-      REAL(ReKi)      , INTENT(IN   )        :: gridVals(:,:,:)      !< 3D array of data, size (nX,nY,nZ)
-      INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
-      CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
- 
-      INTEGER(IntKi)                         :: nPts                 ! Total number of grid points 
-      
-      if ( .not. (Un > 0) ) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'WrVTK_SP_points: Invalid file unit, be sure to call WrVTK_SP_header prior to calling WrVTK_SP_points.'
-         return
-      end if
-   
-      ErrStat = ErrID_None
-      ErrMsg  = ''
-      nPts    = dims(1)*dims(2)
-      
-      ! Note: gridVals must be stored such that the left-most dimension is X and the right-most dimension is Z
-      WRITE(Un,'(A,2(i5,1X))')    'DIMENSIONS ',  dims
-      WRITE(Un,'(A,2(f10.2,1X))') 'ORIGIN '    ,  origin
-      WRITE(Un,'(A,2(f10.2,1X))') 'SPACING '   ,  gridSpacing
-      WRITE(Un,'(A,i15)')         'POINT_DATA ',  nPts
-      WRITE(Un,'(A)')            'VECTORS '//trim(dataDescr)//' float'
-      WRITE(Un,'(3(f10.2,1X))')   gridVals
-      close(Un)
-      RETURN
-      
-   END SUBROUTINE WrVTK_SP_vectors2D
 END MODULE NWTC_IO
