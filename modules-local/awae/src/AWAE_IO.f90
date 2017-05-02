@@ -52,11 +52,13 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
    INTEGER(IntKi)                          :: ErrStat2                        ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'WriteDisWindFiles'
-   INTEGER(IntKi)                          :: nt, n_high 
+   INTEGER(IntKi)                          :: nt, n_out 
+   REAL(ReKi)                              :: t_out
    
-
-   FileName = trim(p%OutFileRoot)//".Low.Dis.t"//trim(num2lstr(nint(n/WrDisSkp1)))//".vtk"
-   call WrVTK_SP_header( FileName, "Low resolution disturbed wind for low-resolution timestep "//trim(num2lstr(n)), Un, errStat2, errMsg2 )
+   n_out = n/WrDisSkp1
+   t_out = n*p%DT
+   FileName = trim(p%OutFileRoot)//".Low.Dis.t"//trim(num2lstr(n_out))//".vtk"
+   call WrVTK_SP_header( FileName, "Low resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    call WrVTK_SP_vectors3D( Un, "LowDis", (/p%nX_low,p%nY_low,p%nZ_low/), (/p%X0_low,p%Y0_low,p%Z0_low/), (/p%dX_low,p%dY_low,p%dZ_low/), m%Vdist_low, errStat2, errMsg2 )
@@ -65,10 +67,9 @@ subroutine WriteDisWindFiles( n, WrDisSkp1, p, y, m, errStat, errMsg )
     
    do nt= 1,p%NumTurbines
        ! We are only writing out the first of the high res data for a given low res time step
-      n_high = p%n_high_low*n
-     
-      FileName = trim(p%OutFileRoot)//".HighT"//trim(num2lstr(nt))//".Dis.t"//trim(num2lstr(nint(n/WrDisSkp1)))//".vtk"
-      call WrVTK_SP_header( FileName, "High resolution disturbed wind for high-resolution timestep "//trim(num2lstr(n_high)), Un, errStat2, errMsg2 )
+      
+      FileName = trim(p%OutFileRoot)//".HighT"//trim(num2lstr(nt))//".Dis.t"//trim(num2lstr(n_out))//".vtk"
+      call WrVTK_SP_header( FileName, "High resolution disturbed wind for time = "//trim(num2lstr(t_out))//" seconds.", Un, errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
       call WrVTK_SP_vectors3D( Un, "HighDis", (/p%nX_high,p%nY_high,p%nZ_high/), (/p%X0_high,p%Y0_high,p%Z0_high/), (/p%dX_high,p%dY_high,p%dZ_high/), y%Vdist_high(nt)%data(:,:,:,:,0), errStat2, errMsg2 )
