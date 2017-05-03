@@ -50,52 +50,52 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "")
 endif()
 message("-- Using test tolerance of ${TOLERANCE} --")
 
-# Create symlinks to CertTest required data directories
+# Create symlinks to data directories required by CertTest cases
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink
-  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/5MW_Baseline
+  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/5MW_Baseline
   ${CMAKE_CURRENT_BINARY_DIR}/5MW_Baseline
 )
 
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink
-  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/AWT27
+  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/AWT27
   ${CMAKE_CURRENT_BINARY_DIR}/AWT27
 )
 
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink
-  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/AOC
+  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/AOC
   ${CMAKE_CURRENT_BINARY_DIR}/AOC
 )
 
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink
-  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/UAE_VI
+  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/UAE_VI
   ${CMAKE_CURRENT_BINARY_DIR}/UAE_VI
 )
 
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink
-  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/WP_Baseline
+  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/WP_Baseline
   ${CMAKE_CURRENT_BINARY_DIR}/WP_Baseline
 )
 
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink
-  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/SWRT
+  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/SWRT
   ${CMAKE_CURRENT_BINARY_DIR}/SWRT
 )
 
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink
-  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/pitch.ipt
+  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/pitch.ipt
   ${CMAKE_CURRENT_BINARY_DIR}/pitch.ipt
 )
 
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E create_symlink
-  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/spd_trq.dat
+  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/spd_trq.dat
   ${CMAKE_CURRENT_BINARY_DIR}/spd_trq.dat
 )
 

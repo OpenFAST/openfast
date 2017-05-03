@@ -6,9 +6,9 @@
 function(add_test_r testname )
   add_test(
     ${testname} bash -c "
-      cp ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/test_files/${testname}/*.fst . &&
+      cp ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/${testname}* . &&
       ${CMAKE_BINARY_DIR}/glue-codes/fast/openfast ${testname}.fst > ${testname}.log &&
-      python ${CMAKE_CURRENT_SOURCE_DIR}/pass_fail.py ${CMAKE_BINARY_DIR}/reg_tests/${testname}.outb ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/test_files/${testname}/${testname}.outb ${TOLERANCE}
+      python ${CMAKE_CURRENT_SOURCE_DIR}/pass_fail.py ${CMAKE_BINARY_DIR}/reg_tests/${testname}.outb ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/outputs/${testname}.outb ${TOLERANCE}
     "
   )
 
@@ -36,3 +36,4 @@ add_test_r(Test13)
 add_test_r(Test14)
 add_test_r(Test15)
 add_test_r(Test16)
+add_test_r(Test17)
