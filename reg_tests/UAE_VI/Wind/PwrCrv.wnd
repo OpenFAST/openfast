@@ -1,7 +1,0 @@
-!UAE Phase VI (Ames) wind for for a simple power curve.
-!Time   Wind    Wind    Vert.   Horiz.  Vert.   LinV    Gust
-!       Speed   Dir     Speed   Shear   Shear   Shear   Speed
-   0.0  5.0     0.0     0.0     0.0     0.0     0.0     0.0
-   5.0  5.0     0.0     0.0     0.0     0.0     0.0     0.0
-  25.0 25.0     0.0     0.0     0.0     0.0     0.0     0.0
-9999.9 25.0     0.0     0.0     0.0     0.0     0.0     0.0

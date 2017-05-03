@@ -1,0 +1,3 @@
+[submodule "reg_tests/RegressionTestData"]
+	path = reg_tests/RegressionTestData
+	url = https://github.com/rafaelmudafort/RegressionTestData.git
