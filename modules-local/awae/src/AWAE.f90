@@ -120,7 +120,12 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
    do nt = 1,p%NumTurbines
       do np = 0, maxPln
          cosTerm = dot_product(u%xhat_plane(:,np+1,nt),u%xhat_plane(:,np,nt))
-         sinTerm = sqrt(1.0_ReKi - cosTerm**2)
+         if (EqualRealNos(cosTerm, 1.0_ReKi)) then
+            sinTerm = 0.0_ReKi
+         else
+            sinTerm = sqrt(1.0_ReKi - cosTerm**2)
+         end if
+         
          dp      = u%p_plane(:,np+1,nt) - u%p_plane(:,np,nt)
          m%r_e(np,nt) = dot_product( u%xhat_plane(:,np  ,nt), dp )
          m%r_s(np,nt) = dot_product( u%xhat_plane(:,np+1,nt), dp )
@@ -130,8 +135,8 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
             m%r_s(np,nt) = m%r_s(np,nt) / sinTerm
             m%rhat_s(:,np,nt) = (u%xhat_plane(:,np,nt)*cosTerm - u%xhat_plane(:,np+1,nt)        ) / sinTerm
             m%rhat_e(:,np,nt) = (u%xhat_plane(:,np,nt)         - u%xhat_plane(:,np+1,nt)*cosTerm) / sinTerm
-            m%phat_cs(:,np,nt) = u%p_plane(:,np  ,nt) - m%r_s(np,nt)*m%rhat_s(:,np,nt)
-            m%phat_ce(:,np,nt) = u%p_plane(:,np+1,nt) - m%r_e(np,nt)*m%rhat_e(:,np,nt)
+            m%pvec_cs(:,np,nt) = u%p_plane(:,np  ,nt) - m%r_s(np,nt)*m%rhat_s(:,np,nt)
+            m%pvec_ce(:,np,nt) = u%p_plane(:,np+1,nt) - m%r_e(np,nt)*m%rhat_e(:,np,nt)
          else
             m%parallelFlag(np,nt) = .true.
          end if
@@ -225,7 +230,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         p_tmp_plane = delta*u%p_plane(:,np+1,nt) + deltad*u%p_plane(:,np,nt)
                      else
                         tmp_vec = delta*m%rhat_e(:,np,nt) + deltad*m%rhat_s(:,np,nt)
-                        p_tmp_plane = delta*m%phat_ce(:,np,nt) + deltad*m%phat_cs(:,np,nt) + ( delta*m%r_e(np,nt) + deltad*m%r_s(np,nt) )* tmp_vec / TwoNorm(tmp_vec)
+                        p_tmp_plane = delta*m%pvec_ce(:,np,nt) + deltad*m%pvec_cs(:,np,nt) + ( delta*m%r_e(np,nt) + deltad*m%r_s(np,nt) )* tmp_vec / TwoNorm(tmp_vec)
                      end if
                      
                         
@@ -239,7 +244,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         n_wake = n_wake + 1
                        ! m%r_plane(n_wake) = r_tmp_plane   ! Why do we need this??  GJH
                         
-                        if ( EqualRealNos(r_tmp_plane, 0.0_ReKi) .or. (r_tmp_plane < 0.0_ReKi) ) then         
+                        if ( EqualRealNos(r_tmp_plane, 0.0_ReKi) ) then         
                            m%rhat_plane(:,n_wake) = 0.0_ReKi
                         else
                            m%rhat_plane(:,n_wake) = ( r_vec_plane  ) / r_tmp_plane
@@ -445,7 +450,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                               p_tmp_plane = delta*u%p_plane(:,np+1,nt2) + deltad*u%p_plane(:,np,nt2)
                            else
                               tmp_vec  = delta*m%rhat_e(:,np,nt2) + deltad*m%rhat_s(:,np,nt2)
-                              p_tmp_plane = delta*m%phat_ce(:,np,nt2) + deltad*m%phat_cs(:,np,nt2) + ( delta*m%r_e(np,nt2) + deltad*m%r_s(np,nt2) )* tmp_vec / TwoNorm(tmp_vec)
+                              p_tmp_plane = delta*m%pvec_ce(:,np,nt2) + deltad*m%pvec_cs(:,np,nt2) + ( delta*m%r_e(np,nt2) + deltad*m%r_s(np,nt2) )* tmp_vec / TwoNorm(tmp_vec)
                            end if
                      
                            r_vec_plane = p%Grid_high(:,nXYZ_high,nt2) - p_tmp_plane
@@ -795,17 +800,17 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( m%parallelFlag( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
    allocate ( m%r_s( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%r_s.', errStat, errMsg, RoutineName )
    allocate ( m%r_e( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%r_e.', errStat, errMsg, RoutineName )
    allocate ( m%rhat_s( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%rhat_s.', errStat, errMsg, RoutineName )
    allocate ( m%rhat_e( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
-   allocate ( m%phat_cs( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
-   allocate ( m%phat_ce( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%rhat_e.', errStat, errMsg, RoutineName )
+   allocate ( m%pvec_cs( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%pvec_cs.', errStat, errMsg, RoutineName )
+   allocate ( m%pvec_ce( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%pvec_ce.', errStat, errMsg, RoutineName )
    if (errStat /= ErrID_None) return
    
    ! TODO: This step isn't really needed
