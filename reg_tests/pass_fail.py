@@ -4,7 +4,7 @@ from fast_io import load_output
 
 def exitWithError(error):
     print error
-    sys.exit(-1)
+    sys.exit(1)
 
 # validate input arguments
 nArgsExpected = 4
