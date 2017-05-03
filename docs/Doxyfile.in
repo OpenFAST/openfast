@@ -790,9 +790,9 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = @CMAKE_SOURCE_DIR@/glue-codes \
-                         @CMAKE_SOURCE_DIR@/modules-local \
-                         @CMAKE_SOURCE_DIR@/modules-ext
+INPUT                  = @CMAKE_SOURCE_DIR@/glue-codes/ \
+                         @CMAKE_SOURCE_DIR@/modules-local/ \
+                         @CMAKE_SOURCE_DIR@/modules-ext/
                          
 
 # This tag can be used to specify the character encoding of the source files
@@ -818,12 +818,8 @@ INPUT_ENCODING         = UTF-8
 # *.m, *.markdown, *.md, *.mm, *.dox, *.py, *.pyw, *.f90, *.f95, *.f03, *.f08,
 # *.f, *.for, *.tcl, *.vhd, *.vhdl, *.ucf and *.qsf.
 
-FILE_PATTERNS          = *.C \
-                         *.c \
-                         *.h \
-                         *.hpp \
-                         *.f90 \
-                         *.F
+FILE_PATTERNS          = *.f90 \
+                         *.F90
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -838,10 +834,10 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE_PATTERNS       =  */.git/* \
-                          */build/* \
-                          */cmake/* \
-                          */docs/* \
+EXCLUDE_PATTERNS       =  @CMAKE_SOURCE_DIR@/.git/* \
+                          @CMAKE_SOURCE_DIR@/build/* \
+                          @CMAKE_SOURCE_DIR@/cmake/* \
+                          @CMAKE_SOURCE_DIR@/docs/* \
                           @CMAKE_SOURCE_DIR@/modules-local/orcaflex-interface/src/OrcaFlexInterface.f90 \
                           @CMAKE_SOURCE_DIR@/modules-local/servodyn/src/BladedInterface.f90
 
@@ -2030,7 +2026,7 @@ SEARCH_INCLUDES        = YES
 # preprocessor.
 # This tag requires that the tag SEARCH_INCLUDES is set to YES.
 
-INCLUDE_PATH           = @CMAKE_SOURCE_DIR@/include
+INCLUDE_PATH           = 
 
 # You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard
 # patterns (like *.h and *.hpp) to filter out the header-files in the
@@ -2400,7 +2396,7 @@ DOT_GRAPH_MAX_NODES    = 75
 # Minimum value: 0, maximum value: 1000, default value: 0.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-MAX_DOT_GRAPH_DEPTH    = 2
+MAX_DOT_GRAPH_DEPTH    = 3
 
 # Set the DOT_TRANSPARENT tag to YES to generate images with a transparent
 # background. This is disabled by default, because dot on Windows does not seem
