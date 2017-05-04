@@ -5,7 +5,7 @@
 # Standard regression test
 function(add_test_r testname )
   add_test(
-    ${testname} python ${CMAKE_BINARY_DIR}/reg_tests/executeRegressionTestCase.py ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${testname} ${TOLERANCE}
+    ${testname} python ${CMAKE_CURRENT_SOURCE_DIR}/executeRegressionTestCase.py ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${testname} ${TOLERANCE}
   )
   # limit each test to ~15 minutes: 1000s
   set_tests_properties(${testname} PROPERTIES TIMEOUT 1000 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "regression")

@@ -49,11 +49,6 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 endif()
 message("-- Using test tolerance of ${TOLERANCE}")
 
-# Copy the regression test execution script
-file(GLOB inputs "${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/*")
-file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/executeRegressionTestCase.py"
-     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
-
 # TODO: Compile the ServoData controller library for 5MW turbine test cases
 
 # Copy the test input files
