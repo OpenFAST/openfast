@@ -5,13 +5,8 @@
 # Standard regression test
 function(add_test_r testname )
   add_test(
-    ${testname} bash -c "
-      cp ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/${testname}* . &&
-      ${CMAKE_BINARY_DIR}/glue-codes/fast/openfast ${testname}.fst > ${testname}.log &&
-      python ${CMAKE_CURRENT_SOURCE_DIR}/pass_fail.py ${CMAKE_BINARY_DIR}/reg_tests/${testname}.outb ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/outputs/${testname}.outb ${TOLERANCE}
-    "
+    ${testname} python ${CMAKE_BINARY_DIR}/reg_tests/executeRegressionTestCase.py ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR} ${testname} ${TOLERANCE}
   )
-
   # limit each test to ~15 minutes: 1000s
   set_tests_properties(${testname} PROPERTIES TIMEOUT 1000 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "regression")
 endfunction(add_test_r)
@@ -37,3 +32,5 @@ add_test_r(Test14)
 add_test_r(Test15)
 add_test_r(Test16)
 add_test_r(Test17)
+add_test_r(Test18)
+add_test_r(Test19)
