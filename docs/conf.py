@@ -71,21 +71,20 @@ autoclass_content = 'both'
 mathjax_path = 'https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'
 
 # FIXME: Naively assuming build directory one level up locally, and two up on readthedocs
-# Disabled doxylink for readthedocs. Not sure why it errors there.
-#if readTheDocs:
-#    doxylink = {
-#        'openfast' : (
-#          os.path.join(builddir, '..', '..', 'openfast.tag'),
-#          os.path.join('html')
-#        )
-#    }
-#else:
-#    doxylink = {
-#        'openfast' : (
-#          os.path.join(builddir, '..', 'openfast.tag'),
-#          os.path.join('html')
-#        )
-#    }
+if readTheDocs:
+    doxylink = {
+        'openfast' : (
+          os.path.join(builddir, '..', '..', 'openfast.tag'),
+          os.path.join('html')
+        )
+    }
+else:
+    doxylink = {
+        'openfast' : (
+          os.path.join(builddir, '..', 'openfast.tag'),
+          os.path.join('html')
+        )
+    }
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
