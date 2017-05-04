@@ -179,6 +179,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: delta, deltad
    integer(IntKi)      :: ILo
    integer(IntKi)      :: maxPln
+   integer(IntKi)      :: N_wind_tmp
    character(*), parameter   :: RoutineName = 'LowResGridCalcOutput'   
    errStat = ErrID_None
    errMsg  = ""
@@ -342,12 +343,27 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
             do nw=1,m%N_wind(np,nt)   
                Vsum_low = Vsum_low + m%Vdist_low( :, m%nx_wind(nw,np,nt),m%ny_wind(nw,np,nt),m%nz_wind(nw,np,nt) )
             end do
-            y%V_plane(:,np,nt) = Vsum_low /  m%N_wind(np,nt)
+            y%V_plane(:,np,nt) = Vsum_low
          else
             y%V_plane(:,np,nt) = 0.0_ReKi
          end if
          
       end do
+      
+      if (  m%N_wind(maxPln  ,nt) > 0 ) then
+         y%V_plane(:,maxPln+1,nt) =   y%V_plane(:,maxPln,nt)                          / m%N_wind(maxPln,nt)
+      else
+         y%V_plane(:,maxPln+1,nt) = 0.0_ReKi
+      end if
+      do np = maxPln, 1, -1
+         N_wind_tmp = m%N_wind(np,nt) + m%N_wind(np-1,nt)
+         if ( N_wind_tmp          > 0 ) then
+            y%V_plane(:,np   ,nt) = ( y%V_plane(:,np    ,nt) + y%V_plane(:,np-1,nt) ) /   N_wind_tmp
+         end if
+      end do
+      if (  m%N_wind(0       ,nt) > 0 ) then
+         y%V_plane(:,0       ,nt) =   y%V_plane(:,0     ,nt)                          / m%N_wind(0     ,nt)
+      end if
       
    end do
    

@@ -609,12 +609,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       V_planeDT(1)            =  u%V_plane   (1,i-1)*p%DT
       V_planeDT(2)            =  u%V_plane   (2,i-1)*p%DT
       V_planeDT(3)            =  u%V_plane   (3,i-1)*p%DT
-      if ( (i==(n+2)) .and. (n < p%NumPlanes-2) ) then
-      !   dx = xd%Vx_wind_disk_filt(i-1)*p%DT
-         dx = dot_product(xd%xhat_plane(:,i-2),u%V_plane(:,i-2)*p%DT)
-      else
-         dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT)
-      end if
+      
+      dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT)
       
       if ( EqualRealNos(dx, 0.0_ReKi) .or. dx < 0.0_ReKi) then
          ! TEST: E2
@@ -678,7 +674,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
          ! Update these states to [n+1]
 
-      xd%x_plane     (i) = xd%x_plane    (i-1) + dx   ! dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT), where V_planeDT is V_plane(:,i-1)*p*DT,  for i<>n+2 or n>= NumPlanes-2   
+      xd%x_plane     (i) = xd%x_plane    (i-1) + dx   ! dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT), where V_planeDT is V_plane(:,i-1)*p*DT   
       xd%YawErr_filt (i) = xd%YawErr_filt(i-1)
       xd%xhat_plane(:,i) = xd%xhat_plane(:,i-1)
       
@@ -691,11 +687,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
             call Cleanup()
             return
          end if
-      if ( (i==(n+2)) .and. (n < p%NumPlanes-2) ) then
-         xd%p_plane        (:,i) = xd%p_plane(:,i-1) + u%V_plane(:,i-2)*p%DT + dy_HWkDfl    
-      else        
-         xd%p_plane        (:,i) = xd%p_plane(:,i-1) + V_planeDT + dy_HWkDfl    
-      end if
+      xd%p_plane        (:,i) = xd%p_plane(:,i-1) + V_planeDT + dy_HWkDfl
          
       xd%Vx_wind_disk_filt(i) = xd%Vx_wind_disk_filt(i-1)
       xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)

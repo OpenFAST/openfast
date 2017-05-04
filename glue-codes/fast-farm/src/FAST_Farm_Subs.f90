@@ -1628,9 +1628,9 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
 
                   ! Advection, deflection, and meandering velocity (not including the horizontal wake-deflection correction) 
                   !  of the wake for downstream wake volume, np, of turbine, nt, in the global coordinate system, m/s
-               farm%m%AllOuts(WkVelXTD(iOutDist,nt)) = farm%AWAE%y%V_plane(1,np,nt)
-               farm%m%AllOuts(WkVelYTD(iOutDist,nt)) = farm%AWAE%y%V_plane(2,np,nt)
-               farm%m%AllOuts(WkVelZTD(iOutDist,nt)) = farm%AWAE%y%V_plane(3,np,nt)
+               farm%m%AllOuts(WkVelXTD(iOutDist,nt)) = delta*farm%AWAE%y%V_plane(1,np+1,nt) + deltad*farm%AWAE%y%V_plane(1,np,nt)
+               farm%m%AllOuts(WkVelYTD(iOutDist,nt)) = delta*farm%AWAE%y%V_plane(2,np+1,nt) + deltad*farm%AWAE%y%V_plane(2,np,nt)
+               farm%m%AllOuts(WkVelZTD(iOutDist,nt)) = delta*farm%AWAE%y%V_plane(3,np+1,nt) + deltad*farm%AWAE%y%V_plane(3,np,nt)
 
                   ! Wake diameter for downstream wake volume, np, of turbine, nt, m
                farm%m%AllOuts(WkDiamTD(iOutDist,nt)) = delta*farm%WD(nt)%y%D_wake(np+1) + deltad*farm%WD(nt)%y%D_wake(np)  !farm%AWAE%u%D_wake(np,nt)
