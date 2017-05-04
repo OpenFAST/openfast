@@ -819,7 +819,18 @@ INPUT_ENCODING         = UTF-8
 # *.f, *.for, *.tcl, *.vhd, *.vhdl, *.ucf and *.qsf.
 
 FILE_PATTERNS          = *.f90 \
-                         *.F90
+                         *.F90 \
+                         *.f \
+                         *.F \
+                         *.c \
+                         *.cxx \
+                         *.cpp \
+                         *.C \
+                         *.cc \
+                         *.hh \
+                         *.hxx \
+                         *.hpp \
+                         *.h
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
