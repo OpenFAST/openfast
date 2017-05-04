@@ -4,7 +4,6 @@
 
 # Determine TOLERANCE for testing
 
-
 if (NOT ${TEST_TOLERANCE} STREQUAL "") # User defined
   set(TOLERANCE ${TEST_TOLERANCE})
 
@@ -51,20 +50,16 @@ endif()
 message("-- Using test tolerance of ${TOLERANCE}")
 
 # Copy the regression test execution script
-execute_process(
-  COMMAND ${CMAKE_COMMAND} -E copy
-  ${CMAKE_CURRENT_SOURCE_DIR}/executeRegressionTestCase.py
-  ${CMAKE_CURRENT_BINARY_DIR}/
-)
+file(GLOB inputs "${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/*")
+file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/executeRegressionTestCase.py"
+     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
 
 # TODO: Compile the ServoData controller library for 5MW turbine test cases
 
 # Copy the test input files
-execute_process(
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/
-  ${CMAKE_CURRENT_BINARY_DIR}/
-)
+file(GLOB inputs "${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/*")
+file(COPY ${inputs}
+     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
 
 # Add tests in list
 include(${CMAKE_CURRENT_SOURCE_DIR}/CTestList.cmake)
