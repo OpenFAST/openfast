@@ -57,76 +57,14 @@ execute_process(
   ${CMAKE_CURRENT_BINARY_DIR}/
 )
 
+# TODO: Compile the ServoData controller library for 5MW turbine test cases
+
 # Copy the test input files
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E copy_directory
   ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/
   ${CMAKE_CURRENT_BINARY_DIR}/
 )
-
-# Compile the ServoData controller library for 5MW turbine test cases
-#add_custom_target(
-#    myCustomTarget
-#    COMMAND "COMPILER=gnu ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/test01.sh"
-#)
-##add_dependencies(OpenFAST myCustomTarget)
-#message("COMPILER=gnu ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/test01.sh")
-#message(${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs)
-#message("COMPILER=gnu ./test01.sh")
-##add_custom_command(
-##    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/5MW_Baseline/ServoData/libDISCON_glin64.so
-##    WORKING_DIR ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs
-##    COMMAND make
-##)
-
-## Create symlinks to data directories required by CertTest cases
-#execute_process(
-#  COMMAND ${CMAKE_COMMAND} -E create_symlink
-#  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/5MW_Baseline
-#  ${CMAKE_CURRENT_BINARY_DIR}/5MW_Baseline
-#)
-#
-#execute_process(
-#  COMMAND ${CMAKE_COMMAND} -E create_symlink
-#  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/AWT27
-#  ${CMAKE_CURRENT_BINARY_DIR}/AWT27
-#)
-#
-#execute_process(
-#  COMMAND ${CMAKE_COMMAND} -E create_symlink
-#  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/AOC
-#  ${CMAKE_CURRENT_BINARY_DIR}/AOC
-#)
-#
-#execute_process(
-#  COMMAND ${CMAKE_COMMAND} -E create_symlink
-#  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/UAE_VI
-#  ${CMAKE_CURRENT_BINARY_DIR}/UAE_VI
-#)
-#
-#execute_process(
-#  COMMAND ${CMAKE_COMMAND} -E create_symlink
-#  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/WP_Baseline
-#  ${CMAKE_CURRENT_BINARY_DIR}/WP_Baseline
-#)
-#
-#execute_process(
-#  COMMAND ${CMAKE_COMMAND} -E create_symlink
-#  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/SWRT
-#  ${CMAKE_CURRENT_BINARY_DIR}/SWRT
-#)
-#
-#execute_process(
-#  COMMAND ${CMAKE_COMMAND} -E create_symlink
-#  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/pitch.ipt
-#  ${CMAKE_CURRENT_BINARY_DIR}/pitch.ipt
-#)
-#
-#execute_process(
-#  COMMAND ${CMAKE_COMMAND} -E create_symlink
-#  ${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/spd_trq.dat
-#  ${CMAKE_CURRENT_BINARY_DIR}/spd_trq.dat
-#)
 
 # Add tests in list
 include(${CMAKE_CURRENT_SOURCE_DIR}/CTestList.cmake)
