@@ -9920,6 +9920,10 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
          WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
          WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
          WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
+         
+         IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
+            WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '      (-)     '
+         END IF
 
          IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
             WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '      (-)     '
@@ -10091,10 +10095,11 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
             WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%AWAE%y%V_plane(J,I,1)
             CALL WrFileNR( farm%p%UnOu, TmpStr2 )
          ENDDO
-
+         
          IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
             WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  trim(num2lstr(farm%AWAE%m%N_Wind(I,1)))
          END IF
+
       ENDDO             ! I - All selected output channels
       
       

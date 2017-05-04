@@ -610,7 +610,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       V_planeDT(2)            =  u%V_plane   (2,i-1)*p%DT
       V_planeDT(3)            =  u%V_plane   (3,i-1)*p%DT
       if ( (i==(n+2)) .and. (n < p%NumPlanes-2) ) then
-         dx = xd%Vx_wind_disk_filt(i-1)*p%DT
+      !   dx = xd%Vx_wind_disk_filt(i-1)*p%DT
+         dx = dot_product(xd%xhat_plane(:,i-2),u%V_plane(:,i-2)*p%DT)
       else
          dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT)
       end if
@@ -691,7 +692,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
             return
          end if
       if ( (i==(n+2)) .and. (n < p%NumPlanes-2) ) then
-         xd%p_plane        (:,i) = xd%p_plane(:,i-1) + dx*xd%xhat_plane(:,i-1) + dy_HWkDfl    
+         xd%p_plane        (:,i) = xd%p_plane(:,i-1) + u%V_plane(:,i-2)*p%DT + dy_HWkDfl    
       else        
          xd%p_plane        (:,i) = xd%p_plane(:,i-1) + V_planeDT + dy_HWkDfl    
       end if
@@ -739,7 +740,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       return
    end if
    
-      ! The function state-related arguments must be at time [n+1], so we must update YawErr_filt adn xhat_plane before computing the deflection
+      ! The function state-related arguments must be at time [n+1], so we must update YawErr_filt and xhat_plane before computing the deflection
    dx = 0.0_ReKi
    dy_HWkDfl = GetYawCorrection(xd%YawErr_filt(0), xd%xhat_plane(:,0), dx, p, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, errStat, errMsg, RoutineName)   
@@ -876,8 +877,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       ! Check if we are fully initialized
    if ( OtherState%firstPass ) then
       ! TODO: This entire block needs to be reviewed
-                 
-    
+                        
       do i = 0, min(n+1,p%NumPlanes-1)
          x_plane = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
        
@@ -888,9 +888,9 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                return
             end if
       
-         y%p_plane     (:,i) = u%p_hub(:) + x_plane*u%xhat_disk(:) + correction
-
-         y%xhat_plane  (:,i) = u%xhat_disk(:)        
+         y%p_plane   (:,i) = u%p_hub(:) + x_plane*u%xhat_disk(:) + correction
+         y%xhat_plane(:,i) = u%xhat_disk(:)
+                 
          
             ! NOTE: Since we are in firstPass=T, then xd%Vx_wake is already set to zero, so just pass that into WakeDiam
          y%D_wake(i)  =  WakeDiam( p%Mod_WakeDiam, p%NumRadii, p%dr, p%r, xd%Vx_wake(:,i), u%Vx_wind_disk, u%D_rotor, p%C_WakeDiam)
@@ -1023,7 +1023,7 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, errStat, errMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
    
-  
+   
    do i = 0, 1
       xd%x_plane     (i)   = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
       xd%YawErr_filt (i)   = u%YawErr
@@ -1037,10 +1037,8 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, errStat, errMsg)
       
       !correction = ( p%C_HWkDfl_x + p%C_HWkDfl_xY*u%YawErr )*xd%x_plane(i) + correctionA
       
-      xd%p_plane     (:,i) = u%p_hub(:) + xd%x_plane(i)*u%xhat_disk(:) + correction
-      
-      xd%xhat_plane  (:,i) = u%xhat_disk(:)
-      
+      xd%p_plane   (:,i)      = u%p_hub(:) + xd%x_plane(i)*u%xhat_disk(:) + correction
+      xd%xhat_plane(:,i)      = u%xhat_disk(:)    
       xd%Vx_wind_disk_filt(i) = u%Vx_wind_disk
       xd%TI_amb_filt      (i) = u%TI_amb
       xd%D_rotor_filt     (i) = u%D_rotor
