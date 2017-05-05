@@ -33,7 +33,8 @@ this would look something like:
 Run CMake Configure and Make the Docs
 -------------------------------------
 
-In the OpenFAST repository checkout, create a ``mydocbuild`` directory.  Change
+In the OpenFAST repository checkout, if it has not been created yet, 
+create a ``build`` directory.  Change
 to the build directory and run CMake with ``BUILD_DOCUMENTATION`` on.  If all
 of the main tools are found successfully, CMake should configure with the
 ability to build the documentation. If Sphinx or Doxygen aren't found, the
@@ -42,18 +43,18 @@ configure will skip the documentation.
 Issue the command ``make docs`` which should first build the Doxygen
 documentation and then the Sphinx documentation. If this completes
 successfully, the entry point to the documentation should be in
-``mydocbuild/docs/html/index.html``.
+``build/docs/html/index.html``.
 
 For example, from the OpenFAST directory:
 
 ::
 
-    mkdir mydocbuild 
-    cd mydocbuild 
+    mkdir build 
+    cd build 
     cmake -DBUILD_DOCUMENTATION:BOOL=ON ..
     make docs
 
-If you modify document source files in ``OpenFAST/docs/source``, you can simply update the html files through another ``make`` in ``OpenFAST/mydocbuild``:
+If you modify document source files in ``OpenFAST/docs/source``, you can simply update the html files through another ``make docs`` in ``OpenFAST/build``:
 
 ::
 

@@ -26,6 +26,7 @@ add_library(foamfastlib
 target_link_libraries(foamfastlib openfoamtypeslib openfast_prelib nwtclibs)
 
 install(TARGETS openfoamtypeslib foamfastlib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

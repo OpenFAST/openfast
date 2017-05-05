@@ -29,6 +29,7 @@ add_library(elastodynlib ${ED_SOURCES})
 target_link_libraries(elastodynlib servodynlib nwtclibs)
 
 install(TARGETS elastodynlib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
