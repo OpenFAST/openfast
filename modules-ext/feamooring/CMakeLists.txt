@@ -32,6 +32,7 @@ target_link_libraries(feam_driver feamlib)
 
 
 install(TARGETS feamlib feam_driver
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)

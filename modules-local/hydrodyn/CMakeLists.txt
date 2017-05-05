@@ -67,6 +67,7 @@ target_link_libraries(hydrodyn hydrodynlib nwtclibs)
 #target_link_libraries(ss_radiation hydrodynlib nwtclibs)
 
 install(TARGETS hydrodynlib hydrodyn
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

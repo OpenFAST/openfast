@@ -41,7 +41,8 @@ macro(set_fast_fortran)
   get_filename_component(FCNAME "${CMAKE_Fortran_COMPILER}" NAME)
 
   # Abort if we do not have gfortran or Intel Fortran Compiler.
-  if (NOT (FCNAME MATCHES "gfortran.*" OR FCNAME MATCHES "ifort*"))
+  if (NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU" OR
+        ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel"))
     message(FATAL_ERROR "OpenFAST requires either GFortran or Intel Fortran Compiler. Compiler detected by CMake: ${FCNAME}")
   endif()
 
@@ -54,11 +55,11 @@ macro(set_fast_fortran)
   include_directories(${CMAKE_Fortran_MODULE_DIRECTORY})
 
   # Get OS/Compiler specific options
-  if (FCNAME MATCHES "gfortran.*")
+  if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
     set_fast_gfortran()
-  elseif(FCNAME MATCHES "ifort.*")
+  elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
     set_fast_intel_fortran()
-  endif(FCNAME MATCHES "gfortran.*")
+  endif()
 endmacro(set_fast_fortran)
 
 #

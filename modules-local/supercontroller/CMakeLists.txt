@@ -14,28 +14,22 @@
 # limitations under the License.
 #
 
-generate_f90_types(src/SubDyn_Registry.txt SubDyn_Types.f90)
+generate_f90_types(src/SuperController_Registry.txt SuperController_Types.f90 -ccode)
 
-set(SUBDYN_SOURCES
-  src/SubDyn.f90
-  src/SD_FEM.f90
-  src/SubDyn_Output.f90
-  src/qsort_c_module.f90
+add_library(sctypeslib
+  SuperController_Types.f90)
+target_link_libraries(sctypeslib nwtclibs)
 
-  SubDyn_Types.f90
-  )
+add_library(scfastlib
+  src/SuperController.f90)
+target_link_libraries(scfastlib sctypeslib openfast_prelib nwtclibs)
 
-add_library(subdynlib ${SUBDYN_SOURCES})
-target_link_libraries(subdynlib nwtclibs)
-
-set(SUBDYN_DRIVER_SOURCES
-  src/SubDyn_Driver.f90)
-
-add_executable(subdyn ${SUBDYN_DRIVER_SOURCES})
-target_link_libraries(subdyn subdynlib nwtclibs)
-
-install(TARGETS subdynlib subdyn
+install(TARGETS sctypeslib scfastlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/SuperController_Types.h
+  DESTINATION include)
