@@ -11,11 +11,11 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 
   # Mac
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Clang")
       set(TOLERANCE 0.0000001)
-    elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
       set(TOLERANCE 0.0000001)
-    elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+    elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
       set(TOLERANCE 0.0000001)
     else()
       set(TOLERANCE 0.0000001) # Mac default
@@ -23,11 +23,11 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 
   # Linux
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Clang")
       set(TOLERANCE 0.0000001)
-    elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
       set(TOLERANCE 0.000000000000001)
-    elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+    elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
       set(TOLERANCE 0.0001)
     else()
       set(TOLERANCE 0.0000001) # Linux default
@@ -35,11 +35,11 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 
   # Windows
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Clang")
       set(TOLERANCE 0.0000001)
-    elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
       set(TOLERANCE 0.0000001)
-    elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
+    elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
       set(TOLERANCE 0.0000001)
     else()
       set(TOLERANCE 0.0000001) # Windows default
