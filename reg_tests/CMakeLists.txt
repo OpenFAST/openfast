@@ -8,12 +8,9 @@ if (NOT ${TEST_TOLERANCE} STREQUAL "") # User defined
   set(TOLERANCE ${TEST_TOLERANCE})
 
 else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
-
   # Mac
   if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-    if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Clang")
-      set(TOLERANCE 0.0000001)
-    elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
+    if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
       set(TOLERANCE 0.0000001)
     elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
       set(TOLERANCE 0.0000001)
@@ -23,9 +20,7 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 
   # Linux
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-    if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Clang")
-      set(TOLERANCE 0.0000001)
-    elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
+    if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
       set(TOLERANCE 0.000000000000001)
     elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
       set(TOLERANCE 0.0001)
@@ -35,9 +30,7 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 
   # Windows
   elseif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-    if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Clang")
-      set(TOLERANCE 0.0000001)
-    elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
+    if("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU")
       set(TOLERANCE 0.0000001)
     elseif("${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel")
       set(TOLERANCE 0.0000001)
@@ -47,7 +40,7 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
   endif()
 
 endif()
-message("-- Using test tolerance of ${TOLERANCE}")
+message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
 
 # TODO: Compile the ServoData controller library for 5MW turbine test cases
 
