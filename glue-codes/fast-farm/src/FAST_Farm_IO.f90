@@ -9920,10 +9920,6 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
          WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
          WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
          WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
-         
-         IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
-            WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '      (-)     '
-         END IF
 
          IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
             WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '      (-)     '
