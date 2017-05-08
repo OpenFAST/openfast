@@ -230,11 +230,30 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%NumBl       = p%NumBl
    InitOut%Gravity     = p%Gravity
    InitOut%BladeLength = p%TipRad - p%HubRad
+   InitOut%TowerHeight = p%TwrFlexL
    InitOut%PlatformPos = x%QT(1:6)
    InitOut%HubHt       = p%HubHt
    InitOut%TwrBasePos  = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
    InitOut%HubRad      = p%HubRad
-   
+
+   if (.not. p%BD4Blades) then
+      ALLOCATE(InitOut%BldRNodes(p%BldNodes),  STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN
+         call CheckError( ErrStat2, ErrMsg2 )
+         if (ErrStat2 >= AbortErrLev) return
+      END IF
+      InitOut%BldRNodes(:) = p%RNodes(:)
+   else
+      !Deal with BeamDyn case later
+   end if
+
+   ALLOCATE(InitOut%TwrHNodes(p%TwrNodes),  STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN
+         call CheckError( ErrStat2, ErrMsg2 )
+         if (ErrStat2 >= AbortErrLev) return
+      END IF
+   InitOut%TwrHNodes(:) = p%HNodes(:)
+
    CALL AllocAry(InitOut%BlPitch, p%NumBl, 'BlPitch', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN

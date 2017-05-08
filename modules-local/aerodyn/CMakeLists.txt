@@ -53,6 +53,7 @@ add_executable(aerodyn ${AD_DRIVER_SOURCES})
 target_link_libraries(aerodyn aerodynlib nwtclibs ${CMAKE_DL_LIBS})
 
 install(TARGETS aerodyn aerodynlib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

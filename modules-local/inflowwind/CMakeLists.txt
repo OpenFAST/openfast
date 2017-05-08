@@ -57,6 +57,7 @@ add_executable(inflowwind ${IFW_DRIVER_SOURCES})
 target_link_libraries(inflowwind ifwlib ${CMAKE_DL_LIBS})
 
 install(TARGETS inflowwind ifwlib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

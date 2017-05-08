@@ -38,9 +38,16 @@
 # SET_FAST_FORTRAN - Set Fortran compiler options based on compiler/arch
 #
 macro(set_fast_fortran)
+  get_filename_component(FCNAME "${CMAKE_Fortran_COMPILER}" NAME)
+
+  # Abort if we do not have gfortran or Intel Fortran Compiler.
+  if (NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU" OR
+        ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel"))
+    message(FATAL_ERROR "OpenFAST requires either GFortran or Intel Fortran Compiler. Compiler detected by CMake: ${FCNAME}")
+  endif()
+
   # Set the preprocessor for all source files by default
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -cpp "
-    )
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -cpp ")
 
   # Force all .mod files to be stored in a single directory
   set(CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/ftnmods"
@@ -48,12 +55,11 @@ macro(set_fast_fortran)
   include_directories(${CMAKE_Fortran_MODULE_DIRECTORY})
 
   # Get OS/Compiler specific options
-  get_filename_component(FCNAME "${CMAKE_Fortran_COMPILER}" NAME)
-  if (FCNAME MATCHES "gfortran.*")
+  if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
     set_fast_gfortran()
-  elseif(FCNAME MATCHES "ifort.*")
+  elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
     set_fast_intel_fortran()
-  endif(FCNAME MATCHES "gfortran.*")
+  endif()
 endmacro(set_fast_fortran)
 
 #

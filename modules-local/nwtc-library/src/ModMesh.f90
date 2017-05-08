@@ -1057,13 +1057,13 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 !! arguments indicate the fields that will be allocated and associated with the nodes of the mesh. The fields that may 
 !! be associated with the mesh nodes are Force, Moment, Orientation, Rotation, TranslationDisp, RotationVel, TranslationVel, 
 !! RotationAcc, TranslationAcc, and an arbitrary number of Scalars. See the definition of ModMeshType for descriptions of these fields.  
+! After the first 5 arguments, the others are optional that say whether to allocate fields in the mesh.
+! These are always dimensioned npoints 
    SUBROUTINE MeshCreate ( BlankMesh                                                       &
                           ,IOS                                                             &
                           ,Nnodes                                                          &
                           ,ErrStat                                                         &
                           ,ErrMess                                                         &
-                             ! optional arguments that say whether to allocate fields      &
-                             ! in the mesh. These are always dimensioned npoints           &
                           ,Force                                                           &
                           ,Moment                                                          &
                           ,Orientation                                                     &

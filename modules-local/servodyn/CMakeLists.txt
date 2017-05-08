@@ -42,6 +42,7 @@ add_executable(TMD
 target_link_libraries(TMD servodynlib nwtclibs ${CMAKE_DL_LIBS})
 
 install(TARGETS servodynlib servodyn TMD
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

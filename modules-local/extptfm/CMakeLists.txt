@@ -26,6 +26,7 @@ add_library(extptfm_mckflib
 target_link_libraries(extptfm_mckflib nwtclibs)
 
 install(TARGETS extptfm_mckflib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
