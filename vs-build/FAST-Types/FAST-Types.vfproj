@@ -1,3 +1,4 @@
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ElastoDyn" Description="Running Registry for ElastoDyn" Outputs="..\..\build\types-files\ElastoDyn_Types.f90"/></FileConfiguration>
 <?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject ProjectType="typeStaticLibrary" ProjectCreator="Intel Fortran" Keyword="Static Library" Version="11.0" ProjectIdGuid="{1A440C5B-CBA6-47D9-9CC2-C1CBA8C00BF9}">
 	<Platforms>
@@ -703,6 +704,25 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\build\types-files\OpenFOAM_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\build\types-files\OpenFOAM_Types.f90"/></FileConfiguration></File></Filter></Filter>
+      <Filter Name="Super Controller">
+		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules-local\supercontroller\src\SuperController_Registry.txt">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration></File></Filter></Filter>      
 		<Filter Name="ServoDyn">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules-local\servodyn\src\ServoDyn_Registry.txt">
