@@ -46,6 +46,9 @@ SET BD_Loc=%Local_Modules_Loc%\beamdyn\src
 SET SC_Loc=%Local_Modules_Loc%\supercontroller\src
 
 SET MAP_Loc_R=%MAP_Loc%\src
+SET AWAE_Loc=%Local_Modules_Loc%\awae\src
+SET WD_Loc=%Local_Modules_Loc%\wakedynamics\src
+SET Farm_Loc=%Root_Loc%\glue-codes\fast-farm\src
 
 SET ALL_FAST_Includes=-I "%FAST_Loc%" -I "%NWTC_Lib_Loc%" -I "%ED_Loc%" -I "%SrvD_Loc%" -I "%AD14_Loc%" -I^
  "%AD_Loc%" -I "%BD_Loc%" -I "%SC_Loc%" -I^
@@ -256,10 +259,29 @@ SET CURR_LOC=%ExtPtfm_Loc%
 %REGISTRY% "%CURR_LOC%\%ModuleName%_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%"
 GOTO checkError
 
+:FarmDriver
+SET CURR_LOC=%Farm_Loc%
+%REGISTRY% "%CURR_LOC%\FAST_Farm_Registry.txt" -I %WD_Loc% -I %AWAE_Loc% -I %Farm_Loc% %ALL_FAST_INCLUDES% -noextrap -O "%Output_Loc%"
+GOTO checkError
+
 :FASTWrapper
 SET CURR_LOC=%Farm_Loc%
 %REGISTRY% "%CURR_LOC%\FASTWrapper_Registry.txt" -I %NWTC_Lib_Loc%  %ALL_FAST_INCLUDES% -noextrap -O "%Output_Loc%"
 GOTO checkError
+
+:WakeDynamics
+SET CURR_LOC=%WD_Loc%
+%REGISTRY% "%CURR_LOC%\WakeDynamics_Registry.txt" -I %NWTC_Lib_Loc% -noextrap -O "%Output_Loc%"
+GOTO checkError
+
+:AWAE
+SET CURR_LOC=%AWAE_Loc%
+%REGISTRY% "%CURR_LOC%\AWAE_Registry.txt" -I %NWTC_Lib_Loc% -noextrap -O "%Output_Loc%"
+GOTO checkError
+
+:WakeDynamics_Driver
+SET CURR_LOC=%Wake_Loc%
+%REGISTRY% "%CURR_LOC%\WakeDynamics_Driver_Registry.txt" -I %NWTC_Lib_Loc% -I %Wake_Loc% -noextrap -O %CURR_LOC% 
 
 :checkError
 ECHO.
