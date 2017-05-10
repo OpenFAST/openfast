@@ -1835,16 +1835,16 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
    INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
    INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
    INTEGER(IntKi)                :: idx_node          !< index to current GLL point in element
-   REAL(BDKi)                    :: q_root(3)         !< Rotation parameters for root node
+   REAL(BDKi)                    :: q_root(3)         !< Rotation parameters for root node (\f$\underline{\hat{c}}^1 \f$)
    REAL(BDKi)                    :: q_temp(3)         !< Temp array for the rotation parameters of the current node
    REAL(BDKi)                    :: Nr_temp(3)        !< Temp array for the resulting relative rotation
    REAL(BDKi)                    :: rrr(3)            !< relative rotation field \f$ \underline{r}(\xi) \f$
    REAL(BDKi)                    :: rrp(3)            !< relative prime rotation field \f$ \underline{r}^\prime(\xi) \f$
    REAL(BDKi)                    :: cc(3)
-   REAL(BDKi)                    :: rotu_root(3)      !< Rotation parameters for root (\f$\underline{\hat{c}}^1 \f$)
    REAL(BDKi)                    :: rot_c_xi(3)       !< Rotation parameters \f$\underline{c}(\xi)\f$
    REAL(BDKi)                    :: rot0_T0(3)        !< Initial rotation at T=0
    REAL(BDKi)                    :: temp33(3,3)
+   REAL(BDKi)                    :: DCM_root(3,3)       !< DCM for first node
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_RotationalInterpQP'
 
 
@@ -1890,8 +1890,14 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
 
    q_root(:) = x%q(4:6,elem_start)              ! Rotation parameters for root
 
+      !> Find the transpose of the DCM orientation matrix of the root as
+      !! \f$ \underline{\underline{R}}\left(\underline{\hat{c}}^1\right)\f$
+   CALL BD_CrvMatrixR(q_root,DCM_root)   ! returns temp33 (the transpose of the DCM orientation matrix)
+ 
+
       ! Calculate the rotation parameters relative to the root for each node
-   DO idx_node=1,p%nodes_per_elem
+   m%Nrrr(1:3,elem_start,nelem)  = (/ 0.0_BDKi, 0.0_BDKi, 0.0_BDKi /)  ! First node has no curvature relative to itself
+   DO idx_node=2,p%nodes_per_elem
       q_temp(:) = x%q(4:6,elem_start-1+idx_node)    ! Adjust to location in array for current element
          ! Find resulting rotation parameters R(Nr) = Ri^T(x%q(1)) R(x%q(:))
          ! where R(x%q(1))^T is the transpose rotation parameters for the root node
@@ -1942,8 +1948,7 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
             !! \f$  \underline{\underline{R}}\left(c^i\right)
             !!       =  \underline{\underline{R}}\left(\underline{\hat{c}}^1\right)
             !!          \underline{\underline{R}}\left(\underline{\underline{r}}^i\right) \f$
-         rotu_root(:) = x%q(4:6,elem_start)                          ! rotation parameters for root \f$ \underline{\hat{c}}^1 \f$
-         CALL BD_CrvCompose(rot_c_xi,rotu_root,rrr,FLAG_R1R2)  ! rot_c_xi = rotu_root composed with rrr
+         CALL BD_CrvCompose(rot_c_xi,q_root,rrr,FLAG_R1R2)  ! rot_c_xi = q_root composed with rrr
             ! Set the rotation parameters to return
          m%qp%uuu(4:6,idx_qp,nelem) = rot_c_xi(:)                                ! rotation parameters \f$\underline{c}(\xi)\f$
       
@@ -1962,13 +1967,9 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
          CALL BD_CrvMatrixH(rrr,temp33)         ! retrieve the tangent tensor given rrr
          cc = MATMUL(temp33,rrp)                ! \underline{k} in eq (5) http://www.nrel.gov/docs/fy14osti/60759.pdf
       
-            !> Find the transpose of the DCM orientation matrix of the root as
-            !! \f$ \underline{\underline{R}}\left(\underline{\hat{c}}^1\right)\f$
-         CALL BD_CrvMatrixR(rotu_root,temp33)   ! returns temp33 (the transpose of the DCM orientation matrix)
- 
             !> Assemble \f$\underline{kappa}\f$ by adding in the root rotation.
             !! This is \f$\underline{\kappa} = \underline{k} + \underline{\underline{R}}\underline{k}_i \f$
-         m%qp%kappa(:,idx_qp,nelem) = MATMUL(temp33,cc)
+         m%qp%kappa(:,idx_qp,nelem) = MATMUL(DCM_root,cc)
       
             !> ###Find the rotation tensor \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$
             !!
