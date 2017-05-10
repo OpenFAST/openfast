@@ -1,0 +1,6 @@
+set(CTEST_PROJECT_NAME         "Test-Project")
+set(CTEST_NIGHTLY_START_TIME   "01:00:00 MST")
+set(CTEST_DROP_METHOD          "http")
+set(CTEST_DROP_SITE            "raf.mudaf")
+set(CTEST_DROP_LOCATION        "/cdash/submit.php?project=TestProject")
+set(CTEST_DROP_SITE_CDASH      FALSE)
