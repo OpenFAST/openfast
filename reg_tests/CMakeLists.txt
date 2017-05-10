@@ -45,7 +45,7 @@ message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran
 # TODO: Compile the ServoData controller library for 5MW turbine test cases
 
 # Copy the test input files
-file(GLOB inputs "${CMAKE_CURRENT_SOURCE_DIR}/RegressionTestData/inputs/*")
+file(GLOB inputs "${CMAKE_CURRENT_SOURCE_DIR}/r-test/inputs/*")
 file(COPY ${inputs}
      DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
 
