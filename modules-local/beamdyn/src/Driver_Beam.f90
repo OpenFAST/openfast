@@ -374,10 +374,11 @@ SUBROUTINE BD_InputSolve( t, u,  p, BD_DriverData, IniVelo, ErrStat, ErrMsg)
 
    ! Point mesh: RootMotion 
    ! Calculate root displacements and rotations
-   !u%RootMotion%Orientation(:,:,1) = MATMUL(p%GlbRot,DCM)
-   u%RootMotion%Orientation(:,:,1) = DCM
+   u%RootMotion%Orientation(:,:,1) = MATMUL(p%GlbRot,DCM)
+   !u%RootMotion%Orientation(:,:,1) = DCM
    
-   temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
+   !temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
+   temp_rr(:) = MATMUL(DCM,temp_r0)
    !temp_rr(:) = u%RootMotion%TranslationDisp(:,:,1)
    u%RootMotion%Orientation(:,:,1)   = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
    u%RootMotion%TranslationDisp(:,:) = 0.0_BDKi
