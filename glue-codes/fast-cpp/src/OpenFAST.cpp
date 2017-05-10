@@ -86,9 +86,9 @@ void fast::OpenFAST::solution0() {
 
   if (!dryRun) {
        // set wind speeds at initial locations
-    for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-        setOutputsToFAST(cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
-    }
+    // for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+    //     setOutputsToFAST(cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
+    // }
      
      if(scStatus) {
 
@@ -128,7 +128,7 @@ void fast::OpenFAST::step() {
    for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
 
      //  set wind speeds at original locations 
-     setOutputsToFAST(cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
+     //     setOutputsToFAST(cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
 
      // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
      // (note OpenFOAM could do subcycling around this step)
@@ -138,15 +138,27 @@ void fast::OpenFAST::step() {
        }
      }
 
+     if ( isDebug() ) {
+
+       std::ofstream fastcpp_velocity_file;
+       fastcpp_velocity_file.open("fastcpp_velocity.csv") ;
+       fastcpp_velocity_file << "# x, y, z, fx, fy, fz" << std::endl ;
+       fastcpp_velocity_file << get_numVelPtsLoc(iTurb) << std::endl ;
+       for (int iNode=0; iNode < get_numVelPtsLoc(iTurb); iNode++) {
+	 fastcpp_velocity_file << cDriver_Input_from_FAST[iTurb].pxForce[iNode] << ", " << cDriver_Input_from_FAST[iTurb].pyForce[iNode] << ", " << cDriver_Input_from_FAST[iTurb].pzForce[iNode] << ", " << cDriver_Output_to_FAST[iTurb].u[iNode] << ", " << cDriver_Output_to_FAST[iTurb].v[iNode] << ", " << cDriver_Output_to_FAST[iTurb].w[iNode] << " " << std::endl ;           
+       }
+       fastcpp_velocity_file.close() ;
+       
+     }
+
+
+     
      FAST_OpFM_Step(&iTurb, &ErrStat, ErrMsg);
      checkError(ErrStat, ErrMsg);
 
      if ( isDebug() ) {
-       for (int iNode=0; iNode < get_numForcePtsLoc(iTurb); iNode++) {
-	 std::cout << "Node " << iNode << " Position = " << cDriver_Input_from_FAST[iTurb].pxForce[iNode] << " " << cDriver_Input_from_FAST[iTurb].pyForce[iNode] << " " << cDriver_Input_from_FAST[iTurb].pzForce[iNode] << " " << std::endl ;
-       }
        std::ofstream actuatorForcesFile;
-       actuatorForcesFile.open("actuatorForces.csv") ;
+       actuatorForcesFile.open("actuator_forces.csv") ;
        actuatorForcesFile << "# x, y, z, fx, fy, fz" << std::endl ;
        for (int iNode=0; iNode < get_numForcePtsLoc(iTurb); iNode++) {
 	 actuatorForcesFile << cDriver_Input_from_FAST[iTurb].pxForce[iNode] << ", " << cDriver_Input_from_FAST[iTurb].pyForce[iNode] << ", " << cDriver_Input_from_FAST[iTurb].pzForce[iNode] << ", " << cDriver_Input_from_FAST[iTurb].fx[iNode] << ", " << cDriver_Input_from_FAST[iTurb].fy[iNode] << ", " << cDriver_Input_from_FAST[iTurb].fz[iNode] << " " << std::endl ;           
@@ -246,12 +258,22 @@ void fast::OpenFAST::setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, 
 
 }
 
+void fast::OpenFAST::getApproxHubPos(std::vector<double> & currentCoords, int iTurbGlob) {
+
+  // Get hub position of Turbine 'iTurbGlob'
+  currentCoords[0] = globTurbineData[iTurbGlob].TurbineHubPos[0];
+  currentCoords[1] = globTurbineData[iTurbGlob].TurbineHubPos[1];
+  currentCoords[2] = globTurbineData[iTurbGlob].TurbineHubPos[2];
+
+}
+
 void fast::OpenFAST::getHubPos(std::vector<double> & currentCoords, int iTurbGlob) {
 
   // Get hub position of Turbine 'iTurbGlob'
-  currentCoords[0] = globTurbineData[iTurbGlob].TurbineHubPos[0] ;
-  currentCoords[1] = globTurbineData[iTurbGlob].TurbineHubPos[1] ;
-  currentCoords[2] = globTurbineData[iTurbGlob].TurbineHubPos[2] ;
+  int iTurbLoc = get_localTurbNo(iTurbGlob);
+  currentCoords[0] = cDriver_Input_from_FAST[iTurbLoc].pxVel[0] ;
+  currentCoords[1] = cDriver_Input_from_FAST[iTurbLoc].pyVel[0] ;
+  currentCoords[2] = cDriver_Input_from_FAST[iTurbLoc].pzVel[0] ;
   
 }
 
@@ -323,10 +345,9 @@ void fast::OpenFAST::setVelocity(std::vector<double> & currentVelocity, int iNod
   // Set velocity at current node of current turbine - 
   int iTurbLoc = get_localTurbNo(iTurbGlob);
   for(int j=0; j < iTurbLoc; j++) iNode = iNode - get_numVelPtsLoc(iTurbLoc);
-  cDriver_Output_to_FAST[iTurbLoc].u[iNode] = currentVelocity[0];
-  cDriver_Output_to_FAST[iTurbLoc].v[iNode] = currentVelocity[1];
-  cDriver_Output_to_FAST[iTurbLoc].w[iNode] = currentVelocity[2];
-
+  forceNodeVel[iTurbLoc][iNode][0] = currentVelocity[0];
+  forceNodeVel[iTurbLoc][iNode][1] = currentVelocity[1];
+  forceNodeVel[iTurbLoc][iNode][2] = currentVelocity[2];
 }
 
 void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
@@ -338,6 +359,15 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
     cDriver_Output_to_FAST[iTurb].u[0] = forceNodeVel[iTurb][0][0];
     cDriver_Output_to_FAST[iTurb].v[0] = forceNodeVel[iTurb][0][1];
     cDriver_Output_to_FAST[iTurb].w[0] = forceNodeVel[iTurb][0][2];
+
+    if ( isDebug() ) {
+       std::ofstream actuatorVelFile;
+       actuatorVelFile.open("actuator_velocity.csv") ;
+       for (int iNode=0; iNode < get_numForcePtsLoc(iTurb); iNode++) {
+	 actuatorVelFile << cDriver_Input_from_FAST[iTurb].pxForce[iNode] << ", " << cDriver_Input_from_FAST[iTurb].pyForce[iNode] << ", " << cDriver_Input_from_FAST[iTurb].pzForce[iNode] << ", " << forceNodeVel[iTurb][iNode][0] << ", " << forceNodeVel[iTurb][iNode][1] << ", " << forceNodeVel[iTurb][iNode][2] << " " << std::endl ;
+       }
+       actuatorVelFile.close() ;
+    }
 
     // Do the blades first
     int nBlades = get_numBladesLoc(iTurb);
@@ -366,7 +396,7 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
 			      );
 	//Find nearest two force nodes
 	int jForceLower = 0;
-	while (  ((rDistForce[jForceLower]-rDistVel)*(rDistForce[jForceLower+1]-rDistVel) >  0) && (jForceLower < (nForcePtsBlade-1)  ) ) {
+	while ( (rDistForce[jForceLower+1] < rDistVel) && ( jForceLower < (nForcePtsBlade-1)) )   {
 	  jForceLower = jForceLower + 1;
 	}
 	int iNodeForceLower = 1 + iBlade * nForcePtsBlade + jForceLower ; 
@@ -405,7 +435,7 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
 	                      );
 	//Find nearest two force nodes
 	int jForceLower = 0;
-	while (  ((hDistForce[jForceLower]-hDistVel)*(hDistForce[jForceLower+1]-hDistVel) >  0) && (jForceLower < (nForcePtsTower-1)  ) ) {
+	while ( (hDistForce[jForceLower+1] < hDistVel) && ( jForceLower < (nForcePtsTower-1)) )   {
 	  jForceLower = jForceLower + 1;
 	}
 	int iNodeForceLower = iNodeBotTowerForce + jForceLower ; 

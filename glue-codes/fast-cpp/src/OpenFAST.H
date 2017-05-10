@@ -1,6 +1,5 @@
 #ifndef OpenFAST_h
 #define OpenFAST_h
-
 #include "FAST_Library.h"
 #include "sys/stat.h"
 #include "math.h"
@@ -152,6 +151,7 @@ class OpenFAST {
 
   void setTurbineProcNo(int iTurbGlob, int procNo) { turbineMapGlobToProc[iTurbGlob] = procNo; }
   void allocateTurbinesToProcsSimple();
+  void getApproxHubPos(std::vector<double> & currentCoords, int iTurbGlob);
   void getHubPos(std::vector<double> & currentCoords, int iTurbGlob);
   void getHubShftDir(std::vector<double> & hubShftVec, int iTurbGlob);
 
