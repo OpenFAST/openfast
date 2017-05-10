@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
+! Copyright (C) 2016-2017  Envision Energy USA, LTD   
 !
 !    This file is part of the NWTC Subroutine Library.
 !
@@ -19,10 +20,26 @@
 !**********************************************************************************************************************************
 module BeamDyn_driver_subs
   
-  
+   USE BeamDyn
+   USE BeamDyn_Subs
+
+  ! Variables for multi-point loads
+   TYPE , PUBLIC :: BD_DriverInternalType
+      REAL(ReKi)     , DIMENSION(1:6)               :: DistrLoad        !< Constant distributed load along beam axis, 3 forces and 3 moments [-]
+      REAL(ReKi)     , DIMENSION(1:6)               :: TipLoad          !< Constant point load applied at tip, 3 forces and 3 moments [-]
+      INTEGER(IntKi)                                :: NumPointLoads    !< Number of constant point loads applied along beam axis, 3 forces and 3 moments [-]
+      REAL(ReKi) ,     DIMENSION(:,:), ALLOCATABLE  :: MultiPointLoad   !< Constant point loads applied along beam axis (index 1= Relative position along blade span; indices 2-7 = Fx, Fy, Fz, Mx, My, Mz) [-]
+!  INTEGER(IntKi)                :: NumPointLoads               !< Number of multi-point loads in the driver input file
+!  REAL(DbKi)                    :: MultiPointLoads{:}{:}       !< The array of multipoint loads Index 1: [1, NumPointLoads]; 
+                                                                !< Index 2: [1,7] (index of Loads 1   = Relative position along blade span;
+                                                                !!                                2-7 = Fx, Fy, Fz, Mx, My, Mz )
+   END TYPE
+   
+   
+   
   contains
   
-  SUBROUTINE BD_ReadDvrFile(DvrInputFile,t_ini,t_f,dt,InitInputData,&
+  SUBROUTINE BD_ReadDvrFile(DvrInputFile,t_ini,t_f,dt,InitInputData,BD_DriverData,&
                           ErrStat,ErrMsg)
 !------------------------------------------------------------------------------------
 ! This routine reads in the primary BeamDyn input file and places the values it reads
@@ -32,25 +49,24 @@ module BeamDyn_driver_subs
 !   It also returns the names of the BldFile, FurlFile, and TrwFile for further
 !     reading of inputs.
 !------------------------------------------------------------------------------------
-   USE BeamDyn
-   USE BeamDyn_Subs
-   USE BeamDyn_Types
-   USE NWTC_Library
 
    ! Passed variables
    CHARACTER(*),                 INTENT(IN   ) :: DvrInputFile
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg
    TYPE(BD_InitInputType),       INTENT(  OUT) :: InitInputData
+   TYPE(BD_DriverInternalType),  INTENT(  OUT) :: BD_DriverData
    REAL(DbKi),                   INTENT(  OUT) :: t_ini
    REAL(DbKi),                   INTENT(  OUT) :: t_f
    REAL(DbKi),                   INTENT(  OUT) :: dt
 
    ! Local variables:
+   REAL(BDKi)                   :: TmpReAry(7)
    INTEGER(IntKi)               :: UnIn                         ! Unit number for reading file
    INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)         :: ErrMsg2                      ! Temporary Error message
    character(*), parameter      :: RoutineName = 'BD_ReadDvrFile'
+   character(1024)              :: line
    INTEGER(IntKi)               :: UnEc
    
    CHARACTER(1024)              :: FTitle                       ! "File Title": the 2nd line of the input file, which contains a description of its contents
@@ -153,39 +169,90 @@ module BeamDyn_driver_subs
    !---------------------- APPLIED FORCE --------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'Section Header: Applied Force',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   InitInputData%DistrLoad(:)   = 0.0_ReKi
-   InitInputData%TipLoad(:)     = 0.0_ReKi
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(1),"InitInputData%DistrLoad(1)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc)
+   BD_DriverData%DistrLoad(:)   = 0.0_ReKi
+   BD_DriverData%TipLoad(:)     = 0.0_ReKi
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%DistrLoad(1),"InitInputData%DistrLoad(1)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(2),"InitInputData%DistrLoad(2)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%DistrLoad(2),"InitInputData%DistrLoad(2)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(3),"InitInputData%DistrLoad(3)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%DistrLoad(3),"InitInputData%DistrLoad(3)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(4),"InitInputData%DistrLoad(4)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%DistrLoad(4),"InitInputData%DistrLoad(4)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(5),"InitInputData%DistrLoad(5)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%DistrLoad(5),"InitInputData%DistrLoad(5)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(6),"InitInputData%DistrLoad(6)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%DistrLoad(6),"InitInputData%DistrLoad(6)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(1),"InitInputData%TipLoad(1)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%TipLoad(1),"InitInputData%TipLoad(1)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(2),"InitInputData%TipLoad(2)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%TipLoad(2),"InitInputData%TipLoad(2)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(3),"InitInputData%TipLoad(3)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%TipLoad(3),"InitInputData%TipLoad(3)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(4),"InitInputData%TipLoad(4)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%TipLoad(4),"InitInputData%TipLoad(4)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(5),"InitInputData%TipLoad(5)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%TipLoad(5),"InitInputData%TipLoad(5)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(6),"InitInputData%TipLoad(6)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,BD_DriverData%TipLoad(6),"InitInputData%TipLoad(6)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    if (ErrStat >= AbortErrLev) then
        call cleanup()
        return
    end if
-   !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Primary input file',ErrStat2,ErrMsg2,UnEc)
+
+      !---------------------- MULTI-POINT LOAD INPUTS ----------------------------------------
+   !First read into temporary "line" variable so we can check if this is numeric or not (for backward compatibility)
+   CALL ReadVar(UnIn,DvrInputFile,line,"BD_DriverData%NumPointLoads", "Number of Point Loads (primary input file section header)",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+            call cleanup()
+            return
+      end if
+         
+   READ( Line, *, IOSTAT=IOS) BD_DriverData%NumPointLoads
+   if (IOS == 0) then !this is numeric, so we can go ahead with the multi-point loads
+            
+      CALL ReadCom(UnIn,DvrInputFile,'Section Header: Multiple Point Loads',ErrStat2,ErrMsg2,UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry(BD_DriverData%MultiPointLoad,BD_DriverData%NumPointLoads,7,'Point loads input array',ErrStat2,ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) then
+             call cleanup()
+             return
+         end if
+   
+      DO i = 1,BD_DriverData%NumPointLoads
+          CALL ReadAry( UnIn, DvrInputFile, TmpReAry, 7, 'PointLoad', 'Nodal point loads - Node No., DOF No., ', ErrStat2, ErrMsg2, UnEc )       
+             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          BD_DriverData%MultiPointLoad(i,1) =  TmpReAry(1)
+          BD_DriverData%MultiPointLoad(i,2) =  TmpReAry(2)
+          BD_DriverData%MultiPointLoad(i,3) =  TmpReAry(3)
+          BD_DriverData%MultiPointLoad(i,4) =  TmpReAry(4)
+          BD_DriverData%MultiPointLoad(i,5) =  TmpReAry(5)
+          BD_DriverData%MultiPointLoad(i,6) =  TmpReAry(6)
+          BD_DriverData%MultiPointLoad(i,7) =  TmpReAry(7)
+      ENDDO  
+      if (ErrStat >= AbortErrLev) then
+          call cleanup()
+          return
+      end if
+   
+      !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
+      CALL ReadCom(UnIn,DvrInputFile,'Section Header: Primary input file',ErrStat2,ErrMsg2,UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+   else
+      BD_DriverData%NumPointLoads = 1
+      CALL AllocAry(BD_DriverData%MultiPointLoad,BD_DriverData%NumPointLoads,7,'Point loads input array',ErrStat2,ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) then
+             call cleanup()
+             return
+         end if
+      BD_DriverData%MultiPointLoad = 0.0_ReKi           
+   end if ! we read the header already
+      
+      !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
    CALL ReadVar ( UnIn, DvrInputFile, InitInputData%InputFile, 'InputFile', 'Name of the primary input file', ErrStat2,ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    if (ErrStat >= AbortErrLev) then
@@ -205,9 +272,6 @@ END SUBROUTINE BD_ReadDvrFile
 
 SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
 
-   USE BeamDyn
-   USE BeamDyn_Types
-   USE NWTC_Library
 
    INTEGER(IntKi),              INTENT(  OUT):: OutUnit
    TYPE(BD_InitOutputType),     INTENT(IN   ):: IntOutput     ! Output for initialization routine
@@ -267,8 +331,6 @@ END SUBROUTINE Dvr_InitializeOutputFile
 
 SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output, errStat, errMsg)
 
-   USE BeamDyn_Types
-   USE NWTC_Library
 
    real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
    INTEGER(IntKi)         ,  intent(in   )   :: OutUnit              ! Status of error message
