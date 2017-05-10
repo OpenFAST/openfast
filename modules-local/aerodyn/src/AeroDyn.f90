@@ -259,16 +259,19 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
       CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrElev.", ErrStat, ErrMsg, RoutineName)
       RETURN
    END IF
-   ALLOCATE(InitOut%TwrDiam(p%NumTwrNds), STAT = ErrStat2)
-   IF (ErrStat2 /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrDiam.", ErrStat, ErrMsg, RoutineName)
-      RETURN
-   END IF
    InitOut%TwrElev(:) = InputFileData%TwrElev(:)
-   InitOut%TwrDiam(:) = p%TwrDiam(:)
    
+   IF ( p%NumTwrNds > 0 ) THEN
+      ALLOCATE(InitOut%TwrDiam(p%NumTwrNds), STAT = ErrStat2)
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrDiam.", ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF   
+      InitOut%TwrDiam(:) = p%TwrDiam(:)
+   END IF  
    
 end subroutine AD_SetInitOut
+
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.

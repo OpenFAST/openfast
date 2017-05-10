@@ -433,7 +433,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             CALL Cleanup()
             RETURN
          END IF
-            
+      InitInData_AD%Gravity            = InitOutData_ED%Gravity      
       InitInData_AD%Linearize          = p_FAST%Linearize
       InitInData_AD%InputFile          = p_FAST%AeroFile
       InitInData_AD%NumBlades          = InitOutData_ED%NumBl
