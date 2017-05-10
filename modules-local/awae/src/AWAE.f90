@@ -939,9 +939,6 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    integer(intKi)                               :: errStat2          ! temporary Error status
    character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'AWAE_UpdateStates'
-   real(ReKi)                                   :: lstar, dx, Vx_wake_min, r_wake, V_planeDT(3), a_interp, norm2_xhat_plane, EddyTermA, EddyTermB  
-   real(ReKi)                                   :: dy_HWkDfl(3)
-   integer(intKi)                               :: i,j, ILo
    
    errStat = ErrID_None
    errMsg  = ""
@@ -979,8 +976,6 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
    integer(intKi)                               :: errStat2
    character(ErrMsgLen)                         :: errMsg2
    character(*), parameter                      :: RoutineName = 'AWAE_CalcOutput'
-   real(ReKi)                                   :: correction(3)
-   real(ReKi)                                   :: x_plane
    integer(intKi)                               :: n, n_high
    CHARACTER(1024)                              :: FileName
    INTEGER(IntKi)                               :: Un                   ! unit number of opened file   
