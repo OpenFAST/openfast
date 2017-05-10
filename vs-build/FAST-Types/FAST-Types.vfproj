@@ -1,3 +1,4 @@
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ElastoDyn" Description="Running Registry for ElastoDyn" Outputs="..\..\build\types-files\ElastoDyn_Types.f90"/></FileConfiguration>
 <?xml version="1.0" encoding="UTF-8"?>
 <VisualStudioProject ProjectType="typeStaticLibrary" ProjectCreator="Intel Fortran" Keyword="Static Library" Version="11.0" ProjectIdGuid="{1A440C5B-CBA6-47D9-9CC2-C1CBA8C00BF9}">
 	<Platforms>
