@@ -79,7 +79,11 @@ function GetYawCorrection(yawErr, xhat_disk, dx, p, errStat, errMsg)
       return
    end if
  
-   GetYawCorrection = ( ( p%C_HWkDfl_x + p%C_HWkDfl_xY*yawErr ) * dx + p%C_HWkDfl_O + p%C_HWkDfl_OY*YawErr ) * ( ( xydisk - yxdisk ) / (xydisknorm) )     
+   if (EqualRealNos(dx,0.0_ReKi)) then
+      GetYawCorrection = ( p%C_HWkDfl_O + p%C_HWkDfl_OY*YawErr ) *      ( ( xydisk - yxdisk ) / (xydisknorm) )
+   else
+      GetYawCorrection = ( p%C_HWkDfl_x + p%C_HWkDfl_xY*yawErr ) * dx * ( ( xydisk - yxdisk ) / (xydisknorm) )
+   end if
       
 end function GetYawCorrection
 
@@ -394,6 +398,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for xd%xhat_plane.', errStat, errMsg, RoutineName )   
    allocate ( xd%p_plane          (3, 0:p%NumPlanes-1) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for xd%p_plane.', errStat, errMsg, RoutineName )   
+   allocate ( xd%V_plane_filt     (3, 0:p%NumPlanes-1) , STAT=ErrStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for xd%V_plane_filt.', errStat, errMsg, RoutineName )
    allocate ( xd%Vx_wind_disk_filt(0:p%NumPlanes-1) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for xd%Vx_wind_disk_filt.', errStat, errMsg, RoutineName )   
    allocate ( xd%x_plane          (0:p%NumPlanes-1) , STAT=ErrStat2 )
@@ -417,6 +423,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    xd%x_plane             = 0.0_ReKi
    xd%Vx_wake             = 0.0_ReKi
    xd%Vr_wake             = 0.0_ReKi
+   xd%V_plane_filt        = 0.0_ReKi
    xd%Vx_wind_disk_filt   = 0.0_ReKi
    xd%TI_amb_filt         = 0.0_ReKi
    xd%D_rotor_filt        = 0.0_ReKi
@@ -568,13 +575,12 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    integer(intKi)                               :: errStat2          ! temporary Error status
    character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'WD_UpdateStates'
-   real(ReKi)                                   :: lstar, dx, Vx_wake_min, r_wake, V_planeDT(3), a_interp, norm2_xhat_plane, EddyTermA, EddyTermB  
+   real(ReKi)                                   :: lstar, dx, Vx_wake_min, r_wake, a_interp, norm2_xhat_plane, EddyTermA, EddyTermB  
    real(ReKi)                                   :: dy_HWkDfl(3)
-   integer(intKi)                               :: i,j, ILo
+   integer(intKi)                               :: i,j, ILo, maxPln
    
    errStat = ErrID_None
    errMsg  = ""
-     
    
    
    if ( EqualRealNos(u%D_Rotor,0.0_ReKi) .or. u%D_Rotor < 0.0_ReKi ) then
@@ -595,9 +601,22 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       
    end if         
    
+
+   ! Update V_plane_filt to [n+1]:
+   
+   maxPln = min(n,p%NumPlanes-2)
+   do i = 0,maxPln 
+      xd%V_plane_filt(:,i       ) = xd%V_plane_filt(:,i)*p%filtParam + u%V_plane(:,i       )*(1.0_ReKi-p%filtParam)
+   end do
+   xd%V_plane_filt   (:,maxPln+1) =                                    u%V_plane(:,maxPln+1)
+
+   
+   maxPln = min(n+2,p%NumPlanes-1)
+
+   
       ! We are going to update Vx_Wake
       ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1]
-   do i = min(n+2,p%NumPlanes-1), 1, -1  
+   do i = maxPln, 1, -1  
       
       lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
 
@@ -606,15 +625,11 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          ! dx      = xd%x_plane(i) - xd%x_plane(i-1)
          ! This is equivalent to
       
-      V_planeDT(1)            =  u%V_plane   (1,i-1)*p%DT
-      V_planeDT(2)            =  u%V_plane   (2,i-1)*p%DT
-      V_planeDT(3)            =  u%V_plane   (3,i-1)*p%DT
-      
-      dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT)
+      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT
       
       if ( EqualRealNos(dx, 0.0_ReKi) .or. dx < 0.0_ReKi) then
          ! TEST: E2
-         call SetErrStat(ErrID_FATAL, 'Downwind advection speed of a wake plane is not positive, i.e., dot_product(xd%xhat_plane(:,i-1),V_planeDT)<= 0', errStat, errMsg, RoutineName)   
+         call SetErrStat(ErrID_FATAL, 'Downwind advection speed of a wake plane is not positive, i.e., dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*DT<= 0', errStat, errMsg, RoutineName)   
          call Cleanup()
          return
       end if
@@ -674,7 +689,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
          ! Update these states to [n+1]
 
-      xd%x_plane     (i) = xd%x_plane    (i-1) + dx   ! dx = dot_product(xd%xhat_plane(:,i-1),V_planeDT), where V_planeDT is V_plane(:,i-1)*p*DT   
+      xd%x_plane     (i) = xd%x_plane    (i-1) + dx   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT   
       xd%YawErr_filt (i) = xd%YawErr_filt(i-1)
       xd%xhat_plane(:,i) = xd%xhat_plane(:,i-1)
       
@@ -687,7 +702,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
             call Cleanup()
             return
          end if
-      xd%p_plane        (:,i) = xd%p_plane(:,i-1) + V_planeDT + dy_HWkDfl
+      xd%p_plane        (:,i) =  xd%p_plane(:,i-1) + xd%xhat_plane(:,i-1)*dx + dy_HWkDfl &
+                              + ( u%V_plane(:,i-1) - xd%xhat_plane(:,i-1)*dot_product(xd%xhat_plane(:,i-1),u%V_plane(:,i-1)) )*p%DT
          
       xd%Vx_wind_disk_filt(i) = xd%Vx_wind_disk_filt(i-1)
       xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)
@@ -744,7 +760,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       
    ! NOTE: xd%x_plane(0) was already initialized to zero
       
-   xd%p_plane        (:,0) =  xd%p_plane(:,0)*p%filtParam + u%p_hub(:)*(1.0_ReKi-p%filtParam) + dy_HWkDfl
+   xd%p_plane        (:,0) =  xd%p_plane(:,0)*p%filtParam + ( u%p_hub(:) + dy_HWkDfl(:) )*(1.0_ReKi-p%filtParam)
    xd%Vx_wind_disk_filt(0) =  xd%Vx_wind_disk_filt(0)*p%filtParam + u%Vx_wind_disk*(1.0_ReKi-p%filtParam)   
    xd%TI_amb_filt      (0) =  xd%TI_amb_filt(0)*p%filtParam + u%TI_amb*(1.0_ReKi-p%filtParam)   
    xd%D_rotor_filt     (0) =  xd%D_rotor_filt(0)*p%filtParam + u%D_rotor*(1.0_ReKi-p%filtParam)   
@@ -752,7 +768,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
    
 ! TODO: This is a new 3D wake plane crossing check and I'm not sure this is the most efficient implemenation.
-   do i = 1,min(n+2,p%NumPlanes-1)
+   do i = 1,maxPln
       if ( xd%x_plane(i) - xd%x_plane(i-1) <= 0.0_ReKi ) then
          call SetErrStat(ErrID_FATAL, 'In a 1D sense, wake plane '//trim(num2lstr(i-1))//' is further downstream than wake plane '//trim(num2lstr(i)), errStat, errMsg, RoutineName)   
          call Cleanup()
@@ -816,8 +832,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       xd%Vx_wake(j,0) = -xd%Vx_rel_disk_filt*p%C_NearWake*a_interp
       xd%Vr_wake(j,0) = 0.0_ReKi
    end do
+      
    
-!Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
+   !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
    
    call Cleanup()
    
@@ -871,10 +888,11 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    if ( OtherState%firstPass ) then
       ! TODO: This entire block needs to be reviewed
                         
+      correction = 0.0_ReKi
       do i = 0, min(n+1,p%NumPlanes-1)
          x_plane = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
        
-         correction = GetYawCorrection(u%YawErr, u%xhat_disk, x_plane, p,  errStat2, errMsg2)
+         correction = correction + GetYawCorrection(u%YawErr, u%xhat_disk, x_plane, p,  errStat2, errMsg2)
             call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
             if (errStat >= AbortErrLev) then
                ! TEST: E3
@@ -1063,11 +1081,12 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
    ErrMsg = ""
    
    
+   correction = 0.0_ReKi
    do i = 0, 1
       xd%x_plane     (i)   = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
       xd%YawErr_filt (i)   = u%YawErr
       
-      correction = GetYawCorrection(u%YawErr, u%xhat_disk, xd%x_plane(i), p,  errStat2, errMsg2)
+      correction = correction + GetYawCorrection(u%YawErr, u%xhat_disk, xd%x_plane(i), p,  errStat2, errMsg2)
       call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)   
       if (errStat >= AbortErrLev) then
          ! TEST: E3      
@@ -1077,7 +1096,8 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
       !correction = ( p%C_HWkDfl_x + p%C_HWkDfl_xY*u%YawErr )*xd%x_plane(i) + correctionA
       
       xd%p_plane   (:,i)      = u%p_hub(:) + xd%x_plane(i)*u%xhat_disk(:) + correction
-      xd%xhat_plane(:,i)      = u%xhat_disk(:)    
+      xd%xhat_plane(:,i)      = u%xhat_disk(:)
+      xd%V_plane_filt(:,i)    = u%V_plane(:,i)
       xd%Vx_wind_disk_filt(i) = u%Vx_wind_disk
       xd%TI_amb_filt      (i) = u%TI_amb
       xd%D_rotor_filt     (i) = u%D_rotor
