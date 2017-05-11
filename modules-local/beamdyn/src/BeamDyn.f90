@@ -490,6 +490,7 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
 
    member_first_kp = 1
 
+write(52,*), 'p%QuadPt'
    DO i=1,p%elem_total
       member_last_kp  = member_first_kp + InputFileData%kp_member(i) - 1
 
@@ -500,6 +501,7 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
          temp_id2 = (i-1)*p%nqp + idx_qp + p%qp_indx_offset            
          p%QuadPt(1:3,temp_id2) = temp_POS
          p%QuadPt(4:6,temp_id2) = temp_CRV
+write(52,'(6(2x,ES20.12E3))') p%QuadPt(:,temp_id2)
       ENDDO
 
          ! set for next element:
@@ -1684,12 +1686,14 @@ SUBROUTINE BD_QuadraturePointDataAt0( p )
 
       ! Initialize to zero for the summation
    p%uu0(:,:,:)   = 0.0_BDKi
+   p%rrN0(:,:,:)  = 0.0_BDKi
    p%E10(:,:,:)   = 0.0_BDKi
 
 
       ! calculate rrN0 (Initial relative rotation array)
    DO nelem = 1,p%elem_total
-      DO idx_node=1,p%nodes_per_elem
+      p%rrN0(1:3,1,nelem) = (/ 0.0_BDKi, 0.0_BDKi, 0.0_BDKi /)    ! first node has no rotation relative to itself.
+      DO idx_node=2,p%nodes_per_elem
             ! Find resulting rotation parameters R(Nr) = Ri^T(Nu(1)) R(Nu(:))
             ! where R(Nu(1))^T is the transpose rotation parameters for the root node
          CALL BD_CrvCompose(p%rrN0(1:3,idx_node,nelem),p%uuN0(4:6,1,nelem),p%uuN0(4:6,idx_node,nelem),FLAG_R1TR2)  ! rrN0  = node composed with root
@@ -1697,6 +1701,7 @@ SUBROUTINE BD_QuadraturePointDataAt0( p )
    ENDDO
 
 
+write(51,*) 'p%uu0'
    DO nelem = 1,p%elem_total
        DO idx_qp = 1,p%nqp
             !> ### Calculate the the initial displacement fields in an element
@@ -1731,8 +1736,10 @@ SUBROUTINE BD_QuadraturePointDataAt0( p )
             !! (tangent to curve through this GLL point).  This is simply the
          CALL BD_CrvMatrixR(p%uu0(4:6,idx_qp,nelem),R0_temp)         ! returns R0_temp (the transpose of the DCM orientation matrix)
          p%E10(:,idx_qp,nelem) = R0_temp(:,3)                        ! unit vector tangent to curve through this GLL point (derivative with respect to z in IEC coords).
+write(51,'(6(2x,ES20.12E3))') p%uu0(:,idx_qp,nelem)
       ENDDO
    ENDDO 
+
 
 END SUBROUTINE BD_QuadraturePointDataAt0
 
@@ -1975,6 +1982,7 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
             !!
             !! Note: \f$ \underline{\underline{R}}\underline{\underline{R}}_0 \f$ is used to go from the material basis into the inertial basis
             !!       and the transpose for the other direction.
+!FIXME: note that p%uu0 is not the same as p%QuadPt (which is used in mesh orientation)  
          rot0_T0(:) = p%uu0(4:6,idx_qp,nelem)                ! initial rotation parameter set at gauss point at T=0
       
          CALL BD_CrvCompose(cc,rot_c_xi,rot0_T0,FLAG_R1R2)   ! cc = rot_c_xi composed with rot0_T0
@@ -2585,6 +2593,8 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, x, m )
    m%elf(:,:,:)      = 0.0_BDKi
    m%elm(:,:,:,:)    = 0.0_BDKi
 
+write(53,*) 'm%qp%Fc'
+write(54,*) 'm%qp%Fd'
    DO idx_qp=1,p%nqp
 
 
@@ -2593,6 +2603,8 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, x, m )
       CALL BD_GyroForce( nelem, idx_qp, m )
       CALL BD_GravityForce( nelem, idx_qp, p, m, p%gravity )
       CALL BD_ElasticForce( nelem,idx_qp,p,m,.FALSE. )     ! Calculate Fc, Fd only
+write(53,'(6(2x,ES20.12E3))') m%qp%Fc(:,idx_qp,nelem) 
+write(54,'(6(2x,ES20.12E3))') m%qp%Fd(:,idx_qp,nelem) 
       IF(p%damp_flag .NE. 0) THEN
          CALL BD_DissipativeForce( nelem, idx_qp, p,m,.FALSE. )         ! Calculate dissipative terms on Fc, Fd
 
