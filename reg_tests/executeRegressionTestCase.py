@@ -72,16 +72,16 @@ if not systemcompiler_given:
     "Usage: python executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id\n"+
     "Currently using {}-{}.\n".format(targetSystem, targetCompiler))
 
-# the r-test submodule, /inputs and /outputs subdirectories are required to run the regression test
+# the r-test submodule, inputs subdirectory, and corresponding machine-compiler outputs subdirectorie are required to run the regression test
 testDataDirectory = os.path.join(sourceDirectory, "reg_tests", "r-test")
 if not os.path.isdir(testDataDirectory):
     exitWithError("The test data directory, {}, does not exist. If you haven't already, run `git submodule update --init --recursive`".format(testDataDirectory))
-inputsDirectory = os.path.join(testDataDirectory, targetOutput, "inputs")
-if not os.path.isdir(inputsDirectory):
-    exitWithError("The test data inputs directory, {}, does not exist. Try running `git submodule update`".format(inputsDirectory))
-outputsDirectory = os.path.join(testDataDirectory, targetOutput, "outputs")
+outputsDirectory = os.path.join(testDataDirectory, targetOutput)
 if not os.path.isdir(outputsDirectory):
     exitWithError("The test data outputs directory, {}, does not exist. Try running `git submodule update`".format(outputsDirectory))
+inputsDirectory = os.path.join(testDataDirectory, "inputs")
+if not os.path.isdir(inputsDirectory):
+    exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
