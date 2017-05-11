@@ -21,7 +21,11 @@ file(GLOB MAP_C_HEADERS src/*.h src/*/*.h)
 
 add_library(mapcpplib ${MAP_CLIB_SOURCES} MAP_Types.f90)
 target_include_directories(mapcpplib PUBLIC
-  src/bstring src/cminpack src/lapack src/simclist ${CMAKE_CURRENT_BINARY_DIR})
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/bstring>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/cminpack>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/lapack>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/simclist>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
 
 add_library(maplib
   src/map.f90
@@ -31,7 +35,8 @@ add_library(maplib
   )
 target_link_libraries(maplib mapcpplib nwtclibs)
 
-install(TARGETS maplib
+install(TARGETS maplib mapcpplib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)

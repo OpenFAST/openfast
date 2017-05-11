@@ -52,18 +52,18 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
    IF (PRESENT(InFile)) THEN
       IF (PRESENT(ExternInitData)) THEN
          CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
+                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC,&
                      Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg, InFile, ExternInitData )
       ELSE         
          CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
+                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC, &
                      Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg, InFile  )
       END IF
    ELSE
       CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
+                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC, &
                      Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
    END IF
@@ -72,7 +72,7 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
 END SUBROUTINE FAST_InitializeAll_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to call Init routine for each module. This routine sets all of the init input data for each module.
-SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
+SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, SC, HD, SD, ExtPtfm, &
                                MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InFile, ExternInitData )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
@@ -87,6 +87,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
+   TYPE(SuperController_Data), INTENT(INOUT) :: SC                !< SuperController data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
@@ -130,6 +131,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    TYPE(OpFM_InitInputType)                :: InitInData_OpFM     ! Initialization input data
    TYPE(OpFM_InitOutputType)               :: InitOutData_OpFM    ! Initialization output data
       
+   TYPE(SC_InitInputType)                  :: InitInData_SC       ! Initialization input data
+   TYPE(SC_InitOutputType)                 :: InitOutData_SC      ! Initialization output data
+
    TYPE(HydroDyn_InitInputType)            :: InitInData_HD       ! Initialization input data
    TYPE(HydroDyn_InitOutputType)           :: InitOutData_HD      ! Initialization output data
                                            
@@ -429,7 +433,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             CALL Cleanup()
             RETURN
          END IF
-            
+      InitInData_AD%Gravity            = InitOutData_ED%Gravity      
       InitInData_AD%Linearize          = p_FAST%Linearize
       InitInData_AD%InputFile          = p_FAST%AeroFile
       InitInData_AD%NumBlades          = InitOutData_ED%NumBl
@@ -534,14 +538,26 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       IF ( PRESENT(ExternInitData) ) THEN
          InitInData_OpFM%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
          InitInData_OpFM%NumCtrl2SC = ExternInitData%NumCtrl2SC  
+         InitInData_OpFM%NumActForcePtsBlade = ExternInitData%NumActForcePtsBlade
+         InitInData_OpFM%NumActForcePtsTower = ExternInitData%NumActForcePtsTower 
       ELSE
          CALL SetErrStat( ErrID_Fatal, 'OpenFOAM integration can be used only with external input data (not the stand-alone executable).', ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
          RETURN         
       END IF
-      
+      InitInData_OpFM%BladeLength = InitOutData_ED%BladeLength
+      InitInData_OpFM%TowerHeight = InitOutData_ED%TowerHeight
+      ALLOCATE(InitInData_OpFM%StructBldRNodes( SIZE(InitOutData_ED%BldRNodes)),  STAT=ErrStat2)
+      InitInData_OpFM%StructBldRNodes(:) = InitOutData_ED%BldRNodes(:)
+      ALLOCATE(InitInData_OpFM%StructTwrHNodes( SIZE(InitOutData_ED%TwrHNodes)),  STAT=ErrStat2)
+      InitInData_OpFM%StructTwrHNodes(:) = InitOutData_ED%TwrHNodes(:)
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating OpFM%InitInput.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
          ! set up the data structures for integration with OpenFOAM
-      CALL Init_OpFM( InitInData_OpFM, p_FAST, AirDens, AD14%Input(1), AD%Input(1), AD%y, ED%Output(1), OpFM, InitOutData_OpFM, ErrStat2, ErrMsg2 )
+      CALL Init_OpFM( InitInData_OpFM, p_FAST, AirDens, AD14%Input(1), AD%Input(1), InitOutData_AD, AD%y, ED%Output(1), OpFM, InitOutData_OpFM, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
       IF (ErrStat >= AbortErrLev) THEN
@@ -556,6 +572,25 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitOutData_IfW%WindFileInfo%MWS = 0.0_ReKi
    END IF   ! CompInflow
    
+   ! ........................
+   ! initialize SuperController
+   ! ........................   
+      IF ( PRESENT(ExternInitData) ) THEN
+         InitInData_SC%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
+         InitInData_SC%NumCtrl2SC = ExternInitData%NumCtrl2SC  
+      ELSE
+         InitInData_SC%NumSC2Ctrl = 0
+         InitInData_SC%NumCtrl2SC = 0
+      END IF
+      
+         ! set up the data structures for integration with supercontroller
+      CALL Init_SC( InitInData_SC, SC, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF       
 
    ! ........................
    ! some checks for AeroDyn inputs with the high-speed shaft brake hack in ElastoDyn:
