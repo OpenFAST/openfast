@@ -4,8 +4,8 @@
     r-test is initialized with `git submodule update --init --recursive` or
     updated with `git submodule update`
 
-    Usage: python executeRegressionTestCase.py testname openfast_executable tolerance system_name
-    Example: python executeRegressionTestCase.py Test02 openfast 0.000001
+    Usage: python executeRegressionTestCase.py testname openfast_executable tolerance system_name compiler_id
+    Example: python executeRegressionTestCase.py Test02 openfast 0.000001 Darwin Intel
 """
 
 import os
@@ -28,33 +28,49 @@ def exitWithFileNotFound(file):
 ##### Main program
 
 # Verify input arguments
-if len(sys.argv) != 6:
+if len(sys.argv) < 5 or len(sys.argv) > 7:
     exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: python executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name")
+    "Usage: python executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id")
 
 caseName = sys.argv[1]
 executable = sys.argv[2]
 sourceDirectory = sys.argv[3]
 tolerance = sys.argv[4]
-systemName = sys.argv[5]
 
 if not os.path.isdir(sourceDirectory):
     exitWithError("The given source directory, {}, does not exist.".format(sourceDirectory))
 
+systemcompiler_given = True
+try:
+    systemName = sys.argv[6]
+except IndexError:
+    systemcompiler_given = False
+    systemName = "not_given"
+
+try:
+    compilerId = sys.argv[7]
+except IndexError:
+    systemcompiler_given = False
+    compilerId = "not_given"
+
 # Map the system and compiler configurations to a solution set
 # Internal names -> Human readable names
 systemName_map = {
-    "Darwin": "macos",
-    "RHEL": "rhel"
+    "darwin": "macos",
+    "rhel": "rhel"
 }
 compilerId_map = {
-    "GNU": "gnu",
-    "INTEL": "intel"
+    "gnu": "gnu",
+    "intel": "intel"
 }
 # Build the target output directory name or choose the default
-targetSystem = systemName_map.get(systemName, "rhel")
-targetCompiler = compilerId_map.get(compilerId, "intel")
+targetSystem = systemName_map.get(systemName.lower(), "rhel")
+targetCompiler = compilerId_map.get(compilerId.lower(), "intel")
 targetOutput = os.path.join(targetSystem+"-"+targetCompiler)
+if not systemcompiler_given:
+    print("\nThe gold standard files are machine/compiler dependent. Remember to specify a machine and compiler type when executing this program.\n" +
+    "Usage: python executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id\n"+
+    "Currently using {}-{}.\n".format(targetSystem, targetCompiler))
 
 # the r-test submodule, /inputs and /outputs subdirectories are required to run the regression test
 testDataDirectory = os.path.join(sourceDirectory, "reg_tests", "r-test")
