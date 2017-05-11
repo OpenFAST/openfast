@@ -19,15 +19,15 @@ endif( "${EXECUTABLE}" STREQUAL "")
 ## -- Set build name
 ## --------------------------
 
-find_program(UNAME NAMES uname)
-macro(getuname name flag)
-  exec_program("${UNAME}" ARGS "${flag}" OUTPUT_VARIABLE "${name}")
-endmacro(getuname)
-
-getuname(osname -s)
-getuname(cpu -m)
-
-set(CTEST_BUILD_NAME "${osname}-${cpu}")
+#find_program(UNAME NAMES uname)
+#macro(getuname name flag)
+#  exec_program("${UNAME}" ARGS "${flag}" OUTPUT_VARIABLE "${name}")
+#endmacro(getuname)
+#
+#getuname(osname -s)
+#getuname(cpu -m)
+#
+#set(CTEST_BUILD_NAME "${osname}-${cpu}")
 
 # -----------------------------------------------------------
 # -- Configure CTest
