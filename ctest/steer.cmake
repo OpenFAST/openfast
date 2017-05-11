@@ -15,6 +15,9 @@ if( "${EXECUTABLE}" STREQUAL "")
   ")
 endif( "${EXECUTABLE}" STREQUAL "")
 
+# convert to cmake style path
+file(TO_CMAKE_PATH ${EXECUTABLE} EXECUTABLE)
+
 # -----------------------------------------------------------
 ## -- Set build name
 ## --------------------------
