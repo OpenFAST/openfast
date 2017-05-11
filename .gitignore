@@ -32,6 +32,7 @@
 # CMake specific files
 build/**/*
 install/*
+ctest-build/*
 
 # Visual Studio specific files
 vs-build

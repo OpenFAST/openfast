@@ -41,7 +41,6 @@ for j in range(nColumns):
     variance[j] = (dict1[:,j]-dict2[:,j]).var()
 
 if max(variance) < solutionTolerance:
-    print "ok"
     sys.exit(0)
 else:
     print info1['attribute_names']
