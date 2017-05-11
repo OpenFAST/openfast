@@ -6,6 +6,15 @@ set(MODEL "openfast")
 set(CTEST_SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CTEST_BINARY_DIRECTORY "${CTEST_SOURCE_DIRECTORY}/ctest-build")
 
+# verify that an openfast executable was given
+if( "${EXECUTABLE}" STREQUAL "")
+  message(FATAL_ERROR "
+    The -DEXECUTABLE flag is required to run CTest alone.
+    For example: ctest -S ctest/steer.cmake -V -DEXECUTABLE=/path/to/openfast.exe
+    CTest will exit.
+  ")
+endif( "${EXECUTABLE}" STREQUAL "")
+
 # -----------------------------------------------------------
 ## -- Set build name
 ## --------------------------
