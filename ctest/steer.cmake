@@ -1,10 +1,14 @@
 # -----------------------------------------------------------
-# -- build specific
+# -- Configure CTest
 # -----------------------------------------------------------
 
 set(MODEL "openfast")
 set(CTEST_SOURCE_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CTEST_BINARY_DIRECTORY "${CTEST_SOURCE_DIRECTORY}/ctest-build")
+
+# -----------------------------------------------------------
+# -- Settings
+# -----------------------------------------------------------
 
 # verify that an openfast executable was given
 if( "${EXECUTABLE}" STREQUAL "")
@@ -18,33 +22,49 @@ endif( "${EXECUTABLE}" STREQUAL "")
 # convert to cmake style path
 file(TO_CMAKE_PATH ${EXECUTABLE} EXECUTABLE)
 
-# -----------------------------------------------------------
-## -- Set build name
-## --------------------------
+# set the testing tolerance
+## specific in ctest call
+if (NOT ${TEST_TOLERANCE} STREQUAL "")
+  set(TOLERANCE ${TEST_TOLERANCE})
 
-#find_program(UNAME NAMES uname)
-#macro(getuname name flag)
-#  exec_program("${UNAME}" ARGS "${flag}" OUTPUT_VARIABLE "${name}")
-#endmacro(getuname)
-#
-#getuname(osname -s)
-#getuname(cpu -m)
-#
-#set(CTEST_BUILD_NAME "${osname}-${cpu}")
+else (NOT ${TEST_TOLERANCE} STREQUAL "")
 
-# -----------------------------------------------------------
-# -- Configure CTest
-# -----------------------------------------------------------
+  if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
+    # default
+    set(TOLERANCE 0.0000001)
 
-## -- CTest Config
-configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestConfig.cmake ${CTEST_BINARY_DIRECTORY}/CTestConfig.cmake)
+    # compiler specific
+    if( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU" )
+      set(TOLERANCE 0.0000001)
+    elseif( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel" )
+      set(TOLERANCE 0.0000001)
+    endif()
 
-## -- CTest Testfile
-configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestTestfile.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
+  elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
+    # default
+    set(TOLERANCE 0.0000001)
 
-# -----------------------------------------------------------
-# -- Settings
-# -----------------------------------------------------------
+    # compiler specific
+    if( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU" )
+      set(TOLERANCE 0.000000000000001)
+    elseif( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel" )
+      set(TOLERANCE 0.0001)
+    endif()
+
+  elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
+    # default
+    set(TOLERANCE 0.0000001)
+
+    # compiler specific
+    if( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU" )
+      set(TOLERANCE 0.0000001)
+    elseif( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel" )
+      set(TOLERANCE 0.0000001)
+    endif()
+
+  endif()
+
+endif()
 
 ## -- Process timeout in seconds
 set(CTEST_TIMEOUT "7200")
@@ -56,12 +76,19 @@ set($ENV{LC_MESSAGES} "en_EN" )
 # -- Run CTest
 # -----------------------------------------------------------
 
+# configure CTest just before running the test so all variables exist
+## -- CTest Config
+configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestConfig.cmake ${CTEST_BINARY_DIRECTORY}/CTestConfig.cmake)
+
+## -- CTest Testfile
+configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestTestfile.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
+
 ## -- Start
-message(" -- Start testing ${MODEL} - ${CTEST_BUILD_NAME} --")
+message(" -- Starting test on ${MODEL} --")
 ctest_start(${MODEL} TRACK ${MODEL})
 
 ## -- TEST
-message(" -- Test ${MODEL} - ${CTEST_BUILD_NAME} --")
-ctest_test(     BUILD  "${CTEST_BINARY_DIRECTORY}" RETURN_VALUE res)
+message(" -- Test ${MODEL} --")
+ctest_test(BUILD "${CTEST_BINARY_DIRECTORY}" RETURN_VALUE res)
 
-message(" -- Finished ${MODEL}  - ${CTEST_BUILD_NAME} --")
+message(" -- Finished ${MODEL} --")
