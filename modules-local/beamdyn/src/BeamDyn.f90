@@ -109,16 +109,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       end if
 
 
-   ! Compute p%SP_Coef, coefficients for cubic spline fit, clamped at two ends
-   call ComputeSplineCoeffs(InputFileData, p%SP_Coef, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-
-
-      ! this routine sets *some* of the parameters (basically the "easy" ones) [depends on p%SP_Coef]
+      ! this routine sets *some* of the parameters (basically the "easy" ones) 
    call SetParameters(InitInp, InputFileData, p, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
@@ -748,6 +739,16 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    ! set parameters for pitch actuator:
    !...............................................
 
+
+   !...............................................
+   ! Compute p%SP_Coef, coefficients for cubic spline fit, clamped at two ends
+   !...............................................
+
+   call ComputeSplineCoeffs(InputFileData, p%SP_Coef, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         return
+      end if
 
    !...............................................
    ! set parameters for blade/member/segment lengths:
