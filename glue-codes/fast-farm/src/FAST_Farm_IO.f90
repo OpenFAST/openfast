@@ -9871,26 +9871,26 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
       ENDDO ! I
 !============================================================
 ! DEBUG OUTPUTS HERE
-
-      DO I = 0,farm%WD(1)%p%NumPlanes-1  ! Loop through all selected output channels
-
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEX'//trim(num2lstr(I))
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEY'//trim(num2lstr(I))
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEZ'//trim(num2lstr(I))  
-
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'XPLANE'//trim(num2lstr(I))
-
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'VPLANEX'//trim(num2lstr(I))
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'VPLANEY'//trim(num2lstr(I))
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'VPLANEZ'//trim(num2lstr(I))
-
-         IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
-            WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'N_WIND'//trim(num2lstr(I))
-         END IF
-
-      ENDDO             ! I - All selected output channels
-      
-      
+!
+!      DO I = 0,farm%WD(1)%p%NumPlanes-1  ! Loop through all selected output channels
+!
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEX'//trim(num2lstr(I))
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEY'//trim(num2lstr(I))
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   'PPLANEZ'//trim(num2lstr(I))  
+!
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'XPLANE'//trim(num2lstr(I))
+!
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'VPLANEX'//trim(num2lstr(I))
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'VPLANEY'//trim(num2lstr(I))
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'VPLANEZ'//trim(num2lstr(I))
+!
+!         IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
+!            WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  'N_WIND'//trim(num2lstr(I))
+!         END IF
+!
+!      ENDDO             ! I - All selected output channels
+!      
+!      
 ! END DEBUG OUTPUTS 
 !============================================================
       WRITE (farm%p%UnOu,'()')
@@ -9908,26 +9908,26 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
 
 !============================================================
 ! DEBUG OUTPUTS HERE
-
-      DO I = 0,farm%WD(1)%p%NumPlanes-1  ! Loop through all selected output channels
-
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
-
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '      (m)     '
-
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
-         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
-
-         IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
-            WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '      (-)     '
-         END IF
-
-      ENDDO             ! I - All selected output channels
-      
-      
+!
+!      DO I = 0,farm%WD(1)%p%NumPlanes-1  ! Loop through all selected output channels
+!
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO')   '      (m)     '
+!
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '      (m)     '
+!
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
+!         WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '    (m/s)     '
+!
+!         IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
+!            WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  '      (-)     '
+!         END IF
+!
+!      ENDDO             ! I - All selected output channels
+!      
+!      
 ! END DEBUG OUTPUTS 
 !============================================================
       
@@ -10076,29 +10076,29 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
       
 !============================================================
 ! DEBUG OUTPUTS HERE
-
-      DO I = 0,farm%WD(1)%p%NumPlanes-1  ! Loop through all selected output channels
-
-         DO J = 1,3
-            WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%WD(1)%y%p_plane(J,I)
-            CALL WrFileNR( farm%p%UnOu, TmpStr2 )
-         ENDDO
-
-         WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%WD(1)%xd%x_plane(I)
-         CALL WrFileNR( farm%p%UnOu, TmpStr2 )
-
-         DO J = 1,3
-            WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%AWAE%y%V_plane(J,I,1)
-            CALL WrFileNR( farm%p%UnOu, TmpStr2 )
-         ENDDO
-         
-         IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
-            WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  trim(num2lstr(farm%AWAE%m%N_Wind(I,1)))
-         END IF
-
-      ENDDO             ! I - All selected output channels
-      
-      
+!
+!      DO I = 0,farm%WD(1)%p%NumPlanes-1  ! Loop through all selected output channels
+!
+!         DO J = 1,3
+!            WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%WD(1)%y%p_plane(J,I)
+!            CALL WrFileNR( farm%p%UnOu, TmpStr2 )
+!         ENDDO
+!
+!         WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%WD(1)%xd%x_plane(I)
+!         CALL WrFileNR( farm%p%UnOu, TmpStr2 )
+!
+!         DO J = 1,3
+!            WRITE( TmpStr2, '('//trim(farm%p%OutFmt)//')' )  farm%AWAE%y%V_plane(J,I,1)
+!            CALL WrFileNR( farm%p%UnOu, TmpStr2 )
+!         ENDDO
+!         
+!         IF ( I < farm%WD(1)%p%NumPlanes-1 ) THEN
+!            WRITE( farm%p%UnOu,'(A14)',ADVANCE='NO' )  trim(num2lstr(farm%AWAE%m%N_Wind(I,1)))
+!         END IF
+!
+!      ENDDO             ! I - All selected output channels
+!      
+!      
 ! END DEBUG OUTPUTS 
 !============================================================
          ! write a new line (advance to the next line)
