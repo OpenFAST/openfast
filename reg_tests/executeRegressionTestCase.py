@@ -42,13 +42,13 @@ if not os.path.isdir(sourceDirectory):
 
 systemcompiler_given = True
 try:
-    systemName = sys.argv[6]
+    systemName = sys.argv[5]
 except IndexError:
     systemcompiler_given = False
     systemName = "not_given"
 
 try:
-    compilerId = sys.argv[7]
+    compilerId = sys.argv[6]
 except IndexError:
     systemcompiler_given = False
     compilerId = "not_given"
