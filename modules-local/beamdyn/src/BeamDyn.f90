@@ -440,6 +440,9 @@ subroutine InitializeNodalLocations(InputFileData,p,SP_Coef,GLL_nodes,ErrStat, E
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'InitGaussPoints'
 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
    !-------------------------------------------------
    ! p%uuN0 contains the initial (physical) positions and orientations of the (output) GLL nodes
    !-------------------------------------------------
@@ -711,7 +714,7 @@ subroutine SetParameters(InitInp, InputFileData, SP_Coef, p, ErrStat, ErrMsg)
        p%ngp = p%node_elem !- 1
    ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
        p%refine = InputFileData%refine
-       p%ngp = (InputFileData%kp_member(1) - 1)*p%refine + 1
+       p%ngp = (InputFileData%InpBl%station_total - 1)*p%refine + 1
    ENDIF
 
    ! Degree-of-freedom (DoF) per node
