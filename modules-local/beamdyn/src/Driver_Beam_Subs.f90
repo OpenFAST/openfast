@@ -33,6 +33,13 @@ module BeamDyn_driver_subs
 !  REAL(DbKi)                    :: MultiPointLoads{:}{:}       !< The array of multipoint loads Index 1: [1, NumPointLoads]; 
                                                                 !< Index 2: [1,7] (index of Loads 1   = Relative position along blade span;
                                                                 !!                                2-7 = Fx, Fy, Fz, Mx, My, Mz )
+      TYPE(MeshType)                   :: mplMotion  ! Mesh for blade motion at multipoint loads locations
+      TYPE(MeshType)                   :: mplLoads   ! Mesh for multipoint loads
+      TYPE(MeshMapType)                :: Map_BldMotion_to_mplMotion
+      TYPE(MeshMapType)                :: Map_mplLoads_to_PointLoad
+      TYPE(MeshType)                   :: y_BldMotion_at_u_point ! Intermediate mesh to transfer motion from output mesh to input mesh
+      TYPE(MeshMapType)                :: Map_y_BldMotion_to_u_point
+      
    END TYPE
    
    
@@ -214,13 +221,15 @@ module BeamDyn_driver_subs
             
       CALL ReadCom(UnIn,DvrInputFile,'Section Header: Multiple Point Loads',ErrStat2,ErrMsg2,UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL AllocAry(BD_DriverData%MultiPointLoad,BD_DriverData%NumPointLoads,7,'Point loads input array',ErrStat2,ErrMsg2)
+      CALL AllocAry(BD_DriverData%MultiPointLoad,max(1,BD_DriverData%NumPointLoads),7,'Point loads input array',ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat >= AbortErrLev) then
              call cleanup()
              return
          end if
    
+      BD_DriverData%MultiPointLoad = 0.0_ReKi      ! this must have at least one node, and it will be initialized to 0      
+         
       DO i = 1,BD_DriverData%NumPointLoads
           CALL ReadAry( UnIn, DvrInputFile, TmpReAry, 7, 'PointLoad', 'Nodal point loads - Node No., DOF No., ', ErrStat2, ErrMsg2, UnEc )       
              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -236,6 +245,8 @@ module BeamDyn_driver_subs
           call cleanup()
           return
       end if
+      
+      BD_DriverData%NumPointLoads = max(1,BD_DriverData%NumPointLoads) 
    
       !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
       CALL ReadCom(UnIn,DvrInputFile,'Section Header: Primary input file',ErrStat2,ErrMsg2,UnEc)

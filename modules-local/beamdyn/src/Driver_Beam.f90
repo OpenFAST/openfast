@@ -51,12 +51,6 @@ PROGRAM BeamDyn_Driver_Program
    TYPE(BD_OutputType),ALLOCATABLE  :: BD_Output(:)
    REAL(DbKi),ALLOCATABLE           :: BD_OutputTimes(:)
    INTEGER(IntKi)                   :: DvrOut 
-   TYPE(MeshType)                   :: mplMotion  ! Mesh for blade motion at multipoint loads locations
-   TYPE(MeshType)                   :: mplLoads   ! Mesh for multipoint loads
-   TYPE(MeshMapType)                :: Map_BldMotion_to_mplMotion
-   TYPE(MeshMapType)                :: Map_mplLoads_to_PointLoad
-   TYPE(MeshType)                   :: y_BldMotion_at_u_point ! Intermediate mesh to transfer motion from output mesh to input mesh
-   TYPE(MeshMapType)                :: Map_y_BldMotion_to_u_point
    REAL(BDKi)                       :: temp_POS(3)
    REAL(BDKi)                       :: temp_CRV(3)
    REAL(BDKi)                       :: temp_CRV2(3)
@@ -64,7 +58,7 @@ PROGRAM BeamDyn_Driver_Program
    REAL(ReKi)                       :: Pos(3)            ! must be same type as mesh position fields
    REAL(BDKi)                       :: TmpDCM(3,3)
    
-   TYPE(BD_DriverInternalType)      :: BD_DriverData
+   TYPE(BD_DriverInternalType)      :: DvrData
 
    CHARACTER(256)                   :: DvrInputFile
    CHARACTER(256)                   :: RootName
@@ -101,7 +95,7 @@ PROGRAM BeamDyn_Driver_Program
    
    CALL GET_COMMAND_ARGUMENT(1,DvrInputFile)
    CALL GetRoot(DvrInputFile,RootName)
-   CALL BD_ReadDvrFile(DvrInputFile,t_initial,t_final,dt_global,BD_InitInput,BD_DriverData,ErrStat,ErrMsg)
+   CALL BD_ReadDvrFile(DvrInputFile,t_initial,t_final,dt_global,BD_InitInput,DvrData,ErrStat,ErrMsg)
       CALL CheckError()
    BD_InitInput%RootName         = TRIM(BD_Initinput%InputFile)
    BD_InitInput%RootDisp(:)      = 0.0_R8Ki
@@ -134,108 +128,10 @@ PROGRAM BeamDyn_Driver_Program
                    , ErrStat             &
                    , ErrMsg )
       CALL CheckError()
-
-! Mesh for multi-point loading on blades
-   CALL MeshCreate( BlankMesh        = mplMotion          &
-                   ,IOS              = COMPONENT_INPUT    &
-                   ,NNodes           = BD_DriverData%NumPointLoads      &
-                   ,TranslationDisp  = .TRUE.             &
-                   ,Orientation      = .TRUE.             &
-                   ,TranslationVel   = .TRUE.             &
-                   ,RotationVel      = .TRUE.             &
-                   ,TranslationAcc   = .TRUE.             &
-                   ,RotationAcc      = .TRUE.             &
-                   ,ErrStat          = ErrStat2           &
-                   ,ErrMess          = ErrMsg2             )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-   DO i = 1,BD_DriverData%NumPointLoads
-
-       call Find_IniNode(BD_InitOutput%kp_coordinate, BD_Parameter, 1, BD_InitOutput%kp_total, BD_DriverData%MultiPointLoad(i,1), temp_POS, temp_CRV)
-       
-       Pos = BD_Parameter%GlbPos + MATMUL(BD_Parameter%GlbRot,temp_POS)
-       
-       temp_CRV2 = MATMUL(BD_Parameter%GlbRot,temp_CRV)
-       CALL BD_CrvCompose(temp_CRV,BD_Parameter%Glb_crv,temp_CRV2,FLAG_R1R2) !temp_CRV = p%Glb_crv composed with temp_CRV2
-
-       CALL BD_CrvMatrixR(temp_CRV,TmpDCM) ! returns TmpDCM (the transpose of the DCM orientation matrix)
-
-       ! possible type conversions here:
-       DCM = TRANSPOSE(TmpDCM)
-
-       ! set the reference position and orientation for each node.
-       CALL MeshPositionNode ( Mesh    = mplMotion     &
-                              ,INode   = i             &
-                              ,Pos     = Pos           &
-                              ,ErrStat = ErrStat2      &
-                              ,ErrMess = ErrMsg2       &
-                              ,Orient  = DCM           )
-       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   ENDDO
-   DO i = 1,BD_DriverData%NumPointLoads
-       CALL MeshConstructElement( Mesh     = mplMotion      &
-                                 ,Xelement = ELEMENT_POINT    &
-                                 ,P1       = i                &
-                                 ,ErrStat  = ErrStat2         &
-                                 ,ErrMess  = ErrMsg2          )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   ENDDO
-   CALL MeshCommit ( Mesh    = mplMotion       &
-                    ,ErrStat = ErrStat2        &
-                    ,ErrMess = ErrMsg2         )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL CheckError()
    
-   CALL MeshCopy ( SrcMesh  = mplMotion            &
-                 , DestMesh = mplLoads             &
-                 , CtrlCode = MESH_SIBLING         &
-                 , IOS      = COMPONENT_INPUT      &
-                 , Force    = .TRUE.               &
-                 , Moment   = .TRUE.               &
-                 , ErrStat  = ErrStat2             &
-                 , ErrMess  = ErrMsg2              )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call CreateMultiPointMeshes()   
+   call Transfer_MultipointLoads()
    
-   CALL MeshMapCreate( BD_Output(1)%BldMotion, mplMotion, Map_BldMotion_to_mplMotion, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL MeshMapCreate( mplLoads, BD_Input(1)%PointLoad, Map_mplLoads_to_PointLoad, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL CheckError()
-
-   DO i = 1,BD_DriverData%NumPointLoads
-      mplLoads%Force(1:3,i)  = BD_DriverData%MultiPointLoad(i,2:4)
-      mplLoads%Moment(1:3,i) = BD_DriverData%MultiPointLoad(i,5:7)
-   ENDDO
-
-   CALL MeshCopy ( SrcMesh  = BD_Input(1)%PointLoad        &
-                 , DestMesh = y_BldMotion_at_u_point       &
-                 , CtrlCode = MESH_COUSIN                  &  ! Like a sibling, except using new memory for position/refOrientation and elements
-                 , IOS      = COMPONENT_OUTPUT             &
-                 , Orientation     = .TRUE.                &
-                 , TranslationDisp = .TRUE.                &
-                 , ErrStat         = ErrStat2              &
-                 , ErrMess         = ErrMsg2               )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL MeshMapCreate( BD_Output(1)%BldMotion, y_BldMotion_at_u_point, Map_y_BldMotion_to_u_point, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL CheckError()
-
-   y_BldMotion_at_u_point%remapFlag = .false.
-   
-   CALL Transfer_Line2_to_Point( BD_Output(1)%BldMotion, y_BldMotion_at_u_point, Map_y_BldMotion_to_u_point, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-   ! transfer the output motions to the input nodes for load transfer
-   CALL Transfer_Line2_to_Point( BD_Output(1)%BldMotion, mplMotion, Map_BldMotion_to_mplMotion, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-    
-      ! transfer the input loads to the output nodes for writing output
-   CALL Transfer_Point_to_Point( mplLoads, BD_Input(1)%PointLoad, Map_mplLoads_to_PointLoad, ErrStat2, ErrMsg2, mplMotion, y_BldMotion_at_u_point)  
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL CheckError()
-       
 !bjj: this is the driver's hack to get initial velocities for the input-output solve      
    CALL AllocAry(IniVelo,BD_Parameter%dof_node,BD_Parameter%node_total,'IniVelo',ErrStat,ErrMsg); 
       CALL CheckError()
@@ -251,7 +147,7 @@ PROGRAM BeamDyn_Driver_Program
    BD_OutputTimes(2) = t_initial
 
    !CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput,IniVelo,ErrStat, ErrMsg)
-   CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_DriverData,IniVelo,ErrStat, ErrMsg)
+   CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, DvrData,IniVelo,ErrStat, ErrMsg)
    CALL BD_CopyInput (BD_Input(1) , BD_Input(2) , MESH_NEWCOPY, ErrStat, ErrMsg)
    CALL BD_CopyOutput(BD_Output(1), BD_Output(2), MESH_NEWCOPY, ErrStat, ErrMsg)
       CALL CheckError()
@@ -264,8 +160,8 @@ PROGRAM BeamDyn_Driver_Program
      BD_InputTimes(1)  = t_global + dt_global
      BD_OutputTimes(2) = BD_OutputTimes(1) 
      BD_OutputTimes(1) = t_global + dt_global
-     CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_DriverData, IniVelo, ErrStat, ErrMsg)
-     CALL BD_InputSolve( BD_InputTimes(2), BD_Input(2), BD_Parameter, BD_DriverData, IniVelo, ErrStat, ErrMsg)
+     CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, DvrData, IniVelo, ErrStat, ErrMsg)
+     CALL BD_InputSolve( BD_InputTimes(2), BD_Input(2), BD_Parameter, DvrData, IniVelo, ErrStat, ErrMsg)
         CALL CheckError()
      CALL BD_CalcOutput( t_global, BD_Input(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
@@ -296,7 +192,7 @@ PROGRAM BeamDyn_Driver_Program
    CALL Dvr_End()
 
 CONTAINS
-
+!----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE Dvr_End()
 
       character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /=
@@ -313,7 +209,7 @@ CONTAINS
 
       IF(ALLOCATED(BD_InputTimes )) DEALLOCATE(BD_InputTimes )
       IF(ALLOCATED(BD_OutputTimes)) DEALLOCATE(BD_OutputTimes)
-      if(allocated(BD_DriverData%MultiPointLoad)) deallocate(BD_DriverData%MultiPointLoad)
+      if(allocated(DvrData%MultiPointLoad)) deallocate(DvrData%MultiPointLoad)
 
       if (ErrStat >= AbortErrLev) then      
          CALL ProgAbort( 'BeamDyn Driver encountered simulation error level: '&
@@ -322,7 +218,7 @@ CONTAINS
          call NormStop()
       end if
    END SUBROUTINE Dvr_End
-
+!----------------------------------------------------------------------------------------------------------------------------------
    subroutine CheckError()
    
       if (ErrStat /= ErrID_None) then
@@ -334,16 +230,159 @@ CONTAINS
       end if
          
    end subroutine CheckError
+!----------------------------------------------------------------------------------------------------------------------------------
+   subroutine CreateMultiPointMeshes()
+   
+   ! DvrData%NumPointLoads is at least 1
+   
+   !.......................
+   ! Mesh for multi-point loading on blades
+   !.......................
+   CALL MeshCreate( BlankMesh        = DvrData%mplMotion  &
+                   ,IOS              = COMPONENT_INPUT    &
+                   ,NNodes           = DvrData%NumPointLoads      &
+                   ,TranslationDisp  = .TRUE.             &
+                   ,Orientation      = .TRUE.             &
+                   ,TranslationVel   = .TRUE.             &
+                   ,RotationVel      = .TRUE.             &
+                   ,TranslationAcc   = .TRUE.             &
+                   ,RotationAcc      = .TRUE.             &
+                   ,ErrStat          = ErrStat2           &
+                   ,ErrMess          = ErrMsg2             )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      ! these nodes are placed along the key point line (as are the GLL nodes)
+   DO i = 1,DvrData%NumPointLoads
 
+       call Find_IniNode(BD_InitOutput%kp_coordinate, BD_Parameter, 1, BD_InitOutput%kp_total, DvrData%MultiPointLoad(i,1), temp_POS, temp_CRV)
+       
+       Pos = BD_Parameter%GlbPos + MATMUL(BD_Parameter%GlbRot,temp_POS)
+       
+       temp_CRV2 = MATMUL(BD_Parameter%GlbRot,temp_CRV)
+       CALL BD_CrvCompose(temp_CRV,BD_Parameter%Glb_crv,temp_CRV2,FLAG_R1R2) !temp_CRV = p%Glb_crv composed with temp_CRV2
 
+       CALL BD_CrvMatrixR(temp_CRV,TmpDCM) ! returns TmpDCM (the transpose of the DCM orientation matrix)
 
+       ! possible type conversions here:
+       DCM = TRANSPOSE(TmpDCM)
 
-SUBROUTINE BD_InputSolve( t, u,  p, BD_DriverData, IniVelo, ErrStat, ErrMsg)
+       ! set the reference position and orientation for each node.
+       CALL MeshPositionNode ( Mesh    = DvrData%mplMotion     &
+                              ,INode   = i             &
+                              ,Pos     = Pos           &
+                              ,ErrStat = ErrStat2      &
+                              ,ErrMess = ErrMsg2       &
+                              ,Orient  = DCM           )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   ENDDO
+   
+   DO i = 1,DvrData%NumPointLoads
+       CALL MeshConstructElement( Mesh     = DvrData%mplMotion      &
+                                 ,Xelement = ELEMENT_POINT    &
+                                 ,P1       = i                &
+                                 ,ErrStat  = ErrStat2         &
+                                 ,ErrMess  = ErrMsg2          )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   ENDDO
+   CALL MeshCommit ( Mesh    = DvrData%mplMotion       &
+                    ,ErrStat = ErrStat2        &
+                    ,ErrMess = ErrMsg2         )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL CheckError()
+
+   !.......................
+   ! sibling mesh for motions, which are needed to transfer loads
+   !.......................
+
+   CALL MeshCopy ( SrcMesh  = DvrData%mplMotion    &
+                 , DestMesh = DvrData%mplLoads     &
+                 , CtrlCode = MESH_SIBLING         &
+                 , IOS      = COMPONENT_INPUT      &
+                 , Force    = .TRUE.               &
+                 , Moment   = .TRUE.               &
+                 , ErrStat  = ErrStat2             &
+                 , ErrMess  = ErrMsg2              )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL CheckError()
+
+      
+   !.......................
+   ! "sibling" mesh for BD motions, which are needed to transfer loads
+   ! BD's input and output meshes may not be at the same location, so we need another copy
+   !.......................
+      
+   CALL MeshCopy ( SrcMesh  = BD_Input(1)%PointLoad        &
+                 , DestMesh = DvrData%y_BldMotion_at_u_point       &
+                 , CtrlCode = MESH_COUSIN                  &  ! Like a sibling, except using new memory for position/refOrientation and elements
+                 , IOS      = COMPONENT_OUTPUT             &
+                 , Orientation     = .TRUE.                &
+                 , TranslationDisp = .TRUE.                &
+                 , ErrStat         = ErrStat2              &
+                 , ErrMess         = ErrMsg2               )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL CheckError()
+      
+      
+   !.......................
+   ! initialize the mapping between the BD output motions and driver mpl motion mesh:
+   !.......................
+      
+   CALL MeshMapCreate( BD_Output(1)%BldMotion, DvrData%mplMotion, DvrData%Map_BldMotion_to_mplMotion, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   !.......................
+   ! initialize the mapping between the driver mpl loads and BD input point loads mesh:
+   !.......................
+   CALL MeshMapCreate( DvrData%mplLoads, BD_Input(1)%PointLoad, DvrData%Map_mplLoads_to_PointLoad, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL CheckError()
+      
+   !.......................
+   ! initialize the mapping between the BD output motions and BD motions at the nodes on the y%BldMotion mesh:
+   !.......................
+      
+   CALL MeshMapCreate( BD_Output(1)%BldMotion, DvrData%y_BldMotion_at_u_point, DvrData%Map_y_BldMotion_to_u_point, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL CheckError()
+      
+      
+   DvrData%mplMotion%remapFlag = .false.
+   DvrData%mplLoads%remapFlag = .false.
+   DvrData%y_BldMotion_at_u_point%remapFlag = .false.
+      
+   end subroutine CreateMultiPointMeshes
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine Transfer_MultipointLoads()
+
+      ! the mpl loads are constant over the course of the simulation, but they could be set up to vary
+   DO i = 1,DvrData%NumPointLoads
+      DvrData%mplLoads%Force(1:3,i)  = DvrData%MultiPointLoad(i,2:4)
+      DvrData%mplLoads%Moment(1:3,i) = DvrData%MultiPointLoad(i,5:7)
+   ENDDO
+      
+      ! get the motions from BD to the two meshes needed in this loads transfer:
+   CALL Transfer_Line2_to_Point( BD_Output(1)%BldMotion, DvrData%y_BldMotion_at_u_point, DvrData%Map_y_BldMotion_to_u_point, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   CALL Transfer_Line2_to_Point( BD_Output(1)%BldMotion, DvrData%mplMotion, DvrData%Map_BldMotion_to_mplMotion, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      
+      ! transfer the mpl loads to BD's input point mesh at the GLL nodes:
+   CALL Transfer_Point_to_Point( DvrData%mplLoads, BD_Input(1)%PointLoad, DvrData%Map_mplLoads_to_PointLoad, ErrStat2, ErrMsg2, DvrData%mplMotion, DvrData%y_BldMotion_at_u_point)  
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL CheckError()
+
+end subroutine Transfer_MultipointLoads
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE BD_InputSolve( t, u,  p, DvrData, IniVelo, ErrStat, ErrMsg)
  
    REAL(DbKi),                  INTENT(IN   ) :: t
    TYPE(BD_InputType),          INTENT(INOUT) :: u
    TYPE(BD_ParameterType),      INTENT(IN   ) :: p
-   TYPE(BD_DriverInternalType), INTENT(IN   ) :: BD_DriverData
+   TYPE(BD_DriverInternalType), INTENT(INOUT) :: DvrData
    REAL(BDKi),                  INTENT(IN   ) :: IniVelo(:,:)
    INTEGER(IntKi),              INTENT(  OUT) :: ErrStat          ! Error status of the operation
    CHARACTER(*),                INTENT(  OUT) :: ErrMsg           ! Error message if ErrStat /= ErrID_None
@@ -398,20 +437,22 @@ SUBROUTINE BD_InputSolve( t, u,  p, BD_DriverData, IniVelo, ErrStat, ErrMsg)
                                              u%RootMotion%TranslationVel(:,1))
    ! END Calculate root translational and angular accelerations
 
-!ADP: we still need these.  PointLoad still exists 
-!VA: Commenting these since they make the multi-point load zero
-   !u%PointLoad%Force(:,:)  = 0.0_ReKi
-   !u%PointLoad%Moment(:,:) = 0.0_ReKi
-   !u%PointLoad%Force(1:3,p%node_total)  = InitInput%TipLoad(1:3)
-   !u%PointLoad%Moment(1:3,p%node_total) = InitInput%TipLoad(4:6)
+   
+   
+   ! set up the point load input:
+   ! @VA: if we want to apply these at different positions, we should call Transfer_MultipointLoads(); alternatively, we could store the result of u%PointLoad the first
+   ! time we call this and just use that instead of doing another transfer here.
+   CALL Transfer_Point_to_Point( DvrData%mplLoads, u%PointLoad, DvrData%Map_mplLoads_to_PointLoad, ErrStat2, ErrMsg2, DvrData%mplMotion, DvrData%y_BldMotion_at_u_point)  
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL CheckError()
+   
+   u%PointLoad%Force(1:3,u%PointLoad%NNodes)  = u%PointLoad%Force(1:3,u%PointLoad%NNodes)  + DvrData%TipLoad(1:3)
+   u%PointLoad%Moment(1:3,u%PointLoad%NNodes) = u%PointLoad%Moment(1:3,u%PointLoad%NNodes) + DvrData%TipLoad(4:6)
    
    ! LINE2 mesh: DistrLoad
    DO i=1,u%DistrLoad%NNodes
-!ADP: can't do this. u%DistrLoad not initialized anywhere else
-!      u%DistrLoad%Force(1:3,i) = u%DistrLoad%Force(1:3,i)  + BD_DriverData%DistrLoad(1:3)
-!      u%DistrLoad%Moment(1:3,i)= u%DistrLoad%Moment(1:3,i) + BD_DriverData%DistrLoad(4:6)
-      u%DistrLoad%Force(:,i) =  BD_DriverData%DistrLoad(1:3)
-      u%DistrLoad%Moment(:,i)=  BD_DriverData%DistrLoad(4:6)
+      u%DistrLoad%Force(:,i) =  DvrData%DistrLoad(1:3)
+      u%DistrLoad%Moment(:,i)=  DvrData%DistrLoad(4:6)
    ENDDO
 
 END SUBROUTINE BD_InputSolve
