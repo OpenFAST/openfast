@@ -1,7 +1,7 @@
 .. OpenFAST documentation master file, created by
    sphinx-quickstart on Wed Jan 25 13:52:07 2017.
 
-OpenFAST Documentation 
+OpenFAST Documentation
 ======================
 
 This page is under construction. Our intention is that this page will eventually host documents on compiling OpenFAST, theory behind OpenFAST, software-development requirements, reporting issues, etc.
@@ -18,7 +18,7 @@ Users may find the established FAST8 through the NWTC Information Portal: https:
    OpenFAST Github Organization Page <https://github.com/OpenFAST>
    OpenFAST Github Repository <https://github.com/OpenFAST/OpenFAST>
    Installing OpenFAST  <source/install.rst>
+   Testing OpenFAST  <source/test.rst>
    Module Documentation <source/module.rst>
    Source Code Documentation <source/code.rst>
    Building this Documentation Locally <source/build_doc.rst>
-

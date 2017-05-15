@@ -11,7 +11,7 @@ The automated regression test runs CTest and can be executed in two ways:
 
 
 - `executeFullRegressionTest.py`
-  - Runs CTest independently of CMake using a steering script at `openfast/ctest/steer.cmake`. A build directory is created at `openfast/ctest-build` which contains the inputs to run the test cases and the locally generated outputs.
+  - Runs CTest independently of CMake using a steering script at ``openfast/ctest/steer.cmake``. This method requires the user to specify an OpenFAST executable in the Python program call. A build directory is created at ``openfast/ctest-build`` which contains the inputs to run the test cases and the locally generated outputs.
 
 Dependencies to run the regression test suite are
 - Python 2.7
