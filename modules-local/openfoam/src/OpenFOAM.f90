@@ -458,6 +458,9 @@ SUBROUTINE SetOpFMForces(p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpFM,
    INTEGER(IntKi)                                  :: J           ! Loops through nodes / elements
    INTEGER(IntKi)                                  :: K           ! Loops through blades.
    INTEGER(IntKi)                                  :: Node        ! Node number for blade/node on mesh
+#ifdef DEBUG_OPENFOAM   
+   INTEGER(IntKi)                                  :: actForcesFile, aerodynForcesFile ! Unit numbers for files containing actuator forces and aerodyn forces
+#endif
    INTEGER(IntKi)                                  :: ErrStat2    ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                            :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
 
@@ -476,17 +479,23 @@ SUBROUTINE SetOpFMForces(p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpFM,
    ! blade nodes
    !.......................
 
-   open(unit=987,file='fast_aerodyn_velocity_forces.csv')
-   write(987,*) '#x, y, z, fx, fy, fz'
+#ifdef DEBUG_OPENFOAM   
+   CALL GetNewUnit( aerodynForcesFile )
+   open(unit=aerodynForcesFile,file='fast_aerodyn_velocity_forces.csv')
+   write(aerodynForcesFile,*) '#x, y, z, fx, fy, fz'
 
-   open(unit=988,file='fast_actuator_forces.csv')
-   write(988,*) '#x, y, z, fx, fy, fz'
+   CALL GetNewUnit( actForcesFile )
+   open(unit=actForcesFile,file='fast_actuator_forces.csv')
+   write(actForcesFile,*) '#x, y, z, fx, fy, fz'
+#endif
 
    DO K = 1,OpFM%p%NumBl
       
+#ifdef DEBUG_OPENFOAM   
       DO J = 1,u_AD%BladeMotion(k)%NNodes
-        write(987,*) u_AD%BladeMotion(k)%TranslationDisp(1,j) + u_AD%BladeMotion(k)%Position(1,j), ', ', u_AD%BladeMotion(k)%TranslationDisp(2,j) + u_AD%BladeMotion(k)%Position(2,j), ', ', u_AD%BladeMotion(k)%TranslationDisp(3,j) + u_AD%BladeMotion(k)%Position(3,j), ', ', OpFM%y%u(1 + (k-1)*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%v(1 + (k-1)*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%w(1 + (k-1)*u_AD%BladeMotion(k)%NNodes + j), ', ', y_AD%BladeLoad(k)%Force(1,j), ', ', y_AD%BladeLoad(k)%Force(2,j), ', ', y_AD%BladeLoad(k)%Force(2,j)
+        write(aerodynForcesFile,*) u_AD%BladeMotion(k)%TranslationDisp(1,j) + u_AD%BladeMotion(k)%Position(1,j), ', ', u_AD%BladeMotion(k)%TranslationDisp(2,j) + u_AD%BladeMotion(k)%Position(2,j), ', ', u_AD%BladeMotion(k)%TranslationDisp(3,j) + u_AD%BladeMotion(k)%Position(3,j), ', ', OpFM%y%u(1 + (k-1)*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%v(1 + (k-1)*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%w(1 + (k-1)*u_AD%BladeMotion(k)%NNodes + j), ', ', y_AD%BladeLoad(k)%Force(1,j), ', ', y_AD%BladeLoad(k)%Force(2,j), ', ', y_AD%BladeLoad(k)%Force(2,j)
       END DO
+#endif
 
       call Transfer_Line2_to_Line2( y_AD%BladeLoad(k), OpFM%m%ActForceLoads(k), OpFM%m%Line2_to_Line2_Loads(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), OpFM%m%ActForceMotions(k) )
       call Transfer_Line2_to_Point( OpFM%m%ActForceLoads(k), OpFM%m%ActForceLoadsPoints(k), OpFM%m%Line2_to_Point_Loads(k), ErrStat2, ErrMsg2, OpFM%m%ActForceMotions(k), OpFM%m%ActForceMotionsPoints(k) )
@@ -499,8 +508,11 @@ SUBROUTINE SetOpFMForces(p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpFM,
          OpFM%u%momentx(Node) = OpFM%m%ActForceLoadsPoints(k)%Moment(1,j)
          OpFM%u%momenty(Node) = OpFM%m%ActForceLoadsPoints(k)%Moment(2,j)
          OpFM%u%momentz(Node) = OpFM%m%ActForceLoadsPoints(k)%Moment(3,j)
-         
-         write(988,*) OpFM%u%pxForce(Node), ', ', OpFM%u%pyForce(Node), ', ', OpFM%u%pzForce(Node), ', ', OpFM%u%fx(Node), ', ', OpFM%u%fy(Node), ', ', OpFM%u%fz(Node), ', '
+
+#ifdef DEBUG_OPENFOAM   
+         write(actForcesFile,*) OpFM%u%pxForce(Node), ', ', OpFM%u%pyForce(Node), ', ', OpFM%u%pzForce(Node), ', ', OpFM%u%fx(Node), ', ', OpFM%u%fy(Node), ', ', OpFM%u%fz(Node), ', '
+#endif
+
       END DO 
 
    END DO !K = 1,OpFM%p%NumBl
@@ -512,9 +524,11 @@ SUBROUTINE SetOpFMForces(p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpFM,
    ! mesh mapping from line2 mesh to point mesh
    k = SIZE(u_AD%BladeMotion) + 1
    
+#ifdef DEBUG_OPENFOAM   
    DO J = 1,u_AD%TowerMotion%NNodes
-      write(987,*) u_AD%TowerMotion%TranslationDisp(1,j) + u_AD%TowerMotion%Position(1,j), ', ', u_AD%TowerMotion%TranslationDisp(2,j) + u_AD%TowerMotion%Position(2,j), ', ', u_AD%TowerMotion%TranslationDisp(3,j) + u_AD%TowerMotion%Position(3,j), ', ', OpFM%y%u(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%v(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%w(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', y_AD%TowerLoad%Force(1,j), ', ', y_AD%TowerLoad%Force(2,j), ', ', y_AD%TowerLoad%Force(2,j)
+      write(aerodynForcesFile,*) u_AD%TowerMotion%TranslationDisp(1,j) + u_AD%TowerMotion%Position(1,j), ', ', u_AD%TowerMotion%TranslationDisp(2,j) + u_AD%TowerMotion%Position(2,j), ', ', u_AD%TowerMotion%TranslationDisp(3,j) + u_AD%TowerMotion%Position(3,j), ', ', OpFM%y%u(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%v(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%w(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', y_AD%TowerLoad%Force(1,j), ', ', y_AD%TowerLoad%Force(2,j), ', ', y_AD%TowerLoad%Force(2,j)
    END DO
+#endif
 
    call Transfer_Line2_to_Line2( y_AD%TowerLoad, OpFM%m%ActForceLoads(k), OpFM%m%Line2_to_Line2_Loads(k), ErrStat2, ErrMsg2, u_AD%TowerMotion, OpFM%m%ActForceMotions(k) )
    call Transfer_Line2_to_Point( OpFM%m%ActForceLoads(k), OpFM%m%ActForceLoadsPoints(k), OpFM%m%Line2_to_Point_Loads(k), ErrStat2, ErrMsg2, OpFM%m%ActForceMotions(k), OpFM%m%ActForceMotionsPoints(k) )
@@ -528,11 +542,15 @@ SUBROUTINE SetOpFMForces(p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpFM,
       OpFM%u%momenty(Node) = OpFM%m%ActForceLoadsPoints(k)%Moment(2,j)
       OpFM%u%momentz(Node) = OpFM%m%ActForceLoadsPoints(k)%Moment(3,j)
 
-      write(988,*) OpFM%u%pxForce(Node), ', ', OpFM%u%pyForce(Node), ', ', OpFM%u%pzForce(Node), ', ', OpFM%u%fx(Node), ', ', OpFM%u%fy(Node), ', ', OpFM%u%fz(Node), ', '
+#ifdef DEBUG_OPENFOAM   
+      write(actForcesFile,*) OpFM%u%pxForce(Node), ', ', OpFM%u%pyForce(Node), ', ', OpFM%u%pzForce(Node), ', ', OpFM%u%fx(Node), ', ', OpFM%u%fy(Node), ', ', OpFM%u%fz(Node), ', '
+#endif
    END DO
 
-   close(987)
-   close(988)
+#ifdef DEBUG_OPENFOAM   
+   close(aerodynForcesFile)
+   close(actForcesFile)
+#endif
    
 END SUBROUTINE SetOpFMForces
 !----------------------------------------------------------------------------------------------------------------------------------
