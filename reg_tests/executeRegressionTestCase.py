@@ -5,7 +5,7 @@
     with `git submodule update --init --recursive` or updated with `git submodule update`.
 
     Usage: `python executeRegressionTestCase.py testname openfast_executable tolerance system_name compiler_id`
-    Example: `python executeRegressionTestCase.py Test02 openfast 0.000001 [Darwin,RHEL,Windows] [Intel,GNU]`
+    Example: `python executeRegressionTestCase.py Test02 openfast 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
 """
 
 import os
@@ -57,14 +57,14 @@ except IndexError:
 # Internal names -> Human readable names
 systemName_map = {
     "darwin": "macos",
-    "rhel": "rhel"
+    "linux": "linux"
 }
 compilerId_map = {
     "gnu": "gnu",
     "intel": "intel"
 }
 # Build the target output directory name or choose the default
-targetSystem = systemName_map.get(systemName.lower(), "rhel")
+targetSystem = systemName_map.get(systemName.lower(), "linux")
 targetCompiler = compilerId_map.get(compilerId.lower(), "intel")
 targetOutput = os.path.join(targetSystem+"-"+targetCompiler)
 if not systemcompiler_given:

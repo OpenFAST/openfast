@@ -66,7 +66,7 @@ r-test, which must be initialized prior to running. r-test can be initialized
 with `git submodule update --init --recursive` or updated with `git submodule update`.
 
 Usage: `python executeRegressionTestCase.py testname openfast_executable tolerance system_name compiler_id`  
-Example: `python executeRegressionTestCase.py Test02 openfast 0.000001 [Darwin,RHEL,Windows] [Intel,GNU]`
+Example: `python executeRegressionTestCase.py Test02 openfast 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
 
 #### pass_fail.py
 This program determines whether a new solution has regressed from the "gold standard"
