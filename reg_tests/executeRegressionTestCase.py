@@ -1,11 +1,11 @@
 """
-    This script executes openfast and a regression test for a single test case.
-    The test case must be one of the CertTest cases, and the r-test submodule must be initialized.
-    r-test is initialized with `git submodule update --init --recursive` or
-    updated with `git submodule update`
+    This program executes OpenFAST and a regression test for a single test case.
+    The test case must be one of the CertTest cases. The test data is contained in a git submodule,
+    r-test, which must be initialized prior to running. r-test can be initialized
+    with `git submodule update --init --recursive` or updated with `git submodule update`.
 
     Usage: python executeRegressionTestCase.py testname openfast_executable tolerance system_name compiler_id
-    Example: python executeRegressionTestCase.py Test02 openfast 0.000001 Darwin Intel
+    Example: python executeRegressionTestCase.py Test02 openfast 0.000001 [Darwin,RHEL,Windows] [Intel,GNU]
 """
 
 import os

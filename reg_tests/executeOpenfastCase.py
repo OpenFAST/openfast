@@ -1,5 +1,5 @@
 """
-    This script executes a single openfast case.
+    This program executes a single OpenFAST case.
 
     Usage: python executeOpenfastCase.py input_file openfast_executable
     - openfast_executable is an optional argument pointing to the openfast executable of choice.

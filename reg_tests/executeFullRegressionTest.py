@@ -2,8 +2,7 @@
     This program executes the openfast regression test suite through the use of
     CTest and other custom scripts. The test data is contained in a git submodule,
     r-test, which must be initialized prior to running. r-test can be initialized
-    with this command: `git submodule update --init --recursive` or updated
-    with this command: `git submodule update`.
+    with `git submodule update --init --recursive` or updated with `git submodule update`.
 
     Required dependencies are:
     - Python 2.7
