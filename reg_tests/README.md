@@ -5,6 +5,14 @@ This directory contains the regression testing suite for OpenFAST. Its contents 
 - CMake/CMake configuration files
 - Python scripts
 
+The automated regression test runs CTest and can be executed in two ways:
+- `make test`
+  - Requires OpenFAST to have been built with `make`. Specifically, it is assumed that an `openfast` binary executable exists at `openfast/build/glue-codes/fast/openfast`. This method creates a subdirectory in the CMake build directory called `reg_tests` which contains the inputs to run the test cases and the local outputs.
+
+
+- `executeFullRegressionTest.py`
+  - Runs CTest independently of CMake using a steering script at `openfast/ctest/steer.cmake`. A local build directory is created at `openfast/ctest-build` which contains the inputs to run the test cases and the local outputs.
+
 ## r-test
 This repository serves as a container for regression test data for OpenFAST. The test cases are taken from the FAST V8 CertTests. The repository contains:
 - input files for test execution
