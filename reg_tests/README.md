@@ -40,7 +40,7 @@ This is the CTest configuration file which lists the test cases that run in the 
 The included Python scripts are used to execute various parts of the automated regression test, so they should remain in their current location with their current name. Each script can be executed independently.
 
 #### executeFullRegressionTest.py
-This program executes the openfast regression test suite through the use of
+This program executes the OpenFAST regression test suite through the use of
 CTest and other custom scripts. The test data is contained in a git submodule,
 r-test, which must be initialized prior to running. r-test can be initialized
 with `git submodule update --init --recursive` or updated with `git submodule update`.
