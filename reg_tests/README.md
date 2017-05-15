@@ -1,8 +1,8 @@
 # OpenFAST/reg_tests
 
 This directory contains the regression testing suite for OpenFAST. Its contents are list here and further described below.
-- r-test is a standalone repository containing the regression test data
-- CMake/CMake configuration files
+- r-test, a standalone repository containing the regression test data
+- CMake/CTest configuration files
 - Python scripts
 
 The automated regression test runs CTest and can be executed in two ways:
@@ -11,7 +11,7 @@ The automated regression test runs CTest and can be executed in two ways:
 
 
 - `executeFullRegressionTest.py`
-  - Runs CTest independently of CMake using a steering script at `openfast/ctest/steer.cmake`. A local build directory is created at `openfast/ctest-build` which contains the inputs to run the test cases and the locally generated outputs.
+  - Runs CTest independently of CMake using a steering script at `openfast/ctest/steer.cmake`. A build directory is created at `openfast/ctest-build` which contains the inputs to run the test cases and the locally generated outputs.
 
 Dependencies to run the regression test suite are
 - Python 2.7
@@ -19,7 +19,7 @@ Dependencies to run the regression test suite are
 - CTest distributed through CMake
 
 ## r-test
-This repository serves as a container for regression test data for OpenFAST. The test cases are taken from the FAST V8 CertTests. The repository contains:
+This repository serves as a container for regression test data. The test cases are taken from the FAST V8 CertTests. The repository contains:
 - input files for test execution
 - outputs for various machine and compiler combinations which serve as "gold standard" solutions for the regression test suite
 
@@ -45,8 +45,8 @@ CTest and other custom scripts. The test data is contained in a git submodule,
 r-test, which must be initialized prior to running. r-test can be initialized
 with `git submodule update --init --recursive` or updated with `git submodule update`.
 
-Usage: `python executeRegressionTestCase.py testname openfast_executable tolerance system_name compiler_id`  
-Example: `python executeRegressionTestCase.py Test02 openfast 0.000001 [Darwin,RHEL,Windows] [Intel,GNU]`
+Usage: `python executeRegressionTestCase.py openfast_executable`  
+Example: `python executeRegressionTestCase.py /path/to/openfast`
 
 #### executeOpenfastCase.py
 This program executes a single OpenFAST case.
@@ -55,9 +55,9 @@ Usage: `python executeOpenfastCase.py input_file openfast_executable`
 - `openfast_executable` is an optional argument pointing to the OpenFAST executable of choice.
 - if `openfast_executable` is not given, an attempt will be made to find one in $PATH
 
-Example: `python executeRegressionTestCase.py .../CaseDir/case01.fst`  
-Example: `python executeRegressionTestCase.py .../CaseDir/case01.fst openfast`  
-Example: `python executeRegressionTestCase.py .../CaseDir/case01.fst openfast/install/bin/openfast`  
+Example: `python executeRegressionTestCase.py CaseDir/case01.fst`  
+Example: `python executeRegressionTestCase.py CaseDir/case01.fst openfast`  
+Example: `python executeRegressionTestCase.py CaseDir/case01.fst openfast/install/bin/openfast`  
 
 #### executeRegressionTestCase.py
 This program executes OpenFAST and a regression test for a single test case.
@@ -66,16 +66,16 @@ r-test, which must be initialized prior to running. r-test can be initialized
 with `git submodule update --init --recursive` or updated with `git submodule update`.
 
 Usage: `python executeRegressionTestCase.py testname openfast_executable tolerance system_name compiler_id`  
-Example: `python executeRegressionTestCase.py Test02 openfast 0.000001 Darwin Intel`  
+Example: `python executeRegressionTestCase.py Test02 openfast 0.000001 [Darwin,RHEL,Windows] [Intel,GNU]`
 
 #### pass_fail.py
 This program determines whether a new solution has regressed from the "gold standard"
 solution. It reads two OpenFAST binary output files (.outb), and computes the variance
-of the two solution files for each output channel. If the max variance is less than
+of the two solution files for each output channel. If the max variance is smaller than
 the given tolerance, the test case passes.
 
 Usage: `python pass_fail.py solution1 solution2 tolerance`  
 Example: `python pass_fail.py output-local/Test01.outb gold-standard/Test01.outb 0.00000001`
 
 #### fast_io.py
-This program reads OpenFAST output files in binary and ascii format and returns the data in a Numpy array.
+This program reads OpenFAST output files in binary or ascii format and returns the data in a Numpy array.

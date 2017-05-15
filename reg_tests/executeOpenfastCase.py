@@ -1,13 +1,13 @@
 """
     This program executes a single OpenFAST case.
 
-    Usage: python executeOpenfastCase.py input_file openfast_executable
-    - openfast_executable is an optional argument pointing to the openfast executable of choice.
-    - if openfast_executable is not given, an attempt will be made to find one in $PATH
+    Usage: `python executeOpenfastCase.py input_file openfast_executable`
+    - `openfast_executable` is an optional argument pointing to the OpenFAST executable of choice.
+    - if `openfast_executable` is not given, an attempt will be made to find one in $PATH
 
-    Example: python executeRegressionTestCase.py .../CaseDir/case01.fst
-    Example: python executeRegressionTestCase.py .../CaseDir/case01.fst openfast
-    Example: python executeRegressionTestCase.py .../CaseDir/case01.fst openfast/install/bin/openfast
+    Example: `python executeRegressionTestCase.py CaseDir/case01.fst`
+    Example: `python executeRegressionTestCase.py CaseDir/case01.fst openfast`
+    Example: `python executeRegressionTestCase.py CaseDir/case01.fst openfast/install/bin/openfast`
 """
 
 import os
