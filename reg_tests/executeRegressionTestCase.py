@@ -4,8 +4,8 @@
     r-test, which must be initialized prior to running. r-test can be initialized
     with `git submodule update --init --recursive` or updated with `git submodule update`.
 
-    Usage: `python executeRegressionTestCase.py testname openfast_executable tolerance system_name compiler_id`
-    Example: `python executeRegressionTestCase.py Test02 openfast 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
+    Usage: `python executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id`
+    Example: `python executeRegressionTestCase.py Test02 openfast path/to/openfast_repo 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
 """
 
 import os
@@ -64,8 +64,13 @@ compilerId_map = {
     "intel": "intel"
 }
 # Build the target output directory name or choose the default
-targetSystem = systemName_map.get(systemName.lower(), "linux")
-targetCompiler = compilerId_map.get(compilerId.lower(), "intel")
+if systemName.lower() not in systemName_map or compilerId.lower() not in compilerId_map:
+    targetSystem = "macos"
+    targetCompiler = "gnu"
+else:
+    targetSystem = systemName_map.get(systemName.lower())
+    targetCompiler = compilerId_map.get(compilerId.lower())
+
 targetOutput = os.path.join(targetSystem+"-"+targetCompiler)
 if not systemcompiler_given:
     print("\nThe gold standard files are machine/compiler dependent. Remember to specify a machine and compiler type when executing this program.\n" +
