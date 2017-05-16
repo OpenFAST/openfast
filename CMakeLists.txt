@@ -111,7 +111,6 @@ endif()
 # the statement below automatically creates a BUILD_TESTING option
 include(CTest)
 if(BUILD_TESTING)
-  message(" ----------- BUILD_TESTING ${BUILD_TESTING}")
   add_subdirectory(reg_tests)
 endif()
 
