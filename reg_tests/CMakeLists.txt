@@ -57,5 +57,8 @@ file(COPY ${inputs} DESTINATION "${CMAKE_SOURCE_DIR}/ctest-build/outputs-local")
 # Store the executable path
 set(EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast/openfast")
 
+# convert to cmake style path
+file(TO_CMAKE_PATH ${EXECUTABLE} EXECUTABLE)
+
 # Add tests in list
 include(${CMAKE_CURRENT_SOURCE_DIR}/CTestList.cmake)
