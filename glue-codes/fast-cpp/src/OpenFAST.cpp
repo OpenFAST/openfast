@@ -546,23 +546,25 @@ void fast::OpenFAST::allocateMemory() {
 
   int nProcsWithTurbines=0;
   turbineProcs.resize(turbineSetProcs.size());
-  std::ofstream turbineAllocFile;
-  turbineAllocFile.open("turbineAlloc." + std::to_string(worldMPIRank) + ".txt") ;
+
   for (std::set<int>::const_iterator p = turbineSetProcs.begin(); p != turbineSetProcs.end(); p++) {
     turbineProcs[nProcsWithTurbines] = *p;
-
-    if (dryRun) {
-      if ( worldMPIRank == turbineProcs[nProcsWithTurbines] ) {
-	for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-	  turbineAllocFile << "Proc " << worldMPIRank << " loc iTurb " << iTurb << " glob iTurb " << turbineMapProcToGlob[iTurb] << std::endl ;
-	}
-      }
-    }
-
     nProcsWithTurbines++ ;
   }
-  turbineAllocFile.flush();
-  turbineAllocFile.close() ;
+
+  if (dryRun) {
+    if (nTurbinesProc > 0) {
+      std::ofstream turbineAllocFile;
+      turbineAllocFile.open("turbineAlloc." + std::to_string(worldMPIRank) + ".txt") ;
+      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+	turbineAllocFile << "Proc " << worldMPIRank << " loc iTurb " << iTurb << " glob iTurb " << turbineMapProcToGlob[iTurb] << std::endl ;
+      }
+      turbineAllocFile.flush();
+      turbineAllocFile.close() ;
+    }
+  
+  }
+
     
   // Construct a group containing all procs running atleast 1 turbine in FAST
   MPI_Group_incl(worldMPIGroup, nProcsWithTurbines, &turbineProcs[0], &fastMPIGroup) ;
