@@ -67,11 +67,13 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "")
 endif()
 
 ## -- Process timeout in seconds
-set(CTEST_TIMEOUT "7200")
+# each test gets 1500s; 26 * 1500 = 39000s
+set(CTEST_TIMEOUT "39000")
 
 ## -- Set output to english
 set($ENV{LC_MESSAGES} "en_EN" )
 
+## -- Set the CMAKE variable here for use downstream in the CTestList file
 if (NOT ${CTEST_SOURCE_DIRECTORY} STREQUAL "")
   set(CMAKE_SOURCE_DIR ${CTEST_SOURCE_DIRECTORY})
 endif()
@@ -85,8 +87,8 @@ endif()
 configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestConfig.cmake ${CTEST_BINARY_DIRECTORY}/CTestConfig.cmake)
 
 ## -- CTest Testfile
-#configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestTestfile.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
-configure_file(${CTEST_SOURCE_DIRECTORY}/reg_tests/CTestList.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
+configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestTestfile.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
+#configure_file(${CTEST_SOURCE_DIRECTORY}/reg_tests/CTestList.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
 
 ## -- Start
 message(" -- Starting test on ${MODEL} --")
