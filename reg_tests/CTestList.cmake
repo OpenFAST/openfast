@@ -5,7 +5,14 @@
 # Standard regression test
 function(add_test_r testname )
   add_test(
-    ${testname} python ${CMAKE_CURRENT_SOURCE_DIR}/executeRegressionTestCase.py ${testname} ${CMAKE_BINARY_DIR}/glue-codes/fast/openfast ${CMAKE_SOURCE_DIR} ${TOLERANCE} ${CMAKE_SYSTEM_NAME} ${CMAKE_Fortran_COMPILER_ID}
+    ${testname} python
+       ${CMAKE_SOURCE_DIR}/reg_tests/executeRegressionTestCase.py
+       ${testname}
+       ${EXECUTABLE}
+       ${CMAKE_SOURCE_DIR}
+       ${TOLERANCE}
+       ${CMAKE_SYSTEM_NAME}
+       ${CMAKE_Fortran_COMPILER_ID}
   )
   # limit each test to 25 minutes: 1500s
   set_tests_properties(${testname} PROPERTIES TIMEOUT 1500 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "regression")
@@ -14,7 +21,6 @@ endfunction(add_test_r)
 #===============================================================================
 # Regression tests
 #===============================================================================
-
 add_test_r(Test01)
 add_test_r(Test02)
 add_test_r(Test03)
