@@ -42,7 +42,9 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 endif()
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
 
-# TODO: Compile the ServoData controller library for 5MW turbine test cases
+# Compile the ServoData controller library for 5MW turbine test cases
+set(command ${CMAKE_CURRENT_SOURCE_DIR}/r-test/inputs/compileDISCON.py ${CMAKE_Fortran_COMPILER_ID} release)
+execute_process(COMMAND python ${command})
 
 # Copy the test input files
 file(GLOB inputs "${CMAKE_CURRENT_SOURCE_DIR}/r-test/inputs/*")
