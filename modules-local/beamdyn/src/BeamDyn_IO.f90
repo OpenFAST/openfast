@@ -82,12 +82,12 @@ MODULE BeamDyn_IO
    INTEGER(IntKi), PARAMETER      :: TipRVXg   =  16
    INTEGER(IntKi), PARAMETER      :: TipRVYg   =  17
    INTEGER(IntKi), PARAMETER      :: TipRVZg   =  18
-   INTEGER(IntKi), PARAMETER      :: TipTAXg   =  19
-   INTEGER(IntKi), PARAMETER      :: TipTAYg   =  20
-   INTEGER(IntKi), PARAMETER      :: TipTAZg   =  21
-   INTEGER(IntKi), PARAMETER      :: TipRAXg   =  22
-   INTEGER(IntKi), PARAMETER      :: TipRAYg   =  23
-   INTEGER(IntKi), PARAMETER      :: TipRAZg   =  24
+   INTEGER(IntKi), PARAMETER      :: TipTAXl   =  19
+   INTEGER(IntKi), PARAMETER      :: TipTAYl   =  20
+   INTEGER(IntKi), PARAMETER      :: TipTAZl   =  21
+   INTEGER(IntKi), PARAMETER      :: TipRAXl   =  22
+   INTEGER(IntKi), PARAMETER      :: TipRAYl   =  23
+   INTEGER(IntKi), PARAMETER      :: TipRAZl   =  24
 
 
      ! Sectional Loads:
@@ -258,60 +258,60 @@ MODULE BeamDyn_IO
    INTEGER(IntKi), PARAMETER      :: N9RVXg    = 184
    INTEGER(IntKi), PARAMETER      :: N9RVYg    = 185
    INTEGER(IntKi), PARAMETER      :: N9RVZg    = 186
-   INTEGER(IntKi), PARAMETER      :: N1TAXg    = 187
-   INTEGER(IntKi), PARAMETER      :: N1TAYg    = 188
-   INTEGER(IntKi), PARAMETER      :: N1TAZg    = 189
-   INTEGER(IntKi), PARAMETER      :: N2TAXg    = 190
-   INTEGER(IntKi), PARAMETER      :: N2TAYg    = 191
-   INTEGER(IntKi), PARAMETER      :: N2TAZg    = 192
-   INTEGER(IntKi), PARAMETER      :: N3TAXg    = 193
-   INTEGER(IntKi), PARAMETER      :: N3TAYg    = 194
-   INTEGER(IntKi), PARAMETER      :: N3TAZg    = 195
-   INTEGER(IntKi), PARAMETER      :: N4TAXg    = 196
-   INTEGER(IntKi), PARAMETER      :: N4TAYg    = 197
-   INTEGER(IntKi), PARAMETER      :: N4TAZg    = 198
-   INTEGER(IntKi), PARAMETER      :: N5TAXg    = 199
-   INTEGER(IntKi), PARAMETER      :: N5TAYg    = 200
-   INTEGER(IntKi), PARAMETER      :: N5TAZg    = 201
-   INTEGER(IntKi), PARAMETER      :: N6TAXg    = 202
-   INTEGER(IntKi), PARAMETER      :: N6TAYg    = 203
-   INTEGER(IntKi), PARAMETER      :: N6TAZg    = 204
-   INTEGER(IntKi), PARAMETER      :: N7TAXg    = 205
-   INTEGER(IntKi), PARAMETER      :: N7TAYg    = 206
-   INTEGER(IntKi), PARAMETER      :: N7TAZg    = 207
-   INTEGER(IntKi), PARAMETER      :: N8TAXg    = 208
-   INTEGER(IntKi), PARAMETER      :: N8TAYg    = 209
-   INTEGER(IntKi), PARAMETER      :: N8TAZg    = 210
-   INTEGER(IntKi), PARAMETER      :: N9TAXg    = 211
-   INTEGER(IntKi), PARAMETER      :: N9TAYg    = 212
-   INTEGER(IntKi), PARAMETER      :: N9TAZg    = 213
-   INTEGER(IntKi), PARAMETER      :: N1RAXg    = 214
-   INTEGER(IntKi), PARAMETER      :: N1RAYg    = 215
-   INTEGER(IntKi), PARAMETER      :: N1RAZg    = 216
-   INTEGER(IntKi), PARAMETER      :: N2RAXg    = 217
-   INTEGER(IntKi), PARAMETER      :: N2RAYg    = 218
-   INTEGER(IntKi), PARAMETER      :: N2RAZg    = 219
-   INTEGER(IntKi), PARAMETER      :: N3RAXg    = 220
-   INTEGER(IntKi), PARAMETER      :: N3RAYg    = 221
-   INTEGER(IntKi), PARAMETER      :: N3RAZg    = 222
-   INTEGER(IntKi), PARAMETER      :: N4RAXg    = 223
-   INTEGER(IntKi), PARAMETER      :: N4RAYg    = 224
-   INTEGER(IntKi), PARAMETER      :: N4RAZg    = 225
-   INTEGER(IntKi), PARAMETER      :: N5RAXg    = 226
-   INTEGER(IntKi), PARAMETER      :: N5RAYg    = 227
-   INTEGER(IntKi), PARAMETER      :: N5RAZg    = 228
-   INTEGER(IntKi), PARAMETER      :: N6RAXg    = 229
-   INTEGER(IntKi), PARAMETER      :: N6RAYg    = 230
-   INTEGER(IntKi), PARAMETER      :: N6RAZg    = 231
-   INTEGER(IntKi), PARAMETER      :: N7RAXg    = 232
-   INTEGER(IntKi), PARAMETER      :: N7RAYg    = 233
-   INTEGER(IntKi), PARAMETER      :: N7RAZg    = 234
-   INTEGER(IntKi), PARAMETER      :: N8RAXg    = 235
-   INTEGER(IntKi), PARAMETER      :: N8RAYg    = 236
-   INTEGER(IntKi), PARAMETER      :: N8RAZg    = 237
-   INTEGER(IntKi), PARAMETER      :: N9RAXg    = 238
-   INTEGER(IntKi), PARAMETER      :: N9RAYg    = 239
-   INTEGER(IntKi), PARAMETER      :: N9RAZg    = 240
+   INTEGER(IntKi), PARAMETER      :: N1TAXl    = 187
+   INTEGER(IntKi), PARAMETER      :: N1TAYl    = 188
+   INTEGER(IntKi), PARAMETER      :: N1TAZl    = 189
+   INTEGER(IntKi), PARAMETER      :: N2TAXl    = 190
+   INTEGER(IntKi), PARAMETER      :: N2TAYl    = 191
+   INTEGER(IntKi), PARAMETER      :: N2TAZl    = 192
+   INTEGER(IntKi), PARAMETER      :: N3TAXl    = 193
+   INTEGER(IntKi), PARAMETER      :: N3TAYl    = 194
+   INTEGER(IntKi), PARAMETER      :: N3TAZl    = 195
+   INTEGER(IntKi), PARAMETER      :: N4TAXl    = 196
+   INTEGER(IntKi), PARAMETER      :: N4TAYl    = 197
+   INTEGER(IntKi), PARAMETER      :: N4TAZl    = 198
+   INTEGER(IntKi), PARAMETER      :: N5TAXl    = 199
+   INTEGER(IntKi), PARAMETER      :: N5TAYl    = 200
+   INTEGER(IntKi), PARAMETER      :: N5TAZl    = 201
+   INTEGER(IntKi), PARAMETER      :: N6TAXl    = 202
+   INTEGER(IntKi), PARAMETER      :: N6TAYl    = 203
+   INTEGER(IntKi), PARAMETER      :: N6TAZl    = 204
+   INTEGER(IntKi), PARAMETER      :: N7TAXl    = 205
+   INTEGER(IntKi), PARAMETER      :: N7TAYl    = 206
+   INTEGER(IntKi), PARAMETER      :: N7TAZl    = 207
+   INTEGER(IntKi), PARAMETER      :: N8TAXl    = 208
+   INTEGER(IntKi), PARAMETER      :: N8TAYl    = 209
+   INTEGER(IntKi), PARAMETER      :: N8TAZl    = 210
+   INTEGER(IntKi), PARAMETER      :: N9TAXl    = 211
+   INTEGER(IntKi), PARAMETER      :: N9TAYl    = 212
+   INTEGER(IntKi), PARAMETER      :: N9TAZl    = 213
+   INTEGER(IntKi), PARAMETER      :: N1RAXl    = 214
+   INTEGER(IntKi), PARAMETER      :: N1RAYl    = 215
+   INTEGER(IntKi), PARAMETER      :: N1RAZl    = 216
+   INTEGER(IntKi), PARAMETER      :: N2RAXl    = 217
+   INTEGER(IntKi), PARAMETER      :: N2RAYl    = 218
+   INTEGER(IntKi), PARAMETER      :: N2RAZl    = 219
+   INTEGER(IntKi), PARAMETER      :: N3RAXl    = 220
+   INTEGER(IntKi), PARAMETER      :: N3RAYl    = 221
+   INTEGER(IntKi), PARAMETER      :: N3RAZl    = 222
+   INTEGER(IntKi), PARAMETER      :: N4RAXl    = 223
+   INTEGER(IntKi), PARAMETER      :: N4RAYl    = 224
+   INTEGER(IntKi), PARAMETER      :: N4RAZl    = 225
+   INTEGER(IntKi), PARAMETER      :: N5RAXl    = 226
+   INTEGER(IntKi), PARAMETER      :: N5RAYl    = 227
+   INTEGER(IntKi), PARAMETER      :: N5RAZl    = 228
+   INTEGER(IntKi), PARAMETER      :: N6RAXl    = 229
+   INTEGER(IntKi), PARAMETER      :: N6RAYl    = 230
+   INTEGER(IntKi), PARAMETER      :: N6RAZl    = 231
+   INTEGER(IntKi), PARAMETER      :: N7RAXl    = 232
+   INTEGER(IntKi), PARAMETER      :: N7RAYl    = 233
+   INTEGER(IntKi), PARAMETER      :: N7RAZl    = 234
+   INTEGER(IntKi), PARAMETER      :: N8RAXl    = 235
+   INTEGER(IntKi), PARAMETER      :: N8RAYl    = 236
+   INTEGER(IntKi), PARAMETER      :: N8RAZl    = 237
+   INTEGER(IntKi), PARAMETER      :: N9RAXl    = 238
+   INTEGER(IntKi), PARAMETER      :: N9RAYl    = 239
+   INTEGER(IntKi), PARAMETER      :: N9RAZl    = 240
 
 
      ! Applied Loads:
@@ -470,15 +470,15 @@ MODULE BeamDyn_IO
                                      N1RVYg,N2RVYg,N3RVYg,N4RVYg,N5RVYg,N6RVYg,N7RVYg,N8RVYg,N9RVYg, &
                                      N1RVZg,N2RVZg,N3RVZg,N4RVZg,N5RVZg,N6RVZg,N7RVZg,N8RVZg,N9RVZg  &
                                    /), (/9, 3/) )
-   INTEGER,  PARAMETER          :: NTAg(9, 3) = RESHAPE( (/ &      ! Sectional translational accelerations expressed in g
-                                     N1TAXg,N2TAXg,N3TAXg,N4TAXg,N5TAXg,N6TAXg,N7TAXg,N8TAXg,N9TAXg, &
-                                     N1TAYg,N2TAYg,N3TAYg,N4TAYg,N5TAYg,N6TAYg,N7TAYg,N8TAYg,N9TAYg, &
-                                     N1TAZg,N2TAZg,N3TAZg,N4TAZg,N5TAZg,N6TAZg,N7TAZg,N8TAZg,N9TAZg  &
+   INTEGER,  PARAMETER          :: NTAl(9, 3) = RESHAPE( (/ &      ! Sectional translational accelerations expressed in l
+                                     N1TAXl,N2TAXl,N3TAXl,N4TAXl,N5TAXl,N6TAXl,N7TAXl,N8TAXl,N9TAXl, &
+                                     N1TAYl,N2TAYl,N3TAYl,N4TAYl,N5TAYl,N6TAYl,N7TAYl,N8TAYl,N9TAYl, &
+                                     N1TAZl,N2TAZl,N3TAZl,N4TAZl,N5TAZl,N6TAZl,N7TAZl,N8TAZl,N9TAZl  &
                                    /), (/9, 3/) )
-   INTEGER,  PARAMETER          :: NRAg(9, 3) = RESHAPE( (/ &      ! Sectional angular/rotational accelerations expressed in g
-                                     N1RAXg,N2RAXg,N3RAXg,N4RAXg,N5RAXg,N6RAXg,N7RAXg,N8RAXg,N9RAXg, &
-                                     N1RAYg,N2RAYg,N3RAYg,N4RAYg,N5RAYg,N6RAYg,N7RAYg,N8RAYg,N9RAYg, &
-                                     N1RAZg,N2RAZg,N3RAZg,N4RAZg,N5RAZg,N6RAZg,N7RAZg,N8RAZg,N9RAZg  &
+   INTEGER,  PARAMETER          :: NRAl(9, 3) = RESHAPE( (/ &      ! Sectional angular/rotational accelerations expressed in l
+                                     N1RAXl,N2RAXl,N3RAXl,N4RAXl,N5RAXl,N6RAXl,N7RAXl,N8RAXl,N9RAXl, &
+                                     N1RAYl,N2RAYl,N3RAYl,N4RAYl,N5RAYl,N6RAYl,N7RAYl,N8RAYl,N9RAYl, &
+                                     N1RAZl,N2RAZl,N3RAZl,N4RAZl,N5RAZl,N6RAZl,N7RAZl,N8RAZl,N9RAZl  &
                                    /), (/9, 3/) )
    INTEGER,  PARAMETER          :: NPFl(9, 3) = RESHAPE( (/ &      ! Applied point forces expressed in l
                                      N1PFxl,N2PFxl,N3PFxl,N4PFxl,N5PFxl,N6PFxl,N7PFxl,N8PFxl,N9PFxl, &
@@ -1048,106 +1048,106 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(352) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
                                "N1DFXL   ","N1DFYL   ","N1DFZL   ","N1DMXL   ","N1DMYL   ","N1DMZL   ","N1FXL    ", &
                                "N1FYL    ","N1FZL    ","N1MXL    ","N1MYL    ","N1MZL    ","N1PFXL   ","N1PFYL   ", &
-                               "N1PFZL   ","N1PMXL   ","N1PMYL   ","N1PMZL   ","N1RAXG   ","N1RAYG   ","N1RAZG   ", &
-                               "N1RDXR   ","N1RDYR   ","N1RDZR   ","N1RVXG   ","N1RVYG   ","N1RVZG   ","N1TAXG   ", &
-                               "N1TAYG   ","N1TAZG   ","N1TDXR   ","N1TDYR   ","N1TDZR   ","N1TVXG   ","N1TVYG   ", &
+                               "N1PFZL   ","N1PMXL   ","N1PMYL   ","N1PMZL   ","N1RAXL   ","N1RAYL   ","N1RAZL   ", &
+                               "N1RDXR   ","N1RDYR   ","N1RDZR   ","N1RVXG   ","N1RVYG   ","N1RVZG   ","N1TAXL   ", &
+                               "N1TAYL   ","N1TAZL   ","N1TDXR   ","N1TDYR   ","N1TDZR   ","N1TVXG   ","N1TVYG   ", &
                                "N1TVZG   ","N2DFXL   ","N2DFYL   ","N2DFZL   ","N2DMXL   ","N2DMYL   ","N2DMZL   ", &
                                "N2FXL    ","N2FYL    ","N2FZL    ","N2MXL    ","N2MYL    ","N2MZL    ","N2PFXL   ", &
-                               "N2PFYL   ","N2PFZL   ","N2PMXL   ","N2PMYL   ","N2PMZL   ","N2RAXG   ","N2RAYG   ", &
-                               "N2RAZG   ","N2RDXR   ","N2RDYR   ","N2RDZR   ","N2RVXG   ","N2RVYG   ","N2RVZG   ", &
-                               "N2TAXG   ","N2TAYG   ","N2TAZG   ","N2TDXR   ","N2TDYR   ","N2TDZR   ","N2TVXG   ", &
+                               "N2PFYL   ","N2PFZL   ","N2PMXL   ","N2PMYL   ","N2PMZL   ","N2RAXL   ","N2RAYL   ", &
+                               "N2RAZL   ","N2RDXR   ","N2RDYR   ","N2RDZR   ","N2RVXG   ","N2RVYG   ","N2RVZG   ", &
+                               "N2TAXL   ","N2TAYL   ","N2TAZL   ","N2TDXR   ","N2TDYR   ","N2TDZR   ","N2TVXG   ", &
                                "N2TVYG   ","N2TVZG   ","N3DFXL   ","N3DFYL   ","N3DFZL   ","N3DMXL   ","N3DMYL   ", &
                                "N3DMZL   ","N3FXL    ","N3FYL    ","N3FZL    ","N3MXL    ","N3MYL    ","N3MZL    ", &
-                               "N3PFXL   ","N3PFYL   ","N3PFZL   ","N3PMXL   ","N3PMYL   ","N3PMZL   ","N3RAXG   ", &
-                               "N3RAYG   ","N3RAZG   ","N3RDXR   ","N3RDYR   ","N3RDZR   ","N3RVXG   ","N3RVYG   ", &
-                               "N3RVZG   ","N3TAXG   ","N3TAYG   ","N3TAZG   ","N3TDXR   ","N3TDYR   ","N3TDZR   ", &
+                               "N3PFXL   ","N3PFYL   ","N3PFZL   ","N3PMXL   ","N3PMYL   ","N3PMZL   ","N3RAXL   ", &
+                               "N3RAYL   ","N3RAZL   ","N3RDXR   ","N3RDYR   ","N3RDZR   ","N3RVXG   ","N3RVYG   ", &
+                               "N3RVZG   ","N3TAXL   ","N3TAYL   ","N3TAZL   ","N3TDXR   ","N3TDYR   ","N3TDZR   ", &
                                "N3TVXG   ","N3TVYG   ","N3TVZG   ","N4DFXL   ","N4DFYL   ","N4DFZL   ","N4DMXL   ", &
                                "N4DMYL   ","N4DMZL   ","N4FXL    ","N4FYL    ","N4FZL    ","N4MXL    ","N4MYL    ", &
                                "N4MZL    ","N4PFXL   ","N4PFYL   ","N4PFZL   ","N4PMXL   ","N4PMYL   ","N4PMZL   ", &
-                               "N4RAXG   ","N4RAYG   ","N4RAZG   ","N4RDXR   ","N4RDYR   ","N4RDZR   ","N4RVXG   ", &
-                               "N4RVYG   ","N4RVZG   ","N4TAXG   ","N4TAYG   ","N4TAZG   ","N4TDXR   ","N4TDYR   ", &
+                               "N4RAXL   ","N4RAYL   ","N4RAZL   ","N4RDXR   ","N4RDYR   ","N4RDZR   ","N4RVXG   ", &
+                               "N4RVYG   ","N4RVZG   ","N4TAXL   ","N4TAYL   ","N4TAZL   ","N4TDXR   ","N4TDYR   ", &
                                "N4TDZR   ","N4TVXG   ","N4TVYG   ","N4TVZG   ","N5DFXL   ","N5DFYL   ","N5DFZL   ", &
                                "N5DMXL   ","N5DMYL   ","N5DMZL   ","N5FXL    ","N5FYL    ","N5FZL    ","N5MXL    ", &
                                "N5MYL    ","N5MZL    ","N5PFXL   ","N5PFYL   ","N5PFZL   ","N5PMXL   ","N5PMYL   ", &
-                               "N5PMZL   ","N5RAXG   ","N5RAYG   ","N5RAZG   ","N5RDXR   ","N5RDYR   ","N5RDZR   ", &
-                               "N5RVXG   ","N5RVYG   ","N5RVZG   ","N5TAXG   ","N5TAYG   ","N5TAZG   ","N5TDXR   ", &
+                               "N5PMZL   ","N5RAXL   ","N5RAYL   ","N5RAZL   ","N5RDXR   ","N5RDYR   ","N5RDZR   ", &
+                               "N5RVXG   ","N5RVYG   ","N5RVZG   ","N5TAXL   ","N5TAYL   ","N5TAZL   ","N5TDXR   ", &
                                "N5TDYR   ","N5TDZR   ","N5TVXG   ","N5TVYG   ","N5TVZG   ","N6DFXL   ","N6DFYL   ", &
                                "N6DFZL   ","N6DMXL   ","N6DMYL   ","N6DMZL   ","N6FXL    ","N6FYL    ","N6FZL    ", &
                                "N6MXL    ","N6MYL    ","N6MZL    ","N6PFXL   ","N6PFYL   ","N6PFZL   ","N6PMXL   ", &
-                               "N6PMYL   ","N6PMZL   ","N6RAXG   ","N6RAYG   ","N6RAZG   ","N6RDXR   ","N6RDYR   ", &
-                               "N6RDZR   ","N6RVXG   ","N6RVYG   ","N6RVZG   ","N6TAXG   ","N6TAYG   ","N6TAZG   ", &
+                               "N6PMYL   ","N6PMZL   ","N6RAXL   ","N6RAYL   ","N6RAZL   ","N6RDXR   ","N6RDYR   ", &
+                               "N6RDZR   ","N6RVXG   ","N6RVYG   ","N6RVZG   ","N6TAXL   ","N6TAYL   ","N6TAZL   ", &
                                "N6TDXR   ","N6TDYR   ","N6TDZR   ","N6TVXG   ","N6TVYG   ","N6TVZG   ","N7DFXL   ", &
                                "N7DFYL   ","N7DFZL   ","N7DMXL   ","N7DMYL   ","N7DMZL   ","N7FXL    ","N7FYL    ", &
                                "N7FZL    ","N7MXL    ","N7MYL    ","N7MZL    ","N7PFXL   ","N7PFYL   ","N7PFZL   ", &
-                               "N7PMXL   ","N7PMYL   ","N7PMZL   ","N7RAXG   ","N7RAYG   ","N7RAZG   ","N7RDXR   ", &
-                               "N7RDYR   ","N7RDZR   ","N7RVXG   ","N7RVYG   ","N7RVZG   ","N7TAXG   ","N7TAYG   ", &
-                               "N7TAZG   ","N7TDXR   ","N7TDYR   ","N7TDZR   ","N7TVXG   ","N7TVYG   ","N7TVZG   ", &
+                               "N7PMXL   ","N7PMYL   ","N7PMZL   ","N7RAXL   ","N7RAYL   ","N7RAZL   ","N7RDXR   ", &
+                               "N7RDYR   ","N7RDZR   ","N7RVXG   ","N7RVYG   ","N7RVZG   ","N7TAXL   ","N7TAYL   ", &
+                               "N7TAZL   ","N7TDXR   ","N7TDYR   ","N7TDZR   ","N7TVXG   ","N7TVYG   ","N7TVZG   ", &
                                "N8DFXL   ","N8DFYL   ","N8DFZL   ","N8DMXL   ","N8DMYL   ","N8DMZL   ","N8FXL    ", &
                                "N8FYL    ","N8FZL    ","N8MXL    ","N8MYL    ","N8MZL    ","N8PFXL   ","N8PFYL   ", &
-                               "N8PFZL   ","N8PMXL   ","N8PMYL   ","N8PMZL   ","N8RAXG   ","N8RAYG   ","N8RAZG   ", &
-                               "N8RDXR   ","N8RDYR   ","N8RDZR   ","N8RVXG   ","N8RVYG   ","N8RVZG   ","N8TAXG   ", &
-                               "N8TAYG   ","N8TAZG   ","N8TDXR   ","N8TDYR   ","N8TDZR   ","N8TVXG   ","N8TVYG   ", &
+                               "N8PFZL   ","N8PMXL   ","N8PMYL   ","N8PMZL   ","N8RAXL   ","N8RAYL   ","N8RAZL   ", &
+                               "N8RDXR   ","N8RDYR   ","N8RDZR   ","N8RVXG   ","N8RVYG   ","N8RVZG   ","N8TAXL   ", &
+                               "N8TAYL   ","N8TAZL   ","N8TDXR   ","N8TDYR   ","N8TDZR   ","N8TVXG   ","N8TVYG   ", &
                                "N8TVZG   ","N9DFXL   ","N9DFYL   ","N9DFZL   ","N9DMXL   ","N9DMYL   ","N9DMZL   ", &
                                "N9FXL    ","N9FYL    ","N9FZL    ","N9MXL    ","N9MYL    ","N9MZL    ","N9PFXL   ", &
-                               "N9PFYL   ","N9PFZL   ","N9PMXL   ","N9PMYL   ","N9PMZL   ","N9RAXG   ","N9RAYG   ", &
-                               "N9RAZG   ","N9RDXR   ","N9RDYR   ","N9RDZR   ","N9RVXG   ","N9RVYG   ","N9RVZG   ", &
-                               "N9TAXG   ","N9TAYG   ","N9TAZG   ","N9TDXR   ","N9TDYR   ","N9TDZR   ","N9TVXG   ", &
+                               "N9PFYL   ","N9PFZL   ","N9PMXL   ","N9PMYL   ","N9PMZL   ","N9RAXL   ","N9RAYL   ", &
+                               "N9RAZL   ","N9RDXR   ","N9RDYR   ","N9RDZR   ","N9RVXG   ","N9RVYG   ","N9RVZG   ", &
+                               "N9TAXL   ","N9TAYL   ","N9TAZL   ","N9TDXR   ","N9TDYR   ","N9TDZR   ","N9TVXG   ", &
                                "N9TVYG   ","N9TVZG   ","PACCACT  ","PANGACT  ","PANGINP  ","PRATACT  ","ROOTFXR  ", &
-                               "ROOTFYR  ","ROOTFZR  ","ROOTMXR  ","ROOTMYR  ","ROOTMZR  ","TIPRAXG  ","TIPRAYG  ", &
-                               "TIPRAZG  ","TIPRDXR  ","TIPRDYR  ","TIPRDZR  ","TIPRVXG  ","TIPRVYG  ","TIPRVZG  ", &
-                               "TIPTAXG  ","TIPTAYG  ","TIPTAZG  ","TIPTDXR  ","TIPTDYR  ","TIPTDZR  ","TIPTVXG  ", &
+                               "ROOTFYR  ","ROOTFZR  ","ROOTMXR  ","ROOTMYR  ","ROOTMZR  ","TIPRAXL  ","TIPRAYL  ", &
+                               "TIPRAZL  ","TIPRDXR  ","TIPRDYR  ","TIPRDZR  ","TIPRVXG  ","TIPRVYG  ","TIPRVZG  ", &
+                               "TIPTAXL  ","TIPTAYL  ","TIPTAZL  ","TIPTDXR  ","TIPTDYR  ","TIPTDZR  ","TIPTVXG  ", &
                                "TIPTVYG  ","TIPTVZG  "/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(352) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                    N1DFxl ,    N1DFyl ,    N1DFzl ,    N1DMxl ,    N1DMyl ,    N1DMzl ,     N1Fxl , &
                                     N1Fyl ,     N1Fzl ,     N1Mxl ,     N1Myl ,     N1Mzl ,    N1PFxl ,    N1PFyl , &
-                                   N1PFzl ,    N1PMxl ,    N1PMyl ,    N1PMzl ,    N1RAXg ,    N1RAYg ,    N1RAZg , &
-                                   N1RDxr ,    N1RDyr ,    N1RDzr ,    N1RVXg ,    N1RVYg ,    N1RVZg ,    N1TAXg , &
-                                   N1TAYg ,    N1TAZg ,    N1TDxr ,    N1TDyr ,    N1TDzr ,    N1TVXg ,    N1TVYg , &
+                                   N1PFzl ,    N1PMxl ,    N1PMyl ,    N1PMzl ,    N1RAXl ,    N1RAYl ,    N1RAZl , &
+                                   N1RDxr ,    N1RDyr ,    N1RDzr ,    N1RVXg ,    N1RVYg ,    N1RVZg ,    N1TAXl , &
+                                   N1TAYl ,    N1TAZl ,    N1TDxr ,    N1TDyr ,    N1TDzr ,    N1TVXg ,    N1TVYg , &
                                    N1TVZg ,    N2DFxl ,    N2DFyl ,    N2DFzl ,    N2DMxl ,    N2DMyl ,    N2DMzl , &
                                     N2Fxl ,     N2Fyl ,     N2Fzl ,     N2Mxl ,     N2Myl ,     N2Mzl ,    N2PFxl , &
-                                   N2PFyl ,    N2PFzl ,    N2PMxl ,    N2PMyl ,    N2PMzl ,    N2RAXg ,    N2RAYg , &
-                                   N2RAZg ,    N2RDxr ,    N2RDyr ,    N2RDzr ,    N2RVXg ,    N2RVYg ,    N2RVZg , &
-                                   N2TAXg ,    N2TAYg ,    N2TAZg ,    N2TDxr ,    N2TDyr ,    N2TDzr ,    N2TVXg , &
+                                   N2PFyl ,    N2PFzl ,    N2PMxl ,    N2PMyl ,    N2PMzl ,    N2RAXl ,    N2RAYl , &
+                                   N2RAZl ,    N2RDxr ,    N2RDyr ,    N2RDzr ,    N2RVXg ,    N2RVYg ,    N2RVZg , &
+                                   N2TAXl ,    N2TAYl ,    N2TAZl ,    N2TDxr ,    N2TDyr ,    N2TDzr ,    N2TVXg , &
                                    N2TVYg ,    N2TVZg ,    N3DFxl ,    N3DFyl ,    N3DFzl ,    N3DMxl ,    N3DMyl , &
                                    N3DMzl ,     N3Fxl ,     N3Fyl ,     N3Fzl ,     N3Mxl ,     N3Myl ,     N3Mzl , &
-                                   N3PFxl ,    N3PFyl ,    N3PFzl ,    N3PMxl ,    N3PMyl ,    N3PMzl ,    N3RAXg , &
-                                   N3RAYg ,    N3RAZg ,    N3RDxr ,    N3RDyr ,    N3RDzr ,    N3RVXg ,    N3RVYg , &
-                                   N3RVZg ,    N3TAXg ,    N3TAYg ,    N3TAZg ,    N3TDxr ,    N3TDyr ,    N3TDzr , &
+                                   N3PFxl ,    N3PFyl ,    N3PFzl ,    N3PMxl ,    N3PMyl ,    N3PMzl ,    N3RAXl , &
+                                   N3RAYl ,    N3RAZl ,    N3RDxr ,    N3RDyr ,    N3RDzr ,    N3RVXg ,    N3RVYg , &
+                                   N3RVZg ,    N3TAXl ,    N3TAYl ,    N3TAZl ,    N3TDxr ,    N3TDyr ,    N3TDzr , &
                                    N3TVXg ,    N3TVYg ,    N3TVZg ,    N4DFxl ,    N4DFyl ,    N4DFzl ,    N4DMxl , &
                                    N4DMyl ,    N4DMzl ,     N4Fxl ,     N4Fyl ,     N4Fzl ,     N4Mxl ,     N4Myl , &
                                     N4Mzl ,    N4PFxl ,    N4PFyl ,    N4PFzl ,    N4PMxl ,    N4PMyl ,    N4PMzl , &
-                                   N4RAXg ,    N4RAYg ,    N4RAZg ,    N4RDxr ,    N4RDyr ,    N4RDzr ,    N4RVXg , &
-                                   N4RVYg ,    N4RVZg ,    N4TAXg ,    N4TAYg ,    N4TAZg ,    N4TDxr ,    N4TDyr , &
+                                   N4RAXl ,    N4RAYl ,    N4RAZl ,    N4RDxr ,    N4RDyr ,    N4RDzr ,    N4RVXg , &
+                                   N4RVYg ,    N4RVZg ,    N4TAXl ,    N4TAYl ,    N4TAZl ,    N4TDxr ,    N4TDyr , &
                                    N4TDzr ,    N4TVXg ,    N4TVYg ,    N4TVZg ,    N5DFxl ,    N5DFyl ,    N5DFzl , &
                                    N5DMxl ,    N5DMyl ,    N5DMzl ,     N5Fxl ,     N5Fyl ,     N5Fzl ,     N5Mxl , &
                                     N5Myl ,     N5Mzl ,    N5PFxl ,    N5PFyl ,    N5PFzl ,    N5PMxl ,    N5PMyl , &
-                                   N5PMzl ,    N5RAXg ,    N5RAYg ,    N5RAZg ,    N5RDxr ,    N5RDyr ,    N5RDzr , &
-                                   N5RVXg ,    N5RVYg ,    N5RVZg ,    N5TAXg ,    N5TAYg ,    N5TAZg ,    N5TDxr , &
+                                   N5PMzl ,    N5RAXl ,    N5RAYl ,    N5RAZl ,    N5RDxr ,    N5RDyr ,    N5RDzr , &
+                                   N5RVXg ,    N5RVYg ,    N5RVZg ,    N5TAXl ,    N5TAYl ,    N5TAZl ,    N5TDxr , &
                                    N5TDyr ,    N5TDzr ,    N5TVXg ,    N5TVYg ,    N5TVZg ,    N6DFxl ,    N6DFyl , &
                                    N6DFzl ,    N6DMxl ,    N6DMyl ,    N6DMzl ,     N6Fxl ,     N6Fyl ,     N6Fzl , &
                                     N6Mxl ,     N6Myl ,     N6Mzl ,    N6PFxl ,    N6PFyl ,    N6PFzl ,    N6PMxl , &
-                                   N6PMyl ,    N6PMzl ,    N6RAXg ,    N6RAYg ,    N6RAZg ,    N6RDxr ,    N6RDyr , &
-                                   N6RDzr ,    N6RVXg ,    N6RVYg ,    N6RVZg ,    N6TAXg ,    N6TAYg ,    N6TAZg , &
+                                   N6PMyl ,    N6PMzl ,    N6RAXl ,    N6RAYl ,    N6RAZl ,    N6RDxr ,    N6RDyr , &
+                                   N6RDzr ,    N6RVXg ,    N6RVYg ,    N6RVZg ,    N6TAXl ,    N6TAYl ,    N6TAZl , &
                                    N6TDxr ,    N6TDyr ,    N6TDzr ,    N6TVXg ,    N6TVYg ,    N6TVZg ,    N7DFxl , &
                                    N7DFyl ,    N7DFzl ,    N7DMxl ,    N7DMyl ,    N7DMzl ,     N7Fxl ,     N7Fyl , &
                                     N7Fzl ,     N7Mxl ,     N7Myl ,     N7Mzl ,    N7PFxl ,    N7PFyl ,    N7PFzl , &
-                                   N7PMxl ,    N7PMyl ,    N7PMzl ,    N7RAXg ,    N7RAYg ,    N7RAZg ,    N7RDxr , &
-                                   N7RDyr ,    N7RDzr ,    N7RVXg ,    N7RVYg ,    N7RVZg ,    N7TAXg ,    N7TAYg , &
-                                   N7TAZg ,    N7TDxr ,    N7TDyr ,    N7TDzr ,    N7TVXg ,    N7TVYg ,    N7TVZg , &
+                                   N7PMxl ,    N7PMyl ,    N7PMzl ,    N7RAXl ,    N7RAYl ,    N7RAZl ,    N7RDxr , &
+                                   N7RDyr ,    N7RDzr ,    N7RVXg ,    N7RVYg ,    N7RVZg ,    N7TAXl ,    N7TAYl , &
+                                   N7TAZl ,    N7TDxr ,    N7TDyr ,    N7TDzr ,    N7TVXg ,    N7TVYg ,    N7TVZg , &
                                    N8DFxl ,    N8DFyl ,    N8DFzl ,    N8DMxl ,    N8DMyl ,    N8DMzl ,     N8Fxl , &
                                     N8Fyl ,     N8Fzl ,     N8Mxl ,     N8Myl ,     N8Mzl ,    N8PFxl ,    N8PFyl , &
-                                   N8PFzl ,    N8PMxl ,    N8PMyl ,    N8PMzl ,    N8RAXg ,    N8RAYg ,    N8RAZg , &
-                                   N8RDxr ,    N8RDyr ,    N8RDzr ,    N8RVXg ,    N8RVYg ,    N8RVZg ,    N8TAXg , &
-                                   N8TAYg ,    N8TAZg ,    N8TDxr ,    N8TDyr ,    N8TDzr ,    N8TVXg ,    N8TVYg , &
+                                   N8PFzl ,    N8PMxl ,    N8PMyl ,    N8PMzl ,    N8RAXl ,    N8RAYl ,    N8RAZl , &
+                                   N8RDxr ,    N8RDyr ,    N8RDzr ,    N8RVXg ,    N8RVYg ,    N8RVZg ,    N8TAXl , &
+                                   N8TAYl ,    N8TAZl ,    N8TDxr ,    N8TDyr ,    N8TDzr ,    N8TVXg ,    N8TVYg , &
                                    N8TVZg ,    N9DFxl ,    N9DFyl ,    N9DFzl ,    N9DMxl ,    N9DMyl ,    N9DMzl , &
                                     N9Fxl ,     N9Fyl ,     N9Fzl ,     N9Mxl ,     N9Myl ,     N9Mzl ,    N9PFxl , &
-                                   N9PFyl ,    N9PFzl ,    N9PMxl ,    N9PMyl ,    N9PMzl ,    N9RAXg ,    N9RAYg , &
-                                   N9RAZg ,    N9RDxr ,    N9RDyr ,    N9RDzr ,    N9RVXg ,    N9RVYg ,    N9RVZg , &
-                                   N9TAXg ,    N9TAYg ,    N9TAZg ,    N9TDxr ,    N9TDyr ,    N9TDzr ,    N9TVXg , &
+                                   N9PFyl ,    N9PFzl ,    N9PMxl ,    N9PMyl ,    N9PMzl ,    N9RAXl ,    N9RAYl , &
+                                   N9RAZl ,    N9RDxr ,    N9RDyr ,    N9RDzr ,    N9RVXg ,    N9RVYg ,    N9RVZg , &
+                                   N9TAXl ,    N9TAYl ,    N9TAZl ,    N9TDxr ,    N9TDyr ,    N9TDzr ,    N9TVXg , &
                                    N9TVYg ,    N9TVZg ,   PAccAct ,   PAngAct ,   PAngInp ,   PRatAct ,   RootFxr , &
-                                  RootFyr ,   RootFzr ,   RootMxr ,   RootMyr ,   RootMzr ,   TipRAXg ,   TipRAYg , &
-                                  TipRAZg ,   TipRDxr ,   TipRDyr ,   TipRDzr ,   TipRVXg ,   TipRVYg ,   TipRVZg , &
-                                  TipTAXg ,   TipTAYg ,   TipTAZg ,   TipTDxr ,   TipTDyr ,   TipTDzr ,   TipTVXg , &
+                                  RootFyr ,   RootFzr ,   RootMxr ,   RootMyr ,   RootMzr ,   TipRAXl ,   TipRAYl , &
+                                  TipRAZl ,   TipRDxr ,   TipRDyr ,   TipRDzr ,   TipRVXg ,   TipRVYg ,   TipRVZg , &
+                                  TipTAXl ,   TipTAYl ,   TipTAZl ,   TipTDxr ,   TipTDyr ,   TipTDzr ,   TipTVXg , &
                                   TipTVYg ,   TipTVZg /)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(352) =  (/ &                     ! This lists the units corresponding to the allowed parameters
                                "(N/m)     ","(N/m)     ","(N/m)     ","(N-m/m)   ","(N-m/m)   ","(N-m/m)   ","(N)       ", &
@@ -1218,8 +1218,8 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( NRDr(i,:) ) = .true.
       InvalidOutput( NTVg(i,:) ) = .true.
       InvalidOutput( NRVg(i,:) ) = .true.
-      InvalidOutput( NTAg(i,:) ) = .true.
-      InvalidOutput( NRAg(i,:) ) = .true.
+      InvalidOutput( NTAl(i,:) ) = .true.
+      InvalidOutput( NRAl(i,:) ) = .true.
       InvalidOutput( NPFl(i,:) ) = .true.
       InvalidOutput( NPMl(i,:) ) = .true.
       InvalidOutput( NDFl(i,:) ) = .true.
@@ -1541,16 +1541,18 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    AllOuts( TipRVZg ) = y%BldMotion%RotationVel(3,y%BldMotion%NNodes)*R2D
 
       !-------------------------
-      ! Tip Tip translational accelerations (absolute) expressed in g, given in m/s^2
-   AllOuts( TipTAXg ) = y%BldMotion%TranslationAcc(1,y%BldMotion%NNodes)
-   AllOuts( TipTAYg ) = y%BldMotion%TranslationAcc(2,y%BldMotion%NNodes)
-   AllOuts( TipTAZg ) = y%BldMotion%TranslationAcc(3,y%BldMotion%NNodes)
+      ! Tip translational accelerations (absolute) expressed in l, given in m/s^2
+   temp_vec = MATMUL(y%BldMotion%Orientation(:,:,y%BldMotion%NNodes), y%BldMotion%TranslationAcc(:,y%BldMotion%NNodes)) ! translate accelerations to local system for output   
+   AllOuts( TipTAXl ) = temp_vec(1)
+   AllOuts( TipTAYl ) = temp_vec(2)
+   AllOuts( TipTAZl ) = temp_vec(3)
 
       !-------------------------
-      ! Tip angular/rotational accelerations (absolute) expressed in g, given in deg/s^2
-   AllOuts( TipRAXg ) = y%BldMotion%RotationAcc(1,y%BldMotion%NNodes)*R2D
-   AllOuts( TipRAYg ) = y%BldMotion%RotationAcc(2,y%BldMotion%NNodes)*R2D
-   AllOuts( TipRAZg ) = y%BldMotion%RotationAcc(3,y%BldMotion%NNodes)*R2D
+      ! Tip angular/rotational accelerations (absolute) expressed in l, given in deg/s^2
+   temp_vec = MATMUL(y%BldMotion%Orientation(:,:,y%BldMotion%NNodes), y%BldMotion%RotationAcc(:,y%BldMotion%NNodes)) ! translate accelerations to local system for output   
+   AllOuts( TipRAXl ) = temp_vec(1)*R2D
+   AllOuts( TipRAYl ) = temp_vec(2)*R2D
+   AllOuts( TipRAZl ) = temp_vec(3)*R2D
 
 
    !------------------------------------
@@ -1616,16 +1618,18 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
 
 
          !-------------------------
-         ! Sectional Tip translational accelerations (absolute) expressed in g, given in m/s^2
-      AllOuts( NTAg( beta,1 ) ) = y%BldMotion%TranslationAcc(1,j_BldMotion)
-      AllOuts( NTAg( beta,2 ) ) = y%BldMotion%TranslationAcc(2,j_BldMotion)
-      AllOuts( NTAg( beta,3 ) ) = y%BldMotion%TranslationAcc(3,j_BldMotion)
+         ! Sectional Tip translational accelerations (absolute) expressed in l, given in m/s^2
+      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), y%BldMotion%TranslationAcc(:,j_BldMotion))      
+      AllOuts( NTAl( beta,1 ) ) = temp_vec(1)
+      AllOuts( NTAl( beta,2 ) ) = temp_vec(2)
+      AllOuts( NTAl( beta,3 ) ) = temp_vec(3)
 
          !-------------------------
-         ! Sectional angular/rotational accelerations (absolute) expressed in g, given in deg/s^2
-      AllOuts( NRAg( beta,1 ) ) = y%BldMotion%RotationAcc(1,j_BldMotion)*R2D
-      AllOuts( NRAg( beta,2 ) ) = y%BldMotion%RotationAcc(2,j_BldMotion)*R2D
-      AllOuts( NRAg( beta,3 ) ) = y%BldMotion%RotationAcc(3,j_BldMotion)*R2D
+         ! Sectional angular/rotational accelerations (absolute) expressed in l, given in deg/s^2
+      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), y%BldMotion%RotationAcc(:,j_BldMotion))      
+      AllOuts( NRAl( beta,1 ) ) = temp_vec(1)*R2D
+      AllOuts( NRAl( beta,2 ) ) = temp_vec(2)*R2D
+      AllOuts( NRAl( beta,3 ) ) = temp_vec(3)*R2D
 
 
          !-------------------------
@@ -1641,6 +1645,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       AllOuts( NPMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NPMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NPMl( beta,3 ) ) = temp_vec(3)
+      
 
    end do ! nodes
 
