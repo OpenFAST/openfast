@@ -357,12 +357,14 @@ SUBROUTINE BladedInterface_End(u, p, m, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)                           :: ErrMsg2     ! The error message, if an error occurred
    
       ! call DLL final time, but skip if we've never called it
-   IF ( .NOT. EqualRealNos( m%dll_data%avrSWAP( 1), 0.0_SiKi ) ) THEN
-      m%dll_data%avrSWAP( 1) = -1.0   ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
-      !CALL Fill_avrSWAP( -1_IntKi, -10.0_DbKi, u, p, LEN(ErrMsg), m%dll_data )
+   if (allocated(m%dll_data%avrSWAP)) then
+      IF ( .NOT. EqualRealNos( m%dll_data%avrSWAP( 1), 0.0_SiKi ) ) THEN
+         m%dll_data%avrSWAP( 1) = -1.0   ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
+         !CALL Fill_avrSWAP( -1_IntKi, -10.0_DbKi, u, p, LEN(ErrMsg), m%dll_data )
 
-      CALL CallBladedDLL(u, p%DLL_Trgt,  m%dll_data, p, ErrStat, ErrMsg)
-   END IF
+         CALL CallBladedDLL(u, p%DLL_Trgt,  m%dll_data, p, ErrStat, ErrMsg)
+      END IF
+   end if
       
    CALL FreeDynamicLib( p%DLL_Trgt, ErrStat2, ErrMsg2 )  ! this doesn't do anything #ifdef STATIC_DLL_LOAD  because p%DLL_Trgt is 0 (NULL)
    IF (ErrStat2 /= ErrID_None) THEN  
