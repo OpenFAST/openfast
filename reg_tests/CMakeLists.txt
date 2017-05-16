@@ -52,8 +52,10 @@ execute_process(COMMAND python ${command})
 
 # Copy the test input files
 file(GLOB inputs "${CMAKE_CURRENT_SOURCE_DIR}/r-test/inputs/*")
-file(COPY ${inputs}
-     DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
+file(COPY ${inputs} DESTINATION "${CMAKE_SOURCE_DIR}/ctest-build/outputs-local")
+
+# Store the executable path
+set(EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast/openfast")
 
 # Add tests in list
 include(${CMAKE_CURRENT_SOURCE_DIR}/CTestList.cmake)

@@ -72,6 +72,10 @@ set(CTEST_TIMEOUT "7200")
 ## -- Set output to english
 set($ENV{LC_MESSAGES} "en_EN" )
 
+if (NOT ${CTEST_SOURCE_DIRECTORY} STREQUAL "")
+  set(CMAKE_SOURCE_DIR ${CTEST_SOURCE_DIRECTORY})
+endif()
+
 # -----------------------------------------------------------
 # -- Run CTest
 # -----------------------------------------------------------
@@ -81,7 +85,8 @@ set($ENV{LC_MESSAGES} "en_EN" )
 configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestConfig.cmake ${CTEST_BINARY_DIRECTORY}/CTestConfig.cmake)
 
 ## -- CTest Testfile
-configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestTestfile.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
+#configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestTestfile.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
+configure_file(${CTEST_SOURCE_DIRECTORY}/reg_tests/CTestList.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
 
 ## -- Start
 message(" -- Starting test on ${MODEL} --")

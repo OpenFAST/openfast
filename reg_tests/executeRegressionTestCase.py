@@ -90,7 +90,7 @@ if not os.path.isdir(inputsDirectory):
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
-localDirectory = "outputs-local"
+localDirectory = os.path.join(sourceDirectory, "ctest-build", "outputs-local")
 if not os.path.isdir(localDirectory):
     shutil.copytree(inputsDirectory, localDirectory)
 
