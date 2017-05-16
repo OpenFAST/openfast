@@ -256,35 +256,5 @@ CONTAINS
       end if
          
    end subroutine CheckError
-!----------------------------------------------------------------------------------------------------------------------------------
-   subroutine CreateMultiPointMeshes()
-   
-   ! DvrData%NumPointLoads is at least 1
-   
-   !.......................
-   ! Mesh for multi-point loading on blades
-   !.......................
-   CALL MeshCreate( BlankMesh        = DvrData%mplMotion  &
-                   ,IOS              = COMPONENT_INPUT    &
-                   ,NNodes           = DvrData%NumPointLoads      &
-                   ,TranslationDisp  = .TRUE.             &
-                   ,Orientation      = .TRUE.             &
-                   ,TranslationVel   = .TRUE.             &
-                   ,RotationVel      = .TRUE.             &
-                   ,TranslationAcc   = .TRUE.             &
-                   ,RotationAcc      = .TRUE.             &
-                   ,ErrStat          = ErrStat2           &
-                   ,ErrMess          = ErrMsg2             )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      ! these nodes are placed along the key point line (as are the GLL nodes)
-   DO i = 1,DvrData%NumPointLoads
-
-       call Find_IniNode(BD_InitOutput%kp_coordinate, BD_Parameter, 1, BD_InitOutput%kp_total, DvrData%MultiPointLoad(i,1), temp_POS, temp_CRV)
-       
-       Pos = BD_Parameter%GlbPos + MATMUL(BD_Parameter%GlbRot,temp_POS)
-       
-       temp_CRV2 = MATMUL(BD_Parameter%GlbRot,temp_CRV)
-       CALL BD_CrvCompose(temp_CRV,BD_Parameter%Glb_crv,temp_CRV2,FLAG_R1R2) !temp_CRV = p%Glb_crv composed with temp_CRV2
 
 END PROGRAM BeamDyn_Driver_Program
