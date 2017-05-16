@@ -1,9 +1,13 @@
-#=============================================================================
-# OpenFAST Testing
-#=============================================================================
+# -----------------------------------------------------------
+# -- OpenFAST Testing
+# -----------------------------------------------------------
+
+# verify that the test data submodule exists
+if(NOT EXISTS "reg_tests")
+  message(FATAL_ERROR "The test data directory, r-test, was not found. Did you initialize the git submodule?" )
+endif()
 
 # Determine TOLERANCE for testing
-
 if (NOT ${TEST_TOLERANCE} STREQUAL "") # User defined
   set(TOLERANCE ${TEST_TOLERANCE})
 
