@@ -47,7 +47,13 @@ endif()
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
 
 # Compile the ServoData controller library for 5MW turbine test cases
-set(command ${CMAKE_CURRENT_SOURCE_DIR}/r-test/inputs/compileDISCON.py ${CMAKE_Fortran_COMPILER_ID} release)
+## determine the architecture type
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(bits 64)
+else()
+  set(bits 32)
+endif()
+set(command ${CMAKE_CURRENT_SOURCE_DIR}/r-test/inputs/compileDISCON.py ${CMAKE_Fortran_COMPILER_ID} ${bits})
 execute_process(COMMAND python ${command})
 
 # Copy the test input files
