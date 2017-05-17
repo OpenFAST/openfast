@@ -20,9 +20,9 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
+! File last committed: $Date: 2016-07-25 13:09:23 -0600 (Mon, 25 Jul 2016) $
+! (File) Revision #: $Rev: 1299 $
+! URL: $HeadURL: https://windsvn2.nrel.gov/FAST/branches/BJonkman/Source/FAST_Subs.f90 $
 !**********************************************************************************************************************************
 MODULE FAST_Subs
 
@@ -52,19 +52,19 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
    IF (PRESENT(InFile)) THEN
       IF (PRESENT(ExternInitData)) THEN
          CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC,&
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg, InFile, ExternInitData )
       ELSE         
          CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg, InFile  )
       END IF
    ELSE
       CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
-                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, Turbine%SC, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
    END IF
    
@@ -72,8 +72,11 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
 END SUBROUTINE FAST_InitializeAll_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to call Init routine for each module. This routine sets all of the init input data for each module.
-SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, SC, HD, SD, ExtPtfm, &
-                               MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InFile, ExternInitData )
+SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, MAPp, FEAM, MD, Orca, &
+                               IceF, IceD, MeshMapData, ErrStat, ErrMsg, InFile, ExternInitData )
+
+   use ElastoDyn_Parameters, only: Method_RK4
+
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              !< Parameters for the glue code
@@ -87,10 +90,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
-   TYPE(SuperController_Data), INTENT(INOUT) :: SC                !< SuperController data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
-   TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
    TYPE(MoorDyn_Data),       INTENT(INOUT) :: MD                  !< Data for the MoorDyn module
@@ -108,8 +109,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    TYPE(FAST_ExternInitType), OPTIONAL, INTENT(IN) :: ExternInitData !< Initialization input data from an external source (Simulink)
    
    ! local variables      
-   CHARACTER(1024)                         :: InputFile           !< A CHARACTER string containing the name of the primary FAST input file
-
    TYPE(ED_InitInputType)                  :: InitInData_ED       ! Initialization input data
    TYPE(ED_InitOutputType)                 :: InitOutData_ED      ! Initialization output data
    
@@ -131,17 +130,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    TYPE(OpFM_InitInputType)                :: InitInData_OpFM     ! Initialization input data
    TYPE(OpFM_InitOutputType)               :: InitOutData_OpFM    ! Initialization output data
       
-   TYPE(SC_InitInputType)                  :: InitInData_SC       ! Initialization input data
-   TYPE(SC_InitOutputType)                 :: InitOutData_SC      ! Initialization output data
-
    TYPE(HydroDyn_InitInputType)            :: InitInData_HD       ! Initialization input data
    TYPE(HydroDyn_InitOutputType)           :: InitOutData_HD      ! Initialization output data
                                            
    TYPE(SD_InitInputType)                  :: InitInData_SD       ! Initialization input data
    TYPE(SD_InitOutputType)                 :: InitOutData_SD      ! Initialization output data
-                                           
-   TYPE(ExtPtfm_InitInputType)             :: InitInData_ExtPtfm  ! Initialization input data
-   TYPE(ExtPtfm_InitOutputType)            :: InitOutData_ExtPtfm ! Initialization output data
                                            
    TYPE(MAP_InitInputType)                 :: InitInData_MAP      ! Initialization input data
    TYPE(MAP_InitOutputType)                :: InitOutData_MAP     ! Initialization output data
@@ -168,11 +161,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    INTEGER(IntKi)                          :: IceDim              ! dimension we're pre-allocating for number of IceDyn legs/instances
    INTEGER(IntKi)                          :: I                   ! generic loop counter
    INTEGER(IntKi)                          :: k                   ! blade loop counter
-   logical                                 :: CallStart
    
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
                                            
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_InitializeAll'       
+   
    
    
    !..........
@@ -197,58 +190,34 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    m_FAST%UsrTime1 = MAX( 0.0_ReKi, m_FAST%UsrTime1 )                   ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
    
 
+   AbortErrLev            = ErrID_Fatal                                 ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
    m_FAST%t_global        = t_initial - 20.                             ! initialize this to a number < t_initial for error message in ProgAbort
    m_FAST%calcJacobian    = .TRUE.                                      ! we need to calculate the Jacobian
    m_FAST%NextJacCalcTime = m_FAST%t_global                             ! We want to calculate the Jacobian on the first step
-   p_FAST%TDesc           = ''
-
-   if (present(ExternInitData)) then
-      CallStart = .not. ExternInitData%FarmIntegration ! .and. ExternInitData%TurbineID == 1
-      if (ExternInitData%TurbineID > 0) p_FAST%TDesc = 'T'//trim(num2lstr(ExternInitData%TurbineID)) 
-   else
-      CallStart = .true.
-   end if
-           
    
-      ! Init NWTC_Library, display copyright and version information:
-   if (CallStart) then
-      AbortErrLev = ErrID_Fatal                                 ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
-      CALL FAST_ProgStart( FAST_Ver )
-      p_FAST%WrSttsTime = .TRUE.
-   else
-      ! if we don't call the start data (e.g., from FAST.Farm), we won't override AbortErrLev either 
-      CALL DispNVD( FAST_Ver )
-      p_FAST%WrSttsTime = .FALSE.
-   end if
    
-   IF (PRESENT(InFile)) THEN
-      p_FAST%UseDWM = .FALSE.
-      InputFile = InFile
-   ELSE
-      CALL GetInputFileName(InputFile,p_FAST%UseDWM,ErrStat2,ErrMsg2)            
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
-   END IF
+      ! ... Initialize NWTC Library (open console, set pi constants) ...
+   CALL NWTC_Init( ProgNameIN=FAST_ver%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
    
-   ! ... Open and read input files ...
-   ! also, set turbine reference position for graphics output
+      ! set turbine reference position for graphics output
    if (PRESENT(ExternInitData)) then
       p_FAST%TurbinePos = ExternInitData%TurbinePos
-      
-      if (ExternInitData%FarmIntegration) then ! we're integrating with FAST.Farm
-         CALL FAST_Init( p_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, OverrideAbortLev=.false., RootName=ExternInitData%RootName )         
-      else
-         CALL FAST_Init( p_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2, ExternInitData%TMax, ExternInitData%TurbineID )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)         
-      end if
-      
    else
       p_FAST%TurbinePos = 0.0_ReKi
-      CALL FAST_Init( p_FAST, y_FAST, t_initial, InputFile, ErrStat2, ErrMsg2 )                       ! We have the name of the input file from somewhere else (e.g. Simulink)
    end if
-         
+   
+   
+      ! ... Open and read input files, initialize global parameters. ...
+   IF (PRESENT(InFile)) THEN
+      IF (PRESENT(ExternInitData)) THEN
+         CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2, InFile, ExternInitData%TMax, ExternInitData%TurbineID )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)         
+      ELSE         
+         CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2, InFile )                       ! We have the name of the input file from somewhere else (e.g. Simulink)
+      END IF
+   ELSE
+      CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2 )
+   END IF
+   
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -351,6 +320,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_BD%HubPos = ED%Output(1)%HubPtMotion%Position(:,1)
       InitInData_BD%HubRot = ED%Output(1)%HubPtMotion%RefOrientation(:,:,1)
             
+      p_FAST%BD_OutputSibling = .true.
       DO k=1,p_FAST%nBeams  
          InitInData_BD%RootName     = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_BD))//TRIM( Num2LStr(k) )
          
@@ -379,7 +349,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          ELSEIF ( .NOT. EqualRealNos( p_FAST%dt_module( MODULE_BD ),dt_BD )) THEN
             CALL SetErrStat(ErrID_Fatal,"All instances of BeamDyn (one per blade) must have the same time step.",ErrStat,ErrMsg,RoutineName)
          END IF
-                        
+                       
+            ! We're going to do fewer computations if the BD input and output meshes that couple to AD are siblings:
+         if (BD%p(k)%BldMotionNodeLoc /= BD_MESH_QP) p_FAST%BD_OutputSibling = .false.         
+      
          ! HACK because BeamDyn shouldn't be run in static mode when coupled with FAST         
          if (BD%p(k)%analysis_type == BD_STATIC_ANALYSIS) then! static
             CALL SetErrStat(ErrID_Fatal,"BeamDyn cannot perform static analysis when coupled with FAST.",ErrStat,ErrMsg,RoutineName)
@@ -406,7 +379,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF
-     
+        
    ALLOCATE( AD%Input( p_FAST%InterpOrder+1 ), AD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating AD%Input and AD%InputTimes.",ErrStat,ErrMsg,RoutineName)
@@ -453,7 +426,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             CALL Cleanup()
             RETURN
          END IF
-      InitInData_AD%Gravity            = InitOutData_ED%Gravity      
+            
       InitInData_AD%Linearize          = p_FAST%Linearize
       InitInData_AD%InputFile          = p_FAST%AeroFile
       InitInData_AD%NumBlades          = InitOutData_ED%NumBl
@@ -525,23 +498,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       ! lidar        
       InitInData_IfW%lidar%Tmax                   = p_FAST%TMax
       InitInData_IfW%lidar%HubPosition            = ED%Output(1)%HubPtMotion%Position(:,1) 
+         ! bjj: these should come from an InflowWind input file; I'm hard coding them here for now
       IF ( PRESENT(ExternInitData) ) THEN
-         InitInData_IfW%Use4Dext = ExternInitData%FarmIntegration
-
-         if (InitInData_IfW%Use4Dext) then
-            InitInData_IfW%FDext%n      = ExternInitData%windGrid_n
-            InitInData_IfW%FDext%delta  = ExternInitData%windGrid_delta
-            InitInData_IfW%FDext%pZero  = ExternInitData%windGrid_pZero
-         end if
-         
-         ! bjj: these lidar inputs should come from an InflowWind input file; I'm hard coding them here for now
          InitInData_IfW%lidar%SensorType          = ExternInitData%SensorType   
          InitInData_IfW%lidar%LidRadialVel        = ExternInitData%LidRadialVel   
          InitInData_IfW%lidar%RotorApexOffsetPos  = 0.0         
          InitInData_IfW%lidar%NumPulseGate        = 0
       ELSE
          InitInData_IfW%lidar%SensorType          = SensorType_None
-         InitInData_IfW%Use4Dext                  = .false.
       END IF
                                      
       CALL InflowWind_Init( InitInData_IfW, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR),  &
@@ -567,26 +531,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       IF ( PRESENT(ExternInitData) ) THEN
          InitInData_OpFM%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
          InitInData_OpFM%NumCtrl2SC = ExternInitData%NumCtrl2SC  
-         InitInData_OpFM%NumActForcePtsBlade = ExternInitData%NumActForcePtsBlade
-         InitInData_OpFM%NumActForcePtsTower = ExternInitData%NumActForcePtsTower 
       ELSE
          CALL SetErrStat( ErrID_Fatal, 'OpenFOAM integration can be used only with external input data (not the stand-alone executable).', ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
          RETURN         
       END IF
-      InitInData_OpFM%BladeLength = InitOutData_ED%BladeLength
-      InitInData_OpFM%TowerHeight = InitOutData_ED%TowerHeight
-      ALLOCATE(InitInData_OpFM%StructBldRNodes( SIZE(InitOutData_ED%BldRNodes)),  STAT=ErrStat2)
-      InitInData_OpFM%StructBldRNodes(:) = InitOutData_ED%BldRNodes(:)
-      ALLOCATE(InitInData_OpFM%StructTwrHNodes( SIZE(InitOutData_ED%TwrHNodes)),  STAT=ErrStat2)
-      InitInData_OpFM%StructTwrHNodes(:) = InitOutData_ED%TwrHNodes(:)
-      IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating OpFM%InitInput.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
+      
          ! set up the data structures for integration with OpenFOAM
-      CALL Init_OpFM( InitInData_OpFM, p_FAST, AirDens, AD14%Input(1), AD%Input(1), InitOutData_AD, AD%y, ED%Output(1), OpFM, InitOutData_OpFM, ErrStat2, ErrMsg2 )
+      CALL Init_OpFM( InitInData_OpFM, p_FAST, AirDens, AD14%Input(1), AD%Input(1), AD%y, ED%Output(1), OpFM, InitOutData_OpFM, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
       IF (ErrStat >= AbortErrLev) THEN
@@ -601,25 +553,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitOutData_IfW%WindFileInfo%MWS = 0.0_ReKi
    END IF   ! CompInflow
    
-   ! ........................
-   ! initialize SuperController
-   ! ........................   
-      IF ( PRESENT(ExternInitData) ) THEN
-         InitInData_SC%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
-         InitInData_SC%NumCtrl2SC = ExternInitData%NumCtrl2SC  
-      ELSE
-         InitInData_SC%NumSC2Ctrl = 0
-         InitInData_SC%NumCtrl2SC = 0
-      END IF
-      
-         ! set up the data structures for integration with supercontroller
-      CALL Init_SC( InitInData_SC, SC, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF       
 
    ! ........................
    ! some checks for AeroDyn inputs with the high-speed shaft brake hack in ElastoDyn:
@@ -637,9 +570,25 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          END IF
          
             
-         IF ( ED%p%method == 1 ) THEN ! bjj: should be using ElastoDyn's Method_ABM4 Method_AB4 parameters
+         IF ( ED%p%method == Method_RK4 ) THEN ! bjj: should be using ElastoDyn's Method_ABM4 Method_AB4 parameters
             CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the AB4 or ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
-         END IF               
+         END IF              
+
+
+            ! Check if we are trying to use GBox efficiency tables and what type they are. We will ignore static values as they will not cause issues.
+            ! Table type
+            !  1. Effic. table      This may cause issues if any point in the table (edge of table) is zero or less % efficiency.   Strong warning
+            !  2. Loss table        There will be solver errors when the effective efficiency goes through zero.  So dissallow.
+         IF ( (.NOT. ED%p%GBoxEffInfo%IsStatic) .AND. (ED%p%GBoxEffInfo%DataType == 1) ) THEN
+               ! This warning may not be needed since checks are made that all values in table are > 0 and nearest values are used off table.
+               ! However, if a very small value us used, it may have unintended consequences in the solver, so for thoroughness in finding issues later, I'll leave it in here.
+            CALL SetErrStat(ErrID_Warn,'Issues may occur when high speed brake is active in ServoDyn while gearbox efficiency tables (Type 1) are used in ElastoDyn. ' //&
+                        'ElastoDyn solver could fail if gearbox efficency is <= 0 at any operating point.',ErrStat,ErrMsg,RoutineName)
+         ELSEIF ( (.NOT. ED%p%GBoxEffInfo%IsStatic) .AND. (ED%p%GBoxEffInfo%DataType == 2) ) THEN
+            CALL SetErrStat(ErrID_Fatal,'High speed brake not allowed in ServoDyn when gearbox loss tables (Type 2) are used in ElastoDyn. ElastoDyn solver ' // &
+                        'would fail as calculated gearbox efficency goes through zero.',ErrStat,ErrMsg,RoutineName)
+         ENDIF
+ 
       END IF
       
    END IF  
@@ -774,7 +723,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    END IF   ! CompHydro
 
    ! ........................
-   ! initialize SubDyn or ExtPtfm_MCKF
+   ! initialize SubDyn 
    ! ........................
    ALLOCATE( SD%Input( p_FAST%InterpOrder+1 ), SD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
@@ -783,13 +732,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          RETURN
       END IF
 
-   ALLOCATE( ExtPtfm%Input( p_FAST%InterpOrder+1 ), ExtPtfm%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
-      IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating ExtPtfm%Input and ExtPtfm%InputTimes.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-      
    IF ( p_FAST%CompSub == Module_SD ) THEN
           
       IF ( p_FAST%CompHydro == Module_HD ) THEN
@@ -817,28 +759,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
-      END IF   
-   ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
-
-      InitInData_ExtPtfm%InputFile = p_FAST%SubFile
-!      InitInData_ExtPtfm%RootName  = trim(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_ExtPtfm))
-      InitInData_ExtPtfm%Linearize = p_FAST%Linearize
-      
-      
-      CALL ExtPtfm_Init( InitInData_ExtPtfm, ExtPtfm%Input(1), ExtPtfm%p,  &
-                         ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), ExtPtfm%z(STATE_CURR),  ExtPtfm%OtherSt(STATE_CURR), &
-                         ExtPtfm%y, ExtPtfm%m, p_FAST%dt_module( MODULE_ExtPtfm ), InitOutData_ExtPtfm, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
-      p_FAST%ModuleInitialized(MODULE_ExtPtfm) = .TRUE.
-      CALL SetModuleSubstepTime(MODULE_ExtPtfm, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-               
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF   
-      
+      END IF              
    END IF
 
    ! ------------------------------
@@ -1100,7 +1021,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! ........................
 
    CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_BD, InitOutData_SrvD, InitOutData_AD14, InitOutData_AD, &
-                         InitOutData_IfW, InitOutData_OpFM, InitOutData_HD, InitOutData_SD, InitOutData_ExtPtfm, InitOutData_MAP, &
+                         InitOutData_IfW, InitOutData_OpFM, InitOutData_HD, InitOutData_SD, InitOutData_MAP, &
                          InitOutData_FEAM, InitOutData_MD, InitOutData_Orca, InitOutData_IceF, InitOutData_IceD, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -1109,7 +1030,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! Initialize mesh-mapping data
    ! -------------------------------------------------------------------------
 
-   CALL InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
+   CALL InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       IF (ErrStat >= AbortErrLev) THEN
@@ -1232,11 +1153,6 @@ CONTAINS
       CALL SD_DestroyInitOutput( InitOutData_SD, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
-      CALL ExtPtfm_DestroyInitInput(  InitInData_ExtPtfm,  ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL ExtPtfm_DestroyInitOutput( InitOutData_ExtPtfm, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
       CALL MAP_DestroyInitInput(  InitInData_MAP,  ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       CALL MAP_DestroyInitOutput( InitOutData_MAP, ErrStat2, ErrMsg2 )
@@ -1272,14 +1188,13 @@ CONTAINS
 END SUBROUTINE FAST_InitializeAll
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This function returns a string describing the glue code and some of the compilation options we're using.
-FUNCTION GetVersion(ThisProgVer)
+FUNCTION GetVersion()
 
    ! Passed Variables:
 
-   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
-   CHARACTER(1024)                 :: GetVersion      !< String containing a description of the compiled precision.
+   CHARACTER(1024)  :: GetVersion                      !< String containing a description of the compiled precision.
 
-   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled'
+   GetVersion = TRIM(GetNVD(FAST_Ver))//', compiled'
 
    IF ( Cmpl4SFun )  THEN     ! FAST has been compiled as an S-Function for Simulink
       GetVersion = TRIM(GetVersion)//' as a DLL S-Function for Simulink'
@@ -1306,69 +1221,9 @@ FUNCTION GetVersion(ThisProgVer)
    RETURN
 END FUNCTION GetVersion
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine is called at the start (or restart) of a FAST program (or FAST.Farm). It initializes the NWTC subroutine library,
-!! displays the copyright notice, and displays some version information (including addressing scheme and precision).
-SUBROUTINE FAST_ProgStart(ThisProgVer)
-   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
-
-   
-      ! ... Initialize NWTC Library (open console, set pi constants) ...
-   CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
-   
-      ! Display the copyright notice
-   CALL DispCopyrightLicense( ThisProgVer )
-
-      ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
-   
-END SUBROUTINE FAST_ProgStart
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine gets the name of the FAST input file from the command line. It also returns a logical indicating if this there
-!! was a "DWM" argument after the file name.
-SUBROUTINE GetInputFileName(InputFile,UseDWM,ErrStat,ErrMsg)
-   CHARACTER(*),             INTENT(OUT)           :: InputFile         !< A CHARACTER string containing the name of the primary FAST input file (if not present, we'll get it from the command line)
-   LOGICAL,                  INTENT(OUT)           :: UseDWM            !< whether the last argument from the command line is "DWM"
-   INTEGER(IntKi),           INTENT(OUT)           :: ErrStat           !< Error status
-   CHARACTER(*),             INTENT(OUT)           :: ErrMsg            !< Error message
-   
-   INTEGER(IntKi)                                  :: ErrStat2          ! local error stat
-   CHARACTER(1024)                                 :: LastArg           ! A second command-line argument that will allow DWM module to be used in AeroDyn
-   
-   ErrStat = ErrID_None
-   ErrMsg = ''
-   
-   UseDWM = .FALSE.  ! by default, we're not going to use the DWM module
-   InputFile = ""  ! initialize to empty string to make sure it's input from the command line
-   CALL CheckArgs( InputFile, ErrStat2, LastArg )  ! if ErrStat2 /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
-      
-   IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'The required input file was not specified on the command line.'
-
-         !bjj:  if people have compiled themselves, they should be able to figure out the file name, right?         
-      IF (BITS_IN_ADDR==32) THEN
-         CALL NWTC_DisplaySyntax( InputFile, 'FAST_Win32.exe' )
-      ELSEIF( BITS_IN_ADDR == 64) THEN
-         CALL NWTC_DisplaySyntax( InputFile, 'FAST_x64.exe' )
-      ELSE
-         CALL NWTC_DisplaySyntax( InputFile, 'FAST.exe' )
-      END IF
-         
-      RETURN
-   END IF            
-      
-   IF (LEN_TRIM(LastArg) > 0) THEN ! see if DWM was specified as the second option
-      CALL Conv2UC( LastArg )
-      IF ( TRIM(LastArg) == "DWM" ) THEN
-         UseDWM    = .TRUE.
-      END IF
-   END IF   
-   
-END SUBROUTINE GetInputFileName
-!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine checks for command-line arguments, gets the root name of the input files
 !! (including full path name), and creates the names of the output files.
-SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, TurbID, OverrideAbortLev, RootName )
+SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbID  )
 
       IMPLICIT                        NONE
 
@@ -1379,18 +1234,17 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
    REAL(DbKi),               INTENT(IN)            :: t_initial         !< the beginning time of the simulation
    INTEGER(IntKi),           INTENT(OUT)           :: ErrStat           !< Error status
    CHARACTER(*),             INTENT(OUT)           :: ErrMsg            !< Error message
-   CHARACTER(*),             INTENT(IN)            :: InputFile         !< A CHARACTER string containing the name of the primary FAST input file (if not present, we'll get it from the command line)
-   REAL(DbKi),               INTENT(IN), OPTIONAL  :: TMax              !< the length of the simulation (from Simulink or FAST.Farm)
+   CHARACTER(*),             INTENT(IN), OPTIONAL  :: InFile            !< A CHARACTER string containing the name of the primary FAST input file (if not present, we'll get it from the command line)
+   REAL(DbKi),               INTENT(IN), OPTIONAL  :: TMax              !< the length of the simulation (from Simulink)
    INTEGER(IntKi),           INTENT(IN), OPTIONAL  :: TurbID            !< an ID for naming the tubine output file
-   LOGICAL,                  INTENT(IN), OPTIONAL  :: OverrideAbortLev  !< whether or not we should override the abort error level (e.g., FAST.Farm)
-   CHARACTER(*),             INTENT(IN), OPTIONAL  :: RootName          !< A CHARACTER string containing the root name of FAST output files, overriding normal naming convention
       ! Local variables
 
    INTEGER                      :: i                                    ! loop counter
    !CHARACTER(1024)              :: DirName                              ! A CHARACTER string containing the path of the current working directory
+   CHARACTER(1024)              :: LastArg                              ! A second command-line argument that will allow DWM module to be used in AeroDyn
+   CHARACTER(1024)              :: InputFile                            ! A CHARACTER string containing the name of the primary FAST input file
 
 
-   LOGICAL                      :: OverrideAbortErrLev  
    CHARACTER(*), PARAMETER      :: RoutineName = "FAST_Init"
    
    INTEGER(IntKi)               :: ErrStat2
@@ -1399,33 +1253,63 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
       ! Initialize some variables
    ErrStat = ErrID_None
    ErrMsg = ''
-   
-   IF (PRESENT(OverrideAbortLev)) THEN
-      OverrideAbortErrLev = OverrideAbortLev
-   ELSE
-      OverrideAbortErrLev = .true.
-   END IF
-   
 
-   
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( FAST_Ver )
+
+
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//GetVersion()//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+
    !...............................................................................................................................
-   ! Set the root name of the output files based on the input file name
+   ! Get the name of the input file from the command line if it isn't an input to this routine
+   ! and set the root name of the output files based on the input file name
    !...............................................................................................................................
+
+   p%UseDWM = .FALSE.  ! by default, we're not going to use the DWM module
    
-   if (present(RootName)) then
-      p%OutFileRoot = RootName
-   else         
-         ! Determine the root name of the primary file (will be used for output files)
-      CALL GetRoot( InputFile, p%OutFileRoot )
-      IF ( Cmpl4SFun )  p%OutFileRoot = TRIM( p%OutFileRoot )//'.SFunc'
-      IF ( PRESENT(TurbID) ) THEN
-         IF ( TurbID > 0 ) THEN
-            p%OutFileRoot = TRIM( p%OutFileRoot )//'.T'//TRIM(Num2LStr(TurbID))
+   IF ( PRESENT(InFile) ) THEN
+      InputFile = InFile
+      p%UseDWM  = .FALSE.
+   ELSE ! get it from the command line
+      InputFile = ""  ! initialize to empty string to make sure it's input from the command line
+      CALL CheckArgs( InputFile, ErrStat2, LastArg )  ! if ErrStat2 /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
+      
+      IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
+         CALL SetErrStat( ErrID_Fatal, 'The required input file was not specified on the command line.', ErrStat, ErrMsg, RoutineName )
+
+            !bjj:  if people have compiled themselves, they should be able to figure out the file name, right?         
+         IF (BITS_IN_ADDR==32) THEN
+            CALL NWTC_DisplaySyntax( InputFile, 'FAST_Win32.exe' )
+         ELSEIF( BITS_IN_ADDR == 64) THEN
+            CALL NWTC_DisplaySyntax( InputFile, 'FAST_x64.exe' )
+         ELSE
+            CALL NWTC_DisplaySyntax( InputFile, 'FAST.exe' )
+         END IF
+         
+         RETURN
+      END IF            
+      
+      IF (LEN_TRIM(LastArg) > 0) THEN ! see if DWM was specified as the second option
+         CALL Conv2UC( LastArg )
+         IF ( TRIM(LastArg) == "DWM" ) THEN
+            p%UseDWM    = .TRUE.
          END IF
       END IF
+            
+   END IF
+      
+
+      ! Determine the root name of the primary file (will be used for output files)
+   CALL GetRoot( InputFile, p%OutFileRoot )
+   IF ( Cmpl4SFun )  p%OutFileRoot = TRIM( p%OutFileRoot )//'.SFunc'
+   IF ( PRESENT(TurbID) ) THEN
+      IF ( TurbID > 0 ) THEN
+         p%OutFileRoot = TRIM( p%OutFileRoot )//'.T'//TRIM(Num2LStr(TurbID))
+      END IF
+   END IF
    
-   end if
-   
+      
    
    !...............................................................................................................................
    ! Initialize the module name/date/version info:
@@ -1435,52 +1319,50 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
       y_FAST%Module_Ver(i)%Date = 'unknown date'
       y_FAST%Module_Ver(i)%Ver  = 'unknown version'
    END DO       
-   y_FAST%Module_Ver( Module_IfW    )%Name = 'InflowWind'
-   y_FAST%Module_Ver( Module_OpFM   )%Name = 'OpenFOAM integration'
-   y_FAST%Module_Ver( Module_ED     )%Name = 'ElastoDyn'
-   y_FAST%Module_Ver( Module_BD     )%Name = 'BeamDyn'
-   y_FAST%Module_Ver( Module_AD14   )%Name = 'AeroDyn14'
-   y_FAST%Module_Ver( Module_AD     )%Name = 'AeroDyn'
-   y_FAST%Module_Ver( Module_SrvD   )%Name = 'ServoDyn'
-   y_FAST%Module_Ver( Module_HD     )%Name = 'HydroDyn'
-   y_FAST%Module_Ver( Module_SD     )%Name = 'SubDyn'
-   y_FAST%Module_Ver( Module_ExtPtfm)%Name = 'ExtPtfm_MCKF'
-   y_FAST%Module_Ver( Module_MAP    )%Name = 'MAP'
-   y_FAST%Module_Ver( Module_FEAM   )%Name = 'FEAMooring'
-   y_FAST%Module_Ver( Module_MD     )%Name = 'MoorDyn'
-   y_FAST%Module_Ver( Module_Orca   )%Name = 'OrcaFlexInterface'
-   y_FAST%Module_Ver( Module_IceF   )%Name = 'IceFloe'
-   y_FAST%Module_Ver( Module_IceD   )%Name = 'IceDyn'
+   y_FAST%Module_Ver( Module_IfW  )%Name = 'InflowWind'
+   y_FAST%Module_Ver( Module_OpFM )%Name = 'OpenFOAM integration'
+   y_FAST%Module_Ver( Module_ED   )%Name = 'ElastoDyn'
+   y_FAST%Module_Ver( Module_BD   )%Name = 'BeamDyn'
+   y_FAST%Module_Ver( Module_AD14 )%Name = 'AeroDyn14'
+   y_FAST%Module_Ver( Module_AD   )%Name = 'AeroDyn'
+   y_FAST%Module_Ver( Module_SrvD )%Name = 'ServoDyn'
+   y_FAST%Module_Ver( Module_HD   )%Name = 'HydroDyn'
+   y_FAST%Module_Ver( Module_SD   )%Name = 'SubDyn'
+   y_FAST%Module_Ver( Module_MAP  )%Name = 'MAP'
+   y_FAST%Module_Ver( Module_FEAM )%Name = 'FEAMooring'
+   y_FAST%Module_Ver( Module_MD   )%Name = 'MoorDyn'
+   y_FAST%Module_Ver( Module_Orca )%Name = 'OrcaFlexInterface'
+   y_FAST%Module_Ver( Module_IceF )%Name = 'IceFloe'
+   y_FAST%Module_Ver( Module_IceD )%Name = 'IceDyn'
          
-   y_FAST%Module_Abrev( Module_IfW    ) = 'IfW'
-   y_FAST%Module_Abrev( Module_OpFM   ) = 'OpFM'
-   y_FAST%Module_Abrev( Module_ED     ) = 'ED'
-   y_FAST%Module_Abrev( Module_BD     ) = 'BD'
-   y_FAST%Module_Abrev( Module_AD14   ) = 'AD'
-   y_FAST%Module_Abrev( Module_AD     ) = 'AD'
-   y_FAST%Module_Abrev( Module_SrvD   ) = 'SrvD'
-   y_FAST%Module_Abrev( Module_HD     ) = 'HD'
-   y_FAST%Module_Abrev( Module_SD     ) = 'SD'
-   y_FAST%Module_Abrev( Module_ExtPtfm) = 'ExtPtfm'
-   y_FAST%Module_Abrev( Module_MAP    ) = 'MAP'
-   y_FAST%Module_Abrev( Module_FEAM   ) = 'FEAM'
-   y_FAST%Module_Abrev( Module_MD     ) = 'MD'
-   y_FAST%Module_Abrev( Module_Orca   ) = 'Orca'
-   y_FAST%Module_Abrev( Module_IceF   ) = 'IceF'
-   y_FAST%Module_Abrev( Module_IceD   ) = 'IceD'   
+   y_FAST%Module_Abrev( Module_IfW  ) = 'IfW'
+   y_FAST%Module_Abrev( Module_OpFM ) = 'OpFM'
+   y_FAST%Module_Abrev( Module_ED   ) = 'ED'
+   y_FAST%Module_Abrev( Module_BD   ) = 'BD'
+   y_FAST%Module_Abrev( Module_AD14 ) = 'AD'
+   y_FAST%Module_Abrev( Module_AD   ) = 'AD'
+   y_FAST%Module_Abrev( Module_SrvD ) = 'SrvD'
+   y_FAST%Module_Abrev( Module_HD   ) = 'HD'
+   y_FAST%Module_Abrev( Module_SD   ) = 'SD'
+   y_FAST%Module_Abrev( Module_MAP  ) = 'MAP'
+   y_FAST%Module_Abrev( Module_FEAM ) = 'FEAM'
+   y_FAST%Module_Abrev( Module_MD   ) = 'MD'
+   y_FAST%Module_Abrev( Module_Orca ) = 'Orca'
+   y_FAST%Module_Abrev( Module_IceF ) = 'IceF'
+   y_FAST%Module_Abrev( Module_IceD ) = 'IceD'   
    
    p%n_substeps = 1                                                ! number of substeps for between modules and global/FAST time
-         
+   p%BD_OutputSibling = .false.
+   
    !...............................................................................................................................
    ! Read the primary file for the glue code:
    !...............................................................................................................................
-   CALL FAST_ReadPrimaryFile( InputFile, p, OverrideAbortErrLev, ErrStat2, ErrMsg2 )
+   CALL FAST_ReadPrimaryFile( InputFile, p, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       
       ! overwrite TMax if necessary)
    IF (PRESENT(TMax)) THEN
-      p%TMax = TMax
-      !p%TMax = MAX( TMax, p%TMax )
+      p%TMax = MAX( TMax, p%TMax )
    END IF
    
    IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1488,7 +1370,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
 
    p%KMax = 1                 ! after more checking, we may put this in the input file...
    !IF (p%CompIce == Module_IceF) p%KMax = 2
-   p%SizeJac_Opt1 = 0  ! initialize this vector to zero; after we figure out what size the ED/SD/HD/BD meshes are, we'll fill this
+   p%SizeJac_ED_SD_HD_BD_Orca = 0  ! initialize this vector to zero; after we figure out what size the ED/SD/HD/BD meshes are, we'll fill this
    
    p%numIceLegs = 0           ! initialize number of support-structure legs in contact with ice (IceDyn will set this later)
    
@@ -1503,7 +1385,6 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
       END IF
    ELSEIF ( p%CompMooring == Module_Orca ) THEN
       p%TurbineType = Type_Offshore_Floating
-   !bjj: what about ExtPtfm_MCKF ???
    ELSE      
       p%TurbineType = Type_LandBased
    END IF   
@@ -1571,7 +1452,7 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
    CALL ChkRealFmtStr( p%OutFmt, 'OutFmt', p%FmtWidth, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   IF ( p%FmtWidth /= ChanLen ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
+   IF ( p%WrTxtOutFile .and. p%FmtWidth /= ChanLen ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
          TRIM(Num2LStr(p%FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLen))//' characters.', ErrStat, ErrMsg, RoutineName )
    
    IF ( p%WrTxtOutFile .AND. p%TChanLen > ChanLen  )  THEN ! ( p%TMax > 9999.999_DbKi )
@@ -1589,7 +1470,7 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
    IF (p%CompAero    == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompAero must be 0 (None), 1 (AeroDyn14), or 2 (AeroDyn).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompServo   == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompServo must be 0 (None) or 1 (ServoDyn).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompHydro   == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompHydro must be 0 (None) or 1 (HydroDyn).', ErrStat, ErrMsg, RoutineName )
-   IF (p%CompSub     == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompSub must be 0 (None), 1 (SubDyn), or 2 (ExtPtfm_MCKF).', ErrStat, ErrMsg, RoutineName )
+   IF (p%CompSub     == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompSub must be 0 (None) or 1 (SubDyn).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompMooring == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompMooring must be 0 (None), 1 (MAP), 2 (FEAMooring), 3 (MoorDyn), or 4 (OrcaFlex).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompIce     == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompIce must be 0 (None) or 1 (IceFloe).', ErrStat, ErrMsg, RoutineName )
    IF (p%CompHydro /= Module_HD) THEN
@@ -1600,7 +1481,6 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
       END IF
    ELSE
       IF (p%CompMooring == Module_Orca) CALL SetErrStat( ErrID_Fatal, 'HydroDyn cannot be used if OrcaFlex is used. Set CompHydro = 0 or CompMooring < 4 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
-      IF (p%CompSub == Module_ExtPtfm) CALL SetErrStat( ErrID_Fatal, 'HydroDyn cannot be used if ExtPtfm_MCKF is used. Set CompHydro = 0 or CompSub < 2 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    END IF
 
    
@@ -1657,7 +1537,7 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
       if (p%CompInflow == MODULE_OpFM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the OpenFOAM coupling.',ErrStat, ErrMsg, RoutineName)
       if (p%CompAero == MODULE_AD14) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the AeroDyn v14 module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompHydro == MODULE_HD) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the HydroDyn module.',ErrStat, ErrMsg, RoutineName)
-      if (p%CompSub /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the substructure modules.',ErrStat, ErrMsg, RoutineName)
+      if (p%CompSub == MODULE_SD) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the SubDyn module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompMooring /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the mooring modules.',ErrStat, ErrMsg, RoutineName)
       if (p%CompIce /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the ice loading modules.',ErrStat, ErrMsg, RoutineName)
                   
@@ -1681,7 +1561,7 @@ END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the output for the glue code, including writing the header for the primary output file.
 SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_BD, InitOutData_SrvD, InitOutData_AD14, InitOutData_AD, &
-                            InitOutData_IfW, InitOutData_OpFM, InitOutData_HD, InitOutData_SD, InitOutData_ExtPtfm, InitOutData_MAP, &
+                            InitOutData_IfW, InitOutData_OpFM, InitOutData_HD, InitOutData_SD, InitOutData_MAP, &
                             InitOutData_FEAM, InitOutData_MD, InitOutData_Orca, InitOutData_IceF, InitOutData_IceD, ErrStat, ErrMsg )
 
    IMPLICIT NONE
@@ -1699,7 +1579,6 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_BD, Init
    TYPE(OpFM_InitOutputType),      INTENT(IN)           :: InitOutData_OpFM                      !< Initialization output for OpenFOAM
    TYPE(HydroDyn_InitOutputType),  INTENT(IN)           :: InitOutData_HD                        !< Initialization output for HydroDyn
    TYPE(SD_InitOutputType),        INTENT(IN)           :: InitOutData_SD                        !< Initialization output for SubDyn
-   TYPE(ExtPtfm_InitOutputType),   INTENT(IN)           :: InitOutData_ExtPtfm                   !< Initialization output for ExtPtfm_MCKF
    TYPE(MAP_InitOutputType),       INTENT(IN)           :: InitOutData_MAP                       !< Initialization output for MAP
    TYPE(Orca_InitOutputType),      INTENT(IN)           :: InitOutData_Orca                      !< Initialization output for OrcaFlex interface
    TYPE(FEAM_InitOutputType),      INTENT(IN)           :: InitOutData_FEAM                      !< Initialization output for FEAMooring
@@ -1723,7 +1602,7 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_BD, Init
    !......................................................
    ! Set the description lines to be printed in the output file
    !......................................................
-   y_FAST%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(FAST_Ver))
+   y_FAST%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion())
    y_FAST%FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
    y_FAST%FileDescLines(3)  = 'Description from the FAST input file: '//TRIM(p_FAST%FTitle)
    
@@ -1770,9 +1649,6 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_BD, Init
    IF ( p_FAST%CompSub == Module_SD ) THEN
       y_FAST%Module_Ver( Module_SD )   = InitOutData_SD%Ver
       y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_SD )))
-   ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
-      y_FAST%Module_Ver( Module_ExtPtfm )   = InitOutData_ExtPtfm%Ver
-      y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_ExtPtfm )))
    END IF
 
    IF ( p_FAST%CompMooring == Module_MAP ) THEN
@@ -1813,17 +1689,16 @@ do i=1,p_FAST%nBeams
 end do   
                                                        y_FAST%numOuts(Module_AD14) = 0
                                                        
-   IF ( ALLOCATED( InitOutData_AD%WriteOutputHdr     ) ) y_FAST%numOuts(Module_AD)     = SIZE(InitOutData_AD%WriteOutputHdr)
-   IF ( ALLOCATED( InitOutData_SrvD%WriteOutputHdr   ) ) y_FAST%numOuts(Module_SrvD)   = SIZE(InitOutData_SrvD%WriteOutputHdr)
-   IF ( ALLOCATED( InitOutData_HD%WriteOutputHdr     ) ) y_FAST%numOuts(Module_HD)     = SIZE(InitOutData_HD%WriteOutputHdr)
-   IF ( ALLOCATED( InitOutData_SD%WriteOutputHdr     ) ) y_FAST%numOuts(Module_SD)     = SIZE(InitOutData_SD%WriteOutputHdr)
-   IF ( ALLOCATED( InitOutData_ExtPtfm%WriteOutputHdr) ) y_FAST%numOuts(Module_ExtPtfm)= SIZE(InitOutData_ExtPtfm%WriteOutputHdr)
-   IF ( ALLOCATED( InitOutData_MAP%WriteOutputHdr    ) ) y_FAST%numOuts(Module_MAP)    = SIZE(InitOutData_MAP%WriteOutputHdr)
-   IF ( ALLOCATED( InitOutData_FEAM%WriteOutputHdr   ) ) y_FAST%numOuts(Module_FEAM)   = SIZE(InitOutData_FEAM%WriteOutputHdr)
-   IF ( ALLOCATED( InitOutData_MD%WriteOutputHdr     ) ) y_FAST%numOuts(Module_MD)     = SIZE(InitOutData_MD%WriteOutputHdr)
-   IF ( ALLOCATED( InitOutData_Orca%WriteOutputHdr   ) ) y_FAST%numOuts(Module_Orca)   = SIZE(InitOutData_Orca%WriteOutputHdr)
-   IF ( ALLOCATED( InitOutData_IceF%WriteOutputHdr   ) ) y_FAST%numOuts(Module_IceF)   = SIZE(InitOutData_IceF%WriteOutputHdr)
-   IF ( ALLOCATED( InitOutData_IceD%WriteOutputHdr   ) ) y_FAST%numOuts(Module_IceD)   = SIZE(InitOutData_IceD%WriteOutputHdr)*p_FAST%numIceLegs         
+   IF ( ALLOCATED( InitOutData_AD%WriteOutputHdr   ) ) y_FAST%numOuts(Module_AD)   = SIZE(InitOutData_AD%WriteOutputHdr)
+   IF ( ALLOCATED( InitOutData_SrvD%WriteOutputHdr ) ) y_FAST%numOuts(Module_SrvD) = SIZE(InitOutData_SrvD%WriteOutputHdr)
+   IF ( ALLOCATED( InitOutData_HD%WriteOutputHdr   ) ) y_FAST%numOuts(Module_HD)   = SIZE(InitOutData_HD%WriteOutputHdr)
+   IF ( ALLOCATED( InitOutData_SD%WriteOutputHdr   ) ) y_FAST%numOuts(Module_SD)   = SIZE(InitOutData_SD%WriteOutputHdr)
+   IF ( ALLOCATED( InitOutData_MAP%WriteOutputHdr  ) ) y_FAST%numOuts(Module_MAP)  = SIZE(InitOutData_MAP%WriteOutputHdr)
+   IF ( ALLOCATED( InitOutData_FEAM%WriteOutputHdr ) ) y_FAST%numOuts(Module_FEAM) = SIZE(InitOutData_FEAM%WriteOutputHdr)
+   IF ( ALLOCATED( InitOutData_MD%WriteOutputHdr   ) ) y_FAST%numOuts(Module_MD)   = SIZE(InitOutData_MD%WriteOutputHdr)
+   IF ( ALLOCATED( InitOutData_Orca%WriteOutputHdr ) ) y_FAST%numOuts(Module_Orca) = SIZE(InitOutData_Orca%WriteOutputHdr)
+   IF ( ALLOCATED( InitOutData_IceF%WriteOutputHdr ) ) y_FAST%numOuts(Module_IceF) = SIZE(InitOutData_IceF%WriteOutputHdr)
+   IF ( ALLOCATED( InitOutData_IceD%WriteOutputHdr ) ) y_FAST%numOuts(Module_IceD) = SIZE(InitOutData_IceD%WriteOutputHdr)*p_FAST%numIceLegs         
    
    !......................................................
    ! Initialize the output channel names and units
@@ -1838,28 +1713,24 @@ end do
    y_FAST%ChannelNames(1) = 'Time'
    y_FAST%ChannelUnits(1) = '(s)'
 
-   indxLast = 1
    indxNext = 2
+   DO i=1,y_FAST%numOuts(Module_IfW) !InflowWind
+      y_FAST%ChannelNames(indxNext) = InitOutData_IfW%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_IfW%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO
 
-   IF ( y_FAST%numOuts(Module_IfW) > 0_IntKi ) THEN  
-      indxLast = indxNext + y_FAST%numOuts(Module_IfW) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_IfW%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_IfW%WriteOutputUnt      
-      indxNext = indxLast + 1
-   ELSEIF ( y_FAST%numOuts(Module_OpFM) > 0_IntKi ) THEN  
-      indxLast = indxNext + y_FAST%numOuts(Module_OpFM) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_OpFM%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_OpFM%WriteOutputUnt      
-      indxNext = indxLast + 1
-   END IF
+   DO i=1,y_FAST%numOuts(Module_OpFM) !OpenFOAM
+      y_FAST%ChannelNames(indxNext) = InitOutData_OpFM%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_OpFM%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO   
 
-
-   IF ( y_FAST%numOuts(Module_ED) > 0_IntKi ) THEN !ElastoDyn
-      indxLast = indxNext + y_FAST%numOuts(Module_ED) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_ED%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_ED%WriteOutputUnt
-      indxNext = indxLast + 1
-   END IF
+   DO i=1,y_FAST%numOuts(Module_ED) !ElastoDyn
+      y_FAST%ChannelNames(indxNext) = InitOutData_ED%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_ED%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO   
 
    IF ( y_FAST%numOuts(Module_BD) > 0_IntKi ) THEN !BeamDyn
       do i=1,p_FAST%nBeams
@@ -1876,71 +1747,61 @@ end do
    
       ! none for AeroDyn14 
    
-   IF ( y_FAST%numOuts(Module_AD) > 0_IntKi ) THEN !AeroDyn
-      indxLast = indxNext + y_FAST%numOuts(Module_AD) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_AD%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_AD%WriteOutputUnt
-      indxNext = indxLast + 1
-   END IF
+   DO i=1,y_FAST%numOuts(Module_AD) !AeroDyn
+      y_FAST%ChannelNames(indxNext) = InitOutData_AD%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_AD%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO   
+   
+   DO i=1,y_FAST%numOuts(Module_SrvD) !ServoDyn
+      y_FAST%ChannelNames(indxNext) = InitOutData_SrvD%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_SrvD%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO   
 
-   
-   IF ( y_FAST%numOuts(Module_SrvD) > 0_IntKi ) THEN !ServoDyn
-      indxLast = indxNext + y_FAST%numOuts(Module_SrvD) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_SrvD%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_SrvD%WriteOutputUnt
-      indxNext = indxLast + 1
-   END IF
+   DO i=1,y_FAST%numOuts(Module_HD) !HydroDyn
+      y_FAST%ChannelNames(indxNext) = InitOutData_HD%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_HD%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO      
 
-   IF ( y_FAST%numOuts(Module_HD) > 0_IntKi ) THEN !HydroDyn
-      indxLast = indxNext + y_FAST%numOuts(Module_HD) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_HD%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_HD%WriteOutputUnt
-      indxNext = indxLast + 1
-   END IF
+   DO i=1,y_FAST%numOuts(Module_SD) !SubDyn
+      y_FAST%ChannelNames(indxNext) = InitOutData_SD%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_SD%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO      
+   
+   DO i=1,y_FAST%numOuts(Module_MAP) !MAP
+      y_FAST%ChannelNames(indxNext) = InitOutData_MAP%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_MAP%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO      
+   
+   DO i=1,y_FAST%numOuts(Module_MD) !MoorDyn
+      y_FAST%ChannelNames(indxNext) = InitOutData_MD%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_MD%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO      
 
-   
-   IF ( y_FAST%numOuts(Module_SD) > 0_IntKi ) THEN !SubDyn
-      indxLast = indxNext + y_FAST%numOuts(Module_SD) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_SD%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_SD%WriteOutputUnt
-      indxNext = indxLast + 1
-   ELSEIF ( y_FAST%numOuts(Module_ExtPtfm) > 0_IntKi ) THEN !ExtPtfm_MCKF
-      indxLast = indxNext + y_FAST%numOuts(Module_ExtPtfm) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_ExtPtfm%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_ExtPtfm%WriteOutputUnt
-      indxNext = indxLast + 1
-   END IF
+   DO i=1,y_FAST%numOuts(Module_FEAM) !FEAMooring
+      y_FAST%ChannelNames(indxNext) = InitOutData_FEAM%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_FEAM%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO      
 
+   DO i=1,y_FAST%numOuts(Module_Orca) !OrcaFlex
+      y_FAST%ChannelNames(indxNext) = InitOutData_Orca%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_Orca%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO         
    
-   IF ( y_FAST%numOuts(Module_MAP) > 0_IntKi ) THEN !MAP
-      indxLast = indxNext + y_FAST%numOuts(Module_MAP) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_MAP%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_MAP%WriteOutputUnt
-      indxNext = indxLast + 1
-   ELSEIF ( y_FAST%numOuts(Module_MD) > 0_IntKi ) THEN !MoorDyn
-      indxLast = indxNext + y_FAST%numOuts(Module_MD) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_MD%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_MD%WriteOutputUnt
-      indxNext = indxLast + 1
-   ELSEIF ( y_FAST%numOuts(Module_FEAM) > 0_IntKi ) THEN !FEAMooring
-      indxLast = indxNext + y_FAST%numOuts(Module_FEAM) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_FEAM%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_FEAM%WriteOutputUnt
-      indxNext = indxLast + 1
-   ELSEIF ( y_FAST%numOuts(Module_Orca) > 0_IntKi ) THEN !OrcaFlex
-      indxLast = indxNext + y_FAST%numOuts(Module_Orca) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_Orca%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_Orca%WriteOutputUnt
-      indxNext = indxLast + 1
-   END IF
+   DO i=1,y_FAST%numOuts(Module_IceF) !IceFloe
+      y_FAST%ChannelNames(indxNext) = InitOutData_IceF%WriteOutputHdr(i)
+      y_FAST%ChannelUnits(indxNext) = InitOutData_IceF%WriteOutputUnt(i)
+      indxNext = indxNext + 1
+   END DO         
    
-   
-   IF ( y_FAST%numOuts(Module_IceF) > 0_IntKi ) THEN !IceFloe
-      indxLast = indxNext + y_FAST%numOuts(Module_IceF) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_IceF%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_IceF%WriteOutputUnt
-      indxNext = indxLast + 1
-   ELSEIF ( y_FAST%numOuts(Module_IceD) > 0_IntKi ) THEN !IceDyn
+   IF ( y_FAST%numOuts(Module_IceD) > 0_IntKi ) THEN !IceDyn
       DO I=1,p_FAST%numIceLegs         
          DO J=1,SIZE(InitOutData_IceD%WriteOutputHdr) 
             y_FAST%ChannelNames(indxNext) =TRIM(InitOutData_IceD%WriteOutputHdr(J))//'L'//TRIM(Num2Lstr(I))  !bjj: do we want this "Lx" at the end?
@@ -2009,7 +1870,7 @@ end do
       CALL AllocAry( y_FAST%AllOutData, NumOuts-1, y_FAST%NOutSteps, 'AllOutData', ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-      IF ( OutputFileFmtID == FileFmtID_WithoutTime ) THEN
+      IF ( OutputFileFmtID /= FileFmtID_WithTime ) THEN
 
          CALL AllocAry( y_FAST%TimeData, 2_IntKi, 'TimeData', ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
@@ -2035,14 +1896,13 @@ END SUBROUTINE FAST_InitOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads in the primary FAST input file, does some validation, and places the values it reads in the
 !!   parameter structure (p). It prints to an echo file if requested.
-SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, OverrideAbortErrLev, ErrStat, ErrMsg )
+SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
 
    IMPLICIT                        NONE
 
       ! Passed variables
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
    CHARACTER(*),             INTENT(IN)    :: InputFile                       !< Name of the file containing the primary input data
-   LOGICAL,                  INTENT(IN)    :: OverrideAbortErrLev             !< Determines if we should override AbortErrLev
    INTEGER(IntKi),           INTENT(OUT)   :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(OUT)   :: ErrMsg                          !< Error message
 
@@ -2169,24 +2029,22 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, OverrideAbortErrLev, ErrStat, Err
          RETURN        
       end if
 
-      IF (OverrideAbortErrLev) THEN
       ! Let's set the abort level here.... knowing that everything before this aborted only on FATAL errors!
-         CALL Conv2UC( AbortLevel ) !convert to upper case
-         SELECT CASE( TRIM(AbortLevel) )
-            CASE ( "WARNING" )
-               AbortErrLev = ErrID_Warn
-            CASE ( "SEVERE" )
-               AbortErrLev = ErrID_Severe
-            CASE ( "FATAL" )
-               AbortErrLev = ErrID_Fatal
-            CASE DEFAULT
-               CALL SetErrStat( ErrID_Fatal, 'Invalid AbortLevel specified in FAST input file. '// &
-                                'Valid entries are "WARNING", "SEVERE", or "FATAL".',ErrStat,ErrMsg,RoutineName)
-               call cleanup()
-               RETURN
-         END SELECT
-      END IF
-      
+      CALL Conv2UC( AbortLevel ) !convert to upper case
+      SELECT CASE( TRIM(AbortLevel) )
+         CASE ( "WARNING" )
+            AbortErrLev = ErrID_Warn
+         CASE ( "SEVERE" )
+            AbortErrLev = ErrID_Severe
+         CASE ( "FATAL" )
+            AbortErrLev = ErrID_Fatal
+         CASE DEFAULT
+            CALL SetErrStat( ErrID_Fatal, 'Invalid AbortLevel specified in FAST input file. '// &
+                             'Valid entries are "WARNING", "SEVERE", or "FATAL".',ErrStat,ErrMsg,RoutineName)
+            call cleanup()
+            RETURN
+      END SELECT
+
 
       ! TMax - Total run time (s):
    CALL ReadVar( UnIn, InputFile, p%TMax, "TMax", "Total run time (s)", ErrStat2, ErrMsg2, UnEc)
@@ -2344,7 +2202,7 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, OverrideAbortErrLev, ErrStat, Err
             p%CompHydro = Module_Unknown
          END IF
          
-      ! CompSub - Compute sub-structural dynamics (switch) {0=None; 1=SubDyn; 2=ExtPtfm_MCKF}:
+      ! CompSub - Compute sub-structural dynamics (switch) {0=None; 1=SubDyn}:
    CALL ReadVar( UnIn, InputFile, p%CompSub, "CompSub", "Compute sub-structural dynamics (switch) {0=None; 1=SubDyn}", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
@@ -2357,8 +2215,6 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, OverrideAbortErrLev, ErrStat, Err
             p%CompSub = Module_NONE
          ELSEIF ( p%CompSub == 1 ) THEN
             p%CompSub = Module_SD
-         ELSEIF ( p%CompSub == 2 ) THEN
-            p%CompSub = Module_ExtPtfm
          ELSE
             p%CompSub = Module_Unknown
          END IF
@@ -2804,8 +2660,8 @@ END SUBROUTINE FAST_ReadPrimaryFile
 SUBROUTINE SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType),     INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
-   TYPE(ED_InitOutputType),      INTENT(IN   ) :: InitOutData_ED   !< The initialization output from structural dynamics module
-   TYPE(HydroDyn_InitInputType), INTENT(INOUT) :: InitInData_HD    !< The initialization input to HydroDyn
+   TYPE(ED_InitOutputType),      INTENT(INOUT) :: InitOutData_ED   !< The initialization output from structural dynamics module
+   TYPE(HydroDyn_InitInputType), INTENT(INOUT) :: InitInData_HD    !< The initialization input toHydroDyn
    TYPE(BeamDyn_Data),           INTENT(IN   ) :: BD               !< BeamDyn data
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
@@ -2868,7 +2724,7 @@ END SUBROUTINE SetVTKParameters_B4HD
 SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_HD, InitOutData_HD, ED, BD, AD, HD, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType),     INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
-   TYPE(ED_InitOutputType),      INTENT(IN   ) :: InitOutData_ED   !< The initialization output from structural dynamics module
+   TYPE(ED_InitOutputType),      INTENT(INOUT) :: InitOutData_ED   !< The initialization output from structural dynamics module
    TYPE(AD_InitOutputType),      INTENT(INOUT) :: InitOutData_AD   !< The initialization output from AeroDyn
    TYPE(HydroDyn_InitInputType), INTENT(INOUT) :: InitInData_HD    !< The initialization input to HydroDyn
    TYPE(HydroDyn_InitOutputType),INTENT(INOUT) :: InitOutData_HD   !< The initialization output from HydroDyn
@@ -2896,7 +2752,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
    
    NumBl = SIZE(ED%Output(1)%BladeRootMotion,1) 
    
-   p_FAST%VTK_Surface%NumSectors = 18   
+   p_FAST%VTK_Surface%NumSectors = 25   
    p_FAST%VTK_Surface%HubRad     = InitOutData_ED%HubRad
 
    ! NOTE: we set p_FAST%VTK_Surface%GroundRad in SetVTKParameters_B4HD
@@ -2956,6 +2812,23 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
       TwrLength = TwoNorm( ED%Output(1)%TowerLn2Mesh%position(:,k) - ED%Output(1)%TowerLn2Mesh%position(:,baseNode) ) 
       p_FAST%VTK_Surface%TowerRad(k) = 0.5*TwrDiam_Base + TwrRatio*TwrLength
    end do
+   
+!>>>>>>>>>>   
+      ! override for Envision tower:
+   do k=1,ED%Output(1)%TowerLn2Mesh%NNodes
+      TwrLength = TwoNorm( ED%Output(1)%TowerLn2Mesh%position(:,k) - ED%Output(1)%TowerLn2Mesh%position(:,baseNode) ) 
+   
+      if (TwrLength < 73.4) then
+         p_FAST%VTK_Surface%TowerRad(k) = 4.3
+      elseif (TwrLength > 91.1) then
+         p_FAST%VTK_Surface%TowerRad(k) = 8.3305 - 0.0456*TwrLength
+      else
+         p_FAST%VTK_Surface%TowerRad(k) = 4.7962- 0.0068*TwrLength 
+      end if
+        
+      p_FAST%VTK_Surface%TowerRad(k)= p_FAST%VTK_Surface%TowerRad(k)  / 2;
+   end do
+!<<<<<<<<<<<<<<<<
    
    !.......................
    ! blade surfaces
@@ -3290,7 +3163,7 @@ SUBROUTINE AD_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrSta
    RETURN
 END SUBROUTINE AD_SetInitInput
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the number of subcycles (substeps) for modules at initialization, checking to make sure that their requested 
+!> This module sets the number of subcycles (substeps) for modules at initialization, checking to make sure that their requested 
 !! time step is valid.
 SUBROUTINE SetModuleSubstepTime(ModuleID, p_FAST, y_FAST, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(IN   ) :: ModuleID            !< ID of the module to check time step and set
@@ -3403,10 +3276,6 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    IF ( p_FAST%CompSub /= Module_SD ) DescStr = TRIM(DescStr)//NotUsedTxt
    WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
    
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_ExtPtfm ) )
-   IF ( p_FAST%CompSub /= Module_ExtPtfm ) DescStr = TRIM(DescStr)//NotUsedTxt
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-   
    DescStr = GetNVD( y_FAST%Module_Ver( Module_MAP ) )
    IF ( p_FAST%CompMooring /= Module_MAP ) DescStr = TRIM(DescStr)//NotUsedTxt
    WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
@@ -3474,16 +3343,16 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
       
    !.......................... Information About Coupling ...................................................
       
-   IF ( ALLOCATED( MeshMapData%Jacobian_Opt1 ) ) then ! we're using option 1
+   IF ( ALLOCATED( MeshMapData%Jacobian_ED_SD_HD_BD ) ) then !ED-SD-HD-BD
       
-      IF ( p_FAST%CompSub /= Module_None .OR. p_FAST%CompElast == Module_BD .OR. p_FAST%CompMooring == Module_Orca ) THEN  ! SubDyn-BeamDyn-HydroDyn-ElastoDyn-ExtPtfm
-         DescStr = 'ElastoDyn, SubDyn, HydroDyn, OrcaFlex, ExtPtfm_MCKF, and/or BeamDyn'                  
+      IF ( p_FAST%CompSub == Module_SD .OR. p_FAST%CompElast == Module_BD .OR. p_FAST%CompMooring == Module_Orca ) THEN  ! SubDyn-BeamDyn-HydroDyn-ElastoDyn
+         DescStr = 'ElastoDyn, SubDyn, HydroDyn, OrcaFlex, and/or BeamDyn'                  
       ELSE ! IF ( p_FAST%CompHydro == Module_HD ) THEN
          DescStr = "ElastoDyn to HydroDyn"
       END IF
                   
       WRITE(y_FAST%UnSum,'( A,I6)'  ) 'Number of rows in Jacobian matrix used for coupling '//TRIM(DescStr)//': ', &
-                                       SIZE(MeshMapData%Jacobian_Opt1, 1)
+                                       SIZE(MeshMapData%Jacobian_ED_SD_HD_BD, 1)
    END IF
 
    !.......................... Time step information: ...................................................
@@ -3531,7 +3400,7 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    !.......................... Requested Output Channels ............................................
 
    WRITE (y_FAST%UnSum,'(//,2X,A)') " Requested Channels in FAST Output File(s)  "
-   WRITE (y_FAST%UnSum,   '(2X,A)') "--------------------------------------------"
+   WRITE (y_FAST%UnSum,   '(2X,A)') "------------------------------------------------------"
    Fmt = '(2X,A6,2(2X,A'//TRIM(num2lstr(ChanLen))//'),2X,A)'
    ChanTxt(1) = 'Name'
    ChanTxt(2) = 'Units'
@@ -3578,14 +3447,13 @@ SUBROUTINE FAST_Solution0_T(Turbine, ErrStat, ErrMsg)
 
       CALL FAST_Solution0(Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                      Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
       
 END SUBROUTINE FAST_Solution0_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that calls CalcOutput for the first time of the simulation (at t=0). After the initial solve, data arrays are initialized.
-SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                          MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
@@ -3600,7 +3468,6 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
-   TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
    TYPE(MoorDyn_Data),       INTENT(INOUT) :: MD                  !< Data for the MoorDyn module
@@ -3626,10 +3493,8 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   IF (p_FAST%WrSttsTime) then
-      CALL SimStatus_FirstTime( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )
-   END IF
    
+   CALL SimStatus_FirstTime( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, p_FAST%TMax )
 
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
@@ -3637,7 +3502,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
 #ifdef SOLVE_OPTION_1_BEFORE_2
 ! used for Option 1 before Option 2:
 
-   IF ( p_FAST%CompSub /= Module_None .OR. p_FAST%CompHydro == Module_HD ) THEN
+   IF ( p_FAST%CompSub == Module_SD .OR. p_FAST%CompHydro == Module_HD ) THEN
    ! Because SubDyn needs a better initial guess from ElastoDyn, we'll add an additional call to ED_CalcOutput to get them:
    ! (we'll do the same for HydroDyn, though I'm not sure it's as critical)
    
@@ -3645,8 +3510,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
                           ED%Output(1), ED%m, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-      CALL Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, ED%Output(1), HD%Input(1), SD%Input(1), ExtPtfm%Input(1), &
-                                            MAPp%Input(1), FEAM%Input(1), MD%Input(1), &
+      CALL Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, ED%Output(1), HD%Input(1), SD%Input(1), MAPp%Input(1), FEAM%Input(1), MD%Input(1), &
                                             Orca%Input(1), BD%Input(1,:), MeshMapData, ErrStat2, ErrMsg2 )         
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                
@@ -3658,8 +3522,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    IF ( p_FAST%CompInflow == Module_IfW ) CALL IfW_SetExternalInputs( IfW%p, m_FAST, ED%Output(1), IfW%Input(1) )  
 
    CALL CalcOutputs_And_SolveForInputs(  n_t_global, m_FAST%t_global,  STATE_CURR, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
-                        p_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                        MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
+                        p_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
             
@@ -3667,7 +3530,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    ! Check to see if we should output data this time step:
    !----------------------------------------------------------------------------------------
 
-   CALL WriteOutputToFile(0, m_FAST%t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)   
+   CALL WriteOutputToFile(0, m_FAST%t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)   
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! turn off VTK output when
@@ -3679,7 +3542,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
       ELSE IF ( p_FAST%VTK_Type == VTK_Basic ) THEN
          CALL WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
       ELSE IF ( p_FAST%VTK_Type == VTK_All ) THEN
-         CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)                                 
+         CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)                                 
       ELSE IF (p_FAST%VTK_Type==VTK_Old) THEN
          CALL WriteInputMeshesToFile( ED%Input(1), AD%Input(1), SD%Input(1), HD%Input(1), MAPp%Input(1), BD%Input(1,:), TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin', ErrStat2, ErrMsg2)                                    
    !unOut = -1
@@ -3701,8 +3564,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
          
    ! Initialize Input-Output arrays for interpolation/extrapolation:
 
-   CALL FAST_InitIOarrays( m_FAST%t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, &
-                           MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
+   CALL FAST_InitIOarrays( m_FAST%t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
 
@@ -3711,8 +3573,7 @@ END SUBROUTINE FAST_Solution0
 !> This routine initializes the input and output arrays stored for extrapolation. They are initialized after the first input-output solve so that the first
 !! extrapolations are used with values from the solution, not just initial guesses. It also creates new copies of the state variables, which need to 
 !! be stored for the predictor-corrector loop.
-SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, &
-                              MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat, ErrMsg )
+SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< start time of the simulation 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -3727,7 +3588,6 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
-   TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
    TYPE(MoorDyn_Data),       INTENT(INOUT) :: MD                  !< MoorDyn data
@@ -3978,31 +3838,6 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL SD_CopyOtherState( SD%OtherSt(STATE_CURR), SD%OtherSt(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-         
-   ELSE IF (p_FAST%CompSub == Module_ExtPtfm ) THEN      
-
-         ! Copy values for interpolation/extrapolation:
-      DO j = 1, p_FAST%InterpOrder + 1
-         ExtPtfm%InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
-      END DO
-
-      DO j = 2, p_FAST%InterpOrder + 1
-         CALL ExtPtfm_CopyInput (ExtPtfm%Input(1),  ExtPtfm%Input(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
-            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      END DO
-      CALL ExtPtfm_CopyInput (ExtPtfm%Input(1),  ExtPtfm%u,  MESH_NEWCOPY, Errstat2, ErrMsg2) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )      
-                               
-         
-         ! Initialize predicted states for j_pc loop:
-      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_CURR), ExtPtfm%x( STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_CURR), ExtPtfm%xd(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)  
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_CURR), ExtPtfm%z( STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyOtherState( ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%OtherSt(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
    END IF ! CompSub         
       
    
@@ -4189,14 +4024,14 @@ SUBROUTINE FAST_Solution_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
    
       CALL FAST_Solution(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
-                  Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                  Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                   Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )                  
                   
 END SUBROUTINE FAST_Solution_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine takes data from n_t_global and gets values at n_t_global + 1
-SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                         MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, MAPp, FEAM, MD, Orca, &
+                         IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< loop counter
@@ -4214,7 +4049,6 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
-   TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
    TYPE(MoorDyn_Data),       INTENT(INOUT) :: MD                  !< Data for the MoorDyn module
@@ -4230,6 +4064,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    ! local variables
    REAL(DbKi)                              :: t_global_next       ! next simulation time (m_FAST%t_global + p_FAST%dt)
    INTEGER(IntKi)                          :: j_pc                ! predictor-corrector loop counter 
+   INTEGER(IntKi)                          :: NumCorrections      ! number of corrections for this time step 
    
    INTEGER(IntKi)                          :: I, k                ! generic loop counters
    
@@ -4255,6 +4090,18 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       
    END IF
       
+   
+   IF ( p_FAST%CompElast == Module_BD ) THEN
+      if (n_t_global > 2) then ! this should probably be related to p_FAST%InterpOrder
+         NumCorrections = p_FAST%NumCrctn
+      elseif (n_t_global == 0) then
+         NumCorrections = max(p_FAST%NumCrctn,16)
+      else      
+         NumCorrections = max(p_FAST%NumCrctn,1)
+      end if
+   END IF
+   
+   
       ! the ServoDyn inputs from Simulink are for t, not t+dt, so we're going to overwrite the inputs from
       ! the previous step before we extrapolate these inputs:
    IF ( p_FAST%CompServo == Module_SrvD ) CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )   
@@ -4264,13 +4111,12 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !!
    !! gives predicted values at t+dt
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   CALL FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, &
-                               MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
+   CALL FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       
    !! predictor-corrector loop:
-   DO j_pc = 0, p_FAST%NumCrctn
+   DO j_pc = 0, NumCorrections
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    !! ## Step 1.b: Advance states (yield state and constraint values at t_global_next)
    !!
@@ -4278,8 +4124,8 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !! STATE_PRED values contain values at t_global_next.
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       
-      CALL FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, &
-                               MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )               
+      CALL FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, MAPp, FEAM, MD, &
+                               Orca, IceF, IceD, ErrStat2, ErrMsg2 )               
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) RETURN
          
@@ -4288,7 +4134,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
       CALL CalcOutputs_And_SolveForInputs( n_t_global, t_global_next,  STATE_PRED, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
-         p_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )            
+            p_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )            
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) RETURN
          
@@ -4403,15 +4249,6 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL SD_CopyOtherState (SD%OtherSt(STATE_PRED), SD%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
-      CALL ExtPtfm_CopyContState   (ExtPtfm%x( STATE_PRED), ExtPtfm%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyDiscState   (ExtPtfm%xd(STATE_PRED), ExtPtfm%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)  
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyConstrState (ExtPtfm%z( STATE_PRED), ExtPtfm%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL ExtPtfm_CopyOtherState (ExtPtfm%OtherSt(STATE_PRED), ExtPtfm%OtherSt(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
          
       
@@ -4491,23 +4328,20 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !! Check to see if we should output data this time step:
    !----------------------------------------------------------------------------------------
 
-   CALL WriteOutputToFile(n_t_global, m_FAST%t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                          SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
+   CALL WriteOutputToFile(n_t_global, m_FAST%t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    !----------------------------------------------------------------------------------------
    !! Display simulation status every SttsTime-seconds (i.e., n_SttsTime steps):
    !----------------------------------------------------------------------------------------   
       
-   IF (p_FAST%WrSttsTime) then
-      IF ( MOD( n_t_global + 1, p_FAST%n_SttsTime ) == 0 ) THEN
+   IF ( MOD( n_t_global + 1, p_FAST%n_SttsTime ) == 0 ) THEN
       
-         if (.not. Cmpl4SFun) then   
-            CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )
-         end if
+      if (.not. Cmpl4SFun) then   
+         CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax )
+      end if
       
-      ENDIF
-   ENDIF
+   ENDIF   
      
 END SUBROUTINE FAST_Solution
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4515,8 +4349,7 @@ END SUBROUTINE FAST_Solution
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine determines if it's time to write to the output files, and calls the routine to write to the files
 !! with the output data. It should be called after all the output solves for a given time have been completed.
-SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                             SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg)
+SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg)
 !...............................................................................................................................
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< Previous (just completed) global time step
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
@@ -4532,7 +4365,6 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
    TYPE(OpenFOAM_Data),      INTENT(IN   ) :: OpFM                !< OpenFOAM data
    TYPE(HydroDyn_Data),      INTENT(IN   ) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(IN   ) :: SD                  !< SubDyn data
-   TYPE(ExtPtfm_Data),       INTENT(IN   ) :: ExtPtfm             !< ExtPtfm_MCKF data
    TYPE(MAP_Data),           INTENT(IN   ) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(IN   ) :: FEAM                !< FEAMooring data
    TYPE(MoorDyn_Data),       INTENT(IN   ) :: MD                  !< MoorDyn data
@@ -4565,7 +4397,7 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
             ! Generate glue-code output file
 
             CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW%y%WriteOutput, OpFM%y%WriteOutput, ED%Output(1)%WriteOutput, &
-                  AD%y%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, SD%y%WriteOutput, ExtPtfm%y%WriteOutput, MAPp%y%WriteOutput, &
+                  AD%y%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, SD%y%WriteOutput, MAPp%y%WriteOutput, &
                   FEAM%y%WriteOutput, MD%y%WriteOutput, Orca%y%WriteOutput, IceF%y%WriteOutput, IceD%y, BD%y, ErrStat, ErrMsg )
                                                                       
       END IF
@@ -4581,7 +4413,7 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
          ELSE IF ( p_FAST%VTK_Type == VTK_Basic ) THEN
             CALL WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
          ELSE IF ( p_FAST%VTK_Type == VTK_All ) THEN
-            CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)                                 
+            CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)                                 
          ELSE IF (p_FAST%VTK_Type==VTK_Old) THEN                           
             CALL WriteMotionMeshesToFile(t_global, ED%Output(1), SD%Input(1), SD%y, HD%Input(1), MAPp%Input(1), BD%y, BD%Input(1,:), y_FAST%UnGra, ErrStat2, ErrMsg2, TRIM(p_FAST%OutFileRoot)//'.gra') 
          END IF
@@ -4594,8 +4426,8 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
 END SUBROUTINE WriteOutputToFile     
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes the module output to the primary output file(s).
-SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, ExtPtfmOutput,&
-                        MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, ErrStat, ErrMsg)
+SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, MAPOutput, FEAMOutput, &
+                        MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, ErrStat, ErrMsg)
 
    IMPLICIT                        NONE
    
@@ -4612,7 +4444,6 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADO
    REAL(ReKi),               INTENT(IN)    :: SrvDOutput (:)                     !< ServoDyn WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: HDOutput (:)                       !< HydroDyn WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: SDOutput (:)                       !< SubDyn WriteOutput values
-   REAL(ReKi),               INTENT(IN)    :: ExtPtfmOutput (:)                  !< ExtPtfm_MCKF WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: MAPOutput (:)                      !< MAP WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: FEAMOutput (:)                     !< FEAMooring WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: MDOutput (:)                       !< MoorDyn WriteOutput values
@@ -4634,8 +4465,8 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADO
    ErrStat = ErrID_None
    ErrMsg  = ''
    
-   CALL FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, ExtPtfmOutput, &
-                      MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, OutputAry)   
+   CALL FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, MAPOutput, FEAMOutput, &
+                           MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, OutputAry)   
 
    IF (p_FAST%WrTxtOutFile) THEN
 
@@ -4662,9 +4493,7 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADO
          ! Write data to array for binary output file
 
       IF ( y_FAST%n_Out == y_FAST%NOutSteps ) THEN
-         ErrStat = ErrID_Warn
-         ErrMsg = 'Not all data could be written to the binary output file.'
-         !CALL ProgWarn( 'Not all data could be written to the binary output file.' )
+         CALL ProgWarn( 'Not all data could be written to the binary output file.' )
          !this really would only happen if we have an error somewhere else, right?
          !otherwise, we could allocate a new, larger array and move existing data
       ELSE
@@ -4695,16 +4524,16 @@ SUBROUTINE FillOutputAry_T(Turbine, Outputs)
 
       CALL FillOutputAry(Turbine%p_FAST, Turbine%y_FAST, Turbine%IfW%y%WriteOutput, Turbine%OpFM%y%WriteOutput, &
                 Turbine%ED%Output(1)%WriteOutput, Turbine%AD%y%WriteOutput, Turbine%SrvD%y%WriteOutput, &
-                Turbine%HD%y%WriteOutput, Turbine%SD%y%WriteOutput, Turbine%ExtPtfm%y%WriteOutput, Turbine%MAP%y%WriteOutput, &
-                Turbine%FEAM%y%WriteOutput, Turbine%MD%y%WriteOutput, Turbine%Orca%y%WriteOutput, &
+                Turbine%HD%y%WriteOutput, Turbine%SD%y%WriteOutput, Turbine%MAP%y%WriteOutput, Turbine%FEAM%y%WriteOutput, &
+                Turbine%MD%y%WriteOutput, Turbine%Orca%y%WriteOutput, &
                 Turbine%IceF%y%WriteOutput, Turbine%IceD%y, Turbine%BD%y, Outputs)   
                         
 END SUBROUTINE FillOutputAry_T                        
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine concatenates all of the WriteOutput values from the module Output into one array to be written to the FAST 
 !! output file.
-SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, ExtPtfmOutput, &
-                        MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, OutputAry)
+SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, MAPOutput, FEAMOutput, &
+                        MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, OutputAry)
 
    TYPE(FAST_ParameterType), INTENT(IN)    :: p_FAST                             !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),INTENT(IN)    :: y_FAST                             !< Glue-code simulation outputs
@@ -4716,7 +4545,6 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutp
    REAL(ReKi),               INTENT(IN)    :: SrvDOutput (:)                     !< ServoDyn WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: HDOutput (:)                       !< HydroDyn WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: SDOutput (:)                       !< SubDyn WriteOutput values
-   REAL(ReKi),               INTENT(IN)    :: ExtPtfmOutput (:)                  !< ExtPtfm_MCKF WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: MAPOutput (:)                      !< MAP WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: FEAMOutput (:)                     !< FEAMooring WriteOutput values
    REAL(ReKi),               INTENT(IN)    :: MDOutput (:)                       !< MoorDyn WriteOutput values
@@ -4783,10 +4611,6 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutp
          indxLast = indxNext + SIZE(SDOutput) - 1
          OutputAry(indxNext:indxLast) = SDOutput
          indxNext = IndxLast + 1
-      ELSE IF ( y_FAST%numOuts(Module_ExtPtfm) > 0 ) THEN
-         indxLast = indxNext + SIZE(ExtPtfmOutput) - 1
-         OutputAry(indxNext:indxLast) = ExtPtfmOutput
-         indxNext = IndxLast + 1
       END IF
                   
       IF ( y_FAST%numOuts(Module_MAP) > 0 ) THEN
@@ -4822,7 +4646,7 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADOutp
 END SUBROUTINE FillOutputAry
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes all the committed meshes to VTK-formatted files. It doesn't bother with returning an error code.
-SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
+SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(IN   ) :: y_FAST              !< Output variables for the glue code
@@ -4837,7 +4661,6 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
    TYPE(OpenFOAM_Data),      INTENT(IN   ) :: OpFM                !< OpenFOAM data
    TYPE(HydroDyn_Data),      INTENT(IN   ) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(IN   ) :: SD                  !< SubDyn data
-   TYPE(ExtPtfm_Data),       INTENT(IN   ) :: ExtPtfm             !< ExtPtfm data
    TYPE(MAP_Data),           INTENT(IN   ) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(IN   ) :: FEAM                !< FEAMooring data
    TYPE(MoorDyn_Data),       INTENT(IN   ) :: MD                  !< MoorDyn data
@@ -4853,11 +4676,10 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_AllMeshes'
    
    
-   NumBl = 0
    if (allocated(ED%Output)) then
-      if (allocated(ED%Output(1)%BladeRootMotion)) then
-         NumBl = SIZE(ED%Output(1)%BladeRootMotion)      
-      end if
+      NumBl = SIZE(ED%Output(1)%BladeRootMotion)            
+   else
+      NumBl = 0
    end if
    
    
@@ -4901,15 +4723,25 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
             call MeshWrVTK(p_FAST%TurbinePos, BD%Input(1,k)%DistrLoad, trim(p_FAST%OutFileRoot)//'.BD_DistrLoad'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, MeshMapData%y_BD_BldMotion_4Loads(k) )
             ! skipping PointLoad
          end do
+      elseif (p_FAST%BD_OutputSibling) then
+         do K=1,NumBl 
+            call MeshWrVTK(p_FAST%TurbinePos, BD%Input(1,k)%DistrLoad, trim(p_FAST%OutFileRoot)//'.BD_Blade'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, BD%y(k)%BldMotion )
+            ! skipping PointLoad
+         end do
       end if
-      
-      
+
       do K=1,NumBl        
             ! BeamDyn outputs
          call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%ReactionForce, trim(p_FAST%OutFileRoot)//'.BD_ReactionForce_RootMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, BD%Input(1,k)%RootMotion )
-         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
-         ! skipping BldForce         
       end do  
+      
+      if (.not. p_FAST%BD_OutputSibling) then !otherwise this mesh has been put with the DistrLoad mesh
+         do K=1,NumBl        
+               ! BeamDyn outputs
+            call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
+         end do  
+      end if
+      
       
    ELSE if (allocated(ED%Input) .and. allocated(ED%Output)) then
       ! ElastoDyn
@@ -4979,8 +4811,6 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
       
       call MeshWrVTK(p_FAST%TurbinePos, SD%y%y1Mesh, trim(p_FAST%OutFileRoot)//'.SD_y1Mesh_TPMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, SD%Input(1)%TPMesh )     
       !call MeshWrVTK(p_FAST%TurbinePos, SD%y%y2Mesh, trim(p_FAST%OutFileRoot)//'.SD_y2Mesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
-   ELSE IF ( p_FAST%CompSub == Module_ExtPtfm .and. allocated(ExtPtfm%Input)) THEN
-      call MeshWrVTK(p_FAST%TurbinePos, ExtPtfm%y%PtfmMesh, trim(p_FAST%OutFileRoot)//'.ExtPtfm', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, ExtPtfm%Input(1)%PtfmMesh )     
    END IF     
        
 ! MAP
@@ -5625,7 +5455,8 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
             
          BlankLine = ""
          CALL WrOver( BlankLine )  ! BlankLine contains MaxWrScrLen spaces
-         CALL WrOver ( ' Performing linearization at simulation time '//TRIM( Num2LStr(t_global) )//' s.' )
+         CALL WrOver ( ' Performing linearization at simulation time '//TRIM( Num2LStr(t_global) )//' s. (RotSpeed='&
+                       //trim(num2lstr(Turbine%ED%Output(1)%RotSpeed*RPS2RPM))//' rpm, BldPitch1='//trim(num2lstr(Turbine%ED%Output(1)%BlPitch(1)*R2D))//' deg)'  )
          CALL WrScr('')
 
 
@@ -5652,11 +5483,10 @@ END SUBROUTINE FAST_Linearize_T
 !> Routine that calls ExitThisProgram for one instance of a Turbine data structure. This is a separate subroutine so that the FAST
 !! driver programs do not need to change or operate on the individual module level. 
 !! This routine should be called from glue code only (e.g., FAST_Prog.f90). It should not be called in any of these driver routines.
-SUBROUTINE ExitThisProgram_T( Turbine, ErrLevel_in, StopTheProgram, ErrLocMsg )
+SUBROUTINE ExitThisProgram_T( Turbine, ErrLevel_in, ErrLocMsg )
    
    TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             !< Data for one turbine instance
    INTEGER(IntKi),           INTENT(IN)    :: ErrLevel_in         !< Error level when Error == .TRUE. (required when Error is .TRUE.)
-   LOGICAL,                  INTENT(IN)    :: StopTheProgram      !< flag indicating if the program should end (false if there are more turbines to end)
    CHARACTER(*), OPTIONAL,   INTENT(IN)    :: ErrLocMsg           !< an optional message describing the location of the error
    
    
@@ -5664,15 +5494,15 @@ SUBROUTINE ExitThisProgram_T( Turbine, ErrLevel_in, StopTheProgram, ErrLocMsg )
       
       CALL ExitThisProgram( Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrLevel_in, StopTheProgram, ErrLocMsg )
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrLevel_in, ErrLocMsg )
    
    ELSE     
       
       CALL ExitThisProgram( Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                      Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
-                     Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
-                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrLevel_in, StopTheProgram )
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrLevel_in )
       
    END IF
 
@@ -5682,8 +5512,7 @@ END SUBROUTINE ExitThisProgram_T
 !! main program. If there was an error, it also aborts. Otherwise, it prints the run times and performs a normal exit.
 !! This routine should not be called from glue code (e.g., FAST_Prog.f90) or ExitThisProgram_T only. It should not be called in any 
 !! of these driver routines.
-SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                            MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrLevel_in, StopTheProgram, ErrLocMsg )
+SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrLevel_in, ErrLocMsg )
 !...............................................................................................................................
 
       ! Passed arguments
@@ -5700,7 +5529,6 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
-   TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm_MCKF data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
    TYPE(MoorDyn_Data),       INTENT(INOUT) :: MD                  !< Data for the MoorDyn module
@@ -5711,7 +5539,6 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
 
    INTEGER(IntKi),           INTENT(IN)    :: ErrLevel_in         !< Error level when Error == .TRUE. (required when Error is .TRUE.)
-   LOGICAL,                  INTENT(IN)    :: StopTheProgram      !< flag indicating if the program should end (false if there are more turbines to end)
    CHARACTER(*), OPTIONAL,   INTENT(IN)    :: ErrLocMsg           !< an optional message describing the location of the error
 
 
@@ -5720,7 +5547,7 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
                                           
    INTEGER(IntKi)                          :: ErrStat2            ! Error status
    CHARACTER(1024)                         :: ErrMsg2             ! Error message
-   CHARACTER(1224)                         :: SimMsg              ! optional message to print about where the error took place in the simulation
+   CHARACTER(1024)                         :: SimMsg              ! optional message to print about where the error took place in the simulation
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'ExitThisProgram'       
    CHARACTER( LEN(p_FAST%OutFileRoot) )    :: TmpOutFileRoot
@@ -5733,14 +5560,14 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
       TmpOutFileRoot = p_FAST%OutFileRoot
       p_FAST%OutFileRoot = trim(p_FAST%OutFileRoot)//'.DebugError'
       p_FAST%VTK_fields = .true.
-      CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)                                 
+      CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)                                 
       p_FAST%OutFileRoot = TmpOutFileRoot
    end if
    
    
       
       ! End all modules
-   CALL FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
+   CALL FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat2, ErrMsg2 )
       IF (ErrStat2 /= ErrID_None) THEN
          CALL WrScr( NewLine//RoutineName//':'//TRIM(ErrMsg2)//NewLine )
          ErrorLevel = MAX(ErrorLevel,ErrStat2)
@@ -5748,7 +5575,7 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
                   
       ! Destroy all data associated with FAST variables:
 
-   CALL FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
+   CALL FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
       IF (ErrStat2 /= ErrID_None) THEN
          CALL WrScr( NewLine//RoutineName//':'//TRIM(ErrMsg2)//NewLine )
          ErrorLevel = MAX(ErrorLevel,ErrStat2)
@@ -5763,35 +5590,25 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
       IF (PRESENT(ErrLocMsg)) THEN
          SimMsg = ErrLocMsg
       ELSE
-         SimMsg = 'after the simulation completed'
+         SimMsg = 'after the simulation was complete'
       END IF
-                         
-      SimMsg = 'FAST encountered an error '//TRIM(SimMsg)//'.'//NewLine//' Simulation error level: '//TRIM(GetErrStr(ErrorLevel))
-      if (StopTheProgram) then
-         CALL ProgAbort( trim(SimMsg), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
-      else
-         CALL WrScr(trim(SimMsg))
-      end if
-                        
+                                         
+      CALL ProgAbort( 'FAST encountered an error '//TRIM(SimMsg)//'.'//NewLine//' Simulation error level: '&
+                        //TRIM(GetErrStr(ErrorLevel)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
    END IF
       
    !............................................................................................................................
    !  Write simulation times and stop
    !............................................................................................................................
 
-   IF (p_FAST%WrSttsTime) THEN
-      CALL RunTimes( m_FAST%StrtTime, m_FAST%UsrTime1, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, DescStrIn=p_FAST%TDesc )
-   END IF
-   
+   CALL RunTimes( m_FAST%StrtTime, m_FAST%UsrTime1, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global )
 
-   if (StopTheProgram) then
 #if (defined COMPILE_SIMULINK || defined COMPILE_LABVIEW)
-      ! for Simulink, this may not be a normal stop. It might call this after an error in the model.
-      CALL WrScr( NewLine//' '//TRIM(FAST_Ver%Name)//' completed.'//NewLine )
+   ! for Simulink, this may not be a normal stop. It might call this after an error in the model.
+   CALL WrScr( NewLine//' '//TRIM(FAST_Ver%Name)//' completed.'//NewLine )
 #else   
-      CALL NormStop( )
+   CALL NormStop( )
 #endif   
-   end if
 
 
 END SUBROUTINE ExitThisProgram
@@ -5863,7 +5680,7 @@ SUBROUTINE FAST_EndOutput( p_FAST, y_FAST, ErrStat, ErrMsg )
 END SUBROUTINE FAST_EndOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calls the end routines for each module that was previously initialized.
-SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat, ErrMsg )
+SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
@@ -5877,7 +5694,6 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
-   TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
    TYPE(MoorDyn_Data),       INTENT(INOUT) :: MD                  !< Data for the MoorDyn module
@@ -5955,10 +5771,6 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
       CALL SD_End( SD%Input(1), SD%p, SD%x(STATE_CURR), SD%xd(STATE_CURR), SD%z(STATE_CURR), SD%OtherSt(STATE_CURR),   &
                    SD%y, SD%m, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   ELSE IF ( p_FAST%ModuleInitialized(Module_ExtPtfm) ) THEN
-      CALL ExtPtfm_End( ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), ExtPtfm%z(STATE_CURR), &
-                        ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END IF
       
    IF ( p_FAST%ModuleInitialized(Module_MAP) ) THEN
@@ -5996,8 +5808,7 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
 END SUBROUTINE FAST_EndMods
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calls the destroy routines for each module. (It is basically a duplicate of FAST_DestroyTurbineType().)
-SUBROUTINE FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
-                            MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
@@ -6012,7 +5823,6 @@ SUBROUTINE FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
-   TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
    TYPE(MAP_Data),           INTENT(INOUT) :: MAPp                !< MAP data
    TYPE(FEAMooring_Data),    INTENT(INOUT) :: FEAM                !< FEAMooring data
    TYPE(MoorDyn_Data),       INTENT(INOUT) :: MD                  !< Data for the MoorDyn module
@@ -6085,11 +5895,6 @@ SUBROUTINE FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    ! SubDyn
    CALL FAST_DestroySubDyn_Data( SD, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      
-   ! ExtPtfm
-   CALL FAST_DestroyExtPtfm_Data( ExtPtfm, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
-      
       
    ! MAP      
    CALL FAST_DestroyMAP_Data( MAPp, ErrStat2, ErrMsg2 )
@@ -6331,10 +6136,12 @@ SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, Check
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-      ! Init NWTC_Library, display copyright and version information:
-   CALL FAST_ProgStart( FAST_Ver )
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( FAST_Ver )
+
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//GetVersion()//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
    
-      ! Restore data from checkpoint file
    Unit = -1         
    DO i_turb = 1,NumTurbines
       CALL FAST_RestoreFromCheckpoint_T(t_initial_out, n_t_global, NumTurbines_out, Turbine(i_turb), CheckpointRoot, ErrStat2, ErrMsg2, Unit )
