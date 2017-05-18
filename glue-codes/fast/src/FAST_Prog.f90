@@ -173,7 +173,6 @@ CONTAINS
          CALL WrScr( NewLine//TRIM(Msg)//NewLine )
          
          IF ( ErrID >= AbortErrLev ) THEN
-            IF (UnErrLog > 0) CLOSE(UnErrLog)
             IF (PRESENT(ErrLocMsg)) THEN
                SimMsg = ErrLocMsg
             ELSE
