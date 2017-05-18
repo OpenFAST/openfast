@@ -40,6 +40,11 @@ tolerance = sys.argv[4]
 if not os.path.isdir(sourceDirectory):
     exitWithError("The given source directory, {}, does not exist.".format(sourceDirectory))
 
+try:
+    float(tolerance)
+except ValueError:
+    exitWithError("The given tolerance, {}, is not a valid number.".format(tolerance))
+
 systemcompiler_given = True
 try:
     systemName = sys.argv[5]
