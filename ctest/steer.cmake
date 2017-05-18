@@ -62,6 +62,8 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "")
       set(TOLERANCE 0.0000001)
     endif()
 
+  else ()
+    set(TOLERANCE 0.0000001)
   endif()
 
 endif()

@@ -41,6 +41,9 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
     else()
       set(TOLERANCE 0.0000001) # Windows default
     endif()
+  
+  else ()
+    set(TOLERANCE 0.0000001)
   endif()
 
 endif()
