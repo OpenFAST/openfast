@@ -156,4 +156,5 @@ typedef      ^      OutputType         ReKi       p_plane              {:}{:}  -
 typedef      ^      OutputType         ReKi       Vx_wake              {:}{:}  -      -      "Axial wake velocity deficit at wake planes, distributed radially"      m/s
 typedef      ^      OutputType         ReKi       Vr_wake              {:}{:}  -      -      "Radial wake velocity deficit at wake planes, distributed radially"      m/s
 typedef      ^      OutputType         ReKi       D_wake               {:}     -      -      "Wake diameters at wake planes"     m
+typedef      ^      OutputType         ReKi       x_plane              {:}     -      -      "Downwind distance from rotor to each wake plane"      m
 
