@@ -36,9 +36,22 @@ caseName = sys.argv[1]
 executable = sys.argv[2]
 sourceDirectory = sys.argv[3]
 tolerance = sys.argv[4]
+
+# verify executable
+try:
+    devnull = open(os.devnull, 'w')
+    subprocess.call(executable, stdout=devnull)
+except OSError as e:
+    if e.errno == os.errno.ENOENT:
+        exitWithError("{}: {}".format(e, executable))
+    else:
+        raise
+
+# verify source directory
 if not os.path.isdir(sourceDirectory):
     exitWithError("The given source directory, {}, does not exist.".format(sourceDirectory))
 
+# verify tolerance
 try:
     float(tolerance)
 except ValueError:
@@ -102,6 +115,7 @@ caseInputFile = os.path.join(localDirectory, caseName) + ".fst"
 executionScript = os.path.join(sourceDirectory, "reg_tests", "executeOpenfastCase.py")
 command = "python {} {} {}".format(executionScript, caseInputFile, executable)
 print "'{}' - running".format(command)
+sys.stdout.flush()
 return_code = subprocess.call(command, shell=True)
 print "'{}' - finished with exit code {}".format(command, return_code)
 

@@ -58,6 +58,7 @@ elif len(sys.argv) == 3:
 # execute the given case
 command = "{} {} > {}.log".format(executable, caseInputFile, caseInputFile.split(".")[0])
 print "'{}' - running".format(command)
+sys.stdout.flush()
 return_code = subprocess.call(command, shell=True)
 print "'{}' - finished with exit code {}".format(command, return_code)
 sys.exit(return_code)
