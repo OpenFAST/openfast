@@ -46,7 +46,14 @@ if len(sys.argv) == 2:
 # verify that the given executable exists and can be run
 elif len(sys.argv) == 3:
     executable = sys.argv[2]
-
+    try:
+        devnull = open(os.devnull, 'w')
+        subprocess.call(executable, stdout=devnull)
+    except OSError as e:
+        if e.errno == os.errno.ENOENT:
+            exitWithError("{}: {}".format(e, executable))
+        else:
+            raise
 
 # execute the given case
 command = "{} {} > {}.log".format(executable, caseInputFile, caseInputFile.split(".")[0])

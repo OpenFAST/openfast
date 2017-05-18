@@ -36,7 +36,6 @@ caseName = sys.argv[1]
 executable = sys.argv[2]
 sourceDirectory = sys.argv[3]
 tolerance = sys.argv[4]
-
 if not os.path.isdir(sourceDirectory):
     exitWithError("The given source directory, {}, does not exist.".format(sourceDirectory))
 
@@ -78,9 +77,8 @@ else:
 
 targetOutput = os.path.join(targetSystem+"-"+targetCompiler)
 if not systemcompiler_given:
-    print("\nThe gold standard files are machine/compiler dependent. Remember to specify a machine and compiler type when executing this program.\n" +
-    "Usage: python executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id\n"+
-    "Currently using {}-{}.\n".format(targetSystem, targetCompiler))
+    print("\nThe gold standard files are machine-compiler dependent.\n" +
+    "Defaulting to {}-{}.\n".format(targetSystem, targetCompiler))
 
 # the r-test submodule, inputs subdirectory, and corresponding machine-compiler outputs subdirectorie are required to run the regression test
 testDataDirectory = os.path.join(sourceDirectory, "reg_tests", "r-test")
@@ -106,7 +104,9 @@ command = "python {} {} {}".format(executionScript, caseInputFile, executable)
 print "'{}' - running".format(command)
 return_code = subprocess.call(command, shell=True)
 print "'{}' - finished with exit code {}".format(command, return_code)
-# TODO check the return code here
+
+if return_code != 0:
+    exitWithError("")
 
 # build, verify, and run the regression test command based on input arguments
 regTestScript = os.path.join(sourceDirectory, "reg_tests", "pass_fail.py")
