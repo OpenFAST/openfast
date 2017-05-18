@@ -9794,6 +9794,36 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v0.01.
 
       contains
 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This function returns a string describing the glue code and some of the compilation options we're using.
+FUNCTION GetVersion(ThisProgVer)
+
+   ! Passed Variables:
+
+   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
+   CHARACTER(1024)                 :: GetVersion      !< String containing a description of the compiled precision.
+
+   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled'
+   
+   
+   GetVersion = TRIM(GetVersion)//' as a '//TRIM(Num2LStr(BITS_IN_ADDR))//'-bit application using'
+   
+   ! determine precision
+
+      IF ( ReKi == SiKi )  THEN     ! Single precision
+         GetVersion = TRIM(GetVersion)//' single'
+      ELSEIF ( ReKi == R8Ki )  THEN ! Double precision
+         GetVersion = TRIM(GetVersion)// ' double'
+      ELSE                          ! Unknown precision
+         GetVersion = TRIM(GetVersion)//' unknown'
+      ENDIF
+
+!   GetVersion = TRIM(GetVersion)//' precision with '//OS_Desc
+   GetVersion = TRIM(GetVersion)//' precision'
+
+
+   RETURN
+END FUNCTION GetVersion
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the output for the glue code, including writing the header for the primary output file.
@@ -9813,7 +9843,7 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
    INTEGER(IntKi)                   :: indxLast                                        ! The index of the last value to be written to an array
    INTEGER(IntKi)                   :: indxNext                                        ! The index of the next value to be written to an array
    INTEGER(IntKi)                   :: NumOuts                                         ! number of channels to be written to the output file(s)
-   CHARACTER(1024)                  :: FileDescLines(3)
+   
    
    
    
@@ -9833,10 +9863,10 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
       
       
    farm%m%AllOuts = 0.0_ReKi
-   
-   FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetNVD(Farm_Ver))
-   FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
-   FileDescLines(3)  = 'Description from the FAST.Farm input file: '//TRIM(farm%p%FTitle)
+    
+   farm%p%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(Farm_Ver))
+   farm%p%FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
+   farm%p%FileDescLines(3)  = 'Description from the FAST.Farm input file: '//TRIM(farm%p%FTitle)
    
  !......................................................
    ! Open the text output file and print the headers
@@ -9852,10 +9882,10 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
 
          ! Add some file information:
 
-      WRITE (farm%p%UnOu,'(/,A)')  TRIM( FileDescLines(1) )
-      WRITE (farm%p%UnOu,'(1X,A)') TRIM( FileDescLines(2) )
+      WRITE (farm%p%UnOu,'(/,A)')  TRIM( farm%p%FileDescLines(1) )
+      WRITE (farm%p%UnOu,'(1X,A)') TRIM( farm%p%FileDescLines(2) )
       WRITE (farm%p%UnOu,'()' )    !print a blank line
-      WRITE (farm%p%UnOu,'(A)'   ) TRIM( FileDescLines(3) )
+      WRITE (farm%p%UnOu,'(A)'   ) TRIM( farm%p%FileDescLines(3) )
       WRITE (farm%p%UnOu,'()' )    !print a blank line
 
 
@@ -9942,27 +9972,27 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
    !IF (farm%p%WrBinOutFile) THEN
    !
    !      ! calculate the size of the array of outputs we need to store
-   !   farm%p%NOutSteps = CEILING ( (farm%p%TMax - farm%p%TStart) / farm%p%DT_OUT ) + 1
+   !   farm%p%NOutSteps = CEILING ( (farm%p%TMax - farm%p%TStart) / farm%p%DT ) + 1
    !
-   !   CALL AllocAry( farm%p%AllOutData, farm%p%NumOuts-1, farm%p%NOutSteps, 'AllOutData', ErrStat, ErrMsg )
+   !   CALL AllocAry( farm%m%AllOutData, farm%p%NumOuts-1, farm%p%NOutSteps, 'AllOutData', ErrStat, ErrMsg )
    !   IF ( ErrStat >= AbortErrLev ) RETURN
    !
-   !   IF ( OutputFileFmtID == FileFmtID_WithoutTime ) THEN
+   !  ! IF ( OutputFileFmtID == FileFmtID_WithoutTime ) THEN
    !
-   !      CALL AllocAry( farm%p%TimeData, 2_IntKi, 'TimeData', ErrStat, ErrMsg )
+   !      CALL AllocAry( farm%m%TimeData, 2_IntKi, 'TimeData', ErrStat, ErrMsg )
    !      IF ( ErrStat >= AbortErrLev ) RETURN
    !
-   !      y_FAST%TimeData(1) = 0.0_DbKi           ! This is the first output time, which we will set later
-   !      y_FAST%TimeData(2) = farm%p%DT_out      ! This is the (constant) time between subsequent writes to the output file
+   !      farm%m%TimeData(1) = 0.0_DbKi           ! This is the first output time, which we will set later
+   !      farm%m%TimeData(2) = farm%p%DT          ! This is the (constant) time between subsequent writes to the output file
    !
-   !   ELSE  ! we store the entire time array
+   !   !ELSE  ! we store the entire time array
+   !   !
+   !   !   CALL AllocAry( farm%m%TimeData, farm%p%NOutSteps, 'TimeData', ErrStat, ErrMsg )
+   !   !   IF ( ErrStat >= AbortErrLev ) RETURN
+   !   !
+   !   !END IF
    !
-   !      CALL AllocAry( y_FAST%TimeData, y_FAST%NOutSteps, 'TimeData', ErrStat, ErrMsg )
-   !      IF ( ErrStat >= AbortErrLev ) RETURN
-   !
-   !   END IF
-   !
-   !   y_FAST%n_Out = 0  !number of steps actually written to the file
+   !   farm%m%n_Out = 0  !number of steps actually written to the file
    !
    !END IF
 
@@ -9986,7 +10016,9 @@ SUBROUTINE Farm_EndOutput( farm, ErrStat, ErrMsg )
       ! local variables
    CHARACTER(1024)  :: FileDesc                  ! The description of the run, to be written in the binary output file
 
-
+   !CHARACTER(ChanLenFF):: ChannelNames(farm%p%NumOuts)
+   !CHARACTER(ChanLenFF):: ChannelUnits(farm%p%NumOuts)
+   !INTEGER(IntKi)  :: I
       ! Initialize some values
 
    ErrStat = ErrID_None
@@ -9995,13 +10027,18 @@ SUBROUTINE Farm_EndOutput( farm, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! Write the binary output file if requested
    !-------------------------------------------------------------------------------------------------
-
-   !IF (farm%p%WrBinOutFile .AND. farm%y%n_Out > 0) THEN
+   ! TODO: The ChannelNames and ChannelUnits need to be length ChanLenFF for Fast.Farm, but the WrBinFAST subroutine needs these to be ChanLen long!
+   !IF (farm%p%WrBinOutFile .AND. farm%m%n_Out > 0) THEN
    !
    !   FileDesc = TRIM(farm%p%FileDescLines(1))//' '//TRIM(farm%p%FileDescLines(2))//'; '//TRIM(farm%p%FileDescLines(3))
    !
-   !   CALL WrBinFAST(TRIM(farm%p%OutFileRoot)//'.outb', OutputFileFmtID, TRIM(FileDesc), &
-   !         ChannelNames, ChannelUnits, farm%y%TimeData, farm%y%AllOutData(:,1:farm%y%n_Out), ErrStat, ErrMsg)
+   !   DO I = 1,farm%p%NumOuts
+   !      ChannelNames(I) = farm%p%OutParam(I)%Name
+   !      ChannelUnits(I) = farm%p%OutParam(I)%Units
+   !   END DO
+   !   
+   !   CALL WrBinFAST(TRIM(farm%p%OutFileRoot)//'.outb', 2, TRIM(FileDesc), &
+   !         ChannelNames, ChannelUnits, farm%m%TimeData(:),farm%m%AllOutData(:,1:farm%m%n_Out), ErrStat, ErrMsg)
    !
    !   IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(GetErrStr(ErrStat))//' when writing binary output file: '//TRIM(ErrMsg) )
    !
@@ -10050,7 +10087,7 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
    CHARACTER(farm%p%TChanLen)              :: TmpStr                                    ! temporary string to print the time output as text 
    CHARACTER(ChanLenFF)                    :: TmpStr2                                    ! temporary string to print the output as text 
    INTEGER(IntKi)                          :: I, J                                      ! loop counter
-   REAL(ReKi)                              :: val
+   REAL(ReKi)                              :: OutputAry(farm%p%NumOuts)
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -10067,8 +10104,8 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
             ! Generate fast.farm output file
       DO I = 1,farm%p%NumOuts  ! Loop through all selected output channels
 
-         val = farm%p%OutParam(I)%SignM * farm%m%AllOuts( farm%p%OutParam(I)%Indx )
-         WRITE( TmpStr2, '('//Frmt//')' ) val
+         OutputAry(I) = farm%p%OutParam(I)%SignM * farm%m%AllOuts( farm%p%OutParam(I)%Indx )
+         WRITE( TmpStr2, '('//Frmt//')' ) OutputAry(I)
          CALL WrFileNR( farm%p%UnOu, TmpStr2 )
       
      
@@ -10104,81 +10141,32 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
          ! write a new line (advance to the next line)
       WRITE (farm%p%UnOu,'()')
 
+      !IF (farm%p%WrBinOutFile) THEN
+      !
+      !      ! Write data to array for binary output file
+      !
+      !   IF ( farm%m%n_Out == farm%p%NOutSteps ) THEN
+      !      CALL ProgWarn( 'Not all data could be written to the binary output file.' )
+      !      !this really would only happen if we have an error somewhere else, right?
+      !      !otherwise, we could allocate a new, larger array and move existing data
+      !   ELSE
+      !      farm%m%n_Out = farm%m%n_Out + 1
+      !
+      !         ! store time data
+      !      IF ( farm%m%n_Out == 1_IntKi ) THEN !.OR. OutputFileFmtID == FileFmtID_WithTime ) THEN
+      !         farm%m%TimeData(farm%m%n_Out) = t_global   ! Time associated with these outputs
+      !      END IF
+      !
+      !         ! store individual module data
+      !      farm%m%AllOutData(:, farm%m%n_Out) = OutputAry
+      !   
+      !   END IF      
+      !
+      !END IF  
    ENDIF
-   
-            
 END SUBROUTINE WriteFarmOutputToFile  
 
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine writes the module output to the primary output file(s).
-SUBROUTINE WrOutputLine( t, farm, ErrStat, ErrMsg)
 
-   IMPLICIT                        NONE
-   
-      ! Passed variables
-   REAL(DbKi), INTENT(IN)                  :: t                                  !< Current simulation time, in seconds
-   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                               !< FAST.Farm data
-   INTEGER(IntKi),           INTENT(OUT)   :: ErrStat                            !< Error status
-   CHARACTER(*),             INTENT(OUT)   :: ErrMsg                             !< Error message
-
-      ! Local variables.
-
-   CHARACTER(200)                   :: Frmt                                      ! A string to hold a format specifier
-   CHARACTER(farm%p%TChanLen)       :: TmpStr                                    ! temporary string to print the time output as text
-
-  ! REAL(ReKi)                       :: OutputAry(SIZE(farm%p%ChannelNames)-1)
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   
-   !CALL FillOutputAry(p_Farm, y_Farm, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, ExtPtfmOutput, &
-   !                   MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, OutputAry)   
-
-   !IF (farm%p%WrTxtOutFile) THEN
-
-         ! Write one line of tabular output:
-   !   Frmt = '(F8.3,'//TRIM(Num2LStr(p%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-      Frmt = '"'//farm%p%Delim//'"'//farm%p%OutFmt      ! format for array elements from individual modules
-
-            ! time
-      WRITE( TmpStr, '('//trim(farm%p%OutFmt_t)//')' ) t
-      !CALL WrFileNR( y_Farm%UnOu, TmpStr )
-      !
-      !   ! write the individual module output (convert to SiKi if necessary, so that we don't need to print so many digits in the exponent)
-      !CALL WrNumAryFileNR ( y_Farm%UnOu, REAL(OutputAry,SiKi), Frmt, ErrStat, ErrMsg )
-      !   !IF ( ErrStat >= AbortErrLev ) RETURN
-      !
-      !   ! write a new line (advance to the next line)
-      !WRITE (y_Farm%UnOu,'()')
-
-   !END IF
-
-
-   !IF (farm%p%WrBinOutFile) THEN
-
-         ! Write data to array for binary output file
-
-      !IF ( y_Farm%n_Out == y_Farm%NOutSteps ) THEN
-      !   CALL ProgWarn( 'Not all data could be written to the binary output file.' )
-      !   !this really would only happen if we have an error somewhere else, right?
-      !   !otherwise, we could allocate a new, larger array and move existing data
-      !ELSE
-      !   y_Farm%n_Out = y_Farm%n_Out + 1
-      !
-      !      ! store time data
-      !   IF ( y_Farm%n_Out == 1_IntKi .OR. OutputFileFmtID == FileFmtID_WithTime ) THEN
-      !      y_Farm%TimeData(y_Farm%n_Out) = t   ! Time associated with these outputs
-      !   END IF
-      !
-      !      ! store individual module data
-      !   y_Farm%AllOutData(:, y_Farm%n_Out) = OutputAry
-      !   
-      !END IF      
-
-   !END IF
-
-   RETURN
-END SUBROUTINE WrOutputLine
 
 logical function PointInAABB(x, y, z, x0, y0, z0, x1, y1, z1)
    real(ReKi), intent(in) :: x,y,z,x0,y0,z0,x1,y1,z1

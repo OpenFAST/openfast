@@ -48,6 +48,8 @@ typedef  ^               ParameterType         ReKi            WindVelY       {:
 typedef  ^               ParameterType         ReKi            WindVelZ       {:}   - - "List of coordinates in the Z direction for wind output [1 to NWindVel]" meters
 typedef	^	             ParameterType	        OutParmFFType   OutParam	      {:}	- - "Names and units (and other characteristics) of all requested output parameters"	-
 typedef  ^               ParameterType         IntKi           NumOuts         -    - - "Number of user-requested outputs" -
+typedef	^	^	IntKi	NOutSteps	-	-	-	"Maximum number of output steps" -
+typedef	^	^	CHARACTER(1024)   FileDescLines {3} -- "File Description lines" -
 typedef  ^               ParameterType         IntKi           UnOu            -    - - "File unit for Fast.Farm output data" -
 typedef  ^               ParameterType         ReKi            dX_low          -    - - "The spacing of the low-resolution nodes in X direction" m
 typedef  ^               ParameterType         ReKi            dY_low          -    - - "The spacing of the low-resolution nodes in Y direction" m
@@ -60,6 +62,10 @@ typedef  ^               ParameterType         ReKi            Y0_low          -
 typedef  ^               ParameterType         ReKi            Z0_low          -    - - "Z-component of the origin of the low-resolution spatial domain" m
 # ..... FAST MiscVar data .......................................................................................................
 typedef	^	             MiscVarType	        ReKi	         AllOuts	      {:}	- - "An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
+typedef	^              	^              	  DbKi	         TimeData	{:}	-	-	"Array to contain the time output data for the binary file (first output time and a time [fixed] increment)"
+typedef	^              	^              	  ReKi	         AllOutData	{:}{:}	-	-	"Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step"
+typedef	^	^	IntKi	n_Out	-	-	-	"Time index into the AllOutData array"
+
 # ..... FASTWrapper data .......................................................................................................
 typedef    ^    FASTWrapper_Data  FWrap_ContinuousStateType x             -   -         -   "Continuous states"
 typedef    ^    ^                 FWrap_DiscreteStateType   xd            -   -         -   "Discrete states"
