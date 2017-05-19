@@ -136,7 +136,10 @@ if not os.path.isfile(caseGoldStandardFile):
     exitWithFileNotFound(caseGoldStandardFile)
 
 test_command = " ".join(["python", regTestScript, caseOutputFile, caseGoldStandardFile, tolerance])
+print "'{}' - running".format(test_command)
+sys.stdout.flush()
 test_return_code = subprocess.call(test_command, shell=True)
+print "'{}' - finished with exit code {}".format(test_command, test_return_code)
 
 # return pass/fail
 sys.exit(test_return_code)
