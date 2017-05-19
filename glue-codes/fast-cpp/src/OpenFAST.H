@@ -158,6 +158,7 @@ class OpenFAST {
   ActuatorNodeType getVelNodeType(int iTurbGlob, int iNode);
   void getVelNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob);
   void setVelocity(std::vector<double> & velocity, int iNode, int iTurbGlob);
+  void setVelocityForceNode(std::vector<double> & velocity, int iNode, int iTurbGlob);
   void interpolateVel_ForceToVelNodes();
   ActuatorNodeType getForceNodeType(int iTurbGlob, int iNode);
   void getForceNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob);

@@ -339,6 +339,16 @@ void fast::OpenFAST::setVelocity(std::vector<double> & currentVelocity, int iNod
   // Set velocity at current node of current turbine - 
   int iTurbLoc = get_localTurbNo(iTurbGlob);
   for(int j=0; j < iTurbLoc; j++) iNode = iNode - get_numVelPtsLoc(iTurbLoc);
+  cDriver_Output_to_FAST[iTurbLoc].u[iNode] = currentVelocity[0];
+  cDriver_Output_to_FAST[iTurbLoc].v[iNode] = currentVelocity[1];
+  cDriver_Output_to_FAST[iTurbLoc].w[iNode] = currentVelocity[2];
+}
+
+void fast::OpenFAST::setVelocityForceNode(std::vector<double> & currentVelocity, int iNode, int iTurbGlob) {
+
+  // Set velocity at current node of current turbine - 
+  int iTurbLoc = get_localTurbNo(iTurbGlob);
+  for(int j=0; j < iTurbLoc; j++) iNode = iNode - get_numForcePtsLoc(iTurbLoc);
   forceNodeVel[iTurbLoc][iNode][0] = currentVelocity[0];
   forceNodeVel[iTurbLoc][iNode][1] = currentVelocity[1];
   forceNodeVel[iTurbLoc][iNode][2] = currentVelocity[2];
