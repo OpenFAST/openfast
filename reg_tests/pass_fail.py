@@ -9,6 +9,7 @@
 """
 import sys, os
 import numpy as np
+from numpy import linalg as LA
 from fast_io import load_output
 
 def exitWithError(error):
@@ -44,14 +45,38 @@ except Exception as e:
     exitWithError("Error: {}".format(e))
 
 # calculate the difference in solutions
-nColumns = np.size(dict1,1)
-variance = np.ones(nColumns)
-for j in range(nColumns):
-    variance[j] = (dict1[:,j]-dict2[:,j]).var()
+## variance
+# nColumns = np.size(dict1,1)
+# variance = np.ones(nColumns)
+# for j in range(nColumns):
+#     variance[j] = (dict1[:,j]-dict2[:,j]).var()
+#
+# if max(variance) < solutionTolerance:
+#     sys.exit(0)
+# else:
+#     print info1['attribute_names']
+#     print "var = ", variance
+#     sys.exit(1)
 
-if max(variance) < solutionTolerance:
+## gold standard RMS, L2 norm
+nColumns = np.size(dict1,1)
+diff = np.ones(nColumns)
+rms_gold = np.ones(nColumns)
+norm_diff = np.ones(nColumns)
+for j in range(nColumns):
+    rms_gold[j] = LA.norm(dict2[:,j], 2)
+
+    diff = dict1[:,j]-dict2[:,j]
+    norm_diff[j] = LA.norm(diff, 2)
+
+# replace any 0s with small number before for division
+rms_gold[rms_gold == 0] = 1e-16
+
+norm = norm_diff / rms_gold
+
+if max(norm) < solutionTolerance:
     sys.exit(0)
 else:
     print info1['attribute_names']
-    print "var = ", variance
+    print "norm = ", norm
     sys.exit(1)
