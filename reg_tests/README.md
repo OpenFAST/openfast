@@ -72,8 +72,8 @@ Example: `python executeRegressionTestCase.py Test02 openfast path/to/openfast_r
 
 #### pass_fail.py
 This program determines whether a new solution has regressed from the "gold standard"
-solution. It reads two OpenFAST binary output files (.outb), and computes the variance
-of the two solution files for each output channel. If the max variance is smaller than
+solution. It reads two OpenFAST binary output files (.outb), and computes the L2 norm
+of the two solution files for each output channel. If the max norm is smaller than
 the given tolerance, the test case passes.
 
 Usage: `python pass_fail.py solution1 solution2 tolerance`  
