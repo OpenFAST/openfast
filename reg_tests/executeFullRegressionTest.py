@@ -34,7 +34,7 @@ steerScript = os.path.join("ctest", "steer.cmake")
 if not os.path.isfile(steerScript):
     exitWithError("The CTest steering script is not found where it was expected: {}".format(steerScript))
 
-ctest_command = " ".join(["ctest", "-S", steerScript, "-V", "-DEXECUTABLE="+executable])
+ctest_command = " ".join(["ctest", "-V", "-S", steerScript, "-DEXECUTABLE="+executable])
 ctest_return_code = subprocess.call(ctest_command, shell=True)
 
 print "CTest finished with return code: {}".format(ctest_return_code)
