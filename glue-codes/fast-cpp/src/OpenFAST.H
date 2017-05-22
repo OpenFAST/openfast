@@ -12,8 +12,12 @@
 #include <set>
 #include <map>
 #include "dlfcn.h"
-#define OMPI_SKIP_MPICXX
-#define MPICH_SKIP_MPICXX
+#ifndef OMPI_SKIP_MPICXX
+ #define OMPI_SKIP_MPICXX
+#endif
+#ifndef MPICH_SKIP_MPICXX
+ #define MPICH_SKIP_MPICXX
+#endif
 #include "mpi.h"
 #include "SC.h"
 
@@ -79,8 +83,8 @@ class OpenFAST {
   bool timeZero;
   double dtFAST;
   double tMax;
-  std::vector<std::vector<float>> TurbineBasePos;
-  std::vector<std::vector<float>> TurbineHubPos;
+  std::vector<std::vector<float> > TurbineBasePos;
+  std::vector<std::vector<float> > TurbineHubPos;
   std::vector<int> TurbID;
   std::vector<std::string > FASTInputFileName;
   std::vector<std::string > CheckpointFileRoot;
@@ -98,7 +102,7 @@ class OpenFAST {
   std::vector<double> scOutputsGlob;  // # outputs from the supercontroller for all turbines
   std::vector<double> scInputsGlob;   // # inputs to the supercontroller for all turbines
 
-  std::vector<std::vector<std::vector<double>>> forceNodeVel; // Velocity at force nodes - Store temporarily to interpolate to the velocity nodes
+  std::vector<std::vector<std::vector<double> > > forceNodeVel; // Velocity at force nodes - Store temporarily to interpolate to the velocity nodes
   std::vector<OpFM_InputType_t> cDriver_Input_from_FAST;
   std::vector<OpFM_OutputType_t> cDriver_Output_to_FAST;
 
