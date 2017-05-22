@@ -86,10 +86,10 @@ endif()
 
 # configure CTest just before running the test so all variables exist
 ## -- CTest Config
-configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestConfig.cmake ${CTEST_BINARY_DIRECTORY}/CTestConfig.cmake)
+configure_file(${CTEST_SCRIPT_DIRECTORY}/CTestConfig.cmake ${CTEST_BINARY_DIRECTORY}/CTestConfig.cmake)
 
 ## -- CTest Testfile
-configure_file(${CTEST_SOURCE_DIRECTORY}/ctest/CTestTestfile.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
+configure_file(${CTEST_SCRIPT_DIRECTORY}/CTestTestfile.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
 #configure_file(${CTEST_SOURCE_DIRECTORY}/reg_tests/CTestList.cmake ${CTEST_BINARY_DIRECTORY}/CTestTestfile.cmake)
 
 ## -- Start
