@@ -292,39 +292,6 @@ subroutine ThomasAlgorithm(nr, a, b, c, d, x, errStat, errMsg)
 end subroutine ThomasAlgorithm
 
 !----------------------------------------------------------------------------------------------------------------------------------   
-!> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
-!! FAST or WakeDynamics_Driver)   
-subroutine WD_SetInitOut(p, InputInp, InitOut, errStat, errMsg)
-
-   type(WD_InitOutputType),       intent(  out)  :: InitOut          !< Initialization output data
-   type(WD_InitInputType),        intent(in   )  :: InputInp         !< Initialization input  data 
-   type(WD_ParameterType),        intent(in   )  :: p                !< Parameters
-   integer(IntKi),                intent(  out)  :: errStat          !< Error status of the operation
-   character(*),                  intent(  out)  :: errMsg           !< Error message if errStat /= ErrID_None
-
-
-      ! Local variables
-   integer(intKi)                               :: ErrStat2          ! temporary Error status
-   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
-   character(*), parameter                      :: RoutineName = 'WD_SetInitOut'
-   
-   
-   
-   integer(IntKi)                               :: i, j, k, f
-   integer(IntKi)                               :: NumCoords
-
-      ! Initialize variables for this routine
-
-   errStat = ErrID_None
-   errMsg  = ""
-
-      ! TODO: Set output data
-   
-   InitOut%Ver = WD_Ver
- 
-end subroutine WD_SetInitOut
-
-!----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
@@ -526,6 +493,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
       ! Define initialization output here
       !............................................................................................
+   
+   InitOut%Ver = WD_Ver
    
    allocate ( y%xhat_plane(3,0:p%NumPlanes-1), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%xhat_plane.', errStat, errMsg, RoutineName )     

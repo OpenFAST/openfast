@@ -172,7 +172,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'Farm_Initialize'       
    CHARACTER(ChanLenFF),ALLOCATABLE          :: OutList(:)             ! list of user-requested output channels
-   
+   INTEGER(IntKi)                          :: i
    !..........
    ErrStat = ErrID_None
    ErrMsg  = ""         
@@ -191,7 +191,16 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
                         
       ! Determine the root name of the primary file (will be used for output files)
    CALL GetRoot( InputFile, farm%p%OutFileRoot )      
-                     
+    
+   DO i=1,NumFFModules
+      farm%p%Module_Ver(i)%Date = 'unknown date'
+      farm%p%Module_Ver(i)%Ver  = 'unknown version'
+   END DO       
+   farm%p%Module_Ver( ModuleFF_SC    )%Name = 'Super Controller'
+   farm%p%Module_Ver( ModuleFF_FWrap )%Name = 'FAST Wrapper'
+   farm%p%Module_Ver( ModuleFF_WD    )%Name = 'Wake Dynamics'
+   farm%p%Module_Ver( ModuleFF_AWAE  )%Name = 'Ambient Wind and Array Effects'
+   
    !...............................................................................................................................  
    ! step 1: read input file
    !...............................................................................................................................  
@@ -270,7 +279,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    farm%p%dX_low = AWAE_InitOutput%dX_low
    farm%p%dY_low = AWAE_InitOutput%dY_low
    farm%p%dZ_low = AWAE_InitOutput%dZ_low
-   
+   farm%p%Module_Ver( ModuleFF_AWAE  ) = AWAE_InitOutput%Ver
       !-------------------
       ! b. CALL SC_Init
 
@@ -312,6 +321,12 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       
    call Farm_InitOutput( farm, ErrStat, ErrMsg )
 
+      ! Print the summary file if requested:
+   IF (farm%p%SumPrint) THEN
+      CALL Farm_PrintSum( farm, WD_InitInput%InputFileData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+   
    !...............................................................................................................................
    ! Destroy initializion data
    !...............................................................................................................................      
@@ -352,7 +367,6 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    INTEGER(IntKi)                :: OutFileFmt                                ! An integer that indicates what kind of tabular output should be generated (1=text, 2=binary, 3=both)
    INTEGER(IntKi)                :: NLinTimes                                 ! An integer that indicates how many times to linearize
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
-   LOGICAL                       :: SumPrint                                  ! Determines if a summary file should be written
    LOGICAL                       :: TabDelim                                  ! Determines if text output should be delimited by tabs (true) or space (false)
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
 
@@ -896,7 +910,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       end if
 
       ! SumPrint - Print summary data to <RootName>.sum? (flag):
-   CALL ReadVar( UnIn, InputFile, SumPrint, "SumPrint", "Print summary data to <RootName>.sum? (flag)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, p%SumPrint, "SumPrint", "Print summary data to <RootName>.sum? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -1250,7 +1264,9 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
             end if
             
       END DO   
-   
+      
+      farm%p%Module_Ver( ModuleFF_WD ) = WD_InitOut%Ver
+      
       call cleanup()
       
 contains
@@ -1336,6 +1352,8 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
             
       END DO   
    
+      farm%p%Module_Ver( ModuleFF_FWrap ) = FWrap_InitOut%Ver
+      
       call cleanup()
       
 contains
@@ -1371,6 +1389,8 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
    
+   
+
    
    !.......................................................................................
    ! Initial calls to AWAE and SC modules (steps 1. and 2. can be done in parallel)

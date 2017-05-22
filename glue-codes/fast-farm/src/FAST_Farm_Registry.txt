@@ -16,6 +16,12 @@ usefrom FASTWrapper_Registry.txt
 usefrom WakeDynamics_Registry.txt
 usefrom AWAE_Registry.txt
 
+param	FAST_Farm/Farm	-	INTEGER	NumFFModules	-	4	-	"The number of modules available in FAST.Farm"	-
+param	^	-	INTEGER	ModuleFF_None	  -	0	-	"No module selected"	-
+param	^	-	INTEGER	ModuleFF_SC	  -	1	-	"Super Controller"	-
+param	^	-	INTEGER	ModuleFF_FWrap  -	2	-	"FAST Wrapper"	-
+param	^	-	INTEGER	ModuleFF_WD	  -	3	-	"Wake Dynamics"	-
+param	^	-	INTEGER	ModuleFF_AWAE	  -	4	-	"Ambient Wind and Array Effects"	-
 # ..... Parameters ................................................................................................................
 typedef  FAST_Farm/Farm  ParameterType         DbKi            DT              -    - - "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step" seconds
 typedef  ^               ParameterType         DbKi            DT_high         -    - - "High-resolution time step"  seconds
@@ -31,6 +37,7 @@ typedef  ^               ParameterType         INTEGER         n_ChkptTime     -
 typedef  ^               ParameterType         DbKi            TStart          -    - - "Time to begin tabular output" s
 typedef  ^               ParameterType         IntKi           n_TMax          -    - - "Number of the time step of TMax (the end time of the simulation)" -
 # parameters for data output to files:
+typedef	^	             ParameterType	        LOGICAL	      SumPrint	       -	   - - "Print summary data to file? (.sum)"	-
 typedef  ^               ParameterType         LOGICAL         WrBinOutFile    -    - - "Write a binary output file? (.outb)" -
 typedef  ^               ParameterType         LOGICAL         WrTxtOutFile    -    - - "Write a text (formatted) output file? (.out)" -
 typedef  ^               ParameterType         CHARACTER(1)    Delim           -    - - "Delimiter between columns of text output file (.out): space or tab" -
@@ -48,8 +55,10 @@ typedef  ^               ParameterType         ReKi            WindVelY       {:
 typedef  ^               ParameterType         ReKi            WindVelZ       {:}   - - "List of coordinates in the Z direction for wind output [1 to NWindVel]" meters
 typedef	^	             ParameterType	        OutParmFFType   OutParam	      {:}	- - "Names and units (and other characteristics) of all requested output parameters"	-
 typedef  ^               ParameterType         IntKi           NumOuts         -    - - "Number of user-requested outputs" -
-typedef	^	^	IntKi	NOutSteps	-	-	-	"Maximum number of output steps" -
-typedef	^	^	CHARACTER(1024)   FileDescLines {3} -- "File Description lines" -
+typedef	^	             ParameterType	        IntKi	         NOutSteps	    -	   - - "Maximum number of output steps" -
+typedef	^	             ParameterType	        CHARACTER(1024) FileDescLines  {3}   - - "File Description lines" -
+typedef	^	             ParameterType	        ProgDesc	      Module_Ver	{NumModules}	-	-	"Version information from all modules"
+
 typedef  ^               ParameterType         IntKi           UnOu            -    - - "File unit for Fast.Farm output data" -
 typedef  ^               ParameterType         ReKi            dX_low          -    - - "The spacing of the low-resolution nodes in X direction" m
 typedef  ^               ParameterType         ReKi            dY_low          -    - - "The spacing of the low-resolution nodes in Y direction" m

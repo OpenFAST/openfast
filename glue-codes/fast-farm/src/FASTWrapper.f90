@@ -96,7 +96,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ! Display the module information
 
    if (InitInp%TurbNum == 1) call DispNVD( FWrap_Ver )
-
+   InitOut%Ver = FWrap_Ver
 
 
       ! Define initial system states here:

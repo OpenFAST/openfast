@@ -9826,6 +9826,151 @@ FUNCTION GetVersion(ThisProgVer)
 END FUNCTION GetVersion
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
+SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
+
+      ! Passed variables
+   type(All_FastFarm_Data),        INTENT(IN )          :: farm                                  !< FAST.Farm data
+   type(WD_InputFileType),         INTENT(IN )          :: WD_InputFileData                      !< Wake Dynamics Input File data
+   INTEGER(IntKi),                 INTENT(OUT)          :: ErrStat                               !< Error status
+   CHARACTER(*),                   INTENT(OUT)          :: ErrMsg                                !< Error message corresponding to ErrStat
+
+
+      ! Local variables.
+
+   INTEGER(IntKi)               :: I,J                                             ! Index for the nodes.
+   INTEGER(IntKi)               :: K                                               ! Generic index (also for the blade number).
+   INTEGER(IntKi)               :: UnSum                                            ! I/O unit number for the summary output file
+
+   CHARACTER(*), PARAMETER      :: Fmt1      = "(34X,3(6X,'Blade',I2,:))"          ! Format for outputting blade headings.
+   CHARACTER(*), PARAMETER      :: Fmt2      = "(34X,3(6X,A,:))"                   ! Format for outputting blade headings.
+   CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,3(:,F13.3))'                ! Format for outputting mass and modal data.
+   CHARACTER(*), PARAMETER      :: FmtDatT   = '(A,T35,1(:,F13.8))'                ! Format for outputting time steps.
+   CHARACTER(100)               :: RotorType                                       ! Text description of rotor.
+   CHARACTER(30)                :: Fmt
+   CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
+   CHARACTER(10)                :: DOFEnabled                                      ! String to say if a DOF is enabled or disabled
+   CHARACTER(2)                 :: outStr
+   CHARACTER(10)                :: CalWakeDiamStr
+   
+   
+   ! Open the summary file and give it a heading.
+   
+   CALL GetNewUnit( UnSum, ErrStat, ErrMsg )
+   IF ( ErrStat /= ErrID_None ) RETURN
+
+   CALL OpenFOutFile ( UnSum, TRIM( farm%p%OutFileRoot )//'.sum', ErrStat, ErrMsg )
+   IF ( ErrStat /= ErrID_None ) RETURN
+
+   
+   ! Heading:
+   !.......................... Module Versions .....................................................
+
+
+   WRITE (UnSum,'(A)') 'FAST.Farm Summary File'
+   WRITE (UnSum,'(/A)')  TRIM( farm%p%FileDescLines(1) )
+
+   WRITE (UnSum,'(2X,A)'   )  'compiled with'
+   Fmt = '(4x,A)'
+   WRITE (UnSum,Fmt)  TRIM( GetNVD( NWTC_Ver ) )
+   WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_SC    ) ) )
+   WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_FWrap ) ) )
+   WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_WD    ) ) )
+   WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_AWAE  ) ) )
+   !WRITE (y_FAST%UnSum,Fmt)  TRIM( GetNVD(  ) )
+
+   WRITE (UnSum,'(/,A)') 'Description from the FAST.Farm input file: '//trim(farm%p%FTitle)
+   
+   WRITE (UnSum,'(/,A)') 'Ambient Wind Input Filepath: '//trim(farm%p%WindFilePath)
+   
+   !..................................
+   ! Turbine information.
+   !..................................
+   
+   WRITE (UnSum,'(/,A)'   )  'Wind Turbines: '//trim(Num2LStr(farm%p%NumTurbines))
+   WRITE (UnSum,'(2X,A)')  'Turbine Number  Output Turbine Number      X         Y         Z       FAST Time Step  FAST SubCycles  FAST Input File'
+   WRITE (UnSum,'(2X,A)')  '      (-)                (-)              (m)       (m)       (m)          (S)             (-)                (-)'
+
+   do I = 1,farm%p%NumTurbines
+      if ( I < 10 ) then
+         outStr = adjustr(trim(Num2LStr(I)))
+      else
+         outStr = '- '
+      end if
+      
+      WRITE(UnSum,'(6X,I4,16X,A4,9X,3F10.3,5X,F9.4,8X,I4,10X,A)')  I, outStr, farm%p%WT_Position(1,I), farm%p%WT_Position(2,I),farm%p%WT_Position(3,I), farm%p%DT, farm%p%n_high_low, trim(farm%p%WT_FASTInFile(I))
+                                                                      
+   end do
+   
+   WRITE (UnSum,'(/,A)'   )  'Wake Dynamics Finite-Difference Grid: '//trim(Num2LStr(farm%WD(1)%p%NumRadii))//' Radii, '//trim(Num2LStr(farm%WD(1)%p%NumPlanes))//' Planes'
+   WRITE (UnSum,'(2X,A)')      'Radial Node Number  Output Node Number    Radius'
+   WRITE (UnSum,'(2X,A)')      '       (-)                (-)              (m) '  
+   do I = 0, farm%WD(1)%p%NumRadii-1
+      outStr = ' -'
+      do J = 1, farm%p%NOutRadii
+         if (farm%p%OutRadii(J) == I ) then
+            outStr = trim(Num2LStr(J))
+            exit
+         end if
+      end do
+      
+      WRITE(UnSum,'(8X,I4,17X,A2,9X,F10.3)')  I, outStr, farm%WD(1)%p%r(I)
+      
+   end do
+   
+   WRITE (UnSum,'(/,A)'   )  'Wake Dynamics Parameters'
+   WRITE (UnSum,'(2X,A)')      'Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz): '//trim(Num2LStr(WD_InputFileData%f_c))
+   WRITE (UnSum,'(4X,A)')        '( low-pass time-filter parameter (-): '//trim(Num2LStr(farm%WD(1)%p%filtParam))//' )'
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m): '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_O))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg): '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_OY)) 
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-):  '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_x))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg):  '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_xY))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter for near-wake correction (-): '//trim(Num2LStr(farm%WD(1)%p%C_NearWake))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-):  '//trim(Num2LStr(farm%WD(1)%p%k_vAmb))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter for the influence of the shear layer in the eddy viscosity (-):  '//trim(Num2LStr(farm%WD(1)%p%k_vShr))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vAmb_DMin))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vAmb_DMax))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vAmb_FMin))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vAmb_Exp))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vShr_DMin))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-): '//trim(Num2LStr(farm%WD(1)%p%C_vShr_DMax)) 
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the functional value in the minimum region (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vShr_FMin))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vShr_Exp))
+   WRITE (UnSum,'(2X,A)')      'Wake diameter calculation model (-):  '//trim(Num2LStr(farm%WD(1)%p%Mod_WakeDiam))
+   if ( farm%WD(1)%p%Mod_WakeDiam > 1 ) then
+      CalWakeDiamStr = trim(Num2LStr(farm%WD(1)%p%C_WakeDiam)) 
+   else
+      CalWakeDiamStr = '-'
+   end if
+   
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter for wake diameter calculation (-): '//CalWakeDiamStr
+   
+   WRITE (UnSum,'(/,A)'   )  'Time Steps'
+   WRITE (UnSum,'(2X,A)')      'Component                        Time Step(s)      Subcyles'
+   WRITE (UnSum,'(2X,A)')      '  (-)                                (s)             (-)'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm (glue code)          ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Super Controller               ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST Wrapper                   ',farm%p%dt, '1 (See table above for FAST.)'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Wake Dynamics                  ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Ambient Wind and Array Effects ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Low -resolution wind input     ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,12X,I2)')     'High-resolution wind input     ',farm%p%DT_high, farm%p%n_high_low
+   WRITE (UnSum,'(2X,A,F10.4,12X,I2)')     'Wind visualization output      ',farm%AWAE%p%WrDisSkp1*farm%p%dt, farm%AWAE%p%WrDisSkp1-1
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm output files         ',farm%p%dt, '1'
+
+   WRITE (UnSum,'(/,A)'   )  'Requested Channels in FAST.Farm Output Files: '//trim(Num2LStr(farm%p%NumOuts+1))
+	WRITE (UnSum,'(2X,A)'  )    'Number     Name         Units'
+	WRITE (UnSum,'(2X,A)'  )    '   0       Time          (s)'
+	do I=1,farm%p%NumOuts
+      WRITE (UnSum,'(2X,I4,7X,A14,A14)'  )  I, farm%p%OutParam(I)%Name,farm%p%OutParam(I)%Units
+   end do
+
+   CLOSE(UnSum)
+
+RETURN
+END SUBROUTINE Farm_PrintSum
+
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the output for the glue code, including writing the header for the primary output file.
 SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
 
@@ -13850,19 +13995,16 @@ SUBROUTINE SetOutParam(OutList, farm, ErrStat, ErrMsg )
          InvalidOutput( WVDisX  (i) ) = .true.
          InvalidOutput( WVDisY  (i) ) = .true.
          InvalidOutput( WVDisZ  (i) ) = .true.
-      end if
-   
-     
+      end if      
    end do
-   do i = farm%p%NWindVel+1, 9
-      
+   
+   do i = farm%p%NWindVel+1, 9     
       InvalidOutput( WVAmbX  (i) ) = .true.
       InvalidOutput( WVAmbY  (i) ) = .true.
       InvalidOutput( WVAmbZ  (i) ) = .true.
       InvalidOutput( WVDisX  (i) ) = .true.
       InvalidOutput( WVDisY  (i) ) = .true.
-      InvalidOutput( WVDisZ  (i) ) = .true.
-     
+      InvalidOutput( WVDisZ  (i) ) = .true.     
    end do
       ! 
 !   ................. End of validity checking .................
