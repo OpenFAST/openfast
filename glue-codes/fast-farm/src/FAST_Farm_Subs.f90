@@ -42,32 +42,87 @@ MODULE FAST_Farm_Subs
    
    CONTAINS
  
-   
+
+   !+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+   !>    This function is used to interpolate into the full-field wind array or tower array if it has
+   !!    been defined and is necessary for the given inputs.  It receives X, Y, Z and
+   !!    TIME from the calling routine.  It then computes a time shift due to a nonzero X based upon
+   !!    the average windspeed.  The modified time is used to decide which pair of time slices to interpolate
+   !!    within and between.  After finding the two time slices, it decides which four grid points bound the
+   !!    (Y,Z) pair.  It does a bilinear interpolation for each time slice. Linear interpolation is then used
+   !!    to interpolate between time slices.  This routine assumes that X is downwind, Y is to the left when
+   !!    looking downwind and Z is up.  It also assumes that no extrapolation will be needed.
+   !!
+   !!    If tower points are used, it assumes the velocity at the ground is 0.  It interpolates between
+   !!    heights and between time slices, but ignores the Y input.
+   !!
+   !!    11/07/1994 - Created by M. Buhl from the original TURBINT.
+   !!    09/25/1997 - Modified by M. Buhl to use f90 constructs and new variable names.  Renamed to FF_Interp.
+   !!    09/23/2009 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.
+   !!                 Height is now relative to the ground
+   !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
    subroutine TrilinearInterpRegGrid(V, pt, dims, val)
    
-      real(ReKi),     intent(in   ) :: V(:,:,:,:)
-      real(ReKi),     intent(in   ) :: pt(3)
-      integer(IntKi), intent(in   ) :: dims(3)
-      real(ReKi),     intent(  out) :: val(3)
+      real(ReKi),     intent(in   ) :: V(:,:,:,:)      !< The volume data being sampled
+      real(ReKi),     intent(in   ) :: pt(3)           !< The point, in grid coordinates where we want to sample the data
+      integer(IntKi), intent(in   ) :: dims(3)         !< The grid dimensions
+      real(ReKi),     intent(  out) :: val(3)          !< The interpolated value of V at location, pt
    
-      integer(IntKi) :: x0,x1,y0,y1,z0,z1
+      integer(IntKi) :: x0,x1,y0,y1,z0,z1, i
       real(ReKi) :: xd,yd,zd,c00(3),c01(3),c10(3),c11(3),c0(3),c1(3)
+      REAL(ReKi)      :: N(8)           ! array for holding scaling factors for the interpolation algorithm
+      REAL(ReKi)      :: u(8)           ! array for holding the corner values for the interpolation algorithm across a cubic volume
+      real(ReKi)      :: val2(3)
       
       x0 = floor(pt(1))
 
       x1 = x0 + 1
       if (x0 == dims(1)) x1 = x0  ! Handle case where x0 is the last index in the grid, in this case xd = 0.0, so the 2nd term in the interpolation will not contribute
-      xd = pt(1) - x0
+      
+      xd = 2.0_ReKi * (pt(1) - REAL(x0, ReKi)) - 1.0_ReKi
       y0 = floor(pt(2))
       y1 = y0 + 1
       if (y0 == dims(2)) y1 = y0  ! Handle case where y0 is the last index in the grid, in this case yd = 0.0, so the 2nd term in the interpolation will not contribute
-      yd = pt(2) - y0
+      yd = 2.0_ReKi * (pt(2) - REAL(y0, ReKi)) - 1.0_ReKi
       z0 = floor(pt(3))
       z1 = z0 + 1
       if (z0 == dims(3)) z1 = z0  ! Handle case where z0 is the last index in the grid, in this case zd = 0.0, so the 2nd term in the interpolation will not contribute
-      zd = pt(3) - z0
+      zd = 2.0_ReKi * (pt(3) - REAL(z0, ReKi)) - 1.0_ReKi
       
+      !-------------------------------------------------------------------------------------------------
+      ! Interpolate on the grid
+      !-------------------------------------------------------------------------------------------------
 
+   
+
+      N(1)  = ( 1.0_ReKi + zd )*( 1.0_ReKi - yd )*( 1.0_ReKi - xd )
+      N(2)  = ( 1.0_ReKi + zd )*( 1.0_ReKi + yd )*( 1.0_ReKi - xd )
+      N(3)  = ( 1.0_ReKi - zd )*( 1.0_ReKi + yd )*( 1.0_ReKi - xd )
+      N(4)  = ( 1.0_ReKi - zd )*( 1.0_ReKi - yd )*( 1.0_ReKi - xd )
+      N(5)  = ( 1.0_ReKi + zd )*( 1.0_ReKi - yd )*( 1.0_ReKi + xd )
+      N(6)  = ( 1.0_ReKi + zd )*( 1.0_ReKi + yd )*( 1.0_ReKi + xd )
+      N(7)  = ( 1.0_ReKi - zd )*( 1.0_ReKi + yd )*( 1.0_ReKi + xd )
+      N(8)  = ( 1.0_ReKi - zd )*( 1.0_ReKi - yd )*( 1.0_ReKi + xd )
+      N     = N / real( size(N), ReKi )  ! normalize
+
+      do i=1,3
+         u(1)  = V( i, x0, y0, z1 )
+         u(2)  = V( i, x0, y1, z1 )
+         u(3)  = V( i, x0, y1, z0 )
+         u(4)  = V( i, x0, y0, z0 )
+         u(5)  = V( i, x1, y0, z1 )
+         u(6)  = V( i, x1, y1, z1 )
+         u(7)  = V( i, x1, y1, z0 )
+         u(8)  = V( i, x1, y0, z0 )
+            
+         val(i)  =  SUM ( N * u ) 
+      end do
+      
+      
+      
+      xd = pt(1) - x0
+      yd = pt(2) - y0
+      zd = pt(3) - z0
       c00 = V(:,x0,y0,z0)*(1.0_ReKi-xd) + V(:,x1,y0,z0)*xd
       c01 = V(:,x0,y0,z1)*(1.0_ReKi-xd) + V(:,x1,y0,z1)*xd
       c10 = V(:,x0,y1,z0)*(1.0_ReKi-xd) + V(:,x1,y1,z0)*xd
@@ -76,8 +131,13 @@ MODULE FAST_Farm_Subs
       c0  = c00*(1.0_ReKi-yd) + c10*yd
       c1  = c01*(1.0_ReKi-yd) + c11*yd
       
-      val = c0 *(1.0_ReKi-zd) + c1 *zd
-      
+      val2 = c0 *(1.0_ReKi-zd) + c1 *zd
+      do i = 1,3
+         if ( .not. EqualRealNos(val(i),val2(i)) ) then
+            write(*,*) "Different inpolated wind values: "//trim(Num2LStr(val(1)))//", "//trim(Num2LStr(val(2)))//", "//trim(Num2LStr(val(3)))//", "//trim(Num2LStr(val2(1)))//", "//trim(Num2LStr(val2(2)))//", "//trim(Num2LStr(val2(3)))
+            return
+         end if
+      end do
    end subroutine TrilinearInterpRegGrid
 
    
@@ -112,7 +172,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'Farm_Initialize'       
    CHARACTER(ChanLenFF),ALLOCATABLE          :: OutList(:)             ! list of user-requested output channels
-   
+   INTEGER(IntKi)                          :: i
    !..........
    ErrStat = ErrID_None
    ErrMsg  = ""         
@@ -131,7 +191,16 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
                         
       ! Determine the root name of the primary file (will be used for output files)
    CALL GetRoot( InputFile, farm%p%OutFileRoot )      
-                     
+    
+   DO i=1,NumFFModules
+      farm%p%Module_Ver(i)%Date = 'unknown date'
+      farm%p%Module_Ver(i)%Ver  = 'unknown version'
+   END DO       
+   farm%p%Module_Ver( ModuleFF_SC    )%Name = 'Super Controller'
+   farm%p%Module_Ver( ModuleFF_FWrap )%Name = 'FAST Wrapper'
+   farm%p%Module_Ver( ModuleFF_WD    )%Name = 'Wake Dynamics'
+   farm%p%Module_Ver( ModuleFF_AWAE  )%Name = 'Ambient Wind and Array Effects'
+   
    !...............................................................................................................................  
    ! step 1: read input file
    !...............................................................................................................................  
@@ -210,7 +279,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    farm%p%dX_low = AWAE_InitOutput%dX_low
    farm%p%dY_low = AWAE_InitOutput%dY_low
    farm%p%dZ_low = AWAE_InitOutput%dZ_low
-   
+   farm%p%Module_Ver( ModuleFF_AWAE  ) = AWAE_InitOutput%Ver
       !-------------------
       ! b. CALL SC_Init
 
@@ -252,6 +321,12 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       
    call Farm_InitOutput( farm, ErrStat, ErrMsg )
 
+      ! Print the summary file if requested:
+   IF (farm%p%SumPrint) THEN
+      CALL Farm_PrintSum( farm, WD_InitInput%InputFileData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+   
    !...............................................................................................................................
    ! Destroy initializion data
    !...............................................................................................................................      
@@ -292,7 +367,6 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    INTEGER(IntKi)                :: OutFileFmt                                ! An integer that indicates what kind of tabular output should be generated (1=text, 2=binary, 3=both)
    INTEGER(IntKi)                :: NLinTimes                                 ! An integer that indicates how many times to linearize
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
-   LOGICAL                       :: SumPrint                                  ! Determines if a summary file should be written
    LOGICAL                       :: TabDelim                                  ! Determines if text output should be delimited by tabs (true) or space (false)
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
 
@@ -836,7 +910,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       end if
 
       ! SumPrint - Print summary data to <RootName>.sum? (flag):
-   CALL ReadVar( UnIn, InputFile, SumPrint, "SumPrint", "Print summary data to <RootName>.sum? (flag)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, p%SumPrint, "SumPrint", "Print summary data to <RootName>.sum? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -1190,7 +1264,9 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
             end if
             
       END DO   
-   
+      
+      farm%p%Module_Ver( ModuleFF_WD ) = WD_InitOut%Ver
+      
       call cleanup()
       
 contains
@@ -1276,6 +1352,8 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
             
       END DO   
    
+      farm%p%Module_Ver( ModuleFF_FWrap ) = FWrap_InitOut%Ver
+      
       call cleanup()
       
 contains
@@ -1311,6 +1389,8 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
    
+   
+
    
    !.......................................................................................
    ! Initial calls to AWAE and SC modules (steps 1. and 2. can be done in parallel)
@@ -1559,7 +1639,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
             ! Loop over user-requested, downstream distances (OutDist), m   
          do iOutDist = 1, farm%p%NOutDist
             
-            if (  farm%p%OutDist(iOutDist) >= farm%WD(nt)%xd%x_plane(min(farm%WD(nt)%p%NumPlanes-1,n+1)) ) then
+            if (  farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(min(farm%WD(nt)%p%NumPlanes-1,n+1)) ) then
                ! TODO: Handle this case. Invalid output
                
                farm%m%AllOuts(WkAxsXTD(iOutDist,nt)) = 0.0_ReKi
@@ -1600,8 +1680,8 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
                
                   ! Find wake volume which contains the user-requested downstream location.
                do np = 0, min(farm%WD(nt)%p%NumPlanes-2 , n)
-                  if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%xd%x_plane(np) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%xd%x_plane(np+1) ) ) then
-                     delta = ( farm%p%OutDist(iOutDist) - farm%WD(nt)%xd%x_plane(np) ) / ( farm%WD(nt)%xd%x_plane(np+1) - farm%WD(nt)%xd%x_plane(np) )
+                  if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(np) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%y%x_plane(np+1) ) ) then
+                     delta = ( farm%p%OutDist(iOutDist) - farm%WD(nt)%y%x_plane(np) ) / ( farm%WD(nt)%y%x_plane(np+1) - farm%WD(nt)%y%x_plane(np) )
                      deltad = (1.0_ReKi-delta)
                      exit
                   end if

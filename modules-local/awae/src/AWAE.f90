@@ -83,6 +83,7 @@ subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
    if (s_grid0 == (szs-1)) s_grid1 = s_grid0  ! Handle case where s0 is the last index in the grid, in this case sd = 0.0, so the 2nd term in the interpolation will not contribute
   
    ! TODO: Add code to check bounds of requested slice location at INIT and fatal error if out of bounds
+   ! doing the bounds checks at INIT keeps this algorithm as fast as possible
    do j = 0,sz2-1
       do i = 0,sz1-1
          select case (sliceType)
@@ -129,8 +130,19 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
          dp      = u%p_plane(:,np+1,nt) - u%p_plane(:,np,nt)
          m%r_e(np,nt) = dot_product( u%xhat_plane(:,np  ,nt), dp )
          m%r_s(np,nt) = dot_product( u%xhat_plane(:,np+1,nt), dp )
+         
          if (   sinTerm > ( max( m%r_e(np,nt), m%r_s(np,nt) ) / ( 100.0_ReKi*rmax ) ) ) then
             m%parallelFlag(np,nt) = .false.
+            if ( u%D_wake(np,nt) > 0.0_ReKi ) then
+               if ( m%r_e(np,nt) < rmax ) then
+                  call SetErrStat( ErrID_Fatal, 'Radius to the wake center in the ending wake plane from the line where the starting and ending wake planes intersect for a given wake volume   (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') is smaller than rmax: '//trim(num2lstr(rmax))//'.', errStat, errMsg, 'ComputeLocals' )
+                  return
+               end if
+               if ( m%r_s(np,nt) < rmax ) then
+                  call SetErrStat( ErrID_Fatal, 'Radius to the wake center in the starting wake plane from the line where the starting and ending wake planes intersect for a given wake volume  (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') is smaller than rmax: '//trim(num2lstr(rmax))//'.', errStat, errMsg, 'ComputeLocals' )
+                  return
+               end if
+            end if 
             m%r_e(np,nt) = m%r_e(np,nt) / sinTerm
             m%r_s(np,nt) = m%r_s(np,nt) / sinTerm
             m%rhat_s(:,np,nt) = (u%xhat_plane(:,np,nt)*cosTerm - u%xhat_plane(:,np+1,nt)        ) / sinTerm

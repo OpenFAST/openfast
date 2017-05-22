@@ -9794,6 +9794,181 @@ TYPE(ProgDesc), PARAMETER      :: Farm_Ver      = ProgDesc( 'FAST.Farm', 'v0.01.
 
       contains
 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This function returns a string describing the glue code and some of the compilation options we're using.
+FUNCTION GetVersion(ThisProgVer)
+
+   ! Passed Variables:
+
+   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
+   CHARACTER(1024)                 :: GetVersion      !< String containing a description of the compiled precision.
+
+   GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled'
+   
+   
+   GetVersion = TRIM(GetVersion)//' as a '//TRIM(Num2LStr(BITS_IN_ADDR))//'-bit application using'
+   
+   ! determine precision
+
+      IF ( ReKi == SiKi )  THEN     ! Single precision
+         GetVersion = TRIM(GetVersion)//' single'
+      ELSEIF ( ReKi == R8Ki )  THEN ! Double precision
+         GetVersion = TRIM(GetVersion)// ' double'
+      ELSE                          ! Unknown precision
+         GetVersion = TRIM(GetVersion)//' unknown'
+      ENDIF
+
+!   GetVersion = TRIM(GetVersion)//' precision with '//OS_Desc
+   GetVersion = TRIM(GetVersion)//' precision'
+
+
+   RETURN
+END FUNCTION GetVersion
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
+SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
+
+      ! Passed variables
+   type(All_FastFarm_Data),        INTENT(IN )          :: farm                                  !< FAST.Farm data
+   type(WD_InputFileType),         INTENT(IN )          :: WD_InputFileData                      !< Wake Dynamics Input File data
+   INTEGER(IntKi),                 INTENT(OUT)          :: ErrStat                               !< Error status
+   CHARACTER(*),                   INTENT(OUT)          :: ErrMsg                                !< Error message corresponding to ErrStat
+
+
+      ! Local variables.
+
+   INTEGER(IntKi)               :: I,J                                             ! Index for the nodes.
+   INTEGER(IntKi)               :: K                                               ! Generic index (also for the blade number).
+   INTEGER(IntKi)               :: UnSum                                            ! I/O unit number for the summary output file
+
+   CHARACTER(*), PARAMETER      :: Fmt1      = "(34X,3(6X,'Blade',I2,:))"          ! Format for outputting blade headings.
+   CHARACTER(*), PARAMETER      :: Fmt2      = "(34X,3(6X,A,:))"                   ! Format for outputting blade headings.
+   CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,3(:,F13.3))'                ! Format for outputting mass and modal data.
+   CHARACTER(*), PARAMETER      :: FmtDatT   = '(A,T35,1(:,F13.8))'                ! Format for outputting time steps.
+   CHARACTER(100)               :: RotorType                                       ! Text description of rotor.
+   CHARACTER(30)                :: Fmt
+   CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
+   CHARACTER(10)                :: DOFEnabled                                      ! String to say if a DOF is enabled or disabled
+   CHARACTER(2)                 :: outStr
+   CHARACTER(10)                :: CalWakeDiamStr
+   
+   
+   ! Open the summary file and give it a heading.
+   
+   CALL GetNewUnit( UnSum, ErrStat, ErrMsg )
+   IF ( ErrStat /= ErrID_None ) RETURN
+
+   CALL OpenFOutFile ( UnSum, TRIM( farm%p%OutFileRoot )//'.sum', ErrStat, ErrMsg )
+   IF ( ErrStat /= ErrID_None ) RETURN
+
+   
+   ! Heading:
+   !.......................... Module Versions .....................................................
+
+
+   WRITE (UnSum,'(A)') 'FAST.Farm Summary File'
+   WRITE (UnSum,'(/A)')  TRIM( farm%p%FileDescLines(1) )
+
+   WRITE (UnSum,'(2X,A)'   )  'compiled with'
+   Fmt = '(4x,A)'
+   WRITE (UnSum,Fmt)  TRIM( GetNVD( NWTC_Ver ) )
+   WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_SC    ) ) )
+   WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_FWrap ) ) )
+   WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_WD    ) ) )
+   WRITE (UnSum,Fmt)  TRIM( GetNVD( farm%p%Module_Ver( ModuleFF_AWAE  ) ) )
+   !WRITE (y_FAST%UnSum,Fmt)  TRIM( GetNVD(  ) )
+
+   WRITE (UnSum,'(/,A)') 'Description from the FAST.Farm input file: '//trim(farm%p%FTitle)
+   
+   WRITE (UnSum,'(/,A)') 'Ambient Wind Input Filepath: '//trim(farm%p%WindFilePath)
+   
+   !..................................
+   ! Turbine information.
+   !..................................
+   
+   WRITE (UnSum,'(/,A)'   )  'Wind Turbines: '//trim(Num2LStr(farm%p%NumTurbines))
+   WRITE (UnSum,'(2X,A)')  'Turbine Number  Output Turbine Number      X         Y         Z       FAST Time Step  FAST SubCycles  FAST Input File'
+   WRITE (UnSum,'(2X,A)')  '      (-)                (-)              (m)       (m)       (m)          (S)             (-)                (-)'
+
+   do I = 1,farm%p%NumTurbines
+      if ( I < 10 ) then
+         outStr = adjustr(trim(Num2LStr(I)))
+      else
+         outStr = '- '
+      end if
+      
+      WRITE(UnSum,'(6X,I4,16X,A4,9X,3F10.3,5X,F9.4,8X,I4,10X,A)')  I, outStr, farm%p%WT_Position(1,I), farm%p%WT_Position(2,I),farm%p%WT_Position(3,I), farm%p%DT, farm%p%n_high_low, trim(farm%p%WT_FASTInFile(I))
+                                                                      
+   end do
+   
+   WRITE (UnSum,'(/,A)'   )  'Wake Dynamics Finite-Difference Grid: '//trim(Num2LStr(farm%WD(1)%p%NumRadii))//' Radii, '//trim(Num2LStr(farm%WD(1)%p%NumPlanes))//' Planes'
+   WRITE (UnSum,'(2X,A)')      'Radial Node Number  Output Node Number    Radius'
+   WRITE (UnSum,'(2X,A)')      '       (-)                (-)              (m) '  
+   do I = 0, farm%WD(1)%p%NumRadii-1
+      outStr = ' -'
+      do J = 1, farm%p%NOutRadii
+         if (farm%p%OutRadii(J) == I ) then
+            outStr = trim(Num2LStr(J))
+            exit
+         end if
+      end do
+      
+      WRITE(UnSum,'(8X,I4,17X,A2,9X,F10.3)')  I, outStr, farm%WD(1)%p%r(I)
+      
+   end do
+   
+   WRITE (UnSum,'(/,A)'   )  'Wake Dynamics Parameters'
+   WRITE (UnSum,'(2X,A)')      'Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz): '//trim(Num2LStr(WD_InputFileData%f_c))
+   WRITE (UnSum,'(4X,A)')        '( low-pass time-filter parameter (-): '//trim(Num2LStr(farm%WD(1)%p%filtParam))//' )'
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m): '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_O))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg): '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_OY)) 
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-):  '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_x))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg):  '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_xY))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter for near-wake correction (-): '//trim(Num2LStr(farm%WD(1)%p%C_NearWake))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-):  '//trim(Num2LStr(farm%WD(1)%p%k_vAmb))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter for the influence of the shear layer in the eddy viscosity (-):  '//trim(Num2LStr(farm%WD(1)%p%k_vShr))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the minimum and exponential regions (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vAmb_DMin))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vAmb_DMax))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vAmb_FMin))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vAmb_Exp))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vShr_DMin))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-): '//trim(Num2LStr(farm%WD(1)%p%C_vShr_DMax)) 
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the functional value in the minimum region (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vShr_FMin))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vShr_Exp))
+   WRITE (UnSum,'(2X,A)')      'Wake diameter calculation model (-):  '//trim(Num2LStr(farm%WD(1)%p%Mod_WakeDiam))
+   if ( farm%WD(1)%p%Mod_WakeDiam > 1 ) then
+      CalWakeDiamStr = trim(Num2LStr(farm%WD(1)%p%C_WakeDiam)) 
+   else
+      CalWakeDiamStr = '-'
+   end if
+   
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter for wake diameter calculation (-): '//CalWakeDiamStr
+   
+   WRITE (UnSum,'(/,A)'   )  'Time Steps'
+   WRITE (UnSum,'(2X,A)')      'Component                        Time Step(s)      Subcyles'
+   WRITE (UnSum,'(2X,A)')      '  (-)                                (s)             (-)'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm (glue code)          ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Super Controller               ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST Wrapper                   ',farm%p%dt, '1 (See table above for FAST.)'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Wake Dynamics                  ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Ambient Wind and Array Effects ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Low -resolution wind input     ',farm%p%dt, '1'
+   WRITE (UnSum,'(2X,A,F10.4,12X,I2)')     'High-resolution wind input     ',farm%p%DT_high, farm%p%n_high_low
+   WRITE (UnSum,'(2X,A,F10.4,12X,I2)')     'Wind visualization output      ',farm%AWAE%p%WrDisSkp1*farm%p%dt, farm%AWAE%p%WrDisSkp1-1
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm output files         ',farm%p%dt, '1'
+
+   WRITE (UnSum,'(/,A)'   )  'Requested Channels in FAST.Farm Output Files: '//trim(Num2LStr(farm%p%NumOuts+1))
+	WRITE (UnSum,'(2X,A)'  )    'Number     Name         Units'
+	WRITE (UnSum,'(2X,A)'  )    '   0       Time          (s)'
+	do I=1,farm%p%NumOuts
+      WRITE (UnSum,'(2X,I4,7X,A14,A14)'  )  I, farm%p%OutParam(I)%Name,farm%p%OutParam(I)%Units
+   end do
+
+   CLOSE(UnSum)
+
+RETURN
+END SUBROUTINE Farm_PrintSum
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the output for the glue code, including writing the header for the primary output file.
@@ -9813,7 +9988,7 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
    INTEGER(IntKi)                   :: indxLast                                        ! The index of the last value to be written to an array
    INTEGER(IntKi)                   :: indxNext                                        ! The index of the next value to be written to an array
    INTEGER(IntKi)                   :: NumOuts                                         ! number of channels to be written to the output file(s)
-   CHARACTER(1024)                  :: FileDescLines(3)
+   
    
    
    
@@ -9833,10 +10008,10 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
       
       
    farm%m%AllOuts = 0.0_ReKi
-   
-   FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetNVD(Farm_Ver))
-   FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
-   FileDescLines(3)  = 'Description from the FAST.Farm input file: '//TRIM(farm%p%FTitle)
+    
+   farm%p%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(Farm_Ver))
+   farm%p%FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
+   farm%p%FileDescLines(3)  = 'Description from the FAST.Farm input file: '//TRIM(farm%p%FTitle)
    
  !......................................................
    ! Open the text output file and print the headers
@@ -9852,10 +10027,10 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
 
          ! Add some file information:
 
-      WRITE (farm%p%UnOu,'(/,A)')  TRIM( FileDescLines(1) )
-      WRITE (farm%p%UnOu,'(1X,A)') TRIM( FileDescLines(2) )
+      WRITE (farm%p%UnOu,'(/,A)')  TRIM( farm%p%FileDescLines(1) )
+      WRITE (farm%p%UnOu,'(1X,A)') TRIM( farm%p%FileDescLines(2) )
       WRITE (farm%p%UnOu,'()' )    !print a blank line
-      WRITE (farm%p%UnOu,'(A)'   ) TRIM( FileDescLines(3) )
+      WRITE (farm%p%UnOu,'(A)'   ) TRIM( farm%p%FileDescLines(3) )
       WRITE (farm%p%UnOu,'()' )    !print a blank line
 
 
@@ -9942,27 +10117,27 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
    !IF (farm%p%WrBinOutFile) THEN
    !
    !      ! calculate the size of the array of outputs we need to store
-   !   farm%p%NOutSteps = CEILING ( (farm%p%TMax - farm%p%TStart) / farm%p%DT_OUT ) + 1
+   !   farm%p%NOutSteps = CEILING ( (farm%p%TMax - farm%p%TStart) / farm%p%DT ) + 1
    !
-   !   CALL AllocAry( farm%p%AllOutData, farm%p%NumOuts-1, farm%p%NOutSteps, 'AllOutData', ErrStat, ErrMsg )
+   !   CALL AllocAry( farm%m%AllOutData, farm%p%NumOuts-1, farm%p%NOutSteps, 'AllOutData', ErrStat, ErrMsg )
    !   IF ( ErrStat >= AbortErrLev ) RETURN
    !
-   !   IF ( OutputFileFmtID == FileFmtID_WithoutTime ) THEN
+   !  ! IF ( OutputFileFmtID == FileFmtID_WithoutTime ) THEN
    !
-   !      CALL AllocAry( farm%p%TimeData, 2_IntKi, 'TimeData', ErrStat, ErrMsg )
+   !      CALL AllocAry( farm%m%TimeData, 2_IntKi, 'TimeData', ErrStat, ErrMsg )
    !      IF ( ErrStat >= AbortErrLev ) RETURN
    !
-   !      y_FAST%TimeData(1) = 0.0_DbKi           ! This is the first output time, which we will set later
-   !      y_FAST%TimeData(2) = farm%p%DT_out      ! This is the (constant) time between subsequent writes to the output file
+   !      farm%m%TimeData(1) = 0.0_DbKi           ! This is the first output time, which we will set later
+   !      farm%m%TimeData(2) = farm%p%DT          ! This is the (constant) time between subsequent writes to the output file
    !
-   !   ELSE  ! we store the entire time array
+   !   !ELSE  ! we store the entire time array
+   !   !
+   !   !   CALL AllocAry( farm%m%TimeData, farm%p%NOutSteps, 'TimeData', ErrStat, ErrMsg )
+   !   !   IF ( ErrStat >= AbortErrLev ) RETURN
+   !   !
+   !   !END IF
    !
-   !      CALL AllocAry( y_FAST%TimeData, y_FAST%NOutSteps, 'TimeData', ErrStat, ErrMsg )
-   !      IF ( ErrStat >= AbortErrLev ) RETURN
-   !
-   !   END IF
-   !
-   !   y_FAST%n_Out = 0  !number of steps actually written to the file
+   !   farm%m%n_Out = 0  !number of steps actually written to the file
    !
    !END IF
 
@@ -9986,7 +10161,9 @@ SUBROUTINE Farm_EndOutput( farm, ErrStat, ErrMsg )
       ! local variables
    CHARACTER(1024)  :: FileDesc                  ! The description of the run, to be written in the binary output file
 
-
+   !CHARACTER(ChanLenFF):: ChannelNames(farm%p%NumOuts)
+   !CHARACTER(ChanLenFF):: ChannelUnits(farm%p%NumOuts)
+   !INTEGER(IntKi)  :: I
       ! Initialize some values
 
    ErrStat = ErrID_None
@@ -9995,13 +10172,18 @@ SUBROUTINE Farm_EndOutput( farm, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! Write the binary output file if requested
    !-------------------------------------------------------------------------------------------------
-
-   !IF (farm%p%WrBinOutFile .AND. farm%y%n_Out > 0) THEN
+   ! TODO: The ChannelNames and ChannelUnits need to be length ChanLenFF for Fast.Farm, but the WrBinFAST subroutine needs these to be ChanLen long!
+   !IF (farm%p%WrBinOutFile .AND. farm%m%n_Out > 0) THEN
    !
    !   FileDesc = TRIM(farm%p%FileDescLines(1))//' '//TRIM(farm%p%FileDescLines(2))//'; '//TRIM(farm%p%FileDescLines(3))
    !
-   !   CALL WrBinFAST(TRIM(farm%p%OutFileRoot)//'.outb', OutputFileFmtID, TRIM(FileDesc), &
-   !         ChannelNames, ChannelUnits, farm%y%TimeData, farm%y%AllOutData(:,1:farm%y%n_Out), ErrStat, ErrMsg)
+   !   DO I = 1,farm%p%NumOuts
+   !      ChannelNames(I) = farm%p%OutParam(I)%Name
+   !      ChannelUnits(I) = farm%p%OutParam(I)%Units
+   !   END DO
+   !   
+   !   CALL WrBinFAST(TRIM(farm%p%OutFileRoot)//'.outb', 2, TRIM(FileDesc), &
+   !         ChannelNames, ChannelUnits, farm%m%TimeData(:),farm%m%AllOutData(:,1:farm%m%n_Out), ErrStat, ErrMsg)
    !
    !   IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(GetErrStr(ErrStat))//' when writing binary output file: '//TRIM(ErrMsg) )
    !
@@ -10050,7 +10232,7 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
    CHARACTER(farm%p%TChanLen)              :: TmpStr                                    ! temporary string to print the time output as text 
    CHARACTER(ChanLenFF)                    :: TmpStr2                                    ! temporary string to print the output as text 
    INTEGER(IntKi)                          :: I, J                                      ! loop counter
-   REAL(ReKi)                              :: val
+   REAL(ReKi)                              :: OutputAry(farm%p%NumOuts)
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -10067,8 +10249,8 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
             ! Generate fast.farm output file
       DO I = 1,farm%p%NumOuts  ! Loop through all selected output channels
 
-         val = farm%p%OutParam(I)%SignM * farm%m%AllOuts( farm%p%OutParam(I)%Indx )
-         WRITE( TmpStr2, '('//Frmt//')' ) val
+         OutputAry(I) = farm%p%OutParam(I)%SignM * farm%m%AllOuts( farm%p%OutParam(I)%Indx )
+         WRITE( TmpStr2, '('//Frmt//')' ) OutputAry(I)
          CALL WrFileNR( farm%p%UnOu, TmpStr2 )
       
      
@@ -10104,81 +10286,32 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
          ! write a new line (advance to the next line)
       WRITE (farm%p%UnOu,'()')
 
+      !IF (farm%p%WrBinOutFile) THEN
+      !
+      !      ! Write data to array for binary output file
+      !
+      !   IF ( farm%m%n_Out == farm%p%NOutSteps ) THEN
+      !      CALL ProgWarn( 'Not all data could be written to the binary output file.' )
+      !      !this really would only happen if we have an error somewhere else, right?
+      !      !otherwise, we could allocate a new, larger array and move existing data
+      !   ELSE
+      !      farm%m%n_Out = farm%m%n_Out + 1
+      !
+      !         ! store time data
+      !      IF ( farm%m%n_Out == 1_IntKi ) THEN !.OR. OutputFileFmtID == FileFmtID_WithTime ) THEN
+      !         farm%m%TimeData(farm%m%n_Out) = t_global   ! Time associated with these outputs
+      !      END IF
+      !
+      !         ! store individual module data
+      !      farm%m%AllOutData(:, farm%m%n_Out) = OutputAry
+      !   
+      !   END IF      
+      !
+      !END IF  
    ENDIF
-   
-            
 END SUBROUTINE WriteFarmOutputToFile  
 
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine writes the module output to the primary output file(s).
-SUBROUTINE WrOutputLine( t, farm, ErrStat, ErrMsg)
 
-   IMPLICIT                        NONE
-   
-      ! Passed variables
-   REAL(DbKi), INTENT(IN)                  :: t                                  !< Current simulation time, in seconds
-   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                               !< FAST.Farm data
-   INTEGER(IntKi),           INTENT(OUT)   :: ErrStat                            !< Error status
-   CHARACTER(*),             INTENT(OUT)   :: ErrMsg                             !< Error message
-
-      ! Local variables.
-
-   CHARACTER(200)                   :: Frmt                                      ! A string to hold a format specifier
-   CHARACTER(farm%p%TChanLen)       :: TmpStr                                    ! temporary string to print the time output as text
-
-  ! REAL(ReKi)                       :: OutputAry(SIZE(farm%p%ChannelNames)-1)
-
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   
-   !CALL FillOutputAry(p_Farm, y_Farm, IfWOutput, OpFMOutput, EDOutput, ADOutput, SrvDOutput, HDOutput, SDOutput, ExtPtfmOutput, &
-   !                   MAPOutput, FEAMOutput, MDOutput, OrcaOutput, IceFOutput, y_IceD, y_BD, OutputAry)   
-
-   !IF (farm%p%WrTxtOutFile) THEN
-
-         ! Write one line of tabular output:
-   !   Frmt = '(F8.3,'//TRIM(Num2LStr(p%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-      Frmt = '"'//farm%p%Delim//'"'//farm%p%OutFmt      ! format for array elements from individual modules
-
-            ! time
-      WRITE( TmpStr, '('//trim(farm%p%OutFmt_t)//')' ) t
-      !CALL WrFileNR( y_Farm%UnOu, TmpStr )
-      !
-      !   ! write the individual module output (convert to SiKi if necessary, so that we don't need to print so many digits in the exponent)
-      !CALL WrNumAryFileNR ( y_Farm%UnOu, REAL(OutputAry,SiKi), Frmt, ErrStat, ErrMsg )
-      !   !IF ( ErrStat >= AbortErrLev ) RETURN
-      !
-      !   ! write a new line (advance to the next line)
-      !WRITE (y_Farm%UnOu,'()')
-
-   !END IF
-
-
-   !IF (farm%p%WrBinOutFile) THEN
-
-         ! Write data to array for binary output file
-
-      !IF ( y_Farm%n_Out == y_Farm%NOutSteps ) THEN
-      !   CALL ProgWarn( 'Not all data could be written to the binary output file.' )
-      !   !this really would only happen if we have an error somewhere else, right?
-      !   !otherwise, we could allocate a new, larger array and move existing data
-      !ELSE
-      !   y_Farm%n_Out = y_Farm%n_Out + 1
-      !
-      !      ! store time data
-      !   IF ( y_Farm%n_Out == 1_IntKi .OR. OutputFileFmtID == FileFmtID_WithTime ) THEN
-      !      y_Farm%TimeData(y_Farm%n_Out) = t   ! Time associated with these outputs
-      !   END IF
-      !
-      !      ! store individual module data
-      !   y_Farm%AllOutData(:, y_Farm%n_Out) = OutputAry
-      !   
-      !END IF      
-
-   !END IF
-
-   RETURN
-END SUBROUTINE WrOutputLine
 
 logical function PointInAABB(x, y, z, x0, y0, z0, x1, y1, z1)
    real(ReKi), intent(in) :: x,y,z,x0,y0,z0,x1,y1,z1
@@ -13862,19 +13995,16 @@ SUBROUTINE SetOutParam(OutList, farm, ErrStat, ErrMsg )
          InvalidOutput( WVDisX  (i) ) = .true.
          InvalidOutput( WVDisY  (i) ) = .true.
          InvalidOutput( WVDisZ  (i) ) = .true.
-      end if
-   
-     
+      end if      
    end do
-   do i = farm%p%NWindVel+1, 9
-      
+   
+   do i = farm%p%NWindVel+1, 9     
       InvalidOutput( WVAmbX  (i) ) = .true.
       InvalidOutput( WVAmbY  (i) ) = .true.
       InvalidOutput( WVAmbZ  (i) ) = .true.
       InvalidOutput( WVDisX  (i) ) = .true.
       InvalidOutput( WVDisY  (i) ) = .true.
-      InvalidOutput( WVDisZ  (i) ) = .true.
-     
+      InvalidOutput( WVDisZ  (i) ) = .true.     
    end do
       ! 
 !   ................. End of validity checking .................

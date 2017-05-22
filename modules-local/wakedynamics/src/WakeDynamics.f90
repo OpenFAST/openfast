@@ -171,6 +171,74 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
 end function WakeDiam
 
 !----------------------------------------------------------------------------------------------------------------------------------   
+!> This subroutine computes the near wake correction : Vx_wake  
+subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, errStat, errMsg )
+   real(ReKi),                   intent(in   ) :: Ct_azavg_filt(0:) !< Time-filtered azimuthally averaged thrust force coefficient (normal to disk), distributed radially
+   real(ReKi),                   intent(in   ) :: Vx_rel_disk_filt  !< Time-filtered rotor-disk-averaged relative wind speed (ambient + deficits + motion), normal to disk
+   type(WD_ParameterType),       intent(in   ) :: p                 !< Parameters
+   type(WD_MiscVarType),         intent(inout) :: m                 !< Initial misc/optimization variables
+   real(ReKi),                   intent(inout) :: Vx_wake(0:,0:)    !< Axial wake velocity deficit at wake planes, distributed radially
+   integer(IntKi),               intent(  out) :: errStat           !< Error status of the operation
+   character(*),                 intent(  out) :: errMsg            !< Error message if errStat /= ErrID_None
+   real(ReKi)     :: a_interp
+   integer(IntKi) :: j, ILo
+   character(*), parameter            :: RoutineName = 'NearWakeCorrection'
+   
+   errStat = ErrID_None
+   errMsg  = ''
+   
+   m%r_wake(0) = 0.0_ReKi
+   
+   do j=0,p%NumRadii-1
+         
+         ! compute m%a using the [n+1] values of Ct_azavg_filt
+      if ( Ct_azavg_filt(j) > 2.0_ReKi ) then
+         ! THROW ERROR because we are in the prop-brake region
+         ! TEST: E5
+         call SetErrStat(ErrID_FATAL, 'Wake model is not valid in the propeller-brake region, i.e., Ct_azavg_filt(j) > 2.0.', errStat, errMsg, RoutineName) 
+         
+         return
+      else if ( Ct_azavg_filt(j) >= 24.0_ReKi/25.0_ReKi ) then
+         m%a(j) = (2.0_ReKi + 3.0_ReKi*sqrt(14.0_ReKi*Ct_azavg_filt(j)-12.0_ReKi))/14.0_ReKi
+      else
+         m%a(j) =  0.5_ReKi - 0.5_ReKi*sqrt( 1.0_ReKi-Ct_azavg_filt(j))
+      end if
+      
+      if ( EqualRealNos(m%a(j),(1.0_ReKi / p%C_NearWake)) .or.  (m%a(j) > (1.0_ReKi / p%C_NearWake)) ) then
+         ! TEST: E6
+         call SetErrStat(ErrID_FATAL, 'Local induction is high enough to invalidate the near-wake correction, i.e., m%a(i) >= 1.0_ReKi / p%C_NearWake.', errStat, errMsg, RoutineName) 
+        
+         return
+      end if
+      
+      if (j > 0) then
+         m%r_wake(j) = sqrt(m%r_wake(j-1)**2 + p%dr*( ((1.0_ReKi - m%a(j))*p%r(j)) / (1.0_ReKi-p%C_NearWake*m%a(j)) + ((1.0_ReKi - m%a(j-1))*p%r(j-1)) / (1.0_ReKi-p%C_NearWake*m%a(j-1)) ) )
+      end if
+      
+   end do
+   
+   ! NOTE: We need another loop over NumRadii because we need the complete m%a() vector so that we can interpolate into m%a() using the value of r_wake
+   
+      ! Use the [n+1] version of Vx_rel_disk_filt to determine the [n+1] version of Vx_wake(:,0)
+   Vx_wake(0,0) = -Vx_rel_disk_filt*p%C_Nearwake*m%a(0)
+   Vx_wake(0,1) =  Vx_wake(0,0)
+   
+   ILo = 0
+   do j=1, p%NumRadii-1     
+     
+      ! given r_wake and m%a at p%dr increments, find value of m%a(r_wake) using interpolation 
+      a_interp = InterpBin( p%r(j),m%r_wake, m%a, ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
+      
+         !                 [n+1] 
+      Vx_wake(j,0) = -Vx_rel_disk_filt*p%C_NearWake*a_interp
+      Vx_wake(j,1) =  Vx_wake(j,0)
+   end do
+   
+end subroutine NearWakeCorrection
+
+
+
+!----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine solves the tridiagonal linear system for x() using the Thomas algorithm   
 subroutine ThomasAlgorithm(nr, a, b, c, d, x, errStat, errMsg)
 
@@ -222,39 +290,6 @@ subroutine ThomasAlgorithm(nr, a, b, c, d, x, errStat, errMsg)
    end do
 
 end subroutine ThomasAlgorithm
-
-!----------------------------------------------------------------------------------------------------------------------------------   
-!> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
-!! FAST or WakeDynamics_Driver)   
-subroutine WD_SetInitOut(p, InputInp, InitOut, errStat, errMsg)
-
-   type(WD_InitOutputType),       intent(  out)  :: InitOut          !< Initialization output data
-   type(WD_InitInputType),        intent(in   )  :: InputInp         !< Initialization input  data 
-   type(WD_ParameterType),        intent(in   )  :: p                !< Parameters
-   integer(IntKi),                intent(  out)  :: errStat          !< Error status of the operation
-   character(*),                  intent(  out)  :: errMsg           !< Error message if errStat /= ErrID_None
-
-
-      ! Local variables
-   integer(intKi)                               :: ErrStat2          ! temporary Error status
-   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
-   character(*), parameter                      :: RoutineName = 'WD_SetInitOut'
-   
-   
-   
-   integer(IntKi)                               :: i, j, k, f
-   integer(IntKi)                               :: NumCoords
-
-      ! Initialize variables for this routine
-
-   errStat = ErrID_None
-   errMsg  = ""
-
-      ! TODO: Set output data
-   
-   InitOut%Ver = WD_Ver
- 
-end subroutine WD_SetInitOut
 
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine is called at the start of the simulation to perform initialization steps.
@@ -459,6 +494,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       ! Define initialization output here
       !............................................................................................
    
+   InitOut%Ver = WD_Ver
+   
    allocate ( y%xhat_plane(3,0:p%NumPlanes-1), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%xhat_plane.', errStat, errMsg, RoutineName )     
    allocate ( y%p_plane   (3,0:p%NumPlanes-1), STAT=ErrStat2 )
@@ -469,6 +506,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vr_wake.', errStat, errMsg, RoutineName )  
    allocate ( y%D_wake    (0:p%NumPlanes-1), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%D_wake.', errStat, errMsg, RoutineName )  
+   allocate ( y%x_plane   (0:p%NumPlanes-1), STAT=ErrStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%x_plane.', errStat, errMsg, RoutineName )  
    if (errStat /= ErrID_None) return
    
    y%xhat_plane = 0.0_Reki
@@ -476,6 +515,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    y%Vx_wake    = 0.0_Reki
    y%Vr_wake    = 0.0_Reki
    y%D_wake     = 0.0_Reki
+   y%x_plane    = 0.0_Reki
    
    call Cleanup() 
       
@@ -655,6 +695,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1)                                                   
       end do
       
+      
+      
          ! All of the m%a,m%b,m%c,m%d vectors use states at time increment [n]
          ! These need to be inside another radial loop because m%dvtdr depends on the j+1 and j-1 indices of m%vt()
       
@@ -725,6 +767,11 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       end do  
    end do ! i = 1,min(n+2,p%NumPlanes-1) 
  
+      ! Set the last wake plane's eddy viscosity terms equal to the previous wake plane values.  This is for output writing purposes only.
+   m%vt_amb(:,maxPln) = m%vt_amb(:,maxPln-1)
+   m%vt_shr(:,maxPln) = m%vt_shr(:,maxPln-1)
+   m%vt_tot(:,maxPln) = m%vt_tot(:,maxPln-1)
+      
       ! Update states at disk-plane to [n+1] 
       
    xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0)*p%filtParam + u%xhat_disk(:)*(1.0_ReKi-p%filtParam)  ! 2-step calculation for xhat_plane at disk
@@ -775,7 +822,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          return
       end if
       
-      if ( dot_product( xd%xhat_plane(:,i-1), ( xd%p_plane(:,i) -xd%p_plane(:,i-1) ) ) <= 0.0_ReKi ) then
+      if ( ( dot_product( xd%xhat_plane(:,i-1), ( xd%p_plane(:,i) - xd%p_plane(:,i-1) ) ) <= 0.0_ReKi ) .or. &
+           ( dot_product( xd%xhat_plane(:,i  ), ( xd%p_plane(:,i) - xd%p_plane(:,i-1) ) ) <= 0.0_ReKi ) )then
          call SetErrStat(ErrID_FATAL, 'In a 3D sense, wake plane '//trim(num2lstr(i-1))//' is further downstream than wake plane '//trim(num2lstr(i)), errStat, errMsg, RoutineName)   
          call Cleanup()
          return 
@@ -784,55 +832,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
    
       !  filtered, azimuthally-averaged Ct values at each radial station
+   xd%Ct_azavg_filt (:) = xd%Ct_azavg_filt(:)*p%filtParam + u%Ct_azavg(:)*(1.0_ReKi-p%filtParam)
    
-   m%r_wake(0) = 0.0_ReKi
-   
-   do j=0,p%NumRadii-1
-      
-      xd%Ct_azavg_filt (j) =  xd%Ct_azavg_filt(j)*p%filtParam + u%Ct_azavg(j)*(1.0_ReKi-p%filtParam) 
-      
-         ! compute m%a using the [n+1] values of Ct_azavg_filt
-      if ( xd%Ct_azavg_filt(j) > 2.0_ReKi ) then
-         ! THROW ERROR because we are in the prop-brake region
-         ! TEST: E5
-         call SetErrStat(ErrID_FATAL, 'Wake model is not valid in the propeller-brake region, i.e., xd%Ct_azavg_filt(j) > 2.0.', errStat, errMsg, RoutineName) 
-         call Cleanup()
-         return
-      else if ( xd%Ct_azavg_filt(j) >= 24.0_ReKi/25.0_ReKi ) then
-         m%a(j) = (2.0_ReKi + 3.0_ReKi*sqrt(14.0_ReKi*xd%Ct_azavg_filt(j)-12.0_ReKi))/14.0_ReKi
-      else
-         m%a(j) =  0.5_ReKi - 0.5_ReKi*sqrt( 1.0_ReKi-xd%Ct_azavg_filt(j))
-      end if
-      
-      if ( EqualRealNos(m%a(j),(1.0_ReKi / p%C_NearWake)) .or.  (m%a(j) > (1.0_ReKi / p%C_NearWake)) ) then
-         ! TEST: E6
-         call SetErrStat(ErrID_FATAL, 'Local induction is high enough to invalidate the near-wake correction, i.e., m%a(i) >= 1.0_ReKi / p%C_NearWake.', errStat, errMsg, RoutineName) 
-         call Cleanup()
-         return
-      end if
-      
-      if (j > 0) then
-         m%r_wake(j) = sqrt(m%r_wake(j-1)**2 + p%dr*( ((1.0_ReKi - m%a(j))*p%r(j)) / (1.0_ReKi-p%C_NearWake*m%a(j)) + ((1.0_ReKi - m%a(j-1))*p%r(j-1)) / (1.0_ReKi-p%C_NearWake*m%a(j-1)) ) )
-      end if
-      
-   end do
-   
-   ! NOTE: We need another loop over NumRadii because we need the complete m%a() vector so that we can interpolate into m%a() using the value of r_wake
-   
-      ! Use the [n+1] version of xd%Vx_rel_disk_filt to determine the [n+1] version of Vx_wake(:,0)
-   xd%Vx_wake(0,0) = - xd%Vx_rel_disk_filt*p%C_Nearwake*m%a(0)
-   
-   ILo = 0
-   do j=1, p%NumRadii-1     
-     
-      ! given r_wake and m%a at p%dr increments, find value of m%a(r_wake) using interpolation 
-      a_interp = InterpBin( p%r(j),m%r_wake, m%a, ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
-      
-         !                 [n+1] 
-      xd%Vx_wake(j,0) = -xd%Vx_rel_disk_filt*p%C_NearWake*a_interp
-      xd%Vr_wake(j,0) = 0.0_ReKi
-   end do
-      
+   call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake, errStat, errMsg )
    
    !Used for debugging: write(51,'(I5,100(1x,ES10.2E2))') n, xd%x_plane(n), xd%x_plane(n)/xd%D_rotor_filt(n), xd%Vx_wind_disk_filt(n) + xd%Vx_wake(:,n), xd%Vr_wake(:,n)    
    
@@ -890,16 +892,16 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
                         
       correction = 0.0_ReKi
       do i = 0, min(n+1,p%NumPlanes-1)
-         x_plane = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
+         y%x_plane(i) = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
        
-         correction = correction + GetYawCorrection(u%YawErr, u%xhat_disk, x_plane, p,  errStat2, errMsg2)
+         correction = correction + GetYawCorrection(u%YawErr, u%xhat_disk, y%x_plane(i), p,  errStat2, errMsg2)
             call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)
             if (errStat >= AbortErrLev) then
                ! TEST: E3
                return
             end if
       
-         y%p_plane   (:,i) = u%p_hub(:) + x_plane*u%xhat_disk(:) + correction
+         y%p_plane   (:,i) = u%p_hub(:) + y%x_plane(i)*u%xhat_disk(:) + correction
          y%xhat_plane(:,i) = u%xhat_disk(:)
                  
          
@@ -915,62 +917,15 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          end if
       
       end do
-
-      
-         ! Initialze Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
-
-      m%r_wake(0) = 0.0_ReKi
-   
-      do j=0,p%NumRadii-1
-      
-            ! compute m%a using the [n+1] values of Ct_azavg_filt
-         if ( u%Ct_azavg(j) > 2.0_ReKi ) then
-            ! THROW ERROR because we are in the prop-brake region
-            ! TEST: E5
-            call SetErrStat(ErrID_FATAL, 'Wake model is not valid in the propeller-brake region, i.e., u%Ct_azavg(j) > 2.0.', errStat, errMsg, RoutineName) 
-            
-            return
-         else if ( u%Ct_azavg(j) >= 24.0_ReKi/25.0_ReKi ) then
-            m%a(j) = (2.0_ReKi + 3.0_ReKi*sqrt(14.0_ReKi*u%Ct_azavg(j)-12.0_ReKi))/14.0_ReKi
-         else
-            m%a(j) =  0.5_ReKi - 0.5_ReKi*sqrt( 1.0_ReKi-u%Ct_azavg(j))
-         end if
-      
-         if ( EqualRealNos(m%a(j),(1.0_ReKi / p%C_NearWake)) .or.  (m%a(j) > (1.0_ReKi / p%C_NearWake)) ) then
-            ! TEST: E6
-            call SetErrStat(ErrID_FATAL, 'Local induction is high enough to invalidate the near-wake correction, i.e., m%a(i) >= 1.0_ReKi / p%C_NearWake.', errStat, errMsg, RoutineName) 
-        
-            return
-         end if
-      
-         if (j > 0) then
-            m%r_wake(j) = sqrt(m%r_wake(j-1)**2 + p%dr*( ((1.0_ReKi - m%a(j))*p%r(j)) / (1.0_ReKi-p%C_NearWake*m%a(j)) + ((1.0_ReKi - m%a(j-1))*p%r(j-1)) / (1.0_ReKi-p%C_NearWake*m%a(j-1)) ) )
-         end if
-      
-      end do
-   
-      ! NOTE: We need another loop over NumRadii because we need the complete m%a() vector so that we can interpolate into m%a() using the value of r_wake
-   
-         ! Use the [n+1] version of xd%Vx_rel_disk_filt to determine the [n+1] version of Vx_wake(:,0)
-      y%Vx_wake(0,0) = - u%Vx_rel_disk*p%C_Nearwake*m%a(0)
-      y%Vx_wake(0,1) = y%Vx_wake(0,0)
-   
-      ILo = 0
-      do j=1, p%NumRadii-1     
      
-         ! given r_wake and m%a at p%dr increments, find value of m%a(r_wake) using interpolation 
-         a_interp = InterpBin( p%r(j),m%r_wake, m%a, ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
-      
-            !                 [n+1] 
-         y%Vx_wake(j,0) = -u%Vx_rel_disk*p%C_NearWake*a_interp
-         y%Vx_wake(j,1) =  y%Vx_wake(j,0)
-      end do
-      
-   
+         ! Initialze Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
+      call NearWakeCorrection( u%Ct_azavg, u%Vx_rel_disk, p, m, y%Vx_wake, errStat, errMsg )
+         if (errStat > AbortErrLev)  return
+ 
       return
       
    else
-      
+      y%x_plane    = xd%x_plane
       y%p_plane    = xd%p_plane
       y%xhat_plane = xd%xhat_plane
       y%Vx_wake    = xd%Vx_wake
@@ -1105,62 +1060,13 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
       
    end do
    
-      ! Only need to set the 0 index because everything else is already initialized to zero.
-   
-   xd%Vx_rel_disk_filt     = u%Vx_rel_disk 
-   
+   xd%Vx_rel_disk_filt     = u%Vx_rel_disk    
    
       ! Initialze Ct_azavg_filt and Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
+   xd%Ct_azavg_filt (:) = u%Ct_azavg(:) 
    
-   m%r_wake(0) = 0.0_ReKi
-   
-   do j=0,p%NumRadii-1
+   call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake, errStat, errMsg )
       
-      xd%Ct_azavg_filt (j) = u%Ct_azavg(j) 
-      
-         ! compute m%a using the [n+1] values of Ct_azavg_filt
-      if ( xd%Ct_azavg_filt(j) > 2.0_ReKi ) then
-         ! THROW ERROR because we are in the prop-brake region
-         ! TEST: E5
-         call SetErrStat(ErrID_FATAL, 'Wake model is not valid in the propeller-brake region, i.e., u%Ct_azavg(j) > 2.0.', errStat, errMsg, RoutineName) 
-         
-         return
-      else if ( xd%Ct_azavg_filt(j) >= 24.0_ReKi/25.0_ReKi ) then
-         m%a(j) = (2.0_ReKi + 3.0_ReKi*sqrt(14.0_ReKi*xd%Ct_azavg_filt(j)-12.0_ReKi))/14.0_ReKi
-      else
-         m%a(j) =  0.5_ReKi - 0.5_ReKi*sqrt( 1.0_ReKi-xd%Ct_azavg_filt(j))
-      end if
-      
-      if ( EqualRealNos(m%a(j),(1.0_ReKi / p%C_NearWake)) .or.  (m%a(j) > (1.0_ReKi / p%C_NearWake)) ) then
-         ! TEST: E6
-         call SetErrStat(ErrID_FATAL, 'Local induction is high enough to invalidate the near-wake correction, i.e., m%a(i) >= 1.0_ReKi / p%C_NearWake.', errStat, errMsg, RoutineName) 
-        
-         return
-      end if
-      
-      if (j > 0) then
-         m%r_wake(j) = sqrt(m%r_wake(j-1)**2 + p%dr*( ((1.0_ReKi - m%a(j))*p%r(j)) / (1.0_ReKi-p%C_NearWake*m%a(j)) + ((1.0_ReKi - m%a(j-1))*p%r(j-1)) / (1.0_ReKi-p%C_NearWake*m%a(j-1)) ) )
-      end if
-      
-   end do
-   
-   ! NOTE: We need another loop over NumRadii because we need the complete m%a() vector so that we can interpolate into m%a() using the value of r_wake
-   
-      ! Use the [n+1] version of xd%Vx_rel_disk_filt to determine the [n+1] version of Vx_wake(:,0)
-   xd%Vx_wake(0,0) = - xd%Vx_rel_disk_filt*p%C_Nearwake*m%a(0)
-   xd%Vx_wake(0,1) = xd%Vx_wake(0,0)
-   
-   ILo = 0
-   do j=1, p%NumRadii-1     
-     
-      ! given r_wake and m%a at p%dr increments, find value of m%a(r_wake) using interpolation 
-      a_interp = InterpBin( p%r(j),m%r_wake, m%a, ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
-      
-         !                 [n+1] 
-      xd%Vx_wake(j,0) = -xd%Vx_rel_disk_filt*p%C_NearWake*a_interp
-      xd%Vx_wake(j,1) =  xd%Vx_wake(j,0)
-   end do
-   
 end subroutine InitStatesWithInputs
    
 !----------------------------------------------------------------------------------------------------------------------------------
