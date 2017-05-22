@@ -63,6 +63,7 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "")
     endif()
 
   else ()
+    # default for other systems, CYGWIN
     set(TOLERANCE 0.0000001)
   endif()
 
