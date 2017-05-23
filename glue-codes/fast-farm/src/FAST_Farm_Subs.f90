@@ -43,24 +43,6 @@ MODULE FAST_Farm_Subs
    CONTAINS
  
 
-   !+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-   !>    This function is used to interpolate into the full-field wind array or tower array if it has
-   !!    been defined and is necessary for the given inputs.  It receives X, Y, Z and
-   !!    TIME from the calling routine.  It then computes a time shift due to a nonzero X based upon
-   !!    the average windspeed.  The modified time is used to decide which pair of time slices to interpolate
-   !!    within and between.  After finding the two time slices, it decides which four grid points bound the
-   !!    (Y,Z) pair.  It does a bilinear interpolation for each time slice. Linear interpolation is then used
-   !!    to interpolate between time slices.  This routine assumes that X is downwind, Y is to the left when
-   !!    looking downwind and Z is up.  It also assumes that no extrapolation will be needed.
-   !!
-   !!    If tower points are used, it assumes the velocity at the ground is 0.  It interpolates between
-   !!    heights and between time slices, but ignores the Y input.
-   !!
-   !!    11/07/1994 - Created by M. Buhl from the original TURBINT.
-   !!    09/25/1997 - Modified by M. Buhl to use f90 constructs and new variable names.  Renamed to FF_Interp.
-   !!    09/23/2009 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.
-   !!                 Height is now relative to the ground
-   !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
    subroutine TrilinearInterpRegGrid(V, pt, dims, val)
    
       real(ReKi),     intent(in   ) :: V(:,:,:,:)      !< The volume data being sampled
@@ -75,15 +57,15 @@ MODULE FAST_Farm_Subs
       real(ReKi)      :: val2(3)
       
       x0 = floor(pt(1))
-
       x1 = x0 + 1
       if (x0 == dims(1)) x1 = x0  ! Handle case where x0 is the last index in the grid, in this case xd = 0.0, so the 2nd term in the interpolation will not contribute
-      
       xd = 2.0_ReKi * (pt(1) - REAL(x0, ReKi)) - 1.0_ReKi
+
       y0 = floor(pt(2))
       y1 = y0 + 1
       if (y0 == dims(2)) y1 = y0  ! Handle case where y0 is the last index in the grid, in this case yd = 0.0, so the 2nd term in the interpolation will not contribute
       yd = 2.0_ReKi * (pt(2) - REAL(y0, ReKi)) - 1.0_ReKi
+
       z0 = floor(pt(3))
       z1 = z0 + 1
       if (z0 == dims(3)) z1 = z0  ! Handle case where z0 is the last index in the grid, in this case zd = 0.0, so the 2nd term in the interpolation will not contribute
@@ -92,8 +74,6 @@ MODULE FAST_Farm_Subs
       !-------------------------------------------------------------------------------------------------
       ! Interpolate on the grid
       !-------------------------------------------------------------------------------------------------
-
-   
 
       N(1)  = ( 1.0_ReKi + zd )*( 1.0_ReKi - yd )*( 1.0_ReKi - xd )
       N(2)  = ( 1.0_ReKi + zd )*( 1.0_ReKi + yd )*( 1.0_ReKi - xd )
@@ -118,26 +98,26 @@ MODULE FAST_Farm_Subs
          val(i)  =  SUM ( N * u ) 
       end do
       
-      
-      
-      xd = pt(1) - x0
-      yd = pt(2) - y0
-      zd = pt(3) - z0
-      c00 = V(:,x0,y0,z0)*(1.0_ReKi-xd) + V(:,x1,y0,z0)*xd
-      c01 = V(:,x0,y0,z1)*(1.0_ReKi-xd) + V(:,x1,y0,z1)*xd
-      c10 = V(:,x0,y1,z0)*(1.0_ReKi-xd) + V(:,x1,y1,z0)*xd
-      c11 = V(:,x0,y1,z1)*(1.0_ReKi-xd) + V(:,x1,y1,z1)*xd
-      
-      c0  = c00*(1.0_ReKi-yd) + c10*yd
-      c1  = c01*(1.0_ReKi-yd) + c11*yd
-      
-      val2 = c0 *(1.0_ReKi-zd) + c1 *zd
-      do i = 1,3
-         if ( .not. EqualRealNos(val(i),val2(i)) ) then
-            write(*,*) "Different inpolated wind values: "//trim(Num2LStr(val(1)))//", "//trim(Num2LStr(val(2)))//", "//trim(Num2LStr(val(3)))//", "//trim(Num2LStr(val2(1)))//", "//trim(Num2LStr(val2(2)))//", "//trim(Num2LStr(val2(3)))
-            return
-         end if
-      end do
+      !
+      !
+      !xd = pt(1) - x0
+      !yd = pt(2) - y0
+      !zd = pt(3) - z0
+      !c00 = V(:,x0,y0,z0)*(1.0_ReKi-xd) + V(:,x1,y0,z0)*xd
+      !c01 = V(:,x0,y0,z1)*(1.0_ReKi-xd) + V(:,x1,y0,z1)*xd
+      !c10 = V(:,x0,y1,z0)*(1.0_ReKi-xd) + V(:,x1,y1,z0)*xd
+      !c11 = V(:,x0,y1,z1)*(1.0_ReKi-xd) + V(:,x1,y1,z1)*xd
+      !
+      !c0  = c00*(1.0_ReKi-yd) + c10*yd
+      !c1  = c01*(1.0_ReKi-yd) + c11*yd
+      !
+      !val2 = c0 *(1.0_ReKi-zd) + c1 *zd
+      !do i = 1,3
+      !   if ( .not. EqualRealNos(val(i),val2(i)) ) then
+      !      write(*,*) "Different inpolated wind values: "//trim(Num2LStr(val(1)))//", "//trim(Num2LStr(val(2)))//", "//trim(Num2LStr(val(3)))//", "//trim(Num2LStr(val2(1)))//", "//trim(Num2LStr(val2(2)))//", "//trim(Num2LStr(val2(3)))
+      !      return
+      !   end if
+      !end do
    end subroutine TrilinearInterpRegGrid
 
    

@@ -221,7 +221,6 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, e
    
       ! Use the [n+1] version of Vx_rel_disk_filt to determine the [n+1] version of Vx_wake(:,0)
    Vx_wake(0,0) = -Vx_rel_disk_filt*p%C_Nearwake*m%a(0)
-   Vx_wake(0,1) =  Vx_wake(0,0)
    
    ILo = 0
    do j=1, p%NumRadii-1     
@@ -231,7 +230,7 @@ subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, e
       
          !                 [n+1] 
       Vx_wake(j,0) = -Vx_rel_disk_filt*p%C_NearWake*a_interp
-      Vx_wake(j,1) =  Vx_wake(j,0)
+
    end do
    
 end subroutine NearWakeCorrection
@@ -615,9 +614,9 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    integer(intKi)                               :: errStat2          ! temporary Error status
    character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'WD_UpdateStates'
-   real(ReKi)                                   :: lstar, dx, Vx_wake_min, r_wake, a_interp, norm2_xhat_plane, EddyTermA, EddyTermB  
+   real(ReKi)                                   :: lstar, dx, Vx_wake_min, norm2_xhat_plane, EddyTermA, EddyTermB  
    real(ReKi)                                   :: dy_HWkDfl(3)
-   integer(intKi)                               :: i,j, ILo, maxPln
+   integer(intKi)                               :: i,j, maxPln
    
    errStat = ErrID_None
    errMsg  = ""
@@ -874,13 +873,11 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
 
 
    integer, parameter                           :: indx = 1  
-   integer(intKi)                               :: n, i, j, ILo
+   integer(intKi)                               :: n, i
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'WD_CalcOutput'
    real(ReKi)                                   :: correction(3)
-   real(ReKi)                                   :: x_plane
-   real(ReKi)                                   :: a_interp
    errStat = ErrID_None
    errMsg  = ""
 
@@ -891,7 +888,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       ! TODO: This entire block needs to be reviewed
                         
       correction = 0.0_ReKi
-      do i = 0, min(n+1,p%NumPlanes-1)
+      do i = 0, 1
          y%x_plane(i) = u%Vx_rel_disk*real(i,ReKi)*real(p%DT,ReKi)
        
          correction = correction + GetYawCorrection(u%YawErr, u%xhat_disk, y%x_plane(i), p,  errStat2, errMsg2)
@@ -921,6 +918,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          ! Initialze Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
       call NearWakeCorrection( u%Ct_azavg, u%Vx_rel_disk, p, m, y%Vx_wake, errStat, errMsg )
          if (errStat > AbortErrLev)  return
+      y%Vx_wake(:,1) = y%Vx_wake(:,0) 
  
       return
       
@@ -1024,8 +1022,7 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
    INTEGER(IntKi),               intent(  out)   :: errStat     !< Error status of the operation
    CHARACTER(*),                 intent(  out)   :: errMsg      !< Error message if errStat /= ErrID_None
    character(*), parameter                       :: RoutineName = 'InitStatesWithInputs'
-   integer(IntKi) :: i,j, ILo
-   real(ReKi) :: a_interp
+   integer(IntKi) :: i
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    real(ReKi)     :: correction(3)
@@ -1066,6 +1063,7 @@ subroutine InitStatesWithInputs(numPlanes, numRadii, u, p, xd, m, errStat, errMs
    xd%Ct_azavg_filt (:) = u%Ct_azavg(:) 
    
    call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake, errStat, errMsg )
+   xd%Vx_wake(:,1) = xd%Vx_wake(:,0)
       
 end subroutine InitStatesWithInputs
    

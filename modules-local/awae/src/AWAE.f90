@@ -135,11 +135,11 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
             m%parallelFlag(np,nt) = .false.
             if ( u%D_wake(np,nt) > 0.0_ReKi ) then
                if ( m%r_e(np,nt) < rmax ) then
-                  call SetErrStat( ErrID_Fatal, 'Radius to the wake center in the ending wake plane from the line where the starting and ending wake planes intersect for a given wake volume   (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') is smaller than rmax: '//trim(num2lstr(rmax))//'.', errStat, errMsg, 'ComputeLocals' )
+                  call SetErrStat( ErrID_Fatal, 'Radius to the wake center in the ending wake plane from the line where the starting and ending wake planes intersect for a given wake volume (volume='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') is smaller than rmax: '//trim(num2lstr(rmax))//'.', errStat, errMsg, 'ComputeLocals' )
                   return
                end if
                if ( m%r_s(np,nt) < rmax ) then
-                  call SetErrStat( ErrID_Fatal, 'Radius to the wake center in the starting wake plane from the line where the starting and ending wake planes intersect for a given wake volume  (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') is smaller than rmax: '//trim(num2lstr(rmax))//'.', errStat, errMsg, 'ComputeLocals' )
+                  call SetErrStat( ErrID_Fatal, 'Radius to the wake center in the starting wake plane from the line where the starting and ending wake planes intersect for a given wake volume (volume='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') is smaller than rmax: '//trim(num2lstr(rmax))//'.', errStat, errMsg, 'ComputeLocals' )
                   return
                end if
             end if 

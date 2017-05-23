@@ -9942,11 +9942,10 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    else
       CalWakeDiamStr = '-'
    end if
-   
    WRITE (UnSum,'(2X,A)')      'Calibrated parameter for wake diameter calculation (-): '//CalWakeDiamStr
    
    WRITE (UnSum,'(/,A)'   )  'Time Steps'
-   WRITE (UnSum,'(2X,A)')      'Component                        Time Step(s)      Subcyles'
+   WRITE (UnSum,'(2X,A)')      'Component                        Time Step         Subcyles'
    WRITE (UnSum,'(2X,A)')      '  (-)                                (s)             (-)'
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm (glue code)          ',farm%p%dt, '1'
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Super Controller               ',farm%p%dt, '1'
@@ -9955,7 +9954,7 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Ambient Wind and Array Effects ',farm%p%dt, '1'
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Low -resolution wind input     ',farm%p%dt, '1'
    WRITE (UnSum,'(2X,A,F10.4,12X,I2)')     'High-resolution wind input     ',farm%p%DT_high, farm%p%n_high_low
-   WRITE (UnSum,'(2X,A,F10.4,12X,I2)')     'Wind visualization output      ',farm%AWAE%p%WrDisSkp1*farm%p%dt, farm%AWAE%p%WrDisSkp1-1
+   WRITE (UnSum,'(2X,A,F10.4,12X,I2,A)')   'Wind visualization output      ',farm%AWAE%p%WrDisSkp1*farm%p%dt, farm%AWAE%p%WrDisSkp1, '^-1'
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm output files         ',farm%p%dt, '1'
 
    WRITE (UnSum,'(/,A)'   )  'Requested Channels in FAST.Farm Output Files: '//trim(Num2LStr(farm%p%NumOuts+1))
