@@ -5,7 +5,7 @@
     with `git submodule update --init --recursive` or updated with `git submodule update`.
 
     Required dependencies are:
-    - Python > 2.7 (Recommended Python3)
+    - Python 3.0+
     - CTest
 
     Usage: python3 executeRegressionTestCase.py openfast_executable

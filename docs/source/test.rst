@@ -10,7 +10,7 @@ files and should generally be left untouched. ``reg_tests`` contains the input f
 
 Dependencies
 ------------
-- Python 2.7
+- Python 3.0+
 - Numpy
 - CTest distributed through CMake
 
@@ -94,7 +94,7 @@ Test procedure from scratch
   git clone https://github.com/openfast/openfast.git
   cd openfast/reg_tests
   git submodule update --init --recursive
-  python executeFullRegressionTest.py path/to/openfast
+  python3 executeFullRegressionTest.py path/to/openfast
 
 - Calling CTest directly
 

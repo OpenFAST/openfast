@@ -16,7 +16,7 @@ The automated regression test runs CTest and can be executed in two ways:
 When executing the regression test by any method, a build directory is created at `openfast/ctest-build` which contains the inputs to run the test cases and the locally generated outputs.
 
 Dependencies to run the regression test suite are
-- Python 2.7
+- Python 3.0+
 - Numpy
 - CTest distributed through CMake
 
@@ -47,19 +47,19 @@ CTest and other custom scripts. The test data is contained in a git submodule,
 r-test, which must be initialized prior to running. r-test can be initialized
 with `git submodule update --init --recursive` or updated with `git submodule update`.
 
-Usage: `python executeRegressionTestCase.py openfast_executable`  
-Example: `python executeRegressionTestCase.py /path/to/openfast`
+Usage: `python3 executeRegressionTestCase.py openfast_executable`  
+Example: `python3 executeRegressionTestCase.py /path/to/openfast`
 
 #### executeOpenfastCase.py
 This program executes a single OpenFAST case.
 
-Usage: `python executeOpenfastCase.py input_file openfast_executable`  
+Usage: `python3 executeOpenfastCase.py input_file openfast_executable`  
 - `openfast_executable` is an optional argument pointing to the OpenFAST executable of choice.
 - if `openfast_executable` is not given, an attempt will be made to find one in $PATH
 
-Example: `python executeRegressionTestCase.py CaseDir/case01.fst`  
-Example: `python executeRegressionTestCase.py CaseDir/case01.fst openfast`  
-Example: `python executeRegressionTestCase.py CaseDir/case01.fst openfast/install/bin/openfast`  
+Example: `python3 executeRegressionTestCase.py CaseDir/case01.fst`  
+Example: `python3 executeRegressionTestCase.py CaseDir/case01.fst openfast`  
+Example: `python3 executeRegressionTestCase.py CaseDir/case01.fst openfast/install/bin/openfast`  
 
 #### executeRegressionTestCase.py
 This program executes OpenFAST and a regression test for a single test case.
@@ -67,8 +67,8 @@ The test case must be one of the CertTest cases. The test data is contained in a
 r-test, which must be initialized prior to running. r-test can be initialized
 with `git submodule update --init --recursive` or updated with `git submodule update`.
 
-Usage: `python executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id`  
-Example: `python executeRegressionTestCase.py Test02 openfast path/to/openfast_repo 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
+Usage: `python3 executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id`  
+Example: `python3 executeRegressionTestCase.py Test02 openfast path/to/openfast_repo 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
 
 #### pass_fail.py
 This program determines whether a new solution has regressed from the "gold standard"
@@ -76,8 +76,8 @@ solution. It reads two OpenFAST binary output files (.outb), and computes the L2
 of the two solution files for each output channel. If the max norm is smaller than
 the given tolerance, the test case passes.
 
-Usage: `python pass_fail.py solution1 solution2 tolerance`  
-Example: `python pass_fail.py output-local/Test01.outb gold-standard/Test01.outb 0.00000001`
+Usage: `python3 pass_fail.py solution1 solution2 tolerance`  
+Example: `python3 pass_fail.py output-local/Test01.outb gold-standard/Test01.outb 0.00000001`
 
 #### fast_io.py
 This program reads OpenFAST output files in binary or ascii format and returns the data in a Numpy array.
