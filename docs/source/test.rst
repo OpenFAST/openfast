@@ -26,20 +26,19 @@ and compiler differences, three combinations of "gold standards" are included
 
 CMake can automatically determine the appropriate solution set, but in case none match the default is macOS with GNU compiler.
 
-The comparison reads the OpenFAST binary output files (.outb) and computes the variance on each channel reported. If the maximum variance
+The comparison reads the OpenFAST binary output files (.outb) and computes a norm on each channel reported. If the maximum norm
 is greater than a predetermined tolerance, that particular test is reported as failed. The failure criteria is outlined in pseudocode below.
 
 ::
 
-  variance = nChannels*[0]
-  for i in nChannels
-    channelDifference = outb1[:,i] - outb2[:,i]
-    variance[i] = channelDifference.variance()
+  for j in range(nChannels)
+     norm_diff[j] = L2norm(dict1[:,j]-dict2[:,j])
+     rms_gold[j] = L2norm(dict2[:,j])
 
-  if max(variance) < tolerance
-    pass
-  else
-    fail
+  norm = norm_diff / rms_gold
+
+  if max(norm) < tolerance:
+    success
 
 Configuring the automated test
 ------------------------------
