@@ -44,20 +44,6 @@ try:
 except Exception as e:
     exitWithError("Error: {}".format(e))
 
-# calculate the difference in solutions
-## variance
-# nColumns = np.size(dict1,1)
-# variance = np.ones(nColumns)
-# for j in range(nColumns):
-#     variance[j] = (dict1[:,j]-dict2[:,j]).var()
-#
-# if max(variance) < solutionTolerance:
-#     sys.exit(0)
-# else:
-#     print info1['attribute_names']
-#     print "var = ", variance
-#     sys.exit(1)
-
 ## gold standard RMS, L2 norm
 nColumns = np.size(dict1,1)
 diff = np.ones(nColumns)
