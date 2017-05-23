@@ -46,13 +46,24 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
       set(TOLERANCE 0.0000001)
     endif()
 
-  else ()
+  else()
     # default for other systems, CYGWIN
     set(TOLERANCE 0.0000001)
   endif()
 
 endif()
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
+
+# Save the python/python3 executable available
+find_program(PYTHON3_EXECUTABLE NAMES python3)
+find_program(PYTHON2_EXECUTABLE NAMES python)
+if( NOT ${PYTHON3_EXECUTABLE} STREQUAL "" )
+  set(PYTHON_EXECUTABLE ${PYTHON3_EXECUTABLE})
+elseif( NOT ${PYTHON2_EXECUTABLE} STREQUAL "" )
+  set(PYTHON_EXECUTABLE ${PYTHON2_EXECUTABLE})
+else()
+  message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run the regression test." )
+endif()
 
 # Compile the ServoData controller library for 5MW turbine test cases during CMake
 # so the libraries will be correctly copied into the CTest build directories before executing the test
@@ -63,7 +74,7 @@ else()
   set(bits 32)
 endif()
 set(command ${CMAKE_CURRENT_SOURCE_DIR}/r-test/inputs/compileDISCON.py ${CMAKE_Fortran_COMPILER_ID} ${bits})
-execute_process(COMMAND python ${command})
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${command})
 
 # Copy the test input files
 file(GLOB inputs "${CMAKE_CURRENT_SOURCE_DIR}/r-test/inputs/*")

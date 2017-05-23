@@ -5,7 +5,7 @@
 # Standard regression test
 function(add_test_r testname )
   add_test(
-    ${testname} python
+    ${testname} ${PYTHON_EXECUTABLE}
        ${CMAKE_SOURCE_DIR}/reg_tests/executeRegressionTestCase.py
        ${testname}
        ${EXECUTABLE}
