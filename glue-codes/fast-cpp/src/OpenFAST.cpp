@@ -309,7 +309,7 @@ void fast::OpenFAST::getForceNodeOrientation(std::vector<double> & currentOrient
   int iTurbLoc = get_localTurbNo(iTurbGlob);
   for(int j=0; j < iTurbLoc; j++) iNode = iNode - get_numForcePtsLoc(iTurbLoc);
   for(int i=0;i<9;i++) {
-    currentOrientation[i] = cDriver_Input_from_FAST[iTurbLoc].pxForce[iNode*9+i] ;
+    currentOrientation[i] = cDriver_Input_from_FAST[iTurbLoc].pOrientation[iNode*9+i] ;
   }
 
 }
