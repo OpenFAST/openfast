@@ -41,6 +41,14 @@ enum ActuatorNodeType {
   ActuatorNodeType_END
 };
 
+enum simStartType {
+  init = 0,
+  trueRestart = 1,
+  restartDriverInitFAST = 2,
+  simStartType_END    
+};
+
+
 class fastInputs {
 
  public: 
@@ -50,6 +58,7 @@ class fastInputs {
   bool dryRun;
   bool debug; 
   double tStart;
+  simStartType simStart;
   int nEveryCheckPoint;  
   double tMax;
   double dtFAST;  
@@ -79,7 +88,7 @@ class OpenFAST {
   std::vector<globTurbineDataType> globTurbineData;
   int nTurbinesProc;
   int nTurbinesGlob;
-  bool restart;
+  simStartType simStart;
   bool timeZero;
   double dtFAST;
   double tMax;
@@ -103,6 +112,9 @@ class OpenFAST {
   std::vector<double> scInputsGlob;   // # inputs to the supercontroller for all turbines
 
   std::vector<std::vector<std::vector<double> > > forceNodeVel; // Velocity at force nodes - Store temporarily to interpolate to the velocity nodes
+  std::vector<std::vector<double> > velNodeData; // Position and velocity data at the velocity (aerodyn) nodes - (nTurbines, nTimesteps * nPoints * 6)
+  hid_t velNodeDataFile; // HDF-5 tag of file containing velocity (aerodyn) node data file
+
   std::vector<OpFM_InputType_t> cDriver_Input_from_FAST;
   std::vector<OpFM_OutputType_t> cDriver_Output_to_FAST;
 
@@ -151,7 +163,13 @@ class OpenFAST {
   void init();
   void solution0();
   void step();
+  void stepNoWrite();
   void end();
+
+  hid_t openVelocityDataFile(bool createFile);
+  int readVelocityData();
+  void writeVelocityData(hid_t h5file, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData);
+  herr_t closeVelocityDataFile(int nt_global, hid_t velDataFile);
 
   void setTurbineProcNo(int iTurbGlob, int procNo) { turbineMapGlobToProc[iTurbGlob] = procNo; }
   void allocateTurbinesToProcsSimple();
@@ -173,7 +191,7 @@ class OpenFAST {
   int get_ntStart() { return ntStart; }
   bool isDryRun() { return dryRun; }
   bool isDebug() { return debug; }
-  bool isRestart() { return restart; }
+  simStartType get_simStartType() { return simStart; }
   bool isTimeZero() { return timeZero; }
   int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; } // Get processor number of a turbine with global id 'iTurbGlob'
   int get_localTurbNo(int iTurbGlob) { return reverseTurbineMapProcToGlob[iTurbGlob]; }
@@ -209,6 +227,7 @@ class OpenFAST {
   void fillScOutputsLoc() ;
 
   void setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, OpFM_OutputType_t cDriver_Output_to_FAST) ; // An example to set velocities at the Aerodyn nodes
+  void applyVelocityData(int iPrestart, int iTurb, OpFM_OutputType_t cDriver_Output_to_FAST, std::vector<double> & velData) ;
 
 };
 
