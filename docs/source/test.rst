@@ -1,7 +1,7 @@
 Testing OpenFAST
 ================
 
-OpenFAST automated testing is accomplished through the use of CTest and customized with a set of Python scripts.
+OpenFAST automated testing is accomplished through the use of `CTest <https://cmake.org/Wiki/CMake/Testing_With_CTest>` and customized with a set of Python scripts.
 
 All of the files corresponding to automated testing are contained in the ``reg_tests``
 and ``ctest`` directories of the OpenFAST repository. ``ctest`` contains configuration
@@ -24,9 +24,9 @@ and compiler differences, three combinations of "gold standards" are included
 - Red Hat Enterprise Linux with Intel compiler
 - Windows with Intel compiler
 
-CMake can automatically determine the appropriate solution set, but in case none match the default is macOS with GNU compiler.
+CTest can automatically determine the appropriate solution set, but in case none match the default is macOS with GNU compiler.
 
-The comparison reads the OpenFAST binary output files (.outb) and computes a norm on each channel reported. If the maximum norm
+The comparison script reads the OpenFAST binary output files (.outb) and computes a norm on each channel reported. If the maximum norm
 is greater than a predetermined tolerance, that particular test is reported as failed. The failure criteria is outlined in pseudocode below.
 
 ::
@@ -74,7 +74,7 @@ The automated regression test uses CTest and can be executed in three ways:
 
 Test procedure from scratch
 ---------------------------
-- ``make test``
+- ``make test`` method
 
 ::
 
@@ -86,7 +86,7 @@ Test procedure from scratch
   make
   make test
 
-- ``executeFullRegressionTest.py``
+- ``executeFullRegressionTest.py`` method
 
 ::
 
