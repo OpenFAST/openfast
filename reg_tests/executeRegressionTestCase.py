@@ -4,8 +4,8 @@
     r-test, which must be initialized prior to running. r-test can be initialized
     with `git submodule update --init --recursive` or updated with `git submodule update`.
 
-    Usage: `python executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id`
-    Example: `python executeRegressionTestCase.py Test02 openfast path/to/openfast_repo 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
+    Usage: `python3 executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id`
+    Example: `python3 executeRegressionTestCase.py Test02 openfast path/to/openfast_repo 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
 """
 
 import os
@@ -16,7 +16,7 @@ import subprocess
 ##### Helper functions
 
 def exitWithError(error):
-    print error
+    print(error)
     sys.exit(1)
 
 def exitWithDirNotFound(dir):
@@ -27,10 +27,15 @@ def exitWithFileNotFound(file):
 
 ##### Main program
 
+# determine python version
+pythonCommand = "python3"
+if sys.version_info < (3, 0):
+     pythonCommand = "python"
+
 # Verify input arguments
 if len(sys.argv) < 5 or len(sys.argv) > 7:
     exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: python executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id")
+    "Usage: {} executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id".format(pythonCommand))
 
 caseName = sys.argv[1]
 executable = sys.argv[2]
@@ -113,11 +118,11 @@ if not os.path.isdir(localDirectory):
 # execute the given case locally
 caseInputFile = os.path.join(localDirectory, caseName) + ".fst"
 executionScript = os.path.join(sourceDirectory, "reg_tests", "executeOpenfastCase.py")
-command = "python {} {} {}".format(executionScript, caseInputFile, executable)
-print "'{}' - running".format(command)
+command = " ".join([pythonCommand, executionScript, caseInputFile, executable])
+print("'{}' - running".format(command))
 sys.stdout.flush()
 return_code = subprocess.call(command, shell=True)
-print "'{}' - finished with exit code {}".format(command, return_code)
+print("'{}' - finished with exit code {}".format(command, return_code))
 
 if return_code != 0:
     exitWithError("")
@@ -135,11 +140,11 @@ caseGoldStandardFile = os.path.join(outputsDirectory, caseName) + ".outb"
 if not os.path.isfile(caseGoldStandardFile):
     exitWithFileNotFound(caseGoldStandardFile)
 
-test_command = " ".join(["python", regTestScript, caseOutputFile, caseGoldStandardFile, tolerance])
-print "'{}' - running".format(test_command)
+test_command = " ".join([pythonCommand, regTestScript, caseOutputFile, caseGoldStandardFile, tolerance])
+print("'{}' - running".format(test_command))
 sys.stdout.flush()
 test_return_code = subprocess.call(test_command, shell=True)
-print "'{}' - finished with exit code {}".format(test_command, test_return_code)
+print("'{}' - finished with exit code {}".format(test_command, test_return_code))
 
 # return pass/fail
 sys.exit(test_return_code)

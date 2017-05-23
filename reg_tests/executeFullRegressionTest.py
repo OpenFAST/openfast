@@ -5,11 +5,11 @@
     with `git submodule update --init --recursive` or updated with `git submodule update`.
 
     Required dependencies are:
-    - Python 2.7
+    - Python > 2.7 (Recommended Python3)
     - CTest
 
-    Usage: python executeRegressionTestCase.py openfast_executable
-    Example: python executeRegressionTestCase.py /path/to/openfast
+    Usage: python3 executeRegressionTestCase.py openfast_executable
+    Example: python3 executeRegressionTestCase.py /path/to/openfast
 """
 
 import os
@@ -18,12 +18,12 @@ import shutil
 import subprocess
 
 def exitWithError(error):
-    print error
+    print(error)
     sys.exit(1)
 
 if len(sys.argv) != 2:
     exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: python executeRegressionTestCase.py openfast_executable")
+    "Usage: python3 executeRegressionTestCase.py openfast_executable")
 
 os.chdir("..")
 
@@ -37,4 +37,4 @@ if not os.path.isfile(steerScript):
 ctest_command = " ".join(["ctest", "-V", "-S", steerScript, "-DEXECUTABLE="+executable])
 ctest_return_code = subprocess.call(ctest_command, shell=True)
 
-print "CTest finished with return code: {}".format(ctest_return_code)
+print("CTest finished with return code: {}".format(ctest_return_code))

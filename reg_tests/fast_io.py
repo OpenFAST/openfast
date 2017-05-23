@@ -35,7 +35,7 @@ def load_output(filename):
             return load_binary_output(filename)
         elif "out" in filename:
             try:
-                print f.readline()
+                print(f.readline())
             except UnicodeDecodeError:
                 return load_binary_output(filename)
     return load_ascii_output(filename)
@@ -157,12 +157,12 @@ if __name__=="__main__":
     types = []
     for j in range(39):
         types.append('f8')
-    print type(i['attribute_names'])
+    print(type(i['attribute_names']))
 
-    print np.dtype({'names':tuple(i['attribute_names']), 'formats': tuple(types) })
-    print type(d)
-    print np.array(d,dtype=np.dtype({'names':tuple(i['attribute_names']), 'formats': tuple(types) }))
+    print(np.dtype({'names':tuple(i['attribute_names']), 'formats': tuple(types) }))
+    print(type(d))
+    print(np.array(d,dtype=np.dtype({'names':tuple(i['attribute_names']), 'formats': tuple(types) })))
 
-    print i
-    print len(i['attribute_names'])
-    print np.shape(d)
+    print(i)
+    print(len(i['attribute_names']))
+    print(np.shape(d))

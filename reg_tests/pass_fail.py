@@ -4,8 +4,8 @@
     of the two solution files for each output channel. If the max variance is less than
     the given tolerance, the test case passes.
 
-    Usage: python pass_fail.py solution1 solution2 tolerance
-    Example: python pass_fail.py output-local/Test01.outb gold-standard/Test01.outb 0.00000001
+    Usage: python3 pass_fail.py solution1 solution2 tolerance
+    Example: python3 pass_fail.py output-local/Test01.outb gold-standard/Test01.outb 0.00000001
 """
 import sys, os
 import numpy as np
@@ -13,7 +13,7 @@ from numpy import linalg as LA
 from fast_io import load_output
 
 def exitWithError(error):
-    print error
+    print(error)
     sys.exit(1)
 
 # validate input arguments
@@ -63,6 +63,6 @@ norm = norm_diff / rms_gold
 if max(norm) < solutionTolerance:
     sys.exit(0)
 else:
-    print info1['attribute_names']
-    print "norm = ", norm
+    print(info1['attribute_names'])
+    print("norm = ", norm)
     sys.exit(1)
