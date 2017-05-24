@@ -1,18 +1,20 @@
 Testing OpenFAST
 ================
 
-OpenFAST automated testing is accomplished through the use of `CTest <https://cmake.org/Wiki/CMake/Testing_With_CTest>` and customized with a set of Python scripts.
+OpenFAST automated testing is accomplished through the use of `CTest <https://cmake.org/Wiki/CMake/Testing_With_CTest>`__ and customized with a set of Python scripts.
 
 All of the files corresponding to automated testing are contained in the ``reg_tests``
-and ``ctest`` directories of the OpenFAST repository. ``ctest`` contains configuration
-files and should generally be left untouched. ``reg_tests`` contains the input files,
-"gold standard" outputs, and various Python programs used in the tests.
+directory of the OpenFAST repository. The associated files include
+
+- input files
+- "gold standard" outputs
+- various Python programs used in the tests
 
 Dependencies
 ------------
 - Python 3.0+
 - Numpy
-- CTest distributed through CMake
+- CMake and CTest
 
 Regression test
 ---------------
@@ -32,8 +34,8 @@ is greater than a predetermined tolerance, that particular test is reported as f
 ::
 
   for j in range(nChannels)
-     norm_diff[j] = L2norm(dict1[:,j]-dict2[:,j])
-     rms_gold[j] = L2norm(dict2[:,j])
+     norm_diff[j] = L2norm(localSolution[j]-goldSolution[j])
+     rms_gold[j] = L2norm(goldSolution[j])
 
   norm = norm_diff / rms_gold
 
@@ -42,39 +44,25 @@ is greater than a predetermined tolerance, that particular test is reported as f
 
 Configuring the automated test
 ------------------------------
-The most critical step in configuring the automated test is getting the input files
+A critical step in configuring the automated test is getting the input files
 and "gold standards". These are brought into OpenFAST through the git submodule ``r-test``
 and can be initialized with ``git submodule update --init --recursive`` or updated with
 ``git submodule update``.
 
+If the test will be executed without building OpenFAST, set the ``OPENFAST_EXECUTABLE`` CMake
+variable to the executable to test. CMake variables can be configured in the CMake
+GUI or in the command line interface with the command ``ccmake ../reg_tests``.
+
 Running the automated test
 --------------------------
-The automated regression test uses CTest and can be executed in three ways:
-
-- ``make test``
-
-  Requires OpenFAST to have been built with ``make``. Specifically, it is
-  assumed that a binary executable exists at ``openfast/build/glue-codes/fast/openfast``.
-  This method creates a subdirectory in the CMake build directory called ``reg_tests``
-  which contains the inputs to run the test cases and the locally generated outputs.
-
-
-- ``executeFullRegressionTest.py``
-
-  Runs CTest independently of CMake using a steering script at ``openfast/ctest/steer.cmake``.
-  This method requires the user to specify an OpenFAST executable in the Python program call.
-  A build directory is created at ``openfast/ctest-build`` which contains the inputs to run the
-  test cases and the locally generated outputs.
-
-
-- Calling CTest directly
-
-  The CTest steering script can be executed directly, but this is not recommended as
-  CMake and the Python program perform additional configuration checks before executing.
+The automated regression test runs CTest and can be executed by running the command ``make test`` from the build directory. If
+the entire OpenFAST package is to be built, CMake will configure CTest to find the new binary at
+``openfast/build/glue-codes/fast/openfast``. However, if the intention is to build only the test suite, the OpenFAST binary
+should be specified in the CMake configuration under the ``OPENFAST_EXECUTABLE`` flag.
 
 Test procedure from scratch
 ---------------------------
-- ``make test`` method
+- Building all of OpenFAST
 
 ::
 
@@ -82,24 +70,19 @@ Test procedure from scratch
   cd openfast
   git submodule update --init --recursive
   mkdir build && cd build
-  cmake -DENABLE_TESTS:BOOL=ON ..
+  cmake ..
   make
   make test
 
-- ``executeFullRegressionTest.py`` method
 
-::
-
-  git clone https://github.com/openfast/openfast.git
-  cd openfast/reg_tests
-  git submodule update --init --recursive
-  python3 executeFullRegressionTest.py path/to/openfast
-
-- Calling CTest directly
+- Building only the test
 
 ::
 
   git clone https://github.com/openfast/openfast.git
   cd openfast
   git submodule update --init --recursive
-  ctest -S ctest/steer.cmake -V -DEXECUTABLE=path/to/openfast
+  mkdir build && cd build
+  # Configure CMake - OPENFAST_EXECUTABLE
+  cmake ../reg_tests
+  make test

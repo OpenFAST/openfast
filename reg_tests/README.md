@@ -5,20 +5,18 @@ This directory contains the regression testing suite for OpenFAST. Its contents 
 - CMake/CTest configuration files
 - Python scripts
 
-The automated regression test runs CTest and can be executed in two ways:
-- `make test`
-  - Requires OpenFAST to have been built with `make`. Specifically, it is assumed that a binary executable exists at `openfast/build/glue-codes/fast/openfast`.
+The automated regression test runs CTest and can be executed by running the command `make test` from the build directory. If
+the entire OpenFAST package is to be built, CMake will configure CTest to find the new binary at
+`openfast/build/glue-codes/fast/openfast`. However, if the intention is to build only the test suite, the OpenFAST binary
+should be specified in the CMake configuration under the `OPENFAST_EXECUTABLE` flag.
 
-
-- `executeFullRegressionTest.py`
-  - Runs CTest independently of CMake using a steering script at `openfast/ctest/steer.cmake`. This method requires the user to specify an OpenFAST executable in the Python program call.
-
-When executing the regression test by any method, a build directory is created at `openfast/ctest-build` which contains the inputs to run the test cases and the locally generated outputs.
+The regression test creates a subdirectory in the build directory calledA build directory is created at `ctest-build` which contains
+the inputs to run the test cases and the locally generated outputs.
 
 Dependencies to run the regression test suite are
 - Python 3.0+
 - Numpy
-- CTest distributed through CMake
+- CMake and CTest
 
 ## r-test
 This repository serves as a container for regression test data for OpenFAST. The test cases are taken from the [FAST V8 CertTests](https://github.com/NWTC/FAST/tree/master/CertTest). The repository contains:
@@ -40,15 +38,6 @@ This is the CTest configuration file which lists the test cases that run in the 
 
 ## Python Scripts
 The included Python scripts are used to execute various parts of the automated regression test, so they should remain in their current location with their current name. Each script can be executed independently.
-
-#### executeFullRegressionTest.py
-This program executes the OpenFAST regression test suite through the use of
-CTest and other custom scripts. The test data is contained in a git submodule,
-r-test, which must be initialized prior to running. r-test can be initialized
-with `git submodule update --init --recursive` or updated with `git submodule update`.
-
-Usage: `python3 executeRegressionTestCase.py openfast_executable`  
-Example: `python3 executeRegressionTestCase.py /path/to/openfast`
 
 #### executeOpenfastCase.py
 This program executes a single OpenFAST case.
