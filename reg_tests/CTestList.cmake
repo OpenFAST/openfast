@@ -6,13 +6,14 @@
 function(add_test_r testname )
   add_test(
     ${testname} ${PYTHON_EXECUTABLE}
-       ${CMAKE_SOURCE_DIR}/reg_tests/executeRegressionTestCase.py
+       ${CMAKE_CURRENT_LIST_DIR}/executeRegressionTestCase.py
        ${testname}
-       ${EXECUTABLE}
-       ${CMAKE_SOURCE_DIR}
+       ${OPENFAST_EXECUTABLE}
+       ${CMAKE_CURRENT_LIST_DIR}/..     # openfast source directory
+       ${CTEST_BUILD_DIR}               # build directory for test
        ${TOLERANCE}
-       ${CMAKE_SYSTEM_NAME}
-       ${CMAKE_Fortran_COMPILER_ID}
+       ${CMAKE_SYSTEM_NAME}             # [Darwin,Linux,Windows]
+       ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
   )
   # limit each test to 25 minutes: 1500s
   set_tests_properties(${testname} PROPERTIES TIMEOUT 1500 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "regression")

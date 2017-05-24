@@ -2,16 +2,39 @@
 # -- OpenFAST Testing
 # -----------------------------------------------------------
 
-# verify that the test data submodule exists
-if(NOT EXISTS "reg_tests")
-  message(FATAL_ERROR "The test data directory, r-test, was not found. Did you initialize the git submodule?" )
+cmake_minimum_required(VERSION 2.8.12)
+project(OpenFAST_RegressionTest Fortran)
+
+# Store the CTest build directory
+set(CTEST_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/ctest-build")
+
+# Verify that the test data submodule exists
+if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test")
+  message(FATAL_ERROR "CMake cannot find the test data directory, r-test. Did you initialize the git submodule?" )
 endif()
 
-# Determine TOLERANCE for testing
+# Set the openfast executable configuration option and default
+SET(OPENFAST_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/glue-codes/fast/openfast" CACHE STRING "Specify the OpenFAST executable to use in testing.")
+# convert to CMake style path
+#file(TO_CMAKE_PATH ${OPENFAST_EXECUTABLE} OPENFAST_EXECUTABLE)
+
+# Set the python executable configuration option and default
+if(NOT EXISTS ${PYTHON_EXECUTABLE})
+  find_program(PYTHON_EXECUTABLE NAMES python3)
+  if(NOT EXISTS ${PYTHON_EXECUTABLE})
+    find_program(PYTHON_EXECUTABLE NAMES python)
+    if(NOT EXISTS ${PYTHON_EXECUTABLE})
+      message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
+    endif()
+  endif()
+endif()
+set(PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE STRING "Specify the Python executable to use in testing.")
+
+# Set the testing tolerance
 if (NOT ${TEST_TOLERANCE} STREQUAL "") # User defined
   set(TOLERANCE ${TEST_TOLERANCE})
 
-else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
+else(NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 
   if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
     # default
@@ -46,24 +69,24 @@ else (NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
       set(TOLERANCE 0.0000001)
     endif()
 
+  elseif( ${CMAKE_SYSTEM_NAME} MATCHES "CYGWIN" )
+    # default
+    set(TOLERANCE 0.0000001)
+
+    # compiler specific
+    if( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU" )
+      set(TOLERANCE 0.0000001)
+    elseif( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel" )
+      set(TOLERANCE 0.0000001)
+    endif()
+
   else()
-    # default for other systems, CYGWIN
+    # default for other systems
     set(TOLERANCE 0.0000001)
   endif()
 
 endif()
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
-
-# Save the python/python3 executable available
-find_program(PYTHON3_EXECUTABLE NAMES python3)
-find_program(PYTHON2_EXECUTABLE NAMES python)
-if( NOT ${PYTHON3_EXECUTABLE} STREQUAL "" )
-  set(PYTHON_EXECUTABLE ${PYTHON3_EXECUTABLE})
-elseif( NOT ${PYTHON2_EXECUTABLE} STREQUAL "" )
-  set(PYTHON_EXECUTABLE ${PYTHON2_EXECUTABLE})
-else()
-  message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run the regression test." )
-endif()
 
 # Compile the ServoData controller library for 5MW turbine test cases during CMake
 # so the libraries will be correctly copied into the CTest build directories before executing the test
@@ -73,18 +96,11 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 8)
 else()
   set(bits 32)
 endif()
-set(command ${CMAKE_CURRENT_SOURCE_DIR}/r-test/inputs/compileDISCON.py ${CMAKE_Fortran_COMPILER_ID} ${bits})
+set(command "${CMAKE_CURRENT_LIST_DIR}/r-test/inputs/compileDISCON.py" "${CMAKE_Fortran_COMPILER_ID}" "${bits}")
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${command})
 
-# Copy the test input files
-file(GLOB inputs "${CMAKE_CURRENT_SOURCE_DIR}/r-test/inputs/*")
-file(COPY ${inputs} DESTINATION "${CMAKE_SOURCE_DIR}/ctest-build/outputs-local")
-
-# Store the executable path
-set(EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast/openfast")
-
-# convert to cmake style path
-file(TO_CMAKE_PATH ${EXECUTABLE} EXECUTABLE)
-
-# Add tests in list
-include(${CMAKE_CURRENT_SOURCE_DIR}/CTestList.cmake)
+# the statement below automatically creates a BUILD_TESTING option
+include(CTest)
+if(BUILD_TESTING)
+  include(${CMAKE_CURRENT_LIST_DIR}/CTestList.cmake)
+endif()

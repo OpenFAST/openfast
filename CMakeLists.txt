@@ -105,13 +105,13 @@ endforeach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
 
 option(BUILD_DOCUMENTATION "Build documentation." OFF)
 if(BUILD_DOCUMENTATION)
-   add_subdirectory(docs)
+  add_subdirectory(docs)
 endif()
 
-# the statement below automatically creates a BUILD_TESTING option
-include(CTest)
+option(BUILD_TESTING "Build the testing tree." ON)
 if(BUILD_TESTING)
-  add_subdirectory(reg_tests)
+  include(reg_tests/CMakeLists.txt)
+  #add_subdirectory(reg_tests)
 endif()
 
 add_subdirectory(glue-codes)
