@@ -30,9 +30,8 @@ if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test")
 endif()
 
 # Set the openfast executable configuration option and default
-SET(OPENFAST_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/glue-codes/fast/openfast" CACHE STRING "Specify the OpenFAST executable to use in testing.")
-# convert to CMake style path
-#file(TO_CMAKE_PATH ${OPENFAST_EXECUTABLE} OPENFAST_EXECUTABLE)
+SET(OPENFAST_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/glue-codes/fast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
+file(TO_NATIVE_PATH ${OPENFAST_EXECUTABLE} OPENFAST_EXECUTABLE)
 
 # Set the python executable configuration option and default
 if(NOT EXISTS ${PYTHON_EXECUTABLE})
