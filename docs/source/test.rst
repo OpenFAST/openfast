@@ -49,9 +49,18 @@ and "gold standards". These are brought into OpenFAST through the git submodule 
 and can be initialized with ``git submodule update --init --recursive`` or updated with
 ``git submodule update``.
 
+The build process contains useful defaults, but may need some configuring for a
+particular build environment.CMake variables can be configured in the CMake
+GUI or in the command line interface with the command ``ccmake``.
+
 If the test will be executed without building OpenFAST, set the ``OPENFAST_EXECUTABLE`` CMake
-variable to the executable to test. CMake variables can be configured in the CMake
-GUI or in the command line interface with the command ``ccmake ../reg_tests``.
+variable to the executable to test. Configure this CMake variables with ``ccmake ../reg_tests``.
+
+If the test will be executed after building OpenFAST, leave the ``OPENFAST_EXECUTABLE`` CMake
+variable as its default value. The build process will place the new binary at this location,
+so CTest is already configured correctly. If needed, look at the `Installing OpenFAST <install.html>`__
+page for details on configuring this build target.
+
 
 Running the automated test
 --------------------------
@@ -70,6 +79,7 @@ Test procedure from scratch
   cd openfast
   git submodule update --init --recursive
   mkdir build && cd build
+  # Configure CMake - OPENFAST_EXECUTABLE
   cmake ..
   make
   make test
