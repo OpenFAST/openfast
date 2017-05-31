@@ -239,6 +239,7 @@ typedef   ^        EqMotionQP      ^           Fc         :::    - - "Elastic fo
 typedef   ^        EqMotionQP      ^           Fd         :::    - - "Elastic force \f$ \underline{F}^d \f$ at current QP. 6" -
 typedef   ^        EqMotionQP      ^           Fg         :::    - - "Gravity forces at current QP. 6" -
 typedef   ^        EqMotionQP      ^           Fi         :::    - - "Inertial forces at current QP. 6" -
+typedef   ^        EqMotionQP      ^           Ftemp      :::    - - "Sum of some of the forces at current QP. 6" -
 
 typedef   ^        EqMotionQP      ^           RR0mEta    :::    - - "RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0" -
 typedef   ^        EqMotionQP      ^           rho        ::::   -  - "Tensor of inertia resolved in inertia frame at quadrature point. 3x3" -

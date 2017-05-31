@@ -75,7 +75,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    REAL(BDKi)              :: denom
 
 
-   INTEGER(IntKi)          :: nelem
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
    character(*), parameter :: RoutineName = 'BD_Init'
@@ -168,6 +167,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          call cleanup()
          return
       end if
+
+!FIXME: shift mass stiffness matrices here from the keypoint line to the calculated curvature line in p%uu0
+!   CALL BD_KMshift2Ref(p)
+
 
       ! compute blade mass, CG, and IN for summary file:
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
@@ -401,6 +404,7 @@ subroutine InitializeMassStiffnessMatrices(InputFileData,p,ErrStat, ErrMsg)
    ENDIF
 
 
+!FIXME: if we must shift the K and M matrices, this will need to be recaulculated (or calculated elsewhere)
       ! Initialize some mass and inertia properies at the quadrature points
    DO nelem=1,p%elem_total
       DO idx_qp=1,p%nqp
@@ -490,7 +494,6 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
 
    member_first_kp = 1
 
-write(52,*), 'p%QuadPt'
    DO i=1,p%elem_total
       member_last_kp  = member_first_kp + InputFileData%kp_member(i) - 1
 
@@ -501,7 +504,6 @@ write(52,*), 'p%QuadPt'
          temp_id2 = (i-1)*p%nqp + idx_qp + p%qp_indx_offset            
          p%QuadPt(1:3,temp_id2) = temp_POS
          p%QuadPt(4:6,temp_id2) = temp_CRV
-write(52,'(6(2x,ES20.12E3))') p%QuadPt(:,temp_id2)
       ENDDO
 
          ! set for next element:
@@ -606,7 +608,6 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    !local variables
    INTEGER(IntKi)                               :: i, j              ! generic counter index
    INTEGER(IntKi)                               :: indx              ! counter into index array (p%NdIndx)
-   INTEGER(IntKi)                               :: nUniqueQP         ! number of unique quadrature points (not double-counting nodes at element boundaries)
 
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
@@ -625,7 +626,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
       ! Global rotation tensor
    p%GlbRot = TRANSPOSE(InitInp%GlbRot) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
    CALL BD_CrvExtractCrv(p%GlbRot,p%Glb_crv)
-
+   CALL BD_CrvMatrixR(p%Glb_crv,p%GlbRot) ! ensure that the rotation matrix is a DCM in double precision (this should be the same as TRANSPOSE(InitInp%GlbRot))
 
       ! Gravity vector
    p%gravity = MATMUL(TRANSPOSE(p%GlbRot),InitInp%gravity)
@@ -915,6 +916,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
 
    integer(intKi)                               :: temp_id
    integer(intKi)                               :: i,j               ! loop counters
+   integer(intKi)                               :: j_start           ! loop counter start for looping over quadrature points
    integer(intKi)                               :: NNodes            ! number of nodes in mesh
 
    integer(intKi)                               :: ErrStat2          ! temporary Error status
@@ -982,8 +984,8 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
       if (ErrStat>=AbortErrLev) return
 
 
-   DCM = InitInp%GlbRot
-   Pos = InitInp%GlbPos
+   DCM = TRANSPOSE(p%GlbRot)
+   Pos = p%GlbPos
    CALL MeshPositionNode ( Mesh    = u%RootMotion &
                          , INode   = 1            &
                          , Pos     = Pos          &
@@ -1031,6 +1033,8 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
        DO j=1,p%nodes_per_elem
            temp_POS = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,j,i))
 
+            ! Note:  Here we can use this subroutine to get the DCM.  This is under the assumption
+            !        that there is no rotational displacement yet, so x%q is zero
            DCM = BDrot_to_FASTdcm(p%uuN0(4:6,j,i),p)
 
            temp_id = (i-1)*(p%nodes_per_elem-1)+j
@@ -1067,7 +1071,8 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
    ! u%DistrLoad (for coupling with AeroDyn)
    !.................................
 
-   NNodes = size(p%QuadPt,2)
+!FIXME: size against p%uu0 somehow.
+   NNodes = size(p%NdIndx)
    CALL MeshCreate( BlankMesh  = u%DistrLoad      &
                    ,IOS        = COMPONENT_INPUT  &
                    ,NNodes     = NNodes           &
@@ -1078,19 +1083,52 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat>=AbortErrLev) return
 
-   DO i=1,NNodes
-      Pos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%QuadPt(1:3,i))
 
-      DCM = BDrot_to_FASTdcm(p%QuadPt(4:6,i),p)
+ 
+   DO i=1,p%elem_total
+      DO j=1,p%nqp      !NOTE: if we add multi-element to trap, we will need to change this.
+         temp_id = (i-1)*p%nqp + j + p%qp_indx_offset            ! Index to a node within element i
+         Pos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uu0(1:3,j,i))
 
+            ! Note:  Here we can use this subroutine to get the DCM.  This is under the assumption
+            !        that there is no rotational displacement yet, so m%qp%uuu is zero
+         DCM = BDrot_to_FASTdcm(p%uu0(4:6,j,i),p)
+
+         CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
+                                ,INode   = temp_id     &
+                                ,Pos     = Pos          &
+                                ,ErrStat = ErrStat2     &
+                                ,ErrMess = ErrMsg2      &
+                                ,Orient  = DCM )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ENDDO
+   ENDDO
+
+      ! For Gauss quadrature, an additional node is added to the end.
+   IF (p%quadrature .EQ. GAUSS_QUADRATURE) THEN
+         ! First node
+      Pos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1,1))
+      DCM = BDrot_to_FASTdcm(p%uuN0(4:6,1,1),p)
       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
-                             ,INode   = i            &
+                             ,INode   = 1            &
+                             ,Pos     = Pos          &
+                             ,ErrStat = ErrStat2     &
+                             ,ErrMess = ErrMsg2      &
+                             ,Orient  = DCM )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+  
+         ! Last node 
+      Pos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,p%nodes_per_elem,p%elem_total))
+      DCM = BDrot_to_FASTdcm(p%uuN0(4:6,p%nodes_per_elem,p%elem_total),p)
+      CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
+                             ,INode   = NNodes       &
                              ,Pos     = Pos          &
                              ,ErrStat = ErrStat2     &
                              ,ErrMess = ErrMsg2      &
                              ,Orient  = DCM )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ENDDO
+   ENDIF
+
 
    DO i=1,NNodes-1
       CALL MeshConstructElement( Mesh      = u%DistrLoad      &
@@ -1208,6 +1246,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       CALL AllocAry(m%qp%Fd,                 p%dof_node,p%nqp,p%elem_total,                  'm%qp%Fd at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%Fg,                 p%dof_node,p%nqp,p%elem_total,                  'm%qp%Fg at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%Fi,                 p%dof_node,p%nqp,p%elem_total,                  'm%qp%Fi at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry(m%qp%Ftemp,              p%dof_node,p%nqp,p%elem_total,                  'm%qp%Ftemp at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Inertial force terms
       CALL AllocAry(m%qp%Gi,               6,6,         p%nqp,p%elem_total,                  'm%qp%Gi gyroscopic at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1348,6 +1387,7 @@ subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
       ! convert to BeamDyn-internal system inputs, u_tmp:
    CALL BD_InputGlobalLocal(p,u_tmp)
 
+
       ! initialize states, given parameters and initial inputs (in BD coordinates)
    CALL BD_CalcIC(u_tmp,p,x)
 
@@ -1467,7 +1507,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    TYPE(BD_ContinuousStateType)                 :: x_tmp
-   INTEGER(IntKi)                               :: i        ! loop over elements
+   INTEGER(IntKi)                               :: i           ! generic loop counter
+   INTEGER(IntKi)                               :: nelem       ! loop over elements
    REAL(ReKi)                                   :: AllOuts(0:MaxOutPts)
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
@@ -1535,21 +1576,24 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           
        
-      y%ReactionForce%Force(:,1) = -MATMUL(p%GlbRot,m%RHS(1:3,1))
-
-      y%ReactionForce%Moment(:,1) = -MATMUL(p%GlbRot,m%RHS(4:6,1))
+      y%ReactionForce%Force(:,1)    = -MATMUL(p%GlbRot,m%RHS(1:3,1))
+      y%ReactionForce%Moment(:,1)   = -MATMUL(p%GlbRot,m%RHS(4:6,1))
 
       CALL BD_GenerateInternalForceMoment( y, p, m )       
     
    ELSE
-!FIXME: note that the static case doesn't actually calculate reaction forces...       
-      m%RHS = 0.0_BdKi 
+      m%RHS = 0.0_BdKi ! accelerations are set to zero in the static case 
+
+         ! Calculate the elastic forces for the static case.
+      DO nelem=1,p%elem_total
+         CALL BD_StaticElementMatrix( nelem, p%gravity, p, x_tmp, m )
+      ENDDO
+
 
       CALL BD_GenerateInternalForceMoment( y, p, m )       
     
-      !VA: Going back to the old way of calculating Reaction forces above
-      !y%ReactionForce%Force(1:3,1)  = -m%BldInternalForce(1:3,1)
-      !y%ReactionForce%Moment(1:3,1) = -m%BldInternalForce(4:6,1)
+      y%ReactionForce%Force(:,1)  = -m%BldInternalForce(1:3,1)
+      y%ReactionForce%Moment(:,1) = -m%BldInternalForce(4:6,1)
    ENDIF
 
        
@@ -1701,7 +1745,6 @@ SUBROUTINE BD_QuadraturePointDataAt0( p )
    ENDDO
 
 
-write(51,*) 'p%uu0'
    DO nelem = 1,p%elem_total
        DO idx_qp = 1,p%nqp
             !> ### Calculate the the initial displacement fields in an element
@@ -1736,7 +1779,6 @@ write(51,*) 'p%uu0'
             !! (tangent to curve through this GLL point).  This is simply the
          CALL BD_CrvMatrixR(p%uu0(4:6,idx_qp,nelem),R0_temp)         ! returns R0_temp (the transpose of the DCM orientation matrix)
          p%E10(:,idx_qp,nelem) = R0_temp(:,3)                        ! unit vector tangent to curve through this GLL point (derivative with respect to z in IEC coords).
-write(51,'(6(2x,ES20.12E3))') p%uu0(:,idx_qp,nelem)
       ENDDO
    ENDDO 
 
@@ -1842,14 +1884,9 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
    INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
    INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
    INTEGER(IntKi)                :: idx_node          !< index to current GLL point in element
-   REAL(BDKi)                    :: q_root(3)         !< Rotation parameters for root node (\f$\underline{\hat{c}}^1 \f$)
-   REAL(BDKi)                    :: q_temp(3)         !< Temp array for the rotation parameters of the current node
-   REAL(BDKi)                    :: Nr_temp(3)        !< Temp array for the resulting relative rotation
    REAL(BDKi)                    :: rrr(3)            !< relative rotation field \f$ \underline{r}(\xi) \f$
    REAL(BDKi)                    :: rrp(3)            !< relative prime rotation field \f$ \underline{r}^\prime(\xi) \f$
    REAL(BDKi)                    :: cc(3)
-   REAL(BDKi)                    :: rot_c_xi(3)       !< Rotation parameters \f$\underline{c}(\xi)\f$
-   REAL(BDKi)                    :: rot0_T0(3)        !< Initial rotation at T=0
    REAL(BDKi)                    :: temp33(3,3)
    REAL(BDKi)                    :: DCM_root(3,3)       !< DCM for first node
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_RotationalInterpQP'
@@ -1895,21 +1932,17 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
       !! \f$ \underline{\underline{R}}\left(\underline{\hat{r}}^k\right)
       !!       = \underline{\underline{R}}^T\left(\underline{\hat{c}}^1\right) \underline{\underline{R}}\left(\underline{\underline{c}}^k\right) \f$.
 
-   q_root(:) = x%q(4:6,elem_start)              ! Rotation parameters for root
-
       !> Find the transpose of the DCM orientation matrix of the root as
       !! \f$ \underline{\underline{R}}\left(\underline{\hat{c}}^1\right)\f$
-   CALL BD_CrvMatrixR(q_root,DCM_root)   ! returns temp33 (the transpose of the DCM orientation matrix)
+   CALL BD_CrvMatrixR(x%q(4:6,elem_start),DCM_root)   ! returns DCM_root (the transpose of the DCM orientation matrix at the root (first node of the element))
  
 
       ! Calculate the rotation parameters relative to the root for each node
    m%Nrrr(1:3,elem_start,nelem)  = (/ 0.0_BDKi, 0.0_BDKi, 0.0_BDKi /)  ! First node has no curvature relative to itself
    DO idx_node=2,p%nodes_per_elem
-      q_temp(:) = x%q(4:6,elem_start-1+idx_node)    ! Adjust to location in array for current element
          ! Find resulting rotation parameters R(Nr) = Ri^T(x%q(1)) R(x%q(:))
          ! where R(x%q(1))^T is the transpose rotation parameters for the root node
-      CALL BD_CrvCompose(Nr_temp,q_root,q_temp,FLAG_R1TR2)  ! Nr_temp = q_root^- composed with q_temp
-      m%Nrrr(1:3,idx_node,nelem)  = Nr_temp(:)   ! Adjust to location in array for current element
+      CALL BD_CrvCompose(m%Nrrr(1:3,idx_node,nelem),x%q(4:6,elem_start),x%q(4:6,elem_start-1+idx_node),FLAG_R1TR2)  ! m%Nrrr(1:3,idx_node,nelem) = x%q(4:6,elem_start)^- composed with x%q(4:6,elem_start-1+idx_node)
    ENDDO
 
 
@@ -1955,13 +1988,9 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
             !! \f$  \underline{\underline{R}}\left(c^i\right)
             !!       =  \underline{\underline{R}}\left(\underline{\hat{c}}^1\right)
             !!          \underline{\underline{R}}\left(\underline{\underline{r}}^i\right) \f$
-         CALL BD_CrvCompose(rot_c_xi,q_root,rrr,FLAG_R1R2)  ! rot_c_xi = q_root composed with rrr
-            ! Set the rotation parameters to return
-         m%qp%uuu(4:6,idx_qp,nelem) = rot_c_xi(:)                                ! rotation parameters \f$\underline{c}(\xi)\f$
-      
-      
-      
-      
+         CALL BD_CrvCompose(m%qp%uuu(4:6,idx_qp,nelem),x%q(4:6,elem_start),rrr,FLAG_R1R2)  ! m%qp%uuu(4:6,idx_qp,nelem) = x%q(4:6,elem_start) composed with rrr
+
+         
             !> ###Find the curvature field
             !!             \f$  \underline{k}(\xi)
             !!                = \underline{\underline{R}}\left(\underline{\hat{c}}^1\right)
@@ -1982,10 +2011,8 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
             !!
             !! Note: \f$ \underline{\underline{R}}\underline{\underline{R}}_0 \f$ is used to go from the material basis into the inertial basis
             !!       and the transpose for the other direction.
-!FIXME: note that p%uu0 is not the same as p%QuadPt (which is used in mesh orientation)  
-         rot0_T0(:) = p%uu0(4:6,idx_qp,nelem)                ! initial rotation parameter set at gauss point at T=0
       
-         CALL BD_CrvCompose(cc,rot_c_xi,rot0_T0,FLAG_R1R2)   ! cc = rot_c_xi composed with rot0_T0
+         CALL BD_CrvCompose(cc,m%qp%uuu(4:6,idx_qp,nelem),p%uu0(4:6,idx_qp,nelem),FLAG_R1R2)   ! cc = m%qp%uuu(4:6,idx_qp,nelem) composed with p%uu0(4:6,idx_qp,nelem)
          CALL BD_CrvMatrixR(cc,m%qp%RR0(:,:,idx_qp,nelem))   ! returns RR0 (the transpose of the DCM orientation matrix)
 
    ENDDO
@@ -2017,6 +2044,7 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
       tempR6(4:6,4:6) = m%qp%RR0(:,:,idx_qp,nelem)       ! lower right  -- rotation
    
    
+!FIXME: is this assuming something about where the elastic center is???
          !> Modify the Mass matrix as
          !! \f$ \begin{bmatrix}
          !!        \left(\underline{\underline{R}} \underline{\underline{R}}_0\right)      &  0             \\
@@ -2207,6 +2235,7 @@ SUBROUTINE BD_ElasticForce(nelem,idx_qp,p,m,fact)
       !!                \left(\underline{\mathcal{F}}^c \times \underline{E}_1 \right)^T
       !!       \end{bmatrix}  \f$
    m%qp%Fd(1:3,idx_qp,nelem)  = 0.0_BDKi
+! ADP uu0 ref: If E1 is referenced against a different curve than Stif0_QP, there will be strange coupling terms here. 
    m%qp%Fd(4:6,idx_qp,nelem)  = cross_product(m%qp%Fc(1:3,idx_qp,nelem), m%qp%E1(:,idx_qp,nelem))
 
 
@@ -2593,8 +2622,6 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, x, m )
    m%elf(:,:,:)      = 0.0_BDKi
    m%elm(:,:,:,:)    = 0.0_BDKi
 
-write(53,*) 'm%qp%Fc'
-write(54,*) 'm%qp%Fd'
    DO idx_qp=1,p%nqp
 
 
@@ -2603,14 +2630,12 @@ write(54,*) 'm%qp%Fd'
       CALL BD_GyroForce( nelem, idx_qp, m )
       CALL BD_GravityForce( nelem, idx_qp, p, m, p%gravity )
       CALL BD_ElasticForce( nelem,idx_qp,p,m,.FALSE. )     ! Calculate Fc, Fd only
-write(53,'(6(2x,ES20.12E3))') m%qp%Fc(:,idx_qp,nelem) 
-write(54,'(6(2x,ES20.12E3))') m%qp%Fd(:,idx_qp,nelem) 
       IF(p%damp_flag .NE. 0) THEN
          CALL BD_DissipativeForce( nelem, idx_qp, p,m,.FALSE. )         ! Calculate dissipative terms on Fc, Fd
 
       ENDIF
 
-      m%qp%Fd(:,idx_qp,nelem) = m%qp%Fd(:,idx_qp,nelem) + m%qp%Fb(:,idx_qp,nelem) - m%DistrLoad_QP(:,idx_qp,nelem) - m%qp%Fg(:,idx_qp,nelem)
+      m%qp%Ftemp(:,idx_qp,nelem) = m%qp%Fd(:,idx_qp,nelem) + m%qp%Fb(:,idx_qp,nelem) - m%DistrLoad_QP(:,idx_qp,nelem) - m%qp%Fg(:,idx_qp,nelem)
 
       DO j=1,p%nodes_per_elem
          DO idx_dof2=1,p%dof_node
@@ -2623,8 +2648,8 @@ write(54,'(6(2x,ES20.12E3))') m%qp%Fd(:,idx_qp,nelem)
       ENDDO
       DO i=1,p%nodes_per_elem
          DO idx_dof1=1,p%dof_node
-            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%ShpDer(i,idx_qp)*m%qp%Fc(idx_dof1,idx_qp,nelem)*p%QPtWeight(idx_qp)
-            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Fd(idx_dof1,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
+            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%ShpDer(i,idx_qp)*m%qp%Fc   (idx_dof1,idx_qp,nelem)*p%QPtWeight(idx_qp)
+            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Ftemp(idx_dof1,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
          ENDDO
       ENDDO
 
@@ -3240,6 +3265,7 @@ SUBROUTINE BD_StaticUpdateConfiguration(p,m,x)
    INTEGER(IntKi)                         :: i
    CHARACTER(*), PARAMETER                :: RoutineName = 'BD_StaticUpdateConfiguration'
 
+!FIXME: why is x%q(:,1) calculated??? Isn't that already known???
    DO i=1, p%node_total
 
          ! Calculate new position
@@ -3316,7 +3342,7 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, x, m )
       CALL BD_ElasticForce( nelem,idx_qp,p,m,.true. )    ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
 
       CALL BD_GravityForce( nelem, idx_qp, p, m, gravity )
-      m%qp%Fd(:,idx_qp,nelem) = m%qp%Fd(:,idx_qp,nelem) - m%qp%Fg(:,idx_qp,nelem) - m%DistrLoad_QP(:,idx_qp,nelem)
+      m%qp%Ftemp(:,idx_qp,nelem) = m%qp%Fd(:,idx_qp,nelem) - m%qp%Fg(:,idx_qp,nelem) - m%DistrLoad_QP(:,idx_qp,nelem)
 
       DO j=1,p%nodes_per_elem
          DO idx_dof2=1,p%dof_node
@@ -3334,8 +3360,8 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, x, m )
 
       DO i=1,p%nodes_per_elem
          DO j=1,p%dof_node
-            m%elf(j,i,nelem) = m%elf(j,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Fd(j,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
-            m%elf(j,i,nelem) = m%elf(j,i,nelem) - p%ShpDer(i,idx_qp)*m%qp%Fc(j,idx_qp,nelem)*p%QPtWeight(idx_qp)
+            m%elf(j,i,nelem) = m%elf(j,i,nelem) - p%ShpDer(i,idx_qp)*m%qp%Fc   (j,idx_qp,nelem)*p%QPtWeight(idx_qp)
+            m%elf(j,i,nelem) = m%elf(j,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Ftemp(j,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
          ENDDO
       ENDDO
 
@@ -3541,8 +3567,9 @@ SUBROUTINE BD_TiSchmPredictorStep( x, OtherState, p )
    INTEGER                     ::i              ! generic counter
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_TiSchmPredictorStep'
       
-
-   DO i=1,p%node_total
+!We already know what the first node is, so why are we calculating it?
+!X   DO i=1,p%node_total
+   DO i=2,p%node_total
 
       tr                  = p%dt * x%dqdt(:,i) + p%coef(1) * OtherState%acc(:,i) + p%coef(2) * OtherState%xcc(:,i)
       x%dqdt(:,i)         =        x%dqdt(:,i) + p%coef(3) * OtherState%acc(:,i) + p%coef(4) * OtherState%xcc(:,i) ! velocities at t+dt
@@ -3608,7 +3635,7 @@ END SUBROUTINE BD_TiSchmComputeCoefficients
 !! into states and otherstates at the root finite element node
 SUBROUTINE BD_BoundaryGA2(x,p,u,OtherState)
 
-   TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t (in BD coords)
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t (in local BD coords)
    TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Inputs at t
    TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Continuous states at t
@@ -3616,7 +3643,7 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,OtherState)
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
 
 
-      ! Root displacements (in BD coord system)
+      ! Root displacements
    x%q(1:3,1) = u%RootMotion%TranslationDisp(1:3,1)
 
       ! Root rotations
@@ -3848,7 +3875,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, x, OtherState, m )
       CALL BD_GravityForce( nelem, idx_qp, p, m, p%gravity )
 
       ! F^ext is combined with F^D (F^D = F^D-F^ext), i.e. RHS of Equation 9 in Wang_2014
-      m%qp%Fd(:,idx_qp,nelem) = m%qp%Fd(:,idx_qp,nelem) - m%qp%Fg(:,idx_qp,nelem) - m%DistrLoad_QP(:,idx_qp,nelem)
+      m%qp%Ftemp(:,idx_qp,nelem) = m%qp%Fd(:,idx_qp,nelem) - m%qp%Fg(:,idx_qp,nelem) - m%DistrLoad_QP(:,idx_qp,nelem)
 
       ! Equations 10, 11, 12 in Wang_2014
       IF(fact) THEN
@@ -3896,9 +3923,9 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, x, OtherState, m )
       ! Equations 13 and 14 in Wang_2014. F^ext is combined with F^D (F^D = F^D-F^ext)
       DO i=1,p%nodes_per_elem
          DO idx_dof1=1,p%dof_node
-            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Fd(idx_dof1,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
-            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%ShpDer(i,idx_qp)*m%qp%Fc(idx_dof1,idx_qp,nelem)*p%QPtWeight(idx_qp)
-            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Fi(idx_dof1,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
+            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%ShpDer(i,idx_qp)*m%qp%Fc   (idx_dof1,idx_qp,nelem)*p%QPtWeight(idx_qp)
+            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Ftemp(idx_dof1,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
+            m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Fi   (idx_dof1,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
          ENDDO
       ENDDO
 
@@ -3922,31 +3949,26 @@ SUBROUTINE BD_InputGlobalLocal( p, u)
    CHARACTER(*), PARAMETER              :: RoutineName = 'BD_InputGlobalLocal'
 
 !FIXME: we might be able to get rid of the m%u now if we put the p%GlbRot multiplications elsewhere.   
-   u%RootMotion%TranslationDisp(:,1) = u%RootMotion%TranslationDisp(:,1)
-   u%RootMotion%TranslationVel(:,1) = u%RootMotion%TranslationVel(:,1)
-   u%RootMotion%RotationVel(:,1) = u%RootMotion%RotationVel(:,1)
-   u%RootMotion%TranslationAcc(:,1) = u%RootMotion%TranslationAcc(:,1)
-   u%RootMotion%RotationAcc(:,1) = u%RootMotion%RotationAcc(:,1)
 
    ! Transform Root Motion from Global to Local (Blade) frame
-   u%RootMotion%TranslationDisp(:,1) = MATMUL(u%RootMotion%TranslationDisp(:,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationDisp(:,1))
-   u%RootMotion%TranslationVel(:,1)  = MATMUL(u%RootMotion%TranslationVel( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationVel(:,1))
-   u%RootMotion%RotationVel(:,1)     = MATMUL(u%RootMotion%RotationVel(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationVel(:,1))
-   u%RootMotion%TranslationAcc(:,1)  = MATMUL(u%RootMotion%TranslationAcc( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationAcc(:,1))
-   u%RootMotion%RotationAcc(:,1)     = MATMUL(u%RootMotion%RotationAcc(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationAcc(:,1))
+   u%RootMotion%TranslationDisp(:,1) = MATMUL(u%RootMotion%TranslationDisp(:,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationDisp(:,1)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationDisp(:,1))
+   u%RootMotion%TranslationVel(:,1)  = MATMUL(u%RootMotion%TranslationVel( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationVel(:,1))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationVel(:,1))
+   u%RootMotion%RotationVel(:,1)     = MATMUL(u%RootMotion%RotationVel(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationVel(:,1))     = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%RotationVel(:,1))
+   u%RootMotion%TranslationAcc(:,1)  = MATMUL(u%RootMotion%TranslationAcc( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationAcc(:,1))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationAcc(:,1))
+   u%RootMotion%RotationAcc(:,1)     = MATMUL(u%RootMotion%RotationAcc(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationAcc(:,1))     = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%RotationAcc(:,1))
 
-   ! Transform DCM to Rotation Tensor (RT)
-   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1)) !possible type conversion
-
+   ! Transform DCM to Rotation Tensor (RT)   
+   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1)) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
+   
    ! Transform Applied Forces from Global to Local (Blade) frame
    DO i=1,p%node_total
-      u%PointLoad%Force(1:3,i)  = MATMUL(u%PointLoad%Force(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Force(:,i))
-      u%PointLoad%Moment(1:3,i) = MATMUL(u%PointLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Moment(:,i))
+      u%PointLoad%Force(1:3,i)  = MATMUL(u%PointLoad%Force(:,i),p%GlbRot)  !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%PointLoad%Force(:,i)) 
+      u%PointLoad%Moment(1:3,i) = MATMUL(u%PointLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Moment(:,i)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%PointLoad%Moment(:,i))
    ENDDO
    
    DO i=1,u%DistrLoad%Nnodes
-      u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Force(:,i))
-      u%DistrLoad%Moment(1:3,i) = MATMUL(u%DistrLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Moment(:,i))
+      u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),p%GlbRot)  !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Force(:,i)) 
+      u%DistrLoad%Moment(1:3,i) = MATMUL(u%DistrLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Moment(:,i)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Moment(:,i))
    ENDDO
 
 END SUBROUTINE BD_InputGlobalLocal
@@ -4007,10 +4029,12 @@ SUBROUTINE BD_CalcIC( u, p, x)
    CHARACTER(*), PARAMETER                    :: RoutineName = 'BD_CalcIC'
 
 
-   temp33=u%RootMotion%Orientation(:,:,1) ! possible type conversion
-   CALL BD_CrvExtractCrv(temp33,temp3)
-   CALL BD_CrvCompose(temp_rv,temp3,p%Glb_crv,FLAG_R1R2T)  ! temp_rv = temp3 composed with p%Glb_crv^-
-   CALL BD_CrvMatrixR(temp_rv,temp_R) ! returns temp_R (the transpose of the DCM orientation matrix)
+
+
+
+      !  Since RootMotion%Orientation is the transpose of the absolute orientation in the global frame,
+      !  we need to find the relative change in orientation from the reference.
+   temp_rv = ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1),p)
 
 
    !Initialize displacements and rotations
@@ -4018,13 +4042,12 @@ SUBROUTINE BD_CalcIC( u, p, x)
    DO i=1,p%elem_total
       temp_id = p%node_elem_idx(i,1)-1      ! Node just before the start of this element
       DO j=k,p%nodes_per_elem
-!FIXME: is this correct??????
-         temp_p0 = MATMUL(p%GlbRot,p%uuN0(1:3,j,i))
-         temp_p0 = MATMUL(temp_R,temp_p0) - temp_p0
-         temp_p0 = MATMUL(temp_p0,p%GlbRot) != transpose(MATMUL(transpose(temp_p0),p%GlbRot)) = MATMUL(TRANSPOSE(p%GlbRot),temp_p0)  [transpose of a 1-d array temp_p0 is temp_p0]
-
-         x%q(1:3,temp_id+j) = u%RootMotion%TranslationDisp(1:3,1) + temp_p0
-
+            ! reference at current root orientation.
+         temp_p0 = MATMUL(u%rootmotion%orientation(:,:,1),p%uuN0(1:3,j,i))    ! Global frame
+         temp_p0 = MATMUL(temp_p0, p%GlbRot )                                 ! Into the local frame
+            !  Add the root displacement (in local frame) to the reference at current root orientation in local frame,
+            !  and subtract the reference to get the displacement.  This is equivalent to TranslationDisp in the local frame.
+         x%q(1:3,temp_id+j) = u%RootMotion%TranslationDisp(1:3,1) + temp_p0 - p%uuN0(1:3,j,i)
       ENDDO
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
@@ -4033,26 +4056,25 @@ SUBROUTINE BD_CalcIC( u, p, x)
    DO i=1,p%elem_total
       temp_id = p%node_elem_idx(i,1)-1      ! Node just before the start of this element
       DO j=k,p%nodes_per_elem
-         x%q(4:6,temp_id+j) = MATMUL(temp_rv,p%GlbRot) != transpose(MATMUL(TRANSPOSE(temp_rv),p%GlbRot) = MATMUL(TRANSPOSE(p%GlbRot),temp_rv) because temp_rv is 1-dimension
+         x%q(4:6,temp_id+j) = temp_rv  ! each node is assumed to have the same initial relative rotation as the root
       ENDDO
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
+
 
    !Initialize velocities and angular velocities
    x%dqdt(:,:) = 0.0_BDKi
 
    ! these values don't change in the loop:
-   GlbRot_TransVel     = MATMUL(p%GlbRot,u%RootMotion%TranslationVel(:,1))
-   GlbRot_RotVel_tilde = SkewSymMat(MATMUL(p%GlbRot,u%RootMotion%RotationVel(:,1)))
    k=1 !when i=1, k=1
    DO i=1,p%elem_total
       temp_id = p%node_elem_idx(i,1)-1      ! Node just before the start of this element
       DO j=k,p%nodes_per_elem
 
-         temp3 = MATMUL(p%GlbRot, p%uuN0(1:3,j,i) + x%q(1:3,temp_id+j) )
-         temp3 = GlbRot_TransVel + MATMUL(GlbRot_RotVel_tilde,temp3)
+         temp3 = p%uuN0(1:3,j,i) + x%q(1:3,temp_id+j)
+         temp3 = u%RootMotion%TranslationVel(:,1) + cross_product(u%RootMotion%RotationVel(:,1),temp3)
 
-         x%dqdt(1:3,temp_id+j) = MATMUL(temp3,p%GlbRot) ! = transpose(MATMUL(transpose(temp3),p%GlbRot)) = MATMUL(TRANSPOSE(p%GlbRot),temp3)  because temp3 is 1-dimension
+         x%dqdt(1:3,temp_id+j) = temp3
          x%dqdt(4:6,temp_id+j) = u%RootMotion%RotationVel(1:3,1)
       ENDDO
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
@@ -4240,6 +4262,7 @@ SUBROUTINE BD_ComputeBladeMassNew( p, ErrStat, ErrMsg )
        temp_id = (nelem-1)*p%nqp
        DO j=1,p%nqp
            EMass0_GL(1:6,1:6,j) = p%Mass0_QP(1:6,1:6,temp_id+j)
+!FIXME: does this need to be calculated against p%uu0, if the Mass0_QP is referenced against it?????????
            NQPpos(1:3,j)        = p%QuadPt(1:3,temp_id+j+p%qp_indx_offset)
        ENDDO
 

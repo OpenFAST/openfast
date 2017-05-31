@@ -564,7 +564,6 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
    LOGICAL                      :: Echo                         ! Determines if an echo file should be written
    INTEGER(IntKi)               :: IOS                          ! Temporary Error status
    CHARACTER(ErrMsgLen)         :: ErrMsg2                      ! Temporary Error message
-   CHARACTER(ErrMsgLen)         :: ErrMsg_NoBldNdOuts           ! Temporary Error message
    character(*), parameter      :: RoutineName = 'BD_ReadPrimaryFile'
 
    CHARACTER(1024)              :: PriPath                      ! Path name of the primary file

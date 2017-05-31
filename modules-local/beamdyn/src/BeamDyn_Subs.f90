@@ -246,13 +246,9 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
    INTEGER       ,INTENT(IN   ):: flag      !< Option flag
 
    REAL(BDKi)                  :: pp0
-   REAL(BDKi)                  :: pp1
-   REAL(BDKi)                  :: pp2
-   REAL(BDKi)                  :: pp3
+   REAL(BDKi)                  :: p(3)
    REAL(BDKi)                  :: qq0
-   REAL(BDKi)                  :: qq1
-   REAL(BDKi)                  :: qq2
-   REAL(BDKi)                  :: qq3
+   REAL(BDKi)                  :: q(3)
    REAL(BDKi)                  :: tr1
    REAL(BDKi)                  :: Delta1
    REAL(BDKi)                  :: Delta2
@@ -263,23 +259,15 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
       ! Set the local values pp and qq allowing for the transpose
 
    IF(flag==FLAG_R1TR2 .OR. flag==FLAG_R1TR2T) THEN ! "transpose" (negative) of first rotation parameter
-       pp1 = -pp(1)
-       pp2 = -pp(2)
-       pp3 = -pp(3)
+       p = -pp
    ELSE
-       pp1 = pp(1)
-       pp2 = pp(2)
-       pp3 = pp(3)
+       p = pp
    ENDIF
 
    IF(flag==FLAG_R1R2T .OR. flag==FLAG_R1TR2T) THEN ! "transpose" (negative) of second rotation parameter
-       qq1 = -qq(1)
-       qq2 = -qq(2)
-       qq3 = -qq(3)
+       q = -qq
    ELSE
-       qq1 = qq(1)
-       qq2 = qq(2)
-       qq3 = qq(3)
+       q = qq
    ENDIF
 
       !> ## Composing the resulting Wiener-Milenkovic parameter
@@ -305,13 +293,13 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
 
       ! Calculate pp0 and qq0. See Bauchau for the mathematics here (equations 8 to 9 and interviening text)
 
-   pp0 = 2.0_BDKi - (pp1 * pp1 + pp2 * pp2 + pp3 * pp3) / 8.0_BDKi   ! p_0
-   qq0 = 2.0_BDKi - (qq1 * qq1 + qq2 * qq2 + qq3 * qq3) / 8.0_BDKi   ! q_0
+   pp0 = 2.0_BDKi - dot_product(p,p) / 8.0_BDKi   ! p_0
+   qq0 = 2.0_BDKi - dot_product(q,q) / 8.0_BDKi   ! q_0
 
-   Delta1 = (4.0_BDKi - pp0) * (4.0_BDKi - qq0)                   ! Delta_1 in Bauchau
-   Delta2 = pp0 * qq0 - pp1 * qq1 - pp2 * qq2 - pp3 * qq3         ! Delta_2 in Bauchau
-   dd1 = Delta1 + Delta2                                             ! Denomimator term for \Delta_2 >= 0
-   dd2 = Delta1 - Delta2                                             ! Denomimator term for \Delta_2 <  0
+   Delta1 = (4.0_BDKi - pp0) * (4.0_BDKi - qq0)   ! Delta_1 in Bauchau
+   Delta2 = pp0 * qq0 - dot_product(p,q)          ! Delta_2 in Bauchau
+   dd1 = Delta1 + Delta2                          ! Denomimator term for \Delta_2 >= 0
+   dd2 = Delta1 - Delta2                          ! Denomimator term for \Delta_2 <  0
 
       ! Rescaling to remove singularities at +/- 2 \pi
       ! Note: changed this to test on \Delta_2 (instead of dd1 > dd2) for better consistency with documentation.
@@ -321,9 +309,7 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
        tr1 = -4.0_BDKi / dd2
    ENDIF
 
-   rr(1) = tr1 * (pp1 * qq0 + pp0 * qq1 - pp3 * qq2 + pp2 * qq3)
-   rr(2) = tr1 * (pp2 * qq0 + pp3 * qq1 + pp0 * qq2 - pp1 * qq3)
-   rr(3) = tr1 * (pp3 * qq0 - pp2 * qq1 + pp1 * qq2 + pp0 * qq3)
+   rr = tr1 * (qq0*p + pp0*q + cross_product(p,q))
 
 
 END SUBROUTINE BD_CrvCompose
@@ -601,6 +587,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, u, x, m, y)
             y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,x%q(1:3,temp_id))
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
+!adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotatinoal displacement yet
                ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
                ! referenced against the DCM of the blade root at T=0.
             cc = MATMUL(p%GlbRot,x%q(4:6,temp_id))                ! Global coordinate DCM times rotation parameters
@@ -641,7 +628,6 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
    INTEGER(IntKi)                               :: i
    INTEGER(IntKi)                               :: j
    INTEGER(IntKi)                               :: j_start !starting node on this element
-   INTEGER(IntKi)                               :: idx_node
    INTEGER(IntKi)                               :: temp_id
    INTEGER(IntKi)                               :: temp_id2
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Set_BldMotion_Mesh'
@@ -796,14 +782,16 @@ FUNCTION BDrot_to_FASTdcm(rr,p) RESULT(dcm)
    REAL(BDKi)                         :: temp_CRV2(3)   ! temp curvature parameters
    real(BDKi)                         :: R(3,3)         ! rotation matrix
    
-! note differences in setting up meshes with Set_BldMotion_NoAcc   
+! note differences in setting up meshes with Set_BldMotion_NoAcc  
+!adp: in the case of the meshes in Set_BldMotion_NoAcc, x%q(4:6,:) and m%qp%uuu(4:6,:,:) are not zero.  When this routine is called, they
+!     are zero, and the expression in Set_BldMotion_NoAcc simplifies to this expression.
    
    ! note that p%GlbRot = BD_CrvMatrixR(p%Glb_crv) 
    
       ! rotate relative W-M rotations to global system?
    temp_CRV = MATMUL(p%GlbRot, rr)
    
-      ! 
+       
    CALL BD_CrvCompose(temp_CRV2,p%Glb_crv,temp_CRV,FLAG_R1R2) !temp_CRV2 = p%Glb_crv composed with temp_CRV
    
    

@@ -28,7 +28,7 @@ module BeamDyn_driver_subs
       REAL(ReKi)     , DIMENSION(1:6)               :: DistrLoad        !< Constant distributed load along beam axis, 3 forces and 3 moments [-]
       REAL(ReKi)     , DIMENSION(1:6)               :: TipLoad          !< Constant point load applied at tip, 3 forces and 3 moments [-]
       INTEGER(IntKi)                                :: NumPointLoads    !< Number of constant point loads applied along beam axis, 3 forces and 3 moments [-]
-      REAL(ReKi) ,     DIMENSION(:,:), ALLOCATABLE  :: MultiPointLoad   !< Constant point loads applied along beam axis (index 1= Relative position along blade span; indices 2-7 = Fx, Fy, Fz, Mx, My, Mz) [-]
+      REAL(BDKi) ,     DIMENSION(:,:), ALLOCATABLE  :: MultiPointLoad   !< Constant point loads applied along beam axis (index 1= Relative position along blade span; indices 2-7 = Fx, Fy, Fz, Mx, My, Mz) [-]
 !  INTEGER(IntKi)                :: NumPointLoads               !< Number of multi-point loads in the driver input file
 !  REAL(DbKi)                    :: MultiPointLoads{:}{:}       !< The array of multipoint loads Index 1: [1, NumPointLoads]; 
                                                                 !< Index 2: [1,7] (index of Loads 1   = Relative position along blade span;
@@ -591,13 +591,13 @@ SUBROUTINE Init_RotationCenterMesh(DvrData, InitInputData, RootMotionMesh, ErrSt
    else
       z_hat = InitInputData%RootVel(4:6) / DvrData%w
       
-      if ( EqualRealNos( z_hat(3), 1.0_ReKi ) ) then
+      if ( EqualRealNos( z_hat(3), 1.0_R8Ki ) ) then
          call eye(orientation, ErrStat2, ErrMsg2)
-      elseif ( EqualRealNos( z_hat(3), -1.0_ReKi ) ) then
+      elseif ( EqualRealNos( z_hat(3), -1.0_R8Ki ) ) then
          orientation = 0.0_ReKi
-         orientation(1,1) = -1.0_ReKi
-         orientation(2,2) =  1.0_ReKi
-         orientation(3,3) = -1.0_ReKi
+         orientation(1,1) = -1.0_R8Ki
+         orientation(2,2) =  1.0_R8Ki
+         orientation(3,3) = -1.0_R8Ki
       else
          
          Z_unit = (/0, 0, 1/)
