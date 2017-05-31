@@ -102,16 +102,20 @@ else(NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 endif()
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
 
-# Compile the ServoData controller library for 5MW turbine test cases during CMake
-# so the libraries will be correctly copied into the CTest build directories before executing the test
-## determine the architecture type
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(bits 64)
-else()
-  set(bits 32)
+if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
+  # Compile the ServoData controller library for 5MW turbine test cases during CMake
+  # so the libraries will be correctly copied into the CTest build directories before executing the test
+  ## determine the architecture type
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(bits 64)
+  else()
+    set(bits 32)
+  endif()
+  set(SCRIPT_PATH "${CMAKE_CURRENT_LIST_DIR}/r-test/inputs/compileDISCON.py")
+  file(TO_NATIVE_PATH ${SCRIPT_PATH} SCRIPT_PATH)
+  set(command "${SCRIPT_PATH}" "${CMAKE_Fortran_COMPILER_ID}" "${bits}")
+  execute_process(COMMAND ${PYTHON_EXECUTABLE} ${command})
 endif()
-set(command "${CMAKE_CURRENT_LIST_DIR}/r-test/inputs/compileDISCON.py" "${CMAKE_Fortran_COMPILER_ID}" "${bits}")
-execute_process(COMMAND ${PYTHON_EXECUTABLE} ${command})
 
 # the statement below automatically creates a BUILD_TESTING option
 include(CTest)
