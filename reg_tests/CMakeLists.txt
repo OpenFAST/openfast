@@ -29,9 +29,8 @@ if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test")
   message(FATAL_ERROR "CMake cannot find the test data directory, r-test. Did you initialize the git submodule?" )
 endif()
 
-# Set the openfast executable configuration option and default
-SET(OPENFAST_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/glue-codes/fast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
-file(TO_NATIVE_PATH ${OPENFAST_EXECUTABLE} OPENFAST_EXECUTABLE)
+# Set the OpenFAST executable configuration option and default
+set(OPENFAST_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/glue-codes/fast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
 # Set the python executable configuration option and default
 if(NOT EXISTS ${PYTHON_EXECUTABLE})

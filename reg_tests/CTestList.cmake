@@ -20,13 +20,18 @@
 
 # Standard regression test
 function(add_test_r testname )
+  file(TO_NATIVE_PATH "${PYTHON_EXECUTABLE}" PYTHON_EXECUTABLE)
+  file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/executeRegressionTestCase.py" TEST_SCRIPT)
+  file(TO_NATIVE_PATH "${OPENFAST_EXECUTABLE}" OPENFAST_EXECUTABLE)
+  file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/.." SOURCE_DIRECTORY)
+  file(TO_NATIVE_PATH "${CTEST_BUILD_DIR}" BUILD_DIRECTORY)
   add_test(
     ${testname} ${PYTHON_EXECUTABLE}
-       ${CMAKE_CURRENT_LIST_DIR}/executeRegressionTestCase.py
+       ${TEST_SCRIPT}
        ${testname}
        ${OPENFAST_EXECUTABLE}
-       ${CMAKE_CURRENT_LIST_DIR}/..     # openfast source directory
-       ${CTEST_BUILD_DIR}               # build directory for test
+       ${SOURCE_DIRECTORY}              # openfast source directory
+       ${BUILD_DIRECTORY}               # build directory for test
        ${TOLERANCE}
        ${CMAKE_SYSTEM_NAME}             # [Darwin,Linux,Windows]
        ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
