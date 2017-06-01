@@ -19,7 +19,7 @@ param	^                    -               INTEGER         YZSlice     - 2 -  "E
 param	^                    -               INTEGER         XZSlice     - 3 -  "Extract an XZ slice of data from the 3D grid" -
 
 # ..... Wind 3D Data .......................................................................................................
-typedef   AWAE/AWAE   AWAE_HighWindGrid       ReKi            data         {:}{:}{:}{:}{:} - - "UVW components of wind data across the high-res regularly-spaced grid" m/s
+typedef   AWAE/AWAE   AWAE_HighWindGrid       SiKi            data         {:}{:}{:}{:}{:} - - "UVW components of wind data across the high-res regularly-spaced grid" m/s
 # ..... InputFile Data .......................................................................................................
 typedef   AWAE/AWAE   AWAE_InputFileType  ReKi            dr             - - -  "Radial increment of radial finite-difference grid [>0.0]" m
 typedef   ^           AWAE_InputFileType  DbKi            dt             - - -  "Low-resolution (FAST.Farm driver/glue code) time step" s
@@ -84,9 +84,9 @@ typedef   ^ OtherStateType      ReKi     DummyOtherState  - - -  "Remove this va
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef   ^ MiscVarType    ReKi     Vamb_low     {:}{:}{:}{:} - -  "UVW components of ambient wind across the low-resolution domain throughout the farm" m/s
-typedef   ^ MiscVarType    ReKi     Vdist_low    {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm" m/s
-typedef   ^ MiscVarType    ReKi     Vamb_high    {:}{:}{:}{:} - -  "UVW components of ambient wind across each high-resolution domain around a turbine (one for each turbine) for each high-resolution time step within a low-resolution time step" m/s
+typedef   ^ MiscVarType    SiKi     Vamb_low     {:}{:}{:}{:} - -  "UVW components of ambient wind across the low-resolution domain throughout the farm" m/s
+typedef   ^ MiscVarType    SiKi     Vdist_low    {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm" m/s
+typedef   ^ MiscVarType    SiKi     Vamb_high    {:}{:}{:}{:} - -  "UVW components of ambient wind across each high-resolution domain around a turbine (one for each turbine) for each high-resolution time step within a low-resolution time step" m/s
 typedef   ^ MiscVarType    IntKi    N_wind       {:}{:}    - -  "Number of grid points contained in a given wake plane volume" -
 typedef   ^ MiscVarType    ReKi     xhat_plane   {:}{:} - -  "Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain" -
 #typedef  ^ MiscVarType    ReKi     r_plane      {:}{:}       - - "" m
@@ -103,9 +103,9 @@ typedef   ^ MiscVarType    ReKi     Vr_wake      {:}       - - "" m/s
 typedef   ^ MiscVarType    IntKi    nx_wind      {:}{:}{:}    - - "" -     
 typedef   ^ MiscVarType    IntKi    ny_wind      {:}{:}{:}    - - "" -     
 typedef   ^ MiscVarType    IntKi    nz_wind      {:}{:}{:}    - - "" -     
-typedef	^	MiscVarType	   ReKi	   outVizXYPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
-typedef	^	MiscVarType	   ReKi	   outVizYZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
-typedef	^	MiscVarType	   ReKi	   outVizXZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
+typedef	^	MiscVarType	   SiKi	   outVizXYPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
+typedef	^	MiscVarType	   SiKi	   outVizYZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
+typedef	^	MiscVarType	   SiKi	   outVizXZPlane  {:}{:}{:}{:} -- "An array holding the output data for a 2D visualization slice" -
  
 
 # ..... Parameters ................................................................................................................
