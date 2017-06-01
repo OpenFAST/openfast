@@ -125,11 +125,13 @@ type(All_FastFarm_Data)               :: farm
    !   
       ! this takes data from n_t_global and gets values at n_t_global + 1
       t = n_t_global*farm%p%DT
-      CALL FARM_UpdateStates(t, n_t_global, farm, ErrStat, ErrMsg)      
+      !CALL FARM_UpdateStates(t, n_t_global, farm, ErrStat, ErrMsg)   
+      CALL FARM_UpdateStatesSerial(t, n_t_global, farm, ErrStat, ErrMsg)   
          CALL CheckError( ErrStat, ErrMsg  )
    
       t = (n_t_global+1)*farm%p%DT
-      CALL FARM_CalcOutput(t, farm, ErrStat, ErrMsg)      
+      !CALL FARM_CalcOutput(t, farm, ErrStat, ErrMsg)   
+      CALL FARM_CalcOutputSerial(t, farm, ErrStat, ErrMsg)
          CALL CheckError( ErrStat, ErrMsg  )
       
       CALL SimStatus( PrevSimTime, PrevClockTime, t, farm%p%TMax )
