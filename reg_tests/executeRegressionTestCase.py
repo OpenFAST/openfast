@@ -155,7 +155,7 @@ if executionReturnCode != 0:
     exitWithError("")
 
 ### Build the filesystem navigation variables for running the regression test
-passFailScript = os.path.join(regtests, "pass_fail.py")
+passFailScript = os.path.join(regtests, "lib", "pass_fail.py")
 localOutputFile = os.path.join(testBuildDirectory, caseName + ".outb")
 goldStandardFile = os.path.join(targetOutputDirectory, caseName + ".outb")
 
