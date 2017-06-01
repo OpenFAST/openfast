@@ -9850,7 +9850,7 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    CHARACTER(30)                :: Fmt
    CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
    CHARACTER(10)                :: DOFEnabled                                      ! String to say if a DOF is enabled or disabled
-   CHARACTER(2)                 :: outStr
+   CHARACTER(3)                 :: outStr
    CHARACTER(10)                :: CalWakeDiamStr
    
    
@@ -9893,12 +9893,12 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
 
    do I = 1,farm%p%NumTurbines
       if ( I < 10 ) then
-         outStr = adjustr(trim(Num2LStr(I)))
+         outStr = 'T'//(trim(Num2LStr(I)))
       else
-         outStr = '- '
+         outStr = ' - '
       end if
       
-      WRITE(UnSum,'(6X,I4,16X,A4,9X,3F10.3,5X,F9.4,8X,I4,10X,A)')  I, outStr, farm%p%WT_Position(1,I), farm%p%WT_Position(2,I),farm%p%WT_Position(3,I), farm%p%DT, farm%p%n_high_low, trim(farm%p%WT_FASTInFile(I))
+      WRITE(UnSum,'(6X,I4,16X,A4,9X,3F10.3,5X,F10.5,8X,I4,10X,A)')  I, outStr, farm%p%WT_Position(1,I), farm%p%WT_Position(2,I),farm%p%WT_Position(3,I), farm%p%DT/farm%FWrap%p%n_FAST_low, farm%FWrap%p%n_FAST_low, trim(farm%p%WT_FASTInFile(I))
                                                                       
    end do
    
@@ -9906,15 +9906,15 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    WRITE (UnSum,'(2X,A)')      'Radial Node Number  Output Node Number    Radius'
    WRITE (UnSum,'(2X,A)')      '       (-)                (-)              (m) '  
    do I = 0, farm%WD(1)%p%NumRadii-1
-      outStr = ' -'
+      outStr = ' - '
       do J = 1, farm%p%NOutRadii
          if (farm%p%OutRadii(J) == I ) then
-            outStr = trim(Num2LStr(J))
+            outStr = 'N'//trim(Num2LStr(J))
             exit
          end if
       end do
       
-      WRITE(UnSum,'(8X,I4,17X,A2,9X,F10.3)')  I, outStr, farm%WD(1)%p%r(I)
+      WRITE(UnSum,'(8X,I4,16X,A3,9X,F10.3)')  I, outStr, farm%WD(1)%p%r(I)
       
    end do
    
@@ -9922,9 +9922,9 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    WRITE (UnSum,'(2X,A)')      'Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz): '//trim(Num2LStr(WD_InputFileData%f_c))
    WRITE (UnSum,'(4X,A)')        '( low-pass time-filter parameter (-): '//trim(Num2LStr(farm%WD(1)%p%filtParam))//' )'
    WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m): '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_O))
-   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg): '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_OY)) 
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg): '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_OY/R2D)) 
    WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-):  '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_x))
-   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg):  '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_xY))
+   WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg):  '//trim(Num2LStr(farm%WD(1)%p%C_HWkDfl_xY/R2D))
    WRITE (UnSum,'(2X,A)')      'Calibrated parameter for near-wake correction (-): '//trim(Num2LStr(farm%WD(1)%p%C_NearWake))
    WRITE (UnSum,'(2X,A)')      'Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-):  '//trim(Num2LStr(farm%WD(1)%p%k_vAmb))
    WRITE (UnSum,'(2X,A)')      'Calibrated parameter for the influence of the shear layer in the eddy viscosity (-):  '//trim(Num2LStr(farm%WD(1)%p%k_vShr))
@@ -10040,7 +10040,7 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
       CALL WrFileNR ( farm%p%UnOu, farm%p%OutParam(0)%Name )
 
       DO I=1,farm%p%NumOuts
-         WRITE (farm%p%UnOu,'(A14)',ADVANCE='NO')  farm%p%Delim//farm%p%OutParam(I)%Name
+         WRITE (farm%p%UnOu,'(A14)',ADVANCE='NO')  farm%p%Delim//farm%p%OutParam(I)%Name  ! Cannot use WrFileNR because it assumes a ChanLen length string and ours is ChanLenFF (14)
         ! CALL WrFileNR ( farm%p%UnOu, farm%p%Delim//farm%p%OutParam(I)%Name )
       ENDDO ! I
 !============================================================
@@ -10246,15 +10246,20 @@ SUBROUTINE WriteFarmOutputToFile( t_global, farm, ErrStat, ErrMsg )
       CALL WrFileNR( farm%p%UnOu, TmpStr )
 
             ! Generate fast.farm output file
+      
+      
       DO I = 1,farm%p%NumOuts  ! Loop through all selected output channels
 
          OutputAry(I) = farm%p%OutParam(I)%SignM * farm%m%AllOuts( farm%p%OutParam(I)%Indx )
-         WRITE( TmpStr2, '('//Frmt//')' ) OutputAry(I)
-         CALL WrFileNR( farm%p%UnOu, TmpStr2 )
+        ! WRITE( TmpStr2, '('//trim(Frmt)//')' ) OutputAry(I)
+        ! WRITE (farm%p%UnOu,'(A14)',ADVANCE='NO') TmpStr2
+         
+        ! CALL WrFileNR( farm%p%UnOu, TmpStr2 )
       
      
       ENDDO             ! I - All selected output channels
-      
+        ! write the individual module output (convert to SiKi if necessary, so that we don't need to print so many digits in the exponent)
+      CALL WrNumAryFileNR ( farm%p%UnOu, REAL(OutputAry,SiKi), Frmt, ErrStat, ErrMsg ) 
 !============================================================
 ! DEBUG OUTPUTS HERE
 !
