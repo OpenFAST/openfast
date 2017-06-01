@@ -1071,8 +1071,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
    ! u%DistrLoad (for coupling with AeroDyn)
    !.................................
 
-!FIXME: size against p%uu0 somehow.
-   NNodes = size(p%NdIndx)
+   NNodes = p%nqp*p%elem_total + 2*p%qp_indx_offset
    CALL MeshCreate( BlankMesh  = u%DistrLoad      &
                    ,IOS        = COMPONENT_INPUT  &
                    ,NNodes     = NNodes           &
