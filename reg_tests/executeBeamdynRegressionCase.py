@@ -80,6 +80,7 @@ except ValueError:
 
 ### Build the filesystem navigation variables for running the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")
+lib = os.path.join(regtests, "lib")
 rtest = os.path.join(regtests, "r-test")
 targetOutputDirectory = os.path.join(rtest, "beamdyn", caseName)
 inputsDirectory = os.path.join(rtest, "beamdyn", caseName)
@@ -102,7 +103,7 @@ if not os.path.isdir(testBuildDirectory):
     shutil.copy(os.path.join(inputsDirectory,"beam_props.inp"), os.path.join(testBuildDirectory,"beam_props.inp"))
 
 ### Run beamdyn on the test case
-executionScript = os.path.join(regtests, "lib", "executeBeamdynCase.py")
+executionScript = os.path.join(lib, "executeBeamdynCase.py")
 executionCommand = " ".join([pythonCommand, executionScript, testBuildDirectory, executable])
 
 print("'{}' - running".format(executionCommand))
@@ -112,22 +113,21 @@ print("'{}' - finished with exit code {}".format(executionCommand, executionRetu
 
 if executionReturnCode != 0:
     exitWithError("")
-sys.exit(executionReturnCode)
 
 ### Build the filesystem navigation variables for running the regression test
-# passFailScript = os.path.join(regtests, "lib", "pass_fail.py")
-# localOutputFile = os.path.join(testBuildDirectory, caseName + ".outb")
-# goldStandardFile = os.path.join(targetOutputDirectory, caseName + ".outb")
-#
-# if not os.path.isfile(passFailScript): exitWithFileNotFound(passFailScript)
-# if not os.path.isfile(localOutputFile): exitWithFileNotFound(localOutputFile)
-# if not os.path.isfile(goldStandardFile): exitWithFileNotFound(goldStandardFile)
-#
-# passfailCommand = " ".join([pythonCommand, passFailScript, localOutputFile, goldStandardFile, tolerance])
-# print("'{}' - running".format(passfailCommand))
-# sys.stdout.flush()
-# passfailReturnCode = subprocess.call(passfailCommand, shell=True)
-# print("'{}' - finished with exit code {}".format(passfailCommand, passfailReturnCode))
-#
-# # return pass/fail
-# sys.exit(passfailReturnCode)
+passFailScript = os.path.join(lib, "pass_fail.py")
+localOutputFile = os.path.join(testBuildDirectory, "bd_driver.out")
+goldStandardFile = os.path.join(targetOutputDirectory, "bd_driver.out")
+
+if not os.path.isfile(passFailScript): exitWithFileNotFound(passFailScript)
+if not os.path.isfile(localOutputFile): exitWithFileNotFound(localOutputFile)
+if not os.path.isfile(goldStandardFile): exitWithFileNotFound(goldStandardFile)
+
+passfailCommand = " ".join([pythonCommand, passFailScript, localOutputFile, goldStandardFile, tolerance])
+print("'{}' - running".format(passfailCommand))
+sys.stdout.flush()
+passfailReturnCode = subprocess.call(passfailCommand, shell=True)
+print("'{}' - finished with exit code {}".format(passfailCommand, passfailReturnCode))
+
+# return pass/fail
+sys.exit(passfailReturnCode)
