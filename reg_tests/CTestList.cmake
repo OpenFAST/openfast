@@ -62,5 +62,5 @@ endfunction(bd_regression)
 #===============================================================================
 # Regression tests
 #===============================================================================
-#of_regression(Test01)
+of_regression(Test01)
 bd_regression(bd_isotropic_rollup)
