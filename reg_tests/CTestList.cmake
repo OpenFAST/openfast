@@ -19,9 +19,9 @@
 #===============================================================================
 
 # Standard regression test
-function(add_test_r testname )
+function(of_regression testname)
   file(TO_NATIVE_PATH "${PYTHON_EXECUTABLE}" PYTHON_EXECUTABLE)
-  file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/executeRegressionTestCase.py" TEST_SCRIPT)
+  file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py" TEST_SCRIPT)
   file(TO_NATIVE_PATH "${OPENFAST_EXECUTABLE}" OPENFAST_EXECUTABLE)
   file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/.." SOURCE_DIRECTORY)
   file(TO_NATIVE_PATH "${CTEST_BUILD_DIR}" BUILD_DIRECTORY)
@@ -38,34 +38,29 @@ function(add_test_r testname )
   )
   # limit each test to 25 minutes: 1500s
   set_tests_properties(${testname} PROPERTIES TIMEOUT 1500 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "regression")
-endfunction(add_test_r)
+endfunction(of_regression)
+
+function(bd_regression testname)
+  file(TO_NATIVE_PATH "${PYTHON_EXECUTABLE}" PYTHON_EXECUTABLE)
+  file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py" TEST_SCRIPT)
+  file(TO_NATIVE_PATH "${BEAMDYN_EXECUTABLE}" BEAMDYN_EXECUTABLE)
+  file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/.." SOURCE_DIRECTORY)
+  file(TO_NATIVE_PATH "${CTEST_BUILD_DIR}" BUILD_DIRECTORY)
+  add_test(
+    ${testname} ${PYTHON_EXECUTABLE}
+       ${TEST_SCRIPT}
+       ${testname}
+       ${BEAMDYN_EXECUTABLE}
+       ${SOURCE_DIRECTORY}              # openfast source directory
+       ${BUILD_DIRECTORY}               # build directory for test
+       ${TOLERANCE}
+  )
+  # limit each test to 25 minutes: 1500s
+  set_tests_properties(${testname} PROPERTIES TIMEOUT 1500 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "regression")
+endfunction(bd_regression)
 
 #===============================================================================
 # Regression tests
 #===============================================================================
-add_test_r(Test01)
-add_test_r(Test02)
-add_test_r(Test03)
-add_test_r(Test04)
-add_test_r(Test05)
-add_test_r(Test06)
-add_test_r(Test07)
-add_test_r(Test08)
-add_test_r(Test09)
-add_test_r(Test10)
-add_test_r(Test11)
-add_test_r(Test12)
-add_test_r(Test13)
-add_test_r(Test14)
-add_test_r(Test15)
-add_test_r(Test16)
-add_test_r(Test17)
-add_test_r(Test18)
-add_test_r(Test19)
-add_test_r(Test20)
-add_test_r(Test21)
-add_test_r(Test22)
-add_test_r(Test23)
-add_test_r(Test24)
-add_test_r(Test25)
-add_test_r(Test26)
+#of_regression(Test01)
+bd_regression(bd_isotropic_rollup)
