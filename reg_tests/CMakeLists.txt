@@ -32,6 +32,9 @@ endif()
 # Set the OpenFAST executable configuration option and default
 set(OPENFAST_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/glue-codes/fast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
+# Set the BeamDyn executable configuration option and default
+set(BEAMDYN_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/modules-local/beamdyn/beamdyn_driver" CACHE FILEPATH "Specify the BeamDyn executable to use in testing.")
+
 # Set the python executable configuration option and default
 if(NOT EXISTS ${PYTHON_EXECUTABLE})
   find_program(PYTHON_EXECUTABLE NAMES python3)
