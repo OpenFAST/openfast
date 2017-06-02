@@ -21,9 +21,9 @@
     - `openfast_executable` is an optional argument pointing to the OpenFAST executable of choice.
     - if `openfast_executable` is not given, an attempt will be made to find one in $PATH
 
-    Example: `python3 executeRegressionTestCase.py CaseDir/case01.fst`
-    Example: `python3 executeRegressionTestCase.py CaseDir/case01.fst openfast`
-    Example: `python3 executeRegressionTestCase.py CaseDir/case01.fst openfast/install/bin/openfast`
+    Example: `python3 executeOpenfastCase.py CaseDir/case01.fst`
+    Example: `python3 executeOpenfastCase.py CaseDir/case01.fst openfast`
+    Example: `python3 executeOpenfastCase.py CaseDir/case01.fst openfast/install/bin/openfast`
 """
 
 import os
@@ -76,5 +76,6 @@ command = "{} {} > {}.log".format(executable, caseInputFile, caseInputFile.split
 print("'{}' - running".format(command))
 sys.stdout.flush()
 return_code = subprocess.call(command, shell=True)
+print(return_code)
 print("'{}' - finished with exit code {}".format(command, return_code))
 sys.exit(return_code)
