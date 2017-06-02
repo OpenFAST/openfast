@@ -62,5 +62,34 @@ endfunction(bd_regression)
 #===============================================================================
 # Regression tests
 #===============================================================================
+
+# openfast regression tests
 of_regression(Test01)
+of_regression(Test02)
+of_regression(Test03)
+of_regression(Test04)
+of_regression(Test05)
+of_regression(Test06)
+of_regression(Test07)
+of_regression(Test08)
+of_regression(Test09)
+of_regression(Test10)
+of_regression(Test11)
+of_regression(Test12)
+of_regression(Test13)
+of_regression(Test14)
+of_regression(Test15)
+of_regression(Test16)
+of_regression(Test17)
+of_regression(Test18)
+of_regression(Test19)
+of_regression(Test20)
+of_regression(Test21)
+of_regression(Test22)
+of_regression(Test23)
+of_regression(Test24)
+of_regression(Test25)
+of_regression(Test26)
+
+# beam dyn regression tests
 bd_regression(bd_isotropic_rollup)
