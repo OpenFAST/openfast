@@ -120,6 +120,7 @@ print("-- Using gold standard files with machine-compiler type {}".format(output
 
 ### Build the filesystem navigation variables for running openfast on the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")
+lib = os.path.join(regtests, "lib")
 rtest = os.path.join(regtests, "r-test")
 targetOutputDirectory = os.path.join(rtest, "openfast", outputType)
 inputsDirectory = os.path.join(rtest, "openfast", "inputs")
@@ -140,7 +141,7 @@ if not os.path.isdir(testBuildDirectory):
 
 ### Run openfast on the test case
 caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
-executionScript = os.path.join(regtests, "lib", "executeOpenfastCase.py")
+executionScript = os.path.join(lib, "executeOpenfastCase.py")
 executionCommand = " ".join([pythonCommand, executionScript, caseInputFile, executable])
 print("'{}' - running".format(executionCommand))
 sys.stdout.flush()
@@ -151,7 +152,7 @@ if executionReturnCode != 0:
     exitWithError("")
 
 ### Build the filesystem navigation variables for running the regression test
-passFailScript = os.path.join(regtests, "lib", "pass_fail.py")
+passFailScript = os.path.join(lib, "pass_fail.py")
 localOutputFile = os.path.join(testBuildDirectory, caseName + ".outb")
 goldStandardFile = os.path.join(targetOutputDirectory, caseName + ".outb")
 
