@@ -25,6 +25,7 @@
 """
 
 import os
+from stat import *
 import sys
 import shutil
 import subprocess
@@ -50,7 +51,7 @@ else: pythonCommand = "python3"
 ### Verify input arguments
 if len(sys.argv) < 6 or len(sys.argv) > 8:
     exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: {} executeRegressionTestCase.py testname openfast_executable source_directory tolerance system_name compiler_id".format(pythonCommand))
+    "Usage: {} executeRegressionTestCase.py testname openfast_executable source_directory build_directory tolerance system_name compiler_id".format(pythonCommand))
 
 caseName = sys.argv[1]
 executable = sys.argv[2]
@@ -59,14 +60,12 @@ buildDirectory = sys.argv[4]
 tolerance = sys.argv[5]
 
 # verify executable
-try:
-    devnull = open(os.devnull, 'w')
-    subprocess.call(executable, stdout=devnull)
-except OSError as e:
-    if e.errno == os.errno.ENOENT:
-        exitWithError("{}: {}".format(e, executable))
-    else:
-        raise
+if not os.path.isfile(executable):
+    exitWithError("The given executable, {}, does not exist.".format(executable))
+
+permissionsMask = oct(os.stat(executable)[ST_MODE])[-1:]
+if not int(permissionsMask)%2 == 1:
+    exitWithError("The given executable, {}, does not have proper permissions.".format(executable))
 
 # verify source directory
 if not os.path.isdir(sourceDirectory):
@@ -117,15 +116,13 @@ else:
     targetCompiler = compilerId_map.get(compilerId.lower())
 
 outputType = os.path.join(targetSystem+"-"+targetCompiler)
-if not systemcompiler_given:
-    print("\nThe gold standard files are machine-compiler dependent.\n" +
-    "Defaulting to {}-{}.\n".format(targetSystem, targetCompiler))
+print("-- Using gold standard files with machine-compiler type {}".format(outputType))
 
 ### Build the filesystem navigation variables for running openfast on the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")
 rtest = os.path.join(regtests, "r-test")
-targetOutputDirectory = os.path.join(rtest, outputType)
-inputsDirectory = os.path.join(rtest, "inputs")
+targetOutputDirectory = os.path.join(rtest, "openfast", outputType)
+inputsDirectory = os.path.join(rtest, "openfast", "inputs")
 testBuildDirectory = os.path.join(buildDirectory, "outputs-local")
 
 # verify all the required directories exist
@@ -143,7 +140,7 @@ if not os.path.isdir(testBuildDirectory):
 
 ### Run openfast on the test case
 caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
-executionScript = os.path.join(regtests, "executeOpenfastCase.py")
+executionScript = os.path.join(regtests, "lib", "executeOpenfastCase.py")
 executionCommand = " ".join([pythonCommand, executionScript, caseInputFile, executable])
 print("'{}' - running".format(executionCommand))
 sys.stdout.flush()

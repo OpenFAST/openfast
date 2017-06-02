@@ -55,11 +55,11 @@ tolerance = sys.argv[5]
 
 # verify that the given executable exists and can be run
 if not os.path.isfile(executable):
-    exitWithError("The given beamdyn_driver, {}, does not exist.".format(executable))
+    exitWithError("The given executable, {}, does not exist.".format(executable))
 
 permissionsMask = oct(os.stat(executable)[ST_MODE])[-1:]
 if not int(permissionsMask)%2 == 1:
-    exitWithError("The given beamdyn_driver, {}, does not executable permission.".format(executable))
+    exitWithError("The given executable, {}, does not have proper permissions.".format(executable))
 
 # verify source directory
 if not os.path.isdir(sourceDirectory):
@@ -113,6 +113,7 @@ print("'{}' - finished with exit code {}".format(executionCommand, executionRetu
 if executionReturnCode != 0:
     exitWithError("")
 sys.exit(executionReturnCode)
+
 ### Build the filesystem navigation variables for running the regression test
 # passFailScript = os.path.join(regtests, "lib", "pass_fail.py")
 # localOutputFile = os.path.join(testBuildDirectory, caseName + ".outb")
