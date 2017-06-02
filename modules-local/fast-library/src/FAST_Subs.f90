@@ -4256,6 +4256,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       
    END IF
       
+   NumCorrections = max(p_FAST%NumCrctn,1)
    
    IF ( p_FAST%CompElast == Module_BD ) THEN
       if (n_t_global > 2) then ! this should probably be related to p_FAST%InterpOrder
