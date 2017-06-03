@@ -63,7 +63,7 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, MeshMapData, ErrStat, ErrMsg )
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST                   !< Glue-code simulation parameters
    TYPE(BeamDyn_Data),             INTENT(INOUT)  :: BD                       !< BD Inputs at t
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD                     !< AeroDyn outputs
-   TYPE(AD_InputType),             INTENT(INOUT)  :: u_AD                     !< AD inputs (for AD-BD load transfer)
+   TYPE(AD_InputType),             INTENT(IN   )  :: u_AD                     !< AD inputs (for AD-BD load transfer)
    
    TYPE(FAST_ModuleMapType),       INTENT(INOUT)  :: MeshMapData              !< Data for mapping between modules
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                  !< Error status
@@ -123,7 +123,7 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
    TYPE(AD14_ParameterType),       INTENT(IN   )  :: p_AD14                   !< AeroDyn14 parameters (a hack because the AD14 meshes aren't set up properly)
    TYPE(AD14_OutputType),          INTENT(IN   )  :: y_AD14                   !< AeroDyn14 outputs
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD                     !< AeroDyn outputs
-   TYPE(AD_InputType),             INTENT(INOUT)  :: u_AD                     !< AD inputs (for AD-ED load transfer)
+   TYPE(AD_InputType),             INTENT(IN   )  :: u_AD                     !< AD inputs (for AD-ED load transfer)
    TYPE(SrvD_OutputType),          INTENT(IN   )  :: y_SrvD                   !< ServoDyn outputs
    TYPE(SrvD_InputType),           INTENT(IN   )  :: u_SrvD                   !< ServoDyn inputs
    
@@ -3658,7 +3658,6 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
          BD%Input(1,i)%HubMotion%RemapFlag  = .FALSE.
              
          BD%y(i)%ReactionForce%RemapFlag    = .FALSE.
-         BD%y(i)%BldForce%RemapFlag         = .FALSE.
          BD%y(i)%BldMotion%RemapFlag        = .FALSE.
       END DO                  
    END IF

@@ -457,8 +457,8 @@ SUBROUTINE Transfer_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
    TYPE(MeshType),         INTENT(IN   ) ::  Src      !< source mesh
    TYPE(MeshType),         INTENT(INOUT) ::  Dest     !< destination mesh
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping data structure
 
@@ -596,8 +596,8 @@ SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
    TYPE(MeshType),         INTENT(IN   ) ::  Src      !  source mesh
    TYPE(MeshType),         INTENT(IN   ) ::  Dest     !  destination mesh
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !  a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !  a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !  a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !  a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !  mapping data structure
 
@@ -1241,7 +1241,6 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    REAL(DbKi)                :: FieldValue(3,2)                ! Temporary variable to store values for DCM interpolation
    REAL(DbKi)                :: RotationMatrixD(3,3)
    REAL(DbKi)                :: tensor_interp(3)
-   REAL(DbKi)                :: theta(1)
    
 
    ErrStat = ErrID_None
@@ -1795,7 +1794,9 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 
 !   INTEGER(IntKi)                                 :: ErrStat2                       ! Error status of the operation
 !   CHARACTER(ErrMsgLen)                           :: ErrMsg2                        ! Error message if ErrStat2 /= ErrID_None
+#ifdef DEBUG_MESHMAPPING
    CHARACTER(200)                                 :: DebugFileName                  ! File name for debugging file
+#endif   
    CHARACTER(*), PARAMETER                        :: RoutineName = 'CreateMapping_ProjectToLine2' 
    
    
@@ -1820,8 +1821,8 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
    LOGICAL         :: found
    LOGICAL         :: on_element
    
-   INTEGER(IntKi)  :: Un               ! unit number for debugging
 #ifdef DEBUG_MESHMAPPING
+   INTEGER(IntKi)  :: Un               ! unit number for debugging
    REAL(ReKi)      :: closest_elem_position
    INTEGER(IntKi)  :: closest_elem
 #endif
@@ -2104,8 +2105,8 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    ! local variables
 
@@ -2211,8 +2212,8 @@ SUBROUTINE Linearize_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    INTEGER(IntKi),            INTENT(  OUT) :: ErrStat   ! Error status of the operation
    CHARACTER(*),              INTENT(  OUT) :: ErrMsg    ! Error message if ErrStat /= ErrID_None
                               
-   TYPE(MeshType),OPTIONAL,   INTENT(IN   ) :: SrcDisp   ! a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,   INTENT(IN   ) :: DestDisp  ! a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,   INTENT(IN   ) :: SrcDisp   ! a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,   INTENT(IN   ) :: DestDisp  ! a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    ! local variables
 
@@ -3312,8 +3313,8 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
    TYPE(MeshType),         INTENT(IN   ) ::  Src      !< source Line2 mesh
    TYPE(MeshType),         INTENT(INOUT) ::  Dest     !< destination Line2 mesh
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping between Src and Dest meshes
 
@@ -3486,8 +3487,8 @@ SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
    TYPE(MeshType),         INTENT(IN   ) :: Src       !< source Line2 mesh
    TYPE(MeshType),         INTENT(IN   ) :: Dest      !< destination mesh
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientation
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientation
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping between Src and Dest meshes
 
@@ -3756,16 +3757,16 @@ END SUBROUTINE Transfer_Loads_Point_to_Line2
 !! \begin{bmatrix} M_{mi} & M_{f_{\times p}} & 0      & 0      \\
 !!                 0        & M_{mi}         & 0      & 0      \\
 !!                 0        & 0              & M_{li} & 0      \\
-!!                 M_{um}   & M_{tm}         & M_{fm} & M_{li} \\ \end{bmatrix} 
+!!                 M_{um}   & M_{tm}         & M_{fm} & M_{li} \\ \end{bmatrix}
 !! \left\{ \begin{matrix} \Delta\vec{u}^S \\  \Delta\vec{\theta}^S \\  \Delta\vec{F}^S \\   \Delta\vec{M}^S \end{matrix} \right\} \\ & =   
 !! \begin{bmatrix} I                                                         & 0 & 0                                                                                                        & 0        \\
 !!                 0                                                         & I & 0                                                                                                        & 0        \\
 !!                 0                                                         & 0 &  \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}                                                          & 0        \\
-!!                -\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}M_{um}^{DL} & 0 & -\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}M_{fm}^{DL}\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} & \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} \\ \end{bmatrix}  
+!!                -\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}M_{um}^{DL} & 0 & -\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}M_{fm}^{DL}\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} & \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} \\ \end{bmatrix}
 !! \begin{bmatrix} M_{mi}   & M_{f_{\times p}} & 0        & 0        \\
 !!                 0        & M_{mi}           & 0        & 0        \\
 !!                 0        & 0                & M_{li}^D & 0        \\
-!!                 0        & M_{tm}^D         & M_{fm}^D & M_{li}^D \\ \end{bmatrix}  
+!!                 0        & M_{tm}^D         & M_{fm}^D & M_{li}^D \\ \end{bmatrix}
 !! \left\{ \begin{matrix} \Delta\vec{u}^S \\  \Delta\vec{\theta}^S \\  \Delta\vec{F}^S \\   \Delta\vec{M}^S \end{matrix} \right\}
 !! \end{aligned}
 !! \f}
@@ -4298,14 +4299,12 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
    Aug_Nnodes = Src%nnodes  ! number of nodes in the augmented mesh 
    Aug_NElem  = Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%nelem
 
-   ! loop through the destination elements:
+   ! loop through the destination elements (NOTE: for point elements, this is the same as looping over nodes):
    DO jElem = 1,dest%ElemTable(Dest_TYPE)%nelem
       
       IF ( Dest_TYPE == ELEMENT_LINE2 ) THEN
          p_eD =   dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(2)) &
                 - dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(1))
-      ELSE
-         p_eD =   dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(1))
       END IF
       
      
@@ -4318,6 +4317,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
          p_eS =   Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(2)) &
                 - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1))
          
+         IF ( Dest_TYPE == ELEMENT_POINT ) p_eD = p_eS
          denom = DOT_PRODUCT( p_eD , p_eS )
             
   
@@ -4344,6 +4344,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                      
                                           
                   p_eS  = Src%Position(:, n2) - Src%Position(:, n1)
+                  IF ( Dest_TYPE == ELEMENT_POINT ) p_eD = p_eS
                   denom = DOT_PRODUCT( p_eD , p_eS )   ! we don't need to check that this is zero because it's just a shorter version of the temp Temp_Ln2_Src element
                   n1S_nD_vector =   dest%Position(:, dest%ElemTable(Dest_TYPE)%Elements(jElem)%ElemNodes(jNode)) &
                                    - Src%Position(:, n1 )

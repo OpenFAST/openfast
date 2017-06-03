@@ -259,16 +259,19 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
       CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrElev.", ErrStat, ErrMsg, RoutineName)
       RETURN
    END IF
-   ALLOCATE(InitOut%TwrDiam(p%NumTwrNds), STAT = ErrStat2)
-   IF (ErrStat2 /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrDiam.", ErrStat, ErrMsg, RoutineName)
-      RETURN
-   END IF
    InitOut%TwrElev(:) = InputFileData%TwrElev(:)
-   InitOut%TwrDiam(:) = p%TwrDiam(:)
    
+   IF ( p%NumTwrNds > 0 ) THEN
+      ALLOCATE(InitOut%TwrDiam(p%NumTwrNds), STAT = ErrStat2)
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrDiam.", ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF   
+      InitOut%TwrDiam(:) = p%TwrDiam(:)
+   END IF  
    
 end subroutine AD_SetInitOut
+
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
@@ -1369,6 +1372,8 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
       m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
 #endif
       theta(3) = 0.0_ReKi  
+      m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+      
       orientation = EulerConstruct( theta )
       orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k)
             
@@ -2111,7 +2116,7 @@ SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_towe
    
    TwrClrnc = TwoNorm(r_TowerBlade) - 0.5_ReKi*TwrDiam
    if ( TwrClrnc <= 0.0_ReKi ) then
-      call SetErrStat(ErrID_Severe, "Tower strike.", ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Tower strike.", ErrStat, ErrMsg, RoutineName)
    end if
    
    

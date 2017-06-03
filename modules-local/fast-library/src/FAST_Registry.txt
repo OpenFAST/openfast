@@ -112,6 +112,7 @@ typedef	^	FAST_ParameterType	CHARACTER(1024)	IceFile	-	-	-	"Name of file contain
 #typedef	^	FAST_ParameterType	DbKi	SttsTime	-	-	-	"Amount of time between screen status messages"	s
 typedef	^	FAST_ParameterType	DbKi	TStart	-	-	-	"Time to begin tabular output"	s
 typedef	^	FAST_ParameterType	DbKi	DT_Out	-	-	-	"Time step for tabular output"	s
+typedef	^	FAST_ParameterType	LOGICAL	WrSttsTime	-	-	-	"Whether we should write the status times to the screen"	-
 typedef	^	FAST_ParameterType	INTEGER	n_SttsTime	-	-	-	"Number of time steps between screen status messages"	-
 typedef	^	FAST_ParameterType	INTEGER	n_ChkptTime	-	-	-	"Number of time steps between writing checkpoint files"	-
 typedef	^	FAST_ParameterType	INTEGER	n_VTKTime	-	-	-	"Number of time steps between writing VTK files"	-
@@ -140,6 +141,7 @@ typedef	^	FAST_ParameterType	IntKi	SizeLin	{NumModules+1}{3}	-	-	"dimension 1 is
 typedef	^	FAST_ParameterType	IntKi	LinStartIndx	{NumModules}{3}	-	-	"dimension 1 is the module ID: dimension 2 is the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states"	-
 typedef	^	FAST_ParameterType	IntKi	Lin_NumMods	-	-	-	"number of modules in the linearization"
 typedef	^	FAST_ParameterType	Integer	Lin_ModOrder	{NumModules}	-	-	"indices that determine which order the modules are in the glue-code linearization matrix"
+typedef	^	FAST_ParameterType	CHARACTER(4)	Tdesc	-	-	-	"description of turbine ID (for FAST.Farm) screen printing"	
 
 # ..... FAST_LinType data .......................................................................................................
 typedef	FAST	FAST_LinType	CHARACTER(LinChanLen)	Names_u	{:}	-	-	"Names of the linearized inputs"
@@ -477,10 +479,15 @@ typedef	^	FAST_MiscVarType	INTEGER	NextLinTimeIndx	-	-	-	"index for next time in
 typedef	^	FAST_ExternInitType	DbKi	Tmax	-	-1	-	"External code specified Tmax"	s
 typedef	^	FAST_ExternInitType	IntKi	SensorType	-	SensorType_None	-	"lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file"	-
 typedef	^	FAST_ExternInitType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
-typedef	^	FAST_ExternInitType	IntKi	TurbineID	-	-	-	"ID number for turbine (used to create output file naming convention)"	-
+typedef	^	FAST_ExternInitType	IntKi	TurbineID	-	0	-	"ID number for turbine (used to create output file naming convention)"	-
 typedef	^	FAST_ExternInitType	ReKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used in future for graphics)"	m
 typedef	^	FAST_ExternInitType	IntKi	NumSC2Ctrl	-	-	-	"number of controller inputs [from supercontroller]"	-
 typedef	^	FAST_ExternInitType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
+typedef	^	FAST_ExternInitType	logical	FarmIntegration	-	.false.	-	"whether this is called from FAST.Farm (or another program that doesn't want FAST to call all of the init stuff first)"	-
+typedef	^	FAST_ExternInitType	IntKi	windGrid_n	4	-	-	"number of grid points in the x, y, z, and t directions for IfW"	-
+typedef	^	FAST_ExternInitType	ReKi	windGrid_delta	4	-	-	"size between 2 consecutive grid points in each grid direction for IfW"	"m,m,m,s"
+typedef	^	FAST_ExternInitType	ReKi	windGrid_pZero	3	-	-	"fixed position of the XYZ grid (i.e., XYZ coordinates of IfW m%V(:,1,1,1,:))"	m
+typedef	^	FAST_ExternInitType	CHARACTER(1024)	RootName	-	-	-	"Root name of FAST output files (overrides normal operation)"	-
 typedef	^	FAST_ExternInitType	IntKi	NumActForcePtsBlade	-	-	-	"number of actuator line force points in blade"	-
 typedef	^	FAST_ExternInitType	IntKi	NumActForcePtsTower	-	-	-	"number of actuator line force points in tower"	-
 
