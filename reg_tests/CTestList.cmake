@@ -63,7 +63,7 @@ endfunction(bd_regression)
 # Regression tests
 #===============================================================================
 
-# openfast regression tests
+# OpenFAST regression tests
 of_regression(Test01)
 of_regression(Test02)
 of_regression(Test03)
@@ -91,5 +91,5 @@ of_regression(Test24)
 of_regression(Test25)
 of_regression(Test26)
 
-# beam dyn regression tests
+# BeamDyn regression tests
 bd_regression(bd_isotropic_rollup)
