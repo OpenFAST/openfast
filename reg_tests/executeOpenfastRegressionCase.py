@@ -73,7 +73,7 @@ if not os.path.isdir(sourceDirectory):
 
 # verify build directory
 if not os.path.isdir(buildDirectory):
-    os.mkdir(buildDirectory)
+    os.makedirs(buildDirectory)
 
 if not os.path.isdir(buildDirectory):
     exitWithError("The given build directory, {}, does not exist.".format(buildDirectory))
