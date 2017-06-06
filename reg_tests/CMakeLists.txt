@@ -108,7 +108,7 @@ message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
   # Compile the ServoData controller library for 5MW turbine test cases during CMake
   # so the libraries will be correctly copied into the CTest build directories before executing the test
-  set(SCRIPT_PATH "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/inputs/compileDISCON.py")
+  set(SCRIPT_PATH "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/compileDISCON.py")
   file(TO_NATIVE_PATH ${SCRIPT_PATH} SCRIPT_PATH)
   execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SCRIPT_PATH})
 endif()
