@@ -82,9 +82,10 @@ except ValueError:
 regtests = os.path.join(sourceDirectory, "reg_tests")
 lib = os.path.join(regtests, "lib")
 rtest = os.path.join(regtests, "r-test")
-targetOutputDirectory = os.path.join(rtest, "beamdyn", caseName)
-inputsDirectory = os.path.join(rtest, "beamdyn", caseName)
-testBuildDirectory = os.path.join(buildDirectory, "beamdyn")
+modulesLocal = os.path.join(rtest, "modules-local")
+targetOutputDirectory = os.path.join(modulesLocal, "beamdyn", caseName)
+inputsDirectory = os.path.join(modulesLocal, "beamdyn", caseName)
+testBuildDirectory = os.path.join(buildDirectory, "beamdyn", caseName)
 
 # verify all the required directories exist
 if not os.path.isdir(rtest):
@@ -97,7 +98,7 @@ if not os.path.isdir(inputsDirectory):
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
 if not os.path.isdir(testBuildDirectory):
-    os.mkdir(testBuildDirectory)
+    os.makedirs(testBuildDirectory)
     shutil.copy(os.path.join(inputsDirectory,"bd_driver.inp"), os.path.join(testBuildDirectory,"bd_driver.inp"))
     shutil.copy(os.path.join(inputsDirectory,"bd_primary.inp"), os.path.join(testBuildDirectory,"bd_primary.inp"))
     shutil.copy(os.path.join(inputsDirectory,"beam_props.inp"), os.path.join(testBuildDirectory,"beam_props.inp"))

@@ -122,9 +122,10 @@ print("-- Using gold standard files with machine-compiler type {}".format(output
 regtests = os.path.join(sourceDirectory, "reg_tests")
 lib = os.path.join(regtests, "lib")
 rtest = os.path.join(regtests, "r-test")
-targetOutputDirectory = os.path.join(rtest, "openfast", outputType)
-inputsDirectory = os.path.join(rtest, "openfast", "inputs")
-testBuildDirectory = os.path.join(buildDirectory, "outputs-local")
+moduleDirectory = os.path.join(rtest, "openfast")
+inputsDirectory = os.path.join(moduleDirectory, caseName)
+targetOutputDirectory = os.path.join(inputsDirectory, outputType)
+testBuildDirectory = os.path.join(buildDirectory, caseName)
 
 # verify all the required directories exist
 if not os.path.isdir(rtest):
@@ -136,6 +137,11 @@ if not os.path.isdir(inputsDirectory):
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
+for data in ["5MW_Baseline", "AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
+    dataDir = os.path.join(buildDirectory, data)
+    if not os.path.isdir(dataDir):
+        shutil.copytree(os.path.join(moduleDirectory, data), dataDir)
+
 if not os.path.isdir(testBuildDirectory):
     shutil.copytree(inputsDirectory, testBuildDirectory)
 
