@@ -9811,7 +9811,7 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
          outStr = ' - '
       end if
       
-      WRITE(UnSum,'(6X,I4,16X,A4,9X,3F10.3,5X,F10.5,8X,I4,10X,A)')  I, outStr, farm%p%WT_Position(1,I), farm%p%WT_Position(2,I),farm%p%WT_Position(3,I), farm%p%DT/farm%FWrap%p%n_FAST_low, farm%FWrap%p%n_FAST_low, trim(farm%p%WT_FASTInFile(I))
+      WRITE(UnSum,'(6X,I4,16X,A4,9X,3F10.3,5X,F10.5,8X,I4,10X,A)')  I, outStr, farm%p%WT_Position(1,I), farm%p%WT_Position(2,I),farm%p%WT_Position(3,I), farm%p%DT/farm%FWrap(I)%p%n_FAST_low, farm%FWrap%p%n_FAST_low, trim(farm%p%WT_FASTInFile(I))
                                                                       
    end do
    
