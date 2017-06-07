@@ -37,15 +37,11 @@ set(CTEST_BEAMDYN_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/modules-local/beamdyn/
 
 # Set the python executable configuration option and default
 if(NOT EXISTS ${PYTHON_EXECUTABLE})
-  find_program(PYTHON_EXECUTABLE NAMES python3)
+  find_program(PYTHON_EXECUTABLE NAMES python3 python)
   if(NOT EXISTS ${PYTHON_EXECUTABLE})
-    find_program(PYTHON_EXECUTABLE NAMES python)
-    if(NOT EXISTS ${PYTHON_EXECUTABLE})
-      message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
-    endif()
+    message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
   endif()
 endif()
-set(PYTHON_EXECUTABLE ${PYTHON_EXECUTABLE} CACHE STRING "Specify the Python executable to use in testing.")
 
 # Set the testing tolerance
 if (NOT ${TEST_TOLERANCE} STREQUAL "") # User defined
