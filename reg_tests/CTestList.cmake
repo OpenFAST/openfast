@@ -37,7 +37,8 @@ function(of_regression testname)
        ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
   )
   # limit each test to 45 minutes: 2700s
-  set_tests_properties(${testname} PROPERTIES TIMEOUT 2700 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "regression")
+  set(LABELS openfast regression)
+  set_tests_properties(${testname} PROPERTIES TIMEOUT 2700 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
 endfunction(of_regression)
 
 function(bd_regression testname)
@@ -55,8 +56,9 @@ function(bd_regression testname)
        ${BUILD_DIRECTORY}               # build directory for test
        ${TOLERANCE}
   )
-  # limit each test to 25 minutes: 1500s
-  set_tests_properties(${testname} PROPERTIES TIMEOUT 1500 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "regression")
+  # limit each test to 45 minutes: 2700s
+  set(LABELS beamdyn regression)
+  set_tests_properties(${testname} PROPERTIES TIMEOUT 2700 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
 endfunction(bd_regression)
 
 #===============================================================================
