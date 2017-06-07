@@ -102,11 +102,17 @@ endif()
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
 
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
-  # Compile the ServoData controller library for 5MW turbine test cases during CMake
-  # so the libraries will be correctly copied into the CTest build directories before executing the test
-  set(SCRIPT_PATH "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/compileDISCON.py")
-  file(TO_NATIVE_PATH ${SCRIPT_PATH} SCRIPT_PATH)
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SCRIPT_PATH})
+  if(
+    NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON.dll" OR
+    NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON_ITIBarge.dll" OR
+    NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON_OC3Hywind.dll"
+  )
+    # Compile the ServoData controller library for 5MW turbine test cases during CMake
+    # so the libraries will be correctly copied into the CTest build directories before executing the test
+    set(SCRIPT_PATH "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/compileDISCON.py")
+    file(TO_NATIVE_PATH ${SCRIPT_PATH} SCRIPT_PATH)
+    execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SCRIPT_PATH})
+  endif()
 endif()
 
 # the statement below automatically creates a BUILD_TESTING option
