@@ -108,7 +108,7 @@ if(BUILD_DOCUMENTATION)
   add_subdirectory(docs)
 endif()
 
-option(BUILD_TESTING "Build the testing tree." ON)
+option(BUILD_TESTING "Build the testing tree." OFF)
 if(BUILD_TESTING)
   include(reg_tests/CMakeLists.txt)
   #add_subdirectory(reg_tests)
