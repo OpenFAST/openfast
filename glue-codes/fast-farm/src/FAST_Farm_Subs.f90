@@ -1547,15 +1547,17 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       ! 3. CALL F_Increment         
    !$OMP SECTION
    t3 = omp_get_wtime()
+   !$OMP PARALLEL DO DEFAULT(SHARED)
    DO nt = 1,farm%p%NumTurbines
       
       call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                      farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF, ErrMsgF )         
          call SetErrStat(ErrStatF, ErrMsgF, ErrStatF, ErrMsgF, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
-   t4 = omp_get_wtime()  
-   write(*,*) '  Serial F_Increment took '//trim(num2lstr(t4-t3))//' seconds. Using thread #'//trim(num2lstr(omp_get_thread_num()))
+      write(*,*) '    FWrap_Increment for turbine #'//trim(num2lstr(nt))//' using thread #'//trim(num2lstr(omp_get_thread_num()))
    END DO
-  
+  !$OMP END PARALLEL DO
+   t4 = omp_get_wtime()  
+   write(*,*) '  Parallel F_Increment(s) took '//trim(num2lstr(t4-t3))//' seconds.'
   ! if (ErrStat >= AbortErrLev) return
 
    
@@ -1596,7 +1598,7 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   tm1 = omp_get_wtime()
+  ! tm1 = omp_get_wtime()
    
    
    !.......................................................................................
@@ -1648,8 +1650,8 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    if (errStatAWAE >= AbortErrLev) return
    
    
-   tm2 = omp_get_wtime()
-   write(*,*) 'Total Farm_US-serial took '//trim(num2lstr(tm2-tm1))//' seconds.'
+  ! tm2 = omp_get_wtime()
+  ! write(*,*) 'Total Farm_US-serial took '//trim(num2lstr(tm2-tm1))//' seconds.'
  
    
 end subroutine FARM_UpdateStatesSerial
@@ -1981,7 +1983,7 @@ subroutine FARM_CalcOutputSerial(t, farm, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   tm1 = omp_get_wtime()
+  ! tm1 = omp_get_wtime()
    
    !.......................................................................................
    ! calculate module outputs and perform some input-output solves (steps 1. and 2. and 3. can be done in parallel,
@@ -2035,7 +2037,7 @@ subroutine FARM_CalcOutputSerial(t, farm, ErrStat, ErrMsg)
    call Farm_WriteOutput(n, t, farm, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
-   write(*,*) 'Total Farm_CO-serial took '//trim(num2lstr(omp_get_wtime()-tm1))//' seconds.' 
+ !  write(*,*) 'Total Farm_CO-serial took '//trim(num2lstr(omp_get_wtime()-tm1))//' seconds.' 
    
 end subroutine FARM_CalcOutputSerial
 !----------------------------------------------------------------------------------------------------------------------------------
