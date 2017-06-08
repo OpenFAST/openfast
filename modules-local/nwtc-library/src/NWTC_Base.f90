@@ -40,6 +40,7 @@ MODULE NWTC_Base
    INTEGER, PARAMETER            :: ErrMsgLen = 1024                              !< The maximum number of characters in an error message in the FAST framework
    
    INTEGER(IntKi), PARAMETER     :: ChanLen    = 10                               !< The allowable length of channel names (i.e., width of output columns) in the FAST framework
+   INTEGER(IntKi), PARAMETER     :: ChanLenFF  = 14                               !< The allowable length of channel names (i.e., width of output columns) in the FAST.Farm software
    INTEGER(IntKi), PARAMETER     :: LinChanLen = 200                              !< The allowable length of row/column names in linearization files
 
    INTEGER(IntKi), PARAMETER     :: NWTC_Verbose = 10                             !< The maximum level of verbosity

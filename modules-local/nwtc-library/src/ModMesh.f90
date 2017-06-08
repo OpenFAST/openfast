@@ -230,7 +230,7 @@ SUBROUTINE MeshWrVTKreference (RefPoint, M, FileRootName, ErrStat, ErrMsg )
    ErrMsg  = ""
       
       
-   ! PolyData (.vtp) — Serial vtkPolyData (unstructured)
+   ! PolyData (.vtp) - Serial vtkPolyData (unstructured)
    call WrVTK_header( TRIM(FileRootName)//'_Reference.vtp', M%Nnodes, M%ElemTable(ELEMENT_LINE2)%nelem, 0, Un, ErrStat2, ErrMsg2 )    
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -318,7 +318,7 @@ SUBROUTINE MeshWrVTK ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, Err
    ! write the data that potentially changes each time step:
    !.................................................................
       
-   ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
+   ! PolyData (.vtp) - Serial vtkPolyData (unstructured) file
    FileName = TRIM(FileRootName)//'.t'//TRIM(Num2LStr(VTKcount))//'.vtp'
       
    call WrVTK_header( trim(FileName), M%Nnodes, M%ElemTable(ELEMENT_LINE2)%nelem, 0, Un, ErrStat2, ErrMsg2 )    
@@ -567,7 +567,7 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFie
    ! write the data that potentially changes each time step:
    !.................................................................
       
-   ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
+   ! PolyData (.vtp) - Serial vtkPolyData (unstructured) file
    FileName = TRIM(FileRootName)//'.t'//TRIM(Num2LStr(VTKcount))//'.vtp'
        
       ! Write a VTP mesh file (Polygonal VTK file) with positions and polygons (surfaces)
@@ -758,7 +758,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    ! write the data that potentially changes each time step:
    !.................................................................
       
-   ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
+   ! PolyData (.vtp) - Serial vtkPolyData (unstructured) file
    FileName = TRIM(FileRootName)//'.t'//TRIM(Num2LStr(VTKcount))//'.vtp'
       
       ! Write a VTP mesh file (Polygonal VTK file) with positions and polygons (surfaces)

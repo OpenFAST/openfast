@@ -34,6 +34,5 @@ build/**/*
 install/*
 ctest-build/*
 
-# Visual Studio specific files
 vs-build
 build

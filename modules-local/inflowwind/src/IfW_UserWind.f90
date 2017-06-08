@@ -102,7 +102,7 @@ SUBROUTINE IfW_UserWind_Init(InitData, ParamData, MiscVars, Interval, InitOutDat
       ! Copy things from the InitData to the ParamData.  If you need to store it for later calculations,
       !  copy it over now.
       !-------------------------------------------------------------------------------------------------
-
+    ParamData%dummy = 0
 !   ParamData%RefHt            =  InitData%ReferenceHeight
 !   ParamData%RefLength        =  InitData%RefLength
 

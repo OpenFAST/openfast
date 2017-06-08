@@ -45,6 +45,18 @@ void readInputFile(fast::fastInputs & fi, std::string cInterfaceInputFile, doubl
       if(cDriverInp["debug"]) {
 	fi.debug = cDriverInp["debug"].as<bool>();
       } 
+
+      if(cDriverInp["simStart"]) {
+	if (cDriverInp["simStart"].as<std::string>() == "init") {
+	  fi.simStart = fast::init;
+	} else if(cDriverInp["simStart"].as<std::string>() == "trueRestart") {
+	  fi.simStart = fast::trueRestart;
+	} else if(cDriverInp["simStart"].as<std::string>() == "restartDriverInitFAST") {
+	  fi.simStart = fast::restartDriverInitFAST;
+	} else {
+	  throw std::runtime_error("simStart is not well defined in the input file");
+	}
+      }
       
       fi.tStart = cDriverInp["tStart"].as<double>();
       *tEnd = cDriverInp["tEnd"].as<double>();
@@ -110,7 +122,7 @@ int main() {
   // Or allocate turbines to procs by calling "setTurbineProcNo(iTurbGlob, procId)" for turbine.
 
   FAST.init();
-  if (!FAST.isRestart()) {
+  if (FAST.isTimeZero()) {
     FAST.solution0();
   }
 
