@@ -76,9 +76,12 @@ rms_gold[rms_gold == 0] = 1e-16
 
 norm = norm_diff / rms_gold
 
+####### need to reverse inequality to actually see output since test currently passes every time ######
 if max(norm) < solutionTolerance:
+    print('PASS')
     sys.exit(0)
 else:
-    print(info1['attribute_names'])
-    print("norm = ", norm)
+    for i in range(len(info1['attribute_names'])):
+        print(info1['attribute_names'][i], norm[i])
+
     sys.exit(1)
