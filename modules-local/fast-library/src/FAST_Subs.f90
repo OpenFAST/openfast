@@ -6300,7 +6300,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
          Turbine%SrvD%p%DLL_InFile = DLLFileName
          Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
          Turbine%SrvD%m%dll_data%avrSWAP( 1) = -8
-         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%xd(STATE_CURR)%ScInFilter, Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             ! put values back:
@@ -6498,7 +6498,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
          Turbine%SrvD%p%DLL_InFile = DLLFileName
          Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
          Turbine%SrvD%m%dll_data%avrSWAP( 1) = -9
-         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%xd(STATE_CURR)%ScInFilter, Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                           
             ! put values back:
          Turbine%SrvD%p%DLL_InFile = FileName
