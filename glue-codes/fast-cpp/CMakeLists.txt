@@ -18,7 +18,7 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(MPI REQUIRED)
-find_package(HDF5 REQUIRED PATHS HDF5_ROOT)
+find_package(HDF5 REQUIRED COMPONENTS C HL)
 find_package(YAMLCPP REQUIRED)
 
 include_directories(${YAML_INCLUDES})
@@ -32,15 +32,18 @@ add_library(openfastcpplib
   src/OpenFAST.cpp)
 target_link_libraries(openfastcpplib
   openfastlib
-  ${HDF5_C_STATIC_LIBRARY}
-  ${HDF5_HL_STATIC_LIBRARY}
+  ${HDF5_C_LIBRARIES}
+  ${HDF5_HL_LIBRARIES}
   ${CMAKE_DL_LIBS})
 
 add_executable(openfastcpp
   src/FAST_Prog.cpp)
 
 target_link_libraries(openfastcpp openfastcpplib openfastlib
-  ${MPI_LIBRARIES} ${YAML_LIBRARIES} ${CMAKE_DL_LIBS})
+  ${MPI_LIBRARIES} ${YAML_LIBRARIES} 
+  ${HDF5_C_LIBRARIES}
+  ${HDF5_HL_LIBRARIES}
+  ${CMAKE_DL_LIBS})
 
 if(MPI_COMPILE_FLAGS)
   set_target_properties(openfastcpp PROPERTIES
