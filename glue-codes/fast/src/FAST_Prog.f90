@@ -56,7 +56,6 @@ CHARACTER(1024)                       :: ErrMsg                                 
 CHARACTER(1024)                       :: CheckpointRoot                          ! Rootname of the checkpoint file
 CHARACTER(20)                         :: FlagArg                                 ! flag argument from command line
 INTEGER(IntKi)                        :: Restart_step                            ! step to start on (for restart) 
-INTEGER(IntKi)                        :: UnErrLog                                ! File unit for error log file
 
       !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! determine if this is a restart from checkpoint
@@ -64,19 +63,7 @@ INTEGER(IntKi)                        :: UnErrLog                               
    CALL NWTC_Init() ! open console for writing
    ProgName = 'FAST'
    CheckpointRoot = ""
-   
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! BEGIN: Draft Code for generating parsable error reporting for automated testing
-!
-      ! Open error report log file
-   UnErrLog = -1
-   CALL GetNewUnit( UnErrLog, ErrStat, ErrMsg )
-   CALL OpenFOutfile ( UnErrLog, 'OpenFastErr.log', ErrStat, ErrMsg )
-   WRITE (UnErrLog,'(A)')  ''
-!
-! END  : Draft Code for generating parsable error reporting for automated testing
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   
+     
    CALL CheckArgs( CheckpointRoot, ErrStat, Flag=FlagArg )  ! if ErrStat /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
       
    IF ( TRIM(FlagArg) == 'RESTART' ) THEN ! Restart from checkpoint file
@@ -157,7 +144,6 @@ INTEGER(IntKi)                        :: UnErrLog                               
       
    END DO ! n_t_global
   
-   IF (UnErrLog > 0) CLOSE(UnErrLog)
   
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    !  Write simulation times and stop
@@ -185,12 +171,8 @@ CONTAINS
       
       IF ( ErrID /= ErrID_None ) THEN
          CALL WrScr( NewLine//TRIM(Msg)//NewLine )
-         IF (UnErrLog > 0) THEN
-            WRITE (UnErrLog,'(/,A)')  TRIM(Num2LStr(ErrID))//':  '//Msg
-         END IF
          
          IF ( ErrID >= AbortErrLev ) THEN
-            IF (UnErrLog > 0) CLOSE(UnErrLog)
             IF (PRESENT(ErrLocMsg)) THEN
                SimMsg = ErrLocMsg
             ELSE
