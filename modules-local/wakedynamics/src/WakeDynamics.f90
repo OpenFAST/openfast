@@ -67,10 +67,10 @@ function GetYawCorrection(yawErr, xhat_disk, dx, p, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ''
    
-   xydisk = (/0.0, xhat_disk(1), 0.0/)
-   yxdisk = (/xhat_disk(2), 0.0, 0.0/)
-   yydisk = (/0.0, xhat_disk(2), 0.0/)
-   xxdisk = (/xhat_disk(1), 0.0, 0.0/)
+   xydisk = (/0.0_ReKi, xhat_disk(1), 0.0_ReKi/)
+   yxdisk = (/xhat_disk(2), 0.0_ReKi, 0.0_ReKi/)
+   yydisk = (/0.0_ReKi, xhat_disk(2), 0.0_ReKi/)
+   xxdisk = (/xhat_disk(1), 0.0_ReKi, 0.0_ReKi/)
    xydisknorm = TwoNorm(xxdisk + yydisk)
    
    if (EqualRealNos(xydisknorm,0.0_ReKi)) then
@@ -470,11 +470,11 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%dvdr.', errStat, errMsg, RoutineName )   
    allocate ( m%dvtdr(0:p%NumRadii-1 ) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%dvtdr.', errStat, errMsg, RoutineName )  
-   allocate (   m%vt_tot(0:p%NumRadii-1,0:p%NumPlanes-2 ) , STAT=ErrStat2 )
+   allocate (   m%vt_tot(0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_tot.', errStat, errMsg, RoutineName )  
-   allocate (   m%vt_amb(0:p%NumRadii-1,0:p%NumPlanes-2 ) , STAT=ErrStat2 )
+   allocate (   m%vt_amb(0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_amb.', errStat, errMsg, RoutineName )  
-   allocate (   m%vt_shr(0:p%NumRadii-1,0:p%NumPlanes-2 ) , STAT=ErrStat2 )
+   allocate (   m%vt_shr(0:p%NumRadii-1,0:p%NumPlanes-1 ) , STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%vt_shr.', errStat, errMsg, RoutineName )  
 
    allocate (    m%a(0:p%NumRadii-1 ) , STAT=ErrStat2 )
@@ -1188,9 +1188,9 @@ subroutine WD_TEST_SetGoodInitInpData(interval, InitInp)
    InitInp%InputFileData%dr             = 0.1_ReKi
    InitInp%InputFileData%f_c            = 0.03333333333333
    InitInp%InputFileData%C_HWkDfl_O     = -2.9
-   InitInp%InputFileData%C_HWkDfl_OY    = -.24*D2R
+   InitInp%InputFileData%C_HWkDfl_OY    = -.24/D2R
    InitInp%InputFileData%C_HWkDfl_x     = -0.0054
-   InitInp%InputFileData%C_HWkDfl_xY    = 0.00039*D2R
+   InitInp%InputFileData%C_HWkDfl_xY    = 0.00039/D2R
    InitInp%InputFileData%C_NearWake     = 2
    InitInp%InputFileData%C_vAmb_DMin    = 0
    InitInp%InputFileData%C_vAmb_DMax    = 2

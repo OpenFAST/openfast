@@ -401,6 +401,18 @@ module AWAE_Driver_Subs
 !   end subroutine Cleanup
 !
 !end subroutine ReadWDInputFile
+   
+   
+   
+subroutine AWAE_Dvr_Tests(pMod, errStat, errMsg)
+   integer(IntKi),           intent(out)     :: pMod                               !< Flag indicating parallel code mode [0=serial code, 1=parallel code]
+   integer(IntKi),           intent(out)     :: errStat                             !< Error status
+   character(*),             intent(out)     :: errMsg                              !< Error message
+
+end subroutine AWAE_Dvr_Tests
+
+
+
 
 subroutine AWAE_Dvr_Init( AWAE_InitInp,  AWAE_InitOut, AWAE_u,AWAE_p, AWAE_xd,  AWAE_y, errStat, errMsg)
 
@@ -416,7 +428,7 @@ subroutine AWAE_Dvr_Init( AWAE_InitInp,  AWAE_InitOut, AWAE_u,AWAE_p, AWAE_xd,  
    
    
       ! Local variables
-   TYPE(ProgDesc), PARAMETER                    :: version = ProgDesc( 'WakeDynamics', 'v0.01', '4-Nov-2016')               ! The name, version, and date of AirfoilInfo.
+   TYPE(ProgDesc), PARAMETER                    :: version = ProgDesc( 'AWAE_Dvr', 'v0.02', '25-May-2017')               ! The name, version, and date of AirfoilInfo.
    character(*), parameter                   :: RoutineName = 'AWAE_Dvr_Init'
    character(1024)                           :: OutFileRoot                         !< The rootname of the echo file, possibly opened in this routine
    integer(IntKi)                            :: errStat2                            ! local status of error message

@@ -27,7 +27,8 @@ module AWAE
    use NWTC_Library
    use AWAE_Types
    use AWAE_IO
-     
+   use OMP_LIB 
+   
    implicit none
 
    private
@@ -47,10 +48,15 @@ module AWAE
    public :: AWAE_TEST_Init_BadData    
    public :: AWAE_TEST_Init_GoodData    
    public :: AWAE_TEST_CalcOutput
+   public :: AWAE_TEST_ExtractSlice
+   public :: AWAE_TEST_LowResGridCalcs
   
    contains  
    
-subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
+subroutine ExtractSliceOMP( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
+
+
+   
    ! TODO: Rewrite this algorithm using shape functions
    integer(IntKi),      intent(in   ) :: sliceType  !< Type of slice: XYSlice, YZSlice, XZSlice
    real(ReKi),          intent(in   ) :: s          !< data value in meters of the interpolatan
@@ -59,17 +65,17 @@ subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
    integer(IntKi),      intent(in   ) :: sz1        !< 1st dimension of slice
    integer(IntKi),      intent(in   ) :: sz2        !< 2nd dimension of slice
    real(ReKi),          intent(in   ) :: ds
-   real(ReKi),          intent(in   ) :: V(:,0:,0:,0:)
-   real(ReKi),          intent(inout) :: slice(:,0:,0:)
+   real(SiKi),          intent(in   ) :: V(:,0:,0:,0:)
+   real(SiKi),          intent(inout) :: slice(:,0:,0:)
    
-   integer(IntKi)   :: s_grid0,s_grid1,i,j
-   real(ReKi)       :: s_grid, sd
+   integer(IntKi)   :: s_grid0,s_grid1,i,j,m, procs
+   real(SiKi)       :: s_grid, sd
    
       
       ! s is in meters but all the s_grid variables are in the grid units so that we can index into the grid arrays properly
       ! NOTE: The grid coordinates run from 0 to sz-1 
       
-   s_grid  = ((s-s0)/ds)
+   s_grid  = real((s-s0)/ds,SiKi)
    
       ! Lower bounds of grid cell in interpolation direction
    s_grid0 = floor(s_grid)
@@ -78,7 +84,62 @@ subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
    s_grid1 = s_grid0 + 1   
    
       ! fractional distance of requested slice from lower cell bounds in the range [0-1]
-   sd = (s_grid-real(s_grid0,ReKi)) 
+   sd = (s_grid-real(s_grid0,SiKi)) 
+   
+   if (s_grid0 == (szs-1)) s_grid1 = s_grid0  ! Handle case where s0 is the last index in the grid, in this case sd = 0.0, so the 2nd term in the interpolation will not contribute
+  
+   ! TODO: Add code to check bounds of requested slice location at INIT and fatal error if out of bounds
+   ! doing the bounds checks at INIT keeps this algorithm as fast as possible
+   procs = omp_get_num_procs()
+   call omp_set_num_threads(procs)
+   
+   !$OMP PARALLEL DO PRIVATE(i,j) SHARED(slice,sz1,sz2,sliceType,V,sd,s_grid0,s_grid1) DEFAULT(NONE)   
+   do m = 0,(sz2)*(sz1)-1
+      j = m/(sz1)
+      i = mod(m,sz1)
+      select case (sliceType)
+      case (XYSlice)
+         slice(:,i,j) = V(:,i,j,s_grid0)*(1.0_SiKi-sd) + V(:,i,j,s_grid1)*sd
+      case (YZSlice)
+         slice(:,i,j) = V(:,s_grid0,i,j)*(1.0_SiKi-sd) + V(:,s_grid1,i,j)*sd
+      case (XZSlice)
+         slice(:,i,j) = V(:,i,s_grid0,j)*(1.0_SiKi-sd) + V(:,i,s_grid1,j)*sd
+      end select
+   end do
+   !$OMP END PARALLEL DO
+   
+end subroutine ExtractSliceOMP
+
+subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
+   
+   ! TODO: Rewrite this algorithm using shape functions
+   integer(IntKi),      intent(in   ) :: sliceType  !< Type of slice: XYSlice, YZSlice, XZSlice
+   real(ReKi),          intent(in   ) :: s          !< data value in meters of the interpolatan
+   real(ReKi),          intent(in   ) :: s0         !< origin value in meters of the interpolatan
+   integer(IntKi),      intent(in   ) :: szs
+   integer(IntKi),      intent(in   ) :: sz1        !< 1st dimension of slice
+   integer(IntKi),      intent(in   ) :: sz2        !< 2nd dimension of slice
+   real(ReKi),          intent(in   ) :: ds
+   real(SiKi),          intent(in   ) :: V(:,0:,0:,0:)
+   real(SiKi),          intent(inout) :: slice(:,0:,0:)
+   
+   integer(IntKi)   :: s_grid0,s_grid1,i,j
+   real(SiKi)       :: s_grid, sd
+   
+      
+      ! s is in meters but all the s_grid variables are in the grid units so that we can index into the grid arrays properly
+      ! NOTE: The grid coordinates run from 0 to sz-1 
+      
+   s_grid  = real((s-s0)/ds,SiKi)
+   
+      ! Lower bounds of grid cell in interpolation direction
+   s_grid0 = floor(s_grid)
+   
+      ! Upper bounds of grid cell in interpolation direction
+   s_grid1 = s_grid0 + 1   
+   
+      ! fractional distance of requested slice from lower cell bounds in the range [0-1]
+   sd = (s_grid-real(s_grid0,SiKi)) 
    
    if (s_grid0 == (szs-1)) s_grid1 = s_grid0  ! Handle case where s0 is the last index in the grid, in this case sd = 0.0, so the 2nd term in the interpolation will not contribute
   
@@ -88,11 +149,11 @@ subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
       do i = 0,sz1-1
          select case (sliceType)
          case (XYSlice)
-            slice(:,i,j) = V(:,i,j,s_grid0)*(1.0_ReKi-sd) + V(:,i,j,s_grid1)*sd
+            slice(:,i,j) = V(:,i,j,s_grid0)*(1.0_SiKi-sd) + V(:,i,j,s_grid1)*sd
          case (YZSlice)
-            slice(:,i,j) = V(:,s_grid0,i,j)*(1.0_ReKi-sd) + V(:,s_grid1,i,j)*sd
+            slice(:,i,j) = V(:,s_grid0,i,j)*(1.0_SiKi-sd) + V(:,s_grid1,i,j)*sd
          case (XZSlice)
-            slice(:,i,j) = V(:,i,s_grid0,j)*(1.0_ReKi-sd) + V(:,i,s_grid1,j)*sd
+            slice(:,i,j) = V(:,i,s_grid0,j)*(1.0_SiKi-sd) + V(:,i,s_grid1,j)*sd
          end select
       end do
    end do
@@ -197,11 +258,11 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    errMsg  = ""
    maxPln =  min(n,p%NumPlanes-2)
    
-      ! read from file the ambient flow for the current time step
-   call ReadLowResWindFile(n, p, m%Vamb_Low, errStat, errMsg)
-      if ( errStat >= AbortErrLev ) then
-         return
-      end if
+   !    ! read from file the ambient flow for the current time step
+   ! call ReadLowResWindFile(n, p, m%Vamb_Low, errStat, errMsg)
+   !    if ( errStat >= AbortErrLev ) then
+   !       return
+   !    end if
    
             
    nXYZ_low = 0
@@ -312,7 +373,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                end do
                   ! [I - XX']V = V - (V dot X)X
                Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane               
-               m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vdist_low(:,nx_low,ny_low,nz_low) + Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp)
+               m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vdist_low(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
             end if  ! (n_wake > 0)
             
          end do ! do nx_low=0, p%nX_low-1
@@ -325,7 +386,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
          Vsum_low = 0.0_ReKi
       
          do nw=1,m%N_wind(0,nt)   
-            Vsum_low = Vsum_low + m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt))
+            Vsum_low = Vsum_low + real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi)
          end do
          Vsum_low       = Vsum_low / m%N_wind(0,nt)  ! if N_wind gets large ( ~= 100,000 ) then this may not give enough precision in Vave_amb_low
          Vave_amb_low_norm  = TwoNorm(Vsum_low)
@@ -337,7 +398,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
          y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,0,nt), Vsum_low )
          y%TI_amb(nt)       = 0.0_ReKi
          do nw=1,m%N_wind(0,nt)
-            y%TI_amb(nt) = y%TI_amb(nt) + TwoNorm( m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)) - Vsum_low )**2
+            y%TI_amb(nt) = y%TI_amb(nt) + TwoNorm( real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi) - Vsum_low )**2
          end do
          y%TI_amb(nt) = sqrt(y%TI_amb(nt)/(3.0*m%N_wind(0,nt)))/Vave_amb_low_norm
       else
@@ -381,7 +442,227 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    
 end subroutine LowResGridCalcOutput
 
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> This subroutine 
+!!
+subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, errMsg)
+   integer(IntKi),                 intent(in   )  :: n           !< Current simulation time increment (zero-based)
+   type(AWAE_InputType),           intent(in   )  :: u           !< Inputs at Time t
+   type(AWAE_ParameterType),       intent(in   )  :: p           !< Parameters
+   type(AWAE_OutputType),          intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
+                                                               !!   nectivity information does not have to be recalculated)
+   real(SiKi),                     intent(inout)  :: Vdist_low(:,0:,0:,0:)
+   real(SiKi),                     intent(inout)  :: Vamb_low(:,0:,0:,0:)
+   type(AWAE_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
+   integer(IntKi),                 intent(  out)  :: errStat     !< Error status of the operation
+   character(*),                   intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
+   
+   integer(IntKi)      :: i,nx, ny, nz, nt, np, nw, nx_low, ny_low, nz_low !< loop counters
+   integer(IntKi)      :: nXYZ_low, n_wake       !< accumulating counters
+   real(ReKi)          :: xhatBar_plane(3)       !< 
+   real(ReKi)          :: x_end_plane
+   real(ReKi)          :: x_start_plane
+   real(ReKi)          :: r_vec_plane(3)
+   real(ReKi)          :: tmp_xhatBar_plane
+   real(ReKi)          :: r_tmp_plane
+   real(ReKi)          :: Vx_wake_tmp
+   real(ReKi)          :: Vr_wake_tmp(3)
+   real(ReKi)          :: Vr_term(3)
+   real(ReKi)          :: Vx_term
+   real(ReKi)          :: Vsum_low(3)
+   real(ReKi)          :: p_tmp_plane(3)
+   real(ReKi)          :: tmp_vec(3)
+   real(ReKi)          :: Vave_amb_low_norm
+   real(ReKi)          :: delta, deltad
+   integer(IntKi)      :: ILo, j
+   integer(IntKi)      :: maxPln, procs
+   integer(IntKi)      :: N_wind_tmp
+   
+   character(*), parameter   :: RoutineName = 'LowResGridCalcOutput'   
+   errStat = ErrID_None
+   errMsg  = ""
+   maxPln =  min(n,p%NumPlanes-2)
 
+   nXYZ_low = 0
+   m%N_wind(:,:) = 0
+   
+      ! Loop over the entire grid of low resolution ambient wind data to compute:
+      !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
+   procs = omp_get_num_procs()
+   call omp_set_num_threads(procs)
+  
+   !$OMP PARALLEL DO PRIVATE(j, nx_low,ny_low,nz_low, nXYZ_low, n_wake, xhatBar_plane, x_end_plane, nt,np,ILo,x_start_plane,delta,deltad, p_tmp_plane,tmp_vec,r_vec_plane,r_tmp_plane,tmp_xhatBar_plane,Vx_wake_tmp,Vr_wake_tmp,nw,Vr_term,Vx_term) SHARED(Vdist_low,Vamb_low,m,u,p,maxPln,errStat, errMsg) DEFAULT(NONE)    
+   do i = 0, p%nX_low*p%nY_low*p%nZ_low - 1
+      
+            nx_low = mod(i,p%nX_low)
+            ny_low = mod(i/(p%nX_low),p%nY_low)
+            nz_low = i / (p%nX_low*p%nY_low)
+
+               ! set the disturbed flow equal to the ambient flow for this time step
+            Vdist_low(:,nx_low,ny_low,nz_low) = Vamb_low(:,nx_low,ny_low,nz_low)
+
+            nXYZ_low = i + 1
+            n_wake = 0
+            xhatBar_plane = 0.0_ReKi
+            
+            do nt = 1,p%NumTurbines
+                  
+               x_end_plane = dot_product(u%xhat_plane(:,0,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,0,nt)) )
+               
+               do np = 0, maxPln  
+                  
+                     ! Reset interpolation counter
+                  ILo = 0
+                  
+                     ! Construct the endcaps of the current wake plane volume
+                  x_start_plane = x_end_plane
+                  x_end_plane = dot_product(u%xhat_plane(:,np+1,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,np+1,nt)) )
+                  
+                     ! test if the point is within the endcaps of the wake volume
+                  if ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) then
+                     
+                     delta = x_start_plane / ( x_start_plane - x_end_plane )
+                     deltad = (1.0_ReKi - delta)
+                     if ( m%parallelFlag(np,nt) ) then
+                        p_tmp_plane = delta*u%p_plane(:,np+1,nt) + deltad*u%p_plane(:,np,nt)
+                     else
+                        tmp_vec = delta*m%rhat_e(:,np,nt) + deltad*m%rhat_s(:,np,nt)
+                        p_tmp_plane = delta*m%pvec_ce(:,np,nt) + deltad*m%pvec_cs(:,np,nt) + ( delta*m%r_e(np,nt) + deltad*m%r_s(np,nt) )* tmp_vec / TwoNorm(tmp_vec)
+                     end if
+                     
+                        
+                        
+                     r_vec_plane = p%Grid_Low(:,nXYZ_low) - p_tmp_plane
+                     r_tmp_plane = TwoNorm( r_vec_plane )
+                     
+                        ! test if the point is within radial finite-difference grid
+                     if ( r_tmp_plane <= p%r(p%numRadii-1) ) then
+                        
+                        n_wake = n_wake + 1
+                       ! m%r_plane(n_wake) = r_tmp_plane   ! Why do we need this??  GJH
+                        
+                        if ( EqualRealNos(r_tmp_plane, 0.0_ReKi) ) then         
+                           m%rhat_plane(:,n_wake) = 0.0_ReKi
+                        else
+                           m%rhat_plane(:,n_wake) = ( r_vec_plane  ) / r_tmp_plane
+                        end if
+                        
+
+                           ! given r_tmp_plane and Vx_wake at p%dr increments, find value of m%Vx_wake(@r_tmp_plane) using interpolation 
+                        m%Vx_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np+1,nt), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np,nt), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
+                        m%Vr_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np+1,nt), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np,nt), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
+                        
+                        
+                        m%xhat_plane(:,n_wake) = delta*u%xhat_plane(:,np+1,nt) + deltad*u%xhat_plane(:,np,nt)
+                        m%xhat_plane(:,n_wake) = m%xhat_plane(:,n_wake) / TwoNorm(m%xhat_plane(:,n_wake))
+                        xhatBar_plane = xhatBar_plane + abs(m%Vx_wake(n_wake))*m%xhat_plane(:,n_wake)
+      
+                     end if  ! if the point is within radial finite-difference grid
+                     
+                        ! test if the point is within the radius of the wake volume cylinder
+                     if ( r_tmp_plane <= (delta*u%D_wake(np+1,nt) + deltad*u%D_wake(np,nt) )) then
+                        m%N_wind(np,nt) = m%N_wind(np,nt) + 1
+                        
+                        ! TODO: Verify that m%N_wind(np,nt) <= MAX_1ST_DIM_SIZE of nx_wind
+                        if ( m%N_wind(np,nt) > p%n_wind_max ) then
+                           call SetErrStat( ErrID_Fatal, 'The wake plane volume (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, 'LowResGridCalcOutput'  )
+                          ! return
+                        end if
+                        
+                        m%nx_wind(m%N_wind(np,nt),np,nt) = nx_low
+                        m%ny_wind(m%N_wind(np,nt),np,nt) = ny_low
+                        m%nz_wind(m%N_wind(np,nt),np,nt) = nz_low   
+                        
+                     end if
+                     exit
+                  end if  ! if the point is within the endcaps of the wake volume                 
+               end do     ! do np = 0, p%NumPlanes-2
+            end do        ! do nt = 1,p%NumTurbines
+            if (n_wake > 0) then
+               tmp_xhatBar_plane = TwoNorm(xhatBar_plane)
+               if ( EqualRealNos(tmp_xhatBar_plane, 0.0_ReKi) ) then
+                  xhatBar_plane = 0.0_ReKi
+               else
+                  xhatBar_plane = xhatBar_plane / tmp_xhatBar_plane
+               end if
+               
+               Vx_wake_tmp   = 0.0_ReKi
+               Vr_wake_tmp   = 0.0_ReKi
+               do nw = 1,n_wake 
+                  Vr_term     = m%Vx_wake(nw)*m%xhat_plane(:,nw) + m%Vr_wake(nw)*m%rhat_plane(:,nw)
+                  Vx_term     = dot_product( xhatBar_plane, Vr_term )
+                  Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
+                  Vr_wake_tmp = Vr_wake_tmp + Vr_term
+               end do
+                  ! [I - XX']V = V - (V dot X)X
+               Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane               
+               m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vdist_low(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
+            end if  ! (n_wake > 0)
+            
+   end do ! do i : loop over all grid points
+   !$OMP END PARALLEL DO
+   
+   do nt = 1,p%NumTurbines
+      if ( m%N_wind(0,nt) > 0 ) then
+         ! TODO: This is modified in Rev 7 and the current code is for Rev 6. 13/Feb/2017
+         Vsum_low = 0.0_ReKi
+      
+         do nw=1,m%N_wind(0,nt)   
+            Vsum_low = Vsum_low + real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi)
+         end do
+         Vsum_low       = Vsum_low / m%N_wind(0,nt)  ! if N_wind gets large ( ~= 100,000 ) then this may not give enough precision in Vave_amb_low
+         Vave_amb_low_norm  = TwoNorm(Vsum_low)
+         if ( EqualRealNos(Vave_amb_low_norm,0.0_ReKi) ) then    
+            call SetErrStat( ErrID_Fatal, 'The magnitude of the spatial-averaged ambient wind speed in the low-resolution domain associated with the wake volume at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
+            return     
+         end if
+      
+         y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,0,nt), Vsum_low )
+         y%TI_amb(nt)       = 0.0_ReKi
+         do nw=1,m%N_wind(0,nt)
+            y%TI_amb(nt) = y%TI_amb(nt) + TwoNorm( real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi) - Vsum_low )**2
+         end do
+         y%TI_amb(nt) = sqrt(y%TI_amb(nt)/(3.0*m%N_wind(0,nt)))/Vave_amb_low_norm
+      else
+         y%Vx_wind_disk(nt) = 0.0_ReKi
+         y%TI_amb(nt)       = 0.0_ReKi 
+      end if
+      
+      
+      do np = 0, maxPln !p%NumPlanes-2
+         if ( (u%D_wake(np,nt) > 0.0_ReKi) .and.  (m%N_wind(np,nt) < p%n_wind_min) ) then
+            call SetErrStat( ErrID_Fatal, 'The number of points in the wake volume #'//trim(num2lstr(np))//' for turbine '//trim(num2lstr(nt))//' is '//trim(num2lstr(m%N_wind(np,nt)))//', which is less than the minimum threshold, '//trim(num2lstr(p%n_wind_min))//'.', errStat, errMsg, RoutineName )
+            return     
+         else if ( m%N_wind(np,nt) > 0  ) then            
+            Vsum_low = 0.0_ReKi
+            do nw=1,m%N_wind(np,nt)   
+               Vsum_low = Vsum_low + m%Vdist_low( :, m%nx_wind(nw,np,nt),m%ny_wind(nw,np,nt),m%nz_wind(nw,np,nt) )
+            end do
+            y%V_plane(:,np,nt) = Vsum_low
+         else
+            y%V_plane(:,np,nt) = 0.0_ReKi
+         end if
+         
+      end do
+      
+      if (  m%N_wind(maxPln  ,nt) > 0 ) then
+         y%V_plane(:,maxPln+1,nt) =   y%V_plane(:,maxPln,nt)                          / m%N_wind(maxPln,nt)
+      else
+         y%V_plane(:,maxPln+1,nt) = 0.0_ReKi
+      end if
+      do np = maxPln, 1, -1
+         N_wind_tmp = m%N_wind(np,nt) + m%N_wind(np-1,nt)
+         if ( N_wind_tmp          > 0 ) then
+            y%V_plane(:,np   ,nt) = ( y%V_plane(:,np    ,nt) + y%V_plane(:,np-1,nt) ) /   N_wind_tmp
+         end if
+      end do
+      if (  m%N_wind(0       ,nt) > 0 ) then
+         y%V_plane(:,0       ,nt) =   y%V_plane(:,0     ,nt)                          / m%N_wind(0     ,nt)
+      end if
+      
+   end do
+   
+end subroutine LowResGridCalcOutputOMP
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine 
 !!
@@ -533,7 +814,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      ! [I - XX']V = V - (V dot X)X
                   Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane 
                   do n_hl=0, n_high_low-1
-                     y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) + Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp)
+                     y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
                   end do
                      
                end if  ! (n_wake > 0)
@@ -749,7 +1030,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    do i = 1, p%NumTurbines
       allocate ( y%Vdist_High(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low-1), STAT=ErrStat2 )
          if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vdist_High%data.', errStat, errMsg, RoutineName ) 
-      y%Vdist_High(i)%data    = 0.0_Reki
+      y%Vdist_High(i)%data    = 0.0_Siki
    end do
    
    allocate ( y%Vx_wind_disk   (1:p%NumTurbines), STAT=ErrStat2 )
@@ -842,9 +1123,9 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    if (errStat /= ErrID_None) return
    
    ! TODO: This step isn't really needed
-   m%Vamb_low     = 0.0_ReKi
-   m%Vdist_low    = 0.0_ReKi
-   m%Vamb_High    = 0.0_ReKi 
+   m%Vamb_low     = 0.0_SiKi
+   m%Vdist_low    = 0.0_SiKi
+   m%Vamb_High    = 0.0_SiKi 
    m%N_wind       = 0 
    m%xhat_plane   = 0.0_ReKi 
    m%rhat_plane   = 0.0_ReKi
@@ -951,10 +1232,24 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    integer(intKi)                               :: errStat2          ! temporary Error status
    character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'AWAE_UpdateStates'
+   real(DbKi)          :: t1, tread
    
    errStat = ErrID_None
    errMsg  = ""
- 
+   
+   ! Read the ambient wind data that is need for t+dt
+   
+   !t1 = omp_get_wtime()   
+      ! read from file the ambient flow for the n+1 time step
+   call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat, errMsg)
+      if ( errStat >= AbortErrLev ) then
+         return
+      end if
+  ! tread =  ( omp_get_wtime() - t1 )       
+  ! write(*,*) 'Time spent reading data:  ',tread            
+    
+   
+      
 end subroutine AWAE_UpdateStates
 
 
@@ -1002,11 +1297,13 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
             return
       end if
    call LowResGridCalcOutput(n, u, p, y, m, errStat2, errMsg2)
+   !call LowResGridCalcOutputOMP(n, u, p, y, m%Vdist_low, m%Vamb_low, m, errStat2, errMsg2)
+   
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
       if (errStat2 >= AbortErrLev) then 
             return
       end if
-      
+   
       ! starting index for the high-res files
    n_high =  n*p%n_high_low
    call HighResGridCalcOutput(n_high, u, p, y, m, errStat2, errMsg2)
@@ -1176,13 +1473,25 @@ subroutine AWAE_TEST_SetGoodInitInpData(interval, InitInp)
    real(DbKi)            , intent(out)       :: interval
    type(AWAE_InitInputType), intent(out)       :: InitInp       !< Input data for initialization routine
 
-      ! Based on NREL 5MW
-    interval               = 1.0_DbKi
-    InitInp%InputFileData%WindFilePath   = 'C:\Dev\NWTC Github\FAST.Farm\data' 
-    InitInp%InputFileData%NumTurbines    = 1
-    InitInp%InputFileData%NumPlanes      = 500
-    InitInp%InputFileData%NumRadii       = 40
-    InitInp%InputFileData%dr             = 5.0_ReKi
+   ! Based on NREL 5MW
+   interval               = 2.0_DbKi
+   InitInp%InputFileData%WindFilePath   = 'C:\Dev\OpenFAST-farm\OpenFAST-test\fast-farm\steady' 
+   InitInp%InputFileData%WindFilePath   = 'Y:\Wind\Public\Projects\Projects F\FAST.Farm\AmbWind\04'
+   InitInp%InputFileData%NumTurbines    = 1
+   InitInp%InputFileData%NumPlanes      = 140
+   InitInp%InputFileData%NumRadii       = 40
+   InitInp%InputFileData%dr             = 5.0_ReKi
+   InitInp%n_high_low                   = 6
+   InitInp%InputFileData%dt             = 2.0
+   InitInp%NumDT                        = 1
+   InitInp%InputFileData%NOutDisWindXY  = 0
+   InitInp%InputFileData%NOutDisWindYZ  = 0
+   InitInp%InputFileData%NOutDisWindXZ  = 0
+   InitInp%InputFileData%WrDisWind      = .false.
+   InitInp%InputFileData%WrDisDT        = 0.0
+   InitInp%InputFileData%OutDisWindY    = 0
+   InitInp%InputFileData%OutDisWindZ    = 0
+   InitInp%InputFileData%OutDisWindX    = 0
 
 end subroutine AWAE_TEST_SetGoodInitInpData
 
@@ -1219,6 +1528,125 @@ subroutine AWAE_TEST_Init_GoodData(errStat, errMsg)
    return
    
 end subroutine AWAE_TEST_Init_GoodData
+
+subroutine AWAE_TEST_LowResGridCalcs(errStat, errMsg)
+
+   integer(IntKi),           intent(out)    :: errStat                           !< Error status
+   character(*),             intent(out)    :: errMsg                            !< Error message
+
+   real(DbKi)                               :: t1, t2, t3
+   type(AWAE_InitInputType)       :: InitInp       !< Input data for initialization routine
+   type(AWAE_InputType)           :: u             !< An initial guess for the input; input mesh must be defined
+   type(AWAE_ParameterType)       :: p             !< Parameters
+   type(AWAE_ContinuousStateType) :: x             !< Initial continuous states
+   type(AWAE_DiscreteStateType)   :: xd            !< Initial discrete states
+   type(AWAE_ConstraintStateType) :: z             !< Initial guess of the constraint states
+   type(AWAE_OtherStateType)      :: OtherState    !< Initial other states
+   type(AWAE_OutputType)          :: y             !< Initial system outputs (outputs are not calculated;
+                                                 !!   only the output mesh is initialized)
+   type(AWAE_MiscVarType)         :: m             !< Initial misc/optimization variables
+   real(DbKi)                   :: interval      !< Coupling interval in seconds: the rate that
+   real(DbKi)                     :: t
+   type(AWAE_InitOutputType)      :: initOut                         !< Input data for initialization routine
+   integer(IntKi)                 :: n,ix,iy,iz
+   real(SiKi),allocatable                     :: Vamb_lowOMP(:,:,:,:)
+   real(SiKi),allocatable                     :: Vdist_lowOMP(:,:,:,:)
+      ! Set up the initialization inputs
+   call AWAE_TEST_SetGoodInitInpData(interval, InitInp)
+
+   call AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, interval, InitOut, errStat, errMsg )
+   
+   
+   allocate ( Vamb_lowOMP   ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat ) 
+      if (errStat /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_low.', errStat, errMsg, 'AWAE_TEST_LowResGridCalcs' )   
+   allocate ( Vdist_lowOMP  ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat ) 
+      if (errStat /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vdist_low.', errStat, errMsg, 'AWAE_TEST_LowResGridCalcs' )  
+   if (errStat > ErrID_None) return
+   
+   n = 0 ! starting time
+   t = n*p%dt
+      ! Update states is really reading the wind data for n+1 time step
+   call AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg )
+   
+   n=n+1 ! increment time
+   
+   t1 = omp_get_wtime()
+   call LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
+      if (errStat >= AbortErrLev) then 
+            return
+      end if   
+   t2 = omp_get_wtime()
+   call LowResGridCalcOutputOMP(n, u, p, y, Vdist_lowOMP, m%Vamb_low, m, errStat, errMsg)
+      if (errStat >= AbortErrLev) then 
+            return
+      end if   
+   t3 = omp_get_wtime()
+   write(*,*) 'Serial Low Res Grid took '//trim(num2lstr(t2-t1))//' seconds.'
+   write(*,*) 'Parallel Low Res Grid took '//trim(num2lstr(t3-t2))//' seconds.'
+   
+   do iz = 0,p%nZ_low-1
+      do iy = 0,p%nY_low-1
+         do ix = 0,p%nX_low-1
+            if ( .not. (EqualRealNos(Vdist_lowOMP(1,ix,iy,iz),m%Vdist_low(1,ix,iy,iz)) .and. EqualRealNos(Vdist_lowOMP(2,ix,iy,iz),m%Vdist_low(2,ix,iy,iz)) .and. EqualRealNos(Vdist_lowOMP(3,ix,iy,iz),m%Vdist_low(3,ix,iy,iz)) ) ) then
+               WRITE(*,*) 'Values do not match between serial and parallel results'
+            end if        
+         end do
+      end do
+   end do      
+   
+end subroutine AWAE_TEST_LowResGridCalcs 
+
+subroutine AWAE_TEST_ExtractSlice(errStat, errMsg)
+
+   integer(IntKi),           intent(out)    :: errStat                           !< Error status
+   character(*),             intent(out)    :: errMsg                            !< Error message
+   
+   integer(IntKi)                           :: nx, ny, nz, ix, iy, iz
+   real(SiKi), allocatable                  :: V(:,:,:,:),sliceXY(:,:,:),sliceXY_OMP(:,:,:),sliceYZ(:,:,:),sliceXZ(:,:,:)
+   real(ReKi)                               :: dx,dy,dz,x0,y0,z0,x,y,z
+   real(DbKi)                               :: t1, t2, t3
+   
+      ! Create a volume of random number data
+   nx = 500
+   ny = 500
+   nz = 100
+   dx = 10.0
+   dy = 10.0
+   dz = 10.0
+   x0 = 500.0
+   y0 = 300.0
+   z0 = 10.0
+   !allocate( p%r(0:p%NumRadii-1),stat=errStat2)
+   allocate(V(3,0:nx-1,0:ny-1,0:nz-1))
+   allocate(sliceXY(3,0:nx-1,0:ny-1))
+   allocate(sliceXY_OMP(3,0:nx-1,0:ny-1))
+   do iz = 0,nz-1
+      do iy = 0,ny-1
+         do ix = 0,nx-1
+            CALL RANDOM_NUMBER(V(1,ix,iy,iz) )
+            CALL RANDOM_NUMBER(V(2,ix,iy,iz) )
+            CALL RANDOM_NUMBER(V(3,ix,iy,iz) )            
+         end do
+      end do      
+   end do
+   CALL RANDOM_NUMBER(z)
+   z = z*nz*dz + z0
+   t1 = omp_get_wtime()
+   call ExtractSlice( XYSlice, z, z0, nz, nx, ny, dz,  V, sliceXY)
+   t2 = omp_get_wtime()
+   call ExtractSliceOMP( XYSlice, z, z0, nz, nx, ny, dz,  V, sliceXY_OMP)
+   t3 = omp_get_wtime()
+   write(*,*) 'Serial Extract slice took '//trim(num2lstr(t2-t1))//' seconds.'
+   write(*,*) 'Parallel Extract slice took '//trim(num2lstr(t3-t2))//' seconds.'
+      do iy = 0,ny-1
+         do ix = 0,nx-1
+            if ( .not. (EqualRealNos(sliceXY(1,ix,iy),sliceXY_OMP(1,ix,iy)) .and. EqualRealNos(sliceXY(2,ix,iy),sliceXY_OMP(2,ix,iy)) .and. EqualRealNos(sliceXY(3,ix,iy),sliceXY_OMP(3,ix,iy)) ) ) then
+               WRITE(*,*) 'Values do not match between serial and parallel results'
+            end if        
+         end do
+      end do      
+end subroutine AWAE_TEST_ExtractSlice
+
 
 subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
 
