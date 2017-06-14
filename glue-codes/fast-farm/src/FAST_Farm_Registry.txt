@@ -45,6 +45,7 @@ typedef  ^               ParameterType         CHARACTER(20)   OutFmt          -
 typedef  ^               ParameterType         CHARACTER(20)   OutFmt_t        -    - - "Format used for time channel in text tabular output; resulting field should be 10 characters" -
 typedef  ^               ParameterType         IntKi           FmtWidth        -    - - "width of the time OutFmt specifier" -
 typedef  ^               ParameterType         IntKi           TChanLen        -    - - "width of the time channel" -
+typedef  ^               ParameterType         IntKi           NOutTurb        -    - - "Number of turbines for write output [1 to 9]"
 typedef  ^               ParameterType         IntKi           NOutRadii       -    - - "Number of radial nodes for wake output for an individual rotor [0 to 20]" -
 typedef  ^               ParameterType         IntKi           OutRadii       {:}   - - "List of radial nodes for wake output for an individual rotor [1 to NOutRadii]" -
 typedef  ^               ParameterType         IntKi           NOutDist        -    - - "Number of downstream distances for wake output for an individual rotor [0 to 9]" -

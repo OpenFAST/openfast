@@ -9900,7 +9900,6 @@ SUBROUTINE Farm_InitOutput( farm, ErrStat, ErrMsg )
    INTEGER(IntKi)                   :: indxLast                                        ! The index of the last value to be written to an array
    INTEGER(IntKi)                   :: indxNext                                        ! The index of the next value to be written to an array
    INTEGER(IntKi)                   :: NumOuts                                         ! number of channels to be written to the output file(s)
-   INTEGER(IntKi)                   :: temp(20,9)
    
    
 WkDfVxTND(:,:,1) = RESHAPE(  & 
@@ -11143,7 +11142,6 @@ SUBROUTINE SetOutParam(OutList, farm, ErrStat, ErrMsg )
    LOGICAL                      :: InvalidOutput(0:MaxOutPts)                      ! This array determines if the output channel is valid for this configuration
    CHARACTER(ChanLenFF)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
-   INTEGER                      :: nTurbOut                                        ! min (p%NumTurbines,9), for output handling
 
    CHARACTER(OutStrLenM1) :: ValidParamAry(9423)            ! This lists the names of the allowed parameters, which must be sorted alphabetically
    INTEGER(IntKi)         :: ParamIndxAry (9423)            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)   CHARACTER(ChanLenFF), :: ParamUnitsAry(9423)            ! This lists the units corresponding to the allowed parameters
@@ -14708,35 +14706,174 @@ SUBROUTINE SetOutParam(OutList, farm, ErrStat, ErrMsg )
    
 !   ..... Developer must add checking for invalid inputs here: .....
   
-   nTurbOut = min(farm%p%NumTurbines,9)  ! We only support output for the first 9 turbines, even if the farm has more than 9
-   
+  
       ! Check Output radii and make sure they are >= 0 and <= Nr-1 : NOTE: This was actually already done during the input file read.
    do i = 1,farm%p%NOutRadii   
       if ( (farm%p%OutRadii(i) < 0) .or. (farm%p%OutRadii(i) >= farm%AWAE%p%NumRadii) )  then
          
-         InvalidOutput( CtTN     (i,:  ) ) = .true.
+         InvalidOutput( CtTN     (i,  :) ) = .true.
          InvalidOutput( WkDfVxTND(i,:,1) ) = .true.
          InvalidOutput( WkDfVrTND(i,:,1) ) = .true.
          InvalidOutput( EddVisTND(i,:,1) ) = .true.
          InvalidOutput( EddAmbTND(i,:,1) ) = .true.
          InvalidOutput( EddShrTND(i,:,1) ) = .true.
+         InvalidOutput( WkDfVxTND(i,:,2) ) = .true.
+         InvalidOutput( WkDfVrTND(i,:,2) ) = .true.
+         InvalidOutput( EddVisTND(i,:,2) ) = .true.
+         InvalidOutput( EddAmbTND(i,:,2) ) = .true.
+         InvalidOutput( EddShrTND(i,:,2) ) = .true.
+         InvalidOutput( WkDfVxTND(i,:,3) ) = .true.
+         InvalidOutput( WkDfVrTND(i,:,3) ) = .true.
+         InvalidOutput( EddVisTND(i,:,3) ) = .true.
+         InvalidOutput( EddAmbTND(i,:,3) ) = .true.
+         InvalidOutput( EddShrTND(i,:,3) ) = .true.
+         InvalidOutput( WkDfVxTND(i,:,4) ) = .true.
+         InvalidOutput( WkDfVrTND(i,:,4) ) = .true.
+         InvalidOutput( EddVisTND(i,:,4) ) = .true.
+         InvalidOutput( EddAmbTND(i,:,4) ) = .true.
+         InvalidOutput( EddShrTND(i,:,4) ) = .true.
+         InvalidOutput( WkDfVxTND(i,:,5) ) = .true.
+         InvalidOutput( WkDfVrTND(i,:,5) ) = .true.
+         InvalidOutput( EddVisTND(i,:,5) ) = .true.
+         InvalidOutput( EddAmbTND(i,:,5) ) = .true.
+         InvalidOutput( EddShrTND(i,:,5) ) = .true.
+         InvalidOutput( WkDfVxTND(i,:,6) ) = .true.
+         InvalidOutput( WkDfVrTND(i,:,6) ) = .true.
+         InvalidOutput( EddVisTND(i,:,6) ) = .true.
+         InvalidOutput( EddAmbTND(i,:,6) ) = .true.
+         InvalidOutput( EddShrTND(i,:,6) ) = .true.
+         InvalidOutput( WkDfVxTND(i,:,7) ) = .true.
+         InvalidOutput( WkDfVrTND(i,:,7) ) = .true.
+         InvalidOutput( EddVisTND(i,:,7) ) = .true.
+         InvalidOutput( EddAmbTND(i,:,7) ) = .true.
+         InvalidOutput( EddShrTND(i,:,7) ) = .true.
+         InvalidOutput( WkDfVxTND(i,:,8) ) = .true.
+         InvalidOutput( WkDfVrTND(i,:,8) ) = .true.
+         InvalidOutput( EddVisTND(i,:,8) ) = .true.
+         InvalidOutput( EddAmbTND(i,:,8) ) = .true.
+         InvalidOutput( EddShrTND(i,:,8) ) = .true.
+         InvalidOutput( WkDfVxTND(i,:,9) ) = .true.
+         InvalidOutput( WkDfVrTND(i,:,9) ) = .true.
+         InvalidOutput( EddVisTND(i,:,9) ) = .true.
+         InvalidOutput( EddAmbTND(i,:,9) ) = .true.
+         InvalidOutput( EddShrTND(i,:,9) ) = .true.
          
       end if     
    end do
    
    
-   DO i = farm%p%NOutRadii+1,9  ! Invalid tower nodes
+   DO i = farm%p%NOutRadii+1,20
    
-      InvalidOutput( CtTN     (i,:  ) ) = .true.
+      InvalidOutput( CtTN     (i,  :) ) = .true.
       InvalidOutput( WkDfVxTND(i,:,1) ) = .true.
       InvalidOutput( WkDfVrTND(i,:,1) ) = .true.
       InvalidOutput( EddVisTND(i,:,1) ) = .true.
       InvalidOutput( EddAmbTND(i,:,1) ) = .true.
       InvalidOutput( EddShrTND(i,:,1) ) = .true.
+      InvalidOutput( WkDfVxTND(i,:,2) ) = .true.
+      InvalidOutput( WkDfVrTND(i,:,2) ) = .true.
+      InvalidOutput( EddVisTND(i,:,2) ) = .true.
+      InvalidOutput( EddAmbTND(i,:,2) ) = .true.
+      InvalidOutput( EddShrTND(i,:,2) ) = .true.
+      InvalidOutput( WkDfVxTND(i,:,3) ) = .true.
+      InvalidOutput( WkDfVrTND(i,:,3) ) = .true.
+      InvalidOutput( EddVisTND(i,:,3) ) = .true.
+      InvalidOutput( EddAmbTND(i,:,3) ) = .true.
+      InvalidOutput( EddShrTND(i,:,3) ) = .true.
+      InvalidOutput( WkDfVxTND(i,:,4) ) = .true.
+      InvalidOutput( WkDfVrTND(i,:,4) ) = .true.
+      InvalidOutput( EddVisTND(i,:,4) ) = .true.
+      InvalidOutput( EddAmbTND(i,:,4) ) = .true.
+      InvalidOutput( EddShrTND(i,:,4) ) = .true.
+      InvalidOutput( WkDfVxTND(i,:,5) ) = .true.
+      InvalidOutput( WkDfVrTND(i,:,5) ) = .true.
+      InvalidOutput( EddVisTND(i,:,5) ) = .true.
+      InvalidOutput( EddAmbTND(i,:,5) ) = .true.
+      InvalidOutput( EddShrTND(i,:,5) ) = .true.
+      InvalidOutput( WkDfVxTND(i,:,6) ) = .true.
+      InvalidOutput( WkDfVrTND(i,:,6) ) = .true.
+      InvalidOutput( EddVisTND(i,:,6) ) = .true.
+      InvalidOutput( EddAmbTND(i,:,6) ) = .true.
+      InvalidOutput( EddShrTND(i,:,6) ) = .true.
+      InvalidOutput( WkDfVxTND(i,:,7) ) = .true.
+      InvalidOutput( WkDfVrTND(i,:,7) ) = .true.
+      InvalidOutput( EddVisTND(i,:,7) ) = .true.
+      InvalidOutput( EddAmbTND(i,:,7) ) = .true.
+      InvalidOutput( EddShrTND(i,:,7) ) = .true.
+      InvalidOutput( WkDfVxTND(i,:,8) ) = .true.
+      InvalidOutput( WkDfVrTND(i,:,8) ) = .true.
+      InvalidOutput( EddVisTND(i,:,8) ) = .true.
+      InvalidOutput( EddAmbTND(i,:,8) ) = .true.
+      InvalidOutput( EddShrTND(i,:,8) ) = .true.
+      InvalidOutput( WkDfVxTND(i,:,9) ) = .true.
+      InvalidOutput( WkDfVrTND(i,:,9) ) = .true.
+      InvalidOutput( EddVisTND(i,:,9) ) = .true.
+      InvalidOutput( EddAmbTND(i,:,9) ) = .true.
+      InvalidOutput( EddShrTND(i,:,9) ) = .true.
       
    END DO
 
-   do i = nTurbOut+1,9
+   DO i = farm%p%NOutDist+1,9
+   
+      InvalidOutput( WkAxsXTD (  i,:) ) = .true.
+      InvalidOutput( WkAxsYTD (  i,:) ) = .true.
+      InvalidOutput( WkAxsZTD (  i,:) ) = .true.
+      InvalidOutput( WkPosXTD (  i,:) ) = .true.
+      InvalidOutput( WkPosYTD (  i,:) ) = .true.
+      InvalidOutput( WkPosZTD (  i,:) ) = .true.
+      InvalidOutput( WkVelXTD (  i,:) ) = .true.
+      InvalidOutput( WkVelYTD (  i,:) ) = .true.
+      InvalidOutput( WkVelZTD (  i,:) ) = .true.
+      InvalidOutput( WkDiamTD (  i,:) ) = .true.
+      InvalidOutput( WkDfVxTND(:,i,1) ) = .true.
+      InvalidOutput( WkDfVrTND(:,i,1) ) = .true.
+      InvalidOutput( EddVisTND(:,i,1) ) = .true.
+      InvalidOutput( EddAmbTND(:,i,1) ) = .true.
+      InvalidOutput( EddShrTND(:,i,1) ) = .true.
+      InvalidOutput( WkDfVxTND(:,i,2) ) = .true.
+      InvalidOutput( WkDfVrTND(:,i,2) ) = .true.
+      InvalidOutput( EddVisTND(:,i,2) ) = .true.
+      InvalidOutput( EddAmbTND(:,i,2) ) = .true.
+      InvalidOutput( EddShrTND(:,i,2) ) = .true.
+      InvalidOutput( WkDfVxTND(:,i,3) ) = .true.
+      InvalidOutput( WkDfVrTND(:,i,3) ) = .true.
+      InvalidOutput( EddVisTND(:,i,3) ) = .true.
+      InvalidOutput( EddAmbTND(:,i,3) ) = .true.
+      InvalidOutput( EddShrTND(:,i,3) ) = .true.
+      InvalidOutput( WkDfVxTND(:,i,4) ) = .true.
+      InvalidOutput( WkDfVrTND(:,i,4) ) = .true.
+      InvalidOutput( EddVisTND(:,i,4) ) = .true.
+      InvalidOutput( EddAmbTND(:,i,4) ) = .true.
+      InvalidOutput( EddShrTND(:,i,4) ) = .true.
+      InvalidOutput( WkDfVxTND(:,i,5) ) = .true.
+      InvalidOutput( WkDfVrTND(:,i,5) ) = .true.
+      InvalidOutput( EddVisTND(:,i,5) ) = .true.
+      InvalidOutput( EddAmbTND(:,i,5) ) = .true.
+      InvalidOutput( EddShrTND(:,i,5) ) = .true.
+      InvalidOutput( WkDfVxTND(:,i,6) ) = .true.
+      InvalidOutput( WkDfVrTND(:,i,6) ) = .true.
+      InvalidOutput( EddVisTND(:,i,6) ) = .true.
+      InvalidOutput( EddAmbTND(:,i,6) ) = .true.
+      InvalidOutput( EddShrTND(:,i,6) ) = .true.
+      InvalidOutput( WkDfVxTND(:,i,7) ) = .true.
+      InvalidOutput( WkDfVrTND(:,i,7) ) = .true.
+      InvalidOutput( EddVisTND(:,i,7) ) = .true.
+      InvalidOutput( EddAmbTND(:,i,7) ) = .true.
+      InvalidOutput( EddShrTND(:,i,7) ) = .true.
+      InvalidOutput( WkDfVxTND(:,i,8) ) = .true.
+      InvalidOutput( WkDfVrTND(:,i,8) ) = .true.
+      InvalidOutput( EddVisTND(:,i,8) ) = .true.
+      InvalidOutput( EddAmbTND(:,i,8) ) = .true.
+      InvalidOutput( EddShrTND(:,i,8) ) = .true.
+      InvalidOutput( WkDfVxTND(:,i,9) ) = .true.
+      InvalidOutput( WkDfVrTND(:,i,9) ) = .true.
+      InvalidOutput( EddVisTND(:,i,9) ) = .true.
+      InvalidOutput( EddAmbTND(:,i,9) ) = .true.
+      InvalidOutput( EddShrTND(:,i,9) ) = .true.
+      
+   END DO
+
+   do i = farm%p%NOutTurb+1,9
       
       InvalidOutput( RtAxsXT  (i) ) = .true.
       InvalidOutput( RtAxsYT  (i) ) = .true.
@@ -14749,24 +14886,62 @@ SUBROUTINE SetOutParam(OutList, farm, ErrStat, ErrMsg )
       InvalidOutput( TIAmbT   (i) ) = .true.
       InvalidOutput( RtVAmbT  (i) ) = .true.
       InvalidOutput( RtVRelT  (i) ) = .true.
-      InvalidOutput( CtTN   (:,i) ) = .true.
-      InvalidOutput( WkAxsXTD  (:,i) ) = .true.
-      InvalidOutput( WkAxsYTD  (:,i) ) = .true.
-      InvalidOutput( WkAxsZTD  (:,i) ) = .true.
-      InvalidOutput( WkPosXTD  (:,i) ) = .true.
-      InvalidOutput( WkPosYTD  (:,i) ) = .true.
-      InvalidOutput( WkPosZTD  (:,i) ) = .true.
-      InvalidOutput( WkVelXTD  (:,i) ) = .true.
-      InvalidOutput( WkVelYTD  (:,i) ) = .true.
-      InvalidOutput( WkVelZTD  (:,i) ) = .true.
-      InvalidOutput( WkDiamTD(:,i) ) = .true.
-      
-         ! TODO: Once the following arrays support NumTurbines > 1, then add them back into this section
-      !InvalidOutput( WkDfVxTND(i,:,1) ) = .true.
-      !InvalidOutput( WkDfVrTND(i,:,1) ) = .true.
-      !InvalidOutput( EddVisTND(i,:,1) ) = .true.
-      !InvalidOutput( EddAmbTND(i,:,1) ) = .true.
-      !InvalidOutput( EddShrTND(i,:,1) ) = .true.
+      InvalidOutput( CtTN     (:,  i) ) = .true.
+      InvalidOutput( WkAxsXTD (  :,i) ) = .true.
+      InvalidOutput( WkAxsYTD (  :,i) ) = .true.
+      InvalidOutput( WkAxsZTD (  :,i) ) = .true.
+      InvalidOutput( WkPosXTD (  :,i) ) = .true.
+      InvalidOutput( WkPosYTD (  :,i) ) = .true.
+      InvalidOutput( WkPosZTD (  :,i) ) = .true.
+      InvalidOutput( WkVelXTD (  :,i) ) = .true.
+      InvalidOutput( WkVelYTD (  :,i) ) = .true.
+      InvalidOutput( WkVelZTD (  :,i) ) = .true.
+      InvalidOutput( WkDiamTD (  :,i) ) = .true.
+      InvalidOutput( WkDfVxTND(:,1,i) ) = .true.
+      InvalidOutput( WkDfVrTND(:,1,i) ) = .true.
+      InvalidOutput( EddVisTND(:,1,i) ) = .true.
+      InvalidOutput( EddAmbTND(:,1,i) ) = .true.
+      InvalidOutput( EddShrTND(:,1,i) ) = .true.
+      InvalidOutput( WkDfVxTND(:,2,i) ) = .true.
+      InvalidOutput( WkDfVrTND(:,2,i) ) = .true.
+      InvalidOutput( EddVisTND(:,2,i) ) = .true.
+      InvalidOutput( EddAmbTND(:,2,i) ) = .true.
+      InvalidOutput( EddShrTND(:,2,i) ) = .true.
+      InvalidOutput( WkDfVxTND(:,3,i) ) = .true.
+      InvalidOutput( WkDfVrTND(:,3,i) ) = .true.
+      InvalidOutput( EddVisTND(:,3,i) ) = .true.
+      InvalidOutput( EddAmbTND(:,3,i) ) = .true.
+      InvalidOutput( EddShrTND(:,3,i) ) = .true.
+      InvalidOutput( WkDfVxTND(:,4,i) ) = .true.
+      InvalidOutput( WkDfVrTND(:,4,i) ) = .true.
+      InvalidOutput( EddVisTND(:,4,i) ) = .true.
+      InvalidOutput( EddAmbTND(:,4,i) ) = .true.
+      InvalidOutput( EddShrTND(:,4,i) ) = .true.
+      InvalidOutput( WkDfVxTND(:,5,i) ) = .true.
+      InvalidOutput( WkDfVrTND(:,5,i) ) = .true.
+      InvalidOutput( EddVisTND(:,5,i) ) = .true.
+      InvalidOutput( EddAmbTND(:,5,i) ) = .true.
+      InvalidOutput( EddShrTND(:,5,i) ) = .true.
+      InvalidOutput( WkDfVxTND(:,6,i) ) = .true.
+      InvalidOutput( WkDfVrTND(:,6,i) ) = .true.
+      InvalidOutput( EddVisTND(:,6,i) ) = .true.
+      InvalidOutput( EddAmbTND(:,6,i) ) = .true.
+      InvalidOutput( EddShrTND(:,6,i) ) = .true.
+      InvalidOutput( WkDfVxTND(:,7,i) ) = .true.
+      InvalidOutput( WkDfVrTND(:,7,i) ) = .true.
+      InvalidOutput( EddVisTND(:,7,i) ) = .true.
+      InvalidOutput( EddAmbTND(:,7,i) ) = .true.
+      InvalidOutput( EddShrTND(:,7,i) ) = .true.
+      InvalidOutput( WkDfVxTND(:,8,i) ) = .true.
+      InvalidOutput( WkDfVrTND(:,8,i) ) = .true.
+      InvalidOutput( EddVisTND(:,8,i) ) = .true.
+      InvalidOutput( EddAmbTND(:,8,i) ) = .true.
+      InvalidOutput( EddShrTND(:,8,i) ) = .true.
+      InvalidOutput( WkDfVxTND(:,9,i) ) = .true.
+      InvalidOutput( WkDfVrTND(:,9,i) ) = .true.
+      InvalidOutput( EddVisTND(:,9,i) ) = .true.
+      InvalidOutput( EddAmbTND(:,9,i) ) = .true.
+      InvalidOutput( EddShrTND(:,9,i) ) = .true.
    
    end do
    
