@@ -1072,8 +1072,10 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       ErrMsg  = ""
 
 
-      ! Filter the inputs from the Supercontroller to ServoDyn
-      xd%ScInFilter = p%ScInAlpha * xd%ScInFilter + (1.0_SiKi - p%ScInAlpha) * u%SuperController
+      if( allocated(u%SuperController) ) then
+         ! Filter the inputs from the Supercontroller to ServoDyn
+         xd%ScInFilter = p%ScInAlpha * xd%ScInFilter + (1.0_SiKi - p%ScInAlpha) * u%SuperController
+      end if
       
       !xd%BlPitchFilter = p%BlAlpha * xd%BlPitchFilter + (1.0_ReKi - p%BlAlpha) * u%BlPitch
    
