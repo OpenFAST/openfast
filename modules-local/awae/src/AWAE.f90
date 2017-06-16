@@ -747,7 +747,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                do nt2 = 1,p%NumTurbines
                   if (nt /= nt2) then  
                      
-                     x_end_plane = dot_product(u%xhat_plane(:,0,nt2), (p%Grid_high(:,nXYZ_high,nt2) - u%p_plane(:,0,nt2)) )
+                     x_end_plane = dot_product(u%xhat_plane(:,0,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,0,nt2)) )
                
                      do np = 0, maxPln !p%NumPlanes-2
                   
@@ -756,7 +756,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                   
                            ! Construct the endcaps of the current wake plane volume
                         x_start_plane = x_end_plane
-                        x_end_plane = dot_product(u%xhat_plane(:,np+1,nt2), (p%Grid_high(:,nXYZ_high,nt2) - u%p_plane(:,np+1,nt2)) )
+                        x_end_plane = dot_product(u%xhat_plane(:,np+1,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,np+1,nt2)) )
                   
                            ! test if the point is within the endcaps of the wake volume
                         if ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) then
@@ -770,7 +770,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                               p_tmp_plane = delta*m%pvec_ce(:,np,nt2) + deltad*m%pvec_cs(:,np,nt2) + ( delta*m%r_e(np,nt2) + deltad*m%r_s(np,nt2) )* tmp_vec / TwoNorm(tmp_vec)
                            end if
                      
-                           r_vec_plane = p%Grid_high(:,nXYZ_high,nt2) - p_tmp_plane
+                           r_vec_plane = p%Grid_high(:,nXYZ_high,nt) - p_tmp_plane
                            r_tmp_plane = TwoNorm( r_vec_plane )
                      
                               ! test if the point is within radial finite-difference grid
