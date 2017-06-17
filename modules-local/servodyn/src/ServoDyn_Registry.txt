@@ -29,6 +29,8 @@ typedef	^	InitInputType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simu
 typedef	^	InitInputType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
 typedef	^	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of controller inputs [from supercontroller]"	-
 typedef	^	InitInputType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
+typedef	^	InitInputType	ReKi	InitScOutputsTurbine	{:}	-	-	"Initial inputs to the controller [from the supercontroller]"	-
+
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-

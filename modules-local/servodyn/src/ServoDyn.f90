@@ -325,14 +325,14 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       CALL AllocAry( u%SuperController, InitInp%NumSC2Ctrl, 'u%SuperController', ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      u%SuperController = 0.0_SiKi
+      u%SuperController = InitInp%InitScOutputsTurbine
 
       p%ScInAlpha = exp( -TwoPi*p%DT*InputFileData%ScInCutoff )
       if (InputFileData%ScInCutOff < EPSILON( InputFileData%ScInCutOff )) CALL CheckError( ErrID_Fatal, 'ScInCutoff must be greater than 0.')       
       CALL AllocAry( xd%ScInFilter, InitInp%NumSC2Ctrl, 'xd%ScInFilter', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-      xd%ScInFilter = 0.0_ReKi
+      xd%ScInFilter = InitInp%InitScOutputsTurbine
 
    END IF
                   

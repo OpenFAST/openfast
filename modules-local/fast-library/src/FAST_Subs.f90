@@ -684,7 +684,15 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
       IF ( PRESENT(ExternInitData) ) THEN
          InitInData_SrvD%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
-         InitInData_SrvD%NumCtrl2SC = ExternInitData%NumCtrl2SC  
+         InitInData_SrvD%NumCtrl2SC = ExternInitData%NumCtrl2SC
+         IF ( (InitInData_SrvD%NumSC2Ctrl .gt. 0) .and. (InitInData_SrvD%NumSC2Ctrl .gt. 0)) THEN
+            CALL AllocAry( InitInData_SrvD%InitScOutputsTurbine, InitInData_SrvD%NumSC2Ctrl, 'InitInData_SrvD%InitScOutputsTurbine', ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            do i=1,InitInData_SrvD%NumSC2Ctrl
+               InitInData_SrvD%InitScOutputsTurbine(i) = ExternInitData%InitScOutputsTurbine(i)
+            end do
+            
+         END IF
       ELSE
          InitInData_SrvD%NumSC2Ctrl = 0
          InitInData_SrvD%NumCtrl2SC = 0

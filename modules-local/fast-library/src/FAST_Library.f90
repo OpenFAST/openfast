@@ -422,7 +422,7 @@ subroutine FAST_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, d
       
 end subroutine FAST_Restart 
 !==================================================================================================================================
-subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumCtrl2SC, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, &
+subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, &
                           OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_Input_from_FAST, SC_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Init')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Init
    IMPLICIT NONE 
@@ -435,6 +435,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
    INTEGER(C_INT),         INTENT(IN   ) :: TurbID           ! Need not be same as iTurb
    INTEGER(C_INT),         INTENT(IN   ) :: NumSC2Ctrl       ! Supercontroller outputs = controller inputs
    INTEGER(C_INT),         INTENT(IN   ) :: NumCtrl2SC       ! controller outputs = Supercontroller inputs
+   REAL(C_FLOAT),          INTENT(IN   ) :: InitScOutputsTurbine (:) ! Initial Supercontroller outputs = controller inputs
    INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsBlade ! number of actuator line force points in blade
    INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsTower ! number of actuator line force points in tower
    REAL(C_FLOAT),          INTENT(IN   ) :: TurbPosn(3)      
@@ -470,6 +471,12 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
    ExternInitData%SensorType = SensorType_None
    ExternInitData%NumCtrl2SC = NumCtrl2SC
    ExternInitData%NumSC2Ctrl = NumSC2Ctrl
+   if ( (NumSC2Ctrl .gt. 0) .and. (NumCtrl2SC .gt. 0) ) then
+      CALL AllocAry( ExternInitData%InitScOutputsTurbine, NumSC2Ctrl, 'ExternInitData%InitScOutputsTurbine', ErrStat, ErrMsg)
+        do i=1,NumSC2Ctrl
+           ExternInitData%InitScOutputsTurbine(i) = InitScOutputsTurbine(i)
+        end do
+   end if
    ExternInitData%NumActForcePtsBlade = NumActForcePtsBlade
    ExternInitData%NumActForcePtsTower = NumActForcePtsTower
 
