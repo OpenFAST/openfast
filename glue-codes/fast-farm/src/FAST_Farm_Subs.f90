@@ -32,7 +32,9 @@ MODULE FAST_Farm_Subs
    USE FAST_Farm_IO
    USE FAST_Subs
    USE FASTWrapper
+#ifdef PARALLEL_CODE
    USE OMP_LIB 
+#endif
 
 
    IMPLICIT NONE
@@ -204,7 +206,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       END IF   
       
    
-      
+   farm%p%NOutTurb = min(farm%p%NumTurbines,9)  ! We only support output for the first 9 turbines, even if the farm has more than 9 
    
    farm%p%n_high_low = NINT( farm%p%dt / farm%p%dt_high )
             
@@ -1387,8 +1389,6 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    
       !--------------------
       ! 1b. CALL AWAE_CO      
-   call AWAE_UpdateStates( 0.0_DbKi, -1, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%m, errStat, errMsg )
    call AWAE_CalcOutput( 0.0_DbKi, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
                      farm%AWAE%OtherSt, farm%AWAE%y, farm%AWAE%m, ErrStat2, ErrMsg2 )         
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1486,6 +1486,7 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    
 end subroutine FARM_InitialCO
  
+#ifdef PARALLEL_CODE
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine updates states each time increment.
 !! The update states algorithm: \n
@@ -1581,6 +1582,7 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    
 end subroutine FARM_UpdateStates
+#endif
 
 subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
@@ -1682,7 +1684,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
          ! Define the output channel specifying the current simulation time:
       farm%m%AllOuts(  Time) = REAL( t, ReKi )
 
-      do nt = 1, farm%p%NumTurbines
+      do nt = 1, farm%p%NOutTurb
          
          !.......................................................................................
          ! Super controller Outputs
@@ -1862,6 +1864,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
    end if
 end subroutine Farm_WriteOutput
 
+#ifdef PARALLEL_CODE
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates outputs at each time increment and solves for the inputs at the next step.
 !! The calculate output algorithm: \n
@@ -1968,6 +1971,8 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
   write(*,*) 'Total Farm_CO took '//trim(num2lstr(t6-tm1))//' seconds.' 
    
 end subroutine FARM_CalcOutput
+#endif
+
 subroutine FARM_CalcOutputSerial(t, farm, ErrStat, ErrMsg)
    REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  

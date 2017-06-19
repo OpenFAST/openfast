@@ -121,6 +121,7 @@ typedef	^	SrvD_InputFile	LOGICAL	CompNTMD	-	-	-	"Compute nacelle tuned mass damp
 typedef	^	SrvD_InputFile	CHARACTER(1024)	NTMDfile	-	-	-	"File for nacelle tuned mass damper (quoted string)"	-
 typedef	^	SrvD_InputFile	LOGICAL	CompTTMD	-	-	-	"Compute tower tuned mass damper {true/false}"	-
 typedef	^	SrvD_InputFile	CHARACTER(1024)	TTMDfile	-	-	-	"File for tower tuned mass damper (quoted string)"	-
+typedef ^       SrvD_InputFile  SiKi    ScInCutOff	-	-	-	"Cuttoff frequency for low-pass filter on Supercontroller inputs"	Hz
 
 # ..... Data for using Bladed DLLs .......................................................................................................
 typedef	^	BladedDLLType	SiKi	avrSWAP	{:}	-	-	"The swap array: used to pass data to and from the DLL controller"	"see Bladed DLL documentation"
@@ -143,6 +144,8 @@ typedef	^	ContinuousStateType	TMD_ContinuousStateType	TTMD	-	-	-	"TMD module sta
 #typedef	^	DiscreteStateType	ReKi	BlPitchFilter	{:}	-	-	"blade pitch filter"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	TTMD	-	-	-	"TMD module states - tower"	-
+typedef ^       DiscreteStateType       SiKi                    ScInFilter    {:}     -       -       "Filtered inputs from supercontroller" -
+
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
@@ -277,6 +280,7 @@ typedef	^	ParameterType	TMD_ParameterType	NTMD	-	-	-	"TMD module parameters - na
 typedef	^	ParameterType	TMD_ParameterType	TTMD	-	-	-	"TMD module parameters - tower"	-
 typedef	^	ParameterType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
+typedef	^	ParameterType	SiKi	ScInAlpha       -       -       -  "Low pass filter cutoff parameter for Supercontroller inputs to ServoDyn" -
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

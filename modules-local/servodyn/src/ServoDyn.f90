@@ -326,6 +326,14 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
       u%SuperController = 0.0_SiKi
+
+      p%ScInAlpha = exp( -TwoPi*p%DT*InputFileData%ScInCutoff )
+      if (InputFileData%ScInCutOff < EPSILON( InputFileData%ScInCutOff )) CALL CheckError( ErrID_Fatal, 'ScInCutoff must be greater than 0.')       
+      CALL AllocAry( xd%ScInFilter, InitInp%NumSC2Ctrl, 'xd%ScInFilter', ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+      xd%ScInFilter = 0.0_ReKi
+
    END IF
                   
       
@@ -470,7 +478,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%AirDens      = InitInp%AirDens     
       p%AvgWindSpeed = InitInp%AvgWindSpeed
       
-      CALL BladedInterface_Init(u, p, m, y, InputFileData, ErrStat2, ErrMsg2 )
+      CALL BladedInterface_Init(u, p, m, xd, y, InputFileData, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
          
@@ -655,7 +663,7 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! Place any last minute operations or calculations here:
 
       IF ( p%UseBladedInterface ) THEN
-         CALL BladedInterface_End(u, p, m, ErrStat, ErrMsg )
+         CALL BladedInterface_End(u, p, m, xd, ErrStat, ErrMsg )
       END IF
       
       IF (p%CompNTMD) THEN
@@ -802,28 +810,27 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    END IF
       
             
-         ! Get appropriate value of input for the filter in discrete states
-      ! this works only for the DLL at this point, so we're going to move it there>>>>>>>>>>>>>>>
+   CALL SrvD_CopyInput( Inputs(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
 
-      !   
-      !CALL SrvD_UpdateDiscState( t, u_interp, p, x, xd, z, OtherState, ErrStat2, ErrMsg2 )
-      !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+   CALL SrvD_Input_ExtrapInterp( Inputs, InputTimes, u_interp, t, ErrStat2, ErrMsg2 )
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+
+   CALL SrvD_UpdateDiscState( t, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
    !...............................................................................................................................   
    ! get inputs at t+dt:
    !...............................................................................................................................  
    t_next = t+p%dt
-   
-   CALL SrvD_CopyInput( Inputs(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
+
    CALL SrvD_Input_ExtrapInterp( Inputs, InputTimes, u_interp, t_next, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+   
    
    !...............................................................................................................................   
    ! update remaining states to values at t+dt:
@@ -930,7 +937,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       ELSE
          m%dll_data%PrevBlPitch(1:p%NumBl) = m%dll_data%BlPitchCom ! used for linear ramp of delayed signal
          m%LastTimeCalled = t
-         CALL BladedInterface_CalcOutput( t, u, p, m, ErrStat2, ErrMsg2 )
+         CALL BladedInterface_CalcOutput( t, u, p, m, xd, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
       
@@ -1065,6 +1072,9 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       ErrMsg  = ""
 
 
+      ! Filter the inputs from the Supercontroller to ServoDyn
+      xd%ScInFilter = p%ScInAlpha * xd%ScInFilter + (1.0_SiKi - p%ScInAlpha) * u%SuperController
+      
       !xd%BlPitchFilter = p%BlAlpha * xd%BlPitchFilter + (1.0_ReKi - p%BlAlpha) * u%BlPitch
    
       !if ( p%PCMode == ControlMode_DLL ) then
@@ -2212,6 +2222,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
                    
    END DO
                      
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED !---------------------- SUPERCONTROLLER -------------
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL ReadCom( UnIn, InputFile, 'Section Header: Supercontroller', ErrStat2, ErrMsg2, UnEc )
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL CheckError( ErrStat2, ErrMsg2 )
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED IF ( ErrStat >= AbortErrLev ) RETURN
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL ReadVar( UnIn, InputFile, InputFileData%ScInCutoff, "ScInCutoff", "Cuttoff frequency for low-pass filter on Supercontroller Inputs (Hz)", ErrStat2, ErrMsg2, UnEc)
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL CheckError( ErrStat2, ErrMsg2 )
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED IF ( ErrStat >= AbortErrLev ) RETURN
    
    !---------------------- OUTPUT --------------------------------------------------         
    CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )

@@ -97,10 +97,11 @@ MODULE BladedInterface
 CONTAINS
 !==================================================================================================================================
 !> This SUBROUTINE is used to call the Bladed-style DLL.
-SUBROUTINE CallBladedDLL ( u, DLL, dll_data, p, ErrStat, ErrMsg )
+SUBROUTINE CallBladedDLL ( u, scInFilter, DLL, dll_data, p, ErrStat, ErrMsg )
 
       ! Passed Variables:
    TYPE(SrvD_InputType),      INTENT(IN   )  :: u              ! System inputs
+   REAL(SiKi),                INTENT(IN   )  :: scInFilter (*) ! Filtered input from Supercontroller to ServoDyn
    TYPE(DLL_Type),            INTENT(IN   )  :: DLL            ! The DLL to be called.
    TYPE(BladedDLLType),       INTENT(INOUT)  :: dll_data       ! data type containing the avrSWAP, accINFILE, and avcOUTNAME arrays 
    TYPE(SrvD_ParameterType),  INTENT(IN   )  :: p              ! Parameters
@@ -138,7 +139,7 @@ SUBROUTINE CallBladedDLL ( u, DLL, dll_data, p, ErrStat, ErrMsg )
       ! if we're statically loading the library (i.e., OpenFOAM), we can just call DISCON(); 
       ! I'll leave some options for whether the supercontroller is being used
 #ifdef LOAD_SUPERCONTROLLER
-   CALL DISCON( dll_data%avrSWAP, u%SuperController, dll_data%SCoutput, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
+   CALL DISCON( dll_data%avrSWAP, scInFilter, dll_data%SCoutput, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
 #else
    CALL DISCON( dll_data%avrSWAP, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
 #endif
@@ -148,7 +149,7 @@ SUBROUTINE CallBladedDLL ( u, DLL, dll_data, p, ErrStat, ErrMsg )
    IF ( ALLOCATED(dll_data%SCoutput) ) THEN
          ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
       CALL C_F_PROCPOINTER( DLL%ProcAddr(1), DLL_SC_Subroutine) 
-      CALL DLL_SC_Subroutine ( dll_data%avrSWAP, u%SuperController, dll_data%SCoutput, aviFAIL, accINFILE, avcOUTNAME, avcMSG ) 
+      CALL DLL_SC_Subroutine ( dll_data%avrSWAP, scInFilter, dll_data%SCoutput, aviFAIL, accINFILE, avcOUTNAME, avcMSG ) 
             
    ELSE
       
@@ -180,11 +181,12 @@ SUBROUTINE CallBladedDLL ( u, DLL, dll_data, p, ErrStat, ErrMsg )
 END SUBROUTINE CallBladedDLL
 !==================================================================================================================================
 !> This routine initializes variables used in the Bladed DLL interface.
-SUBROUTINE BladedInterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
+SUBROUTINE BladedInterface_Init(u,p,m,xd,y,InputFileData, ErrStat, ErrMsg)
    
    TYPE(SrvD_InputType),           INTENT(INOUT)  :: u               !< An initial guess for the input; input mesh must be defined
    TYPE(SrvD_ParameterType),       INTENT(INOUT)  :: p               !< Parameters
    TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m               !< Initial misc (optimization) variables
+   TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd              !< Discrete states
    TYPE(SrvD_OutputType),          INTENT(INOUT)  :: y               !< Initial system outputs (outputs are not calculated;
                                                                      !!   only the output mesh is initialized)
    TYPE(SrvD_InputFile),           INTENT(INOUT)  :: InputFileData   !< Data stored in the module's input file
@@ -305,7 +307,7 @@ SUBROUTINE BladedInterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
    !CALL Fill_avrSWAP( 0_IntKi, t, u, p, LEN(ErrMsg), m%dll_data )  ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
   
       
-   !CALL CallBladedDLL(p%DLL_Trgt,  m%dll_data, ErrStat2, ErrMsg2)
+   !CALL CallBladedDLL(u, xd%ScInFilter, p%DLL_Trgt,  m%dll_data, ErrStat2, ErrMsg2)
    !   CALL CheckError(ErrStat2,ErrMsg2)
    !   IF ( ErrStat >= AbortErrLev ) RETURN
    !   
@@ -344,11 +346,12 @@ CONTAINS
 END SUBROUTINE BladedInterface_Init
 !==================================================================================================================================
 !> This routine calls the DLL for the final time (if it was previously called), and frees the dynamic library.
-SUBROUTINE BladedInterface_End(u, p, m, ErrStat, ErrMsg)
+SUBROUTINE BladedInterface_End(u, p, m, xd, ErrStat, ErrMsg)
    
    TYPE(SrvD_InputType),           INTENT(IN   )  :: u               !< System inputs
    TYPE(SrvD_ParameterType),       INTENT(INOUT)  :: p               !< Parameters
    TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m               !< misc (optimization) variables
+   TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd              !< Discrete states
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat         !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
@@ -362,7 +365,7 @@ SUBROUTINE BladedInterface_End(u, p, m, ErrStat, ErrMsg)
          m%dll_data%avrSWAP( 1) = -1.0   ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
          !CALL Fill_avrSWAP( -1_IntKi, -10.0_DbKi, u, p, LEN(ErrMsg), m%dll_data )
 
-         CALL CallBladedDLL(u, p%DLL_Trgt,  m%dll_data, p, ErrStat, ErrMsg)
+         CALL CallBladedDLL(u, xd%ScInFilter, p%DLL_Trgt,  m%dll_data, p, ErrStat, ErrMsg)
       END IF
    end if
       
@@ -376,12 +379,13 @@ END SUBROUTINE BladedInterface_End
 !==================================================================================================================================
 !> This routine sets the AVRswap array, calls the routine from the BladedDLL, and sets the outputs from the call to be used as
 !! necessary in the main ServoDyn CalcOutput routine.
-SUBROUTINE BladedInterface_CalcOutput(t, u, p, m, ErrStat, ErrMsg)
+SUBROUTINE BladedInterface_CalcOutput(t, u, p, m, xd, ErrStat, ErrMsg)
 
    REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
    TYPE(SrvD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m           !< misc (optimization) variables
+   TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       
@@ -406,7 +410,7 @@ write(58,'()')
    
    
       ! Call the Bladed-style DLL controller:
-   CALL CallBladedDLL(u, p%DLL_Trgt,  m%dll_data, p, ErrStat, ErrMsg)
+   CALL CallBladedDLL(u, xd%ScInFilter, p%DLL_Trgt,  m%dll_data, p, ErrStat, ErrMsg)
       IF ( ErrStat >= AbortErrLev ) RETURN
 
 #ifdef DEBUG_BLADED_INTERFACE

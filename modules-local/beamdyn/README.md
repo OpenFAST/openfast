@@ -6,7 +6,9 @@ BeamDyn is a time-domain structural-dynamics module for slender structures. The 
 
 BeamDyn is based on the geometrically exact beam theory (GEBT) and is implemented using Legendre spectral finite elements (LSFEs). GEBT supports full geometric nonlinearity and large deflection, with bending, torsion, shear, and extensional degree-of-freedom (DOFs); anisotropic composite material couplings (using full 6x6 mass and stiffness matrices, including bend-twist coupling); and a reference axis that permits blades that are not straight (supporting built-in curve, sweep, and sectional offsets).
 
-BeamDyn was originally developed by Qi Wang, Mike Sprague, and Jason Jonkman under an NREL Laboratory Directed Research and Development (LDRD) Project:  High-fidelity computational modeling of wind-turbine structural dynamics (2011-2013; PI: M.A. Sprague).  Further development was funded by the DOE Wind Energy Technology Office.
+BeamDyn was originally developed by Qi Wang, Mike Sprague, and Jason Jonkman under an NREL Laboratory Directed Research and Development (LDRD) Project:  High-fidelity computational modeling of wind-turbine structural dynamics (2011-2013; PI: M.A. Sprague).  Further development was funded by the DOE Wind Energy Technology Office. NREL gratefully acknowledges the development contributions from the following organizations:
+* [Envision Energy USA, Ltd](http://www.envision-energy.com)
+
 
 ## BeamDyn Manual
 
@@ -29,7 +31,7 @@ Proceedings of *34th Wind Energy Symposium, AIAA Science and Technology  Forum a
 * C. Pavese, T. Kim, Q. Wang, J. Jonkman, M.A. Sprague,
 HAWC2 and BeamDyn: Comparison Between Beam Structural Models for Aero-Servo-Elastic Frameworks, Proceedings of the *European Wind Energy Association Annual Conference and Exhibition 2015* (EWEA 2015), 17-20 November 2015, Paris, France pp. 1193-1201. Also published as [NREL/CP-5000-65115](http://www.nrel.gov/docs/fy16osti/65115.pdf).
 
-* Wang, Q., N. Johnson, M.A. Sprague}, J. Jonkman, BeamDyn:
+* Wang, Q., N. Johnson, M.A. Sprague, J. Jonkman, BeamDyn:
 A high-fidelity wind turbine blade solver in the FAST modular framework.
 Proceedings of the *AIAA Science and Technology Forum and Exposition,
 33rd ASME Wind Energy Symposium*, Kissimmee, FL, 5--9 January 2015. Also published as [NREL/CP-5000-63165](http://www.nrel.gov/docs/fy15osti/63165.pdf).

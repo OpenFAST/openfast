@@ -27,7 +27,9 @@ module AWAE
    use NWTC_Library
    use AWAE_Types
    use AWAE_IO
-   use OMP_LIB 
+#ifdef PARALLEL_CODE
+   use OMP_LIB
+#endif
    
    implicit none
 
@@ -48,11 +50,14 @@ module AWAE
    public :: AWAE_TEST_Init_BadData    
    public :: AWAE_TEST_Init_GoodData    
    public :: AWAE_TEST_CalcOutput
+#ifdef PARALLEL_CODE
    public :: AWAE_TEST_ExtractSlice
    public :: AWAE_TEST_LowResGridCalcs
-  
+#endif
+
    contains  
    
+#ifdef PARALLEL_CODE
 subroutine ExtractSliceOMP( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
 
 
@@ -109,6 +114,7 @@ subroutine ExtractSliceOMP( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
    !$OMP END PARALLEL DO
    
 end subroutine ExtractSliceOMP
+#endif
 
 subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
    
@@ -442,6 +448,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    
 end subroutine LowResGridCalcOutput
 
+#ifdef PARALLEL_CODE
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine 
 !!
@@ -663,6 +670,7 @@ subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, 
    end do
    
 end subroutine LowResGridCalcOutputOMP
+#endif
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine 
 !!
@@ -739,7 +747,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                do nt2 = 1,p%NumTurbines
                   if (nt /= nt2) then  
                      
-                     x_end_plane = dot_product(u%xhat_plane(:,0,nt2), (p%Grid_high(:,nXYZ_high,nt2) - u%p_plane(:,0,nt2)) )
+                     x_end_plane = dot_product(u%xhat_plane(:,0,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,0,nt2)) )
                
                      do np = 0, maxPln !p%NumPlanes-2
                   
@@ -748,7 +756,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                   
                            ! Construct the endcaps of the current wake plane volume
                         x_start_plane = x_end_plane
-                        x_end_plane = dot_product(u%xhat_plane(:,np+1,nt2), (p%Grid_high(:,nXYZ_high,nt2) - u%p_plane(:,np+1,nt2)) )
+                        x_end_plane = dot_product(u%xhat_plane(:,np+1,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,np+1,nt2)) )
                   
                            ! test if the point is within the endcaps of the wake volume
                         if ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) then
@@ -762,7 +770,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                               p_tmp_plane = delta*m%pvec_ce(:,np,nt2) + deltad*m%pvec_cs(:,np,nt2) + ( delta*m%r_e(np,nt2) + deltad*m%r_s(np,nt2) )* tmp_vec / TwoNorm(tmp_vec)
                            end if
                      
-                           r_vec_plane = p%Grid_high(:,nXYZ_high,nt2) - p_tmp_plane
+                           r_vec_plane = p%Grid_high(:,nXYZ_high,nt) - p_tmp_plane
                            r_tmp_plane = TwoNorm( r_vec_plane )
                      
                               ! test if the point is within radial finite-difference grid
@@ -1135,6 +1143,11 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    m%ny_wind      = 0.0_ReKi  
    m%nz_wind      = 0.0_ReKi 
 
+   
+   ! Read-in the ambient wind data for the initial calculate output
+   
+   call AWAE_UpdateStates( 0.0_DbKi, -1, u, p, x, xd, z, OtherState, m, errStat, errMsg )
+   
    call Cleanup() 
       
 contains
@@ -1529,6 +1542,7 @@ subroutine AWAE_TEST_Init_GoodData(errStat, errMsg)
    
 end subroutine AWAE_TEST_Init_GoodData
 
+#ifdef PARALLEL_CODE
 subroutine AWAE_TEST_LowResGridCalcs(errStat, errMsg)
 
    integer(IntKi),           intent(out)    :: errStat                           !< Error status
@@ -1646,7 +1660,7 @@ subroutine AWAE_TEST_ExtractSlice(errStat, errMsg)
          end do
       end do      
 end subroutine AWAE_TEST_ExtractSlice
-
+#endif
 
 subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
 

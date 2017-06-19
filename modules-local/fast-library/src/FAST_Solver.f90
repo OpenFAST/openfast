@@ -3658,7 +3658,6 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, MAPp
          BD%Input(1,i)%HubMotion%RemapFlag  = .FALSE.
              
          BD%y(i)%ReactionForce%RemapFlag    = .FALSE.
-         BD%y(i)%BldForce%RemapFlag         = .FALSE.
          BD%y(i)%BldMotion%RemapFlag        = .FALSE.
       END DO                  
    END IF

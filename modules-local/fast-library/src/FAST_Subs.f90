@@ -4230,6 +4230,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    ! local variables
    REAL(DbKi)                              :: t_global_next       ! next simulation time (m_FAST%t_global + p_FAST%dt)
    INTEGER(IntKi)                          :: j_pc                ! predictor-corrector loop counter 
+   INTEGER(IntKi)                          :: NumCorrections      ! number of corrections for this time step 
    
    INTEGER(IntKi)                          :: I, k                ! generic loop counters
    
@@ -4255,6 +4256,19 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       
    END IF
       
+      ! set number of corrections to be used for this time step:
+   IF ( p_FAST%CompElast == Module_BD ) THEN ! BD accelerations have fewer spikes with these corrections on the first several time steps
+      if (n_t_global > 2) then ! this 2 should probably be related to p_FAST%InterpOrder
+         NumCorrections = p_FAST%NumCrctn
+      elseif (n_t_global == 0) then
+         NumCorrections = max(p_FAST%NumCrctn,16)
+      else      
+         NumCorrections = max(p_FAST%NumCrctn,1)
+      end if
+   ELSE
+      NumCorrections = p_FAST%NumCrctn
+   END IF   
+   
       ! the ServoDyn inputs from Simulink are for t, not t+dt, so we're going to overwrite the inputs from
       ! the previous step before we extrapolate these inputs:
    IF ( p_FAST%CompServo == Module_SrvD ) CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )   
@@ -4270,7 +4284,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
 
       
    !! predictor-corrector loop:
-   DO j_pc = 0, p_FAST%NumCrctn
+   DO j_pc = 0, NumCorrections
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    !! ## Step 1.b: Advance states (yield state and constraint values at t_global_next)
    !!
@@ -6286,7 +6300,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
          Turbine%SrvD%p%DLL_InFile = DLLFileName
          Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
          Turbine%SrvD%m%dll_data%avrSWAP( 1) = -8
-         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%xd(STATE_CURR)%ScInFilter, Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             ! put values back:
@@ -6484,7 +6498,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
          Turbine%SrvD%p%DLL_InFile = DLLFileName
          Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
          Turbine%SrvD%m%dll_data%avrSWAP( 1) = -9
-         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%xd(STATE_CURR)%ScInFilter, Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                           
             ! put values back:
          Turbine%SrvD%p%DLL_InFile = FileName

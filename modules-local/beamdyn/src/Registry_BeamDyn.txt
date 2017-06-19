@@ -1,6 +1,6 @@
 ##################################################################################################################################
-# Registry for Module1, creates MODULE Module1_Types
-# Module Module1_Types contains all of the user-defined types needed in Module1. It also contains copy, destroy, pack, and
+# Registry for BeamDyn, creates MODULE BeamDyn_Types
+# Module BeamDyn_Types contains all of the user-defined types needed in BeamDyn. It also contains copy, destroy, pack, and
 # unpack routines associated with each defined data types.
 ##################################################################################################################################
 # Entries are of the form
@@ -10,25 +10,23 @@ include Registry_NWTC_Library.txt
 
 # BeamDyn Constants
 param   BeamDyn/BD   -           IntKi    BD_STATIC_ANALYSIS   -  1  -  "Constant for static analysis" -
-param   BeamDyn/BD   -           IntKi    BD_DYNAMIC_ANALYSIS  -  2  -  "Constant for dynamic analysis" -
+param   ^            -           IntKi    BD_DYNAMIC_ANALYSIS  -  2  -  "Constant for dynamic analysis" -
 
 
 # ..... Initialization data
 # .......................................................................................................
 # Define inputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.
-typedef BeamDyn/BD InitInputType CHARACTER(1024) InputFile  - - - "Name of the input file; remove if there is no file" -
-typedef BeamDyn/BD InitInputType CHARACTER(1024) RootName   - - - "RootName for writing output files" -
-typedef BeamDyn/BD InitInputType ReKi            gravity   {3} - - "Gravitational acceleration" m/s^2
-typedef BeamDyn/BD InitInputType ReKi            GlbPos    {3} - - "Initial Position Vector of the local blade coordinate system"
-typedef BeamDyn/BD InitInputType R8Ki            GlbRot    {3}{3} - - "Initial direction cosine matrix of the local blade coordinate system"
-typedef BeamDyn/BD InitInputType R8Ki            RootDisp  {3} - - "Initial root displacement"
-typedef BeamDyn/BD InitInputType R8Ki            RootOri   {3}{3} - - "Initial root orientation"
-typedef BeamDyn/BD InitInputType ReKi            RootVel   {6} - - "Initial root velocities and angular veolcities"
-typedef BeamDyn/BD InitInputType ReKi            DistrLoad {6} - - "Constant distributed load along beam axis, 3 forces and 3 moments" 
-typedef BeamDyn/BD InitInputType ReKi            TipLoad   {6} - - "Constant point load applied at tip, 3 forces and 3 moments" 
-typedef BeamDyn/BD InitInputType ReKi            HubPos    {3} - - "Initial Hub position vector"
-typedef BeamDyn/BD InitInputType R8Ki            HubRot    {3}{3} - - "Initial Hub direction cosine matrix"
+typedef   ^         InitInputType CHARACTER(1024) InputFile  -     - - "Name of the input file; remove if there is no file" -
+typedef   ^         InitInputType CHARACTER(1024) RootName   -     - - "RootName for writing output files" -
+typedef   ^         InitInputType ReKi            gravity   {3}    - - "Gravitational acceleration" m/s^2
+typedef   ^         InitInputType ReKi            GlbPos    {3}    - - "Initial Position Vector of the local blade coordinate system"
+typedef   ^         InitInputType R8Ki            GlbRot    {3}{3} - - "Initial direction cosine matrix of the local blade coordinate system -- in BD coords"
+typedef   ^         InitInputType R8Ki            RootDisp  {3}    - - "Initial root displacement"
+typedef   ^         InitInputType R8Ki            RootOri   {3}{3} - - "Initial root orientation"
+typedef   ^         InitInputType ReKi            RootVel   {6}    - - "Initial root velocities and angular veolcities"
+typedef   ^         InitInputType ReKi            HubPos    {3}    - - "Initial Hub position vector"
+typedef   ^         InitInputType R8Ki            HubRot    {3}{3} - - "Initial Hub direction cosine matrix"
 
 
 # Define outputs that the initialization routine may need here:
@@ -36,82 +34,97 @@ typedef BeamDyn/BD InitInputType R8Ki            HubRot    {3}{3} - - "Initial H
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputHdr {:}  -   -   "Names of the output-to-file channels"   -
 typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputUnt {:}  -   -   "Units of the output-to-file channels"   -
 typedef   ^        InitOutputType ProgDesc            Ver             -   -   -   "This module's name, version, and date"  -
-
+typedef   ^        InitOutputType R8Ki                kp_coordinate  {:}{:} - -   "Key point coordinates array"            -
+typedef   ^        InitOutputType IntKi               kp_total        -   -   -   "Total number of key point" -
 
 # ..... Blade Input file data........................................................................
-typedef BeamDyn/BD    BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
-typedef BeamDyn/BD    BladeInputData    IntKi    format_index     -     -     -    "Number of blade input stations"
+typedef   ^        BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
+typedef   ^        BladeInputData    IntKi    format_index     -     -     -    "Number of blade input stations"
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
-typedef BeamDyn/BD    BladeInputData    R8Ki     station_eta     {:}    -     -    "Station location in eta [0,1]"
-typedef BeamDyn/BD    BladeInputData     ^       stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"
-typedef BeamDyn/BD    BladeInputData     ^       mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"
-typedef BeamDyn/BD    BladeInputData     ^       beta             {6} - - "Damping Coefficient" -
+typedef   ^        BladeInputData    R8Ki     station_eta     {:}    -     -    "Station location in eta [0,1]"
+typedef   ^        BladeInputData     ^       stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"
+typedef   ^        BladeInputData     ^       mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"
+typedef   ^        BladeInputData     ^       beta             {6} - - "Damping Coefficient" -
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-typedef BeamDyn/BD    BladeInputData    IntKi    damp_flag    - - - "Damping Flag: 0-No Damping, 1-Damped"
+typedef   ^        BladeInputData    IntKi    damp_flag    - - - "Damping Flag: 0-No Damping, 1-Damped"
+
+
 # ..... Input file data..............................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Primary Input file data......................................................................
-typedef BeamDyn/BD    BD_InputFile    IntKi    analysis_type    - - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
-typedef ^             BD_InputFile    IntKi    member_total     - - - "Total number of members" -
-typedef ^             BD_InputFile    IntKi    kp_total         - - - "Total number of key point" -
-typedef ^             BD_InputFile    IntKi    kp_member       {:} - - "Number of key points in each member" -
-typedef ^             BD_InputFile    IntKi    order_elem       - - - "Order of interpolation (basis) function" -
-typedef ^             BD_InputFile    IntKi    NRMax            - - - "Max number of iterations in Newton Ralphson algorithm" -
-typedef ^             BD_InputFile    IntKi    quadrature       - - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
-typedef ^             BD_InputFile    IntKi    n_fact           - - - "Factorization frequency" -
-typedef ^             BD_InputFile    IntKi    refine           - - - "FE mesh refinement factor for trapezoidal quadrature" -
-typedef ^             BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -
-typedef ^             BD_InputFile    DbKi     DTBeam          - - - "Time interval for BeamDyn  calculations {or default} (s)" -
-typedef ^             BD_InputFile    BladeInputData    InpBl   - - - "Input data for individual blades"   "see BladeInputData Type"
-typedef ^             BD_InputFile    CHARACTER(1024) BldFile   - - -  "Name of blade input file"
-typedef ^             BD_InputFile    Logical  UsePitchAct - - -  "Whether to use a pitch actuator inside BeamDyn" (flag) 
+typedef   ^        BD_InputFile    IntKi           analysis_type  -  - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
+typedef   ^        BD_InputFile    IntKi           member_total   -  - - "Total number of members" -
+typedef   ^        BD_InputFile    IntKi           kp_total       -  - - "Total number of key point" -
+typedef   ^        BD_InputFile    IntKi           kp_member     {:} - - "Number of key points in each member" -
+typedef   ^        BD_InputFile    IntKi           order_elem     -  - - "Order of interpolation (basis) function" -
+typedef   ^        BD_InputFile    IntKi           NRMax          -  - - "Max number of iterations in Newton Ralphson algorithm" -
+typedef   ^        BD_InputFile    IntKi           quadrature     -  - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
+typedef   ^        BD_InputFile    IntKi           n_fact         -  - - "Factorization frequency" -
+typedef   ^        BD_InputFile    IntKi           refine         -  - - "FE mesh refinement factor for trapezoidal quadrature" -
+typedef   ^        BD_InputFile    DbKi            rhoinf         -  - - "Numerical damping parameter for generalized-alpha integrator" -
+typedef   ^        BD_InputFile    DbKi            DTBeam         -  - - "Time interval for BeamDyn  calculations {or default} (s)" -
+typedef   ^        BD_InputFile    BladeInputData  InpBl          -  - - "Input data for individual blades"   "see BladeInputData Type"
+typedef   ^        BD_InputFile    CHARACTER(1024) BldFile        -  - - "Name of blade input file"
+typedef   ^        BD_InputFile    Logical         UsePitchAct    -  - - "Whether to use a pitch actuator inside BeamDyn" (flag) 
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
-typedef ^             BD_InputFile    R8Ki     stop_tol         - - - "Key point coordinates array" -
-typedef ^             BD_InputFile     ^       kp_coordinate   {:}{:} - - "Key point coordinates array" -
-typedef ^             BD_InputFile     ^       pitchJ - - -     "Pitch actuator inertia" (kg-m^2)
-typedef ^             BD_InputFile     ^       pitchK - - -     "Pitch actuator stiffness" (kg-m^2/s^2) 
-typedef ^             BD_InputFile     ^       pitchC - - -     "Pitch actuator damping" - (kg-m^2/s)
+typedef   ^        BD_InputFile    R8Ki     stop_tol         - - - "Tolerance for stopping criterion" -
+typedef   ^        BD_InputFile     ^       kp_coordinate   {:}{:} - - "Key point coordinates array" -
+typedef   ^        BD_InputFile     ^       pitchJ - - -     "Pitch actuator inertia" (kg-m^2)
+typedef   ^        BD_InputFile     ^       pitchK - - -     "Pitch actuator stiffness" (kg-m^2/s^2) 
+typedef   ^        BD_InputFile     ^       pitchC - - -     "Pitch actuator damping" - (kg-m^2/s)
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-typedef ^             BD_InputFile    Logical  Echo             - - -  "Echo"
-typedef ^             BD_InputFile    IntKi    NNodeOuts - - - "Number of node outputs [0 - 9]"	-
-typedef ^             BD_InputFile    IntKi    OutNd   {9} - - "Nodes whose values will be output"	-
-typedef ^             BD_InputFile    IntKi    NumOuts  -  - - "Number of parameters in the output list (number of outputs requested)"	-
-typedef ^             BD_InputFile    CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-
-typedef ^             BD_InputFile    LOGICAL  SumPrint  -  -  -  "Print summary data to file? (.sum)"	-
-typedef ^             BD_InputFile    CHARACTER(20) OutFmt   - - -  "Format specifier" -
+typedef   ^        BD_InputFile    Logical             Echo      -  - - "Echo"
+typedef   ^        BD_InputFile    IntKi               NNodeOuts -  - - "Number of node outputs [0 - 9]"	-
+typedef   ^        BD_InputFile    IntKi               OutNd    {9} - - "Nodes whose values will be output"	-
+typedef   ^        BD_InputFile    IntKi               NumOuts   -  - - "Number of parameters in the output list (number of outputs requested)"	-
+typedef   ^        BD_InputFile    CHARACTER(ChanLen)  OutList	{:}	- -	"List of user-requested output channels"	-
+typedef   ^        BD_InputFile    LOGICAL             SumPrint  -  - - "Print summary data to file? (.sum)"	-
+typedef   ^        BD_InputFile    CHARACTER(20)       OutFmt    -  - - "Format specifier" -
+
+
 
 # ..... States
 # ....................................................................................................................
 # Define continuous (differentiable) states here:
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
-typedef BeamDyn/BD ContinuousStateType R8Ki q        {:}{:} - -  "q - displacement" m    #BDKi
-typedef      ^     ContinuousStateType  ^   dqdt     {:}{:} - -  "dqdt - velocity"  m/s  #BDKi
+typedef   ^        ContinuousStateType R8Ki q        {:}{:} - -  "q - displacement (1:3), and rotation displacement parameters (4:6)" m,-    #BDKi
+typedef   ^        ContinuousStateType  ^   dqdt     {:}{:} - -  "dqdt - velocity"  m/s  #BDKi
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 # Define discrete (nondifferentiable) states here:
-#typedef BeamDyn/BD BD_DiscreteStateType ReKi rot  {3} - - "For filter" -             
-typedef BeamDyn/BD BD_DiscreteStateType ReKi thetaP  - - - "Pitch angle state" -      
-typedef BeamDyn/BD BD_DiscreteStateType ReKi thetaPD  - - - "Pitch rate state" -      
+#typedef   ^        BD_DiscreteStateType ReKi rot  {3} - - "For filter" -             
+typedef   ^        BD_DiscreteStateType ReKi thetaP  - - - "Pitch angle state" -      
+typedef   ^        BD_DiscreteStateType ReKi thetaPD  - - - "Pitch rate state" -      
 
 # Define constraint states here:
-typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, Replace if you have constraint states" -
+typedef   ^        ConstraintStateType ReKi DummyConstrState - - - "A variable, Replace if you have constraint states" -
 
 # Define any data that are not considered actual states here:
 # e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 # at a given time, etc.)
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
-typedef BeamDyn/BD OtherStateType R8Ki  acc        {:}{:} - - "Accerleration in GA2"
-typedef BeamDyn/BD OtherStateType  ^    xcc        {:}{:} - - "Algorithm acceleration in GA2"
+typedef   ^        OtherStateType R8Ki  acc        {:}{:} - - "Acceleration in GA2"
+typedef   ^        OtherStateType  ^    xcc        {:}{:} - - "Algorithm acceleration in GA2"
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-typedef BeamDyn/BD OtherStateType Logical  InitAcc  -  - - "flag to determine if accerlerations have been initialized in updateStates"
+typedef   ^        OtherStateType Logical  InitAcc  -  - - "flag to determine if accerlerations have been initialized in updateStates"
+
+
+# Quadrature point info that does not change throughout the simulation
+#vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#the following are BDKi = R8Ki
+typedef   ^        qpParam       R8Ki        mmm        ::     - - "Mass at current QP" -
+typedef   ^        ^             ^           mEta       :::    - - "Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0" -
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
 
 
 # ..... Parameters
@@ -119,140 +132,179 @@ typedef BeamDyn/BD OtherStateType Logical  InitAcc  -  - - "flag to determine if
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
-typedef BeamDyn/BD ParameterType DbKi   dt     - - -  "module dt" s
-typedef BeamDyn/BD ParameterType DbKi   coef   {9} - -  "GA2 Coefficient" -
-typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"
+typedef   ^        ParameterType DbKi           dt               -         - -  "module dt" s
+typedef   ^        ParameterType DbKi           coef             {9}       - -  "GA2 Coefficient" -
+typedef   ^        ParameterType DbKi           rhoinf           -         - -  "Numerical Damping Coefficient for GA2"
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
-typedef BeamDyn/BD ParameterType R8Ki   uuN0      {:}{:}{:} - -  "Initial Postion Vector" -
-typedef BeamDyn/BD ParameterType  ^     Gauss     {:}{:} - -  "Gauss point postion vector" -
-typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at Gauss point" -
-typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Mass Properties at Gauss point" -
-typedef      ^            ^       ^     gravity   {3} - -  "Gravitational acceleration" m/s^2
-typedef      ^            ^       ^     segment_length   {:}{:} - -  "Array stored length of each segment" -
-typedef      ^            ^       ^     member_length   {:}{:} - -  "Array stored length of each member" -
-typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
-typedef      ^            ^       ^     blade_mass     - - -  "Blade Length" -
-typedef      ^            ^       ^     blade_CG    {3} - -  "Blade Length" -
-typedef      ^            ^       ^     blade_IN    {3}{3} - -  "Blade Length" -
-#typedef      ^            ^       ^     kp_coordinate  {:}{:} - -  "Total number of dofs" -
-typedef      ^            ^       ^     beta   {6} - -  "Damping Coefficient" -
-typedef      ^            ^       ^     tol    - - -  "Tolerance used in stopping criterion" -
-typedef      ^            ^       ^     GlbPos {3} - -  "Initial Position Vector between origins of Global and blade frames" -
-typedef      ^            ^       ^     GlbRot {3}{3} - -  "Initial Rotation Tensor between Global and Blade frames" -
-typedef      ^            ^       ^     Glb_crv {3} - -  "CRV parameters of GlbRot" -
-#typedef      ^            ^       ^     IniDisp {:} - -  "Initial Position Vector between origins of Global and blade frames" -
-#typedef      ^            ^       ^     IniVelo {:} - -  "Initial Position Vector between origins of Global and blade frames" -
-#typedef      ^            ^       ^     GLL {:} - -  "GLL point locations in natural frame" -
-typedef      ^            ^       ^     GL {:} - -  "GL(Gauss) point locations in natural frame" -
-typedef      ^            ^       ^     GLw {:} - -  "Weights at each GL(Gauss) point" -
-typedef      ^            ^       ^     Shp {:}{:} - -  "Shape function matrix" -
-typedef      ^            ^       ^     Der {:}{:} - -  "Derivative of shape function matrix" -
-typedef      ^            ^       ^     Jacobian {:}{:} - -  "Jacobian value at each quadrature point" -
-typedef      ^            ^       ^     rrN0 {:}{:}{:} - -  "Initial relative rotation array" -
-typedef      ^            ^       ^     uu0  {:}{:}{:} - -  "Initial Disp/Rot value at quadrature point " -
-typedef      ^            ^       ^     E10  {:}{:}{:} - -  "Initial E10 at quadrature point" -
+typedef   ^        ParameterType R8Ki           uuN0             {:}{:}{:} - -  "Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)" -
+typedef   ^        ParameterType  ^             QuadPt           {:}{:}    - -  "Quadrature point postion vectors" -
+typedef   ^        ParameterType  ^             Stif0_QP         {:}{:}{:} - -  "Sectional Stiffness Properties at quadrature points (6x6xqp)" -
+typedef   ^        ParameterType  ^             Mass0_QP         {:}{:}{:} - -  "Sectional Mass Properties at quadrature points (6x6xqp)" -
+typedef   ^        ParameterType  ^             gravity          {3}       - -  "Gravitational acceleration" m/s^2
+typedef   ^        ParameterType  ^             segment_length   {:}{:}    - -  "Array stored length of each segment" -
+typedef   ^        ParameterType  ^             member_length    {:}{:}    - -  "Array stored length of each member (index 1: element #; index 2: [1=absolute length;2:=ratio of length to beam length])" -
+typedef   ^        ParameterType  ^             blade_length      -        - -  "Blade Length" -
+typedef   ^        ParameterType  ^             blade_mass        -        - -  "Blade mass" -
+typedef   ^        ParameterType  ^             blade_CG         {3}       - -  "Blade center of gravity" -
+typedef   ^        ParameterType  ^             blade_IN         {3}{3}    - -  "Blade Length" -
+typedef   ^        ParameterType  ^             beta             {6}       - -  "Damping Coefficient" -
+typedef   ^        ParameterType  ^             tol              -         - -  "Tolerance used in stopping criterion" -
+typedef   ^        ParameterType  ^             GlbPos           {3}       - -  "Initial Position Vector between origins of Global and blade frames (BD coordinates)" -
+typedef   ^        ParameterType  ^             GlbRot           {3}{3}    - -  "Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)" -
+typedef   ^        ParameterType  ^             Glb_crv          {3}       - -  "CRV parameters of GlbRot" -
+typedef   ^        ParameterType  ^             QPtN             {:}       - -  "Quadrature (QuadPt) point locations in natural frame [-1, 1]" -
+typedef   ^        ParameterType  ^             QPtWeight        {:}       - -  "Weights at each quadrature point (QuadPt)" -
+typedef   ^        ParameterType  ^             Shp              {:}{:}    - -  "Shape function matrix (index 1 = FE nodes; index 2=quadrature points)" -
+typedef   ^        ParameterType  ^             ShpDer           {:}{:}    - -  "Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points)" -
+typedef   ^        ParameterType  ^             Jacobian         {:}{:}    - -  "Jacobian value at each quadrature point" -
+typedef   ^        ParameterType  ^             uu0              {:}{:}{:} - -  "Initial Disp/Rot value at quadrature point (at T=0)" -
+typedef   ^        ParameterType  ^             rrN0             {:}{:}{:} - -  "Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element)" -
+typedef   ^        ParameterType  ^             E10              {:}{:}{:} - -  "Initial E10 at quadrature point" -
+typedef   ^        ParameterType  ^             SP_Coef          {:}{:}{:} - -  "Coefficients for cubic spline interpolation; index 1 = [1, kp_member-1]; index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms); index 3 = [1,4] (each column of kp_coord)" -
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-typedef      ^            ^     IntKi   node_elem - - -  "Node per element" -
-typedef      ^            ^     IntKi   node_elem_idx {:}{:} - -  "Index to first and last nodes of element in p%node_total sized arrays" -
-#typedef      ^            ^       ^     kp_total  - - -  "Total number of dofs" -
-#typedef      ^            ^       ^     kp_member {:} - -  "Total number of dofs" -
-typedef      ^            ^       ^     refine   - - -  "FE mesh refinement factor for trapezoidal quadrature" -
-typedef      ^            ^       ^     dof_node  - - -  "dof per node" -
-typedef      ^            ^       ^     dof_elem  - - -  "dof per element" -
-typedef      ^            ^       ^     rot_elem  - - -  "rotational dof per element" -
-typedef      ^            ^       ^     elem_total  - - -  "Total number of elements" -
-typedef      ^            ^       ^     node_total  - - -  "Total number of nodes" -
-typedef      ^            ^       ^     dof_total  - - -  "Total number of dofs" -
-typedef      ^            ^       ^     ngp  - - -  "Number of Gauss points" -
-typedef      ^            ^       ^     analysis_type  - - -  "analysis_type flag" -
-typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
-typedef      ^            ^       ^     niter  - - -  "Maximum number of iterations in Newton-Ralphson algorithm"  -
-typedef      ^            ^       ^     quadrature  - - -  "Quadrature method: 1 Gauss 2 Trapezoidal" -
-typedef      ^            ^       ^     n_fact  - - -  "Factorization frequency" -
-#typedef      ^            ^       ^     NRMax  - - -  "Maximum number of iterations in Newton-Ralphson algorithm" -
-typedef      ^            ^      Logical  OutInputs - - -  "Determines if we've asked to output the inputs (do we need mesh transfer?)" -
-typedef      ^            ^      IntKi  NumOuts - - -  "Number of parameters in the output list (number of outputs requested)" -
-typedef      ^     ParameterType OutParmType OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
-typedef      ^     ParameterType IntKi  NNodeOuts - - - "Number of nodes to output data to a file[0 - 9]"	-
-typedef      ^     ParameterType IntKi  OutNd   {9} - - "Nodes whose values will be output"	-
-typedef      ^     ParameterType IntKi  NdIndx  {:} - - "Index into BldMotion mesh (to number the nodes for output without using collocated nodes)"	-
-typedef      ^     ParameterType CHARACTER(20)  OutFmt   - - - "Format specifier" -
-#typedef      ^            ^      ReKi   alpha - - -  "Coefficient for filter" - 
-typedef      ^            ^      Logical UsePitchAct - - -  "Whether to use a pitch actuator inside BeamDyn" (flag) 
-typedef      ^            ^      ReKi   pitchJ - - -  "Pitch actuator inertia" (kg-m^2)
-typedef      ^            ^      ReKi   pitchK - - -  "Pitch actuator stiffness" (kg-m^2/s^2) 
-typedef      ^            ^      ReKi   pitchC - - -  "Pitch actuator damping" - (kg-m^2/s)
-typedef      ^            ^      ReKi   torqM {2}{2} - -  "Pitch actuator matrix: (I-hA)^-1" - 
-
+typedef   ^        ParameterType IntKi          nodes_per_elem   -         - -  "Finite element (GLL) nodes per element" -
+typedef   ^        ParameterType IntKi          node_elem_idx   {:}{:}     - -  "Index to first and last nodes of element in p%node_total sized arrays" -
+typedef   ^        ParameterType IntKi          refine           -         - -  "FE mesh refinement factor for trapezoidal quadrature" -
+typedef   ^        ParameterType IntKi          dof_node         -         - -  "dof per node" -
+typedef   ^        ParameterType IntKi          dof_elem         -         - -  "dof per element" -
+typedef   ^        ParameterType IntKi          rot_elem         -         - -  "rotational dof per element" -
+typedef   ^        ParameterType IntKi          elem_total       -         - -  "Total number of elements" -
+typedef   ^        ParameterType IntKi          node_total       -         - -  "Total number of finite element (GLL) nodes" -
+typedef   ^        ParameterType IntKi          dof_total        -         - -  "Total number of dofs" -
+typedef   ^        ParameterType IntKi          nqp              -         - -  "Number of quadrature points (per element)" -
+typedef   ^        ParameterType IntKi          analysis_type    -         - -  "analysis_type flag" -
+typedef   ^        ParameterType IntKi          damp_flag        -         - -  "damping flag" -
+typedef   ^        ParameterType IntKi          niter            -         - -  "Maximum number of iterations in Newton-Ralphson algorithm"  -
+typedef   ^        ParameterType IntKi          quadrature       -         - -  "Quadrature method: 1 Gauss 2 Trapezoidal" -
+typedef   ^        ParameterType IntKi          n_fact           -         - -  "Factorization frequency" -
+typedef   ^        ParameterType Logical        OutInputs        -         - -  "Determines if we've asked to output the inputs (do we need mesh transfer?)" -
+typedef   ^        ParameterType IntKi          NumOuts          -         - -  "Number of parameters in the output list (number of outputs requested)" -
+typedef   ^        ParameterType OutParmType    OutParam        {:}        - -  "Names and units (and other characteristics) of all requested output parameters"	-
+typedef   ^        ParameterType IntKi          NNodeOuts        -         - -  "Number of nodes to output data to a file[0 - 9]"	-
+typedef   ^        ParameterType IntKi          OutNd           {9}        - -  "Nodes whose values will be output"	-
+typedef   ^        ParameterType IntKi          NdIndx          {:}        - -  "Index into BldMotion mesh (to number the nodes for output without using collocated nodes)"	-
+typedef   ^        ParameterType IntKi          OutNd2NdElem    {:}{:}     - -  "To go from an output node number to a node/elem pair" -
+typedef   ^        ParameterType CHARACTER(20)  OutFmt           -         - -  "Format specifier" -
+typedef   ^        ParameterType Logical        UsePitchAct      -         - -  "Whether to use a pitch actuator inside BeamDyn" (flag) 
+typedef   ^        ParameterType ReKi           pitchJ           -         - -  "Pitch actuator inertia" (kg-m^2)
+typedef   ^        ParameterType ReKi           pitchK           -         - -  "Pitch actuator stiffness" (kg-m^2/s^2) 
+typedef   ^        ParameterType ReKi           pitchC           -         - -  "Pitch actuator damping" - (kg-m^2/s)
+typedef   ^        ParameterType ReKi           torqM           {2}{2}     - -  "Pitch actuator matrix: (I-hA)^-1" - 
+typedef   ^        ParameterType qpParam        qp               -         - -  "Quadrature point info that does not change during simulation" -
+typedef   ^        ParameterType IntKi          qp_indx_offset   -         - -  "Offset for computing index of the quadrature arrays (gauss skips the first [end-point] node)" -
 
 # ..... Inputs
 # ....................................................................................................................
 # Define inputs that are not on this mesh here:
-typedef BeamDyn/BD   InputType  MeshType  RootMotion - - - "contains motion" -
-typedef BeamDyn/BD   InputType  MeshType  PointLoad - - - "Applied point forces along beam axis" -
-typedef BeamDyn/BD   InputType  MeshType  DistrLoad - - - "Applied distributed forces along beam axis" -
-typedef BeamDyn/BD   InputType  MeshType  HubMotion - - - "motion (orientation) at the hub" -
+typedef   ^        InputType  MeshType  RootMotion - - - "contains motion" -
+typedef   ^        InputType  MeshType  PointLoad  - - - "Applied point forces along beam axis" -
+typedef   ^        InputType  MeshType  DistrLoad  - - - "Applied distributed forces along beam axis" -
+typedef   ^        InputType  MeshType  HubMotion  - - - "motion (orientation) at the hub" -
 
 # ..... Outputs
 # ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef BeamDyn/BD   OutputType  MeshType  ReactionForce - - - "contains force and moments" -
-typedef BeamDyn/BD   OutputType  MeshType  BldForce - - - "contains force and moments" -
-typedef BeamDyn/BD   OutputType  MeshType  BldMotion - - - "Motion (disp,rot,vel) along beam axis" -
+typedef   ^        OutputType  MeshType  ReactionForce -  - - "contains force and moments" -
+typedef   ^        OutputType  MeshType  BldMotion     -  - - "Motion (disp,rot,vel, acc) along beam axis" -
 # Define outputs that are not on this mesh here:
-typedef  ^           OutputType  ReKi      RootMxr - - - "x-component of the root reaction moment expressed in r (used for ServoDyn Bladed DLL Interface)" "Nm"
-typedef  ^           OutputType  ReKi      RootMyr - - - "y-component of the root reaction moment expressed in r (used for ServoDyn Bladed DLL Interface)" "Nm"
-typedef  ^           OutputType  ReKi      WriteOutput  {:}  -  -  "Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
+typedef   ^        OutputType  ReKi      RootMxr       -  - - "x-component of the root reaction moment expressed in r (used for ServoDyn Bladed DLL Interface)" "Nm"
+typedef   ^        OutputType  ReKi      RootMyr       -  - - "y-component of the root reaction moment expressed in r (used for ServoDyn Bladed DLL Interface)" "Nm"
+typedef   ^        OutputType  ReKi      WriteOutput  {:} - - "Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
+
+
+
+# ..... EQMotion_QP variables ..................................
+# Variables for equation of motion calculation at current quadrature point.  This will be a subtype of MiscVars.
+# These variables are dimensioned with p%nqp,p%elem_total as the last two dimensions
+#vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#the following are BDKi = R8Ki
+typedef   ^        EqMotionQP      R8Ki        uuu        :::    - - "Displacement and rotation field [u c] at current QP" -
+typedef   ^        EqMotionQP      ^           uup        :::    - - "Derivative of uuu with respect to X at current QP" -
+typedef   ^        EqMotionQP      ^           vvv        :::    - - "Translational velocity and rotational parameter velocity (at current QP)" -
+typedef   ^        EqMotionQP      ^           vvp        :::    - - "Derivative of vvv with respect to X" -
+typedef   ^        EqMotionQP      ^           aaa        :::    - - "Translational acceleration and rotational parameter acceration (at current QP)" -
+
+#This may not be needed at all. Would be useful only if we decide to use something other than the quadrature points for the output mesh.  In that case, don't put it in m%qp%q
+#typedef   ^        EqMotionQP      ^           q          :::    - - "Displacement and rotation for all quadrature points -- Calculated from x%q after solve. size 6 x p%nqp x p%elem_total" -
+
+typedef   ^        EqMotionQP      ^           RR0        ::::   - - "Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$" -
+typedef   ^        EqMotionQP      ^           kappa      :::    - - "Curvature vector \f$ \underline{k} \f$ at current QP (note this is not \kappa, but a term in \kappa)" -
+typedef   ^        EqMotionQP      ^           E1         :::    - - "\vec{e_1} = x_0^\prime + u^\prime (3) at current QP" -
+typedef   ^        EqMotionQP      ^           Stif       ::::   - - "C/S stiffness matrix resolved in inertial frame at current QP. 6x6" -
+
+typedef   ^        EqMotionQP      ^           Fb         :::    - - "Gyroscopic forces at current QP. 6" -
+typedef   ^        EqMotionQP      ^           Fc         :::    - - "Elastic force \f$ \underline{F}^c \f$ at current QP. 6" -
+typedef   ^        EqMotionQP      ^           Fd         :::    - - "Elastic force \f$ \underline{F}^d \f$ at current QP. 6" -
+typedef   ^        EqMotionQP      ^           Fg         :::    - - "Gravity forces at current QP. 6" -
+typedef   ^        EqMotionQP      ^           Fi         :::    - - "Inertial forces at current QP. 6" -
+
+typedef   ^        EqMotionQP      ^           RR0mEta    :::    - - "RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0" -
+typedef   ^        EqMotionQP      ^           rho        ::::   -  - "Tensor of inertia resolved in inertia frame at quadrature point. 3x3" -
+typedef   ^        EqMotionQP      ^           betaC      ::::   - - "No idea.  Used in dissipative force.  6x6" -
+
+# Inertial force terms
+typedef   ^        EqMotionQP      ^           Gi         ::::   - - "Gyroscopic matrix for inertial force. 6x6" -
+typedef   ^        EqMotionQP      ^           Ki         ::::   - - "Stiffness matrix for inertial force. 6x6" -
+typedef   ^        EqMotionQP      ^           Mi         ::::   - - "Mass matrix for inertial force. 6x6" -
+
+# Elastic force terms
+typedef   ^        EqMotionQP      ^           Oe         ::::   - - "\f$ \underline{\underline{\mathcal{O}}} \f$ from equation (19) of NREL CP-2C00-60759. 6x6" -
+typedef   ^        EqMotionQP      ^           Pe         ::::   - - "\f$ \underline{\underline{\mathcal{P}}} \f$ from equation (20) of NREL CP-2C00-60759. 6x6" -
+typedef   ^        EqMotionQP      ^           Qe         ::::   - - "\f$ \underline{\underline{\mathcal{Q}}} \f$ from equation (21) of NREL CP-2C00-60759. 6x6" -
+
+# Disspipative terms
+typedef   ^        EqMotionQP      ^           Gd         :::: - - "Dissipative term for gyroscopic term. 6x6" -
+typedef   ^        EqMotionQP      ^           Od         :::: - - "Dissipative term on O. 6x6" -
+typedef   ^        EqMotionQP      ^           Pd         :::: - - "Dissipative term on P. 6x6" -
+typedef   ^        EqMotionQP      ^           Qd         :::: - - "Dissipative term on Q. 6x6" -
+typedef   ^        EqMotionQP      ^           Sd         :::: - - "Dissipative term on S. 6x6" -
+typedef   ^        EqMotionQP      ^           Xd         :::: - - "Dissipative term on X. 6x6" -
+typedef   ^        EqMotionQP      ^           Yd         :::: - - "Dissipative term on Y. 6x6" -
+#end of BDKi-type variables
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef ^    MiscVarType    MeshType    u_DistrLoad_at_y - - - "input loads at output node locations" -
-typedef ^    MiscVarType    MeshType    y_BldMotion_at_u - - - "output motions at input node locations (displacements necessary for mapping loads)" -
-typedef ^    MiscVarType    MeshMapType Map_u_DistrLoad_to_y - - - "mapping of input loads to output node locations" -
-typedef ^    MiscVarType    MeshMapType Map_y_BldMotion_to_u - - - "mapping of output motions to input node locations (for load transfer)" -
-typedef ^      ^            IntKi       Un_Sum  -  -  -  "unit number of summary file"	-
+typedef   ^        MiscVarType    MeshType    u_DistrLoad_at_y     - - - "input loads at output node locations" -
+typedef   ^        MiscVarType    MeshType    y_BldMotion_at_u     - - - "output motions at input node locations (displacements necessary for mapping loads)" -
+typedef   ^        MiscVarType    MeshMapType Map_u_DistrLoad_to_y - - - "mapping of input loads to output node locations" -
+typedef   ^        MiscVarType    MeshMapType Map_y_BldMotion_to_u - - - "mapping of output motions to input node locations (for load transfer)" -
+typedef   ^        MiscVarType    IntKi       Un_Sum               - - - "unit number of summary file"	-
+typedef   ^        MiscVarType    EqMotionQP  qp                   - - - "Quadrature point calculation info" -
 
 #
 # these are temporary variables placed in a type so we don't allocate and deallocate each time step
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
-typedef ^    MiscVarType    R8Ki Nuuu         {:}{:}        - - "" -
-typedef ^    MiscVarType    R8Ki Nrrr         {:}{:}        - - "" -
-typedef ^    MiscVarType    R8Ki Nvvv         {:}{:}        - - "" -
-typedef ^    MiscVarType    R8Ki Naaa         {:}{:}        - - "" -
-typedef ^    MiscVarType    R8Ki temp_Naaa    {:}{:}        - - "" -
-typedef ^    MiscVarType    R8Ki temp_Nvvv    {:}{:}        - - "" -
-typedef ^    MiscVarType    R8Ki elf          {:}{:}        - - "" -
-typedef ^    MiscVarType    R8Ki elk          {:}{:}{:}{:}  - - "" -
-typedef ^    MiscVarType    R8Ki elg          {:}{:}{:}{:}  - - "" -
-typedef ^    MiscVarType    R8Ki elm          {:}{:}{:}{:}  - - "" -
-typedef ^    MiscVarType    R8Ki EStif0_GL    {:}{:}{:}     - - "" -
-typedef ^    MiscVarType    R8Ki EMass0_GL    {:}{:}{:}     - - "" -
-typedef ^    MiscVarType    R8Ki DistrLoad_GL {:}{:}        - - "" -
-typedef ^    MiscVarType    R8Ki StifK_LU     {:}{:}{:}{:}  - - "Stiffness Matrix for LU" -
-typedef ^    MiscVarType    R8Ki StifK        {:}{:}{:}{:}  - - "Stiffness Matrix" -
-typedef ^    MiscVarType    R8Ki MassM        {:}{:}{:}{:}  - - "Mass Matrix" -
-typedef ^    MiscVarType    R8Ki DampG        {:}{:}{:}{:}  - - "Damping Matrix" -
-typedef ^    MiscVarType    R8Ki RHS          {:}{:}        - - "Right-hand-side vector" -
-typedef ^    MiscVarType    R8Ki RHS_LU       {:}{:}        - - "Right-hand-side vector for LU" -
-typedef ^    MiscVarType    R8Ki F_PointLoad  {:}{:}        - - "F_PointLoad vector" -
-typedef ^    MiscVarType    R8Ki temp_Force   {:}{:}        - - "temporary force array used in dynamic calculations" -
-typedef ^    MiscVarType    R8Ki Solution     {:}{:}        - - "Result from LAPACK solve (X from A*X = B solve)" -
-# arrays for lapack routines
-typedef ^    MiscVarType    R8Ki LP_StifK     {:}{:}    - - "Stiffness Matrix" -
-typedef ^    MiscVarType    R8Ki LP_MassM     {:}{:}    - - "Mass Matrix" -
-typedef ^    MiscVarType    R8Ki LP_DampG     {:}{:}    - - "Damping Matrix" -
-typedef ^    MiscVarType    R8Ki LP_RHS       {:}       - - "Right-hand-side vector" -
-typedef ^    MiscVarType    R8Ki LP_StifK_LU  {:}{:}    - - "Stiffness Matrix for LU" -
-typedef ^    MiscVarType    R8Ki LP_RHS_LU    {:}       - - "Right-hand-side vector for LU" -
+typedef   ^        MiscVarType    R8Ki         Nrrr         :::           - - "Rotation parameters relative to root node, from Nuuu (at GLL points)" -
+typedef   ^        MiscVarType    ^            elf          {:}{:}{:}     - - "" -
+typedef   ^        MiscVarType    ^            elk          {:}{:}{:}{:}  - - "" -
+typedef   ^        MiscVarType    ^            elg          {:}{:}{:}{:}  - - "" -
+typedef   ^        MiscVarType    ^            elm          {:}{:}{:}{:}  - - "" -
+typedef   ^        MiscVarType    ^            DistrLoad_QP {:}{:}{:}     - - "" -
+typedef   ^        MiscVarType    ^            StifK_LU     {:}{:}{:}{:}  - - "Stiffness Matrix for LU" -
+typedef   ^        MiscVarType    ^            StifK        {:}{:}{:}{:}  - - "Stiffness Matrix" -
+typedef   ^        MiscVarType    ^            MassM        {:}{:}{:}{:}  - - "Mass Matrix" -
+typedef   ^        MiscVarType    ^            DampG        {:}{:}{:}{:}  - - "Damping Matrix" -
+typedef   ^        MiscVarType    ^            RHS          {:}{:}        - - "Right-hand-side vector" -
+typedef   ^        MiscVarType    ^            BldInternalForce   {:}{:}  - - "temporary force array used in dynamic calculations" -
+typedef   ^        MiscVarType    ^            Solution     {:}{:}        - - "Result from LAPACK solve (X from A*X = B solve)" -
+# arrays for lapack routines                 
+typedef   ^        MiscVarType    ^            LP_StifK     {:}{:}        - - "Stiffness Matrix" -
+typedef   ^        MiscVarType    ^            LP_MassM     {:}{:}        - - "Mass Matrix" -
+typedef   ^        MiscVarType    ^            LP_DampG     {:}{:}        - - "Damping Matrix" -
+typedef   ^        MiscVarType    ^            LP_RHS       {:}           - - "Right-hand-side vector" -
+typedef   ^        MiscVarType    ^            LP_StifK_LU  {:}{:}        - - "Stiffness Matrix for LU" -
+typedef   ^        MiscVarType    ^            LP_RHS_LU    {:}           - - "Right-hand-side vector for LU" -
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-typedef ^    MiscVarType    IntKi    LP_indx  {:}      - - "Index vector for LU" -
-typedef ^    MiscVarType    BD_InputType u     -        - - "Inputs converted to the internal BD coordinate system" -
-typedef ^    MiscVarType    BD_InputType u2    -        - - "Inputs in the FAST coordinate system, possibly modified by pitch actuator" -
+typedef   ^        MiscVarType    IntKi        LP_indx      {:}           - - "Index vector for LU" -
+typedef   ^        MiscVarType    BD_InputType u             -            - - "Inputs converted to the internal BD coordinate system" -
+typedef   ^        MiscVarType    BD_InputType u2            -            - - "Inputs in the FAST coordinate system, possibly modified by pitch actuator" -
 
 
