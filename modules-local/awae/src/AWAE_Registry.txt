@@ -35,6 +35,7 @@ typedef  ^            AWAE_InputFileType  ReKi            OutDisWindX       {:} 
 typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindXZ      -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^            AWAE_InputFileType  ReKi            OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
 typedef  ^            AWAE_InputFileType  DbKi            WrDisDT           -  - -   "The time between vtk outputs [must be a multiple of the low resolution time step]" s
+typedef  ^            AWAE_InputFileType  LOGICAL         ChkWndFiles    - - -  "Check all the ambient wind files for data consistency (flag)" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
