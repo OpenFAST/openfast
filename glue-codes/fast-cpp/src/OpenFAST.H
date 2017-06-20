@@ -241,7 +241,7 @@ class OpenFAST {
   int get_numForcePtsLoc(int iTurbLoc) { return 1 + numBlades[iTurbLoc]*numForcePtsBlade[iTurbLoc] + numForcePtsTwr[iTurbLoc]; }
 
   void loadSuperController(const fastInputs & fi);
-  void fastScInputOutput() ;
+  void fastScInputOutput(std::vector<SC_InputType_t> & scIT_from_FAST, std::vector<float> & scIT, std::vector<float> & scOT, std::vector<SC_OutputType_t> & scOT_to_FAST) ;
   void scAdvanceTime() ;
 
   void setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, OpFM_OutputType_t cDriver_Output_to_FAST) ; // An example to set velocities at the Aerodyn nodes

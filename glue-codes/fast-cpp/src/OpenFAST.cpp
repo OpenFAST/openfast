@@ -159,6 +159,11 @@ void fast::OpenFAST::solution0() {
     //     setOutputsToFAST(cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
     // }
      
+      
+     if (scStatus) {
+         fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_np1, scOutputsTurbine_np1, scOutputsTurbine_to_FAST);
+     }
+     
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
 
        FAST_OpFM_Solution0(&iTurb, &ErrStat, ErrMsg);
@@ -169,8 +174,8 @@ void fast::OpenFAST::solution0() {
      timeZero = false;
 
      if (scStatus) {
-         fastScInputOutput();
-         scAdvanceTime();
+       sc.calcOutputs(scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
+       fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_n, scOutputsTurbine_n, scOutputsTurbine_to_FAST);
      }
   }
 
@@ -222,7 +227,7 @@ void fast::OpenFAST::step() {
    if(scStatus) {
        sc.updateStates(scInputsGlob_n, scInputsTurbine_n); // Predict state at 'n+1' based on inputs
        sc.calcOutputs(scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
-       fastScInputOutput();
+       fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_np1, scOutputsTurbine_np1, scOutputsTurbine_to_FAST);
    }
 
    nt_global = nt_global + 1;
@@ -268,7 +273,7 @@ void fast::OpenFAST::stepNoWrite() {
    if(scStatus) {
        sc.updateStates(scInputsGlob_n, scInputsTurbine_n); // Predict state at 'n+1' based on inputs
        sc.calcOutputs(scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
-       fastScInputOutput();
+       fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_np1, scOutputsTurbine_np1, scOutputsTurbine_to_FAST);
    }
 
    nt_global = nt_global + 1;
@@ -977,35 +982,35 @@ void fast::OpenFAST::loadSuperController(const fast::fastInputs & fi) {
 }
 
 
-void fast::OpenFAST::fastScInputOutput() {
+void fast::OpenFAST::fastScInputOutput(std::vector<SC_InputType_t> & scIT_from_FAST, std::vector<float> & scIT, std::vector<float> & scOT, std::vector<SC_OutputType_t> & scOT_to_FAST) {
   
-  // Fills the global array containing inputs to the supercontroller from all turbines
-
-  for(int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-    for(int iInput=0; iInput < numScInputsTurbine; iInput++) {
-      scInputsTurbine_np1[iTurb*numScInputsTurbine + iInput] = 0.0; // Initialize to zero 
+    // Transfers
+    // scIT <------ scIT_from_FAST 
+    // scOT_to_FAST <------- scOT
+    
+    for(int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
+        for(int iInput=0; iInput < numScInputsTurbine; iInput++) {
+            scIT[iTurb*numScInputsTurbine + iInput] = 0.0; // Initialize to zero 
+        }
     }
-  }
-  
-  for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-    for(int iInput=0; iInput < numScInputsTurbine; iInput++) {
-      scInputsTurbine_np1[turbineMapProcToGlob[iTurb]*numScInputsTurbine + iInput] = scInputsTurbine_from_FAST[iTurb].toSC[iInput] ;
+    
+    for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+        for(int iInput=0; iInput < numScInputsTurbine; iInput++) {
+            scIT[turbineMapProcToGlob[iTurb]*numScInputsTurbine + iInput] = scIT_from_FAST[iTurb].toSC[iInput] ;
+        }
     }
-  }
-  
-  if (MPI_COMM_NULL != fastMPIComm) {
-    MPI_Allreduce(MPI_IN_PLACE, scInputsTurbine_np1.data(), numScInputsTurbine*nTurbinesGlob, MPI_DOUBLE, MPI_SUM, fastMPIComm) ;
-  }
-
-
-  // Fills the local array containing outputs from the supercontroller to each turbine
-  
-  for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-      for(int iOutput=0; iOutput < numScOutputsTurbine; iOutput++) {
-          scOutputsTurbine_to_FAST[iTurb].fromSC[iOutput] = scOutputsTurbine_np1[turbineMapProcToGlob[iTurb]*numScOutputsTurbine + iOutput] ;
-      }
-  }
-
+    
+    if (MPI_COMM_NULL != fastMPIComm) {
+        MPI_Allreduce(MPI_IN_PLACE, scIT.data(), numScInputsTurbine*nTurbinesGlob, MPI_DOUBLE, MPI_SUM, fastMPIComm) ;
+    }
+    
+    
+    for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+        for(int iOutput=0; iOutput < numScOutputsTurbine; iOutput++) {
+            scOT_to_FAST[iTurb].fromSC[iOutput] = scOT[turbineMapProcToGlob[iTurb]*numScOutputsTurbine + iOutput] ;
+        }
+    }
+    
 }
 
 
