@@ -42,6 +42,14 @@ def exitWithDirNotFound(dir):
 def exitWithFileNotFound(file):
     exitWithError("File does not exist: {}\n".format(file))
 
+def ignoreBaselineItems(directory, contents):
+    itemFilter = ['linux-intel', 'macos-gnu', 'windows-intel']
+    caught = []
+    for c in contents:
+        if c in itemFilter:
+            caught.append(c)
+    return tuple(caught)
+
 ##### Main program
 
 ### Determine python version
@@ -143,7 +151,7 @@ for data in ["5MW_Baseline", "AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
         shutil.copytree(os.path.join(moduleDirectory, data), dataDir)
 
 if not os.path.isdir(testBuildDirectory):
-    shutil.copytree(inputsDirectory, testBuildDirectory)
+    shutil.copytree(inputsDirectory, testBuildDirectory, ignore=ignoreBaselineItems)
 
 ### Run openfast on the test case
 caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
