@@ -112,10 +112,10 @@ class OpenFAST {
   int numScInputsTurbine;   // # inputs to the supercontroller == # outputs from the controller == NumCtrl2SC
   int numScOutputsGlob;  // # outputs from the supercontroller == # inputs to glob == NumSC2Ctrl
   int numScInputsGlob;   // # inputs to the supercontroller == # outputs from glob == NumCtrl2SC
-  std::vector<double> scOutputsTurbine;  // # outputs from the supercontroller for turbines
-  std::vector<double> scInputsTurbine;   // # inputs to the supercontroller from turbines
-  std::vector<double> scOutputsGlob;  // # outputs from the supercontroller for glob
-  std::vector<double> scInputsGlob;   // # inputs to the supercontroller from glob
+  std::vector<float> scOutputsTurbine;  // # outputs from the supercontroller for turbines
+  std::vector<float> scInputsTurbine;   // # inputs to the supercontroller from turbines
+  std::vector<float> scOutputsGlob;  // # outputs from the supercontroller for glob
+  std::vector<float> scInputsGlob;   // # inputs to the supercontroller from glob
 
   std::vector<std::vector<std::vector<double> > > forceNodeVel; // Velocity at force nodes - Store temporarily to interpolate to the velocity nodes
   std::vector<std::vector<double> > velNodeData; // Position and velocity data at the velocity (aerodyn) nodes - (nTurbines, nTimesteps * nPoints * 6)

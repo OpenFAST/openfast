@@ -435,7 +435,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
    INTEGER(C_INT),         INTENT(IN   ) :: TurbID           ! Need not be same as iTurb
    INTEGER(C_INT),         INTENT(IN   ) :: NumSC2Ctrl       ! Supercontroller outputs = controller inputs
    INTEGER(C_INT),         INTENT(IN   ) :: NumCtrl2SC       ! controller outputs = Supercontroller inputs
-   REAL(C_FLOAT),          INTENT(IN   ) :: InitScOutputsTurbine (:) ! Initial Supercontroller outputs = controller inputs
+   REAL(C_FLOAT),          INTENT(IN   ) :: InitScOutputsTurbine (*) ! Initial Supercontroller outputs = controller inputs
    INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsBlade ! number of actuator line force points in blade
    INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsTower ! number of actuator line force points in tower
    REAL(C_FLOAT),          INTENT(IN   ) :: TurbPosn(3)      

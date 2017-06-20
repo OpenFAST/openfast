@@ -1,4 +1,4 @@
-#include "SC.h"
+#include "SC.H"
 
 SuperController::SuperController():
 nInputsTurbine(0),
@@ -78,12 +78,13 @@ void SuperController::init(int nTurbinesGlob) {
 
   turbineStates.resize(nTurbines*nTurbineStates);
   turbineStates_np1.resize(nTurbines*nTurbineStates);
-  
+
+  globStates[0] = 0.0 ;// Initialize time to zero
   // Initialize the turbine states at time zero - Not sure how to do this. May be call calcOut?
  
 }
 
-void SuperController::calcOutputs(std::vector<double> & sc_inputsGlob, std::vector<double> & sc_inputsTurbine, std::vector<double> & sc_outputsGlob, std::vector<double> & sc_outputsTurbine) {
+void SuperController::calcOutputs(std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine, std::vector<float> & sc_outputsGlob, std::vector<float> & sc_outputsTurbine) {
 
     sc_calcOutputs(nTurbines, nInputsGlob, sc_inputsGlob, nInputsTurbine, sc_inputsTurbine, nGlobStates, globStates, nTurbineStates, turbineStates, nOutputsGlob, sc_outputsGlob, nOutputsTurbine, sc_outputsTurbine);   
 
@@ -103,7 +104,7 @@ void SuperController::advanceStates() {
 
 }
 
-void SuperController::updateStates(std::vector<double> & sc_inputsGlob, std::vector<double> & sc_inputsTurbine) {
+void SuperController::updateStates(std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine) {
 
 
   // Meaning of scInputs
@@ -185,21 +186,21 @@ int SuperController::readRestartFile(int n_t_global) {
 
   if (nGlobStates > 0) {
     hid_t dataSet = H5Dopen2(restartFile, "/globStates", H5P_DEFAULT);
-    herr_t status = H5Dread(dataSet, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates.data());
+    herr_t status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates.data());
     status = H5Dclose(dataSet);
 
     dataSet = H5Dopen2(restartFile, "/globStates_np1", H5P_DEFAULT);
-    status = H5Dread(dataSet, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates_np1.data());
+    status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates_np1.data());
     status = H5Dclose(dataSet);
   }
   
   if (nTurbineStates > 0) {
     hid_t dataSet = H5Dopen2(restartFile, "turbineStates", H5P_DEFAULT);
-    herr_t status = H5Dread(dataSet, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates.data());
+    herr_t status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates.data());
     status = H5Dclose(dataSet);
 
     dataSet = H5Dopen2(restartFile, "turbineStates_np1", H5P_DEFAULT);
-    status = H5Dread(dataSet, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates_np1.data());
+    status = H5Dread(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates_np1.data());
     status = H5Dclose(dataSet);
   }
 
@@ -273,15 +274,15 @@ int SuperController::writeRestartFile(int n_t_global) {
     hsize_t dims[1];
     dims[0] = nGlobStates;
     hid_t dataSpace = H5Screate_simple(1, dims, NULL);
-    hid_t dataSet = H5Dcreate2(restartFile, "/globStates", H5T_NATIVE_DOUBLE, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);    
-    herr_t status = H5Dwrite(dataSet, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates.data());
+    hid_t dataSet = H5Dcreate2(restartFile, "/globStates", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);    
+    herr_t status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates.data());
     
     status = H5Dclose(dataSet);
     status = H5Sclose(dataSpace);
 
     dataSpace = H5Screate_simple(1, dims, NULL);
-    dataSet = H5Dcreate2(restartFile, "/globStates_np1", H5T_NATIVE_DOUBLE, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);    
-    status = H5Dwrite(dataSet, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates_np1.data());
+    dataSet = H5Dcreate2(restartFile, "/globStates_np1", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);    
+    status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, globStates_np1.data());
     
     status = H5Dclose(dataSet);
     status = H5Sclose(dataSpace);
@@ -296,15 +297,15 @@ int SuperController::writeRestartFile(int n_t_global) {
     dims[1] = nTurbineStates;
 
     hid_t dataSpace = H5Screate_simple(2, dims, NULL);
-    hid_t dataSet = H5Dcreate2(restartFile, "turbineStates", H5T_NATIVE_DOUBLE, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);    
-    herr_t status = H5Dwrite(dataSet, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates.data());
+    hid_t dataSet = H5Dcreate2(restartFile, "turbineStates", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);    
+    herr_t status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates.data());
     
     status = H5Dclose(dataSet);
     status = H5Sclose(dataSpace);
 
     dataSpace = H5Screate_simple(2, dims, NULL);
-    dataSet = H5Dcreate2(restartFile, "turbineStates_np1", H5T_NATIVE_DOUBLE, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);    
-    status = H5Dwrite(dataSet, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates_np1.data());
+    dataSet = H5Dcreate2(restartFile, "turbineStates_np1", H5T_NATIVE_FLOAT, dataSpace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);    
+    status = H5Dwrite(dataSet, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, turbineStates_np1.data());
     
     status = H5Dclose(dataSet);
     status = H5Sclose(dataSpace);
