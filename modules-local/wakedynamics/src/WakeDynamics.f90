@@ -670,7 +670,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'WD_UpdateStates'
    real(ReKi)                                   :: dx, norm2_xhat_plane  
-   real(ReKi)                                   :: dy_HWkDfl(3)
+   real(ReKi)                                   :: dy_HWkDfl(3), EddyTermA, EddyTermB, lstar, Vx_wake_min
    integer(intKi)                               :: i,j, maxPln
    
    errStat = ErrID_None
@@ -707,26 +707,70 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
    maxPln = min(n+2,p%NumPlanes-1)
 
-   call ComputeEddyViscosity(maxPln+1, p, xd, m, dx, errStat2, errMsg2)
-      call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)   
-      if (errStat >= AbortErrLev) then       
-         call Cleanup()
-         return
-      end if
+      ! create eddy viscosity info for most downstream plane
+   i = maxPln+1
+   lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
    
+   Vx_wake_min = huge(ReKi)
+   do j = 0,p%NumRadii-1
+      Vx_wake_min = min(Vx_wake_min, xd%Vx_wake(j,i-1))
+   end do
+        
+   EddyTermA = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vAmb_DMin, p%C_vAmb_DMax, p%C_vAmb_FMin, p%C_vAmb_Exp) * p%k_vAmb * xd%TI_amb_filt(i-1) * xd%Vx_wind_disk_filt(i-1) * xd%D_rotor_filt(i-1)/2.0_ReKi
+   EddyTermB = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vShr_DMin, p%C_vShr_DMax, p%C_vShr_FMin, p%C_vShr_Exp) * p%k_vShr
+   do j = 0,p%NumRadii-1      
+      if ( j == 0 ) then
+         m%dvdr(j) =   0.0_ReKi
+      elseif (j <= p%NumRadii-2) then
+         m%dvdr(j) = ( xd%Vx_wake(j+1,i-1) - xd%Vx_wake(j-1,i-1) ) / (2_ReKi*p%dr)
+      else
+         m%dvdr(j) = - xd%Vx_wake(j-1,i-1)  / (2_ReKi*p%dr)
+      end if
+       !     All of the following states are at [n] 
+      m%vt_amb(j,i-1) = EddyTermA
+      m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(m%dvdr(j)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
+      m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1)                                                   
+   end do   
+  
       ! We are going to update Vx_Wake
       ! The quantities in these loops are all at time [n], so we need to compute prior to updating the states to [n+1]
    do i = maxPln, 1, -1  
+    
+      lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
+
+         ! The following two quantities need to be for the time increments:
+         !           [n+1]             [n]
+         ! dx      = xd%x_plane(i) - xd%x_plane(i-1)
+         ! This is equivalent to
       
+      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT
       
-      call ComputeEddyViscosity(i, p, xd, m, dx, errStat2, errMsg2)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName)   
-         if (errStat >= AbortErrLev) then         
-            call Cleanup()
-            return
+      if ( EqualRealNos(dx, 0.0_ReKi) .or. dx < 0.0_ReKi) then
+         ! TEST: E2
+         call SetErrStat(ErrID_FATAL, 'Downwind advection speed of a wake plane is not positive, i.e., dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*DT<= 0', errStat, errMsg, RoutineName)   
+         return
+      end if
+      
+      Vx_wake_min = huge(ReKi)
+      do j = 0,p%NumRadii-1
+         Vx_wake_min = min(Vx_wake_min, xd%Vx_wake(j,i-1))
+      end do
+        
+      EddyTermA = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vAmb_DMin, p%C_vAmb_DMax, p%C_vAmb_FMin, p%C_vAmb_Exp) * p%k_vAmb * xd%TI_amb_filt(i-1) * xd%Vx_wind_disk_filt(i-1) * xd%D_rotor_filt(i-1)/2.0_ReKi
+      EddyTermB = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vShr_DMin, p%C_vShr_DMax, p%C_vShr_FMin, p%C_vShr_Exp) * p%k_vShr
+      do j = 0,p%NumRadii-1      
+         if ( j == 0 ) then
+          m%dvdr(j) =   0.0_ReKi
+         elseif (j <= p%NumRadii-2) then
+            m%dvdr(j) = ( xd%Vx_wake(j+1,i-1) - xd%Vx_wake(j-1,i-1) ) / (2_ReKi*p%dr)
+         else
+            m%dvdr(j) = - xd%Vx_wake(j-1,i-1)  / (2_ReKi*p%dr)
          end if
-      
-      
+            ! All of the following states are at [n] 
+         m%vt_amb(j,i-1) = EddyTermA
+         m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(m%dvdr(j)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
+         m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1)                                                   
+      end do
       
          ! All of the m%a,m%b,m%c,m%d vectors use states at time increment [n]
          ! These need to be inside another radial loop because m%dvtdr depends on the j+1 and j-1 indices of m%vt()
@@ -798,10 +842,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       end do  
    end do ! i = 1,min(n+2,p%NumPlanes-1) 
  
-      ! Set the last wake plane's eddy viscosity terms equal to the previous wake plane values.  This is for output writing purposes only.
-   m%vt_amb(:,maxPln) = m%vt_amb(:,maxPln-1)
-   m%vt_shr(:,maxPln) = m%vt_shr(:,maxPln-1)
-   m%vt_tot(:,maxPln) = m%vt_tot(:,maxPln-1)
+
       
       ! Update states at disk-plane to [n+1] 
       

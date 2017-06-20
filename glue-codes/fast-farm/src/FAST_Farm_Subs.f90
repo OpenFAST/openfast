@@ -1623,7 +1623,7 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
       call WD_UpdateStates( t, n, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
                      farm%WD(nt)%OtherSt, farm%WD(nt)%m, ErrStatWD, ErrMsgWD )         
          call SetErrStat(ErrStatWD, ErrMsgWD, ErrStatWD, ErrMsgWD, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
-               
+           ! TODO: Need a way to report errors from each turbine.  Right now they could be overwritten    
    END DO
    
    if (ErrStatWD >= AbortErrLev) return
