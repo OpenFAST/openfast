@@ -44,7 +44,7 @@ function(of_regression testname LABELS)
        ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
   )
   # limit each test to 45 minutes: 2700s
-  set_tests_properties(${testname} PROPERTIES TIMEOUT 2700 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
+  set_tests_properties(${testname} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
 endfunction(of_regression)
 
 function(bd_regression testname)
@@ -71,7 +71,7 @@ function(bd_regression testname)
   )
   # limit each test to 45 minutes: 2700s
   set(LABELS beamdyn regression)
-  set_tests_properties(${testname} PROPERTIES TIMEOUT 2700 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
+  set_tests_properties(${testname} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
 endfunction(bd_regression)
 
 #===============================================================================
