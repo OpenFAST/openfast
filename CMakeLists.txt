@@ -110,8 +110,7 @@ endif()
 
 option(BUILD_TESTING "Build the testing tree." OFF)
 if(BUILD_TESTING)
-  include(reg_tests/CMakeLists.txt)
-  #add_subdirectory(reg_tests)
+  add_subdirectory(reg_tests)
 endif()
 
 add_subdirectory(glue-codes)
