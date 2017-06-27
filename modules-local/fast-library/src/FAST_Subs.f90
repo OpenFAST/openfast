@@ -4256,17 +4256,18 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       
    END IF
       
-   
-   IF ( p_FAST%CompElast == Module_BD ) THEN
-      if (n_t_global > 2) then ! this should probably be related to p_FAST%InterpOrder
+      ! set number of corrections to be used for this time step:
+   IF ( p_FAST%CompElast == Module_BD ) THEN ! BD accelerations have fewer spikes with these corrections on the first several time steps
+      if (n_t_global > 2) then ! this 2 should probably be related to p_FAST%InterpOrder
          NumCorrections = p_FAST%NumCrctn
       elseif (n_t_global == 0) then
          NumCorrections = max(p_FAST%NumCrctn,16)
       else      
          NumCorrections = max(p_FAST%NumCrctn,1)
       end if
-   END IF
-   
+   ELSE
+      NumCorrections = p_FAST%NumCrctn
+   END IF   
    
       ! the ServoDyn inputs from Simulink are for t, not t+dt, so we're going to overwrite the inputs from
       ! the previous step before we extrapolate these inputs:
