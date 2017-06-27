@@ -34,47 +34,6 @@ MODULE WakeDynamics_IO
       
 contains
    
-   
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WD_PrintSum(  p, u, y, ErrStat, ErrMsg )
-! This routine generates the summary file, which contains a summary of input file options.
-
-      ! passed variables
-   !TYPE(WD_InitInput),        INTENT(IN)  :: InputFileData                        ! Input-file data
-   TYPE(WD_ParameterType),    INTENT(IN)  :: p                                    ! Parameters
-   TYPE(WD_InputType),        INTENT(IN)  :: u                                    ! inputs 
-   TYPE(WD_OutputType),       INTENT(IN)  :: y                                    ! outputs
-   INTEGER(IntKi),            INTENT(OUT) :: ErrStat
-   CHARACTER(*),              INTENT(OUT) :: ErrMsg
-
-
-      ! Local variables.
-
-   INTEGER(IntKi)               :: I                                               ! Index for the nodes.
-   INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
-
-   CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,1(:,F13.3))'                ! Format for outputting mass and modal data.
-   CHARACTER(*), PARAMETER      :: FmtDatT   = '(A,T35,1(:,F13.8))'                ! Format for outputting time steps.
-
-   CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
-   CHARACTER(100)               :: Msg                                             ! temporary string for writing appropriate text to summary file
-
-   ! Open the summary file and give it a heading.
-      
-   CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
-   CALL OpenFOutFile ( UnSu, TRIM( p%OutFileRoot )//'.sum', ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
- 
-
-   CLOSE(UnSu)
-
-RETURN
-END SUBROUTINE WD_PrintSum
-!----------------------------------------------------------------------------------------------------------------------------------
-
 
 
 END MODULE WakeDynamics_IO

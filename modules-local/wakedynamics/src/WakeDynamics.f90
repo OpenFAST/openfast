@@ -26,12 +26,13 @@ module WakeDynamics
     
    use NWTC_Library
    use WakeDynamics_Types
-   use WakeDynamics_IO
      
    implicit none
 
    private
-         
+   
+   type(ProgDesc), parameter  :: WD_Ver = ProgDesc( 'WakeDynamics', 'v00.01.00', '21-Sep-2016' )
+   character(*),   parameter  :: WD_Nickname = 'WD'      
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -50,6 +51,27 @@ module WakeDynamics
   
    contains  
 
+!function  GJH_Interp ( yTarget, xArr, yArr )
+!   real(ReKi)                     :: GJH_Interp
+!   real(ReKi),      intent(in   ) :: yTarget
+!   real(ReKi),      intent(in   ) :: xArr(:) 
+!   real(ReKi),      intent(in   ) :: yArr(:)
+!   
+!   integer(IntKi)  :: ncross
+!   real(ReKi)      :: y1,y2
+!   ncross = 0
+!   y1 = yArr(1) - yTarget
+!   do i=2,size(xArr)-1
+!      y2 = yArr(i) - yTarget   
+!      if( nint( sign(1.0_ReKi, y1) ) /= nint( sign(1.0_ReKi, y2) ) ) then
+!         ncross = ncross + 1
+!         if (ncross == 2) GJH_Interp = y2
+!      end if
+!      
+!      y1=y2
+!   end do
+!   
+!end function GJH_Interp
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This function sets the nacelle-yaw-related directional term for the yaw correction deflection calculations
 !!   
@@ -130,9 +152,7 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
    real(ReKi) :: m(0:nr-1)
    integer(IntKi) :: i
    ILo = 0
-   
-   ! TODO: We no longer need error handling in this routine.  Remove errStat and errMsg
-   
+    
    ! Any errors due to invalid values of dr and C_WakeDiam have been raised when this module was initialized
    
    select case ( Mod_WakeDiam )
@@ -144,6 +164,9 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
          
             ! Ensure the wake diameter is at least as large as the rotor diameter   
          ! TODO: InterpBin assume monotonic, one-to-one mapping, and this is not guaranteed for Vx_wake.  NEED NEW ALGO. GJH
+         !Here is an example curve for Vx_wake:
+         ! [0.0000000E+00,-0.1732988,-1.475719,-3.237534,-3.103220,-2.988648,-3.159560,-3.382733,-3.633807,-3.875628,-3.690545,-3.722210,-3.773840,-3.267874,-1.185296,4.0265087E-02,-4.7604232E-03,-4.2291398E-05,2.7738308E-04,-1.3021289E-04,4.5997433E-05,-1.1811796E-05,2.5355919E-06,-6.2027152E-07,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00]
+         
          WakeDiam = max(D_rotor, 2.0_ReKi*InterpBin( (C_WakeDiam-1_ReKi)*Vx_wind_disk, Vx_wake, rArr, ILo, nr )  )
          
       case (WakeDiamMod_MassFlux) 
@@ -152,7 +175,7 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
          do i = 1,nr-1
             m(i) = m(i-1) + pi*dr*(Vx_wake(i)*rArr(i) + Vx_wake(i-1)*rArr(i-1))
          end do
-         ! TODO: InterpBin assume monotonic, one-to-one mapping, and this is not guarranteed for Vx_wake.  NEED NEW ALGO. GJH
+         ! TODO: InterpBin assume monotonic, one-to-one mapping, and this is not guarranteed for m.  NEED NEW ALGO. GJH
          WakeDiam = max(D_rotor, 2_ReKi*InterpBin( C_WakeDiam*m(nr-1), m, rArr, ILo, nr ))
          
       case (WakeDiamMod_MtmFlux)
@@ -161,7 +184,7 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
          do i = 1,nr-1
             m(i) = m(i-1) + pi*dr*( (Vx_wake(i)**2)*rArr(i) + (Vx_wake(i-1)**2)*rArr(i-1))
          end do
-         ! TODO: InterpBin assume monotonic, one-to-one mapping, and this is not guarranteed for Vx_wake.  NEED NEW ALGO. GJH
+         ! TODO: InterpBin assume monotonic, one-to-one mapping, and this is not guarranteed for m.  NEED NEW ALGO. GJH
          WakeDiam = max(D_rotor, 2.0_ReKi*InterpBin( C_WakeDiam*m(nr-1),  m, rArr, ILo, nr ))
          
    
@@ -378,10 +401,6 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    
    integer(IntKi)                              :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                        :: errMsg2       ! temporary error message 
-      
-   !type(WD_InitInputType)                      :: InputFileData ! Data stored in the module's input file
-   integer(IntKi)                              :: UnEcho        ! Unit number for the echo file
-   
    character(*), parameter                     :: RoutineName = 'WD_Init'
    
    
@@ -389,8 +408,7 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
 
    errStat = ErrID_None
    errMsg  = ""
-   UnEcho  = -1  ! TODO: May not need file echoing in this module
-
+  
       ! Initialize the NWTC Subroutine Library
 
    call NWTC_Init( EchoLibVer=.FALSE. )
@@ -398,23 +416,12 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    
       ! Display the module information
 
-   if (InitInp%TurbNum <= 1) call DispNVD( WD_Ver )
-   
-   
-   ! TODO: For output reporting in this module we need to have Rootname include the turbine number 
-   
-   p%OutFileRoot  = TRIM(InitInp%RootName)//'.WD'
-   
-   
-         
+   if (InitInp%TurbNum <= 1) call DispNVD( WD_Ver )       
       
       ! Validate the initialization inputs
    call ValidateInitInputData( interval, InitInp, InitInp%InputFileData, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName ) 
-      if (errStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
+      if (errStat >= AbortErrLev) return
       
       !............................................................................................
       ! Define parameters
@@ -455,8 +462,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       p%r(i)       = p%dr*i     
    end do
    
-   p%filtParam     = exp(-2.0_ReKi*pi*p%dt*InitInp%InputFileData%f_c)
-   
+   p%filtParam         = exp(-2.0_ReKi*pi*p%dt*InitInp%InputFileData%f_c)
+   p%oneMinusFiltParam = 1.0_ReKi - p%filtParam
       !............................................................................................
       ! Define and initialize inputs here 
       !............................................................................................
@@ -570,18 +577,8 @@ subroutine WD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    y%Vr_wake    = 0.0_Reki
    y%D_wake     = 0.0_Reki
    y%x_plane    = 0.0_Reki
-   
-   call Cleanup() 
+
       
-contains
-   subroutine Cleanup()
-
-      ! TODO: May not need file echoing in this module
-
-      IF ( UnEcho > 0 ) CLOSE( UnEcho )
-      
-   end subroutine Cleanup
-
 end subroutine WD_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -700,7 +697,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
    maxPln = min(n,p%NumPlanes-2)
    do i = 0,maxPln 
-      xd%V_plane_filt(:,i       ) = xd%V_plane_filt(:,i)*p%filtParam + u%V_plane(:,i       )*(1.0_ReKi-p%filtParam)
+      xd%V_plane_filt(:,i       ) = xd%V_plane_filt(:,i)*p%filtParam + u%V_plane(:,i       )*p%oneMinusFiltParam
    end do
    xd%V_plane_filt   (:,maxPln+1) =                                    u%V_plane(:,maxPln+1)
 
@@ -846,7 +843,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       
       ! Update states at disk-plane to [n+1] 
       
-   xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0)*p%filtParam + u%xhat_disk(:)*(1.0_ReKi-p%filtParam)  ! 2-step calculation for xhat_plane at disk
+   xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0)*p%filtParam + u%xhat_disk(:)*p%oneMinusFiltParam  ! 2-step calculation for xhat_plane at disk
    norm2_xhat_plane        =  TwoNorm( xd%xhat_plane(:,0) ) 
    if ( EqualRealNos(norm2_xhat_plane, 0.0_ReKi) ) then
       ! TEST: E1
@@ -857,8 +854,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
    xd%xhat_plane     (:,0) =  xd%xhat_plane(:,0) / norm2_xhat_plane
    
-   ! TODO: Consider making 1.0_ReKi-p%filtParam a parameter, p%OneMinusFiltParam
-   xd%YawErr_filt      (0) =  xd%YawErr_filt(0)*p%filtParam + u%YawErr*(1.0_ReKi-p%filtParam)
+   xd%YawErr_filt      (0) =  xd%YawErr_filt(0)*p%filtParam + u%YawErr*p%oneMinusFiltParam
    
    if ( EqualRealNos(abs(xd%YawErr_filt(0)), pi/2) .or. abs(xd%YawErr_filt(0)) > pi/2 ) then
       ! TEST: E4
@@ -879,14 +875,13 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       
    ! NOTE: xd%x_plane(0) was already initialized to zero
       
-   xd%p_plane        (:,0) =  xd%p_plane(:,0)*p%filtParam + ( u%p_hub(:) + dy_HWkDfl(:) )*(1.0_ReKi-p%filtParam)
-   xd%Vx_wind_disk_filt(0) =  xd%Vx_wind_disk_filt(0)*p%filtParam + u%Vx_wind_disk*(1.0_ReKi-p%filtParam)   
-   xd%TI_amb_filt      (0) =  xd%TI_amb_filt(0)*p%filtParam + u%TI_amb*(1.0_ReKi-p%filtParam)   
-   xd%D_rotor_filt     (0) =  xd%D_rotor_filt(0)*p%filtParam + u%D_rotor*(1.0_ReKi-p%filtParam)   
-   xd%Vx_rel_disk_filt     =  xd%Vx_rel_disk_filt*p%filtParam + u%Vx_rel_disk*(1.0_ReKi-p%filtParam)   
+   xd%p_plane        (:,0) =  xd%p_plane(:,0)*p%filtParam + ( u%p_hub(:) + dy_HWkDfl(:) )*p%oneMinusFiltParam
+   xd%Vx_wind_disk_filt(0) =  xd%Vx_wind_disk_filt(0)*p%filtParam + u%Vx_wind_disk*p%oneMinusFiltParam
+   xd%TI_amb_filt      (0) =  xd%TI_amb_filt(0)*p%filtParam + u%TI_amb*p%oneMinusFiltParam
+   xd%D_rotor_filt     (0) =  xd%D_rotor_filt(0)*p%filtParam + u%D_rotor*p%oneMinusFiltParam  
+   xd%Vx_rel_disk_filt     =  xd%Vx_rel_disk_filt*p%filtParam + u%Vx_rel_disk*p%oneMinusFiltParam 
    
    
-! TODO: This is a new 3D wake plane crossing check and I'm not sure this is the most efficient implemenation.
    do i = 1,maxPln
       if ( xd%x_plane(i) - xd%x_plane(i-1) <= 0.0_ReKi ) then
          call SetErrStat(ErrID_FATAL, 'In a 1D sense, wake plane '//trim(num2lstr(i-1))//' is further downstream than wake plane '//trim(num2lstr(i)), errStat, errMsg, RoutineName)   
@@ -904,7 +899,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    
    
       !  filtered, azimuthally-averaged Ct values at each radial station
-   xd%Ct_azavg_filt (:) = xd%Ct_azavg_filt(:)*p%filtParam + u%Ct_azavg(:)*(1.0_ReKi-p%filtParam)
+   xd%Ct_azavg_filt (:) = xd%Ct_azavg_filt(:)*p%filtParam + u%Ct_azavg(:)*p%oneMinusFiltParam
    
    call NearWakeCorrection( xd%Ct_azavg_filt, xd%Vx_rel_disk_filt, p, m, xd%Vx_wake, errStat, errMsg )
    
@@ -958,7 +953,6 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
    
       ! Check if we are fully initialized
    if ( OtherState%firstPass ) then
-      ! TODO: This entire block needs to be reviewed
                         
       correction = 0.0_ReKi
       do i = 0, 1
@@ -1015,39 +1009,8 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       end do
    end if
    
-  ! call SetInputs(p, u, m, indx, errStat2, errMsg2)      
-  !    call SetErrStat(ErrStat2, ErrMsg2, errStat, errMsg, RoutineName)
-            
- 
-   !-------------------------------------------------------   
-   !     get values to output to file:  
-   !-------------------------------------------------------   
- !  if (p%NumOuts > 0) then
-#ifdef DBG_OUTS
-  !    call Calc_WriteDbgOutput( p, u, m, y, ErrStat2, ErrMsg2 ) 
-#else
- !     call Calc_WriteOutput( p, u, m, y, indx, ErrStat2, ErrMsg2 )   
-#endif   
-!      call SetErrStat(ErrStat2, ErrMsg2, errStat, errMsg, RoutineName)      
-   
-      !...............................................................................................................................   
-      ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
-      !...............................................................................................................................   
-
-  !    do i = 1,p%NumOuts  ! Loop through all selected output channels
-#ifdef DBG_OUTS
-  !       y%WriteOutput(i) = m%AllOuts( i )
-#else
-  !       y%WriteOutput(i) = p%OutParam(i)%SignM * m%AllOuts( p%OutParam(i)%Indx )
-#endif
-
-  !    end do             ! i - All selected output channels
-      
- !  end if
-   
-   
-   
 end subroutine WD_CalcOutput
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
 subroutine WD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, errStat, errMsg )
@@ -1161,8 +1124,6 @@ SUBROUTINE ValidateInitInputData( DT, InitInp, InputFileData, errStat, errMsg )
    errStat = ErrID_None
    errMsg  = ""
    
-   ! TODO: If we do not have output reporting do we need a RootName ? GJH
-   if (len(trim(InitInp%RootName)) == 0) call SetErrStat ( ErrID_Fatal, 'Rootname must contain at least one character.', errStat, errMsg, RoutineName )  
    
    ! TODO: Talk to Bonnie about whether we want to convert <= or >= checks to EqualRealNos() .or. >  checks, etc.  GJH
    ! TEST: E13,
@@ -1220,7 +1181,6 @@ subroutine WD_TEST_Init_BadData(errStat, errMsg)
    
       ! Set up the initialization inputs
    
-   InitInp%RootName       = ''   
    interval               = 0.0_DbKi
    InitInp%InputFileData%NumPlanes      = 0
    InitInp%InputFileData%NumRadii       = 0
@@ -1254,7 +1214,6 @@ subroutine WD_TEST_SetGoodInitInpData(interval, InitInp)
    real(DbKi)            , intent(out)       :: interval
    type(WD_InitInputType), intent(out)       :: InitInp       !< Input data for initialization routine
 
-   InitInp%RootName       = 'GoodData'   
    interval               = 0.1_DbKi
    InitInp%InputFileData%NumPlanes      = 2
    InitInp%InputFileData%NumRadii       = 2
