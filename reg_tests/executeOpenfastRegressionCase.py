@@ -16,12 +16,12 @@
 
 """
     This program executes OpenFAST and a regression test for a single test case.
-    The test case must be one of the CertTest cases. The test data is contained in a git submodule,
-    r-test, which must be initialized prior to running. r-test can be initialized
-    with `git submodule update --init --recursive` or updated with `git submodule update`.
+    The test data is contained in a git submodule, r-test, which must be initialized
+    prior to running. r-test can be initialized with
+    `git submodule update --init --recursive` or updated with `git submodule update`.
 
-    Usage: `python3 executeRegressionTestCase.py testname openfast_executable source_directory build_directory tolerance system_name compiler_id`
-    Example: `python3 executeRegressionTestCase.py Test02 openfast path/to/openfast_repo path/to/openfast_repo/build 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
+    Usage: `python3 executeOpenfastRegressionCase.py testname openfast_executable source_directory build_directory tolerance system_name compiler_id`
+    Example: `python3 executeOpenfastRegressionCase.py Test02 openfast path/to/openfast_repo path/to/openfast_repo/build 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
 """
 
 import os
@@ -59,7 +59,7 @@ else: pythonCommand = "python3"
 ### Verify input arguments
 if len(sys.argv) < 6 or len(sys.argv) > 8:
     exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: {} executeRegressionTestCase.py testname openfast_executable source_directory build_directory tolerance system_name compiler_id".format(pythonCommand))
+    "Usage: {} executeOpenfastRegressionCase.py testname openfast_executable source_directory build_directory tolerance system_name compiler_id".format(pythonCommand))
 
 caseName = sys.argv[1]
 executable = sys.argv[2]

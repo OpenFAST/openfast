@@ -15,7 +15,13 @@
 #
 
 """
+    This program executes BeamDyn and a regression test for a single test case.
+    The test data is contained in a git submodule, r-test, which must be initialized
+    prior to running. r-test can be initialized with
+    `git submodule update --init --recursive` or updated with `git submodule update`.
 
+    Usage: `python3 executeBeamdynRegressionCase.py testname beamdyn_driver source_directory build_directory tolerance system_name compiler_id`
+    Example: `python3 executeBeamdynRegressionCase.py Test02 beamdyn_driver path/to/openfast_repo path/to/openfast_repo/build 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
 """
 
 import os
