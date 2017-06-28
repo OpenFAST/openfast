@@ -44,7 +44,7 @@ if(NOT EXISTS ${PYTHON_EXECUTABLE})
 endif()
 
 # Set the testing tolerance
-if (NOT ${TEST_TOLERANCE} STREQUAL "") # User defined
+if(NOT ${TEST_TOLERANCE} STREQUAL "") # User defined
   set(TOLERANCE ${TEST_TOLERANCE})
 
 else(NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
@@ -101,12 +101,11 @@ else(NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 endif()
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
 
+# build the ServoDyn controllers on Mac/Linux
 if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
-  if(
-    NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON.dll" OR
-    NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON_ITIBarge.dll" OR
-    NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON_OC3Hywind.dll"
-  )
+  if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON.dll" OR
+     NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON_ITIBarge.dll" OR
+     NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON_OC3Hywind.dll")
     # Compile the ServoData controller library for 5MW turbine test cases during CMake
     # so the libraries will be correctly copied into the CTest build directories before executing the test
     set(SCRIPT_PATH "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/compileDISCON.py")
@@ -115,8 +114,18 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux
   endif()
 endif()
 
+# build and seed the test directories with the data they need to run the tests
+file(MAKE_DIRECTORY ${CTEST_BUILD_DIR})
+foreach(regTest openfast beamdyn)
+  file(MAKE_DIRECTORY ${CTEST_BUILD_DIR}/${regTest})
+endforeach()
+
+## openfast seed
+foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/${turbineDirectory}"
+     DESTINATION "${CTEST_BUILD_DIR}/openfast/")
+endforeach()
+
 # the statement below automatically creates a BUILD_TESTING option
 include(CTest)
-if(BUILD_TESTING)
-  include(${CMAKE_CURRENT_LIST_DIR}/CTestList.cmake)
-endif()
+include(${CMAKE_CURRENT_LIST_DIR}/CTestList.cmake)
