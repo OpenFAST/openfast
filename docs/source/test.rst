@@ -1,14 +1,15 @@
 Testing OpenFAST
 ================
 
-OpenFAST automated testing is accomplished through the use of `CTest <https://cmake.org/Wiki/CMake/Testing_With_CTest>`__ and customized with a set of Python scripts.
+OpenFAST testing is accomplished through the use of `CTest <https://cmake.org/Wiki/CMake/Testing_With_CTest>`__ and customized with a set of Python scripts.
 
-All of the files corresponding to automated testing are contained in the ``reg_tests``
-directory of the OpenFAST repository. The associated files include
+All of the files corresponding to testing suite are contained in the ``reg_tests`` directory of the OpenFAST repository. The associated files include
 
 - input files
-- "gold standard" outputs
+- baseline solutions
 - various Python programs used in the tests
+
+Some required files are linked in the OpenFAST repository through a git submodule. Be sure to obtain all of the necessary files for testing by running ``git submodule update --init --recursive`` or update the required files with ``git submodule update``.
 
 Dependencies
 ------------
@@ -16,62 +17,70 @@ Dependencies
 - Numpy
 - CMake and CTest
 
+Configuring the test suite
+--------------------------
+The test suite is built with `CMake <https://cmake.org/>`__ similar to OpenFAST. The default CMake configuration is useful, but may need customization for particular build environments. CMake variables can be configured in the `CMake GUI <https://cmake.org/download/>`__ or through the command line interface with the command ``ccmake``. If the entire OpenFAST package is to be built, the test related CMake variables can be configured during the OpenFAST CMake configuration. However, if only the test suite will be built, configure CMake using the ``reg_tests`` project with ``ccmake path/to/reg_tests`` or selecting ``reg_tests`` as the source directory in the CMake GUI.
+
+The test specific CMake variables are
+
+- BUILD_TESTING
+- OPENFAST_EXECUTABLE
+- [MODULE]_EXECUTABLE
+
+Look at the `Installing OpenFAST <install.html>`__ page for more details on configuring the CMake targets.
+
+Unit test
+---------
+Coming soon
+
+
 Regression test
 ---------------
-The automated regression test executes a series of test cases which fully describe the OpenFAST capability. Each
-locally computed result is compared to a static set of "gold standard" results. To account for machine
-and compiler differences, three combinations of "gold standards" are included
+The regression test executes a series of test cases which fully describe OpenFAST and some associated submodule capabilities. Each locally computed result is compared to a static set of baseline results. To account for machine and compiler differences, CTest attempts to match the current machine and compiler type to the appropriate solution set from these combinations
 
-- macOS with GNU compiler
+- macOS with GNU compiler (default)
 - Red Hat Enterprise Linux with Intel compiler
 - Windows with Intel compiler
 
-CTest can automatically determine the appropriate solution set, but in case none match the default is macOS with GNU compiler.
-
-The comparison script reads the OpenFAST binary output files (.outb) and computes a norm on each channel reported. If the maximum norm
-is greater than a predetermined tolerance, that particular test is reported as failed. The failure criteria is outlined in pseudocode below.
+The comparison script reads the output files and computes a norm on each channel reported. If the maximum norm is greater than a predetermined tolerance, that particular test is reported as failed. The failure criteria is outlined in pseudocode below.
 
 ::
 
   for j in range(nChannels)
-     norm_diff[j] = L2norm(localSolution[j]-goldSolution[j])
-     rms_gold[j] = L2norm(goldSolution[j])
+     norm_diff[j] = L2norm(localSolution[j]-baselineSolution[j])
+     rms_baseline[j] = L2norm(baselineSolution[j])
 
-  norm = norm_diff / rms_gold
+  norm = norm_diff / rms_baseline
 
   if max(norm) < tolerance:
     success
 
-Configuring the automated test
-------------------------------
-A critical step in configuring the automated test is getting the input files
-and "gold standards". These are brought into OpenFAST through the git submodule ``r-test``
-and can be initialized with ``git submodule update --init --recursive`` or updated with
-``git submodule update``.
 
-The build process contains useful defaults, but may need some configuring for a
-particular build environment.CMake variables can be configured in the CMake
-GUI or in the command line interface with the command ``ccmake``.
+Each regression test case contains a series of labels associating all of the modules used. The labeling can be seen in the test instantiation in ``reg_tests/CTestList.cmake``
 
-If the test will be executed without building OpenFAST, set the ``OPENFAST_EXECUTABLE`` CMake
-variable to the executable to test. Configure this CMake variables with ``ccmake ../reg_tests``.
-
-If the test will be executed after building OpenFAST, leave the ``OPENFAST_EXECUTABLE`` CMake
-variable as its default value. The build process will place the new binary at this location,
-so CTest is already configured correctly. If needed, look at the `Installing OpenFAST <install.html>`__
-page for details on configuring this build target.
-
-
-Running the automated test
---------------------------
-The automated regression test runs CTest and can be executed by running the command ``make test`` from the build directory. If
-the entire OpenFAST package is to be built, CMake will configure CTest to find the new binary at
-``openfast/build/glue-codes/fast/openfast``. However, if the intention is to build only the test suite, the OpenFAST binary
-should be specified in the CMake configuration under the ``OPENFAST_EXECUTABLE`` flag.
-
-Test procedure from scratch
+Running the regression test
 ---------------------------
-- Building all of OpenFAST
+The test suite is driven by CTest and can be executed by running various forms of the command ``ctest`` from the build directory.
+
+Run a test by name: ``ctest -R TestName``
+
+Run all tests with a particular label: ``ctest -L Label``
+
+Parellel test execution with N processes: ``-j N``
+
+Verbose output: ``-V``
+
+Extra verbose output: ``-VV``
+
+Some common uses of ``ctest`` are:
+
+- ``ctest -j 16``
+- ``ctest -VV -L aerodyn14``
+
+
+Regression test from scratch
+--------------------------------------
+- Build OpenFAST and the test suite
 
 ::
 
@@ -79,13 +88,13 @@ Test procedure from scratch
   cd openfast
   git submodule update --init --recursive
   mkdir build && cd build
-  # Configure CMake - OPENFAST_EXECUTABLE
+  # Configure CMake - BUILD_TESTING, OPENFAST_EXECUTABLE, [MODULE]_EXECUTABLE
   cmake ..
   make
-  make test
+  ctest
 
 
-- Building only the test
+- Build only the test suite
 
 ::
 
@@ -93,6 +102,6 @@ Test procedure from scratch
   cd openfast
   git submodule update --init --recursive
   mkdir build && cd build
-  # Configure CMake - OPENFAST_EXECUTABLE
+  # Configure CMake - OPENFAST_EXECUTABLE, [MODULE]_EXECUTABLE
   cmake ../reg_tests
-  make test
+  ctest
