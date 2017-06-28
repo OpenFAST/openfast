@@ -717,26 +717,18 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
    do nt = 1,p%NumTurbines
       nXYZ_high = 0
-      !do n_hl=0, n_high_low-1
-            ! read from file the ambient flow for the current time step
-        ! call ReadHighResWindFile(nt, n+n_hl, p, m%Vamb_high, errStat, errMsg)
-        !    if ( errStat >= AbortErrLev ) then
-        !       return
-        !    end if
-            
+      
             ! set the disturbed flow equal to the ambient flow for this time step
       y%Vdist_high(nt)%data = m%Vamb_high(nt)%data
-      !end do
       
       do nz_high=0, p%nZ_high-1 
          do ny_high=0, p%nY_high-1
             do nx_high=0, p%nX_high-1
-               
-               
+              
                nXYZ_high = nXYZ_high + 1
                n_wake = 0
                xhatBar_plane = 0.0_ReKi
-            
+
                do nt2 = 1,p%NumTurbines
                   if (nt /= nt2) then  
                      
