@@ -76,7 +76,7 @@ Example: `python3 executeBeamdynCase.py CaseDir/case01.fst`
 Example: `python3 executeBeamdynCase.py CaseDir/case01.fst beamdyn`
 Example: `python3 executeBeamdynCase.py CaseDir/case01.fst openfast/install/bin/beamdyn`
 
-#### pass_fail.py
+#### lib/pass_fail.py
 This program determines whether a new solution has regressed from the "gold standard"
 solution. It reads two OpenFAST binary output files (.outb), and computes the L2 norm
 of the two solution files for each output channel. If the max norm is smaller than
@@ -85,5 +85,5 @@ the given tolerance, the test case passes.
 Usage: `python3 pass_fail.py solution1 solution2 tolerance`  
 Example: `python3 pass_fail.py output-local/Test01.outb gold-standard/Test01.outb 0.00000001`
 
-#### fast_io.py
+#### lib/fast_io.py
 This program reads OpenFAST output files in binary or ascii format and returns the data in a Numpy array.
