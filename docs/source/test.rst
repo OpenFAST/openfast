@@ -13,7 +13,7 @@ Some required files are linked in the OpenFAST repository through a git submodul
 
 Dependencies
 ------------
-- Python 3.0+
+- Python 2.7/3+
 - Numpy
 - CMake and CTest
 
