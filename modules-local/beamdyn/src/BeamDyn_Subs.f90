@@ -18,7 +18,7 @@
 MODULE BeamDyn_Subs
 
    USE BeamDyn_Types
-   !USE NWTC_LAPACK
+   USE NWTC_LAPACK
 
    IMPLICIT NONE
 
@@ -330,10 +330,10 @@ END SUBROUTINE BD_CrvCompose
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the CRV parameters given
 !! the rotation matrix
-SUBROUTINE BD_CrvExtractCrv(Rr,cc)
+SUBROUTINE BD_CrvExtractCrv(R, cc)
 
-   REAL(BDKi),    INTENT(IN   ):: Rr(3,3)       !< Rotation Matrix
-   REAL(BDKi),    INTENT(  OUT):: cc(3)         !< Crv paramteres
+   REAL(BDKi),       INTENT(IN   ):: R(3,3)       !< Rotation Matrix
+   REAL(BDKi),       INTENT(  OUT):: cc(3)         !< Crv paramteres
 
    !Local variables
    REAL(BDKi)                  :: pivot      ! Trace of the rotation matrix
@@ -343,6 +343,27 @@ SUBROUTINE BD_CrvExtractCrv(Rr,cc)
    REAL(BDKi)                  :: sm3
    REAL(BDKi)                  :: em
    REAL(BDKi)                  :: temp
+   REAL(BDKi)                  :: tempmat(3,3)
+   REAL(BDKi)                  :: S(3) !mjs--these three are the SVD matrices (S is actually a vector)
+   REAL(BDKi)                  :: U(3,3)
+   REAL(BDKi)                  :: VT(3,3)
+   INTEGER(IntKi)              :: lwork = 27 !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
+   REAL(BDKi), ALLOCATABLE     :: work(:)       ! where M x N is dimension of R, and lwork is the dimension of work
+   INTEGER(IntKi)              :: info !mjs--exit message for dgesvd
+   REAL(BDKi)                  :: Rr(3,3) !mjs--correccted rotation matrix
+   REAL(BDKi)                  :: eps !mjs--tolerance for determining if R is a valid rotation matrix
+   REAL(BDKi)                  :: eye(3,3) !mjs--3x3 identity matrix for determining if R is orthogonal
+   LOGICAL                     :: ortho !mjs--logical value indicating whether R is orthogonal
+   LOGICAL                     :: det1 !mjs--logical value indicating whether det(R) == 1
+
+   INTEGER(IntKi)             :: ErrStat        !< Error status of the operation
+   CHARACTER(ErrMsgLen)       :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)             :: ErrStat2
+   CHARACTER(ErrMsgLen)       :: ErrMsg2
+   character(*), parameter    :: RoutineName = 'BD_CrvExtractCrv'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    !> Starting with equation (14) from AIAA paper, "Geometric Nonlinear Analysis of Composite Beams Using
    !! Wiener-Milenkovic Parameters", Wang, et. al. \n
@@ -359,6 +380,50 @@ SUBROUTINE BD_CrvExtractCrv(Rr,cc)
    !!
    !! _Note:_ The above equation does not match what is in the March 2016 BD manual (it is the transpose).
    !! It does, however, match equation 5.17 in the March 2016 "BeamDyn User's Guide and Theory Manual"
+
+   ! mjs--Start by determining if R is a valid rotation matrix using the following properties:
+      ! 1) \f$ \underline{\underline{R}} \f$ is orthogonal,
+         ! i.e., \f$ \underline{\underline{R}} \underline{\underline{R}}^T = I \f$
+         ! (check residual vs. single/double precision eps)
+      ! 2) \f$ \underline{\underline{R}} \f$ is a 'proper orthogonal tensor',
+         ! i.e., \f$ \det(\underline{\underline{R}}) = 1 \f$
+
+      allocate (work(lwork))
+      tempmat = R !mjs--need this to handle inout nature of input for LAPACK_gesvd
+      eps =  epsilon(R)
+      eye = 0
+      eye = reshape( (/ 1.0_BDKi,   0.0,        0.0, &
+                        0.0,        1.0_BDKi,   0.0, &
+                        0.0,        0.0,        1.0_BDKi /), &
+                        shape(R), order=(/2,1/) )
+
+      ortho = any(abs(matmul(transpose(R), R) - eye) > eps)
+      det1  = abs(( R(1, 1) * (R(2, 2) * R(3, 3) - R(2, 3) * R(3, 2)) - &
+                   R(1, 2) * (R(2, 1) * R(3, 3) - R(2, 3) * R(3, 1)) + &
+                   R(1, 3) * (R(2, 1) * R(3, 2) - R(2, 2) * R(3, 1)) ) - 1.0_BDKi) > eps
+
+      ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
+         ! compute \f$ \underline{\underline{Rr}} \f$, the nearest orthogonal tensor
+         ! to \f$ \underline{\underline{R}} \f$
+         ! this is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
+         ! and setting \f$ \underline{\underline{Rr}} = UV^T \f$
+         ! otherwise, assign \f$ \underline{\underline{Rr}}  = \underline{\underline{R}} \f$,
+
+      if (ortho .or. det1) then
+
+!mjs--FIXME: not 100% confident on the error catching/return here, since i think it may only kick
+   ! out to the calling function, neither of which have ErrMsg/ErrStat machinery
+         call LAPACK_gesvd('A', 'A', 3, 3, tempmat, S, U, VT, work, lwork, info, ErrStat2, ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) return
+
+         Rr = matmul(U, VT)
+
+      else
+
+         Rr = R
+
+      end if
 
       !> Find the trace of the matrix
       !! \f$  T = t_{r0} \left( 3 c_0 - c_1^2 - c_2^2 - c_3^2 \right) \f$
@@ -405,6 +470,7 @@ SUBROUTINE BD_CrvExtractCrv(Rr,cc)
       sm2  = Rr(1,3) - Rr(3,1)                           ! -4 c_0 c_2 t_{r0}
       sm3  = Rr(2,1) - Rr(1,2)                           ! -4 c_0 c_3 t_{r0}
       temp = SIGN( 2.0_BDKi*SQRT(ABS(sm0)), sm0 )
+
    ENDIF
 
    em = sm0 + temp
