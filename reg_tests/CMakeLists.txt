@@ -22,7 +22,7 @@ cmake_minimum_required(VERSION 2.8.12)
 project(OpenFAST_RegressionTest Fortran)
 
 # Store the CTest build directory
-set(CTEST_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/ctest-build")
+set(CTEST_BINARY_DIR "${CMAKE_BINARY_DIR}/reg_tests")
 
 # Verify that the test data submodule exists
 if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test")
@@ -115,15 +115,15 @@ if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux
 endif()
 
 # build and seed the test directories with the data they need to run the tests
-file(MAKE_DIRECTORY ${CTEST_BUILD_DIR})
+file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
 foreach(regTest openfast beamdyn)
-  file(MAKE_DIRECTORY ${CTEST_BUILD_DIR}/${regTest})
+  file(MAKE_DIRECTORY ${CTEST_BINARY_DIR}/${regTest})
 endforeach()
 
 ## openfast seed
 foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
   file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/${turbineDirectory}"
-     DESTINATION "${CTEST_BUILD_DIR}/openfast/")
+     DESTINATION "${CTEST_BINARY_DIR}/openfast/")
 endforeach()
 
 # the statement below automatically creates a BUILD_TESTING option
