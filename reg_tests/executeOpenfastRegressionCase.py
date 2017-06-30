@@ -109,7 +109,8 @@ except IndexError:
 # Internal names -> Human readable names
 systemName_map = {
     "darwin": "macos",
-    "linux": "linux"
+    "linux": "linux",
+    "windows": "windows"
 }
 compilerId_map = {
     "gnu": "gnu",
