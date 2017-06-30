@@ -101,18 +101,11 @@ else(NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
 endif()
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
 
-# build the ServoDyn controllers on Mac/Linux
-if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
-  if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON.dll" OR
-     NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON_ITIBarge.dll" OR
-     NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData/DISCON_OC3Hywind.dll")
-    # Compile the ServoData controller library for 5MW turbine test cases during CMake
-    # so the libraries will be correctly copied into the CTest build directories before executing the test
-    set(SCRIPT_PATH "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/compileDISCON.py")
-    file(TO_NATIVE_PATH ${SCRIPT_PATH} SCRIPT_PATH)
-    execute_process(COMMAND ${PYTHON_EXECUTABLE} ${SCRIPT_PATH})
-  endif()
-endif()
+# include the ServoDyn controller projects
+set(SERVODATA_DIR "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData")
+add_subdirectory("${SERVODATA_DIR}/DISCON" "${SERVODATA_DIR}/DISCON/build")
+add_subdirectory("${SERVODATA_DIR}/DISCON_ITI" "${SERVODATA_DIR}/DISCON_ITI/build")
+add_subdirectory("${SERVODATA_DIR}/DISCON_OC3" "${SERVODATA_DIR}/DISCON_OC3/build")
 
 # build and seed the test directories with the data they need to run the tests
 file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
