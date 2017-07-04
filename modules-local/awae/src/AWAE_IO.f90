@@ -146,8 +146,7 @@ subroutine ReadLowResWindFile(n, p, Vamb_Low, errStat, errMsg)
    
    errStat = ErrID_None
    errMsg  = ""
-  ! TODO: Try to skip this and just jump to the correct file location for the vector reads
- 
+  
    FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"
    call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
       if (ErrStat >= AbortErrLev) return
@@ -183,7 +182,6 @@ subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
    
-! TODO: Try to skip this and just jump to the correct file location for the vector reads
    FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"
    call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
       if (ErrStat >= AbortErrLev) return
@@ -222,16 +220,21 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    errMsg  = ""
    
    
-   
+   !---------------------------------------------------------------------------
+   ! Parse time 0.0, low res wind input file to gather the grid 
+   !    information and set data associated with the low res grid
+   !---------------------------------------------------------------------------
 
    FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Amb.t0.vtk"
    Un = -1 ! Set to force closing of file on return
    call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg )     
       if (ErrStat >= AbortErrLev) return     
+      
    if ( (dims(1) < 2) .or. (dims(2) < 2) .or. (dims(3) < 2) ) then
       call SetErrStat ( ErrID_Fatal, 'The low resolution grid dimensions most contain a minimum of 2 nodes in each spatial direction.', errStat, errMsg, RoutineName )
       return
    end if
+   
    p%X0_Low           = origin(1)
    p%Y0_low           = origin(2)
    p%Z0_low           = origin(3) 
@@ -279,7 +282,36 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       end do
    end do
    
-    ! Parse a high res wind input file to gather the grid information
+   if (InitInp%InputFileData%ChkWndFiles) then
+      do n=1,p%NumDT-1  ! We have already checked the first low res time step
+         
+         FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"
+         Un = -1 ! Set to force closing of file on return
+         call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
+            if (ErrStat >= AbortErrLev) return 
+            
+            ! verify dims, origin, gridSpacing match the first input file
+         if ( ( dims(1) .ne. p%nX_low ) .or. ( dims(2) .ne. p%nY_low ) .or. ( dims(3) .ne. p%nZ_low ) ) then
+            call SetErrStat ( ErrID_Fatal, 'The low resolution grid dimensions for time step '//trim(num2lstr(n))//' do not match time step 0.', errStat, errMsg, RoutineName )
+            return
+         end if 
+         if ( ( origin(1) .ne. InitOut%X0_Low ) .or. ( origin(2) .ne. InitOut%Y0_Low ) .or. ( origin(3) .ne. InitOut%Z0_Low ) ) then
+            call SetErrStat ( ErrID_Fatal, 'The low resolution grid origins for time step '//trim(num2lstr(n))//' do not match time step 0.', errStat, errMsg, RoutineName )
+            return
+         end if 
+         if ( ( gridSpacing(1) .ne. p%dX_low ) .or. ( gridSpacing(2) .ne. p%dY_low ) .or. ( gridSpacing(3) .ne. p%dZ_low ) ) then
+            call SetErrStat ( ErrID_Fatal, 'The low resolution grid spacing for time step '//trim(num2lstr(n))//' do not match time step 0.', errStat, errMsg, RoutineName )
+            return
+         end if  
+         
+      end do
+   end if
+
+   !---------------------------------------------------------------------------
+   ! Parse turbine 1, 1st timestep, high res wind input file to gather the grid 
+   !    information and set data associated with turbine 1
+   !---------------------------------------------------------------------------
+   
    allocate( InitOut%X0_high(p%NumTurbines), InitOut%Y0_high(p%NumTurbines), InitOut%Z0_high(p%NumTurbines), stat=errStat2)   
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for InitOut origin arrays.', errStat, errMsg, RoutineName )
    allocate( InitOut%dX_high(p%NumTurbines), InitOut%dY_high(p%NumTurbines), InitOut%dZ_high(p%NumTurbines), stat=errStat2)   
@@ -306,6 +338,13 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    p%dZ_high(1)       = gridSpacing(3)
    NumGrid_high       = p%nX_high*p%nY_high*p%nZ_high
    
+   InitOut%X0_high(1) = origin(1)
+   InitOut%Y0_high(1) = origin(2)
+   InitOut%Z0_high(1) = origin(3)  
+   InitOut%dX_high(1) = gridSpacing(1)
+   InitOut%dY_high(1) = gridSpacing(2)
+   InitOut%dZ_high(1) = gridSpacing(3)
+      
       ! Just using this to make sure dims are >=2 points in each direction
    call HiResWindCheck(0, 1, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(1), p%dY_high(1), p%dZ_high(1), p%X0_high(1), p%Y0_high(1), p%Z0_high(1), dims, gridSpacing, origin, RoutineName, errMsg, errStat)
       if (errStat >= AbortErrLev ) return
@@ -316,9 +355,25 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          return
       end if
       
-   
-   
+   nXYZ_high = 0
+   do nz_high=0, p%nZ_high-1 
+      do ny_high=0, p%nY_high-1
+         do nx_high=0, p%nX_high-1
+            nXYZ_high = nXYZ_high + 1
+            p%Grid_high(1,nXYZ_high,1) = InitOut%X0_high(1) + nx_high*InitOut%dX_high(1)
+            p%Grid_high(2,nXYZ_high,1) = InitOut%Y0_high(1) + ny_high*InitOut%dY_high(1)
+            p%Grid_high(3,nXYZ_high,1) = InitOut%Z0_high(1) + nz_high*InitOut%dZ_high(1)            
+         end do
+      end do
+   end do
+ 
+   !---------------------------------------------------------------------------
+   ! Parse the remaining turbine's 1st timestep, high res wind input files to 
+   !    gather the grid information and set data associated with those turbines
+   !---------------------------------------------------------------------------
+
    do nt = 1, p%NumTurbines 
+      
       FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t0.vtk"
       Un = -1 ! Set to force closing of file on return
       call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
@@ -341,9 +396,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          ! Using this to make sure dims are >=2 points in each direction, and number of grid points in each direction matches turbine 1
       call HiResWindCheck(0, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg, errStat)
          if (errStat >= AbortErrLev ) return
-      
-      
-      
+ 
       nXYZ_high = 0
       do nz_high=0, p%nZ_high-1 
          do ny_high=0, p%nY_high-1
@@ -355,8 +408,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
             end do
          end do
       end do
-      
-      
+   
    end do
    
    InitOut%nx_high = p%nx_high
@@ -364,54 +416,31 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    InitOut%nz_high = p%nz_high
    
    
-   ! Error checking to see that all winds files have consistent headers
-   
-   !do nt=1,p%NumTurbines
-   !   do n=0,p%NumDT-1  ! We have already checked the first low res time step but we need to check all the high-res files associated with n=0
-   !      FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"
-   !      Un = -1 ! Set to force closing of file on return
-   !      call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
-   !         if (ErrStat >= AbortErrLev) return 
-   !         
-   !         ! verify dims, origin, gridSpacing
-   !      if ( ( dims(1) .ne. p%nX_low ) .or. ( dims(2) .ne. p%nY_low ) .or. ( dims(3) .ne. p%nZ_low ) ) then
-   !         call SetErrStat ( ErrID_Fatal, 'The low resolution grid dimensions for time step '//trim(num2lstr(n))//' do not match time step 0.', errStat, errMsg, RoutineName )
-   !         return
-   !      end if 
-   !      if ( ( origin(1) .ne. InitOut%X0_Low ) .or. ( origin(2) .ne. InitOut%Y0_Low ) .or. ( origin(3) .ne. InitOut%Z0_Low ) ) then
-   !         call SetErrStat ( ErrID_Fatal, 'The low resolution grid origins for time step '//trim(num2lstr(n))//' do not match time step 0.', errStat, errMsg, RoutineName )
-   !         return
-   !      end if 
-   !      if ( ( gridSpacing(1) .ne. p%dX_low ) .or. ( gridSpacing(2) .ne. p%dY_low ) .or. ( gridSpacing(3) .ne. p%dZ_low ) ) then
-   !         call SetErrStat ( ErrID_Fatal, 'The low resolution grid spacing for time step '//trim(num2lstr(n))//' do not match time step 0.', errStat, errMsg, RoutineName )
-   !         return
-   !      end if  
-   !      
-   !         ! High-res turbine wind files
-   !      if ( (n) == (p%NumDT-1) ) then
-   !         n_high_low = 1
-   !      else
-   !         n_high_low = p%n_high_low
-   !      end if
-   !      do nh=1,n_high_low
-   !         nhigh = nh+n*p%n_high_low-1
-   !         FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(nhigh))//".vtk"  !TODO: Should the turbine numbers be padding with leading zero(es)? 
-   !         Un = -1 ! Set to force closing of file on return
-   !         call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
-   !            if (ErrStat >= AbortErrLev) return 
-   !            
-   !         call HiResWindCheck(nhigh, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg, errStat)
-   !            if (errStat >= AbortErrLev ) return
-   !         
-   !      end do
-   !   end do
-   !      
-   !end do      
-      
-      
-   
-   
-   !TODO:  Perform any error checking on InitOut and all wind input files here  : Review Plan.
+   if (InitInp%InputFileData%ChkWndFiles) then
+      do nt=1,p%NumTurbines
+         do n=0,p%NumDT-1  ! We have already checked the first high-res files associated with n=0, but need to check the remaining, so for simplicity of code we will repeat the check on the first file
+  
+               ! We only have one high res input for for the very last low res timestep
+            if ( (n) == (p%NumDT-1) ) then
+               n_high_low = 1
+            else
+               n_high_low = p%n_high_low
+            end if
+            
+            do nh=1,n_high_low
+               nhigh = nh+n*p%n_high_low-1
+               FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(nhigh))//".vtk"  !TODO: Should the turbine numbers be padding with leading zero(es)? 
+               Un = -1 ! Set to force closing of file on return
+               call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
+                  if (ErrStat >= AbortErrLev) return 
+               
+               call HiResWindCheck(nhigh, nt, p%nX_high, p%nY_high, p%nZ_high, p%dX_high(nt), p%dY_high(nt), p%dZ_high(nt), p%X0_high(nt), p%Y0_high(nt), p%Z0_high(nt), dims, gridSpacing, origin, RoutineName, errMsg, errStat)
+                  if (errStat >= AbortErrLev ) return
+            
+            end do
+         end do     
+      end do      
+   end if
    
 ! End simulated read of low and high res ambient wind files   
 !==============================================================================

@@ -35,6 +35,7 @@ typedef  ^            AWAE_InputFileType  ReKi            OutDisWindX       {:} 
 typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindXZ      -    - - "Number of XZ planes for output of disturbed wind data across the low-resolution domain to <WindFilePath>/Low/DisXZ.<n_out>.t<n>.vtk [0 to 9]" -
 typedef  ^            AWAE_InputFileType  ReKi            OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
 typedef  ^            AWAE_InputFileType  DbKi            WrDisDT           -  - -   "The time between vtk outputs [must be a multiple of the low resolution time step]" s
+typedef  ^            AWAE_InputFileType  LOGICAL         ChkWndFiles    - - -  "Check all the ambient wind files for data consistency (flag)" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -86,7 +87,7 @@ typedef   ^ OtherStateType      ReKi     DummyOtherState  - - -  "Remove this va
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef   ^ MiscVarType    SiKi     Vamb_low     {:}{:}{:}{:} - -  "UVW components of ambient wind across the low-resolution domain throughout the farm" m/s
 typedef   ^ MiscVarType    SiKi     Vdist_low    {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm" m/s
-typedef   ^ MiscVarType    SiKi     Vamb_high    {:}{:}{:}{:} - -  "UVW components of ambient wind across each high-resolution domain around a turbine (one for each turbine) for each high-resolution time step within a low-resolution time step" m/s
+typedef   ^ MiscVarType    AWAE_HighWindGrid Vamb_High   {:} - -  "UVW components of ambient wind across each high-resolution domain around a turbine (one for each turbine) for each high-resolution time step within a low-resolution time step" m/s
 typedef   ^ MiscVarType    IntKi    N_wind       {:}{:}    - -  "Number of grid points contained in a given wake plane volume" -
 typedef   ^ MiscVarType    ReKi     xhat_plane   {:}{:} - -  "Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain" -
 #typedef  ^ MiscVarType    ReKi     r_plane      {:}{:}       - - "" m

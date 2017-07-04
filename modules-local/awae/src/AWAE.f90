@@ -61,8 +61,6 @@ module AWAE
 subroutine ExtractSliceOMP( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
 
 
-   
-   ! TODO: Rewrite this algorithm using shape functions
    integer(IntKi),      intent(in   ) :: sliceType  !< Type of slice: XYSlice, YZSlice, XZSlice
    real(ReKi),          intent(in   ) :: s          !< data value in meters of the interpolatan
    real(ReKi),          intent(in   ) :: s0         !< origin value in meters of the interpolatan
@@ -93,8 +91,6 @@ subroutine ExtractSliceOMP( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
    
    if (s_grid0 == (szs-1)) s_grid1 = s_grid0  ! Handle case where s0 is the last index in the grid, in this case sd = 0.0, so the 2nd term in the interpolation will not contribute
   
-   ! TODO: Add code to check bounds of requested slice location at INIT and fatal error if out of bounds
-   ! doing the bounds checks at INIT keeps this algorithm as fast as possible
    procs = omp_get_num_procs()
    call omp_set_num_threads(procs)
    
@@ -118,7 +114,6 @@ end subroutine ExtractSliceOMP
 
 subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
    
-   ! TODO: Rewrite this algorithm using shape functions
    integer(IntKi),      intent(in   ) :: sliceType  !< Type of slice: XYSlice, YZSlice, XZSlice
    real(ReKi),          intent(in   ) :: s          !< data value in meters of the interpolatan
    real(ReKi),          intent(in   ) :: s0         !< origin value in meters of the interpolatan
@@ -149,8 +144,6 @@ subroutine ExtractSlice( sliceType, s, s0, szs, sz1, sz2, ds,  V, slice)
    
    if (s_grid0 == (szs-1)) s_grid1 = s_grid0  ! Handle case where s0 is the last index in the grid, in this case sd = 0.0, so the 2nd term in the interpolation will not contribute
   
-   ! TODO: Add code to check bounds of requested slice location at INIT and fatal error if out of bounds
-   ! doing the bounds checks at INIT keeps this algorithm as fast as possible
    do j = 0,sz2-1
       do i = 0,sz1-1
          select case (sliceType)
@@ -346,10 +339,10 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      if ( r_tmp_plane <= (delta*u%D_wake(np+1,nt) + deltad*u%D_wake(np,nt) )) then
                         m%N_wind(np,nt) = m%N_wind(np,nt) + 1
                         
-                        ! TODO: Verify that m%N_wind(np,nt) <= MAX_1ST_DIM_SIZE of nx_wind
+                        
                         if ( m%N_wind(np,nt) > p%n_wind_max ) then
                            call SetErrStat( ErrID_Fatal, 'The wake plane volume (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
-                           return
+                           return  ! if m%N_wind(np,nt) > p%n_wind_max then we will be indexing beyond the allocated memory for nx_wind,ny_wind,nz_wind arrays
                         end if
                         
                         m%nx_wind(m%N_wind(np,nt),np,nt) = nx_low
@@ -388,7 +381,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    
    do nt = 1,p%NumTurbines
       if ( m%N_wind(0,nt) > 0 ) then
-         ! TODO: This is modified in Rev 7 and the current code is for Rev 6. 13/Feb/2017
+         
          Vsum_low = 0.0_ReKi
       
          do nw=1,m%N_wind(0,nt)   
@@ -570,10 +563,10 @@ subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, 
                      if ( r_tmp_plane <= (delta*u%D_wake(np+1,nt) + deltad*u%D_wake(np,nt) )) then
                         m%N_wind(np,nt) = m%N_wind(np,nt) + 1
                         
-                        ! TODO: Verify that m%N_wind(np,nt) <= MAX_1ST_DIM_SIZE of nx_wind
+                           
                         if ( m%N_wind(np,nt) > p%n_wind_max ) then
                            call SetErrStat( ErrID_Fatal, 'The wake plane volume (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, 'LowResGridCalcOutput'  )
-                          ! return
+                           return  ! if m%N_wind(np,nt) > p%n_wind_max then we will be indexing beyond the allocated memory for nx_wind,ny_wind,nz_wind arrays
                         end if
                         
                         m%nx_wind(m%N_wind(np,nt),np,nt) = nx_low
@@ -611,7 +604,7 @@ subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, 
    
    do nt = 1,p%NumTurbines
       if ( m%N_wind(0,nt) > 0 ) then
-         ! TODO: This is modified in Rev 7 and the current code is for Rev 6. 13/Feb/2017
+         
          Vsum_low = 0.0_ReKi
       
          do nw=1,m%N_wind(0,nt)   
@@ -724,26 +717,18 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
    do nt = 1,p%NumTurbines
       nXYZ_high = 0
-      do n_hl=0, n_high_low-1
-            ! read from file the ambient flow for the current time step
-         call ReadHighResWindFile(nt, n+n_hl, p, m%Vamb_high, errStat, errMsg)
-            if ( errStat >= AbortErrLev ) then
-               return
-            end if
-            
+      
             ! set the disturbed flow equal to the ambient flow for this time step
-         y%Vdist_high(nt)%data(:,:,:,:,n_hl) = m%Vamb_high(:,:,:,:)
-      end do
+      y%Vdist_high(nt)%data = m%Vamb_high(nt)%data
       
       do nz_high=0, p%nZ_high-1 
          do ny_high=0, p%nY_high-1
             do nx_high=0, p%nX_high-1
-               
-               
+              
                nXYZ_high = nXYZ_high + 1
                n_wake = 0
                xhatBar_plane = 0.0_ReKi
-            
+
                do nt2 = 1,p%NumTurbines
                   if (nt /= nt2) then  
                      
@@ -864,11 +849,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    integer(IntKi)                                :: i,j             ! loop counter
    real(ReKi)                                    :: gridLoc       ! Location of requested output slice in grid coordinates [0,sz-1]                                      
    integer(IntKi)                                :: errStat2      ! temporary error status of the operation
-   character(ErrMsgLen)                          :: errMsg2       ! temporary error message 
-                                              
-   !type(AWAE_InitInputType)                       :: InputFileData ! Data stored in the module's input file
-   integer(IntKi)                                :: UnEcho        ! Unit number for the echo file
-                                              
+   character(ErrMsgLen)                          :: errMsg2       ! temporary error message                                           
    character(*), parameter                       :: RoutineName = 'AWAE_Init'
    
    
@@ -876,8 +857,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    errStat = ErrID_None
    errMsg  = ""
-   UnEcho  = -1  ! TODO: May not need file echoing in this module
-
+   
       ! Initialize the NWTC Subroutine Library
 
    call NWTC_Init( EchoLibVer=.FALSE. )
@@ -885,10 +865,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! Display the module information
 
    call DispNVD( AWAE_Ver )
-   
-   
-   ! TODO: For output reporting in this module we need to have Rootname include the turbine number 
-   
+  
    p%OutFileRoot  = TRIM(InitInp%OutFileRoot)
    
    
@@ -897,7 +874,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call ValidateInitInputData( InitInp%InputFileData, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, errStat, errMsg, RoutineName ) 
       if (errStat >= AbortErrLev) then
-         call Cleanup()
          return
       end if
       
@@ -911,7 +887,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%NumPlanes        = InitInp%InputFileData%NumPlanes   
    p%NumRadii         = InitInp%InputFileData%NumRadii    
    p%NumTurbines      = InitInp%InputFileData%NumTurbines 
-   p%WindFilePath     = InitInp%InputFileData%WindFilePath ! TODO: Make sure this wasn't specified with the trailing folder separator
+   p%WindFilePath     = InitInp%InputFileData%WindFilePath ! TODO: Make sure this wasn't specified with the trailing folder separator. Note: on Windows a trailing / or \ causes no problem! GJH 
    p%n_high_low       = InitInp%n_high_low
    p%dt               = InitInp%InputFileData%dt
    p%NumDT            = InitInp%NumDT
@@ -924,21 +900,18 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call allocAry( p%OutDisWindZ, p%NOutDisWindXY, "OutDisWindZ", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
          RETURN        
       end if
       
    call allocAry( p%OutDisWindX, p%NOutDisWindYZ, "OutDisWindX", ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
             RETURN        
          end if
          
    call allocAry( p%OutDisWindY, p%NOutDisWindXZ, "OutDisWindY", ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if ( ErrStat >= AbortErrLev ) then
-            call cleanup()
             RETURN        
          end if      
          
@@ -949,7 +922,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate( p%r(0:p%NumRadii-1),stat=errStat2)
       if (errStat2 /= 0) then
          call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p%r.', errStat, errMsg, RoutineName )
-         call Cleanup()
          return
       end if
     
@@ -969,7 +941,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat2, errMsg2)
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if (errStat2 >= AbortErrLev) then      
-         call Cleanup() 
          return
    end if
    
@@ -1001,7 +972,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          end if
       end do
       if (errStat2 >= AbortErrLev) then      
-         call Cleanup() 
          return
       end if
   
@@ -1092,9 +1062,19 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( m%Vamb_low   ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 ) 
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_low.', errStat, errMsg, RoutineName )   
    allocate ( m%Vdist_low  ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 ) 
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vdist_low.', errStat, errMsg, RoutineName )  
-   allocate ( m%Vamb_high  ( 3, 0:p%nX_high-1, 0:p%nY_high-1, 0:p%nZ_high-1 ), STAT=errStat2 ) 
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_High.', errStat, errMsg, RoutineName )  
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vdist_low.', errStat, errMsg, RoutineName ) 
+      
+      
+   !allocate ( m%Vamb_high  ( 3, 0:p%nX_high-1, 0:p%nY_high-1, 0:p%nZ_high-1 ), STAT=errStat2 ) 
+   !   if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_High.', errStat, errMsg, RoutineName )  
+      
+   allocate ( m%Vamb_high(1:p%NumTurbines), STAT=ErrStat2 )
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_high.', errStat, errMsg, RoutineName )  
+   do i = 1, p%NumTurbines
+         allocate ( m%Vamb_high(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low-1), STAT=ErrStat2 )
+            if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_high%data.', errStat, errMsg, RoutineName ) 
+   end do   
+      
    allocate ( m%N_wind     ( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%N_wind.', errStat, errMsg, RoutineName )  
    allocate ( m%xhat_plane ( 3, 1:p%NumTurbines ), STAT=errStat2 )
@@ -1129,35 +1109,15 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( m%pvec_ce( 3,0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%pvec_ce.', errStat, errMsg, RoutineName )
    if (errStat /= ErrID_None) return
-   
-   ! TODO: This step isn't really needed
-   m%Vamb_low     = 0.0_SiKi
-   m%Vdist_low    = 0.0_SiKi
-   m%Vamb_High    = 0.0_SiKi 
-   m%N_wind       = 0 
-   m%xhat_plane   = 0.0_ReKi 
-   m%rhat_plane   = 0.0_ReKi
-   m%Vx_wake      = 0.0_ReKi   
-   m%Vr_wake      = 0.0_ReKi   
-   m%nx_wind      = 0.0_ReKi   
-   m%ny_wind      = 0.0_ReKi  
-   m%nz_wind      = 0.0_ReKi 
 
    
    ! Read-in the ambient wind data for the initial calculate output
    
    call AWAE_UpdateStates( 0.0_DbKi, -1, u, p, x, xd, z, OtherState, m, errStat, errMsg )
    
-   call Cleanup() 
+  
       
-contains
-   subroutine Cleanup()
 
-      ! TODO: May not need file echoing in this module
-
-      IF ( UnEcho > 0 ) CLOSE( UnEcho )
-      
-   end subroutine Cleanup
 
 end subroutine AWAE_Init
 
@@ -1246,11 +1206,12 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'AWAE_UpdateStates'
    real(DbKi)          :: t1, tread
+   integer(IntKi)                               :: n_high_low, nt, n_hl
    
    errStat = ErrID_None
    errMsg  = ""
    
-   ! Read the ambient wind data that is need for t+dt
+   ! Read the ambient wind data that is needed for t+dt, i.e., n+1
    
    !t1 = omp_get_wtime()   
       ! read from file the ambient flow for the n+1 time step
@@ -1260,9 +1221,26 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       end if
   ! tread =  ( omp_get_wtime() - t1 )       
   ! write(*,*) 'Time spent reading data:  ',tread            
-    
    
       
+   if ( ((n+1)/p%n_high_low) == (p%NumDT-1) ) then
+      n_high_low = 1
+   else
+      n_high_low = p%n_high_low
+   end if
+ 
+      ! Loop over the entire grid of low resolution ambient wind data to compute:
+      !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
+   do nt = 1,p%NumTurbines
+      do n_hl=0, n_high_low-1
+            ! read from file the ambient flow for the current time step
+         call ReadHighResWindFile(nt, n+1+n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat, errMsg)
+            if ( errStat >= AbortErrLev ) then
+               return
+            end if 
+      end do
+   end do
+   
 end subroutine AWAE_UpdateStates
 
 
@@ -1324,8 +1302,7 @@ subroutine AWAE_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg
       if (errStat2 >= AbortErrLev) then 
             return
       end if
-! TODO: Should we introduce another parameter which indicates whether we are even generating any of the following outputs?
-!       i.e., p%NOutDisWindXY > 0 .or. p%NOutDisWindXZ > 0 .or. p%NOutDisWindYZ > 0 .or. p%WrDisWind
+
    if (mod(n,p%WrDisSkp1) == 0) then
       if ( p%WrDisWind  ) then
          call WriteDisWindFiles( n, p%WrDisSkp1, p, y, m, ErrStat2, ErrMsg2 )

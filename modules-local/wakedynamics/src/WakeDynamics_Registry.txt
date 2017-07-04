@@ -46,7 +46,6 @@ typedef  ^                 WD_InputFileType  ReKi            C_WakeDiam     - - 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 #   e.g., the name of the input file, the file root name, etc.
-typedef ^  InitInputType CHARACTER(1024)  RootName       - - -   "The root name derived from the primary FAST.Farm input file [For output reporting in this module we need to have Rootname include the turbine number]"      -
 typedef ^  InitInputType WD_InputFileType InputFileData  - - -   "FAST.Farm input-file data for wake dynamics" -
 typedef ^  InitInputType IntKi            TurbNum        - 0 -   "Turbine ID number (start with 1; end with number of turbines)"      -
 
@@ -99,12 +98,6 @@ typedef   ^         MiscVarType   ReKi  r_wake  {:}    - -   ""
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-#typedef  ^               ParameterType         DbKi            DT              -    - - "Time step for cont. state integration & disc. state update" seconds
-#typedef  ^               ParameterType         DbKi            TMax            -    - - "Total run time" seconds
-#typedef  ^               ParameterType         CHARACTER(1024) OutFileRoot     -    - - "The root name derived from the primary FAST.Farm input file, appended with .WD" -
-# ..... Parameters ................................................................................................................
-# Define parameters here:
-# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef ^ ParameterType  DbKi             dt             -  - -   "Time interval for wake dynamics calculations {or default}"      s
 #typedef  ^ ParameterType DbKi            tmax            -  - - "Total run time" seconds
 typedef ^ ParameterType  IntKi            NumPlanes      -  - -   "Number of wake planes"      -
@@ -112,6 +105,7 @@ typedef ^ ParameterType  IntKi            NumRadii       -  - -   "Number of rad
 typedef ^ ParameterType  ReKi             dr             -  - -   "Radial increment of radial finite-difference grid"      m
 typedef ^ ParameterType  ReKi             r             {:} - -   "Discretization of radial finite-difference grid"        m
 typedef ^ ParameterType  ReKi             filtParam      -  - -   "Low-pass time-filter parameter, with a value between 0 (minimum filtering) and 1 (maximum filtering) (exclusive)"      -
+typedef ^ ParameterType  ReKi             oneMinusFiltParam - - - "1.0 - filtParam" -
 typedef ^ ParameterType  ReKi             C_HWkDfl_O     -  - -   "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor" m
 typedef ^ ParameterType  ReKi             C_HWkDfl_OY    -  - -   "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error" m/rad
 typedef ^ ParameterType  ReKi             C_HWkDfl_x     -  - -   "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance" -
@@ -129,12 +123,6 @@ typedef ^ ParameterType  ReKi             k_vAmb         -  - -   "Calibrated pa
 typedef ^ ParameterType  ReKi             k_vShr         -  - -   "Calibrated parameter for the influence of the shear layer in the eddy viscosity"      -
 typedef ^ ParameterType  IntKi            Mod_WakeDiam   -  - -   "Wake diameter calculation model"      -
 typedef ^ ParameterType  ReKi             C_WakeDiam     -  - -   "Calibrated parameter for wake diameter calculation"      -
-#                                         
-# parameters for output  
-typedef ^ ParameterType  IntKi            NumOuts        -  - -   "Number of parameters in the output list (number of outputs requested)"      -
-typedef ^ ParameterType  CHARACTER(1024)  OutFileRoot    -  - -   "The root name derived from the primary FAST.Farm input file" -
-typedef ^ ParameterType  OutParmType      OutParam      {:} - -   "Names and units (and other characteristics) of all requested output parameters"      -
-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:

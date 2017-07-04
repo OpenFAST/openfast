@@ -381,8 +381,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          call cleanup()
          RETURN        
       end if
-! TODO: Fix this! GJH 3/13/2017
-   !ALLOCATE ( OutList(MaxOutPts) , STAT=ErrStat )   
+
    CALL AllocAry( OutList, MaxOutPts, "FAST.Farm's Input File's Outlist", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -527,7 +526,14 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       end if
    IF ( PathIsRelative( p%WindFilePath ) ) p%WindFilePath = TRIM(PriPath)//TRIM(p%WindFilePath)
             
-      
+         ! ChkWndFiles - Check all the ambient wind files for data consistency (flag):
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%ChkWndFiles, "ChkWndFiles", "Check all the ambient wind files for data consistency (flag)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+   
    !---------------------- WIND TURBINES ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Wind Turbines', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1232,7 +1238,6 @@ SUBROUTINE Farm_InitWD( farm, WD_InitInp, ErrStat, ErrMsg )
          ! initialization can be done in parallel (careful for FWrap_InitInp, though)
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++         
          
-         WD_InitInp%RootName    = trim(farm%p%OutFileRoot)//'.T'//num2lstr(nt)
          WD_InitInp%TurbNum     = nt
          
             ! note that WD_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt here:
@@ -1592,8 +1597,8 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
    INTEGER(IntKi)                          :: nt                    
-   INTEGER(IntKi)                          :: ErrStatWD, ErrStatF, ErrStatAWAE                      ! Temporary Error status
-   CHARACTER(ErrMsgLen)                    :: ErrMsgWD,  ErrMsgF,  ErrMsgAWAE                        ! Temporary Error message
+   INTEGER(IntKi)                          :: ErrStatWD, ErrStatF                      ! Temporary Error status
+   CHARACTER(ErrMsgLen)                    :: ErrMsgWD,  ErrMsgF                       ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_UpdateStates'
    REAL(DbKi)                              :: tm1,tm2
    
@@ -1615,11 +1620,11 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
       
       call WD_UpdateStates( t, n, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
                      farm%WD(nt)%OtherSt, farm%WD(nt)%m, ErrStatWD, ErrMsgWD )         
-         call SetErrStat(ErrStatWD, ErrMsgWD, ErrStatWD, ErrMsgWD, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
-               
+         call SetErrStat(ErrStatWD, ErrMsgWD, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
+         
    END DO
    
-   if (ErrStatWD >= AbortErrLev) return
+   if (ErrStat >= AbortErrLev) return
    
    
       !--------------------
@@ -1633,12 +1638,12 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
       
       call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                      farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF, ErrMsgF )         
-         call SetErrStat(ErrStatF, ErrMsgF, ErrStatF, ErrMsgF, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
+         call SetErrStat(ErrStatF, ErrMsgF, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
    
    
    END DO
   
-   if (ErrStatF >= AbortErrLev) return
+   if (ErrStat >= AbortErrLev) return
 
    
       !--------------------
@@ -1646,10 +1651,10 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
   
   
    call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%m, errStatAWAE, errMsgAWAE )
+                     farm%AWAE%OtherSt, farm%AWAE%m, errStat, errMsg )
   
    
-   if (errStatAWAE >= AbortErrLev) return
+   if (errStat >= AbortErrLev) return
    
    
   ! tm2 = omp_get_wtime()
@@ -1734,7 +1739,6 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
          do iOutDist = 1, farm%p%NOutDist
             
             if (  farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(min(farm%WD(nt)%p%NumPlanes-1,n+1)) ) then
-               ! TODO: Handle this case. Invalid output
                
                farm%m%AllOuts(WkAxsXTD(iOutDist,nt)) = 0.0_ReKi
                farm%m%AllOuts(WkAxsYTD(iOutDist,nt)) = 0.0_ReKi
