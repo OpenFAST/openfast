@@ -422,7 +422,7 @@ subroutine FAST_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, d
       
 end subroutine FAST_Restart 
 !==================================================================================================================================
-subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumCtrl2SC, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, &
+subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumCtrl2SC, InitSCOutputsTurbine, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, &
                           OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_Input_from_FAST, SC_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Init')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Init
    IMPLICIT NONE 
@@ -435,6 +435,7 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
    INTEGER(C_INT),         INTENT(IN   ) :: TurbID           ! Need not be same as iTurb
    INTEGER(C_INT),         INTENT(IN   ) :: NumSC2Ctrl       ! Supercontroller outputs = controller inputs
    INTEGER(C_INT),         INTENT(IN   ) :: NumCtrl2SC       ! controller outputs = Supercontroller inputs
+   REAL(C_FLOAT),          INTENT(IN   ) :: InitScOutputsTurbine (*) ! Initial Supercontroller outputs = controller inputs
    INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsBlade ! number of actuator line force points in blade
    INTEGER(C_INT),         INTENT(IN   ) :: NumActForcePtsTower ! number of actuator line force points in tower
    REAL(C_FLOAT),          INTENT(IN   ) :: TurbPosn(3)      
@@ -470,6 +471,12 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
    ExternInitData%SensorType = SensorType_None
    ExternInitData%NumCtrl2SC = NumCtrl2SC
    ExternInitData%NumSC2Ctrl = NumSC2Ctrl
+   if ( (NumSC2Ctrl .gt. 0) .and. (NumCtrl2SC .gt. 0) ) then
+      CALL AllocAry( ExternInitData%InitScOutputsTurbine, NumSC2Ctrl, 'ExternInitData%InitScOutputsTurbine', ErrStat, ErrMsg)
+        do i=1,NumSC2Ctrl
+           ExternInitData%InitScOutputsTurbine(i) = InitScOutputsTurbine(i)
+        end do
+   end if
    ExternInitData%NumActForcePtsBlade = NumActForcePtsBlade
    ExternInitData%NumActForcePtsTower = NumActForcePtsTower
 
@@ -509,10 +516,6 @@ subroutine FAST_OpFM_Solution0(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_O
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
 
-   if(Turbine(iTurb)%SC%p%scOn) then
-      CALL SC_SetOutputs(Turbine(iTurb)%p_FAST, Turbine(iTurb)%SrvD%Input(1), Turbine(iTurb)%SC, ErrStat, ErrMsg)
-   end if
-   
    call FAST_Solution0_T(Turbine(iTurb), ErrStat, ErrMsg ) 
 
    if(Turbine(iTurb)%SC%p%scOn) then
@@ -613,8 +616,6 @@ subroutine SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST
    OpFM_Input_from_FAST%momenty_Len = Turbine(iTurb)%OpFM%u%c_obj%momenty_Len; OpFM_Input_from_FAST%momenty = Turbine(iTurb)%OpFM%u%c_obj%momenty
    OpFM_Input_from_FAST%momentz_Len = Turbine(iTurb)%OpFM%u%c_obj%momentz_Len; OpFM_Input_from_FAST%momentz = Turbine(iTurb)%OpFM%u%c_obj%momentz
    OpFM_Input_from_FAST%forceNodesChord_Len = Turbine(iTurb)%OpFM%u%c_obj%forceNodesChord_Len; OpFM_Input_from_FAST%forceNodesChord = Turbine(iTurb)%OpFM%u%c_obj%forceNodesChord
-   OpFM_Input_from_FAST%SuperController_Len = Turbine(iTurb)%OpFM%u%c_obj%SuperController_Len
-   OpFM_Input_from_FAST%SuperController     = Turbine(iTurb)%OpFM%u%c_obj%SuperController
 
    SC_Input_from_FAST%toSC_Len = Turbine(iTurb)%SC%u%c_obj%toSC_Len
    SC_Input_from_FAST%toSC     = Turbine(iTurb)%SC%u%c_obj%toSC
@@ -622,8 +623,6 @@ subroutine SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST
    OpFM_Output_to_FAST%u_Len   = Turbine(iTurb)%OpFM%y%c_obj%u_Len;  OpFM_Output_to_FAST%u = Turbine(iTurb)%OpFM%y%c_obj%u 
    OpFM_Output_to_FAST%v_Len   = Turbine(iTurb)%OpFM%y%c_obj%v_Len;  OpFM_Output_to_FAST%v = Turbine(iTurb)%OpFM%y%c_obj%v 
    OpFM_Output_to_FAST%w_Len   = Turbine(iTurb)%OpFM%y%c_obj%w_Len;  OpFM_Output_to_FAST%w = Turbine(iTurb)%OpFM%y%c_obj%w 
-   OpFM_Output_to_FAST%SuperController_Len = Turbine(iTurb)%OpFM%y%c_obj%SuperController_Len
-   OpFM_Output_to_FAST%SuperController     = Turbine(iTurb)%OpFM%y%c_obj%SuperController
 
    SC_Output_to_FAST%fromSC_Len = Turbine(iTurb)%SC%y%c_obj%fromSC_Len
    SC_Output_to_FAST%fromSC     = Turbine(iTurb)%SC%y%c_obj%fromSC
@@ -659,10 +658,6 @@ subroutine FAST_OpFM_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_S
       end if
       
    ELSE
-
-      if(Turbine(iTurb)%SC%p%scOn) then
-         CALL SC_SetOutputs(Turbine(iTurb)%p_FAST, Turbine(iTurb)%SrvD%Input(1), Turbine(iTurb)%SC, ErrStat, ErrMsg)
-      end if
 
       CALL FAST_Solution_T( t_initial, n_t_global, Turbine(iTurb), ErrStat, ErrMsg )                  
 

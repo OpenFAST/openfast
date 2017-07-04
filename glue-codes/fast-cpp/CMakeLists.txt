@@ -21,15 +21,16 @@ find_package(MPI REQUIRED)
 find_package(HDF5 REQUIRED COMPONENTS C HL)
 find_package(YAMLCPP REQUIRED)
 
+message("HDF5_INCLUDES" ${HDF5_INCLUDE_DIR})
 include_directories(${YAML_INCLUDES})
-include_directories(${HDF5_INCLUDES})
+include_directories(${HDF5_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/modules-local/fast-library/src/)
 include_directories(${CMAKE_BINARY_DIR}/modules-local/openfoam/)
 include_directories(${CMAKE_BINARY_DIR}/modules-local/supercontroller/)
 include_directories(${MPI_INCLUDE_PATH})
 
 add_library(openfastcpplib
-  src/OpenFAST.cpp)
+  src/OpenFAST.cpp src/SC.cpp)
 target_link_libraries(openfastcpplib
   openfastlib
   ${HDF5_C_LIBRARIES}
@@ -64,7 +65,7 @@ install(TARGETS openfastcpplib
   LIBRARY DESTINATION lib)
 
 install(FILES
-  src/OpenFAST.H src/SC.h
+  src/OpenFAST.H src/SC.H
   DESTINATION include)
 
 install(TARGETS openfastcpp
