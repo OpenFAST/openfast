@@ -13,6 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
+"""
+    This program executes OpenFAST on all of the CertTest cases. It mimics the
+    regression test execution through CMake/CTest. All generated data goes into
+    openfast/build/reg_tests.
+
+    Usage: python manualRegressionTest path/to/openfast_executable [Darwin,Linux,Windows] [Intel,GNU]
+
+"""
+
 import sys
 import os
 import subprocess
@@ -24,7 +34,7 @@ def exitWithError(error, code=1):
 ### Verify input arguments
 if len(sys.argv) != 4:
     exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: python executeRegressionTest.py openfast_executable [Darwin,Linux,Windows] [Intel,GNU]")
+    "Usage: python manualRegressionTest.py openfast_executable [Darwin,Linux,Windows] [Intel,GNU]")
 
 openfast_executable = sys.argv[1]
 sourceDirectory = ".."
