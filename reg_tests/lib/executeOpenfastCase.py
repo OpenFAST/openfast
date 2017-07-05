@@ -72,7 +72,7 @@ elif len(sys.argv) == 3:
             raise
 
 # execute the given case
-command = "{} {} > {}.log".format(executable, caseInputFile, caseInputFile.split(".")[0])
+command = "{} {} > {}.log".format(executable, caseInputFile, caseInputFile.split(".fst")[0])
 print("'{}' - running".format(command))
 sys.stdout.flush()
 return_code = subprocess.call(command, shell=True)
