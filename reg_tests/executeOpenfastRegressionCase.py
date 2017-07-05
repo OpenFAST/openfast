@@ -52,9 +52,8 @@ def ignoreBaselineItems(directory, contents):
 
 ##### Main program
 
-### Determine python version
-if sys.version_info < (3, 0): pythonCommand = "python"
-else: pythonCommand = "python3"
+### Store the python executable for future python calls
+pythonCommand = sys.executable
 
 ### Verify input arguments
 if len(sys.argv) < 6 or len(sys.argv) > 8:
