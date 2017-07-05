@@ -21,6 +21,9 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(OpenFAST_UnitTest Fortran)
 
+include(CTest)
+enable_testing()
+
 ### pfunit
 include(ExternalProject)
 set(ExternalProjectCMakeArgs
@@ -56,23 +59,6 @@ include_directories(
   ${pfunit_directory}/mod
 )
 
-
-### beamdyn test module
-file(MAKE_DIRECTORY "${source_modulesdirectory}/beamdyn_utest")
-file(COPY "${source_modulesdirectory}/beamdyn/"
-     DESTINATION "${source_modulesdirectory}/beamdyn_utest")
-execute_process(
-  COMMAND python ${PROJECT_SOURCE_DIR}/lib/filePrep.py "privateToPublic" ${source_modulesdirectory}/beamdyn_utest/src/BeamDyn.f90
-)
-execute_process(
-  COMMAND python ${PROJECT_SOURCE_DIR}/lib/filePrep.py "swapWordInFile" beamdynlib beamdynlib_utest ${source_modulesdirectory}/beamdyn_utest/CMakeLists.txt
-)
-execute_process(
-  COMMAND python ${PROJECT_SOURCE_DIR}/lib/filePrep.py "swapWordInFile" beamdyn_driver beamdyn_driver_utest ${source_modulesdirectory}/beamdyn_utest/CMakeLists.txt
-)
-add_subdirectory("${source_modulesdirectory}/beamdyn_utest" "${build_modulesdirectory}")
-
-
 ### unit tests
 set(test_sources)
 foreach(test test_BD_CrvExtractCrv)
@@ -88,18 +74,18 @@ endforeach()
 
 set_source_files_properties(${pfunit_directory}/include/driver.F90 PROPERTIES GENERATED 1)
 
-add_executable(
-  beamdyn_utest
-  ${pfunit_directory}/include/driver.F90
-  ${test_sources}
-)
+foreach(module in beamdyn)
+  add_executable(
+    ${module}_utest
+    ${pfunit_directory}/include/driver.F90
+    ${test_sources}
+  )
 
-target_link_libraries(
-  beamdyn_utest
-  ${pfunit_directory}/lib/libpfunit.a
-  beamdynlib_utest
-)
+  target_link_libraries(
+    ${module}_utest
+    ${pfunit_directory}/lib/libpfunit.a
+    ${module}lib
+  )
 
-include(CTest)
-enable_testing()
-add_test(beamdyn_utest ${PROJECT_BINARY_DIR}/beamdyn_utest)
+  add_test(${module}_utest ${PROJECT_BINARY_DIR}/${module}_utest)
+endforeach()

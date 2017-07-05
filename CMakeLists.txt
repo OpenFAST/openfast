@@ -57,10 +57,29 @@ find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
 ########################################################################
+# Option configuration
+# Do this before configuring modules so that precompiler flags are included
+option(BUILD_TESTING "Build the testing tree." OFF)
+if(BUILD_TESTING)
+  # add_subdirectory(reg_tests) this should be 'include'. with add_subdirectory,
+  # the CTestTestlist.cmake file is placed in the reg_tests subdirectory
+  # and cannot be found by ctest
+  include(reg_tests/CMakeLists.txt)
+
+  # unit tests
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
+  add_subdirectory(unit_tests)
+endif()
+
+option(BUILD_DOCUMENTATION "Build documentation." OFF)
+if(BUILD_DOCUMENTATION)
+  add_subdirectory(docs)
+endif()
+
+########################################################################
 # Build rules for FAST Registry
 #
 add_subdirectory(modules-local/fast-registry)
-
 
 ########################################################################
 # FAST Core modules
