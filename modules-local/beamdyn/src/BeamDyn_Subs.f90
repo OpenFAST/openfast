@@ -353,8 +353,8 @@ SUBROUTINE BD_CrvExtractCrv(R, cc)
    REAL(BDKi)                  :: Rr(3,3) !mjs--correccted rotation matrix
    REAL(BDKi)                  :: eps !mjs--tolerance for determining if R is a valid rotation matrix
    REAL(BDKi)                  :: eye(3,3) !mjs--3x3 identity matrix for determining if R is orthogonal
-   LOGICAL                     :: ortho !mjs--logical value indicating whether R is orthogonal
-   LOGICAL                     :: det1 !mjs--logical value indicating whether det(R) == 1
+   LOGICAL                     :: ortho = .false. !mjs--logical value indicating whether R is orthogonal
+   LOGICAL                     :: det1 = .false. !mjs--logical value indicating whether det(R) == 1
 
    INTEGER(IntKi)             :: ErrStat        !< Error status of the operation
    CHARACTER(ErrMsgLen)       :: ErrMsg         !< Error message if ErrStat /= ErrID_None
@@ -397,10 +397,15 @@ SUBROUTINE BD_CrvExtractCrv(R, cc)
                         0.0,        0.0,        1.0_BDKi /), &
                         shape(R), order=(/2,1/) )
 
-      ortho = any(abs(matmul(transpose(R), R) - eye) > eps)
       det1  = abs(( R(1, 1) * (R(2, 2) * R(3, 3) - R(2, 3) * R(3, 2)) - &
                    R(1, 2) * (R(2, 1) * R(3, 3) - R(2, 3) * R(3, 1)) + &
                    R(1, 3) * (R(2, 1) * R(3, 2) - R(2, 2) * R(3, 1)) ) - 1.0_BDKi) > eps
+
+      if (.not. det1) then
+
+         ortho = any(abs(matmul(transpose(R), R) - eye) > eps)
+
+      end if
 
       ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
          ! compute \f$ \underline{\underline{Rr}} \f$, the nearest orthogonal tensor
