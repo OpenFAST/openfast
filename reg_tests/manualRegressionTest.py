@@ -44,7 +44,7 @@ compiler = sys.argv[3]
 devnull = open(os.devnull, 'w')
 
 results = []
-for i in range(1,3):
+for i in range(1,27):
     if i < 10:
         casename = "Test0" + str(i)
     else:
