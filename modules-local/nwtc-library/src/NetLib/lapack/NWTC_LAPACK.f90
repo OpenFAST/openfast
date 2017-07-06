@@ -97,6 +97,7 @@ MODULE NWTC_LAPACK
       MODULE PROCEDURE LAPACK_spptrf
    END INTERFACE
 
+!> Compute the SVD for a general matrix A = USV^T.
    INTERFACE LAPACK_gesvd
       MODULE PROCEDURE LAPACK_dgesvd
       MODULE PROCEDURE LAPACK_sgesvd
