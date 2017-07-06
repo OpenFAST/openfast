@@ -44,10 +44,10 @@ ExternalProject_Add(pfunit
 include_directories(${PROJECT_BINARY_DIR}/pfunit/mod)
 
 set(pfunit_directory ${PFUNIT_INSTALL})
-set(source_testdirectory ${PROJECT_SOURCE_DIR}/tests)
-set(build_testdirectory ${PROJECT_BINARY_DIR}/tests)
 set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules-local)
 set(build_modulesdirectory ${PROJECT_BINARY_DIR}/modules-local)
+set(source_testdirectory ${source_modulesdirectory}/beamdyn/tests)
+set(build_testdirectory ${PROJECT_BINARY_DIR}/tests)
 
 file(MAKE_DIRECTORY ${build_testdirectory})
 file(WRITE ${build_testdirectory}/testSuites.inc "")

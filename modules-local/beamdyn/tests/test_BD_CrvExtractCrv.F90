@@ -20,6 +20,6 @@ input = reshape( (/ 1.0                     ,   0.00000000000000000E+000,   0.00
 
 call BD_CrvExtractCrv(input, output)
 
-@assertEqual(expected, output)!, 0.001)
+@assertEqual(expected, output, 0.001)  
 
 end subroutine
