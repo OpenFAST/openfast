@@ -61,10 +61,11 @@ find_package(LAPACK REQUIRED)
 # Do this before configuring modules so that precompiler flags are included
 option(BUILD_TESTING "Build the testing tree." OFF)
 if(BUILD_TESTING)
-  # add_subdirectory(reg_tests) this should be 'include'. with add_subdirectory,
-  # the CTestTestlist.cmake file is placed in the reg_tests subdirectory
-  # and cannot be found by ctest
-  include(reg_tests/CMakeLists.txt)
+
+  include(CTest)
+
+  # regression tests
+  add_subdirectory(reg_tests)
 
   # unit tests
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")

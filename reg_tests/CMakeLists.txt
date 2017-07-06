@@ -21,6 +21,8 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(OpenFAST_RegressionTest Fortran)
 
+include(CTest)
+
 # Store the CTest build directory
 set(CTEST_BINARY_DIR "${CMAKE_BINARY_DIR}/reg_tests")
 
@@ -122,6 +124,5 @@ foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
   DESTINATION "${CTEST_BINARY_DIR}/glue-codes/fast/")
 endforeach()
 
-# the statement below automatically creates a BUILD_TESTING option
-include(CTest)
+# add the tests
 include(${CMAKE_CURRENT_LIST_DIR}/CTestList.cmake)
