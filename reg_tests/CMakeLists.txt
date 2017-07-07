@@ -30,10 +30,10 @@ if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test")
 endif()
 
 # Set the OpenFAST executable configuration option and default
-set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/glue-codes/fast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
+set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
 # Set the BeamDyn executable configuration option and default
-set(CTEST_BEAMDYN_EXECUTABLE "${CMAKE_CURRENT_BINARY_DIR}/modules-local/beamdyn/beamdyn_driver" CACHE FILEPATH "Specify the BeamDyn driver executable to use in testing.")
+set(CTEST_BEAMDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules-local/beamdyn/beamdyn_driver" CACHE FILEPATH "Specify the BeamDyn driver executable to use in testing.")
 
 # Set the python executable configuration option and default
 if(NOT EXISTS ${PYTHON_EXECUTABLE})
