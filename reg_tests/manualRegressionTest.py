@@ -43,19 +43,43 @@ machine = sys.argv[2]
 compiler = sys.argv[3]
 devnull = open(os.devnull, 'w')
 
+casenames = [
+             "AWT_YFix_WSt"
+             "AWT_WSt_StartUp_HighSpShutDown"
+             "AWT_YFree_WSt"
+             "AWT_YFree_WTurb"
+             "AWT_WSt_StartUpShutDown"
+             "AOC_WSt"
+             "AOC_YFree_WTurb"
+             "AOC_YFix_WSt"
+             "UAE_YRamp_WSt"
+             "UAE_Rigid_WRamp_PwrCurve"
+             "WP_VSP_WTurb_PitchFail"
+             "WP_VSP_ECD"
+             "WP_VSP_WTurb"
+             "WP_Stationary_Linear"
+             "SWRT_YFree_VS_EDG01"
+             "SWRT_YFree_VS_EDC01"
+             "SWRT_YFree_VS_WTurb"
+             "5MW_DLL_Potential_WTurb"
+             "5MW_DLL_Potential_WTurb_WavesIrr"
+             "5MW_DLL_Potential_WSt_WavesReg"
+             "5MW_DLL_Potential_WTurb_WavesIrrFixedYawGrowth"
+             "5MW_DLL_WTurb_WavesIrr"
+             "5MW_DLL_WTurb_WavesIrr_WavesMulti"
+             "5MW_DLL_WTurb_WavesIrr"
+             "5MW_WSt_WhiteNoise_OC4"
+             "5MW_BD_DLL_Potential_WTurb"
+            ]
 results = []
-for i in range(1,27):
-    if i < 10:
-        casename = "Test0" + str(i)
-    else:
-        casename = "Test" + str(i)
-    print("executing case {}".format(casename))
-    command = "python executeOpenfastRegressionCase.py {} {} {} {} 0.000001 {} {}".format(casename, openfast_executable, sourceDirectory, buildDirectory, machine, compiler)
+for case in casenames:
+    print("executing case {}".format(case))
+    command = "python executeOpenfastRegressionCase.py {} {} {} {} 0.000001 {} {}".format(case, openfast_executable, sourceDirectory, buildDirectory, machine, compiler)
     returnCode = subprocess.call(command, stdout=devnull, shell=True)
     if returnCode == 0:
-        results.append((casename, "PASS"))
+        results.append((case, "PASS"))
     else:
-        results.append((casename, "FAIL"))
+        results.append((case, "FAIL"))
 
 for r in results:
     print r[0], r[1]
