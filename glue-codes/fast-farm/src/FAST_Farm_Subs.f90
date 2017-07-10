@@ -526,8 +526,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       end if
    IF ( PathIsRelative( p%WindFilePath ) ) p%WindFilePath = TRIM(PriPath)//TRIM(p%WindFilePath)
             
-         ! ChkWndFiles - Check all the ambient wind files for data consistency (flag):
-   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%ChkWndFiles, "ChkWndFiles", "Check all the ambient wind files for data consistency (flag)", ErrStat2, ErrMsg2, UnEc)
+      ! ChkWndFiles - Check all the ambient wind files for data consistency? (flag):
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%ChkWndFiles, "ChkWndFiles", "Check all the ambient wind files for data consistency? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -936,7 +936,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          call cleanup()
          RETURN        
       end if
-   
+
       SELECT CASE (OutFileFmt)
          CASE (1_IntKi)
             p%WrBinOutFile = .FALSE.
@@ -955,6 +955,13 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
             !   RETURN        
             !end if
       END SELECT
+   
+      if ( OutFileFmt /= 1_IntKi ) then ! TODO: Only allow text format for now; add binary format later.
+         CALL SetErrStat( ErrID_Fatal, "FAST.Farm's OutFileFmt must be 1.",ErrStat,ErrMsg,RoutineName) 
+         call cleanup()
+         RETURN        
+      end if
+      
    
       ! TabDelim - Use tab delimiters in text tabular output file? (flag) {uses spaces if False}:
    CALL ReadVar( UnIn, InputFile, TabDelim, "TabDelim", "Use tab delimiters in text tabular output file? (flag) {uses spaces if False}", ErrStat2, ErrMsg2, UnEc)
@@ -1773,8 +1780,6 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
                end do  
 
             else
-               
-               ! TODO: Verify with Jason that all of this should be within the else block. GJH 
                
                   ! Find wake volume which contains the user-requested downstream location.
                do np = 0, min(farm%WD(nt)%p%NumPlanes-2 , n)

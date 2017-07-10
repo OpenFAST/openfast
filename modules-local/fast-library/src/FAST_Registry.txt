@@ -52,7 +52,8 @@ param	^	-	INTEGER	Module_MD	-	13	-	"MoorDyn"	-
 param	^	-	INTEGER	Module_Orca	-	14	-	"OrcaFlex integration (HD/Mooring)"	-
 param	^	-	INTEGER	Module_IceF	-	15	-	"IceFloe"	-
 param	^	-	INTEGER	Module_IceD	-	16	-	"IceDyn"	-
-param	^	-	INTEGER	NumModules	-	16	-	"The number of modules available in FAST"	-
+param	^	-	INTEGER	Module_SC	-	17	-	"Supercontroller"	-
+param	^	-	INTEGER	NumModules	-	17	-	"The number of modules available in FAST"	-
 # Other Constants
 param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
@@ -96,6 +97,7 @@ typedef	^	FAST_ParameterType	IntKi	CompHydro	-	-	-	"Compute hydrodynamic loads (
 typedef	^	FAST_ParameterType	IntKi	CompSub	-	-	-	"Compute sub-structural dynamics (switch) {Module_None; Module_HD}"	-
 typedef	^	FAST_ParameterType	IntKi	CompMooring	-	-	-	"Compute mooring system (switch) {Module_None; Module_MAP; Module_FEAM; Module_MD; Module_Orca}"	-
 typedef	^	FAST_ParameterType	IntKi	CompIce	-	-	-	"Compute ice loading (switch) {Module_None; Module_IceF, Module_IceD}"	-
+typedef	^	FAST_ParameterType	IntKi	CompSC	-	-	-	"Use supercontroller (switch) {Module_None; Module_SC}"	-
 typedef	^	FAST_ParameterType	LOGICAL	UseDWM	-	-	-	"Use the DWM module in AeroDyn"	-
 typedef	^	FAST_ParameterType	LOGICAL	Linearize	-	-	-	"Linearization analysis (flag)"	-
 # Input file names:
@@ -137,6 +139,7 @@ typedef	^	FAST_ParameterType	LOGICAL	LinOutJac	-	-	-	"Include full Jacabians in 
 typedef	^	FAST_ParameterType	LOGICAL	LinOutMod	-	-	-	"Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False]"	-
 typedef	^	FAST_ParameterType	FAST_VTK_SurfaceType	VTK_surface	-	-	-	"Data for VTK surface visualization"
 typedef	^	FAST_ParameterType	SiKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used for graphics)"	m
+typedef ^       FAST_ParameterType	LOGICAL	UseSupercontroller	-	-	-	"Use Supercontroller"	-  
 typedef	^	FAST_ParameterType	IntKi	SizeLin	{NumModules+1}{3}	-	-	"dimension 1 is the module (numModules+1 is glue): dimension 2 is the size of (1) the module's inputs,  (2) the module's linearized outputs, and (3) the module's continuous states"	-
 typedef	^	FAST_ParameterType	IntKi	LinStartIndx	{NumModules}{3}	-	-	"dimension 1 is the module ID: dimension 2 is the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states"	-
 typedef	^	FAST_ParameterType	IntKi	Lin_NumMods	-	-	-	"number of modules in the linearization"
@@ -483,6 +486,7 @@ typedef	^	FAST_ExternInitType	IntKi	TurbineID	-	0	-	"ID number for turbine (used
 typedef	^	FAST_ExternInitType	ReKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used in future for graphics)"	m
 typedef	^	FAST_ExternInitType	IntKi	NumSC2Ctrl	-	-	-	"number of controller inputs [from supercontroller]"	-
 typedef	^	FAST_ExternInitType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
+typedef	^	FAST_ExternInitType	ReKi	InitScOutputsTurbine	{:}	-	-	"Initial inputs to the controller [from the supercontroller]"	-
 typedef	^	FAST_ExternInitType	logical	FarmIntegration	-	.false.	-	"whether this is called from FAST.Farm (or another program that doesn't want FAST to call all of the init stuff first)"	-
 typedef	^	FAST_ExternInitType	IntKi	windGrid_n	4	-	-	"number of grid points in the x, y, z, and t directions for IfW"	-
 typedef	^	FAST_ExternInitType	ReKi	windGrid_delta	4	-	-	"size between 2 consecutive grid points in each grid direction for IfW"	"m,m,m,s"

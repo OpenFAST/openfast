@@ -1223,18 +1223,16 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
   ! write(*,*) 'Time spent reading data:  ',tread            
    
       
-   if ( ((n+1)/p%n_high_low) == (p%NumDT-1) ) then
+   if ( (n+1) == (p%NumDT-1) ) then
       n_high_low = 1
    else
       n_high_low = p%n_high_low
    end if
  
-      ! Loop over the entire grid of low resolution ambient wind data to compute:
-      !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
    do nt = 1,p%NumTurbines
       do n_hl=0, n_high_low-1
             ! read from file the ambient flow for the current time step
-         call ReadHighResWindFile(nt, n+1+n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat, errMsg)
+         call ReadHighResWindFile(nt, (n+1)*p%n_high_low + n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat, errMsg)
             if ( errStat >= AbortErrLev ) then
                return
             end if 
