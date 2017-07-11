@@ -44,31 +44,31 @@ compiler = sys.argv[3]
 devnull = open(os.devnull, 'w')
 
 casenames = [
-             "AWT_YFix_WSt"
-             "AWT_WSt_StartUp_HighSpShutDown"
-             "AWT_YFree_WSt"
-             "AWT_YFree_WTurb"
-             "AWT_WSt_StartUpShutDown"
-             "AOC_WSt"
-             "AOC_YFree_WTurb"
-             "AOC_YFix_WSt"
-             "UAE_YRamp_WSt"
-             "UAE_Rigid_WRamp_PwrCurve"
-             "WP_VSP_WTurb_PitchFail"
-             "WP_VSP_ECD"
-             "WP_VSP_WTurb"
-             "WP_Stationary_Linear"
-             "SWRT_YFree_VS_EDG01"
-             "SWRT_YFree_VS_EDC01"
-             "SWRT_YFree_VS_WTurb"
-             "5MW_DLL_Potential_WTurb"
-             "5MW_DLL_Potential_WTurb_WavesIrr"
-             "5MW_DLL_Potential_WSt_WavesReg"
-             "5MW_DLL_Potential_WTurb_WavesIrrFixedYawGrowth"
-             "5MW_DLL_WTurb_WavesIrr"
-             "5MW_DLL_WTurb_WavesIrr_WavesMulti"
-             "5MW_DLL_WTurb_WavesIrr"
-             "5MW_WSt_WhiteNoise_OC4"
+             "AWT_YFix_WSt",
+             "AWT_WSt_StartUp_HighSpShutDown",
+             "AWT_YFree_WSt",
+             "AWT_YFree_WTurb",
+             "AWT_WSt_StartUpShutDown",
+             "AOC_WSt",
+             "AOC_YFree_WTurb",
+             "AOC_YFix_WSt",
+             "UAE_YRamp_WSt",
+             "UAE_Rigid_WRamp_PwrCurve",
+             "WP_VSP_WTurb_PitchFail",
+             "WP_VSP_ECD",
+             "WP_VSP_WTurb",
+             "WP_Stationary_Linear",
+             "SWRT_YFree_VS_EDG01",
+             "SWRT_YFree_VS_EDC01",
+             "SWRT_YFree_VS_WTurb",
+             "5MW_DLL_Potential_WTurb",
+             "5MW_DLL_Potential_WTurb_WavesIrr",
+             "5MW_DLL_Potential_WSt_WavesReg",
+             "5MW_DLL_Potential_WTurb_WavesIrrFixedYawGrowth",
+             "5MW_DLL_WTurb_WavesIrr",
+             "5MW_DLL_WTurb_WavesIrr_WavesMulti",
+             "5MW_DLL_WTurb_WavesIrr",
+             "5MW_WSt_WhiteNoise_OC4",
              "5MW_BD_DLL_Potential_WTurb"
             ]
 results = []
@@ -82,4 +82,4 @@ for case in casenames:
         results.append((case, "FAIL"))
 
 for r in results:
-    print r[0], r[1]
+    print(r[0], r[1])
