@@ -467,7 +467,9 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
 
            eta = (GLL_nodes(j) + 1.0_BDKi)/2.0_BDKi ! relative location where we are on the member (element), in range [0,1]
 
-           call Find_IniNode(InputFileData%kp_coordinate, p, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV)
+           call Find_IniNode(InputFileData%kp_coordinate, p, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
+           CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+           if (ErrStat >= AbortErrLev) return
            p%uuN0(1:3,j,i) = temp_POS
            p%uuN0(4:6,j,i) = temp_CRV
        ENDDO
@@ -496,7 +498,9 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
       DO idx_qp=1,p%nqp
          eta = (p%QPtN(idx_qp) + 1.0_BDKi)/2.0_BDKi  ! translate quadrature points in [-1,1] to eta in [0,1]
 
-         call Find_IniNode(InputFileData%kp_coordinate, p, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV)
+         call Find_IniNode(InputFileData%kp_coordinate, p, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
          temp_id2 = (i-1)*p%nqp + idx_qp + p%qp_indx_offset            
          p%QuadPt(1:3,temp_id2) = temp_POS
          p%QuadPt(4:6,temp_id2) = temp_CRV
@@ -622,7 +626,9 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
 
       ! Global rotation tensor
    p%GlbRot = TRANSPOSE(InitInp%GlbRot) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
-   CALL BD_CrvExtractCrv(p%GlbRot,p%Glb_crv)
+   CALL BD_CrvExtractCrv(p%GlbRot,p%Glb_crv, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
 
       ! Gravity vector
@@ -1347,7 +1353,9 @@ subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
    CALL BD_InputGlobalLocal(p,u_tmp)
 
       ! initialize states, given parameters and initial inputs (in BD coordinates)
-   CALL BD_CalcIC(u_tmp,p,x)
+   CALL BD_CalcIC(u_tmp,p,x, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
    CALL Cleanup()
 
@@ -1509,7 +1517,9 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Incorporate boundary conditions (note that we are doing this because the first node isn't really a state. should fix x so we don't need a temp copy here.)
    x_tmp%q(   1:3,1) = m%u%RootMotion%TranslationDisp(:,1)
-   x_tmp%q(   4:6,1) = ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p)
+   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p, x_tmp%q(   4:6,1), ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    x_tmp%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
    x_tmp%dqdt(4:6,1) = m%u%Rootmotion%RotationVel(:,1)
 
@@ -3085,8 +3095,9 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
       ! Incorporate boundary conditions
-   CALL BD_BoundaryGA2(x,p,u_interp,OtherState)
-
+   CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
    i = 1
    piter = 0
@@ -3441,7 +3452,9 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
       CALL BD_DistrLoadCopy( p, u_interp, m )
 
          ! Incorporate boundary conditions
-      CALL BD_BoundaryGA2(x,p,u_interp,OtherState)
+      CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
       
       
       CALL BD_InitAcc( u_interp, p, x, OtherState, m, ErrStat2, ErrMsg2)
@@ -3498,7 +3511,9 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
       ! Incorporate boundary conditions (overwrite first node of continuous states and Acc array at t+dt)
-   CALL BD_BoundaryGA2(x,p,u_interp,OtherState)
+   CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
 
       ! find x, acc, and xcc at t+dt
@@ -3593,21 +3608,31 @@ END SUBROUTINE BD_TiSchmComputeCoefficients
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine applies the prescribed boundary conditions (from the input RootMotion mesh)
 !! into states and otherstates at the root finite element node
-SUBROUTINE BD_BoundaryGA2(x,p,u,OtherState)
+SUBROUTINE BD_BoundaryGA2(x,p,u,OtherState, ErrStat, ErrMsg)
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t (in BD coords)
    TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Inputs at t
    TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Continuous states at t
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
+   INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
 
       ! Root displacements (in BD coord system)
    x%q(1:3,1) = u%RootMotion%TranslationDisp(1:3,1)
 
       ! Root rotations
-   x%q(4:6,1) = ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1),p)
+   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1),p, x%q(4:6,1), ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
       ! Root velocities/angular velocities and accelerations/angular accelerations
    x%dqdt(1:3,1)         = u%RootMotion%TranslationVel(1:3,1)
@@ -3973,11 +3998,13 @@ END SUBROUTINE BD_DistrLoadCopy
 !! The initial displacements/rotations and linear velocities are
 !! set to the root value; the angular velocities over the beam
 !! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
-SUBROUTINE BD_CalcIC( u, p, x)
+SUBROUTINE BD_CalcIC( u, p, x, ErrStat, ErrMsg)
 
-   TYPE(BD_InputType),           INTENT(INOUT):: u             !< Inputs at t (in BD coordinates)
-   TYPE(BD_ParameterType),       INTENT(IN   ):: p             !< Parameters
-   TYPE(BD_ContinuousStateType), INTENT(INOUT):: x             !< Continuous states at t
+   TYPE(BD_InputType),           INTENT(INOUT)  :: u             !< Inputs at t (in BD coordinates)
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p             !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x             !< Continuous states at t
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat       !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
 
    INTEGER(IntKi)                             :: i
@@ -3991,11 +4018,20 @@ SUBROUTINE BD_CalcIC( u, p, x)
    REAL(BDKi)                                 :: GlbRot_TransVel(3)           ! = MATMUL(p%GlbRot,u%RootMotion%TranslationVel(:,1))
    REAL(BDKi)                                 :: GlbRot_RotVel_tilde(3,3)     ! = SkewSymMat(MATMUL(p%GlbRot,u%RootMotion%RotationVel(:,1)))
    REAL(BDKi)                                 :: temp33(3,3)
+
+   INTEGER(IntKi)                             :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER                    :: RoutineName = 'BD_CalcIC'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
 
    temp33=u%RootMotion%Orientation(:,:,1) ! possible type conversion
-   CALL BD_CrvExtractCrv(temp33,temp3)
+   CALL BD_CrvExtractCrv(temp33,temp3, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    CALL BD_CrvCompose(temp_rv,temp3,p%Glb_crv,FLAG_R1R2T)  ! temp_rv = temp3 composed with p%Glb_crv^-
    CALL BD_CrvMatrixR(temp_rv,temp_R) ! returns temp_R (the transpose of the DCM orientation matrix)
 

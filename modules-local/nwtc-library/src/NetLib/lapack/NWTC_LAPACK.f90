@@ -1328,7 +1328,7 @@ MODULE NWTC_LAPACK
 !=======================================================================
 !> Compute singular value decomposition (SVD) for a general matrix, A.
 !! use LAPACK_DGESVD (nwtc_lapack::lapack_dgesvd) instead of this specific function.
-   SUBROUTINE LAPACK_DGESVD(JOBU, JOBVT, M, N, A, S, U, VT, WORK, LWORK, INFO, ErrStat, ErrMsg)
+   SUBROUTINE LAPACK_DGESVD(JOBU, JOBVT, M, N, A, S, U, VT, WORK, LWORK, ErrStat, ErrMsg)
 
       ! passed variables/parameters:
 
@@ -1433,7 +1433,7 @@ MODULE NWTC_LAPACK
 !=======================================================================
 !> Compute singular value decomposition (SVD) for a general matrix, A.
 !! use LAPACK_SGESVD (nwtc_lapack::lapack_sgesvd) instead of this specific function.
-   SUBROUTINE LAPACK_SGESVD(JOBU, JOBVT, M, N, A, S, U, VT, WORK, LWORK, INFO, ErrStat, ErrMsg)
+   SUBROUTINE LAPACK_SGESVD(JOBU, JOBVT, M, N, A, S, U, VT, WORK, LWORK, ErrStat, ErrMsg)
 
       ! passed variables/parameters:
 
