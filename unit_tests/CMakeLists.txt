@@ -73,7 +73,7 @@ endforeach()
 
 set_source_files_properties(${pfunit_directory}/include/driver.F90 PROPERTIES GENERATED 1)
 
-foreach(module in beamdyn)
+foreach(module beamdyn)
   add_executable(
     ${module}_utest
     ${pfunit_directory}/include/driver.F90
