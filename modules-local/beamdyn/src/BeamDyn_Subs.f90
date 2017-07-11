@@ -328,8 +328,9 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
 
 END SUBROUTINE BD_CrvCompose
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes the CRV parameters given
-!! the rotation matrix
+!> This subroutine computes the CRV parameters given the rotation matrix
+!> The algorithm for this subroutine can be found in Markley, 'Unit Quaternion from Rotation Matrix'
+!> https://doi.org/10.2514/1.31730
 SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
 
    REAL(BDKi),       INTENT(IN   )  :: R(3,3)        !< Rotation Matrix
@@ -391,7 +392,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
       ! and setting \f$ \underline{\underline{Rr}} = UV^T \f$
       ! otherwise, assign \f$ \underline{\underline{Rr}}  = \underline{\underline{R}} \f$,
 
-   
+
    allocate (work(lwork))
    tempmat = R !mjs--need this to handle inout nature of input for LAPACK_gesvd
    call LAPACK_dgesvd('A', 'A', 3, 3, tempmat, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
