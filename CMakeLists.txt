@@ -57,24 +57,11 @@ find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
 ########################################################################
-# Option configuration
+# Test option configuration
 # Do this before configuring modules so that precompiler flags are included
 option(BUILD_TESTING "Build the testing tree." OFF)
 if(BUILD_TESTING)
-
-  include(CTest)
-
-  # regression tests
-  add_subdirectory(reg_tests)
-
-  # unit tests
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
-  add_subdirectory(unit_tests)
-endif()
-
-option(BUILD_DOCUMENTATION "Build documentation." OFF)
-if(BUILD_DOCUMENTATION)
-  add_subdirectory(docs)
 endif()
 
 ########################################################################
@@ -170,3 +157,20 @@ configure_package_config_file(
   PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR FTNMOD_INSTALL_DIR)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
   DESTINATION lib/cmake/OpenFAST)
+
+########################################################################
+# Option configuration
+if(BUILD_TESTING)
+  include(CTest)
+
+  # regression tests
+  add_subdirectory(reg_tests)
+
+  # unit tests
+  add_subdirectory(unit_tests)
+endif()
+
+option(BUILD_DOCUMENTATION "Build documentation." OFF)
+if(BUILD_DOCUMENTATION)
+  add_subdirectory(docs)
+endif()
