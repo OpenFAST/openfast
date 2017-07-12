@@ -145,10 +145,26 @@ if not os.path.isdir(inputsDirectory):
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
-for data in ["5MW_Baseline", "AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
+for data in ["AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
     dataDir = os.path.join(buildDirectory, data)
     if not os.path.isdir(dataDir):
         shutil.copytree(os.path.join(moduleDirectory, data), dataDir)
+
+# Special copy for the 5MW_Baseline folder because the Windows python-only workflow may have already created data in the subfolder ServoData
+dst = os.path.join(buildDirectory, "5MW_Baseline")
+src = os.path.join(moduleDirectory, "5MW_Baseline")
+if os.path.isdir(dst):
+    names = os.listdir(src)
+    for name in names:
+        if name is "ServoData":
+            continue
+        srcname = os.path.join(src, name)
+        dstname = os.path.join(dst, name)
+        if os.path.isdir(srcname):
+            if not os.path.isdir(dstname):
+                shutil.copytree(srcname, dstname)
+        else:
+            shutil.copy2(srcname, dstname)
 
 if not os.path.isdir(testBuildDirectory):
     shutil.copytree(inputsDirectory, testBuildDirectory, ignore=ignoreBaselineItems)
