@@ -339,22 +339,15 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    !Local variables
-   REAL(BDKi)                  :: pivot        ! Trace of the rotation matrix
+   REAL(BDKi)                  :: pivot(4) ! Trace of the rotation matrix
    REAL(BDKi)                  :: sm0
    REAL(BDKi)                  :: sm1
    REAL(BDKi)                  :: sm2
    REAL(BDKi)                  :: sm3
    REAL(BDKi)                  :: em
    REAL(BDKi)                  :: temp
-   REAL(BDKi)                  :: tempmat(3,3)
-   REAL(BDKi)                  :: S(3)         !mjs--these three are the SVD matrices (S is actually a vector)
-   REAL(BDKi)                  :: U(3,3)
-   REAL(BDKi)                  :: VT(3,3)
-   INTEGER(IntKi)              :: lwork = 27   !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
-   REAL(BDKi), ALLOCATABLE     :: work(:)          ! where M x N is dimension of R, and lwork is the dimension of work
-   REAL(BDKi)                  :: Rr(3,3)      !mjs--correccted rotation matrix
-   LOGICAL                     :: ortho        !mjs--logical value indicating whether R is orthogonal
-   INTEGER                     :: i            ! loop variable
+   REAL(BDKi)                  :: Rr(3,3)  ! (possibly) corrected rotation matrix
+   INTEGER                     :: i        ! case indicator
 
    INTEGER(IntKi)              :: ErrStat2 ! Temporary Error status
    CHARACTER(ErrMsgLen)        :: ErrMsg2  ! Temporary Error message
@@ -380,51 +373,18 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    !! _Note:_ The above equation does not match what is in the March 2016 BD manual (it is the transpose).
    !! It does, however, match equation 5.17 in the March 2016 "BeamDyn User's Guide and Theory Manual"
 
-   ! mjs--Start by determining if R is a valid rotation matrix using the properties:
-      ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1
-      ! 2) a valid rotation matrix must have determinant == +1
-      ! i.e., the singular values == 1
-
-   ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
-      ! compute \f$ \underline{\underline{Rr}} \f$, the nearest orthogonal tensor
-      ! to \f$ \underline{\underline{R}} \f$
-      ! this is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
-      ! and setting \f$ \underline{\underline{Rr}} = UV^T \f$
-      ! otherwise, assign \f$ \underline{\underline{Rr}}  = \underline{\underline{R}} \f$,
-
-
-   allocate (work(lwork))
-   tempmat = R !mjs--need this to handle inout nature of input for LAPACK_gesvd
-   call LAPACK_dgesvd('A', 'A', 3, 3, tempmat, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
+   ! mjs--determine whether R is a valid rotation matrix and correct it if not
+   call BD_CheckRotMat(R, Rr, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-   do i = 1, 3
-      ortho = equalrealnos(S(i), 1.0_BDKi)
-      if (.not. ortho) exit
-   end do
-
-   ! mjs--if an invalid rotatation matrix is passed, set lowest error status, so as not to abort,
-      ! but still inform user
-   if (.not. ortho) then
-      ErrStat = 1
-      ErrMsg = 'Passed invalid rotation matrix--fixing via SVD'
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-      Rr = matmul(U, VT)
-   else
-      Rr = R
-   end if
-
-      !> Find the trace of the matrix
-      !! \f$  T = t_{r0} \left( 3 c_0 - c_1^2 - c_2^2 - c_3^2 \right) \f$
-   pivot = Rr(1,1) + Rr(2,2) + Rr(3,3)
+   ! mjs--find max value of T := Tr(Rr) and diagonal elements of Rr
+   pivot = (/ Rr(1, 1), Rr(2, 2), Rr(3, 3), Rr(1,1) + Rr(2,2) + Rr(3,3) /)
+   i = maxloc(pivot, 1)
 
       !> - Condition 1: \f$ \underline{\underline{R(3,3)}} > T \f$
       !! This implies that \f$ c_3^2 > c_0^2 \f$
-   IF (Rr(3,3) .GT. pivot) THEN
-      !pivot = Rr(3,3)
-      !ipivot = 3
+   IF (i == 3) THEN
       sm0  = Rr(2,1) - Rr(1,2)                           !  4 c_0 c_3 t_{r0}
       sm1  = Rr(1,3) + Rr(3,1)                           !  4 c_1 c_3 t_{r0}
       sm2  = Rr(2,3) + Rr(3,2)                           !  4 c_2 c_3 t_{r0}
@@ -433,9 +393,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
 
       !> - Condition 2: \f$ \underline{\underline{R(2,2)}} > T \f$
       !! This implies that \f$ c_2^2 > c_0^2 \f$
-   ELSEIF (Rr(2,2) .GT. pivot) THEN
-      !pivot = Rr(2,2)
-      !ipivot = 2
+   ELSEIF (i == 2) THEN
       sm0  = Rr(1,3) - Rr(3,1)                           !  4 c_0 c_2 t_{r0}
       sm1  = Rr(1,2) + Rr(2,1)                           !  4 c_1 c_2 t_{r0}
       sm2  = 1.0_BDKi - Rr(1,1) + Rr(2,2) - Rr(3,3)      !  4 c_2^2   t_{r0}
@@ -444,9 +402,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
 
       !> - Condition 3: \f$ \underline{\underline{R(1,1)}} > T \f$
       !! This implies that \f$ c_1^2 > c_0^2 \f$
-   ELSEIF (Rr(1,1) .GT. pivot) THEN
-      !pivot = Rr(1,1)
-      !ipivot = 1
+   ELSEIF (i == 1) THEN
       sm0  = Rr(3,2) - Rr(2,3)                           !  4 c_0 c_1 t_{r0}
       sm1  = 1.0_BDKi + Rr(1,1) - Rr(2,2) - Rr(3,3)      !  4 c_1^2   t_{r0}
       sm2  = Rr(1,2) + Rr(2,1)                           !  4 c_1 c_2 t_{r0}
@@ -470,6 +426,71 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    cc(3) = em*sm3
 
 END SUBROUTINE BD_CrvExtractCrv
+!------------------------------------------------------------------------------
+!> This subroutine determines whether R is a valid rotation matrix and, if not,
+!> replaces it with the closest orthongonal rotation matrix
+SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
+
+   REAL(BDKi),       INTENT(IN   )  :: R(3,3)        !< Rotation Matrix input
+   REAL(BDKi),       INTENT(  OUT)  :: Rout(3,3)     !< Rotation Matrix output
+   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat       !< Error status of the operation
+   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
+
+   !Local variables
+   REAL(BDKi)                  :: tempmat(3,3)
+   REAL(BDKi)                  :: S(3)         !mjs--these three are the SVD matrices (S is actually a vector)
+   REAL(BDKi)                  :: U(3,3)
+   REAL(BDKi)                  :: VT(3,3)
+   INTEGER(IntKi)              :: lwork = 27   !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
+   REAL(BDKi), ALLOCATABLE     :: work(:)          ! where M x N is dimension of R, and lwork is the dimension of work
+   REAL(BDKi)                  :: Rr(3,3)      !mjs--correccted rotation matrix
+   LOGICAL                     :: ortho        !mjs--logical value indicating whether R is orthogonal
+   INTEGER                     :: i            ! loop variable/case indicator
+
+   INTEGER(IntKi)              :: ErrStat2 ! Temporary Error status
+   CHARACTER(ErrMsgLen)        :: ErrMsg2  ! Temporary Error message
+   character(*), parameter     :: RoutineName = 'BD_CheckRotMat'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! mjs--Start by determining if R is a valid rotation matrix using the properties:
+      ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1
+      ! 2) a valid rotation matrix must have determinant == +1
+      ! i.e., the singular values == 1
+
+   ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
+      ! compute \f$ \underline{\underline{Rr}} \f$, the nearest orthogonal tensor
+      ! to \f$ \underline{\underline{R}} \f$
+      ! this is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
+      ! and setting \f$ \underline{\underline{Rr}} = UV^T \f$
+      ! otherwise, assign \f$ \underline{\underline{Rr}}  = \underline{\underline{R}} \f$
+
+   allocate (work(lwork))
+   tempmat = R !mjs--need this to handle inout nature of input for LAPACK_dgesvd
+   call LAPACK_dgesvd('A', 'A', 3, 3, tempmat, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   do i = 1, 3
+      ortho = equalrealnos(S(i), 1.0_BDKi)
+      if (.not. ortho) exit
+   end do
+
+   ! mjs--if an invalid rotatation matrix is passed, set lowest error status, so as not to abort,
+      ! but still inform user
+   if (.not. ortho) then
+      ErrStat = 1
+      ErrMsg = 'Passed invalid rotation matrix--fixing via SVD'
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      Rout = matmul(U, VT)
+   else
+      Rout = R
+   end if
+
+END SUBROUTINE BD_CheckRotMat
 !------------------------------------------------------------------------------
 !> This subroutine generates n-point gauss-legendre quadrature points and weights
 !!
