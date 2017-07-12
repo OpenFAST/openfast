@@ -153,7 +153,9 @@ for data in ["AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
 # Special copy for the 5MW_Baseline folder because the Windows python-only workflow may have already created data in the subfolder ServoData
 dst = os.path.join(buildDirectory, "5MW_Baseline")
 src = os.path.join(moduleDirectory, "5MW_Baseline")
-if os.path.isdir(dst):
+if not os.path.isdir(dst):
+    shutil.copytree(src, dst)
+else:
     names = os.listdir(src)
     for name in names:
         if name is "ServoData":
