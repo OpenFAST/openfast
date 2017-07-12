@@ -20,7 +20,6 @@
     openfast/build/reg_tests.
 
     Usage: python manualRegressionTest path/to/openfast_executable [Darwin,Linux,Windows] [Intel,GNU]
-
 """
 
 import sys
@@ -71,6 +70,7 @@ casenames = [
              "5MW_WSt_WhiteNoise_OC4",
              "5MW_BD_DLL_Potential_WTurb"
             ]
+
 results = []
 for case in casenames:
     print("executing case {}".format(case))
@@ -81,5 +81,6 @@ for case in casenames:
     else:
         results.append((case, "FAIL"))
 
+print("Regression test execution completed with these results:")
 for r in results:
     print(r[0], r[1])
