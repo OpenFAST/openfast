@@ -1,26 +1,32 @@
-# OpenFAST/reg_tests
+# openfast/reg_tests
 
-This directory contains the regression testing suite for OpenFAST. Its contents are list here and further described below.
+This directory contains the regression test suite for OpenFAST and its modules. Its contents are listed here and further described below.
 - [r-test](https://github.com/openfast/r-test), a standalone repository containing the regression test data
 - CMake/CTest configuration files
 - Module specific regression test execution scripts
 - A `lib` subdirectory with lower level python scripts
-
-The automated regression test runs CTest and can be executed by running the command `make test` from the build directory. If the entire OpenFAST package is to be built, CMake will configure CTest to find the new binary at `openfast/build/glue-codes/fast/openfast`. However, if the intention is to build only the test suite, the OpenFAST binary should be specified in the CMake configuration under the `OPENFAST_EXECUTABLE` flag.
-
-The regression test creates a subdirectory in the build directory called `ctest-build`. There are subdirectories here containing the input files for the test cases for OpenFAST itself and each module included in the regression test.
 
 Dependencies required to run the regression test suite are
 - Python 2.7/3+
 - Numpy
 - CMake and CTest
 
-## r-test
-This repository serves as a container for regression test data for OpenFAST and its included modules. The test cases for OpenFAST are taken from the [FAST V8 CertTests](https://github.com/NWTC/FAST/tree/master/CertTest). The repository contains:
-- input files for test execution
-- outputs for various machine and compiler combinations located in the individual test directories and which serve as baseline solutions for the regression test suite
+## Execution
+The automated regression test runs CTest and can be executed by running either of the commands `make test` or `ctest` from the build directory. If the entire OpenFAST package is to be built, CMake will configure CTest to find the new binary at `openfast/build/glue-codes/fast/openfast`. However, if the intention is to build only the test suite, the OpenFAST binary should be specified in the CMake configuration under the `CTEST_OPENFAST_EXECUTABLE` flag. There is also a corresponding `CTEST_MODULE_NAME` flag for each module that is included in the regression test.
 
-r-test is brought into OpenFAST as a git submodule and can be initialized with `git submodule update --init --recursive` or updated with `git submodule update`.
+The regression test can be executed manually with the included driver `manualRegressionTest.py`.
+
+In both modes of execution a subdirectory is created in the build directory called `reg_tests` where all of the input files for the test cases are copied and all of the locally generated outputs are stored.
+
+## r-test
+This repository serves as a container for regression test data for system level and module level testing of OpenFAST. The repository contains:
+- input files for test case execution
+- baseline solutions for various machine and compiler combinations
+- turbine specific inputs
+
+The baseline solutions serve as "gold standards" for the regression test suite and are updated periodically as OpenFAST and its modules are improved.
+
+r-test is brought into OpenFAST as a git submodule and should be initialized after cloning with `git submodule update --init --recursive` or updated with `git submodule update`.
 
 ## CTest/CMake
 The configuration files consist of
@@ -42,7 +48,7 @@ The test data is contained in a git submodule, r-test, which must be initialized
 prior to running. r-test can be initialized with
 `git submodule update --init --recursive` or updated with `git submodule update`.
 
-Usage: `python executeOpenfastRegressionCase.py testname openfast_executable source_directory build_directory tolerance system_name compiler_id`
+Usage: `python executeOpenfastRegressionCase.py testname openfast_executable source_directory build_directory tolerance system_name compiler_id`  
 Example: `python executeOpenfastRegressionCase.py Test02 openfast path/to/openfast_repo path/to/openfast_repo/build 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
 
 #### executeBeamdynRegressionCase.py
@@ -51,8 +57,15 @@ The test data is contained in a git submodule, r-test, which must be initialized
 prior to running. r-test can be initialized with
 `git submodule update --init --recursive` or updated with `git submodule update`.
 
-Usage: `python executeBeamdynRegressionCase.py testname beamdyn_driver source_directory build_directory tolerance system_name compiler_id`
+Usage: `python executeBeamdynRegressionCase.py testname beamdyn_driver source_directory build_directory tolerance system_name compiler_id`  
 Example: `python executeBeamdynRegressionCase.py Test02 beamdyn_driver path/to/openfast_repo path/to/openfast_repo/build 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
+
+#### manualRegressionTest.py
+This program executes OpenFAST on all of the CertTest cases. It mimics the
+regression test execution through CMake/CTest. All generated data goes into
+`openfast/build/reg_tests`.
+
+Usage: `python manualRegressionTest.py path/to/openfast_executable [Darwin,Linux,Windows] [Intel,GNU]`
 
 #### lib/executeOpenfastCase.py
 This program executes a single OpenFAST case.
@@ -61,8 +74,8 @@ Usage: `python executeOpenfastCase.py input_file openfast_executable`
 - `openfast_executable` is an optional argument pointing to the OpenFAST executable of choice.
 - if `openfast_executable` is not given, an attempt will be made to find one in $PATH
 
-Example: `python executeOpenfastCase.py CaseDir/case01.fst`
-Example: `python executeOpenfastCase.py CaseDir/case01.fst openfast`
+Example: `python executeOpenfastCase.py CaseDir/case01.fst`  
+Example: `python executeOpenfastCase.py CaseDir/case01.fst openfast`  
 Example: `python executeOpenfastCase.py CaseDir/case01.fst openfast/install/bin/openfast`
 
 #### lib/executeBeamdynCase.py
