@@ -24,6 +24,5 @@ https://nwtc.nrel.gov/
    OpenFAST Github Repository <https://github.com/OpenFAST/OpenFAST>
    Installing OpenFAST  <source/install.rst>
    Testing OpenFAST  <source/test.rst>
-   Module Documentation <source/module.rst>
    Source Code Documentation <source/code.rst>
    Building this Documentation Locally <source/build_doc.rst>
