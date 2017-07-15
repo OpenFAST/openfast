@@ -502,7 +502,7 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
          call Find_IniNode(InputFileData%kp_coordinate, p, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
-         temp_id2 = (i-1)*p%nqp + idx_qp + p%qp_indx_offset            
+         temp_id2 = (i-1)*p%nqp + idx_qp + p%qp_indx_offset
          p%QuadPt(1:3,temp_id2) = temp_POS
          p%QuadPt(4:6,temp_id2) = temp_CRV
       ENDDO
@@ -3453,7 +3453,8 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
       CALL BD_DistrLoadCopy( p, u_interp, m )
 
          ! Incorporate boundary conditions
-      CALL BD_BoundaryGA2(x,p,u_interp,OtherState)
+      CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
+          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
       CALL BD_InitAcc( u_interp, p, x, OtherState, m, ErrStat2, ErrMsg2)

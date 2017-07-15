@@ -887,7 +887,7 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-   
+
    
    R_BD = R ! possible type conversion (only if BDKi /= R8Ki)
 
