@@ -328,40 +328,32 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
 
 END SUBROUTINE BD_CrvCompose
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes the CRV parameters given
-!! the rotation matrix
-SUBROUTINE BD_CrvExtractCrv(R, cc)
+!> This subroutine computes the CRV parameters given the rotation matrix
+!> The algorithm for this subroutine can be found in Markley, 'Unit Quaternion from Rotation Matrix'
+!> https://doi.org/10.2514/1.31730
+SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
 
-   REAL(BDKi),       INTENT(IN   ):: R(3,3)       !< Rotation Matrix
-   REAL(BDKi),       INTENT(  OUT):: cc(3)         !< Crv paramteres
+   REAL(BDKi),       INTENT(IN   )  :: R(3,3)        !< Rotation Matrix
+   REAL(BDKi),       INTENT(  OUT)  :: cc(3)         !< Crv paramters
+   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat       !< Error status of the operation
+   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    !Local variables
-   REAL(BDKi)                  :: pivot      ! Trace of the rotation matrix
+   REAL(BDKi)                  :: pivot(4) ! Trace of the rotation matrix
    REAL(BDKi)                  :: sm0
    REAL(BDKi)                  :: sm1
    REAL(BDKi)                  :: sm2
    REAL(BDKi)                  :: sm3
    REAL(BDKi)                  :: em
    REAL(BDKi)                  :: temp
-   REAL(BDKi)                  :: tempmat(3,3)
-   REAL(BDKi)                  :: S(3) !mjs--these three are the SVD matrices (S is actually a vector)
-   REAL(BDKi)                  :: U(3,3)
-   REAL(BDKi)                  :: VT(3,3)
-   INTEGER(IntKi)              :: lwork = 27 !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
-   REAL(BDKi), ALLOCATABLE     :: work(:)       ! where M x N is dimension of R, and lwork is the dimension of work
-   INTEGER(IntKi)              :: info !mjs--exit message for dgesvd
-   REAL(BDKi)                  :: Rr(3,3) !mjs--correccted rotation matrix
-   REAL(BDKi)                  :: eps !mjs--tolerance for determining if R is a valid rotation matrix
-   REAL(BDKi)                  :: eye(3,3) !mjs--3x3 identity matrix for determining if R is orthogonal
-   LOGICAL                     :: ortho = .false. !mjs--logical value indicating whether R is orthogonal
-   LOGICAL                     :: det1 = .false. !mjs--logical value indicating whether det(R) == 1
+   REAL(BDKi)                  :: Rr(3,3)  ! (possibly) corrected rotation matrix
+   INTEGER                     :: i        ! case indicator
 
-   INTEGER(IntKi)             :: ErrStat        !< Error status of the operation
-   CHARACTER(ErrMsgLen)       :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-   INTEGER(IntKi)             :: ErrStat2
-   CHARACTER(ErrMsgLen)       :: ErrMsg2
-   character(*), parameter    :: RoutineName = 'BD_CrvExtractCrv'
+   INTEGER(IntKi)              :: ErrStat2 ! Temporary Error status
+   CHARACTER(ErrMsgLen)        :: ErrMsg2  ! Temporary Error message
+   character(*), parameter     :: RoutineName = 'BD_CrvExtractCrv'
 
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -381,64 +373,18 @@ SUBROUTINE BD_CrvExtractCrv(R, cc)
    !! _Note:_ The above equation does not match what is in the March 2016 BD manual (it is the transpose).
    !! It does, however, match equation 5.17 in the March 2016 "BeamDyn User's Guide and Theory Manual"
 
-   ! mjs--Start by determining if R is a valid rotation matrix using the following properties:
-      ! 1) \f$ \underline{\underline{R}} \f$ is orthogonal,
-         ! i.e., \f$ \underline{\underline{R}} \underline{\underline{R}}^T = I \f$
-         ! (check residual vs. single/double precision eps)
-      ! 2) \f$ \underline{\underline{R}} \f$ is a 'proper orthogonal tensor',
-         ! i.e., \f$ \det(\underline{\underline{R}}) = 1 \f$
+   ! mjs--determine whether R is a valid rotation matrix and correct it if not
+   call BD_CheckRotMat(R, Rr, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
-      allocate (work(lwork))
-      tempmat = R !mjs--need this to handle inout nature of input for LAPACK_gesvd
-      eps =  epsilon(R)
-      eye = 0
-      eye = reshape( (/ 1.0_BDKi,   0.0,        0.0, &
-                        0.0,        1.0_BDKi,   0.0, &
-                        0.0,        0.0,        1.0_BDKi /), &
-                        shape(R), order=(/2,1/) )
-
-      det1  = abs(( R(1, 1) * (R(2, 2) * R(3, 3) - R(2, 3) * R(3, 2)) - &
-                   R(1, 2) * (R(2, 1) * R(3, 3) - R(2, 3) * R(3, 1)) + &
-                   R(1, 3) * (R(2, 1) * R(3, 2) - R(2, 2) * R(3, 1)) ) - 1.0_BDKi) > eps
-
-      if (.not. det1) then
-
-         ortho = any(abs(matmul(transpose(R), R) - eye) > eps)
-
-      end if
-
-      ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
-         ! compute \f$ \underline{\underline{Rr}} \f$, the nearest orthogonal tensor
-         ! to \f$ \underline{\underline{R}} \f$
-         ! this is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
-         ! and setting \f$ \underline{\underline{Rr}} = UV^T \f$
-         ! otherwise, assign \f$ \underline{\underline{Rr}}  = \underline{\underline{R}} \f$,
-
-      if (ortho .or. det1) then
-
-!mjs--FIXME: not 100% confident on the error catching/return here, since i think it may only kick
-   ! out to the calling function, neither of which have ErrMsg/ErrStat machinery
-         call LAPACK_gesvd('A', 'A', 3, 3, tempmat, S, U, VT, work, lwork, info, ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat >= AbortErrLev) return
-
-         Rr = matmul(U, VT)
-
-      else
-
-         Rr = R
-
-      end if
-
-      !> Find the trace of the matrix
-      !! \f$  T = t_{r0} \left( 3 c_0 - c_1^2 - c_2^2 - c_3^2 \right) \f$
-   pivot = Rr(1,1) + Rr(2,2) + Rr(3,3)
+   ! mjs--find max value of T := Tr(Rr) and diagonal elements of Rr
+   pivot = (/ Rr(1, 1), Rr(2, 2), Rr(3, 3), Rr(1,1) + Rr(2,2) + Rr(3,3) /)
+   i = maxloc(pivot, 1)
 
       !> - Condition 1: \f$ \underline{\underline{R(3,3)}} > T \f$
       !! This implies that \f$ c_3^2 > c_0^2 \f$
-   IF (Rr(3,3) .GT. pivot) THEN
-      !pivot = Rr(3,3)
-      !ipivot = 3
+   IF (i == 3) THEN
       sm0  = Rr(2,1) - Rr(1,2)                           !  4 c_0 c_3 t_{r0}
       sm1  = Rr(1,3) + Rr(3,1)                           !  4 c_1 c_3 t_{r0}
       sm2  = Rr(2,3) + Rr(3,2)                           !  4 c_2 c_3 t_{r0}
@@ -447,9 +393,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc)
 
       !> - Condition 2: \f$ \underline{\underline{R(2,2)}} > T \f$
       !! This implies that \f$ c_2^2 > c_0^2 \f$
-   ELSEIF (Rr(2,2) .GT. pivot) THEN
-      !pivot = Rr(2,2)
-      !ipivot = 2
+   ELSEIF (i == 2) THEN
       sm0  = Rr(1,3) - Rr(3,1)                           !  4 c_0 c_2 t_{r0}
       sm1  = Rr(1,2) + Rr(2,1)                           !  4 c_1 c_2 t_{r0}
       sm2  = 1.0_BDKi - Rr(1,1) + Rr(2,2) - Rr(3,3)      !  4 c_2^2   t_{r0}
@@ -458,9 +402,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc)
 
       !> - Condition 3: \f$ \underline{\underline{R(1,1)}} > T \f$
       !! This implies that \f$ c_1^2 > c_0^2 \f$
-   ELSEIF (Rr(1,1) .GT. pivot) THEN
-      !pivot = Rr(1,1)
-      !ipivot = 1
+   ELSEIF (i == 1) THEN
       sm0  = Rr(3,2) - Rr(2,3)                           !  4 c_0 c_1 t_{r0}
       sm1  = 1.0_BDKi + Rr(1,1) - Rr(2,2) - Rr(3,3)      !  4 c_1^2   t_{r0}
       sm2  = Rr(1,2) + Rr(2,1)                           !  4 c_1 c_2 t_{r0}
@@ -475,7 +417,6 @@ SUBROUTINE BD_CrvExtractCrv(R, cc)
       sm2  = Rr(1,3) - Rr(3,1)                           ! -4 c_0 c_2 t_{r0}
       sm3  = Rr(2,1) - Rr(1,2)                           ! -4 c_0 c_3 t_{r0}
       temp = SIGN( 2.0_BDKi*SQRT(ABS(sm0)), sm0 )
-
    ENDIF
 
    em = sm0 + temp
@@ -485,6 +426,71 @@ SUBROUTINE BD_CrvExtractCrv(R, cc)
    cc(3) = em*sm3
 
 END SUBROUTINE BD_CrvExtractCrv
+!------------------------------------------------------------------------------
+!> This subroutine determines whether R is a valid rotation matrix and, if not,
+!> replaces it with the closest orthongonal rotation matrix
+SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
+
+   REAL(BDKi),       INTENT(IN   )  :: R(3,3)        !< Rotation Matrix input
+   REAL(BDKi),       INTENT(  OUT)  :: Rout(3,3)     !< Rotation Matrix output
+   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat       !< Error status of the operation
+   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
+
+   !Local variables
+   REAL(BDKi)                  :: tempmat(3,3)
+   REAL(BDKi)                  :: S(3)         !mjs--these three are the SVD matrices (S is actually a vector)
+   REAL(BDKi)                  :: U(3,3)
+   REAL(BDKi)                  :: VT(3,3)
+   INTEGER(IntKi)              :: lwork = 27   !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
+   REAL(BDKi), ALLOCATABLE     :: work(:)          ! where M x N is dimension of R, and lwork is the dimension of work
+   REAL(BDKi)                  :: Rr(3,3)      !mjs--correccted rotation matrix
+   LOGICAL                     :: ortho        !mjs--logical value indicating whether R is orthogonal
+   INTEGER                     :: i            ! loop variable/case indicator
+
+   INTEGER(IntKi)              :: ErrStat2 ! Temporary Error status
+   CHARACTER(ErrMsgLen)        :: ErrMsg2  ! Temporary Error message
+   character(*), parameter     :: RoutineName = 'BD_CheckRotMat'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! mjs--Start by determining if R is a valid rotation matrix using the properties:
+      ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1
+      ! 2) a valid rotation matrix must have determinant == +1
+      ! i.e., the singular values == 1
+
+   ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
+      ! compute \f$ \underline{\underline{Rr}} \f$, the nearest orthogonal tensor
+      ! to \f$ \underline{\underline{R}} \f$
+      ! this is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
+      ! and setting \f$ \underline{\underline{Rr}} = UV^T \f$
+      ! otherwise, assign \f$ \underline{\underline{Rr}}  = \underline{\underline{R}} \f$
+
+   allocate (work(lwork))
+   tempmat = R !mjs--need this to handle inout nature of input for LAPACK_dgesvd
+   call LAPACK_dgesvd('A', 'A', 3, 3, tempmat, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+   do i = 1, 3
+      ortho = equalrealnos(S(i), 1.0_BDKi)
+      if (.not. ortho) exit
+   end do
+
+   ! mjs--if an invalid rotatation matrix is passed, set lowest error status, so as not to abort,
+      ! but still inform user
+   if (.not. ortho) then
+      ErrStat = 1
+      ErrMsg = 'Passed invalid rotation matrix--fixing via SVD'
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      Rout = matmul(U, VT)
+   else
+      Rout = R
+   end if
+
+END SUBROUTINE BD_CheckRotMat
 !------------------------------------------------------------------------------
 !> This subroutine generates n-point gauss-legendre quadrature points and weights
 !!
@@ -746,7 +752,7 @@ END SUBROUTINE Set_BldMotion_Mesh
 !> This subroutine finds the (initial) nodal position and curvature based on a relative position, eta, along the blade.
 !! The key points are used to obtain the z coordinate of the physical distance along the blade, and POS and CRV vectors are returned
 !! from that location.
-subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, POS, CRV)
+subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, POS, CRV, ErrStat, ErrMsg)
 
    REAL(BDKi),                   intent(in   )  :: kp_coordinate(:,:)  !< Key Point coordinates
    type(BD_ParameterType),       intent(in   )  :: p                   !< Parameters
@@ -755,6 +761,8 @@ subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, 
    REAL(BDKi),                   intent(in   )  :: eta                 !! relative position of desired node, [0,1]
    REAL(BDKi),                   intent(  out)  :: POS(3)              !! position of node (in BD coordinates)
    REAL(BDKi),                   intent(  out)  :: CRV(3)              !! curvature of node (in BD coordinates)
+   integer(IntKi),               intent(  out)  :: ErrStat             !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi),PARAMETER    :: EPS = 1.0D-10
 
@@ -764,6 +772,14 @@ subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, 
    REAL(BDKi)              :: etaD              ! distance (in z coordinate) associated with eta along this member, in meters
    REAL(BDKi)              :: temp_twist
    REAL(BDKi)              :: temp_e1(3)
+
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'Find_IniNode'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    ! compute the dimensional distance along the full beam
    etaD = kp_coordinate(member_first_kp,3) + &
@@ -779,7 +795,9 @@ subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, 
 
    ! using the spline coefficients at this key point, compute the position and orientation of the node
    CALL BD_ComputeIniNodalPosition(p%SP_Coef(kp,:,:),etaD,POS,temp_e1,temp_twist) ! Compute point physical coordinates (POS) in blade frame                   
-   CALL BD_ComputeIniNodalCrv(temp_e1,temp_twist,CRV)                           ! Compute initial rotation parameters (CRV) in blade frame
+   CALL BD_ComputeIniNodalCrv(temp_e1, temp_twist, CRV, ErrStat2, ErrMsg2) ! Compute initial rotation parameters (CRV) in blade frame
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
 
 end subroutine Find_IniNode
@@ -809,17 +827,26 @@ END SUBROUTINE BD_ComputeIniNodalPosition
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes initial CRV parameters
 !! given geometry information
-SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc)
+SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc, ErrStat, ErrMsg)
 
-   REAL(BDKi),    INTENT(IN   ):: e1(:)         !< Tangent unit vector
-   REAL(BDKi),    INTENT(IN   ):: phi           !< Initial twist angle, in degrees
-   REAL(BDKi),    INTENT(  OUT):: cc(:)         !< Initial Crv Parameter
+   REAL(BDKi),     INTENT(IN   )  :: e1(:)         !< Tangent unit vector
+   REAL(BDKi),     INTENT(IN   )  :: phi           !< Initial twist angle, in degrees
+   REAL(BDKi),     INTENT(  OUT)  :: cc(:)         !< Initial Crv Parameter
+   INTEGER(IntKi), INTENT(  OUT)  :: ErrStat       !< Error status of the operation
+   CHARACTER(*),   INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                  :: e2(3)         !< Unit normal vector
    REAL(BDKi)                  :: Rr(3,3)       !< Initial rotation matrix
    REAL(BDKi)                  :: PhiRad        !< Phi in radians
    REAL(BDKi)                  :: Delta
+
+   INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeIniNodalCrv'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    PhiRad = phi*D2R_D  ! convert to radians
 
@@ -835,27 +862,42 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc)
 
    Rr(:,2) = Cross_Product(e1,e2)
 
-   CALL BD_CrvExtractCrv(Rr,cc)
+   CALL BD_CrvExtractCrv(Rr, cc, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
 
 END SUBROUTINE BD_ComputeIniNodalCrv
 !-----------------------------------------------------------------------------------------------------------------------------------
-FUNCTION ExtractRelativeRotation(R,p) RESULT(rr)
-   real(R8Ki),             intent(in) :: R(3,3)       !< input rotation matrix (transpose of DCM; in BD coords)
-   type(BD_ParameterType), intent(in) :: p            !< Parameters
-   real(BDKi)                         :: rr(3)        !< W-M parameters of relative rotation 
+!mjs--had to change this to a subroutine to get out ErrStat/ErrMsg
+SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
+   real(R8Ki),             INTENT(in   )     :: R(3,3)       !< input rotation matrix (transpose of DCM; in BD coords)
+   type(BD_ParameterType), INTENT(in   )     :: p            !< Parameters
+   real(BDKi),             INTENT(  OUT)     :: rr(3)        !< W-M parameters of relative rotation
+   INTEGER(IntKi),         INTENT(  OUT)     :: ErrStat      !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT)     :: ErrMsg       !< Error message if ErrStat /= ErrID_None
    
    real(BDKi)                         :: R_WM(3)      ! W-M parameters of R 
    real(BDKi)                         :: R_BD(3,3)    ! input rotation matrix in BDKi precision 
    REAL(BDKi)                         :: temp_cc(3)   ! W-M parameters
+
+   INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
+   CHARACTER(*), PARAMETER     :: RoutineName = 'ExtractRelativeRotation'
+
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    
    
    R_BD = R ! possible type conversion (only if BDKi /= R8Ki)
 
-   CALL BD_CrvExtractCrv(R_BD,R_WM)
+   CALL BD_CrvExtractCrv(R_BD,R_WM, ErrStat2, ErrMsg2)
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    CALL BD_CrvCompose(temp_cc,R_WM,p%Glb_crv,FLAG_R1R2T)   ! temp_cc = R_WM composed with p%Glb_crv^-
    rr = MATMUL(temp_cc,p%GlbRot)                           ! equation is MATMUL(TRANSPOSE(p%GlbRot),temp_cc), but this is the same as MATMUL(temp_cc,p%GlbRot) because Fortran treats row and column vectors the same (e.g.,  transpose(MATMUL(TRANSPOSE(p%GlbRot),temp_cc)) = matmul( transpose(temp_cc), p%GlbRot ) = matmul( temp_cc, p%GlbRot )
       
-END FUNCTION ExtractRelativeRotation
+END SUBROUTINE ExtractRelativeRotation
 !-----------------------------------------------------------------------------------------------------------------------------------
 FUNCTION BDrot_to_FASTdcm(rr,p) RESULT(dcm)
    real(BDKi),             intent(in) :: rr(3)        !< W-M parameters of relative rotation 
