@@ -40,6 +40,7 @@ module AeroDyn
    ! ..... Public Subroutines ...................................................................................................
 
    public :: AD_Init                           ! Initialization routine
+   public :: AD_ReInit                         ! Routine to reinitialize driver (re-initializes the states)
    public :: AD_End                            ! Ending routine (includes clean up)
    public :: AD_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
                                                !   continuous states, and updating discrete states
@@ -416,6 +417,41 @@ contains
    end subroutine Cleanup
 
 end subroutine AD_Init
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> This subroutine reinitializes BEMT and UA, assuming that we will start the simulation over again, with only the inputs being different.
+!! This allows us to bypass reading input files and allocating arrays because p is already set.
+subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )   
+
+   type(AD_ParameterType),       intent(in   ) :: p             !< Parameters
+   type(AD_ContinuousStateType), intent(inout) :: x             !< Initial continuous states
+   type(AD_DiscreteStateType),   intent(inout) :: xd            !< Initial discrete states
+   type(AD_ConstraintStateType), intent(inout) :: z             !< Initial guess of the constraint states
+   type(AD_OtherStateType),      intent(inout) :: OtherState    !< Initial other states
+   type(AD_MiscVarType),         intent(inout) :: m             !< Initial misc/optimization variables
+   real(DbKi),                   intent(in   ) :: interval      !< Coupling interval in seconds: the rate that
+                                                                !!   (1) AD_UpdateStates() is called in loose coupling &
+                                                                !!   (2) AD_UpdateDiscState() is called in tight coupling.
+                                                                !!   Input is the suggested time from the glue code;
+                                                                !!   Output is the actual coupling interval that will be used
+                                                                !!   by the glue code.
+   integer(IntKi),               intent(  out) :: errStat       !< Error status of the operation
+   character(*),                 intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter                     :: RoutineName = 'AD_ReInit'
+
+   
+   ErrStat = ErrID_None
+   ErrMsg = ''
+   
+   if ( .not. EqualRealNos(p%DT, interval) ) then
+      call SetErrStat( ErrID_Fatal, 'When AD is reinitialized, DT must not change.', ErrStat, ErrMsg, RoutineName )
+      ! we could get around this by figuring out what needs to change when we modify the dt parameter... probably just some unused-parameters
+      ! and the UA filter
+   end if
+      
+   call BEMT_ReInit(p%BEMT,x%BEMT,xd%BEMT,z%BEMT,OtherState%BEMT,m%BEMT,p%AFI%AFInfo)
+      
+end subroutine AD_ReInit
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine initializes (allocates) the misc variables for use during the simulation.
 subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
@@ -2017,7 +2053,7 @@ SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_towe
    
    TwrClrnc = TwoNorm(r_TowerBlade) - 0.5_ReKi*TwrDiam
    if ( TwrClrnc <= 0.0_ReKi ) then
-      call SetErrStat(ErrID_Severe, "Tower strike.", ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, "Tower strike.", ErrStat, ErrMsg, RoutineName)
    end if
    
    
@@ -2973,13 +3009,13 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
       call AD_DestroyConstrState( z_m, ErrStat2, ErrMsg2 ) ! we don't need this any more      
       
    END IF
-
+     
    call cleanup()
    
 contains
    subroutine cleanup()
       m%BEMT%UseFrozenWake = .false.
-   
+
       call AD_DestroyOutput(            y_p, ErrStat2, ErrMsg2 )
       call AD_DestroyOutput(            y_m, ErrStat2, ErrMsg2 )
       call AD_DestroyConstrState(       z_p, ErrStat2, ErrMsg2 )

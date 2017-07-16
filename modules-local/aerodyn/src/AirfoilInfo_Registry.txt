@@ -19,36 +19,36 @@ include	Registry_NWTC_Library.txt
 # ..... Airfoil data ...............................................................................................................
 # The following derived type stores Beddoes-Leishman unsteady-aero data for an airfoil at a single combination of Re and control setting. The data can be computed internally of not read from the input file.
 typedef   AirfoilInfo/AFI       AFI_UA_BL_Type   ReKi                alpha0      -  -  - "Angle of attack for zero lift (used for Beddoes-Leishman unsteady aero)"	degrees
-typedef   ^                     ^                ReKi                alpha1      -  -  - "" =
-typedef   ^                     ^                ReKi                alpha2      -  -  - "" =
+typedef   ^                     ^                ReKi                alpha1      -  -  - "angle of attack at f = 0.7, approximately the stall angle; for alpha >= alpha0" degrees
+typedef   ^                     ^                ReKi                alpha2      -  -  - "angle of attack at f = 0.7, approximately the stall angle; for alpha < alpha0" degrees
 typedef   ^                     ^                ReKi                eta_e       -  -  - "Recovery factor in the range [0.85 - 0.95]" -
-typedef   ^                     ^                ReKi                C_nalpha    -  -  - "Cn slope for zero lift (used for Beddoes-Leishman unsteady aero)"	- 
-typedef   ^                     ^                ReKi                T_f0        -  -  - "" =
-typedef   ^                     ^                ReKi                T_V0        -  -  - "" =
-typedef   ^                     ^                ReKi                T_p         -  -  - "" =
+typedef   ^                     ^                ReKi                C_nalpha    -  -  - "Cn slope for zero lift (used for Beddoes-Leishman unsteady aero)"	1/rad 
+typedef   ^                     ^                ReKi                T_f0        -  -  - "initial value of T_f, airfoil specific, used to compute D_f and fprimeprime" -
+typedef   ^                     ^                ReKi                T_V0        -  -  - "initial value of T_V, airfoil specific, time parameter associated with the vortex lift decay process, used in Cn_v" -
+typedef   ^                     ^                ReKi                T_p         -  -  - "boundary-layer, leading edge pressure gradient time parameter; used in D_p; airfoil specific" -
 typedef   ^                     ^                ReKi                T_VL        -  -  - "" =
-typedef   ^                     ^                ReKi                b1          -  -  - "" =
-typedef   ^                     ^                ReKi                b2          -  -  - "" =
-typedef   ^                     ^                ReKi                b5          -  -  - "" =
-typedef   ^                     ^                ReKi                A1          -  -  - "" =
-typedef   ^                     ^                ReKi                A2          -  -  - "" =
-typedef   ^                     ^                ReKi                A5          -  -  - "" =
-typedef   ^                     ^                ReKi                S1          -  -  - "" =
-typedef   ^                     ^                ReKi                S2          -  -  - "" =
-typedef   ^                     ^                ReKi                S3          -  -  - "" =
-typedef   ^                     ^                ReKi                S4          -  -  - "" =
-typedef   ^                     ^                ReKi                Cn1         -  -  - "Cn at stall value for positive angle of attack (used for Beddoes-Leishman unsteady aero)"	-
-typedef   ^                     ^                ReKi                Cn2         -  -  - "Cn at stall value for negative angle (used for Beddoes-Leishman unsteady aero)"	-
+typedef   ^                     ^                ReKi                b1          -  -  - "airfoil constant derived from experimental results, usually 0.14" -
+typedef   ^                     ^                ReKi                b2          -  -  - "airfoil constant derived from experimental results, usually 0.53" -
+typedef   ^                     ^                ReKi                b5          -  -  - "airfoil constant derived from experimental results, usually 5.0" -
+typedef   ^                     ^                ReKi                A1          -  -  - "airfoil constant derived from experimental results, usually 0.3" -
+typedef   ^                     ^                ReKi                A2          -  -  - "airfoil constant derived from experimental results, usually 0.7" -
+typedef   ^                     ^                ReKi                A5          -  -  - "airfoil constant derived from experimental results, usually 1.0" -
+typedef   ^                     ^                ReKi                S1          -  -  - "constant in the f-curve best-fit, alpha >= alpha0" -
+typedef   ^                     ^                ReKi                S2          -  -  - "constant in the f-curve best-fit, alpha >= alpha0" -
+typedef   ^                     ^                ReKi                S3          -  -  - "constant in the f-curve best-fit, alpha <  alpha0" -
+typedef   ^                     ^                ReKi                S4          -  -  - "constant in the f-curve best-fit, alpha <  alpha0" -
+typedef   ^                     ^                ReKi                Cn1         -  -  - "Cn at stall value for positive angle of attack (used for Beddoes-Leishman unsteady aero) [or critical value of Cn_prime at LE separation for alpha >= alpha0]"	-
+typedef   ^                     ^                ReKi                Cn2         -  -  - "Cn at stall value for negative angle (used for Beddoes-Leishman unsteady aero) or [critical value of Cn_prime at LE separation for alpha < alpha0]"	-
 typedef   ^                     ^                ReKi                St_sh       -  -  - "" = 
 typedef   ^                     ^                ReKi                Cd0         -  -  - "Minimum Cd value (used for Beddoes-Leishman unsteady aero)"	degrees
-typedef   ^                     ^                ReKi                Cm0         -  -  - "" =
-typedef   ^                     ^                ReKi                k0          -  -  - "" =
-typedef   ^                     ^                ReKi                k1          -  -  - "" =
-typedef   ^                     ^                ReKi                k2          -  -  - "" =
-typedef   ^                     ^                ReKi                k3          -  -  - "" =
-typedef   ^                     ^                ReKi                k1_hat      -  -  - "" =
-typedef   ^                     ^                ReKi                x_cp_bar    -  -  - "" =
-typedef   ^                     ^                ReKi                UACutout    -  -  - "" =
+typedef   ^                     ^                ReKi                Cm0         -  -  - "2D pitching moment coefficient at zero lift, positive if nose is up" -
+typedef   ^                     ^                ReKi                k0          -  -  - "airfoil parameter in the x_cp_hat curve best-fit" -
+typedef   ^                     ^                ReKi                k1          -  -  - "airfoil parameter in the x_cp_hat curve best-fit" -
+typedef   ^                     ^                ReKi                k2          -  -  - "airfoil parameter in the x_cp_hat curve best-fit" -
+typedef   ^                     ^                ReKi                k3          -  -  - "airfoil parameter in the x_cp_hat curve best-fit" -
+typedef   ^                     ^                ReKi                k1_hat      -  -  - "" -
+typedef   ^                     ^                ReKi                x_cp_bar    -  -  - "" -
+typedef   ^                     ^                ReKi                UACutout    -  -  - "" -
 typedef   ^                     ^                ReKi                filtCutOff  -  -  - "low pass filter cut-off frequency for the pitching rate and accelerations"       Hz
 # The following derived type stores data for an airfoil at a single combination of Re and control setting.
 typedef	AirfoilInfo/AFI	AFI_Table_Type	ReKi	Alpha   	{:}	-	-	"Angle-of-attack vector that matches the Coefs matrix" rad

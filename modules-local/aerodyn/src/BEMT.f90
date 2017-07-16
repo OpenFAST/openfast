@@ -49,13 +49,14 @@ module BEMT
    public :: BEMT_End                            ! Ending routine (includes clean up)
 
    public :: BEMT_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
-                                               !   continuous states, and updating discrete states
+                                                 !   continuous states, and updating discrete states
    public :: BEMT_CalcOutput                     ! Routine for computing outputs
 
    public :: BEMT_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    public :: BEMT_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    public :: BEMT_UpdateDiscState                ! Tight coupling routine for updating discrete states
    
+   public :: BEMT_ReInit
    ! routines for linearization
    public :: Get_phi_perturbations   
    public :: ComputeFrozenWake
@@ -267,7 +268,7 @@ subroutine BEMT_InitOtherStates( OtherState, p, errStat, errMsg )
 
 
       ! Local variables
-   character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   !character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
    character(*), parameter                       :: RoutineName = 'BEMT_InitOtherStates'
    
@@ -275,6 +276,13 @@ subroutine BEMT_InitOtherStates( OtherState, p, errStat, errMsg )
 
    errStat = ErrID_None
    errMsg  = ""
+   
+      ! We need to set an other state version so that we can change this during execution if the AOA is too large!
+   allocate ( OtherState%UA_Flag( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for OtherState%UA_Flag.', errStat, errMsg, RoutineName )
+      return
+   end if 
    
    if (p%UseInduction) then
       
@@ -287,6 +295,7 @@ subroutine BEMT_InitOtherStates( OtherState, p, errStat, errMsg )
 
    end if
    
+   OtherState%UA_Flag = p%UA_Flag
    OtherState%nodesInitialized = .false. ! z%phi hasn't been initialized properly, so make sure we compute a value for phi until we've updated them in the first call to BEMT_UpdateStates()
    
 !
@@ -538,26 +547,11 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    type(UA_InputType)                             :: u_UA
    type(UA_InitInputType)                         :: Init_UA_Data
    type(UA_InitOutputType)                        :: InitOutData_UA
-   integer(IntKi)                                 :: i,j
-   real(ReKi)                                             :: Cn1             ! critical value of Cn_prime at LE separation for alpha >= alpha0    
-   real(ReKi)                                             :: Cn2             ! critical value of Cn_prime at LE separation for alpha < alpha0
-   real(ReKi)                                             :: Cd0
-   real(ReKi)                                             :: Cm0
-   real(ReKi)                                             :: k0
-   real(ReKi)                                             :: k1
-   real(ReKi)                                             :: k2
-   real(ReKi)                                             :: k3
-   real(ReKi)                                             :: T_VL
-   real(ReKi)                                             :: x_cp_bar 
-   real(ReKi)                                             :: alpha0              ! zero lift angle of attack (radians)
-   real(ReKi)                                             :: eta_e
-   real(ReKi)                                             :: St_sh
-   real(ReKi)                                             :: Re
-   real(ReKi)                                             :: alpha
 
-   real(ReKi)                                     :: M, alpha1, alpha2, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, b1,b2,b5,A1,A2,A5,S1,S2,S3,S4,k1_hat
-   real(ReKi)                :: filtCutOff                    ! airfoil parameter for the low-pass cut-off frequency for pitching rate and accelerations (Hz)
-   character(64)                                  :: chanPrefix
+#ifdef UA_OUTS
+   integer(IntKi)                                 :: i
+#endif   
+   
       ! Initialize variables for this routine
    errStat = ErrID_None
    errMsg  = ""
@@ -583,18 +577,9 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
       ! Define states here
       !............................................................................................
    
-      ! We need to set an other state version so that we can change this during execution if the AOA is too large!
-   allocate ( OtherState%UA_Flag( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for OtherState%UA_Flag.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      return
-   end if 
-   OtherState%UA_Flag = p%UA_Flag
    
       ! initialize the constraint states
-   call BEMT_InitContraintStates( z, p, errStat2, errMsg2 )     ! initialize the continuous states
+   call BEMT_InitContraintStates( z, p, errStat2, errMsg2 )     ! initialize the constraint states
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       if (errStat >= AbortErrLev) return
    
@@ -619,6 +604,13 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
             call cleanup()
             return
          end if
+         
+      call BEMT_CheckInitUA(p, OtherState, AFInfo, ErrStat2, ErrMsg2)    
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+         if (errStat >= AbortErrLev) then
+            call cleanup()
+            return
+         end if
       
 #ifdef UA_OUTS   
    !CALL GetNewUnit( UnUAOuts, ErrStat, ErrMsg )
@@ -631,106 +623,22 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
       ! Heading:
    WRITE (69,'(/,A)')  'This output information was generated by '//TRIM( GetNVD(BEMT_Ver) )// &
                          ' on '//CurDate()//' at '//CurTime()//'.'
-   WRITE (69,'(:,A11)', ADVANCE='no' ) 'Time   '
-   do j = 1, p%numBlades
-      do i = 1, p%numBladeNodes  
-         chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))  
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'ALPHA'//chanPrefix      
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'VREL'//chanPrefix  
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CN'//chanPrefix      
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CC'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CL'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CD'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CM'//chanPrefix     
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CNCP'//chanPrefix    
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CNIQ'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CNPOT'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'DPP'//chanPrefix       
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CNP'//chanPrefix        
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'FSP'//chanPrefix       
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'DF'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CNV'//chanPrefix         
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'TAUV'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'LESF'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'TESF'//chanPrefix 
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'VRTX'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CVN'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CMI'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CMQ'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'CMV'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'AFEP'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'DFAF'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'PMC'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'T_f'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'T_V'//chanPrefix
-         WRITE (69,'(:,A11)', ADVANCE='no' )  'dS'//chanPrefix
-      end do
+   WRITE (69,'(:,A20)', ADVANCE='no' ) 'Time'
+   do i=1,size(InitOutData_UA%WriteOutputHdr)
+      WRITE (69,'(:,A20)', ADVANCE='no' )  trim(InitOutData_UA%WriteOutputHdr(i))
    end do  
    write (69,'(A)')    ' '
    
-   WRITE (69,'(:,A9)', ADVANCE='no' ) '      (s)'
-   do j = 1, p%numBlades
-      do i = 1, p%numBladeNodes  
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(deg)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(m/s)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-         WRITE (69,'(:,A11)', ADVANCE='no' ) '(-)'
-      end do
-   end do
-   write (69,'(A)')    ' '
-   
+   WRITE (69,'(:,A20)', ADVANCE='no' ) '(s)'
+   do i=1,size(InitOutData_UA%WriteOutputUnt)
+      WRITE (69,'(:,A20)', ADVANCE='no' )  trim(InitOutData_UA%WriteOutputUnt(i))
+   end do  
+   write (69,'(A)')    ' '   
 #endif
-
-      do j = 1,p%numBlades
-         do i = 1,p%numBladeNodes ! Loop over blades and nodes
-      
-            ! u_UA values were not set in UA_Init, so we will use arbitrary values for M,Re, and alpha,  and we need them only because we're trying to determine if C_nalpha is 0 so we can shut off UA.
-
-            M = 0.1_ReKi
-            Re = 10.0_ReKi
-            alpha = 2.0*D2R
-            !M           = u_UA%U / p%UA%a_s
-            !call UA_CheckMachNumber(M, misc%UA%FirstWarn_M, ErrStat2, ErrMsg2 )
-            
-            call AFI_GetAirfoilParams( AFInfo(p%AFindx(i,j)), M, Re, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
-                                    T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, filtCutOff, errMsg2, errStat2 )           
-            ! AFI_GetAirfoilParams does not set errors
-            
-            if ( EqualRealNos(C_nalpha, 0.0_ReKi) .and. OtherState%UA_Flag(i,j) ) then
-               OtherState%UA_Flag(i,j) = .false.
-               call WrScr( 'Warning: Turning off Unsteady Aerodynamics because C_nalpha is 0.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
-            end if
-            
-         end do
-      end do
       
    
-   end if
+   end if ! unsteady aero is used
+   
       !............................................................................................
       ! Define initial guess for the system inputs here:
       !............................................................................................
@@ -770,6 +678,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
    
  
 
+
       !............................................................................................
       ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
       !   this module must be called here:
@@ -803,6 +712,84 @@ CONTAINS
 
 END SUBROUTINE BEMT_Init
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine reinitializes BEMT and UA, assuming that we will start the simulation over again, with only the inputs being different.
+!! This allows us to bypass reading input files and allocating arrays.
+subroutine BEMT_ReInit(p,x,xd,z,OtherState,misc,AFinfo)
+
+   type(BEMT_ParameterType),       intent(in   )  :: p           ! Parameters
+   type(BEMT_ContinuousStateType), intent(inout)  :: x           ! Initial continuous states
+   type(BEMT_DiscreteStateType),   intent(inout)  :: xd          ! Initial discrete states
+   type(BEMT_ConstraintStateType), intent(inout)  :: z           ! Initial guess of the constraint states
+   type(BEMT_OtherStateType),      intent(inout)  :: OtherState  ! Initial other states
+   type(BEMT_MiscVarType),         intent(inout)  :: misc        ! Initial misc/optimization variables
+   type(AFInfoType),               intent(in   )  :: AFInfo(:)   ! The airfoil parameter data
+
+   integer(intki) :: ErrStat2
+   character(ErrMsgLen) :: errmsg2
+   
+   if (p%UseInduction) then
+      OtherState%ValidPhi = .true.
+   end if
+   
+   OtherState%UA_Flag = p%UA_Flag
+   OtherState%nodesInitialized = .false. ! z%phi hasn't been initialized properly, so make sure we compute a value for phi until we've updated them in the first call to BEMT_UpdateStates()
+
+   if (p%UA_Flag) then
+      call UA_ReInit( p%UA, xd%UA, OtherState%UA, misc%UA )  
+      call BEMT_CheckInitUA(p, OtherState, AFInfo, errstat2, errmsg2)
+   end if
+   
+end subroutine BEMT_ReInit
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine finds C_nalpha for each node, and turns off unsteady aero for that node if C_nalpha=0. It is called only during initialization.
+subroutine BEMT_CheckInitUA(p, OtherState, AFInfo, ErrStat, ErrMsg)
+
+   type(BEMT_ParameterType),       intent(in   )  :: p           !< Parameters
+   type(BEMT_OtherStateType),      intent(inout)  :: OtherState  !< Initial other states
+   type(AFInfoType),               intent(in   )  :: AFInfo(:)   !< The airfoil parameter data
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)                                 :: i,j         ! node and blade loop counters
+   character(ErrMsgLen)                           :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)                                 :: errStat2    ! temporary Error status of the operation
+
+
+   real(ReKi), parameter                          :: Re = 10.0_ReKi
+   real(ReKi), parameter                          :: M  =  0.1_ReKi
+   type(AFI_UA_BL_Type)                           :: BL_p   
+   real(ReKi)                                     :: C_nalpha_circ
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
+   
+      do j = 1,p%numBlades
+         do i = 1,p%numBladeNodes ! Loop over blades and nodes
+      
+            ! u_UA values were not set in UA_Init, so we will use arbitrary values for M and Re; we need them only because we're trying to determine if C_nalpha is 0 so we can shut off UA.
+            
+            call AFI_GetAirfoilParams( AFInfo(p%AFindx(i,j)), M, Re, BL_p, C_nalpha_circ, ErrMsg2, ErrStat2 )
+            ! AFI_GetAirfoilParams does not set errors
+            
+            !if ( EqualRealNos(BL_p%C_nalpha, 0.0_ReKi) .and. OtherState%UA_Flag(i,j) ) then
+            if ( EqualRealNos(BL_p%C_nalpha, 0.0_ReKi) ) then ! OtherState%UA_Flag(i,j) must be true at this stage
+               OtherState%UA_Flag(i,j) = .false.
+               call WrScr( 'Warning: Turning off Unsteady Aerodynamics because C_nalpha is 0.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
+            end if
+            
+            if ( EqualRealNos(BL_p%St_sh, 0.0_ReKi) ) then
+               ErrStat = ErrID_Fatal
+               ErrMsg = 'UA St_sh parameter must not be 0.' !would be nice to put the file name here, but that will take more time than I have now.
+               return
+            end if
+            
+            
+         end do
+      end do
+      
+end subroutine BEMT_CheckInitUA
+!----------------------------------------------------------------------------------------------------------------------------------
 subroutine BEMT_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 ! This routine is called at the end of the simulation.
 !..................................................................................................................................
@@ -814,8 +801,8 @@ subroutine BEMT_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       TYPE(BEMT_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
       TYPE(BEMT_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other states
       TYPE(BEMT_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
 
 
@@ -1099,13 +1086,17 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
 #endif
 
    logical, parameter             :: UpdateValues  = .TRUE.                          ! determines if the OtherState values need to be updated
-   type(BEMT_ContinuousStateType) :: dxdt                                            ! Continuous state derivs at t
    real(ReKi)                     :: Vrel
    logical                        :: IsValidSolution !< this is set to false if k<=1 in propeller brake region or k<-1 in momentum region, indicating an invalid solution
          ! Initialize some output values
    errStat = ErrID_None
    errMsg  = ""
            
+   
+#ifdef UA_OUTS
+  ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
+   if (allocated(m%y_UA%WriteOutput)) m%y_UA%WriteOutput = 0.0 !reset to zero in case UA shuts off mid-simulation
+#endif            
    
    !...............................................................................................................................
    ! if we haven't initialized z%phi, we want to get a better guess as to what the actual values of phi are:
@@ -1219,7 +1210,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
          call BEMTU_Wind( y%axInduction(i,j), y%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, y%Vrel(I,J), y%Re(i,j) )
   
             ! Now depending on the option for UA get the airfoil coefs, Cl, Cd, Cm for unsteady or steady implementation
-         if (OtherState%UA_Flag(i,j) .and. t > 0.0_DbKi) then            
+         if (OtherState%UA_Flag(i,j)) then            
             call Compute_UA_AirfoilCoefs( y%AOA(i,j), y%Vrel(I,J), y%Re(i,j),  AFInfo(p%AFindx(i,j)), p%UA, xd%UA, OtherState%UA, m%y_UA, m%UA, &
                                          y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), errStat2, errMsg2 ) 
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
@@ -1251,13 +1242,9 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
 
 #ifdef UA_OUTS
   ! if ( mod(REAL(t,ReKi),.1) < p%dt) then
-            WRITE (69, '(F9.4,'//trim(num2lstr(p%numBladeNodes*p%numBlades*p%UA%NumOuts))//'(:,A,ES12.3E3))') t, (' ', m%y_UA%WriteOutput(k), k=1,p%UA%NumOuts*p%numBladeNodes*p%numBlades)
-  ! end if
-     !WRITE (69, '((F8.3,'//TRIM(num2lstr(13*p%numBladeNodes*p%numBlades))//'(:,A,ES10.3E2))')
-            !Frmt = '(F8.3,'//TRIM(Int2LStr(p%WAMIT%NumOuts+p%Morison%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-   !Frmt = '('ES10.3E2,'//TRIM(13*p%numBladeNodes*p%numBlades)//'(:,A,'ES10.3E2'))'
-   
-           
+   if (allocated(m%y_UA%WriteOutput)) &
+            WRITE (69, '(F20.6,'//trim(num2lstr(size(m%y_UA%WriteOutput)))//'(:,1x,ES19.5E3))') t, ( m%y_UA%WriteOutput(k), k=1,size(m%y_UA%WriteOutput))
+  ! end if              
 #endif 
    
    !...............................................................................................................................
@@ -1682,10 +1669,11 @@ end subroutine GetSolveRegionOrdering
    
 integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, chord, theta, AFInfo, &
                         Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst,  atol, &
+                        phiIn_IsValidSolution, phiIn, f_phiIn, &
                         f1, f2, errStat, errMsg)
 
-   real(ReKi),             intent(in   ) :: phiLower
-   real(ReKi),             intent(in   ) :: phiUpper
+   real(ReKi),             intent(inout) :: phiLower !intent "out" in case the previous solution can alter the test region bounds
+   real(ReKi),             intent(inout) :: phiUpper !intent "out" in case the previous solution can alter the test region bounds
    integer,                intent(in   ) :: numBlades
    !integer,                intent(in   ) :: numBladeNodes
    type(AFInfoType),       intent(in   ) :: AFInfo
@@ -1703,6 +1691,9 @@ integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, chord, theta,
    real(ReKi),             intent(in   ) :: hubLossConst
    real(ReKi),             intent(in   ) :: tipLossConst
    real(ReKi),             intent(in   ) :: atol
+   logical,                intent(in   ) :: phiIn_IsValidSolution
+   real(ReKi),             intent(in   ) :: phiIn
+   real(ReKi),             intent(in   ) :: f_phiIn
    real(ReKi),             intent(  out) :: f1 !< value of residual at phiLower
    real(ReKi),             intent(  out) :: f2 !< value of residual at phiUpper
    integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
@@ -1753,6 +1744,23 @@ integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, chord, theta,
    
    if ( sign(1.0_ReKi,f1) /= sign(1.0_ReKi,f2) ) then
       TestRegion = 1
+      
+      if (phiIn_IsValidSolution) then
+         if ( (phiLower < phiIn .and. phiIn < phiUpper ) .or. (phiUpper < phiIn .and. phiIn < phiLower ) ) then
+         
+            ! the previous solution was in this region
+            if ( sign(1.0_ReKi,f1) /= sign(1.0_ReKi,f_phiIn) ) then     
+               phiUpper = phiIn
+               f2 = f_phiIn
+            else
+               phiLower = phiIn
+               f1 = f_phiIn
+            end if
+            
+         end if
+      end if
+      
+      
    else
       TestRegion = 2  ! No zero
    end if
@@ -1763,7 +1771,6 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
                            Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
                            maxIndIterations, aTol, ValidPhi, ErrStat, ErrMsg)
 
-   use fminfcn
    use mod_root1dim
    !use fminMod
    real(ReKi),             intent(inout) :: phi
@@ -1796,9 +1803,9 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    character(ErrMsgLen)                  :: errMsg2       ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                        :: errStat2      ! temporary Error status of the operation
    character(*), parameter               :: RoutineName = 'BEMT_UnCoupledSolve'
-   real(ReKi), parameter                 :: MsgLimit = 0.07_ReKi ! don't print a message if we're within about 4 degrees of 0 or +/- pi/2 [arbitrary number picked by bjj]
+   real(ReKi), parameter                 :: MsgLimit = 0.07_ReKi  !BEMT_epsilon2*100.0_ReKi don't print a message if we're within about 4 degrees of 0 or +/- pi/2 [bjj arbitrary number]
    
-   real(ReKi) :: f1, f_lower, f_upper
+   real(ReKi) :: f1, f_lower, f_upper, phiIn
    real(ReKi) :: phi_lower(3), phi_upper(3)         ! upper and lower bounds for region of phi in which we are trying to find a solution to the BEM equations
    integer    :: i, TestRegionResult
    logical    :: IsValidSolution
@@ -1842,6 +1849,8 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
          !phiStar =  phiIn
          return
       end if
+   else
+      IsValidSolution = .false.
    end if
    
    
@@ -1873,10 +1882,12 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    
    
    call GetSolveRegionOrdering(Vx, phi, phi_lower, phi_upper)
+   phiIn = phi
    
    do i = 1,size(phi_upper)   ! Need to potentially test 3 regions
       TestRegionResult = TestRegion(phi_lower(i), phi_upper(i), numBlades, rlocal, chord, theta, AFInfo, &
                         Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, atol, &
+                        IsValidSolution, phiIn, f1, &
                         f_lower, f_upper, errStat2, errMsg2)
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
       
@@ -1885,7 +1896,7 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
          ! There is a zero in the solution region [phi_lower(i), phi_upper(i)] because the endpoints have residuals with different signs (SolutionRegion=1)
          ! We use Brent's Method to find the zero-residual solution in this region
                   
-         call sub_brent(phi,fmin_fcn,phi_lower(i),phi_upper(i), aTol, maxIndIterations, fcnArgs, AFInfo, f_lower, f_upper)
+         call sub_brent(phi,phi_lower(i),phi_upper(i), aTol, maxIndIterations, fcnArgs, AFInfo, f_lower, f_upper)
             call SetErrStat(fcnArgs%ErrStat, fcnArgs%ErrMsg, ErrStat, ErrMsg, RoutineName)
    
          if (fcnArgs%IsValidSolution) then ! we have a valid BEMT solution
@@ -1922,8 +1933,6 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
          call SetErrStat( ErrID_Info, 'There is no valid value of phi for these operating conditions: Vx = '//TRIM(Num2Lstr(Vx))//&
             ', Vy = '//TRIM(Num2Lstr(Vy))//', rlocal = '//TRIM(Num2Lstr(rLocal))//', theta = '//TRIM(Num2Lstr(theta))//', geometric phi = '//TRIM(Num2Lstr(phi)), errStat, errMsg, RoutineName )
       end if
-      
-         
    end if
    
          

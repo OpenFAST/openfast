@@ -9,10 +9,6 @@
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
-# File last committed: $Date: 2014-05-27 09:53:59 -0600 (Tue, 27 May 2014) $
-# (File) Revision #: $Rev: 395 $
-# URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/RegistryFiles/BEMT.txt $
-###################################################################################################################################
 
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include   Registry_NWTC_Library.txt

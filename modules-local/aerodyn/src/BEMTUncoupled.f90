@@ -181,8 +181,8 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
 ! This routine is called from BEMTU_InductionWithResidual and possibly BEMT_CalcOutput.
 ! Determine the Cl, Cd, Cm coeficients for a given angle of attack
 !..................................................................................................................................
-   real(ReKi),                   intent(in   ) :: AOA
-   real(ReKi),                   intent(in   ) :: U
+   real(ReKi),                   intent(in   ) :: AOA                !< angle of attack, radians
+   real(ReKi),                   intent(in   ) :: U                  !< Vrel, m/s
    real(ReKi),                   intent(in   ) :: Re                 ! Unused in the current version!
    type(AFInfoType),             intent(in   ) :: AFInfo
    type(UA_ParameterType),       intent(in   ) :: p_UA               ! Parameters
@@ -265,7 +265,7 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
    
    ! make these return values consistent with what is returned in inductionFactors routine:
     
-      ! Set the local version of the induction factors (use values that set the force to 0)
+      ! Set the local version of the induction factors
    if ( ( useTiploss .and. EqualRealNos(tipLossConst,0.0_ReKi) ) .or. ( useHubloss .and. EqualRealNos(hubLossConst,0.0_ReKi) ) ) then
       ! We are simply going to bail if we are using tiploss and tipLossConst = 0 or using hubloss and hubLossConst=0, regardless of phi! [do this before checking if Vx or Vy is zero or you'll get jumps in the induction and loads]
       axInduction  =  1.0_ReKi
@@ -393,6 +393,7 @@ subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, tipRatio, a, ap, ch
    
 end subroutine ApplySkewedWakeCorrection
 !-----------------------------------------------------------------------------------------
+!> This subroutine computes the induction factors (a) and (ap) along with the residual (fzero)
 subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
                               fzero, a, ap, IsValidSolution)
 
@@ -412,8 +413,7 @@ subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useH
    logical,    intent(in) :: useHubLoss     !< hub-loss flag [p%useHubLoss]
    logical,    intent(in) :: useTipLoss     !< tip-loss flag [p%useTipLoss]
    logical,    intent(in) :: wakerotation   !< Include tangential induction in BEMT calculations [flag] [p%useTanInd]
-               
-    
+                   
    ! out
    real(ReKi), intent(out) :: fzero         !< residual of BEM equations
    real(ReKi), intent(out) :: a             !< axial induction [y%axInduction]
