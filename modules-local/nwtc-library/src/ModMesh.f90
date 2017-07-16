@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 !> The modules ModMesh and ModMesh_Types provide data structures and subroutines for representing and manipulating meshes
 !! and meshed data in the FAST modular framework. 
 !!

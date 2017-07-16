@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
+! Copyright (C) 2016-2017  Envision Energy USA, LTD
 !
 !    This file is part of AeroDyn.
 !
@@ -16,10 +17,6 @@
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
 !
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
 !**********************************************************************************************************************************
 !> AeroDyn is a time-domain aerodynamics module for horizontal-axis wind turbines.
 module AeroDyn

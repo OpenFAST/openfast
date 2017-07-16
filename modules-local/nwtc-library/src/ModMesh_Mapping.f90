@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 !> This code implements the spatial mapping algorithms described in the following papers
 !! -  Sprague, Michael A.; Jonkman, Jason M.; and Jonkman, Bonnie J., "FAST Modular Framework for Wind Turbine Simulation: New 
 !!    Algorithms and Numerical Examples." Proceedings of the 53rd Aerospace Sciences Meeting, 2015, also published in tech report 

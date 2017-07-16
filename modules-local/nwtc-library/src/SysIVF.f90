@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 !> This module contains routines with system-specific logic and references, including all references to the console unit, CU.
 !! It also contains standard (but not system-specific) routines it uses.
 !! SysIVF.f90 is specifically for the Intel Visual Fortran for Windows compiler.   

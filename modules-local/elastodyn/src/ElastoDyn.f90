@@ -20,10 +20,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-11-12 13:43:42 -0700 (Thu, 12 Nov 2015) $
-! (File) Revision #: $Rev: 1172 $
-! URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/BJonkman/Source/ElastoDyn.f90 $
-!**********************************************************************************************************************************
 MODULE ElastoDyn
 
    USE ElastoDyn_IO

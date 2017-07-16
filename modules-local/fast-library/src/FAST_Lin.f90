@@ -20,10 +20,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2016-05-16 11:25:44 -0600 (Mon, 16 May 2016) $
-! (File) Revision #: $Rev: 1280 $
-! URL: $HeadURL: https://windsvn2.nrel.gov/FAST/branches/BJonkman/Source/FAST_Subs.f90 $
-!**********************************************************************************************************************************
 MODULE FAST_Linear
 
    USE FAST_Solver  ! I mostly just want the modules that are inherited from this module, not the routines in it

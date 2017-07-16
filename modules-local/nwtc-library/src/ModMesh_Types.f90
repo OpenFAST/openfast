@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 !> This module contains the type definition of of ModMesh, the FAST spatial mesh structure.   
 MODULE ModMesh_Types
    USE NWTC_Num

@@ -20,10 +20,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-11-25 22:20:14 -0700 (Wed, 25 Nov 2015) $
-! (File) Revision #: $Rev: 1180 $
-! URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/BJonkman/Source/FAST_Subs.f90 $
-!**********************************************************************************************************************************
 !> This module contains the routines used by FAST to solve input-output equations and to advance states.
 MODULE FAST_Solver
 
