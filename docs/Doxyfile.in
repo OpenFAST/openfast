@@ -187,7 +187,7 @@ SHORT_NAMES            = NO
 # description.)
 # The default value is: NO.
 
-JAVADOC_AUTOBRIEF      = NO
+JAVADOC_AUTOBRIEF      = YES
 
 # If the QT_AUTOBRIEF tag is set to YES then doxygen will interpret the first
 # line (until the first dot) of a Qt-style comment as the brief description. If
@@ -790,8 +790,9 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = @CMAKE_SOURCE_DIR@/glue-codes/fast/src/FAST_Prog.f90 \
-                         @CMAKE_SOURCE_DIR@/modules-local/nwtc-library/src/NWTC_Num.f90
+INPUT                  = @CMAKE_SOURCE_DIR@/glue-codes/ \
+                         @CMAKE_SOURCE_DIR@/modules-local/ \
+                         @CMAKE_SOURCE_DIR@/modules-ext/
                          
 
 # This tag can be used to specify the character encoding of the source files
@@ -817,12 +818,19 @@ INPUT_ENCODING         = UTF-8
 # *.m, *.markdown, *.md, *.mm, *.dox, *.py, *.pyw, *.f90, *.f95, *.f03, *.f08,
 # *.f, *.for, *.tcl, *.vhd, *.vhdl, *.ucf and *.qsf.
 
-FILE_PATTERNS          = *.C \
+FILE_PATTERNS          = *.f90 \
+                         *.F90 \
+                         *.f \
+                         *.F \
                          *.c \
-                         *.h \
+                         *.cxx \
+                         *.cpp \
+                         *.C \
+                         *.cc \
+                         *.hh \
+                         *.hxx \
                          *.hpp \
-                         *.f90 \
-                         *.F
+                         *.h
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -837,12 +845,12 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which doxygen is
 # run.
 
-EXCLUDE_PATTERNS       =  */.git/* \
-#                          */build/* \
-#                          */SQA/* \
-#                          */cmake/* \
-#                          */docs/* \
-#                          */nightly_build/*
+EXCLUDE_PATTERNS       =  @CMAKE_SOURCE_DIR@/.git/* \
+                          @CMAKE_SOURCE_DIR@/build/* \
+                          @CMAKE_SOURCE_DIR@/cmake/* \
+                          @CMAKE_SOURCE_DIR@/docs/* \
+                          @CMAKE_SOURCE_DIR@/modules-local/orcaflex-interface/src/OrcaFlexInterface.f90 \
+                          @CMAKE_SOURCE_DIR@/modules-local/servodyn/src/BladedInterface.f90
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
@@ -2029,7 +2037,7 @@ SEARCH_INCLUDES        = YES
 # preprocessor.
 # This tag requires that the tag SEARCH_INCLUDES is set to YES.
 
-INCLUDE_PATH           = @CMAKE_SOURCE_DIR@/include
+INCLUDE_PATH           = 
 
 # You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard
 # patterns (like *.h and *.hpp) to filter out the header-files in the
@@ -2202,7 +2210,7 @@ DOT_FONTPATH           =
 # The default value is: YES.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-CLASS_GRAPH            = YES
+CLASS_GRAPH            = NO
 
 # If the COLLABORATION_GRAPH tag is set to YES then doxygen will generate a
 # graph for each documented class showing the direct and indirect implementation
@@ -2211,14 +2219,14 @@ CLASS_GRAPH            = YES
 # The default value is: YES.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-COLLABORATION_GRAPH    = YES
+COLLABORATION_GRAPH    = NO
 
 # If the GROUP_GRAPHS tag is set to YES then doxygen will generate a graph for
 # groups, showing the direct groups dependencies.
 # The default value is: YES.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-GROUP_GRAPHS           = YES
+GROUP_GRAPHS           = NO
 
 # If the UML_LOOK tag is set to YES, doxygen will generate inheritance and
 # collaboration diagrams in a style similar to the OMG's Unified Modeling
@@ -2256,7 +2264,7 @@ TEMPLATE_RELATIONS     = NO
 # The default value is: YES.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-INCLUDE_GRAPH          = YES
+INCLUDE_GRAPH          = NO
 
 # If the INCLUDED_BY_GRAPH, ENABLE_PREPROCESSING and SEARCH_INCLUDES tags are
 # set to YES then doxygen will generate a graph for each documented file showing
@@ -2265,7 +2273,7 @@ INCLUDE_GRAPH          = YES
 # The default value is: YES.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-INCLUDED_BY_GRAPH      = YES
+INCLUDED_BY_GRAPH      = NO
 
 # If the CALL_GRAPH tag is set to YES then doxygen will generate a call
 # dependency graph for every global function or class method.
@@ -2305,7 +2313,7 @@ GRAPHICAL_HIERARCHY    = YES
 # The default value is: YES.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-DIRECTORY_GRAPH        = YES
+DIRECTORY_GRAPH        = NO
 
 # The DOT_IMAGE_FORMAT tag can be used to set the image format of the images
 # generated by dot. For an explanation of the image formats see the section
@@ -2387,7 +2395,7 @@ PLANTUML_INCLUDE_PATH  =
 # Minimum value: 0, maximum value: 10000, default value: 50.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-DOT_GRAPH_MAX_NODES    = 100
+DOT_GRAPH_MAX_NODES    = 25
 
 # The MAX_DOT_GRAPH_DEPTH tag can be used to set the maximum depth of the graphs
 # generated by dot. A depth value of 3 means that only nodes reachable from the

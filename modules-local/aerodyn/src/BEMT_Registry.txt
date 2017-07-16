@@ -143,3 +143,4 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     Cl                              {:}{:}         -         -         "lift coefficient"   -
 typedef   ^                            ^                             ReKi                     Cd                              {:}{:}         -         -         "drag coefficient"   -
 typedef   ^                            ^                             ReKi                     chi                             {:}{:}         -         -         "wake skew angle"   rad
+typedef   ^                            ^                             ReKi                     Cpmin                           {:}{:}         -         -         "min Cpressure"      -

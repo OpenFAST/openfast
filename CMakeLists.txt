@@ -15,7 +15,7 @@
 #
 
 cmake_minimum_required(VERSION 2.8.12)
-project(OpenFAST Fortran C)
+project(OpenFAST CXX C Fortran)
 
 include(${CMAKE_SOURCE_DIR}/cmake/FastCmakeUtils.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/FastFortranOptions.cmake)
@@ -33,6 +33,7 @@ option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" off)
+option(BUILD_FAST_CPP_API "Enable building FAST - C++ API" off)
 
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
@@ -71,6 +72,7 @@ set(FAST_MODULES_LOCAL
   orcaflex-interface
   extptfm
   openfoam
+  supercontroller
   fast-library
   )
 
@@ -107,3 +109,32 @@ if(BUILD_DOCUMENTATION)
 endif()
 
 add_subdirectory(glue-codes)
+
+# Install fortran .mod files also to installation directory
+install(CODE
+  "EXECUTE_PROCESS (COMMAND \"${CMAKE_COMMAND}\" -E copy_directory \"${CMAKE_Fortran_MODULE_DIRECTORY}\" \"${CMAKE_INSTALL_PREFIX}/include/openfast/\")")
+
+# Install the library dependency information
+install(EXPORT OpenFASTLibraries
+  DESTINATION lib/cmake/OpenFAST
+  FILE OpenFASTLibraries.cmake)
+
+# Create OpenFAST config so that other codes can find OpenFAST
+include(CMakePackageConfigHelpers)
+
+set(INCLUDE_INSTALL_DIR include/)
+set(LIB_INSTALL_DIR lib/)
+set(FTNMOD_INSTALL_DIR include/openfast/)
+if (BUILD_FAST_CPP_API)
+  set(OpenFAST_HAS_CXX_API TRUE)
+else()
+  set(OpenFAST_HAS_CXX_API FALSE)
+endif()
+
+configure_package_config_file(
+  cmake/OpenFASTConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
+  INSTALL_DESTINATION lib/cmake/OpenFAST
+  PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR FTNMOD_INSTALL_DIR)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
+  DESTINATION lib/cmake/OpenFAST)

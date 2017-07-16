@@ -605,7 +605,6 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)\n") ;
   fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)\n") ;
   fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)\n") ;
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask6(:,:,:,:,:,:)\n");
   for (d = 1; d <= q->max_ndims; d++){
   fprintf(fp,"  INTEGER(IntKi)                 :: i%d, i%d_l, i%d_u  !  bounds (upper/lower) for an array dimension %d\n", d, d, d, d);
   }

@@ -474,6 +474,8 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    call allocAry( y%Cm, p%numBladeNodes, p%numBlades, 'y%Cm', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cl, p%numBladeNodes, p%numBlades, 'y%Cl', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Cd, p%numBladeNodes, p%numBlades, 'y%Cd', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cpmin, p%numBladeNodes, p%numBlades, 'm%Cpmin', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
    
    if (ErrStat >= AbortErrLev) RETURN
    
@@ -492,7 +494,7 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    y%AOA = 0.0_ReKi   
    y%Cl = 0.0_ReKi
    y%Cd = 0.0_ReKi
-   
+   y%Cpmin = 0.0_ReKi
 end subroutine BEMT_AllocOutput
 
 
@@ -1226,7 +1228,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
          else 
                ! TODO: When we start using Re, should we use the uninduced Re since we used uninduced Re to solve for the inductions!? Probably this won't change, instead create a Re loop up above.
             call ComputeSteadyAirfoilCoefs( y%AOA(i,j), y%Re(i,j),  AFInfo(p%AFindx(i,j)), &
-                                         y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), errStat2, errMsg2 ) 
+                                         y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), y%Cpmin(i,j),  errStat2, errMsg2 ) 
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
                if (errStat >= AbortErrLev) return 
          end if

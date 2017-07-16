@@ -94,7 +94,8 @@ typedef	^	^	INTEGER	NumCpminAoAkts	-	-	-	"The number of angle-of-attack knots fo
 typedef	^	^	INTEGER	NumCpminReKts	-	-	-	"The number of log(Re) knots for 2D splines of Cpmin"	-
 typedef	^	^	INTEGER	NumTabs	-	-	-	"The number of airfoil tables in the airfoil file"	-
 typedef	^	^	AFI_Table_Type	Table	{:}	-	-	"The tables of airfoil data for given Re and control setting"	-
-
+typedef	^	^	INTEGER	ColCpmin	-	-	-	"Column number for Cpmin"	-
+typedef	^	^	INTEGER	ColCm	-	-	-	"Column number for Cm"	-
 # ..... Initialization data .......................................................................................................
 # The following derived type stores information that comes from the calling module (say, AeroDyn):
 typedef	AirfoilInfo/AFI	InitInputType	INTEGER	NumAFfiles	-	-	-	"The number of airfoil files"	-

@@ -22,15 +22,17 @@
 ! URL: $HeadURL$
 !**********************************************************************************************************************************
 module UnsteadyAero
-   
-   use NWTC_Library   
+
+   ! This module uses equations defined in the document "The Unsteady Aerodynamics Module for FAST 8" by Rick Damiani and Greg Hayman, 28-Feb-2017
+
+use NWTC_Library   
    use UnsteadyAero_Types
    use AirfoilInfo
    
    implicit none 
 
 private
-
+   type(ProgDesc), parameter  :: UA_Ver = ProgDesc( 'UnsteadyAero', 'v1.01.00a', '10-May-2017' )
 
    public :: UA_Init
    public :: UA_UpdateDiscOtherState
@@ -46,7 +48,7 @@ private
    real(ReKi),     parameter :: Gonzales_factor = 0.2_ReKi   ! this factor, proposed by Gonzales (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
    
    contains
-
+   
 ! **************************************************
 FUNCTION SAT( X, VAL, SLOPE )
  !  AOA saturation function 02/15/98
@@ -277,6 +279,9 @@ real(ReKi) function Get_f_c_from_Lookup( Re, alpha, alpha0, c_nalpha_circ, eta_e
       Get_f_c_from_Lookup =  min(fc_limit, (  Cc / denom  + Gonzales_factor ) **2 )
                   
    end if
+      ! Apply an offset of 0.2 to fix cases where f_c should be negative, but we are using **2 so can only return positive values
+      ! Note: because we include this offset, it must be accounted for in the final value of Cc, eqn 1.40.  This will be applied
+      ! For both UA_Mod = 1,2, and 3 when using Flookup = T
    
    
 end function Get_f_c_from_Lookup      
@@ -406,7 +411,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    end if
    
    ! Low Pass filtering of alpha, q, and Kq in order to deal with numerical issues that arise for very small values of dt
-   ! See equations 1.8 of the manual
+   ! See equations 1.7 and 1.8 of the manual
    
    LowPassConst  =  exp(-2.0_ReKi*PI*p%dt*BL_p%filtCutOff) ! from Eqn 1.8 [7]
    
@@ -416,7 +421,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    KC%dalpha0  = KC%alpha_filt_cur - BL_p%alpha0
    
     
-      ! Compute Kalpha using Eqn 1.8
+      ! Compute Kalpha using Eqn 1.7
   
    Kalpha        = ( KC%alpha_filt_cur - alpha_filt_minus1 ) / p%dt ! Eqn 1.7, using filtered values of alpha
    
@@ -492,7 +497,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    KC%Cn_alpha_q_circ = KC%C_nalpha_circ * KC%alpha_e                                                                         ! Eqn 1.13
    
    if ( p%UAMod == UA_Gonzalez ) then
-         ! Compute X3 and X4 using Eqn 1.17a  and then add Cn_q_circ (Eqn 1.17) to the previously computed Cn_alpha_q_circ
+         ! Compute X3 and X4 using Eqn 1.16a  and then add Cn_q_circ (Eqn 1.16) to the previously computed Cn_alpha_q_circ
       KC%X3              = Get_ExpEqn( ds*beta_M_Sqrd*BL_p%b1, 1.0_ReKi, xd%X3_minus1(i,j), BL_p%A1*(KC%q_f_cur - q_f_minus1), 0.0_ReKi ) ! Eqn 1.16a [1]
       KC%X4              = Get_ExpEqn( ds*beta_M_Sqrd*BL_p%b2, 1.0_ReKi, xd%X4_minus1(i,j), BL_p%A2*(KC%q_f_cur - q_f_minus1), 0.0_ReKi ) ! Eqn 1.16a [2]
       
@@ -570,7 +575,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    KC%fprimeprime   = KC%fprime - KC%Df                                                                                       ! Eqn 1.36a
    
    if (p%Flookup) then
-         ! Compute fprime using Eqn 1.30 and Eqn 1.31
+         ! Compute fprime using Eqn 1.32 and Eqn 1.33
       KC%fprime_c   = Get_f_c_from_Lookup( u%Re, KC%alpha_f, BL_p%alpha0, KC%C_nalpha_circ, BL_p%eta_e, AFInfo, ErrStat2, ErrMsg2) ! Solve Eqn 1.32b for f when alpha is replaced with alpha_f
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
@@ -581,9 +586,9 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
          KC%Df_c = Get_ExpEqn( ds, KC%T_f, xd%Df_c_minus1(i,j), KC%fprime_c, xd%fprime_c_minus1(i,j)  )
       end if
    
-         ! Compute Df using Eqn 1.34b   
+         ! Compute Df using Eqn 1.36b   
    
-         ! Compute fprimeprime using Eqn 1.34a
+         ! Compute fprimeprime using Eqn 1.36a
       KC%fprimeprime_c   = KC%fprime_c - KC%Df_c
    else
       KC%fprime_c = KC%fprime
@@ -857,7 +862,7 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
    call NWTC_Init( EchoLibVer=.FALSE. )
 
       ! Display the module information
-   !call DispNVD( UA_Ver )
+   call DispNVD( UA_Ver )
    
       ! Allocate and set parameter data structure using initialization data
    call UA_SetParameters( interval, InitInp, p, ErrStat2, ErrMsg2 )
@@ -869,7 +874,7 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return    
       
-   
+#ifdef UA_OUTS   
 #ifdef UA_OUTS
 
       ! Allocate and set the InitOut data
@@ -1325,7 +1330,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       !.............................
       ! Cn
       !.............................
-         ! Eqn 1.50 or 1.50b depending on UAMod
+         ! Eqn 1.53 or 1.53b depending on UAMod
       if (xd%tau_v(misc%iBladeNode, misc%iBlade) > 0.0) then
          y%Cn= KC%Cn_FS + KC%Cn_v                                                                                                                  ! Eqn 1.53
       else
@@ -1355,7 +1360,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       elseif ( p%UAMod == UA_Gonzalez ) then
          y%Cc = Cc_FS                                                                                                                              ! Eqn. 1.55b
       else
-         ! This is UAMod = 1 and we still need to verify these equations!!!  GJH Dec 20 2015
+         ! TODO: This is UAMod = 1 and we still need to verify these equations!!!  GJH Dec 20 2015
          if ( KC%Cn_prime <= BL_p%Cn1 ) then
             !y%Cc = BL_p%eta_e*KC%Cc_pot*(sqrt(KC%fprimeprime_c) - f_c_offset) !*sin(KC%alpha_e + BL_p%alpha0)
             y%Cc = Cc_FS * sin(KC%alpha_e + BL_p%alpha0)                                                                                           ! Eqn 1.56a [1]
@@ -1418,7 +1423,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             Cn_temp = Cl_temp*cos(KC%alpha_f) + (Cd_temp-BL_p%Cd0)*sin(KC%alpha_f)
             
-            ! TODO: In the future we are going to look at a delayed version of fprime_m and hence why we are using
+            ! TODO: In the future we are going to look at a delayed version of fprime_m and that is why we are using
             ! the variable name fprimeprime_m even though we have not introduced the delay, yet.  GJH 4/12/2016
             
 !#ifndef CHECK_DENOM_DIFF
@@ -1461,7 +1466,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
          else ! UAMod == UA_Gonzalez
             
             Cm_FS = BL_p%Cm0 + KC%Cn_FS*KC%fprimeprime_m + Cm_common                                                                               ! Eqn 1.45 (NOTE: This differs from manual in that Cm0 is added because it is subtracted in our version of fprimeprime_m
-
+            alpha_prime_f = 0.0_ReKi
          end if   
       
          Cm_v     = -BL_p%x_cp_bar*( 1.0_ReKi - cos( pi*xd%tau_v(misc%iBladeNode, misc%iBlade)/BL_p%T_VL ) )*KC%Cn_v                               ! Eqn 1.57   

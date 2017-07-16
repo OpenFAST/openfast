@@ -221,10 +221,58 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    end if
    
    
+   ! set blade properties data
+
    
+   ALLOCATE(InitOut%BladeProps(p%numBlades), STAT = ErrStat2)
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
+      RETURN
+   END IF
+   do k=1,p%numBlades
+      ! allocate space and copy blade data:
+      CALL AllocAry( InitOut%BladeProps(k)%BlSpn,   InputFileData%BladeProps(k)%NumBlNds, 'BlSpn',   ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlSpn(:) = InputFileData%BladeProps(k)%BlSpn(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlCrvAC, InputFileData%BladeProps(k)%NumBlNds, 'BlCrvAC', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlCrvAC(:) = InputFileData%BladeProps(k)%BlCrvAC(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlSwpAC, InputFileData%BladeProps(k)%NumBlNds, 'BlSwpAC', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlSwpAC(:) = InputFileData%BladeProps(k)%BlSwpAC(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlCrvAng,InputFileData%BladeProps(k)%NumBlNds, 'BlCrvAng',ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlCrvAng(:) = InputFileData%BladeProps(k)%BlCrvAng(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlTwist, InputFileData%BladeProps(k)%NumBlNds, 'BlTwist', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlTwist(:) = InputFileData%BladeProps(k)%BlTwist(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlChord, InputFileData%BladeProps(k)%NumBlNds, 'BlChord', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlChord(:) = InputFileData%BladeProps(k)%BlChord(:)
+      CALL AllocAry( InitOut%BladeProps(k)%BlAFID,  InputFileData%BladeProps(k)%NumBlNds, 'BlAFID',  ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      InitOut%BladeProps(k)%BlAFID(:) = InputFileData%BladeProps(k)%BlAFID(:)
+   end do
+
+   !Tower data
+   ALLOCATE(InitOut%TwrElev(p%NumTwrNds), STAT = ErrStat2)
+   IF (ErrStat2 /= 0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrElev.", ErrStat, ErrMsg, RoutineName)
+      RETURN
+   END IF
+   InitOut%TwrElev(:) = InputFileData%TwrElev(:)
    
+   IF ( p%NumTwrNds > 0 ) THEN
+      ALLOCATE(InitOut%TwrDiam(p%NumTwrNds), STAT = ErrStat2)
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrDiam.", ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF   
+      InitOut%TwrDiam(:) = p%TwrDiam(:)
+   END IF  
    
 end subroutine AD_SetInitOut
+
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
@@ -478,7 +526,13 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( m%WithoutSweepPitchTwist, 3_IntKi, 3_IntKi, p%NumBlNds, p%numBlades, 'OtherState%WithoutSweepPitchTwist', ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      
+   
+   call allocAry( m%SigmaCavit, p%NumBlNds, p%numBlades, 'm%SigmaCavit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( m%SigmaCavitCrit, p%NumBlNds, p%numBlades, 'm%SigmaCavitCrit', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( m%CavitWarnSet, p%NumBlNds, p%numBlades, 'm%CavitWarnSet', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   m%SigmaCavit     = 0.0_ReKi      !Init to zero for output files in case a cavit check isnt done but output is requested 
+   m%SigmaCavitCrit = 0.0_ReKi
+   m%CavitWarnSet   = .false.
          ! arrays for output
 #ifdef DBG_OUTS
    allocate( m%AllOuts(0:p%NumOuts), STAT=ErrStat2 ) ! allocate starting at zero to account for invalid output channels
@@ -881,6 +935,10 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    p%TwrPotent        = InputFileData%TwrPotent
    p%TwrShadow        = InputFileData%TwrShadow
    p%TwrAero          = InputFileData%TwrAero
+   p%CavitCheck       = InputFileData%CavitCheck
+   p%Gravity          = InitInp%Gravity
+  
+
    
    if (InitInp%Linearize) then
       p%FrozenWake = InputFileData%FrozenWake 
@@ -902,6 +960,9 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    
    p%AirDens          = InputFileData%AirDens          
    p%KinVisc          = InputFileData%KinVisc
+   p%Patm             = InputFileData%Patm
+   p%Pvap             = InputFileData%Pvap
+   p%FluidDepth       = InputFileData%FluidDepth
    p%SpdSound         = InputFileData%SpdSound
    
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
@@ -1064,7 +1125,7 @@ end subroutine AD_UpdateStates
 !! The descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 !! for a complete description of each output parameter.
 subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
+! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
@@ -1085,11 +1146,13 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer(intKi)                               :: i
+   integer(intKi)                               :: j
+
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'AD_CalcOutput'
-   
-   
+   real(ReKi)                                   :: SigmaCavitCrit, SigmaCavit
+
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -1109,7 +1172,30 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       call ADTwr_CalcOutput(p, u, m, y, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    end if
-         
+   
+   if ( p%CavitCheck ) then      ! Calculate the cavitation number for the airfoil at the node in quesiton, and compare to the critical cavitation number based on the vapour pressure and submerged depth       
+      do j = 1,p%numBlades ! Loop through all blades
+         do i = 1,p%NumBlNds  ! Loop through all nodes
+                     
+      if ( EqualRealNos( m%BEMT_y%Vrel(i,j), 0.0_ReKi ) ) call SetErrStat( ErrID_Fatal, 'Vrel cannot be zero to do a cavitation check', ErrStat, ErrMsg, RoutineName) 
+         if (ErrStat >= AbortErrLev) return
+      
+      SigmaCavit= -1* m%BEMT_y%Cpmin(i,j) ! Local cavitation number on node j                                               
+      SigmaCavitCrit= ( ( p%Patm + ( p%Gravity * (p%FluidDepth - (  u%BladeMotion(j)%Position(3,i) + u%BladeMotion(j)%TranslationDisp(3,i) - u%HubMotion%Position(3,1))) * p%airDens)  - p%Pvap ) / ( 0.5_ReKi * p%airDens * m%BEMT_y%Vrel(i,j)**2)) ! Critical value of Sigma, cavitation occurs if local cavitation number is greater than this
+                                                                  
+         if ( (SigmaCavitCrit < SigmaCavit) .and. (.not. (m%CavitWarnSet(i,j)) ) ) then     
+              call WrScr( NewLine//'Cavitation occurred at blade '//trim(num2lstr(j))//' and node '//trim(num2lstr(i))//'.' )
+              m%CavitWarnSet(i,j) = .true.
+         end if 
+                     
+      m%SigmaCavit(i,j)= SigmaCavit                 
+      m%SigmaCavitCrit(i,j)=SigmaCavitCrit  
+                           
+   end do   ! p%NumBlNds
+     end do  ! p%numBlades
+       end if   ! Cavitation check
+      
+
    !-------------------------------------------------------   
    !     get values to output to file:  
    !-------------------------------------------------------   
@@ -1322,6 +1408,8 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
       m%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
 #endif
       theta(3) = 0.0_ReKi  
+      m%hub_theta_x_root(k) = theta(1)   ! save this value for FAST.Farm
+      
       orientation = EulerConstruct( theta )
       orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k)
             
@@ -1453,7 +1541,11 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%KinVisc <= 0.0) call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%SpdSound <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-      
+   if (InputFileData%Pvap <= 0.0) call SetErrStat ( ErrID_Fatal, 'The vapour pressure (Pvap) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%Patm <= 0.0) call SetErrStat ( ErrID_Fatal, 'The atmospheric pressure (Patm)  must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   if (InputFileData%FluidDepth <= 0.0) call SetErrStat ( ErrID_Fatal, 'Fluid depth (FluidDepth) must be greater than zero', ErrStat, ErrMsg, RoutineName )
+
+                       
    
       ! BEMT inputs
       ! bjj: these checks should probably go into BEMT where they are used...
@@ -1475,7 +1567,14 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       
       if (.not. InputFileData%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    end if
-           
+   
+   if ( InputFileData%CavitCheck .and. InputFileData%AFAeroMod == 2) then
+      call SetErrStat( ErrID_Fatal, 'Cannot use unsteady aerodynamics module with a cavitation check', ErrStat, ErrMsg, RoutineName )
+   end if
+        
+   if (InputFileData%InCol_Cpmin == 0 .and. InputFileData%CavitCheck) call SetErrStat( ErrID_Fatal, 'InCol_Cpmin must not be 0 to do a cavitation check.', ErrStat, ErrMsg, RoutineName )
+
+                
    
          ! validate the AFI input data because it doesn't appear to be done in AFI
    if (InputFileData%NumAFfiles  < 1) call SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )   
