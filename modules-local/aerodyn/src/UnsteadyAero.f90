@@ -872,7 +872,6 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
       if (ErrStat >= AbortErrLev) return    
       
 #ifdef UA_OUTS   
-#ifdef UA_OUTS
 
       ! Allocate and set the InitOut data
    p%NumOuts = 42
