@@ -3722,14 +3722,14 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
          ! Check for convergence
        Enorm = SQRT(abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total))))
 
+       CALL BD_UpdateDynamicGA2(p,m,x,OtherState)
+
        IF(i==1) THEN
            Eref = Enorm*p%tol
            IF(Enorm .LE. 1.0_DbKi) RETURN       !FIXME: Do we want a hardcoded limit like this?
        ELSE
            IF(Enorm .LE. Eref) RETURN
        ENDIF
-
-       CALL BD_UpdateDynamicGA2(p,m,x,OtherState)
 
    ENDDO
 
