@@ -456,16 +456,18 @@ SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
    ErrMsg  = ""
 
    ! mjs--Start by determining if R is a valid rotation matrix using the properties:
-      ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1
+      ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1, where
+         ! the leading eigenvalue is +1 and the other two are a comples conjugate pair
       ! 2) a valid rotation matrix must have determinant == +1
       ! i.e., the singular values == 1
 
    ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
-      ! compute \f$ \underline{\underline{Rr}} \f$, the nearest orthogonal tensor
-      ! to \f$ \underline{\underline{R}} \f$
-      ! this is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
-      ! and setting \f$ \underline{\underline{Rr}} = UV^T \f$
-      ! otherwise, assign \f$ \underline{\underline{Rr}}  = \underline{\underline{R}} \f$
+      ! and the correction is desired,
+      ! compute \f$ \underline{\underline{R_{out}} \f$, the nearest orthogonal tensor
+      ! to \f$ \underline{\underline{R}} \f$.
+      ! This is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
+      ! and setting \f$ \underline{\underline{R_{out}} = UV^T \f$
+      ! otherwise, assign \f$ \underline{\underline{R_{out}}}  = \underline{\underline{R}} \f$
 
    allocate (work(lwork))
    tempmat = R !mjs--need this to handle inout nature of input for LAPACK_dgesvd
@@ -478,14 +480,18 @@ SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
       if (.not. ortho) exit
    end do
 
-   ! mjs--if an invalid rotatation matrix is passed, set lowest error status, so as not to abort,
-      ! but still inform user
+   ! mjs--after consulting with Mike Sprague, it was decided that instead of fixing the rotation matrix and
+      ! notifying the user, the simulation should be stopped if an invalid rotation matrix is passed
+      ! To change this and implement the fix, use the following three commented lines
    if (.not. ortho) then
-      ErrStat2 = ErrID_Info
-      ErrMsg2 = 'Passed invalid rotation matrix--fixing via SVD'
+      ErrStat2 = ErrID_Fatal
+      ! ErrStat2 = ErrID_Info
+      ErrMsg2 = 'Passed invalid rotation matrix'
+      ! ErrMsg2 = 'Passed invalid rotation matrix--fixing via SVD'
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
-      Rout = matmul(U, VT)
+      Rout = R
+      ! Rout = matmul(U, VT)
    else
       Rout = R
    end if
