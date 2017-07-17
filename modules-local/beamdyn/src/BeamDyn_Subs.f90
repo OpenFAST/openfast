@@ -481,7 +481,7 @@ SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
    ! mjs--if an invalid rotatation matrix is passed, set lowest error status, so as not to abort,
       ! but still inform user
    if (.not. ortho) then
-      ErrStat = 1
+      ErrStat = ErrID_Info
       ErrMsg = 'Passed invalid rotation matrix--fixing via SVD'
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
