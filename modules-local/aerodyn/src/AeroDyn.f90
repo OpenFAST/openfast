@@ -1167,9 +1167,9 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%SigmaCavit(i,j)= SigmaCavit                 
       m%SigmaCavitCrit(i,j)=SigmaCavitCrit  
                            
-   end do   ! p%NumBlNds
-     end do  ! p%numBlades
-       end if   ! Cavitation check
+         end do   ! p%NumBlNds
+      end do  ! p%numBlades
+   end if   ! Cavitation check
       
 
    !-------------------------------------------------------   
@@ -1544,7 +1544,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       if (.not. InputFileData%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    end if
    
-   if ( InputFileData%CavitCheck .and. InputFileData%AFAeroMod == 2) then
+   if ( InputFileData%CavitCheck .and. InputFileData%AFAeroMod == AFAeroMod_BL_unsteady) then
       call SetErrStat( ErrID_Fatal, 'Cannot use unsteady aerodynamics module with a cavitation check', ErrStat, ErrMsg, RoutineName )
    end if
         
