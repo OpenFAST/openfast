@@ -44,10 +44,10 @@ if(NOT EXISTS ${PYTHON_EXECUTABLE})
 endif()
 
 # Set the testing tolerance
-if(NOT ${TEST_TOLERANCE} STREQUAL "") # User defined
-  set(TOLERANCE ${TEST_TOLERANCE})
-
-else(NOT ${TEST_TOLERANCE} STREQUAL "") # Automatically set
+set(CTEST_REGRESSION_TOL "0.0000001" CACHE STRING "Set the tolerance for the regression test. Leave empty to automatically set.")
+if(NOT ${CTEST_REGRESSION_TOL} STREQUAL "")
+  set(TOLERANCE ${CTEST_REGRESSION_TOL})
+else(NOT ${CTEST_REGRESSION_TOL} STREQUAL "")
 
   if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
     # default
