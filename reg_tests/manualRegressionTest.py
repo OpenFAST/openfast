@@ -45,7 +45,7 @@ devnull = open(os.devnull, 'w')
 
 with open(os.path.join("r-test", "openfast", "CaseList.md")) as listfile:
     content = listfile.readlines()
-casenames = [x.rstrip("\n\r").strip() for x in content]
+casenames = [x.rstrip("\n\r").strip() for x in content if "#" not in x]
 
 results = []
 for case in casenames:
