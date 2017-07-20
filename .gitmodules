@@ -1,4 +1,4 @@
 [submodule "reg_tests/r-test"]
 	path = reg_tests/r-test
-	url = https://github.com/rafaelmudafort/r-test.git
-	branch = develop
+	url = https://github.com/openfast/r-test.git
+	branch = dev
