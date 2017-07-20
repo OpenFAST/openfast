@@ -230,11 +230,30 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%NumBl       = p%NumBl
    InitOut%Gravity     = p%Gravity
    InitOut%BladeLength = p%TipRad - p%HubRad
+   InitOut%TowerHeight = p%TwrFlexL
    InitOut%PlatformPos = x%QT(1:6)
    InitOut%HubHt       = p%HubHt
    InitOut%TwrBasePos  = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
    InitOut%HubRad      = p%HubRad
-   
+
+   if (.not. p%BD4Blades) then
+      ALLOCATE(InitOut%BldRNodes(p%BldNodes),  STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN
+         call CheckError( ErrStat2, ErrMsg2 )
+         if (ErrStat2 >= AbortErrLev) return
+      END IF
+      InitOut%BldRNodes(:) = p%RNodes(:)
+   else
+      !Deal with BeamDyn case later
+   end if
+
+   ALLOCATE(InitOut%TwrHNodes(p%TwrNodes),  STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN
+         call CheckError( ErrStat2, ErrMsg2 )
+         if (ErrStat2 >= AbortErrLev) return
+      END IF
+   InitOut%TwrHNodes(:) = p%HNodes(:)
+
    CALL AllocAry(InitOut%BlPitch, p%NumBl, 'BlPitch', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
@@ -3491,8 +3510,14 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
 
    p%CosPreC  = COS( InputFileData%Precone(1:p%NumBl) )
    p%SinPreC  = SIN( InputFileData%Precone(1:p%NumBl) )
-   p%CosDel3  = COS( InputFileData%Delta3 )
-   p%SinDel3  = SIN( InputFileData%Delta3 )
+   
+   IF ( p%NumBl == 2 ) THEN
+      p%CosDel3  = COS( InputFileData%Delta3 )
+      p%SinDel3  = SIN( InputFileData%Delta3 )
+   ELSE
+      p%CosDel3  = 1.0_ReKi
+      p%SinDel3  = 0.0_ReKi
+   END IF
 
    !...............................................................................................................................
 
@@ -8687,7 +8712,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
    !.......................................................
       
    CALL MeshCreate( BlankMesh = y%TowerLn2Mesh           &
-                    , IOS             = COMPONENT_INPUT  &
+                    , IOS             = COMPONENT_OUTPUT &
                     , NNodes          = p%TwrNodes + 2   &
                     , TranslationDisp = .TRUE.           &
                     , Orientation     = .TRUE.           &

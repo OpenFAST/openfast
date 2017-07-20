@@ -4863,7 +4863,7 @@ end function Rad2M180to180Deg
 !=======================================================================
 !> This routine displays a message that gives that status of the simulation and the predicted end time of day.
 !! It is intended to be used with SimStatus (nwtc_num::simstatus) and SimStatus_FirstTime (nwtc_num::simstatus_firsttime).
-   SUBROUTINE RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, ZTime, UsrTime_out )
+   SUBROUTINE RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, ZTime, UsrTime_out, DescStrIn )
 
       IMPLICIT                        NONE
 
@@ -4876,6 +4876,8 @@ end function Rad2M180to180Deg
       REAL(DbKi),INTENT(IN)          :: ZTime                                           !< The final simulation time (not necessarially TMax)
       REAL(ReKi),INTENT(OUT),OPTIONAL:: UsrTime_out                                     !< User CPU time for entire run - optional value returned to calling routine
 
+      CHARACTER(*), INTENT(IN), OPTIONAL :: DescStrIn                                 !< optional additional string to print for SimStatus
+                  
          ! Local variables
 
       REAL(ReKi)                      :: ClckTime                                        ! Elapsed clock time for the entire run.
@@ -4890,6 +4892,14 @@ end function Rad2M180to180Deg
                                       
       CHARACTER( 8)                   :: TimePer
       CHARACTER(MaxWrScrLen)          :: BlankLine
+      CHARACTER(10)                   :: DescStr                                        !< optional additional string to print for SimStatus
+
+
+      if (present(DescStrIn)) then
+         DescStr = DescStrIn
+      else
+         DescStr = ""
+      end if
 
          ! Get the end times to compare with start times.
 
@@ -4930,7 +4940,8 @@ end function Rad2M180to180Deg
 
          BlankLine = ""
          CALL WrOver( BlankLine )  ! BlankLine contains MaxWrScrLen spaces
-         CALL WrScr1( ' Total Real Time:       '//TRIM( Num2LStr( Factor*ClckTime      ) )//TRIM( TimePer ) )
+         CALL WrScr ( DescStr   )
+         CALL WrScr ( ' Total Real Time:       '//TRIM( Num2LStr( Factor*ClckTime      ) )//TRIM( TimePer ) )
          CALL WrScr ( ' Total CPU Time:        '//TRIM( Num2LStr( Factor*UsrTime       ) )//TRIM( TimePer ) )
    !     CALL WrScr ( ' ')
    !     CALL WrScr ( ' Simulation Real Time:  '//TRIM( Num2LStr( Factor*ClckTimeSim   ) )//TRIM( TimePer ) )
@@ -5037,7 +5048,7 @@ end function Rad2M180to180Deg
 !=======================================================================   
 !> This routine displays a message that gives that status of the simulation.
 !! It is intended to be used with RunTimes (nwtc_num::runtimes) and SimStatus (nwtc_num::simstatus).
-   SUBROUTINE SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, UsrTimeSim, ZTime, TMax )
+   SUBROUTINE SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, UsrTimeSim, ZTime, TMax, DescStrIn )
 
       IMPLICIT                        NONE
 
@@ -5048,12 +5059,22 @@ end function Rad2M180to180Deg
       REAL(ReKi), INTENT(  OUT)    :: PrevClockTime                                   !< Previous clock time in seconds past midnight
       INTEGER,    INTENT(  OUT)    :: SimStrtTime (8)                                 !< An array containing the elements of the start time.
       REAL(ReKi), INTENT(  OUT)    :: UsrTimeSim                                      !< User CPU time for simulation (without intialization)
-
+      
+      CHARACTER(*), INTENT(IN), OPTIONAL :: DescStrIn                                 !< optional additional string to print for SimStatus
+      
          ! Local variables.
 
       REAL(ReKi)                   :: CurrClockTime                                   ! Current time in seconds past midnight.
+      CHARACTER(10)                :: DescStr                                        !< optional additional string to print for SimStatus
 
 
+      if (present(DescStrIn)) then
+         DescStr = DescStrIn
+      else
+         DescStr = ""
+      end if
+      
+      
          ! How many seconds past midnight?
 
       CALL DATE_AND_TIME ( Values=SimStrtTime )
@@ -5063,7 +5084,7 @@ end function Rad2M180to180Deg
       CurrClockTime = TimeValues2Seconds( SimStrtTime )
 
 
-      CALL WrScr ( ' Timestep: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )//' seconds.')
+      CALL WrScr ( trim(DescStr)//' Timestep: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )//' seconds.')
 
 
       ! Let's save this time as the previous time for the next call to the routine
@@ -5075,7 +5096,7 @@ end function Rad2M180to180Deg
 !=======================================================================
 !> This routine displays a message that gives that status of the simulation and the predicted end time of day.
 !! It is intended to be used with RunTimes (nwtc_num::runtimes) and SimStatus_FirstTime (nwtc_num::simstatus_firsttime).
-   SUBROUTINE SimStatus( PrevSimTime, PrevClockTime, ZTime, TMax )
+   SUBROUTINE SimStatus( PrevSimTime, PrevClockTime, ZTime, TMax, DescStrIn )
    
 
       IMPLICIT                        NONE
@@ -5086,6 +5107,7 @@ end function Rad2M180to180Deg
       REAL(DbKi), INTENT(INOUT)    :: PrevSimTime                          !< Previous time message was written to screen (s > 0)
       REAL(ReKi), INTENT(INOUT)    :: PrevClockTime                        !< Previous clock time in seconds past midnight
 
+      CHARACTER(*), INTENT(IN), OPTIONAL :: DescStrIn                      !< optional additional string to print for SimStatus
 
          ! Local variables.
 
@@ -5105,11 +5127,18 @@ end function Rad2M180to180Deg
 
       CHARACTER(MaxWrScrLen)       :: BlankLine
       CHARACTER( 8)                :: ETimeStr                             ! String containing the end time.
+      CHARACTER(10)                :: DescStr                              !< optional additional string to print for SimStatus
 
 
       IF ( ZTime <= PrevSimTime ) RETURN
 
-
+      
+      if (present(DescStrIn)) then
+         DescStr = DescStrIn
+      else
+         DescStr = ""
+      end if
+      
          ! How many seconds past midnight?
 
       CALL DATE_AND_TIME ( Values=TimeAry )
@@ -5140,7 +5169,7 @@ end function Rad2M180to180Deg
 
       BlankLine = ""
       CALL WrOver( BlankLine )  ! BlankLine contains MaxWrScrLen spaces
-      CALL WrOver ( ' Timestep: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )// &
+      CALL WrOver ( trim(DescStr)//' Timestep: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )// &
                     ' seconds. Estimated final completion at '//ETimeStr//'.'                             )
 
          ! Let's save this time as the previous time for the next call to the routine
@@ -5762,6 +5791,7 @@ end function Rad2M180to180Deg
    end do
    
    END FUNCTION traceR16
+ 
 !=======================================================================
 !> This function returns the \f$l_2\f$ (Euclidian) norm of a vector, 
 !! \f$v = \left(v_1, v_2, \ldots ,v_n\right)\f$. The \f$l_2\f$-norm is defined as   

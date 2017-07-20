@@ -544,6 +544,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
          END IF    
          WaveElevSt = Waves_InitOut%WaveElev
          
+         
             ! We need to reset the wave elevation arrays
          DEALLOCATE(InitLocal%Waves%WaveElevxi)
          DEALLOCATE(InitLocal%Waves%WaveElevyi)

@@ -37,6 +37,7 @@ target_link_libraries(openfast_prelib
   orcaflexlib
   extptfm_mckflib
   openfoamtypeslib
+  sctypeslib
   feamlib
   moordynlib
   icedynlib
@@ -50,14 +51,15 @@ add_library(openfast_postlib
   src/FAST_Subs.f90
   src/FAST_Solver.f90
   )
-target_link_libraries(openfast_postlib openfast_prelib foamfastlib)
+target_link_libraries(openfast_postlib openfast_prelib scfastlib foamfastlib)
 
 add_library(openfastlib
   src/FAST_Library.f90)
 target_link_libraries(openfastlib
-  openfast_postlib openfast_prelib foamfastlib)
+  openfast_postlib openfast_prelib scfastlib foamfastlib)
 
 install(TARGETS openfastlib openfast_prelib openfast_postlib
+  EXPORT ${CMAKE_PROJECT_NAME}Libraries
   RUNTIME DESTINATION lib
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)

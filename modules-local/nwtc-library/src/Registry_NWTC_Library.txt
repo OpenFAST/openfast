@@ -28,6 +28,11 @@ usefrom     ^             ^                 CHARACTER(ChanLen)       Name
 usefrom     ^             ^                 CHARACTER(ChanLen)       Units
 usefrom     ^             ^                 IntKi                    SignM
 
+usefrom   NWTC_Library  OutParmFFType       IntKi                    Indx
+usefrom     ^             ^                 CHARACTER(ChanLenFF)     Name
+usefrom     ^             ^                 CHARACTER(ChanLenFF)     Units
+usefrom     ^             ^                 IntKi                    SignM
+
 usefrom   NWTC_Library  FileInfoType        IntKi                    NumLines
 usefrom     ^             ^                 IntKi                    NumFiles
 usefrom     ^             ^                 IntKi                    FileLine  {:}
