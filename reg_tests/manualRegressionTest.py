@@ -19,7 +19,7 @@
     regression test execution through CMake/CTest. All generated data goes into
     `openfast/build/reg_tests`.
 
-    Usage: `python manualRegressionTest.py openfast/install/bin/openfast [Darwin,Linux,Windows] [Intel,GNU]`
+    Usage: `python manualRegressionTest.py openfast/install/bin/openfast [Darwin,Linux,Windows] [Intel,GNU] tolerance`
 """
 
 import sys
@@ -31,15 +31,16 @@ def exitWithError(error, code=1):
     sys.exit(code)
 
 ### Verify input arguments
-if len(sys.argv) != 4:
+if len(sys.argv) != 4 and len(sys.argv) != 5:
     exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: python manualRegressionTest.py openfast/install/bin/openfast [Darwin,Linux,Windows] [Intel,GNU]")
+    "Usage: python manualRegressionTest.py openfast/install/bin/openfast [Darwin,Linux,Windows] [Intel,GNU] tolerance")
 
 openfast_executable = sys.argv[1]
 sourceDirectory = ".."
 buildDirectory = os.path.join("..", "build", "reg_tests", "openfast")
 machine = sys.argv[2]
 compiler = sys.argv[3]
+tolerance = sys.argv[4] if len(sys.argv) == 5 else 0.0000001
 devnull = open(os.devnull, 'w')
 
 with open(os.path.join("r-test", "openfast", "CaseList.md")) as listfile:
@@ -49,13 +50,13 @@ casenames = [x.rstrip("\n\r").strip() for x in content]
 results = []
 for case in casenames:
     print("executing case {}".format(case))
-    command = "python executeOpenfastRegressionCase.py {} {} {} {} 0.000001 {} {}".format(case, openfast_executable, sourceDirectory, buildDirectory, machine, compiler)
+    command = "python executeOpenfastRegressionCase.py {} {} {} {} {} {} {}".format(case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler)
     returnCode = subprocess.call(command, stdout=devnull, shell=True)
     if returnCode == 0:
         results.append((case, "PASS"))
     else:
-        results.append((case, "FAIL"))
+        results.append((case, "FAIL", returnCode))
 
 print("Regression test execution completed with these results:")
 for r in results:
-    print(r[0], r[1])
+    print(" ".join([str(rr) for rr in r]))
