@@ -220,6 +220,19 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
    
 end subroutine ComputeLocals
 !----------------------------------------------------------------------------------------------------------------------------------   
+!> This function calculates jinc(x) = J_1(2*Pi*x)/x
+real(ReKi) function jinc ( x )
+
+   real(ReKi),      intent(in   ) :: x
+   
+   if ( EqualRealNos(x,0.0_ReKi) ) then
+      jinc = Pi
+   else
+      jinc = BESSEL_JN( 1, TwoPi*x )/x
+   end if
+   
+end function jinc
+!----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine 
 !!
 subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
@@ -240,6 +253,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: r_vec_plane(3)
    real(ReKi)          :: tmp_xhatBar_plane
    real(ReKi)          :: r_tmp_plane
+   real(ReKi)          :: D_wake_tmp
    real(ReKi)          :: Vx_wake_tmp
    real(ReKi)          :: Vr_wake_tmp(3)
    real(ReKi)          :: Vr_term(3)
@@ -249,9 +263,9 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: tmp_vec(3)
    real(ReKi)          :: Vave_amb_low_norm
    real(ReKi)          :: delta, deltad
+   real(ReKi)          :: wsum_tmp
    integer(IntKi)      :: ILo
    integer(IntKi)      :: maxPln
-   integer(IntKi)      :: N_wind_tmp
    character(*), parameter   :: RoutineName = 'LowResGridCalcOutput'   
    errStat = ErrID_None
    errMsg  = ""
@@ -335,8 +349,9 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       
                      end if  ! if the point is within radial finite-difference grid
                      
-                        ! test if the point is within the radius of the wake volume cylinder
-                     if ( r_tmp_plane <= (delta*u%D_wake(np+1,nt) + deltad*u%D_wake(np,nt) )) then
+                        ! test if the point is within the radius of the wake volume cylinder                   
+                     D_wake_tmp = delta*u%D_wake(np+1,nt) + deltad*u%D_wake(np,nt)        
+                     if ( r_tmp_plane <= p%C_ScaleDiam*D_wake_tmp ) then
                         m%N_wind(np,nt) = m%N_wind(np,nt) + 1
                         
                         
@@ -345,10 +360,27 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                            return  ! if m%N_wind(np,nt) > p%n_wind_max then we will be indexing beyond the allocated memory for nx_wind,ny_wind,nz_wind arrays
                         end if
                         
+                        select case ( p%Mod_Meander )
+                        case (MeanderMod_Uniform) 
+                           m%w(   m%N_wind(np,nt),np,nt) = 1.0_ReKi
+                        case (MeanderMod_TruncJinc)  
+                           m%w(   m%N_wind(np,nt),np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )
+                        case (MeanderMod_WndwdJinc) 
+                           m%w(   m%N_wind(np,nt),np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )*jinc( r_tmp_plane/( 2.0_ReKi*p%C_Meander*D_wake_tmp ) )
+                        end select
+                        
                         m%nx_wind(m%N_wind(np,nt),np,nt) = nx_low
                         m%ny_wind(m%N_wind(np,nt),np,nt) = ny_low
                         m%nz_wind(m%N_wind(np,nt),np,nt) = nz_low   
                         
+                        if ( np == 0 ) then
+                           if ( r_tmp_plane <= 0.5_ReKi*p%C_Meander*D_wake_tmp ) then
+                              m%w_Amb(m%N_wind(np,nt),nt) = 1.0_ReKi
+                           else
+                              m%w_Amb(m%N_wind(np,nt),nt) = 0.0_ReKi
+                           end if
+                        end if
+                                                
                      end if
                      exit
                   end if  ! if the point is within the endcaps of the wake volume                 
@@ -382,12 +414,20 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    do nt = 1,p%NumTurbines
       if ( m%N_wind(0,nt) > 0 ) then
          
-         Vsum_low = 0.0_ReKi
+         Vsum_low  = 0.0_ReKi
+         m%wsum(0) = 0.0_ReKi
       
          do nw=1,m%N_wind(0,nt)   
-            Vsum_low = Vsum_low + real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi)
+            Vsum_low  = Vsum_low  + m%w_Amb(nw,nt)*real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi)
+            m%wsum(0) = m%wsum(0) + m%w_Amb(nw,nt)
          end do
-         Vsum_low       = Vsum_low / m%N_wind(0,nt)  ! if N_wind gets large ( ~= 100,000 ) then this may not give enough precision in Vave_amb_low
+         
+         if ( EqualRealNos(m%wsum(0),0.0_ReKi) ) then
+            call SetErrStat( ErrID_Fatal, 'The sum of the weightings for ambient spatial-averaging in the low-resolution domain associated with the wake volume at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
+            return     
+         end if
+         
+         Vsum_low       = Vsum_low / m%wsum(0)  ! if N_wind gets large ( ~= 100,000 ) then this may not give enough precision in Vave_amb_low
          Vave_amb_low_norm  = TwoNorm(Vsum_low)
          if ( EqualRealNos(Vave_amb_low_norm,0.0_ReKi) ) then    
             call SetErrStat( ErrID_Fatal, 'The magnitude of the spatial-averaged ambient wind speed in the low-resolution domain associated with the wake volume at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
@@ -397,9 +437,9 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
          y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,0,nt), Vsum_low )
          y%TI_amb(nt)       = 0.0_ReKi
          do nw=1,m%N_wind(0,nt)
-            y%TI_amb(nt) = y%TI_amb(nt) + TwoNorm( real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi) - Vsum_low )**2
+            y%TI_amb(nt) = y%TI_amb(nt) + m%w_Amb(nw,nt)*TwoNorm( real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi) - Vsum_low )**2
          end do
-         y%TI_amb(nt) = sqrt(y%TI_amb(nt)/(3.0*m%N_wind(0,nt)))/Vave_amb_low_norm
+         y%TI_amb(nt) = sqrt(y%TI_amb(nt)/(3.0*m%wsum(0)))/Vave_amb_low_norm
       else
          y%Vx_wind_disk(nt) = 0.0_ReKi
          y%TI_amb(nt)       = 0.0_ReKi 
@@ -411,34 +451,37 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
             call SetErrStat( ErrID_Fatal, 'The number of points in the wake volume #'//trim(num2lstr(np))//' for turbine '//trim(num2lstr(nt))//' is '//trim(num2lstr(m%N_wind(np,nt)))//', which is less than the minimum threshold, '//trim(num2lstr(p%n_wind_min))//'.', errStat, errMsg, RoutineName )
             return     
          else if ( m%N_wind(np,nt) > 0  ) then            
-            Vsum_low = 0.0_ReKi
+            Vsum_low   = 0.0_ReKi
+            m%wsum(np) = 0.0_ReKi
             do nw=1,m%N_wind(np,nt)   
-               Vsum_low = Vsum_low + m%Vdist_low( :, m%nx_wind(nw,np,nt),m%ny_wind(nw,np,nt),m%nz_wind(nw,np,nt) )
+               Vsum_low   = Vsum_low   + m%w(nw,np,nt)*m%Vdist_low( :, m%nx_wind(nw,np,nt),m%ny_wind(nw,np,nt),m%nz_wind(nw,np,nt) )
+               m%wsum(np) = m%wsum(np) + m%w(nw,np,nt)
             end do
             y%V_plane(:,np,nt) = Vsum_low
          else
             y%V_plane(:,np,nt) = 0.0_ReKi
+            m%wsum   (  np   ) = 0.0_ReKi
          end if
          
       end do
       
-      if (  m%N_wind(maxPln  ,nt) > 0 ) then
-         y%V_plane(:,maxPln+1,nt) =   y%V_plane(:,maxPln,nt)                          / m%N_wind(maxPln,nt)
+      if (  m%wsum(maxPln) > 0.0_ReKi ) then
+         y%V_plane(:,maxPln+1,nt) =   y%V_plane(:,maxPln,nt)                          / m%wsum(maxPln)
       else
          y%V_plane(:,maxPln+1,nt) = 0.0_ReKi
       end if
       do np = maxPln, 1, -1
-         N_wind_tmp = m%N_wind(np,nt) + m%N_wind(np-1,nt)
-         if ( N_wind_tmp          > 0 ) then
-            y%V_plane(:,np   ,nt) = ( y%V_plane(:,np    ,nt) + y%V_plane(:,np-1,nt) ) /   N_wind_tmp
+         wsum_tmp = m%wsum(np) + m%wsum(np-1)
+         if ( wsum_tmp     > 0.0_ReKi ) then
+            y%V_plane(:,np   ,nt) = ( y%V_plane(:,np    ,nt) + y%V_plane(:,np-1,nt) ) /   wsum_tmp
          end if
       end do
-      if (  m%N_wind(0       ,nt) > 0 ) then
-         y%V_plane(:,0       ,nt) =   y%V_plane(:,0     ,nt)                          / m%N_wind(0     ,nt)
+      if (  m%wsum(0     ) > 0.0_ReKi ) then
+         y%V_plane(:,0       ,nt) =   y%V_plane(:,0     ,nt)                          / m%wsum(0     )
       end if
       
    end do
-   
+
 end subroutine LowResGridCalcOutput
 
 #ifdef PARALLEL_CODE
@@ -465,6 +508,7 @@ subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, 
    real(ReKi)          :: r_vec_plane(3)
    real(ReKi)          :: tmp_xhatBar_plane
    real(ReKi)          :: r_tmp_plane
+   real(ReKi)          :: D_wake_tmp
    real(ReKi)          :: Vx_wake_tmp
    real(ReKi)          :: Vr_wake_tmp(3)
    real(ReKi)          :: Vr_term(3)
@@ -474,9 +518,9 @@ subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, 
    real(ReKi)          :: tmp_vec(3)
    real(ReKi)          :: Vave_amb_low_norm
    real(ReKi)          :: delta, deltad
+   real(ReKi)          :: wsum_tmp
    integer(IntKi)      :: ILo, j
    integer(IntKi)      :: maxPln, procs
-   integer(IntKi)      :: N_wind_tmp
    
    character(*), parameter   :: RoutineName = 'LowResGridCalcOutput'   
    errStat = ErrID_None
@@ -560,7 +604,8 @@ subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, 
                      end if  ! if the point is within radial finite-difference grid
                      
                         ! test if the point is within the radius of the wake volume cylinder
-                     if ( r_tmp_plane <= (delta*u%D_wake(np+1,nt) + deltad*u%D_wake(np,nt) )) then
+                     D_wake_tmp = delta*u%D_wake(np+1,nt) + deltad*u%D_wake(np,nt)        
+                     if ( r_tmp_plane <= p%C_ScaleDiam*D_wake_tmp ) then
                         m%N_wind(np,nt) = m%N_wind(np,nt) + 1
                         
                            
@@ -569,9 +614,26 @@ subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, 
                            return  ! if m%N_wind(np,nt) > p%n_wind_max then we will be indexing beyond the allocated memory for nx_wind,ny_wind,nz_wind arrays
                         end if
                         
+                        select case ( p%Mod_Meander )
+                        case (MeanderMod_Uniform) 
+                           m%w(   m%N_wind(np,nt),np,nt) = 1.0_ReKi
+                        case (MeanderMod_TruncJinc)  
+                           m%w(   m%N_wind(np,nt),np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )
+                        case (MeanderMod_WndwdJinc) 
+                           m%w(   m%N_wind(np,nt),np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )*jinc( r_tmp_plane/( 2.0_ReKi*p%C_Meander*D_wake_tmp ) )
+                        end select
+                        
                         m%nx_wind(m%N_wind(np,nt),np,nt) = nx_low
                         m%ny_wind(m%N_wind(np,nt),np,nt) = ny_low
                         m%nz_wind(m%N_wind(np,nt),np,nt) = nz_low   
+                        
+                        if ( np == 0 ) then
+                           if ( r_tmp_plane <= 0.5_ReKi*p%C_Meander*D_wake_tmp ) then
+                              m%w_Amb(m%N_wind(np,nt),nt) = 1.0_ReKi
+                           else
+                              m%w_Amb(m%N_wind(np,nt),nt) = 0.0_ReKi
+                           end if
+                        end if
                         
                      end if
                      exit
@@ -605,12 +667,20 @@ subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, 
    do nt = 1,p%NumTurbines
       if ( m%N_wind(0,nt) > 0 ) then
          
-         Vsum_low = 0.0_ReKi
+         Vsum_low  = 0.0_ReKi
+         m%wsum(0) = 0.0_ReKi
       
          do nw=1,m%N_wind(0,nt)   
-            Vsum_low = Vsum_low + real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi)
+            Vsum_low  = Vsum_low  + m%w_Amb(nw,nt)*real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi)
+            m%wsum(0) = m%wsum(0) + m%w_Amb(nw,nt)
          end do
-         Vsum_low       = Vsum_low / m%N_wind(0,nt)  ! if N_wind gets large ( ~= 100,000 ) then this may not give enough precision in Vave_amb_low
+         
+         if ( EqualRealNos(m%wsum(0),0.0_ReKi) ) then
+            call SetErrStat( ErrID_Fatal, 'The sum of the weightings for ambient spatial-averaging in the low-resolution domain associated with the wake volume at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
+            return     
+         end if
+         
+         Vsum_low       = Vsum_low / m%wsum(0)  ! if N_wind gets large ( ~= 100,000 ) then this may not give enough precision in Vave_amb_low
          Vave_amb_low_norm  = TwoNorm(Vsum_low)
          if ( EqualRealNos(Vave_amb_low_norm,0.0_ReKi) ) then    
             call SetErrStat( ErrID_Fatal, 'The magnitude of the spatial-averaged ambient wind speed in the low-resolution domain associated with the wake volume at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
@@ -620,9 +690,9 @@ subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, 
          y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,0,nt), Vsum_low )
          y%TI_amb(nt)       = 0.0_ReKi
          do nw=1,m%N_wind(0,nt)
-            y%TI_amb(nt) = y%TI_amb(nt) + TwoNorm( real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi) - Vsum_low )**2
+            y%TI_amb(nt) = y%TI_amb(nt) + m%w_Amb(nw,nt)*TwoNorm( real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi) - Vsum_low )**2
          end do
-         y%TI_amb(nt) = sqrt(y%TI_amb(nt)/(3.0*m%N_wind(0,nt)))/Vave_amb_low_norm
+         y%TI_amb(nt) = sqrt(y%TI_amb(nt)/(3.0*m%wsum(0)))/Vave_amb_low_norm
       else
          y%Vx_wind_disk(nt) = 0.0_ReKi
          y%TI_amb(nt)       = 0.0_ReKi 
@@ -634,30 +704,33 @@ subroutine LowResGridCalcOutputOMP(n, u, p, y, Vdist_low, Vamb_low, m, errStat, 
             call SetErrStat( ErrID_Fatal, 'The number of points in the wake volume #'//trim(num2lstr(np))//' for turbine '//trim(num2lstr(nt))//' is '//trim(num2lstr(m%N_wind(np,nt)))//', which is less than the minimum threshold, '//trim(num2lstr(p%n_wind_min))//'.', errStat, errMsg, RoutineName )
             return     
          else if ( m%N_wind(np,nt) > 0  ) then            
-            Vsum_low = 0.0_ReKi
+            Vsum_low   = 0.0_ReKi
+            m%wsum(np) = 0.0_ReKi
             do nw=1,m%N_wind(np,nt)   
-               Vsum_low = Vsum_low + m%Vdist_low( :, m%nx_wind(nw,np,nt),m%ny_wind(nw,np,nt),m%nz_wind(nw,np,nt) )
+               Vsum_low   = Vsum_low   + m%w(nw,np,nt)*m%Vdist_low( :, m%nx_wind(nw,np,nt),m%ny_wind(nw,np,nt),m%nz_wind(nw,np,nt) )
+               m%wsum(np) = m%wsum(np) + m%w(nw,np,nt)
             end do
             y%V_plane(:,np,nt) = Vsum_low
          else
             y%V_plane(:,np,nt) = 0.0_ReKi
+            m%wsum   (  np   ) = 0.0_ReKi
          end if
          
       end do
       
-      if (  m%N_wind(maxPln  ,nt) > 0 ) then
-         y%V_plane(:,maxPln+1,nt) =   y%V_plane(:,maxPln,nt)                          / m%N_wind(maxPln,nt)
+      if (  m%wsum(maxPln) > 0.0_ReKi ) then
+         y%V_plane(:,maxPln+1,nt) =   y%V_plane(:,maxPln,nt)                          / m%wsum(maxPln)
       else
          y%V_plane(:,maxPln+1,nt) = 0.0_ReKi
       end if
       do np = maxPln, 1, -1
-         N_wind_tmp = m%N_wind(np,nt) + m%N_wind(np-1,nt)
-         if ( N_wind_tmp          > 0 ) then
-            y%V_plane(:,np   ,nt) = ( y%V_plane(:,np    ,nt) + y%V_plane(:,np-1,nt) ) /   N_wind_tmp
+         wsum_tmp = m%wsum(np) + m%wsum(np-1)
+         if ( wsum_tmp     > 0.0_ReKi ) then
+            y%V_plane(:,np   ,nt) = ( y%V_plane(:,np    ,nt) + y%V_plane(:,np-1,nt) ) /   wsum_tmp
          end if
       end do
-      if (  m%N_wind(0       ,nt) > 0 ) then
-         y%V_plane(:,0       ,nt) =   y%V_plane(:,0     ,nt)                          / m%N_wind(0     ,nt)
+      if (  m%wsum(0     ) > 0.0_ReKi ) then
+         y%V_plane(:,0       ,nt) =   y%V_plane(:,0     ,nt)                          / m%wsum(0     )
       end if
       
    end do
@@ -896,7 +969,18 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%NOutDisWindXZ    = InitInp%InputFileData%NOutDisWindXZ
    p%WrDisWind        = InitInp%InputFileData%WrDisWind
    p%WrDisSkp1        = nint(InitInp%InputFileData%WrDisDT / p%dt)
-   
+   p%Mod_Meander      = InitInp%InputFileData%Mod_Meander
+   p%C_Meander        = InitInp%InputFileData%C_Meander
+   select case ( p%Mod_Meander )
+   case (MeanderMod_Uniform) 
+      p%C_ScaleDiam   = 0.5_ReKi*p%C_Meander
+   case (MeanderMod_TruncJinc)  
+      p%C_ScaleDiam   = 0.5_ReKi*p%C_Meander*1.21967_ReKi
+   case (MeanderMod_WndwdJinc) 
+      p%C_ScaleDiam   = 0.5_ReKi*p%C_Meander*2.23313_ReKi
+   end select
+
+      
    call allocAry( p%OutDisWindZ, p%NOutDisWindXY, "OutDisWindZ", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
@@ -1087,6 +1171,13 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vr_wake.', errStat, errMsg, RoutineName )  
       
       
+   allocate ( m%w          ( p%n_wind_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 ) 
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%w.', errStat, errMsg, RoutineName )  
+   allocate ( m%w_Amb      ( p%n_wind_max, 1:p%NumTurbines ), STAT=errStat2 ) 
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%w_Amb.', errStat, errMsg, RoutineName )  
+   allocate ( m%wsum       ( 0:p%NumPlanes-2 ), STAT=errStat2 ) 
+      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%wsum.', errStat, errMsg, RoutineName )  
+
    allocate ( m%nx_wind    ( p%n_wind_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 ) 
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%nx_wind.', errStat, errMsg, RoutineName )  
    allocate ( m%ny_wind    ( p%n_wind_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 ) 
@@ -1408,6 +1499,8 @@ subroutine ValidateInitInputData( InputFileData, errStat, errMsg )
    if (  InputFileData%NumPlanes   <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of wake planes must be greater than one.', errStat, errMsg, RoutineName )
    if (  InputFileData%NumRadii    <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of radii in the radial finite-difference grid must be greater than one.', errStat, errMsg, RoutineName )
    if (  InputFileData%dr          <=  0.0)  call SetErrStat ( ErrID_Fatal, 'dr must be greater than zero.', errStat, errMsg, RoutineName ) 
+   if (.not. ((InputFileData%Mod_Meander == 1) .or. (InputFileData%Mod_Meander == 2) .or. (InputFileData%Mod_Meander == 3)) ) call SetErrStat ( ErrID_Fatal, 'Mod_Meander must be equal to 1, 2, or 3.', errStat, errMsg, RoutineName ) 
+   if (  InputFileData%C_Meander   <   1.0_ReKi ) call SetErrStat ( ErrID_Fatal, 'C_Meander must not be less than 1.', errStat, errMsg, RoutineName ) 
    
 end subroutine ValidateInitInputData
 
@@ -1444,12 +1537,15 @@ subroutine AWAE_TEST_Init_BadData(errStat, errMsg)
       ! Set up the initialization inputs
    
     
-    interval               = 0.0_DbKi
-    InitInp%InputFileData%WindFilePath   = '' 
-    InitInp%InputFileData%NumTurbines    = 0
-    InitInp%InputFileData%NumPlanes      = 0
-    InitInp%InputFileData%NumRadii       = 0
-    InitInp%InputFileData%dr             = 0.0_ReKi
+   interval               = 0.0_DbKi
+   InitInp%InputFileData%WindFilePath   = '' 
+   InitInp%InputFileData%NumTurbines    = 0
+   InitInp%InputFileData%NumPlanes      = 0
+   InitInp%InputFileData%NumRadii       = 0
+   InitInp%InputFileData%dr             = 0.0_ReKi
+   InitInp%InputFileData%Mod_Meander    = 0
+   InitInp%InputFileData%C_Meander      = 0.0_ReKi
+
     
    call AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, errStat, errMsg )
    
@@ -1470,7 +1566,7 @@ subroutine AWAE_TEST_SetGoodInitInpData(interval, InitInp)
    InitInp%InputFileData%NumRadii       = 40
    InitInp%InputFileData%dr             = 5.0_ReKi
    InitInp%n_high_low                   = 6
-   InitInp%InputFileData%dt             = 2.0
+   InitInp%InputFileData%dt             = 2.0_DbKi
    InitInp%NumDT                        = 1
    InitInp%InputFileData%NOutDisWindXY  = 0
    InitInp%InputFileData%NOutDisWindYZ  = 0
@@ -1480,6 +1576,9 @@ subroutine AWAE_TEST_SetGoodInitInpData(interval, InitInp)
    InitInp%InputFileData%OutDisWindY    = 0
    InitInp%InputFileData%OutDisWindZ    = 0
    InitInp%InputFileData%OutDisWindX    = 0
+   InitInp%InputFileData%Mod_Meander    = 1
+   InitInp%InputFileData%C_Meander      = 2.0_ReKi
+
 
 end subroutine AWAE_TEST_SetGoodInitInpData
 

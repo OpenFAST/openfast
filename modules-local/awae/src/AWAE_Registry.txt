@@ -17,6 +17,9 @@ include Registry_NWTC_Library.txt
 param	AWAE/AWAE            -               INTEGER         XYSlice     - 1 -  "Extract an XY slice of data from the 3D grid" -
 param	^                    -               INTEGER         YZSlice     - 2 -  "Extract an YZ slice of data from the 3D grid" -
 param	^                    -               INTEGER         XZSlice     - 3 -  "Extract an XZ slice of data from the 3D grid" -
+param	^                    -               INTEGER         MeanderMod_Uniform     - 1 -  "Spatial filter model for wake meandering: uniform" -
+param	^                    -               INTEGER         MeanderMod_TruncJinc   - 2 -  "Spatial filter model for wake meandering: truncated jinc" -
+param	^                    -               INTEGER         MeanderMod_WndwdJinc   - 3 -  "Spatial filter model for wake meandering: windowed jinc" -
 
 # ..... Wind 3D Data .......................................................................................................
 typedef   AWAE/AWAE   AWAE_HighWindGrid       SiKi            data         {:}{:}{:}{:}{:} - - "UVW components of wind data across the high-res regularly-spaced grid" m/s
@@ -36,6 +39,8 @@ typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindXZ      -  
 typedef  ^            AWAE_InputFileType  ReKi            OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
 typedef  ^            AWAE_InputFileType  DbKi            WrDisDT           -  - -   "The time between vtk outputs [must be a multiple of the low resolution time step]" s
 typedef  ^            AWAE_InputFileType  LOGICAL         ChkWndFiles    - - -  "Check all the ambient wind files for data consistency (flag)" -
+typedef  ^            AWAE_InputFileType  IntKi           Mod_Meander    - - -  "Spatial filter model for wake meandering {1: uniform, 2: truncated jinc, 3: windowed jinc} [DEFAULT=1]" -
+typedef  ^            AWAE_InputFileType  ReKi            C_Meander      - - -  "Calibrated parameter for wake meandering [>=1.0] [DEFAULT=2.0]" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -101,6 +106,9 @@ typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     Vx_wake      {:}       - - "" m/s
 typedef   ^ MiscVarType    ReKi     Vr_wake      {:}       - - "" m/s
+typedef   ^ MiscVarType    ReKi     w            {:}{:}{:}    - - "" -
+typedef   ^ MiscVarType    ReKi     w_Amb        {:}{:}       - - "" -
+typedef   ^ MiscVarType    ReKi     wsum         {:}          - - "" -
 typedef   ^ MiscVarType    IntKi    nx_wind      {:}{:}{:}    - - "" -     
 typedef   ^ MiscVarType    IntKi    ny_wind      {:}{:}{:}    - - "" -     
 typedef   ^ MiscVarType    IntKi    nz_wind      {:}{:}{:}    - - "" -     
@@ -142,6 +150,9 @@ typedef   ^ ParameterType  IntKi            n_wind_max         -  - -   "Maximun
 typedef   ^ ParameterType  IntKi            n_wind_min         -  - -   "Minimum required number of low-resolution grid points found in any single wake plane volume" -
 typedef   ^ ParameterType  DbKi             dt                 -  - -   "Low-resolution (FAST.Farm driver/glue code) time step" s
 typedef   ^ ParameterType  IntKi            NumDT              -  - -   "Number of low-resolution (FAST.Farm driver/glue code) time steps" -
+typedef   ^ ParameterType  IntKi            Mod_Meander        -  - -   "Spatial filter model for wake meandering"      -
+typedef   ^ ParameterType  ReKi             C_Meander          -  - -   "Calibrated parameter for wake meandering"      -
+typedef   ^ ParameterType  ReKi             C_ScaleDiam        -  - -   "Normalized wake volume radius for wake meandering (normalized by the wake diameter)"      -
 # parameters for output  
 #typedef   ^ ParameterType  IntKi            NumOuts            -  - -   "Number of parameters in the output list (number of outputs requested)"      -
 typedef  ^  ParameterType  IntKi            WrDisSkp1           -  - -   "Number of time steps to skip plus one" -

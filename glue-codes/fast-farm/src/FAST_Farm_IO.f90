@@ -9849,13 +9849,33 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-): '//trim(Num2LStr(farm%WD(1)%p%C_vShr_DMax)) 
    WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the functional value in the minimum region (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vShr_FMin))
    WRITE (UnSum,'(2X,A)')      'Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-):  '//trim(Num2LStr(farm%WD(1)%p%C_vShr_Exp))
-   WRITE (UnSum,'(2X,A)')      'Wake diameter calculation model (-):  '//trim(Num2LStr(farm%WD(1)%p%Mod_WakeDiam))
+   WRITE (UnSum,'(2X,A)')      'Wake diameter calculation model (-): '//trim(Num2LStr(farm%WD(1)%p%Mod_WakeDiam))
+   select case ( farm%WD(1)%p%Mod_WakeDiam )
+   case (WakeDiamMod_RotDiam) 
+      WRITE (UnSum,'(4X,A)')        '( rotor diameter )'
+   case (WakeDiamMod_Velocity)  
+      WRITE (UnSum,'(4X,A)')        '( velocity based )'
+   case (WakeDiamMod_MassFlux) 
+      WRITE (UnSum,'(4X,A)')        '( mass-flux based )'
+   case (WakeDiamMod_MtmFlux)
+      WRITE (UnSum,'(4X,A)')        '( momentum-flux based )'
+   end select
    if ( farm%WD(1)%p%Mod_WakeDiam > 1 ) then
       CalWakeDiamStr = trim(Num2LStr(farm%WD(1)%p%C_WakeDiam)) 
    else
       CalWakeDiamStr = '-'
    end if
    WRITE (UnSum,'(2X,A)')      'Calibrated parameter for wake diameter calculation (-): '//CalWakeDiamStr
+   WRITE (UnSum,'(2X,A)')      'Spatial filter model for wake meandering (-): '//trim(Num2LStr(farm%AWAE%p%Mod_Meander))
+   select case ( farm%AWAE%p%Mod_Meander )
+   case (MeanderMod_Uniform) 
+      WRITE (UnSum,'(4X,A)')        '( uniform )'
+   case (MeanderMod_TruncJinc)  
+      WRITE (UnSum,'(4X,A)')        '( truncated jinc )'
+   case (MeanderMod_WndwdJinc) 
+      WRITE (UnSum,'(4X,A)')        '( windowed jinc )'
+   end select
+WRITE (UnSum,'(2X,A)')      'Calibrated parameter for wake meandering (-): '//trim(Num2LStr(farm%AWAE%p%C_Meander))
    
    WRITE (UnSum,'(/,A)'   )  'Time Steps'
    WRITE (UnSum,'(2X,A)')      'Component                        Time Step         Subcyles'
@@ -9871,9 +9891,9 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm output files         ',farm%p%dt, '1'
 
    WRITE (UnSum,'(/,A)'   )  'Requested Channels in FAST.Farm Output Files: '//trim(Num2LStr(farm%p%NumOuts+1))
-	WRITE (UnSum,'(2X,A)'  )    'Number     Name         Units'
-	WRITE (UnSum,'(2X,A)'  )    '   0       Time          (s)'
-	do I=1,farm%p%NumOuts
+   WRITE (UnSum,'(2X,A)'  )    'Number     Name         Units'
+   WRITE (UnSum,'(2X,A)'  )    '   0       Time          (s)'
+   do I=1,farm%p%NumOuts
       WRITE (UnSum,'(2X,I4,7X,A14,A14)'  )  I, farm%p%OutParam(I)%Name,farm%p%OutParam(I)%Units
    end do
 
