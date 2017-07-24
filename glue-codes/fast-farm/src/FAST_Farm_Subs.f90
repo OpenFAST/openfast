@@ -797,7 +797,27 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          call cleanup()
          RETURN        
       end if            
-                  
+
+      ! Mod_Meander - Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=1]:
+   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%Mod_Meander, "Mod_Meander", &
+      "Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=1]", &
+      MeanderMod_Uniform, ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if            
+        
+      ! C_Meander - Calibrated parameter for wake meandering (-) [>=1.0] or DEFAULT [DEFAULT=2.0]:
+   CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%C_Meander, "C_Meander", &
+      "Calibrated parameter for wake meandering (-) [>=1.0] or DEFAULT [DEFAULT=2.0]", &
+      2.0_ReKi, ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if            
+
    !---------------------- VISUALIZATION --------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Visualization', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1151,8 +1171,16 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    
    IF (WD_InitInp%Mod_WakeDiam /= WakeDiamMod_RotDiam) THEN
       IF (WD_InitInp%C_WakeDiam <= 0.0_Reki .or. WD_InitInp%C_WakeDiam >= 1.0_ReKi) THEN
-         CALL SetErrStat(ErrID_Fatal,'C_vShr_FMin parameter must be between 0 and 1 (exclusive).',ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,'C_WakeDiam parameter must be between 0 and 1 (exclusive).',ErrStat,ErrMsg,RoutineName)
       END IF
+   END IF
+   
+   IF (AWAE_InitInp%Mod_Meander < MeanderMod_Uniform .or. AWAE_InitInp%Mod_Meander > MeanderMod_WndwdJinc) THEN
+      call SetErrStat(ErrID_Fatal,'Spatial filter model for wake meandering, Mod_Meander, must be 1 (uniform), 2 (truncated jinc), 3 (windowed jinc) or DEFAULT.',ErrStat,ErrMsg,RoutineName)
+   END IF
+   
+   IF (AWAE_InitInp%C_Meander < 1.0_Reki) THEN
+      CALL SetErrStat(ErrID_Fatal,'C_Meander parameter must not be less than 1.',ErrStat,ErrMsg,RoutineName)
    END IF
          
    !--- OUTPUT ---
