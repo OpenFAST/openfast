@@ -117,7 +117,7 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
    InitInData%InputFile      = DvrData%AD_InputFile
    InitInData%NumBlades      = DvrData%numBlades
    InitInData%RootName       = DvrData%outFileData%Root
-                        
+   InitInData%Gravity        = 9.80665_ReKi                
    
       ! set initialization data:
    call AllocAry( InitInData%BladeRootPosition, 3, InitInData%NumBlades, 'BladeRootPosition', errStat2, ErrMsg2 )
