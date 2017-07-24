@@ -110,18 +110,9 @@ compileOpenFAST() {
     cd ${OPENFAST_DIR}
 }
 
-prepPhiEnv() {
-    echo -n "Prepping phi.env"
-    echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH" > phi.env
-    echo "export PATH=$PATH" >> phi.env
-    echo "export FAST=FAST_ProgC_glin64" >> phi.env
-    passFail $?
-}
-
 prepInstall
-#compileYAMLcpp
-#compileHDF5
+compileYAMLcpp
+compileHDF5
 compileOpenFAST
-#rm .prepInstall
 
 
