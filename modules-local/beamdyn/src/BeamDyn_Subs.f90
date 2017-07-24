@@ -339,7 +339,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    !Local variables
-   REAL(BDKi)                  :: pivot(4) ! Trace of the rotation matrix
+   REAL(BDKi)                  :: pivot(4) ! Trace of the rotation matrix and diagonal elements
    REAL(BDKi)                  :: sm0
    REAL(BDKi)                  :: sm1
    REAL(BDKi)                  :: sm2
