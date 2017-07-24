@@ -12,6 +12,7 @@ CMake Build Instructions
     cmake ../ 
     make 
 
+
 Current CMake Options
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -23,3 +24,11 @@ Current CMake Options
 -  ``CMAKE_INSTALL_PREFIX`` - Set desired installation directory
 -  ``BUILD_SHARED_LIBS`` - Enable/disable building shared libraries
    (Default: OFF)
+-  ``FPE_TRAP_ENABLED`` - Enable Floating Point Exception trap
+-  ``BUILD_CPP_API`` - Enable C++ API
+
+Dependencies
+~~~~~~~~~~~~
+
+OpenFAST depends on the ``LAPACK`` libraries provided through the variable ``BLASLIB``. When building the ``C++``API, OpenFAST also depends on `HDF5 <https://support.hdfgroup.org/HDF5/>` (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>` (provided by ``YAML_ROOT``). We recommend installing OpenFAST using `spack <https://spack.readthedocs.io/en/latest>`. However, we also provide some sample scripts in ``share`` folder if you choose to install without ``spack``.
+

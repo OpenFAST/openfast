@@ -30,6 +30,7 @@ include_directories(${MPI_INCLUDE_PATH})
 
 add_library(openfastcpplib
   src/OpenFAST.cpp)
+set_property(TARGET openfastcpplib PROPERTY POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(openfastcpplib
   openfastlib
   ${HDF5_C_LIBRARIES}
