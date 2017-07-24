@@ -32,9 +32,9 @@ MODULE FAST_Farm_Subs
    USE FAST_Farm_IO
    USE FAST_Subs
    USE FASTWrapper
-#ifdef PARALLEL_CODE
+!#ifdef PARALLEL_CODE
    USE OMP_LIB 
-#endif
+!#endif
 
 
    IMPLICIT NONE
@@ -1640,7 +1640,7 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg = ""
    
-  ! tm1 = omp_get_wtime()
+   ! tm1 = omp_get_wtime()
    
    
    !.......................................................................................
@@ -1649,7 +1649,6 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    
       !--------------------
       ! 1. CALL WD_US         
-  
   
    DO nt = 1,farm%p%NumTurbines
       
@@ -1667,17 +1666,32 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    
 
       !--------------------
-      ! 3. CALL F_Increment         
-   
-   DO nt = 1,farm%p%NumTurbines
-      
-      call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
+      ! 3. CALL F_Increment  
+#ifdef _OPENMP
+   tm1 = omp_get_wtime()  
+#endif     
+   !$OMP PARALLEL DO DEFAULT(Shared) Private(nt,tm2)
+   DO nt = 1,farm%p%NumTurbines+1
+      if(nt.ne.farm%p%NumTurbines+1) then      
+        call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                      farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF, ErrMsgF )         
          call SetErrStat(ErrStatF, ErrMsgF, ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
-   
-   
+#ifdef _OPENMP
+         tm2 = omp_get_wtime() 
+         write(*,*)  '    FWrap_Increment for turbine #'//trim(num2lstr(nt))//' using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm1))//' seconds'
+#endif
+      else
+       call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
+                     farm%AWAE%OtherSt, farm%AWAE%m, errStat, errMsg )
+#ifdef _OPENMP
+       tm2 = omp_get_wtime() 
+       write(*,*)  '    AWAE_UpdateStates using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm1))//' seconds'
+#endif
+      endif
+      
    END DO
-  
+   !$OMP END PARALLEL DO  
+
    if (ErrStat >= AbortErrLev) return
 
    
@@ -1685,15 +1699,15 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
       ! 4. CALL AWAE_UpdateStates    
   
   
-   call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%m, errStat, errMsg )
+   ! call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
+   !                  farm%AWAE%OtherSt, farm%AWAE%m, errStat, errMsg )
   
    
-   if (errStat >= AbortErrLev) return
+   ! if (errStat >= AbortErrLev) return
    
    
-  ! tm2 = omp_get_wtime()
-  ! write(*,*) 'Total Farm_US-serial took '//trim(num2lstr(tm2-tm1))//' seconds.'
+  tm2 = omp_get_wtime()
+  write(*,*) 'Total Farm_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
  
    
 end subroutine FARM_UpdateStatesSerial

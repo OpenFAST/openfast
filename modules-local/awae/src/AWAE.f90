@@ -27,9 +27,9 @@ module AWAE
    use NWTC_Library
    use AWAE_Types
    use AWAE_IO
-#ifdef PARALLEL_CODE
+!#ifdef PARALLEL_CODE
    use OMP_LIB
-#endif
+!#endif
    
    implicit none
 
@@ -264,8 +264,10 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: Vave_amb_low_norm
    real(ReKi)          :: delta, deltad
    real(ReKi)          :: wsum_tmp
+   real(ReKi)          :: tmp_x,tmp_y,tmp_z, tm1, tm2
    integer(IntKi)      :: ILo
    integer(IntKi)      :: maxPln
+   integer(IntKi)      :: i,np1
    character(*), parameter   :: RoutineName = 'LowResGridCalcOutput'   
    errStat = ErrID_None
    errMsg  = ""
@@ -276,37 +278,56 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    !    if ( errStat >= AbortErrLev ) then
    !       return
    !    end if
-   
-            
-   nXYZ_low = 0
+#ifdef _OPENMP  
+   tm1 =  omp_get_wtime() 
+#endif 
+     
+   ! nXYZ_low = 0
    m%N_wind(:,:) = 0
    
       ! Loop over the entire grid of low resolution ambient wind data to compute:
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
    
-   do nz_low=0, p%nZ_low-1 
-      do ny_low=0, p%nY_low-1
-         do nx_low=0, p%nX_low-1
+   !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, D_wake_tmp, xhatBar_plane, x_end_plane,nt,np,ILo,x_start_plane,delta,deltad,p_tmp_plane,tmp_vec,r_vec_plane,r_tmp_plane,tmp_xhatBar_plane, Vx_wake_tmp,Vr_wake_tmp,nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,wsum_tmp,i,np1) SHARED(m,u,p,maxPln,errStat, errMsg) DEFAULT(NONE) 
+   
+   !do nz_low=0, p%nZ_low-1 
+   !   do ny_low=0, p%nY_low-1
+   !      do nx_low=0, p%nX_low-1
+
+      do i = 0 , p%nX_low*p%nY_low*p%nZ_low - 1
+
+            nx_low = mod(i,p%nX_low)
+            ny_low = mod(i/(p%nX_low),p%nY_low)
+            nz_low = i / (p%nX_low*p%nY_low)
             
                ! set the disturbed flow equal to the ambient flow for this time step
             m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vamb_low(:,nx_low,ny_low,nz_low)
             
-            nXYZ_low = nXYZ_low + 1
+            nXYZ_low = i + 1
             n_wake = 0
             xhatBar_plane = 0.0_ReKi
             
             do nt = 1,p%NumTurbines
                   
-               x_end_plane = dot_product(u%xhat_plane(:,0,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,0,nt)) )
-               
+               !x_end_plane = dot_product(u%xhat_plane(:,0,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,0,nt)) )
+               tmp_x = u%xhat_plane(1,0,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,0,nt))
+               tmp_y = u%xhat_plane(2,0,nt) * (p%Grid_Low(2,nXYZ_low) - u%p_plane(2,0,nt))
+               tmp_z = u%xhat_plane(3,0,nt) * (p%Grid_Low(3,nXYZ_low) - u%p_plane(3,0,nt))
+               x_end_plane = tmp_x + tmp_y + tmp_z
+
                do np = 0, maxPln  
                   
                      ! Reset interpolation counter
                   ILo = 0
+                  np1 = np + 1
                   
                      ! Construct the endcaps of the current wake plane volume
                   x_start_plane = x_end_plane
-                  x_end_plane = dot_product(u%xhat_plane(:,np+1,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,np+1,nt)) )
+                  !x_end_plane = dot_product(u%xhat_plane(:,np+1,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,np+1,nt)) )
+                  tmp_x = u%xhat_plane(1,np1,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,np1,nt))
+                  tmp_y = u%xhat_plane(2,np1,nt) * (p%Grid_Low(2,nXYZ_low) - u%p_plane(2,np1,nt))
+                  tmp_z = u%xhat_plane(3,np1,nt) * (p%Grid_Low(3,nXYZ_low) - u%p_plane(3,np1,nt))
+                  x_end_plane = tmp_x + tmp_y + tmp_z
                   
                      ! test if the point is within the endcaps of the wake volume
                   if ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) then
@@ -357,7 +378,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         
                         if ( m%N_wind(np,nt) > p%n_wind_max ) then
                            call SetErrStat( ErrID_Fatal, 'The wake plane volume (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
-                           return  ! if m%N_wind(np,nt) > p%n_wind_max then we will be indexing beyond the allocated memory for nx_wind,ny_wind,nz_wind arrays
+                           ! return  ! if m%N_wind(np,nt) > p%n_wind_max then we will be indexing beyond the allocated memory for nx_wind,ny_wind,nz_wind arrays
                         end if
                         
                         select case ( p%Mod_Meander )
@@ -407,9 +428,11 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vdist_low(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
             end if  ! (n_wake > 0)
             
-         end do ! do nx_low=0, p%nX_low-1
-      end do    ! do ny_low=0, p%nY_low-1
+   !      end do ! do nx_low=0, p%nX_low-1
+   !   end do    ! do ny_low=0, p%nY_low-1
    end do       ! do nz_low=0, p%nZ_low-1
+   !OMP END PARALLEL DO
+
    
    do nt = 1,p%NumTurbines
       if ( m%N_wind(0,nt) > 0 ) then
@@ -481,6 +504,10 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       end if
       
    end do
+#ifdef _OPENMP  
+   tm2 =  omp_get_wtime() 
+   write(*,*)  'Total AWAE:LowResGridCalcOutput using '//trim(num2lstr(tm2-tm1))//' seconds'
+#endif 
 
 end subroutine LowResGridCalcOutput
 
