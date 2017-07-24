@@ -35,6 +35,7 @@ add_executable(openfast-farm
   FASTWrapper_Types.f90)
   
 target_link_libraries(openfast-farm openfast_postlib openfast_prelib nwtclibs awaelib wdlib)
+set_property(TARGET openfast-farm PROPERTY LINKER_LANGUAGE Fortran)
 
 install(TARGETS openfast-farm
   RUNTIME DESTINATION bin)
