@@ -97,6 +97,12 @@ MODULE NWTC_LAPACK
       MODULE PROCEDURE LAPACK_spptrf
    END INTERFACE
 
+!> Compute the SVD for a general matrix A = USV^T.
+   INTERFACE LAPACK_gesvd
+      MODULE PROCEDURE LAPACK_dgesvd
+      MODULE PROCEDURE LAPACK_sgesvd
+   END INTERFACE
+
       
    CONTAINS
 
@@ -1318,6 +1324,216 @@ MODULE NWTC_LAPACK
 
 
    RETURN
-   END SUBROUTINE LAPACK_SPPTRF   
-   !=======================================================================
+   END SUBROUTINE LAPACK_SPPTRF
+!=======================================================================
+!> Compute singular value decomposition (SVD) for a general matrix, A.
+!! use LAPACK_DGESVD (nwtc_lapack::lapack_dgesvd) instead of this specific function.
+   SUBROUTINE LAPACK_DGESVD(JOBU, JOBVT, M, N, A, S, U, VT, WORK, LWORK, ErrStat, ErrMsg)
+
+      ! passed variables/parameters:
+
+      CHARACTER(1),    intent(in   ) :: JOBU              !<  'A':  all M columns of U are returned in array U;
+                                                          !!  'S':  the first min(m,n) columns of U (the left singular
+                                                          !!        vectors) are returned in the array U;
+                                                          !!  'O':  the first min(m,n) columns of U (the left singular
+                                                          !!        vectors) are overwritten on the array A;
+                                                          !!  'N':  no columns of U (no left singular vectors) are
+                                                          !!        computed.
+      CHARACTER(1),    intent(in   ) :: JOBVT             !<  'A':  all N rows of V^T are returned in the array VT;
+                                                          !!  'S':  the first min(m,n) rows of V^T (the right singular
+                                                          !!        vectors) are returned in the array VT;
+                                                          !!  'O':  the first min(m,n) rows of V^T (the right singular
+                                                          !!        vectors) are overwritten on the array A;
+                                                          !!  'N':  no rows of V**T (no right singular vectors) are
+                                                          !!        computed.
+
+      INTEGER,         intent(in   ) :: M                 !< The number of rows of the input matrix A.  M >= 0.
+      INTEGER,         intent(in   ) :: N                 !< The number of columns of the input matrix A.  N >= 0.
+
+      REAL(R8Ki),      intent(inout) :: A( :, : )         !< A is DOUBLE PRECISION array, dimension (LDA,N)
+                                                          !! On entry, the M-by-N matrix A.
+                                                          !! On exit,
+                                                          !! if JOBU = 'O',  A is overwritten with the first min(m,n)
+                                                          !!                 columns of U (the left singular vectors,
+                                                          !!                 stored columnwise);
+                                                          !! if JOBVT = 'O', A is overwritten with the first min(m,n)
+                                                          !!                 rows of V**T (the right singular vectors,
+                                                          !!                 stored rowwise);
+                                                          !! if JOBU .ne. 'O' and JOBVT .ne. 'O', the contents of A
+                                                          !!                 are destroyed.
+
+      REAL(R8Ki),      intent(  out) :: S( : )            !< S is DOUBLE PRECISION array, dimension (min(M,N))
+                                                          !! The singular values of A, sorted so that S(i) >= S(i+1).
+      REAL(R8Ki),      intent(  out) :: U( :, : )         !< U is DOUBLE PRECISION array, dimension (LDU,UCOL)
+                                                          !! (LDU,M) if JOBU = 'A' or (LDU,min(M,N)) if JOBU = 'S'.
+                                                          !! If JOBU = 'A', U contains the M-by-M orthogonal matrix U;
+                                                          !! if JOBU = 'S', U contains the first min(m,n) columns of U
+                                                          !! (the left singular vectors, stored columnwise);
+                                                          !! if JOBU = 'N' or 'O', U is not referenced.
+      REAL(R8Ki),      intent(  out) :: VT( :, : )        !< VT is DOUBLE PRECISION array, dimension (LDVT,N)
+                                                          !! If JOBVT = 'A', VT contains the N-by-N orthogonal matrix
+                                                          !! V**T;
+                                                          !! if JOBVT = 'S', VT contains the first min(m,n) rows of
+                                                          !! V**T (the right singular vectors, stored rowwise);
+                                                          !! if JOBVT = 'N' or 'O', VT is not referenced.
+
+      REAL(R8Ki),      intent(inout) :: WORK( : )         !< dimension (MAX(1,LWORK)). On exit, if INFO = 0, WORK(1) returns the optimal LWORK.
+
+      INTEGER,         intent(in   ) :: LWORK             !< The dimension of the array WORK.
+                                                          !! LWORK >= MAX(1,5*MIN(M,N)) for the paths (see comments inside code):
+                                                          !!    - PATH 1  (M much larger than N, JOBU='N')
+                                                          !!    - PATH 1t (N much larger than M, JOBVT='N')
+                                                          !! LWORK >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N)) for the other paths
+                                                          !! For good performance, LWORK should generally be larger.
+                                                          !! If LWORK = -1, then a workspace query is assumed; the routine
+                                                          !! only calculates the optimal size of the WORK array, returns
+                                                          !! this value as the first entry of the WORK array, and no error
+                                                          !! message related to LWORK is issued by XERBLA.
+      INTEGER(IntKi),  intent(  out) :: ErrStat           !< Error level
+      CHARACTER(*),    intent(  out) :: ErrMsg            !< Message describing error
+
+      ! local variables
+      INTEGER                        :: INFO              ! = 0:  successful exit.
+                                                          ! < 0:  if INFO = -i, the i-th argument had an illegal value.
+                                                          ! > 0:  if DBDSQR did not converge, INFO specifies how many
+                                                          !       superdiagonals of an intermediate bidiagonal form B
+                                                          !       did not converge to zero. See the description of WORK
+                                                          !       above for details.
+      INTEGER                        :: LDA               ! The leading dimension of the array A.  LDA >= max(1,M).
+      INTEGER                        :: LDU               ! The leading dimension of the array U.  LDU >= 1; if JOBU = 'S' or 'A', LDU >= M.
+      INTEGER                        :: LDVT              ! The leading dimension of the array VT.  LDVT >= 1; if
+                                                          !! JOBVT = 'A', LDVT >= N; if JOBVT = 'S', LDVT >= min(M,N).
+      CHARACTER(20)                  :: n_str
+
+      LDA  = SIZE(A,1)
+      LDU  = SIZE(U,1)
+      LDVT  = SIZE(VT,1)
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      CALL DGESVD(JOBU, JOBVT, M, N, A, LDA, S, U, LDU, VT, LDVT, WORK, LWORK, INFO)
+
+      IF (INFO /= 0) THEN
+         ErrStat = ErrID_FATAL
+         WRITE( ErrMsg, * ) INFO
+         IF (INFO < 0) THEN
+            ErrMsg  = "LAPACK_DGESVD: illegal value in argument "//TRIM(ErrMsg)//"."
+         ELSEIF (INFO > 0) THEN
+            !ErrStat = ErrID_Severe
+            ErrMsg  = "DBDSQR did not converge, INFO specifies how many superdiagonals of an intermediate bidiagonal form B did not converge to zero"&
+                       //TRIM(ErrMsg)//",...,"//"."
+         ELSE
+            ErrMsg = 'LAPACK_DGESVD: unknown error '//TRIM(ErrMsg)//'.'
+         END IF
+      END IF
+
+   RETURN
+   END SUBROUTINE LAPACK_DGESVD
+!=======================================================================
+!> Compute singular value decomposition (SVD) for a general matrix, A.
+!! use LAPACK_SGESVD (nwtc_lapack::lapack_sgesvd) instead of this specific function.
+   SUBROUTINE LAPACK_SGESVD(JOBU, JOBVT, M, N, A, S, U, VT, WORK, LWORK, ErrStat, ErrMsg)
+
+      ! passed variables/parameters:
+
+      CHARACTER(1),    intent(in   ) :: JOBU              !<  'A':  all M columns of U are returned in array U;
+                                                          !!  'S':  the first min(m,n) columns of U (the left singular
+                                                          !!        vectors) are returned in the array U;
+                                                          !!  'O':  the first min(m,n) columns of U (the left singular
+                                                          !!        vectors) are overwritten on the array A;
+                                                          !!  'N':  no columns of U (no left singular vectors) are
+                                                          !!        computed.
+      CHARACTER(1),    intent(in   ) :: JOBVT             !<  'A':  all N rows of V^T are returned in the array VT;
+                                                          !!  'S':  the first min(m,n) rows of V^T (the right singular
+                                                          !!        vectors) are returned in the array VT;
+                                                          !!  'O':  the first min(m,n) rows of V^T (the right singular
+                                                          !!        vectors) are overwritten on the array A;
+                                                          !!  'N':  no rows of V**T (no right singular vectors) are
+                                                          !!        computed.
+
+      INTEGER,         intent(in   ) :: M                 !< The number of rows of the input matrix A.  M >= 0.
+      INTEGER,         intent(in   ) :: N                 !< The number of columns of the input matrix A.  N >= 0.
+
+      REAL(SiKi),      intent(inout) :: A( :, : )         !< A is SINGLE PRECISION array, dimension (LDA,N)
+                                                          !! On entry, the M-by-N matrix A.
+                                                          !! On exit,
+                                                          !! if JOBU = 'O',  A is overwritten with the first min(m,n)
+                                                          !!                 columns of U (the left singular vectors,
+                                                          !!                 stored columnwise);
+                                                          !! if JOBVT = 'O', A is overwritten with the first min(m,n)
+                                                          !!                 rows of V**T (the right singular vectors,
+                                                          !!                 stored rowwise);
+                                                          !! if JOBU .ne. 'O' and JOBVT .ne. 'O', the contents of A
+                                                          !!                 are destroyed.
+
+      REAL(SiKi),      intent(  out) :: S( : )            !< S is SINGLE PRECISION array, dimension (min(M,N))
+                                                          !! The singular values of A, sorted so that S(i) >= S(i+1).
+      REAL(SiKi),      intent(  out) :: U( :, : )         !< U is SINGLE PRECISION array, dimension (LDU,UCOL)
+                                                          !! (LDU,M) if JOBU = 'A' or (LDU,min(M,N)) if JOBU = 'S'.
+                                                          !! If JOBU = 'A', U contains the M-by-M orthogonal matrix U;
+                                                          !! if JOBU = 'S', U contains the first min(m,n) columns of U
+                                                          !! (the left singular vectors, stored columnwise);
+                                                          !! if JOBU = 'N' or 'O', U is not referenced.
+      REAL(SiKi),      intent(  out) :: VT( :, : )        !< VT is SINGLE PRECISION array, dimension (LDVT,N)
+                                                          !! If JOBVT = 'A', VT contains the N-by-N orthogonal matrix
+                                                          !! V**T;
+                                                          !! if JOBVT = 'S', VT contains the first min(m,n) rows of
+                                                          !! V**T (the right singular vectors, stored rowwise);
+                                                          !! if JOBVT = 'N' or 'O', VT is not referenced.
+
+      REAL(SiKi),      intent(inout) :: WORK( : )         !< dimension (MAX(1,LWORK)). On exit, if INFO = 0, WORK(1) returns the optimal LWORK.
+
+      INTEGER,         intent(in   ) :: LWORK             !< The dimension of the array WORK.
+                                                          !! LWORK >= MAX(1,5*MIN(M,N)) for the paths (see comments inside code):
+                                                          !!    - PATH 1  (M much larger than N, JOBU='N')
+                                                          !!    - PATH 1t (N much larger than M, JOBVT='N')
+                                                          !! LWORK >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N)) for the other paths
+                                                          !! For good performance, LWORK should generally be larger.
+                                                          !! If LWORK = -1, then a workspace query is assumed; the routine
+                                                          !! only calculates the optimal size of the WORK array, returns
+                                                          !! this value as the first entry of the WORK array, and no error
+                                                          !! message related to LWORK is issued by XERBLA.
+      INTEGER(IntKi),  intent(  out) :: ErrStat           !< Error level
+      CHARACTER(*),    intent(  out) :: ErrMsg            !< Message describing error
+
+      ! local variables
+      INTEGER                        :: INFO              ! = 0:  successful exit.
+                                                          ! < 0:  if INFO = -i, the i-th argument had an illegal value.
+                                                          ! > 0:  if SBDSQR did not converge, INFO specifies how many
+                                                          !       superdiagonals of an intermediate bidiagonal form B
+                                                          !       did not converge to zero. See the description of WORK
+                                                          !       above for details.
+      INTEGER                        :: LDA               ! The leading dimension of the array A.  LDA >= max(1,M).
+      INTEGER                        :: LDU               ! The leading dimension of the array U.  LDU >= 1; if JOBU = 'S' or 'A', LDU >= M.
+      INTEGER                        :: LDVT              ! The leading dimension of the array VT.  LDVT >= 1; if
+                                                          !! JOBVT = 'A', LDVT >= N; if JOBVT = 'S', LDVT >= min(M,N).
+      CHARACTER(20)                  :: n_str
+
+      LDA  = SIZE(A,1)
+      LDU  = SIZE(U,1)
+      LDVT  = SIZE(VT,1)
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      CALL SGESVD(JOBU, JOBVT, M, N, A, LDA, S, U, LDU, VT, LDVT, WORK, LWORK, INFO)
+
+      IF (INFO /= 0) THEN
+         ErrStat = ErrID_FATAL
+         WRITE( ErrMsg, * ) INFO
+         IF (INFO < 0) THEN
+            ErrMsg  = "LAPACK_SGESVD: illegal value in argument "//TRIM(ErrMsg)//"."
+         ELSEIF (INFO > 0) THEN
+            !ErrStat = ErrID_Severe
+            ErrMsg  = "DBDSQR did not converge, INFO specifies how many superdiagonals of an intermediate bidiagonal form B did not converge to zero"&
+                       //TRIM(ErrMsg)//",...,"//"."
+         ELSE
+            ErrMsg = 'LAPACK_SGESVD: unknown error '//TRIM(ErrMsg)//'.'
+         END IF
+      END IF
+
+   RETURN
+   END SUBROUTINE LAPACK_SGESVD
+!=======================================================================
 END MODULE NWTC_LAPACK
