@@ -22,55 +22,40 @@
     values, (2) showing the difference in values, and (3) showing relative difference,
     as compared to the baseline solution.
 
-    Usage: python3 pass_fail.py solution1 solution2 attribute
-    Example: python3 pass_fail.py output-local/Test01.outb output-baseline/Test01.outb Wind1VelX
+    Usage: python plotOpenfastOut.py solution1 solution2 attribute
+    Example: python plotOpenfastOut.py output-local/Test01.outb output-baseline/Test01.outb Wind1VelX
 """
-import sys, os
+
+import sys
+import os
 import numpy as np
-from numpy import linalg as LA
 from fast_io import load_output
 import matplotlib.pyplot as plt
+import rtestlib as rtl
 
-def exitWithError(error):
-    print(error)
-    sys.exit(1)
+rtl.validateInputOrExit(sys.argv, 4, "{} solution1 solution2 attribute".format(sys.argv[0]))
 
-# validate input arguments
-nArgsExpected = 4
-if len(sys.argv) < nArgsExpected:
-    exitWithError("Error: {} arguments given, expected {}\n".format(len(sys.argv), nArgsExpected) +
-        "Usage: {} solution1 solution2 attribute".format(sys.argv[0]))
-
-solutionFile1 = sys.argv[1]
-solutionFile2 = sys.argv[2]
+testSolution = sys.argv[1]
+baselineSolution = sys.argv[2]
 attribute = sys.argv[3]
 
-if not os.path.isfile(solutionFile1):
-    exitWithError("Error: solution file does not exist at {}".format(solutionFile1))
-
-if not os.path.isfile(solutionFile2):
-    exitWithError("Error: solution file does not exist at {}".format(solutionFile2))
-
-# try:
-#     solutionTolerance = float(solutionTolerance)
-# except ValueError:
-#     exitWithError("Error: invalid tolerance given, {}".format(solutionTolerance))
+rtl.validateFileOrExit(testSolution)
+rtl.validateFileOrExit(baselineSolution)
 
 # parse the FAST solution files
 try:
-    dict1, info1 = load_output(solutionFile1)
-    dict2, info2 = load_output(solutionFile2)
+    dict1, info1 = load_output(testSolution)
+    dict2, info2 = load_output(baselineSolution)
 except Exception as e:
-    exitWithError("Error: {}".format(e))
+    rtl.exitWithError("Error: {}".format(e))
 
 try:
     channel = info1['attribute_names'].index(attribute)
 except Exception as e:
-    exitWithError("Error: Invalid channel name--{}".format(e))
+    rtl.exitWithError("Error: Invalid channel name--{}".format(e))
 
-# get test name -- this could break if .outb file is not used, or if
-# test number gets to three digits
-testname = solutionFile1.split("/")[-1]
+# get test name -- this could break if .outb file is not used
+testname = testSolution.split("/")[-1]
 testname = testname.split(".")[-2]
 
 timevec = dict1[:, 0]
@@ -81,12 +66,11 @@ reldiff = (a - b) / b
 
 plt.figure(1)
 plt.subplot(311)
-plt.title('File Comparisons for ' + testname + '\nNew: ' +
-          solutionFile1 + '\n Old: ' + solutionFile2)
+plt.title('File Comparisons for ' + testname + '\nNew: ' + testSolution + '\n Old: ' + baselineSolution)
 plt.grid(True)
 plt.ylabel(attribute + '\n' + '(' + info1['attribute_units'][channel] + ')')
-plt.plot(timevec, dict1[:, channel], label = 'New')
-plt.plot(timevec, dict2[:, channel], label = 'Old')
+plt.plot(timevec, dict2[:, channel], 'g', linestyle='solid', linewidth='3', label = 'Old')
+plt.plot(timevec, dict1[:, channel], 'r', linestyle='solid', linewidth='1', label = 'New')
 plt.legend()
 plt.subplot(312)
 plt.grid(True)
@@ -97,4 +81,10 @@ plt.grid(True)
 plt.plot(timevec, reldiff)
 plt.ylabel('Relative\n Difference\n' + '(%)')
 plt.xlabel('Times (s)')
-plt.show()
+#plt.show()
+
+basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
+plotPath = os.path.join(basePath, "plots")
+if not os.path.exists(plotPath):
+    os.makedirs(plotPath)
+plt.savefig(os.path.join(plotPath, attribute+".png"))
