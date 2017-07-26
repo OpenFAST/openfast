@@ -99,7 +99,7 @@ MODULE BladedInterface
 CONTAINS
 !==================================================================================================================================
 !> This SUBROUTINE is used to call the Bladed-style DLL.
-SUBROUTINE CallBladedDLL ( u, scInFilter, scInGlobFilter, DLL, dll_data, p, ErrStat, ErrMsg )
+SUBROUTINE CallBladedDLL ( u, scInGlobFilter, scInFilter, DLL, dll_data, p, ErrStat, ErrMsg )
 
       ! Passed Variables:
    TYPE(SrvD_InputType),      INTENT(IN   )  :: u              ! System inputs
@@ -149,7 +149,7 @@ SUBROUTINE CallBladedDLL ( u, scInFilter, scInGlobFilter, DLL, dll_data, p, ErrS
 
 #else
 
-   IF ( ALLOCATED(dll_data%SCoutput) ) THEN
+   IF ( p%ScOn ) THEN
          ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
       CALL C_F_PROCPOINTER( DLL%ProcAddr(1), DLL_SC_Subroutine) 
       CALL DLL_SC_Subroutine ( dll_data%avrSWAP, scInGlobFilter, scInFilter, dll_data%SCoutput, aviFAIL, accINFILE, avcOUTNAME, avcMSG ) 

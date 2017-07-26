@@ -314,6 +314,12 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry( u%ExternalBlPitchCom, p%NumBl, 'ExternalBlPitchCom', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
+
+   IF ( (InitInp%NumSC2CtrlGlob > 0) .or. (InitInp%NumSC2Ctrl > 0) .or. (InitInp%NumCtrl2SC > 0) ) THEN
+      p%ScOn = .TRUE.
+   ElSE
+      p%ScOn = .FALSE.
+   END IF
         
    IF (InitInp%NumSC2Ctrl > 0 .and. p%UseBladedInterface) THEN
       CALL AllocAry( u%SuperControllerTurbine, InitInp%NumSC2Ctrl, 'u%SuperController', ErrStat2, ErrMsg2 )

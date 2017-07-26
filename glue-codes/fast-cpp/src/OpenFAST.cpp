@@ -66,7 +66,7 @@ void fast::OpenFAST::init() {
      
      if(scStatus) {
         sc.init(nTurbinesGlob);
-        sc.calcOutputs(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
+        sc.calcOutputs_n(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
      }
 
      // this calls the Init() routines of each module
@@ -97,7 +97,7 @@ void fast::OpenFAST::init() {
 
      if(scStatus) {
          sc.init(nTurbinesGlob);
-         sc.calcOutputs(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
+         sc.calcOutputs_n(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
      }
      
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
@@ -174,7 +174,7 @@ void fast::OpenFAST::solution0() {
      timeZero = false;
 
      if (scStatus) {
-       sc.calcOutputs(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
+       sc.calcOutputs_n(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
        fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_n, scOutputsTurbine_n, scOutputsTurbine_to_FAST);
      }
   }
@@ -226,7 +226,7 @@ void fast::OpenFAST::step() {
 
    if(scStatus) {
        sc.updateStates(nt_global * dtFAST, scInputsGlob_n, scInputsTurbine_n); // Predict state at 'n+1' based on inputs
-       sc.calcOutputs( (nt_global + 1) * dtFAST, scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
+       sc.calcOutputs_np1( (nt_global + 1) * dtFAST, scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
        fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_np1, scOutputsTurbine_np1, scOutputsTurbine_to_FAST);
    }
 
@@ -272,7 +272,7 @@ void fast::OpenFAST::stepNoWrite() {
 
    if(scStatus) {
        sc.updateStates( nt_global * dtFAST, scInputsGlob_n, scInputsTurbine_n); // Predict state at 'n+1' based on inputs
-       sc.calcOutputs( (nt_global+1) * dtFAST, scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
+       sc.calcOutputs_np1( (nt_global+1) * dtFAST, scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
        fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_np1, scOutputsTurbine_np1, scOutputsTurbine_to_FAST);
    }
 

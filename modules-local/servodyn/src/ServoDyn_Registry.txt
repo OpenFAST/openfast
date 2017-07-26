@@ -284,6 +284,7 @@ typedef	^	ParameterType	TMD_ParameterType	NTMD	-	-	-	"TMD module parameters - na
 typedef	^	ParameterType	TMD_ParameterType	TTMD	-	-	-	"TMD module parameters - tower"	-
 typedef	^	ParameterType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
+typedef ^       ParameterType   LOGICAL ScOn    -       -       -       "Supercontroller on/off flag" -
 typedef	^	ParameterType	SiKi	ScInAlpha       -       -       -  "Low pass filter cutoff parameter for Supercontroller inputs to ServoDyn" -
 
 # ..... Inputs ....................................................................................................................

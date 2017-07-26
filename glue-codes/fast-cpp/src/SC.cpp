@@ -84,9 +84,15 @@ void SuperController::init(int nTurbinesGlob) {
  
 }
 
-void SuperController::calcOutputs(double t, std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine, std::vector<float> & sc_outputsGlob, std::vector<float> & sc_outputsTurbine) {
+void SuperController::calcOutputs_n(double t, std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine, std::vector<float> & sc_outputsGlob, std::vector<float> & sc_outputsTurbine) {
 
     sc_calcOutputs(t, nTurbines, nInputsGlob, sc_inputsGlob, nInputsTurbine, sc_inputsTurbine, nGlobStates, globStates, nTurbineStates, turbineStates, nOutputsGlob, sc_outputsGlob, nOutputsTurbine, sc_outputsTurbine);   
+
+}
+
+void SuperController::calcOutputs_np1(double t, std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine, std::vector<float> & sc_outputsGlob, std::vector<float> & sc_outputsTurbine) {
+
+    sc_calcOutputs(t, nTurbines, nInputsGlob, sc_inputsGlob, nInputsTurbine, sc_inputsTurbine, nGlobStates, globStates_np1, nTurbineStates, turbineStates_np1, nOutputsGlob, sc_outputsGlob, nOutputsTurbine, sc_outputsTurbine);   
 
 }
 
