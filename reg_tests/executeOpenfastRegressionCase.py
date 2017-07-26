@@ -25,23 +25,15 @@
 """
 
 import os
-from stat import *
 import sys
+basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1])
+sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import shutil
 import subprocess
+import rtestlib as rtl
+import pass_fail
 
 ##### Helper functions
-
-def exitWithError(error):
-    print(error)
-    sys.exit(1)
-
-def exitWithDirNotFound(dir):
-    exitWithError("Directory does not exist: {}\n".format(dir))
-
-def exitWithFileNotFound(file):
-    exitWithError("File does not exist: {}\n".format(file))
-
 def ignoreBaselineItems(directory, contents):
     itemFilter = ['linux-intel', 'macos-gnu', 'windows-intel']
     caught = []
@@ -57,7 +49,7 @@ pythonCommand = sys.executable
 
 ### Verify input arguments
 if len(sys.argv) < 6 or len(sys.argv) > 8:
-    exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
+    rtl.exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
     "Usage: {} executeOpenfastRegressionCase.py testname openfast_executable source_directory build_directory tolerance system_name compiler_id".format(pythonCommand))
 
 caseName = sys.argv[1]
@@ -67,29 +59,20 @@ buildDirectory = sys.argv[4]
 tolerance = sys.argv[5]
 
 # verify executable
-if not os.path.isfile(executable):
-    exitWithError("The given executable, {}, does not exist.".format(executable))
-
-permissionsMask = oct(os.stat(executable)[ST_MODE])[-1:]
-if not int(permissionsMask)%2 == 1:
-    exitWithError("The given executable, {}, does not have proper permissions.".format(executable))
+rtl.validateExeOrExit(executable)
 
 # verify source directory
-if not os.path.isdir(sourceDirectory):
-    exitWithError("The given source directory, {}, does not exist.".format(sourceDirectory))
+rtl.validateDirOrExit(sourceDirectory)
 
 # verify build directory
 if not os.path.isdir(buildDirectory):
     os.makedirs(buildDirectory)
 
-if not os.path.isdir(buildDirectory):
-    exitWithError("The given build directory, {}, does not exist.".format(buildDirectory))
-
 # verify tolerance
 try:
     float(tolerance)
 except ValueError:
-    exitWithError("The given tolerance, {}, is not a valid number.".format(tolerance))
+    rtl.exitWithError("The given tolerance, {}, is not a valid number.".format(tolerance))
 
 systemcompiler_given = True
 try:
@@ -137,11 +120,11 @@ testBuildDirectory = os.path.join(buildDirectory, caseName)
 
 # verify all the required directories exist
 if not os.path.isdir(rtest):
-    exitWithError("The test data directory, {}, does not exist. If you haven't already, run `git submodule update --init --recursive`".format(rtest))
+    rtl.exitWithError("The test data directory, {}, does not exist. If you haven't already, run `git submodule update --init --recursive`".format(rtest))
 if not os.path.isdir(targetOutputDirectory):
-    exitWithError("The test data outputs directory, {}, does not exist. Try running `git submodule update`".format(targetOutputDirectory))
+    rtl.exitWithError("The test data outputs directory, {}, does not exist. Try running `git submodule update`".format(targetOutputDirectory))
 if not os.path.isdir(inputsDirectory):
-    exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
+    rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
@@ -181,16 +164,10 @@ executionReturnCode = subprocess.call(executionCommand, shell=True)
 print("'{}' - finished with exit code {}".format(executionCommand, executionReturnCode))
 
 if executionReturnCode != 0:
-    exitWithError("")
+    rtl.exitWithError("")
 
 ### Build the filesystem navigation variables for running the regression test
 passFailScript = os.path.join(lib, "pass_fail.py")
-localOutputFile = os.path.join(testBuildDirectory, caseName + ".outb")
-goldStandardFile = os.path.join(targetOutputDirectory, caseName + ".outb")
-
-if not os.path.isfile(passFailScript): exitWithFileNotFound(passFailScript)
-if not os.path.isfile(localOutputFile): exitWithFileNotFound(localOutputFile)
-if not os.path.isfile(goldStandardFile): exitWithFileNotFound(goldStandardFile)
 
 passfailCommand = " ".join([pythonCommand, passFailScript, localOutputFile, goldStandardFile, tolerance])
 print("'{}' - running".format(passfailCommand))
@@ -200,3 +177,8 @@ print("'{}' - finished with exit code {}".format(passfailCommand, passfailReturn
 
 # return pass/fail
 sys.exit(passfailReturnCode)
+localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
+baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
+rtl.validateFileOrExit(passFailScript)
+rtl.validateFileOrExit(localOutFile)
+rtl.validateFileOrExit(baselineOutFile)
