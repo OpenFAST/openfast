@@ -70,7 +70,7 @@ if not os.path.isdir(buildDirectory):
 
 # verify tolerance
 try:
-    float(tolerance)
+    tolerance = float(tolerance)
 except ValueError:
     rtl.exitWithError("The given tolerance, {}, is not a valid number.".format(tolerance))
 
@@ -168,17 +168,22 @@ if executionReturnCode != 0:
 
 ### Build the filesystem navigation variables for running the regression test
 passFailScript = os.path.join(lib, "pass_fail.py")
-
-passfailCommand = " ".join([pythonCommand, passFailScript, localOutputFile, goldStandardFile, tolerance])
-print("'{}' - running".format(passfailCommand))
-sys.stdout.flush()
-passfailReturnCode = subprocess.call(passfailCommand, shell=True)
-print("'{}' - finished with exit code {}".format(passfailCommand, passfailReturnCode))
-
-# return pass/fail
-sys.exit(passfailReturnCode)
 localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
+plotScript = os.path.join(lib, "plotOpenfastOut.py")
+
 rtl.validateFileOrExit(passFailScript)
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
+
+testData, testInfo = pass_fail.readFASTOut(localOutFile)
+baselineData, baselineInfo = pass_fail.readFASTOut(baselineOutFile)
+
+norm = pass_fail.calculateRelativeNorm(testData, baselineData)
+if not pass_fail.passRegressionTest(norm, tolerance):
+    for i,channel in enumerate(testInfo["attribute_names"]):
+        plotCommand = " ".join([pythonCommand, plotScript, localOutFile, baselineOutFile, channel])
+        plotReturnCode = subprocess.call(plotCommand, shell=True)
+    sys.exit(1)
+else:
+    sys.exit(0)
