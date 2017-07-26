@@ -30,19 +30,15 @@ import os
 import sys
 import shutil
 import subprocess
+import rtestlib as rtl
 
-def exitWithError(error, code=1):
-    print(error)
-    sys.exit(code)
-
-if len(sys.argv) != 2 and len(sys.argv) != 3:
-    exitWithError("Invalid arguments given: {}\n".format(" ".join(sys.argv)) +
+if not (rtl.validInput(sys.argv, 2) or rtl.validInput(sys.argv, 3)):
+    rtl.exitWithError("Invalid arguments given: {}\n".format(" ".join(sys.argv)) +
     "Usage: python3 executeOpenfastCase.py input_file openfast_executable")
 
 # verify that the given input file exists
 caseInputFile = sys.argv[1]
-if not os.path.isfile(caseInputFile):
-    exitWithError("The given input file, {}, does not exist.".format(caseInputFile))
+rtl.validateFileOrExit(caseInputFile)
 
 # if no openfast executable was given, search in path
 if len(sys.argv) == 2:
@@ -51,7 +47,7 @@ if len(sys.argv) == 2:
         subprocess.call("openfast", stdout=devnull)
     except OSError as e:
         if e.errno == os.errno.ENOENT:
-            exitWithError("{}: openfast\n".format(e) +
+            rtl.exitWithError("{}: openfast\n".format(e) +
             "Usage: python3 executeOpenfastCase.py input_file openfast_executable")
         else:
             raise
@@ -67,7 +63,7 @@ elif len(sys.argv) == 3:
         subprocess.call(executable, stdout=devnull)
     except OSError as e:
         if e.errno == os.errno.ENOENT:
-            exitWithError("{}: {}".format(e, executable))
+            rtl.exitWithError("{}: {}".format(e, executable))
         else:
             raise
 
