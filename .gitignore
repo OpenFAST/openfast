@@ -36,3 +36,4 @@ ctest-build/*
 
 vs-build
 build
+.DS_Store
