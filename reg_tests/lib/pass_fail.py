@@ -27,61 +27,64 @@ import sys, os
 import numpy as np
 from numpy import linalg as LA
 from fast_io import load_output
+import rtestlib as rtl
 
-def exitWithError(error):
-    print(error)
-    sys.exit(1)
+def readFASTOut(fastoutput):
+    try:
+        data, info = load_output(fastoutput)
+        return (data, info)
+    except Exception as e:
+        rtl.exitWithError("Error: {}".format(e))
 
-# validate input arguments
-nArgsExpected = 4
-if len(sys.argv) < nArgsExpected:
-    exitWithError("Error: {} arguments given, expected {}\n".format(len(sys.argv), nArgsExpected) +
-        "Usage: {} solution1 solution2 tolerance".format(sys.argv[0]))
+def passRegressionTest(norm, tolerance):
+    result = True if max(norm) < tolerance else False
+    return result
 
-solutionFile1 = sys.argv[1]
-solutionFile2 = sys.argv[2]
-solutionTolerance = sys.argv[3]
+def calculateRelativeNorm(testData, baselineData):
+    ## gold standard RMS, L2 norm
+    nColumns = np.size(testData,1)
+    diff = np.ones(nColumns)
+    rms_gold = np.ones(nColumns)
+    norm_diff = np.ones(nColumns)
+    for j in range(nColumns):
+        rms_gold[j] = LA.norm(baselineData[:,j], 2)
 
-if not os.path.isfile(solutionFile1):
-    exitWithError("Error: solution file does not exist at {}".format(solutionFile1))
+        diff = testData[:,j]-baselineData[:,j]
+        norm_diff[j] = LA.norm(diff, 2)
 
-if not os.path.isfile(solutionFile2):
-    exitWithError("Error: solution file does not exist at {}".format(solutionFile2))
+    # replace any 0s with small number before for division
+    rms_gold[rms_gold == 0] = 1e-16
 
-try:
-    solutionTolerance = float(solutionTolerance)
-except ValueError:
-    exitWithError("Error: invalid tolerance given, {}".format(solutionTolerance))
+    norm = norm_diff / rms_gold
 
-# parse the FAST solution files
-try:
-    dict1, info1 = load_output(solutionFile1)
-    dict2, info2 = load_output(solutionFile2)
-except Exception as e:
-    exitWithError("Error: {}".format(e))
+    return norm
 
-## gold standard RMS, L2 norm
-nColumns = np.size(dict1,1)
-diff = np.ones(nColumns)
-rms_gold = np.ones(nColumns)
-norm_diff = np.ones(nColumns)
-for j in range(nColumns):
-    rms_gold[j] = LA.norm(dict2[:,j], 2)
+if __name__=="__main__":
 
-    diff = dict1[:,j]-dict2[:,j]
-    norm_diff[j] = LA.norm(diff, 2)
+    rtl.validateInputOrExit(sys.argv, 4, "{} test_solution baseline_solution tolerance".format(sys.argv[0]))
 
-# replace any 0s with small number before for division
-rms_gold[rms_gold == 0] = 1e-16
+    testSolution = sys.argv[1]
+    baselineSolution = sys.argv[2]
+    tolerance = sys.argv[3]
 
-norm = norm_diff / rms_gold
+    try:
+        tolerance = float(tolerance)
+    except ValueError:
+        rtl.exitWithError("Error: invalid tolerance given, {}".format(tolerance))
 
-####### need to reverse inequality to actually see output since test currently passes every time ######
-if max(norm) < solutionTolerance:
-    print('PASS')
-    sys.exit(0)
-else:
-    for i in range(len(info1['attribute_names'])):
-        print(info1['attribute_names'][i], norm[i])
+    rtl.validateFileOrExit(testSolution)
+    rtl.validateFileOrExit(baselineSolution)
 
-    sys.exit(1)
+    testData, testInfo = readFASTOut(testSolution)
+    baselineData, baselineInfo = readFASTOut(baselineSolution)
+
+    norm = calculateRelativeNorm(testData, baselineData)
+
+    if passRegressionTest(norm, tolerance):
+        print('PASS')
+        sys.exit(0)
+    else:
+        dict1, info1 = readFASTOut(testSolution)
+        for i in range(len(info1['attribute_names'])):
+            print(info1['attribute_names'][i], norm[i])
+        sys.exit(1)
