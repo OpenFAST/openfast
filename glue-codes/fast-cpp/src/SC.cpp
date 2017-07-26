@@ -84,9 +84,9 @@ void SuperController::init(int nTurbinesGlob) {
  
 }
 
-void SuperController::calcOutputs(std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine, std::vector<float> & sc_outputsGlob, std::vector<float> & sc_outputsTurbine) {
+void SuperController::calcOutputs(double t, std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine, std::vector<float> & sc_outputsGlob, std::vector<float> & sc_outputsTurbine) {
 
-    sc_calcOutputs(nTurbines, nInputsGlob, sc_inputsGlob, nInputsTurbine, sc_inputsTurbine, nGlobStates, globStates, nTurbineStates, turbineStates, nOutputsGlob, sc_outputsGlob, nOutputsTurbine, sc_outputsTurbine);   
+    sc_calcOutputs(t, nTurbines, nInputsGlob, sc_inputsGlob, nInputsTurbine, sc_inputsTurbine, nGlobStates, globStates, nTurbineStates, turbineStates, nOutputsGlob, sc_outputsGlob, nOutputsTurbine, sc_outputsTurbine);   
 
 }
 
@@ -104,32 +104,9 @@ void SuperController::advanceStates() {
 
 }
 
-void SuperController::updateStates(std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine) {
+void SuperController::updateStates(double t, std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine) {
 
-
-  // Meaning of scInputs
-  // 0 - Time
-  // 1 - GenTorque
-
-  // Meaning of scOutputs
-  // 0 - Minimum Blade pitch
-  
-
-  // Turbine 0
-    /*  Vary PC_MinPit as a function of time: */
-    /*  0-20s: 0 degrees */
-    /*  20-40s: 1.5 degrees */
-    /*  40-60s: 3 degrees */
-
-  // Turbine 1
-    /*  Vary PC_MinPit as a function of time: */
-    /*  0-20s: 0.5 degrees */
-    /*  20-40s: 1 degrees */
-    /*  40-60s: 2.5 degrees */
-
-    sc_updateStates(nTurbines, nInputsGlob, sc_inputsGlob, nInputsTurbine, sc_inputsTurbine, nGlobStates, globStates, globStates_np1, nTurbineStates, turbineStates, turbineStates_np1) ;
-
-/*   //Copy inputs into states first */
+    sc_updateStates(t, nTurbines, nInputsGlob, sc_inputsGlob, nInputsTurbine, sc_inputsTurbine, nGlobStates, globStates, globStates_np1, nTurbineStates, turbineStates, turbineStates_np1) ;
 
     }
 

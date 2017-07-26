@@ -771,11 +771,14 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_SC, y
       u_SrvD%YawErr   = u_SrvD%WindDir - y_ED%YawAngle
       u_SrvD%HorWindV = SQRT( y_OpFM%u(1)**2 + y_OpFM%v(1)**2 )
       
-      if ( allocated(u_SrvD%SuperController) ) then
-         u_SrvD%SuperController = y_SC%fromSC
+      if ( allocated(u_SrvD%SuperControllerGlob) ) then
+         u_SrvD%SuperControllerGlob = y_SC%fromSCglob
       end if
-      
-      
+
+      if ( allocated(u_SrvD%SuperControllerTurbine) ) then
+         u_SrvD%SuperControllerTurbine = y_SC%fromSC
+      end if
+ 
    ELSE  ! No wind inflow
 
       u_SrvD%WindDir  = 0.0

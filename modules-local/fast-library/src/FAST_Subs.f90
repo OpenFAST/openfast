@@ -237,7 +237,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! also, set turbine reference position for graphics output
    if (PRESENT(ExternInitData)) then
       p_FAST%TurbinePos = ExternInitData%TurbinePos
-      if( (ExternInitData%NumSC2Ctrl .gt. 0) .and. (ExternInitData%NumCtrl2SC .gt. 0)) then
+      if( (ExternInitData%NumSC2CtrlGlob .gt. 0) .or. (ExternInitData%NumSC2Ctrl .gt. 0) .or. (ExternInitData%NumCtrl2SC .gt. 0)) then
          p_FAST%UseSupercontroller = .TRUE.
       end if
       
@@ -606,9 +606,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! initialize SuperController
    ! ........................   
       IF ( PRESENT(ExternInitData) ) THEN
+         InitInData_SC%NumSC2CtrlGlob = ExternInitData%NumSC2CtrlGlob
          InitInData_SC%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
          InitInData_SC%NumCtrl2SC = ExternInitData%NumCtrl2SC  
       ELSE
+         InitInData_SC%NumSC2CtrlGlob = 0
          InitInData_SC%NumSC2Ctrl = 0
          InitInData_SC%NumCtrl2SC = 0
       END IF
@@ -684,15 +686,24 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_SrvD%Linearize     = p_FAST%Linearize
       
       IF ( PRESENT(ExternInitData) ) THEN
+         InitInData_SrvD%NumSC2CtrlGlob = ExternInitData%NumSC2CtrlGlob
+
+         InitInData_SrvD%NumSC2CtrlGlob = ExternInitData%NumSC2CtrlGlob
+         IF ( (InitInData_SrvD%NumSC2CtrlGlob .gt. 0) ) THEN
+            CALL AllocAry( InitInData_SrvD%InitScOutputsGlob, InitInData_SrvD%NumSC2CtrlGlob, 'InitInData_SrvD%InitScOutputsGlob', ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            do i=1,InitInData_SrvD%NumSC2CtrlGlob
+               InitInData_SrvD%InitScOutputsGlob(i) = ExternInitData%InitScOutputsGlob(i)
+            end do
+         END IF
+
          InitInData_SrvD%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
-         InitInData_SrvD%NumCtrl2SC = ExternInitData%NumCtrl2SC
-         IF ( (InitInData_SrvD%NumSC2Ctrl .gt. 0) .and. (InitInData_SrvD%NumSC2Ctrl .gt. 0)) THEN
+         IF ( (InitInData_SrvD%NumSC2Ctrl .gt. 0) ) THEN
             CALL AllocAry( InitInData_SrvD%InitScOutputsTurbine, InitInData_SrvD%NumSC2Ctrl, 'InitInData_SrvD%InitScOutputsTurbine', ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             do i=1,InitInData_SrvD%NumSC2Ctrl
                InitInData_SrvD%InitScOutputsTurbine(i) = ExternInitData%InitScOutputsTurbine(i)
             end do
-            
          END IF
       ELSE
          InitInData_SrvD%NumSC2Ctrl = 0
@@ -6321,7 +6332,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
          Turbine%SrvD%p%DLL_InFile = DLLFileName
          Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
          Turbine%SrvD%m%dll_data%avrSWAP( 1) = -8
-         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%xd(STATE_CURR)%ScInFilter, Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%xd(STATE_CURR)%ScInGlobFilter, Turbine%SrvD%xd(STATE_CURR)%ScInFilter, Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             ! put values back:
@@ -6519,7 +6530,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
          Turbine%SrvD%p%DLL_InFile = DLLFileName
          Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
          Turbine%SrvD%m%dll_data%avrSWAP( 1) = -9
-         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%xd(STATE_CURR)%ScInFilter, Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%xd(STATE_CURR)%ScInGlobFilter, Turbine%SrvD%xd(STATE_CURR)%ScInFilter, Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                           
             ! put values back:
          Turbine%SrvD%p%DLL_InFile = FileName

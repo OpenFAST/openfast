@@ -8,7 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include <string>
-#include "yaml-cpp/yaml.h"
+#include <vector>
 #include "hdf5.h"
 #include "dlfcn.h"
 
@@ -49,9 +49,9 @@ class SuperController {
   std::string scLibFile;
   // Dynamic load stuff copied from 'C++ dlopen mini HOWTO' on tldp.org
   void *scLibHandle ; 
-  typedef void sc_updateStates_t(int nTurbines, int nInputsGlob, std::vector<float> & sc_inputsGlob, int nInputsTurbine, std::vector<float> & sc_inputsTurbine, int nGlobStates, std::vector<float> & globStates_n, std::vector<float> & globStates_np1, int nTurbineStates, std::vector<float> & turbineStates_n, std::vector<float> & turbineStates_np1); 
+  typedef void sc_updateStates_t(double t, int nTurbines, int nInputsGlob, std::vector<float> & sc_inputsGlob, int nInputsTurbine, std::vector<float> & sc_inputsTurbine, int nGlobStates, std::vector<float> & globStates_n, std::vector<float> & globStates_np1, int nTurbineStates, std::vector<float> & turbineStates_n, std::vector<float> & turbineStates_np1); 
   sc_updateStates_t * sc_updateStates;
-  typedef void sc_calcOutputs_t(int nTurbines, int nInputsGlob, std::vector<float> & sc_inputsGlob, int nInputsTurbine, std::vector<float> & sc_inputsTurbine, int nGlobStates, std::vector<float> & globStates, int nTurbineStates, std::vector<float> & turbineStates, int nOutputsGlob, std::vector<float> & sc_outputsGlob, int nOutputsTurbine, std::vector<float> & sc_outputsTurbine); 
+  typedef void sc_calcOutputs_t(double t, int nTurbines, int nInputsGlob, std::vector<float> & sc_inputsGlob, int nInputsTurbine, std::vector<float> & sc_inputsTurbine, int nGlobStates, std::vector<float> & globStates, int nTurbineStates, std::vector<float> & turbineStates, int nOutputsGlob, std::vector<float> & sc_outputsGlob, int nOutputsTurbine, std::vector<float> & sc_outputsTurbine); 
   sc_calcOutputs_t * sc_calcOutputs;
 
 
@@ -65,9 +65,9 @@ class SuperController {
   
   void load(scInData sci);
 
-  void calcOutputs(std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine, std::vector<float> & sc_outputsGlob, std::vector<float> & sc_outputsTurbine) ;
+  void calcOutputs(double t, std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine, std::vector<float> & sc_outputsGlob, std::vector<float> & sc_outputsTurbine) ;
 
-  void updateStates(std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine) ; //Make a prediction for 'n+1' based on 'n'
+  void updateStates(double t, std::vector<float> & sc_inputsGlob, std::vector<float> & sc_inputsTurbine) ; //Make a prediction for states at 'n+1' based on inputs and states at 'n'
 
   void advanceStates() ; //Advance states to time step 'n+1'
 

@@ -27,9 +27,11 @@ typedef	^	InitInputType	ReKi	r_TwrBase	{3}	-	-	"tower base origin for setting up
 typedef	^	InitInputType	DbKi	Tmax	-	-	-	"max time from glue code"	s
 typedef	^	InitInputType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	InitInputType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
-typedef	^	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of controller inputs [from supercontroller]"	-
+typedef	^	InitInputType	IntKi	NumSC2CtrlGlob	-	-	-	"number of global controller inputs [from supercontroller]"	-
+typedef	^	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of turbine specific controller inputs [from supercontroller]"	-
 typedef	^	InitInputType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
-typedef	^	InitInputType	ReKi	InitScOutputsTurbine	{:}	-	-	"Initial inputs to the controller [from the supercontroller]"	-
+typedef	^	InitInputType	ReKi	InitScOutputsGlob	{:}	-	-	"Initial global inputs to the controller [from the supercontroller]"	-
+typedef	^	InitInputType	ReKi	InitScOutputsTurbine	{:}	-	-	"Initial turbine specific inputs to the controller [from the supercontroller]"	-
 
 
 # Define outputs from the initialization routine here:
@@ -146,8 +148,8 @@ typedef	^	ContinuousStateType	TMD_ContinuousStateType	TTMD	-	-	-	"TMD module sta
 #typedef	^	DiscreteStateType	ReKi	BlPitchFilter	{:}	-	-	"blade pitch filter"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	TTMD	-	-	-	"TMD module states - tower"	-
-typedef ^       DiscreteStateType       SiKi                    ScInFilter    {:}     -       -       "Filtered inputs from supercontroller" -
-
+typedef ^       DiscreteStateType       SiKi                    ScInFilter    {:}     -       -       "Filtered turbine specific inputs from supercontroller" -
+typedef ^       DiscreteStateType       SiKi                    ScInGlobFilter    {:}     -       -       "Filtered global inputs from supercontroller" -
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
@@ -325,7 +327,8 @@ typedef	^	InputType	ReKi	ElecPwr_prev	-	-	-	"Electrical power (from previous ste
 typedef	^	InputType	ReKi	GenTrq_prev	-	-	-	"Electrical generator torque (from previous step), sent to Bladed DLL"	N-m
 typedef	^	InputType	TMD_InputType	NTMD	-	-	-	"TMD module inputs - nacelle"	-
 typedef	^	InputType	TMD_InputType	TTMD	-	-	-	"TMD module inputs - tower"	-
-typedef	^	InputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the supercontroller"	-
+typedef	^	InputType	SiKi	SuperControllerTurbine	{:}	-	-	"A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller"	-
+typedef	^	InputType	SiKi	SuperControllerGlob	{:}	-	-	"A swap array: used to pass global input data to the DLL controller from the supercontroller"	-
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:

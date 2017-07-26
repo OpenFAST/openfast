@@ -66,12 +66,12 @@ void fast::OpenFAST::init() {
      
      if(scStatus) {
         sc.init(nTurbinesGlob);
-        sc.calcOutputs(scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
+        sc.calcOutputs(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
      }
 
      // this calls the Init() routines of each module
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-         FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &numScOutputsTurbine, &numScInputsTurbine, scOutputsTurbine_n.data(), &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &scInputsTurbine_from_FAST[iTurb], &scOutputsTurbine_to_FAST[iTurb], &ErrStat, ErrMsg);
+         FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &numScOutputsGlob, &numScOutputsTurbine, &numScInputsTurbine, scOutputsGlob_n.data(), scOutputsTurbine_n.data(), &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &scInputsTurbine_from_FAST[iTurb], &scOutputsTurbine_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
        
        timeZero = true;
@@ -97,11 +97,11 @@ void fast::OpenFAST::init() {
 
      if(scStatus) {
          sc.init(nTurbinesGlob);
-         sc.calcOutputs(scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
+         sc.calcOutputs(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
      }
      
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-         FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &numScOutputsTurbine, &numScInputsTurbine, scOutputsTurbine_n.data(), &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &scInputsTurbine_from_FAST[iTurb], &scOutputsTurbine_to_FAST[iTurb], &ErrStat, ErrMsg);
+         FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &numScOutputsGlob, &numScOutputsTurbine, &numScInputsTurbine, scOutputsGlob_n.data(), scOutputsTurbine_n.data(), &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &scInputsTurbine_from_FAST[iTurb], &scOutputsTurbine_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
        
        timeZero = true;
@@ -174,7 +174,7 @@ void fast::OpenFAST::solution0() {
      timeZero = false;
 
      if (scStatus) {
-       sc.calcOutputs(scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
+       sc.calcOutputs(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
        fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_n, scOutputsTurbine_n, scOutputsTurbine_to_FAST);
      }
   }
@@ -225,8 +225,8 @@ void fast::OpenFAST::step() {
    }
 
    if(scStatus) {
-       sc.updateStates(scInputsGlob_n, scInputsTurbine_n); // Predict state at 'n+1' based on inputs
-       sc.calcOutputs(scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
+       sc.updateStates(nt_global * dtFAST, scInputsGlob_n, scInputsTurbine_n); // Predict state at 'n+1' based on inputs
+       sc.calcOutputs( (nt_global + 1) * dtFAST, scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
        fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_np1, scOutputsTurbine_np1, scOutputsTurbine_to_FAST);
    }
 
@@ -271,8 +271,8 @@ void fast::OpenFAST::stepNoWrite() {
    }
 
    if(scStatus) {
-       sc.updateStates(scInputsGlob_n, scInputsTurbine_n); // Predict state at 'n+1' based on inputs
-       sc.calcOutputs(scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
+       sc.updateStates( nt_global * dtFAST, scInputsGlob_n, scInputsTurbine_n); // Predict state at 'n+1' based on inputs
+       sc.calcOutputs( (nt_global+1) * dtFAST, scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
        fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_np1, scOutputsTurbine_np1, scOutputsTurbine_to_FAST);
    }
 
@@ -345,11 +345,6 @@ void fast::OpenFAST::setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, 
       cDriver_Output_to_FAST.v[j] = 0.0;
       cDriver_Output_to_FAST.w[j] = 0.0;
    }
-
-   // // call supercontroller
-   // for (int j = 0; j < cDriver_Output_to_FAST.SuperController_Len; j++){
-   //    cDriver_Output_to_FAST.SuperController[j] = (float) j; // set it somehow.... (would be set from the SuperController outputs)
-   // }
 
 }
 
@@ -917,11 +912,22 @@ void fast::OpenFAST::loadSuperController(const fast::fastInputs & fi) {
     numScInputsGlob = fi.numScInputsGlob;
     numScOutputsGlob = fi.numScOutputsGlob;
 
-    if ( (numScInputsTurbine > 0) && (numScOutputsTurbine > 0) ) {
+    if ( numScOutputsTurbine > 0 ) {
 
         scOutputsTurbine_nm1.resize(nTurbinesGlob*numScOutputsTurbine) ;
         scOutputsTurbine_n.resize(nTurbinesGlob*numScOutputsTurbine) ;
         scOutputsTurbine_np1.resize(nTurbinesGlob*numScOutputsTurbine) ;
+        for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
+            for(int iOutput=0; iOutput < numScOutputsTurbine; iOutput++) {
+                scOutputsTurbine_nm1[iTurb*numScOutputsTurbine + iOutput] = 0.0 ; // Initialize to zero
+                scOutputsTurbine_n[iTurb*numScOutputsTurbine + iOutput] = 0.0 ; // Initialize to zero
+                scOutputsTurbine_np1[iTurb*numScOutputsTurbine + iOutput] = 0.0 ; // Initialize to zero
+            }
+        }
+    }
+
+    if ( numScInputsTurbine > 0 ) {
+
         scInputsTurbine_nm1.resize(nTurbinesGlob*numScInputsTurbine) ;
         scInputsTurbine_n.resize(nTurbinesGlob*numScInputsTurbine) ;
         scInputsTurbine_np1.resize(nTurbinesGlob*numScInputsTurbine) ;
@@ -931,18 +937,23 @@ void fast::OpenFAST::loadSuperController(const fast::fastInputs & fi) {
                 scInputsTurbine_n[iTurb*numScInputsTurbine + iInput] = 0.0 ; // Initialize to zero
                 scInputsTurbine_np1[iTurb*numScInputsTurbine + iInput] = 0.0 ; // Initialize to zero
             }
-            for(int iOutput=0; iOutput < numScOutputsTurbine; iOutput++) {
-                scOutputsTurbine_nm1[iTurb*numScOutputsTurbine + iOutput] = 0.0 ; // Initialize to zero
-                scOutputsTurbine_n[iTurb*numScOutputsTurbine + iOutput] = 0.0 ; // Initialize to zero
-                scOutputsTurbine_np1[iTurb*numScOutputsTurbine + iOutput] = 0.0 ; // Initialize to zero
-            }
         }
-        if (numScInputsGlob < 1) {
-            throw std::runtime_error("Supercontroller: numScInputsGlob should be atleast 1. Simulation time is always a global input to the supercontroller");  
-        }
+    }
+
+    if ( numScOutputsGlob > 0 ) {
+    
         scOutputsGlob_nm1.resize(numScOutputsGlob) ;
         scOutputsGlob_n.resize(numScOutputsGlob) ;
         scOutputsGlob_np1.resize(numScOutputsGlob) ;
+        for(int iOutput=0; iOutput < numScOutputsGlob; iOutput++) {
+            scOutputsGlob_nm1[iOutput] = 0.0 ; // Initialize to zero
+            scOutputsGlob_n[iOutput] = 0.0 ; // Initialize to zero
+            scOutputsGlob_np1[iOutput] = 0.0 ; // Initialize to zero
+        }
+    }
+
+    if ( numScInputsGlob > 0 ) {
+
         scInputsGlob_nm1.resize(numScInputsGlob) ;
         scInputsGlob_n.resize(numScInputsGlob) ;
         scInputsGlob_np1.resize(numScInputsGlob) ;
@@ -951,36 +962,28 @@ void fast::OpenFAST::loadSuperController(const fast::fastInputs & fi) {
             scInputsGlob_n[iInput] = 0.0 ; // Initialize to zero
             scInputsGlob_np1[iInput] = 0.0 ; // Initialize to zero
         }
-        for(int iOutput=0; iOutput < numScOutputsGlob; iOutput++) {
-            scOutputsGlob_nm1[iOutput] = 0.0 ; // Initialize to zero
-            scOutputsGlob_n[iOutput] = 0.0 ; // Initialize to zero
-            scOutputsGlob_np1[iOutput] = 0.0 ; // Initialize to zero
-        }
-
-        scInData sci ;
-        sci.nInputsTurbine = numScInputsTurbine ;
-        sci.nOutputsTurbine = numScOutputsTurbine ;
-        sci.nInputsGlob = numScInputsGlob ;
-        sci.nOutputsGlob = numScOutputsGlob ;
-        sci.nGlobStates = fi.numScGlobStates ;
-        sci.nTurbineStates = fi.numScTurbineStates ;
-        sci.scLibFile = fi.scLibFile ;
-        sc.load(sci);
-
-    } else {
-        std::cerr <<  "Make sure numScInputsTurbine and numScOutputsTurbine are greater than zero" << std::endl;
     }
-    
-   } else {
+
+    scInData sci ;
+    sci.nInputsTurbine = numScInputsTurbine ;
+    sci.nOutputsTurbine = numScOutputsTurbine ;
+    sci.nInputsGlob = numScInputsGlob ;
+    sci.nOutputsGlob = numScOutputsGlob ;
+    sci.nGlobStates = fi.numScGlobStates ;
+    sci.nTurbineStates = fi.numScTurbineStates ;
+    sci.scLibFile = fi.scLibFile ;
+    sc.load(sci);
+
+  } else {
+
     scStatus = false;
     numScInputsGlob = 0;
     numScOutputsGlob = 0;
     numScInputsTurbine = 0;
     numScOutputsTurbine = 0;
-   }
+  }
 
 }
-
 
 void fast::OpenFAST::fastScInputOutput(std::vector<SC_InputType_t> & scIT_from_FAST, std::vector<float> & scIT, std::vector<float> & scOT, std::vector<SC_OutputType_t> & scOT_to_FAST) {
   

@@ -84,21 +84,33 @@ SUBROUTINE Init_SC( InitInp, SC, ErrStat, ErrMsg )
       !............................................................................................
       ! Define system output initializations (set up mesh) here:
       !............................................................................................   
-   if (InitInp%NumSC2Ctrl > 0) then
-      CALL AllocPAry( SC%y%fromSC, InitInp%NumSC2Ctrl, 'y%fromSC', ErrStat2, ErrMsg2 )
+   if (InitInp%NumSC2CtrlGlob > 0) then
+      CALL AllocPAry( SC%y%fromSCglob, InitInp%NumSC2CtrlGlob, 'y%fromSCglob', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end if
    
    IF (ErrStat >= AbortErrLev) RETURN
                         
       ! make sure the C versions are synced with these arrays
+   if (InitInp%NumSC2CtrlGlob > 0) then
+      SC%y%c_obj%fromSCglob_Len = InitInp%NumSC2CtrlGlob
+      SC%y%c_obj%fromSCglob     = C_LOC( SC%y%fromSCglob(1) )
+   end if
+   
+   if (InitInp%NumSC2Ctrl > 0) then
+      CALL AllocPAry( SC%y%fromSC, InitInp%NumSC2Ctrl, 'y%fromSC', ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   end if
+
+   IF (ErrStat >= AbortErrLev) RETURN
+
+   ! make sure the C versions are synced with these arrays
    if (InitInp%NumSC2Ctrl > 0) then
       SC%y%c_obj%fromSC_Len = InitInp%NumSC2Ctrl
       SC%y%c_obj%fromSC     = C_LOC( SC%y%fromSC(1) )
    end if
-   
 
-   if( (InitInp%NumSC2Ctrl > 0) .and. (InitInp%NumSC2Ctrl > 0)) then
+   if( (InitInp%NumSC2CtrlGlob > 0) .or. (InitInp%NumSC2Ctrl > 0) .or. (InitInp%NumSC2Ctrl > 0)) then
       SC%p%scOn = .true. 
    else
       SC%p%scOn = .false.
@@ -139,8 +151,8 @@ SUBROUTINE SC_SetOutputs(p_FAST, u_SrvD, SC, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(FAST_ParameterType),       INTENT(IN    )  :: p_FAST      ! Parameters for the glue code
-   TYPE(SrvD_InputType),          INTENT(INOUT)      :: u_SrvD      ! The inputs of the ServoDyn module (control)
-   TYPE(SuperController_Data),            INTENT(IN)   :: SC        ! data for the SuperController integration module
+   TYPE(SrvD_InputType),           INTENT(INOUT)   :: u_SrvD      ! The inputs of the ServoDyn module (control)
+   TYPE(SuperController_Data),     INTENT(IN)      :: SC          ! data for the SuperController integration module
    INTEGER(IntKi),                 INTENT(  OUT)   :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -156,7 +168,8 @@ SUBROUTINE SC_SetOutputs(p_FAST, u_SrvD, SC, ErrStat, ErrMsg )
    
       ! set SuperController inputs
    if (p_FAST%CompServo == Module_SrvD) then
-      if (allocated(u_SrvD%SuperController).and. associated(SC%y%fromSC)) u_SrvD%SuperController = SC%y%fromSC
+      if (allocated(u_SrvD%SuperControllerTurbine).and. associated(SC%y%fromSC)) u_SrvD%SuperControllerTurbine = SC%y%fromSC
+      if (allocated(u_SrvD%SuperControllerGlob).and. associated(SC%y%fromSCglob)) u_SrvD%SuperControllerGlob = SC%y%fromSCglob      
    end if
    
       
