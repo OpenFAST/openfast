@@ -180,10 +180,11 @@ testData, testInfo = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo = pass_fail.readFASTOut(baselineOutFile)
 
 norm = pass_fail.calculateRelativeNorm(testData, baselineData)
-if not pass_fail.passRegressionTest(norm, tolerance):
-    for i,channel in enumerate(testInfo["attribute_names"]):
+if pass_fail.passRegressionTest(norm, tolerance):
+    sys.exit(0)
+else:
+    failingChannels = [(i, channel) for i,channel in enumerate(testInfo["attribute_names"]) if norm[i] > tolerance]
+    for i,channel in failingChannels:
         plotCommand = " ".join([pythonCommand, plotScript, localOutFile, baselineOutFile, channel])
         plotReturnCode = subprocess.call(plotCommand, shell=True)
     sys.exit(1)
-else:
-    sys.exit(0)
