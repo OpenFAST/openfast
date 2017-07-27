@@ -4307,6 +4307,8 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       ! the previous step before we extrapolate these inputs:
    IF ( p_FAST%CompServo == Module_SrvD ) CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )   
    
+   IF ( p_FAST%UseSupercontroller ) CALL SC_SetOutputs(p_FAST, SrvD%Input(1), SC, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    !! ## Step 1.a: Extrapolate Inputs 
    !!
