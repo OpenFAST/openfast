@@ -83,6 +83,7 @@ module BeamDyn_driver_subs
    INTEGER(IntKi)               :: UnEc
    
    CHARACTER(1024)              :: FTitle                       ! "File Title": the 2nd line of the input file, which contains a description of its contents
+   CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
 
    INTEGER(IntKi)               :: i
 !------------------------------------------------------------------------------------
@@ -98,6 +99,8 @@ module BeamDyn_driver_subs
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
       
+   CALL GetPath( DvrInputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
+
    !-------------------------- HEADER ---------------------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'File Header: Module Version (line 1)',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -270,6 +273,8 @@ module BeamDyn_driver_subs
       !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
    CALL ReadVar ( UnIn, DvrInputFile, InitInputData%InputFile, 'InputFile', 'Name of the primary input file', ErrStat2,ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( PathIsRelative( InitInputData%InputFile ) ) InitInputData%InputFile = TRIM(PriPath)//TRIM(InitInputData%InputFile)
+
    if (ErrStat >= AbortErrLev) then
        call cleanup()
        return
