@@ -22,17 +22,15 @@
     Usage: `python manualRegressionTest.py openfast/install/bin/openfast [Darwin,Linux,Windows] [Intel,GNU] tolerance`
 """
 
-import sys
 import os
+import sys
+basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import subprocess
+import rtestlib as rtl
 
-def exitWithError(error, code=1):
-    print(error)
-    sys.exit(code)
-
-### Verify input arguments
-if len(sys.argv) != 4 and len(sys.argv) != 5:
-    exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
+if not (rtl.validInput(sys.argv, 4) or rtl.validInput(sys.argv, 5)):
+    rtl.exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
     "Usage: python manualRegressionTest.py openfast/install/bin/openfast [Darwin,Linux,Windows] [Intel,GNU] tolerance")
 
 openfast_executable = sys.argv[1]
