@@ -339,15 +339,10 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    !Local variables
-   REAL(BDKi)                  :: pivot(4) ! Trace of the rotation matrix and diagonal elements
-   REAL(BDKi)                  :: sm0
-   REAL(BDKi)                  :: sm1
-   REAL(BDKi)                  :: sm2
-   REAL(BDKi)                  :: sm3
-   REAL(BDKi)                  :: em
-   REAL(BDKi)                  :: temp
+   integer                     :: ipivot(1)
+   REAL(BDKi)                  :: sm(0:3)
+   REAL(BDKi)                  :: em   
    REAL(BDKi)                  :: Rr(3,3)  ! (possibly) corrected rotation matrix
-   INTEGER                     :: i        ! case indicator
 
    INTEGER(IntKi)              :: ErrStat2 ! Temporary Error status
    CHARACTER(ErrMsgLen)        :: ErrMsg2  ! Temporary Error message
@@ -376,54 +371,51 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    ! mjs--determine whether R is a valid rotation matrix and correct it if not
    call BD_CheckRotMat(R, Rr, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+      if (ErrStat >= AbortErrLev) return
 
-   ! mjs--find max value of T := Tr(Rr) and diagonal elements of Rr
-   pivot = (/ Rr(1, 1), Rr(2, 2), Rr(3, 3), Rr(1,1) + Rr(2,2) + Rr(3,3) /)
-   i = maxloc(pivot, 1)
+   ! Note that 0 <= c_0 <= 2 since 0 <= dot_product(cc,cc) <= 16
+   
+      ! Let's first find out which parameter is largest so we can divide by it later 
+   sm(0) = 1.0_BDKi + Rr(1,1) + Rr(2,2) + Rr(3,3)      !  4 c_0 c_0 t_{r0}
+   sm(1) = 1.0_BDKi + Rr(1,1) - Rr(2,2) - Rr(3,3)      !  4 c_1 c_1 t_{r0}
+   sm(2) = 1.0_BDKi - Rr(1,1) + Rr(2,2) - Rr(3,3)      !  4 c_2 c_2 t_{r0}
+   sm(3) = 1.0_BDKi - Rr(1,1) - Rr(2,2) + Rr(3,3)      !  4 c_3 c_3 t_{r0}
+   ipivot = maxloc(sm) - 1 ! our sm array starts at 0, so we need to subtract 1 here to get the correct index
+   
+   select case (ipivot(1))
+   case (3)      
+      !! We need the condition that c_3 is not zero.
+      sm(0)  = Rr(2,1) - Rr(1,2)                           !  4 c_0 c_3 t_{r0}
+      sm(1)  = Rr(1,3) + Rr(3,1)                           !  4 c_1 c_3 t_{r0}
+      sm(2)  = Rr(2,3) + Rr(3,2)                           !  4 c_2 c_3 t_{r0}
+     !sm(3)  = 1.0_BDKi - Rr(1,1) - Rr(2,2) + Rr(3,3)      !  4 c_3 c_3 t_{r0}
 
-      !> - Condition 1: \f$ \underline{\underline{R(3,3)}} > T \f$
-      !! This implies that \f$ c_3^2 > c_0^2 \f$
-   IF (i == 3) THEN
-      sm0  = Rr(2,1) - Rr(1,2)                           !  4 c_0 c_3 t_{r0}
-      sm1  = Rr(1,3) + Rr(3,1)                           !  4 c_1 c_3 t_{r0}
-      sm2  = Rr(2,3) + Rr(3,2)                           !  4 c_2 c_3 t_{r0}
-      sm3  = 1.0_BDKi - Rr(1,1) - Rr(2,2) + Rr(3,3)      !  4 c_3^2   t_{r0}
-      temp = SIGN( 2.0_BDKi*SQRT(ABS(sm3)), sm0 )
+   case (2)      
+      !! We need the condition that c_2 is not zero.
+      sm(0)  = Rr(1,3) - Rr(3,1)                           !  4 c_0 c_2 t_{r0}
+      sm(1)  = Rr(1,2) + Rr(2,1)                           !  4 c_1 c_2 t_{r0}
+     !sm(2)  = 1.0_BDKi - Rr(1,1) + Rr(2,2) - Rr(3,3)      !  4 c_2 c_2 t_{r0}
+      sm(3)  = Rr(2,3) + Rr(3,2)                           !  4 c_3 c_2 t_{r0}
 
-      !> - Condition 2: \f$ \underline{\underline{R(2,2)}} > T \f$
-      !! This implies that \f$ c_2^2 > c_0^2 \f$
-   ELSEIF (i == 2) THEN
-      sm0  = Rr(1,3) - Rr(3,1)                           !  4 c_0 c_2 t_{r0}
-      sm1  = Rr(1,2) + Rr(2,1)                           !  4 c_1 c_2 t_{r0}
-      sm2  = 1.0_BDKi - Rr(1,1) + Rr(2,2) - Rr(3,3)      !  4 c_2^2   t_{r0}
-      sm3  = Rr(2,3) + Rr(3,2)                           !  4 c_2 c_3 t_{r0}
-      temp = SIGN( 2.0_BDKi*SQRT(ABS(sm2)), sm0 )
+   case (1)
+      !! We need the condition that c_1 is not zero.
+      sm(0)  = Rr(3,2) - Rr(2,3)                           !  4 c_0 c_1 t_{r0}
+     !sm(1)  = 1.0_BDKi + Rr(1,1) - Rr(2,2) - Rr(3,3)      !  4 c_1 c_1 t_{r0}
+      sm(2)  = Rr(1,2) + Rr(2,1)                           !  4 c_2 c_1 t_{r0}
+      sm(3)  = Rr(1,3) + Rr(3,1)                           !  4 c_3 c_1 t_{r0}
 
-      !> - Condition 3: \f$ \underline{\underline{R(1,1)}} > T \f$
-      !! This implies that \f$ c_1^2 > c_0^2 \f$
-   ELSEIF (i == 1) THEN
-      sm0  = Rr(3,2) - Rr(2,3)                           !  4 c_0 c_1 t_{r0}
-      sm1  = 1.0_BDKi + Rr(1,1) - Rr(2,2) - Rr(3,3)      !  4 c_1^2   t_{r0}
-      sm2  = Rr(1,2) + Rr(2,1)                           !  4 c_1 c_2 t_{r0}
-      sm3  = Rr(1,3) + Rr(3,1)                           !  4 c_1 c_3 t_{r0}
-      temp = SIGN( 2.0_BDKi*SQRT(ABS(sm1)), sm0 )
-
-      !> - Condition 4: all diagonal terms are less than the trace
-   ELSE
+   case (0)
+      !! We need the condition that c_0 is not zero.
       !ipivot = 0
-      sm0  = 1.0_BDKi + Rr(1,1) + Rr(2,2) + Rr(3,3)      !  4 c_0^2   t_{r0}
-      sm1  = Rr(3,2) - Rr(2,3)                           ! -4 c_0 c_1 t_{r0}
-      sm2  = Rr(1,3) - Rr(3,1)                           ! -4 c_0 c_2 t_{r0}
-      sm3  = Rr(2,1) - Rr(1,2)                           ! -4 c_0 c_3 t_{r0}
-      temp = SIGN( 2.0_BDKi*SQRT(ABS(sm0)), sm0 )
-   ENDIF
+     !sm(0)  = 1.0_BDKi + Rr(1,1) + Rr(2,2) + Rr(3,3)      !  4 c_0 c_0 t_{r0}
+      sm(1)  = Rr(3,2) - Rr(2,3)                           !  4 c_1 c_0 t_{r0}
+      sm(2)  = Rr(1,3) - Rr(3,1)                           !  4 c_2 c_0 t_{r0}
+      sm(3)  = Rr(2,1) - Rr(1,2)                           !  4 c_3 c_0 t_{r0}
+   end select
 
-   em = sm0 + temp
-   em = 4.0_BDKi/em
-   cc(1) = em*sm1
-   cc(2) = em*sm2
-   cc(3) = em*sm3
+   em = sm(0) + SIGN( 2.0_BDKi*SQRT(sm(ipivot(1))), sm(0) ) 
+   em = 4.0_BDKi/em                                        ! 1 / ( 4 t_{r0} c_{ipivot} ), assuming 0 <= c_0 < 4 and c_{ipivot} > 0
+   cc = em*sm(1:3)
 
 END SUBROUTINE BD_CrvExtractCrv
 !------------------------------------------------------------------------------
