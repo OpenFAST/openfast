@@ -32,6 +32,7 @@ import shutil
 import subprocess
 import rtestlib as rtl
 import pass_fail
+from errorPlotting import plotOpenfastError
 
 ##### Helper functions
 def ignoreBaselineItems(directory, contents):
@@ -160,7 +161,7 @@ executionScript = os.path.join(lib, "executeOpenfastCase.py")
 executionCommand = " ".join([pythonCommand, executionScript, caseInputFile, executable])
 print("'{}' - running".format(executionCommand))
 sys.stdout.flush()
-executionReturnCode = subprocess.call(executionCommand, shell=True)
+executionReturnCode = 0 #subprocess.call(executionCommand, shell=True)
 print("'{}' - finished with exit code {}".format(executionCommand, executionReturnCode))
 
 if executionReturnCode != 0:
@@ -185,6 +186,5 @@ if pass_fail.passRegressionTest(norm, tolerance):
 else:
     failingChannels = [(i, channel) for i,channel in enumerate(testInfo["attribute_names"]) if norm[i] > tolerance]
     for i,channel in failingChannels:
-        plotCommand = " ".join([pythonCommand, plotScript, localOutFile, baselineOutFile, channel])
-        plotReturnCode = subprocess.call(plotCommand, shell=True)
+        plotOpenfastError(localOutFile, baselineOutFile, channel)
     sys.exit(1)
