@@ -67,7 +67,6 @@ def plotError(xseries, y1series, y2series, title, xlabel, y1label, y2label):
     return plt
 
 def savePlot(plt, path, foutname):
-    print(foutname)
     plt.savefig(os.path.join(path, foutname+".png"))
     
 def plotOpenfastError(testSolution, baselineSolution, attribute):
@@ -94,6 +93,22 @@ def plotOpenfastError(testSolution, baselineSolution, attribute):
     
     basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
     plotPath = os.path.join(basePath, "plots")
-    if not os.path.exists(plotPath):
-        os.makedirs(plotPath)
+    rtl.validateDirOrMkdir(plotPath)
     savePlot(plt, plotPath, attribute)
+    
+def initializePlotDirectory(testSolution, plotList):
+    basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
+    plotPath = os.path.join(basePath, "plots")
+    rtl.validateDirOrMkdir(plotPath)
+    with open(os.path.join(plotPath, "Plots.md"), "w") as plotsmd:
+        plotsmd.write("These plots were generated automatically.  ")
+        plotsmd.write("The plots included are:  ")
+        for plot in plotList:
+            plotsmd.write(plot + "  \n")
+        for plot in plotList:
+            plotsmd.write("![alt text][{}]  ".format(plot) + "  \n")
+        for plot in plotList:
+            plotsmd.write("[{}]: {}".format(plot, os.path.join(plot+".png")) + "\n")
+
+    plotsmd.close()
+        

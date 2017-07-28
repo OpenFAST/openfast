@@ -32,7 +32,7 @@ import shutil
 import subprocess
 import rtestlib as rtl
 import pass_fail
-from errorPlotting import plotOpenfastError
+from errorPlotting import initializePlotDirectory, plotOpenfastError
 
 ##### Helper functions
 def ignoreBaselineItems(directory, contents):
@@ -184,7 +184,8 @@ norm = pass_fail.calculateRelativeNorm(testData, baselineData)
 if pass_fail.passRegressionTest(norm, tolerance):
     sys.exit(0)
 else:
-    failingChannels = [(i, channel) for i,channel in enumerate(testInfo["attribute_names"]) if norm[i] > tolerance]
-    for i,channel in failingChannels:
+    failingChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if norm[i] > tolerance]
+    initializePlotDirectory(localOutFile, failingChannels)
+    for channel in failingChannels:
         plotOpenfastError(localOutFile, baselineOutFile, channel)
     sys.exit(1)
