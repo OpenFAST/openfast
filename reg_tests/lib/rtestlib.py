@@ -50,6 +50,10 @@ def validateDirOrExit(path):
     if not os.path.isdir(path):
         exitWithError("Error: directory does not exist at {}".format(path))
 
+def validateDirOrMkdir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
 def validateExeOrExit(path):
     validateFileOrExit(path)
     permissionsMask = oct(os.stat(path)[ST_MODE])[-1:]
