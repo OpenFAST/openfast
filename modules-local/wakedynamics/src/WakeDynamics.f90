@@ -57,29 +57,30 @@ function  GJH_Interp ( yVal, xArr, yArr )
    real(ReKi),      intent(in   ) :: xArr(:) 
    real(ReKi),      intent(in   ) :: yArr(:)
    
-   integer(IntKi)  :: ncross, i
+   integer(IntKi)  :: i, nPts
    real(ReKi)      :: y1,y2,x1,x2,dy
-   ncross = 0
+   
+   
+   nPts = size(xArr)
    GJH_Interp = 0.0_ReKi
-   y1 = yArr(1) - yVal
-   x1 = xArr(1)
-   do i=2,size(xArr)-1
-      y2 = yArr(i) - yVal 
-      x2 = xArr(i)
+   y2 = yArr(nPts) - yVal
+   x2 = xArr(nPts)
+   do i=nPts-1,1,-1
+      y1 = yArr(i) - yVal 
+      x1 = xArr(i)
       if( nint( sign(1.0_ReKi, y1) ) /= nint( sign(1.0_ReKi, y2) ) ) then
-         ncross = ncross + 1
-         if (ncross < 3) then            
-            dy = y2-y1
-            if (EqualRealNos(dy,1.0_ReKi) ) then
-            else
-               GJH_Interp = (x2-x1)*(yVal-y1)/(dy) + x1
-            end if
+                 
+         dy = y2-y1
+         if (EqualRealNos(dy,0.0_ReKi) ) then
+            if ( EqualRealNos(y2,0.0_ReKi) ) GJH_Interp =  x2
+         else
+            GJH_Interp = (x2-x1)*(yVal-y1)/(dy) + x1
          end if
          
       end if
       
-      y1 = y2
-      x1 = x2
+      y2 = y1
+      x2 = x1
    end do
    
 end function GJH_Interp
