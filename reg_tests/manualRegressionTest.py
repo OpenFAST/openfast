@@ -41,7 +41,7 @@ compiler = sys.argv[3]
 tolerance = sys.argv[4] if len(sys.argv) == 5 else 0.0000001
 devnull = open(os.devnull, 'w')
 
-with open(os.path.join("r-test", "openfast", "CaseList.md")) as listfile:
+with open(os.path.join("r-test", "glue-codes", "fast", "CaseList.md")) as listfile:
     content = listfile.readlines()
 casenames = [x.rstrip("\n\r").strip() for x in content if "#" not in x]
 

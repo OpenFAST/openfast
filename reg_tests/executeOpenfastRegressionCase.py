@@ -114,7 +114,7 @@ print("-- Using gold standard files with machine-compiler type {}".format(output
 regtests = os.path.join(sourceDirectory, "reg_tests")
 lib = os.path.join(regtests, "lib")
 rtest = os.path.join(regtests, "r-test")
-moduleDirectory = os.path.join(rtest, "openfast")
+moduleDirectory = os.path.join(rtest, "glue-codes", "fast")
 inputsDirectory = os.path.join(moduleDirectory, caseName)
 targetOutputDirectory = os.path.join(inputsDirectory, outputType)
 testBuildDirectory = os.path.join(buildDirectory, caseName)
