@@ -161,7 +161,7 @@ executionScript = os.path.join(lib, "executeOpenfastCase.py")
 executionCommand = " ".join([pythonCommand, executionScript, caseInputFile, executable])
 print("'{}' - running".format(executionCommand))
 sys.stdout.flush()
-executionReturnCode = 0 #subprocess.call(executionCommand, shell=True)
+executionReturnCode = subprocess.call(executionCommand, shell=True)
 print("'{}' - finished with exit code {}".format(executionCommand, executionReturnCode))
 
 if executionReturnCode != 0:
