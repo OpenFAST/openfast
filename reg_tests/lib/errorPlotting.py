@@ -30,6 +30,8 @@ import sys
 import os
 import numpy as np
 from fast_io import load_output
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import rtestlib as rtl
 
