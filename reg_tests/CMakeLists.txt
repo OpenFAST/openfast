@@ -102,7 +102,7 @@ endif()
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
 
 # include the ServoDyn controller projects
-set(SERVODATA_DIR "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData")
+set(SERVODATA_DIR "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast/5MW_Baseline/ServoData")
 add_subdirectory("${SERVODATA_DIR}/DISCON" "${SERVODATA_DIR}/DISCON/build")
 add_subdirectory("${SERVODATA_DIR}/DISCON_ITI" "${SERVODATA_DIR}/DISCON_ITI/build")
 add_subdirectory("${SERVODATA_DIR}/DISCON_OC3" "${SERVODATA_DIR}/DISCON_OC3/build")
@@ -115,7 +115,7 @@ endforeach()
 
 ## openfast seed
 foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
-  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/${turbineDirectory}"
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast/${turbineDirectory}"
      DESTINATION "${CTEST_BINARY_DIR}/openfast/")
 endforeach()
 
