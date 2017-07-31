@@ -51,27 +51,39 @@ module WakeDynamics
   
    contains  
 
-!function  GJH_Interp ( yTarget, xArr, yArr )
-!   real(ReKi)                     :: GJH_Interp
-!   real(ReKi),      intent(in   ) :: yTarget
-!   real(ReKi),      intent(in   ) :: xArr(:) 
-!   real(ReKi),      intent(in   ) :: yArr(:)
-!   
-!   integer(IntKi)  :: ncross
-!   real(ReKi)      :: y1,y2
-!   ncross = 0
-!   y1 = yArr(1) - yTarget
-!   do i=2,size(xArr)-1
-!      y2 = yArr(i) - yTarget   
-!      if( nint( sign(1.0_ReKi, y1) ) /= nint( sign(1.0_ReKi, y2) ) ) then
-!         ncross = ncross + 1
-!         if (ncross == 2) GJH_Interp = y2
-!      end if
-!      
-!      y1=y2
-!   end do
-!   
-!end function GJH_Interp
+function  GJH_Interp ( yVal, xArr, yArr )
+   real(ReKi)                     :: GJH_Interp
+   real(ReKi),      intent(in   ) :: yVal
+   real(ReKi),      intent(in   ) :: xArr(:) 
+   real(ReKi),      intent(in   ) :: yArr(:)
+   
+   integer(IntKi)  :: i, nPts
+   real(ReKi)      :: y1,y2,x1,x2,dy
+   
+   
+   nPts = size(xArr)
+   GJH_Interp = 0.0_ReKi
+   y2 = yArr(nPts) - yVal
+   x2 = xArr(nPts)
+   do i=nPts-1,1,-1
+      y1 = yArr(i) - yVal 
+      x1 = xArr(i)
+      if( nint( sign(1.0_ReKi, y1) ) /= nint( sign(1.0_ReKi, y2) ) ) then
+                 
+         dy = y2-y1
+         if (EqualRealNos(dy,0.0_ReKi) ) then
+            if ( EqualRealNos(y2,0.0_ReKi) ) GJH_Interp =  x2
+         else
+            GJH_Interp = (x2-x1)*(yVal-y1)/(dy) + x1
+         end if
+         
+      end if
+      
+      y2 = y1
+      x2 = x1
+   end do
+   
+end function GJH_Interp
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This function sets the nacelle-yaw-related directional term for the yaw correction deflection calculations
 !!   
@@ -168,7 +180,7 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
          ! [0.0000000E+00,-0.1732988,-1.475719,-3.237534,-3.103220,-2.988648,-3.159560,-3.382733,-3.633807,-3.875628,-3.690545,-3.722210,-3.773840,-3.267874,-1.185296,4.0265087E-02,-4.7604232E-03,-4.2291398E-05,2.7738308E-04,-1.3021289E-04,4.5997433E-05,-1.1811796E-05,2.5355919E-06,-6.2027152E-07,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00]
          
          WakeDiam = max(D_rotor, 2.0_ReKi*InterpBin( (C_WakeDiam-1_ReKi)*Vx_wind_disk, Vx_wake, rArr, ILo, nr )  )
-         
+         WakeDiam = max(D_rotor, 2.0_ReKi*GJH_Interp( (C_WakeDiam-1_ReKi)*Vx_wind_disk, rArr, Vx_wake ) )
       case (WakeDiamMod_MassFlux) 
          
          m(0) = 0.0
@@ -177,6 +189,7 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
          end do
          ! TODO: InterpBin assume monotonic, one-to-one mapping, and this is not guarranteed for m.  NEED NEW ALGO. GJH
          WakeDiam = max(D_rotor, 2_ReKi*InterpBin( C_WakeDiam*m(nr-1), m, rArr, ILo, nr ))
+         WakeDiam = max(D_rotor, 2.0_ReKi*GJH_Interp( C_WakeDiam*m(nr-1), rArr, m ) )
          
       case (WakeDiamMod_MtmFlux)
          
@@ -186,7 +199,7 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
          end do
          ! TODO: InterpBin assume monotonic, one-to-one mapping, and this is not guarranteed for m.  NEED NEW ALGO. GJH
          WakeDiam = max(D_rotor, 2.0_ReKi*InterpBin( C_WakeDiam*m(nr-1),  m, rArr, ILo, nr ))
-         
+         WakeDiam = max(D_rotor, 2.0_ReKi*GJH_Interp( C_WakeDiam*m(nr-1), rArr, m ) )
    
    end select
 
