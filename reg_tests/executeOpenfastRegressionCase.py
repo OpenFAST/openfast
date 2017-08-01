@@ -28,6 +28,7 @@ import os
 import sys
 basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
+import argparse
 import shutil
 import subprocess
 import rtestlib as rtl
@@ -49,15 +50,26 @@ def ignoreBaselineItems(directory, contents):
 pythonCommand = sys.executable
 
 ### Verify input arguments
-if len(sys.argv) < 6 or len(sys.argv) > 8:
-    rtl.exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: {} executeOpenfastRegressionCase.py testname openfast_executable source_directory build_directory tolerance system_name compiler_id".format(pythonCommand))
+parser = argparse.ArgumentParser(description='Executes OpenFAST and a regression test for a single test case.')
+parser.add_argument('caseName', metavar='Case Name', type=str, nargs=1, help='The name of the test case.')
+parser.add_argument('executable', metavar='OpenFAST', type=str, nargs=1, help='The path to the OpenFAST executable.')
+parser.add_argument('sourceDirectory', metavar='path/to/openfast_repo', type=str, nargs=1, help='The path to the OpenFAST repository.')
+parser.add_argument('buildDirectory', metavar='path/to/openfast_repo/build', type=str, nargs=1, help='The path to the OpenFAST repository build directory.')
+parser.add_argument('tolerance', metavar='Test Tolerance', type=float, nargs=1, help='Tolerance defining pass or failure in the regression test.')
+parser.add_argument('systemName', metavar='System Name', type=str, nargs=1, help='The current system\'s name: [Darwin,Linux,Windows]')
+parser.add_argument('compilerId', metavar='Compiler Id', type=str, nargs=1, help='The compiler\'s id: [Intel,GNU]')
+parser.add_argument('-plot', '-p', dest="plotError", default=False, metavar='Toggle error plotting', type=bool, nargs="?", help='')
 
-caseName = sys.argv[1]
-executable = sys.argv[2]
-sourceDirectory = sys.argv[3]
-buildDirectory = sys.argv[4]
-tolerance = sys.argv[5]
+args = parser.parse_args()
+
+caseName = args.caseName[0]
+executable = args.executable[0]
+sourceDirectory = args.sourceDirectory[0]
+buildDirectory = args.buildDirectory[0]
+tolerance = args.tolerance[0]
+systemName = args.systemName[0]
+compilerId = args.compilerId[0]
+plotError = args.plotError if args.plotError is False else True
 
 # verify executable
 rtl.validateExeOrExit(executable)
@@ -68,25 +80,6 @@ rtl.validateDirOrExit(sourceDirectory)
 # verify build directory
 if not os.path.isdir(buildDirectory):
     os.makedirs(buildDirectory)
-
-# verify tolerance
-try:
-    tolerance = float(tolerance)
-except ValueError:
-    rtl.exitWithError("The given tolerance, {}, is not a valid number.".format(tolerance))
-
-systemcompiler_given = True
-try:
-    systemName = sys.argv[6]
-except IndexError:
-    systemcompiler_given = False
-    systemName = "not_given"
-
-try:
-    compilerId = sys.argv[7]
-except IndexError:
-    systemcompiler_given = False
-    compilerId = "not_given"
 
 ### Map the system and compiler configurations to a solution set
 # Internal names -> Human readable names
