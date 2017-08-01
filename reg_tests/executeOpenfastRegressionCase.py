@@ -179,11 +179,15 @@ testData, testInfo = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo = pass_fail.readFASTOut(baselineOutFile)
 
 norm = pass_fail.calculateRelativeNorm(testData, baselineData)
-if pass_fail.passRegressionTest(norm, tolerance):
-    sys.exit(0)
-else:
-    failingChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if norm[i] > tolerance]
-    initializePlotDirectory(localOutFile, failingChannels)
-    for channel in failingChannels:
-        plotOpenfastError(localOutFile, baselineOutFile, channel)
+
+# failing case
+if not pass_fail.passRegressionTest(norm, tolerance):
+    if plotError:
+        failingChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if norm[i] > tolerance]
+        initializePlotDirectory(localOutFile, failingChannels)
+        for channel in failingChannels:
+            plotOpenfastError(localOutFile, baselineOutFile, channel)
     sys.exit(1)
+
+# passing case
+sys.exit(0)

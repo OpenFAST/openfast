@@ -32,6 +32,11 @@ function(of_regression testname LABELS)
   string(REPLACE "\\" "\\\\" SOURCE_DIRECTORY ${SOURCE_DIRECTORY})
   string(REPLACE "\\" "\\\\" BUILD_DIRECTORY ${BUILD_DIRECTORY})
 
+  set(PLOT_FLAG "")
+  if(CTEST_PLOT_ERRORS)
+    set(PLOT_FLAG "-p")
+  endif()
+
   add_test(
     ${testname} ${PYTHON_EXECUTABLE}
        ${TEST_SCRIPT}
@@ -42,6 +47,7 @@ function(of_regression testname LABELS)
        ${TOLERANCE}
        ${CMAKE_SYSTEM_NAME}             # [Darwin,Linux,Windows]
        ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
+       ${PLOT_FLAG}                     # empty or "-p"
   )
   # limit each test to 45 minutes: 2700s
   set_tests_properties(${testname} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")

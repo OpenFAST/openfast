@@ -29,6 +29,9 @@ if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test")
   message(FATAL_ERROR "CMake cannot find the test data directory, r-test. Did you initialize the git submodule?" )
 endif()
 
+# Set the default plotting flag to OFF
+option(CTEST_PLOT_ERRORS "Generate plots of regression test errors." OFF)
+
 # Set the OpenFAST executable configuration option and default
 set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
