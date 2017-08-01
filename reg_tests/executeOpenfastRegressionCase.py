@@ -100,14 +100,12 @@ compilerId_map = {
     "intel": "intel"
 }
 # Build the target output directory name or choose the default
-if systemName.lower() not in systemName_map or compilerId.lower() not in compilerId_map:
-    targetSystem = "macos"
-    targetCompiler = "gnu"
-else:
-    targetSystem = systemName_map.get(systemName.lower())
-    targetCompiler = compilerId_map.get(compilerId.lower())
-
+supportedBaselines = ["macos-gnu", "linux-intel", "windows-intel"]
+targetSystem = systemName_map.get(systemName.lower())
+targetCompiler = compilerId_map.get(compilerId.lower())
 outputType = os.path.join(targetSystem+"-"+targetCompiler)
+if outputType not in supportedBaselines:
+    outputType = supportedBaselines[0]
 print("-- Using gold standard files with machine-compiler type {}".format(outputType))
 
 ### Build the filesystem navigation variables for running openfast on the test case
