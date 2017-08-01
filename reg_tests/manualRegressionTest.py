@@ -58,7 +58,7 @@ casenames = [x.rstrip("\n\r").strip() for x in content if "#" not in x]
 results = []
 for case in casenames:
     print("executing case {}".format(case))
-    command = "python executeOpenfastRegressionCase.py {} {} {} {} {} {} {}".format(case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler)
+    command = "python executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {}".format(case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag)
     returnCode = subprocess.call(command, stdout=devnull, shell=True)
     if returnCode == 0:
         results.append((case, "PASS"))
