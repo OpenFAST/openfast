@@ -91,7 +91,7 @@ rtest = os.path.join(regtests, "r-test")
 modulesLocal = os.path.join(rtest, "modules-local")
 targetOutputDirectory = os.path.join(modulesLocal, "beamdyn", caseName)
 inputsDirectory = os.path.join(modulesLocal, "beamdyn", caseName)
-testBuildDirectory = os.path.join(buildDirectory, "beamdyn", caseName)
+testBuildDirectory = os.path.join(buildDirectory, caseName)
 
 # verify all the required directories exist
 if not os.path.isdir(rtest):

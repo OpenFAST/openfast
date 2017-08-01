@@ -109,14 +109,14 @@ add_subdirectory("${SERVODATA_DIR}/DISCON_OC3" "${SERVODATA_DIR}/DISCON_OC3/buil
 
 # build and seed the test directories with the data they need to run the tests
 file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
-foreach(regTest openfast beamdyn)
+foreach(regTest glue-codes/fast modules-local/beamdyn)
   file(MAKE_DIRECTORY ${CTEST_BINARY_DIR}/${regTest})
 endforeach()
 
 ## openfast seed
 foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
   file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast/${turbineDirectory}"
-     DESTINATION "${CTEST_BINARY_DIR}/openfast/")
+  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/fast/")
 endforeach()
 
 # the statement below automatically creates a BUILD_TESTING option
