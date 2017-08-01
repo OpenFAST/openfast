@@ -26,19 +26,29 @@ import os
 import sys
 basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
+import argparse
 import subprocess
 import rtestlib as rtl
 
-if not (rtl.validInput(sys.argv, 4) or rtl.validInput(sys.argv, 5)):
-    rtl.exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: python manualRegressionTest.py openfast/install/bin/openfast [Darwin,Linux,Windows] [Intel,GNU] tolerance")
+### Verify input arguments
+parser = argparse.ArgumentParser(description='Executes OpenFAST and a regression test for a single test case.')
+parser.add_argument('executable', metavar='OpenFAST', type=str, nargs=1, help='The path to the OpenFAST executable.')
+parser.add_argument('systemName', metavar='System-Name', type=str, nargs=1, help='The current system\'s name: [Darwin,Linux,Windows]')
+parser.add_argument('compilerId', metavar='Compiler-Id', type=str, nargs=1, help='The compiler\'s id: [Intel,GNU]')
+parser.add_argument('tolerance', metavar='Test-Tolerance', type=float, nargs=1, help='Tolerance defining pass or failure in the regression test.')
+parser.add_argument('-plot', '-p', dest="plotError", default=False, metavar='Plotting-Flag', type=bool, nargs="?", help='')
 
-openfast_executable = sys.argv[1]
+args = parser.parse_args()
+
+openfast_executable = args.executable[0]
 sourceDirectory = ".."
-buildDirectory = os.path.join("..", "build", "reg_tests", "openfast")
-machine = sys.argv[2]
-compiler = sys.argv[3]
-tolerance = sys.argv[4] if len(sys.argv) == 5 else 0.0000001
+buildDirectory = os.path.join("..", "build", "reg_tests", "glue-codes", "fast")
+machine = args.systemName[0]
+compiler = args.compilerId[0]
+tolerance = args.tolerance[0]
+plotError = args.plotError if args.plotError is False else True
+plotFlag = "-p" if plotError else ""
+
 devnull = open(os.devnull, 'w')
 
 with open(os.path.join("r-test", "glue-codes", "fast", "CaseList.md")) as listfile:
