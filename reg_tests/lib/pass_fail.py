@@ -31,8 +31,7 @@ import rtestlib as rtl
 
 def readFASTOut(fastoutput):
     try:
-        data, info = load_output(fastoutput)
-        return (data, info)
+        return load_output(fastoutput)
     except Exception as e:
         rtl.exitWithError("Error: {}".format(e))
 
@@ -56,7 +55,10 @@ def calculateRelativeNorm(testData, baselineData):
     rms_gold[rms_gold == 0] = 1e-16
 
     norm = norm_diff / rms_gold
+    index = np.argmax(norm)
 
+    # print(index)
+    # print(norm_diff[index], rms_gold[index], norm[index])
     return norm
 
 if __name__=="__main__":
@@ -75,8 +77,12 @@ if __name__=="__main__":
     rtl.validateFileOrExit(testSolution)
     rtl.validateFileOrExit(baselineSolution)
 
-    testData, testInfo = readFASTOut(testSolution)
-    baselineData, baselineInfo = readFASTOut(baselineSolution)
+    testData, testInfo, testPack = readFASTOut(testSolution)
+    baselineData, baselineInfo, basePack = readFASTOut(baselineSolution)
+
+    packDiff = [abs(testPack[i]-basePack[i]) for i in range(len(testPack))]
+    print(max(packDiff))
+    print(packDiff.count(max(packDiff)))
 
     norm = calculateRelativeNorm(testData, baselineData)
 
@@ -84,7 +90,7 @@ if __name__=="__main__":
         print('PASS')
         sys.exit(0)
     else:
-        dict1, info1 = readFASTOut(testSolution)
-        for i in range(len(info1['attribute_names'])):
-            print(info1['attribute_names'][i], norm[i])
+        dict1, info1, pack1 = readFASTOut(testSolution)
+        # for i in range(len(info1['attribute_names'])):
+        #     print(info1['attribute_names'][i], norm[i])
         sys.exit(1)
