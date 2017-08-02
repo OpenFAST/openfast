@@ -30,6 +30,9 @@ import argparse
 import subprocess
 import rtestlib as rtl
 
+def strFormat(string):
+    return "{:<" + str(len(string)) + "}"
+
 ### Verify input arguments
 parser = argparse.ArgumentParser(description='Executes OpenFAST and a regression test for a single test case.')
 parser.add_argument('executable', metavar='OpenFAST', type=str, nargs=1, help='The path to the OpenFAST executable.')
@@ -56,15 +59,20 @@ with open(os.path.join("r-test", "glue-codes", "fast", "CaseList.md")) as listfi
 casenames = [x.rstrip("\n\r").strip() for x in content if "#" not in x]
 
 results = []
+prefix = "executing case"
+passString, failString = "[PASS]", "[FAIL]"
+longestName = max(casenames, key=len)
 for case in casenames:
-    print("executing case {}".format(case))
+    print(strFormat(prefix).format(prefix), strFormat(longestName).format(case), end="", flush=True)
     command = "python executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {}".format(case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag)
     returnCode = subprocess.call(command, stdout=devnull, shell=True)
     if returnCode == 0:
-        results.append((case, "PASS"))
+        print(passString)
+        results.append((strFormat(longestName).format(case), passString))
     else:
-        results.append((case, "FAIL", returnCode))
+        print(failString)
+        results.append((strFormat(longestName).format(case), failString, returnCode))
 
-print("Regression test execution completed with these results:")
+print("\nRegression test execution completed with these results:")
 for r in results:
     print(" ".join([str(rr) for rr in r]))

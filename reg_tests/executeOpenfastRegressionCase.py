@@ -150,10 +150,9 @@ if not os.path.isdir(testBuildDirectory):
 caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
 executionScript = os.path.join(lib, "executeOpenfastCase.py")
 executionCommand = " ".join([pythonCommand, executionScript, caseInputFile, executable])
-print("'{}' - running".format(executionCommand))
-sys.stdout.flush()
+print("'{}' - running".format(executionCommand), flush=True)
 executionReturnCode = subprocess.call(executionCommand, shell=True)
-print("'{}' - finished with exit code {}".format(executionCommand, executionReturnCode))
+print("'{}' - finished with exit code {}".format(executionCommand, executionReturnCode), flush=True)
 
 if executionReturnCode != 0:
     rtl.exitWithError("")
