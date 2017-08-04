@@ -55,11 +55,15 @@ plotFlag = "-p" if plotError else ""
 verbose = args.verbose if args.verbose is False else True
 case = args.case
 
-devnull = open(os.devnull, 'w')
+outstd = sys.stdout if verbose else open(os.devnull, 'w') 
+pythonCommand = sys.executable
 
-with open(os.path.join("r-test", "glue-codes", "fast", "CaseList.md")) as listfile:
-    content = listfile.readlines()
-casenames = [x.rstrip("\n\r").strip() for x in content if "#" not in x]
+if case is not "":
+    caselist = [case]
+else:
+    with open(os.path.join("r-test", "glue-codes", "fast", "CaseList.md")) as listfile:
+        caselist = listfile.readlines()
+casenames = [c.rstrip("\n\r").strip() for c in caselist if "#" not in c]
 
 results = []
 prefix = "executing case"
