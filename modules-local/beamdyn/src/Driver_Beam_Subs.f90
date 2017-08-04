@@ -27,26 +27,22 @@ module BeamDyn_driver_subs
    TYPE , PUBLIC :: BD_DriverInternalType
       REAL(ReKi)     , DIMENSION(1:6)               :: DistrLoad        !< Constant distributed load along beam axis, 3 forces and 3 moments [-]
       REAL(ReKi)     , DIMENSION(1:6)               :: TipLoad          !< Constant point load applied at tip, 3 forces and 3 moments [-]
-      INTEGER(IntKi)                                :: NumPointLoads    !< Number of constant point loads applied along beam axis, 3 forces and 3 moments [-]
-      REAL(ReKi) ,     DIMENSION(:,:), ALLOCATABLE  :: MultiPointLoad   !< Constant point loads applied along beam axis (index 1= Relative position along blade span; indices 2-7 = Fx, Fy, Fz, Mx, My, Mz) [-]
-!  INTEGER(IntKi)                :: NumPointLoads               !< Number of multi-point loads in the driver input file
-!  REAL(DbKi)                    :: MultiPointLoads{:}{:}       !< The array of multipoint loads Index 1: [1, NumPointLoads]; 
-                                                                !< Index 2: [1,7] (index of Loads 1   = Relative position along blade span;
-                                                                !!                                2-7 = Fx, Fy, Fz, Mx, My, Mz )
-            
-      TYPE(MeshType)                   :: mplMotion  ! Mesh for blade motion at multipoint loads locations
-      TYPE(MeshType)                   :: mplLoads   ! Mesh for multipoint loads
-      TYPE(MeshMapType)                :: Map_BldMotion_to_mplMotion
-      TYPE(MeshMapType)                :: Map_mplLoads_to_PointLoad
-      TYPE(MeshType)                   :: y_BldMotion_at_u_point ! Intermediate mesh to transfer motion from output mesh to input mesh
-      TYPE(MeshMapType)                :: Map_y_BldMotion_to_u_point
-            
-      TYPE(MeshType)                   :: RotationCenter
-      TYPE(MeshMapType)                :: Map_RotationCenter_to_RootMotion
+      INTEGER(IntKi)                                :: NumPointLoads    !< Number of constant point loads applied along beam axis, 3 forces and 3 moments, from the driver input file [-]
+      REAL(BDKi) ,     DIMENSION(:,:), ALLOCATABLE  :: MultiPointLoad   !< Constant point loads applied along beam axis, size (NumPointLoads,7); (dimension 2: index 1=Relative position along blade span; indices 2-7 = Fx, Fy, Fz, Mx, My, Mz) [-]            
       
-      REAL(DbKi)                       :: t_initial
-      REAL(DbKi)                       :: t_final
-      REAL(ReKi)                       :: w           ! magnitude of rotational velocity vector
+      TYPE(MeshType)                                :: mplMotion        ! Mesh for blade motion at multipoint loads locations
+      TYPE(MeshType)                                :: mplLoads         ! Mesh for multipoint loads
+      TYPE(MeshMapType)                             :: Map_BldMotion_to_mplMotion
+      TYPE(MeshMapType)                             :: Map_mplLoads_to_PointLoad
+      TYPE(MeshType)                                :: y_BldMotion_at_u_point ! Intermediate mesh to transfer motion from output mesh to input mesh
+      TYPE(MeshMapType)                             :: Map_y_BldMotion_to_u_point
+      
+      TYPE(MeshType)                                :: RotationCenter
+      TYPE(MeshMapType)                             :: Map_RotationCenter_to_RootMotion
+      
+      REAL(DbKi)                                    :: t_initial
+      REAL(DbKi)                                    :: t_final
+      REAL(R8Ki)                                    :: w           ! magnitude of rotational velocity vector
       
    END TYPE
    
@@ -586,8 +582,8 @@ SUBROUTINE Init_RotationCenterMesh(DvrData, InitInputData, RootMotionMesh, ErrSt
 
    DvrData%w = TwoNorm( InitInputData%RootVel(4:6) )
    
-   if (EqualRealNos(DvrData%w,0.0_ReKi)) then
-      DvrData%w = 0.0_ReKi
+   if (EqualRealNos(DvrData%w,0.0_R8Ki)) then
+      DvrData%w = 0.0_R8Ki
          ! the beam is not rotating, so pick an orientation
       call eye(orientation, ErrStat2, ErrMsg2)
    else
