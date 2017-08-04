@@ -34,15 +34,16 @@ def strFormat(string):
     return "{:<" + str(len(string)) + "}"
 
 ### Verify input arguments
-parser = argparse.ArgumentParser(description='Executes OpenFAST and a regression test for a single test case.')
-parser.add_argument('executable', metavar='OpenFAST', type=str, nargs=1, help='The path to the OpenFAST executable.')
-parser.add_argument('systemName', metavar='System-Name', type=str, nargs=1, help='The current system\'s name: [Darwin,Linux,Windows]')
-parser.add_argument('compilerId', metavar='Compiler-Id', type=str, nargs=1, help='The compiler\'s id: [Intel,GNU]')
-parser.add_argument('tolerance', metavar='Test-Tolerance', type=float, nargs=1, help='Tolerance defining pass or failure in the regression test.')
-parser.add_argument('-plot', '-p', dest="plotError", default=False, metavar='Plotting-Flag', type=bool, nargs="?", help='')
+parser = argparse.ArgumentParser(description="Executes OpenFAST and a regression test for a single test case.")
+parser.add_argument("executable", metavar="OpenFAST", type=str, nargs=1, help="path to the OpenFAST executable")
+parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="current system's name: [Darwin,Linux,Windows]")
+parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="compiler's id: [Intel,GNU]")
+parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="tolerance defining pass or failure in the regression test")
+parser.add_argument("-plot", "-p", dest="plotError", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-verbose", "-v", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
+parser.add_argument("-case", dest="case", default="", metavar="Case-Name", type=str, nargs="?", help="single case name to execute")
 
 args = parser.parse_args()
-
 openfast_executable = args.executable[0]
 sourceDirectory = ".."
 buildDirectory = os.path.join("..", "build", "reg_tests", "glue-codes", "fast")
@@ -51,6 +52,8 @@ compiler = args.compilerId[0]
 tolerance = args.tolerance[0]
 plotError = args.plotError if args.plotError is False else True
 plotFlag = "-p" if plotError else ""
+verbose = args.verbose if args.verbose is False else True
+case = args.case
 
 devnull = open(os.devnull, 'w')
 

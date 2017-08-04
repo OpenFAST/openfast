@@ -59,6 +59,7 @@ parser.add_argument('tolerance', metavar='Test-Tolerance', type=float, nargs=1, 
 parser.add_argument('systemName', metavar='System-Name', type=str, nargs=1, help='The current system\'s name: [Darwin,Linux,Windows]')
 parser.add_argument('compilerId', metavar='Compiler-Id', type=str, nargs=1, help='The compiler\'s id: [Intel,GNU]')
 parser.add_argument('-plot', '-p', dest="plotError", default=False, metavar='Plotting-Flag', type=bool, nargs="?", help='')
+parser.add_argument("-verbose", "-v", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
 
 args = parser.parse_args()
 
@@ -70,14 +71,11 @@ tolerance = args.tolerance[0]
 systemName = args.systemName[0]
 compilerId = args.compilerId[0]
 plotError = args.plotError if args.plotError is False else True
+verbose = args.verbose if args.verbose is False else True
 
-# verify executable
+# validate inputs
 rtl.validateExeOrExit(executable)
-
-# verify source directory
 rtl.validateDirOrExit(sourceDirectory)
-
-# verify build directory
 if not os.path.isdir(buildDirectory):
     os.makedirs(buildDirectory)
 
