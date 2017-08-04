@@ -589,13 +589,13 @@ SUBROUTINE Init_RotationCenterMesh(DvrData, InitInputData, RootMotionMesh, ErrSt
    else
       z_hat = InitInputData%RootVel(4:6) / DvrData%w
       
-      if ( EqualRealNos( z_hat(3), 1.0_ReKi ) ) then
+      if ( EqualRealNos( z_hat(3), 1.0_R8Ki ) ) then
          call eye(orientation, ErrStat2, ErrMsg2)
-      elseif ( EqualRealNos( z_hat(3), -1.0_ReKi ) ) then
+      elseif ( EqualRealNos( z_hat(3), -1.0_R8Ki ) ) then
          orientation = 0.0_ReKi
-         orientation(1,1) = -1.0_ReKi
-         orientation(2,2) =  1.0_ReKi
-         orientation(3,3) = -1.0_ReKi
+         orientation(1,1) = -1.0_R8Ki
+         orientation(2,2) =  1.0_R8Ki
+         orientation(3,3) = -1.0_R8Ki
       else
          
          Z_unit = (/0, 0, 1/)
