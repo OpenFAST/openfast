@@ -130,8 +130,8 @@ def load_binary_output(filename):
             raise Exception('Could not read entire %s file: read %d of %d values' % (filename, cnt, nPts))
 
     # Scale the packed binary to real data
-    data = np.array(PackedData).reshape(NT, NumOutChans)
-    data = (data - ColOff) / ColScl
+    pack = np.array(PackedData).reshape(NT, NumOutChans)
+    data = (pack - ColOff) / ColScl
 
     if FileID == FileFmtID_WithTime:
         time = (np.array(PackedTime) - TimeOff) / TimeScl;
@@ -139,12 +139,13 @@ def load_binary_output(filename):
         time = TimeOut1 + TimeIncr * np.arange(NT)
 
     data = np.concatenate([time.reshape(NT, 1), data], 1)
+    pack = np.concatenate([time.reshape(NT, 1), pack], 1)
 
     info = {'name': os.path.splitext(os.path.basename(filename))[0],
             'description': DescStr,
             'attribute_names': ChanName,
             'attribute_units': ChanUnit}
-    return data, info, list(PackedData)
+    return data, info, pack
 
 if __name__=="__main__":
     d,i = load_binary_output('Test18.T1.outb')
