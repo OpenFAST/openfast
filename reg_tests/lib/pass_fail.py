@@ -79,7 +79,7 @@ if __name__=="__main__":
 
     norm = calculateRelativeNorm(testData, baselineData)
 
-    if passRegressionTest(norm, tolerance):
+    relativeNorm = calculateRelativeNorm(testData, baselineData)
     if passRegressionTest(relativeNorm, tolerance):
         print('PASS')
         sys.exit(0)
