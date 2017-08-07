@@ -72,13 +72,7 @@ if __name__=="__main__":
 
     testData, testInfo, testPack = readFASTOut(testSolution)
     baselineData, baselineInfo, basePack = readFASTOut(baselineSolution)
-
-    packDiff = [abs(testPack[i]-basePack[i]) for i in range(len(testPack))]
-    print(max(packDiff))
-    print(packDiff.count(max(packDiff)))
-
-    norm = calculateRelativeNorm(testData, baselineData)
-
+    
     relativeNorm = calculateRelativeNorm(testData, baselineData)
     if passRegressionTest(relativeNorm, tolerance):
         print('PASS')
