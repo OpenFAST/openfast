@@ -46,7 +46,7 @@ def validateAndExpandInputs(argv):
 
 def parseSolution(solution):
     try:
-        data, info = load_output(solution)
+        data, info, _ = load_output(solution)
         return (data, info)
     except Exception as e:
         rtl.exitWithError("Error: {}".format(e))
