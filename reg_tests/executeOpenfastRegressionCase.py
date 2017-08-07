@@ -163,8 +163,8 @@ rtl.validateFileOrExit(passFailScript)
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 
-testData, testInfo = pass_fail.readFASTOut(localOutFile)
-baselineData, baselineInfo = pass_fail.readFASTOut(baselineOutFile)
+testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
+baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
 
 norm = pass_fail.calculateRelativeNorm(testData, baselineData)
 

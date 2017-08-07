@@ -39,28 +39,21 @@ def passRegressionTest(norm, tolerance):
     result = True if max(norm) < tolerance else False
     return result
 
+
+def l2norm(data):
+    return LA.norm(data, 2, axis=0)
+
 def calculateRelativeNorm(testData, baselineData):
-    ## gold standard RMS, L2 norm
-    nColumns = np.size(testData,1)
-    diff = np.ones(nColumns)
-    rms_gold = np.ones(nColumns)
-    norm_diff = np.ones(nColumns)
-    for j in range(nColumns):
-        rms_gold[j] = LA.norm(baselineData[:,j], 2)
-
-        diff = testData[:,j]-baselineData[:,j]
-        norm_diff[j] = LA.norm(diff, 2)
-
+    norm_diff = l2norm(testData - baselineData)
+    norm_baseline = l2norm(baselineData)
+    
     # replace any 0s with small number before for division
-    rms_gold[rms_gold == 0] = 1e-16
-
-    norm = norm_diff / rms_gold
-    index = np.argmax(norm)
-
-    # print(index)
-    # print(norm_diff[index], rms_gold[index], norm[index])
-    return norm
-
+    norm_baseline[norm_baseline == 0] = 1e-16
+    
+    norms = np.ones(len(norm_baseline))
+    for i,n in enumerate(norm_baseline):
+        norms[i] = norm_diff[i] if n < 1 else norm_diff[i] / norm_baseline[i]
+    return norms
 if __name__=="__main__":
 
     rtl.validateInputOrExit(sys.argv, 4, "{} test_solution baseline_solution tolerance".format(sys.argv[0]))
@@ -87,6 +80,7 @@ if __name__=="__main__":
     norm = calculateRelativeNorm(testData, baselineData)
 
     if passRegressionTest(norm, tolerance):
+    if passRegressionTest(relativeNorm, tolerance):
         print('PASS')
         sys.exit(0)
     else:
