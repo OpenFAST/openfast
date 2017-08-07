@@ -13,8 +13,8 @@ prepInstall() {
 #Prepare for installation
     echo -n "Prepping install"
     echo -n $PWD > /tmp/fastDir
-    OPENFAST_DIR=$(sed 's:/:\\/:g' /tmp/fastDir)
-    echo "export OPENFAST_DIR=${OPENFAST_DIR}" > .prepInstall
+    openfast_dir=$(sed 's:/:\\/:g' /tmp/fastDir)
+    echo "export openfast_dir=${openfast_dir}" > .prepInstall
     source .prepInstall
     passFail $?
 }
@@ -36,7 +36,7 @@ compileLapack() {
     make -j 8 &> log.make
     make install &> log.makeInstall
     passFail $?
-    cd ${OPENFAST_DIR}
+    cd ${openfast_dir}
 }
 
 compileYAMLcpp() {
@@ -53,7 +53,7 @@ compileYAMLcpp() {
     fi
     passFail $?
     echo -n "   Configuring"
-    cmake ../yaml-cpp/ -DCMAKE_INSTALL_PREFIX=${OPENFAST_DIR}/install &> log.cmake
+    cmake ../yaml-cpp/ -DCMAKE_INSTALL_PREFIX=${openfast_dir}/install &> log.cmake
     passFail $? 
     echo -n "   Compiling"
     make -j 8 &> log.make
@@ -61,7 +61,7 @@ compileYAMLcpp() {
     echo -n "   Installing"
     make install &> log.makeInstall
     passFail $?
-    cd ${OPENFAST_DIR}
+    cd ${openfast_dir}
 }
 
 compileHDF5() {
@@ -76,7 +76,7 @@ compileHDF5() {
     cd hdf5-1.8.19
     passFail $?
     echo -n "   Configuring"
-    ./configure CC=mpicc FC=mpif90 CXX=mpicxx --enable-parallel --prefix=${OPENFAST_DIR}/install &> log.config
+    ./configure CC=mpicc FC=mpif90 CXX=mpicxx --enable-parallel --prefix=${openfast_dir}/install &> log.config
     passFail $? 
     echo -n "   Compiling"
     make -j 8 &> log.make
@@ -84,7 +84,7 @@ compileHDF5() {
     echo -n "   Installing"
     make install &> log.makeInstall
     passFail $?
-    cd ${OPENFAST_DIR}
+    cd ${openfast_dir}
 }
 
 compileOpenFAST() {
@@ -96,10 +96,10 @@ compileOpenFAST() {
     # if [ -f CMakeCache.txt] ; then
     #     rm CMakeCache.txt
     # fi
-    cp ${OPENFAST_DIR}/share/doConfigOpenFAST_cpp_nospack .
+    cp ${openfast_dir}/share/fast-build-cpp.sh .
     passFail $?
     echo -n "   Configuring"
-    ./doConfigOpenFAST_cpp_nospack
+    ./fast-build-cpp.sh
     passFail $?
     echo -n "   Compiling"
     make &> log.make
@@ -107,7 +107,7 @@ compileOpenFAST() {
     echo -n "   Installing"
     make install &> log.makeInstall
     passFail $?
-    cd ${OPENFAST_DIR}
+    cd ${openfast_dir}
 }
 
 prepInstall
