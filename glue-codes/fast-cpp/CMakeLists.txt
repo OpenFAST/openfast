@@ -25,6 +25,7 @@ find_package(YAMLCPP REQUIRED)
 
 include_directories(${YAML_INCLUDES})
 include_directories(${HDF5_INCLUDES})
+include_directories(${HDF5_INCLUDE_DIR})
 include_directories(${ZLIB_INCLUDES})
 include_directories(${LIBXML2_INCLUDE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/modules-local/fast-library/src/)
