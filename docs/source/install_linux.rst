@@ -1,11 +1,20 @@
 Building OpenFAST
 =================
 
-OpenFAST uses the `CMake <https://cmake.org>`__ build system. We recommend installing OpenFAST using `spack <https://spack.readthedocs.io/en/latest>`__. However, we also provide some sample scripts in ``share`` folder if you choose to install without `spack`.
+OpenFAST uses the `CMake <https://cmake.org>`__ build system. 
+We recommend building OpenFAST using `Spack <https://spack.readthedocs.io/en/latest>`__. 
+However, we also provide some sample scripts in ``openfast/share`` if you choose to proceed without `Spack`.
+
+Dependencies
+------------
+
+OpenFAST has the following dependencies:
+
+- LAPACK libraries provided through the variable ``BLASLIB``
+- for the C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`__ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__ (provided by ``YAML_ROOT``). 
 
 CMake Build Instructions
 ------------------------
-
 ::
 
     git clone https://github.com/OpenFAST/OpenFAST.git
@@ -13,7 +22,13 @@ CMake Build Instructions
     mkdir build && cd build
     cmake ../ 
     make 
+    
+A sample installation shell script is also provided in the ``openfast/share``. Run the script from ``openfast/`` as:
+::
 
+    git clone https://github.com/OpenFAST/OpenFAST.git
+    cd OpenFAST
+    bash share/install.sh
 
 Current CMake Options
 ~~~~~~~~~~~~~~~~~~~~~
@@ -28,17 +43,6 @@ Current CMake Options
 -  ``ORCA_DLL_LOAD`` - Enable OrcaFlex library load (Default: OFF)
 -  ``USE_DLL_INTERFACE`` - Enable runtime loading of dynamic libraries (Default: ON)
 
-Dependencies
-~~~~~~~~~~~~
-
-OpenFAST has the following dependencies:
-
-- ``LAPACK`` libraries provided through the variable ``BLASLIB``
-- for the C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`__ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__ (provided by ``YAML_ROOT``). 
-
-
-
-Building OpenFAST Semi-Automatically Using Spack on Mac OS X or Linux
 ---------------------------------------------------------------------
 
 The following describes how to build OpenFAST and its dependencies
@@ -134,15 +138,3 @@ The executables and libraries will be located at
 
     
 Add the appropriate paths to your ``PATH`` and ``LD_LIBRARY_PATH`` to run OpenFAST.
-
-
-Building OpenFAST manually on Mac OS X or Linux
------------------------------------------------
-
-A sample installation shell script is provided in the `share` folder. Run the script from `openfast_dir` as:
-
-::
-   
-    git clone https://github.com/OpenFAST/OpenFAST.git
-    cd OpenFAST
-    bash share/install.sh
