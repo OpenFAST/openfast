@@ -43,6 +43,7 @@ Current CMake Options
 -  ``ORCA_DLL_LOAD`` - Enable OrcaFlex library load (Default: OFF)
 -  ``USE_DLL_INTERFACE`` - Enable runtime loading of dynamic libraries (Default: ON)
 
+Building OpenFAST Semi-Automatically Using Spack on macOS or Linux
 ---------------------------------------------------------------------
 
 The following describes how to build OpenFAST and its dependencies
@@ -51,24 +52,20 @@ mostly automatically on your Mac using
 This can also be used as a template to build OpenFAST on any 
 Linux system with Spack.
 
+These instructions were developed on macOS 10.11 with the following tools installed via Homebrew:
+
+- GCC 6.3.0
+- CMake 3.6.1
+- pkg-config 0.29.2
+
 Step 1
-~~~~~~
-
-This assumes you have a Homebrew installation of GCC installed already 
-(we are using GCC 6.3.0). These instructions have been tested on OSX 10.11.
-We have built OpenFAST using Spack on MacOS Sierra by using Homebrew to
-install ``cmake`` and ``pkg-config`` and defining these as external
-packages in Spack (see 
-`packages.yaml.mac_sierra <https://github.com/NaluCFD/NaluSpack/blob/master/spack_config/packages.yaml.mac_sierra>`__).
-
-Step 2
 ~~~~~~
 
 Checkout the official Spack repo from github (we will checkout into ``${HOME}``):
 
 ``cd ${HOME} && git clone https://github.com/LLNL/spack.git``
 
-Step 3
+Step 2
 ~~~~~~
 
 Add Spack shell support to your ``.profile`` by adding the lines:
@@ -78,7 +75,7 @@ Add Spack shell support to your ``.profile`` by adding the lines:
     export SPACK_ROOT=${HOME}/spack
     . $SPACK_ROOT/share/spack/setup-env.sh
 
-Step 4
+Step 3
 ~~~~~~
 
 Copy the `https://raw.githubusercontent.com/OpenFAST/openfast/dev/share/spack/package.py`__ file
@@ -89,7 +86,7 @@ to your installation of Spack:
     mkdir ${SPACK_ROOT}/etc/spack/openfast ; cd ${SPACK_ROOT}/etc/spack/openfast
     wget --no-check-certificate https://raw.githubusercontent.com/OpenFAST/openfast/dev/share/spack/package.py
 
-Step 5
+Step 4
 ~~~~~~
 
 Try ``spack info openfast`` to see if Spack works. If it does, check the
@@ -105,12 +102,10 @@ compilers you have available by:
     -- clang --------------------------------------------------------
     clang@8.0.0-apple  clang@7.3.0-apple
 
-Step 6
+Step 5
 ~~~~~~
 
-Install OpenFAST with whatever version of GCC (6.3.0 for us) you have
-installed from Homebrew and force the build to use CMake 3.6.1 because
-newer versions currently don't build on OS X:
+Install OpenFAST with your chosen version of GCC:
 
 ::
 
