@@ -1,11 +1,11 @@
-!> This unit test is for the subroutine BD_CrvExtractCrv and tests it by generating 'n' random unit vectors
+!> This unit test is for the subroutine BD_CrvMatrixR and tests it by generating 'n' random unit vectors
 !> and testing 'n' angles in the range \f$[-\pi, \pi]\f$ for each unit vector to determine whether the
-!> subroutine generates the appropriate WM parameter vector from an explicity constructed rotation matrix,
-!> as compared to the explicity calculated WM vector.
+!> subroutine generates the appropriate rotation matrix from an explicity constructed WM vector,
+!> as compared to the explicity calculated rotation matrix.
 ! mjs-- NOTE: could presumably change 'n' and 'tol' to be inputs to the subroutine in the comprehensive
     ! unit testing framework
 @test
-subroutine test_BD_CrvExtractCrv()
+subroutine test_BD_CrvMatrixR()
     use pFUnit_mod
     use BeamDyn_Subs
     implicit none
@@ -17,9 +17,9 @@ subroutine test_BD_CrvExtractCrv()
         ! value for pi could be used instead of this
     real(BDKi), parameter    :: pi1 = 4.0_BDKi * atan(1.0_BDKi)
     
-    REAL(BDKi) :: inmat(3, 3)
-    REAL(BDKi) :: outvec(3), testvec(3)
-    integer    :: i, j
+    REAL(BDKi) :: testmat(3, 3), outmat(3, 3)
+    REAL(BDKi) :: invec(3)
+    integer    :: i, j, k
     REAL(BDKi) :: normvec(3, n)
     REAL(BDKi) :: angle(n)
     REAL(BDKi) :: ct, st, omct
@@ -43,14 +43,14 @@ subroutine test_BD_CrvExtractCrv()
             omct = 1.0_BDKi - ct
             ! formula for rotation matrix, given unit normal vector (axis of rotation) and rotation angle
             ! from https://en.wikipedia.org/wiki/Rotation_matrix#Conversion_from_and_to_axis.E2.80.93angle
-            inmat = reshape( (/ ct + normvec(1, i)**2 * omct,                              normvec(1, i) * normvec(2, i) * omct - normvec(3, i) * st, normvec(1, i) * normvec(3, i) * omct + normvec(2, i) * st, &
+            testmat = reshape( (/ ct + normvec(1, i)**2 * omct,                              normvec(1, i) * normvec(2, i) * omct - normvec(3, i) * st, normvec(1, i) * normvec(3, i) * omct + normvec(2, i) * st, &
                                 normvec(1, i) * normvec(2, i) * omct + normvec(3, i) * st, ct + normvec(2, i)**2 * omct,                              normvec(2, i) * normvec(3, i) * omct - normvec(1, i) * st, &
                                 normvec(1, i) * normvec(3, i) * omct - normvec(2, i) * st, normvec(2, i) * normvec(3, i) * omct + normvec(1, i) * st, ct + normvec(3, i)**2 * omct /), &
-                                shape(inmat), order=(/2, 1/) )
+                                shape(testmat), order=(/2, 1/) )
             ! formula for WM parameters from Bauchau, 'Flexible Multibody Dynamics'
-            testvec = 4.0_BDKi * tan(angle(j)/4.0_BDKi) * normvec(:, i)
-            call BD_CrvExtractCrv(inmat, outvec, ErrStat, ErrMsg)
-            @assertEqual(outvec, testvec, tol)
+            invec = 4.0_BDKi * tan(angle(j)/4.0_BDKi) * normvec(:, i)
+            call BD_CrvMatrixR(invec, outmat)
+            @assertEqual(testmat, outmat, tol)
         end do
     end do
 
@@ -70,4 +70,4 @@ subroutine test_BD_CrvExtractCrv()
 
         end subroutine init_random_seed
 
-end subroutine test_BD_CrvExtractCrv
+end subroutine test_BD_CrvMatrixR
