@@ -51,11 +51,10 @@ Step 1
 ~~~~~~
 
 This assumes you have a Homebrew installation of GCC installed already 
-(we are using GCC 6.3.0). These instructions have been tested on OSX 10.11. MacOS 10.12 
-will not build CMake with GCC anymore, so these instructions won't work 
-in that case, but we have built OpenFAST using Spack on MacOS Sierra by
-using Homebrew to install ``cmake`` and ``pkg-config`` and defining these 
-as external packages in Spack (see 
+(we are using GCC 6.3.0). These instructions have been tested on OSX 10.11.
+We have built OpenFAST using Spack on MacOS Sierra by using Homebrew to
+install ``cmake`` and ``pkg-config`` and defining these as external
+packages in Spack (see 
 `packages.yaml.mac_sierra <https://github.com/NaluCFD/NaluSpack/blob/master/spack_config/packages.yaml.mac_sierra>`__).
 
 Step 2
