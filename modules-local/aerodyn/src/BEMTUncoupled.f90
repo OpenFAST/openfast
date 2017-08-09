@@ -28,9 +28,12 @@ module BEMTUnCoupled
 
    implicit none
    
-   integer(IntKi), public, parameter  :: SkewMod_Uncoupled  = 1      ! Uncoupled (no correction) [-]
-   integer(IntKi), public, parameter  :: SkewMod_PittPeters = 2      ! Pitt/Peters [-]
-   integer(IntKi), public, parameter  :: SkewMod_Coupled    = 3      ! Coupled [-]
+   integer(IntKi), public, parameter  :: SkewMod_Uncoupled  = 1            ! Uncoupled (no correction) [-]
+   integer(IntKi), public, parameter  :: SkewMod_PittPeters = 2            ! Pitt/Peters [-]
+   integer(IntKi), public, parameter  :: SkewMod_Coupled    = 3            ! Coupled [-]
+   
+   real(ReKi),     public, parameter  :: BEMT_MaxInduction(2) = 2.0_ReKi   ! largest magnitude of axial (1) and tangential (2) inductions
+
    
    !1e-6 works for double precision, but not single precision 
    real(ReKi),     public, parameter  :: BEMT_epsilon2 = 10.0_ReKi*sqrt(epsilon(1.0_ReKi)) !this is the tolerance in radians for values around singularities in phi (i.e., phi=0 and phi=pi/2); must be large enough so that EqualRealNos(BEMT_epsilon2, 0.0_ReKi) is false
@@ -343,7 +346,7 @@ real(ReKi) function UncoupledErrFn(phi, theta, Re, numBlades, rlocal, chord, AFI
 end function UncoupledErrFn
 
                               
-subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, tipRatio, a, ap, chi, ErrStat, ErrMsg )
+subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, tipRatio, a, ap, chi, FirstWarn )
    
    real(ReKi),                intent(in   ) :: Vx
    real(ReKi),                intent(in   ) :: Vy
@@ -353,40 +356,48 @@ subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, tipRatio, a, ap, ch
    real(ReKi),                intent(inout) :: a 
    real(ReKi),                intent(inout) :: ap 
    real(ReKi),                intent(  out) :: chi
-   integer(IntKi),            intent(  out) :: ErrStat       ! Error status of the operation
-   character(*),              intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None   
+   logical(IntKi),            intent(inout) :: FirstWarn       ! If this is the first warning about invalid skew
    
       ! Local variables      
    real(ReKi)                               :: yawCorr, saz
    
-   
-   ErrStat = ErrID_None
-   ErrMsg  = ""
    
    ! Skewed wake correction
    
    saz = sin(azimuth)
    chi = chi0
    
-   if ( abs(saz) > 0.005_ReKi ) then
+   if ( abs(saz) > 0.005_ReKi ) then  ! FIXME: bjj: not sure why this check is here....
+      
       chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
       
-   !if (chi0 < 40.0*d2r .and. chi > 0.0 ) then
-      ! TODO: Add check on chi to make sure it is < pi/2 and (positive check should be outside solve)  GJH 5/20/2015
-      !yawCorr = max(0.0,chi0-0.5236)
-      !yawCorr = min(0.785,yawCorr)
-      !bjj: modified 22-Sep-2015: RRD recommends 32 instead of 64 in the denominator (like AD14)
-      yawCorr = (15.0_ReKi*pi/32.0_ReKi*tan(chi/2.0_ReKi) * (tipRatio) * saz)
-               
-      a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
-      !if ((a > 1.0 .AND. ayaw < 1.0) .OR. (a < 1.0 .AND. ayaw > 1.0 )) then
-      !   call WrScr('Yaw correction crossed over 1.0.')
-      !   !a = max(1.0, ayaw)
-      !else if ((a < -1.0 .AND. ayaw > -1.0) .OR. (a > -1.0 .AND. ayaw < -1.0 )) then
-      !   call WrScr('Yaw correction crossed over -1.0.')
-      !
-      !end if
+      call MPi2Pi( chi ) ! make sure chi is in [-pi, pi] before testing if it's outside a valid range
+      
+      if (abs(chi) > piBy2) then
+      !if (chi0 < 40.0*d2r .and. chi > 0.0 ) then
          
+         if (FirstWarn) then
+            call WrScr( 'Warning: SkewedWakeCorrection encountered a large value of chi ('//trim(num2lstr(chi*R2D))// &
+               ' deg). Correction factor will be disabled this time step. This warning will not be repeated though the condition may persist.' )
+            FirstWarn = .false.
+         end if
+         
+      else
+         ! TODO: Add check on chi to make sure it is < pi/2 and (positive check should be outside solve)  GJH 5/20/2015
+         !yawCorr = max(0.0,chi0-0.5236)
+         !yawCorr = min(0.785,yawCorr)
+         !bjj: modified 22-Sep-2015: RRD recommends 32 instead of 64 in the denominator (like AD14)
+         yawCorr = (15.0_ReKi*pi/32.0_ReKi*tan(chi/2.0_ReKi) * (tipRatio) * saz) ! bjj: note that when chi gets close to +/-pi this blows up
+               
+         a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
+         !if ((a > 1.0 .AND. ayaw < 1.0) .OR. (a < 1.0 .AND. ayaw > 1.0 )) then
+         !   call WrScr('Yaw correction crossed over 1.0.')
+         !   !a = max(1.0, ayaw)
+         !else if ((a < -1.0 .AND. ayaw > -1.0) .OR. (a > -1.0 .AND. ayaw < -1.0 )) then
+         !   call WrScr('Yaw correction crossed over -1.0.')
+         !
+         !end if
+      end if
    else
       chi = chi0
    end if
@@ -431,11 +442,10 @@ subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useH
    real(ReKi) :: g1, g2, g3
    real(ReKi) :: temp  ! temporary variable so we don't have to calculate 2.0_ReKi*F*k multiple times
    real(ReKi), parameter :: InductionLimit = 1000000.0_ReKi
-   real(ReKi), parameter :: MaxTnInd = 2.0_ReKi
-   real(ReKi), parameter :: MaxAxInd = 2.0_ReKi
+   real(ReKi), parameter :: MaxTnInd = BEMT_MaxInduction(2)
+   real(ReKi), parameter :: MaxAxInd = BEMT_MaxInduction(1)
    
    logical    :: momentumRegion
-
 
    
    IsValidSolution  = .true.
