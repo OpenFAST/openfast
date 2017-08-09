@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
+! Copyright (C) 2016-2017  Envision Energy USA, LTD
 !
 !    This file is part of AeroDyn.
 !
@@ -16,10 +17,6 @@
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
 !
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
 !**********************************************************************************************************************************
 !> AeroDyn is a time-domain aerodynamics module for horizontal-axis wind turbines.
 module AeroDyn
@@ -1269,6 +1266,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    x_hat_disk = u%HubMotion%Orientation(1,:,1) !actually also x_hat_hub      
    
    m%V_dot_x  = dot_product( m%V_diskAvg, x_hat_disk )
+   m%BEMT_u(indx)%Un_disk  = m%V_dot_x
    tmp    = m%V_dot_x * x_hat_disk - m%V_diskAvg
    tmp_sz = TwoNorm(tmp)
    if ( EqualRealNos( tmp_sz, 0.0_ReKi ) ) then
@@ -1440,8 +1438,11 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    
    if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, ErrMsg, RoutineName )
    if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%WakeMod /= WakeMod_None .and. InputFileData%WakeMod /= WakeMod_BEMT) call SetErrStat ( ErrID_Fatal, &
-      'WakeMod must '//trim(num2lstr(WakeMod_None))//' (none) or '//trim(num2lstr(WakeMod_BEMT))//' (BEMT).', ErrStat, ErrMsg, RoutineName ) 
+   if (InputFileData%WakeMod /= WakeMod_None .and. InputFileData%WakeMod /= WakeMod_BEMT .and. InputFileData%WakeMod /= WakeMod_DBEMT) then
+      call SetErrStat ( ErrID_Fatal, 'WakeMod must '//trim(num2lstr(WakeMod_None))//' (none), '//trim(num2lstr(WakeMod_BEMT))//' (BEMT),'// &
+         'or '//trim(num2lstr(WakeMod_DBEMT))//' (DBEMT).', ErrStat, ErrMsg, RoutineName ) 
+   end if
+   
    if (InputFileData%AFAeroMod /= AFAeroMod_Steady .and. InputFileData%AFAeroMod /= AFAeroMod_BL_unsteady) then
       call SetErrStat ( ErrID_Fatal, 'AFAeroMod must be '//trim(num2lstr(AFAeroMod_Steady))//' (steady) or '//&
                         trim(num2lstr(AFAeroMod_BL_unsteady))//' (Beddoes-Leishman unsteady).', ErrStat, ErrMsg, RoutineName ) 
@@ -1455,9 +1456,9 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InputFileData%SpdSound <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
       
    
-      ! BEMT inputs
+      ! BEMT/DBEMT inputs
       ! bjj: these checks should probably go into BEMT where they are used...
-   if (InputFileData%WakeMod == WakeMod_BEMT) then
+   if (InputFileData%WakeMod /= WakeMod_none) then
       if ( InputFileData%MaxIter < 1 ) call SetErrStat( ErrID_Fatal, 'MaxIter must be greater than 0.', ErrStat, ErrMsg, RoutineName )
       
       if ( InputFileData%IndToler < 0.0 .or. EqualRealNos(InputFileData%IndToler, 0.0_ReKi) ) &
@@ -1466,7 +1467,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       if ( InputFileData%SkewMod /= SkewMod_Uncoupled .and. InputFileData%SkewMod /= SkewMod_PittPeters) &  !  .and. InputFileData%SkewMod /= SkewMod_Coupled )
            call SetErrStat( ErrID_Fatal, 'SkewMod must be 1, or 2.  Option 3 will be implemented in a future version.', ErrStat, ErrMsg, RoutineName )      
       
-   end if !BEMT checks
+   end if !BEMT/DBEMT checks
    
       ! UA inputs
    if (InputFileData%AFAeroMod == AFAeroMod_BL_unsteady ) then
@@ -1594,6 +1595,10 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       if (InputFileData%AFAeroMod /= AFAeroMod_Steady) then
          call SetErrStat( ErrID_Fatal, 'Steady blade airfoil aerodynamics must be used for linearization. Set AFAeroMod=1.', ErrStat, ErrMsg, RoutineName )
       end if
+      
+      if (InputFileData%WakeMod == WakeMod_DBEMT) then
+         call SetErrStat( ErrID_Fatal, 'DBEMT cannot currently be used for linearization. Set WakeMod=0 or WakeMod=1.', ErrStat, ErrMsg, RoutineName )
+      end if
    end if
    
    
@@ -1720,6 +1725,9 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
                                                  
    integer(intKi)                                :: j              ! node index
    integer(intKi)                                :: k              ! blade index
+   real(ReKi)                                    :: tmp(3), tmp_sz_y, tmp_sz
+   real(ReKi)                                    :: y_hat_disk(3)
+   real(ReKi)                                    :: z_hat_disk(3)
    integer(IntKi)                                :: ErrStat2
    character(ErrMsgLen)                          :: ErrMsg2
    character(*), parameter                       :: RoutineName = 'Init_BEMTmodule'
@@ -1740,7 +1748,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
    InitInp%useHubLoss       = InputFileData%HubLoss
-   InitInp%useInduction     = InputFileData%WakeMod == WakeMod_BEMT
+   InitInp%useInduction     = InputFileData%WakeMod /= WakeMod_none
    InitInp%useTanInd        = InputFileData%TanInd
    InitInp%useAIDrag        = InputFileData%AIDrag        
    InitInp%useTIDrag        = InputFileData%TIDrag  
@@ -1752,6 +1760,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    call AllocAry(InitInp%AFindx,InitInp%numBladeNodes,InitInp%numBlades,'AFindx',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
    call AllocAry(InitInp%zHub,                        InitInp%numBlades,'zHub',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(InitInp%zLocal,InitInp%numBladeNodes,InitInp%numBlades,'zLocal',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
+   call AllocAry(InitInp%rLocal,InitInp%numBladeNodes,InitInp%numBlades,'rLocal',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
    call AllocAry(InitInp%zTip,                        InitInp%numBlades,'zTip',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
    
@@ -1774,6 +1783,17 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
       
       InitInp%zTip(k) = InitInp%zLocal(p%NumBlNds,k)
       
+      y_hat_disk = u_AD%HubMotion%Orientation(2,:,1)
+      z_hat_disk = u_AD%HubMotion%Orientation(3,:,1)
+      
+      do j=1,p%NumBlNds
+               ! displaced position of the jth node in the kth blade relative to the hub:
+         tmp =  u_AD%BladeMotion(k)%Position(:,j)  - u_AD%HubMotion%Position(:,1) 
+            ! local radius (normalized distance from rotor centerline)
+         tmp_sz_y = dot_product( tmp, y_hat_disk )**2
+         tmp_sz   = dot_product( tmp, z_hat_disk )**2
+         InitInp%rLocal(j,k) = sqrt( tmp_sz + tmp_sz_y )
+      end do !j=nodes   
    end do !k=blades
    
                
@@ -1784,10 +1804,17 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
      end do
   end do
    
-   InitInp%UA_Flag  = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
-   InitInp%UAMod    = InputFileData%UAMod
-   InitInp%Flookup  = InputFileData%Flookup
-   InitInp%a_s      = InputFileData%SpdSound
+   InitInp%UA_Flag    = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   InitInp%UAMod      = InputFileData%UAMod
+   InitInp%Flookup    = InputFileData%Flookup
+   InitInp%a_s        = InputFileData%SpdSound
+   
+   if (InputFileData%WakeMod == WakeMod_DBEMT) then
+      InitInp%DBEMT_Mod  = InputFileData%DBEMT_Mod
+   else
+      InitInp%DBEMT_Mod  = DBEMT_none
+   end if
+   InitInp%tau1_const = InputFileData%tau1_const
    
    if (ErrStat >= AbortErrLev) then
       call cleanup()
