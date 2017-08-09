@@ -83,7 +83,8 @@ to your installation of Spack:
 
 ::
    
-    mkdir ${SPACK_ROOT}/etc/spack/openfast ; cd ${SPACK_ROOT}/etc/spack/openfast
+    mkdir ${SPACK_ROOT}/var/spack/repos/builtin/packages/openfast
+    cd ${SPACK_ROOT}/var/spack/repos/builtin/packages/openfast
     wget --no-check-certificate https://raw.githubusercontent.com/OpenFAST/openfast/dev/share/spack/package.py
 
 Step 4
