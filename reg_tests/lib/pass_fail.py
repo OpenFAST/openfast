@@ -39,7 +39,6 @@ def passRegressionTest(norm, tolerance):
     result = True if max(norm) < tolerance else False
     return result
 
-
 def l2norm(data):
     return LA.norm(data, 2, axis=0)
 
@@ -54,6 +53,7 @@ def calculateRelativeNorm(testData, baselineData):
     for i,n in enumerate(norm_baseline):
         norms[i] = norm_diff[i] if n < 1 else norm_diff[i] / norm_baseline[i]
     return norms
+
 if __name__=="__main__":
 
     rtl.validateInputOrExit(sys.argv, 4, "{} test_solution baseline_solution tolerance".format(sys.argv[0]))
@@ -75,10 +75,7 @@ if __name__=="__main__":
     
     relativeNorm = calculateRelativeNorm(testData, baselineData)
     if passRegressionTest(relativeNorm, tolerance):
-        print('PASS')
         sys.exit(0)
     else:
         dict1, info1, pack1 = readFASTOut(testSolution)
-        # for i in range(len(info1['attribute_names'])):
-        #     print(info1['attribute_names'][i], norm[i])
         sys.exit(1)

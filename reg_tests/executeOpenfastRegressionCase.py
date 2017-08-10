@@ -155,11 +155,8 @@ if executionReturnCode != 0:
     rtl.exitWithError("")
 
 ### Build the filesystem navigation variables for running the regression test
-passFailScript = os.path.join(lib, "pass_fail.py")
 localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
-
-rtl.validateFileOrExit(passFailScript)
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 
