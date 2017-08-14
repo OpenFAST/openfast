@@ -110,8 +110,8 @@ typedef   ^        ConstraintStateType ReKi DummyConstrState - - - "A variable, 
 # at a given time, etc.)
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
-typedef   ^        OtherStateType R8Ki  acc        {:}{:} - - "Acceleration in GA2"
-typedef   ^        OtherStateType  ^    xcc        {:}{:} - - "Algorithm acceleration in GA2"
+typedef   ^        OtherStateType R8Ki  acc        {:}{:} - - "Acceleration (dqdtdt)"
+typedef   ^        OtherStateType  ^    xcc        {:}{:} - - "Algorithm acceleration in GA2: (1-alpha_m)*xcc_(n+1) = (1-alpha_f)*Acc_(n+1) + alpha_f*Acc_n - alpha_m*xcc_n"
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef   ^        OtherStateType Logical  InitAcc  -  - - "flag to determine if accerlerations have been initialized in updateStates"
@@ -194,6 +194,12 @@ typedef   ^        ParameterType ReKi           pitchC           -         - -  
 typedef   ^        ParameterType ReKi           torqM           {2}{2}     - -  "Pitch actuator matrix: (I-hA)^-1" - 
 typedef   ^        ParameterType qpParam        qp               -         - -  "Quadrature point info that does not change during simulation" -
 typedef   ^        ParameterType IntKi          qp_indx_offset   -         - -  "Offset for computing index of the quadrature arrays (gauss skips the first [end-point] node)" -
+# .... arrays for optimization ........................................................................................................
+typedef   ^        ParameterType    R8Ki        QPtw_Shp_Shp_Jac       {:}{:}{:}{:}  - - "optimization variable: QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem) = p%Shp(i,idx_qp)*p%Shp(j,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
+typedef   ^        ParameterType    ^           QPtw_Shp_ShpDer        {:}{:}{:}     - - "optimization variable: QPtw_Shp_ShpDer(idx_qp,i,j) = p%Shp(i,idx_qp)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)" -
+typedef   ^        ParameterType    ^           QPtw_ShpDer_ShpDer_Jac {:}{:}{:}{:}  - - "optimization variable: QPtw_ShpDer_ShpDer_Jac(idx_qp,i,j,nelem) = p%ShpDer(i,idx_qp)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)/p%Jacobian(idx_qp,nelem)" -
+typedef   ^        ParameterType    ^           QPtw_Shp_Jac           {:}{:}{:}     - - "optimization variable: QPtw_Shp_Jac(idx_qp,i,nelem) = p%Shp(i,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
+typedef   ^        ParameterType    ^           QPtw_ShpDer            {:}{:}        - - "optimization variable: QPtw_ShpDer(idx_qp,i) = p%ShpDer(i,idx_qp)*p%QPtWeight(idx_qp)" -
 
 # ..... Inputs
 # ....................................................................................................................
@@ -283,7 +289,8 @@ typedef   ^        MiscVarType    EqMotionQP  qp                   - - - "Quadra
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
 typedef   ^        MiscVarType    R8Ki         Nrrr         :::           - - "Rotation parameters relative to root node, from Nuuu (at GLL points)" -
-typedef   ^        MiscVarType    ^            elf          {:}{:}{:}     - - "" -
+typedef   ^        MiscVarType    ^            elf          {:}{:}        - - "" -
+typedef   ^        MiscVarType    ^            EFint        {:}{:}{:}     - - "Elastic forces internal to blade.  For output calculations only." -
 typedef   ^        MiscVarType    ^            elk          {:}{:}{:}{:}  - - "" -
 typedef   ^        MiscVarType    ^            elg          {:}{:}{:}{:}  - - "" -
 typedef   ^        MiscVarType    ^            elm          {:}{:}{:}{:}  - - "" -
@@ -293,7 +300,7 @@ typedef   ^        MiscVarType    ^            StifK        {:}{:}{:}{:}  - - "S
 typedef   ^        MiscVarType    ^            MassM        {:}{:}{:}{:}  - - "Mass Matrix" -
 typedef   ^        MiscVarType    ^            DampG        {:}{:}{:}{:}  - - "Damping Matrix" -
 typedef   ^        MiscVarType    ^            RHS          {:}{:}        - - "Right-hand-side vector" -
-typedef   ^        MiscVarType    ^            BldInternalForce   {:}{:}  - - "temporary force array used in dynamic calculations" -
+typedef   ^        MiscVarType    ^            BldInternalForceFE   {:}{:}  - - "Force/Moment array for internal force calculations at FE" -
 typedef   ^        MiscVarType    ^            Solution     {:}{:}        - - "Result from LAPACK solve (X from A*X = B solve)" -
 # arrays for lapack routines                 
 typedef   ^        MiscVarType    ^            LP_StifK     {:}{:}        - - "Stiffness Matrix" -
@@ -307,5 +314,4 @@ typedef   ^        MiscVarType    ^            LP_RHS_LU    {:}           - - "R
 typedef   ^        MiscVarType    IntKi        LP_indx      {:}           - - "Index vector for LU" -
 typedef   ^        MiscVarType    BD_InputType u             -            - - "Inputs converted to the internal BD coordinate system" -
 typedef   ^        MiscVarType    BD_InputType u2            -            - - "Inputs in the FAST coordinate system, possibly modified by pitch actuator" -
-
 

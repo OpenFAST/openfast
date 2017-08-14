@@ -68,7 +68,7 @@ PROGRAM BeamDyn_Driver_Program
    
 
    
-   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'BeamDyn Driver', 'v2.00.00', '9-May-2017' )  ! The version number of this program.
+   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'BeamDyn Driver', 'v2.00.00', '14-Aug-2017' )  ! The version number of this program.
    
 
    ! -------------------------------------------------------------------------
@@ -84,7 +84,7 @@ PROGRAM BeamDyn_Driver_Program
       ! Display the copyright notice
    CALL DispCopyrightLicense( version )   
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetNVD( version )//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   CALL WrScr( ' Running '//GetNVD( version )//' compiled on '//__DATE__//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
    
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables

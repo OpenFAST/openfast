@@ -315,7 +315,9 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
 END SUBROUTINE BD_CrvCompose
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the CRV parameters given
-!! the rotation matrix
+!! the rotation matrix.
+!! NOTE: values for the DCM passed into this routine must be accurate at least ~12 digits of precision on the diagonal for this
+!! routine to work properly. The received DMC is assumed to have all the properties of a well formed accurate DCM.
 SUBROUTINE BD_CrvExtractCrv(Rr,cc)
 
    REAL(BDKi),    INTENT(IN   ):: Rr(3,3)       !< Rotation Matrix
@@ -628,27 +630,31 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
 
       ! set positions and velocities (not accelerations)
    call Set_BldMotion_NoAcc(p, u, x, m, y)
-   
-      ! now set the accelerations:
-   
-   ! The first node on the mesh is just the root location:   
-   y%BldMotion%TranslationAcc(:,1)    = u%RootMotion%TranslationAcc(:,1)
-   y%BldMotion%RotationAcc(:,1)       = u%RootMotion%RotationAcc(:,1)
-         
-      j_start = 2 ! we'll skip the first node on the first element; otherwise we will start at the first node on the other elements
-      DO i=1,p%elem_total
-         DO j=j_start,p%nodes_per_elem
-            temp_id = (i-1)*(p%nodes_per_elem-1)+j
-            temp_id2= (i-1)*p%nodes_per_elem+j
-               
-            y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, m%RHS(1:3,temp_id) )
 
-            y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, m%RHS(4:6,temp_id) )
-         ENDDO
-         j_start = 1
-      ENDDO
+   ! Only need this bit for dynamic cases
+   IF (p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
+
+       ! now set the accelerations:
+       
+       ! The first node on the mesh is just the root location:   
+       y%BldMotion%TranslationAcc(:,1)    = u%RootMotion%TranslationAcc(:,1)
+       y%BldMotion%RotationAcc(:,1)       = u%RootMotion%RotationAcc(:,1)
+         
+          j_start = 2 ! we'll skip the first node on the first element; otherwise we will start at the first node on the other elements
+          DO i=1,p%elem_total
+             DO j=j_start,p%nodes_per_elem
+                temp_id = (i-1)*(p%nodes_per_elem-1)+j
+                temp_id2= (i-1)*p%nodes_per_elem+j
+               
+                y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, m%RHS(1:3,temp_id) )
+
+                y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, m%RHS(4:6,temp_id) )
+             ENDDO
+             j_start = 1
+          ENDDO
       
-      
+   END IF
+   
 END SUBROUTINE Set_BldMotion_Mesh
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine finds the (initial) nodal position and curvature based on a relative position, eta, along the blade.

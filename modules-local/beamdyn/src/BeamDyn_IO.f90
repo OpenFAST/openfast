@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
-! Copyright (C) 2016-2017  Envision Energy USA, LTD       
+! Copyright (C) 2016-2017  Envision Energy USA, LTD   
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ MODULE BeamDyn_IO
 
    IMPLICIT NONE
 
-   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v2.00.00','9-May-2017')
+   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v2.00.00','14-Aug-2017')
 
 
 
@@ -1559,23 +1559,21 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    !------------------------------------
 
       ! outputs on the nodes
-   do beta=1,p%NNodeOuts
+   DO beta=1,p%NNodeOuts
 
       j=p%OutNd(beta)
       j_BldMotion = p%NdIndx(j)
 
          !------------------------------------
          ! Sectional force resultants at Node 1 expressed in l, given in N
-      !FIXME:  N#Mxl & N#Myl are known to be incorrect!  See https://wind.nrel.gov/forum/wind/viewtopic.php?f=3&t=1622
-      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForce(1:3,j_BldMotion))
+      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(1:3,j))
       AllOuts( NFl( beta,1 ) ) = temp_vec(1)
       AllOuts( NFl( beta,2 ) ) = temp_vec(2)
       AllOuts( NFl( beta,3 ) ) = temp_vec(3)
       
          !------------------------------------
          ! Sectional moment resultants at Node 1 expressed in l, given in N-m
-      !FIXME:  N#Mxl & N#Myl are known to be incorrect!  See https://wind.nrel.gov/forum/wind/viewtopic.php?f=3&t=1622
-      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForce(4:6,j_BldMotion))
+      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(4:6,j))
       AllOuts( NMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NMl( beta,3 ) ) = temp_vec(3)
@@ -1585,7 +1583,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
          ! Sectional translational deflection (relative to the undeflected position) expressed in r   
       d     = y%BldMotion%TranslationDisp(:, j_BldMotion) - m%u2%RootMotion%TranslationDisp(:,1)
       d_ref = y%BldMotion%Position(       :, j_BldMotion) - m%u2%RootMotion%Position(       :,1)
-      temp_vec2 = d + d_ref - matmul( RootRelOrient, d_ref ) ! tip displacement
+      temp_vec2 = d + d_ref - MATMUL( RootRelOrient, d_ref ) ! tip displacement
       temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2)
       
       AllOuts( NTDr( beta,1 ) ) = temp_vec(1)
