@@ -4021,10 +4021,6 @@ SUBROUTINE BD_CalcIC( u, p, x)
    REAL(BDKi)                                 :: temp3(3)
    REAL(BDKi)                                 :: temp_p0(3)
    REAL(BDKi)                                 :: temp_rv(3)
-   REAL(BDKi)                                 :: temp_R(3,3)
-   REAL(BDKi)                                 :: GlbRot_TransVel(3)           ! = MATMUL(p%GlbRot,u%RootMotion%TranslationVel(:,1))
-   REAL(BDKi)                                 :: GlbRot_RotVel_tilde(3,3)     ! = SkewSymMat(MATMUL(p%GlbRot,u%RootMotion%RotationVel(:,1)))
-   REAL(BDKi)                                 :: temp33(3,3)
    CHARACTER(*), PARAMETER                    :: RoutineName = 'BD_CalcIC'
 
 
@@ -4070,10 +4066,12 @@ SUBROUTINE BD_CalcIC( u, p, x)
       temp_id = p%node_elem_idx(i,1)-1      ! Node just before the start of this element
       DO j=k,p%nodes_per_elem
 
-         temp3 = p%uuN0(1:3,j,i) + x%q(1:3,temp_id+j)
-         temp3 = u%RootMotion%TranslationVel(:,1) + cross_product(u%RootMotion%RotationVel(:,1),temp3)
+            ! Find distance vector from root
+         temp3 = (p%uuN0(1:3,j,i) + x%q(1:3,temp_id+j)) - (p%uuN0(1:3,1,1) + x%q(1:3,1))
+            ! Calculate translational velocity of tip relative to root, and add it to the root translational velocity
+         x%dqdt(1:3,temp_id+j) = u%RootMotion%TranslationVel(:,1) + cross_product(u%RootMotion%RotationVel(:,1),temp3)
 
-         x%dqdt(1:3,temp_id+j) = temp3
+            ! Rotational velocity is the same as the root rotational velocity
          x%dqdt(4:6,temp_id+j) = u%RootMotion%RotationVel(1:3,1)
       ENDDO
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
