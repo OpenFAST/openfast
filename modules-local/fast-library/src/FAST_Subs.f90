@@ -1305,6 +1305,43 @@ FUNCTION GetVersion(ThisProgVer)
 
    RETURN
 END FUNCTION GetVersion
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine parses and compiles the relevant version and compile data for a givne program
+subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision, compile_date, compile_time)
+
+   TYPE(ProgDesc), INTENT(IN ) :: ThisProgVer     !< program name/date/version description
+   character(200), intent(out) :: name
+   character(200), intent(out) :: version
+   character(200), intent(out) :: git_commit
+   character(200), intent(out) :: architecture
+   character(200), intent(out) :: precision
+   character(200), intent(out) :: compile_date
+   character(200), intent(out) :: compile_time
+   character(200)  :: zone
+   
+   name = trim(ThisProgVer%Name)
+   version = trim(ThisProgVer%Ver)
+   
+   #ifdef GIT_COMMIT_HASH
+   git_commit = GIT_COMMIT_HASH
+   #endif
+   
+   architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
+   
+   if (ReKi == SiKi) then
+     precision = 'single'
+   else if (ReKi == R8Ki) then
+     precision = 'double'
+   else
+     precision = 'unknown'
+   end if
+   
+   call date_and_time(compile_date, compile_time, zone) 
+   compile_time = trim(compile_time)//trim(zone)
+   
+end subroutine GetProgramMetadata
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine is called at the start (or restart) of a FAST program (or FAST.Farm). It initializes the NWTC subroutine library,
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
