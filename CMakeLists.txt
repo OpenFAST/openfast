@@ -22,6 +22,25 @@ include(${CMAKE_SOURCE_DIR}/cmake/FastFortranOptions.cmake)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+# Get the git info into the executable
+# # working branch
+# execute_process(
+#   COMMAND git rev-parse --abbrev-ref HEAD
+#   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+#   OUTPUT_VARIABLE GIT_BRANCH
+#   OUTPUT_STRIP_TRAILING_WHITESPACE
+# )
+# add_definitions(-DGIT_BRANCH="${GIT_BRANCH}")
+
+# commit hash
+execute_process(
+  COMMAND git log -1 --format=%h
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE GIT_COMMIT_HASH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+add_definitions(-DGIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
+
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
