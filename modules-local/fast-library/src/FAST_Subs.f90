@@ -1270,6 +1270,7 @@ CONTAINS
    END SUBROUTINE Cleanup
 
 END SUBROUTINE FAST_InitializeAll
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This function returns a string describing the glue code and some of the compilation options we're using.
 FUNCTION GetVersion(ThisProgVer)
@@ -1302,6 +1303,8 @@ FUNCTION GetVersion(ThisProgVer)
 !   GetVersion = TRIM(GetVersion)//' precision with '//OS_Desc
    GetVersion = TRIM(GetVersion)//' precision'
 
+   ! add git info
+   GetVersion = TRIM(GetVersion)//' at commit '//GIT_COMMIT_HASH//' on branch '//GIT_BRANCH
 
    RETURN
 END FUNCTION GetVersion
@@ -1343,22 +1346,52 @@ subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architectu
 end subroutine GetProgramMetadata
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine is called at the start (or restart) of a FAST program (or FAST.Farm). It initializes the NWTC subroutine library,
+!> This subroutine is called at the start (or restart) of a FAST program. It initializes the NWTC subroutine library,
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
 SUBROUTINE FAST_ProgStart(ThisProgVer)
-   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
-
+   TYPE(ProgDesc), INTENT(IN) :: ThisProgVer     !< program name/date/version description
+   character(200) :: name
+   character(200) :: version
+   character(200) :: date
+   character(200) :: git_commit
+   character(200) :: architecture
+   character(200) :: precision
+   character(200) :: compile_date
+   character(200) :: compile_time
+   character(200) :: execution_date
+   character(200) :: execution_time
+   character(200) :: execution_zone
    
-      ! ... Initialize NWTC Library (open console, set pi constants) ...
-   CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
+   ! ... Initialize NWTC Library (open console, set pi constants) ...
+   ! sets the pi constants, open console for output, etc...
+   CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )
    
-      ! Display the copyright notice
+   ! Display the copyright notice
    CALL DispCopyrightLicense( ThisProgVer )
+   
+   ! Display the program metadata
+   call GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision, compile_date, compile_time)
+   
+   call wrscr(trim(name)//' '//trim(version)//'-'//trim(git_commit))
+   call wrscr('Compile Info:')
+  !  call wrscr(' - Date: '//trim(compile_date(5:6)//'/'//compile_date(7:8)//'/'//compile_date(1:4)))
+  !  call wrscr(' - Time: '//trim(compile_time(1:2)//':'//compile_time(3:4)//':'//compile_time(5:)))
+   call wrscr(' - Architecture: '//trim(architecture))
+   call wrscr(' - Precision: '//trim(precision))
+   ! call wrscr(' - Compiler: '//trim(compiler_version()))
+   ! call wrscr(' - Options: '//trim(compiler_options()))
+   ! use iso_fortran_env for compiler_version() and compiler_options()
 
-      ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   call date_and_time(execution_date, execution_time, execution_zone) 
+   execution_time = trim(execution_time)//trim(execution_zone)
+   call wrscr('Execution Info:')
+   call wrscr(' - Date: '//trim(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
+   call wrscr(' - Time: '//trim(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:)))
+   
+  !  CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
    
 END SUBROUTINE FAST_ProgStart
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine gets the name of the FAST input file from the command line. It also returns a logical indicating if this there
 !! was a "DWM" argument after the file name.
@@ -1381,7 +1414,6 @@ SUBROUTINE GetInputFileName(InputFile,UseDWM,ErrStat,ErrMsg)
    IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
       ErrStat = ErrID_Fatal
       ErrMsg  = 'The required input file was not specified on the command line.'
-
          !bjj:  if people have compiled themselves, they should be able to figure out the file name, right?         
       IF (BITS_IN_ADDR==32) THEN
          CALL NWTC_DisplaySyntax( InputFile, 'FAST_Win32.exe' )
