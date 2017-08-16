@@ -49,16 +49,17 @@ def ignoreBaselineItems(directory, contents):
 pythonCommand = sys.executable
 
 ### Verify input arguments
-parser = argparse.ArgumentParser(description='Executes OpenFAST and a regression test for a single test case.')
-parser.add_argument('caseName', metavar='Case-Name', type=str, nargs=1, help='The name of the test case.')
-parser.add_argument('executable', metavar='OpenFAST', type=str, nargs=1, help='The path to the OpenFAST executable.')
-parser.add_argument('sourceDirectory', metavar='path/to/openfast_repo', type=str, nargs=1, help='The path to the OpenFAST repository.')
-parser.add_argument('buildDirectory', metavar='path/to/openfast_repo/build', type=str, nargs=1, help='The path to the OpenFAST repository build directory.')
-parser.add_argument('tolerance', metavar='Test-Tolerance', type=float, nargs=1, help='Tolerance defining pass or failure in the regression test.')
-parser.add_argument('systemName', metavar='System-Name', type=str, nargs=1, help='The current system\'s name: [Darwin,Linux,Windows]')
-parser.add_argument('compilerId', metavar='Compiler-Id', type=str, nargs=1, help='The compiler\'s id: [Intel,GNU]')
-parser.add_argument('-plot', '-p', dest="plotError", default=False, metavar='Plotting-Flag', type=bool, nargs="?", help='')
-parser.add_argument("-verbose", "-v", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
+parser = argparse.ArgumentParser(description="Executes OpenFAST and a regression test for a single test case.")
+parser.add_argument("caseName", metavar="Case-Name", type=str, nargs=1, help="The name of the test case.")
+parser.add_argument("executable", metavar="OpenFAST", type=str, nargs=1, help="The path to the OpenFAST executable.")
+parser.add_argument("sourceDirectory", metavar="path/to/openfast_repo", type=str, nargs=1, help="The path to the OpenFAST repository.")
+parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", type=str, nargs=1, help="The path to the OpenFAST repository build directory.")
+parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
+parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
+parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
+parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
+parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
 
 args = parser.parse_args()
 
@@ -69,7 +70,8 @@ buildDirectory = args.buildDirectory[0]
 tolerance = args.tolerance[0]
 systemName = args.systemName[0]
 compilerId = args.compilerId[0]
-plotError = args.plotError if args.plotError is False else True
+plotError = args.plot if args.plot is False else True
+noExec = args.noExec if args.noExec is False else True
 verbose = args.verbose if args.verbose is False else True
 
 # validate inputs
@@ -143,13 +145,16 @@ else:
 if not os.path.isdir(testBuildDirectory):
     shutil.copytree(inputsDirectory, testBuildDirectory, ignore=ignoreBaselineItems)
 
-### Run openfast on the test case
-caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
-executionScript = os.path.join(lib, "executeOpenfastCase.py")
-executionCommand = " ".join([pythonCommand, executionScript, caseInputFile, executable])
-print("'{}' - running".format(executionCommand), flush=True)
-executionReturnCode = subprocess.call(executionCommand, shell=True)
-print("'{}' - finished with exit code {}".format(executionCommand, executionReturnCode), flush=True)
+if noExec:
+    executionReturnCode = 0
+else:
+    ### Run openfast on the test case
+    caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
+    executionScript = os.path.join(lib, "executeOpenfastCase.py")
+    executionCommand = " ".join([pythonCommand, executionScript, caseInputFile, executable])
+    print("'{}' - running".format(executionCommand), flush=True)
+    executionReturnCode = subprocess.call(executionCommand, shell=True)
+    print("'{}' - finished with exit code {}".format(executionCommand, executionReturnCode), flush=True)
 
 if executionReturnCode != 0:
     rtl.exitWithError("")

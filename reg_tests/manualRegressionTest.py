@@ -39,8 +39,9 @@ parser.add_argument("executable", metavar="OpenFAST", type=str, nargs=1, help="p
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="current system's name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="compiler's id: [Intel,GNU]")
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="tolerance defining pass or failure in the regression test")
-parser.add_argument("-plot", "-p", dest="plotError", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
-parser.add_argument("-verbose", "-v", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
+parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
+parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
 parser.add_argument("-case", dest="case", default="", metavar="Case-Name", type=str, nargs="?", help="single case name to execute")
 
 args = parser.parse_args()
@@ -50,8 +51,10 @@ buildDirectory = os.path.join("..", "build", "reg_tests", "glue-codes", "fast")
 machine = args.systemName[0]
 compiler = args.compilerId[0]
 tolerance = args.tolerance[0]
-plotError = args.plotError if args.plotError is False else True
+plotError = args.plot if args.plot is False else True
 plotFlag = "-p" if plotError else ""
+noExec = args.noExec if args.noExec is False else True
+noExecFlag = "-n" if noExec else ""
 verbose = args.verbose if args.verbose is False else True
 case = args.case
 
@@ -70,7 +73,7 @@ prefix, passString, failString = "executing", "[PASS]", "[FAIL]"
 longestName = max(casenames, key=len)
 for case in casenames:
     print(strFormat(prefix).format(prefix), strFormat(longestName).format(case), end="", flush=True)
-    command = "{} executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag)
+    command = "{} executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
     returnCode = subprocess.call(command, stdout=outstd, shell=True)
     resultString = passString if returnCode == 0 else failString
     results.append((strFormat(longestName).format(case), resultString))    
