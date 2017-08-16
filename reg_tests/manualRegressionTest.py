@@ -69,7 +69,7 @@ results = []
 prefix, passString, failString = "executing", "[PASS]", "[FAIL]"
 longestName = max(casenames, key=len)
 for case in casenames:
-    print(strFormat(prefix).format(prefix), strFormat(longestName).format(case), end="\n", flush=True)
+    print(strFormat(prefix).format(prefix), strFormat(longestName).format(case), end="", flush=True)
     command = "{} executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag)
     returnCode = subprocess.call(command, stdout=outstd, shell=True)
     resultString = passString if returnCode == 0 else failString
