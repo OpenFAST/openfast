@@ -106,8 +106,8 @@ baselineOutFile = os.path.join(targetOutputDirectory, "bd_driver.out")
 rtl.validateFileOrExit(localOutFile)
 rtl.validateFileOrExit(baselineOutFile)
 
-testData, testInfo = pass_fail.readFASTOut(localOutFile)
-baselineData, baselineInfo = pass_fail.readFASTOut(baselineOutFile)
+testData, testInfo, _ = pass_fail.readFASTOut(localOutFile)
+baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
 
 norm = pass_fail.calculateRelativeNorm(testData, baselineData)
 

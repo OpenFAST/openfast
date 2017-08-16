@@ -53,7 +53,7 @@ def load_output(filename):
                 print(f.readline())
             except UnicodeDecodeError:
                 return load_binary_output(filename)
-    return load_ascii_output(filename)
+    return load_ascii_output(filename) + (np.ones(1),)
 
 def load_ascii_output(filename):
     with open(filename) as f:
