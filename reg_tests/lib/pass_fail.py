@@ -36,9 +36,11 @@ def readFASTOut(fastoutput):
         rtl.exitWithError("Error: {}".format(e))
 
 def passRegressionTest(norm, tolerance):
-    result = True if max(norm) < tolerance else False
-    return result
+    return True if max(norm) < tolerance else False
 
+def maxnorm(data):
+    return LA.norm(data, np.inf, axis=0)
+    
 def l2norm(data):
     return LA.norm(data, 2, axis=0)
 
@@ -54,6 +56,14 @@ def calculateRelativeNorm(testData, baselineData):
         norms[i] = norm_diff[i] if n < 1 else norm_diff[i] / norm_baseline[i]
     return norms
 
+def calculateMaxNorm(testData, baselineData):
+    return maxnorm(abs(testData - baselineData))
+    
+def calculateNorms(testData, baselineData):
+    relativeNorm = calculateRelativeNorm(testData, baselineData)
+    maxNorm = calculateMaxNorm(testData, baselineData)
+    return relativeNorm, maxNorm
+    
 if __name__=="__main__":
 
     rtl.validateInputOrExit(sys.argv, 4, "{} test_solution baseline_solution tolerance".format(sys.argv[0]))

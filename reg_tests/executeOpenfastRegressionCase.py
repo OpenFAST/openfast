@@ -168,15 +168,17 @@ rtl.validateFileOrExit(baselineOutFile)
 testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
 
-norm = pass_fail.calculateRelativeNorm(testData, baselineData)
+relativeNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData)
 
 # failing case
-if not pass_fail.passRegressionTest(norm, tolerance):
+if not pass_fail.passRegressionTest(relativeNorm, tolerance):
     if plotError:
         from errorPlotting import initializePlotDirectory, plotOpenfastError
-        failingChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if norm[i] > tolerance]
-        initializePlotDirectory(localOutFile, failingChannels)
-        for channel in failingChannels:
+        failChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if relativeNorm[i] > tolerance]
+        failRelNorm = [relativeNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if relativeNorm[i] > tolerance]
+        failMaxNorm = [maxNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if relativeNorm[i] > tolerance]
+        initializePlotDirectory(localOutFile, failChannels, failRelNorm, failMaxNorm)
+        for channel in failChannels:
             plotOpenfastError(localOutFile, baselineOutFile, channel)
     sys.exit(1)
 
