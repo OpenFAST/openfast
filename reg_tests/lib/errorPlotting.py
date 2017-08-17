@@ -36,7 +36,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 import rtestlib as rtl
 
-def validateAndExpandInputs(argv):
+def _validateAndExpandInputs(argv):
     rtl.validateInputOrExit(argv, 3, "solution1 solution2 attribute")
     testSolution = argv[0]
     baselineSolution = argv[1]
@@ -45,14 +45,14 @@ def validateAndExpandInputs(argv):
     rtl.validateFileOrExit(baselineSolution)
     return (testSolution, baselineSolution, attribute)
 
-def parseSolution(solution):
+def _parseSolution(solution):
     try:
         data, info, _ = load_output(solution)
         return (data, info)
     except Exception as e:
         rtl.exitWithError("Error: {}".format(e))
 
-def plotError(xseries, y1series, y2series, xlabel, title1, title2):
+def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     plt.figure()
     
     ax = plt.subplot(211)
@@ -73,13 +73,13 @@ def plotError(xseries, y1series, y2series, xlabel, title1, title2):
     
     return plt
 
-def savePlot(plt, path, foutname):
+def _savePlot(plt, path, foutname):
     plt.savefig(os.path.join(path, foutname+".png"))
 
 def plotOpenfastError(testSolution, baselineSolution, attribute):
-    testSolution, baselineSolution, attribute = validateAndExpandInputs([testSolution, baselineSolution, attribute])
-    dict1, info1 = parseSolution(testSolution)
-    dict2, info2 = parseSolution(baselineSolution)
+    testSolution, baselineSolution, attribute = _validateAndExpandInputs([testSolution, baselineSolution, attribute])
+    dict1, info1 = _parseSolution(testSolution)
+    dict2, info2 = _parseSolution(baselineSolution)
 
     try:
         channel = info1['attribute_names'].index(attribute)
@@ -93,12 +93,12 @@ def plotOpenfastError(testSolution, baselineSolution, attribute):
     timevec = dict1[:, 0]
     y1series = np.array(dict1[:, channel], dtype = np.float)
     y2series = np.array(dict2[:, channel], dtype = np.float)
-    plt = plotError(timevec, y1series, y2series, xlabel, title1, title2)
+    plt = _plotError(timevec, y1series, y2series, xlabel, title1, title2)
 
     basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
     plotPath = os.path.join(basePath, "plots")
     rtl.validateDirOrMkdir(plotPath)
-    savePlot(plt, plotPath, attribute)
+    _savePlot(plt, plotPath, attribute)
     
     plt.close()
     
