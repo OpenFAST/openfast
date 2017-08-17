@@ -33,6 +33,7 @@ from fast_io import load_output
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 import rtestlib as rtl
 
 def validateAndExpandInputs(argv):
@@ -51,21 +52,25 @@ def parseSolution(solution):
     except Exception as e:
         rtl.exitWithError("Error: {}".format(e))
 
-def plotError(xseries, y1series, y2series, title, xlabel, y1label, y2label):
-    diff = y1series - y2series
+def plotError(xseries, y1series, y2series, xlabel, title1, title2):
     plt.figure()
-    plt.subplot(211)
-    plt.title(title)
+    
+    ax = plt.subplot(211)
+    plt.title(title1)
     plt.grid(True)
-    plt.ylabel(y1label)
     plt.plot(xseries, y1series, "g", linestyle="solid", linewidth=3, label = "Baseline")
     plt.plot(xseries, y2series, "r", linestyle="solid", linewidth=1, label = "Local")
     plt.legend()
-    plt.subplot(212)
+    
+    ax = plt.subplot(212)
+    plt.title(title2)
     plt.grid(True)
-    plt.plot(xseries, diff)
-    plt.ylabel(y2label)
+    plt.plot(xseries, y1series - y2series)
     plt.xlabel(xlabel)
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1e'))
+    
+    plt.tight_layout()
+    
     return plt
 
 def savePlot(plt, path, foutname):
