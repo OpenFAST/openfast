@@ -86,15 +86,14 @@ def plotOpenfastError(testSolution, baselineSolution, attribute):
     except Exception as e:
         rtl.exitWithError("Error: Invalid channel name--{}".format(e))
 
-    title = attribute + " (" + info1["attribute_units"][channel] + ")"
+    title1 = attribute + " (" + info1["attribute_units"][channel] + ")"
+    title2 = "Baseline - Local"
     xlabel = 'Time (s)'
-    y1label = attribute
-    y2label = "Baseline - Local"
 
     timevec = dict1[:, 0]
     y1series = np.array(dict1[:, channel], dtype = np.float)
     y2series = np.array(dict2[:, channel], dtype = np.float)
-    plt = plotError(timevec, y1series, y2series, title, xlabel, y1label, y2label)
+    plt = plotError(timevec, y1series, y2series, xlabel, title1, title2)
 
     basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
     plotPath = os.path.join(basePath, "plots")
@@ -103,7 +102,7 @@ def plotOpenfastError(testSolution, baselineSolution, attribute):
     
     plt.close()
     
-def initializePlotDirectory(testSolution, plotList):
+def initializePlotDirectory(testSolution, plotList, relativeNorm, maxNorm):
     basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
     plotPath = os.path.join(basePath, "plots")
     caseName = basePath.split(os.path.sep)[-1]
@@ -120,9 +119,29 @@ def initializePlotDirectory(testSolution, plotList):
         plotshtml.write('<body>' + "\n")
         plotshtml.write('  <h2 class="text-center">{}</h2>'.format(caseName) + "\n")
         plotshtml.write('  <div class="container">' + "\n")
+        plotshtml.write('    <table class="table table-bordered table-hover table-sm" style="margin: auto; width: 50%">' + "\n")
+        plotshtml.write('      <thead>' + "\n")
+        plotshtml.write('        <tr>' + "\n")
+        plotshtml.write('          <th>#</th>' + "\n")
+        plotshtml.write('          <th>Channel</th>' + "\n")
+        plotshtml.write('          <th>Relative Norm</th>' + "\n")
+        plotshtml.write('          <th>Max Norm</th>' + "\n")
+        plotshtml.write('        </tr>' + "\n")
+        plotshtml.write('      </thead>' + "\n")
+        plotshtml.write('      <tbody>' + "\n")
+        for i,plot in enumerate(plotList):
+            plotshtml.write('        <tr>' + "\n")
+            plotshtml.write('          <th scope="row">{}</th>'.format(i) + "\n")
+            plotshtml.write('          <td><a href="#{}">{}</a></td>'.format(plot, plot) + "\n")
+            plotshtml.write('          <td>{0:0.4e}</td>'.format(relativeNorm[i]) + "\n")
+            plotshtml.write('          <td>{0:0.4e}</td>'.format(maxNorm[i]) + "\n")
+            plotshtml.write('        </tr>' + "\n")
+        plotshtml.write('      </tbody>' + "\n")
+        plotshtml.write('    </table>' + "\n")
+        plotshtml.write('    <br>' + "\n")
         plotshtml.write('    <div class="row">' + "\n")
         for i,plot in enumerate(plotList):
-            plotshtml.write('      <div class="col-sm-12 col-md-6 col-lg-6">' + "\n")
+            plotshtml.write('      <div id={} class="col-sm-12 col-md-6 col-lg-6">'.format(plot) + "\n")
             plotshtml.write('        <img src="{}" class="center-block img-responsive thumbnail">'.format(plot+".png") + "\n")
             plotshtml.write('      </div>' + "\n")
         plotshtml.write('    </div>' + "\n")
