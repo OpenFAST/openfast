@@ -46,8 +46,9 @@ parser.add_argument('executable', metavar='BeamDyn-Driver', type=str, nargs=1, h
 parser.add_argument('sourceDirectory', metavar='path/to/openfast_repo', type=str, nargs=1, help='The path to the OpenFAST repository.')
 parser.add_argument('buildDirectory', metavar='path/to/openfast_repo/build', type=str, nargs=1, help='The path to the OpenFAST repository build directory.')
 parser.add_argument('tolerance', metavar='Test-Tolerance', type=float, nargs=1, help='Tolerance defining pass or failure in the regression test.')
-parser.add_argument('-plot', '-p', dest="plotError", default=False, metavar='Plotting-Flag', type=bool, nargs="?", help='')
-parser.add_argument("-verbose", "-v", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
+parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
+parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
 
 args = parser.parse_args()
 
@@ -56,7 +57,8 @@ executable = args.executable[0]
 sourceDirectory = args.sourceDirectory[0]
 buildDirectory = args.buildDirectory[0]
 tolerance = args.tolerance[0]
-plotError = args.plotError if args.plotError is False else True
+plotError = args.plot if args.plot is False else True
+noExec = args.noExec if args.noExec is False else True
 verbose = args.verbose if args.verbose is False else True
 
 # validate inputs
