@@ -33,13 +33,19 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 # add_definitions(-DGIT_BRANCH="${GIT_BRANCH}")
 
 # commit hash
-execute_process(
-  COMMAND git log -1 --format=%h
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_COMMIT_HASH
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-add_definitions(-DGIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
+# execute_process(
+#   COMMAND git log -1 --format=%h
+#   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+#   OUTPUT_VARIABLE GIT_COMMIT_HASH
+#   OUTPUT_STRIP_TRAILING_WHITESPACE
+# )
+# add_definitions(-DGIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+include(GetGitRevisionDescription)
+get_git_head_revision(GIT_REFSPEC GIT_SHA1)
+message("------ ${GIT_SHA1}")
+add_definitions(-DGIT_COMMIT_HASH="${GIT_SHA1}")
 
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)
