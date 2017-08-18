@@ -126,7 +126,7 @@ END SUBROUTINE Spec_IECVKM
 !! The use of this subroutine requires that all variables have the units of meters and seconds.
 !! See A.7.4 (Page 41) of API 2MET/ISO 19901-1:2005(E).
 !! See https://rules.dnvgl.com/docs/pdf/DNV/codes/docs/2010-10/RP-C205.pdf (page 20 of 124), describing the
-!! Fr�ya model spectral density proposed by Andersen and L�vseth (1992, 2006) for wind over water.
+!! Froya model spectral density proposed by Andersen and Lovseth (1992, 2006) for wind over water.
 SUBROUTINE Spec_API ( p, Ht, Spec )
 
    ! NOTE: This routine uses the Kaimal model to create the spectrum for all three components
