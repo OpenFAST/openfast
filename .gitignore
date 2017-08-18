@@ -39,6 +39,7 @@
 *.sln
 *.u2d
 BuildLog.htm
+*VisualStudio*
 
 # Executables
 *.exe
