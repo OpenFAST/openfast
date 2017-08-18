@@ -126,7 +126,7 @@ END SUBROUTINE Spec_IECVKM
 !! The use of this subroutine requires that all variables have the units of meters and seconds.
 !! See A.7.4 (Page 41) of API 2MET/ISO 19901-1:2005(E).
 !! See https://rules.dnvgl.com/docs/pdf/DNV/codes/docs/2010-10/RP-C205.pdf (page 20 of 124), describing the
-!! Frøya model spectral density proposed by Andersen and Løvseth (1992, 2006) for wind over water.
+!! Frï¿½ya model spectral density proposed by Andersen and Lï¿½vseth (1992, 2006) for wind over water.
 SUBROUTINE Spec_API ( p, Ht, Spec )
 
    ! NOTE: This routine uses the Kaimal model to create the spectrum for all three components
@@ -176,8 +176,8 @@ CALL Spec_IECKAI ( p%UHub, p%IEC%SigmaIEC, p%IEC%IntegralScale, p%grid%Freq, p%g
 
    ! Compute some parameters that are independent of frequency.
 
-Scale1 = 172.0*( Ht/Ref_Ht )**(2.0/3.0) * ( p%met%URef/Ref_WS )*(-0.75)
-Scale2 = 320.0*( p%met%URef/Ref_WS )**2 * ( Ht/Ref_Ht )**0.45  
+Scale1 = 172.0*( Ht/Ref_Ht )**(2.0/3.0) * ( p%met%URef/Ref_WS )**(-0.75)
+Scale2 = 320.0*( p%met%URef/Ref_WS )**2 * ( Ht/Ref_Ht )**0.45
 
 DO I=1,p%grid%NumFreq
 
