@@ -102,51 +102,118 @@ def plotOpenfastError(testSolution, baselineSolution, attribute):
     
     plt.close()
     
+def _htmlHead(title):
+    head  = '<!DOCTYPE html>' + '\n'
+    head += '<html>' + '\n'
+    head += '<head>' + '\n'
+    head += '  <title>{}</title>'.format(title) + '\n'
+    head += '  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">' + '\n'
+    head += '  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>' + '\n'
+    head += '  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>' + '\n'
+    head += '</head>' + '\n'
+    return head
+
+def _htmlTail():
+    tail = '</html>' + '\n'
+    return tail
+
+def _tableHead(columns):
+    head  = '      <thead>' + '\n'
+    head += '        <tr>' + '\n'
+    head += '          <th>#</th>' + '\n'
+    for column in columns:
+        head += '          <th>{}</th>'.format(column) + '\n'
+    head += '        </tr>' + '\n'
+    head += '      </thead>' + '\n'
+    return head
+
+def _tableBody(data):
+    body = '      <tbody>' + '\n'
+    for i, d in enumerate(data):
+        
+        body += '        <tr>' + '\n'
+        body += '          <th scope="row">{}</th>'.format(i+1) + '\n'
+        body += '          <td>{0:s}</td>'.format(d[0]) + '\n'
+        for j in range(1,len(d)):
+            fmt = "{0:0.4e}" if type(d[j]) is np.float64 else '{0:s}'
+            body += ('          <td>' + fmt + '</td>').format(d[j]) + '\n'
+        
+        body += '        </tr>' + '\n'
+    body += '      </tbody>' + '\n'
+    return body
+    
+def _table(columns, data):
+    table  = '    <table class="table table-bordered table-hover table-sm" style="margin: auto; width: 50%">' + '\n'
+    table += _tableHead(columns)
+    table += _tableBody(data)
+    table += '    </table>' + '\n'
+    return table
+    
 def initializePlotDirectory(testSolution, plotList, relativeNorm, maxNorm):
     basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
     plotPath = os.path.join(basePath, "plots")
     caseName = basePath.split(os.path.sep)[-1]
     rtl.validateDirOrMkdir(plotPath)
-    with open(os.path.join(plotPath, "plots.html"), "w") as plotshtml:
-        plotshtml.write('<!DOCTYPE html>' + "\n")
-        plotshtml.write('<html>' + "\n")
-        plotshtml.write('<head>' + "\n")
-        plotshtml.write('  <title>{}</title>'.format(caseName) + "\n")
-        plotshtml.write('  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">' + "\n")
-        plotshtml.write('  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>' + "\n")
-        plotshtml.write('  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>' + "\n")
-        plotshtml.write('</head>' + "\n")
-        plotshtml.write('<body>' + "\n")
-        plotshtml.write('  <h2 class="text-center">{}</h2>'.format(caseName) + "\n")
-        plotshtml.write('  <div class="container">' + "\n")
-        plotshtml.write('    <table class="table table-bordered table-hover table-sm" style="margin: auto; width: 50%">' + "\n")
-        plotshtml.write('      <thead>' + "\n")
-        plotshtml.write('        <tr>' + "\n")
-        plotshtml.write('          <th>#</th>' + "\n")
-        plotshtml.write('          <th>Channel</th>' + "\n")
-        plotshtml.write('          <th>Relative Norm</th>' + "\n")
-        plotshtml.write('          <th>Max Norm</th>' + "\n")
-        plotshtml.write('        </tr>' + "\n")
-        plotshtml.write('      </thead>' + "\n")
-        plotshtml.write('      <tbody>' + "\n")
+    
+    with open(os.path.join(plotPath, "plots.html"), "w") as html:
+        
+        html.write( _htmlHead(caseName) )
+        
+        html.write('<body>' + '\n')
+        html.write('  <h2 class="text-center">{}</h2>'.format(caseName) + '\n')
+        html.write('  <div class="container">' + '\n')
+    
+        # column 1 - column 2 - column 3
+        data = [('<a href="#{0}">{0}</a>'.format(plot), relativeNorm[i], maxNorm[i]) for i,plot in enumerate(plotList)]    
+        html.write( _table(['Channel', 'Relative Norm', 'Infinity Norm'], data) )
+        
+        html.write('    <br>' + '\n')
+        html.write('    <div class="row">' + '\n')
         for i,plot in enumerate(plotList):
-            plotshtml.write('        <tr>' + "\n")
-            plotshtml.write('          <th scope="row">{}</th>'.format(i) + "\n")
-            plotshtml.write('          <td><a href="#{}">{}</a></td>'.format(plot, plot) + "\n")
-            plotshtml.write('          <td>{0:0.4e}</td>'.format(relativeNorm[i]) + "\n")
-            plotshtml.write('          <td>{0:0.4e}</td>'.format(maxNorm[i]) + "\n")
-            plotshtml.write('        </tr>' + "\n")
-        plotshtml.write('      </tbody>' + "\n")
-        plotshtml.write('    </table>' + "\n")
-        plotshtml.write('    <br>' + "\n")
-        plotshtml.write('    <div class="row">' + "\n")
-        for i,plot in enumerate(plotList):
-            plotshtml.write('      <div id={} class="col-sm-12 col-md-6 col-lg-6">'.format(plot) + "\n")
-            plotshtml.write('        <img src="{}" class="center-block img-responsive thumbnail">'.format(plot+".png") + "\n")
-            plotshtml.write('      </div>' + "\n")
-        plotshtml.write('    </div>' + "\n")
-        plotshtml.write('  </div>' + "\n")
-        plotshtml.write('</body>' + "\n")
-        plotshtml.write('</html>' + "\n")
-
-    plotshtml.close()
+            html.write('      <div id={} class="col-sm-12 col-md-6 col-lg-6">'.format(plot) + '\n')
+            html.write('        <img src="{}" class="center-block img-responsive thumbnail">'.format(plot+".png") + '\n')
+            html.write('      </div>' + '\n')
+        html.write('    </div>' + '\n')
+        html.write('  </div>' + '\n')
+        html.write('</body>' + '\n')
+        html.write( _htmlTail() )
+    html.close()
+    
+def exportResultsSummary(path, results):
+    with open(os.path.join(path, "regression_test_summary.html"), "w") as html:
+        
+        html.write( _htmlHead("Regression Test Summary") )
+        
+        html.write('<body>' + '\n')
+        html.write('  <h2 class="text-center">{}</h2>'.format("Regression Test Summary") + '\n')
+        html.write('  <div class="container">' + '\n')
+        
+        # Test Case - Pass/Fail - Max Relative Norm
+        data = [('<a href="{0}/{0}.html">{0}</a>'.format(r[0]), r[1]) for i,r in enumerate(results)]
+        html.write( _table(['Test Case', 'Pass/Fail'], data) )
+            
+        html.write('    <br>' + '\n')
+        html.write('  </div>' + '\n')
+        html.write('</body>' + '\n')
+        html.write( _htmlTail() )
+    html.close()
+    
+def exportCaseSummary(path, case, results):
+    with open(os.path.join(path, case+".html"), "w") as html:
+        
+        html.write( _htmlHead(case + " Summary") )
+        
+        html.write('<body>' + '\n')
+        html.write('  <h2 class="text-center">{}</h2>'.format(case + " Summary") + '\n')
+        html.write('  <h4 class="text-center"><a href="plots/plots.html">Go To Plots</a></h2>' + '\n')
+        html.write('  <div class="container">' + '\n')
+        
+        # Channel - Relative Norm - Max Norm
+        data = [(r[0], r[1], r[2]) for i,r in enumerate(results)]
+        html.write( _table(['Channel', 'Relative Norm', 'Infinity Norm'], data) )
+        
+        html.write('    <br>' + '\n')
+        html.write('  </div>' + '\n')
+        html.write('</body>' + '\n')
+        html.write( _htmlTail() )
+    html.close()
