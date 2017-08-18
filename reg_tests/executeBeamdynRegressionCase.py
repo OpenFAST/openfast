@@ -32,6 +32,7 @@ import argparse
 import shutil
 import subprocess
 import rtestlib as rtl
+import openfastDrivers
 import pass_fail
 
 ##### Main program
@@ -91,17 +92,15 @@ if not os.path.isdir(testBuildDirectory):
     shutil.copy(os.path.join(inputsDirectory,"bd_driver.inp"), os.path.join(testBuildDirectory,"bd_driver.inp"))
     shutil.copy(os.path.join(inputsDirectory,"bd_primary.inp"), os.path.join(testBuildDirectory,"bd_primary.inp"))
     shutil.copy(os.path.join(inputsDirectory,"beam_props.inp"), os.path.join(testBuildDirectory,"beam_props.inp"))
-
+    
 ### Run beamdyn on the test case
-executionScript = os.path.join(lib, "executeBeamdynCase.py")
-executionCommand = " ".join([pythonCommand, executionScript, testBuildDirectory, executable])
-print("'{}' - running".format(executionCommand), flush=True)
-executionReturnCode = subprocess.call(executionCommand, shell=True)
-print("'{}' - finished with exit code {}".format(executionCommand, executionReturnCode), flush=True)
+if not noExec:
+    caseInputFile = os.path.join(testBuildDirectory, "bd_driver.inp")
+    returnCode = openfastDrivers.runBeamdynDriverCase(caseInputFile, executable)
 
-if executionReturnCode != 0:
+if returnCode != 0:
     rtl.exitWithError("")
-
+    
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, "bd_driver.out")
 baselineOutFile = os.path.join(targetOutputDirectory, "bd_driver.out")

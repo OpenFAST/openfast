@@ -32,6 +32,7 @@ import argparse
 import shutil
 import subprocess
 import rtestlib as rtl
+import openfastDrivers
 import pass_fail
 
 ##### Helper functions
@@ -145,20 +146,14 @@ else:
 if not os.path.isdir(testBuildDirectory):
     shutil.copytree(inputsDirectory, testBuildDirectory, ignore=ignoreBaselineItems)
 
-if noExec:
-    executionReturnCode = 0
-else:
-    ### Run openfast on the test case
+### Run openfast on the test case
+if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
-    executionScript = os.path.join(lib, "executeOpenfastCase.py")
-    executionCommand = " ".join([pythonCommand, executionScript, caseInputFile, executable])
-    print("'{}' - running".format(executionCommand), flush=True)
-    executionReturnCode = subprocess.call(executionCommand, shell=True)
-    print("'{}' - finished with exit code {}".format(executionCommand, executionReturnCode), flush=True)
+    returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
 
-if executionReturnCode != 0:
+if returnCode != 0:
     rtl.exitWithError("")
-
+    
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
 baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
