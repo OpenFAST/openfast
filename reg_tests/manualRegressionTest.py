@@ -28,7 +28,6 @@ basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep 
 sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
 import argparse
 import subprocess
-import rtestlib as rtl
 
 def strFormat(string):
     return "{:<" + str(len(string)) + "}"
@@ -69,19 +68,22 @@ else:
 casenames = [c.rstrip("\n\r").strip() for c in caselist if "#" not in c]
 
 results = []
-prefix, passString, failString = "executing", "[PASS]", "[FAIL]"
+prefix, passString, failString = "executing", "PASS", "FAIL"
 longestName = max(casenames, key=len)
 for case in casenames:
-    print(strFormat(prefix).format(prefix), strFormat(longestName).format(case), end="", flush=True)
+    print(strFormat(prefix).format(prefix), strFormat(longestName+" ").format(case), end="", flush=True)
     command = "{} executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
     returnCode = subprocess.call(command, stdout=outstd, shell=True)
     resultString = passString if returnCode == 0 else failString
-    results.append((strFormat(longestName).format(case), resultString))    
+    results.append((case, resultString))
     print(resultString)
+
+from errorPlotting import exportResultsSummary
+exportResultsSummary(buildDirectory, results)
 
 print("\nRegression test execution completed with these results:")
 for r in results:
-    print(" ".join([str(rr) for rr in r]))
+    print(" ".join([strFormat(longestName).format(r[0]), r[1]]))
 
 nPasses = len( [r[1] for r in results if r[1] == passString] )
 print("Total PASSING tests - {}".format(nPasses))
