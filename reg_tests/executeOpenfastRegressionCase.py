@@ -34,6 +34,7 @@ import subprocess
 import rtestlib as rtl
 import openfastDrivers
 import pass_fail
+from errorPlotting import exportCaseSummary
 
 ##### Helper functions
 def ignoreBaselineItems(directory, contents):
@@ -162,8 +163,11 @@ rtl.validateFileOrExit(baselineOutFile)
 
 testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
-
 relativeNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData)
+
+# export all case summaries
+results = list(zip(testInfo["attribute_names"], relativeNorm, maxNorm))
+exportCaseSummary(testBuildDirectory, caseName, results)
 
 # failing case
 if not pass_fail.passRegressionTest(relativeNorm, tolerance):
