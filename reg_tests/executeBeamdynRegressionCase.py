@@ -98,9 +98,8 @@ if not os.path.isdir(testBuildDirectory):
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, "bd_driver.inp")
     returnCode = openfastDrivers.runBeamdynDriverCase(caseInputFile, executable)
-
-if returnCode != 0:
-    rtl.exitWithError("")
+    if returnCode != 0:
+        rtl.exitWithError("")
     
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, "bd_driver.out")

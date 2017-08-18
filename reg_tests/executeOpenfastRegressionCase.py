@@ -151,9 +151,8 @@ if not os.path.isdir(testBuildDirectory):
 if not noExec:
     caseInputFile = os.path.join(testBuildDirectory, caseName + ".fst")
     returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
-
-if returnCode != 0:
-    rtl.exitWithError("")
+    if returnCode != 0:
+        rtl.exitWithError("")
     
 ### Build the filesystem navigation variables for running the regression test
 localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
