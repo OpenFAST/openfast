@@ -1304,7 +1304,7 @@ FUNCTION GetVersion(ThisProgVer)
    GetVersion = TRIM(GetVersion)//' precision'
 
    ! add git info
-   GetVersion = TRIM(GetVersion)//' at commit '//GIT_COMMIT_HASH//' on branch '//GIT_BRANCH
+   GetVersion = TRIM(GetVersion)//' at commit '//GIT_COMMIT_HASH
 
    RETURN
 END FUNCTION GetVersion
