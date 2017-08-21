@@ -1311,24 +1311,18 @@ END FUNCTION GetVersion
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine parses and compiles the relevant version and compile data for a givne program
-subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision, compile_date, compile_time)
+subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision)
 
    TYPE(ProgDesc), INTENT(IN ) :: ThisProgVer     !< program name/date/version description
-   character(200), intent(out) :: name
-   character(200), intent(out) :: version
-   character(200), intent(out) :: git_commit
-   character(200), intent(out) :: architecture
-   character(200), intent(out) :: precision
-   character(200), intent(out) :: compile_date
-   character(200), intent(out) :: compile_time
-   character(200)  :: zone
+   character(200), intent(out) :: name, version
+   character(200), intent(out) :: git_commit, architecture, precision
    
    name = trim(ThisProgVer%Name)
    version = trim(ThisProgVer%Ver)
    
-   #ifdef GIT_COMMIT_HASH
-   git_commit = GIT_COMMIT_HASH
-   #endif
+#ifdef GIT_COMMIT_HASH
+git_commit = GIT_COMMIT_HASH
+#endif
    
    architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
    
@@ -1340,9 +1334,6 @@ subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architectu
      precision = 'unknown'
    end if
    
-   call date_and_time(compile_date, compile_time, zone) 
-   compile_time = trim(compile_time)//trim(zone)
-   
 end subroutine GetProgramMetadata
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1350,17 +1341,9 @@ end subroutine GetProgramMetadata
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
 SUBROUTINE FAST_ProgStart(ThisProgVer)
    TYPE(ProgDesc), INTENT(IN) :: ThisProgVer     !< program name/date/version description
-   character(200) :: name
-   character(200) :: version
-   character(200) :: date
-   character(200) :: git_commit
-   character(200) :: architecture
-   character(200) :: precision
-   character(200) :: compile_date
-   character(200) :: compile_time
-   character(200) :: execution_date
-   character(200) :: execution_time
-   character(200) :: execution_zone
+   character(200) :: name, version, date
+   character(200) :: git_commit, architecture, precision
+   character(200) :: execution_date, execution_time, execution_zone
    
    ! ... Initialize NWTC Library (open console, set pi constants) ...
    ! sets the pi constants, open console for output, etc...
@@ -1370,23 +1353,21 @@ SUBROUTINE FAST_ProgStart(ThisProgVer)
    CALL DispCopyrightLicense( ThisProgVer )
    
    ! Display the program metadata
-   call GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision, compile_date, compile_time)
+   call GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision)
    
    call wrscr(trim(name)//' '//trim(version)//'-'//trim(git_commit))
    call wrscr('Compile Info:')
-  !  call wrscr(' - Date: '//trim(compile_date(5:6)//'/'//compile_date(7:8)//'/'//compile_date(1:4)))
-  !  call wrscr(' - Time: '//trim(compile_time(1:2)//':'//compile_time(3:4)//':'//compile_time(5:)))
    call wrscr(' - Architecture: '//trim(architecture))
    call wrscr(' - Precision: '//trim(precision))
+   ! use iso_fortran_env for compiler_version() and compiler_options()
    ! call wrscr(' - Compiler: '//trim(compiler_version()))
    ! call wrscr(' - Options: '//trim(compiler_options()))
-   ! use iso_fortran_env for compiler_version() and compiler_options()
 
    call date_and_time(execution_date, execution_time, execution_zone) 
-   execution_time = trim(execution_time)//trim(execution_zone)
+   
    call wrscr('Execution Info:')
    call wrscr(' - Date: '//trim(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
-   call wrscr(' - Time: '//trim(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:)))
+   call wrscr(' - Time: '//trim(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:))//trim(execution_zone))
    
   !  CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
    
