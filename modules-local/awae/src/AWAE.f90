@@ -193,6 +193,8 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
          
          if (   sinTerm > ( max( m%r_e(np,nt), m%r_s(np,nt) ) / ( 100.0_ReKi*rmax ) ) ) then
             m%parallelFlag(np,nt) = .false.
+            m%r_e(np,nt) = m%r_e(np,nt) / sinTerm
+            m%r_s(np,nt) = m%r_s(np,nt) / sinTerm
             if ( u%D_wake(np,nt) > 0.0_ReKi ) then
                if ( m%r_e(np,nt) < rmax ) then
                   call SetErrStat( ErrID_Fatal, 'Radius to the wake center in the ending wake plane from the line where the starting and ending wake planes intersect for a given wake volume (volume='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') is smaller than rmax: '//trim(num2lstr(rmax))//'.', errStat, errMsg, 'ComputeLocals' )
@@ -203,8 +205,6 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
                   return
                end if
             end if 
-            m%r_e(np,nt) = m%r_e(np,nt) / sinTerm
-            m%r_s(np,nt) = m%r_s(np,nt) / sinTerm
             m%rhat_s(:,np,nt) = (u%xhat_plane(:,np,nt)*cosTerm - u%xhat_plane(:,np+1,nt)        ) / sinTerm
             m%rhat_e(:,np,nt) = (u%xhat_plane(:,np,nt)         - u%xhat_plane(:,np+1,nt)*cosTerm) / sinTerm
             m%pvec_cs(:,np,nt) = u%p_plane(:,np  ,nt) - m%r_s(np,nt)*m%rhat_s(:,np,nt)
