@@ -110,6 +110,14 @@ def _htmlHead(title):
     head += '  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">' + '\n'
     head += '  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>' + '\n'
     head += '  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>' + '\n'
+    head += '  <style media="screen" type="text/css">'
+    head += '    .cell-warning {'
+    head += '      background-color: #FF6666;'
+    head += '    }'
+    head += '    .cell-highlight {'
+    head += '      background-color: #E5E589;'
+    head += '    }'
+    head += '  </style>'
     head += '</head>' + '\n'
     return head
 
@@ -118,7 +126,8 @@ def _htmlTail():
     return tail
 
 def _tableHead(columns):
-    head  = '      <thead>' + '\n'
+    head  = '    <table class="table table-bordered table-hover table-sm" style="margin: auto; width: 50%">' + '\n'
+    head += '      <thead>' + '\n'
     head += '        <tr>' + '\n'
     head += '          <th>#</th>' + '\n'
     for column in columns:
@@ -126,28 +135,6 @@ def _tableHead(columns):
     head += '        </tr>' + '\n'
     head += '      </thead>' + '\n'
     return head
-
-def _tableBody(data):
-    body = '      <tbody>' + '\n'
-    for i, d in enumerate(data):
-        
-        body += '        <tr>' + '\n'
-        body += '          <th scope="row">{}</th>'.format(i+1) + '\n'
-        body += '          <td>{0:s}</td>'.format(d[0]) + '\n'
-        for j in range(1,len(d)):
-            fmt = "{0:0.4e}" if type(d[j]) is np.float64 else '{0:s}'
-            body += ('          <td>' + fmt + '</td>').format(d[j]) + '\n'
-        
-        body += '        </tr>' + '\n'
-    body += '      </tbody>' + '\n'
-    return body
-    
-def _table(columns, data):
-    table  = '    <table class="table table-bordered table-hover table-sm" style="margin: auto; width: 50%">' + '\n'
-    table += _tableHead(columns)
-    table += _tableBody(data)
-    table += '    </table>' + '\n'
-    return table
     
 def initializePlotDirectory(testSolution, plotList, relativeNorm, maxNorm):
     basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
@@ -162,10 +149,34 @@ def initializePlotDirectory(testSolution, plotList, relativeNorm, maxNorm):
         html.write('<body>' + '\n')
         html.write('  <h2 class="text-center">{}</h2>'.format(caseName) + '\n')
         html.write('  <div class="container">' + '\n')
-    
-        # column 1 - column 2 - column 3
+        html.write('  <h4 class="text-center">Maximum values for each norm are highlighted</h2>' + '\n')
+        
+        # Channel - Relative Norm - Max Norm
         data = [('<a href="#{0}">{0}</a>'.format(plot), relativeNorm[i], maxNorm[i]) for i,plot in enumerate(plotList)]    
-        html.write( _table(['Channel', 'Relative Norm', 'Infinity Norm'], data) )
+        maxRelNorm = max(relativeNorm)
+        maxMaxNorm = max(maxNorm)
+        table = _tableHead(['Channel', 'Relative Norm', 'Infinity Norm'])
+        body = '      <tbody>' + '\n'
+        for i, d in enumerate(data):
+            body += '        <tr>' + '\n'
+            body += '          <th scope="row">{}</th>'.format(i+1) + '\n'
+            body += '          <td>{0:s}</td>'.format(d[0]) + '\n'
+            
+            fmt = '{0:0.4e}'
+            if d[1] == maxRelNorm:
+                body += ('          <td class="cell-highlight">' + fmt + '</td>').format(d[1]) + '\n'
+            else:
+                body += ('          <td>' + fmt + '</td>').format(d[1]) + '\n'
+                    
+            if d[2] == maxMaxNorm:
+                body += ('          <td class="cell-highlight">' + fmt + '</td>').format(d[2]) + '\n'
+            else:
+                body += ('          <td>' + fmt + '</td>').format(d[2]) + '\n'
+            body += '        </tr>' + '\n'
+        body += '      </tbody>' + '\n'
+        table += body
+        table += '    </table>' + '\n'
+        html.write(table)
         
         html.write('    <br>' + '\n')
         html.write('    <div class="row">' + '\n')
@@ -188,9 +199,26 @@ def exportResultsSummary(path, results):
         html.write('  <h2 class="text-center">{}</h2>'.format("Regression Test Summary") + '\n')
         html.write('  <div class="container">' + '\n')
         
-        # Test Case - Pass/Fail - Max Relative Norm
+        # Test Case - Pass/Fail - Max Relative Norm            
         data = [('<a href="{0}/{0}.html">{0}</a>'.format(r[0]), r[1]) for i,r in enumerate(results)]
-        html.write( _table(['Test Case', 'Pass/Fail'], data) )
+        table = _tableHead(['Test Case', 'Pass/Fail'])
+        body = '      <tbody>' + '\n'
+        for i, d in enumerate(data):
+            body += '        <tr>' + '\n'
+            body += '          <th scope="row">{}</th>'.format(i+1) + '\n'
+            body += '          <td>{0:s}</td>'.format(d[0]) + '\n'
+            
+            fmt = '{0:s}'
+            if d[1] == "FAIL":
+                body += ('          <td class="cell-warning">' + fmt + '</td>').format(d[1]) + '\n'
+            else:
+                body += ('          <td>' + fmt + '</td>').format(d[1]) + '\n'
+                
+            body += '        </tr>' + '\n'
+        body += '      </tbody>' + '\n'
+        table += body
+        table += '    </table>' + '\n'
+        html.write(table)
             
         html.write('    <br>' + '\n')
         html.write('  </div>' + '\n')
@@ -206,11 +234,35 @@ def exportCaseSummary(path, case, results):
         html.write('<body>' + '\n')
         html.write('  <h2 class="text-center">{}</h2>'.format(case + " Summary") + '\n')
         html.write('  <h4 class="text-center"><a href="plots/plots.html">Go To Plots</a></h2>' + '\n')
+        html.write('  <h4 class="text-center">Maximum values for each norm are highlighted</h2>' + '\n')
         html.write('  <div class="container">' + '\n')
         
         # Channel - Relative Norm - Max Norm
         data = [(r[0], r[1], r[2]) for i,r in enumerate(results)]
-        html.write( _table(['Channel', 'Relative Norm', 'Infinity Norm'], data) )
+        maxRelNorm = max([r[1] for i,r in enumerate(results)])
+        maxMaxNorm = max([r[2] for i,r in enumerate(results)])
+        table = _tableHead(['Channel', 'Relative Norm', 'Infinity Norm'])
+        body = '      <tbody>' + '\n'
+        for i, d in enumerate(data):
+            body += '        <tr>' + '\n'
+            body += '          <th scope="row">{}</th>'.format(i+1) + '\n'
+            body += '          <td>{0:s}</td>'.format(d[0]) + '\n'
+            
+            fmt = '{0:0.4e}'
+            if d[1] == maxRelNorm:
+                body += ('          <td class="cell-highlight">' + fmt + '</td>').format(d[1]) + '\n'
+            else:
+                body += ('          <td>' + fmt + '</td>').format(d[1]) + '\n'
+                    
+            if d[2] == maxMaxNorm:
+                body += ('          <td class="cell-highlight">' + fmt + '</td>').format(d[2]) + '\n'
+            else:
+                body += ('          <td>' + fmt + '</td>').format(d[2]) + '\n'
+            body += '        </tr>' + '\n'
+        body += '      </tbody>' + '\n'
+        table += body
+        table += '    </table>' + '\n'
+        html.write(table)
         
         html.write('    <br>' + '\n')
         html.write('  </div>' + '\n')
