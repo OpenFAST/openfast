@@ -162,19 +162,19 @@ rtl.validateFileOrExit(baselineOutFile)
 
 testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
-relativeNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
+normalizedNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
 
 # export all case summaries
-results = list(zip(testInfo["attribute_names"], relativeNorm, maxNorm))
+results = list(zip(testInfo["attribute_names"], normalizedNorm, maxNorm))
 exportCaseSummary(testBuildDirectory, caseName, results)
 
 # failing case
-if not pass_fail.passRegressionTest(relativeNorm, tolerance):
+if not pass_fail.passRegressionTest(normalizedNorm, tolerance):
     if plotError:
         from errorPlotting import initializePlotDirectory, plotOpenfastError
-        failChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if relativeNorm[i] > tolerance]
-        failRelNorm = [relativeNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if relativeNorm[i] > tolerance]
-        failMaxNorm = [maxNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if relativeNorm[i] > tolerance]
+        failChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
+        failRelNorm = [normalizedNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
+        failMaxNorm = [maxNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
         initializePlotDirectory(localOutFile, failChannels, failRelNorm, failMaxNorm)
         for channel in failChannels:
             plotOpenfastError(localOutFile, baselineOutFile, channel)

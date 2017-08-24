@@ -155,7 +155,7 @@ def initializePlotDirectory(testSolution, plotList, relativeNorm, maxNorm):
         data = [('<a href="#{0}">{0}</a>'.format(plot), relativeNorm[i], maxNorm[i]) for i,plot in enumerate(plotList)]    
         maxRelNorm = max(relativeNorm)
         maxMaxNorm = max(maxNorm)
-        table = _tableHead(['Channel', 'Relative Norm', 'Infinity Norm'])
+        table = _tableHead(['Channel', 'Relative Max Norm', 'Infinity Norm'])
         body = '      <tbody>' + '\n'
         for i, d in enumerate(data):
             body += '        <tr>' + '\n'
@@ -241,7 +241,7 @@ def exportCaseSummary(path, case, results):
         data = [(r[0], r[1], r[2]) for i,r in enumerate(results)]
         maxRelNorm = max([r[1] for i,r in enumerate(results)])
         maxMaxNorm = max([r[2] for i,r in enumerate(results)])
-        table = _tableHead(['Channel', 'Relative Norm', 'Infinity Norm'])
+        table = _tableHead(['Channel', 'Relative Max Norm', 'Infinity Norm'])
         body = '      <tbody>' + '\n'
         for i, d in enumerate(data):
             body += '        <tr>' + '\n'

@@ -56,26 +56,24 @@ def calculateRelativeNorm(testData, baselineData):
         norm[i] = norm_diff[i] if n < 1 else norm_diff[i] / norm_baseline[i]
     return norm
     
-def calculateDiffOverRange(testData, baselineData, tolerance): 
+def calculateMaxNormOverRange(testData, baselineData, tolerance): 
     numTimesteps = baselineData.shape[0]
     numChannels = baselineData.shape[1]
     
     channelRanges = [abs(max(baselineData[:,i]) - min(baselineData[:,i])) for i in range(numChannels)]
-    diff = abs(testData - baselineData)  
+    diff = abs(testData-baselineData)
     norm = np.zeros(numChannels)
     
-    for j, crange in enumerate(channelRanges):
-        for i in range(numTimesteps):
-            val = diff[i,j] if crange < tolerance else diff[i,j] / crange
-            if val > norm[j]:
-                norm[j] = val
+    for i, channelRange in enumerate(channelRanges):
+        channelNorm = diff[:,i] if channelRange < tolerance else diff[:,i] / channelRange
+        norm[i] = max(channelNorm)
     return norm
     
 def calculateMaxNorm(testData, baselineData):
     return maxnorm(abs(testData - baselineData))
     
 def calculateNorms(testData, baselineData, tolerance):
-    relativeNorm = calculateDiffOverRange(testData, baselineData, tolerance)
+    relativeNorm = calculateMaxNormOverRange(testData, baselineData, tolerance)
     maxNorm = calculateMaxNorm(testData, baselineData)
     return relativeNorm, maxNorm
     
@@ -98,8 +96,8 @@ if __name__=="__main__":
     testData, testInfo, testPack = readFASTOut(testSolution)
     baselineData, baselineInfo, basePack = readFASTOut(baselineSolution)
     
-    relativeNorm = calculateRelativeNorm(testData, baselineData)
-    if passRegressionTest(relativeNorm, tolerance):
+    normalizedNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
+    if passRegressionTest(normalizedNorm, tolerance):
         sys.exit(0)
     else:
         dict1, info1, pack1 = readFASTOut(testSolution)
