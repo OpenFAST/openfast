@@ -34,7 +34,7 @@ import subprocess
 import rtestlib as rtl
 
 def _runCase(executable, inputFile, logFile, stdout):
-    command = "{} {} > {}.log".format(executable, inputFile, logFile)
+    command = "{} {} > {}".format(executable, inputFile, logFile)
     print(command)
     return subprocess.call(command, stdout=stdout, shell=True)
     
@@ -47,8 +47,7 @@ def _runGenericCase(inputFile, executable, verbose=False):
     casebase = os.path.sep.join(inputFile.split(os.path.sep)[-1].split('.')[:-1])
     caseparent = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
     logFile = caseparent + os.path.sep + casebase + '.log'
-
-    print("{} on {} - ".format(executable, inputFile), flush=True, end="")
+    
     returnCode = _runCase(executable, inputFile, logFile, stdout)
     print("COMPLETE with code {}".format(returnCode), flush=True)    
     
