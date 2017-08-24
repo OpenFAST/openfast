@@ -23,28 +23,13 @@ include(${CMAKE_SOURCE_DIR}/cmake/FastFortranOptions.cmake)
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # Get the git info into the executable
-# # working branch
-# execute_process(
-#   COMMAND git rev-parse --abbrev-ref HEAD
-#   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-#   OUTPUT_VARIABLE GIT_BRANCH
-#   OUTPUT_STRIP_TRAILING_WHITESPACE
-# )
-# add_definitions(-DGIT_BRANCH="${GIT_BRANCH}")
-
-# commit hash
-# execute_process(
-#   COMMAND git log -1 --format=%h
-#   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-#   OUTPUT_VARIABLE GIT_COMMIT_HASH
-#   OUTPUT_STRIP_TRAILING_WHITESPACE
-# )
-# add_definitions(-DGIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
-message("------ ${GIT_SHA1}")
+git_local_changes(GIT_DIRTY)
+if(${GIT_DIRTY} STREQUAL "DIRTY")
+  set(GIT_SHA1 "${GIT_SHA1}*")
+endif()
 add_definitions(-DGIT_COMMIT_HASH="${GIT_SHA1}")
 
 # CMake Configuration variables
