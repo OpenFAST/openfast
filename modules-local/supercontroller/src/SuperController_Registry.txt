@@ -15,7 +15,8 @@ include	Registry_NWTC_Library.txt
 
 
 # ..... SuperController_InitInputType data .......................................................................................................
-typedef	SuperController/SC	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of controller inputs [from supercontroller]"	-
+typedef	SuperController/SC	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of turbine specific controller inputs [from supercontroller]"	-
+typedef	^       ^	IntKi	NumSC2CtrlGlob	-	-	-	"number of global controller inputs [from supercontroller]"	-
 typedef	^	^	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
 
 # ..... SuperController_InitOutputType data .......................................................................................................
@@ -31,4 +32,5 @@ typedef	SuperController/SC	ParameterType	Logical	scOn	-	.FALSE.	-	"Flag that tel
 typedef	SuperController/SC	InputType	ReKi	toSC	{:}	-	-	"inputs to the super controller (from the turbine controller)"	-
 
 # ..... SuperController_OutputType data .......................................................................................................
-typedef	SuperController/SC	OutputType	ReKi	fromSC	{:}	-	-	"outputs of the super controller (to the turbine controller)"	-
+typedef	SuperController/SC	OutputType	ReKi	fromSC	{:}	-	-	"global outputs of the super controller (to the turbine controller)"	-
+typedef	SuperController/SC	OutputType	ReKi	fromSCglob	{:}	-	-	"turbine specific outputs of the super controller (to the turbine controller)"	-

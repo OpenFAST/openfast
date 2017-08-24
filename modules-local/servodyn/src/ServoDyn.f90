@@ -235,12 +235,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
       
-   if ( (InitInp%NumCtrl2SC  > 0 .and. InitInp%NumCtrl2SC <= 0) .or. &
-        (InitInp%NumSC2Ctrl <= 0 .and. InitInp%NumSC2Ctrl  > 0) ) then      
-      call CheckError( ErrID_Fatal, "If supercontroller is used, there must be at least one supercontroller input and one supercontroller output." )
-      return
-   end if
-        
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
@@ -320,12 +314,18 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry( u%ExternalBlPitchCom, p%NumBl, 'ExternalBlPitchCom', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
+
+   IF ( (InitInp%NumSC2CtrlGlob > 0) .or. (InitInp%NumSC2Ctrl > 0) .or. (InitInp%NumCtrl2SC > 0) ) THEN
+      p%ScOn = .TRUE.
+   ElSE
+      p%ScOn = .FALSE.
+   END IF
         
    IF (InitInp%NumSC2Ctrl > 0 .and. p%UseBladedInterface) THEN
-      CALL AllocAry( u%SuperController, InitInp%NumSC2Ctrl, 'u%SuperController', ErrStat2, ErrMsg2 )
+      CALL AllocAry( u%SuperControllerTurbine, InitInp%NumSC2Ctrl, 'u%SuperController', ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      u%SuperController = InitInp%InitScOutputsTurbine
+      u%SuperControllerTurbine = InitInp%InitScOutputsTurbine
 
       p%ScInAlpha = exp( -TwoPi*p%DT*InputFileData%ScInCutoff )
       if (InputFileData%ScInCutOff < EPSILON( InputFileData%ScInCutOff )) CALL CheckError( ErrID_Fatal, 'ScInCutoff must be greater than 0.')       
@@ -336,6 +336,20 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
    END IF
                   
+   IF (InitInp%NumSC2CtrlGlob > 0 .and. p%UseBladedInterface) THEN
+      CALL AllocAry( u%SuperControllerGlob, InitInp%NumSC2CtrlGlob, 'u%SuperControllerGlob', ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+      u%SuperControllerGlob = InitInp%InitScOutputsGlob
+
+      p%ScInAlpha = exp( -TwoPi*p%DT*InputFileData%ScInCutoff )
+      if (InputFileData%ScInCutOff < EPSILON( InputFileData%ScInCutOff )) CALL CheckError( ErrID_Fatal, 'ScInCutoff must be greater than 0.')       
+      CALL AllocAry( xd%ScInGlobFilter, InitInp%NumSC2CtrlGlob, 'xd%ScInGlobFilter', ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+      xd%ScInGlobFilter = InitInp%InitScOutputsGlob
+
+   END IF
       
    u%BlPitch = p%BlPitchInit
    
@@ -1072,9 +1086,10 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       ErrMsg  = ""
 
 
-      if( allocated(u%SuperController) ) then
+      if( allocated(u%SuperControllerTurbine) ) then
          ! Filter the inputs from the Supercontroller to ServoDyn
-         xd%ScInFilter = p%ScInAlpha * xd%ScInFilter + (1.0_SiKi - p%ScInAlpha) * u%SuperController
+         xd%ScInGlobFilter = p%ScInAlpha * xd%ScInGlobFilter + (1.0_SiKi - p%ScInAlpha) * u%SuperControllerGlob
+         xd%ScInFilter = p%ScInAlpha * xd%ScInFilter + (1.0_SiKi - p%ScInAlpha) * u%SuperControllerTurbine         
       end if
       
       !xd%BlPitchFilter = p%BlAlpha * xd%BlPitchFilter + (1.0_ReKi - p%BlAlpha) * u%BlPitch

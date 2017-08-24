@@ -12,7 +12,7 @@ EXTERNAL_ROUTINE void FAST_AllocateTurbines(int * iTurb, int *ErrStat, char *Err
 
 EXTERNAL_ROUTINE void FAST_OpFM_Restart(int * iTurb, const char *CheckpointRootName, int *AbortErrLev, double * dt, int * NumBl, int * NumBlElem, int * n_t_global,
    OpFM_InputType_t* OpFM_Input, OpFM_OutputType_t* OpFM_Output, SC_InputType_t* SC_Input, SC_OutputType_t* SC_Output, int *ErrStat, char *ErrMsg);
-EXTERNAL_ROUTINE void FAST_OpFM_Init(int * iTurb, double *TMax, const char *InputFileName, int * TurbineID, int * NumSC2Ctrl, int * NumCtrl2SC, float * initSCInputsTurbine, int * NumActForcePtsBlade, int * NumActForcePtsTower, float * TurbinePosition,
+EXTERNAL_ROUTINE void FAST_OpFM_Init(int * iTurb, double *TMax, const char *InputFileName, int * TurbineID, int * NumSC2CtrlGlob, int * NumSC2Ctrl, int * NumCtrl2SC, float * initSCInputsGlob, float * initSCInputsTurbine, int * NumActForcePtsBlade, int * NumActForcePtsTower, float * TurbinePosition,
    int *AbortErrLev, double * dt, int * NumBl, int * NumBlElem, OpFM_InputType_t* OpFM_Input, OpFM_OutputType_t* OpFM_Output, SC_InputType_t* SC_Input, SC_OutputType_t* SC_Output, 
    int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_OpFM_Solution0(int * iTurb, int *ErrStat, char *ErrMsg);
