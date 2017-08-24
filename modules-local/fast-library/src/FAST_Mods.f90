@@ -66,13 +66,13 @@ MODULE FAST_ModTypes
    
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
    
-#if defined COMPILE_SIMULINK || defined COMPILE_LABVIEW
+!#if defined COMPILE_SIMULINK || defined COMPILE_LABVIEW
    !bjj: 2015-03-03: not sure this is still necessary...
-   INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithTime            ! We cannot guarantee the output time step is constant in binary files
-#else
+!   INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithTime            ! We cannot guarantee the output time step is constant in binary files
+!#else
    !INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
-   INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_NoCompressWithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel;3=don't include time channel and do not pack data)
-#endif  
+!   INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_NoCompressWithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel;3=don't include time channel and do not pack data)
+!#endif  
 
    LOGICAL,        PARAMETER :: GenerateAdamsModel = .FALSE.
 

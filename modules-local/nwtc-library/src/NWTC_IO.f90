@@ -6806,10 +6806,11 @@ CONTAINS
          ColOff(IC) = IntMin - ColScl(IC)*REAL( ColMin(IC), SiKi )
 
       ENDDO !IC
-
+      
+   ENDIF
 
       !...............................................................................................................................
-      ! Convert channels to 16-bit integers (packed binary)
+      ! Convert channels to 16-bit integers (packed binary) or (R8Ki if unpacked binary)
       !...............................................................................................................................
       J = 1
       DO IT=1,NT                                ! Loop through the time steps
@@ -6826,7 +6827,7 @@ CONTAINS
 
       ENDDO !IT
 
-   ENDIF
+
    
 
    !...............................................................................................................................
