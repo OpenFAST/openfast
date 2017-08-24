@@ -1367,7 +1367,9 @@ SUBROUTINE FAST_ProgStart(ThisProgVer)
    
    call wrscr('Execution Info:')
    call wrscr(' - Date: '//trim(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
-   call wrscr(' - Time: '//trim(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:))//trim(execution_zone))
+   call wrscr(' - Time: '//trim(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:6))//trim(execution_zone))
+   
+   call wrscr('')
    
   !  CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
    
@@ -2206,8 +2208,9 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, OverrideAbortErrLev, ErrStat, Err
 
    END DO
 
-   CALL WrScr( ' Heading of the '//TRIM(FAST_Ver%Name)//' input file: ' )
-   CALL WrScr( '   '//TRIM( p%FTitle ) )
+   CALL WrScr( TRIM(FAST_Ver%Name)//' input file heading:' )
+   CALL WrScr( '    '//TRIM( p%FTitle ) )
+   CALL WrScr('')
 
 
       ! AbortLevel - Error level when simulation should abort:
