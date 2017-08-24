@@ -51,16 +51,31 @@ def calculateRelativeNorm(testData, baselineData):
     # replace any 0s with small number before for division
     norm_baseline[norm_baseline == 0] = 1e-16
     
-    norms = np.ones(len(norm_baseline))
+    norm = np.ones(len(norm_baseline))
     for i,n in enumerate(norm_baseline):
-        norms[i] = norm_diff[i] if n < 1 else norm_diff[i] / norm_baseline[i]
-    return norms
-
+        norm[i] = norm_diff[i] if n < 1 else norm_diff[i] / norm_baseline[i]
+    return norm
+    
+def calculateDiffOverRange(testData, baselineData, tolerance): 
+    numTimesteps = baselineData.shape[0]
+    numChannels = baselineData.shape[1]
+    
+    channelRanges = [abs(max(baselineData[:,i]) - min(baselineData[:,i])) for i in range(numChannels)]
+    diff = abs(testData - baselineData)  
+    norm = np.zeros(numChannels)
+    
+    for j, crange in enumerate(channelRanges):
+        for i in range(numTimesteps):
+            val = diff[i,j] if crange < tolerance else diff[i,j] / crange
+            if val > norm[j]:
+                norm[j] = val
+    return norm
+    
 def calculateMaxNorm(testData, baselineData):
     return maxnorm(abs(testData - baselineData))
     
-def calculateNorms(testData, baselineData):
-    relativeNorm = calculateRelativeNorm(testData, baselineData)
+def calculateNorms(testData, baselineData, tolerance):
+    relativeNorm = calculateDiffOverRange(testData, baselineData, tolerance)
     maxNorm = calculateMaxNorm(testData, baselineData)
     return relativeNorm, maxNorm
     

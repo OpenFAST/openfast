@@ -162,7 +162,7 @@ rtl.validateFileOrExit(baselineOutFile)
 
 testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
-relativeNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData)
+relativeNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
 
 # export all case summaries
 results = list(zip(testInfo["attribute_names"], relativeNorm, maxNorm))
