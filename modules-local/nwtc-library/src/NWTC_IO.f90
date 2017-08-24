@@ -2105,61 +2105,59 @@ CONTAINS
       END IF
       
    END SUBROUTINE DLLTypeUnPack   
+
 !=======================================================================
 !> This routine displays the name of the program, its version, and its release date.
 !! Use DispNVD (nwtc_io::dispnvd) instead of directly calling a specific routine in the generic interface.
    SUBROUTINE DispNVD0()
-
-
+     
       ! Print out program name, version, and date.
-
-   CALL WrScr ( NewLine//' Running '//TRIM( ProgName )//' '//Trim( ProgVer )//'.' )
-
+      CALL WrScr ( NewLine//' Running '//TRIM( ProgName )//' '//Trim( ProgVer )//'.' )
 
    RETURN
    END SUBROUTINE DispNVD0
+
 !=======================================================================
 !> \copydoc nwtc_io::dispnvd0
    SUBROUTINE DispNVD1 ( ProgInfo, DispNWTCVer )
 
-
-   IMPLICIT NONE
-   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    !< Contains the name and version info
-   LOGICAL,INTENT(IN),OPTIONAL         :: DispNWTCVer !< Option to display what version of the library is linked with the code
+      IMPLICIT NONE
+      
+      TYPE( ProgDesc ), INTENT(IN) :: ProgInfo    !< Contains the name and version info
+      LOGICAL,INTENT(IN),OPTIONAL  :: DispNWTCVer !< Option to display what version of the library is linked with the code
 
       ! Print out program name, version, and date.
-
+      
       ! As a special case, display the library version with the program version
-   IF ( PRESENT(DispNWTCVer) ) THEN
-      IF ( DispNWTCVer .AND. ProgInfo%Name /= NWTC_Ver%Name ) THEN
-         CALL WrScr ( NewLine//' Running '//TRIM( GetNVD( ProgInfo ) )//' linked with '//TRIM( GetNVD( NWTC_Ver ) )//'.' )
-         RETURN
+      IF ( PRESENT(DispNWTCVer) ) THEN
+         IF ( DispNWTCVer .AND. ProgInfo%Name /= NWTC_Ver%Name ) THEN
+            CALL WrScr ( NewLine//' Running '//TRIM( GetNVD( ProgInfo ) )//' linked with '//TRIM( GetNVD( NWTC_Ver ) )//'.' )
+            RETURN
+         END IF
       END IF
-   END IF
 
    CALL WrScr ( NewLine//' Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
 
 
    RETURN
    END SUBROUTINE DispNVD1
+
 !=======================================================================
 !> This routine displays the name of the program, its version, and its release date passed in as strings
 !! This routine is depricated and for legacy purposes only. Please don't use for any new code (Dec-2012).
    SUBROUTINE DispNVD2 ( Name, Ver )
 
-
-   IMPLICIT NONE
-   CHARACTER(*),  INTENT(IN)           :: Name     !< String containing the name of the program using the library
-   CHARACTER(*),  INTENT(IN)           :: Ver      !< String containing the version and date info
-
-
+      IMPLICIT NONE
+     
+      CHARACTER(*),  INTENT(IN) :: Name     !< String containing the name of the program using the library
+      CHARACTER(*),  INTENT(IN) :: Ver      !< String containing the version and date info
+     
       ! Print out program name, version, and date.
-
-   CALL WrScr ( NewLine//' Running '//TRIM( Name )//' ('//Trim( Ver )//').' )
-
+      CALL WrScr ( NewLine//' Running '//TRIM( Name )//' ('//Trim( Ver )//').' )
 
    RETURN
    END SUBROUTINE DispNVD2
+   
 !=======================================================================
 !> This routine finds one line of text with a maximum length of MaxLen from the Str.
 !! It tries to break the line at a blank.
@@ -2297,6 +2295,7 @@ CONTAINS
 
 
    END FUNCTION GetErrStr
+   
 !=======================================================================
 !> This function converts the three strings contained in the ProgDesc
 !! data type into a single string listing the program name,
@@ -2304,14 +2303,10 @@ CONTAINS
    FUNCTION GetNVD ( ProgInfo )
 
       ! Argument declarations.
-
-   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    !< Contains the name, date, and version info
-
+      TYPE( ProgDesc ), INTENT(IN) :: ProgInfo    !< Contains the name, date, and version info
 
       ! Function delcaration
-
-   CHARACTER(200)                      :: GetNVD      !< A single string containing the name, date, and version info
-
+      CHARACTER(200)               :: GetNVD      !< A single string containing the name, date, and version info
 
       ! Print all the version info into a nice string:
 
