@@ -65,8 +65,8 @@ def calculateMaxNormOverRange(testData, baselineData, tolerance):
     norm = np.zeros(numChannels)
     
     for i, channelRange in enumerate(channelRanges):
-        channelNorm = diff[:,i] if channelRange < tolerance else diff[:,i] / channelRange
-        norm[i] = max(channelNorm)
+        norm[i] = maxnorm( diff[:,i] ) if channelRange < tolerance else maxnorm( diff[:,i] / channelRange )
+        
     return norm
     
 def calculateMaxNorm(testData, baselineData):
