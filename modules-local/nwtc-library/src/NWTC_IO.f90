@@ -2135,9 +2135,8 @@ CONTAINS
             RETURN
          END IF
       END IF
-
-   CALL WrScr ( NewLine//' Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
-
+      
+      CALL WrScr ( 'Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
 
    RETURN
    END SUBROUTINE DispNVD1
@@ -2308,9 +2307,8 @@ CONTAINS
       ! Function delcaration
       CHARACTER(200)               :: GetNVD      !< A single string containing the name, date, and version info
 
-      ! Print all the version info into a nice string:
-
-      GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
+      ! Store all the version info into a single string
+      GetNVD = TRIM( ProgInfo%Name ) !//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
 
    END FUNCTION GetNVD
 !=======================================================================
