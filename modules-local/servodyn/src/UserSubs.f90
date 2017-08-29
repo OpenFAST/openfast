@@ -454,17 +454,17 @@ YawRateCom = 0.0
 
 !JASON: IMPOSE YAW STEP FOR FAST.Farm CALIBRATION CASE - START
 IF (      ( ZTime >= 298.0_DbKi ) .AND. ( ZTime < 300.0_DbKi ) ) THEN
-   YawRateCom = ( 10.0_ReKi/2.0_ReKi )*D2R 
-   YawPosCom  = 0.0           + YawRateCom*( ZTime - 298.0_DbKi )
+   YawRateCom = -( 10.0_ReKi/2.0_ReKi )*D2R 
+   YawPosCom  =   0.0          + YawRateCom*( ZTime - 298.0_DbKi )
 ELSE IF ( ( ZTime >= 300.0_DbKi ) .AND. ( ZTime < 598.0_DbKi ) ) THEN    
-   YawRateCom = 0.0
-   YawPosCom  = 10.0_ReKi*D2R
+   YawRateCom =   0.0
+   YawPosCom  = -10.0_ReKi*D2R
 ELSE IF ( ( ZTime >= 598.0_DbKi ) .AND. ( ZTime < 600.0_DbKi ) ) THEN    
-   YawRateCom = ( 15.0_ReKi/2.0_ReKi )*D2R 
-   YawPosCom  = 10.0_ReKi*D2R + YawRateCom*( ZTime - 598.0_DbKi )
+   YawRateCom = -( 15.0_ReKi/2.0_ReKi )*D2R 
+   YawPosCom  = -10.0_ReKi*D2R + YawRateCom*( ZTime - 598.0_DbKi )
 ELSE IF ( ( ZTime >= 600.0_DbKi )                               ) THEN
-   YawRateCom = 0.0
-   YawPosCom  = 25.0_ReKi*D2R
+   YawRateCom =   0.0
+   YawPosCom  = -25.0_ReKi*D2R
 END IF
 !JASON: IMPOSE YAW STEP FOR FAST.Farm CALIBRATION CASE - END
 
