@@ -52,7 +52,6 @@ def calculateRelativeNorm(testData, baselineData):
     return norm
     
 def calculateMaxNormOverRange(testData, baselineData, tolerance): 
-    numTimesteps = baselineData.shape[0]
     numChannels = baselineData.shape[1]
     
     channelRanges = [abs(max(baselineData[:,i]) - min(baselineData[:,i])) for i in range(numChannels)]
