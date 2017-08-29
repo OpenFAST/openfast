@@ -60,7 +60,7 @@ MODULE IfW_UniformWind
    IMPLICIT                                  NONE
    PRIVATE
 
-   TYPE(ProgDesc),   PARAMETER               :: IfW_UniformWind_Ver = ProgDesc( 'IfW_UniformWind', 'v2.03.00', '14-Dec-2015' )
+   TYPE(ProgDesc),   PARAMETER               :: IfW_UniformWind_Ver = ProgDesc( 'IfW_UniformWind', '', '' )
 
    PUBLIC                                    :: IfW_UniformWind_Init
    PUBLIC                                    :: IfW_UniformWind_End

@@ -37,7 +37,7 @@ PROGRAM OrcaDriver
    IMPLICIT NONE
 
       ! Info on this code
-   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("Orca_Driver","v1.01.00a-adp","16-Dec-2015")
+   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("Orca_Driver","","")
    INTEGER(IntKi)                                     :: OrcaDriver_Verbose =  5  ! Verbose level.  0 = none, 5 = some, 10 = lots
 
       ! Types needed here (from Orca module)

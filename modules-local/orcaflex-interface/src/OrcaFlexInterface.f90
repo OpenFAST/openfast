@@ -28,7 +28,7 @@ MODULE OrcaFlexInterface_Parameters
 
    IMPLICIT                      NONE
 
-   TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', 'v1.01.02', '25-Jul-2016' )
+   TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', '', '' )
    CHARACTER(*),   PARAMETER  :: Orca_Nickname = 'Orca'
 
 

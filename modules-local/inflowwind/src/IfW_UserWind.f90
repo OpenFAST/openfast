@@ -31,7 +31,7 @@ MODULE IfW_UserWind
    IMPLICIT                                  NONE
    PRIVATE
 
-   TYPE(ProgDesc),   PARAMETER               :: IfW_UserWind_Ver = ProgDesc( 'IfW_UserWind', 'v0.00.00', '00-Jan-0000' )
+   TYPE(ProgDesc),   PARAMETER               :: IfW_UserWind_Ver = ProgDesc( 'IfW_UserWind', '', '' )
 
    PUBLIC                                    :: IfW_UserWind_Init
    PUBLIC                                    :: IfW_UserWind_End
