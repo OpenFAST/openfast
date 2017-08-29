@@ -32,9 +32,9 @@ MODULE FAST_Farm_Subs
    USE FAST_Farm_IO
    USE FAST_Subs
    USE FASTWrapper
-!#ifdef PARALLEL_CODE
+#ifdef _OPENMP
    USE OMP_LIB 
-!#endif
+#endif
 
 
    IMPLICIT NONE
