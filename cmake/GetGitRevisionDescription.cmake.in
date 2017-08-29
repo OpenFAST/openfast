@@ -3,6 +3,9 @@
 #
 # Requires CMake 2.6 or newer (uses the 'function' command)
 #
+# Obtained from https://github.com/rpavlik/cmake-modules/blob/master/GetGitRevisionDescription.cmake.in
+# on August 29 2017
+#
 # Original Author:
 # 2009-2010 Ryan Pavlik <rpavlik@iastate.edu> <abiryan@ryand.net>
 # http://academic.cleardefinition.com
