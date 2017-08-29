@@ -10,11 +10,12 @@ Dependencies required to run the regression test suite are
 - Python 3+
 - Numpy
 - CMake and CTest
+- matplotlib (optional)
 
 ## Execution
 The automated regression test runs CTest and can be executed by running either of the commands `make test` or `ctest` from the build directory. If the entire OpenFAST package is to be built, CMake will configure CTest to find the new binary at `openfast/build/glue-codes/fast/openfast`. However, if the intention is to build only the test suite, the OpenFAST binary should be specified in the CMake configuration under the `CTEST_OPENFAST_EXECUTABLE` flag. There is also a corresponding `CTEST_[MODULE]_NAME` flag for each module that is included in the regression test.
 
-The regression test can be executed manually with the included driver `manualRegressionTest.py`.
+The regression test can be executed manually with the included driver `manualRegressionTest.py`. Run `manualRegressionTest.py -h` for usage.
 
 In both modes of execution a subdirectory is created in the build directory called `reg_tests` where all of the input files for the test cases are copied and all of the locally generated outputs are stored.
 
