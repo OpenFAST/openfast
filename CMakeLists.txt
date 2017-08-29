@@ -28,7 +28,7 @@ include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC GIT_SHA1)
 git_local_changes(GIT_DIRTY)
 if(${GIT_DIRTY} STREQUAL "DIRTY")
-  set(GIT_SHA1 "${GIT_SHA1}*")
+  set(GIT_SHA1 "${GIT_SHA1}-dirty")
 endif()
 add_definitions(-DGIT_COMMIT_HASH="${GIT_SHA1}")
 
