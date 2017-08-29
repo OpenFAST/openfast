@@ -15,15 +15,9 @@
 #
 
 """
-    This program executes a single OpenFAST case.
-
-    Usage: `python3 executeOpenfastCase.py input_file openfast_executable`
-    - `openfast_executable` is an optional argument pointing to the OpenFAST executable of choice.
-    - if `openfast_executable` is not given, an attempt will be made to find one in $PATH
-
-    Example: `python3 executeOpenfastCase.py CaseDir/case01.fst`
-    Example: `python3 executeOpenfastCase.py CaseDir/case01.fst openfast`
-    Example: `python3 executeOpenfastCase.py CaseDir/case01.fst openfast/install/bin/openfast`
+    This library provides tools for executing cases with drivers contained in the
+    OpenFAST framework. Any new drivers should have a corresponding public driver
+    function called `def run[NewDriver]Case` in this library.
 """
 
 import argparse

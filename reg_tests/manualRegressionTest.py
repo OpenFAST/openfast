@@ -15,11 +15,11 @@
 #
 
 """
-    This program executes OpenFAST on all of the CertTest cases. It mimics the
+    This program executes OpenFAST on the CertTest cases. It mimics the
     regression test execution through CMake/CTest. All generated data goes into
     `openfast/build/reg_tests`.
 
-    Usage: `python manualRegressionTest.py openfast/install/bin/openfast [Darwin,Linux,Windows] [Intel,GNU] tolerance`
+    Get usage with: `manualRegressionTest.py -h`
 """
 
 import os

@@ -15,15 +15,10 @@
 #
 
 """
-    This program plots the output vectors (vs. time) of a given solution attribute
-    for two OpenFAST solutions, with the second solution assumed to be the baseline for
-    comparison. It reads two OpenFAST binary output files (.outb), and
-    generates three plots of the given attribute (1) comparing the two tests' respective
-    values, (2) showing the difference in values, and (3) showing relative difference,
-    as compared to the baseline solution.
-
-    Usage: python plotOpenfastOut.py solution1 solution2 attribute
-    Example: python plotOpenfastOut.py output-local/Test01.outb output-baseline/Test01.outb Wind1VelX
+    This library provides tools for plotting the output channels over time of a 
+    given solution attribute for two OpenFAST solutions, with the second solution
+    assumed to be the baseline for comparison. There are functions for solution
+    file I/O, plot creation, and html creation for navigating the plots.
 """
 
 import sys

@@ -15,13 +15,8 @@
 #
 
 """
-    This program determines whether a new solution has regressed from the "gold standard"
-    solution. It reads two OpenFAST binary output files (.outb), and computes the variance
-    of the two solution files for each output channel. If the max variance is less than
-    the given tolerance, the test case passes.
-
-    Usage: python3 pass_fail.py solution1 solution2 tolerance
-    Example: python3 pass_fail.py output-local/Test01.outb gold-standard/Test01.outb 0.00000001
+    This library provides tools for comparing a test solution to a baseline solution
+    for any structured output file generated within the OpenFAST framework.
 """
 import sys, os
 import numpy as np

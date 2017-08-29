@@ -15,12 +15,8 @@
 #
 
 """
-    This module contains utility functions for the custom python programs making
+    This library contains utility functions for the custom python programs making
     up the regression test system.
-
-    exitWithError(error<type 'str'>, code<type 'int'>=1)
-    validateInputOrExit(argv<type 'list'>, nArgsExpected<type 'int'>, usage<type 'str'>):
-    validateFileOrExit(filepath<type 'str'>):
 """
 
 import sys

@@ -17,11 +17,9 @@
 """
     This program executes OpenFAST and a regression test for a single test case.
     The test data is contained in a git submodule, r-test, which must be initialized
-    prior to running. r-test can be initialized with
-    `git submodule update --init --recursive` or updated with `git submodule update`.
+    prior to running. See the r-test README or OpenFAST documentation for more info.
 
-    Usage: `python3 executeOpenfastRegressionCase.py testname openfast_executable source_directory build_directory tolerance system_name compiler_id`
-    Example: `python3 executeOpenfastRegressionCase.py Test02 openfast path/to/openfast_repo path/to/openfast_repo/build 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
+    Get usage with: `executeOpenfastRegressionCase.py -h`
 """
 
 import os
