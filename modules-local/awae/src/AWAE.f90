@@ -27,9 +27,9 @@ module AWAE
    use NWTC_Library
    use AWAE_Types
    use AWAE_IO
-!#ifdef PARALLEL_CODE
+#ifdef _OPENMP
    use OMP_LIB
-!#endif
+#endif
    
    implicit none
 
