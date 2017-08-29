@@ -19,7 +19,7 @@
     The test data is contained in a git submodule, r-test, which must be initialized
     prior to running. See the r-test README or OpenFAST documentation for more info.
     
-    Get usage with: `executeOpenfastRegressionCase.py -h`
+    Get usage with: `executeBeamdynRegressionCase.py -h`
 """
 
 import os
