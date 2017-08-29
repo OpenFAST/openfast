@@ -45,6 +45,7 @@ target_link_libraries(aerodyn14lib nwtclibs)
 # target_link_libraries(dwm_driver_wind_farm aerodyn14lib)
 
 install(TARGETS aerodyn14lib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
