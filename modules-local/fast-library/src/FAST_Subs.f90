@@ -1355,7 +1355,7 @@ SUBROUTINE FAST_ProgStart(ThisProgVer)
    ! Display the program metadata
    call GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision)
    
-   call wrscr(trim(name)//' '//trim(version)//'-'//trim(git_commit))
+   call wrscr(trim(name)//'-'//trim(git_commit))
    call wrscr('Compile Info:')
    call wrscr(' - Architecture: '//trim(architecture))
    call wrscr(' - Precision: '//trim(precision))
