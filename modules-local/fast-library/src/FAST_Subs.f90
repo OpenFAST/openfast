@@ -1337,7 +1337,7 @@ git_commit = GIT_COMMIT_HASH
 end subroutine GetProgramMetadata
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine is called at the start (or restart) of a FAST program. It initializes the NWTC subroutine library,
+!> This subroutine is called at the start (or restart) of a FAST program (or FAST.Farm). It initializes the NWTC subroutine library,
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
 SUBROUTINE FAST_ProgStart(ThisProgVer)
    TYPE(ProgDesc), INTENT(IN) :: ThisProgVer     !< program name/date/version description
@@ -2061,19 +2061,15 @@ end do
       CALL AllocAry( y_FAST%AllOutData, NumOuts-1, y_FAST%NOutSteps, 'AllOutData', ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-      IF ( OutputFileFmtID == FileFmtID_WithoutTime ) THEN
-
+      IF ( p_FAST%WrBinMod == FileFmtID_WithTime ) THEN   ! we store the entire time array
+         CALL AllocAry( y_FAST%TimeData, y_FAST%NOutSteps, 'TimeData', ErrStat, ErrMsg )
+         IF ( ErrStat >= AbortErrLev ) RETURN
+      ELSE  
          CALL AllocAry( y_FAST%TimeData, 2_IntKi, 'TimeData', ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
 
          y_FAST%TimeData(1) = 0.0_DbKi           ! This is the first output time, which we will set later
          y_FAST%TimeData(2) = p_FAST%DT_out      ! This is the (constant) time between subsequent writes to the output file
-
-      ELSE  ! we store the entire time array
-
-         CALL AllocAry( y_FAST%TimeData, y_FAST%NOutSteps, 'TimeData', ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
       END IF
 
       y_FAST%n_Out = 0  !number of steps actually written to the file
@@ -2627,14 +2623,26 @@ END DO
       end if
 
       ! OutFileFmt - Format for tabular (time-marching) output file(s) (1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both) (-):
-   CALL ReadVar( UnIn, InputFile, OutFileFmt, "OutFileFmt", "Format for tabular (time-marching) output file(s) (1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both) (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, OutFileFmt, "OutFileFmt", "Format for tabular (time-marching) output file(s) (0: uncompressed binary and text file, 1: text file [<RootName>.out], 2: compressed binary file [<RootName>.outb], 3: both text and compressed binary) (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if
+      
+#if defined COMPILE_SIMULINK || defined COMPILE_LABVIEW
+   !bjj: 2015-03-03: not sure this is still necessary...
+            p%WrBinMod = FileFmtID_WithTime            ! We cannot guarantee the output time step is constant in binary files
+#else
+            p%WrBinMod = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel;3=don't include time channel and do not pack data)
+#endif      
 
       SELECT CASE (OutFileFmt)
+      CASE (0_IntKi) 
+         ! This is an undocumented feature for the regression testing system.  It writes both text and binary output, but the binary is stored as uncompressed double floating point data instead of compressed int16 data.
+            p%WrBinOutFile = .TRUE.
+            p%WrBinMod     =  FileFmtID_NoCompressWithoutTime         ! A format specifier for the binary output file format (3=don't include time channel and do not pack data)
+            p%WrTxtOutFile = .TRUE.
          CASE (1_IntKi)
             p%WrBinOutFile = .FALSE.
             p%WrTxtOutFile = .TRUE.
@@ -2645,7 +2653,7 @@ END DO
             p%WrBinOutFile = .TRUE.
             p%WrTxtOutFile = .TRUE.
          CASE DEFAULT
-            CALL SetErrStat( ErrID_Fatal, "FAST's OutFileFmt must be 1, 2, or 3.",ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal, "FAST's OutFileFmt must be 0, 1, 2, or 3.",ErrStat,ErrMsg,RoutineName)
             if ( ErrStat >= AbortErrLev ) then
                call cleanup()
                RETURN        
@@ -4738,7 +4746,7 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADO
          y_FAST%n_Out = y_FAST%n_Out + 1
 
             ! store time data
-         IF ( y_FAST%n_Out == 1_IntKi .OR. OutputFileFmtID == FileFmtID_WithTime ) THEN
+         IF ( y_FAST%n_Out == 1_IntKi .OR. p_FAST%WrBinMod == FileFmtID_WithTime ) THEN
             y_FAST%TimeData(y_FAST%n_Out) = t   ! Time associated with these outputs
          END IF
 
@@ -5890,7 +5898,7 @@ SUBROUTINE FAST_EndOutput( p_FAST, y_FAST, ErrStat, ErrMsg )
 
       FileDesc = TRIM(y_FAST%FileDescLines(1))//' '//TRIM(y_FAST%FileDescLines(2))//'; '//TRIM(y_FAST%FileDescLines(3))
 
-      CALL WrBinFAST(TRIM(p_FAST%OutFileRoot)//'.outb', OutputFileFmtID, TRIM(FileDesc), &
+      CALL WrBinFAST(TRIM(p_FAST%OutFileRoot)//'.outb', Int(p_FAST%WrBinMod, B2Ki), TRIM(FileDesc), &
             y_FAST%ChannelNames, y_FAST%ChannelUnits, y_FAST%TimeData, y_FAST%AllOutData(:,1:y_FAST%n_Out), ErrStat, ErrMsg)
 
       IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(GetErrStr(ErrStat))//' when writing binary output file: '//TRIM(ErrMsg) )

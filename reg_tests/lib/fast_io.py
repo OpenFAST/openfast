@@ -82,17 +82,18 @@ def load_binary_output(filename):
     def fread(fid, n, type):
         fmt, nbytes = {'uint8': ('B', 1), 'int16':('h', 2), 'int32':('i', 4), 'float32':('f', 4), 'float64':('d', 8)}[type]
         return struct.unpack(fmt * n, fid.read(nbytes * n))
-
+    
     FileFmtID_WithTime = 1    # File identifiers used in FAST
     FileFmtID_WithoutTime = 2
+    FileFmtID_NoCompressWithoutTime = 3
     LenName = 10              # number of characters per channel name
     LenUnit = 10              # number of characters per unit name
-
+    
     with open(filename, 'rb') as fid:
-        FileID = fread(fid, 1, 'int16')          # FAST output file format, INT(2)
+        FileID = fread(fid, 1, 'int16')[0]       # FAST output file format, INT(2)
         NumOutChans = fread(fid, 1, 'int32')[0]  # The number of output channels, INT(4)
         NT = fread(fid, 1, 'int32')[0]           # The number of time steps, INT(4)
-
+        print(FileID)
         if FileID == FileFmtID_WithTime:
             TimeScl = fread(fid, 1, 'float64')   # The time slopes for scaling, REAL(8)
             TimeOff = fread(fid, 1, 'float64')   # The time offsets for scaling, REAL(8)
@@ -100,8 +101,9 @@ def load_binary_output(filename):
             TimeOut1 = fread(fid, 1, 'float64')  # The first time in the time series, REAL(8)
             TimeIncr = fread(fid, 1, 'float64')  # The time increment, REAL(8)
 
-        ColScl = fread(fid, NumOutChans, 'float32')  # The channel slopes for scaling, REAL(4)
-        ColOff = fread(fid, NumOutChans, 'float32')  # The channel offsets for scaling, REAL(4)
+        if FileID != FileFmtID_NoCompressWithoutTime:
+            ColScl = fread(fid, NumOutChans, 'float32')  # The channel slopes for scaling, REAL(4)
+            ColOff = fread(fid, NumOutChans, 'float32')  # The channel offsets for scaling, REAL(4)
 
         LenDesc = fread(fid, 1, 'int32')[0]          # The number of characters in the description string, INT(4)
         DescStrASCII = fread(fid, LenDesc, 'uint8')  # DescStr converted to ASCII
@@ -124,14 +126,23 @@ def load_binary_output(filename):
             cnt = len(PackedTime)
             if cnt < NT:
                 raise Exception('Could not read entire %s file: read %d of %d time values' % (filename, cnt, NT))
-        PackedData = fread(fid, nPts, 'int16')    # read the channel data
+        
+        if FileID == FileFmtID_NoCompressWithoutTime:
+            PackedData = fread(fid, nPts, 'float64')    # read the channel data
+        else:
+            PackedData = fread(fid, nPts, 'int16')    # read the channel data
+            
         cnt = len(PackedData)
         if cnt < nPts:
             raise Exception('Could not read entire %s file: read %d of %d values' % (filename, cnt, nPts))
 
-    # Scale the packed binary to real data
-    pack = np.array(PackedData).reshape(NT, NumOutChans)
-    data = (pack - ColOff) / ColScl
+    if FileID == FileFmtID_NoCompressWithoutTime:
+        pack = np.array(PackedData).reshape(NT, NumOutChans)
+        data = pack
+    else:
+        # Scale the packed binary to real data
+        pack = np.array(PackedData).reshape(NT, NumOutChans)
+        data = (pack - ColOff) / ColScl
 
     if FileID == FileFmtID_WithTime:
         time = (np.array(PackedTime) - TimeOff) / TimeScl;
