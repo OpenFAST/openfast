@@ -53,8 +53,8 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     ax = plt.subplot(211)
     plt.title(title1)
     plt.grid(True)
-    plt.plot(xseries, y1series, "g", linestyle="solid", linewidth=3, label = "Baseline")
-    plt.plot(xseries, y2series, "r", linestyle="solid", linewidth=1, label = "Local")
+    plt.plot(xseries, y1series, "g", linestyle="solid", linewidth=3, label = "Local")
+    plt.plot(xseries, y2series, "r", linestyle="solid", linewidth=1, label = "Baseline")
     plt.legend()
     
     ax = plt.subplot(212)
