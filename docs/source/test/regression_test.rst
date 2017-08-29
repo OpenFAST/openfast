@@ -29,19 +29,21 @@ called ``reg_tests`` where all of the input files for the test cases are copied
 and all of the locally generated outputs are stored.
 
 Ultimately, both CTest and the manual execution script call a series of Python
-scripts in ``reg_tests`` and ``reg_tests/lib``. One such script is ``lib/pass_fail.py``
-which reads the output files and computes a norm on each channel reported.
-If the maximum norm is greater than a predetermined tolerance, that particular
+scripts and libraries in ``reg_tests`` and ``reg_tests/lib``. One such script is
+``lib/pass_fail.py`` which reads the output files and computes a norm on each 
+channel reported. If the maximum norm is greater than a preset tolerance, that particular
 test is reported as failed. The failure criteria is outlined in pseudocode below.
 
 ::
-
-  for j in range(nChannels)
-     norm_diff[j] = L2norm(localSolution[j]-baselineSolution[j])
-     rms_baseline[j] = L2norm(baselineSolution[j])
-
-  norm = norm_diff / rms_baseline
-
+  
+  difference = abs(testData-baselineData)
+  for i in nChannels
+     if channelRange < 1 {
+        norm[i] = MaxNorm( difference[:,i] )
+     } else {
+        norm[i] = MaxNorm( difference[:,i] ) / channelRange
+     }
+     
   if max(norm) < tolerance:
     success
 
@@ -79,7 +81,7 @@ Regression test from scratch
   python compileDISCON.py
   cd ../../
   mkdir build && cd build
-  # Configure CMake - BUILD_TESTING, CTEST_OPENFAST_EXECUTABLE, CTEST_[MODULE]_EXECUTABLE
+  # Configure CMake with openfast/CMakeLists.txt - BUILD_TESTING, CTEST_OPENFAST_EXECUTABLE, CTEST_[MODULE]_EXECUTABLE
   cmake ..
   make
   ctest
@@ -94,7 +96,7 @@ Regression test from scratch
   python compileDISCON.py
   cd ../../
   mkdir build && cd build
-  # Configure CMake - CTEST_OPENFAST_EXECUTABLE, CTEST_[MODULE]_EXECUTABLE
+  # Configure CMake with openfast/reg_tests/CMakeLists.txt - CTEST_OPENFAST_EXECUTABLE, CTEST_[MODULE]_EXECUTABLE
   cmake ../reg_tests
   ctest
 
