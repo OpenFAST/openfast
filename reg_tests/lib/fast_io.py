@@ -93,7 +93,7 @@ def load_binary_output(filename):
         FileID = fread(fid, 1, 'int16')[0]       # FAST output file format, INT(2)
         NumOutChans = fread(fid, 1, 'int32')[0]  # The number of output channels, INT(4)
         NT = fread(fid, 1, 'int32')[0]           # The number of time steps, INT(4)
-        print(FileID)
+        
         if FileID == FileFmtID_WithTime:
             TimeScl = fread(fid, 1, 'float64')   # The time slopes for scaling, REAL(8)
             TimeOff = fread(fid, 1, 'float64')   # The time offsets for scaling, REAL(8)
