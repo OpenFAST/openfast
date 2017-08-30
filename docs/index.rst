@@ -26,3 +26,4 @@ https://nwtc.nrel.gov/
    Testing OpenFAST  <source/test.rst>
    Source Code Documentation <source/code.rst>
    Building this Documentation Locally <source/build_doc.rst>
+   FAST to OpenFAST transition <source/fast_to_openfast.rst>
