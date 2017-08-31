@@ -10,7 +10,7 @@ Dependencies
 
 OpenFAST has the following dependencies:
 
-- LAPACK libraries
+- LAPACK libraries. Users should set ``BLAS_LIBRARIES`` and ``LAPACK_LIBRARIES`` appropriately for cmake if the library isn't found in standard paths. Use `BLASLIB` as an example when using Intel MKL.
 - For the optional C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`__ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__ (provided by ``YAML_ROOT``)
 - For the optional testing framework, Python 3+
 
@@ -25,12 +25,12 @@ CMake Build Instructions
     cmake ../ 
     make 
     
-A sample installation shell script is also provided in the ``openfast/share``. Run the script from ``openfast/`` as:
+A sample installation shell script is also provided in the ``openfast/share``. Update the location of ``openfast_dir`` in the ``fast-build*`` scripts and run the script from ``openfast/`` as:
 ::
 
     git clone https://github.com/OpenFAST/OpenFAST.git
     cd OpenFAST
-    bash share/install.sh
+    bash share/fast-install.sh
 
 Current CMake Options
 ~~~~~~~~~~~~~~~~~~~~~
