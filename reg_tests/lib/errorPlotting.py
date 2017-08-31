@@ -53,14 +53,14 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     ax = plt.subplot(211)
     plt.title(title1)
     plt.grid(True)
-    plt.plot(xseries, y1series, "g", linestyle="solid", linewidth=3, label = "Local")
-    plt.plot(xseries, y2series, "r", linestyle="solid", linewidth=1, label = "Baseline")
+    plt.plot(xseries, y2series, "g", linestyle="solid", linewidth=3, label = "Baseline")
+    plt.plot(xseries, y1series, "r", linestyle="solid", linewidth=1, label = "Local")
     plt.legend()
     
     ax = plt.subplot(212)
     plt.title(title2)
     plt.grid(True)
-    plt.plot(xseries, y1series - y2series)
+    plt.plot(xseries, abs(y2series - y1series))
     plt.xlabel(xlabel)
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1e'))
     
@@ -82,7 +82,7 @@ def plotOpenfastError(testSolution, baselineSolution, attribute):
         rtl.exitWithError("Error: Invalid channel name--{}".format(e))
 
     title1 = attribute + " (" + info1["attribute_units"][channel] + ")"
-    title2 = "Baseline - Local"
+    title2 = "Max norm"
     xlabel = 'Time (s)'
 
     timevec = dict1[:, 0]
