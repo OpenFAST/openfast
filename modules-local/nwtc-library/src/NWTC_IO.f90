@@ -33,7 +33,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               
-          ProgDesc( 'NWTC Subroutine Library', 'v2.11.02', '13-Mar-2017')    !< The name, version, and date of the NWTC Subroutine Library
+          ProgDesc( 'NWTC Subroutine Library', '', '')    !< The name, version, and date of the NWTC Subroutine Library
 
       !> This type stores a linked list of file names, used in MLB-style input file parsing (currently used in AirfoilInfo)
    TYPE, PUBLIC   :: FNlist_Type                                
@@ -1992,8 +1992,8 @@ CONTAINS
    CALL WrScr('')
    CALL WrScr( 'Copyright (C) '//TRIM(year)//' National Renewable Energy Laboratory' )
    CALL WrScr('')
-   CALL WrScr( 'This program comes with ABSOLUTELY NO WARRANTY. '//&
-               'See the "license.txt" file distributed with this software for details.')   
+   CALL WrScr( 'This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY. '//&
+               'See the "LICENSE" file distributed with this software for details.')   
 
    IF (PRESENT(AdditionalComment)) THEN
       CALL WrScr(Stars)
@@ -2106,61 +2106,58 @@ CONTAINS
       END IF
       
    END SUBROUTINE DLLTypeUnPack   
+
 !=======================================================================
 !> This routine displays the name of the program, its version, and its release date.
 !! Use DispNVD (nwtc_io::dispnvd) instead of directly calling a specific routine in the generic interface.
    SUBROUTINE DispNVD0()
-
-
+     
       ! Print out program name, version, and date.
-
-   CALL WrScr ( NewLine//' Running '//TRIM( ProgName )//' '//Trim( ProgVer )//'.' )
-
+      CALL WrScr ( NewLine//' Running '//TRIM( ProgName )//' '//Trim( ProgVer )//'.' )
 
    RETURN
    END SUBROUTINE DispNVD0
+
 !=======================================================================
 !> \copydoc nwtc_io::dispnvd0
    SUBROUTINE DispNVD1 ( ProgInfo, DispNWTCVer )
 
-
-   IMPLICIT NONE
-   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    !< Contains the name and version info
-   LOGICAL,INTENT(IN),OPTIONAL         :: DispNWTCVer !< Option to display what version of the library is linked with the code
+      IMPLICIT NONE
+      
+      TYPE( ProgDesc ), INTENT(IN) :: ProgInfo    !< Contains the name and version info
+      LOGICAL,INTENT(IN),OPTIONAL  :: DispNWTCVer !< Option to display what version of the library is linked with the code
 
       ! Print out program name, version, and date.
-
+      
       ! As a special case, display the library version with the program version
-   IF ( PRESENT(DispNWTCVer) ) THEN
-      IF ( DispNWTCVer .AND. ProgInfo%Name /= NWTC_Ver%Name ) THEN
-         CALL WrScr ( NewLine//' Running '//TRIM( GetNVD( ProgInfo ) )//' linked with '//TRIM( GetNVD( NWTC_Ver ) )//'.' )
-         RETURN
+      IF ( PRESENT(DispNWTCVer) ) THEN
+         IF ( DispNWTCVer .AND. ProgInfo%Name /= NWTC_Ver%Name ) THEN
+            CALL WrScr ( NewLine//' Running '//TRIM( GetNVD( ProgInfo ) )//' linked with '//TRIM( GetNVD( NWTC_Ver ) )//'.' )
+            RETURN
+         END IF
       END IF
-   END IF
-
-   CALL WrScr ( NewLine//' Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
-
+      
+      CALL WrScr ( 'Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
 
    RETURN
    END SUBROUTINE DispNVD1
+
 !=======================================================================
 !> This routine displays the name of the program, its version, and its release date passed in as strings
 !! This routine is depricated and for legacy purposes only. Please don't use for any new code (Dec-2012).
    SUBROUTINE DispNVD2 ( Name, Ver )
 
-
-   IMPLICIT NONE
-   CHARACTER(*),  INTENT(IN)           :: Name     !< String containing the name of the program using the library
-   CHARACTER(*),  INTENT(IN)           :: Ver      !< String containing the version and date info
-
-
+      IMPLICIT NONE
+     
+      CHARACTER(*),  INTENT(IN) :: Name     !< String containing the name of the program using the library
+      CHARACTER(*),  INTENT(IN) :: Ver      !< String containing the version and date info
+     
       ! Print out program name, version, and date.
-
-   CALL WrScr ( NewLine//' Running '//TRIM( Name )//' ('//Trim( Ver )//').' )
-
+      CALL WrScr ( NewLine//' Running '//TRIM( Name )//' ('//Trim( Ver )//').' )
 
    RETURN
    END SUBROUTINE DispNVD2
+   
 !=======================================================================
 !> This routine finds one line of text with a maximum length of MaxLen from the Str.
 !! It tries to break the line at a blank.
@@ -2298,6 +2295,7 @@ CONTAINS
 
 
    END FUNCTION GetErrStr
+   
 !=======================================================================
 !> This function converts the three strings contained in the ProgDesc
 !! data type into a single string listing the program name,
@@ -2305,18 +2303,13 @@ CONTAINS
    FUNCTION GetNVD ( ProgInfo )
 
       ! Argument declarations.
-
-   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    !< Contains the name, date, and version info
-
+      TYPE( ProgDesc ), INTENT(IN) :: ProgInfo    !< Contains the name, date, and version info
 
       ! Function delcaration
+      CHARACTER(200)               :: GetNVD      !< A single string containing the name, date, and version info
 
-   CHARACTER(200)                      :: GetNVD      !< A single string containing the name, date, and version info
-
-
-      ! Print all the version info into a nice string:
-
-      GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
+      ! Store all the version info into a single string
+      GetNVD = TRIM( ProgInfo%Name ) !//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
 
    END FUNCTION GetNVD
 !=======================================================================
@@ -6759,19 +6752,17 @@ CONTAINS
 
       TimeOff = Int32Min - TimeScl*REAL( TimeMin, R8Ki )
       
-         ! Pack the time into 32-bit integers
+      ! Pack the time into 32-bit integers
       DO IT=1,NT                             ! Loop through the time steps
          TmpTimeArray(IT) = NINT( Max( Min( REAL( TimeScl*TimeData(IT) + TimeOff, R8Ki), Int32Max ), Int32Min) , B4Ki )
       ENDDO !IT
    
       
-   ELSE ! FileFmtID_WithoutTime
+   ELSE ! FileFmtID_WithoutTime and FileFmtID_NoCompressWithoutTime
          ! Convert DbKi to R8Ki, if necessary
       TimeOut1      = TimeData(1)                ! The first output time
       TimeIncrement = TimeData(2)                ! The time increment
    END IF ! FileID
-
-   
    
    IF ( FileID /= FileFmtID_NoCompressWithoutTime ) THEN
       
@@ -6779,61 +6770,47 @@ CONTAINS
       ColMax(:) = AllOutData(:,1_IntKi)         ! Initialize the Max values for each channel
 
       DO IT=2,NT                                ! Loop through the remaining time steps
-
          DO IC=1,NumOutChans                    ! Loop through the output channels
-
             IF ( AllOutData(IC,IT) > ColMax(IC) ) THEN
                ColMax(IC) = AllOutData(IC,IT)
             ELSEIF ( AllOutData(IC,IT) < ColMin(IC) ) THEN
                ColMin(IC) = AllOutData(IC,IT)
             ENDIF
-
          ENDDO !IC
-
       ENDDO !IT
 
       !...............................................................................................................................
       ! Calculate the scaling parameters for each channel
       !...............................................................................................................................
       DO IC=1,NumOutChans                    ! Loop through the output channels
-
          IF ( ColMax(IC) == ColMin(IC) ) THEN
             ColScl(IC) = IntRng/SQRT(EPSILON(1.0_SiKi))
          ELSE
             ColScl(IC) = IntRng/REAL( ColMax(IC) - ColMin(IC), SiKi )
          ENDIF
-
          ColOff(IC) = IntMin - ColScl(IC)*REAL( ColMin(IC), SiKi )
-
       ENDDO !IC
       
    ENDIF
 
-      !...............................................................................................................................
-      ! Convert channels to 16-bit integers (packed binary) or (R8Ki if unpacked binary)
-      !...............................................................................................................................
-      J = 1
-      DO IT=1,NT                                ! Loop through the time steps
-         DO IC=1,NumOutChans                    ! Loop through the output channels
-            IF ( FileID == FileFmtID_NoCompressWithoutTime ) THEN
-               TmpR8OutArray(J) =   REAL( AllOutData(IC,IT), R8Ki )
-            ELSE           
-               TmpOutArray(J) =  NINT( Max( Min( REAL( ColScl(IC)*AllOutData(IC,IT) + ColOff(IC), SiKi), IntMax ), IntMin) , B2Ki )
-            END IF
-         
-            J = J + 1
-
-         ENDDO !IC
-
-      ENDDO !IT
-
-
-   
+   !...............................................................................................................................
+   ! Convert channels to 16-bit integers (packed binary) or (R8Ki if unpacked binary)
+   !...............................................................................................................................
+   J = 1
+   DO IT=1,NT                                ! Loop through the time steps
+     DO IC=1,NumOutChans                    ! Loop through the output channels
+        IF ( FileID == FileFmtID_NoCompressWithoutTime ) THEN
+           TmpR8OutArray(J) =   REAL( AllOutData(IC,IT), R8Ki )
+        ELSE           
+           TmpOutArray(J) =  NINT( Max( Min( REAL( ColScl(IC)*AllOutData(IC,IT) + ColOff(IC), SiKi), IntMax ), IntMin) , B2Ki )
+        END IF
+        J = J + 1
+     ENDDO !IC
+   ENDDO !IT
 
    !...............................................................................................................................
    ! Write the output file header
    !...............................................................................................................................
-
    WRITE (UnIn, IOSTAT=ErrStat2)   INT( FileID             , B2Ki )            ! FAST output file format
       IF ( ErrStat2 /= 0 ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Error writing FileID to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
@@ -6848,14 +6825,12 @@ CONTAINS
          RETURN
       END IF
 
-
    WRITE (UnIn, IOSTAT=ErrStat2)   INT( NT                 , B4Ki )            ! The number of time steps
       IF ( ErrStat2 /= 0 ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Error writing NT to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
          CALL Cleanup( )
          RETURN
       END IF
-
 
    IF ( FileID == FileFmtID_WithTime ) THEN
          ! Write the slope and offset for the time channel
@@ -6874,7 +6849,7 @@ CONTAINS
             RETURN
          END IF
 
-   ELSE ! FileFmtID_WithoutTime
+   ELSE ! FileFmtID_WithoutTime and FileFmtID_NoCompressWithoutTime
          ! Write the first output time and the time step
 
       WRITE (UnIn, IOSTAT=ErrStat2)  TimeOut1                                  ! The first output time

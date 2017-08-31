@@ -33,7 +33,7 @@ MODULE ServoDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: SrvD_Ver = ProgDesc( 'ServoDyn', 'v1.06.00a-bjj', '26-Jul-2016' )
+   TYPE(ProgDesc), PARAMETER            :: SrvD_Ver = ProgDesc( 'ServoDyn', '', '' )
    
 #ifdef COMPILE_SIMULINK
    LOGICAL, PARAMETER, PUBLIC           :: Cmpl4SFun  = .TRUE.                            ! Is the module being compiled as an S-Function for Simulink?
@@ -3159,9 +3159,9 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                  NTMD_XQD ,   NTMD_YQ ,  NTMD_YQD ,   TTMD_XQ ,  TTMD_XQD ,   TTMD_YQ ,  TTMD_YQD , &
                                 YawMomCom , YawMomCom /)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(16) =  (/ &                     ! This lists the units corresponding to the allowed parameters
-                               "(deg)     ","(deg)     ","(deg)     ","(kW)      ","(kN·m)    ","(kN·m)    ","(m)       ", &
+                               "(deg)     ","(deg)     ","(deg)     ","(kW)      ","(kN-m)    ","(kN-m)    ","(m)       ", &
                                "(m/s)     ","(m)       ","(m/s)     ","(m)       ","(m/s)     ","(m)       ","(m/s)     ", &
-                               "(kN·m)    ","(kN·m)    "/)
+                               "(kN-m)    ","(kN-m)    "/)
 
 
       ! Initialize values

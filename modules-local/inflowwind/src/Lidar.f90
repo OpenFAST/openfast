@@ -28,7 +28,7 @@ MODULE Lidar
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: Lidar_Ver = ProgDesc( 'Lidar', 'v1.01.00a-bjj', '14-Dec-2015' )
+   TYPE(ProgDesc), PARAMETER            :: Lidar_Ver = ProgDesc( 'Lidar', '', '' )
    CHARACTER(*),   PARAMETER            :: Lidar_Nickname = 'Lidar'
    
    

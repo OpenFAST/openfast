@@ -25,12 +25,17 @@ function(of_regression testname LABELS)
   file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py" TEST_SCRIPT)
   file(TO_NATIVE_PATH "${CTEST_OPENFAST_EXECUTABLE}" OPENFAST_EXECUTABLE)
   file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/.." SOURCE_DIRECTORY)
-  file(TO_NATIVE_PATH "${CTEST_BINARY_DIR}/openfast" BUILD_DIRECTORY)
+  file(TO_NATIVE_PATH "${CTEST_BINARY_DIR}/glue-codes/fast" BUILD_DIRECTORY)
 
   string(REPLACE "\\" "\\\\" TEST_SCRIPT ${TEST_SCRIPT})
   string(REPLACE "\\" "\\\\" OPENFAST_EXECUTABLE ${OPENFAST_EXECUTABLE})
   string(REPLACE "\\" "\\\\" SOURCE_DIRECTORY ${SOURCE_DIRECTORY})
   string(REPLACE "\\" "\\\\" BUILD_DIRECTORY ${BUILD_DIRECTORY})
+
+  set(PLOT_FLAG "")
+  if(CTEST_PLOT_ERRORS)
+    set(PLOT_FLAG "-p")
+  endif()
 
   add_test(
     ${testname} ${PYTHON_EXECUTABLE}
@@ -42,6 +47,7 @@ function(of_regression testname LABELS)
        ${TOLERANCE}
        ${CMAKE_SYSTEM_NAME}             # [Darwin,Linux,Windows]
        ${CMAKE_Fortran_COMPILER_ID}     # [Intel,GNU]
+       ${PLOT_FLAG}                     # empty or "-p"
   )
   # limit each test to 45 minutes: 2700s
   set_tests_properties(${testname} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
@@ -53,7 +59,7 @@ function(bd_regression testname)
   file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py" TEST_SCRIPT)
   file(TO_NATIVE_PATH "${CTEST_BEAMDYN_EXECUTABLE}" BEAMDYN_EXECUTABLE)
   file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/.." SOURCE_DIRECTORY)
-  file(TO_NATIVE_PATH "${CTEST_BINARY_DIR}" BUILD_DIRECTORY)
+  file(TO_NATIVE_PATH "${CTEST_BINARY_DIR}/modules-local/beamdyn" BUILD_DIRECTORY)
 
   string(REPLACE "\\" "\\\\" TEST_SCRIPT ${TEST_SCRIPT})
   string(REPLACE "\\" "\\\\" BEAMDYN_EXECUTABLE ${BEAMDYN_EXECUTABLE})
@@ -69,7 +75,7 @@ function(bd_regression testname)
        ${BUILD_DIRECTORY}               # build directory for test
        ${TOLERANCE}
   )
-  # limit each test to 45 minutes: 2700s
+  # limit each test to 90 minutes: 5400s
   set(LABELS beamdyn regression)
   set_tests_properties(${testname} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
 endfunction(bd_regression)

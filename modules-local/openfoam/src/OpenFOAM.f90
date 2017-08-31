@@ -31,7 +31,7 @@ MODULE OpenFOAM
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: OpFM_Ver = ProgDesc( 'OpenFOAM Integration', 'v1.00.00a-bjj', '11-Aug-2015' )
+   TYPE(ProgDesc), PARAMETER            :: OpFM_Ver = ProgDesc( 'OpenFOAM Integration', '', '' )
 
 
 ! ==================================================================================================="

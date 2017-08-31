@@ -18,7 +18,7 @@ IMPLICIT                           NONE
 
    ! Local declarations.
 
-TYPE(ProgDesc), PARAMETER     :: ProgInfo = ProgDesc( 'NWTC Test_OpenCon_GnuWin', '1.00.00', '26-Dec-2012')       ! The name, version, and date of this program.
+TYPE(ProgDesc), PARAMETER     :: ProgInfo = ProgDesc( 'NWTC Test_OpenCon_GnuWin', '', '')       ! The name, version, and date of this program.
 
 
    ! Initialize the NWTC Library, which will initialize Pi-based constants.

@@ -32,7 +32,7 @@ use NWTC_Library
    implicit none 
 
 private
-   type(ProgDesc), parameter  :: UA_Ver = ProgDesc( 'UnsteadyAero', 'v1.01.00a', '10-May-2017' )
+   type(ProgDesc), parameter  :: UA_Ver = ProgDesc( 'UnsteadyAero', '', '' )
 
    public :: UA_Init
    public :: UA_UpdateDiscOtherState

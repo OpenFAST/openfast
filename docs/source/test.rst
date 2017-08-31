@@ -13,9 +13,10 @@ module.
 
 Dependencies
 ------------
-- Python 2.7/3+
+- Python 3+
 - Numpy
 - CMake and CTest (Optional in regression test)
+- matplotlib (Optional in regression test)
 
 Configuring the test suite
 --------------------------

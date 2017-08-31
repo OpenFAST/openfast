@@ -31,7 +31,7 @@ MODULE IfW_4Dext
    IMPLICIT                                  NONE
    PRIVATE
 
-   TYPE(ProgDesc),   PARAMETER               :: IfW_4Dext_Ver = ProgDesc( 'IfW_4Dext', 'v1.00.00', '17-Dec-2016' )
+   TYPE(ProgDesc),   PARAMETER               :: IfW_4Dext_Ver = ProgDesc( 'IfW_4Dext', '', '' )
 
    PUBLIC                                    :: IfW_4Dext_Init
    PUBLIC                                    :: IfW_4Dext_End

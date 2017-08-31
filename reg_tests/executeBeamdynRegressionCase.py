@@ -17,89 +17,72 @@
 """
     This program executes BeamDyn and a regression test for a single test case.
     The test data is contained in a git submodule, r-test, which must be initialized
-    prior to running. r-test can be initialized with
-    `git submodule update --init --recursive` or updated with `git submodule update`.
-
-    Usage: `python3 executeBeamdynRegressionCase.py testname beamdyn_driver source_directory build_directory tolerance system_name compiler_id`
-    Example: `python3 executeBeamdynRegressionCase.py Test02 beamdyn_driver path/to/openfast_repo path/to/openfast_repo/build 0.000001 [Darwin,Linux,Windows] [Intel,GNU]`
+    prior to running. See the r-test README or OpenFAST documentation for more info.
+    
+    Get usage with: `executeBeamdynRegressionCase.py -h`
 """
 
 import os
-from stat import *
 import sys
+basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
+import argparse
 import shutil
 import subprocess
-
-##### Helper functions
-
-def exitWithError(error):
-    print(error)
-    sys.exit(1)
-
-def exitWithDirNotFound(dir):
-    exitWithError("Directory does not exist: {}\n".format(dir))
-
-def exitWithFileNotFound(file):
-    exitWithError("File does not exist: {}\n".format(file))
+import rtestlib as rtl
+import openfastDrivers
+import pass_fail
+from errorPlotting import exportCaseSummary
 
 ##### Main program
 
-### Determine python version
-if sys.version_info < (3, 0): pythonCommand = "python"
-else: pythonCommand = "python3"
+### Store the python executable for future python calls
+pythonCommand = sys.executable
 
 ### Verify input arguments
-if len(sys.argv) != 6:
-    exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: {} executeBeamdynRegressionCase.py testname beamdyn_executable source_directory build_directory tolerance".format(pythonCommand))
+parser = argparse.ArgumentParser(description='Executes OpenFAST and a regression test for a single test case.')
+parser.add_argument('caseName', metavar='Case-Name', type=str, nargs=1, help='The name of the test case.')
+parser.add_argument('executable', metavar='BeamDyn-Driver', type=str, nargs=1, help='The path to the BeamDyn driver executable.')
+parser.add_argument('sourceDirectory', metavar='path/to/openfast_repo', type=str, nargs=1, help='The path to the OpenFAST repository.')
+parser.add_argument('buildDirectory', metavar='path/to/openfast_repo/build', type=str, nargs=1, help='The path to the OpenFAST repository build directory.')
+parser.add_argument('tolerance', metavar='Test-Tolerance', type=float, nargs=1, help='Tolerance defining pass or failure in the regression test.')
+parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
+parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
 
-caseName = sys.argv[1]
-executable = sys.argv[2]
-sourceDirectory = sys.argv[3]
-buildDirectory = sys.argv[4]
-tolerance = sys.argv[5]
+args = parser.parse_args()
 
-# verify that the given executable exists and can be run
-if not os.path.isfile(executable):
-    exitWithError("The given executable, {}, does not exist.".format(executable))
+caseName = args.caseName[0]
+executable = args.executable[0]
+sourceDirectory = args.sourceDirectory[0]
+buildDirectory = args.buildDirectory[0]
+tolerance = args.tolerance[0]
+plotError = args.plot if args.plot is False else True
+noExec = args.noExec if args.noExec is False else True
+verbose = args.verbose if args.verbose is False else True
 
-permissionsMask = oct(os.stat(executable)[ST_MODE])[-1:]
-if not int(permissionsMask)%2 == 1:
-    exitWithError("The given executable, {}, does not have proper permissions.".format(executable))
-
-# verify source directory
-if not os.path.isdir(sourceDirectory):
-    exitWithError("The given source directory, {}, does not exist.".format(sourceDirectory))
-
-# verify build directory
+# validate inputs
+rtl.validateExeOrExit(executable)
+rtl.validateDirOrExit(sourceDirectory)
 if not os.path.isdir(buildDirectory):
-    os.mkdir(buildDirectory)
-
-if not os.path.isdir(buildDirectory):
-    exitWithError("The given build directory, {}, does not exist.".format(buildDirectory))
-
-# verify tolerance
-try:
-    float(tolerance)
-except ValueError:
-    exitWithError("The given tolerance, {}, is not a valid number.".format(tolerance))
+    os.makedirs(buildDirectory)
 
 ### Build the filesystem navigation variables for running the test case
 regtests = os.path.join(sourceDirectory, "reg_tests")
 lib = os.path.join(regtests, "lib")
 rtest = os.path.join(regtests, "r-test")
-modulesLocal = os.path.join(rtest, "modules-local")
-targetOutputDirectory = os.path.join(modulesLocal, "beamdyn", caseName)
-inputsDirectory = os.path.join(modulesLocal, "beamdyn", caseName)
-testBuildDirectory = os.path.join(buildDirectory, "beamdyn", caseName)
-
+moduleDirectory = os.path.join(rtest, "modules-local", "beamdyn")
+inputsDirectory = os.path.join(moduleDirectory, caseName)
+targetOutputDirectory = os.path.join(inputsDirectory)
+testBuildDirectory = os.path.join(buildDirectory, caseName)
+    
 # verify all the required directories exist
 if not os.path.isdir(rtest):
-    exitWithError("The test data directory, {}, does not exist. If you haven't already, run `git submodule update --init --recursive`".format(rtest))
+    rtl.exitWithError("The test data directory, {}, does not exist. If you haven't already, run `git submodule update --init --recursive`".format(rtest))
 if not os.path.isdir(targetOutputDirectory):
-    exitWithError("The test data outputs directory, {}, does not exist. Try running `git submodule update`".format(targetOutputDirectory))
+    rtl.exitWithError("The test data outputs directory, {}, does not exist. Try running `git submodule update`".format(targetOutputDirectory))
 if not os.path.isdir(inputsDirectory):
-    exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
+    rtl.exitWithError("The test data inputs directory, {}, does not exist. Verify your local repository is up to date.".format(inputsDirectory))
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
@@ -108,33 +91,39 @@ if not os.path.isdir(testBuildDirectory):
     shutil.copy(os.path.join(inputsDirectory,"bd_driver.inp"), os.path.join(testBuildDirectory,"bd_driver.inp"))
     shutil.copy(os.path.join(inputsDirectory,"bd_primary.inp"), os.path.join(testBuildDirectory,"bd_primary.inp"))
     shutil.copy(os.path.join(inputsDirectory,"beam_props.inp"), os.path.join(testBuildDirectory,"beam_props.inp"))
-
+    
 ### Run beamdyn on the test case
-executionScript = os.path.join(lib, "executeBeamdynCase.py")
-executionCommand = " ".join([pythonCommand, executionScript, testBuildDirectory, executable])
-
-print("'{}' - running".format(executionCommand))
-sys.stdout.flush()
-executionReturnCode = subprocess.call(executionCommand, shell=True)
-print("'{}' - finished with exit code {}".format(executionCommand, executionReturnCode))
-
-if executionReturnCode != 0:
-    exitWithError("")
-
+if not noExec:
+    caseInputFile = os.path.join(testBuildDirectory, "bd_driver.inp")
+    returnCode = openfastDrivers.runBeamdynDriverCase(caseInputFile, executable)
+    if returnCode != 0:
+        rtl.exitWithError("")
+    
 ### Build the filesystem navigation variables for running the regression test
-passFailScript = os.path.join(lib, "pass_fail.py")
-localOutputFile = os.path.join(testBuildDirectory, "bd_driver.out")
-goldStandardFile = os.path.join(targetOutputDirectory, "bd_driver.out")
+localOutFile = os.path.join(testBuildDirectory, "bd_driver.out")
+baselineOutFile = os.path.join(targetOutputDirectory, "bd_driver.out")
+rtl.validateFileOrExit(localOutFile)
+rtl.validateFileOrExit(baselineOutFile)
 
-if not os.path.isfile(passFailScript): exitWithFileNotFound(passFailScript)
-if not os.path.isfile(localOutputFile): exitWithFileNotFound(localOutputFile)
-if not os.path.isfile(goldStandardFile): exitWithFileNotFound(goldStandardFile)
+testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
+baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
+relativeNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData)
 
-passfailCommand = " ".join([pythonCommand, passFailScript, localOutputFile, goldStandardFile, tolerance])
-print("'{}' - running".format(passfailCommand))
-sys.stdout.flush()
-passfailReturnCode = subprocess.call(passfailCommand, shell=True)
-print("'{}' - finished with exit code {}".format(passfailCommand, passfailReturnCode))
+# export all case summaries
+results = list(zip(testInfo["attribute_names"], relativeNorm, maxNorm))
+exportCaseSummary(testBuildDirectory, caseName, results)
 
-# return pass/fail
-sys.exit(passfailReturnCode)
+# failing case
+if not pass_fail.passRegressionTest(relativeNorm, tolerance):
+    if plotError:
+        from errorPlotting import initializePlotDirectory, plotOpenfastError
+        failChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if relativeNorm[i] > tolerance]
+        failRelNorm = [relativeNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if relativeNorm[i] > tolerance]
+        failMaxNorm = [maxNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if relativeNorm[i] > tolerance]
+        initializePlotDirectory(localOutFile, failChannels, failRelNorm, failMaxNorm)
+        for channel in failChannels:
+            plotOpenfastError(localOutFile, baselineOutFile, channel)
+    sys.exit(1)
+    
+# passing case
+sys.exit(0)

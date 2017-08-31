@@ -1270,6 +1270,7 @@ CONTAINS
    END SUBROUTINE Cleanup
 
 END SUBROUTINE FAST_InitializeAll
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This function returns a string describing the glue code and some of the compilation options we're using.
 FUNCTION GetVersion(ThisProgVer)
@@ -1302,26 +1303,96 @@ FUNCTION GetVersion(ThisProgVer)
 !   GetVersion = TRIM(GetVersion)//' precision with '//OS_Desc
    GetVersion = TRIM(GetVersion)//' precision'
 
+   ! add git info
+#ifdef GIT_COMMIT_HASH
+   GetVersion = TRIM(GetVersion)//' at commit '//GIT_COMMIT_HASH
+#endif
+#ifdef GIT_HASH_FILE
+   ! VS build method for obtaining the git hash info.
+   ! This requires setting:
+   !  1) GIT_HASH_FILE = '$(ProjectDir)\gitHash.txt' preprocessor opetion on this file.
+   !  2) Creating a prebuild event on the profile file which runs this command: ..\GetGitHash.bat
+   !  3) The bat file, GetGitHash.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
+   GetVersion = TRIM(GetVersion)//' at commit '//ReadGitHash(GIT_HASH_FILE, errStat, errMsg)
+#endif
 
    RETURN
 END FUNCTION GetVersion
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine parses and compiles the relevant version and compile data for a givne program
+subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision)
+
+   TYPE(ProgDesc), INTENT(IN ) :: ThisProgVer     !< program name/date/version description
+   character(200), intent(out) :: name, version
+   character(200), intent(out) :: git_commit, architecture, precision
+   
+   name = trim(ThisProgVer%Name)
+   version = trim(ThisProgVer%Ver)
+   
+#ifdef GIT_COMMIT_HASH
+   git_commit = GIT_COMMIT_HASH
+#endif
+#ifdef GIT_HASH_FILE
+   ! VS build method for obtaining the git hash info.
+   ! This requires setting:
+   !  1) GIT_HASH_FILE = '$(ProjectDir)\gitHash.txt' preprocessor opetion on this file.
+   !  2) Creating a prebuild event on the profile file which runs this command: ..\GetGitHash.bat
+   !  3) The bat file, GetGitHash.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
+   git_commit = ReadGitHash(GIT_HASH_FILE, errStat, errMsg)
+#endif
+
+   architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
+   
+   if (ReKi == SiKi) then
+     precision = 'single'
+   else if (ReKi == R8Ki) then
+     precision = 'double'
+   else
+     precision = 'unknown'
+   end if
+   
+end subroutine GetProgramMetadata
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine is called at the start (or restart) of a FAST program (or FAST.Farm). It initializes the NWTC subroutine library,
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
 SUBROUTINE FAST_ProgStart(ThisProgVer)
-   TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
-
+   TYPE(ProgDesc), INTENT(IN) :: ThisProgVer     !< program name/date/version description
+   character(200) :: name, version, date
+   character(200) :: git_commit, architecture, precision
+   character(200) :: execution_date, execution_time, execution_zone
    
-      ! ... Initialize NWTC Library (open console, set pi constants) ...
-   CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
+   ! ... Initialize NWTC Library (open console, set pi constants) ...
+   ! sets the pi constants, open console for output, etc...
+   CALL NWTC_Init( ProgNameIN=ThisProgVer%Name, EchoLibVer=.FALSE. )
    
-      ! Display the copyright notice
+   ! Display the copyright notice
    CALL DispCopyrightLicense( ThisProgVer )
+   
+   ! Display the program metadata
+   call GetProgramMetadata(ThisProgVer, name, version, git_commit, architecture, precision)
+   
+   call wrscr(trim(name)//'-'//trim(git_commit))
+   call wrscr('Compile Info:')
+   call wrscr(' - Architecture: '//trim(architecture))
+   call wrscr(' - Precision: '//trim(precision))
+   ! use iso_fortran_env for compiler_version() and compiler_options()
+   ! call wrscr(' - Compiler: '//trim(compiler_version()))
+   ! call wrscr(' - Options: '//trim(compiler_options()))
 
-      ! Tell our users what they're running
-   CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   call date_and_time(execution_date, execution_time, execution_zone) 
+   
+   call wrscr('Execution Info:')
+   call wrscr(' - Date: '//trim(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
+   call wrscr(' - Time: '//trim(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:6))//trim(execution_zone))
+   
+   call wrscr('')
+   
+  !  CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
    
 END SUBROUTINE FAST_ProgStart
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine gets the name of the FAST input file from the command line. It also returns a logical indicating if this there
 !! was a "DWM" argument after the file name.
@@ -1344,7 +1415,6 @@ SUBROUTINE GetInputFileName(InputFile,UseDWM,ErrStat,ErrMsg)
    IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
       ErrStat = ErrID_Fatal
       ErrMsg  = 'The required input file was not specified on the command line.'
-
          !bjj:  if people have compiled themselves, they should be able to figure out the file name, right?         
       IF (BITS_IN_ADDR==32) THEN
          CALL NWTC_DisplaySyntax( InputFile, 'FAST_Win32.exe' )
@@ -2152,8 +2222,9 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, OverrideAbortErrLev, ErrStat, Err
 
    END DO
 
-   CALL WrScr( ' Heading of the '//TRIM(FAST_Ver%Name)//' input file: ' )
-   CALL WrScr( '   '//TRIM( p%FTitle ) )
+   CALL WrScr( TRIM(FAST_Ver%Name)//' input file heading:' )
+   CALL WrScr( '    '//TRIM( p%FTitle ) )
+   CALL WrScr('')
 
 
       ! AbortLevel - Error level when simulation should abort:
@@ -5845,7 +5916,7 @@ SUBROUTINE FAST_EndOutput( p_FAST, y_FAST, ErrStat, ErrMsg )
 
       FileDesc = TRIM(y_FAST%FileDescLines(1))//' '//TRIM(y_FAST%FileDescLines(2))//'; '//TRIM(y_FAST%FileDescLines(3))
 
-      CALL WrBinFAST(TRIM(p_FAST%OutFileRoot)//'.outb', p_FAST%WrBinMod, TRIM(FileDesc), &
+      CALL WrBinFAST(TRIM(p_FAST%OutFileRoot)//'.outb', Int(p_FAST%WrBinMod, B2Ki), TRIM(FileDesc), &
             y_FAST%ChannelNames, y_FAST%ChannelUnits, y_FAST%TimeData, y_FAST%AllOutData(:,1:y_FAST%n_Out), ErrStat, ErrMsg)
 
       IF ( ErrStat /= ErrID_None ) CALL WrScr( TRIM(GetErrStr(ErrStat))//' when writing binary output file: '//TRIM(ErrMsg) )

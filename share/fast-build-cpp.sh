@@ -11,8 +11,6 @@ CC=mpicc CXX=mpic++ FC=gfortran cmake \
    -DYAML_ROOT:PATH=$yaml_install_dir \
    -DHDF5_USE_STATIC_LIBRARIES=ON \
    -DHDF5_ROOT:PATH=$hdf5_install_dir \
-   -DLAPACK_LIBRARIES="$BLASLIB" \
-   -DBLAS_LIBRARIES="$BLASLIB" \
    -DFPE_TRAP_ENABLED=OFF \
    $EXTRA_ARGS \
 ../ &> log.cmake
