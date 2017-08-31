@@ -22,6 +22,12 @@ include(${CMAKE_SOURCE_DIR}/cmake/FastFortranOptions.cmake)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+# Get the git info into the executable
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+include(GetGitRevisionDescription)
+git_describe(GIT_DESCRIBE)
+add_definitions(-DGIT_COMMIT_HASH="${GIT_DESCRIBE}")
+
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
@@ -110,9 +116,6 @@ endif()
 
 option(BUILD_TESTING "Build the testing tree." OFF)
 if(BUILD_TESTING)
-  # add_subdirectory(reg_tests) this should be 'include'. with add_subdirectory,
-  # the CTestTestlist.cmake file is placed in the reg_tests subdirectory
-  # and cannot be found by ctest 
   include(reg_tests/CMakeLists.txt)
 endif()
 

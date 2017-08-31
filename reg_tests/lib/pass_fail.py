@@ -15,73 +15,84 @@
 #
 
 """
-    This program determines whether a new solution has regressed from the "gold standard"
-    solution. It reads two OpenFAST binary output files (.outb), and computes the variance
-    of the two solution files for each output channel. If the max variance is less than
-    the given tolerance, the test case passes.
-
-    Usage: python3 pass_fail.py solution1 solution2 tolerance
-    Example: python3 pass_fail.py output-local/Test01.outb gold-standard/Test01.outb 0.00000001
+    This library provides tools for comparing a test solution to a baseline solution
+    for any structured output file generated within the OpenFAST framework.
 """
 import sys, os
 import numpy as np
 from numpy import linalg as LA
 from fast_io import load_output
+import rtestlib as rtl
 
-def exitWithError(error):
-    print(error)
-    sys.exit(1)
+def readFASTOut(fastoutput):
+    try:
+        return load_output(fastoutput)
+    except Exception as e:
+        rtl.exitWithError("Error: {}".format(e))
 
-# validate input arguments
-nArgsExpected = 4
-if len(sys.argv) < nArgsExpected:
-    exitWithError("Error: {} arguments given, expected {}\n".format(len(sys.argv), nArgsExpected) +
-        "Usage: {} solution1 solution2 tolerance".format(sys.argv[0]))
+def passRegressionTest(norm, tolerance):
+    return True if max(norm) < tolerance else False
 
-solutionFile1 = sys.argv[1]
-solutionFile2 = sys.argv[2]
-solutionTolerance = sys.argv[3]
+def maxnorm(data):
+    return LA.norm(data, np.inf, axis=0)
+    
+def l2norm(data):
+    return LA.norm(data, 2, axis=0)
 
-if not os.path.isfile(solutionFile1):
-    exitWithError("Error: solution file does not exist at {}".format(solutionFile1))
+def calculateRelativeNorm(testData, baselineData):
+    norm_diff = l2norm(testData - baselineData)
+    norm_baseline = l2norm(baselineData)
+    
+    # replace any 0s with small number before for division
+    norm_baseline[norm_baseline == 0] = 1e-16
+    
+    norm = np.ones(len(norm_baseline))
+    for i,n in enumerate(norm_baseline):
+        norm[i] = norm_diff[i] if n < 1 else norm_diff[i] / norm_baseline[i]
+    return norm
+    
+def calculateMaxNormOverRange(testData, baselineData, tolerance): 
+    numChannels = baselineData.shape[1]
+    
+    channelRanges = [abs(max(baselineData[:,i]) - min(baselineData[:,i])) for i in range(numChannels)]
+    diff = abs(testData-baselineData)
+    norm = np.zeros(numChannels)
+    
+    for i, channelRange in enumerate(channelRanges):
+        norm[i] = maxnorm( diff[:,i] ) if channelRange < 1 else maxnorm( diff[:,i] / channelRange )
+        
+    return norm
+    
+def calculateMaxNorm(testData, baselineData):
+    return maxnorm(abs(testData - baselineData))
+    
+def calculateNorms(testData, baselineData, tolerance):
+    relativeNorm = calculateMaxNormOverRange(testData, baselineData, tolerance)
+    maxNorm = calculateMaxNorm(testData, baselineData)
+    return relativeNorm, maxNorm
+    
+if __name__=="__main__":
 
-if not os.path.isfile(solutionFile2):
-    exitWithError("Error: solution file does not exist at {}".format(solutionFile2))
+    rtl.validateInputOrExit(sys.argv, 4, "{} test_solution baseline_solution tolerance".format(sys.argv[0]))
 
-try:
-    solutionTolerance = float(solutionTolerance)
-except ValueError:
-    exitWithError("Error: invalid tolerance given, {}".format(solutionTolerance))
+    testSolution = sys.argv[1]
+    baselineSolution = sys.argv[2]
+    tolerance = sys.argv[3]
 
-# parse the FAST solution files
-try:
-    dict1, info1 = load_output(solutionFile1)
-    dict2, info2 = load_output(solutionFile2)
-except Exception as e:
-    exitWithError("Error: {}".format(e))
+    try:
+        tolerance = float(tolerance)
+    except ValueError:
+        rtl.exitWithError("Error: invalid tolerance given, {}".format(tolerance))
 
-## gold standard RMS, L2 norm
-nColumns = np.size(dict1,1)
-diff = np.ones(nColumns)
-rms_gold = np.ones(nColumns)
-norm_diff = np.ones(nColumns)
-for j in range(nColumns):
-    rms_gold[j] = LA.norm(dict2[:,j], 2)
+    rtl.validateFileOrExit(testSolution)
+    rtl.validateFileOrExit(baselineSolution)
 
-    diff = dict1[:,j]-dict2[:,j]
-    norm_diff[j] = LA.norm(diff, 2)
-
-# replace any 0s with small number before for division
-rms_gold[rms_gold == 0] = 1e-16
-
-norm = norm_diff / rms_gold
-
-####### need to reverse inequality to actually see output since test currently passes every time ######
-if max(norm) < solutionTolerance:
-    print('PASS')
-    sys.exit(0)
-else:
-    for i in range(len(info1['attribute_names'])):
-        print(info1['attribute_names'][i], norm[i])
-
-    sys.exit(1)
+    testData, testInfo, testPack = readFASTOut(testSolution)
+    baselineData, baselineInfo, basePack = readFASTOut(baselineSolution)
+    
+    normalizedNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
+    if passRegressionTest(normalizedNorm, tolerance):
+        sys.exit(0)
+    else:
+        dict1, info1, pack1 = readFASTOut(testSolution)
+        sys.exit(1)

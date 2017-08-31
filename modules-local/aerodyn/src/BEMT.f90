@@ -39,7 +39,7 @@ module BEMT
    
    private
    
-   type(ProgDesc), parameter  :: BEMT_Ver = ProgDesc( 'BEM', 'v1.03.00', '29-Oct-2016' )
+   type(ProgDesc), parameter  :: BEMT_Ver = ProgDesc( 'BEM', '', '' )
    character(*),   parameter  :: BEMT_Nickname = 'BEM'
       
    

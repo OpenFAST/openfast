@@ -32,7 +32,7 @@ char *template_data[] = {
 "",
 "   PRIVATE",
 "",
-"   TYPE(ProgDesc), PARAMETER  :: ModName_Ver = ProgDesc( 'ModuleName', 'v2.01.00', '7-Jul-2016' ) !< module date/version information",
+"   TYPE(ProgDesc), PARAMETER  :: ModName_Ver = ProgDesc( 'ModuleName', '', '' ) !< module date/version information",
 "",
 "",
 "   ! ..... Public Subroutines ...................................................................................................",

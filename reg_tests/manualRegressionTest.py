@@ -15,48 +15,76 @@
 #
 
 """
-    This program executes OpenFAST on all of the CertTest cases. It mimics the
+    This program executes OpenFAST on the CertTest cases. It mimics the
     regression test execution through CMake/CTest. All generated data goes into
     `openfast/build/reg_tests`.
 
-    Usage: `python manualRegressionTest.py openfast/install/bin/openfast [Darwin,Linux,Windows] [Intel,GNU] tolerance`
+    Get usage with: `manualRegressionTest.py -h`
 """
 
-import sys
 import os
+import sys
+basepath = os.path.sep.join(sys.argv[0].split(os.path.sep)[:-1]) if os.path.sep in sys.argv[0] else "."
+sys.path.insert(0, os.path.sep.join([basepath, "lib"]))
+import argparse
 import subprocess
 
-def exitWithError(error, code=1):
-    print(error)
-    sys.exit(code)
+def strFormat(string):
+    return "{:<" + str(len(string)) + "}"
 
 ### Verify input arguments
-if len(sys.argv) != 4 and len(sys.argv) != 5:
-    exitWithError("Invalid arguments: {}\n".format(" ".join(sys.argv)) +
-    "Usage: python manualRegressionTest.py openfast/install/bin/openfast [Darwin,Linux,Windows] [Intel,GNU] tolerance")
+parser = argparse.ArgumentParser(description="Executes OpenFAST and a regression test for a single test case.")
+parser.add_argument("executable", metavar="OpenFAST", type=str, nargs=1, help="path to the OpenFAST executable")
+parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="current system's name: [Darwin,Linux,Windows]")
+parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="compiler's id: [Intel,GNU]")
+parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="tolerance defining pass or failure in the regression test")
+parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
+parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
+parser.add_argument("-case", dest="case", default="", metavar="Case-Name", type=str, nargs="?", help="single case name to execute")
 
-openfast_executable = sys.argv[1]
+args = parser.parse_args()
+openfast_executable = args.executable[0]
 sourceDirectory = ".."
-buildDirectory = os.path.join("..", "build", "reg_tests", "openfast")
-machine = sys.argv[2]
-compiler = sys.argv[3]
-tolerance = sys.argv[4] if len(sys.argv) == 5 else 0.0000001
-devnull = open(os.devnull, 'w')
+buildDirectory = os.path.join("..", "build", "reg_tests", "glue-codes", "fast")
+machine = args.systemName[0]
+compiler = args.compilerId[0]
+tolerance = args.tolerance[0]
+plotError = args.plot if args.plot is False else True
+plotFlag = "-p" if plotError else ""
+noExec = args.noExec if args.noExec is False else True
+noExecFlag = "-n" if noExec else ""
+verbose = args.verbose if args.verbose is False else True
+case = args.case
 
-with open(os.path.join("r-test", "openfast", "CaseList.md")) as listfile:
-    content = listfile.readlines()
-casenames = [x.rstrip("\n\r").strip() for x in content if "#" not in x]
+outstd = sys.stdout if verbose else open(os.devnull, 'w') 
+pythonCommand = sys.executable
+
+if case is not "":
+    caselist = [case]
+else:
+    with open(os.path.join("r-test", "glue-codes", "fast", "CaseList.md")) as listfile:
+        caselist = listfile.readlines()
+casenames = [c.rstrip("\n\r").strip() for c in caselist if "#" not in c]
 
 results = []
+prefix, passString, failString = "executing", "PASS", "FAIL"
+longestName = max(casenames, key=len)
 for case in casenames:
-    print("executing case {}".format(case))
-    command = "python executeOpenfastRegressionCase.py {} {} {} {} {} {} {}".format(case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler)
-    returnCode = subprocess.call(command, stdout=devnull, shell=True)
-    if returnCode == 0:
-        results.append((case, "PASS"))
-    else:
-        results.append((case, "FAIL", returnCode))
+    print(strFormat(prefix).format(prefix), strFormat(longestName+" ").format(case), end="", flush=True)
+    command = "{} executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
+    returnCode = subprocess.call(command, stdout=outstd, shell=True)
+    resultString = passString if returnCode == 0 else failString
+    results.append((case, resultString))
+    print(resultString)
 
-print("Regression test execution completed with these results:")
+from errorPlotting import exportResultsSummary
+exportResultsSummary(buildDirectory, results)
+
+print("\nRegression test execution completed with these results:")
 for r in results:
-    print(" ".join([str(rr) for rr in r]))
+    print(" ".join([strFormat(longestName).format(r[0]), r[1]]))
+
+nPasses = len( [r[1] for r in results if r[1] == passString] )
+print("Total PASSING tests - {}".format(nPasses))
+print("Total FAILING tests - {}".format(len(results) - nPasses))

@@ -29,6 +29,9 @@ if(NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/r-test")
   message(FATAL_ERROR "CMake cannot find the test data directory, r-test. Did you initialize the git submodule?" )
 endif()
 
+# Set the default plotting flag to OFF
+option(CTEST_PLOT_ERRORS "Generate plots of regression test errors." OFF)
+
 # Set the OpenFAST executable configuration option and default
 set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/fast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
@@ -102,21 +105,21 @@ endif()
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
 
 # include the ServoDyn controller projects
-set(SERVODATA_DIR "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/5MW_Baseline/ServoData")
+set(SERVODATA_DIR "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast/5MW_Baseline/ServoData")
 add_subdirectory("${SERVODATA_DIR}/DISCON" "${SERVODATA_DIR}/DISCON/build")
 add_subdirectory("${SERVODATA_DIR}/DISCON_ITI" "${SERVODATA_DIR}/DISCON_ITI/build")
 add_subdirectory("${SERVODATA_DIR}/DISCON_OC3" "${SERVODATA_DIR}/DISCON_OC3/build")
 
 # build and seed the test directories with the data they need to run the tests
 file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
-foreach(regTest openfast beamdyn)
+foreach(regTest glue-codes/fast modules-local/beamdyn)
   file(MAKE_DIRECTORY ${CTEST_BINARY_DIR}/${regTest})
 endforeach()
 
 ## openfast seed
 foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
-  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/openfast/${turbineDirectory}"
-     DESTINATION "${CTEST_BINARY_DIR}/openfast/")
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast/${turbineDirectory}"
+  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/fast/")
 endforeach()
 
 # the statement below automatically creates a BUILD_TESTING option

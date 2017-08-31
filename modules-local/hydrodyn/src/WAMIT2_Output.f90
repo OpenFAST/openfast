@@ -64,7 +64,7 @@ MODULE WAMIT2_Output
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(6) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                  WavesF2xi ,  WavesF2yi , WavesF2zi ,  WavesM2xi ,  WavesM2yi ,  WavesM2zi /)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(6) =  (/ &                     ! This lists the units corresponding to the allowed parameters
-                               "(N)       ","(N)       ","(N)       ","(N·m)     ","(N·m)     ","(N·m)     "/)
+                               "(N)       ","(N)       ","(N)       ","(N-m)     ","(N-m)     ","(N-m)     "/)
    
 
    REAL(ReKi)               :: AllOuts(MaxWAMIT2Outputs)          ! Array of all possible outputs
