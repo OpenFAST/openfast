@@ -1304,7 +1304,17 @@ FUNCTION GetVersion(ThisProgVer)
    GetVersion = TRIM(GetVersion)//' precision'
 
    ! add git info
+#ifdef GIT_COMMIT_HASH
    GetVersion = TRIM(GetVersion)//' at commit '//GIT_COMMIT_HASH
+#endif
+#ifdef GIT_HASH_FILE
+   ! VS build method for obtaining the git hash info.
+   ! This requires setting:
+   !  1) GIT_HASH_FILE = '$(ProjectDir)\gitHash.txt' preprocessor opetion on this file.
+   !  2) Creating a prebuild event on the profile file which runs this command: ..\GetGitHash.bat
+   !  3) The bat file, GetGitHash.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
+   GetVersion = TRIM(GetVersion)//' at commit '//ReadGitHash(GIT_HASH_FILE, errStat, errMsg)
+#endif
 
    RETURN
 END FUNCTION GetVersion
@@ -1321,9 +1331,17 @@ subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architectu
    version = trim(ThisProgVer%Ver)
    
 #ifdef GIT_COMMIT_HASH
-git_commit = GIT_COMMIT_HASH
+   git_commit = GIT_COMMIT_HASH
 #endif
-   
+#ifdef GIT_HASH_FILE
+   ! VS build method for obtaining the git hash info.
+   ! This requires setting:
+   !  1) GIT_HASH_FILE = '$(ProjectDir)\gitHash.txt' preprocessor opetion on this file.
+   !  2) Creating a prebuild event on the profile file which runs this command: ..\GetGitHash.bat
+   !  3) The bat file, GetGitHash.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
+   git_commit = ReadGitHash(GIT_HASH_FILE, errStat, errMsg)
+#endif
+
    architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
    
    if (ReKi == SiKi) then
