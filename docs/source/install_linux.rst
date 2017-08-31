@@ -14,7 +14,6 @@ OpenFAST has the following dependencies:
 - For the optional C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`__ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__ (provided by ``YAML_ROOT``)
 - For the optional testing framework, Python 3+
 
-
 CMake Build Instructions
 ------------------------
 ::
