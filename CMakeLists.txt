@@ -117,16 +117,6 @@ foreach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules-ext/${IDIR}")
 endforeach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
 
-option(BUILD_DOCUMENTATION "Build documentation." OFF)
-if(BUILD_DOCUMENTATION)
-  add_subdirectory(docs)
-endif()
-
-option(BUILD_TESTING "Build the testing tree." OFF)
-if(BUILD_TESTING)
-  include(reg_tests/CMakeLists.txt)
-endif()
-
 add_subdirectory(glue-codes)
 
 # Install fortran .mod files also to installation directory
