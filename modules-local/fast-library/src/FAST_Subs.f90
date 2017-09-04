@@ -239,6 +239,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%TurbinePos = ExternInitData%TurbinePos
       if( (ExternInitData%NumSC2CtrlGlob .gt. 0) .or. (ExternInitData%NumSC2Ctrl .gt. 0) .or. (ExternInitData%NumCtrl2SC .gt. 0)) then
          p_FAST%UseSupercontroller = .TRUE.
+      else
+         p_FAST%UseSupercontroller = .FALSE.
       end if
       
       if (ExternInitData%FarmIntegration) then ! we're integrating with FAST.Farm
@@ -1507,7 +1509,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
       !p%TMax = MAX( TMax, p%TMax )
    END IF
 
-   IF (p%UseSuperController) THEN
+   IF (p%UseSupercontroller) THEN
       p%CompSC = Module_SC
    ELSE
       p%CompSC = Module_NONE
@@ -4307,7 +4309,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       ! the previous step before we extrapolate these inputs:
    IF ( p_FAST%CompServo == Module_SrvD ) CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )   
    
-   IF ( p_FAST%UseSupercontroller ) CALL SC_SetOutputs(p_FAST, SrvD%Input(1), SC, ErrStat2, ErrMsg2 )
+   IF ( p_FAST%CompSC == Module_SC ) CALL SC_SetOutputs(p_FAST, SrvD%Input(1), SC, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    !! ## Step 1.a: Extrapolate Inputs 
