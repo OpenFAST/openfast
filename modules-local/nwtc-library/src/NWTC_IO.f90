@@ -4416,6 +4416,64 @@ CONTAINS
 
    RETURN
    END SUBROUTINE ProgWarn 
+   
+!=======================================================================
+!> This routine outputs the git hash associate with the current codebase.
+   FUNCTION QueryGitHash()
+   
+      ! Passed variables.
+   
+   !INTEGER(IntKi),     INTENT(OUT)     :: ErrStat                              ! Error status 
+   !CHARACTER(*),       INTENT(OUT)     :: ErrMsg                               ! Error message 
+      
+      ! Function declaration.
+
+   CHARACTER(200)                      :: QueryGitHash                         ! This function.
+      
+      ! Local variables.
+
+   INTEGER(IntKi)                      :: UnIn                                 ! Unit number for reading file                                        
+   INTEGER(IntKi)                      :: ErrStat2                             ! Temporary Error status 
+   CHARACTER(ErrMsgLen)                :: ErrMsg2                              ! Temporary Error message 
+   
+   !ErrStat = ErrID_None 
+   !ErrMsg  = '' 
+   QueryGitHash = 'unversioned' 
+   
+#ifdef GIT_COMMIT_HASH
+   QueryGitHash = GIT_COMMIT_HASH   ! set by the cmake build scripts
+#endif
+#ifdef GIT_HASH_FILE
+   ! VS build method for obtaining the git hash info.
+   ! This requires setting:
+   !  1) GIT_HASH_FILE = '$(ProjectDir)\..\gitHash.txt' preprocessor option on this file or the project containing this file.
+   !  2) Creating a prebuild event on the project file producing the resulting binary (i.e., FAST.exe) with the following command: ..\GetGitHash.bat
+   !  3) The bat file, GetGitHash.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
+   !         git describe --abbrev=8 --dirty --tags > ..\githash.txt
+   !     This creates the githash.txt file in the vs-build folder
+
+      ! Get an available unit number for the file. 
+ 
+   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 ) 
+      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      IF ( ErrStat2 > ErrID_None ) RETURN
+      ! Open the Primary input file. 
+ 
+   CALL OpenFInpFile ( UnIn, GIT_HASH_FILE, ErrStat2, ErrMsg2 ) 
+      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      IF ( ErrStat2 > ErrID_None ) RETURN   
+          
+   CALL ReadVar( UnIn, GIT_HASH_FILE, QueryGitHash, "HASH", "Git Hash String)", ErrStat2, ErrMsg2, 0) 
+      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      IF ( ErrStat2 > ErrID_None ) RETURN
+  
+   IF (UnIn > 0) CLOSE ( UnIn ) 
+#endif  
+
+   
+   RETURN
+   END FUNCTION QueryGitHash
+   
 !=======================================================================
 !> \copydoc nwtc_io::int2lstr
    FUNCTION R2LStr4 ( Num )
