@@ -284,7 +284,6 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    tm1 =  omp_get_wtime() 
 #endif 
      
-   ! nXYZ_low = 0
    m%N_wind(:,:) = 0
 
    ! Temporary variables needed by OpenMP 
@@ -303,9 +302,6 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    
    !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, D_wake_tmp, xhatBar_plane, x_end_plane,nt,np,ILo,x_start_plane,delta,deltad,p_tmp_plane,tmp_vec,r_vec_plane,r_tmp_plane,tmp_xhatBar_plane, Vx_wake_tmp,Vr_wake_tmp,nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,wsum_tmp,tmp_xhat_plane,tmp_rhat_plane,tmp_Vx_wake,tmp_Vr_wake,tmp_N_wind,i,np1,errStat2) SHARED(m,u,p,maxPln,errStat,errMsg) DEFAULT(NONE) 
    
-   !do nz_low=0, p%nZ_low-1 
-   !   do ny_low=0, p%nY_low-1
-   !      do nx_low=0, p%nX_low-1
 
       do i = 0 , p%nX_low*p%nY_low*p%nZ_low - 1
 
@@ -322,6 +318,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
             
             do nt = 1,p%NumTurbines
                   
+               ! H Long: replace intrinsic dot_product with explicit do product can save as much as 10% of total calculation time! 
                !x_end_plane = dot_product(u%xhat_plane(:,0,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,0,nt)) )
                tmp_x = u%xhat_plane(1,0,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,0,nt))
                tmp_y = u%xhat_plane(2,0,nt) * (p%Grid_Low(2,nXYZ_low) - u%p_plane(2,0,nt))
@@ -336,6 +333,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                   
                      ! Construct the endcaps of the current wake plane volume
                   x_start_plane = x_end_plane
+                  ! H Long: again, replace intrinsic dot_product 
                   !x_end_plane = dot_product(u%xhat_plane(:,np+1,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,np+1,nt)) )
                   tmp_x = u%xhat_plane(1,np1,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,np1,nt))
                   tmp_y = u%xhat_plane(2,np1,nt) * (p%Grid_Low(2,nXYZ_low) - u%p_plane(2,np1,nt))
@@ -388,6 +386,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      D_wake_tmp = delta*u%D_wake(np1,nt) + deltad*u%D_wake(np,nt)  
                         
                      if ( r_tmp_plane <= p%C_ScaleDiam*D_wake_tmp ) then
+                        ! H Long: Use atomic to avoid racing
                         !OMP ATOMIC CAPTURE
                         m%N_wind(np,nt) = m%N_wind(np,nt) + 1
                         tmp_N_wind = m%N_wind(np,nt) 
@@ -447,9 +446,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vdist_low(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
             end if  ! (n_wake > 0)
             
-   !      end do ! do nx_low=0, p%nX_low-1
-   !   end do    ! do ny_low=0, p%nY_low-1
-   end do       ! do nz_low=0, p%nZ_low-1
+   end do       
    !OMP END PARALLEL DO
 
    
@@ -527,6 +524,11 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    tm2 =  omp_get_wtime() 
    write(*,*)  'Total AWAE:LowResGridCalcOutput using '//trim(num2lstr(tm2-tm1))//' seconds'
 #endif 
+
+   if (allocated(tmp_xhat_plane)) deallocate(tmp_xhat_plane)
+   if (allocated(tmp_rhat_plane)) deallocate(tmp_rhat_plane)
+   if (allocated(tmp_Vx_wake)) deallocate(tmp_Vx_wake)
+   if (allocated(tmp_Vr_wake)) deallocate(tmp_Vr_wake)
 
 end subroutine LowResGridCalcOutput
 
