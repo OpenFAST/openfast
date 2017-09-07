@@ -22,6 +22,12 @@ include(${CMAKE_SOURCE_DIR}/cmake/FastFortranOptions.cmake)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+# Get the git info into the executable
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+include(GetGitRevisionDescription)
+git_describe(GIT_DESCRIBE)
+add_definitions(-DGIT_COMMIT_HASH="${GIT_DESCRIBE}")
+
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
@@ -105,7 +111,12 @@ endforeach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
 
 option(BUILD_DOCUMENTATION "Build documentation." OFF)
 if(BUILD_DOCUMENTATION)
-   add_subdirectory(docs)
+  add_subdirectory(docs)
+endif()
+
+option(BUILD_TESTING "Build the testing tree." OFF)
+if(BUILD_TESTING)
+  include(reg_tests/CMakeLists.txt)
 endif()
 
 add_subdirectory(glue-codes)

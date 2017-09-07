@@ -189,7 +189,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
 
       ! Tell the users what we are doing... though this part should be rather quick.
-   CALL WrScr( ' Opening InflowWind input file:  '//InputFileName )
+  !  CALL WrScr( ' Opening InflowWind input file:  '//InputFileName )
 
 
    !-------------------------------------------------------------------------------------------------

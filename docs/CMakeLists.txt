@@ -21,6 +21,12 @@ if(SPHINX_FOUND)
         )
     add_dependencies(sphinx doxygen)
     add_custom_target(docs DEPENDS sphinx)
+    
+    # Add a sphinx-only HTML target to avoid building doxygen while developing documentation
+    add_custom_target(sphinx-html
+        COMMAND ${SPHINX_EXECUTABLE} -M html
+        "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
+        -c ${CMAKE_CURRENT_BINARY_DIR})
 else()
     message(WARNING "Skipping Sphinx documentation due to missing dependencies.")
 endif()

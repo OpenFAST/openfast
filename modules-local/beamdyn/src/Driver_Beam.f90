@@ -68,7 +68,7 @@ PROGRAM BeamDyn_Driver_Program
    
 
    
-   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'BeamDyn Driver', 'v2.00.00', '9-May-2017' )  ! The version number of this program.
+   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'BeamDyn Driver', '', '' )  ! The version number of this program.
    
 
    ! -------------------------------------------------------------------------

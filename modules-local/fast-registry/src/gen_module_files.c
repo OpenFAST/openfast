@@ -419,13 +419,13 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
     if (has_deferred_dim(r, 0)){
          // store whether the data type is allocated and the bounds of each dimension
   fprintf(fp, "  IF ( .NOT. %s(InData%%%s) ) THEN\n", assoc_or_allocated(r), r->name);
-  fprintf(fp, "    IntKiBuf( Int_Xferred ) = 0\n", r->name); // not allocated
-  fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n", r->name);
+  fprintf(fp, "    IntKiBuf( Int_Xferred ) = 0\n"); // not allocated
+  fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n");
   //fprintf(fp, "    IntKiBuf( Int_Xferred:Int_Xferred+2*%d-1 ) = 0\n", r->ndims, r->name);
   //fprintf(fp, "    Int_Xferred = Int_Xferred + 2*%d\n", r->ndims);
   fprintf(fp, "  ELSE\n");
-  fprintf(fp, "    IntKiBuf( Int_Xferred ) = 1\n", r->name); // allocated
-  fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n", r->name);
+  fprintf(fp, "    IntKiBuf( Int_Xferred ) = 1\n"); // allocated
+  fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n");
   for (d = 1; d <= r->ndims; d++) {
   fprintf(fp, "    IntKiBuf( Int_Xferred    ) = LBOUND(InData%%%s,%d)\n", r->name, d);
   fprintf(fp, "    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%%%s,%d)\n", r->name, d);
@@ -634,10 +634,10 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
      if (has_deferred_dim(r, 0)){
         // determine if the array was allocated when packed:
         fprintf(fp, "  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! %s not allocated\n", r->name); // not allocated
-        fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n", r->name);
+        fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n");
       //fprintf(fp, "    Int_Xferred = Int_Xferred + 2*%d\n", r->ndims);
         fprintf(fp, "  ELSE\n");
-        fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n", r->name);
+        fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n");
 
         for (d = 1; d <= r->ndims; d++) {
            fprintf(fp, "    i%d_l = IntKiBuf( Int_Xferred    )\n", d); //fprintf(fp, "    IntKiBuf( Int_Xferred    ) = LBOUND(OutData%%%s,%d)\n", r->name, d);
@@ -740,11 +740,11 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
               dimstr(r->ndims), r->name);
         }
         fprintf(fp, "        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n");
-        fprintf(fp, "        IF (ErrStat >= AbortErrLev) RETURN\n\n", r->name, r->name);
+        fprintf(fp, "        IF (ErrStat >= AbortErrLev) RETURN\n\n");
 
-        fprintf(fp, "      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )\n", r->name);
-        fprintf(fp, "      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )\n", r->name);
-        fprintf(fp, "      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)\n", r->name);
+        fprintf(fp, "      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )\n");
+        fprintf(fp, "      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )\n");
+        fprintf(fp, "      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)\n");
 
         for (d = r->ndims; d >= 1; d--) {
            fprintf(fp, "    END DO\n");
@@ -1557,7 +1557,7 @@ gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, "!  f(t) = a + b * t, or\n");
    fprintf(fp, "!\n");
    fprintf(fp, "!  where a and b are determined as the solution to\n");
-   fprintf(fp, "!  f(t1) = %s1, f(t2) = %s2\n", uy, uy, uy);
+   fprintf(fp, "!  f(t1) = %s1, f(t2) = %s2\n", uy, uy);
    fprintf(fp, "!\n");
    fprintf(fp, "!..................................................................................................................................\n");
    fprintf(fp, "\n");
