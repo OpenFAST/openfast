@@ -53,7 +53,7 @@ contains
       call getIceInput(iceInput, 'riseTime', inParams%riseTime, iceLog, 0.1_ReKi, 0.9_ReKi)
       call logMessage(iceLog, ' Saw tooth rise time fraction = '//TRIM(Num2LStr(inParams%riseTime)))
 
-      call getIceInput(iceInput, 'fallTime', inParams%fallTime, iceLog, 0.1_ReKi, 1.0-inParams%riseTime)
+      call getIceInput(iceInput, 'fallTime', inParams%fallTime, iceLog, 0.1_ReKi, 1.0_ReKi-inParams%riseTime)
       call logMessage(iceLog, ' Saw tooth fall time fraction = '//TRIM(Num2LStr(inParams%fallTime)))
 
    !  get leg load phase
