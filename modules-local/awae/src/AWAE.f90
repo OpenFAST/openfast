@@ -270,9 +270,13 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    integer(IntKi)      :: ILo
    integer(IntKi)      :: maxPln
    integer(IntKi)      :: i,np1,errStat2,tmp_N_wind
-   character(*), parameter   :: RoutineName = 'LowResGridCalcOutput'   
+   character(*), parameter   :: RoutineName = 'LowResGridCalcOutput' 
+   logical             :: boundary_error
+  
    errStat = ErrID_None
    errMsg  = ""
+   boundary_error = .FALSE.
+
    maxPln =  min(n,p%NumPlanes-2)
    
    !    ! read from file the ambient flow for the current time step
@@ -300,7 +304,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       ! Loop over the entire grid of low resolution ambient wind data to compute:
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
    
-   !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, D_wake_tmp, xhatBar_plane, x_end_plane,nt,np,ILo,x_start_plane,delta,deltad,p_tmp_plane,tmp_vec,r_vec_plane,r_tmp_plane,tmp_xhatBar_plane, Vx_wake_tmp,Vr_wake_tmp,nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,wsum_tmp,tmp_xhat_plane,tmp_rhat_plane,tmp_Vx_wake,tmp_Vr_wake,tmp_N_wind,i,np1,errStat2) SHARED(m,u,p,maxPln,errStat,errMsg) DEFAULT(NONE) 
+   !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, D_wake_tmp, xhatBar_plane, x_end_plane,nt,np,ILo,x_start_plane,delta,deltad,p_tmp_plane,tmp_vec,r_vec_plane,r_tmp_plane,tmp_xhatBar_plane, Vx_wake_tmp,Vr_wake_tmp,nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,wsum_tmp,tmp_xhat_plane,tmp_rhat_plane,tmp_Vx_wake,tmp_Vr_wake,tmp_N_wind,i,np1,errStat2) SHARED(m,u,p,maxPln,errStat,errMsg,boundary_error) DEFAULT(NONE) 
    
 
       do i = 0 , p%nX_low*p%nY_low*p%nZ_low - 1
@@ -387,36 +391,41 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         
                      if ( r_tmp_plane <= p%C_ScaleDiam*D_wake_tmp ) then
                         ! H Long: Use atomic to avoid racing
-                        !OMP ATOMIC CAPTURE
+                        !$OMP ATOMIC CAPTURE
                         m%N_wind(np,nt) = m%N_wind(np,nt) + 1
                         tmp_N_wind = m%N_wind(np,nt) 
-                        !OMP END ATOMIC 
+                        !$OMP END ATOMIC 
+
+                        !! if tmp_N_wind > p%n_wind_max then we will be indexing beyond the allocated memory for nx_wind,ny_wind,nz_wind arrays
                         if ( tmp_N_wind > p%n_wind_max ) then
-                           call SetErrStat( ErrID_Fatal, 'The wake plane volume (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
-                           ! return  ! if m%N_wind(np,nt) > p%n_wind_max then we will be indexing beyond the allocated memory for nx_wind,ny_wind,nz_wind arrays
-                        end if
+                           !$OMP ATOMIC WRITE
+                           boundary_error = .TRUE.
+                           !$OMP END ATOMIC
+                        else                        
                         
-                        select case ( p%Mod_Meander )
-                        case (MeanderMod_Uniform) 
-                           m%w(   tmp_N_wind,np,nt) = 1.0_ReKi
-                        case (MeanderMod_TruncJinc)  
-                           m%w(   tmp_N_wind,np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )
-                        case (MeanderMod_WndwdJinc) 
-                           m%w(   tmp_N_wind,np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )*jinc( r_tmp_plane/( 2.0_ReKi*p%C_Meander*D_wake_tmp ) )
-                        end select
+                           select case ( p%Mod_Meander )
+                           case (MeanderMod_Uniform) 
+                              m%w(   tmp_N_wind,np,nt) = 1.0_ReKi
+                           case (MeanderMod_TruncJinc)  
+                              m%w(   tmp_N_wind,np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )
+                           case (MeanderMod_WndwdJinc) 
+                              m%w(   tmp_N_wind,np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )*jinc( r_tmp_plane/( 2.0_ReKi*p%C_Meander*D_wake_tmp ) )
+                           end select
                         
-                        m%nx_wind(tmp_N_wind,np,nt) = nx_low
-                        m%ny_wind(tmp_N_wind,np,nt) = ny_low
-                        m%nz_wind(tmp_N_wind,np,nt) = nz_low   
+                           m%nx_wind(tmp_N_wind,np,nt) = nx_low
+                           m%ny_wind(tmp_N_wind,np,nt) = ny_low
+                           m%nz_wind(tmp_N_wind,np,nt) = nz_low   
                         
-                        if ( np == 0 ) then
-                           if ( r_tmp_plane <= 0.5_ReKi*p%C_Meander*D_wake_tmp ) then
-                              m%w_Amb(tmp_N_wind,nt) = 1.0_ReKi
-                           else
-                              m%w_Amb(tmp_N_wind,nt) = 0.0_ReKi
+                           if ( np == 0 ) then
+                              if ( r_tmp_plane <= 0.5_ReKi*p%C_Meander*D_wake_tmp ) then
+                                 m%w_Amb(tmp_N_wind,nt) = 1.0_ReKi
+                              else
+                                 m%w_Amb(tmp_N_wind,nt) = 0.0_ReKi
+                              end if
                            end if
-                        end if
-                                              
+                        
+                        endif   
+                                    
                      end if
                      
                      exit
@@ -447,8 +456,12 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
             end if  ! (n_wake > 0)
             
    end do       
-   !OMP END PARALLEL DO
+   !$OMP END PARALLEL DO
 
+   if(boundary_error) then                           
+      call SetErrStat( ErrID_Fatal, 'The wake plane volume (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
+      return  
+   endif
    
    do nt = 1,p%NumTurbines
       if ( m%N_wind(0,nt) > 0 ) then
