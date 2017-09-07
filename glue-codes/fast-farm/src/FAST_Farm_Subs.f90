@@ -1632,15 +1632,20 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
    INTEGER(IntKi)                          :: nt                    
-   INTEGER(IntKi)                          :: ErrStatWD, ErrStatF(4)                      ! Temporary Error status
-   CHARACTER(ErrMsgLen)                    :: ErrMsgWD,  ErrMsgF(4)                       ! Temporary Error message
+   INTEGER(IntKi)                          :: ErrStatWD, ErrStat2 
+   INTEGER(IntKi),dimension(:),ALLOCATABLE :: ErrStatF(:)                      ! Temporary Error status
+   CHARACTER(ErrMsgLen)                    :: ErrMsgWD
+   CHARACTER(ErrMsgLen),dimension(:),ALLOCATABLE ::  ErrMsgF(:)                       ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_UpdateStates'
    REAL(DbKi)                              :: tm1,tm2,tm3
    
    ErrStat = ErrID_None
    ErrMsg = ""
 
-   
+   allocate ( ErrStatF ( farm%p%NumTurbines + 1 ), STAT=errStat2 )
+       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_xhat_plane.', errStat, errMsg, RoutineName )
+   allocate ( ErrMsgF ( farm%p%NumTurbines + 1 ), STAT=errStat2 )
+       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_xhat_plane.', errStat, errMsg, RoutineName )
    
    !.......................................................................................
    ! update module states (steps 1. and 2. and 3. and 4. can be done in parallel)
@@ -1677,18 +1682,18 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
 #endif     
         call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                      farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF(nt), ErrMsgF(nt) )         
-         call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
+         
 #ifdef _OPENMP
          tm2 = omp_get_wtime() 
          write(*,*)  '    FWrap_Increment for turbine #'//trim(num2lstr(nt))//' using thread #'//trim(num2lstr(omp_get_thread_num()))//' taking '//trim(num2lstr(tm2-tm3))//' seconds'
 #endif
+
       else
 #ifdef _OPENMP
    tm3 = omp_get_wtime()  
 #endif    
        call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%m, errStatF(nt), errMsgF(nt) )
-       call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':AWAE_UpdateStates')
+                     farm%AWAE%OtherSt, farm%AWAE%m, errStatF(nt), errMsgF(nt) )       
 
 #ifdef _OPENMP
        tm2 = omp_get_wtime() 
@@ -1699,6 +1704,11 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    END DO
    !$OMP END PARALLEL DO  
 
+   DO nt = 1,farm%p%NumTurbines 
+      call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
+   END DO
+
+   call SetErrStat(ErrStatF(farm%p%NumTurbines+1), ErrMsgF(farm%p%NumTurbines+1), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':AWAE_UpdateStates')
 
    if (ErrStat >= AbortErrLev) return
 
