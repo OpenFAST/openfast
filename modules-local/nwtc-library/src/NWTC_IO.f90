@@ -4419,7 +4419,7 @@ CONTAINS
    
 !=======================================================================
 !> This routine outputs the git hash associate with the current codebase.
-   FUNCTION QueryGitHash()
+   FUNCTION QueryGitVersion()
    
       ! Passed variables.
    
@@ -4428,7 +4428,7 @@ CONTAINS
       
       ! Function declaration.
 
-   CHARACTER(200)                      :: QueryGitHash                         ! This function.
+   CHARACTER(200)                      :: QueryGitVersion                      ! This function.
       
       ! Local variables.
 
@@ -4438,41 +4438,33 @@ CONTAINS
    
    !ErrStat = ErrID_None 
    !ErrMsg  = '' 
-   QueryGitHash = 'unversioned' 
    
-#ifdef GIT_COMMIT_HASH
-   QueryGitHash = GIT_COMMIT_HASH   ! set by the cmake build scripts
-#endif
-#ifdef GIT_HASH_FILE
-   ! VS build method for obtaining the git hash info.
+   QueryGitVersion = 'unversioned' 
+   
+   ! VS build method for obtaining the git version info.
    ! This requires setting:
-   !  1) GIT_HASH_FILE = '$(ProjectDir)\..\gitHash.txt' preprocessor option on this file or the project containing this file.
-   !  2) Creating a prebuild event on the project file producing the resulting binary (i.e., FAST.exe) with the following command: ..\GetGitHash.bat
-   !  3) The bat file, GetGitHash.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
-   !         git describe --abbrev=8 --dirty --tags > ..\githash.txt
-   !     This creates the githash.txt file in the vs-build folder
-
-      ! Get an available unit number for the file. 
- 
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 ) 
-      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      IF ( ErrStat2 > ErrID_None ) RETURN
-      ! Open the Primary input file. 
- 
-   CALL OpenFInpFile ( UnIn, GIT_HASH_FILE, ErrStat2, ErrMsg2 ) 
-      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      IF ( ErrStat2 > ErrID_None ) RETURN   
-          
-   CALL ReadVar( UnIn, GIT_HASH_FILE, QueryGitHash, "HASH", "Git Hash String)", ErrStat2, ErrMsg2, 0) 
-      !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      IF ( ErrStat2 > ErrID_None ) RETURN
-  
-   IF (UnIn > 0) CLOSE ( UnIn ) 
-#endif  
-
+   !  1) GIT_INCLUDE_FILE = '$(ProjectDir)\..\gitVersionInfo.h' preprocessor option on this file or the project containing this file.
+   !  2) Creating a prebuild event on the project file producing the resulting binary (i.e., FAST.exe) with the following command: ..\CreateGitVersion.bat
+   !  3) The bat file, CreateGitVersion.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
+   !         @ECHO off
+   !         SET IncludeFile=..\gitVersionInfo.h
+   !         
+   !         <NUL SET /p IncludeTxt=#define GIT_VERSION_INFO '> %IncludeFile%
+   !         FOR /f %%a IN ('git describe --abbrev^=7 --always --tags --dirty') DO <NUL SET /p IncludeTxt=%%a>> %IncludeFile%
+   !         ECHO '>> %IncludeFile%
+   !         EXIT /B 0
+   !     This creates the gitVersionInfo.h file in the vs-build folder
    
+#ifdef GIT_INCLUDE_FILE
+#include GIT_INCLUDE_FILE
+#endif
+
+#ifdef GIT_VERSION_INFO
+QueryGitVersion = GIT_VERSION_INFO
+#endif
+
    RETURN
-   END FUNCTION QueryGitHash
+   END FUNCTION QueryGitVersion
    
 !=======================================================================
 !> \copydoc nwtc_io::int2lstr

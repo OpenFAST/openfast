@@ -52,13 +52,14 @@ subroutine Dvr_Init(DvrData,errStat,errMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+
    DvrData%OutFileData%unOutFile   = -1
    
    CALL NWTC_Init()
       ! Display the copyright notice
    CALL DispCopyrightLicense( version )   
       ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitHash()
+   git_commit = QueryGitVersion()
       ! Tell our users what they're running
    CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
 

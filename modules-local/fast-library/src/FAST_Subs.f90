@@ -1307,7 +1307,7 @@ FUNCTION GetVersion(ThisProgVer)
    GetVersion = TRIM(GetVersion)//' precision'
 
    ! add git info
-   git_commit = QueryGitHash()
+   git_commit = QueryGitVersion()
    GetVersion = TRIM(GetVersion)//' at commit '//git_commit
 
    RETURN
@@ -1324,7 +1324,7 @@ subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architectu
    name = trim(ThisProgVer%Name)
    version = trim(ThisProgVer%Ver)
    
-   git_commit = QueryGitHash()
+   git_commit = QueryGitVersion()
 
    architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
    

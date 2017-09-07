@@ -81,7 +81,7 @@ PROGRAM BeamDyn_Driver_Program
       ! Display the copyright notice
    CALL DispCopyrightLicense( version )   
       ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitHash()
+   git_commit = QueryGitVersion()
       ! Tell our users what they're running
    CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
    
