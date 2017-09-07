@@ -1633,9 +1633,9 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
 
    INTEGER(IntKi)                          :: nt                    
    INTEGER(IntKi)                          :: ErrStatWD, ErrStat2 
-   INTEGER(IntKi),dimension(:),ALLOCATABLE :: ErrStatF(:)                      ! Temporary Error status
+   INTEGER(IntKi),dimension(:),ALLOCATABLE :: ErrStatF                      ! Temporary Error status
    CHARACTER(ErrMsgLen)                    :: ErrMsgWD
-   CHARACTER(ErrMsgLen),dimension(:),ALLOCATABLE ::  ErrMsgF(:)                       ! Temporary Error message
+   CHARACTER(ErrMsgLen),dimension(:),ALLOCATABLE ::  ErrMsgF                       ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_UpdateStates'
    REAL(DbKi)                              :: tm1,tm2,tm3
    
@@ -1643,9 +1643,10 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    ErrMsg = ""
 
    allocate ( ErrStatF ( farm%p%NumTurbines + 1 ), STAT=errStat2 )
-       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_xhat_plane.', errStat, errMsg, RoutineName )
+       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for ErrStatF.', errStat, errMsg, RoutineName )
    allocate ( ErrMsgF ( farm%p%NumTurbines + 1 ), STAT=errStat2 )
-       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_xhat_plane.', errStat, errMsg, RoutineName )
+       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for ErrMsgF.', errStat, errMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) return
    
    !.......................................................................................
    ! update module states (steps 1. and 2. and 3. and 4. can be done in parallel)
@@ -1708,7 +1709,7 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
       call SetErrStat(ErrStatF(nt), ErrMsgF(nt), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
    END DO
 
-   call SetErrStat(ErrStatF(farm%p%NumTurbines+1), ErrMsgF(farm%p%NumTurbines+1), ErrStat, ErrMsg, 'T'//trim(num2lstr(nt))//':AWAE_UpdateStates')
+   call SetErrStat(ErrStatF(farm%p%NumTurbines+1), ErrMsgF(farm%p%NumTurbines+1), ErrStat, ErrMsg, 'AWAE_UpdateStates')
 
    if (ErrStat >= AbortErrLev) return
 

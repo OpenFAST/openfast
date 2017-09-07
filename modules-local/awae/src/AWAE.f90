@@ -299,6 +299,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vx_wake.', errStat, errMsg, RoutineName )
    allocate ( tmp_Vr_wake    ( 1:p%NumTurbines ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vr_wake.', errStat, errMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) return
 
    
       ! Loop over the entire grid of low resolution ambient wind data to compute:
@@ -459,7 +460,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    !$OMP END PARALLEL DO
 
    if(boundary_error) then                           
-      call SetErrStat( ErrID_Fatal, 'The wake plane volume (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
+      call SetErrStat( ErrID_Fatal, 'A wake plane volume contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
       return  
    endif
    
