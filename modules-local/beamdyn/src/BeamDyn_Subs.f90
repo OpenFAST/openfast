@@ -431,29 +431,6 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_CrvExtractCrv
 
-   REAL(BDKi),       INTENT(IN   )  :: R(3,3)        !< Rotation Matrix input
-   REAL(BDKi),       INTENT(  OUT)  :: Rout(3,3)     !< Rotation Matrix output
-   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat       !< Error status of the operation
-   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
-
-   !Local variables
-   REAL(BDKi)                  :: tempmat(3,3)
-   REAL(BDKi)                  :: S(3)         !mjs--these three are the SVD matrices (S is actually a vector)
-   REAL(BDKi)                  :: U(3,3)
-   REAL(BDKi)                  :: VT(3,3)
-   INTEGER(IntKi)              :: lwork = 27   !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
-   REAL(BDKi), ALLOCATABLE     :: work(:)          ! where M x N is dimension of R, and lwork is the dimension of work
-   REAL(BDKi)                  :: Rr(3,3)      !mjs--correccted rotation matrix
-   LOGICAL                     :: ortho        !mjs--logical value indicating whether R is orthogonal
-   INTEGER                     :: i            ! loop variable/case indicator
-
-   INTEGER(IntKi)              :: ErrStat2 ! Temporary Error status
-   CHARACTER(ErrMsgLen)        :: ErrMsg2  ! Temporary Error message
-   character(*), parameter     :: RoutineName = 'BD_CheckRotMat'
-
-   ! Initialize ErrStat
-   ErrStat = ErrID_None
-   ErrMsg  = ""
 
 SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    !> This subroutine checks for rotation matrix validity.
@@ -461,7 +438,23 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    !>   ErrStat = 0 if valid
    !>   ErrStat = 4 (fatal error) if invalid
    
-   REAL(BDKi),       INTENT(INOUT)  :: R(3,3)               !< Rotation Matrix
+   REAL(BDKi),       INTENT(INOUT)  :: R(3,3)       !< Rotation Matrix
+   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat      !< Error status of the operation
+   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                   :: lwork = 27   !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
+   REAL(BDKi), ALLOCATABLE          :: work(:)      ! where M x N is dimension of R, and lwork is the dimension of work
+   REAL(BDKi)                       :: S(3)         !mjs--these three are the SVD matrices (S is actually a vector)
+   REAL(BDKi)                       :: U(3,3), VT(3,3)
+   INTEGER(IntKi)                   :: ErrStat2     ! Temporary Error status
+   CHARACTER(ErrMsgLen)             :: ErrMsg2      ! Temporary Error message
+   LOGICAL                          :: ortho        !mjs--logical value indicating whether R is orthogonal
+   INTEGER                          :: i
+   character(*), parameter          :: RoutineName = 'BD_CheckRotMat'
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
    ! mjs--Start by determining if R is a valid rotation matrix using the properties:
    ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1, where
    !    the leading eigenvalue is +1 and the other two are a complex conjugate pair
