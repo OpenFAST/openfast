@@ -460,12 +460,11 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    !    the leading eigenvalue is +1 and the other two are a complex conjugate pair
    ! 2) a valid rotation matrix must have determinant == +1 i.e., the singular values == 1 
    
-   ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
-   tempmat = R !mjs--need this to handle inout nature of input for LAPACK_dgesvd
-   call LAPACK_dgesvd('A', 'A', 3, 3, tempmat, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
+   allocate(work(lwork))
+   call LAPACK_dgesvd('A', 'A', 3, 3, R, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-
+   deallocate(work)
    
    ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
    !    and the correction is desired,
