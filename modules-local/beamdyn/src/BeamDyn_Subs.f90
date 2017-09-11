@@ -441,8 +441,6 @@ SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
    REAL(BDKi)                  :: S(3)         !mjs--these three are the SVD matrices (S is actually a vector)
    REAL(BDKi)                  :: U(3,3)
    REAL(BDKi)                  :: VT(3,3)
-   INTEGER(IntKi)              :: lwork = 27   !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
-   REAL(BDKi), ALLOCATABLE     :: work(:)          ! where M x N is dimension of R, and lwork is the dimension of work
    REAL(BDKi)                  :: Rr(3,3)      !mjs--correccted rotation matrix
    LOGICAL                     :: ortho        !mjs--logical value indicating whether R is orthogonal
    INTEGER                     :: i            ! loop variable/case indicator
@@ -469,7 +467,6 @@ SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
       ! and setting \f$ \underline{\underline{R_{out}} = UV^T \f$
       ! otherwise, assign \f$ \underline{\underline{R_{out}}}  = \underline{\underline{R}} \f$
 
-   allocate (work(lwork))
    tempmat = R !mjs--need this to handle inout nature of input for LAPACK_dgesvd
    call LAPACK_dgesvd('A', 'A', 3, 3, tempmat, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
