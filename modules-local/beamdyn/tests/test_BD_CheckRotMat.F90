@@ -14,20 +14,21 @@ subroutine test_BD_CheckRotMat()
     real(BDKi)           :: testR(3,3)
     integer(IntKi)       :: ErrStat
     character(ErrMsgLen) :: ErrMsg
+    character(1024)      :: testname
 
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    ! known valid rotation matrix: pi about x-axis
+    testname = "known valid rotation matrix: pi about x-axis"
     call calcRotationMatrix(testR, Pi, 1)
     call BD_CheckRotMat(testR, ErrStat, ErrMsg)
-    @assertEqual(0, ErrStat)
+    @assertEqual(0, ErrStat, testname)
 
-    ! known invalid rotation matrix: halve the angle of the diagonal elements
+    testname = "known invalid rotation matrix: halve the angle of the diagonal elements"
     ! this should produce a fatal error (ErrStat = 4)
     testR(:,2) = (/ testR(1,2),  cos(Pi/2), testR(3,2) /)
     testR(:,3) = (/ testR(1,2), testR(2,2),  cos(Pi/2) /)
     call BD_CheckRotMat(testR, ErrStat, ErrMsg)    
-    @assertEqual(4, ErrStat)
+    @assertEqual(4, ErrStat, testname)
 
 end subroutine test_BD_CheckRotMat
