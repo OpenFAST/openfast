@@ -430,9 +430,6 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    cc(3) = em*sm3
 
 END SUBROUTINE BD_CrvExtractCrv
-!------------------------------------------------------------------------------
-!> This subroutine determines whether R is a valid rotation matrix and, if not,
-!> replaces it with the closest orthongonal rotation matrix
 
    REAL(BDKi),       INTENT(IN   )  :: R(3,3)        !< Rotation Matrix input
    REAL(BDKi),       INTENT(  OUT)  :: Rout(3,3)     !< Rotation Matrix output
@@ -456,48 +453,57 @@ END SUBROUTINE BD_CrvExtractCrv
    ErrMsg  = ""
 
 SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
+   !> This subroutine checks for rotation matrix validity.
+   !> Returns:
+   !>   ErrStat = 0 if valid
+   !>   ErrStat = 4 (fatal error) if invalid
+   
    REAL(BDKi),       INTENT(INOUT)  :: R(3,3)               !< Rotation Matrix
    ! mjs--Start by determining if R is a valid rotation matrix using the properties:
-      ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1, where
-         ! the leading eigenvalue is +1 and the other two are a comples conjugate pair
-      ! 2) a valid rotation matrix must have determinant == +1
-      ! i.e., the singular values == 1
-
+   ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1, where
+   !    the leading eigenvalue is +1 and the other two are a complex conjugate pair
+   ! 2) a valid rotation matrix must have determinant == +1 i.e., the singular values == 1 
+   
    ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
-      ! and the correction is desired,
-      ! compute \f$ \underline{\underline{R_{out}} \f$, the nearest orthogonal tensor
-      ! to \f$ \underline{\underline{R}} \f$.
-      ! This is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
-      ! and setting \f$ \underline{\underline{R_{out}} = UV^T \f$
-      ! otherwise, assign \f$ \underline{\underline{R_{out}}}  = \underline{\underline{R}} \f$
-
    tempmat = R !mjs--need this to handle inout nature of input for LAPACK_dgesvd
    call LAPACK_dgesvd('A', 'A', 3, 3, tempmat, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
+   !    and the correction is desired,
+   !    compute \f$ \underline{\underline{R_{out}} \f$, the nearest orthogonal tensor
+   !    to \f$ \underline{\underline{R}} \f$.
+   !    This is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
+   !    and setting \f$ \underline{\underline{R_{out}} = UV^T \f$
+   !    otherwise, assign \f$ \underline{\underline{R_{out}}}  = \underline{\underline{R}} \f$
+   
    do i = 1, 3
       ortho = equalrealnos(S(i), 1.0_BDKi)
       if (.not. ortho) exit
    end do
 
    ! mjs--after consulting with Mike Sprague, it was decided that instead of fixing the rotation matrix and
-      ! notifying the user, the simulation should be stopped if an invalid rotation matrix is passed
-      ! To change this and implement the fix, use the following three commented lines
    if (.not. ortho) then
       ErrStat2 = ErrID_Fatal
-      ! ErrStat2 = ErrID_Info
       ErrMsg2 = 'Passed invalid rotation matrix'
-      ! ErrMsg2 = 'Passed invalid rotation matrix--fixing via SVD'
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       Rout = R
-      ! Rout = matmul(U, VT)
    else
       Rout = R
    end if
 
+   ! notifying the user, the simulation should be stopped if an invalid rotation matrix is passed
+   ! To change this and implement the fix, use the following lines
+   ! ErrStat2 = ErrID_Info
+   ! ErrMsg2 = 'Passed invalid rotation matrix--fixing via SVD'
+   ! CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   ! if (ErrStat >= AbortErrLev) return
+   ! R = matmul(U, VT)
+   
 END SUBROUTINE BD_CheckRotMat
+
+
 !------------------------------------------------------------------------------
 !> This subroutine generates n-point gauss-legendre quadrature points and weights
 !!
