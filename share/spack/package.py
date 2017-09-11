@@ -44,7 +44,7 @@ class Openfast(CMakePackage):
             description="Treat REAL as double precision")
     variant('dll-interface', default=True,
             description="Enable dynamic library loading interface")
-    variant('cxx', default=True,
+    variant('cxx', default=False,
             description="Enable C++ bindings")
     variant('debug', default=False,
             description="Enable debugging symbols with RelWithDebInfo")
