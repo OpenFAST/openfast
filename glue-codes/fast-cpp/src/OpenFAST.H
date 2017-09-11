@@ -185,7 +185,7 @@ class OpenFAST {
   void end();
 
   hid_t openVelocityDataFile(bool createFile);
-  int readVelocityData();
+  void readVelocityData(int nTimesteps);
   void writeVelocityData(hid_t h5file, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData);
   herr_t closeVelocityDataFile(int nt_global, hid_t velDataFile);
 

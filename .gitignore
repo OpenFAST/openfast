@@ -27,9 +27,28 @@
 *.exe
 *.out
 *.app
+*.pyc
 
 # CMake specific files
 build/**/*
+install/*
+ctest-build/*
 
-vs-build
+# vs-build specific folders and files
+Debug
+x64
+Release
+Release_Double
+Debug-Double Precision
+Release-Double Precision
+*.opensdf
+*.user
+*.suo
+*.sdf
+*.u2d
+*.pdb
+*.tlog
+gitVersionInfo.h
+
 build
+.DS_Store

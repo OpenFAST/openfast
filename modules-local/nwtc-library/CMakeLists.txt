@@ -25,6 +25,9 @@ set(NWTCLIBS_SOURCES
   src/SingPrec.f90
   src/NWTC_Library_Types.f90
 
+  # RanLux sources
+  src/ranlux/RANLUX.f90
+  
   # NetLib sources
   src/NetLib/Dierckx_FitPack/dierckx_fitpack.f
   src/NetLib/fftpack/fftpack4.1.f

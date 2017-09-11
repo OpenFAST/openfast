@@ -39,7 +39,7 @@ MODULE AirfoilInfo
    PUBLIC                                       :: AFI_Init ! routine to initialize AirfoilInfo parameters
    PUBLIC                                       :: AFI_GetAirfoilParams ! routine to calculate Airfoil parameters
 
-   TYPE(ProgDesc), PARAMETER                    :: AFI_Ver = ProgDesc( 'AirfoilInfo', 'v1.01.01a', '10-May-2017')               ! The name, version, and date of AirfoilInfo.
+   TYPE(ProgDesc), PARAMETER                    :: AFI_Ver = ProgDesc( 'AirfoilInfo', '', '')               ! The name, version, and date of AirfoilInfo.
 
 
 CONTAINS

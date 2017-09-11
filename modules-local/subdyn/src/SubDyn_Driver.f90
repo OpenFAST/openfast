@@ -51,47 +51,48 @@ PROGRAM TestSubDyn
    
       ! Program variables
 
-   REAL(DbKi)                                         :: Time                 ! Variable for storing time, in seconds
-   REAL(DbKi)                                         :: TimeInterval         ! Interval between time steps, in seconds
-   REAL(DbKi)                                         :: InputTime(NumInp)    ! Variable for storing time associated with inputs, in seconds
+   REAL(DbKi)                      :: Time                 ! Variable for storing time, in seconds
+   REAL(DbKi)                      :: TimeInterval         ! Interval between time steps, in seconds
+   REAL(DbKi)                      :: InputTime(NumInp)    ! Variable for storing time associated with inputs, in seconds
    
-   TYPE(SD_InitInputType)                             :: InitInData           ! Input data for initialization
-   TYPE(SD_InitOutputType)                            :: InitOutData          ! Output data from initialization
+   TYPE(SD_InitInputType)          :: InitInData           ! Input data for initialization
+   TYPE(SD_InitOutputType)         :: InitOutData          ! Output data from initialization
 
-   TYPE(SD_ContinuousStateType)                       :: x                    ! Continuous states
-   TYPE(SD_DiscreteStateType)                         :: xd                   ! Discrete states
-   TYPE(SD_ConstraintStateType)                       :: z                    ! Constraint states
-   TYPE(SD_OtherStateType)                            :: OtherState           ! Other states
-   TYPE(SD_MiscVarType)                               :: m                    ! Misc/optimization variables
+   TYPE(SD_ContinuousStateType)    :: x                    ! Continuous states
+   TYPE(SD_DiscreteStateType)      :: xd                   ! Discrete states
+   TYPE(SD_ConstraintStateType)    :: z                    ! Constraint states
+   TYPE(SD_OtherStateType)         :: OtherState           ! Other states
+   TYPE(SD_MiscVarType)            :: m                    ! Misc/optimization variables
 
-   TYPE(SD_ParameterType)                             :: p                    ! Parameters
-   TYPE(SD_InputType)                                 :: u(NumInp)            ! System inputs
-   TYPE(SD_OutputType)                                :: y                    ! System outputs
-
-
-   INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
-   INTEGER(IntKi)                                     :: ErrStat, ErrStat1, ErrStat2, ErrStat3          ! Status of error message
-   CHARACTER(1024)                                    :: ErrMsg, ErrMsg1, ErrMsg2, ErrMsg3              ! Error message if ErrStat /= ErrID_None
+   TYPE(SD_ParameterType)          :: p                    ! Parameters
+   TYPE(SD_InputType)              :: u(NumInp)            ! System inputs
+   TYPE(SD_OutputType)             :: y                    ! System outputs
 
 
-   CHARACTER(1024)                                    :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
-   TYPE(SD_Drvr_InitInput)                            :: drvrInitInp          ! Initialization data for the driver program
-   INTEGER(IntKi)                                     :: UnInp                !  Inputs file identifier
-   INTEGER(IntKi)                                     :: UnSD_Out             ! Output file identifier
-   REAL(ReKi), ALLOCATABLE                            :: SDin(:,:)            ! Variable for storing time, forces, and body velocities, in m/s or rad/s for SubDyn inputs
-   INTEGER(IntKi)                                     :: J                    ! Generic loop counter
-   REAL(ReKi)                                         :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
-   REAL(DbKi)                                         :: maxAngle             ! For debugging, see what the largest rotational angle input is for the simulation
-   CHARACTER(10)                                      :: AngleMsg             ! For debugging, a string version of the largest rotation input
+   INTEGER(IntKi)                  :: n                    ! Loop counter (for time step)
+   INTEGER(IntKi)                  :: ErrStat, ErrStat1, ErrStat2, ErrStat3          ! Status of error message
+   CHARACTER(1024)                 :: ErrMsg, ErrMsg1, ErrMsg2, ErrMsg3              ! Error message if ErrStat /= ErrID_None
+
+
+   CHARACTER(1024)                 :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
+   TYPE(SD_Drvr_InitInput)         :: drvrInitInp          ! Initialization data for the driver program
+   INTEGER(IntKi)                  :: UnInp                !  Inputs file identifier
+   INTEGER(IntKi)                  :: UnSD_Out             ! Output file identifier
+   REAL(ReKi), ALLOCATABLE         :: SDin(:,:)            ! Variable for storing time, forces, and body velocities, in m/s or rad/s for SubDyn inputs
+   INTEGER(IntKi)                  :: J                    ! Generic loop counter
+   REAL(ReKi)                      :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
+   REAL(DbKi)                      :: maxAngle             ! For debugging, see what the largest rotational angle input is for the simulation
+   CHARACTER(10)                   :: AngleMsg             ! For debugging, a string version of the largest rotation input
    
       ! Other/Misc variables
-   REAL(DbKi)                                         :: TiLstPrn             ! The time of the last print
-   REAL(DbKi)                                         :: TMax
-   REAL(DbKi)                                         :: OutTime              ! Used to determine if output should be generated at this simulation time
-   REAL(ReKi)                                         :: PrevClockTime        ! Clock time at start of simulation in seconds
-   REAL                                               :: UsrTime1             ! User CPU time for simulation initialization
-   INTEGER                                            :: StrtTime (8)         ! Start time of simulation
-   
+   REAL(DbKi)                      :: TiLstPrn             ! The time of the last print
+   REAL(DbKi)                      :: TMax
+   REAL(DbKi)                      :: OutTime              ! Used to determine if output should be generated at this simulation time
+   REAL(ReKi)                      :: PrevClockTime        ! Clock time at start of simulation in seconds
+   REAL                            :: UsrTime1             ! User CPU time for simulation initialization
+   INTEGER                         :: StrtTime (8)         ! Start time of simulation
+   CHARACTER(200)                  :: git_commit           ! String containing the current git commit hash
+   TYPE(ProgDesc), PARAMETER       :: version   = ProgDesc( 'SubDyn Driver', '', '' )  ! The version number of this program.
    !...............................................................................................................................
    ! Routines called in initialization
    !...............................................................................................................................
@@ -109,6 +110,15 @@ PROGRAM TestSubDyn
          ! Initialize the NWTC Subroutine Library
 
    CALL NWTC_Init( )
+   
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( version )   
+      ! Obtain OpenFAST git commit hash
+   git_commit = QueryGitVersion()
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   
+   
    
          ! Set the abort error level to a fatal error
    AbortErrLev = ErrID_Fatal

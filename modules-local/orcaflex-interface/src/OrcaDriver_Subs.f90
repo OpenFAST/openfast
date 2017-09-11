@@ -1907,12 +1907,13 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
 
          ! Temporary local variables
    INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary variable for the status of error message
-   CHARACTER(*),              PARAMETER               :: RoutineName = 'PointsForce_OutputWrite'
+   CHARACTER(*),                       PARAMETER      :: RoutineName = 'PointsForce_OutputWrite'
    CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary variable for the error message
    INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
    REAL(ReKi)                                         :: rotdisp(3)           !< Rotational displacement (euler angles)
    INTEGER(IntKi)                                     :: I                    !< Generic counter
-
+   REAL(ReKi)                                         :: outputArray(13)
+   
    CHARACTER(47)                                      :: PointsOutputFmt      !< Format specifier for the output file for wave elevation series
    CHARACTER(3)                                       :: AngleUnit            !< Units for the angle
 
@@ -1972,32 +1973,30 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
       WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp ) ''
    ENDIF
 
-
    rotdisp = GetSmllRotAngs ( u%PtfmMesh%Orientation(:,:,1), ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
 
-
    IF ( AnglesInDegrees ) THEN
-      CALL WrNumAryFileNR( OutUnit,   (/ REAL(Time, ReKi),                                                                    &
-                     u%PtfmMesh%TranslationDisp(1,1), u%PtfmMesh%TranslationDisp(2,1), u%PtfmMesh%TranslationDisp(3,1),       &
-                     rotdisp(1)*R2D,                  rotdisp(2)*R2D,                  rotdisp(3)*R2D,                        &
-                     u%PtfmMesh%TranslationVel(1,1),  u%PtfmMesh%TranslationVel(2,1),  u%PtfmMesh%TranslationVel(3,1),        &
-                     u%PtfmMesh%RotationVel(1,1)*R2D, u%PtfmMesh%RotationVel(2,1)*R2D, u%PtfmMesh%RotationVel(3,1)*R2D  /),   &
-                     '3x,ES10.3E2', ErrStatTmp, ErrMsgTmp )
-      CALL WrNumAryFileNR( OutUnit, y%WriteOutput, '3x,ES10.3E2', ErrStatTmp, ErrMsgTmp )
-      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp ) ''
+      outputArray = (/ REAL(Time, ReKi),                                                                                     &
+                    REAL(u%PtfmMesh%TranslationDisp(1,1), ReKi),                                                             &
+                    REAL(u%PtfmMesh%TranslationDisp(2,1), ReKi),                                                             &
+                    REAL(u%PtfmMesh%TranslationDisp(3,1), ReKi),                                                             &
+                    rotdisp(1)*R2D,                  rotdisp(2)*R2D,                  rotdisp(3)*R2D,                        &
+                    u%PtfmMesh%TranslationVel(1,1),  u%PtfmMesh%TranslationVel(2,1),  u%PtfmMesh%TranslationVel(3,1),        &
+                    u%PtfmMesh%RotationVel(1,1)*R2D, u%PtfmMesh%RotationVel(2,1)*R2D, u%PtfmMesh%RotationVel(3,1)*R2D  /)
    ELSE
-      CALL WrNumAryFileNR( OutUnit,   (/ REAL(Time, ReKi),                                                                    &
-                     u%PtfmMesh%TranslationDisp(1,1), u%PtfmMesh%TranslationDisp(2,1), u%PtfmMesh%TranslationDisp(3,1),       &
-                     rotdisp(1),                      rotdisp(2),                      rotdisp(3),                            &
-                     u%PtfmMesh%TranslationVel(1,1),  u%PtfmMesh%TranslationVel(2,1),  u%PtfmMesh%TranslationVel(3,1),        &
-                     u%PtfmMesh%RotationVel(1,1),     u%PtfmMesh%RotationVel(2,1),     u%PtfmMesh%RotationVel(3,1)      /),   &
-                     '3x,ES10.3E2', ErrStatTmp, ErrMsgTmp )
-      CALL WrNumAryFileNR( OutUnit, y%WriteOutput, '3x,ES10.3E2', ErrStatTmp, ErrMsgTmp )
-      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp ) ''
+      outputArray = (/ REAL(Time, ReKi),                                                                                     &
+                    REAL(u%PtfmMesh%TranslationDisp(1,1), ReKi),                                                             &
+                    REAL(u%PtfmMesh%TranslationDisp(2,1), ReKi),                                                             &
+                    REAL(u%PtfmMesh%TranslationDisp(3,1), ReKi),                                                             &
+                    rotdisp(1),                      rotdisp(2),                      rotdisp(3),                            &
+                    u%PtfmMesh%TranslationVel(1,1),  u%PtfmMesh%TranslationVel(2,1),  u%PtfmMesh%TranslationVel(3,1),        &
+                    u%PtfmMesh%RotationVel(1,1),     u%PtfmMesh%RotationVel(2,1),     u%PtfmMesh%RotationVel(3,1)      /)
    ENDIF
-
-
+   
+   CALL WrNumAryFileNR( OutUnit, outputArray, '3x,ES10.3E2', ErrStatTmp, ErrMsgTmp )
+   CALL WrNumAryFileNR( OutUnit, y%WriteOutput, '3x,ES10.3E2', ErrStatTmp, ErrMsgTmp )
+   WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp ) ''
 
 END SUBROUTINE PointsForce_OutputWrite
 

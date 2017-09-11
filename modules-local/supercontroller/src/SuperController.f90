@@ -30,7 +30,7 @@ MODULE SuperController
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: SC_Ver = ProgDesc( 'SuperController Integration', 'v1.00.00a-gv', '07-Sept-2016' )
+   TYPE(ProgDesc), PARAMETER            :: SC_Ver = ProgDesc( 'SuperController Integration', '', '' )
 
   
 ! ==================================================================================================="
