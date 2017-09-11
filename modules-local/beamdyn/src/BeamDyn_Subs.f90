@@ -466,6 +466,8 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
+   
+   ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
    !    and the correction is desired,
    !    compute \f$ \underline{\underline{R_{out}} \f$, the nearest orthogonal tensor
    !    to \f$ \underline{\underline{R}} \f$.
@@ -475,20 +477,13 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    
    do i = 1, 3
       ortho = equalrealnos(S(i), 1.0_BDKi)
-      if (.not. ortho) exit
+      if (.not. ortho) then
+         CALL SetErrStat(ErrID_Fatal, "Passed invalid rotation matrix", ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end if
    end do
-
+   
    ! mjs--after consulting with Mike Sprague, it was decided that instead of fixing the rotation matrix and
-   if (.not. ortho) then
-      ErrStat2 = ErrID_Fatal
-      ErrMsg2 = 'Passed invalid rotation matrix'
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-      Rout = R
-   else
-      Rout = R
-   end if
-
    ! notifying the user, the simulation should be stopped if an invalid rotation matrix is passed
    ! To change this and implement the fix, use the following lines
    ! ErrStat2 = ErrID_Info
