@@ -327,6 +327,8 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
 
 
 END SUBROUTINE BD_CrvCompose
+
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the CRV parameters given the rotation matrix
 !> The algorithm for this subroutine can be found in Markley, 'Unit Quaternion from Rotation Matrix'
@@ -337,8 +339,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    REAL(BDKi),       INTENT(  OUT)  :: cc(3)         !< Crv paramters
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat       !< Error status of the operation
    CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
-
-   !Local variables
+   
    REAL(BDKi)                  :: pivot(4) ! Trace of the rotation matrix and diagonal elements
    REAL(BDKi)                  :: sm0
    REAL(BDKi)                  :: sm1
@@ -346,7 +347,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    REAL(BDKi)                  :: sm3
    REAL(BDKi)                  :: em
    REAL(BDKi)                  :: temp
-   REAL(BDKi)                  :: Rr(3,3)  ! (possibly) corrected rotation matrix
+   REAL(BDKi)                  :: Rr(3,3)
    INTEGER                     :: i        ! case indicator
 
    INTEGER(IntKi)              :: ErrStat2 ! Temporary Error status
@@ -356,6 +357,9 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
+   
+   ! use the local rotation matrix variable to avoid side effects
+   Rr = R
 
    !> Starting with equation (14) from AIAA paper, "Geometric Nonlinear Analysis of Composite Beams Using
    !! Wiener-Milenkovic Parameters", Wang, et. al. \n
@@ -374,7 +378,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    !! It does, however, match equation 5.17 in the March 2016 "BeamDyn User's Guide and Theory Manual"
 
    ! mjs--determine whether R is a valid rotation matrix and correct it if not
-   call BD_CheckRotMat(R, Rr, ErrStat2, ErrMsg2)
+   call BD_CheckRotMat(Rr, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -429,7 +433,6 @@ END SUBROUTINE BD_CrvExtractCrv
 !------------------------------------------------------------------------------
 !> This subroutine determines whether R is a valid rotation matrix and, if not,
 !> replaces it with the closest orthongonal rotation matrix
-SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
 
    REAL(BDKi),       INTENT(IN   )  :: R(3,3)        !< Rotation Matrix input
    REAL(BDKi),       INTENT(  OUT)  :: Rout(3,3)     !< Rotation Matrix output
@@ -441,7 +444,6 @@ SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
    REAL(BDKi)                  :: S(3)         !mjs--these three are the SVD matrices (S is actually a vector)
    REAL(BDKi)                  :: U(3,3)
    REAL(BDKi)                  :: VT(3,3)
-   REAL(BDKi)                  :: Rr(3,3)      !mjs--correccted rotation matrix
    LOGICAL                     :: ortho        !mjs--logical value indicating whether R is orthogonal
    INTEGER                     :: i            ! loop variable/case indicator
 
@@ -453,6 +455,8 @@ SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
+   REAL(BDKi),       INTENT(INOUT)  :: R(3,3)               !< Rotation Matrix
    ! mjs--Start by determining if R is a valid rotation matrix using the properties:
       ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1, where
          ! the leading eigenvalue is +1 and the other two are a comples conjugate pair
