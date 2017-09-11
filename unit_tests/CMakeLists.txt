@@ -60,7 +60,13 @@ include_directories(
 
 ### unit tests
 set(test_sources)
-foreach(test test_BD_CrvExtractCrv test_BD_CheckRotMat test_BD_CrvMatrixR)
+foreach(test 
+  test_BD_CrvExtractCrv 
+  test_BD_CheckRotMat 
+  test_BD_CrvMatrixR
+  test_BD_CrvCompose
+  test_BD_CheckRotMat
+  test_tools )
   set(test_dependency pfunit ${source_testdirectory}/${test}.F90)
   add_custom_command(
     OUTPUT ${build_testdirectory}/${test}.F90
