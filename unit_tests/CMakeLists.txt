@@ -62,7 +62,6 @@ include_directories(
 set(test_sources)
 foreach(test 
   test_BD_CrvExtractCrv 
-  test_BD_CheckRotMat 
   test_BD_CrvMatrixR
   test_BD_CrvCompose
   test_BD_CheckRotMat
