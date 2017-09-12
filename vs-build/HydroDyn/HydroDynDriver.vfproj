@@ -5,43 +5,43 @@
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
 		<Configuration Name="Debug|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="FPE_TRAP_ENABLED" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUnalignedData="false" WarnInterfaces="true" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUnalignedData="false" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="999999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
 				<Tool Name="VFPreLinkEventTool"/>
-				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="FPE_TRAP_ENABLED;WRITE_WV_KIN" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" InitLocalVarToNAN="true" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" InitLocalVarToNAN="true" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" OutputFile="$(OutDir)\HydroDynDriver_dev_$(ConfigurationName)_$(PlatformName).exe" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="999999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
 				<Tool Name="VFPreLinkEventTool"/>
-				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="FPE_TRAP_ENABLED" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnInterfaces="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="100000000"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
 				<Tool Name="VFPreLinkEventTool"/>
-				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|x64">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="FPE_TRAP_ENABLED;WRITE_WV_KIN" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="999999999"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
 				<Tool Name="VFPreLinkEventTool"/>
-				<Tool Name="VFPreBuildEventTool"/>
+				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
 	<Files>

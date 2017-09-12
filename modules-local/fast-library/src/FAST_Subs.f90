@@ -1279,7 +1279,9 @@ FUNCTION GetVersion(ThisProgVer)
 
    TYPE(ProgDesc), INTENT( IN    ) :: ThisProgVer     !< program name/date/version description
    CHARACTER(1024)                 :: GetVersion      !< String containing a description of the compiled precision.
-
+   
+   CHARACTER(200)                  :: git_commit
+   
    GetVersion = TRIM(GetNVD(ThisProgVer))//', compiled'
 
    IF ( Cmpl4SFun )  THEN     ! FAST has been compiled as an S-Function for Simulink
@@ -1299,22 +1301,14 @@ FUNCTION GetVersion(ThisProgVer)
       ELSE                          ! Unknown precision
          GetVersion = TRIM(GetVersion)//' unknown'
       ENDIF
+      
 
 !   GetVersion = TRIM(GetVersion)//' precision with '//OS_Desc
    GetVersion = TRIM(GetVersion)//' precision'
 
    ! add git info
-#ifdef GIT_COMMIT_HASH
-   GetVersion = TRIM(GetVersion)//' at commit '//GIT_COMMIT_HASH
-#endif
-#ifdef GIT_HASH_FILE
-   ! VS build method for obtaining the git hash info.
-   ! This requires setting:
-   !  1) GIT_HASH_FILE = '$(ProjectDir)\gitHash.txt' preprocessor opetion on this file.
-   !  2) Creating a prebuild event on the profile file which runs this command: ..\GetGitHash.bat
-   !  3) The bat file, GetGitHash.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
-   GetVersion = TRIM(GetVersion)//' at commit '//ReadGitHash(GIT_HASH_FILE, errStat, errMsg)
-#endif
+   git_commit = QueryGitVersion()
+   GetVersion = TRIM(GetVersion)//' at commit '//git_commit
 
    RETURN
 END FUNCTION GetVersion
@@ -1330,17 +1324,7 @@ subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architectu
    name = trim(ThisProgVer%Name)
    version = trim(ThisProgVer%Ver)
    
-#ifdef GIT_COMMIT_HASH
-   git_commit = GIT_COMMIT_HASH
-#endif
-#ifdef GIT_HASH_FILE
-   ! VS build method for obtaining the git hash info.
-   ! This requires setting:
-   !  1) GIT_HASH_FILE = '$(ProjectDir)\gitHash.txt' preprocessor opetion on this file.
-   !  2) Creating a prebuild event on the profile file which runs this command: ..\GetGitHash.bat
-   !  3) The bat file, GetGitHash.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
-   git_commit = ReadGitHash(GIT_HASH_FILE, errStat, errMsg)
-#endif
+   git_commit = QueryGitVersion()
 
    architecture = TRIM(Num2LStr(BITS_IN_ADDR))//' bit'
    

@@ -5,7 +5,7 @@
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
 		<Configuration Name="Debug|Win32" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\build\types-files;..\..\OpenFAST\modules-local\nwtc-library\src" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\build\types-files;..\..\OpenFAST\modules-local\nwtc-library\src" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -14,7 +14,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -23,7 +23,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -32,16 +32,16 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
-				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFCustomBuildTool" AdditionalDependencies="terdf"/>
 				<Tool Name="VFPreLinkEventTool"/>
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release_Matlab|Win32" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Matlab" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -50,7 +50,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release_Matlab|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Matlab" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -59,7 +59,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug_Matlab|Win32" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug_Matlab" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName)_Debug.lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -68,7 +68,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug_Matlab|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug_Matlab" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="COMPILE_SIMULINK;CONSOLE_FILE" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName)_Debug.lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -77,7 +77,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release_Double|Win32" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Double" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h';DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -86,7 +86,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Release_Double|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Double" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h';DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -95,7 +95,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug_Double|Win32" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug_Double" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\build\types-files;..\..\OpenFAST\modules-local\nwtc-library\src" PreprocessorDefinitions="DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" WarnInterfaces="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\build\types-files;..\..\OpenFAST\modules-local\nwtc-library\src" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h';DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -104,11 +104,11 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration>
 		<Configuration Name="Debug_Double|x64" OutputDirectory="..\..\build\bin\" TargetName="$(ProjectName)_$(PlatformName)_Debug_Double" ConfigurationType="typeStaticLibrary">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" WarnInterfaces="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h';DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" WarnDeclarations="true" WarnUnusedVariables="true" WarnUncalled="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
-				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFCustomBuildTool" AdditionalDependencies="asfasdf"/>
 				<Tool Name="VFPreLinkEventTool"/>
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration></Configurations>
@@ -716,8 +716,6 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceDyn" Description="Running Registry for IceDyn" Outputs="..\..\build\types-files\IceDyn_Types.f90"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules-ext\icedyn\src\IceDyn.f90"/></Filter>
 		<Filter Name="IceFloe">
-		<Filter Name="ExternalCode">
-		<File RelativePath="..\..\modules-ext\icefloe\src\ranlux\RANLUX.f90"/></Filter>
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules-ext\icefloe\src\interfaces\FAST\IceFloe_FASTRegistry.inp">
 			<FileConfiguration Name="Debug_Double|Win32">
@@ -1222,6 +1220,8 @@
 		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\Dierckx_FitPack\NWTC_FitPack.f90"/>
 		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/>
 		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\scalapack\NWTC_ScaLAPACK.f90"/></Filter>
+		<Filter Name="RanLux">
+		<File RelativePath="..\..\modules-local\nwtc-library\src\ranlux\RANLUX.f90"/></Filter>
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules-local\nwtc-library\src\Registry_NWTC_Library.txt"/></Filter>
 		<File RelativePath="..\..\modules-local\nwtc-library\src\ModMesh.f90"/>
