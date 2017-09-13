@@ -622,29 +622,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF       
 
    ! ........................
-   ! some checks for AeroDyn inputs with the high-speed shaft brake hack in ElastoDyn:
-   ! (DO NOT COPY THIS CODE!)
-   ! ........................   
-   IF ( p_FAST%CompServo == Module_SrvD ) THEN
-      
-         ! bjj: this is a hack to get high-speed shaft braking in FAST v8
-      
-      IF ( InitOutData_SrvD%UseHSSBrake ) THEN
-         IF ( p_FAST%CompAero == Module_AD14 ) THEN
-            IF ( AD14%p%DYNINFL ) THEN
-               CALL SetErrStat(ErrID_Fatal,'AeroDyn v14 "DYNINFL" InfModel is invalid for models with high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
-            END IF
-         END IF
-         
-            
-         IF ( ED%p%method == 1 ) THEN ! bjj: should be using ElastoDyn's Method_ABM4 Method_AB4 parameters
-            CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the AB4 or ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
-         END IF               
-      END IF
-      
-   END IF  
-   
-   ! ........................
    ! some checks for AeroDyn14's Dynamic Inflow with Mean Wind Speed from InflowWind:
    ! (DO NOT COPY THIS CODE!)
    ! bjj: AeroDyn14 should not need this rule of thumb; it should check the instantaneous values when the code runs
@@ -715,6 +692,27 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF          
+      
+   ! ........................
+   ! some checks for AeroDyn inputs with the high-speed shaft brake hack in ElastoDyn:
+   ! (DO NOT COPY THIS CODE!)
+   ! ........................   
+         ! bjj: this is a hack to get high-speed shaft braking in FAST v8
+      
+      IF ( InitOutData_SrvD%UseHSSBrake ) THEN
+         IF ( p_FAST%CompAero == Module_AD14 ) THEN
+            IF ( AD14%p%DYNINFL ) THEN
+               CALL SetErrStat(ErrID_Fatal,'AeroDyn v14 "DYNINFL" InfModel is invalid for models with high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+            END IF
+         END IF
+         
+            
+         IF ( ED%p%method == 1 ) THEN ! bjj: should be using ElastoDyn's Method_RK4 parameter
+            CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the AB4 or ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+         END IF               
+      END IF
+      
+      
    END IF
 
    ! ........................
