@@ -2564,7 +2564,7 @@ SUBROUTINE GetTwrSectProp ( P, m, ErrStat, ErrMess,      &
 
    ELSE                                                     ! There are multiple Re rows
 
-      TwrElRe = GetReynolds( VelHor, 2.0*TwrElRad, P%Wind%KinVisc )
+      TwrElRe = GetReynolds( VelHor, 2.0_ReKi*TwrElRad, P%Wind%KinVisc )
 
       IF ( p%TwrProps%NTwrCD == 1 ) THEN                               ! There is only one CD column
          TwrElCD = InterpBin( TwrElRe, p%TwrProps%TwrRe, p%TwrProps%TwrCD(:,1), N1, p%TwrProps%NTwrRe )
