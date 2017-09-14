@@ -3,7 +3,7 @@
 Building OpenFAST with Spack
 ============================
 
-OpenFAST uses the `CMake <https://cmake.org>`__ build system. 
+OpenFAST uses the `CMake <https://cmake.org>`_ build system. 
 We recommend building OpenFAST using `Spack <https://spack.readthedocs.io/en/latest>`__. 
 However, we also provide some sample scripts in ``openfast/share`` if you choose to proceed without `Spack`.
 
@@ -50,8 +50,7 @@ Building OpenFAST Semi-Automatically Using Spack on macOS or Linux
 ---------------------------------------------------------------------
 
 The following describes how to build OpenFAST and its dependencies
-mostly automatically on your Mac using 
-`Spack <https://spack.readthedocs.io/en/latest>`__. 
+mostly automatically on your Mac using `Spack <https://spack.readthedocs.io/en/latest>`_. 
 This can also be used as a template to build OpenFAST on any 
 Linux system with Spack.
 
@@ -81,7 +80,7 @@ Add Spack shell support to your ``.profile`` by adding the lines:
 Step 3
 ~~~~~~
 
-Copy the `https://raw.githubusercontent.com/OpenFAST/openfast/dev/share/spack/package.py`__ file
+Copy the https://raw.githubusercontent.com/OpenFAST/openfast/dev/share/spack/package.py file
 to your installation of Spack:
 
 ::

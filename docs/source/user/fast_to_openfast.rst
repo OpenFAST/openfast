@@ -57,8 +57,7 @@ The AeroDyn v15 aerodynamics module has been significantly updated.  The blade-e
 
 *   When hub- and/or tip-loss are enabled (HubLoss = True and/or TipLoss = True), tangential induction (a’) is set to 0 instead of -1 at the root and/or tip, respectively (axial induction (a) is still set to 1 at the root and/or tip);
 
-*   Made the BEMT solution more efficient.
-In addition, several bugs in AeroDyn v15 have been fixed, including:
+*   Made the BEMT solution more efficient.  In addition, several bugs in AeroDyn v15 have been fixed, including:
 
 *   Fixed a bug whereby when hub- and/or tip-loss are enabled (HubLoss = True and/or TipLoss = True) along with the Pitt/Peters skewed-wake correction (SkewMod = 2), BEMT no longer modifies the induction factors at the hub and/or tip, respectively;
 
@@ -101,9 +100,8 @@ In order to increase testing coverage and to maintain robust software, we will r
 
 * bug fixes include appropriate unit tests;
 
-* new features/capabilities include appropriate unit and regression tests.
-We are in the process of better instrumenting the BeamDyn module with extensive testing as a demonstration of requirements for new modules.   
-
+* new features/capabilities include appropriate unit and regression tests.  We are in the process of better instrumenting the BeamDyn module with extensive testing as a demonstration of requirements for new modules.  
+ 
 For unit testing, we will employ the pFUnit framework (https://sourceforge.net/projects/pfunit).
 
 For the time being OpenFAST provides project and solution files to support users developing and compiling using Visual Studio. However, the team is continually working to automate the generation of Visual Studio build files via CMake in future releases. 

@@ -135,6 +135,6 @@ Documentation-Site Contents
 .. toctree::
    :maxdepth: 1
 
-   User documentation <user/index.rst>
-   Developer documentation <dev/index.rst>
+   User documentation <source/user/index.rst>
+   Developer documentation <source/dev/index.rst>
 
