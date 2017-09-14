@@ -18,13 +18,13 @@ subroutine test_ExtractRelativeRotation()
     character                  :: ErrMsg
     
     type(BD_ParameterType)     :: parametertype
-    
-    testname = "extract xaxis by pi/2, zaxis by pi"
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
     
     tolerance = 1e-14
+        
+    testname = "extract xaxis by pi/2, zaxis by pi"
         
     ! input rotation matrix is rotation of pi/2 around x-axis
     ! 1.0  0.0  0.0
