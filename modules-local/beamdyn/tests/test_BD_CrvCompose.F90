@@ -17,6 +17,8 @@ subroutine test_BD_CrvCompose()
     real(BDKi)                 :: angle1, angle2
     real(BDKi), dimension(3)   :: rotparams1, rotparams2, composedparams
     real(BDKi), dimension(3,3) :: testrotation, rotationmat1, rotationmat2, baselinerotation
+    real(BDKi), dimension(3)   :: testaxis, baselineaxis
+    real(BDKi)                 :: testangle, baselineangle
     character(1024)            :: testname
     real(BDKi)                 :: tolerance
     
@@ -40,7 +42,14 @@ subroutine test_BD_CrvCompose()
     
     call parameterizedRotation(testrotation, angle1, angle2, n1, n2, 0)
     call standardRotation(baselinerotation, angle1, angle2, 1, 3)
-    @assertEqual(testrotation, baselinerotation, tolerance, testname)
+    
+    testaxis = getRotationAxis(testrotation)
+    baselineaxis = getRotationAxis(baselinerotation)
+    testangle = getRotationAngle(testrotation)
+    baselineangle = getRotationAngle(baselinerotation)
+    
+    @assertEqual(testaxis, baselineaxis, tolerance, testname)
+    @assertEqual(testangle, baselineangle, tolerance, testname)
     
     
     testname = "delta2 < 0, no transpose of input rotations (flag = 0)"
@@ -53,7 +62,14 @@ subroutine test_BD_CrvCompose()
     
     call parameterizedRotation(testrotation, angle1, angle2, n1, n2, 0)
     call standardRotation(baselinerotation, angle1, angle2, 1, 3)
-    @assertEqual(testrotation, baselinerotation, tolerance, testname)
+    
+    testaxis = getRotationAxis(testrotation)
+    baselineaxis = getRotationAxis(baselinerotation)
+    testangle = getRotationAngle(testrotation)
+    baselineangle = getRotationAngle(baselinerotation)
+    
+    @assertEqual(testaxis, baselineaxis, tolerance, testname)
+    @assertEqual(testangle, baselineangle, tolerance, testname)
     
     !TODO flag = 1
     !TODO flag = 2
