@@ -27,7 +27,7 @@ module AWAE
    use NWTC_Library
    use AWAE_Types
    use AWAE_IO
-#ifdef PARALLEL_CODE
+#ifdef _OPENMP
    use OMP_LIB
 #endif
    
@@ -264,11 +264,19 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: Vave_amb_low_norm
    real(ReKi)          :: delta, deltad
    real(ReKi)          :: wsum_tmp
+   real(ReKi)          :: tmp_x,tmp_y,tmp_z, tm1, tm2
+   real(ReKi),dimension(:,:),ALLOCATABLE :: tmp_rhat_plane, tmp_xhat_plane
+   real(ReKi),dimension(:),ALLOCATABLE   :: tmp_Vx_wake, tmp_Vr_wake
    integer(IntKi)      :: ILo
    integer(IntKi)      :: maxPln
-   character(*), parameter   :: RoutineName = 'LowResGridCalcOutput'   
+   integer(IntKi)      :: i,np1,errStat2,tmp_N_wind
+   character(*), parameter   :: RoutineName = 'LowResGridCalcOutput' 
+   logical             :: boundary_error
+  
    errStat = ErrID_None
    errMsg  = ""
+   boundary_error = .FALSE.
+
    maxPln =  min(n,p%NumPlanes-2)
    
    !    ! read from file the ambient flow for the current time step
@@ -276,45 +284,75 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    !    if ( errStat >= AbortErrLev ) then
    !       return
    !    end if
-   
-            
-   nXYZ_low = 0
+#ifdef _OPENMP  
+   tm1 =  omp_get_wtime() 
+#endif 
+     
    m%N_wind(:,:) = 0
+
+   ! Temporary variables needed by OpenMP 
+   allocate ( tmp_xhat_plane ( 3, 1:p%NumTurbines ), STAT=errStat2 )
+       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_xhat_plane.', errStat, errMsg, RoutineName )
+   allocate ( tmp_rhat_plane ( 3, 1:p%NumTurbines ), STAT=errStat2 )
+       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_xhat_plane.', errStat, errMsg, RoutineName )
+   allocate ( tmp_Vx_wake    ( 1:p%NumTurbines ), STAT=errStat2 )
+       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vx_wake.', errStat, errMsg, RoutineName )
+   allocate ( tmp_Vr_wake    ( 1:p%NumTurbines ), STAT=errStat2 )
+       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vr_wake.', errStat, errMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) return
+
    
       ! Loop over the entire grid of low resolution ambient wind data to compute:
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
    
-   do nz_low=0, p%nZ_low-1 
-      do ny_low=0, p%nY_low-1
-         do nx_low=0, p%nX_low-1
+   !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, D_wake_tmp, xhatBar_plane, x_end_plane,nt,np,ILo,x_start_plane,delta,deltad,p_tmp_plane,tmp_vec,r_vec_plane,r_tmp_plane,tmp_xhatBar_plane, Vx_wake_tmp,Vr_wake_tmp,nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,wsum_tmp,tmp_xhat_plane,tmp_rhat_plane,tmp_Vx_wake,tmp_Vr_wake,tmp_N_wind,i,np1,errStat2) SHARED(m,u,p,maxPln,errStat,errMsg,boundary_error) DEFAULT(NONE) 
+   
+
+      do i = 0 , p%nX_low*p%nY_low*p%nZ_low - 1
+
+            nx_low = mod(i,p%nX_low)
+            ny_low = mod(i/(p%nX_low),p%nY_low)
+            nz_low = i / (p%nX_low*p%nY_low)
             
                ! set the disturbed flow equal to the ambient flow for this time step
             m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vamb_low(:,nx_low,ny_low,nz_low)
             
-            nXYZ_low = nXYZ_low + 1
+            nXYZ_low = i + 1
             n_wake = 0
             xhatBar_plane = 0.0_ReKi
             
             do nt = 1,p%NumTurbines
                   
-               x_end_plane = dot_product(u%xhat_plane(:,0,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,0,nt)) )
-               
+               ! H Long: replace intrinsic dot_product with explicit do product can save as much as 10% of total calculation time! 
+               !x_end_plane = dot_product(u%xhat_plane(:,0,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,0,nt)) )
+               tmp_x = u%xhat_plane(1,0,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,0,nt))
+               tmp_y = u%xhat_plane(2,0,nt) * (p%Grid_Low(2,nXYZ_low) - u%p_plane(2,0,nt))
+               tmp_z = u%xhat_plane(3,0,nt) * (p%Grid_Low(3,nXYZ_low) - u%p_plane(3,0,nt))
+               x_end_plane = tmp_x + tmp_y + tmp_z
+
                do np = 0, maxPln  
                   
                      ! Reset interpolation counter
                   ILo = 0
+                  np1 = np + 1
                   
                      ! Construct the endcaps of the current wake plane volume
                   x_start_plane = x_end_plane
-                  x_end_plane = dot_product(u%xhat_plane(:,np+1,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,np+1,nt)) )
+                  ! H Long: again, replace intrinsic dot_product 
+                  !x_end_plane = dot_product(u%xhat_plane(:,np+1,nt), (p%Grid_Low(:,nXYZ_low) - u%p_plane(:,np+1,nt)) )
+                  tmp_x = u%xhat_plane(1,np1,nt) * (p%Grid_Low(1,nXYZ_low) - u%p_plane(1,np1,nt))
+                  tmp_y = u%xhat_plane(2,np1,nt) * (p%Grid_Low(2,nXYZ_low) - u%p_plane(2,np1,nt))
+                  tmp_z = u%xhat_plane(3,np1,nt) * (p%Grid_Low(3,nXYZ_low) - u%p_plane(3,np1,nt))
+                  x_end_plane = tmp_x + tmp_y + tmp_z
                   
                      ! test if the point is within the endcaps of the wake volume
+
                   if ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) then
-                     
+                       
                      delta = x_start_plane / ( x_start_plane - x_end_plane )
                      deltad = (1.0_ReKi - delta)
                      if ( m%parallelFlag(np,nt) ) then
-                        p_tmp_plane = delta*u%p_plane(:,np+1,nt) + deltad*u%p_plane(:,np,nt)
+                        p_tmp_plane = delta*u%p_plane(:,np1,nt) + deltad*u%p_plane(:,np,nt)
                      else
                         tmp_vec = delta*m%rhat_e(:,np,nt) + deltad*m%rhat_s(:,np,nt)
                         p_tmp_plane = delta*m%pvec_ce(:,np,nt) + deltad*m%pvec_cs(:,np,nt) + ( delta*m%r_e(np,nt) + deltad*m%r_s(np,nt) )* tmp_vec / TwoNorm(tmp_vec)
@@ -332,58 +370,69 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                        ! m%r_plane(n_wake) = r_tmp_plane   ! Why do we need this??  GJH
                         
                         if ( EqualRealNos(r_tmp_plane, 0.0_ReKi) ) then         
-                           m%rhat_plane(:,n_wake) = 0.0_ReKi
+                           tmp_rhat_plane(:,n_wake) = 0.0_ReKi
                         else
-                           m%rhat_plane(:,n_wake) = ( r_vec_plane  ) / r_tmp_plane
+                           tmp_rhat_plane(:,n_wake) = ( r_vec_plane  ) / r_tmp_plane
                         end if
                         
 
                            ! given r_tmp_plane and Vx_wake at p%dr increments, find value of m%Vx_wake(@r_tmp_plane) using interpolation 
-                        m%Vx_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np+1,nt), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np,nt), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
-                        m%Vr_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np+1,nt), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np,nt), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
+                        tmp_Vx_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np1,nt), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vx_wake(:,np,nt), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
+                        tmp_Vr_wake(n_wake) = delta*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np1,nt), ILo, p%NumRadii ) + deltad*InterpBin( r_tmp_plane, p%r, u%Vr_wake(:,np,nt), ILo, p%NumRadii ) !( XVal, XAry, YAry, ILo, AryLen )
                         
                         
-                        m%xhat_plane(:,n_wake) = delta*u%xhat_plane(:,np+1,nt) + deltad*u%xhat_plane(:,np,nt)
-                        m%xhat_plane(:,n_wake) = m%xhat_plane(:,n_wake) / TwoNorm(m%xhat_plane(:,n_wake))
-                        xhatBar_plane = xhatBar_plane + abs(m%Vx_wake(n_wake))*m%xhat_plane(:,n_wake)
+                        tmp_xhat_plane(:,n_wake) = delta*u%xhat_plane(:,np1,nt) + deltad*u%xhat_plane(:,np,nt)
+                        tmp_xhat_plane(:,n_wake) = tmp_xhat_plane(:,n_wake) / TwoNorm(tmp_xhat_plane(:,n_wake))
+                        xhatBar_plane = xhatBar_plane + abs(tmp_Vx_wake(n_wake))*tmp_xhat_plane(:,n_wake)
       
                      end if  ! if the point is within radial finite-difference grid
                      
                         ! test if the point is within the radius of the wake volume cylinder                   
-                     D_wake_tmp = delta*u%D_wake(np+1,nt) + deltad*u%D_wake(np,nt)        
+                     D_wake_tmp = delta*u%D_wake(np1,nt) + deltad*u%D_wake(np,nt)  
+                        
                      if ( r_tmp_plane <= p%C_ScaleDiam*D_wake_tmp ) then
+                        ! H Long: Use atomic to avoid racing
+                        !$OMP ATOMIC CAPTURE
                         m%N_wind(np,nt) = m%N_wind(np,nt) + 1
+                        tmp_N_wind = m%N_wind(np,nt) 
+                        !$OMP END ATOMIC 
+
+                        !! if tmp_N_wind > p%n_wind_max then we will be indexing beyond the allocated memory for nx_wind,ny_wind,nz_wind arrays
+                        if ( tmp_N_wind > p%n_wind_max ) then
+                           !$OMP ATOMIC WRITE
+                           boundary_error = .TRUE.
+                           !$OMP END ATOMIC
+                        else                        
                         
+                           select case ( p%Mod_Meander )
+                           case (MeanderMod_Uniform) 
+                              m%w(   tmp_N_wind,np,nt) = 1.0_ReKi
+                           case (MeanderMod_TruncJinc)  
+                              m%w(   tmp_N_wind,np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )
+                           case (MeanderMod_WndwdJinc) 
+                              m%w(   tmp_N_wind,np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )*jinc( r_tmp_plane/( 2.0_ReKi*p%C_Meander*D_wake_tmp ) )
+                           end select
                         
-                        if ( m%N_wind(np,nt) > p%n_wind_max ) then
-                           call SetErrStat( ErrID_Fatal, 'The wake plane volume (plane='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
-                           return  ! if m%N_wind(np,nt) > p%n_wind_max then we will be indexing beyond the allocated memory for nx_wind,ny_wind,nz_wind arrays
-                        end if
+                           m%nx_wind(tmp_N_wind,np,nt) = nx_low
+                           m%ny_wind(tmp_N_wind,np,nt) = ny_low
+                           m%nz_wind(tmp_N_wind,np,nt) = nz_low   
                         
-                        select case ( p%Mod_Meander )
-                        case (MeanderMod_Uniform) 
-                           m%w(   m%N_wind(np,nt),np,nt) = 1.0_ReKi
-                        case (MeanderMod_TruncJinc)  
-                           m%w(   m%N_wind(np,nt),np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )
-                        case (MeanderMod_WndwdJinc) 
-                           m%w(   m%N_wind(np,nt),np,nt) = jinc( r_tmp_plane/( p%C_Meander*D_wake_tmp ) )*jinc( r_tmp_plane/( 2.0_ReKi*p%C_Meander*D_wake_tmp ) )
-                        end select
-                        
-                        m%nx_wind(m%N_wind(np,nt),np,nt) = nx_low
-                        m%ny_wind(m%N_wind(np,nt),np,nt) = ny_low
-                        m%nz_wind(m%N_wind(np,nt),np,nt) = nz_low   
-                        
-                        if ( np == 0 ) then
-                           if ( r_tmp_plane <= 0.5_ReKi*p%C_Meander*D_wake_tmp ) then
-                              m%w_Amb(m%N_wind(np,nt),nt) = 1.0_ReKi
-                           else
-                              m%w_Amb(m%N_wind(np,nt),nt) = 0.0_ReKi
+                           if ( np == 0 ) then
+                              if ( r_tmp_plane <= 0.5_ReKi*p%C_Meander*D_wake_tmp ) then
+                                 m%w_Amb(tmp_N_wind,nt) = 1.0_ReKi
+                              else
+                                 m%w_Amb(tmp_N_wind,nt) = 0.0_ReKi
+                              end if
                            end if
-                        end if
-                                                
+                        
+                        endif   
+                                    
                      end if
+                     
                      exit
-                  end if  ! if the point is within the endcaps of the wake volume                 
+ 
+                  end if  ! if the point is within the endcaps of the wake volume 
+               
                end do     ! do np = 0, p%NumPlanes-2
             end do        ! do nt = 1,p%NumTurbines
             if (n_wake > 0) then
@@ -397,7 +446,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                Vx_wake_tmp   = 0.0_ReKi
                Vr_wake_tmp   = 0.0_ReKi
                do nw = 1,n_wake 
-                  Vr_term     = m%Vx_wake(nw)*m%xhat_plane(:,nw) + m%Vr_wake(nw)*m%rhat_plane(:,nw)
+                  Vr_term     = tmp_Vx_wake(nw)*tmp_xhat_plane(:,nw) + tmp_Vr_wake(nw)*tmp_rhat_plane(:,nw)
                   Vx_term     = dot_product( xhatBar_plane, Vr_term )
                   Vx_wake_tmp = Vx_wake_tmp + Vx_term*Vx_term
                   Vr_wake_tmp = Vr_wake_tmp + Vr_term
@@ -407,9 +456,13 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vdist_low(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
             end if  ! (n_wake > 0)
             
-         end do ! do nx_low=0, p%nX_low-1
-      end do    ! do ny_low=0, p%nY_low-1
-   end do       ! do nz_low=0, p%nZ_low-1
+   end do       
+   !$OMP END PARALLEL DO
+
+   if(boundary_error) then                           
+      call SetErrStat( ErrID_Fatal, 'A wake plane volume contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
+      return  
+   endif
    
    do nt = 1,p%NumTurbines
       if ( m%N_wind(0,nt) > 0 ) then
@@ -481,6 +534,15 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       end if
       
    end do
+#ifdef _OPENMP  
+   tm2 =  omp_get_wtime() 
+   write(*,*)  'Total AWAE:LowResGridCalcOutput using '//trim(num2lstr(tm2-tm1))//' seconds'
+#endif 
+
+   if (allocated(tmp_xhat_plane)) deallocate(tmp_xhat_plane)
+   if (allocated(tmp_rhat_plane)) deallocate(tmp_rhat_plane)
+   if (allocated(tmp_Vx_wake)) deallocate(tmp_Vx_wake)
+   if (allocated(tmp_Vr_wake)) deallocate(tmp_Vr_wake)
 
 end subroutine LowResGridCalcOutput
 
@@ -1296,23 +1358,25 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    integer(intKi)                               :: errStat2          ! temporary Error status
    character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'AWAE_UpdateStates'
-   real(DbKi)          :: t1, tread
+   real(DbKi)          :: t1, t2
    integer(IntKi)                               :: n_high_low, nt, n_hl
    
    errStat = ErrID_None
    errMsg  = ""
    
    ! Read the ambient wind data that is needed for t+dt, i.e., n+1
-   
-   !t1 = omp_get_wtime()   
+#ifdef _OPENMP
+   t1 = omp_get_wtime()  
+#endif   
       ! read from file the ambient flow for the n+1 time step
    call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat, errMsg)
       if ( errStat >= AbortErrLev ) then
          return
       end if
-  ! tread =  ( omp_get_wtime() - t1 )       
-  ! write(*,*) 'Time spent reading data:  ',tread            
-   
+#ifdef _OPENMP
+   t2 = omp_get_wtime()      
+   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
+#endif   
       
    if ( (n+1) == (p%NumDT-1) ) then
       n_high_low = 1
@@ -1329,6 +1393,10 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             end if 
       end do
    end do
+#ifdef _OPENMP
+   t1 = omp_get_wtime()      
+   write(*,*) '        AWAE_UpdateStates: Time spent reading High Res data : '//trim(num2lstr(t1-t2))//' seconds'             
+#endif 
    
 end subroutine AWAE_UpdateStates
 
