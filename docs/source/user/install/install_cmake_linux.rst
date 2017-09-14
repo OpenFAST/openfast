@@ -1,18 +1,20 @@
-Building OpenFAST
-=================
+.. _install_cmake_linux:
 
-OpenFAST uses the `CMake <https://cmake.org>`__ build system. 
-We recommend building OpenFAST using `Spack <https://spack.readthedocs.io/en/latest>`__. 
-However, we also provide some sample scripts in ``openfast/share`` if you choose to proceed without `Spack`.
+Building OpenFAST with CMake on Linux and Mac
+=============================================
+
+We describe here how to install OpenFAST (or any of its modules) using the `CMake <https://cmake.org>`__ build system on Linux or Mac OS systems.  Separate `CMake <https://cmake.org>`__ documentation is provided for Windows Cygwin users: see :ref:`install_cmake_cygwin`.
 
 Dependencies
 ------------
 
 OpenFAST has the following dependencies:
 
-- LAPACK libraries. Users should set ``BLAS_LIBRARIES`` and ``LAPACK_LIBRARIES`` appropriately for cmake if the library isn't found in standard paths. Use `BLASLIB` as an example when using Intel MKL.
-- For the optional C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`__ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__ (provided by ``YAML_ROOT``)
-- For the optional testing framework, Python 3+
+- LAPACK libraries. Users should set ``BLAS_LIBRARIES`` and ``LAPACK_LIBRARIES`` appropriately for cmake if the library is not found in standard paths. Use `BLASLIB` as an example when using Intel MKL.
+
+- **Optional:** For the C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`__ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__ (provided by ``YAML_ROOT``)
+
+- **Optional:** For the testing framework, Python 3+
 
 CMake Build Instructions
 ------------------------

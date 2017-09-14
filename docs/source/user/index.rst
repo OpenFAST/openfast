@@ -1,6 +1,6 @@
 .. _user_guide:
 
-OpenFAST Users Documentation
+OpenFAST User Documentation
 ============================
 
 .. toctree::

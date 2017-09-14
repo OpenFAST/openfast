@@ -1,5 +1,7 @@
-Building OpenFAST
-=================
+.. _install_spack:
+
+Building OpenFAST with Spack
+============================
 
 OpenFAST uses the `CMake <https://cmake.org>`__ build system. 
 We recommend building OpenFAST using `Spack <https://spack.readthedocs.io/en/latest>`__. 
