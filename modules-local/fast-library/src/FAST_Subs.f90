@@ -625,29 +625,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF       
 
    ! ........................
-   ! some checks for AeroDyn inputs with the high-speed shaft brake hack in ElastoDyn:
-   ! (DO NOT COPY THIS CODE!)
-   ! ........................   
-   IF ( p_FAST%CompServo == Module_SrvD ) THEN
-      
-         ! bjj: this is a hack to get high-speed shaft braking in FAST v8
-      
-      IF ( InitOutData_SrvD%UseHSSBrake ) THEN
-         IF ( p_FAST%CompAero == Module_AD14 ) THEN
-            IF ( AD14%p%DYNINFL ) THEN
-               CALL SetErrStat(ErrID_Fatal,'AeroDyn v14 "DYNINFL" InfModel is invalid for models with high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
-            END IF
-         END IF
-         
-            
-         IF ( ED%p%method == 1 ) THEN ! bjj: should be using ElastoDyn's Method_ABM4 Method_AB4 parameters
-            CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the AB4 or ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
-         END IF               
-      END IF
-      
-   END IF  
-   
-   ! ........................
    ! some checks for AeroDyn14's Dynamic Inflow with Mean Wind Speed from InflowWind:
    ! (DO NOT COPY THIS CODE!)
    ! bjj: AeroDyn14 should not need this rule of thumb; it should check the instantaneous values when the code runs
@@ -726,10 +703,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       CALL SetModuleSubstepTime(Module_SrvD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      !! initialize y%ElecPwr and y%GenTq because they are one timestep different (used as input for the next step)
-      !!bjj: perhaps this will require some better thought so that these two fields of y_SrvD_prev don't get set here in the glue code
-      !CALL SrvD_CopyOutput( SrvD%y, SrvD%y_prev, MESH_NEWCOPY, ErrStat, ErrMsg)               
-      !   
+      !! initialize SrvD%y%ElecPwr and SrvD%y%GenTq because they are one timestep different (used as input for the next step)
                   
       if (allocated(InitOutData_SrvD%LinNames_y)) call move_alloc(InitOutData_SrvD%LinNames_y,y_FAST%Lin%Modules(MODULE_SrvD)%Names_y )
       if (allocated(InitOutData_SrvD%LinNames_u)) call move_alloc(InitOutData_SrvD%LinNames_u,y_FAST%Lin%Modules(MODULE_SrvD)%Names_u )
@@ -740,6 +714,27 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          CALL Cleanup()
          RETURN
       END IF          
+      
+   ! ........................
+   ! some checks for AeroDyn inputs with the high-speed shaft brake hack in ElastoDyn:
+   ! (DO NOT COPY THIS CODE!)
+   ! ........................   
+         ! bjj: this is a hack to get high-speed shaft braking in FAST v8
+      
+      IF ( InitOutData_SrvD%UseHSSBrake ) THEN
+         IF ( p_FAST%CompAero == Module_AD14 ) THEN
+            IF ( AD14%p%DYNINFL ) THEN
+               CALL SetErrStat(ErrID_Fatal,'AeroDyn v14 "DYNINFL" InfModel is invalid for models with high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+            END IF
+         END IF
+         
+            
+         IF ( ED%p%method == 1 ) THEN ! bjj: should be using ElastoDyn's Method_RK4 parameter
+            CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the AB4 or ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+         END IF               
+      END IF
+      
+      
    END IF
 
    ! ........................
@@ -4262,13 +4257,6 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
       END DO ! numIceLegs
       
    END IF ! CompIce            
-   
-   
-      ! ServoDyn: copy current outputs to store as previous outputs for next step
-!bjj: @todo: FIX ME (note that copying SrvD outputs here is a violation of the framework as this is basically a state, 
-      ! but it's only used for the GH-Bladed DLL, which itself violates the framework....
-   CALL SrvD_CopyOutput ( SrvD%y, SrvD%y_prev, MESH_NEWCOPY, ErrStat2, ErrMsg2)   
-      CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    
 END SUBROUTINE FAST_InitIOarrays

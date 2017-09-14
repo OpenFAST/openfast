@@ -248,7 +248,6 @@ typedef	^	^	SrvD_OutputType	y	-	-	-	"System outputs"
 typedef	^	^	SrvD_MiscVarType	m	-	-	-	"Misc (optimization) variables not associated with time"
 typedef	^	^	SrvD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
-typedef	^	^	SrvD_OutputType	y_prev	-	-	-	"previous outputs; a hack because this basically makes them states. Used in BladedDLL"
 
 # ..... AeroDyn14 data .......................................................................................................
 typedef	FAST	AeroDyn14_Data	AD14_ContinuousStateType	x	{2}	-	-	"Continuous states"
