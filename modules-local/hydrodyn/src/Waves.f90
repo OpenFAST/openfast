@@ -35,7 +35,7 @@ MODULE Waves
    
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: Waves_ProgDesc = ProgDesc( 'Waves', 'v1.01.00', '23-Dec-2015' )
+   TYPE(ProgDesc), PARAMETER            :: Waves_ProgDesc = ProgDesc( 'Waves', '', '' )
 
    
       ! ..... Public Subroutines ...................................................................................................

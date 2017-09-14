@@ -25,7 +25,7 @@ MODULE BeamDyn_IO
 
    IMPLICIT NONE
 
-   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v2.00.00','9-May-2017')
+   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', '','')
 
 
 
@@ -1521,7 +1521,9 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       ! Tip angular/rotational deflection Wiener-Milenkovic parameter (relative to the undeflected orientation) expressed in r
    call LAPACK_DGEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,y%BldMotion%NNodes), RootRelOrient,   0.0_BDKi, temp33_2, ErrStat2, ErrMsg2 )
    call LAPACK_DGEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,y%BldMotion%NNodes), temp33_2,        0.0_BDKi, temp33,   ErrStat2, ErrMsg2 )
-   call BD_CrvExtractCrv(temp33,temp_vec2) ! temp_vec2 = the Wiener-Milenkovic parameters of the tip angular/rotational defelctions
+   call BD_CrvExtractCrv(temp33,temp_vec2, ErrStat2, ErrMsg2) ! temp_vec2 = the Wiener-Milenkovic parameters of the tip angular/rotational defelctions
+   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
    temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2) ! translate these parameters to the correct system for output
    
    AllOuts( TipRDxr ) = temp_vec(1)
@@ -1597,7 +1599,9 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
          ! Sectional angular/rotational deflection Wiener-Milenkovic parameter (relative to the undeflected orientation) expressed in r
       call LAPACK_DGEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,j_BldMotion), RootRelOrient,  0.0_BDKi, temp33_2, ErrStat2, ErrMsg2 )
       call LAPACK_DGEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,j_BldMotion), temp33_2,       0.0_BDKi, temp33,   ErrStat2, ErrMsg2 )
-      call BD_CrvExtractCrv(temp33,temp_vec2) ! temp_vec2 = the Wiener-Milenkovic parameters of the node's angular/rotational defelctions
+      call BD_CrvExtractCrv(temp33,temp_vec2, ErrStat2, ErrMsg2) ! temp_vec2 = the Wiener-Milenkovic parameters of the node's angular/rotational defelctions
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
       temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2) ! translate these parameters to the correct system for output
             
       AllOuts( NRDr( beta,1 ) ) = temp_vec(1)

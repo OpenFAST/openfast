@@ -67,7 +67,7 @@ MODULE WAMIT2
    PRIVATE
 
 !   INTEGER(IntKi), PARAMETER                             :: DataFormatID = 1  !< Update this value if the data types change (used in WAMIT_Pack)
-   TYPE(ProgDesc), PARAMETER                             :: WAMIT2_ProgDesc = ProgDesc( 'WAMIT2', 'v1.01.00', '17-Dec-2015' )
+   TYPE(ProgDesc), PARAMETER                             :: WAMIT2_ProgDesc = ProgDesc( 'WAMIT2', '', '' )
                                                                               !< This holds the name of the program, version info, and date.
                                                                               !! It is used by the DispNVD routine in the library and as header
                                                                               !! information in output files.

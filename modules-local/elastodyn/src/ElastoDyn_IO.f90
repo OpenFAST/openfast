@@ -26,7 +26,7 @@ MODULE ElastoDyn_Parameters
 
    USE NWTC_Library
 
-   TYPE(ProgDesc), PARAMETER  :: ED_Ver = ProgDesc( 'ElastoDyn', 'v1.04.00a-bjj', '26-Jul-2016' )
+   TYPE(ProgDesc), PARAMETER  :: ED_Ver = ProgDesc( 'ElastoDyn', '', '' )
    
    REAL(ReKi), PARAMETER      :: SmallAngleLimit_Deg  =  15.0                     ! Largest input angle considered "small" (used as a check on input data), degrees
 

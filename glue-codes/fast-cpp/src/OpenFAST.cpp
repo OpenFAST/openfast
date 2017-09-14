@@ -122,10 +122,8 @@ void fast::OpenFAST::init() {
      int nTimesteps;
      
      if (nTurbinesProc > 0) {
-       nTimesteps = readVelocityData();
-       if (nTimesteps != ntStart)  throw std::runtime_error("Start time is not consistent with the number of timesteps in the velocity data file");
+       readVelocityData(ntStart);
      }
-
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
        applyVelocityData(0, iTurb, cDriver_Output_to_FAST[iTurb], velNodeData[iTurb]);
      }
@@ -753,19 +751,15 @@ void fast::OpenFAST::end() {
   
 }
 
-int fast::OpenFAST::readVelocityData() {
+void fast::OpenFAST::readVelocityData(int nTimesteps) {
   
-  int nTurbines, nTimesteps;
+  int nTurbines;
   
   hid_t velDataFile = H5Fopen(("velDatafile." + std::to_string(worldMPIRank) + ".h5").c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
   
   {
     hid_t attr = H5Aopen(velDataFile, "nTurbines", H5P_DEFAULT);
     herr_t ret = H5Aread(attr, H5T_NATIVE_INT, &nTurbines) ;
-    H5Aclose(attr);
-
-    attr = H5Aopen(velDataFile, "nTimesteps", H5P_DEFAULT);
-    ret = H5Aread(attr, H5T_NATIVE_INT, &nTimesteps) ;
     H5Aclose(attr);
 
   }
@@ -792,8 +786,6 @@ int fast::OpenFAST::readVelocityData() {
 
   }
   
-  return nTimesteps;
-
 }
 
 hid_t fast::OpenFAST::openVelocityDataFile(bool createFile) {
@@ -849,18 +841,12 @@ hid_t fast::OpenFAST::openVelocityDataFile(bool createFile) {
 
 herr_t fast::OpenFAST::closeVelocityDataFile(int nt_global, hid_t velDataFile) {
 
-
-  hid_t attr_id = H5Aopen_by_name(velDataFile, ".", "nTimesteps", H5P_DEFAULT, H5P_DEFAULT);
-  herr_t status = H5Awrite(attr_id, H5T_NATIVE_INT, &nt_global);
-  status = H5Aclose(attr_id);
-
-  status = H5Fclose(velDataFile) ;
+  herr_t status = H5Fclose(velDataFile) ;
   return status;
 }
 
 
 void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData) {
-
 
   hsize_t start[3]; start[0] = iTimestep; start[1] = 0; start[2] = 0;
   int nVelPts = get_numVelPtsLoc(iTurb) ;
@@ -887,6 +873,10 @@ void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, O
   H5Dclose(dset_id);
   H5Sclose(dspace_id);
   H5Sclose(mspace_id);
+
+  hid_t attr_id = H5Aopen_by_name(h5File, ".", "nTimesteps", H5P_DEFAULT, H5P_DEFAULT);
+  herr_t status = H5Awrite(attr_id, H5T_NATIVE_INT, &iTimestep);
+  status = H5Aclose(attr_id);
 
 }
 

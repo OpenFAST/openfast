@@ -32,7 +32,7 @@ use NWTC_Library
    implicit none 
 
 private
-   type(ProgDesc), parameter  :: UA_Ver = ProgDesc( 'UnsteadyAero', 'v1.01.00a', '10-May-2017' )
+   type(ProgDesc), parameter  :: UA_Ver = ProgDesc( 'UnsteadyAero', '', '' )
 
    public :: UA_Init
    public :: UA_UpdateDiscOtherState
@@ -84,9 +84,9 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
    integer(IntKi),   intent(  out) :: ErrStat               ! Error status of the operation
    character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
-   real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
+   real(ReKi)                      :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
    integer                         :: s1                    ! Number of columns in the AFInfo structure
-   real(reki)                      :: Alpha                 ! AOA in range [-pi,pi]
+   real(ReKi)                      :: Alpha                 ! AOA in range [-pi,pi]
 
    
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.

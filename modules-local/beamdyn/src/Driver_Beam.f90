@@ -51,24 +51,21 @@ PROGRAM BeamDyn_Driver_Program
    
    TYPE(BD_DriverInternalType)      :: DvrData
 
+   ! local variables
+   
    CHARACTER(256)                   :: DvrInputFile
    CHARACTER(256)                   :: RootName
+   INTEGER(IntKi)                   :: j             ! counter for various loops
+   INTEGER(IntKi)                   :: i             ! counter for various loops   
+   REAL(DbKi)                       :: TiLstPrn      ! The simulation time of the last print (to file) [(s)]
+   REAL(ReKi)                       :: PrevClockTime ! Clock time at start of simulation in seconds [(s)]
+   REAL(ReKi)                       :: UsrTime1      ! User CPU time for simulation initialization [(s)]
+   REAL(ReKi)                       :: UsrTime2      ! User CPU time for simulation (without intialization) [(s)]
+   INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime      ! Start time of simulation (including intialization) [-]
+   INTEGER(IntKi) , DIMENSION(1:8)  :: SimStrtTime   ! Start time of simulation (after initialization) [-]
+   CHARACTER(200)                   :: git_commit    ! String containing the current git commit hash
 
-
-   ! local variables
-   Integer(IntKi)                          :: j               ! counter for various loops
-   Integer(IntKi)                          :: i               ! counter for various loops
-   
-    REAL(DbKi)  :: TiLstPrn      !< The simulation time of the last print (to file) [(s)]
-    REAL(ReKi)  :: PrevClockTime      !< Clock time at start of simulation in seconds [(s)]
-    REAL(ReKi)  :: UsrTime1      !< User CPU time for simulation initialization [(s)]
-    REAL(ReKi)  :: UsrTime2      !< User CPU time for simulation (without intialization) [(s)]
-    INTEGER(IntKi) , DIMENSION(1:8)  :: StrtTime      !< Start time of simulation (including intialization) [-]
-    INTEGER(IntKi) , DIMENSION(1:8)  :: SimStrtTime      !< Start time of simulation (after initialization) [-]
-   
-
-   
-   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'BeamDyn Driver', 'v2.00.00', '9-May-2017' )  ! The version number of this program.
+   TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'BeamDyn Driver', '', '' )  ! The version number of this program.
    
 
    ! -------------------------------------------------------------------------
@@ -83,8 +80,10 @@ PROGRAM BeamDyn_Driver_Program
    CALL NWTC_Init()
       ! Display the copyright notice
    CALL DispCopyrightLicense( version )   
+      ! Obtain OpenFAST git commit hash
+   git_commit = QueryGitVersion()
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetNVD( version )//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
    
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables

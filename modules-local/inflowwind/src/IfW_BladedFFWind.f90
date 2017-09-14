@@ -40,7 +40,7 @@ MODULE IfW_BladedFFWind
    IMPLICIT                                     NONE
    PRIVATE
 
-   TYPE(ProgDesc),   PARAMETER               :: IfW_BladedFFWind_Ver = ProgDesc( 'IfW_BladedFFWind', 'v1.01.00', '14-Dec-2015' )
+   TYPE(ProgDesc),   PARAMETER               :: IfW_BladedFFWind_Ver = ProgDesc( 'IfW_BladedFFWind', '', '' )
 
    PUBLIC                                    :: IfW_BladedFFWind_Init
    PUBLIC                                    :: IfW_BladedFFWind_End
