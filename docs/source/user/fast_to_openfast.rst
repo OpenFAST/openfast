@@ -1,3 +1,5 @@
+.. _fast_to_openfast:
+
 FAST v8 and the transition to OpenFAST 
 ======================================
 
