@@ -6,8 +6,8 @@ Installing OpenFAST
 .. toctree::
    :maxdepth: 1
 
-   Installing OpenFAST with cMake on Mac OSX and Linux <install_cmake_linux.rst>
-   Installing OpenFAST with Spack on Mac OSX and Linux <install_spack.rst>
-   Installing OpenFAST with cMake on Windows Cygwin 64-bit <install_cmake_cygwin.rst>
-   Installing OpenFAST with Visual Studio on Windows ygwin 64-bit <install_vs_windows.rst>
+   Building OpenFAST with CMake on Linux and Mac <install_cmake_linux.rst>
+   Building OpenFAST with Spack <install_spack.rst>
+   Building OpenFAST on Windows with CMake and Cygwin 64-bit <install_cmake_cygwin.rst>
+   Building OpenFAST on Windows with Visual Studio <install_vs_windows.rst>
 

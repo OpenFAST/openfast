@@ -1,6 +1,6 @@
 .. _install_vs_windows:
 
-Windows Installation with Visual Studio
-=======================================
+Building OpenFAST on Windows with Visual Studio
+===============================================
 
 Under construction

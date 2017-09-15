@@ -6,7 +6,8 @@ OpenFAST User Documentation
 .. toctree::
    :maxdepth: 1
 
-   Installing OpenFAST  <install/index.rst>
-   Testing OpenFAST  <testing/index.rst>
-   FAST to OpenFAST transition <fast_to_openfast.rst>
+   install/index.rst
+   theory/index.rst
+   testing/index.rst
+   fast_to_openfast.rst
 

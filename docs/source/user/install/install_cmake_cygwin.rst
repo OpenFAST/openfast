@@ -1,7 +1,7 @@
 .. _install_cmake_cygwin:
 
-Installing OpenFAST on Windows with CMake and Cygwin 64-bit
-===========================================================
+Building OpenFAST on Windows with CMake and Cygwin 64-bit
+=========================================================
 
 Installing prerequisites
 ------------------------
