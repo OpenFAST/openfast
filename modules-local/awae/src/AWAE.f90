@@ -265,8 +265,8 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: delta, deltad
    real(ReKi)          :: wsum_tmp
    real(ReKi)          :: tmp_x,tmp_y,tmp_z, tm1, tm2
-   real(ReKi),dimension(:,:),ALLOCATABLE :: tmp_rhat_plane, tmp_xhat_plane
-   real(ReKi),dimension(:),ALLOCATABLE   :: tmp_Vx_wake, tmp_Vr_wake
+   real(ReKi), ALLOCATABLE :: tmp_rhat_plane(:,:), tmp_xhat_plane(:,:)
+   real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vr_wake(:)
    integer(IntKi)      :: ILo
    integer(IntKi)      :: maxPln
    integer(IntKi)      :: i,np1,errStat2,tmp_N_wind
@@ -306,17 +306,19 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
    
    !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, D_wake_tmp, xhatBar_plane, x_end_plane,nt,np,ILo,x_start_plane,delta,deltad,p_tmp_plane,tmp_vec,r_vec_plane,r_tmp_plane,tmp_xhatBar_plane, Vx_wake_tmp,Vr_wake_tmp,nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,wsum_tmp,tmp_xhat_plane,tmp_rhat_plane,tmp_Vx_wake,tmp_Vr_wake,tmp_N_wind,i,np1,errStat2) SHARED(m,u,p,maxPln,errStat,errMsg,boundary_error) DEFAULT(NONE) 
-   
+   !do nz_low=0, p%nZ_low-1
+   !   do ny_low=0, p%yZ_low-1
+   !      do nx_low=0, p%nX_low-1
+   do i = 0 , p%nX_low*p%nY_low*p%nZ_low - 1
 
-      do i = 0 , p%nX_low*p%nY_low*p%nZ_low - 1
-
-            nx_low = mod(i,p%nX_low)
-            ny_low = mod(i/(p%nX_low),p%nY_low)
-            nz_low = i / (p%nX_low*p%nY_low)
+            nx_low = mod(     i                        ,p%nX_low)
+            ny_low = mod(int( i / (p%nX_low         ) ),p%nY_low)
+            nz_low =     int( i / (p%nX_low*p%nY_low) )
             
                ! set the disturbed flow equal to the ambient flow for this time step
             m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vamb_low(:,nx_low,ny_low,nz_low)
             
+            !nXYZ_low = nXYZ_low + 1
             nXYZ_low = i + 1
             n_wake = 0
             xhatBar_plane = 0.0_ReKi
@@ -456,11 +458,14 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                m%Vdist_low(:,nx_low,ny_low,nz_low) = m%Vdist_low(:,nx_low,ny_low,nz_low) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
             end if  ! (n_wake > 0)
             
-   end do       
+   end do
+   !      end do ! do nx_low=0, p%nX_low-1 
+   !   end do    ! do ny_low=0, p%nY_low-1 
+   !end do       ! do nz_low=0, p%nZ_low-1 
    !$OMP END PARALLEL DO
 
    if(boundary_error) then                           
-      call SetErrStat( ErrID_Fatal, 'A wake plane volume contains more points than the maximum predicted points: 30*pi*DT(2*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
+      call SetErrStat( ErrID_Fatal, 'A wake plane volume contains more points than the maximum predicted points: 30*pi*DT(2*C_ScaleDiam*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
       return  
    endif
    
