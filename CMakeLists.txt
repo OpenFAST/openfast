@@ -80,6 +80,7 @@ set(FAST_MODULES_LOCAL
   extptfm
   openfoam
   supercontroller
+  turbsim
   fast-library
   )
 

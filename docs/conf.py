@@ -27,6 +27,9 @@ readTheDocs = os.environ.get('READTHEDOCS', None) == 'True'
 sourcedir = sys.argv[-2]
 builddir = sys.argv[-1]
 
+# Use this to turn Doxygen on or off
+useDoxygen=False
+
 # This function was adapted from https://gitlab.kitware.com/cmb/smtk
 # Only run when on readthedocs
 def runDoxygen(sourcfile, doxyfileIn, doxyfileOut):
@@ -43,7 +46,7 @@ def runDoxygen(sourcfile, doxyfileIn, doxyfileOut):
     print 'Running Doxygen on %s' % doxyfileOut
     doxproc = subprocess.call(('doxygen', doxname))
 
-if readTheDocs:
+if readTheDocs and useDoxygen:
     runDoxygen(sourcedir, 'Doxyfile.in', 'Doxyfile')
 
 # -- General configuration ------------------------------------------------
@@ -71,20 +74,21 @@ autoclass_content = 'both'
 mathjax_path = 'https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML'
 
 # FIXME: Naively assuming build directory one level up locally, and two up on readthedocs
-if readTheDocs:
-    doxylink = {
-        'openfast' : (
-          os.path.join(builddir, '..', '..', 'openfast.tag'),
-          os.path.join('html')
-        )
-    }
-else:
-    doxylink = {
-        'openfast' : (
-          os.path.join(builddir, '..', 'openfast.tag'),
-          os.path.join('html')
-        )
-    }
+if useDoxygen:
+    if readTheDocs:
+        doxylink = {
+            'openfast' : (
+              os.path.join(builddir, '..', '..', 'openfast.tag'),
+              os.path.join('html')
+            )
+        }
+    else:
+        doxylink = {
+            'openfast' : (
+              os.path.join(builddir, '..', 'openfast.tag'),
+              os.path.join('html')
+            )
+        }
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -125,10 +129,11 @@ language = None
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # FIXME: Naively assuming build directory one level up locally, and two up on readthedocs
-if readTheDocs:
-   html_extra_path = [os.path.join(builddir, '..', '..', 'doxygen')]
-else:
-   html_extra_path = [os.path.join(builddir, '..', 'doxygen')]
+if useDoxygen:
+    if readTheDocs:
+        html_extra_path = [os.path.join(builddir, '..', '..', 'doxygen')]
+    else:
+        html_extra_path = [os.path.join(builddir, '..', 'doxygen')]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
