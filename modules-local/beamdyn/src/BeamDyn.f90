@@ -3934,14 +3934,6 @@ SUBROUTINE BD_InputGlobalLocal(p, u)
    INTEGER(IntKi)                       :: i                          !< Generic counter
    CHARACTER(*), PARAMETER              :: RoutineName = 'BD_InputGlobalLocal'
 
-!FIXME: we might be able to get rid of the m%u now if we put the p%GlbRot multiplications elsewhere.
-   u%RootMotion%TranslationDisp(:,1) = u%RootMotion%TranslationDisp(:,1)
-   u%RootMotion%TranslationVel(:,1) = u%RootMotion%TranslationVel(:,1)
-   u%RootMotion%RotationVel(:,1) = u%RootMotion%RotationVel(:,1)
-   u%RootMotion%TranslationAcc(:,1) = u%RootMotion%TranslationAcc(:,1)
-   u%RootMotion%RotationAcc(:,1) = u%RootMotion%RotationAcc(:,1)
-
-   ! Transform Root Motion from Global to Local (Blade) frame
    ! transform root motion
    u%RootMotion%TranslationDisp(:,1) = MATMUL(u%RootMotion%TranslationDisp(:,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationDisp(:,1))
    u%RootMotion%TranslationVel(:,1)  = MATMUL(u%RootMotion%TranslationVel( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationVel(:,1))
