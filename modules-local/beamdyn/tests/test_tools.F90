@@ -69,5 +69,12 @@ contains
         getStiffnessMatrix(5,:) = (/    0.0,    0.0,    0.0,    0.0,   1.E2,    0.0 /)
         getStiffnessMatrix(6,:) = (/    0.0,    0.0,    0.0,    0.0,    0.0, 200.E0 /)
     end function
-    
+
+    function getGravityInZ()
+        use BeamDyn_Subs
+        implicit none
+        
+        real(BDKi), dimension(3) :: getGravityInZ
+        getGravityInZ = (/ 0.0, 0.0, -9.806 /)
+    end function    
 end module
