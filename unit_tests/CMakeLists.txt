@@ -61,11 +61,16 @@ include_directories(
 ### unit tests
 set(test_sources)
 foreach(test 
-  test_BD_CrvExtractCrv 
-  test_BD_CrvMatrixR
   test_BD_CrvCompose
   test_BD_CheckRotMat
-  test_ExtractRelativeRotation
+  test_BD_CrvExtractCrv
+  test_BD_CrvMatrixR
+  test_BD_CrvMatrixH
+  # test_ExtractRelativeRotation
+  # test_BD_AssembleRHS
+  test_BD_InputGlobalLocal
+  test_BD_DistrLoadCopy
+  test_BD_GravityForce
   test_tools )
   set(test_dependency pfunit ${source_testdirectory}/${test}.F90)
   add_custom_command(
