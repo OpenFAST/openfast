@@ -2020,21 +2020,18 @@ SUBROUTINE BD_QPData_mEta_rho( p, m )
    INTEGER(IntKi)                               :: idx_qp            !< index to the current quadrature point
 
    DO nelem=1,p%elem_total
-   DO idx_qp=1,p%nqp
-
-
+      DO idx_qp=1,p%nqp
          !> Calculate the new center of mass times mass at the deflected location
          !! as \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) m \underline{\eta} \f$
-      m%qp%RR0mEta(:,idx_qp,nelem)  =  MATMUL(m%qp%RR0(:,:,idx_qp,nelem),p%qp%mEta(:,idx_qp,nelem))
-
+         m%qp%RR0mEta(:,idx_qp,nelem)  =  MATMUL(m%qp%RR0(:,:,idx_qp,nelem),p%qp%mEta(:,idx_qp,nelem))
 
          !> Calculate \f$ \rho = \left(\underline{\underline{R}}\underline{\underline{R}}_0\right)
          !!                      \underline{\underline{M}}_{2,2}
          !!                      \left(\underline{\underline{R}}\underline{\underline{R}}_0\right)^T \f$ where
          !! \f$ \underline{\underline{M}}_{2,2} \f$ is the inertial terms of the undeflected mass matrix at this quadrature point
-      m%qp%rho(:,:,idx_qp,nelem) =  p%Mass0_QP(4:6,4:6,(nelem-1)*p%nqp+idx_qp)
-      m%qp%rho(:,:,idx_qp,nelem) =  MATMUL(m%qp%RR0(:,:,idx_qp,nelem),MATMUL(m%qp%rho(:,:,idx_qp,nelem),TRANSPOSE(m%qp%RR0(:,:,idx_qp,nelem))))
-   ENDDO
+         m%qp%rho(:,:,idx_qp,nelem) =  p%Mass0_QP(4:6,4:6,(nelem-1)*p%nqp+idx_qp)
+         m%qp%rho(:,:,idx_qp,nelem) =  MATMUL(m%qp%RR0(:,:,idx_qp,nelem),MATMUL(m%qp%rho(:,:,idx_qp,nelem),TRANSPOSE(m%qp%RR0(:,:,idx_qp,nelem))))
+      ENDDO
    ENDDO
 
 END SUBROUTINE BD_QPData_mEta_rho
