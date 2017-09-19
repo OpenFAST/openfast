@@ -31,6 +31,17 @@ contains
         calcRotationMatrix = r
         
     end function
+    
+    function identity()
+        use BeamDyn_Subs
+        implicit none
+        
+        real(BDKi) :: identity(3,3)
+        
+        identity(1,:) = (/ 1.0, 0.0, 0.0 /)
+        identity(2,:) = (/ 0.0, 1.0, 0.0 /)
+        identity(3,:) = (/ 0.0, 0.0, 1.0 /)
+    end function
 
     function RonXAxis(angle)
         use BeamDyn_Subs
