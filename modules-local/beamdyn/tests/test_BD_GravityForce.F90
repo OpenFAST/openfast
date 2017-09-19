@@ -23,7 +23,8 @@ subroutine test_BD_GravityForce()
     
     tolerance = 1e-14
     testname = "test_BD_GravityForce"
-    baseline = (/ 0.0, 0.0, -9.80665, 0.0, 0.0, 0.0 /)
+    baseline(1:3) = getGravityInZ()
+    baseline(4:6) = (/ 0.0, 0.0, 0.0 /)
     
     ! allocate and build the custom types
     parametertype%elem_total = 1
