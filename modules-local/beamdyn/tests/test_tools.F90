@@ -49,13 +49,12 @@ contains
         implicit none
         
         real(BDKi), dimension(6,6) :: getMassMatrix
-        
-        getMassMatrix(1,:) =  (/   1.E4,    0.0,    0.0,    0.0,    0.0,    0.0 /)
-        getMassMatrix(2,:) =  (/    0.0,   1.E4,    0.0,    0.0,    0.0,    0.0 /)
-        getMassMatrix(3,:) =  (/    0.0,    0.0,   1.E4,    0.0,    0.0,    0.0 /)
-        getMassMatrix(4,:) =  (/    0.0,    0.0,    0.0,   1.E2,    0.0,    0.0 /)
-        getMassMatrix(5,:) =  (/    0.0,    0.0,    0.0,    0.0,   1.E2,    0.0 /)
-        getMassMatrix(6,:) =  (/    0.0,    0.0,    0.0,    0.0,    0.0, 200.E0 /)
+        getMassMatrix(1,:) =  (/   1.E0,    0.0,    0.0,    0.0,    0.0,   -0.5 /)
+        getMassMatrix(2,:) =  (/    0.0,   1.E0,    0.0,    0.0,    0.0,    0.5 /)
+        getMassMatrix(3,:) =  (/    0.0,    0.0,   1.E0,    0.5,   -0.5,    0.0 /)
+        getMassMatrix(4,:) =  (/    0.0,    0.0,    0.5,   1.E0,   -1.0,    0.0 /)
+        getMassMatrix(5,:) =  (/    0.0,    0.0,   -0.5,  -1.E0,   1.E0,    0.0 /)
+        getMassMatrix(6,:) =  (/   -0.5,    0.5,    0.0,    0.0,    0.0,   2.E0 /)
     end function
     
     function getStiffnessMatrix()
@@ -63,13 +62,12 @@ contains
         implicit none
         
         real(BDKi), dimension(6,6) :: getStiffnessMatrix
-        
-        getStiffnessMatrix(1,:) =  (/   1.E0,    0.0,    0.0,    0.0,    0.0,   -0.5 /)
-        getStiffnessMatrix(2,:) =  (/    0.0,   1.E0,    0.0,    0.0,    0.0,    0.5 /)
-        getStiffnessMatrix(3,:) =  (/    0.0,    0.0,   1.E0,    0.5,   -0.5,    0.0 /)
-        getStiffnessMatrix(4,:) =  (/    0.0,    0.0,    0.5,   1.E0,   -1.0,    0.0 /)
-        getStiffnessMatrix(5,:) =  (/    0.0,    0.0,   -0.5,  -1.E0,   1.E0,    0.0 /)
-        getStiffnessMatrix(6,:) =  (/   -0.5,    0.5,    0.0,    0.0,    0.0,   2.E0 /)
+        getStiffnessMatrix(1,:) = (/   1.E4,    0.0,    0.0,    0.0,    0.0,    0.0 /)
+        getStiffnessMatrix(2,:) = (/    0.0,   1.E4,    0.0,    0.0,    0.0,    0.0 /)
+        getStiffnessMatrix(3,:) = (/    0.0,    0.0,   1.E4,    0.0,    0.0,    0.0 /)
+        getStiffnessMatrix(4,:) = (/    0.0,    0.0,    0.0,   1.E2,    0.0,    0.0 /)
+        getStiffnessMatrix(5,:) = (/    0.0,    0.0,    0.0,    0.0,   1.E2,    0.0 /)
+        getStiffnessMatrix(6,:) = (/    0.0,    0.0,    0.0,    0.0,    0.0, 200.E0 /)
     end function
     
 end module
