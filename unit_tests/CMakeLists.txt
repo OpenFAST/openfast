@@ -66,7 +66,7 @@ foreach(test
   test_BD_CrvExtractCrv
   test_BD_CrvMatrixR
   test_BD_CrvMatrixH
-  # test_ExtractRelativeRotation
+  test_ExtractRelativeRotation
   # test_BD_AssembleRHS
   test_BD_InputGlobalLocal
   test_BD_DistrLoadCopy
