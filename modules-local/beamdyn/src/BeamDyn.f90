@@ -3920,14 +3920,15 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, x, OtherState, m )
 END SUBROUTINE BD_ElementMatrixGA2
 
 
-!-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine tranforms the following quantities in Input data structure
-!! from global frame to local (blade) frame:
-!! 1 Displacements; 2 Linear/Angular velocities; 3 Linear/Angular accelerations
-!! 4 Point forces/moments; 5 Distributed forces/moments
-!! It also transforms the DCM to rotation tensor in the input data structure
-SUBROUTINE BD_InputGlobalLocal( p, u)
-
+SUBROUTINE BD_InputGlobalLocal(p, u)
+    !> This subroutine tranforms the following quantities in Input data structure from global frame to local (blade) frame:
+    !!  1 Displacements
+    !!  2 Linear/Angular velocities
+    !!  3 Linear/Angular accelerations
+    !!  4 Point forces/moments
+    !!  5 Distributed forces/moments
+    !! It also transforms the DCM to rotation tensor in the input data structure
+    
    TYPE(BD_ParameterType), INTENT(IN   ):: p
    TYPE(BD_InputType),     INTENT(INOUT):: u
    INTEGER(IntKi)                       :: i                          !< Generic counter
