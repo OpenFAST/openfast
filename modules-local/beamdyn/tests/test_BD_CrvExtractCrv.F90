@@ -1,73 +1,73 @@
-!> This unit test is for the subroutine BD_CrvExtractCrv and tests it by generating 'n' random unit vectors
-!> and testing 'n' angles in the range \f$[-\pi, \pi]\f$ for each unit vector to determine whether the
-!> subroutine generates the appropriate WM parameter vector from an explicity constructed rotation matrix,
-!> as compared to the explicity calculated WM vector.
-! mjs-- NOTE: could presumably change 'n' and 'tol' to be inputs to the subroutine in the comprehensive
-    ! unit testing framework
 @test
 subroutine test_BD_CrvExtractCrv()
+    ! test branches
+    ! - simple rotation with known parameters: Pi on xaxis
+    ! - 0 rotation
+    ! - small rotation with baseline WM parameters calculated
+    
     use pFUnit_mod
     use BeamDyn_Subs
+    use NWTC_Num
+    use test_tools
+    
     implicit none
 
-    ! n is the parameter determining the size of the test
-    integer,    parameter    :: n = 1e3
-    real(BDKi), parameter    :: tol = 1e-14
-    ! mjs--FIXME: currently this subroutine is not seeing NWTC_Num, but if this is fixed, the built in
-        ! value for pi could be used instead of this
-    real(BDKi), parameter    :: pi1 = 4.0_BDKi * atan(1.0_BDKi)
+    real(BDKi), dimension(3,3) :: r
+    real(BDKi), dimension(3)   :: test_wmparams, baseline_wmparams
+    real(BDKi)                 :: angle, n(3)
+    character(1024)            :: testname
+    real(BDKi)                 :: tolerance
+    integer(IntKi)             :: ErrStat
+    character                  :: ErrMsg
+
+    ! initialize NWTC_Num constants
+    call SetConstants()
     
-    REAL(BDKi) :: inmat(3, 3)
-    REAL(BDKi) :: outvec(3), testvec(3)
-    integer    :: i, j
-    REAL(BDKi) :: normvec(3, n)
-    REAL(BDKi) :: angle(n)
-    REAL(BDKi) :: ct, st, omct
+    tolerance = 1e-14
+    
+    ! set the rotation axis for all tests
+    n = (/ 1, 0, 0 /) ! x axis
 
-
-    INTEGER(IntKi)             :: ErrStat ! Temporary Error status
-    CHARACTER(ErrMsgLen)       :: ErrMsg  ! Temporary Error message
-
-    call init_random_seed
-    call random_number(normvec)
-
-    do i = 1, n
-        normvec(:, i) = normvec(:, i)/norm2(normvec(:, i))
-        angle(i) = -pi1 + (real(i, BDKi)/real(n, BDKi)) * 2.0_BDKi * pi1
-    end do
-
-    do i = 1, n
-        do j = 1, n
-            ct = cos(angle(j))
-            st = sin(angle(j))
-            omct = 1.0_BDKi - ct
-            ! formula for rotation matrix, given unit normal vector (axis of rotation) and rotation angle
-            ! from https://en.wikipedia.org/wiki/Rotation_matrix#Conversion_from_and_to_axis.E2.80.93angle
-            inmat = reshape( (/ ct + normvec(1, i)**2 * omct,                              normvec(1, i) * normvec(2, i) * omct - normvec(3, i) * st, normvec(1, i) * normvec(3, i) * omct + normvec(2, i) * st, &
-                                normvec(1, i) * normvec(2, i) * omct + normvec(3, i) * st, ct + normvec(2, i)**2 * omct,                              normvec(2, i) * normvec(3, i) * omct - normvec(1, i) * st, &
-                                normvec(1, i) * normvec(3, i) * omct - normvec(2, i) * st, normvec(2, i) * normvec(3, i) * omct + normvec(1, i) * st, ct + normvec(3, i)**2 * omct /), &
-                                shape(inmat), order=(/2, 1/) )
-            ! formula for WM parameters from Bauchau, 'Flexible Multibody Dynamics'
-            testvec = 4.0_BDKi * tan(angle(j)/4.0_BDKi) * normvec(:, i)
-            call BD_CrvExtractCrv(inmat, outvec, ErrStat, ErrMsg)
-            @assertEqual(outvec, testvec, tol)
-        end do
-    end do
-
-    contains
-
-        ! subroutine to initialize the random number generator seed from clock time
-        subroutine init_random_seed()
-            integer :: i, n, clock
-            integer, dimension(:), allocatable :: seed
-
-            call random_seed(size = n)
-            allocate(seed(n))
-            call system_clock(count = clock)
-            seed = clock + 37 * (/ (i - 1, i = 1, n) /)
-            call random_seed(put = seed)
-            deallocate(seed)
-
-        end subroutine init_random_seed
-
+    
+    ! --------------------------------------------------------------------------
+    testname = "simple rotation with known parameters: Pi on xaxis"
+    angle = Pi_D
+    
+    ! Wiener-Milenkovic parameters are <4.0, 0.0, 0.0>
+    baseline_wmparams = (/ 4.0, 0.0, 0.0 /)
+    
+    r = RonXAxis(angle)
+    call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
+    
+    @assertEqual(0.0, ErrStat, tolerance, testname)
+    @assertEqual(baseline_wmparams, test_wmparams, tolerance, testname)
+    
+    
+    ! --------------------------------------------------------------------------
+    testname = "0 rotation"
+    angle = 0
+    
+    ! Wiener-Milenkovic parameters are <0.0, 0.0, 0.0>
+    baseline_wmparams = (/ 0.0, 0.0, 0.0 /)
+    
+    r = RonXAxis(angle)
+    call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
+    
+    @assertEqual(0.0, ErrStat, tolerance, testname)
+    @assertEqual(baseline_wmparams, test_wmparams, tolerance, testname)
+    
+    
+    ! --------------------------------------------------------------------------
+    testname = "small rotation with baseline WM parameters calculated"
+    angle = 0.1*Pi_D
+    
+    ! Wiener-Milenkovic parameters are calculated; note tangent is asymptotic at +/- pi/2
+    baseline_wmparams = 4*tan(angle/4)*n
+    
+    r = RonXAxis(angle)
+    call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
+    
+    @assertEqual(0.0, ErrStat, tolerance, testname)
+    @assertEqual(baseline_wmparams, test_wmparams, tolerance, testname)
+        
 end subroutine test_BD_CrvExtractCrv
