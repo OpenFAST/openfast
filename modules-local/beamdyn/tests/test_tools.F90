@@ -43,4 +43,19 @@ contains
         r(3,:) = (/  0.0,  sin(angle),  cos(angle) /)
         RonXAxis = r
     end function  
+        
+    function getMassMatrix()
+        use BeamDyn_Subs
+        implicit none
+        
+        real(BDKi), dimension(6,6) :: getMassMatrix
+        
+        getMassMatrix(1,:) =  (/   1.E4,    0.0,    0.0,    0.0,    0.0,    0.0 /)
+        getMassMatrix(2,:) =  (/    0.0,   1.E4,    0.0,    0.0,    0.0,    0.0 /)
+        getMassMatrix(3,:) =  (/    0.0,    0.0,   1.E4,    0.0,    0.0,    0.0 /)
+        getMassMatrix(4,:) =  (/    0.0,    0.0,    0.0,   1.E2,    0.0,    0.0 /)
+        getMassMatrix(5,:) =  (/    0.0,    0.0,    0.0,    0.0,   1.E2,    0.0 /)
+        getMassMatrix(6,:) =  (/    0.0,    0.0,    0.0,    0.0,    0.0, 200.E0 /)
+    end function
+    
 end module
