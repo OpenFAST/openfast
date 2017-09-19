@@ -1,8 +1,8 @@
 @test
 subroutine test_BD_CheckRotMat()
-    ! branches to test
-    ! valid rotation matrix
-    ! invalid rotation matrix - determinate != 1
+    ! test branches
+    ! - known valid rotation matrix: pi about x-axis
+    ! - known invalid rotation matrix: halve the angle of the diagonal elements
 
     use pFUnit_mod
     use BeamDyn_Subs
@@ -11,6 +11,8 @@ subroutine test_BD_CheckRotMat()
     
     implicit none
     
+    real(BDKi)           :: n(3)
+    real(BDKi)           :: angle
     real(BDKi)           :: testR(3,3)
     integer(IntKi)       :: ErrStat
     character(ErrMsgLen) :: ErrMsg
@@ -18,12 +20,20 @@ subroutine test_BD_CheckRotMat()
 
     ! initialize NWTC_Num constants
     call SetConstants()
+
+    ! set the rotation axis and angle for all tests
+    n = (/ 1, 0, 0 /) ! x axis
+    angle = Pi
     
+    
+    ! --------------------------------------------------------------------------    
     testname = "known valid rotation matrix: pi about x-axis"
-    call calcRotationMatrix(testR, Pi, 1)
+    testR = calcRotationMatrix(angle, n)
     call BD_CheckRotMat(testR, ErrStat, ErrMsg)
     @assertEqual(0, ErrStat, testname)
 
+
+    ! --------------------------------------------------------------------------    
     testname = "known invalid rotation matrix: halve the angle of the diagonal elements"
     ! this should produce a fatal error (ErrStat = 4)
     testR(:,2) = (/ testR(1,2),  cos(Pi/2), testR(3,2) /)
