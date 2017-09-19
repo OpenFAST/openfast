@@ -1643,38 +1643,6 @@ END SUBROUTINE BD_UpdateDiscState
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> Routine for solving for the residual of the constraint state equations
-SUBROUTINE BD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_residual, ErrStat, ErrMsg )
-
-   REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
-   TYPE(BD_InputType),                INTENT(IN   )  :: u           !< Inputs at t
-   TYPE(BD_ParameterType),            INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_ContinuousStateType),      INTENT(IN   )  :: x           !< Continuous states at t
-   TYPE(BD_DiscreteStateType),        INTENT(IN   )  :: xd          !< Discrete states at t
-   TYPE(BD_ConstraintStateType),      INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
-   TYPE(BD_OtherStateType),           INTENT(IN   )  :: OtherState  !< Other states at t
-   TYPE(BD_ConstraintStateType),      INTENT(  OUT)  :: Z_residual  !< Residual of the constraint state equations using
-                                                                    !!     the input values described above
-   TYPE(BD_MiscVarType),              INTENT(INOUT)  :: m           !< misc/optimization variables
-   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
-   ! Initialize ErrStat
-
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-
-   ! Solve for the constraint states here:
-
-   Z_residual%DummyConstrState = 0
-
-END SUBROUTINE BD_CalcConstrStateResidual
-
-
-
-!-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes initial Gauss point values: uu0, E10
 ! Note similarities to BD_QuadraturePointData
 SUBROUTINE BD_QuadraturePointDataAt0( p )
