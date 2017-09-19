@@ -58,4 +58,15 @@ contains
         getMassMatrix(6,:) =  (/    0.0,    0.0,    0.0,    0.0,    0.0, 200.E0 /)
     end function
     
+    function getStiffnessMatrix()
+        real(BDKi), dimension(6,6) :: getStiffnessMatrix
+        
+        getStiffnessMatrix(1,:) =  (/   1.E0,    0.0,    0.0,    0.0,    0.0,   -0.5 /)
+        getStiffnessMatrix(2,:) =  (/    0.0,   1.E0,    0.0,    0.0,    0.0,    0.5 /)
+        getStiffnessMatrix(3,:) =  (/    0.0,    0.0,   1.E0,    0.5,   -0.5,    0.0 /)
+        getStiffnessMatrix(4,:) =  (/    0.0,    0.0,    0.5,   1.E0,   -1.0,    0.0 /)
+        getStiffnessMatrix(5,:) =  (/    0.0,    0.0,   -0.5,  -1.E0,   1.E0,    0.0 /)
+        getStiffnessMatrix(6,:) =  (/   -0.5,    0.5,    0.0,    0.0,    0.0,   2.E0 /)
+    end function
+    
 end module
