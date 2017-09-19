@@ -873,8 +873,8 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
 
 END SUBROUTINE BD_ComputeIniNodalCrv
-!-----------------------------------------------------------------------------------------------------------------------------------
-!mjs--had to change this to a subroutine to get out ErrStat/ErrMsg
+
+
 SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    real(R8Ki),             INTENT(in   )     :: R(3,3)       !< input rotation matrix (transpose of DCM; in BD coords)
    type(BD_ParameterType), INTENT(in   )     :: p            !< Parameters
