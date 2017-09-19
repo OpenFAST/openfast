@@ -59,6 +59,9 @@ contains
     end function
     
     function getStiffnessMatrix()
+        use BeamDyn_Subs
+        implicit none
+        
         real(BDKi), dimension(6,6) :: getStiffnessMatrix
         
         getStiffnessMatrix(1,:) =  (/   1.E0,    0.0,    0.0,    0.0,    0.0,   -0.5 /)
