@@ -256,9 +256,14 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
    DO i=1,size(p%n)   
       IF (Indx_Lo(i) <= 0) THEN
          Indx_Lo(i) = 1
-         CALL SetErrStat(ErrID_Fatal,'Outside the grid bounds.',ErrStat,ErrMsg,RoutineName) !BJJ: check that this isn't too restrictive, especially in time
+         CALL SetErrStat(ErrID_Fatal,'Outside the grid bounds.',ErrStat,ErrMsg,RoutineName) !error out if x,y,z, or time is outside the the lower bounds
          RETURN
       ELSEIF (Indx_Lo(i) >= p%n(i) ) THEN
+         IF (i < 4) THEN
+            CALL SetErrStat(ErrID_Fatal,'Outside the grid bounds.',ErrStat,ErrMsg,RoutineName) !error out if x,y,z is outside the the lower bounds
+            RETURN
+         END IF
+         
          Indx_Lo(i) = max( p%n(i) - 1, 1 )           ! make sure it's a valid index
       END IF      
       Indx_Hi(i) = min( Indx_Lo(i) + 1, p%n(i) )     ! make sure it's a valid index

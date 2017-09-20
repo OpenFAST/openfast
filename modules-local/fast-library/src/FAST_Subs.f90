@@ -4327,8 +4327,10 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution'
 
 
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+   ErrStat2 = ErrID_None
+   ErrMsg2  = ""
    
    t_global_next = t_initial + (n_t_global+1)*p_FAST%DT  ! = m_FAST%t_global + p_FAST%dt
                        

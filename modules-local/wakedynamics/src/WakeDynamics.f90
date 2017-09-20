@@ -31,7 +31,7 @@ module WakeDynamics
 
    private
    
-   type(ProgDesc), parameter  :: WD_Ver = ProgDesc( 'WakeDynamics', 'v00.01.00', '21-Sep-2016' )
+   type(ProgDesc), parameter  :: WD_Ver = ProgDesc( 'WakeDynamics', '', '' )
    character(*),   parameter  :: WD_Nickname = 'WD'      
 
    ! ..... Public Subroutines ...................................................................................................
@@ -51,8 +51,8 @@ module WakeDynamics
   
    contains  
 
-function  GJH_Interp ( yVal, xArr, yArr )
-   real(ReKi)                     :: GJH_Interp
+function  WD_Interp ( yVal, xArr, yArr )
+   real(ReKi)                     :: WD_Interp
    real(ReKi),      intent(in   ) :: yVal
    real(ReKi),      intent(in   ) :: xArr(:) 
    real(ReKi),      intent(in   ) :: yArr(:)
@@ -62,7 +62,7 @@ function  GJH_Interp ( yVal, xArr, yArr )
    
    
    nPts = size(xArr)
-   GJH_Interp = 0.0_ReKi
+   WD_Interp = 0.0_ReKi
    y2 = yArr(nPts) - yVal
    x2 = xArr(nPts)
    do i=nPts-1,1,-1
@@ -72,10 +72,11 @@ function  GJH_Interp ( yVal, xArr, yArr )
                  
          dy = y2-y1
          if (EqualRealNos(dy,0.0_ReKi) ) then
-            if ( EqualRealNos(y2,0.0_ReKi) ) GJH_Interp =  x2
+            WD_Interp =  x2
          else
-            GJH_Interp = (x2-x1)*(yVal-y1)/(dy) + x1
+            WD_Interp = (x2-x1)*(yVal-y1)/(dy) + x1  
          end if
+         exit
          
       end if
       
@@ -83,7 +84,7 @@ function  GJH_Interp ( yVal, xArr, yArr )
       x2 = x1
    end do
    
-end function GJH_Interp
+end function WD_Interp
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This function sets the nacelle-yaw-related directional term for the yaw correction deflection calculations
 !!   
@@ -175,21 +176,17 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
       case (WakeDiamMod_Velocity)  
          
             ! Ensure the wake diameter is at least as large as the rotor diameter   
-         ! TODO: InterpBin assume monotonic, one-to-one mapping, and this is not guaranteed for Vx_wake.  NEED NEW ALGO. GJH
-         !Here is an example curve for Vx_wake:
-         ! [0.0000000E+00,-0.1732988,-1.475719,-3.237534,-3.103220,-2.988648,-3.159560,-3.382733,-3.633807,-3.875628,-3.690545,-3.722210,-3.773840,-3.267874,-1.185296,4.0265087E-02,-4.7604232E-03,-4.2291398E-05,2.7738308E-04,-1.3021289E-04,4.5997433E-05,-1.1811796E-05,2.5355919E-06,-6.2027152E-07,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00,0.0000000E+00]
          
-         WakeDiam = max(D_rotor, 2.0_ReKi*InterpBin( (C_WakeDiam-1_ReKi)*Vx_wind_disk, Vx_wake, rArr, ILo, nr )  )
-         WakeDiam = max(D_rotor, 2.0_ReKi*GJH_Interp( (C_WakeDiam-1_ReKi)*Vx_wind_disk, rArr, Vx_wake ) )
+         WakeDiam = max(D_rotor, 2.0_ReKi*WD_Interp( (C_WakeDiam-1_ReKi)*Vx_wind_disk, rArr, Vx_wake ) )
+         
       case (WakeDiamMod_MassFlux) 
          
          m(0) = 0.0
          do i = 1,nr-1
             m(i) = m(i-1) + pi*dr*(Vx_wake(i)*rArr(i) + Vx_wake(i-1)*rArr(i-1))
          end do
-         ! TODO: InterpBin assume monotonic, one-to-one mapping, and this is not guarranteed for m.  NEED NEW ALGO. GJH
-         WakeDiam = max(D_rotor, 2_ReKi*InterpBin( C_WakeDiam*m(nr-1), m, rArr, ILo, nr ))
-         WakeDiam = max(D_rotor, 2.0_ReKi*GJH_Interp( C_WakeDiam*m(nr-1), rArr, m ) )
+         
+         WakeDiam = max(D_rotor, 2.0_ReKi*WD_Interp( C_WakeDiam*m(nr-1), rArr, m ) )
          
       case (WakeDiamMod_MtmFlux)
          
@@ -197,70 +194,15 @@ real(ReKi) function WakeDiam( Mod_WakeDiam, nr, dr, rArr, Vx_wake, Vx_wind_disk,
          do i = 1,nr-1
             m(i) = m(i-1) + pi*dr*( (Vx_wake(i)**2)*rArr(i) + (Vx_wake(i-1)**2)*rArr(i-1))
          end do
-         ! TODO: InterpBin assume monotonic, one-to-one mapping, and this is not guarranteed for m.  NEED NEW ALGO. GJH
-         WakeDiam = max(D_rotor, 2.0_ReKi*InterpBin( C_WakeDiam*m(nr-1),  m, rArr, ILo, nr ))
-         WakeDiam = max(D_rotor, 2.0_ReKi*GJH_Interp( C_WakeDiam*m(nr-1), rArr, m ) )
+         
+         WakeDiam = max(D_rotor, 2.0_ReKi*WD_Interp( C_WakeDiam*m(nr-1), rArr, m ) )
    
    end select
 
       
 end function WakeDiam
 
-subroutine ComputeEddyViscosity(i, p, xd, m, dx, errStat, errMsg) 
 
-   integer(IntKi),               intent(in   )  :: i           !< Current wake plane index
-   type(WD_ParameterType),       intent(in   )  :: p           !< Parameters
-   type(WD_DiscreteStateType),   intent(in   )  :: xd          !< Discrete states at t
-   type(WD_MiscVarType),         intent(inout)  :: m           !< Misc/optimization variables
-   real(ReKi),                   intent(  out)  :: dx          !< distance between adjacent wake planes (m)
-   integer(IntKi),               intent(  out)  :: errStat     !< Error status of the operation
-   character(*),                 intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
-
-
-   character(*), parameter                      :: RoutineName = 'ComputeEddyViscosity'
-   integer(IntKi)                               :: j
-   real(ReKi)                                   :: EddyTermA, EddyTermB, lstar, Vx_wake_min
-   errStat = ErrID_None
-   errMsg  = ""
-
-
-      lstar = WakeDiam( p%Mod_WakeDiam, p%numRadii, p%dr, p%r, xd%Vx_wake(:,i-1), xd%Vx_wind_disk_filt(i-1), xd%D_rotor_filt(i-1), p%C_WakeDiam) / 2.0_ReKi     
-
-         ! The following two quantities need to be for the time increments:
-         !           [n+1]             [n]
-         ! dx      = xd%x_plane(i) - xd%x_plane(i-1)
-         ! This is equivalent to
-      
-      dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT
-      
-      if ( EqualRealNos(dx, 0.0_ReKi) .or. dx < 0.0_ReKi) then
-         ! TEST: E2
-         call SetErrStat(ErrID_FATAL, 'Downwind advection speed of a wake plane is not positive, i.e., dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*DT<= 0', errStat, errMsg, RoutineName)   
-         return
-      end if
-      
-      Vx_wake_min = huge(ReKi)
-      do j = 0,p%NumRadii-1
-         Vx_wake_min = min(Vx_wake_min, xd%Vx_wake(j,i-1))
-      end do
-        
-      EddyTermA = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vAmb_DMin, p%C_vAmb_DMax, p%C_vAmb_FMin, p%C_vAmb_Exp) * p%k_vAmb * xd%TI_amb_filt(i-1) * xd%Vx_wind_disk_filt(i-1) * xd%D_rotor_filt(i-1)/2.0_ReKi
-      EddyTermB = EddyFilter(xd%x_plane(i-1),xd%D_rotor_filt(i-1), p%C_vShr_DMin, p%C_vShr_DMax, p%C_vShr_FMin, p%C_vShr_Exp) * p%k_vShr
-      do j = 0,p%NumRadii-1      
-         if ( j == 0 ) then
-          m%dvdr(j) =   0.0_ReKi
-         elseif (j <= p%NumRadii-2) then
-            m%dvdr(j) = ( xd%Vx_wake(j+1,i-1) - xd%Vx_wake(j-1,i-1) ) / (2_ReKi*p%dr)
-         else
-            m%dvdr(j) = - xd%Vx_wake(j-1,i-1)  / (2_ReKi*p%dr)
-         end if
-            ! All of the following states are at [n] 
-         m%vt_amb(j,i-1) = EddyTermA
-         m%vt_shr(j,i-1) = EddyTermB * max( (lstar**2)*abs(m%dvdr(j)) , lstar*(xd%Vx_wind_disk_filt(i-1) + Vx_wake_min ) )
-         m%vt_tot(j,i-1) = m%vt_amb(j,i-1) + m%vt_shr(j,i-1)                                                   
-      end do
-   end subroutine ComputeEddyViscosity
-   
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This subroutine computes the near wake correction : Vx_wake  
 subroutine NearWakeCorrection( Ct_azavg_filt, Vx_rel_disk_filt, p, m, Vx_wake, errStat, errMsg )

@@ -29,7 +29,7 @@ MODULE AWAE_IO
    
    implicit none
    
-   type(ProgDesc), parameter  :: AWAE_Ver = ProgDesc( 'AWAE', 'v00.01.00', '25-Jan-2017' )
+   type(ProgDesc), parameter  :: AWAE_Ver = ProgDesc( 'AWAE', '', '' )
    character(*),   parameter  :: AWAE_Nickname = 'AWAE'
     
    public :: AWAE_IO_InitGridInfo
@@ -322,7 +322,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for p spatial increment arrays.', errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) return
    
-   FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT1"//trim(PathSep)//"Amb.t0.vtk"  !TODO: Should the turbine numbers be padding with leading zero(es)?
+   FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT1"//trim(PathSep)//"Amb.t0.vtk"
    Un = -1 ! Set to force closing of file on return
    call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, errStat, errMsg ) 
       if (errStat >= AbortErrLev) return 
@@ -372,7 +372,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    !    gather the grid information and set data associated with those turbines
    !---------------------------------------------------------------------------
 
-   do nt = 1, p%NumTurbines 
+   do nt = 2, p%NumTurbines 
       
       FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t0.vtk"
       Un = -1 ! Set to force closing of file on return
