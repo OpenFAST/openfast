@@ -26,7 +26,7 @@ subroutine test_ExtractRelativeRotation()
     ! --------------------------------------------------------------------------
     testname = "static beam under gravity"
     
-    parametertype%Glb_crv = (/ 0.0, 0.0, 0.0 /)
+    parametertype = simpleParameterType()
     
     call ExtractRelativeRotation(identity(), parametertype, rr, ErrStat, ErrMsg)
     

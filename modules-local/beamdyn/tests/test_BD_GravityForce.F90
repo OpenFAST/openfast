@@ -27,19 +27,8 @@ subroutine test_BD_GravityForce()
     baseline(4:6) = (/ 0.0, 0.0, 0.0 /)
     
     ! allocate and build the custom types
-    parametertype%elem_total = 1
-    parametertype%nqp = 16
-    call AllocAry(parametertype%qp%mmm, parametertype%nqp, parametertype%elem_total, 'qp_mmm', ErrStat, ErrMsg)
-    call AllocAry(miscvartype%qp%Fg, 6, parametertype%nqp, parametertype%elem_total, 'qp_Fg', ErrStat, ErrMsg)
-    call AllocAry(miscvartype%qp%RR0mEta, 3, parametertype%nqp, parametertype%elem_total, 'DistrLoadMoment', ErrStat, ErrMsg)
-    
-    parametertype%qp%mmm = getMassMatrix()
-    
-    do i=1, parametertype%nqp
-        do j=1, parametertype%elem_total
-            miscvartype%qp%RR0mEta(:,i,j) = (/ 0.0, 0.0, 0.0 /)
-        end do
-    end do
+    parametertype = simpleParameterType()
+    miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%elem_total)
     
     gravity = getGravityInZ()
     

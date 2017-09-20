@@ -24,19 +24,10 @@ subroutine test_BD_DistrLoadCopy()
     
     tolerance = 1e-14
     
-    ! build the parameter type
-    parametertype%elem_total = 2
-    parametertype%nqp = 3
-    parametertype%qp_indx_offset = 0
-    
-    ! build the inputtype and miscvartype
-    call AllocAry(miscvartype%DistrLoad_QP, 6, parametertype%nqp, parametertype%elem_total, 'DistrLoad_QP', ErrStat, ErrMsg)
-    call AllocAry(inputtype%DistrLoad%Force, 3, parametertype%elem_total*parametertype%nqp, 'DistrLoadForce', ErrStat, ErrMsg)
-    call AllocAry(inputtype%DistrLoad%Moment, 3, parametertype%elem_total*parametertype%nqp, 'DistrLoadMoment', ErrStat, ErrMsg)
-    do i=1, parametertype%elem_total*parametertype%nqp
-        inputtype%DistrLoad%Force(:,i)  = (/  3*(i-1)+1,  3*(i-1)+2,  3*(i-1)+3 /)
-        inputtype%DistrLoad%Moment(:,i) = (/ -3*(i-1)-1, -3*(i-1)-2, -3*(i-1)-3 /)
-    end do
+    ! build the parametertype, inputtype, and miscvartype
+    parametertype = simpleParameterType()
+    miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%elem_total)
+    inputtype = simpleInputType(parametertype%nqp, parametertype%elem_total)
     
     call BD_DistrLoadCopy(parametertype, inputtype, miscvartype)
 
