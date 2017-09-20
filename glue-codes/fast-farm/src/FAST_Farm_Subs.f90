@@ -1526,105 +1526,9 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    
 end subroutine FARM_InitialCO
  
-#ifdef PARALLEL_CODE
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine updates states each time increment.
-!! The update states algorithm: \n
-!!    -  In parallel: 
-!!       1. call WD_US
-!!       2. call SC_US
-!!       3. call F_Increment
-!!       4. call AWAE_UpdateStates
-!!    -  \f$ n = n + 1 \f$
-!!    -  \f$ t = t + \Delta t \f$
+
+
 subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
-   REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
-   INTEGER(IntKi),           INTENT(IN   ) :: n                               !< Current step of the simulation: t = n*Interval
-   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
-   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
-   CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
-
-   INTEGER(IntKi)                          :: nt                    
-   INTEGER(IntKi)                          :: ErrStatWD, ErrStatF, ErrStatAWAE                      ! Temporary Error status
-   CHARACTER(ErrMsgLen)                    :: ErrMsgWD,  ErrMsgF,  ErrMsgAWAE                        ! Temporary Error message
-   CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_UpdateStates'
-   INTEGER(IntKi)                          :: procs
-   REAL(DbKi)                              :: t1,t2,t3,t4,t5,t6,tm1,tm2
-   
-   ErrStat = ErrID_None
-   ErrMsg = ""
-   write(*,*) 'Beginning FARM_US'
-   procs = omp_get_num_procs()
-   call omp_set_num_threads(procs)
-   tm1 = omp_get_wtime()
-   !$OMP PARALLEL
-   !$OMP SECTIONS  PRIVATE(nt)
-   
-   !.......................................................................................
-   ! update module states (steps 1. and 2. and 3. and 4. can be done in parallel)
-   !.......................................................................................
-   
-      !--------------------
-      ! 1. CALL WD_US         
-   !$OMP SECTION
-   t1 = omp_get_wtime()
-   DO nt = 1,farm%p%NumTurbines
-      
-      call WD_UpdateStates( t, n, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
-                     farm%WD(nt)%OtherSt, farm%WD(nt)%m, ErrStatWD, ErrMsgWD )         
-         call SetErrStat(ErrStatWD, ErrMsgWD, ErrStatWD, ErrMsgWD, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
-               
-   END DO
-   t2 = omp_get_wtime()
-   write(*,*) '  Serial WD_UpdateStates took '//trim(num2lstr(t2-t1))//' seconds. Using thread #'//trim(num2lstr(omp_get_thread_num()))
-  ! if (ErrStat >= AbortErrLev) return
-   
-   
-      !--------------------
-      ! 2. CALL SC_US         
-   
-
-      !--------------------
-      ! 3. CALL F_Increment         
-   !$OMP SECTION
-   t3 = omp_get_wtime()
-   !$OMP PARALLEL DO DEFAULT(SHARED)
-   DO nt = 1,farm%p%NumTurbines
-      
-      call FWrap_Increment( t, n, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
-                     farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, ErrStatF, ErrMsgF )         
-         call SetErrStat(ErrStatF, ErrMsgF, ErrStatF, ErrMsgF, 'T'//trim(num2lstr(nt))//':FARM_UpdateStates')
-      write(*,*) '    FWrap_Increment for turbine #'//trim(num2lstr(nt))//' using thread #'//trim(num2lstr(omp_get_thread_num()))
-   END DO
-  !$OMP END PARALLEL DO
-   t4 = omp_get_wtime()  
-   write(*,*) '  Parallel F_Increment(s) took '//trim(num2lstr(t4-t3))//' seconds.'
-  ! if (ErrStat >= AbortErrLev) return
-
-   
-      !--------------------
-      ! 4. CALL AWAE_UpdateStates    
-   !$OMP SECTION
-   t5 = omp_get_wtime()
-   call AWAE_UpdateStates( t, n, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%m, errStatAWAE, errMsgAWAE )
-   t6 = omp_get_wtime()
-   write(*,*) '  Serial AWAE_UpdateStates took '//trim(num2lstr(t6-t5))//' seconds. Using thread #'//trim(num2lstr(omp_get_thread_num()))
-   !$OMP END SECTIONS
-  ! if (ErrStat >= AbortErrLev) return
-   
-   !$OMP BARRIER
-   !$OMP END PARALLEL
-   
-   tm2 = omp_get_wtime()
-   write(*,*) 'Total Farm_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
- 
-   if (ErrStat >= AbortErrLev) return
-   
-end subroutine FARM_UpdateStates
-#endif
-
-subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
    REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
    INTEGER(IntKi),           INTENT(IN   ) :: n                               !< Current step of the simulation: t = n*Interval
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
@@ -1719,7 +1623,7 @@ subroutine FARM_UpdateStatesSerial(t, n, farm, ErrStat, ErrMsg)
   write(*,*) 'Total Farm_US took '//trim(num2lstr(tm2-tm1))//' seconds.'
 #endif 
    
-end subroutine FARM_UpdateStatesSerial
+end subroutine FARM_UpdateStates
 
 subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(IN   ) :: n                               !< Time step increment number
@@ -1924,116 +1828,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
    end if
 end subroutine Farm_WriteOutput
 
-#ifdef PARALLEL_CODE
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine calculates outputs at each time increment and solves for the inputs at the next step.
-!! The calculate output algorithm: \n
-!!    -  In parallel: 
-!!       1. call WD_CO and transfer y_WD to u_AWAE
-!!       2. call SC_CO and transfer y_SC to u_F
-!!       3. Transfer y_F to u_SC and u_WD
-!!    -  CALL AWAE_CO
-!!    -  Transfer y_AWAE to u_F and u_WD
-!!    -  Write Output to File
 subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
-   REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
-   type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
-   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
-   CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
-
-   INTEGER(IntKi)                          :: nt                    
-   INTEGER(IntKi)                          :: ErrStat2, ErrStatWD, ErrStatF, ErrStatAWAE                      ! Temporary Error status
-   CHARACTER(ErrMsgLen)                    :: ErrMsg2, ErrMsgWD,  ErrMsgF,  ErrMsgAWAE                        ! Temporary Error message
-   CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_CalcOutput'
-   INTEGER(IntKi)                          :: n                               ! time step increment number
-   INTEGER(IntKi)                          :: procs
-   REAL(DbKi)                              :: t1,t2,t3,t4,t5,t6,tm1,tm2,t1b,t2b
-   
-   ErrStat = ErrID_None
-   ErrMsg = ""
-   write(*,*) 'Beginning FARM_CO'
-   procs = omp_get_num_procs()
-   call omp_set_num_threads(procs)
-   tm1 = omp_get_wtime()
-   
-   !$OMP PARALLEL DEFAULT(SHARED)
-   !$OMP SECTIONS  PRIVATE(nt) 
-   
-   !.......................................................................................
-   ! calculate module outputs and perform some input-output solves (steps 1. and 2. and 3. can be done in parallel,
-   !  but be careful that step 3 doesn't modify the inputs to steps 1 or 2)
-   !.......................................................................................
-   
-      !--------------------
-      ! 1. call WD_CO and transfer y_WD to u_AWAE        
-   !$OMP SECTION
-   t1 = omp_get_wtime()
-   
-   DO nt = 1,farm%p%NumTurbines
-      
-      call WD_CalcOutput( t, farm%WD(nt)%u, farm%WD(nt)%p, farm%WD(nt)%x, farm%WD(nt)%xd, farm%WD(nt)%z, &
-                     farm%WD(nt)%OtherSt, farm%WD(nt)%y, farm%WD(nt)%m, ErrStatWD, ErrMsgWD )         
-         call SetErrStat(ErrStatWD, ErrMsgWD, ErrStatWD, ErrMsgWD, 'T'//trim(num2lstr(nt))//':FARM_CalcOutput')     
-               
-   END DO
-  ! if (ErrStat >= AbortErrLev) return
-
-   call Transfer_WD_to_AWAE(farm)
-   t1b = omp_get_wtime()
-   write(*,*) '  Serial WD_CalcOutput and Transfer took '//trim(num2lstr(t1b-t1))//' seconds. Using thread #'//trim(num2lstr(omp_get_thread_num()))
-      !--------------------
-      ! 2. call SC_CO and transfer y_SC to u_F         
-   
-
-      !--------------------
-      ! 3. Transfer y_F to u_SC and u_WD         
-   !$OMP SECTION 
-   t2 = omp_get_wtime()
-   call Transfer_FAST_to_WD(farm)
-   t2b = omp_get_wtime()
-   write(*,*) '  Serial Transfer_FAST_to_WD took '//trim(num2lstr(t2b-t2))//' seconds. Using thread #'//trim(num2lstr(omp_get_thread_num()))    
-   !$OMP END SECTIONS
-   
-   !$OMP BARRIER
-   !$OMP END PARALLEL
-   tm2 = omp_get_wtime()
-   write(*,*) '  Parallel part of Farm_CO took '//trim(num2lstr(tm2-tm1))//' seconds.'
-   !.......................................................................................
-   ! calculate AWAE outputs and perform rest of input-output solves
-   !.......................................................................................
-   
-      !--------------------
-      ! 1. call AWAE_CO 
-   
-   t3 = omp_get_wtime()
-   call AWAE_CalcOutput( t, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, &
-                     farm%AWAE%OtherSt, farm%AWAE%y, farm%AWAE%m, ErrStat2, ErrMsg2 )         
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   t4 = omp_get_wtime()
-      !--------------------
-      ! 2. Transfer y_AWAE to u_F  and u_WD   
-   call Transfer_AWAE_to_FAST(farm)  
-   t5 = omp_get_wtime()
-   call Transfer_AWAE_to_WD(farm)   
-   t6 = omp_get_wtime()
-  
-   write(*,*) '  Total AWAE_CalcOutput and related transfers took '//trim(num2lstr(t6-t3))//' seconds.' 
-   
-   
-   !.......................................................................................
-   ! Write Output to File
-   !.......................................................................................
-      ! NOTE: Visualization data is output via the AWAE module
-   n = nint(t/farm%p%DT)
-   call Farm_WriteOutput(n, t, farm, ErrStat2, ErrMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   
-  write(*,*) 'Total Farm_CO took '//trim(num2lstr(t6-tm1))//' seconds.' 
-   
-end subroutine FARM_CalcOutput
-#endif
-
-subroutine FARM_CalcOutputSerial(t, farm, ErrStat, ErrMsg)
    REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
@@ -2104,7 +1899,7 @@ subroutine FARM_CalcOutputSerial(t, farm, ErrStat, ErrMsg)
    
  !  write(*,*) 'Total Farm_CO-serial took '//trim(num2lstr(omp_get_wtime()-tm1))//' seconds.' 
    
-end subroutine FARM_CalcOutputSerial
+end subroutine FARM_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine ends the modules used in this simulation. It does not exit the program.
 !!    -  In parallel: 

@@ -111,16 +111,36 @@
 				<Tool Name="VFCustomBuildTool" AdditionalDependencies="asfasdf"/>
 				<Tool Name="VFPreLinkEventTool"/>
 				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
+				<Tool Name="VFPostBuildEventTool"/></Configuration>
+		<Configuration Name="Release_OpenMP|Win32" TargetName="$(ProjectName)_$(PlatformName)" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
+				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
+				<Tool Name="VFCustomBuildTool"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
+				<Tool Name="VFPostBuildEventTool"/></Configuration>
+		<Configuration Name="Release_OpenMP|x64" TargetName="$(ProjectName)_$(PlatformName)" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268,5199" UseMkl="mklSequential"/>
+				<Tool Name="VFLibrarianTool" AdditionalDependencies="$(OutDir)\MAP_$(PlatformName).lib"/>
+				<Tool Name="VFResourceCompilerTool"/>
+				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
+				<Tool Name="VFCustomBuildTool" AdditionalDependencies="terdf"/>
+				<Tool Name="VFPreLinkEventTool"/>
+				<Tool Name="VFPreBuildEventTool" CommandLine="..\CreateGitVersion.bat"/>
 				<Tool Name="VFPostBuildEventTool"/></Configuration></Configurations>
 	<Files>
 		<Filter Name="Header Files" Filter="fi;fd"/>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe">
 		<File RelativePath="..\RunRegistry.bat">
 			<FileConfiguration Name="Debug_Double|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release_OpenMP|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release_Double|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release_OpenMP|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug_Matlab|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug_Double|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/>
@@ -135,6 +155,8 @@
 		<File RelativePath="..\..\modules-local\aerodyn\src\AeroDyn_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\build\types-files\AeroDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\build\types-files\AeroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\build\types-files\AeroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -142,6 +164,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\build\types-files\AeroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\build\types-files\AeroDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\build\types-files\AeroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\build\types-files\AeroDyn_Types.f90"/></FileConfiguration>
@@ -165,6 +189,8 @@
 		<File RelativePath="..\..\modules-local\aerodyn\src\AirfoilInfo_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\build\types-files\AirfoilInfo_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\build\types-files\AirfoilInfo_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\build\types-files\AirfoilInfo_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -172,6 +198,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\build\types-files\AirfoilInfo_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\build\types-files\AirfoilInfo_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\build\types-files\AirfoilInfo_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\build\types-files\AirfoilInfo_Types.f90"/></FileConfiguration>
@@ -191,6 +219,8 @@
 		<File RelativePath="..\..\modules-local\aerodyn\src\BEMT_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -198,6 +228,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration>
@@ -217,6 +249,8 @@
 		<File RelativePath="..\..\modules-local\aerodyn\src\UnsteadyAero_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -224,6 +258,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration>
@@ -255,6 +291,8 @@
 		<File RelativePath="..\..\modules-local\aerodyn14\src\Registry-DWM.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\build\types-files\DWM_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\build\types-files\DWM_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\build\types-files\DWM_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -262,6 +300,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\build\types-files\DWM_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\build\types-files\DWM_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\build\types-files\DWM_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DWM" Description="Running Registry for DWM" Outputs="..\..\build\types-files\DWM_Types.f90"/></FileConfiguration>
@@ -284,6 +324,8 @@
 		<File RelativePath="..\..\modules-local\aerodyn14\src\Registry-AD14.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\build\types-files\AeroDyn14_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\build\types-files\AeroDyn14_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\build\types-files\AeroDyn14_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -291,6 +333,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\build\types-files\AeroDyn14_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\build\types-files\AeroDyn14_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\build\types-files\AeroDyn14_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\build\types-files\AeroDyn14_Types.f90"/></FileConfiguration>
@@ -315,6 +359,8 @@
 		<File RelativePath="..\..\modules-local\beamdyn\src\Registry_BeamDyn.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -322,6 +368,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
@@ -345,6 +393,8 @@
 		<File RelativePath="..\..\modules-local\elastodyn\src\ElastoDyn_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ElastoDyn" Description="Running Registry for ElastoDyn" Outputs="..\..\build\types-files\ElastoDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ElastoDyn" Description="Running Registry for ElastoDyn" Outputs="..\..\build\types-files\ElastoDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ElastoDyn" Description="Running Registry for ElastoDyn" Outputs="..\..\build\types-files\ElastoDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -352,6 +402,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ElastoDyn" Description="Running Registry for ElastoDyn" Outputs="..\..\build\types-files\ElastoDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ElastoDyn" Description="Running Registry for ElastoDyn" Outputs="..\..\build\types-files\ElastoDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ElastoDyn" Description="Running Registry for ElastoDyn" Outputs="..\..\build\types-files\ElastoDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ElastoDyn" Description="Running Registry for ElastoDyn" Outputs="..\..\build\types-files\ElastoDyn_Types.f90"/></FileConfiguration>
@@ -376,6 +428,8 @@
 		<File RelativePath="..\..\modules-local\extptfm\src\ExtPtfm_MCKF_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\build\types-files\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\build\types-files\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\build\types-files\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -383,6 +437,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\build\types-files\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\build\types-files\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\build\types-files\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ExtPtfm_MCKF" Description="Running Registry for ExtPtfm_MCKF" Outputs="..\..\build\types-files\ExtPtfm_MCKF_Types.f90"/></FileConfiguration>
@@ -405,6 +461,8 @@
 		<File RelativePath="..\..\modules-local\fast-library\src\FAST_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\build\types-files\FAST_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\build\types-files\FAST_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\build\types-files\FAST_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -412,6 +470,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\build\types-files\FAST_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\build\types-files\FAST_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\build\types-files\FAST_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\build\types-files\FAST_Types.f90"/></FileConfiguration>
@@ -437,6 +497,8 @@
 		<File RelativePath="..\..\modules-local\hydrodyn\src\Conv_Radiation.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\build\types-files\Conv_Radiation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\build\types-files\Conv_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\build\types-files\Conv_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -444,6 +506,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\build\types-files\Conv_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\build\types-files\Conv_Radiation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\build\types-files\Conv_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\build\types-files\Conv_Radiation_Types.f90"/></FileConfiguration>
@@ -463,6 +527,8 @@
 		<File RelativePath="..\..\modules-local\hydrodyn\src\Current.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\build\types-files\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\build\types-files\Current_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\build\types-files\Current_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -470,6 +536,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\build\types-files\Current_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\build\types-files\Current_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\build\types-files\Current_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\build\types-files\Current_Types.f90"/></FileConfiguration>
@@ -489,6 +557,8 @@
 		<File RelativePath="..\..\modules-local\hydrodyn\src\HydroDyn.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\build\types-files\HydroDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\build\types-files\HydroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\build\types-files\HydroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -496,6 +566,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\build\types-files\HydroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\build\types-files\HydroDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\build\types-files\HydroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\build\types-files\HydroDyn_Types.f90"/></FileConfiguration>
@@ -515,6 +587,8 @@
 		<File RelativePath="..\..\modules-local\hydrodyn\src\Morison.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\build\types-files\Morison_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\build\types-files\Morison_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\build\types-files\Morison_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -522,6 +596,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\build\types-files\Morison_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\build\types-files\Morison_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\build\types-files\Morison_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\build\types-files\Morison_Types.f90"/></FileConfiguration>
@@ -541,6 +617,8 @@
 		<File RelativePath="..\..\modules-local\hydrodyn\src\SS_Radiation.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\build\types-files\SS_Radiation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\build\types-files\SS_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\build\types-files\SS_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -548,6 +626,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\build\types-files\SS_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\build\types-files\SS_Radiation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\build\types-files\SS_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\build\types-files\SS_Radiation_Types.f90"/></FileConfiguration>
@@ -567,6 +647,8 @@
 		<File RelativePath="..\..\modules-local\hydrodyn\src\WAMIT.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\build\types-files\WAMIT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\build\types-files\WAMIT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\build\types-files\WAMIT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -574,6 +656,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\build\types-files\WAMIT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\build\types-files\WAMIT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\build\types-files\WAMIT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\build\types-files\WAMIT_Types.f90"/></FileConfiguration>
@@ -592,6 +676,8 @@
 		<File RelativePath="..\..\modules-local\hydrodyn\src\WAMIT2.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\build\types-files\WAMIT2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\build\types-files\WAMIT2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\build\types-files\WAMIT2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -599,6 +685,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\build\types-files\WAMIT2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\build\types-files\WAMIT2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\build\types-files\WAMIT2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\build\types-files\WAMIT2_Types.f90"/></FileConfiguration>
@@ -619,6 +707,8 @@
 		<File RelativePath="..\..\modules-local\hydrodyn\src\Waves.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\build\types-files\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\build\types-files\Waves_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\build\types-files\Waves_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -626,6 +716,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\build\types-files\Waves_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\build\types-files\Waves_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\build\types-files\Waves_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\build\types-files\Waves_Types.f90"/></FileConfiguration>
@@ -644,6 +736,8 @@
 		<File RelativePath="..\..\modules-local\hydrodyn\src\Waves2.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\build\types-files\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\build\types-files\Waves2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\build\types-files\Waves2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -651,6 +745,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\build\types-files\Waves2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\build\types-files\Waves2_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\build\types-files\Waves2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\build\types-files\Waves2_Types.f90"/></FileConfiguration>
@@ -692,6 +788,8 @@
 		<File RelativePath="..\..\modules-ext\icedyn\src\Registry_IceDyn.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceDyn" Description="Running Registry for IceDyn" Outputs="..\..\build\types-files\IceDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceDyn" Description="Running Registry for IceDyn" Outputs="..\..\build\types-files\IceDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceDyn" Description="Running Registry for IceDyn" Outputs="..\..\build\types-files\IceDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -699,6 +797,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceDyn" Description="Running Registry for IceDyn" Outputs="..\..\build\types-files\IceDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceDyn" Description="Running Registry for IceDyn" Outputs="..\..\build\types-files\IceDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceDyn" Description="Running Registry for IceDyn" Outputs="..\..\build\types-files\IceDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceDyn" Description="Running Registry for IceDyn" Outputs="..\..\build\types-files\IceDyn_Types.f90"/></FileConfiguration>
@@ -720,6 +820,8 @@
 		<File RelativePath="..\..\modules-ext\icefloe\src\interfaces\FAST\IceFloe_FASTRegistry.inp">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceFloe" Description="Running Registry for IceFloe" Outputs="..\..\build\types-files\IceFloe_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceFloe" Description="Running Registry for IceFloe" Outputs="..\..\build\types-files\IceFloe_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceFloe" Description="Running Registry for IceFloe" Outputs="..\..\build\types-files\IceFloe_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -727,6 +829,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceFloe" Description="Running Registry for IceFloe" Outputs="..\..\build\types-files\IceFloe_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceFloe" Description="Running Registry for IceFloe" Outputs="..\..\build\types-files\IceFloe_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceFloe" Description="Running Registry for IceFloe" Outputs="..\..\build\types-files\IceFloe_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IceFloe" Description="Running Registry for IceFloe" Outputs="..\..\build\types-files\IceFloe_Types.f90"/></FileConfiguration>
@@ -761,6 +865,8 @@
 		<File RelativePath="..\..\modules-local\inflowwind\src\IfW_4Dext.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_4Dext" Description="Running Registry for IfW_4Dext" Outputs="..\..\build\types-files\IfW_4Dext_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_4Dext" Description="Running Registry for IfW_4Dext" Outputs="..\..\build\types-files\IfW_4Dext_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_4Dext" Description="Running Registry for IfW_4Dext" Outputs="..\..\build\types-files\IfW_4Dext_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -768,6 +874,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_4Dext" Description="Running Registry for IfW_4Dext" Outputs="..\..\build\types-files\IfW_4Dext_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_4Dext" Description="Running Registry for IfW_4Dext" Outputs="..\..\build\types-files\IfW_4Dext_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_4Dext" Description="Running Registry for IfW_4Dext" Outputs="..\..\build\types-files\IfW_4Dext_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_4Dext" Description="Running Registry for IfW_4Dext" Outputs="..\..\build\types-files\IfW_4Dext_Types.f90"/></FileConfiguration>
@@ -787,6 +895,8 @@
 		<File RelativePath="..\..\modules-local\inflowwind\src\IfW_BladedFFWind.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_BladedFFWind" Description="Running Registry for IfW_BladedFFWind" Outputs="..\..\build\types-files\IfW_BladedFFWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_BladedFFWind" Description="Running Registry for IfW_BladedFFWind" Outputs="..\..\build\types-files\IfW_BladedFFWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_BladedFFWind" Description="Running Registry for IfW_BladedFFWind" Outputs="..\..\build\types-files\IfW_BladedFFWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -794,6 +904,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_BladedFFWind" Description="Running Registry for IfW_BladedFFWind" Outputs="..\..\build\types-files\IfW_BladedFFWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_BladedFFWind" Description="Running Registry for IfW_BladedFFWind" Outputs="..\..\build\types-files\IfW_BladedFFWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_BladedFFWind" Description="Running Registry for IfW_BladedFFWind" Outputs="..\..\build\types-files\IfW_BladedFFWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_BladedFFWind" Description="Running Registry for IfW_BladedFFWind" Outputs="..\..\build\types-files\IfW_BladedFFWind_Types.f90"/></FileConfiguration>
@@ -813,6 +925,8 @@
 		<File RelativePath="..\..\modules-local\inflowwind\src\IfW_HAWCWind.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\build\types-files\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\build\types-files\IfW_HAWCWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\build\types-files\IfW_HAWCWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -820,6 +934,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\build\types-files\IfW_HAWCWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\build\types-files\IfW_HAWCWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\build\types-files\IfW_HAWCWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_HAWCWind" Description="Running Registry for IfW_HAWCWindWind" Outputs="..\..\build\types-files\IfW_HAWCWind_Types.f90"/></FileConfiguration>
@@ -839,6 +955,8 @@
 		<File RelativePath="..\..\modules-local\inflowwind\src\IfW_TSFFWind.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_TSFFWind" Description="Running Registry for IfW_TSFFWind" Outputs="..\..\build\types-files\IfW_TSFFWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_TSFFWind" Description="Running Registry for IfW_TSFFWind" Outputs="..\..\build\types-files\IfW_TSFFWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_TSFFWind" Description="Running Registry for IfW_TSFFWind" Outputs="..\..\build\types-files\IfW_TSFFWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -846,6 +964,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_TSFFWind" Description="Running Registry for IfW_TSFFWind" Outputs="..\..\build\types-files\IfW_TSFFWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_TSFFWind" Description="Running Registry for IfW_TSFFWind" Outputs="..\..\build\types-files\IfW_TSFFWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_TSFFWind" Description="Running Registry for IfW_TSFFWind" Outputs="..\..\build\types-files\IfW_TSFFWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_TSFFWind" Description="Running Registry for IfW_TSFFWind" Outputs="..\..\build\types-files\IfW_TSFFWind_Types.f90"/></FileConfiguration>
@@ -865,6 +985,8 @@
 		<File RelativePath="..\..\modules-local\inflowwind\src\IfW_UniformWind.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UniformWind" Description="Running Registry for IfW_UniformWind" Outputs="..\..\build\types-files\IfW_UniformWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UniformWind" Description="Running Registry for IfW_UniformWind" Outputs="..\..\build\types-files\IfW_UniformWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UniformWind" Description="Running Registry for IfW_UniformWind" Outputs="..\..\build\types-files\IfW_UniformWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -872,6 +994,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UniformWind" Description="Running Registry for IfW_UniformWind" Outputs="..\..\build\types-files\IfW_UniformWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UniformWind" Description="Running Registry for IfW_UniformWind" Outputs="..\..\build\types-files\IfW_UniformWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UniformWind" Description="Running Registry for IfW_UniformWind" Outputs="..\..\build\types-files\IfW_UniformWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UniformWind" Description="Running Registry for IfW_UniformWind" Outputs="..\..\build\types-files\IfW_UniformWind_Types.f90"/></FileConfiguration>
@@ -891,6 +1015,8 @@
 		<File RelativePath="..\..\modules-local\inflowwind\src\IfW_UserWind.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UserWind" Description="Running Registry for IfW_UserWind" Outputs="..\..\build\types-files\IfW_UserWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UserWind" Description="Running Registry for IfW_UserWind" Outputs="..\..\build\types-files\IfW_UserWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UserWind" Description="Running Registry for IfW_UserWind" Outputs="..\..\build\types-files\IfW_UserWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -898,6 +1024,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UserWind" Description="Running Registry for IfW_UserWind" Outputs="..\..\build\types-files\IfW_UserWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UserWind" Description="Running Registry for IfW_UserWind" Outputs="..\..\build\types-files\IfW_UserWind_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UserWind" Description="Running Registry for IfW_UserWind" Outputs="..\..\build\types-files\IfW_UserWind_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat IfW_UserWind" Description="Running Registry for IfW_UserWind" Outputs="..\..\build\types-files\IfW_UserWind_Types.f90"/></FileConfiguration>
@@ -917,6 +1045,8 @@
 		<File RelativePath="..\..\modules-local\inflowwind\src\InflowWind.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\build\types-files\InflowWind_Types.f90" AdditionalDependencies="..\..\modules-local\inflowwind\src\Reg-IfW_FFWind.txt;..\..\OpenFAST\modules-local\inflowwind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\build\types-files\InflowWind_Types.f90" AdditionalDependencies="..\..\modules-local\inflowwind\src\Reg-IfW_FFWind.txt;..\..\OpenFAST\modules-local\inflowwind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\build\types-files\InflowWind_Types.f90" AdditionalDependencies="..\..\modules-local\inflowwind\src\Reg-IfW_FFWind.txt;..\..\OpenFAST\modules-local\inflowwind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -924,6 +1054,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\build\types-files\InflowWind_Types.f90" AdditionalDependencies="..\..\modules-local\inflowwind\src\Reg-IfW_FFWind.txt;..\..\OpenFAST\modules-local\inflowwind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\build\types-files\InflowWind_Types.f90" AdditionalDependencies="..\..\modules-local\inflowwind\src\Reg-IfW_FFWind.txt;..\..\OpenFAST\modules-local\inflowwind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\build\types-files\InflowWind_Types.f90" AdditionalDependencies="..\..\modules-local\inflowwind\src\Reg-IfW_FFWind.txt;..\..\OpenFAST\modules-local\inflowwind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat InflowWind" Description="Running Registry for InflowWind" Outputs="..\..\build\types-files\InflowWind_Types.f90" AdditionalDependencies="..\..\modules-local\inflowwind\src\Reg-IfW_FFWind.txt;..\..\OpenFAST\modules-local\inflowwind\src\Reg-IfW_HHWind.txt"/></FileConfiguration>
@@ -943,6 +1075,8 @@
 		<File RelativePath="..\..\modules-local\inflowwind\src\Lidar.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\build\types-files\Lidar_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\build\types-files\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\build\types-files\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -950,6 +1084,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\build\types-files\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\build\types-files\Lidar_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\build\types-files\Lidar_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Lidar" Description="Running Registry for Lidar" Outputs="..\..\build\types-files\Lidar_Types.f90"/></FileConfiguration>
@@ -981,6 +1117,8 @@
 		<File RelativePath="..\..\modules-ext\feamooring\src\FEAM_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FEAMooring" Description="Running Registry for FEAMooring" Outputs="..\..\build\types-files\FEAMooring_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FEAMooring" Description="Running Registry for FEAMooring" Outputs="..\..\build\types-files\FEAMooring_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FEAMooring" Description="Running Registry for FEAMooring" Outputs="..\..\build\types-files\FEAMooring_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -988,6 +1126,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FEAMooring" Description="Running Registry for FEAMooring" Outputs="..\..\build\types-files\FEAMooring_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FEAMooring" Description="Running Registry for FEAMooring" Outputs="..\..\build\types-files\FEAMooring_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FEAMooring" Description="Running Registry for FEAMooring" Outputs="..\..\build\types-files\FEAMooring_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FEAMooring" Description="Running Registry for FEAMooring" Outputs="..\..\build\types-files\FEAMooring_Types.f90"/></FileConfiguration>
@@ -1010,6 +1150,8 @@
 		<File RelativePath="..\..\modules-ext\map\src\MAP_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="" Description="" Outputs=""/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="" Description="" Outputs=""/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1017,6 +1159,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
@@ -1039,6 +1183,10 @@
 				<Tool Name="VFFortranCompilerTool" AdditionalIncludeDirectories=""/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" AdditionalIncludeDirectories=""/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
+				<Tool Name="VFFortranCompilerTool" AdditionalIncludeDirectories=""/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFFortranCompilerTool" AdditionalIncludeDirectories=""/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
 				<Tool Name="VFFortranCompilerTool" AdditionalIncludeDirectories=""/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
@@ -1053,6 +1201,8 @@
 		<File RelativePath="..\..\modules-ext\moordyn\src\MoorDyn_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MoorDyn" Description="Running Registry for MoorDyn" Outputs="..\..\build\types-files\MoorDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MoorDyn" Description="Running Registry for MoorDyn" Outputs="..\..\build\types-files\MoorDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MoorDyn" Description="Running Registry for MoorDyn" Outputs="..\..\build\types-files\MoorDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1060,6 +1210,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MoorDyn" Description="Running Registry for MoorDyn" Outputs="..\..\build\types-files\MoorDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MoorDyn" Description="Running Registry for MoorDyn" Outputs="..\..\build\types-files\MoorDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MoorDyn" Description="Running Registry for MoorDyn" Outputs="..\..\build\types-files\MoorDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat MoorDyn" Description="Running Registry for MoorDyn" Outputs="..\..\build\types-files\MoorDyn_Types.f90"/></FileConfiguration>
@@ -1087,6 +1239,8 @@
 		<File RelativePath="..\..\modules-local\orcaflex-interface\src\OrcaFlexInterface.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OrcaFlexInterface" Description="Running Registry for OrcaFlex Interface" Outputs="..\..\build\types-files\OrcaFlexInterface_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OrcaFlexInterface" Description="Running Registry for OrcaFlex Interface" Outputs="..\..\build\types-files\OrcaFlexInterface_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OrcaFlexInterface" Description="Running Registry for OrcaFlex Interface" Outputs="..\..\build\types-files\OrcaFlexInterface_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1094,6 +1248,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OrcaFlexInterface" Description="Running Registry for OrcaFlex Interface" Outputs="..\..\build\types-files\OrcaFlexInterface_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OrcaFlexInterface" Description="Running Registry for OrcaFlex Interface" Outputs="..\..\build\types-files\OrcaFlexInterface_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OrcaFlexInterface" Description="Running Registry for OrcaFlex Interface" Outputs="..\..\build\types-files\OrcaFlexInterface_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OrcaFlexInterface" Description="Running Registry for OrcaFlex Interface" Outputs="..\..\build\types-files\OrcaFlexInterface_Types.f90"/></FileConfiguration>
@@ -1117,6 +1273,8 @@
 		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\fftpack\fftpack4.1.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1124,6 +1282,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
@@ -1143,6 +1303,8 @@
 		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\Dierckx_FitPack\dierckx_fitpack.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1150,6 +1312,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
@@ -1169,6 +1333,8 @@
 		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\scalapack\dlasrt2.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1176,6 +1342,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
@@ -1194,6 +1362,8 @@
 		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\scalapack\slasrt2.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1201,6 +1371,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone"/></FileConfiguration>
@@ -1240,10 +1412,12 @@
 			<FileConfiguration Name="Release_Matlab|Win32" ExcludedFromBuild="true"/></File>
 		<File RelativePath="..\..\modules-local\nwtc-library\src\SysMatlab.f90">
 			<FileConfiguration Name="Debug_Double|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release_OpenMP|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release_Double|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release_OpenMP|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug_Double|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release_Double|x64" ExcludedFromBuild="true"/></File></Filter>
@@ -1252,6 +1426,8 @@
 		<File RelativePath="..\..\modules-local\openfoam\src\OpenFOAM_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\build\types-files\OpenFOAM_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\build\types-files\OpenFOAM_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\build\types-files\OpenFOAM_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1259,6 +1435,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\build\types-files\OpenFOAM_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\build\types-files\OpenFOAM_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\build\types-files\OpenFOAM_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat OpenFOAM" Description="Running Registry for OpenFOAM" Outputs="..\..\build\types-files\OpenFOAM_Types.f90"/></FileConfiguration>
@@ -1281,6 +1459,8 @@
 		<File RelativePath="..\..\modules-local\servodyn\src\ServoDyn_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Outputs="..\..\build\types-files\ServoDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Outputs="..\..\build\types-files\ServoDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Outputs="..\..\build\types-files\ServoDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1288,6 +1468,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Outputs="..\..\build\types-files\ServoDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Outputs="..\..\build\types-files\ServoDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Outputs="..\..\build\types-files\ServoDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat ServoDyn" Description="Running Registry for ServoDyn" Outputs="..\..\build\types-files\ServoDyn_Types.f90"/></FileConfiguration>
@@ -1307,6 +1489,8 @@
 		<File RelativePath="..\..\modules-local\servodyn\src\TMD_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\build\types-files\TMD_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\build\types-files\TMD_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\build\types-files\TMD_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1314,6 +1498,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\build\types-files\TMD_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\build\types-files\TMD_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\build\types-files\TMD_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat TMD" Description="Running Registry for TMD" Outputs="..\..\build\types-files\TMD_Types.f90"/></FileConfiguration>
@@ -1341,6 +1527,8 @@
 		<File RelativePath="..\..\modules-local\subdyn\src\SubDyn_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1348,6 +1536,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration>
@@ -1373,6 +1563,8 @@
 		<File RelativePath="..\..\modules-local\supercontroller\src\SuperController_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -1380,6 +1572,8 @@
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_OpenMP|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SuperController" Description="Running Registry for SuperController" Outputs="..\..\build\types-files\SuperController_Types.f90"/></FileConfiguration>
