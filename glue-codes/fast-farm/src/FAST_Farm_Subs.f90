@@ -1525,9 +1525,16 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
 end subroutine FARM_InitialCO
- 
-
-
+!---------------------------------------------------------------------------------------------------------------------------------- 
+!> This routine updates states each time increment. 
+!! The update states algorithm: \n 
+!!    -  In parallel:  
+!!       1. call WD_US 
+!!       2. call SC_US 
+!!       3. call F_Increment 
+!!       4. call AWAE_UpdateStates 
+!!    -  \f$ n = n + 1 \f$ 
+!!    -  \f$ t = t + \Delta t \f$ 
 subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
    INTEGER(IntKi),           INTENT(IN   ) :: n                               !< Current step of the simulation: t = n*Interval
@@ -1827,7 +1834,16 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
          
    end if
 end subroutine Farm_WriteOutput
-
+!---------------------------------------------------------------------------------------------------------------------------------- 
+!> This routine calculates outputs at each time increment and solves for the inputs at the next step. 
+!! The calculate output algorithm: \n 
+!!    -  In parallel:  
+!!       1. call WD_CO and transfer y_WD to u_AWAE 
+!!       2. call SC_CO and transfer y_SC to u_F 
+!!       3. Transfer y_F to u_SC and u_WD 
+!!    -  CALL AWAE_CO 
+!!    -  Transfer y_AWAE to u_F and u_WD 
+!!    -  Write Output to File
 subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    REAL(DbKi),               INTENT(IN   ) :: t                               !< Current simulation time in seconds
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data  

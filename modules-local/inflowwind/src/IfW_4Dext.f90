@@ -251,7 +251,7 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
    END DO
          
    !-------------------------------------------------------------------------------------------------
-   ! also make sure we're not outside the bounds. we should probably throw an error here, but I'm just going to go with the closest grid point.
+   ! also make sure we're not outside the bounds
    !-------------------------------------------------------------------------------------------------            
    DO i=1,size(p%n)   
       IF (Indx_Lo(i) <= 0) THEN
