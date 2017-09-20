@@ -1187,6 +1187,8 @@
 				<Tool Name="VFFortranCompilerTool" AdditionalIncludeDirectories=""/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
 				<Tool Name="VFFortranCompilerTool" AdditionalIncludeDirectories=""/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFFortranCompilerTool" AdditionalIncludeDirectories=""/></FileConfiguration>
 			<FileConfiguration Name="Debug_Matlab|Win32">
 				<Tool Name="VFFortranCompilerTool" AdditionalIncludeDirectories=""/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
