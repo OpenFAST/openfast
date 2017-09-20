@@ -22,7 +22,10 @@ subroutine test_BD_GravityForce()
     call SetConstants()
     
     tolerance = 1e-14
-    testname = "test_BD_GravityForce"
+    
+    
+    ! --------------------------------------------------------------------------
+    testname = "static simple beam under gravity"
     baseline(1:3) = getGravityInZ()
     baseline(4:6) = (/ 0.0, 0.0, 0.0 /)
     

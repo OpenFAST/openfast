@@ -32,6 +32,8 @@ subroutine test_BD_InputGlobalLocal()
     ! initialize NWTC_Num constants
     call SetConstants()
     
+    
+    ! --------------------------------------------------------------------------
     testname = "test_BD_InputGlobalLocal"
     
     tolerance = 1e-14
