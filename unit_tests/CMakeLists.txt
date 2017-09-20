@@ -71,6 +71,7 @@ foreach(test
   test_BD_InputGlobalLocal
   test_BD_DistrLoadCopy
   test_BD_GravityForce
+  test_BD_QPData_mEta_rho
   test_tools )
   set(test_dependency pfunit ${source_testdirectory}/${test}.F90)
   add_custom_command(
