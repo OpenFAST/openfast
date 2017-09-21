@@ -56,7 +56,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvMatrixR(composedparams, testrotation)
     testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(testvector, baselinevector, tolerance, testname)
+    @assertEqual(baselinevector, testvector, tolerance, testname)
     
     
     ! --------------------------------------------------------------------------
@@ -78,7 +78,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvMatrixR(composedparams, testrotation)
     testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(testvector, baselinevector, tolerance, testname)
+    @assertEqual(baselinevector, testvector, tolerance, testname)
       
     
     ! --------------------------------------------------------------------------
@@ -100,7 +100,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvMatrixR(composedparams, testrotation)
     testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(testvector, baselinevector, tolerance, testname)
+    @assertEqual(baselinevector, testvector, tolerance, testname)
     
     
     ! --------------------------------------------------------------------------
@@ -122,7 +122,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvMatrixR(composedparams, testrotation)
     testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(testvector, baselinevector, tolerance, testname)
+    @assertEqual(baselinevector, testvector, tolerance, testname)
     
     
     ! --------------------------------------------------------------------------
@@ -144,7 +144,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvMatrixR(composedparams, testrotation)
     testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(testvector, baselinevector, tolerance, testname)
+    @assertEqual(baselinevector, testvector, tolerance, testname)
     
     
     ! --------------------------------------------------------------------------
@@ -166,6 +166,6 @@ subroutine test_BD_CrvCompose()
     call BD_CrvMatrixR(composedparams, testrotation)
     testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(testvector, baselinevector, tolerance, testname)
+    @assertEqual(baselinevector, testvector, tolerance, testname)
     
 end subroutine
