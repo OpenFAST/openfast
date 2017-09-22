@@ -43,7 +43,7 @@ subroutine test_BD_GenerateGLL()
     @assertEqual(baseline, gll_nodes, tolerance, testname)
     
     deallocate(baseline)
-  
+    deallocate(gll_nodes)
     
     ! --------------------------------------------------------------------------
     testname = "p = 5, odd number"
@@ -57,6 +57,7 @@ subroutine test_BD_GenerateGLL()
     @assertEqual(baseline, gll_nodes, tolerance, testname)
     
     deallocate(baseline)
+    deallocate(gll_nodes)
     
     
     ! --------------------------------------------------------------------------
@@ -71,6 +72,7 @@ subroutine test_BD_GenerateGLL()
     @assertEqual(baseline, gll_nodes, tolerance, testname)
     
     deallocate(baseline)
+    deallocate(gll_nodes)
     
     
     ! --------------------------------------------------------------------------
@@ -110,5 +112,6 @@ subroutine test_BD_GenerateGLL()
     @assertEqual(baseline, gll_nodes, tolerance, testname)
     
     deallocate(baseline)
+    deallocate(gll_nodes)
     
 end subroutine
