@@ -77,10 +77,6 @@ subroutine test_BD_CrvCompose()
     angle2 = 1.5*Pi  ! 270 degrees
     flag = 0
     
-    ! a point initially at 0,0,1 is at
-    ! 0,-1,0 after rotation 1
-    ! -1,0,0 after rotation 2
-    
     r1 = calcRotationMatrix(angle1, n1)
     r2 = calcRotationMatrix(angle2, n2)
     baselinerotation = matmul(r1,r2)
@@ -96,10 +92,6 @@ subroutine test_BD_CrvCompose()
     angle1 = PiBy2_D ! 90 degrees
     angle2 = PiBy2_D ! 90 degrees
     flag = 1
-    
-    ! a point initially at 0,0,1 is at
-    ! 0,1,0 after rotation 1 <- transpose of the first rotation
-    ! -1,0,0 after rotation 2
     
     r1 = calcRotationMatrix(-angle1, n1)
     r2 = calcRotationMatrix(angle2, n2)
@@ -117,10 +109,6 @@ subroutine test_BD_CrvCompose()
     angle2 = PiBy2_D ! 90 degrees
     flag = 2
     
-    ! a point initially at 0,0,1 is at
-    ! 0,-1,0 after rotation 1
-    ! -1,0,0 after rotation 2 <- transpose of the second rotation
-    
     r1 = calcRotationMatrix(angle1, n1)
     r2 = calcRotationMatrix(-angle2, n2)
     baselinerotation = matmul(r1,r2)
@@ -136,10 +124,6 @@ subroutine test_BD_CrvCompose()
     angle1 = PiBy2_D ! 90 degrees
     angle2 = PiBy2_D ! 90 degrees
     flag = 3
-    
-    ! a point initially at 0,0,1 is at
-    ! 0,1,0 after rotation 1 <- transpose of the first rotation
-    ! 1,0,0 after rotation 2 <- transpose of the second rotation
     
     r1 = calcRotationMatrix(-angle1, n1)
     r2 = calcRotationMatrix(-angle2, n2)
