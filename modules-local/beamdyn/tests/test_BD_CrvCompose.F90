@@ -19,10 +19,9 @@ subroutine test_BD_CrvCompose()
     real(BDKi), dimension(3)   :: n1, n2
     real(BDKi)                 :: angle1, angle2
     
-    ! result rotations, verification vectors
-    real(BDKi), dimension(3,3) :: testrotation, r1, r2
+    ! result rotations
+    real(BDKi), dimension(3,3) :: testrotation, baselinerotation, r1, r2
     real(BDKi), dimension(3)   :: composedparams
-    real(BDKi), dimension(3)   :: initialvector, testvector, baselinevector
     
     ! other test settings
     integer                    :: flag
@@ -34,10 +33,9 @@ subroutine test_BD_CrvCompose()
     
     tolerance = 1e-14
     
-    ! set the rotation axes and initial vector for all tests
+    ! set the rotation axes for all tests
     n1 = (/ 1, 0, 0 /) ! x axis
     n2 = (/ 0, 0, 1 /) ! z axis
-    initialvector = (/ 0, 0, 1 /)
     
     
     ! --------------------------------------------------------------------------
@@ -49,14 +47,12 @@ subroutine test_BD_CrvCompose()
     ! both rotations should return an identity matrix    
     r1 = calcRotationMatrix(angle1, n1)
     r2 = calcRotationMatrix(angle2, n2)
-    baselinevector = matmul(r1, initialvector)
-    baselinevector = matmul(r2, baselinevector)
+    baselinerotation = matmul(r1,r2)
     
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
-    testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(baselinevector, testvector, tolerance, testname)
+    @assertEqual(baselinerotation, testrotation, tolerance, testname)
     
     
     ! --------------------------------------------------------------------------
@@ -65,20 +61,14 @@ subroutine test_BD_CrvCompose()
     angle2 = PiBy2_D ! 90 degrees
     flag = 0
     
-    ! a point initially at 0,0,1 is at
-    ! 0,-1,0 after rotation 1
-    ! 1,0,0 after rotation 2
-    
     r1 = calcRotationMatrix(angle1, n1)
     r2 = calcRotationMatrix(angle2, n2)
-    baselinevector = matmul(r1, initialvector)
-    baselinevector = matmul(r2, baselinevector)
+    baselinerotation = matmul(r1,r2)
     
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
-    testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(baselinevector, testvector, tolerance, testname)
+    @assertEqual(baselinerotation, testrotation, tolerance, testname)
       
     
     ! --------------------------------------------------------------------------
@@ -93,14 +83,12 @@ subroutine test_BD_CrvCompose()
     
     r1 = calcRotationMatrix(angle1, n1)
     r2 = calcRotationMatrix(angle2, n2)
-    baselinevector = matmul(r1, initialvector)
-    baselinevector = matmul(r2, baselinevector)
+    baselinerotation = matmul(r1,r2)
     
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
-    testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(baselinevector, testvector, tolerance, testname)
+    @assertEqual(baselinerotation, testrotation, tolerance, testname)
     
     
     ! --------------------------------------------------------------------------
@@ -115,14 +103,12 @@ subroutine test_BD_CrvCompose()
     
     r1 = calcRotationMatrix(-angle1, n1)
     r2 = calcRotationMatrix(angle2, n2)
-    baselinevector = matmul(r1, initialvector)
-    baselinevector = matmul(r2, baselinevector)
-
+    baselinerotation = matmul(r1,r2)
+    
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
-    testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(baselinevector, testvector, tolerance, testname)
+    @assertEqual(baselinerotation, testrotation, tolerance, testname)
     
     
     ! --------------------------------------------------------------------------
@@ -137,14 +123,12 @@ subroutine test_BD_CrvCompose()
     
     r1 = calcRotationMatrix(angle1, n1)
     r2 = calcRotationMatrix(-angle2, n2)
-    baselinevector = matmul(r1, initialvector)
-    baselinevector = matmul(r2, baselinevector)
+    baselinerotation = matmul(r1,r2)
     
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
-    testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(baselinevector, testvector, tolerance, testname)
+    @assertEqual(baselinerotation, testrotation, tolerance, testname)
     
     
     ! --------------------------------------------------------------------------
@@ -159,13 +143,11 @@ subroutine test_BD_CrvCompose()
     
     r1 = calcRotationMatrix(-angle1, n1)
     r2 = calcRotationMatrix(-angle2, n2)
-    baselinevector = matmul(r1, initialvector)
-    baselinevector = matmul(r2, baselinevector)
+    baselinerotation = matmul(r1,r2)
     
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
-    testvector = matmul(testrotation, initialvector)
     
-    @assertEqual(baselinevector, testvector, tolerance, testname)
+    @assertEqual(baselinerotation, testrotation, tolerance, testname)
     
 end subroutine
