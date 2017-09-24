@@ -59,8 +59,41 @@ included in the build directory when the files are initially copied. If the buil
 directory is populated without the external controllers, they can be compiled with 
 ``compileDISCON.py`` and copied manually into 
 ``openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoData``.
+
+CTest configuration
+-------------------
+
+CTest is included with CMake and is mostly a set of preconfigured targets and 
+commands. To use the CTest driver for the regression test, CMake must be run with
+one of two ``CMakeLists.txt``'s:
+
+- openfast/CMakeList.txt
+- openfast/reg_tests/CMakeLists.txt
+
+CMake variables can be configured in the `CMake
+GUI <https://cmake.org/download/>`__ or through the command line interface with
+the command ``ccmake``.
+
+The test specific CMake variables are
+
+- BUILD_TESTING
+- CTEST_OPENFAST_EXECUTABLE
+- CTEST_[MODULE]_EXECUTABLE
+- CTEST_PLOT_ERRORS
+- CTEST_REGRESSION_TOL
+
+After CMake configuration, the automated regression test can be executed
+by running either of the commands ``make test`` or ``ctest`` from the build
+directory. If the entire OpenFAST package is to be built, CMake will configure
+CTest to find the new binary at ``openfast/build/glue-codes/fast/openfast``.
+However, if the intention is to build only the test suite, the OpenFAST binary
+should be specified in the CMake configuration under the ``CTEST_OPENFAST_EXECUTABLE``
+flag. There is also a corresponding ``CTEST_[MODULE]_NAME`` flag for each module
+included in the regression test.
+
 Running the regression test with CTest
 --------------------------------------
+
 When driven by CTest, the regression test can be executed by running various
 forms of the command ``ctest`` from the build directory. The basic commands are
 
