@@ -17,6 +17,7 @@ Dependencies
 - Numpy
 - CMake and CTest (Optional in regression test)
 - matplotlib (Optional in regression test)
+- pFUnit (Inlcuded in unit test suite)
 
 Configuring the test suite
 --------------------------
