@@ -11,24 +11,16 @@ compiler type to the appropriate solution set from these combinations
 - Red Hat Enterprise Linux with Intel compiler
 - Windows with Intel compiler
 
-The automated regression test runs
-`CTest <https://cmake.org/Wiki/CMake/Testing_With_CTest>`__ and can be executed
-by running either of the commands ``make test`` or ``ctest`` from the build
-directory. If the entire OpenFAST package is to be built, CMake will configure
-CTest to find the new binary at ``openfast/build/glue-codes/fast/openfast``.
-However, if the intention is to build only the test suite, the OpenFAST binary
-should be specified in the CMake configuration under the ``CTEST_OPENFAST_EXECUTABLE``
-flag. There is also a corresponding ``CTEST_[MODULE]_NAME`` flag for each module
-included in the regression test.
-
-The regression test can be executed manually with the included driver
-``reg_tests/manualRegressionTest.py``.
+The regression test system can be executed with CMake and CTest or manually with
+an included Python driver. Both systems provide similar functionality with respect
+to testing, but CTest integration provides access to multithreading, automation,
+and test reporting via CDash. Both modes of execution require some configuration.
 
 In both modes of execution a subdirectory is created in the build directory
 called ``reg_tests`` where all of the input files for the test cases are copied
 and all of the locally generated outputs are stored.
 
-Ultimately, both CTest and the manual execution script call a series of Python
+Ultimately, both CTest and the manual execution program call a series of Python
 scripts and libraries in ``reg_tests`` and ``reg_tests/lib``. One such script is
 ``lib/pass_fail.py`` which reads the output files and computes a norm on each 
 channel reported. If the maximum norm is greater than a preset tolerance, that particular
