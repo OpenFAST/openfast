@@ -47,6 +47,26 @@ test is reported as failed. The failure criteria is outlined in pseudocode below
   if max(norm) < tolerance:
     success
 
+
+Manual driver configuration
+---------------------------
+
+The regression test can be executed manually with the included driver
+``openfast/reg_tests/manualRegressionTest.py``. This program reads a case list file at 
+``openfast/reg_tests/r-test/glue-codes/fast/CaseList.md``. Cases can be removed 
+or ignored with a ``#``. This driver program includes multiple optional flags 
+which can be obtained by executing with the help option:
+``openfast/reg_tests/manualRegressionTest.py -h``
+
+For the 5MW test cases, an external ServoDyn controller must be compiled and 
+included in the appropriate directory or all 5MW cases will fail without starting.
+Compiling these controllers is automated with CMake and make through
+``openfast/reg_tests/r-test/glue-codes/fast/compileDISCON.py``. This should be
+completed before running the regression test so that the compiled libraries are
+included in the build directory when the files are initially copied. If the build
+directory is populated without the external controllers, they can be compiled with 
+``compileDISCON.py`` and copied manually into 
+``openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoData``.
 Running the regression test with CTest
 --------------------------------------
 When driven by CTest, the regression test can be executed by running various
