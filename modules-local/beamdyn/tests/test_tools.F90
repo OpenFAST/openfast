@@ -65,8 +65,8 @@ contains
         getMassMatrix(1,:) =  (/   1.E0,    0.0,    0.0,    0.0,    0.0,   -0.5 /)
         getMassMatrix(2,:) =  (/    0.0,   1.E0,    0.0,    0.0,    0.0,    0.5 /)
         getMassMatrix(3,:) =  (/    0.0,    0.0,   1.E0,    0.5,   -0.5,    0.0 /)
-        getMassMatrix(4,:) =  (/    0.0,    0.0,    0.5,   1.E0,   -1.0,    0.0 /)
-        getMassMatrix(5,:) =  (/    0.0,    0.0,   -0.5,  -1.E0,   1.E0,    0.0 /)
+        getMassMatrix(4,:) =  (/    0.0,    0.0,    0.5,   1.E0,    0.0,    0.0 /)
+        getMassMatrix(5,:) =  (/    0.0,    0.0,   -0.5,    0.0,   1.E0,    0.0 /)
         getMassMatrix(6,:) =  (/   -0.5,    0.5,    0.0,    0.0,    0.0,   2.E0 /)
     end function
     
