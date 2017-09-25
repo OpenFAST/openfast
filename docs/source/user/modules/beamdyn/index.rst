@@ -1,4 +1,4 @@
-BeamDyn User’s Guide and Theory Manual
+BeamDyn User Guide and Theory Manual
 ======================================
 
 .. only:: html

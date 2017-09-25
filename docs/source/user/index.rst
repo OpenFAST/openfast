@@ -7,7 +7,7 @@ OpenFAST User Documentation
    :maxdepth: 1
 
    install/index.rst
-   theory/index.rst
+   modules/index.rst
    testing/index.rst
    fast_to_openfast.rst
 

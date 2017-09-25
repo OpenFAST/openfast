@@ -74,7 +74,7 @@ applied loads are specified via a stand-alone BeamDyn driver code.
 
 .. _flow-chart:
 
-.. figure:: figs/FlowChart.jpg
+.. figure:: figs/flow_chart.jpg
    :width: 100%
            
    Coupled interaction between BeamDyn and FAST

@@ -33,40 +33,32 @@ is for the user but is not used by the software. If BeamDyn is run in
 the stand-alone mode, the results output file will be prefixed with the
 same name of this driver input file.
 
-A sample BeamDyn driver input file is given in Appendix :ref:`app-driver`
+A sample BeamDyn driver input file is given in :numref:`app-driver`
 
 Simulation Control Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``t_initial`` and ``t_final`` specify the starting time of the
-simulation and ending time of the simulation, respectively. ``dt``
-specifies the time step size.
+:math:`t_\mathrm{initial}` and :math:`t_\mathrm{final}` specify the starting time of the simulation and ending time of the simulation, respectively. 
+:math:`dt` specifies the time step size.
 
 Gravity Parameters
 ~~~~~~~~~~~~~~~~~~
 
-``Gx`` , ``Gy`` , and ``Gz`` specify the components of gravity
-vector along :math:`X`, :math:`Y`, and :math:`Z` directions in the
-global coordinate system, respectively. In FAST, this is normally 0, 0,
-and -9.80665.
+``Gx`` , ``Gy`` , and ``Gz`` specify the components of gravity vector along :math:`X`, :math:`Y`, and :math:`Z` directions in the global coordinate system, respectively. 
+In FAST, this is normally 0, 0, and -9.80665.
 
 Inertial Frame Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This section defines the relation between two inertial frames, the
-global coordinate system and initial blade reference coordinate system.
-``GlbPos(1)`` , ``GlbPos(2)`` , ``GlbPos(3)`` specifies three
-components of the initial global position vector along :math:`X`,
-:math:`Y`, and :math:`Z` directions resolved in the global coordinate
-system, see Figure :num:`frame`. And the following :math:`3 \times 3`
-direction cosine matrix (``GlbDCM``) relates the rotations from the
-global coordinate system to the initial blade reference coordinate
-system.
+This section defines the relation between two inertial frames, the global coordinate system and initial blade reference coordinate system.
+``GlbPos(1)``, ``GlbPos(2)``, ``GlbPos(3)`` specifies three components of the initial global position vector along :math:`X`, :math:`Y`, and :math:`Z` directions resolved in the global coordinate system, see Figure :numref:`frame`.
+And the following :math:`3 \times 3` direction cosine matrix (``GlbDCM``) relates the rotations from the global coordinate system to the initial blade reference coordinate system.
 
 .. _frame:
 
 .. figure:: figs/Frame.jpg
    :width: 80%
+   :align: center
 
    Global and blade coordinate systems in BeamDyn.
    
@@ -74,36 +66,20 @@ system.
 Blade Floating Reference Frame Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This section specifies the parameters that defines the blade floating
-reference frame, which is a body-attached floating frame; the blade root
-is cantilevered at the origin of this frame. Based on the driver input
-file, the floating blade reference fame is assumed to be in a constant
-rigid-body rotation mode about the origin of the global coordinate
-system, that is,
+This section specifies the parameters that defines the blade floating reference frame, which is a body-attached floating frame; the blade root is cantilevered at the origin of this frame. 
+Based on the driver input file, the floating blade reference fame is assumed to be in a constant rigid-body rotation mode about the origin of the global coordinate system, that is,
 
 .. math::
-   :label: RootVelocity
+   :label: rootvelocity
 
    v_{rt} = \omega_r \times r_t
 
-where :math:`v_{rt}` is the root (origin of the floating blade
-reference frame) translational velocity vector; :math:`\omega_r` is the
-constant root (origin of the floating blade reference frame) angular
-velocity vector; and :math:`r_t` is the global position vector
-introduced in the previous section at instant :math:`t`, see
-Figure :num:`frame`. The floating blade reference frame coincides with
-the initial floating blade reference frame at the beginning :math:`t=0`.
-``RootVel(4)``, ``RootVel(5)``, and ``RootVel(6)`` specify the
-three components of the constant root angular velocity vector about
-:math:`X`, :math:`Y`, and :math:`Z` axises in global coordinate system,
-respectively. ``RootVel(1)``, ``RootVel(2)``, and ``RootVel(3)``,
-which are the three components of the root translational velocity vector
-along :math:`X`, :math:`Y`, and :math:`Z` directions in global
-coordinate system, respectively, are calculated based on
-Eq. :numref:`RootVelocity`.
+where :math:`v_{rt}` is the root (origin of the floating blade reference frame) translational velocity vector; :math:`\omega_r` is the constant root (origin of the floating blade reference frame) angular velocity vector; and :math:`r_t` is the global position vector introduced in the previous section at instant :math:`t`, see :numref:`frame`. 
+The floating blade reference frame coincides with the initial floating blade reference frame at the beginning :math:`t=0`.  
+``RootVel(4)``, ``RootVel(5)``, and ``RootVel(6)`` specify the three components of the constant root angular velocity vector about :math:`X`, :math:`Y`, and :math:`Z` axises in global coordinate system, respectively. 
+``RootVel(1)``, ``RootVel(2)``, and ``RootVel(3)``, which are the three components of the root translational velocity vector along :math:`X`, :math:`Y`, and :math:`Z` directions in global coordinate system, respectively, are calculated based on Eq. :eq:`rootvelocity`.
 
-BeamDyn can handle more complicated root motions by changing, for
-example, the ``BD_InputSolve`` subroutine in the ``Driver_Beam.f90``
+BeamDyn can handle more complicated root motions by changing, for example, the ``BD_InputSolve`` subroutine in the ``Driver_Beam.f90``
 (requiring a recompile of stand-alone BeamDyn):
 
 .. code-block:: fortran
@@ -116,22 +92,11 @@ example, the ``BD_InputSolve`` subroutine in the ``Driver_Beam.f90``
        u%RootMotion%TranslationVel(:,1) = &
        MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr)
 
-where :math:`IniVelo(5)`, :math:`IniVelo(6)`, and :math:`IniVelo(4)` are
-the three components of the root angular velocity vector about
-:math:`X`, :math:`Y`, and :math:`Z` axising in the global coordinate
-system, respectively; :math:`temp`\ \_\ :math:`rr` is the global
-position vector at instant :math:`t`. The first index in the
-``u%RootMotion%RotationVel(:,:)`` and the ``u%RootMotion%TranslationVel(:,:)``
-arrays range from 1 to 3 for load vector components along three
-directions and the second index of each array are set to 1, denoting the
-root FE node. Note that the internal BeamDyn variables (here
-``IniVelo``) are based on the internal BD coordinate system
-described in section 5.1.
+where ``IniVelo(5)``, ``IniVelo(6)``, and ``IniVelo(4)`` are the three components of the root angular velocity vector about :math:`X`, :math:`Y`, and :math:`Z` axising in the global coordinate system, respectively; ``temp_rr`` is the global position vector at instant :math:`t`. 
+The first index in the ``u%RootMotion%RotationVel(:,:)`` and the ``u%RootMotion%TranslationVel(:,:)`` arrays range from 1 to 3 for load vector components along three directions and the second index of each array are set to 1, denoting the root FE node. 
+Note that the internal BeamDyn variables (here ``IniVelo``) are based on the internal BD coordinate system described in section FIXME.
 
-The blade is initialized in the rigid-body motion mode, i.e., based on
-the root velocity information defined in this section and the position
-information defined in the previous section, the motion of other points
-along the blade are initialized as
+The blade is initialized in the rigid-body motion mode, i.e., based on the root velocity information defined in this section and the position information defined in the previous section, the motion of other points along the blade are initialized as
 
 .. math::
     :label: ini-rootacct-travel-angvel
@@ -140,11 +105,7 @@ along the blade are initialized as
     v_0 &= v_{r0} + \omega_r \times P \\
     \omega_0 &= \omega_r
 
-where :math:`a_{0}` is the initial translational acceleration vector
-along the blade; :math:`v_0` and :math:`\omega_0` the initial
-translational and angular velocity vectors along the blade,
-respectively; and :math:`P` is the position vector along the blade
-relative to the root.
+where :math:`a_{0}` is the initial translational acceleration vector along the blade; :math:`v_0` and :math:`\omega_0` the initial translational and angular velocity vectors along the blade, respectively; and :math:`P` is the position vector along the blade relative to the root.
 
 Applied Load
 ~~~~~~~~~~~~
@@ -167,7 +128,7 @@ following the rigid-body rotation defined in the previous section.
 BeamDyn is capable of handling more complex loading cases, e.g.,
 time-dependent loads, through customization of the source code
 (requiring a recompile of stand-alone BeamDyn). The user can define such
-loads in the *BD_InputSolve* subroutine in the ``Driver_Beam.f90`` file,
+loads in the ``BD_InputSolve`` subroutine in the ``Driver_Beam.f90`` file,
 which is called every time step. The following section can be modified
 to define the concentrated load at each FE node:
 
@@ -247,8 +208,7 @@ trailing edge).
 The file is organized into several functional sections. Each section
 corresponds to an aspect of the BeamDyn model.
 
-A sample BeamDyn primary input file is given in Appendix
-:ref:`app-primary`.
+A sample BeamDyn primary input file is given in :numref:`appendix`.
 
 The primary input file begins with two lines of header information,
 which are for the user but are not used by the software.
@@ -315,7 +275,7 @@ the simulation. The keyword “DEFAULT” sets
 criteria of a nonlinear solution that is used for the termination of the
 iteration. The keyword “DEFAULT” sets
 ``Stop_Tol = 1.0E-05``. Please refer to
-Section :ref:`convergence-criterion` for more details.
+:numref:`convergence-criterion` for more details.
 
 Geometry Parameter
 ~~~~~~~~~~~~~~~~~~
@@ -359,29 +319,25 @@ the following equality:
 
 where :math:`n_i` is the number of key points in the :math:`i^{th}`
 member. Because cubic splines are implemented in BeamDyn, :math:`n_i`
-must be greater than or equal to three. Figure :num:`geometry1` shows two
+must be greater than or equal to three. Figures :numref:`geometry1-case1` and :numref:`geometry1-case2` show two
 cases for member and key-point definition.
-
-.. subfigstart::
 
 .. _geometry1-case1:
 
 .. figure:: figs/Geometry_Member1.png
-   :width: 100%
+   :width: 60%
+   :align: center
 
-   Case 1
+   Member and key point definition: one member defined by four key points; 
+
+.. _geometry1-case2:
 
 .. figure:: figs/Geometry_Member2.png
-   :width: 100%
+   :width: 60%
+   :align: center
 
-   Case 2
+   Member and key point definition: two members defined by six key points.           
    
-.. subfigend::
-   :width: 0.47
-   :label: geometry1
-
-   Member and key point definition. Case 1: one member defined by four key points; and Case 2: two members defined by six key points.           
-
 The next section defines the key-point information, preceded by two
 header lines. Each key point is defined by three physical coordinates
 (``kp_xr``, ``kp_yr``, ``kp_zr``) in the IEC standard blade
@@ -391,13 +347,14 @@ The structural twist angle is also following the IEC standard which is
 defined as the twist about the negative :math:`Z_l` axis. The key points
 are entered sequentially (from the root to tip) and there should be a
 total of ``kp_total`` lines for BeamDyn to read in the information,
-after two header lines. Please refer to Figure :num:`blade-geometry` for
+after two header lines. Please refer to Figure :numref:`blade-geometry` for
 more details on the blade geometry definition.
 
 .. _blade-geometry:
 
-.. figure:: figs/BladeGeometry.jpg
+.. figure:: figs/blade_geometry.jpg
    :width: 100%
+   :align: center
 
    BeamDyn Blade Geometry - Top: Side View; Middle: Front View (Looking Downwind); Bottom: Cross Section View (Looking Toward the Tip, from the Root)
 
@@ -442,7 +399,7 @@ switches for the desired output behavior.
 
 Specifying ``SumPrint = TRUE`` causes BeamDyn to generate a
 summary file with name ``InputFile.sum``. See
-Section :ref:`sum-file` for summary file details.
+:numref:`sum-file` for summary file details.
 
 ``OutFmt`` parameter controls the formatting of the results within the
 stand-alone BeamDyn output file. It needs to be a valid Fortran format
@@ -475,7 +432,7 @@ of channel names. Node-related quantities are generated for the
 requested nodes identified through the OutNd list above. If BeamDyn
 encounters an unknown/invalid channel name, it warns the users but will
 remove the suspect channel from the output file. Please refer to
-Appendix :ref:`app-output-channel` for a complete list of possible output
+Appendix :numref:`app-output-channel` for a complete list of possible output
 parameters and their names.
 
 Blade Input File
@@ -483,7 +440,7 @@ Blade Input File
 
 The blade input file defines the cross-sectional properties at various
 stations along a blade and six damping coefficient for the whole blade.
-A sample BeamDyn blade input file is given in Appendix :ref:`app-blade`.
+A sample BeamDyn blade input file is given in :numref:`appendix`.
 The blade input file begins with two lines of header information, which
 is for the user but is not used by the software.
 

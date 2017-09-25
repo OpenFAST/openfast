@@ -123,6 +123,11 @@ release = u'1.0'
 # Usually you set "language" from the command line for these cases.
 language = None
 
+#If true, figures, tables and code-blocks are automatically numbered if they 
+#have a caption. At same time, the numref role is enabled. For now, it works 
+#only with the HTML builder and LaTeX builder. Default is False.
+numfig = True
+
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path

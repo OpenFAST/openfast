@@ -1,10 +1,12 @@
+.. _appendix:
+
 Appendix
 ========
 
 .. _app-driver:
 
 BeamDyn Input Files
--------------------------
+-------------------
 
 In this appendix we describe the BeamDyn input-file structure and provide examples for the NREL 5MW Reference Wind Turbine.
 

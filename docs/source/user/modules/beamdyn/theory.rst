@@ -18,13 +18,14 @@ underlines only denote the dimension of the corresponding matrix.
 Coordinate Systems
 ------------------
 
-Figures :num:`blade-geometry` (in Chapter :ref:`input-files`) and
-:num:`bd-frame` show the coordinate system used in BeamDyn.
+:numref:`blade-geometry` (in :numref:`input-files`) and
+:numref:`bd-frame` show the coordinate system used in BeamDyn.
 
 .. _bd-frame:
 
-.. figure:: figs/BDFrame.pdf
+.. figure:: figs/bd_frame.pdf
    :width: 100%
+   :align: center
 
    Global, blade reference, and internal coordinate systems in BeamDyn. Illustration by Al Hicks, NREL.
 
@@ -33,14 +34,14 @@ Global Coordinate System
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 The global coordinate system is denoted as ``X``, ``Y``, and ``Z``
-in Figure :num:`bd-frame`. This is an inertial frame and in FAST its
+in :numref:`bd-frame`. This is an inertial frame and in FAST its
 origin is usually placed at the bottom of the tower as shown.
 
 BD Coordinate System
 ~~~~~~~~~~~~~~~~~~~~
 
 The BD coordinate system is denoted as :math:`x_1`, :math:`x_2`, and
-:math:`x_3` respectively in Figure :num:`bd-frame`. This is an inertial
+:math:`x_3` respectively in :numref:`bd-frame`. This is an inertial
 frame used internally in BeamDyn (i.e., doesn’t rotate with the rotor)
 and its origin is placed at the initial position of the blade root
 point.
@@ -50,7 +51,7 @@ Blade Reference Coordinate System
 
 The blade reference coordinate system is denoted as
 :math:`X_{rt}`, :math:`Y_{rt}`, and
-:math:`Z_{rt}` in Figure :num:`bd-frame` at initialization
+:math:`Z_{rt}` in :numref:`bd-frame` at initialization
 (:math:`t = 0`). The blade reference coordinate system is a floating
 frame that attaches at the blade root and is rotating with the blade.
 Its origin is at the blade root and the directions of axes following the
@@ -64,12 +65,11 @@ that the initial blade reference coordinate system, denoted by subscript
 :math:`r0`, coincides with the BD coordinate system, which is used
 internally in BeamDyn and introduced in the previous section. The axis
 convention relations between the initial blade reference coordinate
-system and the BD coordinate system can be found in Table :num:`IECBD`.
+system and the BD coordinate system can be found in :numref:`IECBD`.
 
-.. figtable::
-   :label: IECBD
-   :caption: Transformation between blade coordinate system and BD coordinate system.
-   :spec: r r r r
+.. _IECBD:
+
+.. table:: Transformation between blade coordinate system and BD coordinate system.
           
    +---------------+------------------+------------------+------------------+
    | Blade Frame   | :math:`X_{r0}`   | :math:`Y_{r0}`   | :math:`Z_{r0}`   |
@@ -303,28 +303,30 @@ for convenience. In the LSFE approach, shape functions (i.e., those
 composing :math:`{\underline{\underline{N}}}`) are :math:`p^{th}`-order
 Lagrangian interpolants, where nodes are located at the :math:`p+1`
 Gauss-Lobatto-Legendre (GLL) points in the :math:`[-1,1]` element
-natural-coordinate domain. Figure :num:`N4_lsfe` shows representative
+natural-coordinate domain. :numref:`N4_lsfe` shows representative
 LSFE basis functions for fourth- and eighth-order elements. Note that
 nodes are clustered near element endpoints. More details on the LSFE and
 its applications can be found in
 References :cite:`Patera:1984,Ronquist:1987,Sprague:2003,Sprague:2004`.
 
 
-.. subfigstart::
+.. _N4_lsfe:
 
-.. figure:: figs/N4.pdf
+.. figure:: figs/n4.pdf
+   :width: 47%
+   :align: center
 
-   :math:`p=4`
+   Representative :math:`p+1` Lagrangian-interpolant shape functions in the element natural coordinates for a fourth-order LSFEs, where nodes are located at the Gauss-Lobatto-Legendre points.
 
-.. figure:: figs/N8.pdf
+.. _N8_lsfe:
 
-   :math:`p=8`
+.. figure:: figs/n8.pdf
+   :width: 47%
+   :align: center
 
-.. subfigend::
-   :width: 0.47
-   :label: N4_lsfe
+   Representative :math:`p+1` Lagrangian-interpolant shape functions in the element natural coordinates for a eigth-order LSFEs, where nodes are located at the Gauss-Lobatto-Legendre points.
 
-   Representative :math:`p+1` Lagrangian-interpolant shape functions in the element natural coordinates for (a) fourth- and (b) eighth-order LSFEs, where nodes are located at the Gauss-Lobatto-Legendre points.
+
 
 Wiener-Milenković Rotation Parameter
 ------------------------------------
@@ -604,6 +606,8 @@ where :math:`{\underline{\underline{O}}}_{12}` and
 matrices of :math:`\mathcal{{\underline{\underline{O}}}}` and
 :math:`\mathcal{{\underline{\underline{G}}}}` as
 :math:`{\underline{\underline{C}}}_{12}` in Eq. :eq:`E1-PartC`.
+
+.. _convergence-criterion:
 
 Convergence Criterion and Generalized-\ :math:`\alpha` Time Integrator
 ----------------------------------------------------------------------

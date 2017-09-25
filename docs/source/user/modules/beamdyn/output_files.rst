@@ -90,7 +90,7 @@ All of these quantities are output in this file in the BD coordinate
 system, the one being used internally in BeamDyn calculations. The
 initial blade reference coordinate system, denoted by a subscript
 :math:`r0` that follows the IEC standard, is related to the internal BD
-coordinate system by Table :num:`IECBD` in Chapter :ref:`beamdyn-theory`.
+coordinate system by :numref:`IECBD` in :numref:`beamdyn-theory`.
 
 Results File
 ------------
