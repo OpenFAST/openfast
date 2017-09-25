@@ -69,11 +69,26 @@ Failing tests:
 
 ::
   
-   >>>$ ./unit_tests/beamdyn_utest 
-   ....F........
-   Time:         0.018 seconds
-     
-    OK
-    (13 tests)
+  >>>$ ./unit_tests/beamdyn_utest 
+  .....F.......
+  Time:         0.008 seconds
+    
+  Failure
+   in: 
+  test_BD_CrvMatrixH_suite.test_BD_CrvMatrixH
+    Location: 
+  [test_BD_CrvMatrixH.F90:48]
+  simple rotation with known parameters: Pi on xaxis expected +0.5000000 but found: +0.4554637;  difference: |+0.4453627E-01| > tolerance:+0.1000000E-13;  first difference at element [1, 1].
+    
+   FAILURES!!!
+  Tests run: 13, Failures: 1, Errors: 0
+  Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_DIVIDE_BY_ZERO
+  ERROR STOP *** Encountered 1 or more failures/errors during testing. ***
 
-
+  Error termination. Backtrace:
+  #0  0x1073b958c
+  #1  0x1073ba295
+  #2  0x1073bb1b6
+  #3  0x106ecdd4f
+  #4  0x1063fabee
+  #5  0x10706691e
