@@ -113,4 +113,5 @@ of_Regression("5MW_OC4Semi_WSt_WavesWN"                "openfast;elastodyn;aerod
 of_Regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn15;servodyn")
 
 # BeamDyn regression tests
-bd_regression(bd_isotropic_rollup)
+bd_regression(isotropic_rollup)
+bd_regression(static_cantilever_beam)
