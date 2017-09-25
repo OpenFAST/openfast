@@ -1,6 +1,7 @@
 @test
 subroutine test_BD_GaussPointWeight()
     ! test branches
+    ! - p = 1, invalid value
     ! - p = 2, boundaries only
     ! - p = 5, odd number
     ! - p = 6, even number
@@ -37,6 +38,26 @@ subroutine test_BD_GaussPointWeight()
     ! (array([-0.90617985, -0.53846931,  0.        ,  0.53846931,  0.90617985]), array([ 0.23692689,  0.47862867,  0.56888889,  0.47862867,  0.23692689]))
   
   
+    ! --------------------------------------------------------------------------
+    testname = "p = 1, invalid value"
+    p = 1
+    call AllocAry(baselinelocations, p, "GLL baseline", ErrStat, ErrMsg)
+    call AllocAry(baselineweights, p, "GLL baseline", ErrStat, ErrMsg)
+    baselinelocations = (/ -0.57735026919, 0.57735026919 /)
+    baselineweights = (/ 1.0, 1.0/)
+
+    call AllocAry(locations, p, "GLL nodes", ErrStat, ErrMsg)
+    call AllocAry(weights, p, "GLL weights", ErrStat, ErrMsg)
+    call BD_GaussPointWeight(p, locations, weights, ErrStat, ErrMsg)
+    
+    @assertEqual(4, ErrStat, testname)
+    
+    deallocate(baselinelocations)
+    deallocate(baselineweights)
+    deallocate(locations)
+    deallocate(weights)
+    
+    
     ! --------------------------------------------------------------------------
     testname = "p = 2, boundaries only"
     p = 2
