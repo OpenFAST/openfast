@@ -113,7 +113,8 @@ in ``openfast/unit_tests/CMakeLists.txt`` using the following format
      test_SUBROUTINE2
      test_SUBROUTINE3
   )
-  build_utest("module_name" ${testlist})
+  # it is important to keep the quotes around "${testlist}" in the call below
+  build_utest("module_name" "${testlist}")
  
 For reference, a template unit test file is included at ``openfast/unit_tests/test_SUBROUTINE.F90``.
 
