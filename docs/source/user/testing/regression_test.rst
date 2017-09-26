@@ -70,7 +70,7 @@ CMake variables can be configured in the `CMake
 GUI <https://cmake.org/download/>`__ or through the command line interface with
 the command ``ccmake``.
 
-The test specific CMake variables are
+The regression test specific CMake variables are
 
 - BUILD_TESTING
 - CTEST_OPENFAST_EXECUTABLE
@@ -78,6 +78,26 @@ The test specific CMake variables are
 - CTEST_PLOT_ERRORS
 - CTEST_REGRESSION_TOL
 
+**IT IS IMPORTANT** to verify that NREL 5MW turbine external controllers are compiled
+and placed in the correct location. More information is documentation in the
+`r-test repository documentation <https://github.com/openfast/r-test/tree/dev#note---servodyn-external-controllers-for-5mw_baseline-cases>`__,
+but be aware that these three DISCON controllers must exist
+
+::
+  
+  openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoDyn/DISCON.dll
+  openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoDyn/DISCON_ITIBarge.dll
+  openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoDyn/DISCON_OC3Hywind.dll
+
+This can be accomplished *before* running CMake with the automated ``compileDISCON.py``
+script or during CMake configuration by setting  the ``CMAKE_INSTALL_PREFIX`` CMake variable.
+If using this method, the install prefix variable should point to an existing and appropriate
+location for CMake to place the compiled binaries. This is important because the NREL 5MW turbine external
+controller CMake projects are preconfigured to install themselves in the appropriate
+location in the build directory. Then, it is important to execute ``make install`` 
+rather than simply ``make``. If ``CMAKE_INSTALL_PREFIX`` is not appropriately configured, 
+the install step may fail or openfast binaries may be placed in some inappropriate default location.
+ 
 After CMake configuration, the automated regression test can be executed
 by running either of the commands ``make test`` or ``ctest`` from the build
 directory. If the entire OpenFAST package is to be built, CMake will configure
