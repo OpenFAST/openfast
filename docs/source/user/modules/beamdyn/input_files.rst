@@ -208,7 +208,7 @@ trailing edge).
 The file is organized into several functional sections. Each section
 corresponds to an aspect of the BeamDyn model.
 
-A sample BeamDyn primary input file is given in :numref:`appendix`.
+A sample BeamDyn primary input file is given in :numref:`bd_appendix`.
 
 The primary input file begins with two lines of header information,
 which are for the user but are not used by the software.
@@ -440,7 +440,7 @@ Blade Input File
 
 The blade input file defines the cross-sectional properties at various
 stations along a blade and six damping coefficient for the whole blade.
-A sample BeamDyn blade input file is given in :numref:`appendix`.
+A sample BeamDyn blade input file is given in :numref:`bd_appendix`.
 The blade input file begins with two lines of header information, which
 is for the user but is not used by the software.
 

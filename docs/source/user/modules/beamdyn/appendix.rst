@@ -1,4 +1,4 @@
-.. _appendix:
+.. _bd_appendix:
 
 Appendix
 ========
