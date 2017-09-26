@@ -12,6 +12,8 @@ This framework provides a Fortran abstraction to the popular `xUnit <https://en.
 structure. pFUnit is compiled along with OpenFAST through CMake when 
 the CMake variable ``BUILD_TESTING`` is turned on.
 
+The BeamDyn module has been unit tested and should serve as a reference for future 
+development and testing.
 
 Executing the unit tests
 ------------------------
