@@ -39,7 +39,8 @@ page for more details on configuring the CMake targets.
 
 While the unit tests must be built with CMake due to its external dependencies,
 the regression test may be executed without building with CMake. See the
-`regression test <regression_test.html>`__ section for more info.
+`regression test <regression_test.html>`__ and `unit test <unit_test.html>`__ 
+sections for more info.
 
 Test specific documentation
 ---------------------------
