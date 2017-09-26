@@ -142,7 +142,10 @@ Regression test from scratch
   python compileDISCON.py
   cd ../../
   mkdir build && cd build
-  # Configure CMake with openfast/CMakeLists.txt - BUILD_TESTING, CTEST_OPENFAST_EXECUTABLE, CTEST_[MODULE]_EXECUTABLE
+  # Configure CMake with openfast/CMakeLists.txt 
+  # - BUILD_TESTING
+  # - CTEST_OPENFAST_EXECUTABLE
+  # - CTEST_[MODULE]_EXECUTABLE
   cmake ..
   make
   ctest
@@ -157,7 +160,9 @@ Regression test from scratch
   python compileDISCON.py
   cd ../../
   mkdir build && cd build
-  # Configure CMake with openfast/reg_tests/CMakeLists.txt - CTEST_OPENFAST_EXECUTABLE, CTEST_[MODULE]_EXECUTABLE
+  # Configure CMake with openfast/reg_tests/CMakeLists.txt 
+  # - CTEST_OPENFAST_EXECUTABLE
+  # - CTEST_[MODULE]_EXECUTABLE
   cmake ../reg_tests
   ctest
 
@@ -172,11 +177,11 @@ excluding the procedure to build OpenFAST itself.
   cd openfast
 
   ## Build the ServoDyn external controller libraries
-  # Open the Visual Studio Solution (DISCON.sln) located in ``openfast\vs-build\DISCON``
+  # Open the Visual Studio Solution (DISCON.sln) located in 'openfast\vs-build\DISCON'
   # Choose Release and x64 for the Solutions Configuration and Solutions Platform
   # Build Solution
 
   ## Execute the OpenFAST regression Tests
   # Open a command prompt which is configured for Python (like Anaconda)
   cd openfast\reg_tests
-  python manualRegressionTest.py ..\build\bin\FAST_x64.exe Windows Intel
+  python manualRegressionTest.py ..\build\bin\openfast_x64.exe Windows Intel
