@@ -54,8 +54,8 @@ subroutine test_BD_diffmtc()
     parametertype%nqp = 2
     n = parametertype%nodes_per_elem
     
-    call AllocAry(test_shape, parametertype%nqp, parametertype%nodes_per_elem, "sshape", ErrStat, ErrMsg)
-    call AllocAry(test_shapederivative, parametertype%nqp, parametertype%nodes_per_elem, "shapederivative", ErrStat, ErrMsg)
+    call AllocAry(test_shape, parametertype%nodes_per_elem, parametertype%nqp, "test_shape", ErrStat, ErrMsg)
+    call AllocAry(test_shapederivative, parametertype%nodes_per_elem, parametertype%nqp, "test_shapederivative", ErrStat, ErrMsg)
     
     call AllocAry(parametertype%QPtN, parametertype%nodes_per_elem, 'QPtN', ErrStat, ErrMsg)
     parametertype%QPtN = (/ -1.0, 1.0 /)
@@ -65,8 +65,8 @@ subroutine test_BD_diffmtc()
     
     call BD_diffmtc(parametertype, gll_nodes, test_shape, test_shapederivative)
     
-    call AllocAry(baseline_shape, parametertype%nqp, parametertype%nodes_per_elem, "sshape", ErrStat, ErrMsg)
-    call AllocAry(baseline_shapederivative, parametertype%nqp, parametertype%nodes_per_elem, "shapederivative", ErrStat, ErrMsg)
+    call AllocAry(baseline_shape, parametertype%nqp, parametertype%nodes_per_elem, "baseline_shape", ErrStat, ErrMsg)
+    call AllocAry(baseline_shapederivative, parametertype%nqp, parametertype%nodes_per_elem, "baseline_shapederivative", ErrStat, ErrMsg)
     baseline_shape(1,:) = (/ 1.0, 0.0 /)
     baseline_shape(2,:) = (/ 0.0, 1.0 /)
     baseline_shapederivative(1,:) = (/ -0.5, -0.5 /)
