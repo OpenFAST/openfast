@@ -47,8 +47,8 @@ Compiling OpenFAST
 
    ::
 
-   mkdir code
-   cd code
+    mkdir code
+    cd code
 
 3. Clone the OpenFAST repository
 
