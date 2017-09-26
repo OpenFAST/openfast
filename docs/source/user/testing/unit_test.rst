@@ -12,48 +12,21 @@ This framework provides a Fortran abstraction to the popular `xUnit <https://en.
 structure. pFUnit is compiled along with OpenFAST through CMake when 
 the CMake variable ``BUILD_TESTING`` is turned on.
 
-Adding unit tests
------------------
-
-Unit tests should be included for each new testable code block (subroutine or function).
-What is testable is the discretion of the developer, but a portion 
-of the pull request review process will be evaluating test coverage.
-
-New unit tests can be added to a ``tests`` directory alongside the ``src``
-directory included in each module. For example, BeamDyn unit tests are at 
-``openfast/modules-local/beamdyn/tests``. Each unit test subroutine
-must be contained in a unique file called ``test_[SUBROUTINE].F90`` where
-``[SUBROUTINE]`` is the code block being tested. Finally, add ``test_[SUBROUTINE]``
-to the corresponding module section in the unit test CMake file at 
-``openfast/unit_tests/CMakeLists.txt``.
-
-Ideally, each unit test will fully test the target code block. If full test coverage
-is not easily achievable, it may be an indication that refactoring is necessary.
-Some useful topics to consider when developing and testing for OpenFAST are:
-
-- `Test driven development <>`__
-- `Separation of concerns <>`__
-- `Functional programming <>`__
-- `Object oriented program <>`__
-- `xUnit <>`__
-- `pFUnit <>`__
-
 
 Executing the unit tests
 ------------------------
 
 Upon successfully compiling OpenFAST, pFUnit, and the unit tests
 themselves, a unit test binary is created at ``openfast/build/unit_tests/[module]_utest``.
-To execute a module's unit test, simple run the unit test binary:
-
-``./openfast/build/unit_tests/beamdyn_utest``
+To execute a module's unit test, simply run the unit test binary
+``./openfast/build/unit_tests/beamdyn_utest``.
 
 pFUnit will display a ``.`` for each unit test successfully completed
 and a ``F`` for each failing test. If any tests do fail, the failure 
 criteria will be displayed listing which particular value caused 
 the failure.
 
-Passing tests:
+All tests passing:
 
 ::
   
@@ -92,3 +65,42 @@ Failing tests:
   #3  0x106ecdd4f
   #4  0x1063fabee
   #5  0x10706691e
+  
+  
+Adding unit tests
+-----------------
+
+Unit tests should be included for each new, *testable* code block (subroutine or function).
+What is testable is the discretion of the developer, but a portion 
+of the pull request review process will be evaluating test coverage.
+
+New unit tests can be added to a ``tests`` directory alongside the ``src``
+directory included in each module. For example, the BeamDyn module directory is
+structured as
+
+::
+  
+  openfast/
+  |-- modules-local/
+    |-- beamdyn/
+      |-- src/
+        |-- BeamDyn.f90
+        `-- BeamDyn_Subs.f90
+      `-- tests/
+        |-- test_BD_Subroutine1.F90
+        |-- test_BD_Subroutine2.F90
+        `-- test_BD_Subroutine3.F90
+    
+Each unit test must be contained in a unique file called ``test_[SUBROUTINE].F90`` where
+``[SUBROUTINE]`` is the code block being tested. Finally, add ``test_[SUBROUTINE]``
+to the corresponding module section in the unit test CMake file at 
+``openfast/unit_tests/CMakeLists.txt``.
+
+Each unit test should fully test the target code block. If full test coverage
+is not easily achievable, it may be an indication that refactoring would be beneficial.
+
+Some useful topics to consider when developing and testing for OpenFAST are:
+
+- `Test driven development <https://en.wikipedia.org/wiki/Test-driven_development#Test-driven_development_cycle>`__
+- `Separation of concerns <https://en.wikipedia.org/wiki/Separation_of_concerns>`__
+- `pFUnit usage <>`__
