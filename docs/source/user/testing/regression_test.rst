@@ -1,7 +1,7 @@
 Regression test
 ===============
 
-The regression test executes a series of test cases which fully describe
+The regression test executes a series of test cases which intend to fully describe
 OpenFAST and its module's capabilities. Each locally computed result is compared
 to a static set of baseline results. To account for machine and compiler
 differences, the regression test attempts to match the current machine and
@@ -14,7 +14,8 @@ compiler type to the appropriate solution set from these combinations
 The regression test system can be executed with CMake and CTest or manually with
 an included Python driver. Both systems provide similar functionality with respect
 to testing, but CTest integration provides access to multithreading, automation,
-and test reporting via CDash. Both modes of execution require some configuration.
+and test reporting via CDash. Both modes of execution require some configuration
+as outlined below.
 
 In both modes of execution a subdirectory is created in the build directory
 called ``reg_tests`` where all of the input files for the test cases are copied
@@ -50,15 +51,10 @@ or ignored with a ``#``. This driver program includes multiple optional flags
 which can be obtained by executing with the help option:
 ``openfast/reg_tests/manualRegressionTest.py -h``
 
-For the 5MW test cases, an external ServoDyn controller must be compiled and 
-included in the appropriate directory or all 5MW cases will fail without starting.
-Compiling these controllers is automated with CMake and make through
-``openfast/reg_tests/r-test/glue-codes/fast/compileDISCON.py``. This should be
-completed before running the regression test so that the compiled libraries are
-included in the build directory when the files are initially copied. If the build
-directory is populated without the external controllers, they can be compiled with 
-``compileDISCON.py`` and copied manually into 
-``openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoData``.
+For the NREL 5MW turbine test cases, an external ServoDyn controller must be compiled and 
+included in the appropriate directory or all NREL 5MW cases will fail without starting.
+More information is documentation in the
+`r-test repository documentation <https://github.com/openfast/r-test/tree/dev#note---servodyn-external-controllers-for-5mw_baseline-cases>`__ .
 
 CTest configuration
 -------------------
