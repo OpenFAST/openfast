@@ -53,7 +53,7 @@ function(of_regression testname LABELS)
   set_tests_properties(${testname} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
 endfunction(of_regression)
 
-function(bd_regression testname)
+function(bd_regression testname LABELS)
   file(TO_NATIVE_PATH "${PYTHON_EXECUTABLE}" PYTHON_EXECUTABLE)
 
   file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py" TEST_SCRIPT)
@@ -76,7 +76,6 @@ function(bd_regression testname)
        ${TOLERANCE}
   )
   # limit each test to 90 minutes: 5400s
-  set(LABELS beamdyn regression)
   set_tests_properties(${testname} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
 endfunction(bd_regression)
 
@@ -113,5 +112,5 @@ of_regression("5MW_OC4Semi_WSt_WavesWN"                "openfast;elastodyn;aerod
 of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn15;servodyn")
 
 # BeamDyn regression tests
-bd_regression(isotropic_rollup)
-bd_regression(static_cantilever_beam)
+bd_regression("static_cantilever_beam" "beamdyn;static")
+bd_regression("isotropic_rollup"       "beamdyn;static")
