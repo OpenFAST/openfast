@@ -15,7 +15,7 @@
 #
 
 # -----------------------------------------------------------
-# -- OpenFAST Testing
+# -- OpenFAST Unit Testing
 # -----------------------------------------------------------
 
 cmake_minimum_required(VERSION 2.8.12)
@@ -45,8 +45,6 @@ include_directories(${PROJECT_BINARY_DIR}/pfunit/mod)
 
 set(pfunit_directory ${PFUNIT_INSTALL})
 set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules-local)
-set(build_modulesdirectory ${PROJECT_BINARY_DIR}/modules-local)
-set(source_testdirectory ${source_modulesdirectory}/beamdyn/tests)
 set(build_testdirectory ${PROJECT_BINARY_DIR}/tests)
 
 file(MAKE_DIRECTORY ${build_testdirectory})
@@ -58,43 +56,26 @@ include_directories(
   ${pfunit_directory}/mod
 )
 
-### unit tests
-set(test_sources)
-foreach(test 
-  test_BD_CrvCompose
-  test_BD_CheckRotMat
-  test_BD_CrvExtractCrv
-  test_BD_CrvMatrixR
-  test_BD_CrvMatrixH
-  test_ExtractRelativeRotation
-  # test_BD_AssembleRHS
-  test_BD_InputGlobalLocal
-  test_BD_DistrLoadCopy
-  test_BD_GravityForce
-  test_BD_QPData_mEta_rho
-  test_BD_GenerateGLL
-  test_BD_GaussPointWeight
-  test_BD_diffmtc
-  test_tools )
-  set(test_dependency pfunit ${source_testdirectory}/${test}.F90)
-  add_custom_command(
-    OUTPUT ${build_testdirectory}/${test}.F90
-    COMMAND python ${pfunit_directory}/bin/pFUnitParser.py ${source_testdirectory}/${test}.F90 ${build_testdirectory}/${test}.F90
-    DEPENDS ${test_dependency}
-  )
-  set(test_sources ${test_sources} ${build_testdirectory}/${test}.F90)
-  file(APPEND ${build_testdirectory}/testSuites.inc "ADD_TEST_SUITE(${test}_suite)\n")
-endforeach()
-
 set_source_files_properties(${pfunit_directory}/include/driver.F90 PROPERTIES GENERATED 1)
 
-foreach(module beamdyn)
+function(build_utest module testlist)
+  foreach(test ${testlist})
+    set(test_dependency pfunit ${source_modulesdirectory}/${module}/tests/${test}.F90)
+    add_custom_command(
+      OUTPUT ${build_testdirectory}/${test}.F90
+      COMMAND python ${pfunit_directory}/bin/pFUnitParser.py ${source_modulesdirectory}/${module}/tests/${test}.F90 ${build_testdirectory}/${test}.F90
+      DEPENDS ${test_dependency}
+    )
+    set(test_sources ${test_sources} ${build_testdirectory}/${test}.F90)
+    file(APPEND ${build_testdirectory}/testSuites.inc "ADD_TEST_SUITE(${test}_suite)\n")
+  endforeach()
+  
   add_executable(
     ${module}_utest
     ${pfunit_directory}/include/driver.F90
     ${test_sources}
   )
-
+  
   target_link_libraries(
     ${module}_utest
     ${pfunit_directory}/lib/libpfunit.a
@@ -102,4 +83,33 @@ foreach(module beamdyn)
   )
 
   add_test(${module}_utest ${PROJECT_BINARY_DIR}/${module}_utest)
-endforeach()
+  
+endfunction(build_utest)
+
+### beamdyn unit tests
+set(testlist
+    test_tools
+    test_BD_CrvCompose
+    test_BD_CheckRotMat
+    test_BD_CrvExtractCrv
+    test_BD_CrvMatrixR
+    test_BD_CrvMatrixH
+    test_ExtractRelativeRotation
+    test_BD_InputGlobalLocal
+    test_BD_DistrLoadCopy
+    test_BD_GravityForce
+    test_BD_QPData_mEta_rho
+    test_BD_GenerateGLL
+    test_BD_GaussPointWeight
+    test_BD_diffmtc
+)
+build_utest("beamdyn" ${testlist})
+
+
+### other module unit tests
+# set(testlist
+#     test_SUBROUTINE1
+#     test_SUBROUTINE2
+#     test_SUBROUTINE3
+# )
+# build_utest("module_name" ${testlist})
