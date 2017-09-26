@@ -103,7 +103,8 @@ set(testlist
     test_BD_GaussPointWeight
     test_BD_diffmtc
 )
-build_utest("beamdyn" ${testlist})
+# it is important to keep the quotes around "${testlist}" in the call below
+build_utest("beamdyn" "${testlist}")
 
 
 ### other module unit tests
@@ -112,4 +113,5 @@ build_utest("beamdyn" ${testlist})
 #     test_SUBROUTINE2
 #     test_SUBROUTINE3
 # )
-# build_utest("module_name" ${testlist})
+# it is important to keep the quotes around "${testlist}" in the call below
+# build_utest("module_name" "${testlist}")
