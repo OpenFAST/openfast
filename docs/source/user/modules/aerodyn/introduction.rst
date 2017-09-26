@@ -1,4 +1,4 @@
-.. _intro:
+.. _ad_intro:
 
 Introduction
 ============

@@ -33,7 +33,7 @@ is for the user but is not used by the software. If BeamDyn is run in
 the stand-alone mode, the results output file will be prefixed with the
 same name of this driver input file.
 
-A sample BeamDyn driver input file is given in :numref:`app-driver`
+A sample BeamDyn driver input file is given in :numref:`bd_input_files`.
 
 Simulation Control Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

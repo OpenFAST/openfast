@@ -1,14 +1,13 @@
 .. _dev_guide:
 
-OpenFAST Developers' Documentation
-==================================
+Developer Documentation
+=======================
 
 Under construction
 
 .. toctree::
    :maxdepth: 1
 
-   Building documentation locally <build_doc.rst>
-   Doxygen API documentation <doxy_doc.rst>
-
+   build_doc.rst
+   doxy_doc.rst
 

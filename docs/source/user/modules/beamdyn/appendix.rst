@@ -3,7 +3,7 @@
 Appendix
 ========
 
-.. _app-driver:
+.. _bd_input_files:
 
 BeamDyn Input Files
 -------------------

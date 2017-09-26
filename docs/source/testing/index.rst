@@ -47,5 +47,6 @@ Test specific documentation
 .. toctree::
    :maxdepth: 2
 
-   Unit Test <unit_test.rst>
-   Regression Test <regression_test.rst>
+   unit_test.rst
+   regression_test.rst
+   regression_test_windows.rst
