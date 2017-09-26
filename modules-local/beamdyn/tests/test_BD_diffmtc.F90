@@ -33,7 +33,7 @@ subroutine test_BD_diffmtc()
     ! h1(-1) = 1,  h1(+1) = 0
     ! h2(-1) = 0,  h2(+1) = 1
     !
-    ! this is satisfied by these quadratic polynomials
+    ! this is satisfied by these linear equations
     ! h1(s) = 0.5*(1-s)
     ! h2(s) = 0.5*(1+s)
     ! therefore,
