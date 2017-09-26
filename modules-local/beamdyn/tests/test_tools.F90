@@ -100,6 +100,7 @@ contains
         
         ! scalars
         p%elem_total = 1
+        p%nodes_per_elem = 16
         p%nqp = 16
         p%qp_indx_offset = 0
         
