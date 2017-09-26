@@ -102,10 +102,20 @@ structured as
         `-- test_BD_Subroutine3.F90
     
 Each unit test must be contained in a unique file called ``test_[SUBROUTINE].F90`` where
-``[SUBROUTINE]`` is the code block being tested. Finally, add ``test_[SUBROUTINE]``
-to the corresponding module section in the unit test CMake file at 
-``openfast/unit_tests/CMakeLists.txt``. For reference, a template unit test file is
-included at ``openfast/unit_tests/test_SUBROUTINE.F90``.
+``[SUBROUTINE]`` is the code block being tested. Finally, update the CMake configuration
+for building a module's unit test executable with the appropriate list of test subroutines
+in ``openfast/unit_tests/CMakeLists.txt`` using the following format
+
+::
+  
+  set(testlist
+     test_SUBROUTINE1
+     test_SUBROUTINE2
+     test_SUBROUTINE3
+  )
+  build_utest("module_name" ${testlist})
+ 
+For reference, a template unit test file is included at ``openfast/unit_tests/test_SUBROUTINE.F90``.
 
 Each unit test should fully test the target code block. If full test coverage
 is not easily achievable, it may be an indication that refactoring would be beneficial.
