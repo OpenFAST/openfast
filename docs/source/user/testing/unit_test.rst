@@ -94,7 +94,8 @@ structured as
 Each unit test must be contained in a unique file called ``test_[SUBROUTINE].F90`` where
 ``[SUBROUTINE]`` is the code block being tested. Finally, add ``test_[SUBROUTINE]``
 to the corresponding module section in the unit test CMake file at 
-``openfast/unit_tests/CMakeLists.txt``.
+``openfast/unit_tests/CMakeLists.txt``. For reference, a template unit test file is
+included at ``openfast/unit_tests/test_SUBROUTINE.F90``.
 
 Each unit test should fully test the target code block. If full test coverage
 is not easily achievable, it may be an indication that refactoring would be beneficial.
