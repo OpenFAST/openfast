@@ -49,61 +49,13 @@ if(NOT EXISTS ${PYTHON_EXECUTABLE})
 endif()
 
 # Set the testing tolerance
-set(CTEST_REGRESSION_TOL "0.0000001" CACHE STRING "Set the tolerance for the regression test. Leave empty to automatically set.")
+set(CTEST_REGRESSION_TOL "0.00001" CACHE STRING "Set the tolerance for the regression test. Leave empty to automatically set.")
 if(NOT ${CTEST_REGRESSION_TOL} STREQUAL "")
   set(TOLERANCE ${CTEST_REGRESSION_TOL})
 else(NOT ${CTEST_REGRESSION_TOL} STREQUAL "")
-
-  if( ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" )
-    # default
-    set(TOLERANCE 0.0000001)
-
-    # compiler specific
-    if( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU" )
-      set(TOLERANCE 0.0000001)
-    elseif( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel" )
-      set(TOLERANCE 0.0000001)
-    endif()
-
-  elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
-    # default
-    set(TOLERANCE 0.0000001)
-
-    # compiler specific
-    if( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU" )
-      set(TOLERANCE 0.000000000000001)
-    elseif( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel" )
-      set(TOLERANCE 0.0000001)
-    endif()
-
-  elseif( ${CMAKE_SYSTEM_NAME} MATCHES "Windows" )
-    # default
-    set(TOLERANCE 0.0000001)
-
-    # compiler specific
-    if( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU" )
-      set(TOLERANCE 0.0000001)
-    elseif( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel" )
-      set(TOLERANCE 0.0000001)
-    endif()
-
-  elseif( ${CMAKE_SYSTEM_NAME} MATCHES "CYGWIN" )
-    # default
-    set(TOLERANCE 0.0000001)
-
-    # compiler specific
-    if( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "GNU" )
-      set(TOLERANCE 0.0000001)
-    elseif( "${CMAKE_Fortran_COMPILER_ID}" STREQUAL "Intel" )
-      set(TOLERANCE 0.0000001)
-    endif()
-
-  else()
-    # default for other systems
-    set(TOLERANCE 0.0000001)
-  endif()
-
+  set(TOLERANCE 0.00001)
 endif()
+
 message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
 
 # include the ServoDyn controller projects
