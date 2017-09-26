@@ -15,32 +15,40 @@ the CMake variable ``BUILD_TESTING`` is turned on.
 The BeamDyn module has been unit tested and should serve as a reference for future 
 development and testing.
 
-Executing the unit tests
+
+Compiling the unit tests
 ------------------------
 
-Upon successfully compiling OpenFAST, pFUnit, and the unit tests
-themselves, a unit test binary is created at ``openfast/build/unit_tests/[module]_utest``.
-To execute a module's unit test, simply run the unit test binary
-``./openfast/build/unit_tests/beamdyn_utest``.
-
-pFUnit will display a ``.`` for each unit test successfully completed
-and a ``F`` for each failing test. If any tests do fail, the failure 
-criteria will be displayed listing which particular value caused 
-the failure.
-
-All tests passing:
+Compiling the unit tests is handled with CMake similar to compiling OpenFAST in general.
+After configuring CMake with ``BUILD_TESTING`` on, new make targets are created for each
+module included in the unit test framework named ``[module]_utest``. Then, simply make the target to test
 
 ::
   
-  >>>$ ./unit_tests/beamdyn_utest 
+  cmake .. -DBUILD_TESTING=ON
+  make beamdyn_utest
+  
+This creates a binary unit test executable at 
+``openfast/build/unit_tests/[module]_utest``.
+  
+
+Executing the unit tests
+------------------------
+
+To execute a module's unit test, simply run the unit test binary. For example,
+::
+  
+  >>>$ ./openfast/build/unit_tests/beamdyn_utest
   .............
   Time:         0.018 seconds
     
    OK
    (13 tests)
 
-
-Failing tests:
+pFUnit will display a ``.`` for each unit test successfully completed
+and a ``F`` for each failing test. If any tests do fail, the failure 
+criteria will be displayed listing which particular value caused 
+the failure. Failure cases display the following output
 
 ::
   
