@@ -10,7 +10,7 @@ subroutine test_BD_InitShpDerJaco()
     
     implicit none
     
-    integer                    :: n, i
+    integer                    :: i
     type(BD_ParameterType)     :: parametertype
     real(BDKi), allocatable    :: test_shape(:,:), test_shapederivative(:,:)
     real(BDKi), allocatable    :: baseline_shape(:,:), baseline_shapederivative(:,:)
@@ -49,13 +49,12 @@ subroutine test_BD_InitShpDerJaco()
     parametertype = simpleParameterType()
     parametertype%nodes_per_elem = 2
     parametertype%nqp = 2
-    n = parametertype%nodes_per_elem
     
-    ! setup for diffmtc
-    call AllocAry(parametertype%Shp, parametertype%nodes_per_elem, parametertype%nqp, 'QPtN', ErrStat, ErrMsg)
-    call AllocAry(parametertype%ShpDer, parametertype%nodes_per_elem, parametertype%nqp, 'QPtN', ErrStat, ErrMsg)
-    call AllocAry(parametertype%uuN0, 3, parametertype%nodes_per_elem, parametertype%nqp, 'QPtN', ErrStat, ErrMsg)
-    call AllocAry(parametertype%Jacobian, parametertype%elem_total, parametertype%nqp, 'QPtN', ErrStat, ErrMsg)
+    call AllocAry(parametertype%Shp, parametertype%nodes_per_elem, parametertype%nqp, 'Shp', ErrStat, ErrMsg)
+    call AllocAry(parametertype%ShpDer, parametertype%nodes_per_elem, parametertype%nqp, 'ShpDer', ErrStat, ErrMsg)
+    call AllocAry(parametertype%uuN0, 3, parametertype%nodes_per_elem, parametertype%nqp, 'uuN0', ErrStat, ErrMsg)
+    call AllocAry(parametertype%Jacobian, parametertype%elem_total, parametertype%nqp, 'Jacobian', ErrStat, ErrMsg)
+    call AllocAry(parametertype%QPtN, parametertype%nodes_per_elem, 'QPtN', ErrStat, ErrMsg)
     
     ! shpder is of dimension (nodes_per_elem, nqp)
     parametertype%ShpDer(:,1) = (/ -0.5, -0.5 /)
@@ -64,11 +63,10 @@ subroutine test_BD_InitShpDerJaco()
     ! shpder is of dimension (3 dof, nodes_per_elem, elem_total)
     parametertype%uuN0(1:3,1,1) = (/  0.0,  0.0,  0.0 /)
     parametertype%uuN0(1:3,2,1) = (/  0.0,  0.0,  0.0 /)
-        
-    call AllocAry(parametertype%QPtN, parametertype%nodes_per_elem, 'QPtN', ErrStat, ErrMsg)
+    
     parametertype%QPtN = (/ -1.0, 1.0 /)
     
-    call AllocAry(gll_nodes, n, "GLL points array", ErrStat, ErrMsg)
+    call AllocAry(gll_nodes, parametertype%nodes_per_elem, "GLL points array", ErrStat, ErrMsg)
     gll_nodes = (/ -1.0, 1.0 /)
     
     ! call the test subroutine
