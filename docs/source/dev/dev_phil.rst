@@ -1,6 +1,6 @@
 .. _dev_philosophy:
 
-OpenFAST development philosophy
+OpenFAST-development philosophy
 ================================
 
 **Under construction**

@@ -1,6 +1,6 @@
 .. _build_doc:
 
-Building this Documentation Locally
+Building this documentation locally
 ===================================
 
 This document describes how to build the OpenFAST documentation on your local   machine.  Documentation is automatically built and updated on readthedocs when  new material is pushed to the github repo. However, while developing            documentation, one should build locally to see changes quickly, and without the need to push your changes to see them on readthedocs.
