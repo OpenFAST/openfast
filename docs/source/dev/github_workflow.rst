@@ -24,20 +24,15 @@ OpenFAST Specific Git Flow
 
 In OpenFAST development, the typical workflow follows this procedure
 
-:: 
+1. Fork OpenFAST/OpenFAST on GitHub
+
+2. Clone your new fork: ``git clone https://github.com/youruser/OpenFAST``
   
-  1. Fork OpenFAST/OpenFAST on GitHub
+3. Create a feature branch for active development: ``git branch feature/a_great_feature``
   
-  2. Clone your new fork
-    - git clone https://github.com/youruser/openfast
-    
-  3. Create a feature branch for active development
-    - git branch feature/a_great_feature
-    
-  4. Add new development on feature/a_great_feature
-  
-  5. When ready, issue a pull request on GitHub to 
-    merge youruser/feature/a_great_feature into openfast/openfast/dev
+4. Add new development on feature/a_great_feature
+
+5. Create a GitHub pull request to merge ``youruser/OpenFAST/feature/a_great_feature`` into ``OpenFAST/OpenFAST/dev``
   
 
 .. _pull_requests:
