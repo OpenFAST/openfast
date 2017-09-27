@@ -42,16 +42,20 @@ Pull Requests
 
 New pull requests should contain
 
-1. A description of the need for modifications
+- A description of the need for modifications
 
   - If the pull request fixes a bug, the accompanying GitHub issue should be referenced
  
-2. A highlight of the work implemented
-3. Regression test results
+- A highlight of the work implemented
+- Regression test results
 
   - If all tests pass, the summary print out should be provided
   - If any tests fail, an explanation of the failing cases and supporting data like plots should be included 
   
-4. Updated unit tests, if applicable
-5. Updated documentation in applicable sections ready for compilation and deployment to `readthedocs <http://openfast.readthedocs.io>`__.
-6. A review request from a specific member of the NREL OpenFAST team
+- Updated unit tests, if applicable
+- Updated documentation in applicable sections ready for compilation and deployment to `readthedocs <http://openfast.readthedocs.io>`__.
+- A review request from a specific member of the NREL OpenFAST team
+
+
+
+    
