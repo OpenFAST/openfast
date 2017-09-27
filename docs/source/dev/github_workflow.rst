@@ -11,8 +11,8 @@ from blocking your local development.
 Git Flow
 --------
 
-The Git Flow process is strictly defined and adopted throughout the software development
-community. It is detailed nicely `here <https://datasift.github.io/gitflow/IntroducingGitFlow.html>`__
+The Git Flow process is well defined and adopted throughout the software development
+community. It is detailed nicely `here <http://nvie.com/posts/a-successful-git-branching-model>`__
 and the chart below provides a high level perspective.
 
 .. image:: ../../_static/GitFlowFeatureBranches.png
@@ -24,6 +24,11 @@ Reference: http://nvie.com/posts/a-successful-git-branching-model
 OpenFAST Specific Git Flow
 --------------------------
 
+It is important to consider how your current work will be affected by other developer's
+commits and how your commits will affect other developers. On public branches, avoid using
+`git rebase <https://git-scm.com/book/en/v2/Git-Branching-Rebasing>`__
+and never `force push <https://git-scm.com/docs/git-push#git-push---force>`__. 
+
 In OpenFAST development, the typical workflow follows this procedure
 
 1. Fork OpenFAST/OpenFAST on GitHub
@@ -32,9 +37,11 @@ In OpenFAST development, the typical workflow follows this procedure
   
 3. Create a feature branch for active development: ``git branch feature/a_great_feature``
   
-4. Add new development on feature/a_great_feature
+4. Add new development on feature/a_great_feature: ``git push/pull``
 
-5. Create a GitHub pull request to merge ``youruser/OpenFAST/feature/a_great_feature`` into ``OpenFAST/OpenFAST/dev``
+5. Update your feature branch with OpenFAST/dev: ``git pull https://github.com/OpenFAST/OpenFAST dev; git push``
+
+6. Create a GitHub pull request to merge ``youruser/OpenFAST/feature/a_great_feature`` into ``OpenFAST/OpenFAST/dev``
   
 
 .. _pull_requests:
