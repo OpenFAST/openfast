@@ -17,6 +17,8 @@ and the chart below provides a high level perspective.
 
 .. image:: ../../_static/GitFlowFeatureBranches.png
     :align: center
+    
+Reference: http://nvie.com/posts/a-successful-git-branching-model
 
 
 OpenFAST Specific Git Flow
