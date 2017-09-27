@@ -102,6 +102,7 @@ set(testlist
     test_BD_GenerateGLL
     test_BD_GaussPointWeight
     test_BD_diffmtc
+    test_BD_InitShpDerJaco
 )
 # it is important to keep the quotes around "${testlist}" in the call below
 build_utest("beamdyn" "${testlist}")
