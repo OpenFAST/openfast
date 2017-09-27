@@ -32,7 +32,7 @@ Prerequisites
 
     -  The testing framework of OpenFAST requires the use of Python.  
 
-    -  Please see :ref:`testing`  on testing OpenFAST for further information on this topic.
+    -  Please see :numref:`testing`  on testing OpenFAST for further information on this topic.
 
     -  We have been working with Continuum's `Anaconda <https://www.anaconda.com/download/#windows>`__ installation of Python 3.6 for Windows.
 

@@ -3,7 +3,7 @@
 Building OpenFAST with CMake on Linux and Mac
 =============================================
 
-We describe here how to install OpenFAST (or any of its modules) using the `CMake <https://cmake.org>`_ build system on Linux or Mac OS systems.  Separate `CMake <https://cmake.org>`_ documentation is provided for Windows Cygwin users: see :ref:`install_cmake_cygwin`.
+We describe here how to install OpenFAST (or any of its modules) using the `CMake <https://cmake.org>`_ build system on Linux or Mac OS systems.  Separate `CMake <https://cmake.org>`_ documentation is provided for Windows Cygwin users: see :numref:`install_cmake_cygwin`.
 
 Required software for building OpenFAST 
 ---------------------------------------
