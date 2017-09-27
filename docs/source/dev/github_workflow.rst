@@ -12,10 +12,11 @@ Git Flow
 --------
 
 The Git Flow process is strictly defined and adopted throughout the software development
-community. It is outlined very nicely `here <https://datasift.github.io/gitflow/IntroducingGitFlow.html>`__
-and the chart below is a great reference.
+community. It is detailed nicely `here <https://datasift.github.io/gitflow/IntroducingGitFlow.html>`__
+and the chart below provides a high level perspective.
 
-!!!!!!!!!!!! git flow image here !!!!!!!!!!!!
+.. image:: ../../_static/GitFlowFeatureBranches.png
+    :align: center
 
 
 OpenFAST Specific Git Flow
