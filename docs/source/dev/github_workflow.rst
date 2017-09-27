@@ -39,6 +39,8 @@ In OpenFAST development, the typical workflow follows this procedure
     merge youruser/feature/a_great_feature into openfast/openfast/dev
   
 
+.. _pull_requests:
+
 Pull Requests
 -------------
 
@@ -55,5 +57,5 @@ New pull requests should contain
   - If any tests fail, an explanation of the failing cases and supporting data like plots should be included 
   
 4. Updated unit tests, if applicable
-5. A review request from a specific member of the NREL OpenFAST team
-  
+5. Updated documentation in applicable sections ready for compilation and deployment to `readthedocs <http://openfast.readthedocs.io>`__.
+6. A review request from a specific member of the NREL OpenFAST team
