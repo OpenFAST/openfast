@@ -55,92 +55,21 @@ This documentation is divided into two parts:
 
 **Note:** If viewing this on http://openfast.readthedocs.io,  one can get this documentation in PDF form via ``Read the Docs`` "box" on the lower left corner of the browser screen.  
 
-Getting started
----------------
-
-**Get the code:** 
-OpenFAST can be cloned (i.e., downloaded) from its `Github Repository <https://github.com/OpenFAST/OpenFAST>`_, e.g., from the command line:
-::
-
-    git clone https://github.com/OpenFAST/OpenFAST.git
-
-It can also be downloaded directly from https://github.com/OpenFAST/OpenFAST.git.
-
-**Compile the code:** 
-See :ref:`installation`, for installation instructions (including dependency requirements) for cmake, spack, and Visual Studio and for multiple platforms (Linux, Mac, Windows).
-As an example, from the command line in a Mac or Linux environment:
-::
-
-    cd OpenFAST
-    mkdir build && cd build
-    cmake ../
-    make
-
-Note that one can see all of the `make` targets via
-::
-
-    make help
-
-
-**Use the code:**
-See :ref:`user_guide`, which is under construction.  
-In the interim, users may refer to the FAST v8 documentation at https://nwtc.nrel.gov/. 
-
-**Develop the code:** 
-See :ref:`dev_guide`, which is under construction.
-In the interim, developers may consult the FAST v8 `Programmer's Handbook <https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf>`_.
-
-Licensing
----------
-
-The OpenFAST software, including its underlying modules, are licensed under `Apache
-License Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0>`_ open-source
-license.
-
-
-Getting help
-------------
-
-For possible bugs, enhancement requests, or code questions, please submit an issue at
-the `OpenFAST Github repository <https://github.com/OpenFAST/OpenFAST>`_.
-
-For OpenFAST usage questions, users should consider the `FAST Forum <https://wind.nrel.gov/forum/wind/>`_, which
-provides a large 10+ year legacy of FAST-related Q&A; the forum's search functionality should be used before posting questions to either github issues or the forum.
-
-Users may find the established FAST v8 through the NWTC Information Portal:
-https://nwtc.nrel.gov/
-
-Please contact `Michael.A.Sprague@NREL.gov <mailto:Michael.A.Sprague@NREL.gov>`_. with questions regarding the OpenFAST development plan or how to contribute.
-
-Acknowledgements
-----------------
-
-This software is developed and maintained by researchers at the `National Renewable Energy Laboratory <https://www.nrel.gov>`_ with funding from U.S. Department of Energy (DOE) Wind Energy Technology Office through the 
-`Atmosphere to electrons (A2e) <https://a2e.energy.gov>`_ research initiative.
-
-NREL gratefully acknowledges development contributions from the following organizations:
-
-* Envision Energy USA, Ltd
-
-* Brigham Young University
-
-NREL gratefully acknowledges additional development support through an 
-`Intel® Parallel Computing Center (IPCC) <https://software.intel.com/en-us/ipcc>`_
-
-Important links
----------------------------
-
-*  Github Organization Page <https://github.com/OpenFAST>
-*  Github Repository <https://github.com/OpenFAST/OpenFAST>
-*  Nightly Testing Results <http://my.cdash.org/index.php?project=OpenFAST>
-
 
 .. toctree::
+   :numbered:
    :maxdepth: 1
 
+   source/get_started.rst
    source/install/index.rst
    source/testing/index.rst
    source/user/index.rst
    source/dev/index.rst
+   source/links.rst
+   source/license.rst
+   source/help.rst
+   source/acknowledgements.rst
+
    Nightly Testing Results <http://my.cdash.org/index.php?project=OpenFAST>
+   github.com Repository <https://github.com/openfast/openfast>
 

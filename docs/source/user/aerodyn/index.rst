@@ -10,7 +10,6 @@ AeroDyn Users Guide and Theory Manual
    modifications to the software.
    
 .. toctree::
-   :numbered:
    :maxdepth: 2
    
    introduction.rst

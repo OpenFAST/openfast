@@ -1,4 +1,4 @@
-Doxygen API Documentation
+Doxygen API documentation
 =========================
 
   * `Main Page <../../html/index.html>`_

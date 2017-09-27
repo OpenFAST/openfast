@@ -37,7 +37,7 @@ Current CMake Options
 ~~~~~~~~~~~~~~~~~~~~~
 
 -  ``BUILD_DOCUMENTATION`` -  Build documentation (Default: OFF)
--  ``BUILD_FAST_CPP_API`` - Enable building FAST - C++ API (Default: OFF)
+-  ``BUILD_FAST_CPP_API`` - Enable building OpenFAST - C++ API (Default: OFF)
 -  ``BUILD_SHARED_LIBS`` - Enable building shared libraries (Default: OFF)
 -  ``CMAKE_BUILD_TYPE`` - Choose the build type: Debug Release (Default: Release)
 -  ``CMAKE_INSTALL_PREFIX`` - Install path prefix, prepended onto install directories.

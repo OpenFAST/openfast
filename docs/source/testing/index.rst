@@ -45,7 +45,7 @@ sections for more info.
 Test specific documentation
 ---------------------------
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    unit_test.rst
    regression_test.rst

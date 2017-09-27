@@ -1,3 +1,5 @@
+.. _build_doc:
+
 Building this Documentation Locally
 ===================================
 

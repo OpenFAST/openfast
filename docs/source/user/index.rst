@@ -6,6 +6,7 @@ User Documentation
 .. toctree::
    :maxdepth: 1
 
-   modules/index.rst
+   aerodyn/index.rst
+   beamdyn/index.rst
    fast_to_openfast.rst
 

@@ -17,7 +17,6 @@ BeamDyn User Guide and Theory Manual
 
    
 .. toctree::
-   :numbered:
    :maxdepth: 2
    
    introduction.rst
