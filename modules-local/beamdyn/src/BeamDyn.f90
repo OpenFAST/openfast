@@ -1979,6 +1979,7 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
    INTEGER(IntKi)                :: temp_id2       !< Index to last node of previous element
    REAL(BDKi)                    :: tempR6(6,6)
 
+   ! see Bauchau 2011 Flexible Multibody Dynamics p 692-693, section 17.7.2
 
          ! extract the mass and stiffness matrices for the current element
    temp_id2 = (nelem-1)*p%nqp
@@ -2054,7 +2055,7 @@ SUBROUTINE BD_ElasticForce(nelem,idx_qp,p,m,fact)
    INTEGER(IntKi),               INTENT(IN   )  :: idx_qp      !< Index to quadrature point currently being calculated
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables.
-   LOGICAL,                      INTENT(IN   )  :: fact
+   LOGICAL,                      INTENT(IN   )  :: fact        !< Boolean to calculate the Jacobian
 
    REAL(BDKi)                                   :: cet         !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
    REAL(BDKi)                                   :: eee(6)      !< intermediate array for calculation Strain and curvature terms of Fc
