@@ -194,33 +194,6 @@ contains
         integer              :: ErrStat
         character(1024)      :: ErrMsg
         
-    !     integer(IntKi)       :: analysis_type ! -  - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
-    !     integer(IntKi)       :: member_total  ! -  - - "Total number of members" -
-    !     integer(IntKi)       :: kp_total      ! -  - - "Total number of key point" -
-    !     integer(IntKi)       :: kp_member     !{:} - - "Number of key points in each member" -
-    !     integer(IntKi)       :: order_elem    ! -  - - "Order of interpolation (basis) function" -
-    !     integer(IntKi)       :: NRMax         ! -  - - "Max number of iterations in Newton Ralphson algorithm" -
-    !     integer(IntKi)       :: quadrature    ! -  - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
-    !     integer(IntKi)       :: n_fact        ! -  - - "Factorization frequency" -
-    !     integer(IntKi)       :: refine        ! -  - - "FE mesh refinement factor for trapezoidal quadrature" -
-    !     real(DbKi)           :: rhoinf        ! -  - - "Numerical damping parameter for generalized-alpha integrator" -
-    !     real(DbKi)           :: DTBeam        ! -  - - "Time interval for BeamDyn  calculations {or default} (s)" -
-    ! !  -> type(BladeInputData) :: InpBl         ! -  - - "Input data for individual blades"   "see BladeInputData Type"
-    ! !  -> character(1024)      :: BldFile       ! -  - - "Name of blade input file"
-    !     logical              :: UsePitchAct   ! -  - - "Whether to use a pitch actuator inside BeamDyn" (flag) 
-    !     real(R8Ki)           :: stop_tol      !   - - - "Tolerance for stopping criterion" -
-    !     real(R8Ki), allocatable :: kp_coordinate(:)(:) !  {:}{:} - - "Key point coordinates array" -
-    !     real(R8Ki)           :: pitchJ        ! - - -     "Pitch actuator inertia" (kg-m^2)
-    !     real(R8Ki)           :: pitchK        ! - - -     "Pitch actuator stiffness" (kg-m^2/s^2) 
-    !     real(R8Ki)           :: pitchC        ! - - -     "Pitch actuator damping" - (kg-m^2/s)  
-    !     Logical              :: Echo          ! -  - - "Echo"
-    !     integer(IntKi)       :: NNodeOuts     ! -  - - "Number of node outputs [0 - 9]"	-
-    !     integer(IntKi)       :: OutNd         ! {9} - - "Nodes whose values will be output"	-
-    !     integer(IntKi)       :: NumOuts       ! -  - - "Number of parameters in the output list (number of outputs requested)"	-
-    !     CHARACTER(ChanLen)   :: OutList	      ! {:}	- -	"List of user-requested output channels"	-
-    !     LOGICAL              :: SumPrint      ! -  - - "Print summary data to file? (.sum)"	-
-    !     CHARACTER(20)        :: OutFmt        ! -  - - "Format specifier" -
-          
         ! scalars
         i%analysis_type = 1   ! -  - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
         i%member_total = 1    ! -  - - "Total number of members" -
