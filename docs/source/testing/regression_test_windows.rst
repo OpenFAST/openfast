@@ -55,7 +55,7 @@ Running OpenFAST Regression Tests on Windows
 
     a) Open the Visual Studio Solution (``FAST.sln``) located in ``openfast\vs-build\FAST`` folder
 
-    b) Choose Release and x64 for the Solutions Configuration and Solutions Platform, respectively
+    b) Choose Release_Double and x64 for the Solutions Configuration and Solutions Platform, respectively
 
     c) From the menu bar select ``Build->Build Solution``
 
@@ -66,7 +66,7 @@ Running OpenFAST Regression Tests on Windows
 
        iii) Close your Visual Studio and then Repeat Steps (a) through (c)
 
-    d) You should now see the file ``FAST_x64.exe`` in your ``openfast\build\bin`` folder
+    d) You should now see the file ``openfast_x64.exe`` in your ``openfast\build\bin`` folder
 
 
 4) Execute the OpenFAST regression Tests
