@@ -56,8 +56,6 @@ else(NOT ${CTEST_REGRESSION_TOL} STREQUAL "")
   set(TOLERANCE 0.00001)
 endif()
 
-message("-- For system/compiler combination ${CMAKE_SYSTEM_NAME}/${CMAKE_Fortran_COMPILER_ID}, using test tolerance ${TOLERANCE}")
-
 # include the ServoDyn controller projects
 set(SERVODATA_DIR "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast/5MW_Baseline/ServoData")
 add_subdirectory("${SERVODATA_DIR}/DISCON" "${SERVODATA_DIR}/DISCON/build")
