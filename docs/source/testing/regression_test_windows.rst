@@ -43,13 +43,13 @@ Running OpenFAST Regression Tests on Windows
 
 2) Build The Regression Testing DISCON DLLs
 
-    a) Open the Visual Studio Solution (``DISCON.sln``) located in ``openfast\vs-build\DISCON`` folder
+    a) Open the Visual Studio Solution (``Discon.sln``) located in ``openfast\vs-build\Discon`` folder
 
     b) Choose Release and x64 for the Solutions Configuration and Solutions Platform, respectively
 
     c) From the menu bar select ``Build->Build Solution``
 
-    d) You should now see the files ``DISCON.dll``, ``DISCON_ITIBarge.dll``, and ``DISCON_OC4.dll`` in your ``openfast\build\reg_tests\openfast\5MW_Baseline\ServoData`` folder.
+    d) You should now see the files ``Discon.dll``, ``Discon_ITIBarge.dll``, and ``Discon_OC3Hywind.dll`` in your ``openfast\reg_tests\r-test\glue-codes\fast\5MW_Baseline\ServoData`` folder.
 
 3) Build OpenFAST using Visual Studio
 
@@ -75,8 +75,8 @@ Running OpenFAST Regression Tests on Windows
  
     b) Change your working directory to ``openfast\reg_tests``
 
-    c) Type: ``python manualRegressionTest.py ..\build\bin\FAST_x64.exe`` Windows Intel
-         You should see this: ``executing case AWT_YFix_WSt``
+    c) Type: ``python manualRegressionTest.py ..\build\bin\openfast_x64.exe Windows Intel 1e-5``
+         You should see this: ``executing AWT_YFix_WSt``
 
     d) The tests will continue to execute one-by-one until you finally see something like this:
 

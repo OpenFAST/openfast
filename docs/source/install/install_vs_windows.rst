@@ -54,9 +54,9 @@ Compiling OpenFAST
 
    ::
 
-    git clone https://github.com/OpenFAST/OpenFAST.git
+    git clone https://github.com/openfast/openfast.git
 
-This will create a directory called ``OpenFAST`` within the ``code``
+This will create a directory called ``openfast`` within the ``code``
 directory.
 
 4. Using Windows Explorer, navigate to the directory ``openfast\vs-build\FAST``
