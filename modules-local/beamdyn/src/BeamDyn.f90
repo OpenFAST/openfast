@@ -2882,23 +2882,23 @@ subroutine ComputeSplineCoeffs(InputFileData, SP_Coef, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)        :: ErrMsg2                    ! Temporary Error message
    CHARACTER(*), PARAMETER     :: RoutineName = 'ComputeSplineCoeffs'
 
-
-
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) return
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) return
 
-
-      ! compute the spline coefficients, SP_Coef
+   ! compute the spline coefficients, SP_Coef
    MemberFirstKP = 1
    DO i=1,InputFileData%member_total
        MemberLastKP = MemberFirstKP + InputFileData%kp_member(i) - 1
        CALL BD_ComputeIniCoef(InputFileData%kp_member(i),InputFileData%kp_coordinate(MemberFirstKP:MemberLastKP,:),&
                               SP_Coef(MemberFirstKP:MemberLastKP-1,:,:), ErrStat2, ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                              
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       if (ErrStat >= AbortErrLev) return
+       
        MemberFirstKP = MemberLastKP ! if we have multiple members, there is an overlapping key point, thus we start at the previous end point
    ENDDO
 
