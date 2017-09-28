@@ -187,4 +187,78 @@ contains
         
     end function
     
+    type(BD_InputFile) function simpleInputFile()
+        
+        type(BD_InputFile)   :: i
+        integer              :: j
+        integer              :: ErrStat
+        character(1024)      :: ErrMsg
+        
+    !     integer(IntKi)       :: analysis_type ! -  - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
+    !     integer(IntKi)       :: member_total  ! -  - - "Total number of members" -
+    !     integer(IntKi)       :: kp_total      ! -  - - "Total number of key point" -
+    !     integer(IntKi)       :: kp_member     !{:} - - "Number of key points in each member" -
+    !     integer(IntKi)       :: order_elem    ! -  - - "Order of interpolation (basis) function" -
+    !     integer(IntKi)       :: NRMax         ! -  - - "Max number of iterations in Newton Ralphson algorithm" -
+    !     integer(IntKi)       :: quadrature    ! -  - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
+    !     integer(IntKi)       :: n_fact        ! -  - - "Factorization frequency" -
+    !     integer(IntKi)       :: refine        ! -  - - "FE mesh refinement factor for trapezoidal quadrature" -
+    !     real(DbKi)           :: rhoinf        ! -  - - "Numerical damping parameter for generalized-alpha integrator" -
+    !     real(DbKi)           :: DTBeam        ! -  - - "Time interval for BeamDyn  calculations {or default} (s)" -
+    ! !  -> type(BladeInputData) :: InpBl         ! -  - - "Input data for individual blades"   "see BladeInputData Type"
+    ! !  -> character(1024)      :: BldFile       ! -  - - "Name of blade input file"
+    !     logical              :: UsePitchAct   ! -  - - "Whether to use a pitch actuator inside BeamDyn" (flag) 
+    !     real(R8Ki)           :: stop_tol      !   - - - "Tolerance for stopping criterion" -
+    !     real(R8Ki), allocatable :: kp_coordinate(:)(:) !  {:}{:} - - "Key point coordinates array" -
+    !     real(R8Ki)           :: pitchJ        ! - - -     "Pitch actuator inertia" (kg-m^2)
+    !     real(R8Ki)           :: pitchK        ! - - -     "Pitch actuator stiffness" (kg-m^2/s^2) 
+    !     real(R8Ki)           :: pitchC        ! - - -     "Pitch actuator damping" - (kg-m^2/s)  
+    !     Logical              :: Echo          ! -  - - "Echo"
+    !     integer(IntKi)       :: NNodeOuts     ! -  - - "Number of node outputs [0 - 9]"	-
+    !     integer(IntKi)       :: OutNd         ! {9} - - "Nodes whose values will be output"	-
+    !     integer(IntKi)       :: NumOuts       ! -  - - "Number of parameters in the output list (number of outputs requested)"	-
+    !     CHARACTER(ChanLen)   :: OutList	      ! {:}	- -	"List of user-requested output channels"	-
+    !     LOGICAL              :: SumPrint      ! -  - - "Print summary data to file? (.sum)"	-
+    !     CHARACTER(20)        :: OutFmt        ! -  - - "Format specifier" -
+          
+        ! scalars
+        i%analysis_type = 1   ! -  - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
+        i%member_total = 1    ! -  - - "Total number of members" -
+        i%kp_total = 3        ! -  - - "Total number of key point" -
+        i%order_elem = 15     ! -  - - "Order of interpolation (basis) function" -
+        i%NRMax = 10          ! -  - - "Max number of iterations in Newton Ralphson algorithm" -
+        i%quadrature = 1      ! -  - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
+        i%n_fact = 5          ! -  - - "Factorization frequency" -
+        i%refine = 1          ! -  - - "FE mesh refinement factor for trapezoidal quadrature" -
+        i%rhoinf = 0.0        ! -  - - "Numerical damping parameter for generalized-alpha integrator" -
+        i%DTBeam = 2E-03      ! -  - - "Time interval for BeamDyn  calculations {or default} (s)" -
+        i%UsePitchAct = .FALSE. ! -  - - "Whether to use a pitch actuator inside BeamDyn" (flag) 
+        ! real(R8Ki)           :: stop_tol      !   - - - "Tolerance for stopping criterion" -
+        i%pitchJ = 0.0        ! - - -     "Pitch actuator inertia" (kg-m^2)
+        i%pitchK = 0.0        ! - - -     "Pitch actuator stiffness" (kg-m^2/s^2) 
+        i%pitchC = 0.0        ! - - -     "Pitch actuator damping" - (kg-m^2/s)  
+        i%Echo = .TRUE.          ! -  - - "Echo"
+        i%NNodeOuts = 1     ! -  - - "Number of node outputs [0 - 9]"	-
+        i%OutNd = 1         ! {9} - - "Nodes whose values will be output"	-
+        ! integer(IntKi)       :: NumOuts       ! -  - - "Number of parameters in the output list (number of outputs requested)"	-
+        i%SumPrint = .TRUE.      ! -  - - "Print summary data to file? (.sum)"	-
+        i%OutFmt = "ES16.8E2"       ! -  - - "Format specifier" -
+        
+        ! fixed size arrays
+        i%kp_member = (/ 3 /) !{:} - - "Number of key points in each member" -
+        i%OutList = (/ "TipTDxr, TipTDyr, TipTDzr", "TipRDxr, TipRDyr, TipRDzr" /)	      ! {:}	- -	"List of user-requested output channels"	-
+        
+        ! allocate arrays
+        call AllocAry(i%kp_coordinate, 3, 4, 'kp_coordinate', ErrStat, ErrMsg)
+        
+        ! construct arrays
+        i%kp_coordinate(1,:) = (/ 0.000000, 0.000000,  0.0000, 0.00000 /) !  {:}{:} - - "Key point coordinates array" -
+        i%kp_coordinate(2,:) = (/ 0.000000, 0.000000,  5.0000, 0.00000 /)
+        i%kp_coordinate(3,:) = (/ 0.000000, 0.000000, 10.0000, 0.00000 /)
+        
+        ! set the return value
+        simpleInputFile = i
+        
+    end function
+    
 end module
