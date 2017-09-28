@@ -109,4 +109,5 @@ of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn
 # BeamDyn regression tests
 bd_regression("static_cantilever_beam" "beamdyn;static")
 bd_regression("isotropic_rollup"       "beamdyn;static")
+bd_regression("curved_beam"            "beamdyn;static")
 bd_regression("5MW_dynamic"            "beamdyn;dynamic")
