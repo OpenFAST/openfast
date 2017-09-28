@@ -82,31 +82,31 @@ Running OpenFAST Regression Tests on Windows
 
     ::
 
-         ('AWT_YFix_WSt', 'FAIL')
-         ('AWT_WSt_StartUp_HighSpShutDown', 'FAIL')
-         ('AWT_YFree_WSt', 'FAIL')
-         ('AWT_YFree_WTurb', 'FAIL')
-         ('AWT_WSt_StartUpShutDown', 'FAIL')
-         ('AOC_WSt', 'FAIL')
-         ('AOC_YFree_WTurb', 'FAIL')
-         ('AOC_YFix_WSt', 'FAIL')
-         ('UAE_YRamp_WSt', 'FAIL')
-         ('UAE_Rigid_WRamp_PwrCurve', 'FAIL')
-         ('WP_VSP_WTurb_PitchFail', 'FAIL')
-         ('WP_VSP_ECD', 'FAIL')
-         ('WP_VSP_WTurb', 'FAIL')
-         ('WP_Stationary_Linear', 'PASS')
-         ('SWRT_YFree_VS_EDG01', 'FAIL')
-         ('SWRT_YFree_VS_EDC01', 'FAIL')
-         ('SWRT_YFree_VS_WTurb', 'FAIL')
-         ('5MW_DLL_Potential_WTurb', 'FAIL')
-         ('5MW_DLL_Potential_WTurb_WavesIrr', 'FAIL')
-         ('5MW_DLL_Potential_WSt_WavesReg', 'FAIL')
-         ('5MW_DLL_Potential_WTurb_WavesIrrFixedYawGrowth', 'FAIL')
-         ('5MW_DLL_WTurb_WavesIrr', 'FAIL')
-         ('5MW_DLL_WTurb_WavesIrr_WavesMulti', 'FAIL')
-         ('5MW_DLL_WTurb_WavesIrr', 'FAIL')
-         ('5MW_WSt_WhiteNoise_OC4', 'FAIL')
-         ('5MW_BD_DLL_Potential_WTurb', 'FAIL')
-
+      executing AWT_YFix_WSt                           PASS
+      executing AWT_WSt_StartUp_HighSpShutDown         PASS
+      executing AWT_YFree_WSt                          PASS
+      executing AWT_YFree_WTurb                        PASS
+      executing AWT_WSt_StartUpShutDown                PASS
+      executing AOC_WSt                                PASS
+      executing AOC_YFree_WTurb                        PASS
+      executing AOC_YFix_WSt                           PASS
+      executing UAE_Dnwind_YRamp_WSt                   PASS
+      executing UAE_Upwind_Rigid_WRamp_PwrCurve        PASS
+      executing WP_VSP_WTurb_PitchFail                 PASS
+      executing WP_VSP_ECD                             PASS
+      executing WP_VSP_WTurb                           PASS
+      executing WP_Stationary_Linear                   PASS
+      executing SWRT_YFree_VS_EDG01                    PASS
+      executing SWRT_YFree_VS_EDC01                    PASS
+      executing SWRT_YFree_VS_WTurb                    PASS
+      executing 5MW_Land_DLL_WTurb                     PASS
+      executing 5MW_OC3Mnpl_DLL_WTurb_WavesIrr         PASS
+      executing 5MW_OC3Trpd_DLL_WSt_WavesReg           PASS
+      executing 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth PASS
+      executing 5MW_ITIBarge_DLL_WTurb_WavesIrr        PASS
+      executing 5MW_TLP_DLL_WTurb_WavesIrr_WavesMulti  PASS
+      executing 5MW_OC3Spar_DLL_WTurb_WavesIrr         PASS
+      executing 5MW_OC4Semi_WSt_WavesWN                PASS
+      executing 5MW_Land_BD_DLL_WTurb                  PASS
+      
     e) If an individual test succeeds you will see ``PASS`` otherwise you will see ``FAIL`` after that test's name
