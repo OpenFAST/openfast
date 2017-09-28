@@ -149,6 +149,15 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
   DESTINATION lib/cmake/OpenFAST)
 
 ########################################################################
+# Configure the default install path to openfast/install
+string(FIND ${CMAKE_Fortran_MODULE_DIRECTORY} "build/ftnmods" found)
+if(${found} GREATER 0)
+  string(REPLACE "build/ftnmods" "install" install_path ${CMAKE_Fortran_MODULE_DIRECTORY})
+  if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX ${install_path} CACHE PATH "..." FORCE)
+  endif()
+endif()
+
 # Option configuration
 if(BUILD_TESTING)
   include(CTest)
