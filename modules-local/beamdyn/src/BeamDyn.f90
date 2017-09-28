@@ -1749,7 +1749,8 @@ END SUBROUTINE BD_QuadraturePointData
 !! 1) uuu, 2) uup, 3) E1
 !!
 !! The equations used here can be found in the NREL publication CP-2C00-60759
-!! (http://www.nrel.gov/docs/fy14osti/60759.pdf)
+!! "Nonlinear Legendre Spectral Finite Elements for Wind Turbine Blade Dynamics"
+!! http://www.nrel.gov/docs/fy14osti/60759.pdf
 SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< number of current element
