@@ -34,7 +34,7 @@ subroutine test_BD_CrvMatrixH()
     
     
     ! --------------------------------------------------------------------------
-    testname = "simple rotation with known parameters: Pi on xaxis"
+    testname = "simple rotation with known parameters: Pi on xaxis:"
     angle = Pi_D
 
     ! Wiener-Milenkovic parameters are <4.0, 0.0, 0.0>
@@ -48,7 +48,7 @@ subroutine test_BD_CrvMatrixH()
     
     
     ! --------------------------------------------------------------------------
-    testname = "0 rotation"
+    testname = "0 rotation:"
     angle = 0
     
     ! Wiener-Milenkovic parameters are <0.0, 0.0, 0.0>
@@ -62,7 +62,7 @@ subroutine test_BD_CrvMatrixH()
     
     
     ! --------------------------------------------------------------------------
-    testname = "small rotation with baseline WM parameters calculated"
+    testname = "small rotation with baseline WM parameters calculated:"
     angle = 0.1*Pi_D
     
     ! Wiener-Milenkovic parameters are calculated; note tangent is asymptotic at +/- pi/2

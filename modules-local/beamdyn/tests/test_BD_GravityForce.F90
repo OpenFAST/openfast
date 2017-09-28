@@ -25,7 +25,7 @@ subroutine test_BD_GravityForce()
     
     
     ! --------------------------------------------------------------------------
-    testname = "static simple beam under gravity"
+    testname = "static simple beam under gravity:"
     baseline(1:3) = getGravityInZ()
     baseline(4:6) = (/ 0.0, 0.0, 0.0 /)
     

@@ -39,7 +39,7 @@ subroutine test_BD_GaussPointWeight()
   
   
     ! --------------------------------------------------------------------------
-    testname = "p = 1, invalid value"
+    testname = "p = 1, invalid value:"
     p = 1
     call AllocAry(baselinelocations, p, "GLL baseline", ErrStat, ErrMsg)
     call AllocAry(baselineweights, p, "GLL baseline", ErrStat, ErrMsg)
@@ -59,7 +59,7 @@ subroutine test_BD_GaussPointWeight()
     
     
     ! --------------------------------------------------------------------------
-    testname = "p = 2, boundaries only"
+    testname = "p = 2, boundaries only:"
     p = 2
     call AllocAry(baselinelocations, p, "GLL baseline", ErrStat, ErrMsg)
     call AllocAry(baselineweights, p, "GLL baseline", ErrStat, ErrMsg)
@@ -80,7 +80,7 @@ subroutine test_BD_GaussPointWeight()
     
     
     ! --------------------------------------------------------------------------
-    testname = "p = 5, odd number"
+    testname = "p = 5, odd number:"
     p = 5
     call AllocAry(baselinelocations, p, "GLL baseline", ErrStat, ErrMsg)
     call AllocAry(baselineweights, p, "GLL baseline", ErrStat, ErrMsg)
@@ -101,7 +101,7 @@ subroutine test_BD_GaussPointWeight()
     
 
     ! --------------------------------------------------------------------------
-    testname = "p = 6, even number"
+    testname = "p = 6, even number:"
     p = 6
     call AllocAry(baselinelocations, p, "GLL baseline", ErrStat, ErrMsg)
     call AllocAry(baselineweights, p, "GLL baseline", ErrStat, ErrMsg)

@@ -34,7 +34,7 @@ subroutine test_BD_InputGlobalLocal()
     
     
     ! --------------------------------------------------------------------------
-    testname = "test_BD_InputGlobalLocal"
+    testname = "test_BD_InputGlobalLocal:"
     
     tolerance = 1e-14
     totalnodes = 2

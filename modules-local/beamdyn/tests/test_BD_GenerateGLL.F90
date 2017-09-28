@@ -32,7 +32,7 @@ subroutine test_BD_GenerateGLL()
   
     
     ! --------------------------------------------------------------------------
-    testname = "p = 2, boundaries only"
+    testname = "p = 2, boundaries only:"
     p = 2
     allocate(baseline(p))
     baseline = (/ -1.0, 1.0 /)
@@ -46,7 +46,7 @@ subroutine test_BD_GenerateGLL()
     deallocate(gll_nodes)
     
     ! --------------------------------------------------------------------------
-    testname = "p = 5, odd number"
+    testname = "p = 5, odd number:"
     p = 5
     allocate(baseline(p))
     baseline = (/ -1.0, -0.6546536707079771437983, 0.0, 0.654653670707977143798, 1.0 /)
@@ -61,7 +61,7 @@ subroutine test_BD_GenerateGLL()
     
     
     ! --------------------------------------------------------------------------
-    testname = "p = 6, even number"
+    testname = "p = 6, even number:"
     p = 6
     allocate(baseline(p))
     baseline = (/ -1.0, -0.765055323929464692851, -0.2852315164806450963142, 0.2852315164806450963142, 0.765055323929464692851, 1.0 /)
@@ -76,7 +76,7 @@ subroutine test_BD_GenerateGLL()
     
     
     ! --------------------------------------------------------------------------
-    testname = "p = 97, large, prime number"
+    testname = "p = 97, large, prime number:"
     p = 97
     allocate(baseline(p))
     baseline = (/                                                                                                          & 

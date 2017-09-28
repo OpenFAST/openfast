@@ -27,14 +27,14 @@ subroutine test_BD_CheckRotMat()
     
     
     ! --------------------------------------------------------------------------    
-    testname = "known valid rotation matrix: pi about x-axis"
+    testname = "known valid rotation matrix: pi about x-axis:"
     testR = calcRotationMatrix(angle, n)
     call BD_CheckRotMat(testR, ErrStat, ErrMsg)
     @assertEqual(0, ErrStat, testname)
 
 
     ! --------------------------------------------------------------------------    
-    testname = "known invalid rotation matrix: halve the angle of the diagonal elements"
+    testname = "known invalid rotation matrix: halve the angle of the diagonal elements:"
     ! this should produce a fatal error (ErrStat = 4)
     testR(:,2) = (/ testR(1,2),  cos(Pi/2), testR(3,2) /)
     testR(:,3) = (/ testR(1,2), testR(2,2),  cos(Pi/2) /)

@@ -25,7 +25,7 @@ subroutine test_BD_QPData_mEta_rho()
     
     
     ! --------------------------------------------------------------------------
-    testname = "static simple beam under gravity"
+    testname = "static simple beam under gravity:"
     
     baselineRho(1,:) = (/ 1.0, 0.0, 0.0 /)
     baselineRho(2,:) = (/ 0.0, 1.0, 0.0 /)

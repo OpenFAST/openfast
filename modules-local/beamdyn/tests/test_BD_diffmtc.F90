@@ -27,7 +27,7 @@ subroutine test_BD_diffmtc()
     
     
     ! --------------------------------------------------------------------------
-    testname = "2 node, 1 element; all quadrature points are at GLL nodes"
+    testname = "2 node, 1 element; all quadrature points are at GLL nodes:"
     
     ! the shape functions should be:
     ! h1(-1) = 1,  h1(+1) = 0

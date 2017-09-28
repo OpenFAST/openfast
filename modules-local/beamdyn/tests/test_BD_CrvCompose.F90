@@ -39,7 +39,7 @@ subroutine test_BD_CrvCompose()
     
     
     ! --------------------------------------------------------------------------
-    testname = "both rotation angles 0, no transpose of input rotations (flag = 0)"
+    testname = "both rotation angles 0, no transpose of input rotations (flag = 0):"
     angle1 = 0 ! 0 degrees
     angle2 = 0 ! 0 degrees
     flag = 0
@@ -56,7 +56,7 @@ subroutine test_BD_CrvCompose()
     
     
     ! --------------------------------------------------------------------------
-    testname = "delta2 > 0, no transpose of input rotations (flag = 0)"
+    testname = "delta2 > 0, no transpose of input rotations (flag = 0):"
     angle1 = PiBy2_D ! 90 degrees
     angle2 = PiBy2_D ! 90 degrees
     flag = 0
@@ -72,7 +72,7 @@ subroutine test_BD_CrvCompose()
       
     
     ! --------------------------------------------------------------------------
-    testname = "delta2 < 0, no transpose of input rotations (flag = 0)"
+    testname = "delta2 < 0, no transpose of input rotations (flag = 0):"
     angle1 = PiBy2_D ! 90 degrees
     angle2 = 1.5*Pi  ! 270 degrees
     flag = 0
@@ -88,7 +88,7 @@ subroutine test_BD_CrvCompose()
     
     
     ! --------------------------------------------------------------------------
-    testname = "delta2 > 0, transpose of first rotation (flag = 1)"
+    testname = "delta2 > 0, transpose of first rotation (flag = 1):"
     angle1 = PiBy2_D ! 90 degrees
     angle2 = PiBy2_D ! 90 degrees
     flag = 1
@@ -104,7 +104,7 @@ subroutine test_BD_CrvCompose()
     
     
     ! --------------------------------------------------------------------------
-    testname = "delta2 > 0, transpose of second rotation (flag = 2)"
+    testname = "delta2 > 0, transpose of second rotation (flag = 2):"
     angle1 = PiBy2_D ! 90 degrees
     angle2 = PiBy2_D ! 90 degrees
     flag = 2
@@ -120,7 +120,7 @@ subroutine test_BD_CrvCompose()
     
     
     ! --------------------------------------------------------------------------
-    testname = "delta2 > 0, transpose of both rotations (flag = 3)"
+    testname = "delta2 > 0, transpose of both rotations (flag = 3):"
     angle1 = PiBy2_D ! 90 degrees
     angle2 = PiBy2_D ! 90 degrees
     flag = 3

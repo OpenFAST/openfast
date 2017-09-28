@@ -29,7 +29,7 @@ subroutine test_BD_InitShpDerJaco()
     
     
     ! --------------------------------------------------------------------------
-    testname = "2 node, 1 element; undeformed"
+    testname = "2 node, 1 element, undeformed:"
     
     ! the shape functions are
     ! h1(s) = 0.5*(1-s)

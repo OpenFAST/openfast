@@ -34,7 +34,7 @@ subroutine test_BD_CrvMatrixR()
     
     
     ! --------------------------------------------------------------------------
-    testname = "simple rotation with known parameters: Pi on xaxis"
+    testname = "simple rotation with known parameters: Pi on xaxis:"
     angle = Pi_D
     
     baselineR = RonXAxis(angle)
@@ -47,7 +47,7 @@ subroutine test_BD_CrvMatrixR()
     
     
     ! --------------------------------------------------------------------------
-    testname = "0 rotation"
+    testname = "0 rotation:"
     angle = 0
     
     baselineR = RonXAxis(angle)
@@ -60,7 +60,7 @@ subroutine test_BD_CrvMatrixR()
     
     
     ! --------------------------------------------------------------------------
-    testname = "small rotation with baseline WM parameters calculated"
+    testname = "small rotation with baseline WM parameters calculated:"
     angle = 0.1*Pi_D
     
     baselineR = RonXAxis(angle)

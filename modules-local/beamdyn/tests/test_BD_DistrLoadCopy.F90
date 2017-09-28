@@ -26,7 +26,7 @@ subroutine test_BD_DistrLoadCopy()
     
     
     ! --------------------------------------------------------------------------
-    testname = "static simple beam under gravity"
+    testname = "static simple beam under gravity:"
     
     ! build the parametertype, inputtype, and miscvartype
     parametertype = simpleParameterType()
