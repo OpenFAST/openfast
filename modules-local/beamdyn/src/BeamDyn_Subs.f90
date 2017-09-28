@@ -833,7 +833,7 @@ END SUBROUTINE BD_ComputeIniNodalPosition
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes initial CRV parameters
 !! given geometry information
-SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc, ErrStat, ErrMsg)
+SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
 
    REAL(BDKi),     INTENT(IN   )  :: e1(:)         !< Tangent unit vector
    REAL(BDKi),     INTENT(IN   )  :: phi           !< Initial twist angle, in degrees
@@ -846,8 +846,8 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc, ErrStat, ErrMsg)
    REAL(BDKi)                  :: PhiRad        !< Phi in radians
    REAL(BDKi)                  :: Delta
 
-   INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
-   CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
+   INTEGER(IntKi)              :: ErrStat2      ! Temporary Error status
+   CHARACTER(ErrMsgLen)        :: ErrMsg2       ! Temporary Error message
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeIniNodalCrv'
 
    ! Initialize ErrStat
@@ -865,8 +865,7 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc, ErrStat, ErrMsg)
    e2(2)    = SIN(PhiRad)
    e2       = e2 / Delta
    Rr(:,1)  = e2
-
-   Rr(:,2) = Cross_Product(e1,e2)
+   Rr(:,2)  = Cross_Product(e1,e2)
 
    CALL BD_CrvExtractCrv(Rr, cc, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
