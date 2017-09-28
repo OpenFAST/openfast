@@ -32,7 +32,6 @@ MODULE BeamDyn
    PUBLIC :: BD_End                            ! Ending routine (includes clean up)
    PUBLIC :: BD_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
    PUBLIC :: BD_CalcOutput                     ! Routine for computing outputs
-   PUBLIC :: BD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    PUBLIC :: BD_UpdateDiscState                ! Tight coupling routine for updating discrete states
 #endif
 
