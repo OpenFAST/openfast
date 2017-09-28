@@ -14,4 +14,5 @@ We are in the process of transitioning legacy FAST v8 documentation, which can b
    aerodyn/index.rst
    beamdyn/index.rst
    fast_to_openfast.rst
+   cppapi/index.rst
 
