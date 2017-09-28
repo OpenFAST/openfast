@@ -3294,8 +3294,6 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, x, m )
    m%elk(:,:,:,:) = 0.0_BDKi
    m%elf(:,:,:)   = 0.0_BDKi
 
-
-
    DO idx_qp=1,p%nqp
 
       CALL BD_ElasticForce( nelem,idx_qp,p,m,.true. )    ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
@@ -3307,9 +3305,16 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, x, m )
          DO idx_dof2=1,p%dof_node
             DO i=1,p%nodes_per_elem
                DO idx_dof1=1,p%dof_node
+                  !                                                              shape function    matrices for tangent stiffness matrix                        geometric Jacobian       qp weight
                   m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + p%Shp(i,idx_qp)   *m%qp%Qe(idx_dof1,idx_dof2,idx_qp,nelem)  *p%Shp(j,idx_qp)   *p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
+                  
+                  !                                                              shape function    matrices for tangent stiffness matrix   shp func derivative  qp weight
                   m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + p%Shp(i,idx_qp)   *m%qp%Pe(idx_dof1,idx_dof2,idx_qp,nelem)  *p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)
+                  
+                  !                                                           shp func derivative  matrices for tangent stiffness matrix    shp func            qp weight
                   m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + p%ShpDer(i,idx_qp)*m%qp%Oe(idx_dof1,idx_dof2,idx_qp,nelem)  *p%Shp(j,idx_qp)   *p%QPtWeight(idx_qp)
+                  
+                  !                                                           shp func derivative  matrices for tangent stiffness matrix   shp func derivative  qp weight           geometric Jacobian
                   m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + p%ShpDer(i,idx_qp)*m%qp%Stif(idx_dof1,idx_dof2,idx_qp,nelem)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)/p%Jacobian(idx_qp,nelem)
                ENDDO
             ENDDO
