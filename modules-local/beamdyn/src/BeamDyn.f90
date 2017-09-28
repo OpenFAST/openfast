@@ -2943,82 +2943,78 @@ SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coordinate,SP_Coef,ErrStat,ErrMsg)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( indx, n,  'IPIV', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) return
+   
+   ! compute K, the coefficient matrix, based on the z-component of the entered key points:
+   ! all of the coefficients will depend on kp_zr
+   K(:,:) = 0.0_BDKi
 
-   if (ErrStat < AbortErrLev) then ! do these calculations only if we could allocate space
+   K(1,3) = 2.0_BDKi
+   K(1,4) = 6.0_BDKi*kp_coordinate(1,3)
+   DO j=1,kp_member-1
+      temp_id1 = (j-1)*4
 
-         ! compute K, the coefficient matrix, based on the z-component of the entered key points:
-         ! all of the coefficients will depend on kp_zr
-      K(:,:) = 0.0_BDKi
+      K(temp_id1+2,temp_id1+1) = 1.0_BDKi
+      K(temp_id1+2,temp_id1+2) = kp_coordinate(j,3)
+      K(temp_id1+2,temp_id1+3) = kp_coordinate(j,3)**2
+      K(temp_id1+2,temp_id1+4) = kp_coordinate(j,3)**3
 
-      K(1,3) = 2.0_BDKi
-      K(1,4) = 6.0_BDKi*kp_coordinate(1,3)
-      DO j=1,kp_member-1
-         temp_id1 = (j-1)*4
+      K(temp_id1+3,temp_id1+1) = 1.0_BDKi
+      K(temp_id1+3,temp_id1+2) = kp_coordinate(j+1,3)
+      K(temp_id1+3,temp_id1+3) = kp_coordinate(j+1,3)**2
+      K(temp_id1+3,temp_id1+4) = kp_coordinate(j+1,3)**3
+   END DO
 
-         K(temp_id1+2,temp_id1+1) = 1.0_BDKi
-         K(temp_id1+2,temp_id1+2) = kp_coordinate(j,3)
-         K(temp_id1+2,temp_id1+3) = kp_coordinate(j,3)**2
-         K(temp_id1+2,temp_id1+4) = kp_coordinate(j,3)**3
+    DO j=1,kp_member-2
+       temp_id1 = (j-1)*4
 
-         K(temp_id1+3,temp_id1+1) = 1.0_BDKi
-         K(temp_id1+3,temp_id1+2) = kp_coordinate(j+1,3)
-         K(temp_id1+3,temp_id1+3) = kp_coordinate(j+1,3)**2
-         K(temp_id1+3,temp_id1+4) = kp_coordinate(j+1,3)**3
-      END DO
+       K(temp_id1+4,temp_id1+2) = 1.0_BDKi
+       K(temp_id1+4,temp_id1+3) = 2.0_BDKi*kp_coordinate(j+1,3)
+       K(temp_id1+4,temp_id1+4) = 3.0_BDKi*kp_coordinate(j+1,3)**2
 
-      DO j=1,kp_member-2
-         temp_id1 = (j-1)*4
+       K(temp_id1+4,temp_id1+6) = -1.0_BDKi
+       K(temp_id1+4,temp_id1+7) = -2.0_BDKi*kp_coordinate(j+1,3)
+       K(temp_id1+4,temp_id1+8) = -3.0_BDKi*kp_coordinate(j+1,3)**2
 
-         K(temp_id1+4,temp_id1+2) = 1.0_BDKi
-         K(temp_id1+4,temp_id1+3) = 2.0_BDKi*kp_coordinate(j+1,3)
-         K(temp_id1+4,temp_id1+4) = 3.0_BDKi*kp_coordinate(j+1,3)**2
+       K(temp_id1+5,temp_id1+3) = 2.0_BDKi
+       K(temp_id1+5,temp_id1+4) = 6.0_BDKi*kp_coordinate(j+1,3)
 
-         K(temp_id1+4,temp_id1+6) = -1.0_BDKi
-         K(temp_id1+4,temp_id1+7) = -2.0_BDKi*kp_coordinate(j+1,3)
-         K(temp_id1+4,temp_id1+8) = -3.0_BDKi*kp_coordinate(j+1,3)**2
+       K(temp_id1+5,temp_id1+7) = -2.0_BDKi
+       K(temp_id1+5,temp_id1+8) = -6.0_BDKi*kp_coordinate(j+1,3)
+    ENDDO
 
-         K(temp_id1+5,temp_id1+3) = 2.0_BDKi
-         K(temp_id1+5,temp_id1+4) = 6.0_BDKi*kp_coordinate(j+1,3)
+    temp_id1 = (kp_member-2)*4
+    K(n,temp_id1+3) = 2.0_BDKi
+    K(n,temp_id1+4) = 6.0_BDKi*kp_coordinate(kp_member,3)
 
-         K(temp_id1+5,temp_id1+7) = -2.0_BDKi
-         K(temp_id1+5,temp_id1+8) = -6.0_BDKi*kp_coordinate(j+1,3)
-      ENDDO
+       ! compute the factored K matrix so we can use it to solve for the coefficients later
 
-      temp_id1 = (kp_member-2)*4
-      K(n,temp_id1+3) = 2.0_BDKi
-      K(n,temp_id1+4) = 6.0_BDKi*kp_coordinate(kp_member,3)
-
-         ! compute the factored K matrix so we can use it to solve for the coefficients later
-
-      CALL LAPACK_getrf( n, n, K,indx, ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    CALL LAPACK_getrf( n, n, K,indx, ErrStat2, ErrMsg2)
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
-      DO i=1,4 ! one for each column of kp_coordinate
+    DO i=1,4 ! one for each column of kp_coordinate
 
-            ! compute the right hand side for the cubic spline fit
-         RHS(:) = 0.0_BDKi
-         DO j=1,kp_member-1
-            temp_id1 = (j-1)*4
+          ! compute the right hand side for the cubic spline fit
+       RHS(:) = 0.0_BDKi
+       DO j=1,kp_member-1
+          temp_id1 = (j-1)*4
 
-            RHS(temp_id1+2) = kp_coordinate(j,i)
-            RHS(temp_id1+3) = kp_coordinate(j+1,i)
-         ENDDO
+          RHS(temp_id1+2) = kp_coordinate(j,i)
+          RHS(temp_id1+3) = kp_coordinate(j+1,i)
+       ENDDO
 
-            ! solve for the cubic-spline coefficients
-         CALL LAPACK_getrs( 'N', n, K, indx, RHS, ErrStat2, ErrMsg2)
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          ! solve for the cubic-spline coefficients
+       CALL LAPACK_getrs( 'N', n, K, indx, RHS, ErrStat2, ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-            ! convert cubic-spline coefficients in RHS to output array, Coef
-         DO j=1,kp_member-1
-            DO m=1,4
-               SP_Coef(j,m,i) = RHS( (j-1)*4 + m )
-            ENDDO
-         ENDDO
-      ENDDO
-
-   end if ! temp arrays are allocated
-
+          ! convert cubic-spline coefficients in RHS to output array, Coef
+       DO j=1,kp_member-1
+          DO m=1,4
+             SP_Coef(j,m,i) = RHS( (j-1)*4 + m )
+          ENDDO
+       ENDDO
+    ENDDO
 
    if (allocated(K   )) deallocate(K)
    if (allocated(RHS )) deallocate(RHS)
