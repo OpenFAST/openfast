@@ -15,20 +15,19 @@
 #
 
 #===============================================================================
-# Functions defining available test types
+# Generic test functions
 #===============================================================================
 
-# Standard regression test
-function(of_regression testname LABELS)
+function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TESTNAME LABELS PLOT_FLAG)
   file(TO_NATIVE_PATH "${PYTHON_EXECUTABLE}" PYTHON_EXECUTABLE)
 
-  file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py" TEST_SCRIPT)
-  file(TO_NATIVE_PATH "${CTEST_OPENFAST_EXECUTABLE}" OPENFAST_EXECUTABLE)
-  file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/.." SOURCE_DIRECTORY)
-  file(TO_NATIVE_PATH "${CTEST_BINARY_DIR}/glue-codes/fast" BUILD_DIRECTORY)
+  file(TO_NATIVE_PATH "${EXECUTABLE}" EXECUTABLE)
+  file(TO_NATIVE_PATH "${TEST_SCRIPT}" TEST_SCRIPT)
+  file(TO_NATIVE_PATH "${SOURCE_DIRECTORY}" SOURCE_DIRECTORY)
+  file(TO_NATIVE_PATH "${BUILD_DIRECTORY}" BUILD_DIRECTORY)
 
+  string(REPLACE "\\" "\\\\" EXECUTABLE ${EXECUTABLE})
   string(REPLACE "\\" "\\\\" TEST_SCRIPT ${TEST_SCRIPT})
-  string(REPLACE "\\" "\\\\" OPENFAST_EXECUTABLE ${OPENFAST_EXECUTABLE})
   string(REPLACE "\\" "\\\\" SOURCE_DIRECTORY ${SOURCE_DIRECTORY})
   string(REPLACE "\\" "\\\\" BUILD_DIRECTORY ${BUILD_DIRECTORY})
 
@@ -38,10 +37,10 @@ function(of_regression testname LABELS)
   endif()
 
   add_test(
-    ${testname} ${PYTHON_EXECUTABLE}
+    ${TESTNAME} ${PYTHON_EXECUTABLE}
        ${TEST_SCRIPT}
-       ${testname}
-       ${OPENFAST_EXECUTABLE}
+       ${TESTNAME}
+       ${EXECUTABLE}
        ${SOURCE_DIRECTORY}              # openfast source directory
        ${BUILD_DIRECTORY}               # build directory for test
        ${TOLERANCE}
@@ -51,32 +50,28 @@ function(of_regression testname LABELS)
   )
   # limit each test to 90 minutes: 5400s
   set_tests_properties(${testname} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
+endfunction(regression)
+
+#===============================================================================
+# Module specific regression test calls
+#===============================================================================
+
+# openfast
+function(of_regression TESTNAME LABELS)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
+  set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/fast")
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} ${LABELS})
 endfunction(of_regression)
 
-function(bd_regression testname LABELS)
-  file(TO_NATIVE_PATH "${PYTHON_EXECUTABLE}" PYTHON_EXECUTABLE)
-
-  file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py" TEST_SCRIPT)
-  file(TO_NATIVE_PATH "${CTEST_BEAMDYN_EXECUTABLE}" BEAMDYN_EXECUTABLE)
-  file(TO_NATIVE_PATH "${CMAKE_CURRENT_LIST_DIR}/.." SOURCE_DIRECTORY)
-  file(TO_NATIVE_PATH "${CTEST_BINARY_DIR}/modules-local/beamdyn" BUILD_DIRECTORY)
-
-  string(REPLACE "\\" "\\\\" TEST_SCRIPT ${TEST_SCRIPT})
-  string(REPLACE "\\" "\\\\" BEAMDYN_EXECUTABLE ${BEAMDYN_EXECUTABLE})
-  string(REPLACE "\\" "\\\\" SOURCE_DIRECTORY ${SOURCE_DIRECTORY})
-  string(REPLACE "\\" "\\\\" BUILD_DIRECTORY ${BUILD_DIRECTORY})
-
-  add_test(
-    ${testname} ${PYTHON_EXECUTABLE}
-       ${TEST_SCRIPT}
-       ${testname}
-       ${BEAMDYN_EXECUTABLE}
-       ${SOURCE_DIRECTORY}              # openfast source directory
-       ${BUILD_DIRECTORY}               # build directory for test
-       ${TOLERANCE}
-  )
-  # limit each test to 90 minutes: 5400s
-  set_tests_properties(${testname} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
+# beamdyn
+function(bd_regression TESTNAME LABELS)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py")
+  set(BEAMDYN_EXECUTABLE "${CTEST_BEAMDYN_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules-local/beamdyn")
+  regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} ${LABELS})
 endfunction(bd_regression)
 
 #===============================================================================
