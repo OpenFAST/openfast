@@ -530,6 +530,10 @@ end subroutine InitializeNodalLocations
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_InitShpDerJaco( GLL_Nodes, p )
 
+  ! Bauchau chapter 17.1 gives an intro to displacement fields, the shape functions and the jacobian 
+  ! see Bauchau equation 17.12
+  ! also https://en.wikipedia.org/wiki/Jacobian_matrix_and_determinant
+  
    REAL(BDKi),             INTENT(IN   )  :: GLL_nodes(:)   !< p%GLL point locations
    TYPE(BD_ParameterType), INTENT(INOUT)  :: p              !< Parameters
 
