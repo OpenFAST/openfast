@@ -51,7 +51,7 @@ elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
   if (APPLE OR UNIX)
     set(NWTC_SYS_FILE src/SysIFL.f90)
   elseif (WIN32)
-    set(NWTC_SYS_FILE src/SysIFV.f90)
+    set(NWTC_SYS_FILE src/SysIVF.f90)
   endif (APPLE OR UNIX)
 endif ()
 
