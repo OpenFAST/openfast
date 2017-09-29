@@ -1,3 +1,5 @@
+.. _unit_test:
+
 Unit test
 =========
 

@@ -1,3 +1,5 @@
+.. _regression_test:
+
 Regression test
 ===============
 
