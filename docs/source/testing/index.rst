@@ -13,14 +13,6 @@ the ``reg_tests`` directory. The unit test framework is housed in ``unit_tests``
 while the actual tests are contained in the directory corresponding to the tested
 module.
 
-Dependencies
-------------
-- Python 3+
-- Numpy
-- CMake and CTest (Optional in regression test)
-- matplotlib (Optional in regression test)
-- pFUnit (Inlcuded in unit test suite)
-
 Configuring the test suite
 --------------------------
 Portions of the test suite are linked to the OpenFAST repository through
@@ -34,13 +26,13 @@ Be sure to clone the repo with the ``--recursive`` flag or execute
 
 The test suite can be built with `CMake <https://cmake.org/>`__ similar to
 OpenFAST. The default CMake configuration is useful, but may need customization
-for particular build environments. Look at the `Installing OpenFAST <install.html>`__ 
-page for more details on configuring the CMake targets.
+for particular build environments. See the installation documentation at :numref:`installation`
+for more details on configuring the CMake targets.
 
 While the unit tests must be built with CMake due to its external dependencies,
-the regression test may be executed without building with CMake. See the
-`regression test <regression_test.html>`__ and `unit test <unit_test.html>`__ 
-sections for more info.
+the regression test may be executed without building with CMake. :numref:`regression_test`
+and :numref:`unit_test` have more information on regression testing and unit testing,
+respectively.
 
 Test specific documentation
 ---------------------------

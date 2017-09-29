@@ -1,3 +1,5 @@
+.. _regression_test:
+
 Regression test
 ===============
 
@@ -40,6 +42,12 @@ test is reported as failed. The failure criteria is outlined in pseudocode below
   if max(norm) < tolerance:
     success
 
+Dependencies
+------------
+    - Python 3+
+    - Numpy
+    - CMake and CTest (Optional)
+    - matplotlib (Optional)
 
 Manual driver configuration
 ---------------------------

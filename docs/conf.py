@@ -223,3 +223,11 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+def setup(app):
+    app.add_object_type("confval", "confval",
+                        objname="input file parameter",
+                        indextemplate="pair: %s; input file parameter")
+    app.add_object_type("cmakeval", "cmakeval",
+                        objname="CMake configuration value",
+                        indextemplate="pair: %s; CMake configuration")
+    
