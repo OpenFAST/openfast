@@ -123,6 +123,11 @@ release = u'1.0'
 # Usually you set "language" from the command line for these cases.
 language = None
 
+#If true, figures, tables and code-blocks are automatically numbered if they 
+#have a caption. At same time, the numref role is enabled. For now, it works 
+#only with the HTML builder and LaTeX builder. Default is False.
+numfig = True
+
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
@@ -148,7 +153,7 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
-html_logo = 'openfastlogo.jpg'
+html_logo = '_static/openfastlogo.jpg'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -218,3 +223,11 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+def setup(app):
+    app.add_object_type("confval", "confval",
+                        objname="input file parameter",
+                        indextemplate="pair: %s; input file parameter")
+    app.add_object_type("cmakeval", "cmakeval",
+                        objname="CMake configuration value",
+                        indextemplate="pair: %s; CMake configuration")
+    
