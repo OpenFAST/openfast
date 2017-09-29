@@ -3,23 +3,17 @@
 Introduction
 ============
 
-AeroDyn is a time-domain wind turbine aerodynamics module that has been
-coupled into the FAST version 8 multi-physics engineering tool to enable
-aero-elastic simulation of horizontal-axis turbines. AeroDyn can also be
-driven as a standalone code to compute wind turbine aerodynamic response
-uncoupled from FAST. When coupled to FAST, AeroDyn can also be
-linearized as part of the linearization of the full coupled solution
-(linearization is not available in standalone mode). AeroDyn was
-originally developed for modeling wind turbine aerodynamics, however,
-the module equally applies to the hydrodynamics of marine hydrokinetic
-(MHK) turbines (the terms “wind turbine”, “tower”, “aerodynamics” etc.
-in this document imply “MHK turbine”, “MHK support structure”,
-“hydrodynamics” etc. for MHK turbines). Additional physics important for
-MHK turbines, not applicable to wind turbines, computed by AeroDyn
-include a cavitation check. This documentation pertains to the newest
-release of AeroDyn—version 15 and newer, which represents a complete
-overhaul from earlier version of AeroDyn. AeroDyn v15 and newer follows
-the requirements of the FAST modularization framework.
+AeroDyn is a time-domain wind turbine aerodynamics module that is coupled in the OpenFAST multi-physics engineering tool to enable aero-elastic simulation of horizontal-axis turbines. 
+AeroDyn can also be driven as a standalone code to compute wind turbine aerodynamic response uncoupled from OpenFAST. 
+When coupled to OpenFAST, AeroDyn can also be linearized as part of the linearization of the full coupled solution (linearization is not available in standalone mode). 
+AeroDyn was originally developed for modeling wind turbine aerodynamics. 
+However, the module equally applies to the hydrodynamics of marine hydrokinetic
+(MHK) turbines (the terms “wind turbine”, “tower”, “aerodynamics” etc.  in this document imply “MHK turbine”, “MHK support structure”, “hydrodynamics” etc. for MHK turbines). 
+Additional physics important for MHK turbines, not applicable to wind turbines, computed by AeroDyn include a cavitation check. 
+This documentation pertains version of AeroDyn in the OpenFAST github repository.  
+The AeroDyn version released of OpenFAST 1.0.0 is most closely related to AeroDyn version 15 in the legacy version numbering. 
+AeroDyn version 15 was a complete overhaul from earlier version of AeroDyn. 
+AeroDyn version 15 and newer follows the requirements of the FAST modularization framework. 
 
 AeroDyn calculates aerodynamic loads on both the blades and tower.
 Aerodynamic calculations within AeroDyn are based on the principles of
@@ -31,7 +25,7 @@ section. Analysis nodes are distributed along the length of each blade
 and tower, the 2D forces and moment at each node are computed as
 distributed loads per unit length, and the total 3D aerodynamic loads
 are found by integrating the 2D distributed loads along the length. When
-AeroDyn is coupled to FAST, the blade and tower analysis node
+AeroDyn is coupled to OpenFAST, the blade and tower analysis node
 discretization may be independent from the discretization of the nodes
 in the structural modules. The actuator line approximations restrict the
 validity of the model to slender structures and 3D behavior is either
@@ -44,13 +38,13 @@ AeroDyn assumes the turbine geometry consists of a one-, two-, or
 three-bladed rotor atop a single tower. While the undeflected tower is
 assumed to be straight and vertical, an undeflected blade may consider
 out-of-plane curvature and in-plane sweep. For blades, the 2D cross
-sections where the aerodynamic analysis takes place may follow the
+sections where the aerodynamic analysis take place may follow the
 out-of-plane curvature, but in-plane sweep is assumed to be accomplished
 by shearing, rather than rotation of the 2D cross section. Aerodynamic
 imbalances are possible through the use of geometrical differences
 between each blade.
 
-When AeroDyn is coupled to FAST, AeroDyn receives the instantaneous
+When AeroDyn is coupled to OpenFAST, AeroDyn receives the instantaneous
 (possibly displaced/deflected) structural position, orientation, and
 velocities of analysis nodes in the tower, hub, and blades. As with
 curvature and sweep, the 2D cross sections where the blade aerodynamic
@@ -62,7 +56,7 @@ freestream (undisturbed) fluid velocities at the tower and blade nodes.
 module and are passed as inputs to AeroDyn by the driver code.) The
 fluid and structural motions are provided at each coupling time step and
 then AeroDyn computes the aerodynamic loads on the blade and tower nodes
-and returns them back to FAST as part of the aero-elastic calculation.
+and returns them back to OpenFAST as part of the aero-elastic calculation.
 In standalone mode, the inputs to AeroDyn are prescribed by a simple
 driver code, without aero-elastic coupling.
 
@@ -97,22 +91,22 @@ the nodal loads once the induction has been found). The wake/induction
 calculation can be bypassed altogether for the purposes of modeling
 rotors that are parked or idling, in which case the inflow velocity and
 angle are determined purely geometrically. During linearization analyses
-with AeroDyn coupled to FAST and BEM enabled, the wake can be assumed to
-be frozen (i.e. the axial and tangential induces velocities, and , are
+with AeroDyn coupled to OpenFAST and BEM enabled, the wake can be assumed to
+be frozen (i.e., the axial and tangential induces velocities, :math:`-V_x a` and :math:`V_y a'`, are
 fixed at their operating-point values during linearization) or the
 induction can be recalculated during linearization using BEM theory.
 Dynamic wake that accounts for induction dynamics as a result of
 transient conditions are not yet available in AeroDyn v15 and newer.
 
 The blade airfoil aerodynamics can be steady or unsteady, except in the
-case that a cavitation check is requested for MHK in which case only
+case that a cavitation check is requested for MHK, in which case only
 steady aerodynamics are supported. In the steady model, the supplied
-static airfoil data—including the lift-force, drag-force, and optional
-pitching-moment and minimum pressure coefficients versus angle of attack
-(AoA)—are used directly to calculate nodal loads. The
+static airfoil data — including the lift force, drag force, and optional
+pitching moment and minimum pressure coefficients versus angle of attack
+(AoA) — are used directly to calculate nodal loads. The
 `AirfoilPrep <https://nwtc.nrel.gov/AirFoilPrep>`__ preprocessor can be
 used to generate the needed static airfoil data based on uncorrected 2D
-data (based e.g. on airfoil tests in a wind tunnel or
+data (based, e.g., on airfoil tests in a wind tunnel or
 `XFoil <http://web.mit.edu/drela/Public/web/xfoil/>`__), including
 features to blend data between different airfoils, apply 3D rotational
 augmentation, and extrapolate to high AoA. The unsteady airfoil
@@ -128,7 +122,7 @@ in this manual, the original B-L model is not yet functional. Testing
 has shown that the González and Minnema/Pierce models produce reasonable
 hysteresis of the normal force, tangential force, and pitching-moment
 coefficients if the UA model parameters are set appropriately for a
-given airfoil, Reynold’s number, and/or Mach number. However, the
+given airfoil, Reynolds number, and/or Mach number. However, the
 results will differ a bit from earlier versions of AeroDyn, (which was
 based on the Minnema/Pierce extensions to B-L) even if the default UA
 model parameters are used, due to differences in the UA model logic
@@ -136,7 +130,7 @@ between the versions. We recommend that users run test cases with
 uniform wind inflow and fixed yaw error (e.g., through the standalone
 AeroDyn driver) to examine the accuracy of the normal force, tangential
 force, and pitching-moment coefficient hysteresis and to adjust the UA
-model parameters appropriately.** The airfoil-, Reynold’s-, and
+model parameters appropriately.** The airfoil-, Reynolds-, and
 Mach-dependent parameters of the UA models may be derived from the
 static airfoil data. These UA models are valid for small to moderate AoA
 under normal rotor operation; the steady model is more appropriate under
@@ -144,12 +138,12 @@ parked or idling conditions. The static airfoil data is always used in
 the BEM iteration; when UA is enabled, it is applied after the BEM
 iteration and after the skewed-wake correction. The UA models are not
 set up to support linearization, so, UA must be disabled during
-linearization analyses with AeroDyn coupled to FAST. The interpolation
+linearization analyses with AeroDyn coupled to OpenFAST. The interpolation
 of airfoil data based on Reynolds number or aerodynamic-control setting
 (e.g., flaps) is not yet available in AeroDyn v15 and newer.
 
 The influence of the tower on the fluid flow local to the blade is based
-on a potential-flow and/or a tower shadow model. The potential-flow
+on a potential-flow and/or a tower-shadow model. The potential-flow
 model uses the analytical potential-flow solution for flow around a
 cylinder to model the tower dam effect on upwind rotors. In this model,
 the freestream (undisturbed) flow at each blade node is disturbed based
@@ -188,13 +182,11 @@ requested.) Blade nodal discretization, geometry, twist, chord, and
 airfoil identifier are likewise read from separate input files (one for
 each blade).
 
-Section 3 details how to obtain the AeroDyn and FAST software archives
-and how to run both the standalone AeroDyn or AeroDyn coupled to FAST.
-Section 4 describes the AeroDyn input files. Section 5 discusses the
+:numref:`ad_input` describes the AeroDyn input files. 
+:numref:`ad_output` discusses the
 output files generated by AeroDyn; these include an echo file, summary
-file, and the results file. Section 6 provides modeling guidance when
-using AeroDyn. The AeroDyn theory is covered in Section 7. Section 8
-outlines future work, and Section 9 contains a list of references.
-Example input files are shown in Appendix A through D. A summary of
-available output channels are found in Appendix E. Appendix F tracks the
-major changes we have made to AeroDyn for each public release.
+file, and the results file. 
+:numref:`ad_modeling` provides modeling guidance when
+using AeroDyn. 
+Example input files are included in :numref:`ad_input_files`. A summary of
+available output channels are found :numref:`ad_output_channels`. 
