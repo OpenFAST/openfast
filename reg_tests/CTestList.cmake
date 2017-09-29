@@ -18,7 +18,7 @@
 # Generic test functions
 #===============================================================================
 
-function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TESTNAME LABELS PLOT_FLAG)
+function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TESTNAME LABEL)
   file(TO_NATIVE_PATH "${PYTHON_EXECUTABLE}" PYTHON_EXECUTABLE)
 
   file(TO_NATIVE_PATH "${EXECUTABLE}" EXECUTABLE)
@@ -49,7 +49,7 @@ function(regression TEST_SCRIPT EXECUTABLE SOURCE_DIRECTORY BUILD_DIRECTORY TEST
        ${PLOT_FLAG}                     # empty or "-p"
   )
   # limit each test to 90 minutes: 5400s
-  set_tests_properties(${testname} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABELS}")
+  set_tests_properties(${TESTNAME} PROPERTIES TIMEOUT 5400 WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}" LABELS "${LABEL}")
 endfunction(regression)
 
 #===============================================================================
@@ -57,21 +57,21 @@ endfunction(regression)
 #===============================================================================
 
 # openfast
-function(of_regression TESTNAME LABELS)
+function(of_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
   set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/fast")
-  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} ${LABELS})
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression)
 
 # beamdyn
-function(bd_regression TESTNAME LABELS)
+function(bd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py")
   set(BEAMDYN_EXECUTABLE "${CTEST_BEAMDYN_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
   set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules-local/beamdyn")
-  regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} ${LABELS})
+  regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(bd_regression)
 
 #===============================================================================
