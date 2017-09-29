@@ -13,14 +13,6 @@ the ``reg_tests`` directory. The unit test framework is housed in ``unit_tests``
 while the actual tests are contained in the directory corresponding to the tested
 module.
 
-Dependencies
-------------
-- Python 3+
-- Numpy
-- CMake and CTest (Optional in regression test)
-- matplotlib (Optional in regression test)
-- pFUnit (Inlcuded in unit test suite)
-
 Configuring the test suite
 --------------------------
 Portions of the test suite are linked to the OpenFAST repository through

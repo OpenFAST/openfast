@@ -17,6 +17,12 @@ the CMake variable ``BUILD_TESTING`` is turned on.
 The BeamDyn module has been unit tested and should serve as a reference for future 
 development and testing.
 
+Dependencies
+------------
+    - Python 3+
+    - CMake and CTest
+    - Numpy and matplotlib (Optional)
+    - pFUnit (Included in unit test suite)
 
 Compiling the unit tests
 ------------------------
