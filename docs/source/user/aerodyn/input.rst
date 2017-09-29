@@ -203,8 +203,8 @@ The input parameters in this section are only used when ``WakeMod =
 ``SkewMod`` determines the skewed-wake correction model. Set
 ``SkewMod`` to 1 to use the uncoupled BEM solution technique without
 an additional skewed-wake correction. Set ``SkewMod`` to 2 to include
-the Pitt/Peters correction model. **The coupled model (**\ *SkewMod* **=
-3) is not available in this version of AeroDyn.**
+the Pitt/Peters correction model. **The coupled model ``SkewMod=
+3`` is not available in this version of AeroDyn.**
 
 Set ``TipLoss`` to TRUE to include the Prandtl tip-loss model or FALSE
 to disable it. Likewise, set ``HubLoss`` to TRUE to include the
@@ -260,8 +260,8 @@ parameters appropriately.**
 value, *f’*, will be calculated. When ``FLookup`` is set to TRUE, *f’*
 is determined via a lookup into the static lift-force coefficient and
 drag-force coefficient data. **Using best-fit exponential equations
-(``FLookup = FALSE``) is not yet available, so** ``FLookup`` **must be
-TRUE in this version of AeroDyn.**
+(``FLookup = FALSE``) is not yet available, so ``FLookup`` must be
+``TRUE`` in this version of AeroDyn.**
 
 
 .. _airfoil_information:
@@ -429,7 +429,7 @@ used by OpenFAST for blade surface visualization when enabled.
 Specify the number of Reynolds number- or aerodynamic-control
 setting-dependent tables of data for the given airfoil via the
 ``NumTabs`` setting. **Currently, AeroDyn can only use the first table
-in any given airfoil file, so you should set** ``NumTabs = 1`` and you
+in any given airfoil file, so you should set ``NumTabs = 1`` and you
 will need to make separate airfoil data input files and run separate
 simulations if you need to analyze data for different Reynolds numbers
 or aerodynamic-control settings.** The remaining parameters in the
