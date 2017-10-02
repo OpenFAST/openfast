@@ -40,12 +40,14 @@ from errorPlotting import exportCaseSummary
 pythonCommand = sys.executable
 
 ### Verify input arguments
-parser = argparse.ArgumentParser(description='Executes OpenFAST and a regression test for a single test case.')
-parser.add_argument('caseName', metavar='Case-Name', type=str, nargs=1, help='The name of the test case.')
-parser.add_argument('executable', metavar='BeamDyn-Driver', type=str, nargs=1, help='The path to the BeamDyn driver executable.')
-parser.add_argument('sourceDirectory', metavar='path/to/openfast_repo', type=str, nargs=1, help='The path to the OpenFAST repository.')
-parser.add_argument('buildDirectory', metavar='path/to/openfast_repo/build', type=str, nargs=1, help='The path to the OpenFAST repository build directory.')
-parser.add_argument('tolerance', metavar='Test-Tolerance', type=float, nargs=1, help='Tolerance defining pass or failure in the regression test.')
+parser = argparse.ArgumentParser(description="Executes OpenFAST and a regression test for a single test case.")
+parser.add_argument("caseName", metavar="Case-Name", type=str, nargs=1, help="The name of the test case.")
+parser.add_argument("executable", metavar="BeamDyn-Driver", type=str, nargs=1, help="The path to the BeamDyn driver executable.")
+parser.add_argument("sourceDirectory", metavar="path/to/openfast_repo", type=str, nargs=1, help="The path to the OpenFAST repository.")
+parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", type=str, nargs=1, help="The path to the OpenFAST repository build directory.")
+parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
+parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
+parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
 parser.add_argument("-p", "-plot", dest="plot", default=False, metavar="Plotting-Flag", type=bool, nargs="?", help="bool to include matplotlib plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", default=False, metavar="No-Execution", type=bool, nargs="?", help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", default=False, metavar="Verbose-Flag", type=bool, nargs="?", help="bool to include verbose system output")
@@ -107,7 +109,7 @@ rtl.validateFileOrExit(baselineOutFile)
 
 testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
-relativeNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData)
+relativeNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
 
 # export all case summaries
 results = list(zip(testInfo["attribute_names"], relativeNorm, maxNorm))
