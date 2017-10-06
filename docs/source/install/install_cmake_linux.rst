@@ -3,7 +3,10 @@
 Building OpenFAST with CMake on Linux and Mac
 =============================================
 
-We describe here how to install OpenFAST (or any of its modules) using the `CMake <https://cmake.org>`_ build system on Linux or Mac OS systems.  Separate `CMake <https://cmake.org>`_ documentation is provided for Windows Cygwin users: see :numref:`install_cmake_cygwin`.
+We describe here how to install OpenFAST (or any of its modules) using the `CMake <https://cmake.org>`_ 
+build system on Linux or Mac OS systems. Separate `CMake <https://cmake.org>`_ documentation is 
+provided for Windows Cygwin users: see :numref:`install_cmake_cygwin`. Also, some template
+build scripts are available in ``openfast/share``.
 
 Required software for building OpenFAST 
 ---------------------------------------
@@ -15,6 +18,12 @@ In order to build OpenFAST using CMake, one needs the following minimum set of p
 - C/C++ compiler
 
 - CMake (version 2.8.12 or later)
+
+- LAPACK libraries. Users should set ``BLAS_LIBRARIES`` and ``LAPACK_LIBRARIES`` appropriately for cmake if the library isn't found in standard paths. Use `BLASLIB` as an example when using Intel MKL.
+
+- For the optional C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`__ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__ (provided by ``YAML_ROOT``)
+
+- For the optional testing framework, Python 3+ and Numpy
 
 OpenFAST third-party-library (TPL) dependencies
 -----------------------------------------------
