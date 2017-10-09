@@ -830,7 +830,8 @@ FILE_PATTERNS          = *.f90 \
                          *.hh \
                          *.hxx \
                          *.hpp \
-                         *.h
+                         *.h \
+                         *.H 
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
 # be searched for input files as well.
@@ -1902,7 +1903,7 @@ MAN_LINKS              = NO
 # captures the structure of the code including all documentation.
 # The default value is: NO.
 
-GENERATE_XML           = NO
+GENERATE_XML           = YES
 
 # The XML_OUTPUT tag is used to specify where the XML pages will be put. If a
 # relative path is entered the value of OUTPUT_DIRECTORY will be put in front of
