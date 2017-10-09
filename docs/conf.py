@@ -23,16 +23,20 @@ import re
 
 #sys.path.append(os.path.abspath('_extensions/'))
 
-readTheDocs = os.environ.get('READTHEDOCS', None) == 'True'
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 sourcedir = sys.argv[-2]
 builddir = sys.argv[-1]
 
+# Only build API docs if the user specifically requests it. On RTD we build it
+# all the time
+use_breathe = tags.has("use_breathe") or on_rtd
+
 # Use this to turn Doxygen on or off
-useDoxygen=False
+useDoxygen=True
 
 # This function was adapted from https://gitlab.kitware.com/cmb/smtk
 # Only run when on readthedocs
-def runDoxygen(sourcfile, doxyfileIn, doxyfileOut):
+def runDoxygen(sourcefile, doxyfileIn, doxyfileOut):
     dx = open(os.path.join(sourcedir, doxyfileIn), 'r')
     cfg = dx.read()
     srcdir = os.path.abspath(os.path.join(os.getcwd(), '..'))
@@ -46,8 +50,13 @@ def runDoxygen(sourcfile, doxyfileIn, doxyfileOut):
     print 'Running Doxygen on %s' % doxyfileOut
     doxproc = subprocess.call(('doxygen', doxname))
 
-if readTheDocs and useDoxygen:
-    runDoxygen(sourcedir, 'Doxyfile.in', 'Doxyfile')
+if on_rtd and useDoxygen:
+    try:
+        runDoxygen(sourcedir, 'Doxyfile.rtd', 'Doxyfile')
+    except:
+        # Gracefully bailout if doxygen encounters errors
+        use_breathe = False
+        
 
 # -- General configuration ------------------------------------------------
 
@@ -64,8 +73,11 @@ extensions = [
               'sphinx.ext.mathjax',
               'sphinx.ext.intersphinx',
               'sphinxcontrib.doxylink',
-              'sphinxcontrib.bibtex',
+              'sphinxcontrib.bibtex'
              ]
+
+if use_breathe:
+    extensions.append('breathe')
 
 autodoc_default_flags = ['members','show-inheritance','undoc-members']
 
@@ -75,7 +87,7 @@ mathjax_path = 'https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS
 
 # FIXME: Naively assuming build directory one level up locally, and two up on readthedocs
 if useDoxygen:
-    if readTheDocs:
+    if on_rtd:
         doxylink = {
             'openfast' : (
               os.path.join(builddir, '..', '..', 'openfast.tag'),
@@ -135,7 +147,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # FIXME: Naively assuming build directory one level up locally, and two up on readthedocs
 if useDoxygen:
-    if readTheDocs:
+    if on_rtd:
         html_extra_path = [os.path.join(builddir, '..', '..', 'doxygen')]
     else:
         html_extra_path = [os.path.join(builddir, '..', 'doxygen')]
@@ -223,6 +235,21 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+
+### Breathe configuration
+if on_rtd:
+    breathe_projects = {
+        'openfast' : os.path.join(builddir, '../../', 'doxygen/xml/')
+    }
+else:
+    breathe_projects = {
+        'openfast' : os.path.join(builddir, '../', 'doxygen/xml/')
+    }
+
+breathe_default_project = "openfast"
+
+primary_domain = "cpp"
+
 def setup(app):
     app.add_object_type("confval", "confval",
                         objname="input file parameter",
@@ -231,3 +258,5 @@ def setup(app):
                         objname="CMake configuration value",
                         indextemplate="pair: %s; CMake configuration")
     
+    app.add_config_value("use_breathe", use_breathe, 'env')
+    app.add_config_value("on_rtd", on_rtd, 'env')
