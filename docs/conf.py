@@ -52,7 +52,7 @@ def runDoxygen(sourcefile, doxyfileIn, doxyfileOut):
 
 if on_rtd and useDoxygen:
     try:
-        runDoxygen(sourcedir, 'Doxyfile.in', 'Doxyfile')
+        runDoxygen(sourcedir, 'Doxyfile.rtd', 'Doxyfile')
     except:
         # Gracefully bailout if doxygen encounters errors
         use_breathe = False
