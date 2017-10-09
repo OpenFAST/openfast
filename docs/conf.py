@@ -237,9 +237,14 @@ texinfo_documents = [
 
 
 ### Breathe configuration
-breathe_projects = {
-    'openfast' : os.path.join(builddir, '../../', 'doxygen/xml/')
-}
+if on_rtd:
+    breathe_projects = {
+        'openfast' : os.path.join(builddir, '../../', 'doxygen/xml/')
+    }
+else:
+    breathe_projects = {
+        'openfast' : os.path.join(builddir, '../', 'doxygen/xml/')
+    }
 
 breathe_default_project = "openfast"
 
