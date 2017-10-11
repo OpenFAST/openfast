@@ -161,7 +161,7 @@ Regression test from scratch
 
 - Build only the test suite
 
-::
+.. code-block:: bash
 
   git clone --recursive https://github.com/openfast/openfast.git
   cd openfast/reg_tests/r-test/glue-codes/fast/
@@ -179,7 +179,7 @@ Regression test from scratch
 Follow the link above for a detailed procedure. It is summarized below though
 excluding the procedure to build OpenFAST itself.
 
-::
+.. code-block:: bash
 
   git clone --recursive https://github.com/openfast/openfast.git
   cd openfast
