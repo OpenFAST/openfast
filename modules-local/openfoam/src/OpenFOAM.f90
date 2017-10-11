@@ -1171,8 +1171,12 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
         do while ( ( (InitOut_AD%TwrElev(jLower) - p_OpFM%forceTwrHnodes(I))*(InitOut_AD%TwrElev(jLower+1) - p_OpFM%forceTwrHnodes(I)) .gt. 0) .and. (jLower .le. nNodesTowerProps) ) !Determine the closest two nodes at which the blade properties are specified
            jLower = jLower + 1
         end do
-        rInterp =  (p_OpFM%forceTwrHnodes(I) - InitOut_AD%TwrElev(jLower))/(InitOut_AD%TwrElev(jLower+1)-InitOut_AD%TwrElev(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
-        u_OpFM%forceNodesChord(Node) = InitOut_AD%TwrDiam(jLower) + rInterp * (InitOut_AD%TwrDiam(jLower+1) - InitOut_AD%TwrDiam(jLower))
+        if (jLower .lt. nNodesTowerProps) then
+           rInterp =  (p_OpFM%forceTwrHnodes(I) - InitOut_AD%TwrElev(jLower))/(InitOut_AD%TwrElev(jLower+1)-InitOut_AD%TwrElev(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
+           u_OpFM%forceNodesChord(Node) = InitOut_AD%TwrDiam(jLower) + rInterp * (InitOut_AD%TwrDiam(jLower+1) - InitOut_AD%TwrDiam(jLower))
+        else
+           u_OpFM%forceNodesChord(Node) = InitOut_AD%TwrDiam(nNodesTowerProps) !Work around for when the last node of the actuator mesh is slightly outside of the Aerodyn tower properties.
+        end if
      END DO
   end do
 
