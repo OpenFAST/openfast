@@ -146,9 +146,9 @@ Regression test from scratch
 ::
 
   git clone --recursive https://github.com/openfast/openfast.git
-  cd openfast/reg_tests/r-tests/openfast
-  python compileDISCON.py
-  cd ../../
+  cd openfast/reg_tests/r-test/glue-codes/fast/
+  python3 compileDISCON.py
+  cd ../../../../
   mkdir build && cd build
   # Configure CMake with openfast/CMakeLists.txt 
   # - BUILD_TESTING
@@ -164,9 +164,9 @@ Regression test from scratch
 ::
 
   git clone --recursive https://github.com/openfast/openfast.git
-  cd openfast/reg_tests/r-tests/openfast
-  python compileDISCON.py
-  cd ../../
+  cd openfast/reg_tests/r-test/glue-codes/fast/
+  python3 compileDISCON.py
+  cd ../../../../
   mkdir build && cd build
   # Configure CMake with openfast/reg_tests/CMakeLists.txt 
   # - CTEST_OPENFAST_EXECUTABLE
