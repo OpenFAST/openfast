@@ -17,20 +17,16 @@ In order to build OpenFAST using CMake, one needs the following minimum set of p
 
 - C/C++ compiler
 
+- GNU Make (version 3.81 or later)
+
 - CMake (version 2.8.12 or later)
-
-- LAPACK libraries. Users should set ``BLAS_LIBRARIES`` and ``LAPACK_LIBRARIES`` appropriately for cmake if the library isn't found in standard paths. Use `BLASLIB` as an example when using Intel MKL.
-
-- For the optional C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`__ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__ (provided by ``YAML_ROOT``)
-
-- For the optional testing framework, Python 3+ and Numpy
 
 OpenFAST third-party-library (TPL) dependencies
 -----------------------------------------------
 
 OpenFAST has the following dependencies:
 
-- LAPACK libraries. Users should set ``BLAS_LIBRARIES`` and ``LAPACK_LIBRARIES`` appropriately for cmake if the library is not found in standard paths. Use `BLASLIB` as an example when using Intel MKL.
+- LAPACK libraries. Users should set ``BLAS_LIBRARIES`` and ``LAPACK_LIBRARIES`` appropriately for CMake if the library is not found in standard paths. Use `BLASLIB` as an example when using Intel MKL.
 
 - **Optional:** For the C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`_ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`_ (provided by ``YAML_ROOT``)
 
@@ -39,7 +35,7 @@ OpenFAST has the following dependencies:
 CMake build instructions
 ------------------------
 
-If one has the appropriate TPLs, cmake, and git installed, obtaining and building OpenFAST can be accomplished as follows:
+If one has the appropriate TPLs, CMake, and git installed, obtaining and building OpenFAST can be accomplished as follows:
 
 .. code-block:: bash
 
@@ -55,7 +51,7 @@ If one has the appropriate TPLs, cmake, and git installed, obtaining and buildin
     # go to the build directory
     cd build
 
-    # execute cmake with the default options, which will create a Makefile
+    # execute CMake with the default options, which will create a Makefile
     cmake ../ 
 
     # execute a make command (with no target provided, equivalent to `make all`
@@ -90,7 +86,7 @@ Below is a list of current CMake options including their default settings (which
 -  ``ORCA_DLL_LOAD`` - Enable OrcaFlex library load (Default: OFF)
 -  ``USE_DLL_INTERFACE`` - Enable runtime loading of dynamic libraries (Default: ON)
 
-CMake options can be executed from the command line as, e.g., the cmake command above could be exectuted as
+CMake options can be executed from the command line as, e.g., the CMake command above could be exectuted as
 
 .. code-block:: bash
 
@@ -100,4 +96,17 @@ CMake options can be executed from the command line as, e.g., the cmake command 
     # e.g., to compile OpenFAST in single precision
     cmake -D:DOUBLE_PRECISIONBOOL=OFF ..
  
+
+Parallel build
+~~~~~~~~~~~~~~
+
+GNU Make has a parellel build option with the ``-jobs`` or ``-j`` flag, and the OpenFAST
+CMake configuration handles setting up the dependencies for Make so the build can be 
+parallelized. However, it is important to note that the only parallel portion
+of the build process is in compiling the modules. Due to some interdependency between
+modules, the max parallel level is around 12. The remaining portion of the build,
+mainly compiling the OpenFAST library itself, takes a considerable amount of time
+and cannot be parallelized.
+
+An example parallel build command is ``make -j 8``.
 
