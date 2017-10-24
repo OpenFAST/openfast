@@ -58,10 +58,17 @@ find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
 ########################################################################
+# Test option configuration
+# Do this before configuring modules so that precompiler flags are included
+option(BUILD_TESTING "Build the testing tree." OFF)
+if(BUILD_TESTING)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
+endif()
+
+########################################################################
 # Build rules for FAST Registry
 #
 add_subdirectory(modules-local/fast-registry)
-
 
 ########################################################################
 # FAST Core modules
@@ -118,16 +125,6 @@ if (BUILD_FAST_FARM)
   set_registry_includes("modules-local" awae)
 endif()
 
-option(BUILD_DOCUMENTATION "Build documentation." OFF)
-if(BUILD_DOCUMENTATION)
-  add_subdirectory(docs)
-endif()
-
-option(BUILD_TESTING "Build the testing tree." OFF)
-if(BUILD_TESTING)
-  include(reg_tests/CMakeLists.txt)
-endif()
-
 add_subdirectory(glue-codes)
 
 # Install fortran .mod files also to installation directory
@@ -158,3 +155,29 @@ configure_package_config_file(
   PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR FTNMOD_INSTALL_DIR)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
   DESTINATION lib/cmake/OpenFAST)
+
+########################################################################
+# Configure the default install path to openfast/install
+string(FIND ${CMAKE_Fortran_MODULE_DIRECTORY} "build/ftnmods" found)
+if(${found} GREATER 0)
+  string(REPLACE "build/ftnmods" "install" install_path ${CMAKE_Fortran_MODULE_DIRECTORY})
+  if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX ${install_path} CACHE PATH "..." FORCE)
+  endif()
+endif()
+
+# Option configuration
+if(BUILD_TESTING)
+  include(CTest)
+
+  # regression tests
+  add_subdirectory(reg_tests)
+
+  # unit tests
+  add_subdirectory(unit_tests)
+endif()
+
+option(BUILD_DOCUMENTATION "Build documentation." OFF)
+if(BUILD_DOCUMENTATION)
+  add_subdirectory(docs)
+endif()

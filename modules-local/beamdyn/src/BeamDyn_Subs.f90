@@ -327,6 +327,8 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
 
 
 END SUBROUTINE BD_CrvCompose
+
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the CRV parameters given the rotation matrix
 !> The algorithm for this subroutine can be found in Markley, 'Unit Quaternion from Rotation Matrix'
@@ -337,8 +339,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    REAL(BDKi),       INTENT(  OUT)  :: cc(3)         !< Crv paramters
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat       !< Error status of the operation
    CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
-
-   !Local variables
+   
    REAL(BDKi)                  :: pivot(4) ! Trace of the rotation matrix and diagonal elements
    REAL(BDKi)                  :: sm0
    REAL(BDKi)                  :: sm1
@@ -346,7 +347,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    REAL(BDKi)                  :: sm3
    REAL(BDKi)                  :: em
    REAL(BDKi)                  :: temp
-   REAL(BDKi)                  :: Rr(3,3)  ! (possibly) corrected rotation matrix
+   REAL(BDKi)                  :: Rr(3,3)
    INTEGER                     :: i        ! case indicator
 
    INTEGER(IntKi)              :: ErrStat2 ! Temporary Error status
@@ -356,6 +357,9 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
+   
+   ! use the local rotation matrix variable to avoid side effects
+   Rr = R
 
    !> Starting with equation (14) from AIAA paper, "Geometric Nonlinear Analysis of Composite Beams Using
    !! Wiener-Milenkovic Parameters", Wang, et. al. \n
@@ -374,7 +378,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    !! It does, however, match equation 5.17 in the March 2016 "BeamDyn User's Guide and Theory Manual"
 
    ! mjs--determine whether R is a valid rotation matrix and correct it if not
-   call BD_CheckRotMat(R, Rr, ErrStat2, ErrMsg2)
+   call BD_CheckRotMat(Rr, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -426,77 +430,73 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    cc(3) = em*sm3
 
 END SUBROUTINE BD_CrvExtractCrv
-!------------------------------------------------------------------------------
-!> This subroutine determines whether R is a valid rotation matrix and, if not,
-!> replaces it with the closest orthongonal rotation matrix
-SUBROUTINE BD_CheckRotMat(R, Rout, ErrStat, ErrMsg)
 
-   REAL(BDKi),       INTENT(IN   )  :: R(3,3)        !< Rotation Matrix input
-   REAL(BDKi),       INTENT(  OUT)  :: Rout(3,3)     !< Rotation Matrix output
-   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat       !< Error status of the operation
-   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
-   !Local variables
-   REAL(BDKi)                  :: tempmat(3,3)
-   REAL(BDKi)                  :: S(3)         !mjs--these three are the SVD matrices (S is actually a vector)
-   REAL(BDKi)                  :: U(3,3)
-   REAL(BDKi)                  :: VT(3,3)
-   INTEGER(IntKi)              :: lwork = 27   !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
-   REAL(BDKi), ALLOCATABLE     :: work(:)          ! where M x N is dimension of R, and lwork is the dimension of work
-   REAL(BDKi)                  :: Rr(3,3)      !mjs--correccted rotation matrix
-   LOGICAL                     :: ortho        !mjs--logical value indicating whether R is orthogonal
-   INTEGER                     :: i            ! loop variable/case indicator
-
-   INTEGER(IntKi)              :: ErrStat2 ! Temporary Error status
-   CHARACTER(ErrMsgLen)        :: ErrMsg2  ! Temporary Error message
-   character(*), parameter     :: RoutineName = 'BD_CheckRotMat'
-
+SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
+   !> This subroutine checks for rotation matrix validity.
+   !> Returns:
+   !>   ErrStat = 0 if valid
+   !>   ErrStat = 4 (fatal error) if invalid
+   
+   REAL(BDKi),       INTENT(IN   )  :: R(3,3)       !< Rotation Matrix
+   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat      !< Error status of the operation
+   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
+   REAL(BDKi)                       :: Rr(3,3)      !< Local Rotation Matrix variable
+   INTEGER(IntKi)                   :: lwork = 27   !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
+   REAL(BDKi), ALLOCATABLE          :: work(:)      ! where M x N is dimension of R, and lwork is the dimension of work
+   REAL(BDKi)                       :: S(3), U(3,3), VT(3,3) !mjs--these three are the SVD matrices (S is actually a vector)
+   INTEGER(IntKi)                   :: ErrStat2     ! Temporary Error status
+   CHARACTER(ErrMsgLen)             :: ErrMsg2      ! Temporary Error message
+   LOGICAL                          :: ortho        !mjs--logical value indicating whether R is orthogonal
+   INTEGER                          :: i
+   character(*), parameter          :: RoutineName = 'BD_CheckRotMat'
+   
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-
+   
+   ! use the local rotation matrix variable to avoid side effects
+   Rr = R
+   
    ! mjs--Start by determining if R is a valid rotation matrix using the properties:
-      ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1, where
-         ! the leading eigenvalue is +1 and the other two are a comples conjugate pair
-      ! 2) a valid rotation matrix must have determinant == +1
-      ! i.e., the singular values == 1
-
-   ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
-      ! and the correction is desired,
-      ! compute \f$ \underline{\underline{R_{out}} \f$, the nearest orthogonal tensor
-      ! to \f$ \underline{\underline{R}} \f$.
-      ! This is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
-      ! and setting \f$ \underline{\underline{R_{out}} = UV^T \f$
-      ! otherwise, assign \f$ \underline{\underline{R_{out}}}  = \underline{\underline{R}} \f$
-
-   allocate (work(lwork))
-   tempmat = R !mjs--need this to handle inout nature of input for LAPACK_dgesvd
-   call LAPACK_dgesvd('A', 'A', 3, 3, tempmat, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
+   ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1, where
+   !    the leading eigenvalue is +1 and the other two are a complex conjugate pair
+   ! 2) a valid rotation matrix must have determinant == +1 i.e., the singular values == 1 
+   
+   allocate(work(lwork))
+   call LAPACK_dgesvd('A', 'A', 3, 3, Rr, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-
+   deallocate(work)
+   
+   ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
+   !    and the correction is desired,
+   !    compute \f$ \underline{\underline{R_{out}} \f$, the nearest orthogonal tensor
+   !    to \f$ \underline{\underline{R}} \f$.
+   !    This is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
+   !    and setting \f$ \underline{\underline{R_{out}} = UV^T \f$
+   !    otherwise, assign \f$ \underline{\underline{R_{out}}}  = \underline{\underline{R}} \f$
+   
    do i = 1, 3
       ortho = equalrealnos(S(i), 1.0_BDKi)
-      if (.not. ortho) exit
+      if (.not. ortho) then
+         CALL SetErrStat(ErrID_Fatal, "Passed invalid rotation matrix", ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      end if
    end do
-
+   
    ! mjs--after consulting with Mike Sprague, it was decided that instead of fixing the rotation matrix and
-      ! notifying the user, the simulation should be stopped if an invalid rotation matrix is passed
-      ! To change this and implement the fix, use the following three commented lines
-   if (.not. ortho) then
-      ErrStat2 = ErrID_Fatal
-      ! ErrStat2 = ErrID_Info
-      ErrMsg2 = 'Passed invalid rotation matrix'
-      ! ErrMsg2 = 'Passed invalid rotation matrix--fixing via SVD'
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
-      Rout = R
-      ! Rout = matmul(U, VT)
-   else
-      Rout = R
-   end if
-
+   ! notifying the user, the simulation should be stopped if an invalid rotation matrix is passed
+   ! To change this and implement the fix, use the following lines
+   ! ErrStat2 = ErrID_Info
+   ! ErrMsg2 = 'Passed invalid rotation matrix--fixing via SVD'
+   ! CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   ! if (ErrStat >= AbortErrLev) return
+   ! R = matmul(U, VT)
+   
 END SUBROUTINE BD_CheckRotMat
+
+
 !------------------------------------------------------------------------------
 !> This subroutine generates n-point gauss-legendre quadrature points and weights
 !!
@@ -833,7 +833,7 @@ END SUBROUTINE BD_ComputeIniNodalPosition
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes initial CRV parameters
 !! given geometry information
-SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc, ErrStat, ErrMsg)
+SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
 
    REAL(BDKi),     INTENT(IN   )  :: e1(:)         !< Tangent unit vector
    REAL(BDKi),     INTENT(IN   )  :: phi           !< Initial twist angle, in degrees
@@ -846,8 +846,8 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc, ErrStat, ErrMsg)
    REAL(BDKi)                  :: PhiRad        !< Phi in radians
    REAL(BDKi)                  :: Delta
 
-   INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
-   CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
+   INTEGER(IntKi)              :: ErrStat2      ! Temporary Error status
+   CHARACTER(ErrMsgLen)        :: ErrMsg2       ! Temporary Error message
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeIniNodalCrv'
 
    ! Initialize ErrStat
@@ -865,16 +865,15 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc, ErrStat, ErrMsg)
    e2(2)    = SIN(PhiRad)
    e2       = e2 / Delta
    Rr(:,1)  = e2
-
-   Rr(:,2) = Cross_Product(e1,e2)
+   Rr(:,2)  = Cross_Product(e1,e2)
 
    CALL BD_CrvExtractCrv(Rr, cc, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
 END SUBROUTINE BD_ComputeIniNodalCrv
-!-----------------------------------------------------------------------------------------------------------------------------------
-!mjs--had to change this to a subroutine to get out ErrStat/ErrMsg
+
+
 SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    real(R8Ki),             INTENT(in   )     :: R(3,3)       !< input rotation matrix (transpose of DCM; in BD coords)
    type(BD_ParameterType), INTENT(in   )     :: p            !< Parameters
