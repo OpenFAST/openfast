@@ -30,7 +30,7 @@ set(AD14_LIBS_SOURCES
   )
 
 add_library(aerodyn14lib ${AD14_LIBS_SOURCES})
-target_link_libraries(aerodyn14lib nwtclibs)
+target_link_libraries(aerodyn14lib ifwlib nwtclibs)
 
 # add_executable(aerodyn14
 #   src/AD_Driver.f90)

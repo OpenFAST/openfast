@@ -62,7 +62,7 @@ which can be obtained by executing with the help option:
 For the NREL 5MW turbine test cases, an external ServoDyn controller must be compiled and 
 included in the appropriate directory or all NREL 5MW cases will fail without starting.
 More information is documentation in the
-`r-test repository documentation <https://github.com/openfast/r-test/tree/dev#note---servodyn-external-controllers-for-5mw_baseline-cases>`__ .
+`r-test repository documentation <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__ .
 
 CTest configuration
 -------------------
@@ -88,17 +88,18 @@ The regression test specific CMake variables are
 
 **IT IS IMPORTANT** to verify that NREL 5MW turbine external controllers are compiled
 and placed in the correct location. More information is documentation in the
-`r-test repository documentation <https://github.com/openfast/r-test/tree/dev#note---servodyn-external-controllers-for-5mw_baseline-cases>`__,
+`r-test repository documentation <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__,
 but be aware that these three DISCON controllers must exist
 
-::
+.. code-block:: bash
   
   openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoDyn/DISCON.dll
   openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoDyn/DISCON_ITIBarge.dll
   openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoDyn/DISCON_OC3Hywind.dll
 
-This can be accomplished *before* running CMake with the automated ``compileDISCON.py``
-script or during CMake configuration by setting  the ``CMAKE_INSTALL_PREFIX`` CMake variable.
+This can be accomplished manually with the CMake projects included with the DISCON source codes
+at ``openfast/reg_tests/r-test/glue-codes/fast/5MW_Baseline/ServoDyn/``
+or during CMake configuration by setting the ``CMAKE_INSTALL_PREFIX`` CMake variable.
 If using this method, the install prefix variable should point to an existing and appropriate
 location for CMake to place the compiled binaries. This is important because the NREL 5MW turbine external
 controller CMake projects are preconfigured to install themselves in the appropriate
@@ -143,35 +144,34 @@ Regression test from scratch
 
 - Build OpenFAST and the test suite
 
-::
+.. code-block:: bash
 
   git clone --recursive https://github.com/openfast/openfast.git
-  cd openfast/reg_tests/r-tests/openfast
-  python compileDISCON.py
-  cd ../../
+  # The default git branch is 'master'. If necessary, switch to your target branch:
+  # git checkout dev
   mkdir build && cd build
   # Configure CMake with openfast/CMakeLists.txt 
   # - BUILD_TESTING
   # - CTEST_OPENFAST_EXECUTABLE
   # - CTEST_[MODULE]_EXECUTABLE
   cmake ..
-  make
+  make install
   ctest
-
 
 - Build only the test suite
 
-::
+.. code-block:: bash
 
   git clone --recursive https://github.com/openfast/openfast.git
-  cd openfast/reg_tests/r-tests/openfast
-  python compileDISCON.py
-  cd ../../
+  # The default git branch is 'master'. If necessary, switch to your target branch:
+  # git checkout dev
   mkdir build && cd build
   # Configure CMake with openfast/reg_tests/CMakeLists.txt 
+  # - BUILD_TESTING
   # - CTEST_OPENFAST_EXECUTABLE
   # - CTEST_[MODULE]_EXECUTABLE
   cmake ../reg_tests
+  make install
   ctest
 
 - `Windows with Visual Studio regression test <regression_test_windows.html>`__
@@ -179,7 +179,7 @@ Regression test from scratch
 Follow the link above for a detailed procedure. It is summarized below though
 excluding the procedure to build OpenFAST itself.
 
-::
+.. code-block:: bash
 
   git clone --recursive https://github.com/openfast/openfast.git
   cd openfast
