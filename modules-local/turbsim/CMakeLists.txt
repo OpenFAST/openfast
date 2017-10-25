@@ -27,11 +27,7 @@ set(MODULE_SOURCES
   src/VelocitySpectra.f90
   )
 
-add_library(turbsimlib ${MODULE_SOURCES})
-target_link_libraries(turbsimlib nwtclibs)
+add_executable(turbsim ${MODULE_SOURCES})
+target_link_libraries(turbsim nwtclibs)
 
-install(TARGETS turbsimlib
-  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
+install(TARGETS turbsim RUNTIME DESTINATION bin)

@@ -56,11 +56,8 @@ else(NOT ${CTEST_REGRESSION_TOL} STREQUAL "")
   set(TOLERANCE 0.00001)
 endif()
 
-# include the ServoDyn controller projects
-set(SERVODATA_DIR "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/fast/5MW_Baseline/ServoData")
-add_subdirectory("${SERVODATA_DIR}/DISCON" "${SERVODATA_DIR}/DISCON/build")
-add_subdirectory("${SERVODATA_DIR}/DISCON_ITI" "${SERVODATA_DIR}/DISCON_ITI/build")
-add_subdirectory("${SERVODATA_DIR}/DISCON_OC3" "${SERVODATA_DIR}/DISCON_OC3/build")
+# include the r-test cmake projects (servodyn controllers)
+add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/r-test")
 
 # build and seed the test directories with the data they need to run the tests
 file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
