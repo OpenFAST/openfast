@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
-! Copyright (C) 2016-2017  Envision Energy USA, LTD   
+! Copyright (C) 2016-2017  Envision Energy USA, LTD
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -78,6 +78,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
    character(*), parameter :: RoutineName = 'BD_Init'
+
 
 
   ! Initialize ErrStat
@@ -161,7 +162,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    CALL BD_InitShpDerJaco( GLL_Nodes, p )
 
 
-      ! Set the initial displacements
+      ! Set the initial displacements: p%uu0, p%rrN0, p%E10
    CALL BD_QuadraturePointDataAt0(p) 
       if (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -172,6 +173,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 !   CALL BD_KMshift2Ref(p)
 
 
+   call Initialize_FEweights(p) ! set p%FEweight; needs p%uuN0 and p%uu0
+      
+      
       ! compute blade mass, CG, and IN for summary file:
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -229,8 +233,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    call Init_OtherStates(p, OtherState, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! initialize outputs (need to do this after initializing inputs and continuous states)
-   call Init_y(p, x, u, y, ErrStat2, ErrMsg2)
+      ! initialize outputs (need to do this after initializing inputs and parameters (p%nnu0))
+   call Init_y(p, u, y, ErrStat2, ErrMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       if (ErrStat >= AbortErrLev) then
@@ -245,10 +249,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
 
       ! initialization of output mesh values (used for initial guess to AeroDyn)
-   CALL Set_BldMotion_NoAcc(p, u, x, MiscVar, y)
+   CALL Set_BldMotion_NoAcc(p, x, MiscVar, y)
    y%BldMotion%TranslationAcc  = 0.0_BDKi
    y%BldMotion%RotationAcc     = 0.0_BDKi
-      
       
       ! set initialization outputs
    call SetInitOut(p, InitOut, errStat, errMsg)
@@ -527,6 +530,36 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
 
 end subroutine InitializeNodalLocations
 !-----------------------------------------------------------------------------------------------------------------------------------
+subroutine Initialize_FEweights(p)
+   type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters
+
+
+   ! local variables
+   INTEGER(IntKi)          :: i                ! do-loop counter
+   INTEGER(IntKi)          :: nelem            ! do-loop counter over number of elements
+   INTEGER(IntKi)          :: idx_qp           !< index of current quadrature point in loop
+   REAL(BDKi)              :: SumShp
+
+   p%FEweight= 0.0_BDKi
+      ! First we find which QP points are the first QP to consider for each node in each element
+   DO nelem=1,p%elem_total
+      DO i=1,p%nodes_per_elem
+         SumShp=0.0_BDKi
+         DO idx_qp=p%nqp,1,-1    ! Step inwards to find the first QP past the FE point
+            IF ( TwoNorm(p%uu0(1:3,idx_qp,nelem)) >= TwoNorm(p%uuN0(1:3,i,nelem))) THEN
+               p%FEweight(i,nelem) = p%FEweight(i,nelem) + p%Shp(i,idx_qp)        !*p%Shp(j,idx_qp)
+            ENDIF
+            SumShp=SumShp+p%Shp(i,idx_qp)       !*p%Shp(j,idx_qp)
+         ENDDO
+         p%FEweight(i,nelem) = p%FEweight(i,nelem) / SumShp
+      ENDDO
+      ! Tip contribution      
+      ! Setting FEWeight at the tip to 1. The contirbution of the tip of each element should be absolute, hence no weighting is required
+      p%FEweight(p%nodes_per_elem,nelem) = 1.0_BDKi
+   ENDDO
+
+end subroutine Initialize_FEweights
+!-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_InitShpDerJaco( GLL_Nodes, p )
 
    REAL(BDKi),             INTENT(IN   )  :: GLL_nodes(:)   !< p%GLL point locations
@@ -726,9 +759,11 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    CALL AllocAry(p%uu0,  p%dof_node,    p%nqp,             p%elem_total,'p%uu0', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%E10,  (p%dof_node/2),p%nqp,             p%elem_total,'p%E10', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+   CALL AllocAry(p%FEweight,p%nodes_per_elem,p%elem_total,'p%FEweight array',ErrStat2,ErrMsg2) ; CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
    ! Quadrature point and weight arrays in natural frame
-   CALL AllocAry(p%QPtN,     p%nqp,'p%QPtN',                  ErrStat2,ErrMsg2) ; CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%QPtWeight,p%nqp,'p%QPtWeight weight array',ErrStat2,ErrMsg2) ; CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%QPtN,     p%nqp,'p%QPtN',           ErrStat2,ErrMsg2) ; CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%QPtWeight,p%nqp,'p%QPtWeight array',ErrStat2,ErrMsg2) ; CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    ! Quadrature mass and inertia terms
    CALL AllocAry(p%qp%mmm,                           p%nqp,p%elem_total,                  'p%qp%mmm mass at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -823,10 +858,9 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
 end subroutine SetParameters
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this routine initializes the outputs, y, that are used in the BeamDyn interface for coupling in the FAST framework.
-subroutine Init_y( p, x, u, y, ErrStat, ErrMsg)
+subroutine Init_y( p, u, y, ErrStat, ErrMsg)
 
    type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters  -- intent(out) only because it changes p%NdIndx
-   type(BD_ContinuousStateType), intent(in   )  :: x                 !< Continuous states
    type(BD_InputType),           intent(inout)  :: u                 !< Inputs
    type(BD_OutputType),          intent(inout)  :: y                 !< Outputs
    integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
@@ -1204,7 +1238,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
 
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
-   character(*), parameter                      :: RoutineName = 'Init_OtherStates'
+   character(*), parameter                      :: RoutineName = 'Init_MiscVars'
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1256,7 +1290,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       CALL AllocAry(m%elg,          p%dof_node,p%nodes_per_elem,p%dof_node,p%nodes_per_elem,    'elg',         ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%elm,          p%dof_node,p%nodes_per_elem,p%dof_node,p%nodes_per_elem,    'elm',         ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-         ! Distributed load from mesh, on the quadrature points.
+         ! Distributed load from mesh, on the quadrature points.  The ramping copy is for the quasi-static solve
       CALL AllocAry(m%DistrLoad_QP,            p%dof_node,p%nqp,p%elem_total,                   'DistrLoad_QP',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
@@ -1431,7 +1465,8 @@ subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
 
 
       ! initialize states, given parameters and initial inputs (in BD coordinates)
-   CALL BD_CalcIC(u_tmp,p,x)
+   CALL BD_CalcIC_Position(u_tmp,p,x)
+   CALL BD_CalcIC_Velocity(u_tmp,p,x)
 
    CALL Cleanup()
 
@@ -1456,6 +1491,7 @@ SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
 
    ! Initialize ErrStat
 
@@ -1614,7 +1650,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CALL BD_QPDataVelocity( p, x_tmp, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
       ! calculate accelerations and reaction loads (in m%RHS):
-      CALL BD_CalcForceAcc(x_tmp, m%u, p, m, ErrStat2,ErrMsg2)
+      CALL BD_CalcForceAcc(m%u, p, m, ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           
 !FIXME: First node pointload is missing.  Same with first QP node and DistrLoad.       
@@ -1628,7 +1664,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
          ! Calculate the elastic forces for the static case.
       DO nelem=1,p%elem_total
-         CALL BD_StaticElementMatrix( nelem, p%gravity, p, x_tmp, m )
+         CALL BD_StaticElementMatrix( nelem, p%gravity, p, m )
       ENDDO
 
 
@@ -2718,11 +2754,10 @@ END SUBROUTINE BD_AssembleRHS
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine total element forces and mass matrices
 !FIXME: note similarities with BD_ElementMatrixGA2
-SUBROUTINE BD_ElementMatrixAcc(  nelem, p, x, m )
+SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< number of current element
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
 
    INTEGER(IntKi)              :: idx_qp
@@ -2770,13 +2805,6 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, x, m )
             m%elf(idx_dof1,i) = m%elf(idx_dof1,i) - m%qp%Ftemp(idx_dof1,idx_qp,nelem)*p%QPtw_Shp_Jac(idx_qp,i,nelem)
          END DO
 
-            ! Elastic force internal
-         m%EFint(idx_dof1,i,nelem) = 0.0_BDKi
-         DO idx_qp = 1,p%nqp ! dot_product(m%qp%Fc(idx_dof1,:,nelem), p%QPtw_ShpDer( :,i))
-            m%EFint(idx_dof1,i,nelem) = m%EFint(idx_dof1,i,nelem) - m%qp%Fc(idx_dof1,idx_qp,nelem)*p%QPtw_ShpDer(idx_qp,i)
-         END DO
-!         m%EFint(idx_dof1,i,nelem) = m%EFint(idx_dof1,i,nelem) - dot_product(m%qp%Fd(idx_dof1,:,nelem),p%QPtw_Shp_Jac(:,i,nelem))
-         
       ENDDO
    ENDDO
    
@@ -3196,6 +3224,7 @@ SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coordinate,SP_Coef,ErrStat,ErrMsg)
 END SUBROUTINE BD_ComputeIniCoef
 
 
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
@@ -3331,7 +3360,7 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
    DO piter=1,p%niter
          ! Calculate Quadrature point values needed 
       CALL BD_QuadraturePointData( p,x,m )      ! Calculate QP values uuu, uup, RR0, kappa, E1
-       CALL BD_GenerateStaticElement(x, gravity, u, p, m)
+       CALL BD_GenerateStaticElement(gravity, p, m)
 
          !  Point loads are on the GLL points.
        DO j=1,p%node_total
@@ -3381,7 +3410,6 @@ END SUBROUTINE BD_StaticSolution
 !> This subroutine updates the static configuration
 !! given incremental value calculated by the
 !! Newton-Raphson algorithm
-!FIXME: this is almost identical to BD_UpdateDynamicGA2, except OtherState doesn't exist here.
 SUBROUTINE BD_StaticUpdateConfiguration(p,m,x)
    TYPE(BD_ParameterType),             INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_MiscVarType),               INTENT(IN   )  :: m           !< misc/optimization variables
@@ -3413,11 +3441,9 @@ END SUBROUTINE BD_StaticUpdateConfiguration
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GenerateStaticElement( x, gravity, u, p, m )
+SUBROUTINE BD_GenerateStaticElement( gravity, p, m )
 
-   TYPE(BD_ContinuousStateType),    INTENT(IN   )  :: x           !< Continuous states at t on input at t + dt on output
    REAL(BDKi),            INTENT(IN   ):: gravity(:)
-   TYPE(BD_InputType),    INTENT(IN   ):: u
    TYPE(BD_ParameterType),INTENT(IN   ):: p           !< Parameters
    TYPE(BD_MiscVarType),  INTENT(INOUT):: m           !< misc/optimization variables
 
@@ -3434,7 +3460,7 @@ SUBROUTINE BD_GenerateStaticElement( x, gravity, u, p, m )
 
    DO nelem=1,p%elem_total
 
-      CALL BD_StaticElementMatrix( nelem, gravity, p, x, m )
+      CALL BD_StaticElementMatrix( nelem, gravity, p, m )
       CALL BD_AssembleStiffK(nelem,p,m%elk,m%StifK)
       CALL BD_AssembleRHS(nelem,p,m%elf,m%RHS)
 
@@ -3445,12 +3471,11 @@ END SUBROUTINE BD_GenerateStaticElement
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, x, m )
+SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, m )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< current element number
    REAL(BDKi),                   INTENT(IN   )  :: gravity(:)        !< gravity vector
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
 
    INTEGER(IntKi)              :: i
@@ -3497,21 +3522,12 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, x, m )
          DO idx_qp = 1,p%nqp ! dot_product(m%qp%Ftemp(idx_dof1,:,nelem), p%QPtw_Shp_Jac(:,i,nelem) )
             m%elf(idx_dof1,i) = m%elf(idx_dof1,i) - m%qp%Ftemp(idx_dof1,idx_qp,nelem)*p%QPtw_Shp_Jac(idx_qp,i,nelem)
          END DO
-
-            ! Elastic force internal
-         m%EFint(idx_dof1,i,nelem) =  0.0_BDKi
-         DO idx_qp = 1,p%nqp ! dot_product(m%qp%Fc(idx_dof1,:,nelem), p%QPtw_ShpDer(:,i)) 
-            m%EFint(idx_dof1,i,nelem) = m%EFint(idx_dof1,i,nelem) - m%qp%Fc(idx_dof1,idx_qp,nelem)*p%QPtw_ShpDer(idx_qp,i)
-         END DO
-!         m%EFint(idx_dof1,i,nelem) = m%EFint(idx_dof1,i,nelem) - dot_product(m%qp%Fd(idx_dof1,:,nelem), p%QPtw_Shp_Jac(:,i,nelem))
-
       ENDDO
    ENDDO
 
    RETURN
 
 END SUBROUTINE BD_StaticElementMatrix
-
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -3528,42 +3544,12 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
    INTEGER(IntKi)                :: nelem ! number of current element
    INTEGER(IntKi)                :: idx_node_in_elem
    INTEGER(IntKi)                :: idx_node
-!   INTEGER(IntKi)                :: idx_node_next
    INTEGER(IntKi)                :: idx_qp
-   REAL(BDKi)                    :: Tmp6(6)
    REAL(BDKi)                    :: Tmp3(3)
    REAL(BDKi)                    :: PrevNodePos(3)
    INTEGER(IntKi)                :: i                          !< generic counter
    INTEGER(IntKi)                :: LastNode                   !< Last node in element to consider in integration in FE points
-   INTEGER(IntKi)                :: StartNode                  !< First node to consider in integration for QP points
    CHARACTER(*),        PARAMETER:: RoutineName = 'BD_InternalForceMoment'
-
-
-   INTEGER(IntKi)                :: FirstQPinFEpoint(p%nodes_per_elem,p%elem_total)
-   REAL(BDKi)                    :: FEweight(p%nodes_per_elem,p%elem_total)
-   REAL(BDKi)                    :: SumShp
-
-
-   FirstQPinFEpoint = p%nqp+1      ! Set to just past the last QP in the event that the last QP is just beyond the last FE location due to numerical noise.
-   FEweight= 0.0_BDKi
-!FIXME: move this to a parameter when it is working as expected
-      ! First we find which QP points are the first QP to consider for each node in each element
-   DO nelem=1,p%elem_total
-      DO i=1,p%nodes_per_elem
-         SumShp=0.0_BDKi
-            DO idx_qp=p%nqp,1,-1    ! Step inwards to find the first QP past the FE point
-               IF ( TwoNorm(p%uu0(1:3,idx_qp,nelem)) >= TwoNorm(p%uuN0(1:3,i,nelem))) THEN
-                  FirstQPinFEpoint(i,nelem)=idx_qp
-                  FEweight(i,nelem) = FEweight(i,nelem) + p%Shp(i,idx_qp)        !*p%Shp(j,idx_qp)
-               ENDIF
-               SumShp=SumShp+p%Shp(i,idx_qp)       !*p%Shp(j,idx_qp)
-            ENDDO
-         FEweight(i,nelem) = FEweight(i,nelem) / SumShp
-      ENDDO
-      ! Tip contribution      
-      ! Setting FEWeight at the tip to 1. The contirbution of the tip of each element should be absolute, hence no weighting is required
-      FEweight(p%nodes_per_elem,nelem) = 1.0_BDKi
-   ENDDO
 
 
       ! Initialize all values to zero.
@@ -3581,12 +3567,12 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
          DO idx_qp=p%nqp,1,-1
                ! Force contributions from current node
             m%EFint(1:3,i,nelem) =  m%EFint(1:3,i,nelem) &
-                                 +  p%ShpDer(i,idx_qp)*m%qp%Fc(1:3,idx_qp,nelem)*p%QPtWeight(idx_qp)
+                                 +  m%qp%Fc(1:3,idx_qp,nelem)*p%QPtw_ShpDer(idx_qp,i)
 
                ! Moment contributions from current node
             m%EFint(4:6,i,nelem) =  m%EFint(4:6,i,nelem) &
-                                 +  p%ShpDer(i,idx_qp)*m%qp%Fc(4:6,idx_qp,nelem)*p%QPtWeight(idx_qp) &
-                                 +  p%Shp(i,idx_qp)   *m%qp%Fd(4:6,idx_qp,nelem)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)    ! Fd only contains moments
+                                 +  m%qp%Fc(4:6,idx_qp,nelem)*p%QPtw_ShpDer( idx_qp,i)  &
+                                 +  m%qp%Fd(4:6,idx_qp,nelem)*p%QPtw_Shp_Jac(idx_qp,i,nelem)   ! Fd only contains moments
          ENDDO
       ENDDO
    ENDDO
@@ -3601,7 +3587,7 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
 
    DO nelem = p%elem_total,1,-1
 
-      m%BldInternalForceFE(1:3,nelem*LastNode+1) =  FEweight(p%nodes_per_elem,nelem) * m%EFint(1:3,p%nodes_per_elem,nelem)
+      m%BldInternalForceFE(1:3,nelem*LastNode+1) =  p%FEweight(p%nodes_per_elem,nelem) * m%EFint(1:3,p%nodes_per_elem,nelem)
       m%BldInternalForceFE(4:6,nelem*LastNode+1) =  m%EFint(4:6,p%nodes_per_elem,nelem)
 
       ! Keep track of previous node for adding force contributions to moments
@@ -3613,7 +3599,7 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
          idx_node       = p%node_elem_idx(nelem,1)-1 + idx_node_in_elem    ! p%node_elem_idx(nelem,1) is the first node in the element
 
             ! Force term
-         m%BldInternalForceFE(1:3,idx_node) =  FEweight(idx_node_in_elem,nelem) * m%EFint(1:3,idx_node_in_elem,nelem) + m%BldInternalForceFE(1:3,idx_node+1) + (1.0_BDKi - FEweight(idx_node_in_elem+1,nelem)) * m%EFint(1:3,idx_node_in_elem+1,nelem)
+         m%BldInternalForceFE(1:3,idx_node) =  p%FEweight(idx_node_in_elem,nelem) * m%EFint(1:3,idx_node_in_elem,nelem) + m%BldInternalForceFE(1:3,idx_node+1) + (1.0_BDKi - p%FEweight(idx_node_in_elem+1,nelem)) * m%EFint(1:3,idx_node_in_elem+1,nelem)
 
             ! Moment term including forces from next node out projected to this node
             ! NOTE: this appears like double counting, but the issue is that the Fd and Fc terms are both included in EFint.
@@ -3697,21 +3683,21 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
 
     ! on first call, initialize accelerations at t=0 and put mass and stiffness matrices in the summary file:
-   if ( n .EQ. 0 .or. .not. OtherState%InitAcc) then
-      
-      ! initialize accelerations at t      
+   IF ( ( n .EQ. 0 .OR. .NOT. OtherState%InitAcc ) ) THEN
+ 
+         ! Set the inputs at t
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-            ! Transform quantities from global frame to local (blade) frame
+         ! Transform quantities from global frame to local (blade) frame
       CALL BD_InputGlobalLocal(p,u_interp)
-          
+
          ! Copy over the DistrLoads
       CALL BD_DistrLoadCopy( p, u_interp, m )
-
+   
          ! Incorporate boundary conditions
       CALL BD_BoundaryGA2(x,p,u_interp,OtherState)
-      
+
          ! initialize the accelerations
       CALL BD_InitAcc( u_interp, p, x, m, OtherState%Acc, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)                  
@@ -3719,21 +3705,21 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
             call cleanup()
             return
          end if
-         
+
       ! initialize GA2 algorithm acceleration variable (acts as a filtering value on OtherState%acc)
       OtherState%Xcc(:,:)  = OtherState%Acc(:,:)
-                         
+ 
          ! accelerations have been initialized
       OtherState%InitAcc = .true.
-         
-               
+
+
          ! If we are writing to a summary file
-      if (m%Un_Sum > 0) then
+      IF (m%Un_Sum > 0) THEN
 
          ! compute mass and stiffness matrices 
             ! Calculate Quadrature point values needed 
          CALL BD_QuadraturePointData( p,x,m )         ! Calculate QP values uuu, uup, RR0, kappa, E1
-         CALL BD_GenerateDynamicElementGA2( x, OtherState, u_interp, p, m, .TRUE.)
+         CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE.)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          WRITE(m%Un_Sum,'()')
@@ -3743,9 +3729,9 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
          CLOSE(m%Un_Sum)
          m%Un_Sum = -1
-      end if
+      END IF
 
-   end if
+   END IF
 
 
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
@@ -3800,8 +3786,6 @@ SUBROUTINE BD_TiSchmPredictorStep( x, OtherState, p )
    INTEGER                     ::i              ! generic counter
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_TiSchmPredictorStep'
       
-!We already know what the first node is, so why are we calculating it?
-!X   DO i=1,p%node_total
    DO i=2,p%node_total
 
       tr                  = p%dt * x%dqdt(:,i) + p%coef(1) * OtherState%acc(:,i) + p%coef(2) * OtherState%xcc(:,i)  ! displacements at t+dt
@@ -3838,13 +3822,16 @@ SUBROUTINE BD_TiSchmComputeCoefficients(p)
    REAL(DbKi)                  :: oalfaM     ! 1 - \alpha_M
    REAL(DbKi)                  :: deltat2    ! {\delta t}^2 = dt^2
 
-
+      ! Bauchau equations 17.39
    tr0 = p%rhoinf + 1.0_BDKi
    alfam = (2.0_BDKi * p%rhoinf - 1.0_BDKi) / tr0
    alfaf = p%rhoinf / tr0
+
+      ! Bauchau equations 17.40
    gama = 0.5_BDKi - alfam + alfaf
    beta = 0.25 * (1.0_BDKi - alfam + alfaf)**2
 
+      ! The coefficents are then found using equations 17.41a - 17.41c
    deltat2 = p%dt**2
    oalfaM = 1.0_BDKi - alfam
    tr0 = alfaf / oalfaM
@@ -3929,7 +3916,7 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
          ! Apply accelerations using F=ma ?  Is that what this routine does?
          ! Calculate Quadrature point values needed 
       CALL BD_QuadraturePointData( p,x,m )         ! Calculate QP values uuu, uup, RR0, kappa, E1 using current guess at continuous states (displacements and velocities)
-      CALL BD_GenerateDynamicElementGA2( x, OtherState, u, p, m,fact)
+      CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m,fact)
 
          ! Apply additional forces / loads at GLL points (such as aerodynamic loads)?
       DO j=1,p%node_total
@@ -3959,7 +3946,7 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
       m%LP_RHS       =  RESHAPE(m%RHS(:,:), (/p%dof_total/))
       m%LP_RHS_LU    =  m%LP_RHS(7:p%dof_total)
 
-         ! Solve for X in A*X=B to get the displacement of blade
+         ! Solve for X in A*X=B to get the accelerations of blade
       CALL LAPACK_getrs( 'N',p%dof_total-6, m%LP_StifK_LU, m%LP_indx, m%LP_RHS_LU, ErrStat2, ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -3991,8 +3978,6 @@ END SUBROUTINE BD_DynamicSolutionGA2
 !! 2) linear/angular velocities(vf); 3) linear/angular accelerations(af); and
 !! 4) algorithmic accelerations(xf) given the increments obtained through
 !! N-R algorithm
-!  This routine is very similar to BD_StaticUpdateConfiguration
-!     Differences include the use of p%coef, x%dqdt, and Otherstate here
 SUBROUTINE BD_UpdateDynamicGA2( p, m, x, OtherState )
 
    TYPE(BD_ParameterType),             INTENT(IN   )  :: p           !< Parameters
@@ -4026,12 +4011,11 @@ END SUBROUTINE BD_UpdateDynamicGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! this routine computes m%LP_MassM, m%LP_RHS, m%LP_StifK
 !FIXME: this routine is really similar to the begining section of BD_GenerateDynamicElementAcc.  Only real difference is that it calculates the m%Stif and m%LP_DampG as well.
-SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, u, p, m, fact )
+SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
 
    TYPE(BD_ContinuousStateType),      INTENT(IN   )  :: x           !< Continuous states at t on input at t + dt on output
    TYPE(BD_OtherStateType),           INTENT(IN   )  :: OtherState  !< Other states at t on input; at t+dt on outputs
 
-   TYPE(BD_InputType),     INTENT(IN   )  :: u
    TYPE(BD_ParameterType), INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_MiscVarType),   INTENT(INOUT)  :: m           !< misc/optimization variables
    LOGICAL,                INTENT(IN   )  :: fact
@@ -4061,7 +4045,7 @@ SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, u, p, m, fact )
    DO nelem=1,p%elem_total
 
         ! compute m%elk,m%elf,m%elm,m%elg:
-      CALL BD_ElementMatrixGA2(fact, nelem, p, x, OtherState, m )
+      CALL BD_ElementMatrixGA2(fact, nelem, p, m )
 
       IF(fact) THEN
          CALL BD_AssembleStiffK(nelem,p,m%elk,m%StifK)
@@ -4077,11 +4061,9 @@ END SUBROUTINE BD_GenerateDynamicElementGA2
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !FIXME: lots of pieces of BD_ElementMatrixAcc show up in here
-SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, x, OtherState, m )
+SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
-   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState        !< Other states at t on input; at t+dt on outputs
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
 
    LOGICAL,                      INTENT(IN   )  :: fact              !< are we factoring?
@@ -4232,14 +4214,6 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, x, OtherState, m )
          DO idx_qp = 1,p%nqp ! dot_product( m%qp%Ftemp(idx_dof1,:,nelem) + m%qp%Fi(idx_dof1,:,nelem), p%QPtw_Shp_Jac(:,i,nelem))
             m%elf(idx_dof1,i) = m%elf(idx_dof1,i) - (m%qp%Ftemp(idx_dof1,idx_qp,nelem) + m%qp%Fi(idx_dof1,idx_qp,nelem))*p%QPtw_Shp_Jac(idx_qp,i,nelem)
          END DO
-
-            ! Elastic force internal
-         m%EFint(idx_dof1,i,nelem) = 0.0_BDKi
-         DO idx_qp = 1,p%nqp ! dot_product(m%qp%Fc(idx_dof1,:,nelem), p%QPtw_ShpDer( :,i))
-            m%EFint(idx_dof1,i,nelem) = m%EFint(idx_dof1,i,nelem) - m%qp%Fc(idx_dof1,idx_qp,nelem)*p%QPtw_ShpDer(idx_qp,i)
-         ENDDO
-!        m%EFint(idx_dof1,i,nelem) = m%EFint(idx_dof1,i,nelem) - dot_product(m%qp%Fd(idx_dof1,:,nelem), p%QPtw_Shp_Jac(:,i,nelem))
-
       ENDDO
    ENDDO
    
@@ -4297,7 +4271,7 @@ SUBROUTINE BD_DistrLoadCopy( p, u, m )
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p             !< Parameters
    TYPE(BD_InputType),           INTENT(IN   )  :: u             !< Inputs at t (in BD coordinates)
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
+   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m             !< misc/optimization variables
 
    INTEGER(IntKi)                               :: temp_id
    INTEGER(IntKi)                               :: idx_qp
@@ -4321,9 +4295,9 @@ END SUBROUTINE BD_DistrLoadCopy
 !! The initial displacements/rotations and linear velocities are
 !! set to the root value; the angular velocities over the beam
 !! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
-SUBROUTINE BD_CalcIC( u, p, x)
+SUBROUTINE BD_CalcIC_Position( u, p, x)
 
-   TYPE(BD_InputType),           INTENT(INOUT):: u             !< Inputs at t (in BD coordinates)
+   TYPE(BD_InputType),           INTENT(IN   ):: u             !< Inputs at t (in BD coordinates)
    TYPE(BD_ParameterType),       INTENT(IN   ):: p             !< Parameters
    TYPE(BD_ContinuousStateType), INTENT(INOUT):: x             !< Continuous states at t
 
@@ -4332,13 +4306,9 @@ SUBROUTINE BD_CalcIC( u, p, x)
    INTEGER(IntKi)                             :: j
    INTEGER(IntKi)                             :: k
    INTEGER(IntKi)                             :: temp_id
-   REAL(BDKi)                                 :: temp3(3)
    REAL(BDKi)                                 :: temp_p0(3)
    REAL(BDKi)                                 :: temp_rv(3)
-   CHARACTER(*), PARAMETER                    :: RoutineName = 'BD_CalcIC'
-
-
-
+   CHARACTER(*), PARAMETER                    :: RoutineName = 'BD_CalcIC_Position'
 
 
       !  Since RootMotion%Orientation is the transpose of the absolute orientation in the global frame,
@@ -4370,6 +4340,30 @@ SUBROUTINE BD_CalcIC( u, p, x)
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
 
+END SUBROUTINE BD_CalcIC_Position
+
+
+
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the initial states
+!! Rigid body assumption is used in initialization of the states.
+!! The initial displacements/rotations and linear velocities are
+!! set to the root value; the angular velocities over the beam
+!! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
+SUBROUTINE BD_CalcIC_Velocity( u, p, x)
+
+   TYPE(BD_InputType),           INTENT(IN   ):: u             !< Inputs at t (in BD coordinates)
+   TYPE(BD_ParameterType),       INTENT(IN   ):: p             !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(INOUT):: x             !< Continuous states at t
+
+
+   INTEGER(IntKi)                             :: i
+   INTEGER(IntKi)                             :: j
+   INTEGER(IntKi)                             :: k
+   INTEGER(IntKi)                             :: temp_id
+   REAL(BDKi)                                 :: temp3(3)
+   CHARACTER(*), PARAMETER                    :: RoutineName = 'BD_CalcIC_Velocity'
+
 
    !Initialize velocities and angular velocities
    x%dqdt(:,:) = 0.0_BDKi
@@ -4391,7 +4385,7 @@ SUBROUTINE BD_CalcIC( u, p, x)
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
 
-END SUBROUTINE BD_CalcIC
+END SUBROUTINE BD_CalcIC_Velocity
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -4420,7 +4414,7 @@ SUBROUTINE BD_InitAcc( u, p, x, m, qdotdot, ErrStat, ErrMsg )
    CALL BD_QuadraturePointData( p, x, m )     ! Calculate QP values uuu, uup, RR0, kappa, E1
    
       ! set misc vars, particularly m%RHS
-   CALL BD_CalcForceAcc( x, u, p, m, ErrStat2, ErrMsg2 )
+   CALL BD_CalcForceAcc( u, p, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! set accelerations with inputs from the root and BD_CalcForceAcc solution
@@ -4438,9 +4432,8 @@ END SUBROUTINE BD_InitAcc
 !! stiffness and mass matrices, build nodal force vector.  The output of this subroutine
 !! is the second time derivative of state "q".
 ! Calculate the equations of motion
-SUBROUTINE BD_CalcForceAcc( x_tmp, u, p, m, ErrStat, ErrMsg )
+SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
 
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x_tmp       !< Continuous states at t
    TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
@@ -4467,7 +4460,7 @@ SUBROUTINE BD_CalcForceAcc( x_tmp, u, p, m, ErrStat, ErrMsg )
    DO nelem=1,p%elem_total
 
 
-      CALL BD_ElementMatrixAcc( nelem, p, x_tmp, m )
+      CALL BD_ElementMatrixAcc( nelem, p, m )
 
       CALL BD_AssembleStiffK(nelem,p,m%elm, m%MassM)
       CALL BD_AssembleRHS(nelem,p,m%elf, m%RHS)

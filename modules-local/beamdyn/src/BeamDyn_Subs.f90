@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
-! Copyright (C) 2016-2017  Envision Energy USA, LTD   
+! Copyright (C) 2016-2017  Envision Energy USA, LTD
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -541,19 +541,16 @@ END SUBROUTINE BD_TrapezoidalPointWeight
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates y%BldMotion%TranslationDisp, y%BldMotion%Orientation, y%BldMotion%TranslationVel, and
-!! y%BldMotion%RotationVel, which depend only on states, parameters, and u%RootMotion mesh.  These are referenced against the DCM
-!! of the blade root at T=0 (which is stored in the BD reference frame).
-SUBROUTINE Set_BldMotion_NoAcc(p, u, x, m, y)
+!! y%BldMotion%RotationVel, which depend only on states (and indirectly, u%RootMotion), and parameters.
+SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t - in the FAST coordinate system (NOT BD)
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
    TYPE(BD_MiscVarType),         INTENT(IN   )  :: m           !< misc/optimization variables
    TYPE(BD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                !!   nectivity information does not have to be recalculated)
    INTEGER(IntKi)                               :: i
    INTEGER(IntKi)                               :: j
-   INTEGER(IntKi)                               :: j_start !starting node on this element
    INTEGER(IntKi)                               :: temp_id
    INTEGER(IntKi)                               :: temp_id2
    REAL(BDKi)                                   :: cc(3)
@@ -562,17 +559,14 @@ SUBROUTINE Set_BldMotion_NoAcc(p, u, x, m, y)
    REAL(BDKi)                                   :: temp_R(3,3)
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Set_BldMotion_NoAcc'
 
-   ! The first node on the mesh is just the root location:   
-   y%BldMotion%TranslationDisp(:,1)   = u%RootMotion%TranslationDisp(:,1)
-   y%BldMotion%Orientation(:,:,1)     = u%RootMotion%Orientation(:,:,1) 
-   y%BldMotion%TranslationVel(:,1)    = u%RootMotion%TranslationVel(:,1)
-   y%BldMotion%RotationVel(:,1)       = u%RootMotion%RotationVel(:,1)
+   ! The first node on the mesh is just the root location, but since the orientation of the root node may not
+   ! RootMotion orientation (due to blade twist), we will calculated it as though it was a regular node
          
    ! now fill in the other nodes
       
-      j_start = 2 ! we'll skip the first node on the first element; otherwise we will start at the first node on the other elements
+      
       DO i=1,p%elem_total
-         DO j=j_start,p%nodes_per_elem
+         DO j=1,p%nodes_per_elem
             temp_id = (i-1)*(p%nodes_per_elem-1)+j      ! The last node of the first element is used as the first node in the second element.
             temp_id2= (i-1)*p%nodes_per_elem+j          ! Index to a node within element i
 
@@ -604,10 +598,8 @@ SUBROUTINE Set_BldMotion_NoAcc(p, u, x, m, y)
                ! referenced against the DCM of the blade root at T=0.
             y%BldMotion%RotationVel(1:3,temp_id2) = MATMUL(p%GlbRot,x%dqdt(4:6,temp_id))
             
-         ENDDO !j
-         j_start = 1 ! all elements except the first one start at the first node
-      ENDDO !i
-         
+         ENDDO
+      ENDDO
       
 END SUBROUTINE Set_BldMotion_NoAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -629,7 +621,7 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
 
 
       ! set positions and velocities (not accelerations)
-   call Set_BldMotion_NoAcc(p, u, x, m, y)
+   call Set_BldMotion_NoAcc(p, x, m, y)
 
    ! Only need this bit for dynamic cases
    IF (p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
@@ -762,6 +754,8 @@ FUNCTION ExtractRelativeRotation(R,p) RESULT(rr)
    real(BDKi)                         :: R_BD(3,3)    ! input rotation matrix in BDKi precision 
    REAL(BDKi)                         :: temp_cc(3)   ! W-M parameters
    
+   ! note that the u%RootMotion mesh does not contain the initial twist, but p%Glb_crv does not have this twist, either.
+   ! The relative rotation will be the same in this case.
    
    R_BD = R ! possible type conversion (only if BDKi /= R8Ki)
 

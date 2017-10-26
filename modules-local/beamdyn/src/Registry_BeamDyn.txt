@@ -200,6 +200,7 @@ typedef   ^        ParameterType    ^           QPtw_Shp_ShpDer        {:}{:}{:}
 typedef   ^        ParameterType    ^           QPtw_ShpDer_ShpDer_Jac {:}{:}{:}{:}  - - "optimization variable: QPtw_ShpDer_ShpDer_Jac(idx_qp,i,j,nelem) = p%ShpDer(i,idx_qp)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)/p%Jacobian(idx_qp,nelem)" -
 typedef   ^        ParameterType    ^           QPtw_Shp_Jac           {:}{:}{:}     - - "optimization variable: QPtw_Shp_Jac(idx_qp,i,nelem) = p%Shp(i,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
 typedef   ^        ParameterType    ^           QPtw_ShpDer            {:}{:}        - - "optimization variable: QPtw_ShpDer(idx_qp,i) = p%ShpDer(i,idx_qp)*p%QPtWeight(idx_qp)" -
+typedef   ^        ParameterType    ^           FEweight               {:}{:}        - - "weighting factors for integrating local sectional loads" -
 
 # ..... Inputs
 # ....................................................................................................................
@@ -294,7 +295,7 @@ typedef   ^        MiscVarType    ^            EFint        {:}{:}{:}     - - "E
 typedef   ^        MiscVarType    ^            elk          {:}{:}{:}{:}  - - "" -
 typedef   ^        MiscVarType    ^            elg          {:}{:}{:}{:}  - - "" -
 typedef   ^        MiscVarType    ^            elm          {:}{:}{:}{:}  - - "" -
-typedef   ^        MiscVarType    ^            DistrLoad_QP {:}{:}{:}     - - "" -
+typedef   ^        MiscVarType    ^            DistrLoad_QP {:}{:}{:}     - - "Copy of the distributed load, in the BD reference frame" -
 typedef   ^        MiscVarType    ^            StifK_LU     {:}{:}{:}{:}  - - "Stiffness Matrix for LU" -
 typedef   ^        MiscVarType    ^            StifK        {:}{:}{:}{:}  - - "Stiffness Matrix" -
 typedef   ^        MiscVarType    ^            MassM        {:}{:}{:}{:}  - - "Mass Matrix" -
