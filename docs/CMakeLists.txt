@@ -1,15 +1,19 @@
 find_package(Doxygen)
 find_package(Sphinx)
 
-if(DOXYGEN_FOUND)
+if(NOT DOXYGEN_FOUND)
+    message(WARNING "Skipping Doxygen documentation due to missing dependencies.")
+else()
     configure_file(Doxyfile.in Doxyfile @ONLY)
+    file(COPY "DoxygenLayout.xml" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+    
     add_custom_target(doxygen
         COMMAND ${DOXYGEN_EXECUTABLE} "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile" )
-else()
-    message(WARNING "Skipping Doxygen documentation due to missing dependencies.")
 endif()
 
-if(SPHINX_FOUND)
+if(NOT SPHINX_FOUND)
+    message(WARNING "Skipping Sphinx documentation due to missing dependencies.")
+else()
     set(SPHINX_GENERATOR html)
     file(COPY "conf.py" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
     file(COPY "_static" DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
@@ -36,6 +40,4 @@ if(SPHINX_FOUND)
             "${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_BINARY_DIR}"
             -c ${CMAKE_CURRENT_BINARY_DIR})
     endif()
-else()
-    message(WARNING "Skipping Sphinx documentation due to missing dependencies.")
 endif()
