@@ -5,13 +5,17 @@ Regression test
 
 The regression test executes a series of test cases which intend to fully describe
 OpenFAST and its module's capabilities. Each locally computed result is compared
-to a static set of baseline results. To account for machine and compiler
+to a static set of baseline results. To account for system, hardware, and compiler
 differences, the regression test attempts to match the current machine and
 compiler type to the appropriate solution set from these combinations
 
 - macOS with GNU compiler (default)
 - Red Hat Enterprise Linux with Intel compiler
 - Windows with Intel compiler
+
+The compiler versions, specific math libraries, and hardware used to generate these baseline
+solutions are documented in the 
+`r-test repository documentation <https://github.com/openFAST/r-test#baselines>`__.
 
 The regression test system can be executed with CMake and CTest or manually with
 an included Python driver. Both systems provide similar functionality with respect
@@ -61,8 +65,8 @@ which can be obtained by executing with the help option:
 
 For the NREL 5MW turbine test cases, an external ServoDyn controller must be compiled and 
 included in the appropriate directory or all NREL 5MW cases will fail without starting.
-More information is documentation in the
-`r-test repository documentation <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__ .
+More information is available in the documentation for the
+`r-test repository <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__.
 
 CTest configuration
 -------------------
@@ -87,8 +91,8 @@ The regression test specific CMake variables are
 - CTEST_REGRESSION_TOL
 
 **IT IS IMPORTANT** to verify that NREL 5MW turbine external controllers are compiled
-and placed in the correct location. More information is documentation in the
-`r-test repository documentation <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__,
+and placed in the correct location. More information is available in the documentation for the
+`r-test repository <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__,
 but be aware that these three DISCON controllers must exist
 
 .. code-block:: bash
