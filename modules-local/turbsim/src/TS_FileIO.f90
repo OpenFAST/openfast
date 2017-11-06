@@ -253,7 +253,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
       ! ---------- Read the flag for turbine rotation. -----------------------------------------------------------
    CALL ReadVar( UI, InFile, p%grid%Clockwise, "Clockwise", "Clockwise rotation when looking downwind?",ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
+      
       ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
    CALL ReadVar( UI, InFile, p%IEC%ScaleIEC, "ScaleIEC", "Scale IEC turbulence models to specified standard deviation?",&
                                  ErrStat2, ErrMsg2, UnEc)
