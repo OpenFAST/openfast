@@ -174,7 +174,7 @@ Regression test from scratch
   make install
   ctest
 
-- `Windows with Visual Studio regression test <regression_test_windows.html>`__
+- :ref:`regression_test_windows`
 
 Follow the link above for a detailed procedure. It is summarized below though
 excluding the procedure to build OpenFAST itself.
