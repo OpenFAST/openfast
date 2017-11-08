@@ -51,9 +51,9 @@ The AeroDyn v15 aerodynamics module has been significantly updated.  The blade-e
 
 * BEMT now functions for the case where the undisturbed velocity along the x-direction of the local blade coordinate system (Vx) is less than zero;
 
-*   BEMT no longer aborts when a valid value of the inflow angle (\phi) cannot be found; in this case, the inflow angle is computed geometrically (without induction);
+*   BEMT no longer aborts when a valid value of the inflow angle (:math:`\phi`) cannot be found; in this case, the inflow angle is computed geometrically (without induction);
 
-*   The inflow angle (\phi) is now initialized on the first call instead of using \phi= 0, giving better results during simulation start up;
+*   The inflow angle (:math:`\phi`) is now initialized on the first call instead of using :math:`\phi`= 0, giving better results during simulation start up;
 
 *   When hub- and/or tip-loss are enabled (HubLoss = True and/or TipLoss = True), tangential induction (a’) is set to 0 instead of -1 at the root and/or tip, respectively (axial induction (a) is still set to 1 at the root and/or tip);
 

@@ -85,7 +85,7 @@ Peters skewed-wake (``SkewMod = 2``), Prandtl tip-loss (``TipLoss
 = TRUE``), Prandtl hub-loss (``HubLoss = TRUE``), and tangential
 induction (``TanInd = TRUE``) models should all be enabled, but
 ``SkewMod = 2`` is invalid for very large yaw errors (much greater
-than 45\degrees). The nonlinear solve in the BEM solution is in terms of the
+than 45 degrees). The nonlinear solve in the BEM solution is in terms of the
 inflow angle, but ``IndToler`` represents the tolerance of the
 nondimensional residual equation, with no physical association possible;
 we recommend setting ``IndToler`` to ``DEFAULT``.
