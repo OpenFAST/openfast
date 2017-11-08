@@ -50,10 +50,10 @@ outputs are expressed in one of the following three coordinate systems:
    this is equivalent to FAST’s global inertial frame (i) coordinate
    system.
 
-.. only:: html
+.. _bd-output-channel:
 
-   :download:`BeamDyn Output Channel List <figs/bd_output_channel.pdf>` 
+.. figure:: figs/bd_output_channel.pdf
+   :width: 500px
+   :align: center
 
-.. raw:: latex
-
-   \includepdf[pages = -, pagecommand={\thispagestyle{plain}}]{\directory bd_output_channel.pdf}
+   BeamDyn Output Channel List
