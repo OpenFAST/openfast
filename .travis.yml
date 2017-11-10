@@ -1,0 +1,17 @@
+# Travis CI configuration
+
+# macOS
+os: osx
+
+before_install:
+    - brew update
+    - brew install gcc
+    # - brew install cmake # cmake is already installed in the default mac image
+
+before_script:
+    - mkdir build
+    - cd build
+    - cmake ..
+  
+script:
+    - make -j 8
