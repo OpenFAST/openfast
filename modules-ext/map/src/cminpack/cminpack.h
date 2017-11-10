@@ -54,7 +54,7 @@ building a DLL on windows.
 #define CMINPACK_DECLSPEC_IMPORT  _Import
 #endif
 
-#if !defined(CMINPACK_NO_DLL) && (defined(__WIN32__) || defined(WIN32) || defined (_WIN32))
+#if !defined(CMINPACK_NO_DLL) && (defined(__WIN32__) || defined(WIN32) || defined (_WIN32)) && !defined (__MINGW32__)
 #if defined(cminpack_EXPORTS) || defined(CMINPACK_EXPORTS) || defined(CMINPACK_DLL_EXPORTS)
     #define  CMINPACK_EXPORT CMINPACK_DECLSPEC_EXPORT
   #else

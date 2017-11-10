@@ -32,7 +32,7 @@
 #include "MAP_Types.h"
 
 
-#if !defined(_MSC_VER)
+#if !defined(_MSC_VER) && !defined(__MINGW32__)
 MAP_ERROR_CODE fopen_s(FILE** f, const char* name, const char* mode);
 #endif
 
