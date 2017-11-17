@@ -57,6 +57,10 @@ add_library(openfastlib
   src/FAST_Library.f90)
 target_link_libraries(openfastlib
   openfast_postlib openfast_prelib scfastlib foamfastlib)
+if(CMAKE_COMPILER_IS_MINGW)
+  set_target_properties(openfastlib
+                        PROPERTIES LINK_FLAGS "-Wl,--export-all-symbols")
+endif(CMAKE_COMPILER_IS_MINGW)
 
 install(TARGETS openfastlib openfast_prelib openfast_postlib
   EXPORT ${CMAKE_PROJECT_NAME}Libraries
