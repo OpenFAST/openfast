@@ -923,6 +923,7 @@ CONTAINS
    REAL(DbKi)              :: theta          ! angle of rotation   
    REAL(DbKi)              :: theta2         ! angle of rotation squared
    REAL(DbKi)              :: tmp_Mat(3,3)
+   REAL(DbKi)              :: tmp1, tmp2, plambda(3),qlambda(3)
    
    INTEGER(IntKi)          :: ErrStat
    CHARACTER(30)           :: ErrMsg  
@@ -939,15 +940,15 @@ CONTAINS
    ELSE   
       
          ! convert lambda to skew-symmetric matrix:
-      tmp_mat(1,1) =  0.0_DbKi                                            
-      tmp_mat(2,1) = -lambda(3)                                           
-      tmp_mat(3,1) =  lambda(2)                                           
-      tmp_mat(1,2) =              lambda(3)                               
-      tmp_mat(2,2) =              0.0_DbKi                                
-      tmp_mat(3,2) =             -lambda(1)                               
-      tmp_mat(1,3) =                               -lambda(2)             
-      tmp_mat(2,3) =                                lambda(1)             
-      tmp_mat(3,3) =                                0.0_DbKi            
+      !tmp_mat(1,1) =  0.0_DbKi                                            
+      !tmp_mat(2,1) = -lambda(3)                                           
+      !tmp_mat(3,1) =  lambda(2)                                           
+      !tmp_mat(1,2) =              lambda(3)                               
+      !tmp_mat(2,2) =              0.0_DbKi                                
+      !tmp_mat(3,2) =             -lambda(1)                               
+      !tmp_mat(1,3) =                               -lambda(2)             
+      !tmp_mat(2,3) =                                lambda(1)             
+      !tmp_mat(3,3) =                                0.0_DbKi            
       
       
          ! Eq. 33b
@@ -959,17 +960,42 @@ CONTAINS
       !DCM_exp = DCM_exp + (1-cos(theta))/theta2 * MATMUL(tmp_mat, tmp_mat) 
       
          ! hopefully this order of calculations gives better numerical results:
-      stheta = sin(theta)
-      DCM_expD      = (1-cos(theta))/theta * tmp_mat      
-      DCM_expD(1,1) = DCM_expD(1,1) + stheta
-      DCM_expD(2,2) = DCM_expD(2,2) + stheta
-      DCM_expD(3,3) = DCM_expD(3,3) + stheta
+      !stheta = sin(theta)
+      !DCM_expD      = (1-cos(theta))/theta * tmp_mat      
+      !DCM_expD(1,1) = DCM_expD(1,1) + stheta
+      !DCM_expD(2,2) = DCM_expD(2,2) + stheta
+      !DCM_expD(3,3) = DCM_expD(3,3) + stheta
       
-      DCM_expD = matmul( DCM_expD, tmp_mat )
-      DCM_expD = DCM_expD / theta
-      DCM_expD(1,1) = DCM_expD(1,1) + 1.0_DbKi ! add identity
-      DCM_expD(2,2) = DCM_expD(2,2) + 1.0_DbKi
-      DCM_expD(3,3) = DCM_expD(3,3) + 1.0_DbKi
+      !DCM_expD = matmul( DCM_expD, tmp_mat )
+      !DCM_expD = DCM_expD / theta
+      !DCM_expD(1,1) = DCM_expD(1,1) + 1.0_DbKi ! add identity
+      !DCM_expD(2,2) = DCM_expD(2,2) + 1.0_DbKi
+      !DCM_expD(3,3) = DCM_expD(3,3) + 1.0_DbKi
+
+      tmp1=sin(theta)/theta
+      tmp2=(1-cos(theta))/theta/theta
+      ! Calculate every element in matrix directly using Eq.33b to have better numerical efficiency
+      !DCM_expD(1,1) =  1.0_DbKi - tmp2*lambda(3)*lambda(3) - tmp2*lambda(2)*lambda(2)                                           
+      !DCM_expD(2,1) = -tmp1*lambda(3) + tmp2*lambda(1)*lambda(2)                                          
+      !DCM_expD(3,1) =  tmp1*lambda(2) + tmp2*lambda(1)*lambda(3)                                           
+      !DCM_expD(1,2) =  tmp1*lambda(3) + tmp2*lambda(1)*lambda(2)                                             
+      !DCM_expD(2,2) =  1.0_DbKi - tmp2*lambda(3)*lambda(3) - tmp2*lambda(1)*lambda(1)                                             
+      !DCM_expD(3,2) = -tmp1*lambda(1) + tmp2*lambda(2)*lambda(3)                             
+      !DCM_expD(1,3) = -tmp1*lambda(2) + tmp2*lambda(1)*lambda(3)              
+      !DCM_expD(2,3) =  tmp1*lambda(1) + tmp2*lambda(2)*lambda(3)             
+      !DCM_expD(3,3) =  1.0_DbKi - tmp2*lambda(2)*lambda(2) - tmp2*lambda(1)*lambda(1) 
+ 
+      plambda=lambda*tmp1
+      qlambda=lambda*tmp2
+      DCM_expD(1,1) =  1.0_DbKi - qlambda(3)*lambda(3) - qlambda(2)*lambda(2)                                           
+      DCM_expD(2,1) = -plambda(3) + qlambda(1)*lambda(2)                                          
+      DCM_expD(3,1) =  plambda(2) + qlambda(1)*lambda(3)                                           
+      DCM_expD(1,2) =  plambda(3) + qlambda(1)*lambda(2)                                             
+      DCM_expD(2,2) =  1.0_DbKi - qlambda(3)*lambda(3) - qlambda(1)*lambda(1)                                             
+      DCM_expD(3,2) = -plambda(1) + qlambda(2)*lambda(3)                             
+      DCM_expD(1,3) = -plambda(2) + qlambda(1)*lambda(3)              
+      DCM_expD(2,3) =  plambda(1) + qlambda(2)*lambda(3)             
+      DCM_expD(3,3) =  1.0_DbKi - qlambda(2)*lambda(2) - qlambda(1)*lambda(1)     
             
    END IF
 
