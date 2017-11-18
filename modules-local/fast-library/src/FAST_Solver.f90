@@ -500,11 +500,12 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_ED, BD, MeshMapData, ErrStat, Er
    ELSEIF (p_FAST%CompElast == Module_BD ) THEN
       
          ! get them from BeamDyn
+      !$OMP PARALLEL DO
       DO k=1,size(u_AD%BladeMotion)
          CALL Transfer_Line2_to_Line2( BD%y(k)%BldMotion, u_AD%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeMotion('//trim(num2lstr(k))//')' )   
       END DO
-      
+      !$OMP END PARALLEL DO
             
    END IF
    
