@@ -5278,7 +5278,10 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
       ErrStat = ErrID_None
       ErrMsg  = ""
       
+      !$OMP PARALLEL
+      !$OMP SINGLE
       ! ElastoDyn
+      !$OMP TASK DEFAULT(SHARED) PRIVATE(j)   
       CALL ED_Input_ExtrapInterp(ED%Input, ED%InputTimes, ED%u, t_global_next, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
   
@@ -5301,16 +5304,14 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
       ED%InputTimes(1)  = t_global_next
       !ED_OutputTimes(1) = t_global_next 
+      !$OMP END TASK
  
- 
-      !$OMP PARALLEL
-      !$OMP SINGLE
 
       ! BeamDyn
       IF (p_FAST%CompElast == Module_BD) THEN
          
          DO k = 1,p_FAST%nBeams
-            !$OMP TASK DEFAULT(SHARED) FIRSTPRIVATE(k)            
+            !$OMP TASK DEFAULT(SHARED) PRIVATE(j) FIRSTPRIVATE(k)            
             CALL BD_Input_ExtrapInterp(BD%Input(:,k), BD%InputTimes(:,k), BD%u(k), t_global_next, ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
@@ -5332,7 +5333,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
 
 
 
-      !$OMP TASK DEFAULT(SHARED)                 
+      !$OMP TASK DEFAULT(SHARED) PRIVATE(j)                 
       ! AeroDyn v14
       IF ( p_FAST%CompAero == Module_AD14 ) THEN
          
@@ -5376,7 +5377,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
       !$OMP END TASK
 
 
-      !$OMP TASK DEFAULT(SHARED)                      
+      !$OMP TASK DEFAULT(SHARED) PRIVATE(j)                      
       ! InflowWind
       IF ( p_FAST%CompInflow == Module_IfW ) THEN
          
@@ -5407,7 +5408,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
       !$OMP END TASK
 
 
-      !$OMP TASK DEFAULT(SHARED)                   
+      !$OMP TASK DEFAULT(SHARED) PRIVATE(j)                   
       ! ServoDyn
       IF ( p_FAST%CompServo == Module_SrvD ) THEN
          
@@ -5438,7 +5439,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
       !$OMP END TASK
 
 
-      !$OMP TASK DEFAULT(SHARED)             
+      !$OMP TASK DEFAULT(SHARED) PRIVATE(j)             
       ! HydroDyn
       IF ( p_FAST%CompHydro == Module_HD ) THEN
 
@@ -5469,7 +5470,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
       !$OMP END TASK
 
 
-      !$OMP TASK DEFAULT(SHARED)            
+      !$OMP TASK DEFAULT(SHARED) PRIVATE(j)            
       ! SubDyn/ExtPtfm_MCKF
       IF ( p_FAST%CompSub == Module_SD ) THEN
 
@@ -5524,7 +5525,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
       !$OMP END TASK
 
 
-      !$OMP TASK DEFAULT(SHARED)                  
+      !$OMP TASK DEFAULT(SHARED) PRIVATE(j)                 
       ! Mooring (MAP , FEAM , MoorDyn)
       ! MAP
       IF ( p_FAST%CompMooring == Module_MAP ) THEN
@@ -5626,7 +5627,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
       !$OMP END TASK
 
 
-      !$OMP TASK DEFAULT(SHARED)                         
+      !$OMP TASK DEFAULT(SHARED) PRIVATE(i,j)                         
       ! Ice (IceFloe or IceDyn)
       ! IceFloe
       IF ( p_FAST%CompIce == Module_IceF ) THEN

@@ -2595,8 +2595,6 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, x, m )
             m%elf(idx_dof1,i,nelem) = m%elf(idx_dof1,i,nelem) - p%Shp(i,idx_qp)   *m%qp%Fd(idx_dof1,idx_qp,nelem)*p%Jacobian(idx_qp,nelem)*p%QPtWeight(idx_qp)
          ENDDO
       ENDDO
-
-
    ENDDO
    RETURN
 END SUBROUTINE BD_ElementMatrixAcc
