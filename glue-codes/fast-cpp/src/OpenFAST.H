@@ -2,9 +2,6 @@
 #define OpenFAST_h
 #include "FAST_Library.h"
 #include "sys/stat.h"
-#include "math.h"
-#include <iostream>
-#include <fstream>
 #include <string>
 #include <cstring>
 #include <stdexcept>
@@ -12,6 +9,7 @@
 #include <set>
 #include <map>
 #include "dlfcn.h"
+//TODO: The skip MPICXX is put in place primarily to get around errors in OpenFOAM. This will cause problems if the driver program uses C++ API for MPI.
 #ifndef OMPI_SKIP_MPICXX
  #define OMPI_SKIP_MPICXX
 #endif
@@ -147,6 +145,7 @@ class OpenFAST {
   MPI_Group worldMPIGroup;
   int worldMPIRank;
 
+  static int AbortErrLev;
   int ErrStat;
   char ErrMsg[INTERFACE_STRING_LENGTH];  // make sure this is the same size as IntfStrLen in FAST_Library.f90
 

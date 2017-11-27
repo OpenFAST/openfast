@@ -1,4 +1,9 @@
 #include "OpenFAST.H"
+#include <iostream>
+#include <fstream>
+#include "math.h"
+
+int fast::OpenFAST::AbortErrLev = ErrID_Fatal; // abort error level; compare with NWTC Library
 
 //Constructor 
 fast::fastInputs::fastInputs():
