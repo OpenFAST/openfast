@@ -99,17 +99,16 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD14, u_AD, initOut_AD, y_AD, 
       ! number of force nodes in the interface
    Opfm%p%NnodesForceBlade =  InitInp%NumActForcePtsBlade 
    OpFM%p%NnodesForceTower = InitInp%NumActForcePtsTower
-   OpFM%p%NnodesForce = 1 + OpFM%p%NumBl * InitInp%NumActForcePtsBlade + InitInp%NumActForcePtsTower
+   OpFM%p%NnodesForce = 1 + OpFM%p%NumBl * InitInp%NumActForcePtsBlade
    OpFM%p%BladeLength = InitInp%BladeLength
 
    if ( y_AD%TowerLoad%NNodes > 0 ) then
       OpFM%p%NMappings = OpFM%p%NumBl + 1
       OpFM%p%TowerHeight = InitInp%TowerHeight
+      OpFM%p%NnodesForce = OpFM%p%NnodesForce + InitInp%NumActForcePtsTower
    else
       OpFM%p%NMappings = OpFM%p%NumBl
    end if
-
-   OpFM%p%NnodesForce = 1 +  OpFM%p%NumBl * InitInp%NumActForcePtsBlade + InitInp%NumActForcePtsTower
 
       ! air density, required for normalizing values sent to OpenFOAM:
    OpFM%p%AirDens = AirDens
@@ -354,16 +353,17 @@ SUBROUTINE SetOpFMPositions(p_FAST, u_AD14, u_AD, y_ED, OpFM)
          
       END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
    END DO !K = 1,p%NumBl
-   
-   ! tower nodes
-   DO J=1,u_AD%TowerMotion%nnodes
-      Node = Node + 1
-      OpFM%u%pxVel(Node) = u_AD%TowerMotion%TranslationDisp(1,J) + u_AD%TowerMotion%Position(1,J)
-      OpFM%u%pyVel(Node) = u_AD%TowerMotion%TranslationDisp(2,J) + u_AD%TowerMotion%Position(2,J)
-      OpFM%u%pzVel(Node) = u_AD%TowerMotion%TranslationDisp(3,J) + u_AD%TowerMotion%Position(3,J)
-   END DO
-   
-   
+
+   if (OpFM%p%NMappings .gt. OpFM%p%NumBl) then
+      ! tower nodes
+      DO J=1,u_AD%TowerMotion%nnodes
+         Node = Node + 1
+         OpFM%u%pxVel(Node) = u_AD%TowerMotion%TranslationDisp(1,J) + u_AD%TowerMotion%Position(1,J)
+         OpFM%u%pyVel(Node) = u_AD%TowerMotion%TranslationDisp(2,J) + u_AD%TowerMotion%Position(2,J)
+         OpFM%u%pzVel(Node) = u_AD%TowerMotion%TranslationDisp(3,J) + u_AD%TowerMotion%Position(3,J)
+      END DO
+   end if
+
    ! Do the Actuator Force nodes now
    Node = 1   ! displaced hub position 
    OpFM%u%pxForce(Node) = OpFM%u%pxVel(Node)
@@ -522,9 +522,9 @@ SUBROUTINE SetOpFMForces(p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpFM,
    !.......................
 
    ! mesh mapping from line2 mesh to point mesh
-   k = SIZE(u_AD%BladeMotion) + 1
-   
-#ifdef DEBUG_OPENFOAM   
+   DO K = OpFM%p%NumBl+1,OpFM%p%NMappings
+
+#ifdef DEBUG_OPENFOAM
    DO J = 1,u_AD%TowerMotion%NNodes
       write(aerodynForcesFile,*) u_AD%TowerMotion%TranslationDisp(1,j) + u_AD%TowerMotion%Position(1,j), ', ', u_AD%TowerMotion%TranslationDisp(2,j) + u_AD%TowerMotion%Position(2,j), ', ', u_AD%TowerMotion%TranslationDisp(3,j) + u_AD%TowerMotion%Position(3,j), ', ', OpFM%y%u(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%v(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', OpFM%y%w(1 + OpFM%p%NumBl*u_AD%BladeMotion(k)%NNodes + j), ', ', y_AD%TowerLoad%Force(1,j), ', ', y_AD%TowerLoad%Force(2,j), ', ', y_AD%TowerLoad%Force(2,j)
    END DO
@@ -551,7 +551,9 @@ SUBROUTINE SetOpFMForces(p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpFM,
    close(aerodynForcesFile)
    close(actForcesFile)
 #endif
-   
+
+   END DO
+
 END SUBROUTINE SetOpFMForces
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE OpFM_SetWriteOutput( OpFM )
@@ -1104,13 +1106,15 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(p_OpFM, ErrStat, ErrMsg)
   p_OpFM%forceBldRnodes(p_OpFM%NnodesForceBlade) = p_OpFM%BladeLength
 
 
-  !Do the tower now
-  allocate(p_OpFM%forceTwrHnodes(p_OpFM%NnodesForceTower), stat=errStat2)
-  dRforceNodes = p_OpFM%TowerHeight/(p_OpFM%NnodesForceTower-1)
-  do i=1,p_OpFM%NnodesForceTower-1
-     p_OpFM%forceTwrHnodes(i) = (i-1)*dRforceNodes
-  end do
-  p_OpFM%forceTwrHnodes(p_OpFM%NnodesForceTower) = p_OpFM%TowerHeight
+  if (p_OpFM%NMappings .gt. p_OpFM%NumBl) then
+     !Do the tower now
+     allocate(p_OpFM%forceTwrHnodes(p_OpFM%NnodesForceTower), stat=errStat2)
+     dRforceNodes = p_OpFM%TowerHeight/(p_OpFM%NnodesForceTower-1)
+     do i=1,p_OpFM%NnodesForceTower-1
+        p_OpFM%forceTwrHnodes(i) = (i-1)*dRforceNodes
+     end do
+     p_OpFM%forceTwrHnodes(p_OpFM%NnodesForceTower) = p_OpFM%TowerHeight
+  end if
 
   return
 
@@ -1162,8 +1166,8 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
      
 
   ! The tower now
-  nNodesTowerProps = SIZE(InitOut_AD%TwrElev)
   do k = p_OpFM%NumBl+1,p_OpFM%NMappings
+     nNodesTowerProps = SIZE(InitOut_AD%TwrElev)
      ! Calculate the chord at the force nodes based on interpolation
      DO I=1,p_OpFM%NnodesForceTower
         Node = Node + 1
