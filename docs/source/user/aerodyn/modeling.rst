@@ -20,8 +20,8 @@ aerodynamics independent of aero-elastic coupling. The standalone
 AeroDyn driver code essentially replaces the functionality previously
 available in the separate wind turbine rotor-performance tool WT\_Perf.
 For example, the standalone AeroDyn driver code can be used to compute
-the surfaces of power coefficient (C:sub:`P`), thrust coefficient
-(C:sub:`T`), and/or torque coefficient (C:sub:`Q`) as a function of
+the surfaces of power coefficient (C\ :sub:`P`), thrust coefficient
+(C\ :sub:`T`), and/or torque coefficient (C\ :sub:`Q`) as a function of
 tip-speed ratio (TSR) and blade-pitch angle for a given rotor. Moreover,
 the standalone AeroDyn driver code is more powerful than WT\_Perf in
 that the standalone AeroDyn driver can capture time-varying dynamics as
@@ -77,7 +77,7 @@ turbines or above the seabed for MHK turbines) as possible (this is a
 particular issue for full-field wind file formats).
 
 Model Options Under Operational and Parked/Idling Conditions
------------------------------------------------------------- 
+------------------------------------------------------------
 
 To model an operational rotor, we recommend to include induction
 (``WakeMod = 1``) and UA (``AFAeroMod = 2``). Normally, the Pitt and
@@ -85,7 +85,7 @@ Peters skewed-wake (``SkewMod = 2``), Prandtl tip-loss (``TipLoss
 = TRUE``), Prandtl hub-loss (``HubLoss = TRUE``), and tangential
 induction (``TanInd = TRUE``) models should all be enabled, but
 ``SkewMod = 2`` is invalid for very large yaw errors (much greater
-than 45˚). The nonlinear solve in the BEM solution is in terms of the
+than 45 degrees). The nonlinear solve in the BEM solution is in terms of the
 inflow angle, but ``IndToler`` represents the tolerance of the
 nondimensional residual equation, with no physical association possible;
 we recommend setting ``IndToler`` to ``DEFAULT``.
@@ -129,4 +129,3 @@ linearization of the full coupled solution. When induction is enabled
 frozen-wake assumption, by setting ``FrozenWake = TRUE``. The UA
 models are not set up to support linearization, so, UA must be disabled
 during linearization by setting ``AFAeroMod = 1``.
-
