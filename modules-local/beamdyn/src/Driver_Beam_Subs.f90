@@ -23,6 +23,8 @@ module BeamDyn_driver_subs
    USE BeamDyn
    USE BeamDyn_Subs
 
+   IMPLICIT NONE
+   
   ! Variables for multi-point loads
    TYPE , PUBLIC :: BD_DriverInternalType
       REAL(ReKi)     , DIMENSION(1:6)               :: DistrLoad        !< Constant distributed load along beam axis, 3 forces and 3 moments [-]
@@ -82,6 +84,7 @@ module BeamDyn_driver_subs
    CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
 
    INTEGER(IntKi)               :: i
+   INTEGER(IntKi)               :: IOS
 !------------------------------------------------------------------------------------
 
    ! Initialize some variables:
