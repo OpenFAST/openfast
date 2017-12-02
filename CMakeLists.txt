@@ -22,6 +22,12 @@ include(${CMAKE_SOURCE_DIR}/cmake/FastFortranOptions.cmake)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+# Get the git info into the executable
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+include(GetGitRevisionDescription)
+git_describe(GIT_DESCRIBE)
+add_definitions(-DGIT_VERSION_INFO="${GIT_DESCRIBE}")
+
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
@@ -51,10 +57,17 @@ find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
 ########################################################################
+# Test option configuration
+# Do this before configuring modules so that precompiler flags are included
+option(BUILD_TESTING "Build the testing tree." OFF)
+if(BUILD_TESTING)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
+endif()
+
+########################################################################
 # Build rules for FAST Registry
 #
 add_subdirectory(modules-local/fast-registry)
-
 
 ########################################################################
 # FAST Core modules
@@ -73,6 +86,7 @@ set(FAST_MODULES_LOCAL
   extptfm
   openfoam
   supercontroller
+  turbsim
   fast-library
   )
 
@@ -102,11 +116,6 @@ endforeach(IDIR IN ITEMS ${FAST_MODULES_LOCAL})
 foreach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules-ext/${IDIR}")
 endforeach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
-
-option(BUILD_DOCUMENTATION "Build documentation." OFF)
-if(BUILD_DOCUMENTATION)
-   add_subdirectory(docs)
-endif()
 
 add_subdirectory(glue-codes)
 
@@ -138,3 +147,29 @@ configure_package_config_file(
   PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR FTNMOD_INSTALL_DIR)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
   DESTINATION lib/cmake/OpenFAST)
+
+########################################################################
+# Configure the default install path to openfast/install
+string(FIND ${CMAKE_Fortran_MODULE_DIRECTORY} "build/ftnmods" found)
+if(${found} GREATER 0)
+  string(REPLACE "build/ftnmods" "install" install_path ${CMAKE_Fortran_MODULE_DIRECTORY})
+  if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX ${install_path} CACHE PATH "..." FORCE)
+  endif()
+endif()
+
+# Option configuration
+if(BUILD_TESTING)
+  include(CTest)
+
+  # regression tests
+  add_subdirectory(reg_tests)
+
+  # unit tests
+  add_subdirectory(unit_tests)
+endif()
+
+option(BUILD_DOCUMENTATION "Build documentation." OFF)
+if(BUILD_DOCUMENTATION)
+  add_subdirectory(docs)
+endif()

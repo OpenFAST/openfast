@@ -28,7 +28,7 @@ module AeroDyn_Driver_Subs
     
    implicit none   
    
-   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'AeroDyn_driver', 'v1.02.00a', '12-Apr-2016' )  ! The version number of this program.
+   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'AeroDyn_driver', '', '' )  ! The version number of this program.
                                                     
    contains
 
@@ -45,20 +45,23 @@ subroutine Dvr_Init(DvrData,errStat,errMsg )
    character(*), parameter                     :: RoutineName = 'Dvr_Init'
 
    CHARACTER(1000)                             :: inputFile     ! String to hold the file name.
+   CHARACTER(200)                              :: git_commit    ! String containing the current git commit hash
+
+   TYPE(ProgDesc), PARAMETER                   :: version   = ProgDesc( 'AeroDyn Driver', '', '' )  ! The version number of this program.
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+
    DvrData%OutFileData%unOutFile   = -1
    
-      ! Initialize the library which handle file echos and WrScr, for example
-   call NWTC_Init()
-      
+   CALL NWTC_Init()
       ! Display the copyright notice
-   CALL DispCopyrightLicense( version )
-   
+   CALL DispCopyrightLicense( version )   
+      ! Obtain OpenFAST git commit hash
+   git_commit = QueryGitVersion()
       ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetNVD( version )//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
 
    InputFile = ""  ! initialize to empty string to make sure it's input from the command line
    CALL CheckArgs( InputFile, ErrStat2 )

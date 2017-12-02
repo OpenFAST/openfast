@@ -25,6 +25,9 @@ set(NWTCLIBS_SOURCES
   src/SingPrec.f90
   src/NWTC_Library_Types.f90
 
+  # RanLux sources
+  src/ranlux/RANLUX.f90
+  
   # NetLib sources
   src/NetLib/Dierckx_FitPack/dierckx_fitpack.f
   src/NetLib/fftpack/fftpack4.1.f
@@ -48,7 +51,7 @@ elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
   if (APPLE OR UNIX)
     set(NWTC_SYS_FILE src/SysIFL.f90)
   elseif (WIN32)
-    set(NWTC_SYS_FILE src/SysIFV.f90)
+    set(NWTC_SYS_FILE src/SysIVF.f90)
   endif (APPLE OR UNIX)
 endif ()
 

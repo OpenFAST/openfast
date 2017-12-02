@@ -1242,9 +1242,9 @@ CONTAINS
 
          ! step 2
    
-         CALL MD_Input_ExtrapInterp(u, utimes, u_interp, tDbKi + 0.5*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
+         CALL MD_Input_ExtrapInterp(u, utimes, u_interp, tDbKi + 0.5_ReKi*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
             
-         CALL MD_CalcContStateDeriv( (t + 0.5*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
+         CALL MD_CalcContStateDeriv( (t + 0.5_ReKi*dtM), u_interp, p, x2, xd, z, other, m, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
          DO J = 1, Nx
             x%states(J) = x%states(J) + dtM*dxdt%states(J)
          END DO

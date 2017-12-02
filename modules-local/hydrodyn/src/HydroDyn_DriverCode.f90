@@ -123,6 +123,11 @@ PROGRAM HydroDynDriver
    CHARACTER(10)                                      :: AngleMsg             ! For debugging, a string version of the largest rotation input
    INTEGER                                            :: UnMeshDebug
    CHARACTER(50)                                      :: MeshDebugFile
+   
+   CHARACTER(200)                   :: git_commit    ! String containing the current git commit hash
+
+   TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'HydroDyn Driver', '', '' )  ! The version number of this program.
+   
    !...............................................................................................................................
    ! Routines called in initialization
    !...............................................................................................................................
@@ -147,8 +152,14 @@ PROGRAM HydroDynDriver
       ! Initialize the library which handle file echos and WrScr, for example
    call nwtc_init()
    
-   
-   IF ( command_argument_count() > 1 ) THEN
+         ! Display the copyright notice
+   CALL DispCopyrightLicense( version )   
+      ! Obtain OpenFAST git commit hash
+   git_commit = QueryGitVersion()
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+
+   IF ( command_argument_count() /= 1 ) THEN
       CALL print_help()
       STOP
    END IF
@@ -175,6 +186,7 @@ PROGRAM HydroDynDriver
    call date_and_time ( Values=StrtTime )                               ! Let's time the whole simulation
    call cpu_time ( UsrTime1 )                                           ! Initial time (this zeros the start time when used as a MATLAB function)
    SttsTime = 1.0 ! seconds
+   
      ! figure out how many time steps we should go before writing screen output:      
    n_SttsTime = MAX( 1, NINT( SttsTime / drvrInitInp%TimeInterval ) ) ! this may not be the final TimeInterval, though!!! GJH 8/14/14
     

@@ -67,7 +67,7 @@ MODULE WAMIT2
    PRIVATE
 
 !   INTEGER(IntKi), PARAMETER                             :: DataFormatID = 1  !< Update this value if the data types change (used in WAMIT_Pack)
-   TYPE(ProgDesc), PARAMETER                             :: WAMIT2_ProgDesc = ProgDesc( 'WAMIT2', 'v1.01.00', '17-Dec-2015' )
+   TYPE(ProgDesc), PARAMETER                             :: WAMIT2_ProgDesc = ProgDesc( 'WAMIT2', '', '' )
                                                                               !< This holds the name of the program, version info, and date.
                                                                               !! It is used by the DispNVD routine in the library and as header
                                                                               !! information in output files.
@@ -752,7 +752,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    !! The data is stored in either 3D or 4D arrays depending on the file type used.
    !! At each step in the summation of the mth term, a call is made to the 3D or 4D interpolation algorithm to find the value of
    !! \f$ F^-_k(\omega_m, \omega_n) \f$ corresponding to the \f$ Z(\omega_m) \f$ term in the complex wave amplitude, _WaveElevC_.
-   !! The limits of \f$ \omega_{lo-d} \le \omega_m \le ≤ \omega_{hi-d} \f$ are imposed during the summation with values
+   !! The limits of \f$ \omega_{lo-d} :math:`\le` \omega_m :math:`\le` \omega_{hi-d} \f$ are imposed during the summation with values
    !! outside this range set to zero.
    !!
    !! For multi-directional waves where the equal energy discretization is used, each frequency has a single wave direction

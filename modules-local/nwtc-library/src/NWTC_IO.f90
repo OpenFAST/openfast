@@ -33,7 +33,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               
-          ProgDesc( 'NWTC Subroutine Library', 'v2.11.02', '13-Mar-2017')    !< The name, version, and date of the NWTC Subroutine Library
+          ProgDesc( 'NWTC Subroutine Library', '', '')    !< The name, version, and date of the NWTC Subroutine Library
 
       !> This type stores a linked list of file names, used in MLB-style input file parsing (currently used in AirfoilInfo)
    TYPE, PUBLIC   :: FNlist_Type                                
@@ -56,6 +56,7 @@ MODULE NWTC_IO
 
    INTEGER(B2Ki), PARAMETER      :: FileFmtID_WithTime    = 1                    !< ID for FAST Output File Format, specifies that the time channel is included in the output file (use if the output can occur at variable times)
    INTEGER(B2Ki), PARAMETER      :: FileFmtID_WithoutTime = 2                    !< ID for FAST Output File Format, specifies that the time channel is not included in the output file (used only with constant time-step output)
+   INTEGER(B2Ki), PARAMETER      :: FileFmtID_NoCompressWithoutTime = 3          !< ID for FAST Output File Format, specifies that the time channel is not included in the output file (used only with constant time-step output), and data is not compressed, but written as double precision floats
 
 
    LOGICAL                       :: Beep     = .TRUE.                            !< Flag that specifies whether or not to beep for error messages and program terminations.
@@ -1991,8 +1992,8 @@ CONTAINS
    CALL WrScr('')
    CALL WrScr( 'Copyright (C) '//TRIM(year)//' National Renewable Energy Laboratory' )
    CALL WrScr('')
-   CALL WrScr( 'This program comes with ABSOLUTELY NO WARRANTY. '//&
-               'See the "license.txt" file distributed with this software for details.')   
+   CALL WrScr( 'This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY. '//&
+               'See the "LICENSE" file distributed with this software for details.')   
 
    IF (PRESENT(AdditionalComment)) THEN
       CALL WrScr(Stars)
@@ -2105,61 +2106,58 @@ CONTAINS
       END IF
       
    END SUBROUTINE DLLTypeUnPack   
+
 !=======================================================================
 !> This routine displays the name of the program, its version, and its release date.
 !! Use DispNVD (nwtc_io::dispnvd) instead of directly calling a specific routine in the generic interface.
    SUBROUTINE DispNVD0()
-
-
+     
       ! Print out program name, version, and date.
-
-   CALL WrScr ( NewLine//' Running '//TRIM( ProgName )//' '//Trim( ProgVer )//'.' )
-
+      CALL WrScr ( NewLine//' Running '//TRIM( ProgName )//' '//Trim( ProgVer )//'.' )
 
    RETURN
    END SUBROUTINE DispNVD0
+
 !=======================================================================
 !> \copydoc nwtc_io::dispnvd0
    SUBROUTINE DispNVD1 ( ProgInfo, DispNWTCVer )
 
-
-   IMPLICIT NONE
-   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    !< Contains the name and version info
-   LOGICAL,INTENT(IN),OPTIONAL         :: DispNWTCVer !< Option to display what version of the library is linked with the code
+      IMPLICIT NONE
+      
+      TYPE( ProgDesc ), INTENT(IN) :: ProgInfo    !< Contains the name and version info
+      LOGICAL,INTENT(IN),OPTIONAL  :: DispNWTCVer !< Option to display what version of the library is linked with the code
 
       ! Print out program name, version, and date.
-
+      
       ! As a special case, display the library version with the program version
-   IF ( PRESENT(DispNWTCVer) ) THEN
-      IF ( DispNWTCVer .AND. ProgInfo%Name /= NWTC_Ver%Name ) THEN
-         CALL WrScr ( NewLine//' Running '//TRIM( GetNVD( ProgInfo ) )//' linked with '//TRIM( GetNVD( NWTC_Ver ) )//'.' )
-         RETURN
+      IF ( PRESENT(DispNWTCVer) ) THEN
+         IF ( DispNWTCVer .AND. ProgInfo%Name /= NWTC_Ver%Name ) THEN
+            CALL WrScr ( NewLine//' Running '//TRIM( GetNVD( ProgInfo ) )//' linked with '//TRIM( GetNVD( NWTC_Ver ) )//'.' )
+            RETURN
+         END IF
       END IF
-   END IF
-
-   CALL WrScr ( NewLine//' Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
-
+      
+      CALL WrScr ( 'Running '//TRIM( GetNVD( ProgInfo ) )//'.' )
 
    RETURN
    END SUBROUTINE DispNVD1
+
 !=======================================================================
 !> This routine displays the name of the program, its version, and its release date passed in as strings
 !! This routine is depricated and for legacy purposes only. Please don't use for any new code (Dec-2012).
    SUBROUTINE DispNVD2 ( Name, Ver )
 
-
-   IMPLICIT NONE
-   CHARACTER(*),  INTENT(IN)           :: Name     !< String containing the name of the program using the library
-   CHARACTER(*),  INTENT(IN)           :: Ver      !< String containing the version and date info
-
-
+      IMPLICIT NONE
+     
+      CHARACTER(*),  INTENT(IN) :: Name     !< String containing the name of the program using the library
+      CHARACTER(*),  INTENT(IN) :: Ver      !< String containing the version and date info
+     
       ! Print out program name, version, and date.
-
-   CALL WrScr ( NewLine//' Running '//TRIM( Name )//' ('//Trim( Ver )//').' )
-
+      CALL WrScr ( NewLine//' Running '//TRIM( Name )//' ('//Trim( Ver )//').' )
 
    RETURN
    END SUBROUTINE DispNVD2
+   
 !=======================================================================
 !> This routine finds one line of text with a maximum length of MaxLen from the Str.
 !! It tries to break the line at a blank.
@@ -2297,6 +2295,7 @@ CONTAINS
 
 
    END FUNCTION GetErrStr
+   
 !=======================================================================
 !> This function converts the three strings contained in the ProgDesc
 !! data type into a single string listing the program name,
@@ -2304,18 +2303,13 @@ CONTAINS
    FUNCTION GetNVD ( ProgInfo )
 
       ! Argument declarations.
-
-   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    !< Contains the name, date, and version info
-
+      TYPE( ProgDesc ), INTENT(IN) :: ProgInfo    !< Contains the name, date, and version info
 
       ! Function delcaration
+      CHARACTER(200)               :: GetNVD      !< A single string containing the name, date, and version info
 
-   CHARACTER(200)                      :: GetNVD      !< A single string containing the name, date, and version info
-
-
-      ! Print all the version info into a nice string:
-
-      GetNVD = TRIM( ProgInfo%Name )//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
+      ! Store all the version info into a single string
+      GetNVD = TRIM( ProgInfo%Name ) !//' ('//Trim( ProgInfo%Ver )//', '//Trim( ProgInfo%Date )//')'
 
    END FUNCTION GetNVD
 !=======================================================================
@@ -4422,6 +4416,56 @@ CONTAINS
 
    RETURN
    END SUBROUTINE ProgWarn 
+   
+!=======================================================================
+!> This routine outputs the git hash associate with the current codebase.
+   FUNCTION QueryGitVersion()
+   
+      ! Passed variables.
+   
+   !INTEGER(IntKi),     INTENT(OUT)     :: ErrStat                              ! Error status 
+   !CHARACTER(*),       INTENT(OUT)     :: ErrMsg                               ! Error message 
+      
+      ! Function declaration.
+
+   CHARACTER(200)                      :: QueryGitVersion                      ! This function.
+      
+      ! Local variables.
+
+   INTEGER(IntKi)                      :: UnIn                                 ! Unit number for reading file                                        
+   INTEGER(IntKi)                      :: ErrStat2                             ! Temporary Error status 
+   CHARACTER(ErrMsgLen)                :: ErrMsg2                              ! Temporary Error message 
+   
+   !ErrStat = ErrID_None 
+   !ErrMsg  = '' 
+   
+   QueryGitVersion = 'unversioned' 
+   
+   ! VS build method for obtaining the git version info.
+   ! This requires setting:
+   !  1) GIT_INCLUDE_FILE = '$(ProjectDir)\..\gitVersionInfo.h' preprocessor option on this file or the project containing this file.
+   !  2) Creating a prebuild event on the project file producing the resulting binary (i.e., FAST.exe) with the following command: ..\CreateGitVersion.bat
+   !  3) The bat file, CreateGitVersion.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
+   !         @ECHO off
+   !         SET IncludeFile=..\gitVersionInfo.h
+   !         
+   !         <NUL SET /p IncludeTxt=#define GIT_VERSION_INFO '> %IncludeFile%
+   !         FOR /f %%a IN ('git describe --abbrev^=7 --always --tags --dirty') DO <NUL SET /p IncludeTxt=%%a>> %IncludeFile%
+   !         ECHO '>> %IncludeFile%
+   !         EXIT /B 0
+   !     This creates the gitVersionInfo.h file in the vs-build folder
+   
+#ifdef GIT_INCLUDE_FILE
+#include GIT_INCLUDE_FILE
+#endif
+
+#ifdef GIT_VERSION_INFO
+QueryGitVersion = GIT_VERSION_INFO
+#endif
+
+   RETURN
+   END FUNCTION QueryGitVersion
+   
 !=======================================================================
 !> \copydoc nwtc_io::int2lstr
    FUNCTION R2LStr4 ( Num )
@@ -4888,6 +4932,7 @@ CONTAINS
 
    INTEGER(B2Ki)                          :: FileType                ! The type of FAST data file (1: Time channel included in file; 2: Time stored as start time and step).
    INTEGER(B2Ki), ALLOCATABLE             :: TmpInArray(:,:)         ! This array holds the normalized channels that were read from the binary file.
+   INTEGER(R8Ki), ALLOCATABLE             :: TmpR8InArray(:,:)       ! This array holds the uncompressed channels that were read from the binary file.
 
    INTEGER(B1Ki), ALLOCATABLE             :: DescStrASCII(:)         ! The ASCII equivalent of DescStr.
    INTEGER(B1Ki)                          :: TmpStrASCII(MaxChrLen)  ! The temporary ASCII equivalent of a channel name or units.
@@ -4989,28 +5034,7 @@ CONTAINS
 
 
       ! Allocate the necessary arrays.
-
-   ALLOCATE ( ColMax( FASTdata%NumChans ) , STAT=ErrStat2 )
-   IF ( ErrStat2 /= 0 )  THEN
-      CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for ColMax array.', ErrStat, ErrMsg, RoutineName )
-      CALL Cleanup()
-      RETURN
-   ENDIF
-
-   ALLOCATE ( ColMin( FASTdata%NumChans ) , STAT=ErrStat2 )
-   IF ( ErrStat2 /= 0 )  THEN
-      CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for ColMin array.', ErrStat, ErrMsg, RoutineName )
-      CALL Cleanup()
-      RETURN
-   ENDIF
-
-   ALLOCATE ( ColOff( FASTdata%NumChans ) , STAT=ErrStat2 )
-   IF ( ErrStat2 /= 0 )  THEN
-      CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for ColOff array.', ErrStat, ErrMsg, RoutineName )
-      CALL Cleanup()
-      RETURN
-   ENDIF
-
+   
    ALLOCATE ( FASTdata%ChanNames( FASTdata%NumChans+1 ) , STAT=ErrStat2 )
    IF ( ErrStat2 /= 0 )  THEN
       CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for FASTdata%ChanNames array.', ErrStat, ErrMsg, RoutineName )
@@ -5025,55 +5049,94 @@ CONTAINS
       RETURN
    ENDIF
 
-   ALLOCATE ( ColScl( FASTdata%NumChans ) , STAT=ErrStat2 )
-   IF ( ErrStat2 /= 0 )  THEN
-      CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for ColScl array.', ErrStat, ErrMsg, RoutineName )
-      CALL Cleanup()
-      RETURN
-   ENDIF
-
-   ALLOCATE ( TmpInArray( FASTdata%NumRecs, FASTdata%NumChans ) , STAT=ErrStat2 )
-   IF ( ErrStat2 /= 0 )  THEN
-      CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for the TmpInArray array.', ErrStat, ErrMsg, RoutineName )
-      CALL Cleanup()
-      RETURN
-   ENDIF
-
-   IF ( FileType == FileFmtID_WithTime ) THEN
-      ALLOCATE ( TmpTimeArray( FASTdata%NumRecs ) , STAT=ErrStat2 )
-      IF ( ErrStat2 /= 0 )  THEN
-         CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for the TmpTimeArray array.', ErrStat, ErrMsg, RoutineName )
-         CALL Cleanup()
-         RETURN
-      ENDIF
-   END IF
-
    ALLOCATE ( FASTdata%Data( FASTdata%NumRecs, FASTdata%NumChans+1 ) , STAT=ErrStat2 )
    IF ( ErrStat2 /= 0 )  THEN
       CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for the FASTdata%Data array.', ErrStat, ErrMsg, RoutineName )
       CALL Cleanup()
       RETURN
    ENDIF
+   
+   IF ( FileType == FileFmtID_NoCompressWithoutTime ) THEN 
+      ALLOCATE ( TmpR8InArray( FASTdata%NumRecs, FASTdata%NumChans ) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for the TmpR8InArray array.', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      ENDIF
+
+   ELSE
+      
+      ALLOCATE ( ColMax( FASTdata%NumChans ) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for ColMax array.', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      ENDIF
+
+      ALLOCATE ( ColMin( FASTdata%NumChans ) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for ColMin array.', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      ENDIF
+
+      ALLOCATE ( ColOff( FASTdata%NumChans ) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for ColOff array.', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      ENDIF
+
+      ALLOCATE ( ColScl( FASTdata%NumChans ) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for ColScl array.', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      ENDIF
+   
+      ALLOCATE ( TmpInArray( FASTdata%NumRecs, FASTdata%NumChans ) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for the TmpInArray array.', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      ENDIF
+
+      IF ( FileType == FileFmtID_WithTime ) THEN
+         ALLOCATE ( TmpTimeArray( FASTdata%NumRecs ) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for the TmpTimeArray array.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
+            RETURN
+         ENDIF
+      END IF
+      
+   END IF
+   
+   
 
 
       ! Read more of the header information.
 
-   READ (UnIn, IOSTAT=ErrStat2)  ColScl
-   IF ( ErrStat2 /= 0 )  THEN
-      CALL SetErrStat ( ErrID_Fatal, 'Fatal error reading the ColScl array from file "' &
-                                          //TRIM( FASTdata%File )//'".', ErrStat, ErrMsg, RoutineName )
-      CALL Cleanup()
-      RETURN
-   ENDIF
+   IF ( FileType /= FileFmtID_NoCompressWithoutTime ) THEN 
+      
+      READ (UnIn, IOSTAT=ErrStat2)  ColScl
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Fatal error reading the ColScl array from file "' &
+                                             //TRIM( FASTdata%File )//'".', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      ENDIF
 
-   READ (UnIn, IOSTAT=ErrStat2)  ColOff
-   IF ( ErrStat2 /= 0 )  THEN
-      CALL SetErrStat ( ErrID_Fatal, 'Fatal error reading the ColOff array from file "' &
-                                          //TRIM( FASTdata%File )//'".', ErrStat, ErrMsg, RoutineName )
-      CALL Cleanup()
-      RETURN
+      READ (UnIn, IOSTAT=ErrStat2)  ColOff
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Fatal error reading the ColOff array from file "' &
+                                             //TRIM( FASTdata%File )//'".', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      ENDIF
+      
    ENDIF
-
+   
    READ (UnIn, IOSTAT=ErrStat2)  LenDesc
    IF ( ErrStat2 /= 0 )  THEN
       CALL SetErrStat ( ErrID_Fatal, 'Fatal error reading LenDesc from file "'//TRIM( FASTdata%File )//'".', ErrStat, ErrMsg, RoutineName )
@@ -5171,7 +5234,12 @@ CONTAINS
       ! Read the FAST channel data.
 
    DO IRow=1,FASTdata%NumRecs
-      READ (UnIn, IOSTAT=ErrStat2)  TmpInArray(IRow,:)
+      IF ( FileType == FileFmtID_NoCompressWithoutTime ) THEN
+         READ (UnIn, IOSTAT=ErrStat2)  TmpR8InArray(IRow,:)
+      ELSE
+         READ (UnIn, IOSTAT=ErrStat2)  TmpInArray(IRow,:)
+      ENDIF
+      
       IF ( ErrStat2 /= 0 )  THEN
          CALL SetErrStat ( ErrID_Fatal, 'Fatal error reading channel data from file "'//TRIM( FASTdata%File )//'".', ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
@@ -5180,10 +5248,14 @@ CONTAINS
    END DO ! IRow=1,FASTdata%NumRecs
 
 
-      ! Denormalize the data one row at a time and store it in the FASTdata%Data array.
-
    DO IRow=1,FASTdata%NumRecs
-      FASTdata%Data(IRow,2:) = ( TmpInArray(IRow,:) - ColOff(:) )/ColScl(:)
+      IF ( FileType == FileFmtID_NoCompressWithoutTime ) THEN
+         FASTdata%Data(IRow,2:) = REAL(TmpInArray(IRow,:), ReKi)
+      ELSE
+            ! Denormalize the data one row at a time and store it in the FASTdata%Data array.
+         FASTdata%Data(IRow,2:) = ( TmpInArray(IRow,:) - ColOff(:) )/ColScl(:)
+      END IF
+      
    END DO ! IRow=1,FASTdata%NumRecs
 
 
@@ -5206,6 +5278,7 @@ CONTAINS
          IF ( ALLOCATED( ColScl             ) ) DEALLOCATE( ColScl             )
          IF ( ALLOCATED( DescStrASCII       ) ) DEALLOCATE( DescStrASCII       )
          IF ( ALLOCATED( TmpInArray         ) ) DEALLOCATE( TmpInArray         )
+         IF ( ALLOCATED( TmpR8InArray       ) ) DEALLOCATE( TmpR8InArray         )
          IF ( ALLOCATED( TmpTimeArray       ) ) DEALLOCATE( TmpTimeArray       )
 
 
@@ -6591,7 +6664,7 @@ CONTAINS
    INTEGER(IntKi)                :: NT                               ! Number of time steps
    INTEGER(IntKi)                :: NumOutChans                      ! Number of output channels
    INTEGER(IntKi)                :: UnIn                             ! Unit number for the binary file
-
+   REAL(R8Ki),    ALLOCATABLE    :: TmpR8OutArray(:)                 ! This array holds the uncompressed output channels before being written to the binary file
    INTEGER(B2Ki), ALLOCATABLE    :: TmpOutArray(:)                   ! This array holds the normalized output channels before being written to the binary file
    INTEGER(B4Ki), ALLOCATABLE    :: TmpTimeArray(:)                  ! This array holds the normalized output time channel before being written to the binary file
    INTEGER(B1Ki), ALLOCATABLE    :: DescStrASCII(:)                  ! The ASCII equivalent of DescStr
@@ -6632,21 +6705,6 @@ CONTAINS
    ! Allocate arrays
    !...............................................................................................................................
 
-   CALL AllocAry( ColMax, NumOutChans, 'column maxima (ColMax)', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL AllocAry( ColMin, NumOutChans, 'column minima (ColMin)', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL AllocAry( ColOff, NumOutChans, 'column offsets (ColOff)', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL AllocAry( ColScl, NumOutChans, 'column scales (ColScl)', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL AllocAry( TmpOutArray, NumOutChans*NT, 'temporary output array (TmpOutArray)', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
    CALL AllocAry( ChanNameASCII, (1+NumOutChans)*LenName , 'temporary channel name array (ChanNameASCII)', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -6656,11 +6714,33 @@ CONTAINS
    CALL AllocAry( DescStrASCII, LenDesc, 'temporary file description (DescStrASCII)', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   IF ( FileID == FileFmtID_WithTime ) THEN
-      CALL AllocAry( TmpTimeArray, NT, 'temporary output time array (TmpTimeArray)', ErrStat2, ErrMsg2 )
+   IF ( FileID == FileFmtID_NoCompressWithoutTime ) THEN
+      CALL AllocAry( TmpR8OutArray, NumOutChans*NT, 'temporary output array (TmpR8OutArray)', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   END IF
+   ELSE    
+      
+      CALL AllocAry( ColMax, NumOutChans, 'column maxima (ColMax)', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+      CALL AllocAry( ColMin, NumOutChans, 'column minima (ColMin)', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      CALL AllocAry( ColOff, NumOutChans, 'column offsets (ColOff)', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      CALL AllocAry( ColScl, NumOutChans, 'column scales (ColScl)', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      CALL AllocAry( TmpOutArray, NumOutChans*NT, 'temporary output array (TmpOutArray)', ErrStat2, ErrMsg2 )  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+      IF ( FileID == FileFmtID_WithTime ) THEN
+         CALL AllocAry( TmpTimeArray, NT, 'temporary output time array (TmpTimeArray)', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+      
+   ENDIF
+   
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL Cleanup( )
       RETURN
@@ -6701,23 +6781,6 @@ CONTAINS
 !BJJ: This scaling has issues if the channel contains NaN.
 
 
-   ColMin(:) = AllOutData(:,1_IntKi)         ! Initialize the Min values for each channel
-   ColMax(:) = AllOutData(:,1_IntKi)         ! Initialize the Max values for each channel
-
-   DO IT=2,NT                                ! Loop through the remaining time steps
-
-      DO IC=1,NumOutChans                    ! Loop through the output channels
-
-         IF ( AllOutData(IC,IT) > ColMax(IC) ) THEN
-            ColMax(IC) = AllOutData(IC,IT)
-         ELSEIF ( AllOutData(IC,IT) < ColMin(IC) ) THEN
-            ColMin(IC) = AllOutData(IC,IT)
-         ENDIF
-
-      ENDDO !IC
-
-   ENDDO !IT
-
 
    IF ( FileID == FileFmtID_WithTime ) THEN
       TimeMin   = TimeData(1)                   ! Initialize the Min time value
@@ -6731,29 +6794,6 @@ CONTAINS
          ENDIF
       ENDDO !IT
 
-   ELSE ! FileFmtID_WithoutTime
-         ! Convert DbKi to R8Ki, if necessary
-      TimeOut1      = TimeData(1)                ! The first output time
-      TimeIncrement = TimeData(2)                ! The time increment
-   END IF ! FileID
-
-   !...............................................................................................................................
-   ! Calculate the scaling parameters for each channel
-   !...............................................................................................................................
-   DO IC=1,NumOutChans                    ! Loop through the output channels
-
-      IF ( ColMax(IC) == ColMin(IC) ) THEN
-         ColScl(IC) = IntRng/SQRT(EPSILON(1.0_SiKi))
-      ELSE
-         ColScl(IC) = IntRng/REAL( ColMax(IC) - ColMin(IC), SiKi )
-      ENDIF
-
-      ColOff(IC) = IntMin - ColScl(IC)*REAL( ColMin(IC), SiKi )
-
-   ENDDO !IC
-
-
-   IF ( FileID == FileFmtID_WithTime ) THEN
       IF ( TimeMax == TimeMin ) THEN
          TimeScl = 1
       ELSE
@@ -6761,34 +6801,66 @@ CONTAINS
       ENDIF
 
       TimeOff = Int32Min - TimeScl*REAL( TimeMin, R8Ki )
-
-   END IF ! FileID
-
-   !...............................................................................................................................
-   ! Convert channels to 16-bit integers (packed binary)
-   !...............................................................................................................................
-   J = 1
-   DO IT=1,NT                                ! Loop through the time steps
-      DO IC=1,NumOutChans                    ! Loop through the output channels
-
-         TmpOutArray(J) =  NINT( Max( Min( REAL( ColScl(IC)*AllOutData(IC,IT) + ColOff(IC), SiKi), IntMax ), IntMin) , B2Ki )
-         J = J + 1
-
-      ENDDO !IC
-
-   ENDDO !IT
-
-
-   IF ( FileID == FileFmtID_WithTime ) THEN  ! Pack the time into 32-bit integers
+      
+      ! Pack the time into 32-bit integers
       DO IT=1,NT                             ! Loop through the time steps
          TmpTimeArray(IT) = NINT( Max( Min( REAL( TimeScl*TimeData(IT) + TimeOff, R8Ki), Int32Max ), Int32Min) , B4Ki )
       ENDDO !IT
+   
+      
+   ELSE ! FileFmtID_WithoutTime and FileFmtID_NoCompressWithoutTime
+         ! Convert DbKi to R8Ki, if necessary
+      TimeOut1      = TimeData(1)                ! The first output time
+      TimeIncrement = TimeData(2)                ! The time increment
    END IF ! FileID
+   
+   IF ( FileID /= FileFmtID_NoCompressWithoutTime ) THEN
+      
+      ColMin(:) = AllOutData(:,1_IntKi)         ! Initialize the Min values for each channel
+      ColMax(:) = AllOutData(:,1_IntKi)         ! Initialize the Max values for each channel
+
+      DO IT=2,NT                                ! Loop through the remaining time steps
+         DO IC=1,NumOutChans                    ! Loop through the output channels
+            IF ( AllOutData(IC,IT) > ColMax(IC) ) THEN
+               ColMax(IC) = AllOutData(IC,IT)
+            ELSEIF ( AllOutData(IC,IT) < ColMin(IC) ) THEN
+               ColMin(IC) = AllOutData(IC,IT)
+            ENDIF
+         ENDDO !IC
+      ENDDO !IT
+
+      !...............................................................................................................................
+      ! Calculate the scaling parameters for each channel
+      !...............................................................................................................................
+      DO IC=1,NumOutChans                    ! Loop through the output channels
+         IF ( ColMax(IC) == ColMin(IC) ) THEN
+            ColScl(IC) = IntRng/SQRT(EPSILON(1.0_SiKi))
+         ELSE
+            ColScl(IC) = IntRng/REAL( ColMax(IC) - ColMin(IC), SiKi )
+         ENDIF
+         ColOff(IC) = IntMin - ColScl(IC)*REAL( ColMin(IC), SiKi )
+      ENDDO !IC
+      
+   ENDIF
+
+   !...............................................................................................................................
+   ! Convert channels to 16-bit integers (packed binary) or (R8Ki if unpacked binary)
+   !...............................................................................................................................
+   J = 1
+   DO IT=1,NT                                ! Loop through the time steps
+     DO IC=1,NumOutChans                    ! Loop through the output channels
+        IF ( FileID == FileFmtID_NoCompressWithoutTime ) THEN
+           TmpR8OutArray(J) =   REAL( AllOutData(IC,IT), R8Ki )
+        ELSE           
+           TmpOutArray(J) =  NINT( Max( Min( REAL( ColScl(IC)*AllOutData(IC,IT) + ColOff(IC), SiKi), IntMax ), IntMin) , B2Ki )
+        END IF
+        J = J + 1
+     ENDDO !IC
+   ENDDO !IT
 
    !...............................................................................................................................
    ! Write the output file header
    !...............................................................................................................................
-
    WRITE (UnIn, IOSTAT=ErrStat2)   INT( FileID             , B2Ki )            ! FAST output file format
       IF ( ErrStat2 /= 0 ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Error writing FileID to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
@@ -6803,14 +6875,12 @@ CONTAINS
          RETURN
       END IF
 
-
    WRITE (UnIn, IOSTAT=ErrStat2)   INT( NT                 , B4Ki )            ! The number of time steps
       IF ( ErrStat2 /= 0 ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Error writing NT to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
          CALL Cleanup( )
          RETURN
       END IF
-
 
    IF ( FileID == FileFmtID_WithTime ) THEN
          ! Write the slope and offset for the time channel
@@ -6829,7 +6899,7 @@ CONTAINS
             RETURN
          END IF
 
-   ELSE ! FileFmtID_WithoutTime
+   ELSE ! FileFmtID_WithoutTime and FileFmtID_NoCompressWithoutTime
          ! Write the first output time and the time step
 
       WRITE (UnIn, IOSTAT=ErrStat2)  TimeOut1                                  ! The first output time
@@ -6848,20 +6918,24 @@ CONTAINS
 
    END IF
 
-   WRITE (UnIn, IOSTAT=ErrStat2)  ColScl(:)                                    ! The channel slopes for scaling
-      IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error writing ColScl to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
-         CALL Cleanup( )
-         RETURN
-      END IF
+   IF ( FileID /= FileFmtID_NoCompressWithoutTime ) THEN
+      
+      WRITE (UnIn, IOSTAT=ErrStat2)  ColScl(:)                                    ! The channel slopes for scaling
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error writing ColScl to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup( )
+            RETURN
+         END IF
 
-   WRITE (UnIn, IOSTAT=ErrStat2)  ColOff(:)                                    ! The channel offsets for scaling
-      IF ( ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error writing ColOff to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
-         CALL Cleanup( )
-         RETURN
-      END IF
-
+      WRITE (UnIn, IOSTAT=ErrStat2)  ColOff(:)                                    ! The channel offsets for scaling
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error writing ColOff to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup( )
+            RETURN
+         END IF
+         
+   END IF
+   
    WRITE (UnIn, IOSTAT=ErrStat2)   INT( LenDesc            , B4Ki )            ! The number of characters in the string
       IF ( ErrStat2 /= 0 ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Error writing LenDesc to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
@@ -6903,8 +6977,11 @@ CONTAINS
          END IF
    END IF ! FileID
 
-
-   WRITE (UnIn, IOSTAT=ErrStat2)  TmpOutArray                                  ! AllOutData converted to packed binary (16-bit)
+   IF ( FileID == FileFmtID_NoCompressWithoutTime ) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)  TmpR8OutArray                                  ! AllOutData
+   ELSE           
+      WRITE (UnIn, IOSTAT=ErrStat2)  TmpOutArray                                  ! AllOutData converted to packed binary (16-bit)
+   END IF
       IF ( ErrStat2 /= 0 ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Error writing channel data to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
          CALL Cleanup( )
@@ -6932,6 +7009,7 @@ CONTAINS
          IF ( ALLOCATED( ColScl        ) ) DEALLOCATE( ColScl )
          IF ( ALLOCATED( TmpTimeArray  ) ) DEALLOCATE( TmpTimeArray )
          IF ( ALLOCATED( TmpOutArray   ) ) DEALLOCATE( TmpOutArray )
+         IF ( ALLOCATED( TmpR8OutArray   ) ) DEALLOCATE( TmpR8OutArray )
          IF ( ALLOCATED( DescStrASCII  ) ) DEALLOCATE( DescStrASCII )
          IF ( ALLOCATED( ChanNameASCII ) ) DEALLOCATE( ChanNameASCII )
          IF ( ALLOCATED( ChanUnitASCII ) ) DEALLOCATE( ChanUnitASCII )

@@ -40,7 +40,7 @@ MODULE IfW_TSFFWind
    IMPLICIT                                     NONE
    PRIVATE
 
-   TYPE(ProgDesc),   PARAMETER               :: IfW_TSFFWind_Ver = ProgDesc( 'IfW_TSFFWind', 'v1.01.00', '14-Dec-2015' )
+   TYPE(ProgDesc),   PARAMETER               :: IfW_TSFFWind_Ver = ProgDesc( 'IfW_TSFFWind', '', '' )
 
    PUBLIC                                    :: IfW_TSFFWind_Init
    PUBLIC                                    :: IfW_TSFFWind_End

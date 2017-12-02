@@ -31,7 +31,7 @@ MODULE OpenFOAM
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: OpFM_Ver = ProgDesc( 'OpenFOAM Integration', 'v1.00.00a-bjj', '11-Aug-2015' )
+   TYPE(ProgDesc), PARAMETER            :: OpFM_Ver = ProgDesc( 'OpenFOAM Integration', '', '' )
 
 
 ! ==================================================================================================="
@@ -1025,7 +1025,7 @@ SUBROUTINE CalcForceActuatorPositionsBlade(InitIn_OpFM, p_OpFM, structPositions,
   ! Now calculate the positions of the force nodes based on interpolation
   DO I=1,p_OpFM%NnodesForceBlade ! Calculate the position of the force nodes
      jLower=1
-     do while ( (rStructNodes(jLower) - p_OpFM%forceBldRnodes(I))*(rStructNodes(jLower+1) - p_OpFM%forceBldRnodes(I)) .gt. 0 )
+     do while ( ( (rStructNodes(jLower) - p_OpFM%forceBldRnodes(I))*(rStructNodes(jLower+1) - p_OpFM%forceBldRnodes(I)) .gt. 0) .and. (jLower .lt. nStructNodes) )
         jLower = jLower + 1
      end do
      rInterp =  (p_OpFM%forceBldRnodes(I) - rStructNodes(jLower))/(rStructNodes(jLower+1)-rStructNodes(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
@@ -1066,7 +1066,7 @@ SUBROUTINE CalcForceActuatorPositionsTower(InitIn_OpFM, p_OpFM, structPositions,
   ! Now calculate the positions of the force nodes based on interpolation
   DO I=1,p_OpFM%NnodesForceTower ! Calculate the position of the force nodes
      jLower=1
-     do while ( (hStructNodes(jLower) - p_OpFM%forceTwrHnodes(I))*(hStructNodes(jLower+1) - p_OpFM%forceTwrHnodes(I)) .gt. 0 )
+     do while ( ((hStructNodes(jLower) - p_OpFM%forceTwrHnodes(I))*(hStructNodes(jLower+1) - p_OpFM%forceTwrHnodes(I)) .gt. 0) .and. (jLower .lt. nStructNodes))
         jLower = jLower + 1
      end do
      hInterp =  (p_OpFM%forceTwrHnodes(I) - hStructNodes(jLower))/(hStructNodes(jLower+1)-hStructNodes(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
@@ -1098,18 +1098,20 @@ SUBROUTINE OpFM_CreateActForceBladeTowerNodes(p_OpFM, ErrStat, ErrMsg)
   !Do the blade first
   allocate(p_OpFM%forceBldRnodes(p_OpFM%NnodesForceBlade), stat=errStat2)
   dRforceNodes = p_OpFM%BladeLength/(p_OpFM%NnodesForceBlade-1)
-  do i=1,p_OpFM%NnodesForceBlade
+  do i=1,p_OpFM%NnodesForceBlade-1
      p_OpFM%forceBldRnodes(i) = (i-1)*dRforceNodes 
   end do
+  p_OpFM%forceBldRnodes(p_OpFM%NnodesForceBlade) = p_OpFM%BladeLength
 
 
   !Do the tower now
   allocate(p_OpFM%forceTwrHnodes(p_OpFM%NnodesForceTower), stat=errStat2)
   dRforceNodes = p_OpFM%TowerHeight/(p_OpFM%NnodesForceTower-1)
-  do i=1,p_OpFM%NnodesForceTower
+  do i=1,p_OpFM%NnodesForceTower-1
      p_OpFM%forceTwrHnodes(i) = (i-1)*dRforceNodes
   end do
-  
+  p_OpFM%forceTwrHnodes(p_OpFM%NnodesForceTower) = p_OpFM%TowerHeight
+
   return
 
 END SUBROUTINE OpFM_CreateActForceBladeTowerNodes
@@ -1127,6 +1129,7 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
   !Local variables
   INTEGER(IntKI)                         :: i,j,k,node  ! Loop variables
   INTEGER(IntKI)                         :: nNodesBladeProps ! Number of nodes in the blade properties for a given blade
+  INTEGER(IntKI)                         :: nNodesTowerProps ! Number of nodes in the tower properties 
   INTEGER(IntKI)                         :: jLower      ! Index of the blade properties node just smaller than the force node
   INTEGER(IntKi)                         :: ErrStat2    ! temporary Error status of the operation
   CHARACTER(ErrMsgLen)                   :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
@@ -1159,16 +1162,21 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
      
 
   ! The tower now
+  nNodesTowerProps = SIZE(InitOut_AD%TwrElev)
   do k = p_OpFM%NumBl+1,p_OpFM%NMappings
      ! Calculate the chord at the force nodes based on interpolation
      DO I=1,p_OpFM%NnodesForceTower
         Node = Node + 1
         jLower=1
-        do while ( (InitOut_AD%TwrElev(jLower) - p_OpFM%forceTwrHnodes(I))*(InitOut_AD%TwrElev(jLower+1) - p_OpFM%forceTwrHnodes(I)) .gt. 0 ) !Determine the closest two nodes at which the blade properties are specified
+        do while ( ( (InitOut_AD%TwrElev(jLower) - p_OpFM%forceTwrHnodes(I))*(InitOut_AD%TwrElev(jLower+1) - p_OpFM%forceTwrHnodes(I)) .gt. 0) .and. (jLower .le. nNodesTowerProps) ) !Determine the closest two nodes at which the blade properties are specified
            jLower = jLower + 1
         end do
-        rInterp =  (p_OpFM%forceTwrHnodes(I) - InitOut_AD%TwrElev(jLower))/(InitOut_AD%TwrElev(jLower+1)-InitOut_AD%TwrElev(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
-        u_OpFM%forceNodesChord(Node) = InitOut_AD%TwrDiam(jLower) + rInterp * (InitOut_AD%TwrDiam(jLower+1) - InitOut_AD%TwrDiam(jLower))
+        if (jLower .lt. nNodesTowerProps) then
+           rInterp =  (p_OpFM%forceTwrHnodes(I) - InitOut_AD%TwrElev(jLower))/(InitOut_AD%TwrElev(jLower+1)-InitOut_AD%TwrElev(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
+           u_OpFM%forceNodesChord(Node) = InitOut_AD%TwrDiam(jLower) + rInterp * (InitOut_AD%TwrDiam(jLower+1) - InitOut_AD%TwrDiam(jLower))
+        else
+           u_OpFM%forceNodesChord(Node) = InitOut_AD%TwrDiam(nNodesTowerProps) !Work around for when the last node of the actuator mesh is slightly outside of the Aerodyn tower properties.
+        end if
      END DO
   end do
 

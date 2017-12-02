@@ -35,7 +35,7 @@ MODULE Morison
    
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: Morison_ProgDesc = ProgDesc( 'Morison', 'v1.01.00', '23-Dec-2015' )
+   TYPE(ProgDesc), PARAMETER            :: Morison_ProgDesc = ProgDesc( 'Morison', '', '' )
 
    
       ! ..... Public Subroutines ...................................................................................................

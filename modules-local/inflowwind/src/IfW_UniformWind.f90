@@ -60,7 +60,7 @@ MODULE IfW_UniformWind
    IMPLICIT                                  NONE
    PRIVATE
 
-   TYPE(ProgDesc),   PARAMETER               :: IfW_UniformWind_Ver = ProgDesc( 'IfW_UniformWind', 'v2.03.00', '14-Dec-2015' )
+   TYPE(ProgDesc),   PARAMETER               :: IfW_UniformWind_Ver = ProgDesc( 'IfW_UniformWind', '', '' )
 
    PUBLIC                                    :: IfW_UniformWind_Init
    PUBLIC                                    :: IfW_UniformWind_End
@@ -415,8 +415,8 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
       !-------------------------------------------------------------------------------------------------
       ! Print warnings and messages
       !-------------------------------------------------------------------------------------------------
-   CALL WrScr( '   Processed '//TRIM( Num2LStr( ParamData%NumDataLines ) )//' records of uniform wind data from '''// &
-               TRIM(ADJUSTL(InitData%WindFileName))//'''')
+  !  CALL WrScr( '   Processed '//TRIM( Num2LStr( ParamData%NumDataLines ) )//' records of uniform wind data from '''// &
+  !              TRIM(ADJUSTL(InitData%WindFileName))//'''')
 
 
    IF ( ParamData%Tdata(1) > 0.0 ) THEN

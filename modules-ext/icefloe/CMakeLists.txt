@@ -19,7 +19,6 @@ generate_f90_types(src/interfaces/FAST/IceFloe_FASTRegistry.inp
 
 
 set(ICEFLOE_LIBS_SOURCES
-  src/ranlux/RANLUX.f90
 
   src/icefloe/IceFlexBase.F90
   src/icefloe/IceFlexIEC.f90
