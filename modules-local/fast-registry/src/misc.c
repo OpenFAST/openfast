@@ -183,7 +183,6 @@ index_with_firstelem( char * pre , char * dref , int bdy ,  /* as defined in dat
 {
   int i ;
   char tx[NAMELEN] ;
-  char tmp2[NAMELEN] ;
   int  bdex, xdex, ydex, zdex = 0 ;
   node_t *xdim, *ydim, *zdim ;
   char r[NAMELEN] ;
