@@ -19,7 +19,7 @@ MODULE BeamDyn
 
    USE BeamDyn_IO
    USE BeamDyn_Subs
-   USE NWTC_LAPACK
+   !USE NWTC_LAPACK inherited from BeamDyn_Subs and BeamDyn_IO
 
    IMPLICIT NONE
 
@@ -1643,8 +1643,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! Incorporate boundary conditions (note that we are doing this because the first node isn't really a state. should fix x so we don't need a temp copy here.)
    x_tmp%q(   1:3,1) = m%u%RootMotion%TranslationDisp(:,1)
    CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p, x_tmp%q(   4:6,1), ErrStat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
    x_tmp%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
    x_tmp%dqdt(4:6,1) = m%u%Rootmotion%RotationVel(:,1)
 
@@ -3257,8 +3257,8 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
       ! Incorporate boundary conditions
    CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
 
    i = 1
    piter = 0
@@ -3337,7 +3337,7 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
    Eref  = 0.0_BDKi
    DO piter=1,p%niter
          ! Calculate Quadrature point values needed
-      CALL BD_QuadraturePointData( p,x,m )      ! Calculate QP values uuu, uup, RR0, kappa, E1
+       CALL BD_QuadraturePointData( p,x,m )      ! Calculate QP values uuu, uup, RR0, kappa, E1
        CALL BD_GenerateStaticElement(gravity, p, m)
 
          !  Point loads are on the GLL points.
@@ -4217,15 +4217,15 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
 END SUBROUTINE BD_ElementMatrixGA2
 
 
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine tranforms the following quantities in Input data structure from global frame to local (blade) frame:
+!!  1 Displacements
+!!  2 Linear/Angular velocities
+!!  3 Linear/Angular accelerations
+!!  4 Point forces/moments
+!!  5 Distributed forces/moments
+!! It also transforms the DCM to rotation tensor in the input data structure
 SUBROUTINE BD_InputGlobalLocal(p, u)
-    !> This subroutine tranforms the following quantities in Input data structure from global frame to local (blade) frame:
-    !!  1 Displacements
-    !!  2 Linear/Angular velocities
-    !!  3 Linear/Angular accelerations
-    !!  4 Point forces/moments
-    !!  5 Distributed forces/moments
-    !! It also transforms the DCM to rotation tensor in the input data structure
-    
    TYPE(BD_ParameterType), INTENT(IN   ):: p
    TYPE(BD_InputType),     INTENT(INOUT):: u
    INTEGER(IntKi)                       :: i                          !< Generic counter

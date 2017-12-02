@@ -450,7 +450,7 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    ! 2) a valid rotation matrix must have determinant == +1 i.e., the singular values == 1 
    
    allocate(work(lwork))
-   call LAPACK_dgesvd('A', 'A', 3, 3, Rr, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
+   call LAPACK_gesvd('A', 'A', 3, 3, Rr, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    deallocate(work)
@@ -783,9 +783,9 @@ subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, 
 
    ! using the spline coefficients at this key point, compute the position and orientation of the node
    CALL BD_ComputeIniNodalPosition(p%SP_Coef(kp,:,:),etaD,POS,temp_e1,temp_twist) ! Compute point physical coordinates (POS) in blade frame                   
-   CALL BD_ComputeIniNodalCrv(temp_e1, temp_twist, CRV, ErrStat2, ErrMsg2) ! Compute initial rotation parameters (CRV) in blade frame
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+   CALL BD_ComputeIniNodalCrv(temp_e1, temp_twist, CRV, ErrStat2, ErrMsg2)        ! Compute initial rotation parameters (CRV) in blade frame
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
 
 
 end subroutine Find_IniNode
@@ -850,12 +850,11 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
    Rr(:,2)  = Cross_Product(e1,e2)
 
    CALL BD_CrvExtractCrv(Rr, cc, ErrStat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
 
 END SUBROUTINE BD_ComputeIniNodalCrv
-
-
+!-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    real(R8Ki),             INTENT(in   )     :: R(3,3)       !< input rotation matrix (transpose of DCM; in BD coords)
    type(BD_ParameterType), INTENT(in   )     :: p            !< Parameters
@@ -863,9 +862,9 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    INTEGER(IntKi),         INTENT(  OUT)     :: ErrStat      !< Error status of the operation
    CHARACTER(*),           INTENT(  OUT)     :: ErrMsg       !< Error message if ErrStat /= ErrID_None
    
-   real(BDKi)                         :: R_WM(3)      ! W-M parameters of R 
-   real(BDKi)                         :: R_BD(3,3)    ! input rotation matrix in BDKi precision 
-   REAL(BDKi)                         :: temp_cc(3)   ! W-M parameters
+   real(BDKi)                                :: R_WM(3)      ! W-M parameters of R 
+   real(BDKi)                                :: R_BD(3,3)    ! input rotation matrix in BDKi precision 
+   REAL(BDKi)                                :: temp_cc(3)   ! W-M parameters
 
    INTEGER(IntKi)                            :: ErrStat2     ! Temporary Error status
    CHARACTER(ErrMsgLen)                      :: ErrMsg2      ! Temporary Error message
@@ -882,8 +881,8 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    R_BD = R ! possible type conversion (only if BDKi /= R8Ki)
 
    CALL BD_CrvExtractCrv(R_BD,R_WM, ErrStat2, ErrMsg2)
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
    CALL BD_CrvCompose(temp_cc,R_WM,p%Glb_crv,FLAG_R1R2T)   ! temp_cc = R_WM composed with p%Glb_crv^-
    rr = MATMUL(temp_cc,p%GlbRot)                           ! equation is MATMUL(TRANSPOSE(p%GlbRot),temp_cc), but this is the same as MATMUL(temp_cc,p%GlbRot) because Fortran treats row and column vectors the same (e.g.,  transpose(MATMUL(TRANSPOSE(p%GlbRot),temp_cc)) = matmul( transpose(temp_cc), p%GlbRot ) = matmul( temp_cc, p%GlbRot )
       
