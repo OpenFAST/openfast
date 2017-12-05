@@ -5,6 +5,7 @@ os: osx
 
 before_install:
     - brew update
+    - brew uninstall gcc
     - brew install gcc
     - brew link --overwrite gcc
     # - brew install cmake # cmake is already installed in the default mac image
