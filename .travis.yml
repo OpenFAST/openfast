@@ -3,7 +3,7 @@
 # macOS
 os: osx
 
-# before_install:
+before_install:
     - brew update
     - brew install gcc
     - brew link --overwrite gcc
