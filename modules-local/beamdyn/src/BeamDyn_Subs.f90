@@ -581,7 +581,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
                ! referenced against the DCM of the blade root at T=0.
             cc = MATMUL(p%GlbRot,x%q(4:6,temp_id))                ! Global coordinate DCM times rotation parameters
             cc0 = MATMUL(p%GlbRot, p%uuN0(4:6,j,i) )              ! Global coordinate DCM times initial rotation parameter array
-            CALL BD_CrvCompose(temp_cc,p%Glb_crv,cc0,FLAG_R1R2)   ! temp_cc = p%Glb_crv composed with cc0 ( p%Glb_crv + cc0 )
+            CALL BD_CrvCompose(temp_cc,cc0,p%Glb_crv,FLAG_R1R2)   ! temp_cc = cc0 composed with p%Glb_crv
             CALL BD_CrvCompose(cc0,cc,temp_cc,FLAG_R1R2)          ! cc0 = cc composed with temp_cc
 
                ! Create the DCM from the rotation parameters
@@ -785,7 +785,7 @@ FUNCTION BDrot_to_FASTdcm(rr,p) RESULT(dcm)
    temp_CRV = MATMUL(p%GlbRot, rr)
    
        
-   CALL BD_CrvCompose(temp_CRV2,p%Glb_crv,temp_CRV,FLAG_R1R2) !temp_CRV2 = p%Glb_crv composed with temp_CRV
+   CALL BD_CrvCompose(temp_CRV2,temp_CRV,p%Glb_crv,FLAG_R1R2) !temp_CRV2 = temp_CRV composed with p%Glb_crv
    
    
       ! create rotation matrix from W-M parameters:
