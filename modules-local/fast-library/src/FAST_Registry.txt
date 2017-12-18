@@ -121,6 +121,7 @@ typedef	^	FAST_ParameterType	INTEGER	n_VTKTime	-	-	-	"Number of time steps betwe
 typedef	^	FAST_ParameterType	IntKi	TurbineType	-	-	-	"Type_LandBased, Type_Offshore_Fixed, or Type_Offshore_Floating"	-
 typedef	^	FAST_ParameterType	LOGICAL	WrBinOutFile	-	-	-	"Write a binary output file? (.outb)"	-
 typedef	^	FAST_ParameterType	LOGICAL	WrTxtOutFile	-	-	-	"Write a text (formatted) output file? (.out)"	-
+typedef	^	FAST_ParameterType	IntKi	WrBinMod	-	-	-	"If writing binary, which file format is to be written [1, 2, or 3]"	-
 typedef	^	FAST_ParameterType	LOGICAL	SumPrint	-	-	-	"Print summary data to file? (.sum)"	-
 typedef	^	FAST_ParameterType	INTEGER	WrVTK	-	-	-	"VTK Visualization data output: (switch) {0=none; 1=initialization data only; 2=animation}"	-
 typedef	^	FAST_ParameterType	INTEGER	VTK_Type	-	-	-	"Type of  VTK visualization data: (switch) {1=surfaces; 2=basic meshes (lines/points); 3=all meshes (debug)}"	-
