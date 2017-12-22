@@ -208,6 +208,8 @@ void fast::OpenFAST::step() {
      FAST_OpFM_Step(&iTurb, &ErrStat, ErrMsg);
      checkError(ErrStat, ErrMsg);
 
+     calc_nacelle_force(cDriver_Output_to_FAST[iTurb].u[0], cDriver_Output_to_FAST[iTurb].v[0], cDriver_Output_to_FAST[iTurb].w[0], nacelle_cd[iTurb], nacelle_area[iTurb], cDriver_Input_from_FAST[iTurb].fx[0], cDriver_Input_from_FAST[iTurb].fy[0], cDriver_Input_from_FAST[iTurb].fz[0]);
+     
      if ( isDebug() ) {
        std::ofstream actuatorForcesFile;
        actuatorForcesFile.open("actuator_forces.csv") ;
@@ -273,6 +275,12 @@ void fast::OpenFAST::stepNoWrite() {
 
    nt_global = nt_global + 1;
   
+}
+
+void fast::OpenFAST::calc_nacelle_force(float & u, float & v, float & w, double & cd, double & area, float & fx, float & fy, float & fz) {
+
+    // Calculate the force on the nacelle (fx,fy,fz) given the velocity sampled at the nacelle point (u,v,w), drag coefficient 'cd' and nacelle area 'area'
+
 }
 
 void fast::OpenFAST::setInputs(const fast::fastInputs & fi ) {
@@ -679,6 +687,8 @@ void fast::OpenFAST::allocateMemory() {
   TurbineBasePos.resize(nTurbinesProc);
   FASTInputFileName.resize(nTurbinesProc);
   CheckpointFileRoot.resize(nTurbinesProc);
+  nacelle_cd.resize(nTurbinesProc);
+  nacelle_area.resize(nTurbinesProc);
   numBlades.resize(nTurbinesProc);
   numForcePtsBlade.resize(nTurbinesProc);
   numForcePtsTwr.resize(nTurbinesProc);
@@ -699,6 +709,8 @@ void fast::OpenFAST::allocateMemory() {
     }
     numForcePtsBlade[iTurb] = globTurbineData[globProc].numForcePtsBlade;
     numForcePtsTwr[iTurb] = globTurbineData[globProc].numForcePtsTwr;
+    nacelle_cd[iTurb] = globTurbineData[globProc].nacelle_cd;
+    nacelle_area[iTurb] = globTurbineData[globProc].nacelle_area;
 
   }
 

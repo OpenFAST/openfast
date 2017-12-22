@@ -22,6 +22,8 @@ void readTurbineData(int iTurb, fast::fastInputs & fi, YAML::Node turbNode) {
   }
   fi.globTurbineData[iTurb].numForcePtsBlade = turbNode["num_force_pts_blade"].as<int>();
   fi.globTurbineData[iTurb].numForcePtsTwr = turbNode["num_force_pts_tower"].as<int>();
+  fi.globTurbineData[iTurb].nacelle_cd = turbNode["nacelle_cd"].as<double>();
+  fi.globTurbineData[iTurb].nacelle_area = turbNode["nacelle_area"].as<double>();
 
 }
 

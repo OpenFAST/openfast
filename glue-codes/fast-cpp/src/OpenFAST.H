@@ -32,6 +32,8 @@ struct globTurbineDataType {
   std::vector<double> TurbineHubPos;
   int numForcePtsBlade;
   int numForcePtsTwr;
+  double nacelle_cd;
+  double nacelle_area;    
 };
 
 enum ActuatorNodeType {
@@ -97,6 +99,8 @@ class OpenFAST {
   std::vector<int> TurbID;
   std::vector<std::string > FASTInputFileName;
   std::vector<std::string > CheckpointFileRoot;
+  std::vector<double> nacelle_cd;
+  std::vector<double> nacelle_area;
   double tStart;
   int nt_global;           
   int ntStart;      // The time step to start the FAST simulation
@@ -166,6 +170,8 @@ class OpenFAST {
   void stepNoWrite();
   void end();
 
+  void calc_nacelle_force(float & u, float & v, float & w, double & cd, double & area, float & fx, float & fy, float & fz);
+
   hid_t openVelocityDataFile(bool createFile);
   void readVelocityData(int nTimesteps);
   void writeVelocityData(hid_t h5file, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData);
@@ -197,6 +203,8 @@ class OpenFAST {
   int get_localTurbNo(int iTurbGlob) { return reverseTurbineMapProcToGlob[iTurbGlob]; }
   int get_nTurbinesGlob() { return nTurbinesGlob; } 
 
+  int get_nacelleArea(int iTurbGlob) { return get_nacelleAreaLoc(get_localTurbNo(iTurbGlob)); }
+  int get_nacelleCd(int iTurbGlob) { return get_nacelleCdLoc(get_localTurbNo(iTurbGlob)); }
   int get_numBlades(int iTurbGlob) { return get_numBladesLoc(get_localTurbNo(iTurbGlob)); }
   int get_numVelPtsBlade(int iTurbGlob) { return get_numVelPtsBladeLoc(get_localTurbNo(iTurbGlob)); }
   int get_numVelPtsTwr(int iTurbGlob) { return get_numVelPtsTwrLoc(get_localTurbNo(iTurbGlob)); }
@@ -214,6 +222,8 @@ class OpenFAST {
 
   void allocateMemory();
   
+  int get_nacelleCdLoc(int iTurbLoc) { return nacelle_cd[iTurbLoc]; }
+  int get_nacelleAreaLoc(int iTurbLoc) { return nacelle_area[iTurbLoc]; }
   int get_numBladesLoc(int iTurbLoc) { return numBlades[iTurbLoc]; }
   int get_numVelPtsBladeLoc(int iTurbLoc) { return numVelPtsBlade[iTurbLoc]; }
   int get_numVelPtsTwrLoc(int iTurbLoc) { return numVelPtsTwr[iTurbLoc]; }
