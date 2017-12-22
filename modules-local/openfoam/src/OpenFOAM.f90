@@ -90,7 +90,7 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD14, u_AD, initOut_AD, y_AD, 
    ELSEIF ( p_FAST%CompAero  == Module_AD ) THEN ! AeroDyn 15 needs these velocities
       OpFM%p%NumBl = SIZE( u_AD%BladeMotion, 1 )
 
-      OpFM%p%NnodesVel = OpFM%p%NnodesVel + u_AD%TowerMotion%NNodes                 ! tower nodes (if any)
+      OpFM%p%NnodesVel = OpFM%p%NnodesVel + y_AD%TowerLoad%NNodes                   ! tower nodes (if any)
       DO k=1,OpFM%p%NumBl
          OpFM%p%NnodesVel = OpFM%p%NnodesVel + u_AD%BladeMotion(k)%NNodes           ! blade nodes
       END DO
