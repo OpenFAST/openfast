@@ -1523,7 +1523,7 @@ SUBROUTINE Linear_AD_InputSolve_du_AD( p_FAST, u_AD, y_ED, MeshMapData, dUdu, Er
                   
          end if        
          
-         AD_Start_td = AD_Start_td + u_AD%BladeMotion(k)%NNodes * 6 ! 3 fields (TranslationDisp, Orientation, TranslationVel) with 3 components
+         AD_Start_td = AD_Start_td + u_AD%BladeMotion(k)%NNodes * 9 ! 3 fields (TranslationDisp, Orientation, TranslationVel) with 3 components
             
       END DO
       
