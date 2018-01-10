@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if(APPLE OR UNIX)
   add_definitions(-DIMPLICIT_DLLEXPORT)
 endif()
 
