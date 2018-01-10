@@ -3617,7 +3617,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    InputFileData%RotSpeed = InputFileData%RotSpeed*RPM2RPS
 
       ! NacYaw - Initial nacelle-yaw angle (deg) (read from file in degrees and converted to radians here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%NacYaw, "RotSpeed", "Initial nacelle-yaw angle (deg)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, InputFileData%NacYaw, "NacYaw", "Initial nacelle-yaw angle (deg)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
