@@ -1647,11 +1647,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    x_tmp%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
    x_tmp%dqdt(4:6,1) = m%u%Rootmotion%RotationVel(:,1)
 
-      ! Root velocities/angular velocities and accelerations/angular accelerations
-
-
-
-      ! Calculate Quadrature point values needed for BldForce results
+      ! Calculate Quadrature point values needed for BldForce results 
    CALL BD_QuadraturePointData( p,x_tmp,m )   ! Calculate QP values uuu, uup, RR0, kappa, E1
 
 
