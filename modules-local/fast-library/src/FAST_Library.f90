@@ -35,9 +35,9 @@ MODULE FAST_Data
 contains
 !================================================================================================================================== 
 subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_AllocateTurbines')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_AllocateTurbines
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_AllocateTurbines
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_AllocateTurbines
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: nTurbines
@@ -58,9 +58,9 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
 end subroutine FAST_AllocateTurbines
 
 subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_Sizes
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
@@ -133,9 +133,9 @@ subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, N
 end subroutine FAST_Sizes
 !==================================================================================================================================
 subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_Start
    IMPLICIT NONE 
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_Start
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Start
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
@@ -206,9 +206,9 @@ subroutine FAST_Start(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, Err
 end subroutine FAST_Start
 !==================================================================================================================================
 subroutine FAST_Update(iTurb, NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_Update
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_Update
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Update
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
@@ -315,9 +315,9 @@ subroutine FAST_SetExternalInputs(iTurb, NumInputs_c, InputAry, m_FAST)
 end subroutine FAST_SetExternalInputs
 !==================================================================================================================================
 subroutine FAST_End(iTurb, StopTheProgram) BIND (C, NAME='FAST_End')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_End
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_End
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
@@ -328,9 +328,9 @@ subroutine FAST_End(iTurb, StopTheProgram) BIND (C, NAME='FAST_End')
 end subroutine FAST_End
 !==================================================================================================================================
 subroutine FAST_CreateCheckpoint(iTurb, CheckpointRootName_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CreateCheckpoint')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_CreateCheckpoint
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_CreateCheckpoint
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_CreateCheckpoint
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
@@ -370,9 +370,9 @@ subroutine FAST_CreateCheckpoint(iTurb, CheckpointRootName_c, ErrStat_c, ErrMsg_
 end subroutine FAST_CreateCheckpoint 
 !==================================================================================================================================
 subroutine FAST_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, NumOuts_c, dt_c, n_t_global_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Restart')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_Restart
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_Restart
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Restart
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
@@ -424,9 +424,9 @@ end subroutine FAST_Restart
 !==================================================================================================================================
 subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumCtrl2SC, NumActForcePtsBlade, NumActForcePtsTower, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, &
                           OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_Input_from_FAST, SC_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Init')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Init
-   IMPLICIT NONE 
+   IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Init
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Init
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
@@ -500,9 +500,9 @@ subroutine FAST_OpFM_Init(iTurb, TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumC
 end subroutine   
 !==================================================================================================================================
 subroutine FAST_OpFM_Solution0(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Solution0')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Solution0
-   IMPLICIT NONE 
+   IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Solution0
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Solution0
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
@@ -529,9 +529,9 @@ end subroutine FAST_OpFM_Solution0
 !==================================================================================================================================
 subroutine FAST_OpFM_Restart(iTurb, CheckpointRootName_c, AbortErrLev_c, dt_c, numblades_c, numElementsPerBlade_c, n_t_global_c, &
                       OpFM_Input_from_FAST, OpFM_Output_to_FAST, SC_Input_from_FAST, SC_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Restart')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Restart
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Restart
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Restart
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
@@ -631,9 +631,9 @@ subroutine SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST
 end subroutine SetOpenFOAM_pointers
 !==================================================================================================================================
 subroutine FAST_OpFM_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Step')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Step
    IMPLICIT NONE
 #ifndef IMPLICIT_DLLEXPORT
+!DEC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Step
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Step
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
@@ -683,4 +683,3 @@ subroutine FAST_OpFM_Step(iTurb, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_S
 end subroutine FAST_OpFM_Step 
 !==================================================================================================================================   
 END MODULE FAST_Data
-
