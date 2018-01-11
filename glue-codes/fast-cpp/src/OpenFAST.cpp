@@ -73,6 +73,11 @@ void fast::OpenFAST::init() {
        timeZero = true;
 
        numVelPtsTwr[iTurb] = cDriver_Output_to_FAST[iTurb].u_Len - numBlades[iTurb]*numVelPtsBlade[iTurb] - 1;
+       if(numVelPtsTwr[iTurb] == 0) {
+           numForcePtsTwr[iTurb] = 0;
+           std::cout << "Aerodyn doesn't want to calculate forces on the tower. All actuator points on the tower are turned off for turbine " << turbineMapProcToGlob[iTurb] << "." << std::endl ;
+       }
+           
 
        int nfpts = get_numForcePtsLoc(iTurb);
        forceNodeVel[iTurb].resize(nfpts);
@@ -230,6 +235,8 @@ void fast::OpenFAST::step() {
    nt_global = nt_global + 1;
   
   if ( (((nt_global - ntStart) % nEveryCheckPoint) == 0 )  && (nt_global != ntStart) ) {
+    if (nTurbinesProc > 0) backupVelocityDataFile(nt_global, velNodeDataFile);
+      
     //sprintf(CheckpointFileRoot, "../../CertTest/Test18.%d", nt_global);
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
       CheckpointFileRoot[iTurb] = " "; // if blank, it will use FAST convention <RootName>.nt_global
@@ -862,6 +869,20 @@ herr_t fast::OpenFAST::closeVelocityDataFile(int nt_global, hid_t velDataFile) {
   return status;
 }
 
+
+void fast::OpenFAST::backupVelocityDataFile(int curTimeStep, hid_t & velDataFile) {
+
+    closeVelocityDataFile(curTimeStep, velDataFile);
+        
+    std::ifstream source("velDatafile." + std::to_string(worldMPIRank) + ".h5", std::ios::binary);
+    std::ofstream dest("velDatafile." + std::to_string(worldMPIRank) + ".h5." + std::to_string(curTimeStep) + ".bak", std::ios::binary);
+
+    dest << source.rdbuf();
+    source.close();
+    dest.close();
+
+    velDataFile = openVelocityDataFile(false);
+}
 
 void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData) {
 
