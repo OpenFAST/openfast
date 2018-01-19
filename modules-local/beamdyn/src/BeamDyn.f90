@@ -3302,10 +3302,19 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
                CALL WrScr( "Maxium number of load steps reached. Exit BeamDyn")
                EXIT
            ENDIF
-           i=i+1
-           call WrScr( "Warning: Load may be too large, BeamDyn will attempt to solve with additional steps.")
-           call WrScr( "  Load_Step="//trim(num2lstr(i)) )
-           x%q = 0.0_BDKi
+
+               ! Warn the user that additional steps are needed.
+          if (i==1) call WrScr( "Warning: Load may be too large, BeamDyn will attempt to solve with additional steps.")
+
+               ! Increment the number of steps
+          i=i+1          call WrScr( "  Load_Step="//trim(num2lstr(i)) )
+
+               ! Reset the displacements
+          x%q = 0.0_BDKi
+               ! If we reached this point, we must reset the err status, otherwise we will report back that this
+               ! failed once a sufficient number of load steps was reached and a solution found.
+          ErrStat = ErrID_None
+          ErrMsg  = ""
        ENDIF
    ENDDO
 
