@@ -1763,9 +1763,9 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
 
    WRITE (UnSu,'(A,1ES18.5)')  'Time increment:',p%dt
 
-   WRITE (UnSu,'(A,I4)' ) 'Maximum number of iterations in Newton-Ralphson solution:', p%niter
+   WRITE (UnSu,'(A,I4)' ) 'Maximum number of iterations in Newton-Raphson solution:', p%niter
    WRITE (UnSu,'(A,1ES18.5)' ) 'Convergence parameter:', p%tol
-   WRITE (UnSu,'(A,I4)' ) 'Factorization frequency in Newton-Ralphson solution:', p%n_fact
+   WRITE (UnSu,'(A,I4)' ) 'Factorization frequency in Newton-Raphson solution:', p%n_fact
 
    IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
        WRITE (UnSu,'(A)')  'Quadrature method: Gauss quadrature'

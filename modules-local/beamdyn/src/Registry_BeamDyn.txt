@@ -59,7 +59,7 @@ typedef   ^        BD_InputFile    IntKi           member_total   -  - - "Total 
 typedef   ^        BD_InputFile    IntKi           kp_total       -  - - "Total number of key point" -
 typedef   ^        BD_InputFile    IntKi           kp_member     {:} - - "Number of key points in each member" -
 typedef   ^        BD_InputFile    IntKi           order_elem     -  - - "Order of interpolation (basis) function" -
-typedef   ^        BD_InputFile    IntKi           NRMax          -  - - "Max number of iterations in Newton Ralphson algorithm" -
+typedef   ^        BD_InputFile    IntKi           NRMax          -  - - "Max number of iterations in Newton Raphson algorithm" -
 typedef   ^        BD_InputFile    IntKi           quadrature     -  - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
 typedef   ^        BD_InputFile    IntKi           n_fact         -  - - "Factorization frequency" -
 typedef   ^        BD_InputFile    IntKi           refine         -  - - "FE mesh refinement factor for trapezoidal quadrature" -
@@ -176,7 +176,7 @@ typedef   ^        ParameterType IntKi          dof_total        -         - -  
 typedef   ^        ParameterType IntKi          nqp              -         - -  "Number of quadrature points (per element)" -
 typedef   ^        ParameterType IntKi          analysis_type    -         - -  "analysis_type flag" -
 typedef   ^        ParameterType IntKi          damp_flag        -         - -  "damping flag" -
-typedef   ^        ParameterType IntKi          niter            -         - -  "Maximum number of iterations in Newton-Ralphson algorithm"  -
+typedef   ^        ParameterType IntKi          niter            -         - -  "Maximum number of iterations in Newton-Raphson algorithm"  -
 typedef   ^        ParameterType IntKi          quadrature       -         - -  "Quadrature method: 1 Gauss 2 Trapezoidal" -
 typedef   ^        ParameterType IntKi          n_fact           -         - -  "Factorization frequency" -
 typedef   ^        ParameterType Logical        OutInputs        -         - -  "Determines if we've asked to output the inputs (do we need mesh transfer?)" -
