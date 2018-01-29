@@ -91,10 +91,8 @@ contains
         getGravityInZ = (/ 0.0, 0.0, -9.806 /)
     end function
     
-!   type(BD_ParameterType) function simpleParameterType()
     type(BD_ParameterType) function simpleParameterType() RESULT(p)
         
-!        type(BD_ParameterType) :: p
         integer                :: i, j
         integer                :: ErrStat
         character(1024)        :: ErrMsg
@@ -113,7 +111,16 @@ contains
         call AllocAry(p%qp%mmm, p%nqp, p%elem_total, 'qp_mmm', ErrStat, ErrMsg)
         call AllocAry(p%qp%mEta, 3, p%nqp, p%elem_total, 'qp_RR0mEta', ErrStat, ErrMsg)
         call AllocAry(p%Mass0_QP, 6, 6, p%nqp*p%elem_total, 'Mass0_QP', ErrStat, ErrMsg)
-        
+        call AllocAry(p%QPtw_Shp_Shp_Jac, p%nqp, p%nodes_per_elem, p%nodes_per_elem, p%elem_total, 'QPtw_Shp_Shp_Jac', ErrStat, ErrMsg)
+        call AllocAry(p%QPtw_ShpDer_ShpDer_Jac, p%nqp, p%nodes_per_elem, p%nodes_per_elem, p%elem_total, 'QPtw_ShpDer_ShpDer_Jac', ErrStat, ErrMsg)
+        call AllocAry(p%QPtw_Shp_ShpDer, p%nqp, p%nodes_per_elem, p%nodes_per_elem, 'QPtw_Shp_ShpDer', ErrStat, ErrMsg)
+        call AllocAry(p%QPtw_Shp_Jac, p%nqp, p%nodes_per_elem, p%elem_total, 'QPtw_Shp_Jac', ErrStat, ErrMsg)
+        call AllocAry(p%Shp, p%nodes_per_elem, p%nqp, 'Shp', ErrStat, ErrMsg)
+        call AllocAry(p%ShpDer, p%nodes_per_elem, p%nqp, 'ShpDer', ErrStat, ErrMsg)
+        call AllocAry(p%QPtWeight, p%nqp, 'QPtWeightShp', ErrStat, ErrMsg)
+        call AllocAry(p%QPtw_ShpDer, p%nqp, p%nodes_per_elem, 'QPtw_ShpDer', ErrStat, ErrMsg)
+        call AllocAry(p%Jacobian, p%nqp, p%nodes_per_elem, 'Jacobian', ErrStat, ErrMsg)
+
         ! construct arrays
         p%qp%mmm = getMassMatrix()
         
@@ -123,15 +130,6 @@ contains
                 p%Mass0_QP(:,:,(i-1)*p%elem_total+j) = getMassMatrix()
             end do
         end do
-        
-! bjj: there are a couple of problems with setting "simpleParameterType = p":
-!      (1) local variables that are (or contain) allocatable arrays should be deallocated before exiting the routine. Different compiler settings may cause memory leaks or errors when calling the routine more than once.
-!      (2) Some compilers (gfortran v4.6?) will give you a segmentation fault if the arrays stored in simpleParameterType aren't first allocated before setting them equal to something else.
-! I wouldn't use it as an example of good coding practice. The NWTC Programmer's Handbook discusses this (and is why the FAST Registry creates Copy() routines).
-! If you want to avoid that, why don't you just return p? i.e., remove the definition of p as a local variable and instead define the function result:
-!  type(BD_ParameterType) function simpleParameterType() RESULT (p)
-!!!        ! set the return value
-!!!        simpleParameterType = p  
         
     end function
     
