@@ -22,8 +22,8 @@
 PROGRAM AeroDyn_DriverCode
 
    USE NWTC_Library
-   USE AeroDyn
-   USE AeroDyn_Types
+   USE AeroDyn14
+   USE AeroDyn14_Types
 
    IMPLICIT NONE
 
@@ -35,18 +35,18 @@ PROGRAM AeroDyn_DriverCode
    REAL(DbKi)                                         :: TimeInterval         ! Interval between time steps, in seconds
    REAL(DbKi)                                         :: InputTime(NumInp)    ! Variable for storing time associated with inputs, in seconds
    
-   TYPE(AD_InitInputType)                             :: InitInData           ! Input data for initialization
-   TYPE(AD_InitOutputType)                            :: InitOutData          ! Output data from initialization
+   TYPE(AD14_InitInputType)                           :: InitInData           ! Input data for initialization
+   TYPE(AD14_InitOutputType)                          :: InitOutData          ! Output data from initialization
                                                       
-   TYPE(AD_ContinuousStateType)                       :: x                    ! Continuous states
-   TYPE(AD_DiscreteStateType)                         :: xd                   ! Discrete states
-   TYPE(AD_ConstraintStateType)                       :: z                    ! Constraint states
-   TYPE(AD_ConstraintStateType)                       :: Z_residual           ! Residual of the constraint state functions (Z)
-   TYPE(AD_OtherStateType)                            :: OtherState           ! Other/optimization states
+   TYPE(AD14_ContinuousStateType)                     :: x                    ! Continuous states
+   TYPE(AD14_DiscreteStateType)                       :: xd                   ! Discrete states
+   TYPE(AD14_ConstraintStateType)                     :: z                    ! Constraint states
+   TYPE(AD14_ConstraintStateType)                     :: Z_residual           ! Residual of the constraint state functions (Z)
+   TYPE(AD14_OtherStateType)                          :: OtherState           ! Other/optimization states
                                                       
-   TYPE(AD_ParameterType)                             :: p                    ! Parameters
-   TYPE(AD_InputType)                                 :: u(NumInp)            ! System inputs
-   TYPE(AD_OutputType)                                :: y                    ! System outputs
+   TYPE(AD14_ParameterType)                           :: p                    ! Parameters
+   TYPE(AD14_InputType)                               :: u(NumInp)            ! System inputs
+   TYPE(AD14_OutputType)                              :: y                    ! System outputs
 
 
 
@@ -74,7 +74,9 @@ PROGRAM AeroDyn_DriverCode
 
          ! Initialize the module
 
-   CALL AD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, TimeInterval, InitOutData, ErrStat, ErrMsg )
+   CALL AD14_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, TimeInterval, InitOutData, ErrStat, ErrMsg )
+        
+
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
       CALL WrScr( ErrMsg )
    END IF
@@ -82,8 +84,8 @@ PROGRAM AeroDyn_DriverCode
 
          ! Destroy initialization data
 
-   CALL AD_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
-   CALL AD_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
+   CALL AD14_DestroyInitInput(  InitInData,  ErrStat, ErrMsg )
+   CALL AD14_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
 
 
    !...............................................................................................................................
@@ -101,7 +103,7 @@ PROGRAM AeroDyn_DriverCode
          
          ! Calculate outputs at n
 
-      CALL AD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+      CALL AD14_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
       END IF
@@ -109,8 +111,8 @@ PROGRAM AeroDyn_DriverCode
          
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
 
-      !bjj: this needs to be fixed: CALL AD_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-      call AD_UpdateStates( Time, u(1), p, x, xd, z, OtherState, ErrStat, ErrMsg )
+      !bjj: this needs to be fixed: CALL AD14_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+      call AD14_UpdateStates( Time, u(1), p, x, xd, z, OtherState, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
       END IF     
@@ -122,7 +124,7 @@ PROGRAM AeroDyn_DriverCode
    !...............................................................................................................................
    ! Routine to terminate program execution
    !...............................................................................................................................
-   CALL AD_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+   CALL AD14_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    
    IF ( ErrStat /= ErrID_None ) THEN
       CALL WrScr( ErrMsg )
