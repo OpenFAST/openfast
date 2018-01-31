@@ -1356,6 +1356,9 @@ SUBROUTINE FAST_ProgStart(ThisProgVer)
    call wrscr('Compile Info:')
    call wrscr(' - Architecture: '//trim(architecture))
    call wrscr(' - Precision: '//trim(precision))
+#ifdef _OPENMP
+   call wrscr(' - OpenMP: ON ')  
+#endif 
    ! use iso_fortran_env for compiler_version() and compiler_options()
    ! call wrscr(' - Compiler: '//trim(compiler_version()))
    ! call wrscr(' - Options: '//trim(compiler_options()))
