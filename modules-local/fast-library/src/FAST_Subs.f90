@@ -28,6 +28,10 @@ MODULE FAST_Subs
 
    USE FAST_Solver
    USE FAST_Linear
+
+#ifdef _OPENMP
+   USE OMP_LIB 
+#endif
    
    IMPLICIT NONE
 
@@ -1338,7 +1342,7 @@ end subroutine GetProgramMetadata
 !! displays the copyright notice, and displays some version information (including addressing scheme and precision).
 SUBROUTINE FAST_ProgStart(ThisProgVer)
    TYPE(ProgDesc), INTENT(IN) :: ThisProgVer     !< program name/date/version description
-   character(200) :: name, version, date
+   character(200) :: name, version, date, threads
    character(200) :: git_commit, architecture, precision
    character(200) :: execution_date, execution_time, execution_zone
    
@@ -1357,7 +1361,7 @@ SUBROUTINE FAST_ProgStart(ThisProgVer)
    call wrscr(' - Architecture: '//trim(architecture))
    call wrscr(' - Precision: '//trim(precision))
 #ifdef _OPENMP
-   call wrscr(' - OpenMP: ON ')  
+   call wrscr(' - OpenMP: ON.')  
 #endif 
    ! use iso_fortran_env for compiler_version() and compiler_options()
    ! call wrscr(' - Compiler: '//trim(compiler_version()))
@@ -1368,7 +1372,11 @@ SUBROUTINE FAST_ProgStart(ThisProgVer)
    call wrscr('Execution Info:')
    call wrscr(' - Date: '//trim(execution_date(5:6)//'/'//execution_date(7:8)//'/'//execution_date(1:4)))
    call wrscr(' - Time: '//trim(execution_time(1:2)//':'//execution_time(3:4)//':'//execution_time(5:6))//trim(execution_zone))
-   
+#ifdef _OPENMP
+   write(threads,*) omp_get_max_threads()  
+   call wrscr(' - OpenMP: Use '//trim(adjustl(threads))//' threads.')
+#endif
+
    call wrscr('')
    
   !  CALL WrScr( ' Running '//TRIM(GetVersion(ThisProgVer))//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
