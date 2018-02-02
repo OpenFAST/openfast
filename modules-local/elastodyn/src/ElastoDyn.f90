@@ -11073,7 +11073,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    CALL AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
-   InitOut%RotFrame_y = .false.
+   InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
    
    Mask  = .false.
    Mask(MASKID_TRANSLATIONDISP) = .true.
@@ -11086,7 +11086,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       do i=1,p%NumBl
          call PackMotionMesh_Names(y%BladeLn2Mesh(i), 'Blade '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
       end do      
-      InitOut%RotFrame_y(index_last:index_next-1) = .true.
+      !InitOut%RotFrame_y(index_last:index_next-1) = .true.
    end if
    call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, index_next)
    call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, index_next)
@@ -11095,7 +11095,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    do i=1,p%NumBl
       call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
    end do   
-   InitOut%RotFrame_y(index_last:index_next-1) = .true.
+   !InitOut%RotFrame_y(index_last:index_next-1) = .true.
 
    call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
    InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
@@ -11424,14 +11424,14 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    call AllocAry(InitOut%RotFrame_u, nu+1, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       
-   InitOut%RotFrame_u = .false.
+   InitOut%RotFrame_u = .false. ! note that meshes are in the global, not rotating frame
    index = 1
    if (allocated(u%BladePtLoads)) then
       index_last = index
       do k=1,p%NumBl
          call PackLoadMesh_Names(u%BladePtLoads(i), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_u, index)   
       end do
-      InitOut%RotFrame_u(index_last:index-1) = .true.
+      ! InitOut%RotFrame_u(index_last:index-1) = .true.
    end if
    call PackLoadMesh_Names(u%PlatformPtMesh, 'Platform', InitOut%LinNames_u, index)   
    call PackLoadMesh_Names(u%TowerPtLoads, 'Tower', InitOut%LinNames_u, index)   
@@ -11527,7 +11527,7 @@ SUBROUTINE ED_Perturb_x( p, n, perturb_sign, x, dx )
    INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(ED_ContinuousStateType)        , INTENT(INOUT) :: x                      !< perturbed ED states
-   REAL( ReKi )                        , INTENT(  OUT) :: dx                     !< amount that specific input was perturbed
+   REAL( ReKi )                        , INTENT(  OUT) :: dx                     !< amount that specific state was perturbed
    
 
    ! local variables

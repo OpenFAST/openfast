@@ -3272,7 +3272,7 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev) return
    
          
-   InitOut%RotFrame_y = .false. ! default all to false, then set the true ones below
+   InitOut%RotFrame_y = .false. ! default all to false, then set the true ones below (note that meshes are in the global, not rotating frame)
    indx_next = 1  
    call PackLoadMesh_Names(y%TowerLoad, 'Tower', InitOut%LinNames_y, indx_next)
    
@@ -3280,7 +3280,7 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    do k=1,p%NumBlades
       call PackLoadMesh_Names(y%BladeLoad(k), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_y, indx_next)
    end do
-   InitOut%RotFrame_y(indx_last:indx_next-1) = .true.
+   ! InitOut%RotFrame_y(indx_last:indx_next-1) = .true.
 
    do i=1,p%NumOuts
       InitOut%LinNames_y(i+indx_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))  !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
@@ -3591,7 +3591,7 @@ SUBROUTINE Init_Jacobian( InputFileData, p, u, y, m, InitOut, ErrStat, ErrMsg)
          end do            
       end do
    end do
-   InitOut%RotFrame_u(index_last:index-1) = .true.
+   !InitOut%RotFrame_u(index_last:index-1) = .true. ! note that this is in the global, not rotating frame
 
    do i=1,p%NumTwrNds
       do j=1,3
