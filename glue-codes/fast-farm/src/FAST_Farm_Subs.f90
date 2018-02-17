@@ -615,30 +615,30 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if
       
-      ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=1/300]:
+      ! f_c - Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%f_c, "f_c", &
-      "Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=1/300]", &
-      1.0_ReKi/300.0_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Cut-off (corner) frequency of the low-pass time-filter for the wake advection, deflection, and meandering model (Hz) [>0.0] or DEFAULT [DEFAULT=0.0007]", &
+      0.0007_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if
       
-      ! C_HWkDfl_O - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m) or DEFAULT [DEFAULT=-2.9]:
+      ! C_HWkDfl_O - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m) or DEFAULT [DEFAULT=0.0]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_O, "C_HWkDfl_O", &
-      "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m) or DEFAULT [DEFAULT=-2.9]", &
-      -2.9_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor (m) or DEFAULT [DEFAULT=0.0]", &
+      0.0_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if
 
-      ! C_HWkDfl_OY - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [DEFAULT=-0.24]:
+      ! C_HWkDfl_OY - Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [DEFAULT=0.3]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_OY, "C_HWkDfl_OY", &
-      "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [DEFAULT=-0.24]", &
-      -0.24_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter in the correction for wake deflection defining the horizontal offset at the rotor scaled with yaw error (m/deg) or DEFAULT [DEFAULT=0.3]", &
+      0.3_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -646,20 +646,20 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
       end if
    WD_InitInp%C_HWkDfl_OY = WD_InitInp%C_HWkDfl_OY/D2R !immediately convert to m/radians instead of m/degrees      
       
-      ! C_HWkDfl_x - Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-) or DEFAULT [DEFAULT=-0.0054]:
+      ! C_HWkDfl_x - Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-) or DEFAULT [DEFAULT=0.0]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_x, "C_HWkDfl_x", &
-      "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-) or DEFAULT [DEFAULT=-0.0054]", &
-      -0.0054_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance (-) or DEFAULT [DEFAULT=0.0]", &
+      0.0_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if      
          
-      ! C_HWkDfl_xY - Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [DEFAULT= 0.00039]:
+      ! C_HWkDfl_xY - Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [DEFAULT=-0.004]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_HWkDfl_xY, "C_HWkDfl_xY", &
-      "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [DEFAULT= 0.00039]", &
-      0.00039_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter in the correction for wake deflection defining the horizontal offset scaled with downstream distance and yaw error (1/deg) or DEFAULT [DEFAULT=-0.004]", &
+      -0.004_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -668,30 +668,30 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
    WD_InitInp%C_HWkDfl_xY = WD_InitInp%C_HWkDfl_xY/D2R !immediately convert to 1/radians instead of 1/degrees      
 
    
-      ! C_NearWake - Calibrated parameter for the near-wake correction (-) [>1.0] or DEFAULT [DEFAULT=2.0]:
+      ! C_NearWake - Calibrated parameter for the near-wake correction (-) [>1.0] or DEFAULT [DEFAULT=1.8]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_NearWake, "C_NearWake", &
-      "Calibrated parameter for the near-wake correction (-) [>1.0] or DEFAULT [DEFAULT=2.0]", &
-      2.0_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter for the near-wake correction (-) [>1.0] or DEFAULT [DEFAULT=1.8]", &
+      1.8_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if      
               
-      ! k_vAmb - Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.07 ]:
+      ! k_vAmb - Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.05 ]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_vAmb, "k_vAmb", &
-      "Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.07]", &
-      0.07_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter for the influence of ambient turbulence in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.05]", &
+      0.05_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if      
          
-      ! k_vShr - Calibrated parameter for the influence of the shear layer in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.018]:
+      ! k_vShr - Calibrated parameter for the influence of the shear layer in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.016]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%k_vShr, "k_vShr", &
-      "Calibrated parameter for the influence of the shear layer in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.018]", &
-      0.018_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter for the influence of the shear layer in the eddy viscosity (-) [>=0.0] or DEFAULT [DEFAULT=0.016]", &
+      0.016_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -708,29 +708,9 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if      
       
-      ! C_vAmb_DMax - Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vAmb_DMin  ] or DEFAULT [DEFAULT=2.0]:
+      ! C_vAmb_DMax - Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vAmb_DMin  ] or DEFAULT [DEFAULT=1.0]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_DMax, "C_vAmb_DMax", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vAmb_DMin  ] or DEFAULT [DEFAULT=2.0]", &
-      2.0_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-        
-      ! C_vAmb_FMin - Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_FMin, "C_vAmb_FMin", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.0]", &
-      0.0_ReKi, ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) then
-         call cleanup()
-         RETURN        
-      end if      
-      
-      ! C_vAmb_Exp - Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=1.0]:
-   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_Exp, "C_vAmb_Exp", &
-      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=1.0]", &
+      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vAmb_DMin  ] or DEFAULT [DEFAULT=1.0]", &
       1.0_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
@@ -738,40 +718,60 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if      
         
-      ! C_vShr_DMin - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=2.0]:
+      ! C_vAmb_FMin - Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=1.0]:
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_FMin, "C_vAmb_FMin", &
+      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=1.0]", &
+      1.0_ReKi, ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if      
+      
+      ! C_vAmb_Exp - Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.01]:
+   CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vAmb_Exp, "C_vAmb_Exp", &
+      "Calibrated parameter in the eddy viscosity filter function for ambient turbulence defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.01]", &
+      0.01_ReKi, ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if      
+        
+      ! C_vShr_DMin - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=3.0]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_DMin, "C_vShr_DMin", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=2.0]", &
-      2.0_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the minimum and exponential regions (-) [>=0.0] or DEFAULT [DEFAULT=3.0]", &
+      3.0_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if            
          
-      ! C_vShr_DMax - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vShr_DMin] or DEFAULT [DEFAULT=11.0]:
+      ! C_vShr_DMax - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vShr_DMin] or DEFAULT [DEFAULT=25.0]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_DMax, "C_vShr_DMax", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vShr_DMin] or DEFAULT [DEFAULT=11.0]", &
-      11.0_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the transitional diameter fraction between the exponential and maximum regions (-) [> C_vShr_DMin] or DEFAULT [DEFAULT=25.0]", &
+      25.0_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if            
          
-      ! C_vShr_FMin - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.035]:
+      ! C_vShr_FMin - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.2]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_FMin, "C_vShr_FMin", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.035]", &
-      0.035_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the value in the minimum region (-) [>=0.0 and <=1.0] or DEFAULT [DEFAULT=0.2]", &
+      0.2_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if            
         
-      ! C_vShr_Exp - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.4]:
+      ! C_vShr_Exp - Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.1]:
    CALL ReadVarWDefault( UnIn, InputFile, WD_InitInp%C_vShr_Exp, "C_vShr_Exp", &
-      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.4]", &
-      0.4_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter in the eddy viscosity filter function for the shear layer defining the exponent in the exponential region (-) [> 0.0] or DEFAULT [DEFAULT=0.1]", &
+      0.1_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -798,20 +798,20 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if            
 
-      ! Mod_Meander - Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=1]:
+      ! Mod_Meander - Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=3]:
    CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%Mod_Meander, "Mod_Meander", &
-      "Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=1]", &
-      MeanderMod_Uniform, ErrStat2, ErrMsg2, UnEc)
+      "Spatial filter model for wake meandering (-) (switch) {1: uniform, 2: truncated jinc, 3: windowed jinc} or DEFAULT [DEFAULT=3]", &
+      MeanderMod_WndwdJinc, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if            
         
-      ! C_Meander - Calibrated parameter for wake meandering (-) [>=1.0] or DEFAULT [DEFAULT=2.0]:
+      ! C_Meander - Calibrated parameter for wake meandering (-) [>=1.0] or DEFAULT [DEFAULT=1.9]:
    CALL ReadVarWDefault( UnIn, InputFile, AWAE_InitInp%C_Meander, "C_Meander", &
-      "Calibrated parameter for wake meandering (-) [>=1.0] or DEFAULT [DEFAULT=2.0]", &
-      2.0_ReKi, ErrStat2, ErrMsg2, UnEc)
+      "Calibrated parameter for wake meandering (-) [>=1.0] or DEFAULT [DEFAULT=1.9]", &
+      1.9_ReKi, ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()

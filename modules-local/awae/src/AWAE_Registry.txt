@@ -39,8 +39,8 @@ typedef  ^            AWAE_InputFileType  IntKi           NOutDisWindXZ      -  
 typedef  ^            AWAE_InputFileType  ReKi            OutDisWindY       {:}   - - "Y coordinates of XZ planes for output of disturbed wind data across the low-resolution domain [1 to NOutDisWindXZ]" meters
 typedef  ^            AWAE_InputFileType  DbKi            WrDisDT           -  - -   "The time between vtk outputs [must be a multiple of the low resolution time step]" s
 typedef  ^            AWAE_InputFileType  LOGICAL         ChkWndFiles    - - -  "Check all the ambient wind files for data consistency (flag)" -
-typedef  ^            AWAE_InputFileType  IntKi           Mod_Meander    - - -  "Spatial filter model for wake meandering {1: uniform, 2: truncated jinc, 3: windowed jinc} [DEFAULT=1]" -
-typedef  ^            AWAE_InputFileType  ReKi            C_Meander      - - -  "Calibrated parameter for wake meandering [>=1.0] [DEFAULT=2.0]" -
+typedef  ^            AWAE_InputFileType  IntKi           Mod_Meander    - - -  "Spatial filter model for wake meandering {1: uniform, 2: truncated jinc, 3: windowed jinc} [DEFAULT=2]" -
+typedef  ^            AWAE_InputFileType  ReKi            C_Meander      - - -  "Calibrated parameter for wake meandering [>=1.0] [DEFAULT=1.9]" -
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
