@@ -1586,7 +1586,7 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
 !#ifdef _OPENMP
 !   tm1 = omp_get_wtime()  
 !#endif     
-   !$OMP PARALLEL DO DEFAULT(Shared) Private(nt,tm2,tm3)
+   !$OMP PARALLEL DO DEFAULT(Shared) Private(nt) !Private(nt,tm2,tm3)
    DO nt = 1,farm%p%NumTurbines+1
       if(nt.ne.farm%p%NumTurbines+1) then  
 !#ifdef _OPENMP
@@ -1855,7 +1855,7 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    CHARACTER(ErrMsgLen)                    :: ErrMsg2                         ! Temporary Error message
    CHARACTER(*),   PARAMETER               :: RoutineName = 'FARM_CalcOutput'
    INTEGER(IntKi)                          :: n                               ! time step increment number
-   REAL(DbKi)                              :: tm1
+!   REAL(DbKi)                              :: tm1
    ErrStat = ErrID_None
    ErrMsg = ""
    
