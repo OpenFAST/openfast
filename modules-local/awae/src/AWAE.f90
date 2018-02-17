@@ -207,7 +207,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: Vave_amb_low_norm
    real(ReKi)          :: delta, deltad
    real(ReKi)          :: wsum_tmp
-   real(ReKi)          :: tmp_x,tmp_y,tmp_z, tm1, tm2
+   real(ReKi)          :: tmp_x,tmp_y,tmp_z !, tm1, tm2
    real(ReKi), ALLOCATABLE :: tmp_rhat_plane(:,:), tmp_xhat_plane(:,:)
    real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vr_wake(:)
    integer(IntKi)      :: ILo
@@ -223,9 +223,9 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    maxPln =  min(n,p%NumPlanes-2)
    
    
-#ifdef _OPENMP  
-   tm1 =  omp_get_wtime() 
-#endif 
+!#ifdef _OPENMP  
+!   tm1 =  omp_get_wtime() 
+!#endif 
      
    m%N_wind(:,:) = 0
 
@@ -478,10 +478,10 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
       end if
       
    end do
-#ifdef _OPENMP  
-   tm2 =  omp_get_wtime() 
-   write(*,*)  'Total AWAE:LowResGridCalcOutput using '//trim(num2lstr(tm2-tm1))//' seconds'
-#endif 
+!#ifdef _OPENMP  
+!   tm2 =  omp_get_wtime() 
+!   write(*,*)  'Total AWAE:LowResGridCalcOutput using '//trim(num2lstr(tm2-tm1))//' seconds'
+!#endif 
 
    if (allocated(tmp_xhat_plane)) deallocate(tmp_xhat_plane)
    if (allocated(tmp_rhat_plane)) deallocate(tmp_rhat_plane)
@@ -1050,25 +1050,25 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    integer(intKi)                               :: errStat2          ! temporary Error status
    character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'AWAE_UpdateStates'
-   real(DbKi)          :: t1, t2
+!   real(DbKi)          :: t1, t2
    integer(IntKi)                               :: n_high_low, nt, n_hl
    
    errStat = ErrID_None
    errMsg  = ""
    
    ! Read the ambient wind data that is needed for t+dt, i.e., n+1
-#ifdef _OPENMP
-   t1 = omp_get_wtime()  
-#endif   
+!#ifdef _OPENMP
+!   t1 = omp_get_wtime()  
+!#endif   
       ! read from file the ambient flow for the n+1 time step
    call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat, errMsg)
       if ( errStat >= AbortErrLev ) then
          return
       end if
-#ifdef _OPENMP
-   t2 = omp_get_wtime()      
-   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
-#endif   
+!#ifdef _OPENMP
+!   t2 = omp_get_wtime()      
+!   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
+!#endif   
       
    if ( (n+1) == (p%NumDT-1) ) then
       n_high_low = 1
@@ -1085,10 +1085,10 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             end if 
       end do
    end do
-#ifdef _OPENMP
-   t1 = omp_get_wtime()      
-   write(*,*) '        AWAE_UpdateStates: Time spent reading High Res data : '//trim(num2lstr(t1-t2))//' seconds'             
-#endif 
+!#ifdef _OPENMP
+!   t1 = omp_get_wtime()      
+!   write(*,*) '        AWAE_UpdateStates: Time spent reading High Res data : '//trim(num2lstr(t1-t2))//' seconds'             
+!#endif 
    
 end subroutine AWAE_UpdateStates
 
