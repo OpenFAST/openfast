@@ -38,17 +38,6 @@ install(TARGETS aerodyn14lib
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
 
-set(AD14_DRIVER_SOURCES
-    src/AD_Driver.f90)
-
-add_executable(aerodyn14_driver ${AD14_DRIVER_SOURCES})
-target_link_libraries(aerodyn14_driver aerodyn14lib ${CMAKE_DL_LIBS})
-
-install(TARGETS aerodyn14_driver
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib)
-
 set(DWM_SOURCES
   src/DWM_driver_wind_farm_mod.f90
   src/DWM_driver_wind_farm_sub.f90
