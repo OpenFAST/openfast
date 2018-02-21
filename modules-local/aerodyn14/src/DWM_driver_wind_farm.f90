@@ -1,9 +1,9 @@
 PROGRAM DWM_driver_wind_farm
-   USE IFPORT
-   USE DFLIB
+!    USE IFPORT
+!    USE DFLIB
    USE DWM_driver_wind_farm_sub
    USE read_wind_farm_parameter_data, ONLY: NumWT, DWM_exe_name
-   USE IFQWIN
+!    USE IFQWIN
    USE DWM_init_data, ONLY:InputFile
    
    IMPLICIT NONE
@@ -52,7 +52,7 @@ PROGRAM DWM_driver_wind_farm
        ! FAST 8
        RESULT = system(TRIM(DWM_exe_name)//".exe "// TRIM(InputFile)//".fst" // " " //TRIM(Int2LStr(simulation_index)) //" "// "DWM")
        
-       result = SetExitQQ (QWIN$EXITNOPERSIST)
+    !    result = SetExitQQ (QWIN$EXITNOPERSIST)
        CALL rename_FAST_output(simulation_index)
    END DO
    

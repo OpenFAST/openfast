@@ -16,8 +16,8 @@ MODULE read_wind_farm_parameter_data
     INTEGER  ::  Tinfluencer ! The max number of upstream turbines that affects a downstream turbine (-)
     CHARACTER(20):: DWM_exe_name
     
-    REAL, ALLOCATABLE  ::  Xcoordinate (:)       ! wind turbine x location
-    REAL, ALLOCATABLE  ::  Ycoordinate (:)       ! wind turbine y location
+    REAL(8), ALLOCATABLE  ::  Xcoordinate (:)       ! wind turbine x location
+    REAL(8), ALLOCATABLE  ::  Ycoordinate (:)       ! wind turbine y location
         
 END MODULE read_wind_farm_parameter_data
     
@@ -27,8 +27,8 @@ MODULE wind_farm_geometry_data
     INTEGER,ALLOCATABLE   ::    turbine_sort(:)            ! the array that stores the order of the turbines from upstream to downstream
     INTEGER,ALLOCATABLE   ::    TurbineInfluenceData(:,:)
     REAL,ALLOCATABLE      ::    wake_sector_angle_array(:)
-    REAL                  ::    xwind
-    REAL                  ::    ywind
+    REAL(8)               ::    xwind
+    REAL(8)               ::    ywind
     INTEGER               ::    scale_factor
     REAL                  ::    Pi
     REAL,ALLOCATABLE      ::    length(:)        ! projected length on the wind direction vector

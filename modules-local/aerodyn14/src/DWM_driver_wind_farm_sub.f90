@@ -26,15 +26,17 @@ SUBROUTINE read_wind_farm_parameter()
     IMPLICIT NONE
 
     INTEGER  ::  UnIn = 0
+    INTEGER  ::  UnEc = -1
     INTEGER  ::  I
     CHARACTER(1024) :: DWM_Title,comment
     INTEGER  ::  ErrStat = 0
+    CHARACTER(ErrMsgLen) :: ErrMsg
     INTEGER(4)                   :: IOS
     CHARACTER:: PriFile =  'DWM-driver\wind_farm.txt'
 
 
     !bjj: CALL GetNewUnit(UnIn)
-    CALL OpenFInpFile ( UnIn, 'DWM-driver\wind_farm.txt', ErrStat )    
+    CALL OpenFInpFile ( UnIn, 'DWM-driver\wind_farm.txt', ErrStat, ErrMsg )    
 
     READ (UnIn,'(//,A,/)',IOSTAT=IOS)  DWM_Title                      ! read the words (title)
     CALL CheckIOS( IOS, PriFile, 'file title', StrType )
@@ -42,53 +44,53 @@ SUBROUTINE read_wind_farm_parameter()
     READ (UnIn,'(A)',IOSTAT=IOS)  Comment                             ! read the words (comment)
     CALL CheckIOS( IOS, PriFile, 'simulation control parameters comment', StrType )
     
-    
-      ! Read in the hub height
-    CALL ReadRVar ( UnIn, PriFile, HubHt, 'HubHt', 'The hub height (m)',ErrStat )
+
+   ! Read in the hub height
+    CALL ReadVar ( UnIn, PriFile, HubHt, 'HubHt', 'The hub height (m)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
     
       ! Read in the rotor radius
-    CALL ReadRVar ( UnIn, PriFile, RotorR, 'RotorR', 'The Rotor radius (m)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, RotorR, 'RotorR', 'The Rotor radius (m)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
 
       ! Read in the total number of wind turbines
-    CALL ReadIVar ( UnIn, PriFile, NumWT, 'NumWT', 'The total number of wind turbines (-)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, NumWT, 'NumWT', 'The total number of wind turbines (-)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
        
       ! Read in the ambient wind velocity
-    CALL ReadRVar ( UnIn, PriFile, Uambient, 'Uambient', 'The ambient wind velocity (m/s)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, Uambient, 'Uambient', 'The ambient wind velocity (m/s)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
     
       ! Read in the ambient TI
-    CALL ReadRVar ( UnIn, PriFile, TI, 'TI', 'TI for first turbine (%)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, TI, 'TI', 'TI for first turbine (%)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
     
       ! Read in the radial domain size
-    CALL ReadIVar ( UnIn, PriFile, ppR, 'ppR', 'Point per R resolution (-)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, ppR, 'ppR', 'Point per R resolution (-)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
     
       ! Read in the point per R resolution
-    CALL ReadRVar ( UnIn, PriFile, Domain_R, 'Domain_R', 'Radial domain size (R)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, Domain_R, 'Domain_R', 'Radial domain size (R)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
     
       ! Read in the point per R resolution
-    CALL ReadRVar ( UnIn, PriFile, Domain_X, 'Domain_X', 'Longitudinal domain size (R)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, Domain_X, 'Domain_X', 'Longitudinal domain size (R)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
     
       ! Read in the simulation time length of the meandering wake model
-    CALL ReadIVar ( UnIn, PriFile, Mstl, 'Meandering_simulation_time_length', 'The length of the simulation time in the meandering wake model (-)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, Mstl, 'Meandering_simulation_time_length', 'The length of the simulation time in the meandering wake model (-)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
     
       ! Read in the moving time length of the meandering wake model
-    CALL ReadIVar ( UnIn, PriFile, Mmt, 'Meandering_Moving_time', 'The length of the moving time in the meandering wake model (-)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, Mmt, 'Meandering_Moving_time', 'The length of the moving time in the meandering wake model (-)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
     
       ! Read in the lower bound height of the wind file
-    CALL ReadRVar ( UnIn, PriFile, WFLowerBd, 'WFLowerBd', 'The lower bound height of the wind file (m)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, WFLowerBd, 'WFLowerBd', 'The lower bound height of the wind file (m)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
    
       ! Read in the ambient wind direction
-    CALL ReadRVar ( UnIn, PriFile, Winddir, 'Winddir', 'The ambient wind direction (degree)',ErrStat )
+    CALL ReadVar ( UnIn, PriFile, Winddir, 'Winddir', 'The ambient wind direction (degree)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
     
       ! Read in the DWM_FAST.exe file rootname
@@ -101,7 +103,7 @@ SUBROUTINE read_wind_farm_parameter()
     ALLOCATE (Xcoordinate(NumWT))
     ALLOCATE (Ycoordinate(NumWT))
     
-    CALL ReadCom( UnIn, PriFile, 'Coordinate table headers', ErrStat)
+    CALL ReadCom( UnIn, PriFile, 'Coordinate table headers', ErrStat, ErrMsg)
     IF ( ErrStat /= 0 ) RETURN
        
     DO i = 1, NumWT
@@ -348,7 +350,7 @@ SUBROUTINE wind_farm_geometry()
     ! test
     
     OPEN (unit=25,file="DWM-driver\turbine_spacing.txt")
-    WRITE (25,*), length(:)
+    WRITE (25,*) length(:)
     CLOSE(25)
     
 END SUBROUTINE wind_farm_geometry
@@ -360,7 +362,7 @@ SUBROUTINE cal_wake_sector_angle()
 ! with respect to the change of the downstream distance
 !...................................................................
     USE wind_farm_geometry_data,        ONLY: wake_sector_angle_array,scale_factor,Pi,TurbineInfluenceData,length,xwind,ywind,turbine_sort
-    USE read_wind_farm_parameter_data,  ONLY: NumWT, Winddir, Tinfluencer,Mmt,ppR,Xcoordinate, Ycoordinate,Mstl,Domain_X,scale_factor
+    USE read_wind_farm_parameter_data,  ONLY: NumWT, Winddir, Tinfluencer,Mmt,ppR,Xcoordinate, Ycoordinate,Mstl,Domain_X
     
     REAL,ALLOCATABLE  ::  distance_array(:)
     INTEGER           ::  I,J
@@ -871,8 +873,8 @@ SUBROUTINE rename_FAST_output(SimulationOrder_index)
 !............................................................................
 ! This routine is called to rename the fast output
 !............................................................................
-    USE IFPORT
-    USE DFLIB
+    ! USE IFPORT
+    ! USE DFLIB
     USE wind_farm_geometry_data,         ONLY: turbine_sort
     USE DWM_init_data,                   ONLY: OutFileRoot
     
