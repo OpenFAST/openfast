@@ -16,7 +16,7 @@ MODULE DWM_driver_wind_farm_sub
     
 CONTAINS
 !-------------------------------------------------------------------
-SUBROUTINE read_wind_farm_parameter()
+SUBROUTINE read_wind_farm_parameter(PriFile)
 !...................................................................
 ! This subroutine is to read the wind farm parameter files
 ! Including the number of rows of the wind farm, the number of turbine in each row
@@ -25,18 +25,17 @@ SUBROUTINE read_wind_farm_parameter()
     USE read_wind_farm_parameter_data
     IMPLICIT NONE
 
+    CHARACTER(*), INTENT(IN) :: PriFile
     INTEGER  ::  UnIn = 0
     INTEGER  ::  UnEc = -1
     INTEGER  ::  I
     CHARACTER(1024) :: DWM_Title,comment
     INTEGER  ::  ErrStat = 0
     CHARACTER(ErrMsgLen) :: ErrMsg
-    INTEGER(4)                   :: IOS
-    CHARACTER:: PriFile =  'DWM-driver\wind_farm.txt'
-
+    INTEGER(4) :: IOS
 
     !bjj: CALL GetNewUnit(UnIn)
-    CALL OpenFInpFile ( UnIn, 'DWM-driver\wind_farm.txt', ErrStat, ErrMsg )    
+    CALL OpenFInpFile ( UnIn, PriFile, ErrStat, ErrMsg )    
 
     READ (UnIn,'(//,A,/)',IOSTAT=IOS)  DWM_Title                      ! read the words (title)
     CALL CheckIOS( IOS, PriFile, 'file title', StrType )
@@ -182,15 +181,15 @@ SUBROUTINE write_parameter_to_file()
     IMPLICIT NONE
     integer   :: Un
     
-    !CALL GetNewUnit(Un)    
+    !CALL GetNewUnit(Un)
     Un = 10
     
-    OPEN(unit = Un, status='replace',file='DWM-driver\DWM_parameter.bin',form='unformatted')    
-    WRITE(Un)   HubHt,RotorR,NumWT,Uambient,TI,Domain_R,Domain_X,ppR,Mstl,Mmt,WFLowerBd,Winddir,Tinfluencer                                                                                                                                                                                                   
+    OPEN(unit = Un, status='replace',file='DWM_parameter.bin',form='unformatted')
+    WRITE(Un)   HubHt,RotorR,NumWT,Uambient,TI,Domain_R,Domain_X,ppR,Mstl,Mmt,WFLowerBd,Winddir,Tinfluencer
     CLOSE(Un)
     
-    OPEN(unit = Un, status='replace',file='DWM-driver\wind_farm_coordinate.bin',form='unformatted')    
-    WRITE(Un)   Xcoordinate,Ycoordinate                                                                                                                                                                                                    
+    OPEN(unit = Un, status='replace',file='wind_farm_coordinate.bin',form='unformatted')
+    WRITE(Un)   Xcoordinate,Ycoordinate
     CLOSE(Un)
     
 END SUBROUTINE write_parameter_to_file
@@ -287,7 +286,7 @@ SUBROUTINE wind_farm_geometry()
     
     !CALL GetNewUnit(Un)    
     Un = 10
-    OPEN(unit = Un, status='replace',file='DWM-results\wind_farm_turbine_sort.bin',form='unformatted')    
+    OPEN(unit = Un, status='replace',file='wind_farm_turbine_sort.bin',form='unformatted')    
     WRITE(Un)   turbine_sort(:)                                                                                                                                                                                                    
     CLOSE(Un)
     
@@ -321,11 +320,11 @@ SUBROUTINE wind_farm_geometry()
     
     !CALL GetNewUnit(Un)    
     Un = 10
-    OPEN(unit = Un, status='replace',file='DWM-results\turbine_angles.bin',form='unformatted')    
+    OPEN(unit = Un, status='replace',file='turbine_angles.bin',form='unformatted')    
     WRITE(Un)   turbine_angle(:,:)                                                                                                                                                                                                    
     CLOSE(Un)
     
-    OPEN(unit = Un, status='replace',file='DWM-results\turbine_distance.bin',form='unformatted')    
+    OPEN(unit = Un, status='replace',file='turbine_distance.bin',form='unformatted')    
     WRITE(Un)   length(:)                                                                                                                                                                                                    
     CLOSE(Un)
     
@@ -349,7 +348,7 @@ SUBROUTINE wind_farm_geometry()
     
     ! test
     
-    OPEN (unit=25,file="DWM-driver\turbine_spacing.txt")
+    OPEN (unit=25,file="turbine_spacing.txt")
     WRITE (25,*) length(:)
     CLOSE(25)
     
@@ -401,11 +400,11 @@ SUBROUTINE cal_wake_sector_angle()
     Pi = ACOS( -1.0 )
     
     ! read the wake file and wake width
-    OPEN(unit = 10, status='old',file='DWM-results\Wake_width_Turbine_0.bin',form='unformatted')  ! open an existing file
+    OPEN(unit = 10, status='old',file='Wake_width_Turbine_0.bin',form='unformatted')  ! open an existing file
     READ(10)  wake_width(:)
     CLOSE(10)
     
-    OPEN(unit = 10, status='old',file='DWM-results\WC_Turbine_0.bin',form='unformatted')  ! open an existing file
+    OPEN(unit = 10, status='old',file='WC_Turbine_0.bin',form='unformatted')  ! open an existing file
     READ(10)  wake_center_position(:,:,:)
     CLOSE(10)
     
@@ -425,7 +424,7 @@ SUBROUTINE cal_wake_sector_angle()
        wake_sector_angle_array(I) = Sector_angle(wake_width,wake_center_position,distance_array(I))
     END DO
     
-    OPEN(unit = 10, status='replace',file='DWM-results\wake_sector_angle.bin',form='unformatted')    
+    OPEN(unit = 10, status='replace',file='wake_sector_angle.bin',form='unformatted')    
     WRITE(10)   wake_sector_angle_array(:)                                                                                                                                                                                                    
     CLOSE(10)
 
@@ -474,11 +473,11 @@ SUBROUTINE cal_wake_sector_angle()
         END DO
     END DO
     
-    !OPEN (unit=25,file="DWM_WIND_FARM\results\turbine_influence.txt")
+    !OPEN (unit=25,file="DWM_WIND_FARM/results/turbine_influence.txt")
     !WRITE (25,'(I5)'), TurbineInfluenceData(:,:)
     !CLOSE(25)
     
-    OPEN(unit = 10, status='replace',file='DWM-results\turbine_interaction.bin',form='unformatted')    
+    OPEN(unit = 10, status='replace',file='turbine_interaction.bin',form='unformatted')    
     WRITE(10)   TurbineInfluenceData(:,:)                                                                                                                                                                                                    
     CLOSE(10)
     
@@ -495,7 +494,7 @@ SUBROUTINE cal_wake_sector_angle()
     !END DO
     
         
-    !OPEN (unit=25,file="DWM_WIND_FARM\results\OWEZ_T7_T8_num.txt")
+    !OPEN (unit=25,file="DWM_WIND_FARM/results/OWEZ_T7_T8_num.txt")
     !WRITE(25,*),'InflowAngle=',Winddir
     !WRITE(25,*),'T7_wake=',T7_wake
     !WRITE(25,*),'T8_wake=',T8_wake
@@ -739,7 +738,7 @@ SUBROUTINE delete_temp_files()
     CHARACTER(LEN=10) :: InductionPrefix    = 'Induction_'
     CHARACTER(LEN=6)  :: Wakeprefix         = 'WakeU_'
     CHARACTER(LEN=11) :: WWprefix_bin       = 'Wake_width_'
-    CHARACTER(LEN=22) :: Prefix             = 'DWM-results\'
+    CHARACTER(LEN=22) :: Prefix             = 'DWM-results/'
     CHARACTER(LEN=4)  :: connectionprefix   = '_to_'
     CHARACTER(LEN=8)  :: Turbineprefix      = 'Turbine_'
     INTEGER           :: I,J,K
@@ -822,25 +821,25 @@ SUBROUTINE delete_temp_files()
     END DO
     
     
-    OPEN (29, file='DWM-results\turbine_angles.bin')
+    OPEN (29, file='turbine_angles.bin')
     CLOSE (29, status='delete')
 
-    OPEN (29, file='DWM-results\turbine_distance.bin')
+    OPEN (29, file='turbine_distance.bin')
     CLOSE (29, status='delete')
     
-    OPEN (29, file='DWM-results\turbine_interaction.bin')
+    OPEN (29, file='turbine_interaction.bin')
     CLOSE (29, status='delete')
     
-    OPEN (29, file='DWM-results\wake_sector_angle.bin')
+    OPEN (29, file='wake_sector_angle.bin')
     CLOSE (29, status='delete')
     
-    OPEN (29, file='DWM-results\Wake_width_Turbine_0.bin')
+    OPEN (29, file='Wake_width_Turbine_0.bin')
     CLOSE (29, status='delete')
     
-    OPEN (29, file='DWM-results\WC_Turbine_0.bin')
+    OPEN (29, file='WC_Turbine_0.bin')
     CLOSE (29, status='delete')
     
-    OPEN (29, file='DWM-results\wind_farm_turbine_sort.bin')
+    OPEN (29, file='wind_farm_turbine_sort.bin')
     CLOSE (29, status='delete')
     
     
@@ -854,7 +853,6 @@ SUBROUTINE Driver_init()
     USE DWM_init_data, ONLY:OutFileRoot, InputFile
     
     INTEGER                      :: Stat
-    !CHARACTER(1024)              :: InputFile
     CHARACTER(1024)              :: DirName
 
     CALL CheckArgs( InputFile, Stat ) 
@@ -862,9 +860,6 @@ SUBROUTINE Driver_init()
     CALL GetRoot( InputFile, OutFileRoot )
     
     CALL Get_CWD  ( DirName, Stat )
-    
-    !PRINT*,DirName
-
 
 END SUBROUTINE Driver_init
 
@@ -882,7 +877,7 @@ SUBROUTINE rename_FAST_output(SimulationOrder_index)
     CHARACTER(LEN=11) :: Fastprefix         = 'FastOutput_' ! Fast output file
     CHARACTER(LEN=8)  :: FastElmprefix      = 'FastElm_'    ! Fast Elm output file
     INTEGER           :: RESULT
-    CHARACTER(LEN=22) :: Prefix             = 'DWM-results\'
+    CHARACTER(LEN=22) :: Prefix             = 'DWM-results/'
     CHARACTER(LEN=8)  :: Turbineprefix      = 'Turbine_'
     CHARACTER(LEN=3)  :: invetigated_turbine_index_character
     INTEGER           :: WT_index
