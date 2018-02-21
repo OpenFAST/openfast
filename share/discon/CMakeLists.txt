@@ -28,12 +28,11 @@ if (NOT CMAKE_BUILD_TYPE)
 endif (NOT CMAKE_BUILD_TYPE)
 
 # add the build flags
-  if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
-    set(CMAKE_Fortran_FLAGS "-m64 -fbacktrace -ffree-line-length-none -fdefault-real-8 -C -DDOUBLE_PRECISION")
-  elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
-    set(CMAKE_Fortran_FLAGS "-m64 -g -traceback -132 -r8 -DDOUBLE_PRECISION")
-  endif()
-
+if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
+  set(CMAKE_Fortran_FLAGS "-m64 -fbacktrace -ffree-line-length-none -fdefault-real-8 -C -DDOUBLE_PRECISION")
+elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
+  set(CMAKE_Fortran_FLAGS "-m64 -g -traceback -132 -r8 -DDOUBLE_PRECISION")
+endif()
 set(CMAKE_SHARE_LINKER_FLAGS "-shared")
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
