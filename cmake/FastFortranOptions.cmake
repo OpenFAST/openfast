@@ -43,7 +43,19 @@ macro(set_fast_fortran)
   # Abort if we do not have gfortran or Intel Fortran Compiler.
   if (NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU" OR
         ${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel"))
-    message(FATAL_ERROR "OpenFAST requires either GFortran or Intel Fortran Compiler. Compiler detected by CMake: ${FCNAME}")
+    message(FATAL_ERROR "OpenFAST requires either GFortran or Intel Fortran Compiler. Compiler detected by CMake: ${FCNAME}.")
+  endif()
+
+  # Verify proper compiler versions are available
+  # see https://github.com/OpenFAST/openfast/issues/88
+  if(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+    if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "4.6.0")
+      message(FATAL_ERROR "A version of GNU GFortran greater than 4.6.0 is required. GFortran version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
+    endif()
+  elseif(CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
+    if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "11")
+      message(FATAL_ERROR "A version of Intel ifort greater than 11 is required. ifort version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
+    endif()
   endif()
 
   # Set the preprocessor for all source files by default
