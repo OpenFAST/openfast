@@ -41,6 +41,13 @@ option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" off)
 option(BUILD_FAST_CPP_API "Enable building FAST - C++ API" off)
 
+# Verify proper compiler versions are available
+if(CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
+  if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "4.6.0")
+    message(FATAL_ERROR "A version of GNU gfortran greater than 4.6.0 is required.")
+  endif()
+endif()
+
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
 
