@@ -3425,7 +3425,6 @@ SUBROUTINE Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       ! Local variables:
 
    REAL(ReKi)                   :: HSSBrFrac                     ! Fraction of full braking torque {0 (off) <= HSSBrFrac <= 1 (full)} (-)
-   REAL(ReKi)                   :: HSSBrTrqC                     ! Braking torque (N-m)
 
 
 
@@ -3485,8 +3484,7 @@ SUBROUTINE Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       CASE ( ControlMode_DLL )                    ! User-defined HSS brake model from Bladed-style DLL
          
          HSSBrFrac = m%dll_data%HSSBrFrac         
-         HSSBrTrqC = m%dll_data%HSSBrTrqC
-         y%HSSBrTrqC = ABS( HSSBrFrac*HSSBrTrqC )
+         y%HSSBrTrqC = ABS( HSSBrFrac*m%dll_data%HSSBrTrqC )
          RETURN
          
       CASE ( ControlMode_EXTERN )                 ! HSS brake model from LabVIEW.
