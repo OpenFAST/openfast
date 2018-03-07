@@ -49,6 +49,7 @@ static int ErrStat = 0;
 static char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static char InputFileName[INTERFACE_STRING_LENGTH]; // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static int n_t_global = -2;  // counter to determine which fixed-step simulation time we are at currently (start at -2 for initialization)
+static int AbortErrLev = ErrID_Fatal;      // abort error level; compare with NWTC Library
 
 // function definitions
 static int checkError(SimStruct *S);
