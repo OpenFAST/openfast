@@ -3220,6 +3220,11 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    INTEGER(IntKi)                                :: j
    INTEGER(IntKi)                                :: piter
    REAL(BDKi)                                    :: gravity_temp(3)
+   REAL(BDKi)                                    :: load_works    
+   REAL(BDKi)                                    :: load_works_not
+   REAL(BDKi)                                    :: load_test
+   TYPE(BD_ContinuousStateType)                  :: x_works
+   LOGICAL                                       :: solved
    INTEGER(IntKi)                                :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                          :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                       :: RoutineName = 'BD_Static'
@@ -3259,48 +3264,73 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
-   i = 1
-   piter = 0
-   DO WHILE(i .NE. 0)
-!       k=i
-          ! Gradually increase load?
-       DO j=1,i         !k
-           u_temp%PointLoad%Force(:,:) = u_interp%PointLoad%Force(:,:)/i*j
-           u_temp%PointLoad%Moment(:,:) = u_interp%PointLoad%Moment(:,:)/i*j
-           u_temp%DistrLoad%Force(:,:) = u_interp%DistrLoad%Force(:,:)/i*j
-           u_temp%DistrLoad%Moment(:,:) = u_interp%DistrLoad%Moment(:,:)/i*j
-           gravity_temp(:) = p%gravity(:)/i*j
-           CALL BD_StaticSolution(x, gravity_temp, u_temp, p, m, piter, ErrStat2, ErrMsg2)
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
-           IF(p%niter .EQ. piter) EXIT
-       ENDDO
 
-         ! Check if converged?
-       IF(piter .LT. p%niter) THEN
-           i=0
-       ELSE
-           IF(i .EQ. p%niter) THEN
-               call SetErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of load steps.", &
-                                ErrStat,ErrMsg, RoutineName)
-               CALL WrScr( "Maxium number of load steps reached. Exit BeamDyn")
-               EXIT
-           ENDIF
+   ! new logic
+   ! (1) try first with full load (load_reduce = 1)
+   ! (2) if that does not work, keep reducing until finding converged solution or reach 
+   !     maximum number of iterations; if found save as x_works
+   ! (3) keep bisecting the load looking using lsat successful iteration (x_works)
 
-               ! Warn the user that additional steps are needed.
-          if (i==1) call WrScr( "Warning: Load may be too large, BeamDyn will attempt to solve with additional steps.")
+   solved         = .false.
+   load_works     = 0.0_BDKi
+   load_test      = 1.0_BDKi
+   load_works_not = 1.0_BDKi
 
-               ! Increment the number of steps
-          i=i+1
-          call WrScr( "  Load_Step="//trim(num2lstr(i)) )
+   x_works = x  ! save initial guess
 
-               ! Reset the displacements
-          x%q = 0.0_BDKi
-               ! If we reached this point, we must reset the err status, otherwise we will report back that this
-               ! failed once a sufficient number of load steps was reached and a solution found.
-          ErrStat = ErrID_None
-          ErrMsg  = ""
-       ENDIF
+   !DO j=1,p%niter  ! original -- no need to this iteration number to the NR iteration number
+   DO j=1,20  ! hard coded value for these static cases
+
+       u_temp%PointLoad%Force(:,:)  = u_interp%PointLoad%Force(:,:)  * load_test
+       u_temp%PointLoad%Moment(:,:) = u_interp%PointLoad%Moment(:,:) * load_test
+       u_temp%DistrLoad%Force(:,:)  = u_interp%DistrLoad%Force(:,:)  * load_test
+       u_temp%DistrLoad%Moment(:,:) = u_interp%DistrLoad%Moment(:,:) * load_test
+       gravity_temp(:)              = p%gravity(:)                   * load_test
+
+       CALL BD_StaticSolution(x, gravity_temp, u_temp, p, m, piter, ErrStat2, ErrMsg2)
+           call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
+           ErrStat = ErrID_None
+           ErrMsg  = ""
+
+       ! note that if BD_StaticSolution converges, then piter will .le. p%niter
+
+       if (piter .le. p%niter) then 
+
+          ! save this successfully converged value
+          x_works = x
+
+          if ( EqualRealNos(load_test,1.0_BDKi) ) then
+             solved = .true.
+          else
+             load_works = load_test
+             ! if we found a convergent load, try full load next
+             load_test = 1.0_BDKi
+          endif
+
+       else
+
+          ! last try did not converge -- save that load value as load_works_not
+          load_works_not = load_test 
+
+          ! Take average of the works and works_not values for next test
+          load_test = 0.5_BDKi * (load_works + load_works_not)     
+
+          ! reset best guess
+          x = x_works
+ 
+       endif 
+
+       if (solved) EXIT
+
+       ! test halfway point between load_works and full load
+
    ENDDO
+
+   IF( .not. solved) then
+       call SetErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of load steps.", &
+                            ErrStat,ErrMsg, RoutineName)
+       CALL WrScr( "Maxium number of load steps reached. Exit BeamDyn")
+   ENDIF
 
    if (ErrStat >= AbortErrLev) then
       call cleanup()
@@ -3364,8 +3394,10 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
 
 
          ! Solve for X in A*X=B to get the displacement of blade under static load.
-       CALL LAPACK_getrf( p%dof_total-p%dof_node, p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2);    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL LAPACK_getrs( 'N',p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, m%LP_RHS_LU, ErrStat2, ErrMsg2);  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL LAPACK_getrf( p%dof_total-p%dof_node, p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL LAPACK_getrs( 'N',p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, m%LP_RHS_LU, ErrStat2, ErrMsg2)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
          ! Reshape to BeamDyn arrays
