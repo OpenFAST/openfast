@@ -125,6 +125,7 @@ typedef	^	SrvD_InputFile	CHARACTER(1024)	TTMDfile	-	-	-	"File for tower tuned ma
 # ..... Data for using Bladed DLLs .......................................................................................................
 typedef	^	BladedDLLType	SiKi	avrSWAP	{:}	-	-	"The swap array: used to pass data to and from the DLL controller"	"see Bladed DLL documentation"
 typedef	^	BladedDLLType	ReKi	HSSBrFrac	-	-	-	"Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) - from Bladed DLL"	-
+typedef	^	BladedDLLType	ReKi	HSSBrTrqC	-	-	-	"Braking torque" N-m
 typedef	^	BladedDLLType	ReKi	YawRateCom	-	-	-	"Nacelle yaw rate demanded from Bladed DLL"	rad/s
 typedef	^	BladedDLLType	ReKi	GenTrq	-	-	-	"Electrical generator torque from Bladed DLL"	N-m
 typedef	^	BladedDLLType	IntKi	GenState	-	-	-	"Generator state from Bladed DLL"	N-m

@@ -1,3 +1,6 @@
+#ifndef FAST_LIBRARY_H
+#define FAST_LIBRARY_H
+
 // routines in FAST_Library_$(PlatformName).dll
 #include "OpenFOAM_Types.h"
 #include "SuperController_Types.h"
@@ -34,7 +37,6 @@ EXTERNAL_ROUTINE void FAST_CreateCheckpoint(int * iTurb, const char *CheckpointR
 #define ErrID_Severe 3 
 #define ErrID_Fatal 4 
 
-static int AbortErrLev = ErrID_Fatal;      // abort error level; compare with NWTC Library
 
 #define SensorType_None -1
 
@@ -45,3 +47,6 @@ static int AbortErrLev = ErrID_Fatal;      // abort error level; compare with NW
 #define MAXInitINPUTS 10
 
 #define NumFixedInputs  2 + 2 + MAXIMUM_BLADES + 1
+
+
+#endif

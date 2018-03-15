@@ -175,7 +175,11 @@ if not pass_fail.passRegressionTest(normalizedNorm, tolerance):
         failMaxNorm = [maxNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
         initializePlotDirectory(localOutFile, failChannels, failRelNorm, failMaxNorm)
         for channel in failChannels:
-            plotOpenfastError(localOutFile, baselineOutFile, channel)
+            try:
+                plotOpenfastError(localOutFile, baselineOutFile, channel)
+            except:
+                error = sys.exc_info()[1]
+                print("Error generating plots: {}".format(error.msg))
     sys.exit(1)
 
 # passing case
