@@ -1395,14 +1395,7 @@ SUBROUTINE GetInputFileName(InputFile,UseDWM,ErrStat,ErrMsg)
       ErrStat = ErrID_Fatal
       ErrMsg  = 'The required input file was not specified on the command line.'
          !bjj:  if people have compiled themselves, they should be able to figure out the file name, right?         
-      IF (BITS_IN_ADDR==32) THEN
-         CALL NWTC_DisplaySyntax( InputFile, 'FAST_Win32.exe' )
-      ELSEIF( BITS_IN_ADDR == 64) THEN
-         CALL NWTC_DisplaySyntax( InputFile, 'FAST_x64.exe' )
-      ELSE
-         CALL NWTC_DisplaySyntax( InputFile, 'FAST.exe' )
-      END IF
-         
+      CALL NWTC_DisplaySyntax( InputFile, 'openfast' )
       RETURN
    END IF            
       
