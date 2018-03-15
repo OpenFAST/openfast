@@ -38,13 +38,13 @@ A sample BeamDyn driver input file is given in :numref:`bd_input_files`.
 Simulation Control Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:math:`t_\mathrm{initial}` and :math:`t_\mathrm{final}` specify the starting time of the simulation and ending time of the simulation, respectively. 
+:math:`t_\mathrm{initial}` and :math:`t_\mathrm{final}` specify the starting time of the simulation and ending time of the simulation, respectively.
 :math:`dt` specifies the time step size.
 
 Gravity Parameters
 ~~~~~~~~~~~~~~~~~~
 
-``Gx`` , ``Gy`` , and ``Gz`` specify the components of gravity vector along :math:`X`, :math:`Y`, and :math:`Z` directions in the global coordinate system, respectively. 
+``Gx`` , ``Gy`` , and ``Gz`` specify the components of gravity vector along :math:`X`, :math:`Y`, and :math:`Z` directions in the global coordinate system, respectively.
 In FAST, this is normally 0, 0, and -9.80665.
 
 Inertial Frame Parameters
@@ -61,12 +61,12 @@ And the following :math:`3 \times 3` direction cosine matrix (``GlbDCM``) relate
    :align: center
 
    Global and blade coordinate systems in BeamDyn.
-   
+
 
 Blade Floating Reference Frame Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This section specifies the parameters that defines the blade floating reference frame, which is a body-attached floating frame; the blade root is cantilevered at the origin of this frame. 
+This section specifies the parameters that defines the blade floating reference frame, which is a body-attached floating frame; the blade root is cantilevered at the origin of this frame.
 Based on the driver input file, the floating blade reference fame is assumed to be in a constant rigid-body rotation mode about the origin of the global coordinate system, that is,
 
 .. math::
@@ -74,9 +74,9 @@ Based on the driver input file, the floating blade reference fame is assumed to 
 
    v_{rt} = \omega_r \times r_t
 
-where :math:`v_{rt}` is the root (origin of the floating blade reference frame) translational velocity vector; :math:`\omega_r` is the constant root (origin of the floating blade reference frame) angular velocity vector; and :math:`r_t` is the global position vector introduced in the previous section at instant :math:`t`, see :numref:`frame`. 
-The floating blade reference frame coincides with the initial floating blade reference frame at the beginning :math:`t=0`.  
-``RootVel(4)``, ``RootVel(5)``, and ``RootVel(6)`` specify the three components of the constant root angular velocity vector about :math:`X`, :math:`Y`, and :math:`Z` axises in global coordinate system, respectively. 
+where :math:`v_{rt}` is the root (origin of the floating blade reference frame) translational velocity vector; :math:`\omega_r` is the constant root (origin of the floating blade reference frame) angular velocity vector; and :math:`r_t` is the global position vector introduced in the previous section at instant :math:`t`, see :numref:`frame`.
+The floating blade reference frame coincides with the initial floating blade reference frame at the beginning :math:`t=0`.
+``RootVel(4)``, ``RootVel(5)``, and ``RootVel(6)`` specify the three components of the constant root angular velocity vector about :math:`X`, :math:`Y`, and :math:`Z` axises in global coordinate system, respectively.
 ``RootVel(1)``, ``RootVel(2)``, and ``RootVel(3)``, which are the three components of the root translational velocity vector along :math:`X`, :math:`Y`, and :math:`Z` directions in global coordinate system, respectively, are calculated based on Eq. :eq:`rootvelocity`.
 
 BeamDyn can handle more complicated root motions by changing, for example, the ``BD_InputSolve`` subroutine in the ``Driver_Beam.f90``
@@ -92,8 +92,8 @@ BeamDyn can handle more complicated root motions by changing, for example, the `
        u%RootMotion%TranslationVel(:,1) = &
        MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr)
 
-where ``IniVelo(5)``, ``IniVelo(6)``, and ``IniVelo(4)`` are the three components of the root angular velocity vector about :math:`X`, :math:`Y`, and :math:`Z` axising in the global coordinate system, respectively; ``temp_rr`` is the global position vector at instant :math:`t`. 
-The first index in the ``u%RootMotion%RotationVel(:,:)`` and the ``u%RootMotion%TranslationVel(:,:)`` arrays range from 1 to 3 for load vector components along three directions and the second index of each array are set to 1, denoting the root FE node. 
+where ``IniVelo(5)``, ``IniVelo(6)``, and ``IniVelo(4)`` are the three components of the root angular velocity vector about :math:`X`, :math:`Y`, and :math:`Z` axising in the global coordinate system, respectively; ``temp_rr`` is the global position vector at instant :math:`t`.
+The first index in the ``u%RootMotion%RotationVel(:,:)`` and the ``u%RootMotion%TranslationVel(:,:)`` arrays range from 1 to 3 for load vector components along three directions and the second index of each array are set to 1, denoting the root FE node.
 Note that the internal BeamDyn variables (here ``IniVelo``) are based on the internal BD coordinate system described in section FIXME.
 
 The blade is initialized in the rigid-body motion mode, i.e., based on the root velocity information defined in this section and the position information defined in the previous section, the motion of other points along the blade are initialized as
@@ -314,7 +314,7 @@ the following equality:
 
 .. math::
    :label: keypoint
-           
+
    kp\_total = \sum_{i=1}^{member\_total} n_i - member\_total +1
 
 where :math:`n_i` is the number of key points in the :math:`i^{th}`
@@ -328,7 +328,7 @@ cases for member and key-point definition.
    :width: 60%
    :align: center
 
-   Member and key point definition: one member defined by four key points; 
+   Member and key point definition: one member defined by four key points;
 
 .. _geometry1-case2:
 
@@ -336,8 +336,8 @@ cases for member and key-point definition.
    :width: 60%
    :align: center
 
-   Member and key point definition: two members defined by six key points.           
-   
+   Member and key point definition: two members defined by six key points.
+
 The next section defines the key-point information, preceded by two
 header lines. Each key point is defined by three physical coordinates
 (``kp_xr``, ``kp_yr``, ``kp_zr``) in the IEC standard blade
@@ -358,7 +358,7 @@ more details on the blade geometry definition.
 
    BeamDyn Blade Geometry - Top: Side View; Middle: Front View (Looking Downwind); Bottom: Cross Section View (Looking Toward the Tip, from the Root)
 
-   
+
 Mesh Parameter
 ~~~~~~~~~~~~~~
 
@@ -470,7 +470,7 @@ stiffness-proportional damping coefficients, whereby the
 
 .. math::
    :label: damping-force
-           
+
    \mathcal{\underline{F}}^{Damp} = \underline{\underline{\mu}}~\underline{\underline{S}}~\dot{\underline{\epsilon}}
 
 where :math:`\mathcal{\underline{F}}^{Damp}` is the damping force,
@@ -481,8 +481,8 @@ coefficient matrix defined as
 
 .. math::
    :label: damp-matrix
-           
-   \underline{\underline{\mu}} = 
+
+   \underline{\underline{\mu}} =
    \begin{bmatrix}
        \mu_{11} & 0 & 0 & 0 & 0 & 0 \\
        0 & \mu_{22} & 0 & 0 & 0 & 0 \\
@@ -500,7 +500,10 @@ This section specifies the cross-sectional properties at each of the
 parameter :math:`\eta` specifies the station location along the local
 blade reference axis ranging from :math:`[0.0,1.0]`. The first and last
 station parameters must be set to :math:`0.0` (for the blade root) and
-:math:`1.0` (for the blade tip), respectively.
+:math:`1.0` (for the blade tip), respectively. Using standard
+quadrature rules, the quadrature points may not always coincide with the
+stations. In such scenarios, the cross-sectional properties are linearly
+interpolated using the stations between which the quadrature point lies.
 
 Following the station location parameter :math:`\eta`, there are two
 :math:`6 \times 6` matrices providing the structural and inertial
@@ -513,7 +516,7 @@ matrix is given as follows:
 
 .. math::
    :label: Stiffness
-           
+
    \begin{bmatrix}
    K_{ShrFlp} & 0 & 0 & 0 & 0 & 0 \\
    0 & K_{ShrEdg} & 0 & 0 & 0 & 0 \\
@@ -558,5 +561,3 @@ We note that for beam structure, the :math:`i_{plr}` is given as
    :label: PolarMOI
 
    i_{plr} = i_{Edg} + i_{Flp}
-
-
