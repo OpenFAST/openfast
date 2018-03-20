@@ -94,7 +94,7 @@ CMake options can be executed from the command line as, e.g., the CMake command 
     cmake -DBUILD_DOCUMENTATION:BOOL=ON ..
 
     # e.g., to compile OpenFAST in single precision
-    cmake -D:DOUBLE_PRECISIONBOOL=OFF ..
+    cmake -D:DOUBLE_PRECISION:BOOL=OFF ..
  
 
 Parallel build
