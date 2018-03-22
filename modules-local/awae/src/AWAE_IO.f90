@@ -249,7 +249,9 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
           
    end if
    
-   
+   if ( (gridSpacing(1) <= 0.0_ReKi) .or. (gridSpacing(2) <= 0.0_ReKi) .or. (gridSpacing(3) <= 0.0_ReKi) ) &
+      call SetErrStat ( ErrID_Fatal, 'The low resolution spatial resolution for Turbine 1 must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
+
    p%X0_low           = origin(1)
    p%Y0_low           = origin(2)
    p%Z0_low           = origin(3) 
@@ -259,6 +261,8 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    p%dX_low           = gridSpacing(1)
    p%dY_low           = gridSpacing(2)
    p%dZ_low           = gridSpacing(3)
+   
+   ! TODO: Check the low-res grid variables
    
    InitOut%X0_Low     = origin(1)
    InitOut%Y0_low     = origin(2)
@@ -361,6 +365,9 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       
    end if
    
+   if ( (gridSpacing(1) <= 0.0_ReKi) .or. (gridSpacing(2) <= 0.0_ReKi) .or. (gridSpacing(3) <= 0.0_ReKi) ) &
+      call SetErrStat ( ErrID_Fatal, 'The high resolution spatial resolution for Turbine 1 must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
+
    p%nX_high          = dims(1)
    p%nY_high          = dims(2)
    p%nZ_high          = dims(3)
@@ -426,6 +433,9 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
 
       end if
       
+      if ( (gridSpacing(1) <= 0.0_ReKi) .or. (gridSpacing(2) <= 0.0_ReKi) .or. (gridSpacing(3) <= 0.0_ReKi) ) &
+         call SetErrStat ( ErrID_Fatal, 'The high resolution spatial resolution for Turbine '//trim(num2lstr(nt))//' must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
+
       InitOut%X0_high(nt) = origin(1)
       InitOut%Y0_high(nt) = origin(2)
       InitOut%Z0_high(nt) = origin(3)

@@ -809,9 +809,13 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          ! Set the position inputs once for the low-resolution grid
       m%u_IfW_Low%PositionXYZ = p%Grid_low
       
-         ! Initialize the high-resolution grid
-      IfW_InitInp%NumWindPoints     = p%nX_high*p%nY_high*p%nZ_high
-      call InflowWind_Init( IfW_InitInp, m%u_IfW_High, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_High, m%IfW, Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
+         ! Initialize the high-resolution grid inputs and outputs
+
+      call AllocAry(m%u_IfW_High%PositionXYZ, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%u_IfW_High%PositionXYZ', ErrStat2, ErrMsg2)   
+         call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      call AllocAry(m%y_IfW_High%VelocityUVW, 3, p%nX_high*p%nY_high*p%nZ_high, 'm%y_IfW_High%VelocityUVW', ErrStat2, ErrMsg2)   
+         call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      call AllocAry(m%y_IfW_High%WriteOutput, size(m%y_IfW_Low%WriteOutput), 'm%y_IfW_High%WriteOutput', ErrStat2, ErrMsg2)   
          call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
       if (errStat2 >= AbortErrLev) then      
             return
@@ -1335,7 +1339,7 @@ subroutine ValidateInitInputData( InputFileData, errStat, errMsg )
    errStat = ErrID_None
    errMsg  = ""
    
-   if ( (InputFileData%Mod_AmbWind < 1) .or. (InputFileData%Mod_AmbWind < 2) ) call SetErrStat ( ErrID_Fatal, 'Mod_AmbWind must be either 1: high-fidelity precursor in VTK format or 2: InflowWind module.', errStat, errMsg, RoutineName )   
+   if ( (InputFileData%Mod_AmbWind < 1) .or. (InputFileData%Mod_AmbWind > 2) ) call SetErrStat ( ErrID_Fatal, 'Mod_AmbWind must be either 1: high-fidelity precursor in VTK format or 2: InflowWind module.', errStat, errMsg, RoutineName )   
    if ( InputFileData%Mod_AmbWind == 1 ) then
       if (len_trim(InputFileData%WindFilePath) == 0) call SetErrStat ( ErrID_Fatal, 'WindFilePath must contain at least one character.', errStat, errMsg, RoutineName )   
    else

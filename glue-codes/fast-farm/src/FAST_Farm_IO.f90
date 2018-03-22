@@ -10819,8 +10819,12 @@ EddShrTND(:,:,9) = RESHAPE(  &
       
       
    farm%m%AllOuts = 0.0_ReKi
-    
+#ifdef _OPENMP  
+   farm%p%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(Farm_Ver))//' and with OpenMP'
+#else
    farm%p%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(Farm_Ver))
+#endif 
+   
    farm%p%FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
    farm%p%FileDescLines(3)  = 'Description from the FAST.Farm input file: '//TRIM(farm%p%FTitle)
    
