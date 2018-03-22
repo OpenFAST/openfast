@@ -163,7 +163,7 @@ Regression test from scratch
   git clone --recursive https://github.com/openfast/openfast.git
   # The default git branch is 'master'. If necessary, switch to your target branch:
   # git checkout dev
-  mkdir build && cd build
+  mkdir build install && cd build
   # Configure CMake with openfast/CMakeLists.txt
   # - BUILD_TESTING
   # - CTEST_OPENFAST_EXECUTABLE
@@ -179,7 +179,7 @@ Regression test from scratch
   git clone --recursive https://github.com/openfast/openfast.git
   # The default git branch is 'master'. If necessary, switch to your target branch:
   # git checkout dev
-  mkdir build && cd build
+  mkdir build install && cd build
   # Configure CMake with openfast/reg_tests/CMakeLists.txt
   # - BUILD_TESTING
   # - CTEST_OPENFAST_EXECUTABLE
