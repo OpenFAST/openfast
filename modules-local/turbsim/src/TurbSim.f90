@@ -66,7 +66,7 @@ IMPLICIT                   NONE
 
 TYPE( TurbSim_ParameterType )    :: p                       ! TurbSim parameters
 TYPE(RandNum_OtherStateType)     :: OtherSt_RandNum         ! other states for random numbers (next seed, etc)
-
+REAL(ReKi)                       :: URef                         !< reference wind speed at hub height 08/31 Latha Sethuraman
 REAL(ReKi), ALLOCATABLE          :: PhaseAngles (:,:,:)     ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi), ALLOCATABLE          :: S           (:,:,:)     ! The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi), ALLOCATABLE          :: V           (:,:,:)     ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
@@ -83,7 +83,6 @@ REAL(ReKi)                       ::  WSig                   ! Standard deviation
 INTEGER(IntKi)                   :: ErrStat                 ! allocation status
 CHARACTER(MaxMsgLen)             :: ErrMsg                  ! error message
 CHARACTER(200)                   :: InFile                  ! Name of the TurbSim input file.
-CHARACTER(200)                   :: git_commit              ! String containing the current git commit hash
 
 
 !BONNIE:*****************************
@@ -98,13 +97,7 @@ CALL NWTC_Init( ProgNameIN=TurbSim_Ver%Name, EchoLibVer=.FALSE. )
 
    ! Print out program name, version, and date.
 
-   ! Display the copyright notice
-   CALL DispCopyrightLicense( TurbSim_Ver )   
-      ! Obtain OpenFAST git commit hash
-   git_commit = QueryGitVersion()
-      ! Tell our users what they're running
-   CALL WrScr( ' Running '//GetNVD( TurbSim_Ver )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
-   
+CALL DispNVD(TurbSim_Ver)
 
 
    ! Check for command line arguments.

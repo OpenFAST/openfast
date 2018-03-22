@@ -20,7 +20,7 @@
 MODULE TSSubs
 
    USE ModifiedvKrm_mod
-   
+   use TurbSim_Types 
    use TS_Profiles  
    use TS_RandNum
    use TS_VelocitySpectra
@@ -188,27 +188,33 @@ REAL(ReKi),                  INTENT(INOUT)  :: TRH (:)                      !< T
 INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
 CHARACTER(*),                INTENT(OUT)    :: ErrMsg
 
+
    
    ! Internal variables
+! Internal variables
+
+INTEGER                      :: J
+INTEGER                      :: I
+INTEGER                      :: K
+INTEGER                      :: IFreq
+INTEGER                      :: Indx
+INTEGER                      :: IVec            ! wind component, 1=u, 2=v, 3=w
+
+INTEGER                      :: UC              ! I/O unit for Coherence debugging file.
+LOGICAL,    PARAMETER        :: COH_OUT = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
 
 REAL(ReKi), ALLOCATABLE       :: Dist(:)        ! The distance between points
 REAL(ReKi), ALLOCATABLE       :: DistU(:)
 REAL(ReKi), ALLOCATABLE       :: DistZMExp(:)
    
 REAL(ReKi)                    :: dY             ! the lateral distance between two points
-REAL(ReKi)                    :: UM             ! The mean wind speed of the two points
+!REAL(ReKi),ALLOCATABLE        :: UM(:)             ! The mean wind speed of the two points
 REAL(ReKi)                    :: ZM             ! The mean height of the two points
 
-INTEGER                       :: J
-INTEGER                       :: I
-INTEGER                       :: IFreq
-INTEGER                       :: Indx
-INTEGER                       :: IVec  ! wind component, 1=u, 2=v, 3=w
-                              
+                             
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
    
-
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -221,7 +227,9 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
    !--------------------------------------------------------------------------------
    CALL AllocAry( Dist,      p%grid%NPacked,      'Dist coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
    CALL AllocAry( DistU,     p%grid%NPacked,     'DistU coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
+   !CALL AllocAry( UM,     p%grid%NPacked,     'Mean wind speed array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
    CALL AllocAry( DistZMExp, p%grid%NPacked, 'DistZMExp coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
+  
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
       RETURN
@@ -282,11 +290,34 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
    DO J=1,p%grid%NPoints
       DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side      
          Indx        = Indx + 1
-         UM          = 0.5*( U(I) + U(J) )
-         DistU(Indx) = Dist(Indx)/UM
+         !UM(Indx)      = 0.5*(U(I) + U(J) )
+         !DistU(Indx) = Dist(Indx)/UM(Indx)
+         DistU(Indx) = Dist(Indx)/ p%met%URef  ! modified Coherence model  # Latha Sethuraman  08/30/2017
       END DO ! I  
    END DO ! J 
    
+      !.................
+   ! DEBUGGING
+   !.................
+IF ( COH_OUT ) THEN !debugging info...
+
+      ! Write the coherence for three frequencies, for debugging purposes
+      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
+      
+      CALL OpenFOutFile( UC, TRIM(p%RootName)//'.coh', ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+      
+      WRITE( UC, '(A4,X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,p%grid%NPacked)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Distance',   Dist(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) '(r/u)', DistU(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) '(u)',  p%met%URef
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) '-(r/z_m)^CohExp', DistZMExp(:)
+ENDIF
+
    
    !--------------------------------------------------------------------------------
    ! Calculate the fourier coefficients
@@ -332,7 +363,14 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
 
             ENDDO ! I
          ENDDO ! J
-      
+     !.................
+   ! DEBUGGING
+   !.................
+         IF (COH_OUT) THEN
+   !        IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
+               WRITE( UC, '(I3,2X,F15.5,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:p%grid%NPacked)
+   !        ENDIF
+         ENDIF 
 
          ! -----------------------------------------------
          ! Now transform coherence to H matrix and then
@@ -356,12 +394,16 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
 CONTAINS
    SUBROUTINE Cleanup()
 
-      IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
-      IF ( ALLOCATED( DistU     ) ) DEALLOCATE( DistU     )
-      IF ( ALLOCATED( DistZMExp ) ) DEALLOCATE( DistZMExp )
+      IF (COH_OUT .AND. UC > 0)  CLOSE( UC )
+
+      IF ( ALLOCATED( Dist ) ) DEALLOCATE( Dist )
+      IF ( ALLOCATED( DistU ) ) DEALLOCATE( DistU )
+      IF ( ALLOCATED( DistZMExp    ) ) DEALLOCATE( DistZMExp    )
+      !IF ( ALLOCATED( UM   ) ) DEALLOCATE( UM   )
    END SUBROUTINE Cleanup
-!............................................   
+!............................................
 END SUBROUTINE CalcFourierCoeffs_General
+   
 !=======================================================================
 !> This subroutine returns the complex Fourier coefficients (packed in a
 !! real array) of the simulated velocity (wind/water speed).
@@ -417,11 +459,12 @@ INTEGER                       :: IVec  ! wind component, 1=u, 2=v, 3=w
    RETURN      
 !............................................      
 END SUBROUTINE CalcFourierCoeffs_NONE
+   
 !=======================================================================
 !> This subroutine computes the coherence between two points on the grid,
 !! forms the cross spectrum matrix, and returns the complex
 !! Fourier coefficients of the simulated velocity (wind speed).
-SUBROUTINE CalcFourierCoeffs( p, U, PhaseAngles, S, V, ErrStat, ErrMsg )
+SUBROUTINE CalcFourierCoeffs( p, U,PhaseAngles, S, V, ErrStat, ErrMsg )
 
 IMPLICIT                      NONE
 
@@ -460,7 +503,7 @@ CHARACTER(MaxMsgLen)                        :: ErrMsg2
 
    CALL CalcFourierCoeffs_IEC(     p, U, PhaseAngles, S, V, TRH, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')   
    CALL CalcFourierCoeffs_API(     p, U, PhaseAngles, S, V, TRH, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')   
-   CALL CalcFourierCoeffs_General( p, U, PhaseAngles, S, V, TRH, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')   
+   CALL CalcFourierCoeffs_General( p, U,PhaseAngles, S, V, TRH, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')   
    CALL CalcFourierCoeffs_NONE(    p, U, PhaseAngles, S, V, TRH, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')   
       
    CALL Cleanup()
@@ -505,8 +548,8 @@ INTEGER                      :: IFreq
 INTEGER                      :: Indx
 INTEGER                      :: IVec            ! wind component, 1=u, 2=v, 3=w
 
-INTEGER                      :: UC             ! I/O unit for Coherence debugging file.
-LOGICAL,    PARAMETER        :: COH_OUT   = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
+INTEGER                      :: UC              ! I/O unit for Coherence debugging file.
+LOGICAL,    PARAMETER        :: COH_OUT = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
 
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
@@ -1775,7 +1818,8 @@ SUBROUTINE ScaleTimeSeries(p, V, ErrStat, ErrMsg)
          SpecModel_WF_14D, &
          SpecModel_USRVKM, &
          SpecModel_TIDAL,  &
-         SpecModel_RIVER   ) ! Do reynolds stress for HYDRO also.
+         SpecModel_RIVER,  &
+         SpecModel_USER  ) ! Do reynolds stress for HYDRO also.
                
    
       CALL TimeSeriesScaling_ReynoldsStress(p, V, ErrStat, ErrMsg)
@@ -2215,7 +2259,7 @@ IF ( ANY (p%WrFile) )  THEN
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".w (formatted full-field W-component file)' )")  
 !      CALL WrScr   ( '    '//TRIM( p%RootName)//'.w (formatted full-field W-component file)' )
    ENDIF
-
+   
 ELSE
    CALL SetErrStat( ErrID_Fatal, 'You have requested no output.', ErrStat, ErrMsg, RoutineName)   
 ENDIF
