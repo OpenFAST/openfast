@@ -492,9 +492,41 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if
       
+       ! UseSC - Use a super controller? (flag):
+   CALL ReadVar( UnIn, InputFile, p%UseSC, "UseSC", "Use a super controller? (flag)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
       
-   !---------------------- AMBIENT WIND ---------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind', ErrStat2, ErrMsg2, UnEc )
+       ! Mod_AmbWind - Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: InflowWind module}:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Mod_AmbWind, "Mod_AmbWind", "Ambient wind model (-) (switch) {1: high-fidelity precursor in VTK format, 2: InflowWind module}", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+   !---------------------- SUPER CONTROLLER ------------------------------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Super Controller', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+      ! SC_FileName - Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoated string):
+   CALL ReadVar( UnIn, InputFile, p%SC_FileName, "SC_FileName", "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms (quoated string)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+   IF ( PathIsRelative( p%SC_FileName ) ) p%SC_FileName = TRIM(PriPath)//TRIM(p%SC_FileName)
+    
+   !---------------------- AMBIENT WIND: PRECURSOR IN VTK FORMAT ---------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: Precursor in VTK Format', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -533,6 +565,138 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          call cleanup()
          RETURN        
       end if
+      
+   !---------------------- AMBIENT WIND: INFLOWWIND MODULE ---------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: InflowWind Module', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+      ! DT - Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT, "DT", "Time step for low-resolution wind data input files; will be used as the global FAST.Farm time step (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+   p%DT = AWAE_InitInp%DT
+   
+      ! DT_high - Time step for high-resolution wind data input files (s) [>0.0]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_high, "DT_high", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+   p%DT_high = AWAE_InitInp%DT_high
+   
+      ! NX_Low - Number of low-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nX_Low, "nX_Low", "Number of low-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+      ! NY_Low - Number of low-resolution spatial nodes in Y direction for wind data interpolation (-) [>=2]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nY_Low, "nY_Low", "Number of low-resolution spatial nodes in Y direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+
+      ! NZ_Low - Number of low-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nZ_Low, "nZ_Low", "Number of low-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+
+      ! X0_Low - Origin of low-resolution spatial nodes in X direction for wind data interpolation (m):
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%X0_Low, "X0_Low", "Origin of low-resolution spatial nodes in X direction for wind data interpolation (m)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+
+      ! Y0_Low - Origin of low-resolution spatial nodes in Y direction for wind data interpolation (m):
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Y0_Low, "Y0_Low", "Origin of low-resolution spatial nodes in Y direction for wind data interpolation (m)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+      ! Z0_Low - Origin of low-resolution spatial nodes in Z direction for wind data interpolation (m):
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%Z0_Low, "Z0_Low", "Origin of low-resolution spatial nodes in Z direction for wind data interpolation (m)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+
+      ! dX_Low - Spacing of low-resolution spatial nodes in X direction for wind data interpolation (m) [>0.0]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%dX_Low, "dX_Low", "Spacing of low-resolution spatial nodes in X direction for wind data interpolation (m) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+      ! dY_Low - Spacing of low-resolution spatial nodes in Y direction for wind data interpolation (m) [>0.0]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%dY_Low, "dY_Low", "Spacing of low-resolution spatial nodes in Y direction for wind data interpolation (m) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+      ! dZ_Low - Spacing of low-resolution spatial nodes in Z direction for wind data interpolation (m) [>0.0]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%dZ_Low, "dZ_Low", "Spacing of low-resolution spatial nodes in Z direction for wind data interpolation (m) [>0.0]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+
+      ! NX_High - Number of high-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nX_High, "nX_High", "Number of high-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+      ! NY_High - Number of high-resolution spatial nodes in Y direction for wind data interpolation (-) [>=2]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nY_High, "nY_High", "Number of high-resolution spatial nodes in Y direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+      
+      ! NZ_High - Number of high-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]:
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nZ_High, "nZ_High", "Number of high-resolution spatial nodes in Z direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+
+      ! InflowFile - Name of file containing InflowWind module input parameters (quoted string):
+   CALL ReadVar( UnIn, InputFile, AWAE_InitInp%InflowFile, "InflowFile", "Name of file containing InflowWind module input parameters (quoted string)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if
+   IF ( PathIsRelative( AWAE_InitInp%InflowFile ) ) AWAE_InitInp%InflowFile = TRIM(PriPath)//TRIM(AWAE_InitInp%InflowFile)
+   if ( AWAE_InitInp%Mod_AmbWind == 2 ) p%WindFilePath = AWAE_InitInp%InflowFile  ! For the summary file
    
    !---------------------- WIND TURBINES ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Wind Turbines', ErrStat2, ErrMsg2, UnEc )
@@ -563,9 +727,34 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if      
 
+   if ( AWAE_InitInp%Mod_AmbWind == 2 ) then   
+         ! Using InflowWind
+      call AllocAry(AWAE_InitInp%X0_high, p%NumTurbines, 'AWAE_InitInp%X0_high', ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry(AWAE_InitInp%Y0_high, p%NumTurbines, 'AWAE_InitInp%Y0_high', ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry(AWAE_InitInp%Z0_high, p%NumTurbines, 'AWAE_InitInp%Z0_high', ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry(AWAE_InitInp%dX_high, p%NumTurbines, 'AWAE_InitInp%dX_high', ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry(AWAE_InitInp%dY_high, p%NumTurbines, 'AWAE_InitInp%dY_high', ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      call AllocAry(AWAE_InitInp%dZ_high, p%NumTurbines, 'AWAE_InitInp%dZ_high', ErrStat2, ErrMsg2)
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if ( ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN        
+      end if      
+   end if
+
       ! WT_Position (WT_X, WT_Y, WT_Z) and WT_FASTInFile
    do i=1,p%NumTurbines
-      READ (UnIn, *, IOSTAT=IOS) p%WT_Position(:,i), p%WT_FASTInFile(i)
+      
+      if ( AWAE_InitInp%Mod_AmbWind == 1 ) then 
+         READ (UnIn, *, IOSTAT=IOS) p%WT_Position(:,i), p%WT_FASTInFile(i)
+      else
+         READ (UnIn, *, IOSTAT=IOS) p%WT_Position(:,i), p%WT_FASTInFile(i), AWAE_InitInp%X0_high(i), AWAE_InitInp%Y0_high(i), AWAE_InitInp%Z0_high(i), AWAE_InitInp%dX_high(i), AWAE_InitInp%dY_high(i), AWAE_InitInp%dZ_high(i)
+      end if
       
       CALL CheckIOS ( IOS, InputFile, 'Wind Turbine Columns', NumType, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -574,8 +763,13 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          call cleanup()
          RETURN        
       end if      
-      IF ( UnEc > 0 ) THEN      
-         WRITE( UnEc, "(3(ES11.4e2,2X),'""',A,'""',T50,' - WT(',I5,')')" ) p%WT_Position(:,i), TRIM( p%WT_FASTInFile(i) ), I
+      IF ( UnEc > 0 ) THEN 
+         if ( AWAE_InitInp%Mod_AmbWind == 1 ) then 
+            WRITE( UnEc, "(3(ES11.4e2,2X),'""',A,'""',T50,' - WT(',I5,')')" ) p%WT_Position(:,i), TRIM( p%WT_FASTInFile(i) ), I
+         else
+            WRITE( UnEc, "(3(ES11.4e2,2X),'""',A,'""',T50,6(ES11.4e2,2X),' - WT(',I5,')')" ) p%WT_Position(:,i), TRIM( p%WT_FASTInFile(i) ), AWAE_InitInp%X0_high(i), AWAE_InitInp%Y0_high(i), AWAE_InitInp%Z0_high(i), AWAE_InitInp%dX_high(i), AWAE_InitInp%dY_high(i), AWAE_InitInp%dZ_high(i), I
+         end if
+         
       END IF
       IF ( PathIsRelative( p%WT_FASTInFile(i) ) ) p%WT_FASTInFile(i) = TRIM(PriPath)//TRIM(p%WT_FASTInFile(i))
       

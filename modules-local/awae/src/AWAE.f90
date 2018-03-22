@@ -27,6 +27,9 @@ module AWAE
    use NWTC_Library
    use AWAE_Types
    use AWAE_IO
+   use InflowWind_Types
+   use InflowWind
+   
 #ifdef _OPENMP
    use OMP_LIB
 #endif
@@ -678,8 +681,8 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    integer(IntKi)                                :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                          :: errMsg2       ! temporary error message                                           
    character(*), parameter                       :: RoutineName = 'AWAE_Init'
-   
-   
+   type(InflowWind_InitInputType)                :: IfW_InitInp
+   type(InflowWind_InitOutputType)               :: IfW_InitOut
       ! Initialize variables for this routine
 
    errStat = ErrID_None
@@ -710,7 +713,8 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       
    
       
-      ! set the rest of the parameters         
+      ! set the rest of the parameters  
+   p%Mod_AmbWind      = InitInp%InputFileData%Mod_AmbWind
    p%NumPlanes        = InitInp%InputFileData%NumPlanes   
    p%NumRadii         = InitInp%InputFileData%NumRadii    
    p%NumTurbines      = InitInp%InputFileData%NumTurbines 
@@ -725,6 +729,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    p%WrDisSkp1        = nint(InitInp%InputFileData%WrDisDT / p%dt)
    p%Mod_Meander      = InitInp%InputFileData%Mod_Meander
    p%C_Meander        = InitInp%InputFileData%C_Meander
+   
    select case ( p%Mod_Meander )
    case (MeanderMod_Uniform) 
       p%C_ScaleDiam   = 0.5_ReKi*p%C_Meander
@@ -780,6 +785,38 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if (errStat2 >= AbortErrLev) then      
          return
+   end if
+
+   if ( p%Mod_AmbWind == 2 ) then
+      ! Using InflowWind, so initialize that module now
+      IfW_InitInp%Linearize         = .false.     
+      IfW_InitInp%RootName          = TRIM(p%OutFileRoot)//'.IfW'
+      IfW_InitInp%UseInputFile      = .TRUE.
+      IfW_InitInp%InputFileName     = InitInp%InputFileData%InflowFile
+      IfW_InitInp%NumWindPoints     = p%nX_low*p%nY_low*p%nZ_low
+      IfW_InitInp%lidar%Tmax        = 0.0_ReKi
+      IfW_InitInp%lidar%HubPosition = 0.0_ReKi
+      IfW_InitInp%lidar%SensorType  = SensorType_None
+      IfW_InitInp%Use4Dext          = .false.
+      
+         ! Initialize the low-resolution grid
+      call InflowWind_Init( IfW_InitInp, m%u_IfW_Low, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_Low, m%IfW, Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
+         call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      if (errStat2 >= AbortErrLev) then      
+            return
+      end if
+      
+         ! Set the position inputs once for the low-resolution grid
+      m%u_IfW_Low%PositionXYZ = p%Grid_low
+      
+         ! Initialize the high-resolution grid
+      IfW_InitInp%NumWindPoints     = p%nX_high*p%nY_high*p%nZ_high
+      call InflowWind_Init( IfW_InitInp, m%u_IfW_High, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_High, m%IfW, Interval, IfW_InitOut, ErrStat2, ErrMsg2 )
+         call SetErrStat ( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      if (errStat2 >= AbortErrLev) then      
+            return
+      end if
+      
    end if
    
    InitOut%Ver = AWAE_Ver
@@ -1051,7 +1088,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'AWAE_UpdateStates'
 !   real(DbKi)          :: t1, t2
-   integer(IntKi)                               :: n_high_low, nt, n_hl
+   integer(IntKi)                               :: n_high_low, nt, n_hl, i,j,k,c
    
    errStat = ErrID_None
    errMsg  = ""
@@ -1059,32 +1096,77 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    ! Read the ambient wind data that is needed for t+dt, i.e., n+1
 !#ifdef _OPENMP
 !   t1 = omp_get_wtime()  
-!#endif   
-      ! read from file the ambient flow for the n+1 time step
-   call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat, errMsg)
-      if ( errStat >= AbortErrLev ) then
-         return
-      end if
-!#ifdef _OPENMP
-!   t2 = omp_get_wtime()      
-!   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
-!#endif   
-      
+!#endif 
+   
    if ( (n+1) == (p%NumDT-1) ) then
       n_high_low = 1
    else
       n_high_low = p%n_high_low
    end if
+      
+   if ( p%Mod_AmbWind == 1 ) then
+         ! read from file the ambient flow for the n+1 time step
+      call ReadLowResWindFile(n+1, p, m%Vamb_Low, errStat, errMsg)
+         if ( errStat >= AbortErrLev ) then
+            return
+         end if
+   !#ifdef _OPENMP
+   !   t2 = omp_get_wtime()      
+   !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
+   !#endif   
+      
+      
  
-   do nt = 1,p%NumTurbines
-      do n_hl=0, n_high_low-1
-            ! read from file the ambient flow for the current time step
-         call ReadHighResWindFile(nt, (n+1)*p%n_high_low + n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat, errMsg)
+      do nt = 1,p%NumTurbines
+         do n_hl=0, n_high_low-1
+               ! read from file the ambient flow for the current time step
+            call ReadHighResWindFile(nt, (n+1)*p%n_high_low + n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat, errMsg)
+               if ( errStat >= AbortErrLev ) then
+                  return
+               end if 
+         end do
+      end do
+      
+   else
+      
+      ! Set low-resolution inflow wind velocities
+      call InflowWind_CalcOutput(t+p%dt, m%u_IfW_Low, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_Low, m%IfW, errStat, errMsg)
+      if ( errStat >= AbortErrLev ) then
+         return
+      end if 
+      c = 1
+      do k = 0,p%nZ_low-1
+         do j = 0,p%nY_low-1
+            do i = 0,p%nX_low-1        
+               m%Vamb_Low(:,i,j,k) = m%y_IfW_Low%VelocityUVW(:,c) 
+               c = c+1
+            end do
+         end do
+      end do
+      
+      ! Set the high-resoultion inflow wind velocities for each turbine
+      do nt = 1,p%NumTurbines
+         m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
+         do n_hl=0, n_high_low-1         
+            call InflowWind_CalcOutput(t+p%dt+n_hl*p%DT_high, m%u_IfW_High, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_High, m%IfW, errStat, errMsg)
             if ( errStat >= AbortErrLev ) then
                return
             end if 
+            c = 1
+            do k = 0,p%nZ_high-1
+               do j = 0,p%nY_high-1
+                  do i = 0,p%nX_high-1        
+                     m%Vamb_high(nt)%data(:,i,j,k,n_hl) = m%y_IfW_High%VelocityUVW(:,c) 
+                     c = c+1
+                  end do
+               end do
+            end do
+            
+         end do
       end do
-   end do
+
+   end if
+
 !#ifdef _OPENMP
 !   t1 = omp_get_wtime()      
 !   write(*,*) '        AWAE_UpdateStates: Time spent reading High Res data : '//trim(num2lstr(t1-t2))//' seconds'             
@@ -1253,8 +1335,19 @@ subroutine ValidateInitInputData( InputFileData, errStat, errMsg )
    errStat = ErrID_None
    errMsg  = ""
    
+   if ( (InputFileData%Mod_AmbWind < 1) .or. (InputFileData%Mod_AmbWind < 2) ) call SetErrStat ( ErrID_Fatal, 'Mod_AmbWind must be either 1: high-fidelity precursor in VTK format or 2: InflowWind module.', errStat, errMsg, RoutineName )   
+   if ( InputFileData%Mod_AmbWind == 1 ) then
+      if (len_trim(InputFileData%WindFilePath) == 0) call SetErrStat ( ErrID_Fatal, 'WindFilePath must contain at least one character.', errStat, errMsg, RoutineName )   
+   else
+      if (len_trim(InputFileData%InflowFile) == 0) call SetErrStat ( ErrID_Fatal, 'InflowFile must contain at least one character.', errStat, errMsg, RoutineName )   
+      if ( (InputFileData%nX_low < 2) .or. (InputFileData%nY_low < 2) .or. (InputFileData%nZ_low < 2) ) &
+         call SetErrStat ( ErrID_Fatal, 'The low resolution grid dimensions must contain a minimum of 2 nodes in each spatial direction. ', errStat, errMsg, RoutineName )
+      if ( (InputFileData%nX_high < 2) .or. (InputFileData%nY_high < 2) .or. (InputFileData%nY_high < 2) ) &
+         call SetErrStat ( ErrID_Fatal, 'The high resolution grid dimensions must contain a minimum of 2 nodes in each spatial direction. ', errStat, errMsg, RoutineName )
+      if ( (InputFileData%dX_low <= 0.0_ReKi) .or. (InputFileData%dY_low <= 0.0_ReKi) .or. (InputFileData%dY_low <= 0.0_ReKi) ) &
+         call SetErrStat ( ErrID_Fatal, 'The low resolution spatial resolution must be greater than zero in each spatial direction. ', errStat, errMsg, RoutineName )
+   end if
    
-   if (len_trim(InputFileData%WindFilePath) == 0) call SetErrStat ( ErrID_Fatal, 'WindFilePath must contain at least one character.', errStat, errMsg, RoutineName )   
    if (  InputFileData%NumTurbines <   1  )  call SetErrStat ( ErrID_Fatal, 'Number of turbines must be greater than zero.', errStat, errMsg, RoutineName )
    if (  InputFileData%NumPlanes   <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of wake planes must be greater than one.', errStat, errMsg, RoutineName )
    if (  InputFileData%NumRadii    <   2  )  call SetErrStat ( ErrID_Fatal, 'Number of radii in the radial finite-difference grid must be greater than one.', errStat, errMsg, RoutineName )

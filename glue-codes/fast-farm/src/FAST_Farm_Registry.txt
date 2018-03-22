@@ -29,6 +29,8 @@ typedef  ^               ParameterType         DbKi            TMax            -
 typedef  ^               ParameterType         IntKi           n_high_low      -    - - "Number of high-resolution time steps per low-resolution time step"      -
 typedef  ^               ParameterType         IntKi           NumTurbines     -    - - "Number of turbines in the simulation" -
 typedef  ^               ParameterType         CHARACTER(1024) WindFilePath    -    - - "Path name of wind data files from ABLSolver precursor" -
+typedef  ^               ParameterType         CHARACTER(1024) SC_FileName    -    - -  "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms" -
+typedef	^	             ParameterType	        LOGICAL	      UseSC 	       -	   - - "Use a super controller?"	-
 typedef  ^               ParameterType         ReKi            WT_Position   {:}{:} - - "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
 typedef  ^               ParameterType         CHARACTER(1024) WT_FASTInFile {:}    - - "Name of input file for each turbine" -
 typedef  ^               ParameterType         CHARACTER(1024) FTitle          -    - - "The description line from the primary FAST.Farm input file" -
