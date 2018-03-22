@@ -33,7 +33,7 @@ MODULE ServoDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: SrvD_Ver = ProgDesc( 'ServoDyn', 'v1.06.00a-bjj', '26-Jul-2016' )
+   TYPE(ProgDesc), PARAMETER            :: SrvD_Ver = ProgDesc( 'ServoDyn', '', '' )
    
 #ifdef COMPILE_SIMULINK
    LOGICAL, PARAMETER, PUBLIC           :: Cmpl4SFun  = .TRUE.                            ! Is the module being compiled as an S-Function for Simulink?
@@ -235,12 +235,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
       
-   if ( (InitInp%NumCtrl2SC  > 0 .and. InitInp%NumCtrl2SC <= 0) .or. &
-        (InitInp%NumSC2Ctrl <= 0 .and. InitInp%NumSC2Ctrl  > 0) ) then      
-      call CheckError( ErrID_Fatal, "If supercontroller is used, there must be at least one supercontroller input and one supercontroller output." )
-      return
-   end if
-        
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
@@ -320,14 +314,42 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry( u%ExternalBlPitchCom, p%NumBl, 'ExternalBlPitchCom', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
+
+   IF ( (InitInp%NumSC2CtrlGlob > 0) .or. (InitInp%NumSC2Ctrl > 0) .or. (InitInp%NumCtrl2SC > 0) ) THEN
+      p%ScOn = .TRUE.
+   ElSE
+      p%ScOn = .FALSE.
+   END IF
         
    IF (InitInp%NumSC2Ctrl > 0 .and. p%UseBladedInterface) THEN
-      CALL AllocAry( u%SuperController, InitInp%NumSC2Ctrl, 'u%SuperController', ErrStat2, ErrMsg2 )
+      CALL AllocAry( u%SuperControllerTurbine, InitInp%NumSC2Ctrl, 'u%SuperController', ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      u%SuperController = 0.0_SiKi
+      u%SuperControllerTurbine = InitInp%InitScOutputsTurbine
+
+      p%ScInAlpha = exp( -TwoPi*p%DT*InputFileData%ScInCutoff )
+      if (InputFileData%ScInCutOff < EPSILON( InputFileData%ScInCutOff )) CALL CheckError( ErrID_Fatal, 'ScInCutoff must be greater than 0.')       
+      CALL AllocAry( xd%ScInFilter, InitInp%NumSC2Ctrl, 'xd%ScInFilter', ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+      xd%ScInFilter = InitInp%InitScOutputsTurbine
+
    END IF
                   
+   IF (InitInp%NumSC2CtrlGlob > 0 .and. p%UseBladedInterface) THEN
+      CALL AllocAry( u%SuperControllerGlob, InitInp%NumSC2CtrlGlob, 'u%SuperControllerGlob', ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+      u%SuperControllerGlob = InitInp%InitScOutputsGlob
+
+      p%ScInAlpha = exp( -TwoPi*p%DT*InputFileData%ScInCutoff )
+      if (InputFileData%ScInCutOff < EPSILON( InputFileData%ScInCutOff )) CALL CheckError( ErrID_Fatal, 'ScInCutoff must be greater than 0.')       
+      CALL AllocAry( xd%ScInGlobFilter, InitInp%NumSC2CtrlGlob, 'xd%ScInGlobFilter', ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+      xd%ScInGlobFilter = InitInp%InitScOutputsGlob
+
+   END IF
       
    u%BlPitch = p%BlPitchInit
    
@@ -470,7 +492,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       p%AirDens      = InitInp%AirDens     
       p%AvgWindSpeed = InitInp%AvgWindSpeed
       
-      CALL BladedInterface_Init(u, p, m, y, InputFileData, ErrStat2, ErrMsg2 )
+      CALL BladedInterface_Init(u, p, m, xd, y, InputFileData, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
          
@@ -655,7 +677,7 @@ SUBROUTINE SrvD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          ! Place any last minute operations or calculations here:
 
       IF ( p%UseBladedInterface ) THEN
-         CALL BladedInterface_End(u, p, m, ErrStat, ErrMsg )
+         CALL BladedInterface_End(u, p, m, xd, ErrStat, ErrMsg )
       END IF
       
       IF (p%CompNTMD) THEN
@@ -802,28 +824,27 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    END IF
       
             
-         ! Get appropriate value of input for the filter in discrete states
-      ! this works only for the DLL at this point, so we're going to move it there>>>>>>>>>>>>>>>
+   CALL SrvD_CopyInput( Inputs(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL Cleanup()
+      RETURN
+   END IF
 
-      !   
-      !CALL SrvD_UpdateDiscState( t, u_interp, p, x, xd, z, OtherState, ErrStat2, ErrMsg2 )
-      !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+   CALL SrvD_Input_ExtrapInterp( Inputs, InputTimes, u_interp, t, ErrStat2, ErrMsg2 )
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+
+   CALL SrvD_UpdateDiscState( t, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
    !...............................................................................................................................   
    ! get inputs at t+dt:
    !...............................................................................................................................  
    t_next = t+p%dt
-   
-   CALL SrvD_CopyInput( Inputs(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF
-      
+
    CALL SrvD_Input_ExtrapInterp( Inputs, InputTimes, u_interp, t_next, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+   
    
    !...............................................................................................................................   
    ! update remaining states to values at t+dt:
@@ -930,7 +951,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       ELSE
          m%dll_data%PrevBlPitch(1:p%NumBl) = m%dll_data%BlPitchCom ! used for linear ramp of delayed signal
          m%LastTimeCalled = t
-         CALL BladedInterface_CalcOutput( t, u, p, m, ErrStat2, ErrMsg2 )
+         CALL BladedInterface_CalcOutput( t, u, p, m, xd, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
       
@@ -1065,6 +1086,17 @@ SUBROUTINE SrvD_UpdateDiscState( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrM
       ErrMsg  = ""
 
 
+      if( allocated(u%SuperControllerTurbine) ) then
+         ! Filter the inputs from the Supercontroller to ServoDyn
+         xd%ScInFilter = p%ScInAlpha * xd%ScInFilter + (1.0_SiKi - p%ScInAlpha) * u%SuperControllerTurbine         
+      end if
+
+      if( allocated(u%SuperControllerGlob) ) then
+         ! Filter the global inputs from the Supercontroller to ServoDyn
+         xd%ScInGlobFilter = p%ScInAlpha * xd%ScInGlobFilter + (1.0_SiKi - p%ScInAlpha) * u%SuperControllerGlob
+      end if
+      
+      
       !xd%BlPitchFilter = p%BlAlpha * xd%BlPitchFilter + (1.0_ReKi - p%BlAlpha) * u%BlPitch
    
       !if ( p%PCMode == ControlMode_DLL ) then
@@ -2212,6 +2244,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
                    
    END DO
                      
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED !---------------------- SUPERCONTROLLER -------------
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL ReadCom( UnIn, InputFile, 'Section Header: Supercontroller', ErrStat2, ErrMsg2, UnEc )
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL CheckError( ErrStat2, ErrMsg2 )
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED IF ( ErrStat >= AbortErrLev ) RETURN
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL ReadVar( UnIn, InputFile, InputFileData%ScInCutoff, "ScInCutoff", "Cuttoff frequency for low-pass filter on Supercontroller Inputs (Hz)", ErrStat2, ErrMsg2, UnEc)
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL CheckError( ErrStat2, ErrMsg2 )
+   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED IF ( ErrStat >= AbortErrLev ) RETURN
    
    !---------------------- OUTPUT --------------------------------------------------         
    CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )
@@ -3159,9 +3199,9 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
                                  NTMD_XQD ,   NTMD_YQ ,  NTMD_YQD ,   TTMD_XQ ,  TTMD_XQD ,   TTMD_YQ ,  TTMD_YQD , &
                                 YawMomCom , YawMomCom /)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(16) =  (/ &                     ! This lists the units corresponding to the allowed parameters
-                               "(deg)     ","(deg)     ","(deg)     ","(kW)      ","(kN·m)    ","(kN·m)    ","(m)       ", &
+                               "(deg)     ","(deg)     ","(deg)     ","(kW)      ","(kN-m)    ","(kN-m)    ","(m)       ", &
                                "(m/s)     ","(m)       ","(m/s)     ","(m)       ","(m/s)     ","(m)       ","(m/s)     ", &
-                               "(kN·m)    ","(kN·m)    "/)
+                               "(kN-m)    ","(kN-m)    "/)
 
 
       ! Initialize values

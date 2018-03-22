@@ -25,6 +25,9 @@ set(NWTCLIBS_SOURCES
   src/SingPrec.f90
   src/NWTC_Library_Types.f90
 
+  # RanLux sources
+  src/ranlux/RANLUX.f90
+  
   # NetLib sources
   src/NetLib/Dierckx_FitPack/dierckx_fitpack.f
   src/NetLib/fftpack/fftpack4.1.f
@@ -38,19 +41,19 @@ set(NWTCLIBS_SOURCES
 
 get_filename_component(FCNAME ${CMAKE_Fortran_COMPILER} NAME)
 
-if (FCNAME MATCHES "gfortran.*")
+if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
   if (APPLE OR UNIX)
     set(NWTC_SYS_FILE src/SysGnuLinux.f90)
   elseif (WIN32)
     set(NWTC_SYS_FILE src/SysGnuWin.f90)
   endif (APPLE OR UNIX)
-elseif (FCNAME MATCHES "ifort.*")
+elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
   if (APPLE OR UNIX)
     set(NWTC_SYS_FILE src/SysIFL.f90)
   elseif (WIN32)
-    set(NWTC_SYS_FILE src/SysIFV.f90)
+    set(NWTC_SYS_FILE src/SysIVF.f90)
   endif (APPLE OR UNIX)
-endif (FCNAME MATCHES "gfortran.*")
+endif ()
 
 if (NWTC_SYS_FILE)
   message("-- Setting system file as: ${NWTC_SYS_FILE}")
@@ -63,5 +66,6 @@ add_library(nwtclibs ${NWTCLIBS_SOURCES})
 target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
 
 install(TARGETS nwtclibs
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

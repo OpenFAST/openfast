@@ -60,6 +60,14 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: SignM      !< Multiplier for output channel; usually -1 (minus) or 0 (invalid channel) [-]
   END TYPE OutParmType
 ! =======================
+! =========  OutParmFFType  =======
+  TYPE, PUBLIC :: OutParmFFType
+    INTEGER(IntKi)  :: Indx      !< An index into AllOuts array where this channel is computed/stored [-]
+    CHARACTER(ChanLenFF)  :: Name      !< Name of the output channel [-]
+    CHARACTER(ChanLenFF)  :: Units      !< Units this channel is specified in [-]
+    INTEGER(IntKi)  :: SignM      !< Multiplier for output channel; usually -1 (minus) or 0 (invalid channel) [-]
+  END TYPE OutParmFFType
+! =======================
 ! =========  FileInfoType  =======
   TYPE, PUBLIC :: FileInfoType
     INTEGER(IntKi)  :: NumLines 
@@ -784,6 +792,163 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE NWTC_Library_UnPackOutParmType
 
+ SUBROUTINE NWTC_Library_CopyOutParmFFType( SrcOutParmTypeData, DstOutParmTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(OutParmFFType), INTENT(IN) :: SrcOutParmTypeData
+   TYPE(OutParmFFType), INTENT(INOUT) :: DstOutParmTypeData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyOutParmFFType'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+    DstOutParmTypeData%Indx = SrcOutParmTypeData%Indx
+    DstOutParmTypeData%Name = SrcOutParmTypeData%Name
+    DstOutParmTypeData%Units = SrcOutParmTypeData%Units
+    DstOutParmTypeData%SignM = SrcOutParmTypeData%SignM
+ END SUBROUTINE NWTC_Library_CopyOutParmFFType
+
+ SUBROUTINE NWTC_Library_DestroyOutParmFFType( OutParmTypeData, ErrStat, ErrMsg )
+  TYPE(OutParmFFType), INTENT(INOUT) :: OutParmTypeData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyOutParmFFType'
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+! 
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+ END SUBROUTINE NWTC_Library_DestroyOutParmFFType
+
+ SUBROUTINE NWTC_Library_PackOutParmFFType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(OutParmFFType),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_PackOutParmFFType'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+      Int_BufSz  = Int_BufSz  + 1  ! Indx
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%Name)  ! Name
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%Units)  ! Units
+      Int_BufSz  = Int_BufSz  + 1  ! SignM
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%Indx
+      Int_Xferred   = Int_Xferred   + 1
+        DO I = 1, LEN(InData%Name)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%Name(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+        DO I = 1, LEN(InData%Units)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%Units(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%SignM
+      Int_Xferred   = Int_Xferred   + 1
+ END SUBROUTINE NWTC_Library_PackOutParmFFType
+
+ SUBROUTINE NWTC_Library_UnPackOutParmFFType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(OutParmFFType), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  LOGICAL                        :: mask0
+  LOGICAL, ALLOCATABLE           :: mask1(:)
+  LOGICAL, ALLOCATABLE           :: mask2(:,:)
+  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_UnPackOutParmFFType'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+      OutData%Indx = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      DO I = 1, LEN(OutData%Name)
+        OutData%Name(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
+      DO I = 1, LEN(OutData%Units)
+        OutData%Units(I:I) = CHAR(IntKiBuf(Int_Xferred))
+        Int_Xferred = Int_Xferred   + 1
+      END DO ! I
+      OutData%SignM = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+ END SUBROUTINE NWTC_Library_UnPackOutParmFFType
+ 
  SUBROUTINE NWTC_Library_CopyFileInfoType( SrcFileInfoTypeData, DstFileInfoTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(FileInfoType), INTENT(IN) :: SrcFileInfoTypeData
    TYPE(FileInfoType), INTENT(INOUT) :: DstFileInfoTypeData

@@ -31,7 +31,7 @@ MODULE IfW_UserWind
    IMPLICIT                                  NONE
    PRIVATE
 
-   TYPE(ProgDesc),   PARAMETER               :: IfW_UserWind_Ver = ProgDesc( 'IfW_UserWind', 'v0.00.00', '00-Jan-0000' )
+   TYPE(ProgDesc),   PARAMETER               :: IfW_UserWind_Ver = ProgDesc( 'IfW_UserWind', '', '' )
 
    PUBLIC                                    :: IfW_UserWind_Init
    PUBLIC                                    :: IfW_UserWind_End
@@ -102,7 +102,7 @@ SUBROUTINE IfW_UserWind_Init(InitData, ParamData, MiscVars, Interval, InitOutDat
       ! Copy things from the InitData to the ParamData.  If you need to store it for later calculations,
       !  copy it over now.
       !-------------------------------------------------------------------------------------------------
-
+    ParamData%dummy = 0
 !   ParamData%RefHt            =  InitData%ReferenceHeight
 !   ParamData%RefLength        =  InitData%RefLength
 

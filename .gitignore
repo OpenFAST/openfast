@@ -27,6 +27,16 @@
 *.exe
 *.out
 *.app
+*.pyc
 
 # CMake specific files
 build/**/*
+install/*
+ctest-build/*
+
+# vs-build specific folders and files
+vs-build/*
+
+
+build
+.DS_Store

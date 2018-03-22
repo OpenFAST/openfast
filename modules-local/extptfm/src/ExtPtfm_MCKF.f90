@@ -35,7 +35,7 @@ MODULE ExtPtfm_MCKF
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER :: ExtPtfm_Ver = ProgDesc( 'ExtPtfm_MCKF', 'v1.00.00', '26-Aug-2016' ) !< module date/version information
+   TYPE(ProgDesc), PARAMETER :: ExtPtfm_Ver = ProgDesc( 'ExtPtfm_MCKF', '', '' ) !< module date/version information
 
 
       ! ..... Public Subroutines ...................................................................................................

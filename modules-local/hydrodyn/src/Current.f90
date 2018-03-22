@@ -33,7 +33,7 @@ MODULE Current
    
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: Current_ProgDesc = ProgDesc( 'Current', 'v1.010.00', '23-Dec-2015' )
+   TYPE(ProgDesc), PARAMETER            :: Current_ProgDesc = ProgDesc( 'Current', '', '' )
 
    
       ! ..... Public Subroutines ...................................................................................................

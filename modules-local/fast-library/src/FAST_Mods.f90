@@ -30,7 +30,7 @@ MODULE FAST_ModTypes
    USE FAST_Types
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.17.00a-bjj', '27-Aug-2016' ) !< The version number of this module
+                                ProgDesc( 'OpenFAST', '', '' ) !< The version number of this module
          
    !..................................................................
    
@@ -65,13 +65,6 @@ MODULE FAST_ModTypes
    
    
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
-   
-#if defined COMPILE_SIMULINK || defined COMPILE_LABVIEW
-   !bjj: 2015-03-03: not sure this is still necessary...
-   INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithTime            ! We cannot guarantee the output time step is constant in binary files
-#else
-   INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime         ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
-#endif  
 
    LOGICAL,        PARAMETER :: GenerateAdamsModel = .FALSE.
 

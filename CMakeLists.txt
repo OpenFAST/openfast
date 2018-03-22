@@ -15,10 +15,18 @@
 #
 
 cmake_minimum_required(VERSION 2.8.12)
-project(OpenFAST Fortran C)
+project(OpenFAST CXX C Fortran)
 
 include(${CMAKE_SOURCE_DIR}/cmake/FastCmakeUtils.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/FastFortranOptions.cmake)
+
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+# Get the git info into the executable
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
+include(GetGitRevisionDescription)
+git_describe(GIT_DESCRIBE)
+add_definitions(-DGIT_VERSION_INFO="${GIT_DESCRIBE}")
 
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)
@@ -31,6 +39,8 @@ option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" off)
+option(BUILD_FAST_CPP_API "Enable building FAST - C++ API" off)
+option(BUILD_FAST_FARM "Enable building FAST-Farm glue code" off)
 
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
@@ -48,10 +58,17 @@ find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
 ########################################################################
+# Test option configuration
+# Do this before configuring modules so that precompiler flags are included
+option(BUILD_TESTING "Build the testing tree." OFF)
+if(BUILD_TESTING)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
+endif()
+
+########################################################################
 # Build rules for FAST Registry
 #
 add_subdirectory(modules-local/fast-registry)
-
 
 ########################################################################
 # FAST Core modules
@@ -69,6 +86,8 @@ set(FAST_MODULES_LOCAL
   orcaflex-interface
   extptfm
   openfoam
+  supercontroller
+  turbsim
   fast-library
   )
 
@@ -99,4 +118,66 @@ foreach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules-ext/${IDIR}")
 endforeach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
 
+if (BUILD_FAST_FARM)
+  add_subdirectory("${CMAKE_SOURCE_DIR}/modules-local/wakedynamics")
+  add_subdirectory("${CMAKE_SOURCE_DIR}/modules-local/awae")
+  set_registry_includes("modules-local" wakedynamics)
+  set_registry_includes("modules-local" awae)
+endif()
+
 add_subdirectory(glue-codes)
+
+# Install fortran .mod files also to installation directory
+install(CODE
+  "EXECUTE_PROCESS (COMMAND \"${CMAKE_COMMAND}\" -E copy_directory \"${CMAKE_Fortran_MODULE_DIRECTORY}\" \"${CMAKE_INSTALL_PREFIX}/include/openfast/\")")
+
+# Install the library dependency information
+install(EXPORT OpenFASTLibraries
+  DESTINATION lib/cmake/OpenFAST
+  FILE OpenFASTLibraries.cmake)
+
+# Create OpenFAST config so that other codes can find OpenFAST
+include(CMakePackageConfigHelpers)
+
+set(INCLUDE_INSTALL_DIR include/)
+set(LIB_INSTALL_DIR lib/)
+set(FTNMOD_INSTALL_DIR include/openfast/)
+if (BUILD_FAST_CPP_API)
+  set(OpenFAST_HAS_CXX_API TRUE)
+else()
+  set(OpenFAST_HAS_CXX_API FALSE)
+endif()
+
+configure_package_config_file(
+  cmake/OpenFASTConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
+  INSTALL_DESTINATION lib/cmake/OpenFAST
+  PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR FTNMOD_INSTALL_DIR)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
+  DESTINATION lib/cmake/OpenFAST)
+
+########################################################################
+# Configure the default install path to openfast/install
+string(FIND ${CMAKE_Fortran_MODULE_DIRECTORY} "build/ftnmods" found)
+if(${found} GREATER 0)
+  string(REPLACE "build/ftnmods" "install" install_path ${CMAKE_Fortran_MODULE_DIRECTORY})
+  if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX ${install_path} CACHE PATH "..." FORCE)
+  endif()
+endif()
+
+# Option configuration
+if(BUILD_TESTING)
+  include(CTest)
+
+  # regression tests
+  add_subdirectory(reg_tests)
+
+  # unit tests
+  add_subdirectory(unit_tests)
+endif()
+
+option(BUILD_DOCUMENTATION "Build documentation." OFF)
+if(BUILD_DOCUMENTATION)
+  add_subdirectory(docs)
+endif()

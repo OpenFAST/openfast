@@ -35,7 +35,7 @@ MODULE IfW_HAWCWind
    IMPLICIT                                     NONE
    PRIVATE
 
-   TYPE(ProgDesc),   PARAMETER               :: IfW_HAWCWind_Ver = ProgDesc( 'IfW_HAWCWind', 'v1.01.00', '14-Dec-2015' )
+   TYPE(ProgDesc),   PARAMETER               :: IfW_HAWCWind_Ver = ProgDesc( 'IfW_HAWCWind', '', '' )
 
    PUBLIC                                    :: IfW_HAWCWind_Init
    PUBLIC                                    :: IfW_HAWCWind_End

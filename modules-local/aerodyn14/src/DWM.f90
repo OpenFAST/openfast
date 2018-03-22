@@ -7,7 +7,7 @@ MODULE DWM
    
    PRIVATE
    
-   TYPE(ProgDesc), PARAMETER  :: DWM_Ver = ProgDesc( 'DWM', 'v2.01.03-yh', '11-Apr-2016' )
+   TYPE(ProgDesc), PARAMETER  :: DWM_Ver = ProgDesc( 'DWM', '', '' )
  
    ! ..... Public Subroutines ...................................................................................................
 
@@ -79,6 +79,7 @@ SUBROUTINE DWM_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    InitInp%IfW%UseInputFile     = .TRUE.
    InitInp%IfW%NumWindPoints    = 1
    InitInp%IfW%lidar%SensorType = SensorType_None      
+   InitInp%IfW%Use4Dext         = .false.
    
    CALL InflowWind_Init( InitInp%IfW, u%IfW, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, y%IfW,  m%IfW,  &
                          Interval,  InitOut%IfW,   ErrStat,    ErrMess )

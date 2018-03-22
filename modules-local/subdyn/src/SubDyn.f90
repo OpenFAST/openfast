@@ -23,7 +23,7 @@
 !**********************************************************************************************************************************
 !> SubDyn is a time-domain structural-dynamics module for multi-member fixed-bottom substructures.
 !! SubDyn relies on two main engineering schematizations: (1) a linear frame finite-element beam model (LFEB), and 
-!! (2) a dynamics system reduction via Craig-Bampton’s (C-B) method, together with a Static-Improvement method, greatly reducing 
+!! (2) a dynamics system reduction via Craig-Bamptonï¿½s (C-B) method, together with a Static-Improvement method, greatly reducing 
 !!  the number of modes needed to obtain an accurate solution.   
 Module SubDyn
    
@@ -42,7 +42,7 @@ Module SubDyn
    !       this will add additional matrices to the SubDyn summary file.
    !............................
 
-   TYPE(ProgDesc), PARAMETER  :: SD_ProgDesc = ProgDesc( 'SubDyn', 'v1.03.00', '11-Apr-2016' )
+   TYPE(ProgDesc), PARAMETER  :: SD_ProgDesc = ProgDesc( 'SubDyn', '', '' )
       
    ! ..... Public Subroutines ...................................................................................................
 
@@ -3105,7 +3105,7 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, Reduced, Init,p, Phi, Omega, ErrStat, 
    CHARACTER(*),           INTENT(  OUT)    :: ErrMsg                             ! Error message if ErrStat /= ErrID_None
    
    ! LOCALS         
-   REAL(ReKi), ALLOCATABLE                   :: Omega2(:)                         !RRD: Eigen-values new system
+   REAL(LAKi), ALLOCATABLE                   :: Omega2(:)                         !RRD: Eigen-values new system
 ! note: SGGEV seems to have memory issues in certain cases. The eigenvalues seem to be okay, but the eigenvectors vary wildly with different compiling options.
 !       DGGEV seems to work better, so I'm making these variables LAKi (which is set to R8Ki for now)   - bjj 4/25/2014
    REAL(LAKi), ALLOCATABLE                   :: Kred(:,:), Mred(:,:) 

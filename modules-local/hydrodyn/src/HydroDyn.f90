@@ -46,7 +46,7 @@ MODULE HydroDyn
    PRIVATE
 
   
-   TYPE(ProgDesc), PARAMETER            :: HydroDyn_ProgDesc = ProgDesc( 'HydroDyn', 'v2.05.00', '15-Mar-2016' )
+   TYPE(ProgDesc), PARAMETER            :: HydroDyn_ProgDesc = ProgDesc( 'HydroDyn', '', '' )
 
     
    
@@ -543,6 +543,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             RETURN
          END IF    
          WaveElevSt = Waves_InitOut%WaveElev
+         
          
             ! We need to reset the wave elevation arrays
          DEALLOCATE(InitLocal%Waves%WaveElevxi)

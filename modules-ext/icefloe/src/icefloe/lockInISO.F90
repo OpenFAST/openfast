@@ -76,7 +76,7 @@ contains
       call logMessage(iceLog, '** Global crushing load is: '//TRIM(Num2LStr(maxLoad))//' Newtons.' )
 
       call crushLoadTimeSeriesISO(myIceParams, inParams, iceLog, maxLoad, inParams%minLoadFraction*maxLoad,    &
-                                  1.0/inParams%twr%freq, inParams%riseTime, fallTime)
+                                  1.0_ReKi/inParams%twr%freq, inParams%riseTime, fallTime)
 
    end subroutine initLockInCrushingISO
 

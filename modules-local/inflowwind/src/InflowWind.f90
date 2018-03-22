@@ -43,26 +43,12 @@ MODULE InflowWind
    USE                              InflowWind_Types
    USE                              NWTC_Library
    USE                              InflowWind_Subs
-
-      !-------------------------------------------------------------------------------------------------
-      ! The included wind modules (TYPES modules are inherited from InflowWind_Types, so not specified here again.)
-      !-------------------------------------------------------------------------------------------------
-   USE                              Lidar                      ! module for obtaining sensor data
-      
-   USE                              IfW_UniformWind            ! uniform wind files (text files)
-   USE                              IfW_TSFFWind               ! TurbSim style full-field binary wind files
-   USE                              IfW_BladedFFWind           ! Bladed style full-field binary wind files
-   USE                              IfW_UserWind               ! User-defined wind module
-   USE                              IfW_HAWCWind               ! full-field binary wind files in HAWC format
-   
-!!!   USE                              FDWind                     ! 4-D binary wind files
-!!!   USE                              CTWind                     ! coherent turbulence from KH billow - binary file superimposed on another wind type
-
+   USE                              Lidar
    
    IMPLICIT NONE
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.03.00', '26-Jul-2016' )
+   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', '', '' )
 
 
 
@@ -151,6 +137,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       TYPE(IfW_UserWind_InitInputType)                      :: User_InitData        !< initialization info
       TYPE(IfW_UserWind_InitOutputType)                     :: User_InitOutData     !< initialization info
 
+      TYPE(IfW_4Dext_InitOutputType)                        :: FDext_InitOutData    !< initialization info
 
 !!!     TYPE(CTBladed_Backgr)                                        :: BackGrndValues
 
@@ -214,13 +201,18 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
                         
       ELSE
                   
-            !bjj: this is basically all it would take, no?
          CALL InflowWind_CopyInputFile( InitInp%PassedFileData, InputFileData, MESH_NEWCOPY, TmpErrStat, TmpErrMsg )
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)          
          
       ENDIF
 
-
+         ! let's tell InflowWind if an external module (e.g., FAST.Farm) is going to set the velocity grids.
+      IF ( InitInp%Use4Dext) then
+         InputFileData%WindType = FDext_WindNumber      
+         InputFileData%PropagationDir = 0.0_ReKi ! wind is in XYZ coordinates (already rotated if necessary), so don't rotate it again
+      END IF
+      
+      
          ! initialize sensor data:   
       CALL Lidar_Init( InitInp, InputGuess, p, ContStates, DiscStates, ConstrStateGuess, OtherStates,   &
                        y, m, TimeInterval, InitOutData, TmpErrStat, TmpErrMsg )
@@ -287,6 +279,7 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
       
       InitOutData%WindFileInfo%MWS = HUGE(InitOutData%WindFileInfo%MWS)
 
+      InitOutData%WindFileInfo%WindType = p%WindType
       SELECT CASE ( p%WindType )
 
 
@@ -352,7 +345,6 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
                ! Store wind file metadata
             InitOutData%WindFileInfo%FileName         =  ""
-            InitOutData%WindFileInfo%WindType         =  Steady_WindNumber
             InitOutData%WindFileInfo%RefHt            =  InputFileData%Steady_RefHt
             InitOutData%WindFileInfo%RefHt_Set        =  .FALSE.                             ! The wind file does not set this
             InitOutData%WindFileInfo%DT               =  0.0_ReKi
@@ -405,7 +397,6 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
                ! Store wind file metadata
             InitOutData%WindFileInfo%FileName         =  InputFileData%Uniform_FileName
-            InitOutData%WindFileInfo%WindType         =  Uniform_WindNumber
             InitOutData%WindFileInfo%RefHt            =  p%UniformWind%RefHt
             InitOutData%WindFileInfo%RefHt_Set        =  .FALSE.                             ! The wind file does not set this
             InitOutData%WindFileInfo%DT               =  Uniform_InitOutData%WindFileDT
@@ -462,7 +453,6 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
                ! Store wind file metadata
             InitOutData%WindFileInfo%FileName            =  InputFileData%TSFF_FileName
-            InitOutData%WindFileInfo%WindType            =  TSFF_WindNumber
             InitOutData%WindFileInfo%RefHt               =  p%TSFFWind%RefHt
             InitOutData%WindFileInfo%RefHt_Set           =  .TRUE.
             InitOutData%WindFileInfo%DT                  =  p%TSFFWind%FFDTime
@@ -509,7 +499,6 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
                ! Store wind file metadata
             InitOutData%WindFileInfo%FileName            =  InputFileData%BladedFF_FileName
-            InitOutData%WindFileInfo%WindType            =  BladedFF_WindNumber
             InitOutData%WindFileInfo%RefHt               =  p%BladedFFWind%RefHt
             InitOutData%WindFileInfo%RefHt_Set           =  .TRUE.
             InitOutData%WindFileInfo%DT                  =  p%BladedFFWind%FFDTime
@@ -579,7 +568,6 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 
                ! Store wind file metadata
             InitOutData%WindFileInfo%FileName            =  InputFileData%HAWC_FileName_u
-            InitOutData%WindFileInfo%WindType            =  HAWC_WindNumber
             InitOutData%WindFileInfo%RefHt               =  p%HAWCWind%RefHt
             InitOutData%WindFileInfo%RefHt_Set           =  .TRUE.
             InitOutData%WindFileInfo%DT                  =  p%HAWCWind%deltaXInv / p%HAWCWind%URef
@@ -608,8 +596,14 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
-
-
+         CASE (FDext_WindNumber)
+            
+               ! Initialize the UserWind module
+            CALL IfW_4Dext_Init(InitInp%FDext, p%FDext, m%FDext, TimeInterval, FDext_InitOutData, TmpErrStat, TmpErrMsg)
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+            
+            
          CASE DEFAULT  ! keep this check to make sure that all new wind types have been accounted for
             CALL SetErrStat(ErrID_Fatal,' Undefined wind type.',ErrStat,ErrMsg,'InflowWind_Init()')
 
@@ -655,31 +649,8 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
 !!!
 !!!      END IF
 !!!
-!!!         !----------------------------------------------------------------------------------------------
-!!!         ! Initialize based on the wind type
-!!!         !----------------------------------------------------------------------------------------------
-!!!
-!!!      SELECT CASE ( p%WindType )
-!!!
-!!!         CASE (Uniform_WindNumber)
-!!!NOTE: is the CTTS used on uniform wind?
-!!!!           IF (CTTS_Flag) CALL CTTS_SetRefVal(FileInfo%ReferenceHeight, 0.5*FileInfo%Width, ErrStat)  !FIXME: check if this was originally used
-!!!!           IF (ErrStat == ErrID_None .AND. p%CTTS_Flag) &
-!!!!              CALL CTTS_SetRefVal(InitInp%ReferenceHeight, REAL(0.0, ReKi), ErrStat, ErrMsg)      !FIXME: will need to put this routine in the Init of CT
-!!!
-!!!
-!!!
 
 
-
-!!!         CASE (HAWC_WindNumber)
-!!!
-!!!               !FIXME: remove this error message when we add HAWC_Wind in
-!!!            CALL SetErrStat( ErrID_Fatal, ' InflowWind cannot currently handle the HAWC_Wind type.', ErrStat, ErrMsg, ' IfW_Init' )
-!!!            RETURN
-!!!
-!!!!           CALL HW_Init( UnWind, p%WindFileName, ErrStat )
-!!!
 
       
          ! Allocate arrays for the WriteOutput
@@ -938,6 +909,9 @@ SUBROUTINE InflowWind_End( InputData, p, ContStates, DiscStates, ConstrStateGues
       CASE (User_WindNumber)
          CALL IfW_UserWind_End( p%UserWind, m%UserWind, ErrStat, ErrMsg )
 
+      CASE (FDext_WindNumber)
+         CALL IfW_4Dext_End( p%FDext, m%FDext, ErrStat, ErrMsg )
+         
       CASE ( Undef_WindNumber )
          ! Do nothing
 
