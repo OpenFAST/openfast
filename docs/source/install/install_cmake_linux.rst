@@ -13,7 +13,7 @@ Required software for building OpenFAST
 
 In order to build OpenFAST using CMake, one needs the following minimum set of packages installed:
 
-- Fortran compiler (e.g., gcc version 6.1.0 or Intel)
+- Fortran compiler (GNU compiler version above 4.6.0 or Intel compiler version above 11)
 
 - C/C++ compiler
 
@@ -94,7 +94,7 @@ CMake options can be executed from the command line as, e.g., the CMake command 
     cmake -DBUILD_DOCUMENTATION:BOOL=ON ..
 
     # e.g., to compile OpenFAST in single precision
-    cmake -D:DOUBLE_PRECISIONBOOL=OFF ..
+    cmake -D:DOUBLE_PRECISION:BOOL=OFF ..
  
 
 Parallel build

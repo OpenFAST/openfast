@@ -4,6 +4,10 @@
 os: osx
 
 before_install:
+    # first uninstall a conflicting package
+    - brew cask uninstall oclint
+
+    # update and install required packages
     - brew update
     - brew install gcc
     # - brew install cmake # cmake is already installed in the default mac image

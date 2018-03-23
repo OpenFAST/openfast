@@ -1956,7 +1956,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
-      ! HSSBrMode - HSS brake model {0: none, 1: simple, 3: user-defined from routine UserHSSBr, 4: user-defined from LabVIEW} (-):
+      ! HSSBrMode - HSS brake model {0: none, 1: simple, 3: user-defined from routine UserHSSBr, 4: user-defined from LabVIEW, 5: user-defined from Bladed-style DLL} (-):
    CALL ReadVar( UnIn, InputFile, InputFileData%HSSBrMode, "HSSBrMode", "HSS brake model {0: none, 1: simple, 3: user-defined from routine UserHSSBr, 4: user-defined from LabVIEW} (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
@@ -3424,7 +3424,7 @@ SUBROUTINE Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
       ! Local variables:
 
-   REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque {0 (off) <= HSSBrFrac <= 1 (full)} (-)
+   REAL(ReKi)                   :: HSSBrFrac                     ! Fraction of full braking torque {0 (off) <= HSSBrFrac <= 1 (full)} (-)
 
 
 
@@ -3484,6 +3484,8 @@ SUBROUTINE Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       CASE ( ControlMode_DLL )                    ! User-defined HSS brake model from Bladed-style DLL
          
          HSSBrFrac = m%dll_data%HSSBrFrac         
+         y%HSSBrTrqC = ABS( HSSBrFrac*m%dll_data%HSSBrTrqC )
+         RETURN
          
       CASE ( ControlMode_EXTERN )                 ! HSS brake model from LabVIEW.
 
