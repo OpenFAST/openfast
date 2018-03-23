@@ -9765,7 +9765,7 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    CHARACTER(10)                :: DOFEnabled                                      ! String to say if a DOF is enabled or disabled
    CHARACTER(3)                 :: outStr
    CHARACTER(10)                :: CalWakeDiamStr
-   
+   CHARACTER(100)               :: strModDescr
    
    ! Open the summary file and give it a heading.
    
@@ -9794,14 +9794,27 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
 
    WRITE (UnSum,'(/,A)') 'Description from the FAST.Farm input file: '//trim(farm%p%FTitle)
    
-   WRITE (UnSum,'(/,A)') 'Ambient Wind Input Filepath: '//trim(farm%p%WindFilePath)
+   WRITE (UnSum,'(/,A)') 'Ambient Wind:'
+   
+   if ( farm%AWAE%p%mod_AmbWind == 1 ) then
+      strModDescr = 'High-Fidelity Precursor'
+   else
+      strModDescr = 'InflowWind Module'
+   end if
+   
+   WRITE (UnSum,'(2X,A)') 'Ambient wind model: '//trim(strModDescr)
+   if ( farm%AWAE%p%mod_AmbWind == 1 ) then
+      WRITE (UnSum,'(2X,A)') 'Ambient wind input filepath: '//trim(farm%p%WindFilePath)
+   else
+      WRITE (UnSum,'(2X,A)') 'Ambient wind input file: '//trim(farm%p%WindFilePath)
+   end if
    
    !..................................
    ! Turbine information.
    !..................................
    
    WRITE (UnSum,'(/,A)'   )  'Wind Turbines: '//trim(Num2LStr(farm%p%NumTurbines))
-   WRITE (UnSum,'(2X,A)')  'Turbine Number  Output Turbine Number      X          Y          Z       FAST Time Step  FAST SubCycles  FAST Input File'
+   WRITE (UnSum,'(2X,A)')  'Turbine Number  Output Turbine Number      X          Y          Z   OpenFAST Time Step  OpenFAST SubCycles  OpenFAST Input File'
    WRITE (UnSum,'(2X,A)')  '      (-)                (-)              (m)        (m)        (m)          (S)             (-)                (-)'
 
    do I = 1,farm%p%NumTurbines
@@ -9882,7 +9895,7 @@ WRITE (UnSum,'(2X,A)')      'Calibrated parameter for wake meandering (-): '//tr
    WRITE (UnSum,'(2X,A)')      '  (-)                                (s)             (-)'
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST.Farm (glue code)          ',farm%p%dt, '1'
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Super Controller               ',farm%p%dt, '1'
-   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST Wrapper                   ',farm%p%dt, '1 (See table above for FAST.)'
+   WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'FAST Wrapper                   ',farm%p%dt, '1 (See table above for OpenFAST.)'
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Wake Dynamics                  ',farm%p%dt, '1'
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Ambient Wind and Array Effects ',farm%p%dt, '1'
    WRITE (UnSum,'(2X,A,F10.4,13X,A)')      'Low -resolution wind input     ',farm%p%dt, '1'
@@ -10806,8 +10819,12 @@ EddShrTND(:,:,9) = RESHAPE(  &
       
       
    farm%m%AllOuts = 0.0_ReKi
-    
+#ifdef _OPENMP  
+   farm%p%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(Farm_Ver))//' and with OpenMP'
+#else
    farm%p%FileDescLines(1)  = 'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//TRIM(GetVersion(Farm_Ver))
+#endif 
+   
    farm%p%FileDescLines(2)  = 'linked with ' //' '//TRIM(GetNVD(NWTC_Ver            ))  ! we'll get the rest of the linked modules in the section below
    farm%p%FileDescLines(3)  = 'Description from the FAST.Farm input file: '//TRIM(farm%p%FTitle)
    
