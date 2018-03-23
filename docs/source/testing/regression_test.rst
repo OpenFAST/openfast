@@ -7,7 +7,7 @@ The regression test executes a series of test cases which intend to fully descri
 OpenFAST and its module's capabilities. Each locally computed result is compared
 to a static set of baseline results. To account for system, hardware, and compiler
 differences, the regression test attempts to match the current machine and
-compiler type to the appropriate solution set from these combinations
+compiler type to the appropriate solution set from these combinations:
 
 - macOS with GNU compiler (default)
 - Red Hat Enterprise Linux with Intel compiler
@@ -153,8 +153,8 @@ all locally generated solutions are located in the corresponding glue-code or mo
 ``openfast/build/reg_tests``. The baseline solutions contained in ``openfast/reg_tests/r-test``
 are strictly read not modified by the automated process.
 
-Regression test from scratch
-----------------------------
+Regression test example
+-----------------------
 
 - Build OpenFAST and the test suite
 
