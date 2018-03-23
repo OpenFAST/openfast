@@ -213,7 +213,25 @@ void fast::OpenFAST::step() {
      FAST_OpFM_Step(&iTurb, &ErrStat, ErrMsg);
      checkError(ErrStat, ErrMsg);
 
-     calc_nacelle_force(cDriver_Output_to_FAST[iTurb].u[0], cDriver_Output_to_FAST[iTurb].v[0], cDriver_Output_to_FAST[iTurb].w[0], nacelle_cd[iTurb], nacelle_area[iTurb], cDriver_Input_from_FAST[iTurb].fx[0], cDriver_Input_from_FAST[iTurb].fy[0], cDriver_Input_from_FAST[iTurb].fz[0]);
+     // Compute the force from the nacelle only if the drag coefficient is
+     //   greater than zero
+     if (nacelle_cd[iTurb]>0.) {
+
+                             calc_nacelle_force (
+                             
+                                 cDriver_Output_to_FAST[iTurb].u[0], 
+                                 cDriver_Output_to_FAST[iTurb].v[0], 
+                                 cDriver_Output_to_FAST[iTurb].w[0], 
+                                 nacelle_cd[iTurb], 
+                                 nacelle_area[iTurb], 
+                                 air_density[iTurb], 
+                                 cDriver_Input_from_FAST[iTurb].fx[0], 
+                                 cDriver_Input_from_FAST[iTurb].fy[0], 
+                                 cDriver_Input_from_FAST[iTurb].fz[0]
+
+                             );
+
+        }
      
      if ( isDebug() ) {
        std::ofstream actuatorForcesFile;
@@ -284,11 +302,38 @@ void fast::OpenFAST::stepNoWrite() {
   
 }
 
-void fast::OpenFAST::calc_nacelle_force(float & u, float & v, float & w, double & cd, double & area, float & fx, float & fy, float & fz) {
-
-    // Calculate the force on the nacelle (fx,fy,fz) given the velocity sampled at the nacelle point (u,v,w), drag coefficient 'cd' and nacelle area 'area'
-
-}
+void fast::OpenFAST::calc_nacelle_force(
+        float & u, 
+        float & v, 
+        float & w, 
+        float & cd, 
+        float & area, 
+        float & rho,
+        float & fx, 
+        float & fy, 
+        float & fz) {
+            // Calculate the force on the nacelle (fx,fy,fz) given the 
+            //   velocity sampled at the nacelle point (u,v,w), 
+            //   drag coefficient 'cd' and nacelle area 'area'
+    
+            // The constant pi
+            const float pi = acos(-1.0);
+    
+            // The velocity magnitude
+            float Vmag = sqrt(pow(u,2) + pow(v,2) + pow(w,2));
+    
+            // Velocity correction based on Martinez-Tossas PhD Thesis 2017
+            // The correction samples the velocity at the center of the
+            // Gaussian kernel and scales it to obtain the inflow velocity 
+            float epsilon_d = sqrt(2.0 / pi * cd * area);
+            float correction = 1. / (1.0 - cd * area /
+                                        (4.0 * pi * pow(epsilon_d,2)));
+    
+            // Compute the force for each velocity component
+            fx = rho * 1./2. * cd * area * Vmag * u * pow(correction,2);
+            fy = rho * 1./2. * cd * area * Vmag * v * pow(correction,2);
+            fz = rho * 1./2. * cd * area * Vmag * w * pow(correction,2);
+        }
 
 void fast::OpenFAST::setInputs(const fast::fastInputs & fi ) {
 
@@ -696,6 +741,7 @@ void fast::OpenFAST::allocateMemory() {
   CheckpointFileRoot.resize(nTurbinesProc);
   nacelle_cd.resize(nTurbinesProc);
   nacelle_area.resize(nTurbinesProc);
+  air_density.resize(nTurbinesProc);
   numBlades.resize(nTurbinesProc);
   numForcePtsBlade.resize(nTurbinesProc);
   numForcePtsTwr.resize(nTurbinesProc);
@@ -718,6 +764,7 @@ void fast::OpenFAST::allocateMemory() {
     numForcePtsTwr[iTurb] = globTurbineData[globProc].numForcePtsTwr;
     nacelle_cd[iTurb] = globTurbineData[globProc].nacelle_cd;
     nacelle_area[iTurb] = globTurbineData[globProc].nacelle_area;
+    air_density[iTurb] = globTurbineData[globProc].air_density;
 
   }
 
