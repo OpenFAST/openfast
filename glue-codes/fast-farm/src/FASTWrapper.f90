@@ -120,6 +120,7 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       ExternInitData%LidRadialVel = .false.
       
          !.... supercontroller (currently unused) ....
+      ExternInitData%NumSC2CtrlGlob = 0 ! "number of controller inputs [from supercontroller]"
       ExternInitData%NumSC2Ctrl = 0 ! "number of controller inputs [from supercontroller]"
       ExternInitData%NumCtrl2SC = 0 ! "number of controller outputs [to supercontroller]"
    
