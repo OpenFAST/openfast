@@ -581,7 +581,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          call cleanup()
          RETURN        
       end if
-   p%DT = AWAE_InitInp%DT
+   if ( AWAE_InitInp%Mod_AmbWind == 2 ) p%DT = AWAE_InitInp%DT
    
       ! DT_high - Time step for high-resolution wind data input files (s) [>0.0]:
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%DT_high, "DT_high", "Time step for high-resolution wind data input files (s) [>0.0]", ErrStat2, ErrMsg2, UnEc)
@@ -590,7 +590,7 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          call cleanup()
          RETURN        
       end if
-   p%DT_high = AWAE_InitInp%DT_high
+   if ( AWAE_InitInp%Mod_AmbWind == 2 ) p%DT_high = AWAE_InitInp%DT_high
    
       ! NX_Low - Number of low-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]:
    CALL ReadVar( UnIn, InputFile, AWAE_InitInp%nX_Low, "nX_Low", "Number of low-resolution spatial nodes in X direction for wind data interpolation (-) [>=2]", ErrStat2, ErrMsg2, UnEc)

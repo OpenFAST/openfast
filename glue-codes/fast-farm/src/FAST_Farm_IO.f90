@@ -9806,7 +9806,7 @@ SUBROUTINE Farm_PrintSum( farm, WD_InputFileData, ErrStat, ErrMsg )
    if ( farm%AWAE%p%mod_AmbWind == 1 ) then
       WRITE (UnSum,'(2X,A)') 'Ambient wind input filepath: '//trim(farm%p%WindFilePath)
    else
-      WRITE (UnSum,'(2X,A)') 'Ambient wind input file: '//trim(farm%p%WindFilePath)
+      WRITE (UnSum,'(2X,A)') 'InflowWind module input file: '//trim(farm%p%WindFilePath)
    end if
    
    !..................................

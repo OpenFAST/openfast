@@ -204,7 +204,6 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    integer(IntKi)                             :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                       :: errMsg2       ! temporary error message 
    character(*), parameter                    :: RoutineName = 'AWAE_IO_InitGridInfo'
-   real(ReKi)                                 :: X0_low, Y0_low, Z0_low, dX_low, dY_low, dZ_low, dt_low, dt_high
    integer(IntKi)                             :: nXYZ_low, nx_low, ny_low, nz_low, nXYZ_high, nx_high, ny_high, nz_high
    integer(IntKi)                             :: dims(3)              ! dimension of the 3D grid (nX,nY,nZ)
    real(ReKi)                                 :: origin(3)            ! the lower-left corner of the 3D grid (X0,Y0,Z0)
@@ -261,8 +260,6 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    p%dX_low           = gridSpacing(1)
    p%dY_low           = gridSpacing(2)
    p%dZ_low           = gridSpacing(3)
-   
-   ! TODO: Check the low-res grid variables
    
    InitOut%X0_Low     = origin(1)
    InitOut%Y0_low     = origin(2)
