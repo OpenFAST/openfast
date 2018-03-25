@@ -66,7 +66,7 @@ IMPLICIT                   NONE
 
 TYPE( TurbSim_ParameterType )    :: p                       ! TurbSim parameters
 TYPE(RandNum_OtherStateType)     :: OtherSt_RandNum         ! other states for random numbers (next seed, etc)
-REAL(ReKi)                       :: UHub                         !< reference wind speed at hub height , 03/24/2018-->changed to UHub from URef08/31 Latha Sethuraman
+REAL(ReKi)                       :: URef                         !< reference wind speed at hub height 08/31 Latha Sethuraman
 REAL(ReKi), ALLOCATABLE          :: PhaseAngles (:,:,:)     ! The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi), ALLOCATABLE          :: S           (:,:,:)     ! The turbulence PSD array (NumFreq,NPoints,3).
 REAL(ReKi), ALLOCATABLE          :: V           (:,:,:)     ! An array containing the summations of the rows of H (NumSteps,NPoints,3).
