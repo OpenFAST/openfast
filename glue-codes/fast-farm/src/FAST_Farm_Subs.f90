@@ -32,6 +32,8 @@ MODULE FAST_Farm_Subs
    USE FAST_Farm_IO
    USE FAST_Subs
    USE FASTWrapper
+   USE SuperController
+   
 #ifdef _OPENMP
    USE OMP_LIB 
 #endif
@@ -151,10 +153,12 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    
    INTEGER(IntKi)                          :: ErrStat2   
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
-   TYPE(WD_InitInputType)                  :: WD_InitInput        ! init-input data for WakeDynamics module
-   
+   TYPE(WD_InitInputType)                  :: WD_InitInput            ! init-input data for WakeDynamics module
+   TYPE(SC_InitInputType)                  :: SC_InitInp              ! input-file data for SC module
+   TYPE(SC_InitOutputType)                 :: SC_InitOut              ! Init output for SC module
    CHARACTER(*), PARAMETER                 :: RoutineName = 'Farm_Initialize'       
-   CHARACTER(ChanLenFF),ALLOCATABLE          :: OutList(:)             ! list of user-requested output channels
+   CHARACTER(ChanLenFF),ALLOCATABLE        :: OutList(:)              ! list of user-requested output channels
+   real(DbKi)                              :: Interval                ! Module's timestep size (should be same as farm%p%DT
    INTEGER(IntKi)                          :: i
    !..........
    ErrStat = ErrID_None
@@ -188,7 +192,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    ! step 1: read input file
    !...............................................................................................................................  
       
-   call Farm_ReadPrimaryFile( InputFile, farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, OutList, ErrStat2, ErrMsg2 )
+   call Farm_ReadPrimaryFile( InputFile, farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, SC_InitInp, OutList, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -198,7 +202,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    !...............................................................................................................................  
    ! step 2: validate input & set parameters
    !...............................................................................................................................  
-   call Farm_ValidateInput( farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, ErrStat2, ErrMsg2 )
+   call Farm_ValidateInput( farm%p, WD_InitInput%InputFileData, AWAE_InitInput%InputFileData, SC_InitInp, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -244,9 +248,9 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    AWAE_InitInput%n_high_low                 = farm%p%n_high_low
    AWAE_InitInput%NumDT                      = farm%p%n_TMax
    AWAE_InitInput%OutFileRoot                = farm%p%OutFileRoot
-   
+   Interval = farm%p%DT
    call AWAE_Init( AWAE_InitInput, farm%AWAE%u, farm%AWAE%p, farm%AWAE%x, farm%AWAE%xd, farm%AWAE%z, farm%AWAE%OtherSt, farm%AWAE%y, &
-                   farm%AWAE%m, farm%p%DT, AWAE_InitOutput, ErrStat2, ErrMsg2 )
+                   farm%AWAE%m, Interval, AWAE_InitOutput, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -263,11 +267,31 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    farm%p%dY_low = AWAE_InitOutput%dY_low
    farm%p%dZ_low = AWAE_InitOutput%dZ_low
    farm%p%Module_Ver( ModuleFF_AWAE  ) = AWAE_InitOutput%Ver
+   
       !-------------------
       ! b. CALL SC_Init
-
-   
+   if ( farm%p%useSC ) then
+      SC_InitInp%nTurbines = farm%p%NumTurbines
+      Interval = farm%p%DT
+      call SC_Init(SC_InitInp, farm%SC%u, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
+                     farm%SC%y, farm%SC%m, Interval, SC_InitOut, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            if (ErrStat >= AbortErrLev) then
+               call Cleanup()
+               return
+            end if 
+      farm%p%Module_Ver( ModuleFF_SC  ) = SC_InitOut%Ver
+         ! allocate input array arrays    
+      if ( farm%SC%p%nInpGlobal     > 0 ) then
+         allocate(farm%SC%uInputs(1)%toSCglob(farm%SC%p%nInpGlobal), STAT=errStat)  
+      end if
       
+      if ( farm%SC%p%NumCtrl2SC     > 0 ) then
+         allocate(farm%SC%uInputs(1)%toSC    (farm%SC%p%NumCtrl2SC*farm%SC%p%nTurbines), STAT=errStat)  
+      end if
+      
+   end if
+   
       !-------------------
       ! c. initialize WD (one instance per turbine, each can be done in parallel, too)
       
@@ -282,8 +306,8 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    !...............................................................................................................................  
    ! step 4: initialize FAST (each instance of FAST can also be done in parallel)
    !...............................................................................................................................  
-         
-   CALL Farm_InitFAST( farm, WD_InitInput%InputFileData, AWAE_InitOutput, ErrStat2, ErrMsg2)
+
+   CALL Farm_InitFAST( farm, WD_InitInput%InputFileData, AWAE_InitOutput, SC_InitOut, farm%SC%y, ErrStat2, ErrMsg2)
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -328,17 +352,18 @@ END SUBROUTINE Farm_Initialize
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads in the primary FAST.Farm input file, does some validation, and places the values it reads in the
 !!   parameter structure (p). It prints to an echo file if requested.
-SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList, ErrStat, ErrMsg )
+SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, SC_InitInp, OutList, ErrStat, ErrMsg )
 
 
       ! Passed variables
-   TYPE(Farm_ParameterType),       INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
-   CHARACTER(*),                   INTENT(IN   ) :: InputFile                       !< Name of the file containing the primary input data
-   TYPE(WD_InputFileType),         INTENT(  OUT) :: WD_InitInp                      !< input-file data for WakeDynamics module
-   TYPE(AWAE_InputFileType),       INTENT(  OUT) :: AWAE_InitInp                    !< input-file data for AWAE module
-   CHARACTER(ChanLenFF),ALLOCATABLE, INTENT(  OUT) :: OutList(:)                    !< list of user-requested output channels
-   INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat                         !< Error status
-   CHARACTER(*),                   INTENT(  OUT) :: ErrMsg                          !< Error message
+   TYPE(Farm_ParameterType),         INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
+   CHARACTER(*),                     INTENT(IN   ) :: InputFile                       !< Name of the file containing the primary input data
+   TYPE(WD_InputFileType),           INTENT(  OUT) :: WD_InitInp                      !< input-file data for WakeDynamics module
+   TYPE(AWAE_InputFileType),         INTENT(  OUT) :: AWAE_InitInp                    !< input-file data for AWAE module
+   TYPE(SC_InitInputType),           INTENT(  OUT) :: SC_InitInp                      !< input-file data for SC module
+   CHARACTER(ChanLenFF),ALLOCATABLE, INTENT(  OUT) :: OutList(:)                      !< list of user-requested output channels
+   INTEGER(IntKi),                   INTENT(  OUT) :: ErrStat                         !< Error status
+   CHARACTER(*),                     INTENT(  OUT) :: ErrMsg                          !< Error message
 
       ! Local variables:
    REAL(DbKi)                    :: TmpTime                                   ! temporary variable to read SttsTime and ChkptTime before converting to #steps based on DT
@@ -524,7 +549,8 @@ SUBROUTINE Farm_ReadPrimaryFile( InputFile, p, WD_InitInp, AWAE_InitInp, OutList
          RETURN        
       end if
    IF ( PathIsRelative( p%SC_FileName ) ) p%SC_FileName = TRIM(PriPath)//TRIM(p%SC_FileName)
-    
+   SC_InitInp%DLL_FileName =  p%SC_FileName
+   
    !---------------------- AMBIENT WIND: PRECURSOR IN VTK FORMAT ---------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Ambient Wind: Precursor in VTK Format', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1316,11 +1342,12 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE Farm_ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
+SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, SC_InitInp, ErrStat, ErrMsg )
       ! Passed variables
    TYPE(Farm_ParameterType), INTENT(INOUT) :: p                               !< The parameter data for the FAST (glue-code) simulation
    TYPE(WD_InputFileType),   INTENT(IN   ) :: WD_InitInp                      !< input-file data for WakeDynamics module
    TYPE(AWAE_InputFileType), INTENT(INOUT) :: AWAE_InitInp                    !< input-file data for AWAE module
+   TYPE(SC_InitInputType),   INTENT(INOUT) :: SC_InitInp              ! input-file data for SC module
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
@@ -1338,6 +1365,10 @@ SUBROUTINE Farm_ValidateInput( p, WD_InitInp, AWAE_InitInp, ErrStat, ErrMsg )
    IF (p%DT_high <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'DT_high must be positive.',ErrStat,ErrMsg,RoutineName)
    IF (p%TMax < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TMax must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF (p%NumTurbines < 1) CALL SetErrStat(ErrID_Fatal,'FAST.Farm requires at least 1 turbine. Set NumTurbines > 0.',ErrStat,ErrMsg,RoutineName)
+   
+   ! --- SUPER CONTROLLER ---
+   ! TODO : Verify that the DLL file exists
+   
    
    ! --- WAKE DYNAMICS ---
    IF (WD_InitInp%dr <= 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'dr (radial increment) must be larger than 0.',ErrStat,ErrMsg,RoutineName)
@@ -1493,13 +1524,15 @@ contains
 END SUBROUTINE Farm_InitWD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes all instances of FAST using the FASTWrapper module
-SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
+SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y, ErrStat, ErrMsg )
 
 
       ! Passed variables
    type(All_FastFarm_Data),  INTENT(INOUT) :: farm                            !< FAST.Farm data
    TYPE(WD_InputFileType),   INTENT(IN   ) :: WD_InitInp                      !< input-file data for WakeDynamics module
    TYPE(AWAE_InitOutputType),INTENT(IN   ) :: AWAE_InitOutput                 !< initialization output from AWAE
+   type(SC_InitOutputType),  INTENT(INOUT) :: SC_InitOutput                   !< Initialization output from SC
+   type(SC_OutputType),      INTENT(INOUT) :: SC_y                            !< SuperController inital outputs
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat                         !< Error status
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg                          !< Error message
 
@@ -1534,6 +1567,19 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
       FWrap_InitInp%nX_high       = AWAE_InitOutput%nX_high
       FWrap_InitInp%nY_high       = AWAE_InitOutput%nY_high
       FWrap_InitInp%nZ_high       = AWAE_InitOutput%nZ_high
+      FWrap_InitInp%UseSC         = farm%p%UseSC
+      FWrap_InitInp%NumSC2Ctrl    = SC_InitOutput%NumSC2Ctrl
+      FWrap_InitInp%NumSC2CtrlGlob= SC_InitOutput%NumSC2CtrlGlob
+      FWrap_InitInp%NumCtrl2SC    = SC_InitOutput%NumCtrl2SC
+      if (SC_InitOutput%NumSC2CtrlGlob>0) then
+         allocate(FWrap_InitInp%fromSCglob(SC_InitOutput%NumSC2CtrlGlob))
+         FWrap_InitInp%fromSCglob = SC_y%fromSCglob
+      end if
+      
+      if (SC_InitOutput%NumSC2Ctrl>0) then
+         allocate(FWrap_InitInp%fromSC(SC_InitOutput%NumSC2Ctrl))
+      end if
+      
       
       DO nt = 1,farm%p%NumTurbines
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1553,8 +1599,9 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
          FWrap_InitInp%dX_high       = AWAE_InitOutput%dX_high(nt)
          FWrap_InitInp%dY_high       = AWAE_InitOutput%dY_high(nt)
          FWrap_InitInp%dZ_high       = AWAE_InitOutput%dZ_high(nt)
-         
-         
+         if (SC_InitOutput%NumSC2Ctrl>0) then
+            FWrap_InitInp%fromSC = SC_y%fromSC((nt-1)*SC_InitOutput%NumSC2Ctrl+1:(nt-1)*SC_InitOutput%NumSC2Ctrl+SC_InitOutput%NumSC2Ctrl)
+         end if
             ! note that FWrap_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt here:
          call FWrap_Init( FWrap_InitInp, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
                           farm%FWrap(nt)%OtherSt, farm%FWrap(nt)%y, farm%FWrap(nt)%m, farm%p%dt, FWrap_InitOut, ErrStat2, ErrMsg2 )
@@ -1632,20 +1679,31 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    
    call Transfer_AWAE_to_FAST(farm)      
    call Transfer_AWAE_to_WD(farm)   
-   
+
+   if (farm%p%UseSC) then
       !--------------------
       ! 2a. u_SC=0         
-
+      if ( farm%SC%p%NInpGlobal > 0 ) farm%SC%u%toSCglob = 0.0_SiKi
+      if ( farm%SC%p%NumCtrl2SC > 0 ) farm%SC%u%toSC     = 0.0_SiKi
+      
       !--------------------
-      ! 2b. CALL SC_CO         
-
+      ! 2b. CALL SC_CO 
+   
+      call SC_CalcOutput(0.0_DbKi, farm%SC%u, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, &
+                           farm%SC%OtherState, farm%SC%y, farm%SC%m, ErrStat, ErrMsg )         
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+         
       !--------------------
       ! 2c. transfer y_SC to u_F         
    
-   !DO nt = 1,farm%p%NumTurbines
-   !   farm%FWrap(nt)%u%FromSC_Global =
-   !   farm%FWrap(nt)%u%FromSC_Turbine =
-   !END DO
+      do nt = 1,farm%p%NumTurbines
+         farm%FWrap(nt)%u%FromSC_Global  = farm%SC%y%fromSCglob
+            ! SC stores all turbine-controller data in a 1D array, need to separate these out for each turbine
+         farm%FWrap(nt)%u%FromSC_Turbine(:) = farm%SC%y%fromSC( (nt-1)*farm%SC%p%NumSC2Ctrl+1:nt*farm%SC%p%NumSC2Ctrl ) 
+      end do
+      
+   end if ! (farm%p%UseSC)
    
    !.......................................................................................
    ! CALL F_t0 (can be done in parallel)
@@ -1666,11 +1724,15 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
       
       !--------------------
       ! 1.  Transfer y_F to u_SC     
+   if (farm%p%UseSC) then
+      
+      farm%SC%u%toSCglob = 0.0_SiKi  ! We currently do not have a way to set global SC inputs from FAST.Farm
    
-   !DO nt = 1,farm%p%NumTurbines   
-   !   = farm%FWrap(nt)%y%ToSC_Turbine   
-   !END DO
-   
+      do nt = 1,farm%p%NumTurbines 
+        farm%SC%u%toSC( (nt-1)*farm%SC%p%NumCtrl2SC+1 : nt*farm%SC%p%NumCtrl2SC )   = farm%FWrap(nt)%y%ToSC_Turbine(:)
+      end do
+      
+   end if
       !--------------------
       ! 2.  Transfer y_F to u_WD     
    
@@ -1772,9 +1834,15 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
    
    
       !--------------------
-      ! 2. CALL SC_US         
+      ! 2. CALL SC_US  
+   if (farm%p%useSC) then
+      farm%SC%utimes(1) = t
+      farm%SC%uInputs(1)%toSCGlob = farm%SC%u%toSCGlob
+      farm%SC%uInputs(1)%toSC     = farm%SC%u%toSC
+      call SC_UpdateStates(t, n, farm%SC%uInputs,farm%SC%utimes, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, farm%SC%m, errStat, errMsg ) ! implement framework interface arguments
+      if (errStat >= AbortErrLev) return
+   end if
    
-
       !--------------------
       ! 3. CALL F_Increment and 4. CALL AWAE_UpdateStates  
 !#ifdef _OPENMP
@@ -2075,11 +2143,25 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
    call Transfer_WD_to_AWAE(farm)
    
       !--------------------
-      ! 2. call SC_CO and transfer y_SC to u_F         
+      ! 2. call SC_CO and transfer y_SC to u_F, at n+1 
+   if ( farm%p%UseSC ) then
+      call SC_CalcOutput(t, farm%SC%u, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, &
+                           farm%SC%OtherState, farm%SC%y, farm%SC%m, ErrStat2, ErrMsg2 ) 
+      
+      do nt = 1,farm%p%NumTurbines
+            
+         farm%FWrap(nt)%u%FromSC_Global  = farm%SC%y%fromSCglob
+         farm%FWrap(nt)%u%FromSC_Turbine = farm%SC%y%fromSC( (nt-1)*farm%SC%p%NumSC2Ctrl + 1 : nt*farm%SC%p%NumSC2Ctrl )
+         !--------------------
+         ! 3a. Transfer y_F to u_SC, at n+1
+         farm%SC%u%toSC( (nt-1)*farm%SC%p%NumCtrl2SC + 1 : nt*farm%SC%p%NumCtrl2SC ) = farm%FWrap(nt)%y%ToSC_Turbine
+         
+      end do
+      
+   end if
    
-
       !--------------------
-      ! 3. Transfer y_F to u_SC and u_WD         
+      ! 3b. Transfer y_F to u_WD         
          
    call Transfer_FAST_to_WD(farm)
          

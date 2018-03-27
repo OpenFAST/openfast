@@ -2244,14 +2244,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
                    
    END DO
                      
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED !---------------------- SUPERCONTROLLER -------------
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL ReadCom( UnIn, InputFile, 'Section Header: Supercontroller', ErrStat2, ErrMsg2, UnEc )
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL CheckError( ErrStat2, ErrMsg2 )
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED IF ( ErrStat >= AbortErrLev ) RETURN
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL ReadVar( UnIn, InputFile, InputFileData%ScInCutoff, "ScInCutoff", "Cuttoff frequency for low-pass filter on Supercontroller Inputs (Hz)", ErrStat2, ErrMsg2, UnEc)
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED CALL CheckError( ErrStat2, ErrMsg2 )
-   !TODO: UNCOMMENT THIS ONCE THE SUPERCONTROLLER HAS BEEN IMPLEMENTED AND THE INPUT FILES HAVE BEEN UPDATED IF ( ErrStat >= AbortErrLev ) RETURN
+   !---------------------- SUPERCONTROLLER -------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Supercontroller', ErrStat2, ErrMsg2, UnEc )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+   CALL ReadVar( UnIn, InputFile, InputFileData%ScInCutoff, "ScInCutoff", "Cut-off frequency for low-pass filter on Supercontroller Inputs (Hz)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
    
    !---------------------- OUTPUT --------------------------------------------------         
    CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )

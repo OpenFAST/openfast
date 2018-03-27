@@ -47,7 +47,7 @@ MODULE FAST_Solver
    USE ServoDyn
    USE SubDyn
    USE OpenFOAM
-   USE SuperController
+   USE SC_DataEx
    Use ExtPtfm_MCKF
    
 
@@ -717,7 +717,7 @@ SUBROUTINE SC_InputSolve( p_FAST, m_FAST, u_SC, y_SrvD, MeshMapData, ErrStat, Er
    ErrMsg  = ""
 
    IF ( p_FAST%UseSupercontroller )  THEN
-
+      
       if ( allocated(y_SrvD%Supercontroller) ) then
          u_SC%toSC = y_SrvD%Supercontroller
       end if
@@ -4838,7 +4838,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
       IF ( firstCall ) THEN
          CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, SC%y, BD%y, MeshMapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
       ELSE
-         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, SC%y, BD%y, MeshMapData, ErrStat2, ErrMsg2, SrvD%y ) ! note that this uses the outputs from the previous step, violating the framework for the Bladed DLL (if SrvD%y is used in another way, this will need to be changed)
+         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, SC%y, BD%y, MeshMapData, ErrStat2, ErrMsg2, SrvD%y   ) 
       END IF
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
