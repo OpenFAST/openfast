@@ -608,19 +608,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! initialize SuperController
    ! ........................   
       IF ( PRESENT(ExternInitData) ) THEN
-         InitInData_SC%NumSC2CtrlGlob = ExternInitData%NumSC2CtrlGlob
-         InitInData_SC%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
-         InitInData_SC%NumCtrl2SC = ExternInitData%NumCtrl2SC  
+            ! set up the data structures for integration with supercontroller
+         IF ( p_FAST%CompSC == Module_SC ) CALL SC_DX_Init( ExternInitData%NumSC2CtrlGlob, ExternInitData%NumSC2Ctrl, ExternInitData%NumCtrl2SC, SC, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       ELSE
-         InitInData_SC%NumSC2CtrlGlob = 0
-         InitInData_SC%NumSC2Ctrl = 0
-         InitInData_SC%NumCtrl2SC = 0
+         IF ( p_FAST%CompSC == Module_SC ) CALL SC_DX_Init( 0, 0, 0, SC, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
-      
-         ! set up the data structures for integration with supercontroller
-      CALL Init_SC( InitInData_SC, SC, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
+ 
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1524,7 +1519,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
    y_FAST%Module_Ver( Module_Orca   )%Name = 'OrcaFlexInterface'
    y_FAST%Module_Ver( Module_IceF   )%Name = 'IceFloe'
    y_FAST%Module_Ver( Module_IceD   )%Name = 'IceDyn'
-   y_FAST%Module_Ver( Module_SC     )%Name = 'SC'
+   y_FAST%Module_Ver( Module_SC     )%Name = 'SC_DataExchange'
          
    y_FAST%Module_Abrev( Module_IfW    ) = 'IfW'
    y_FAST%Module_Abrev( Module_OpFM   ) = 'OpFM'
@@ -1542,7 +1537,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
    y_FAST%Module_Abrev( Module_Orca   ) = 'Orca'
    y_FAST%Module_Abrev( Module_IceF   ) = 'IceF'
    y_FAST%Module_Abrev( Module_IceD   ) = 'IceD'   
-   y_FAST%Module_Abrev( Module_SC     ) = 'SC'   
+   y_FAST%Module_Abrev( Module_SC     ) = 'SC_DX'   
 
    p%n_substeps = 1                                                ! number of substeps for between modules and global/FAST time
          
@@ -4362,7 +4357,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       ! the previous step before we extrapolate these inputs:
    IF ( p_FAST%CompServo == Module_SrvD ) CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )   
    
-   IF ( p_FAST%CompSC == Module_SC ) CALL SC_SetOutputs(p_FAST, SrvD%Input(1), SC, ErrStat2, ErrMsg2 )
+   IF ( p_FAST%CompSC == Module_SC ) CALL SC_DX_SetOutputs(p_FAST, SrvD%Input(1), SC, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    !! ## Step 1.a: Extrapolate Inputs 

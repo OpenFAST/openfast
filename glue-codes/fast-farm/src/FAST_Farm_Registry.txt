@@ -29,6 +29,8 @@ typedef  ^               ParameterType         DbKi            TMax            -
 typedef  ^               ParameterType         IntKi           n_high_low      -    - - "Number of high-resolution time steps per low-resolution time step"      -
 typedef  ^               ParameterType         IntKi           NumTurbines     -    - - "Number of turbines in the simulation" -
 typedef  ^               ParameterType         CHARACTER(1024) WindFilePath    -    - - "Path name of wind data files from ABLSolver precursor" -
+typedef  ^               ParameterType         CHARACTER(1024) SC_FileName    -    - -  "Name/location of the dynamic library {.dll [Windows] or .so [Linux]} containing the Super Controller algorithms" -
+typedef	^	             ParameterType	        LOGICAL	      UseSC 	       -	   - - "Use a super controller?"	-
 typedef  ^               ParameterType         ReKi            WT_Position   {:}{:} - - "X-Y-Z position of each wind turbine; index 1 = XYZ; index 2 = turbine number" meters
 typedef  ^               ParameterType         CHARACTER(1024) WT_FASTInFile {:}    - - "Name of input file for each turbine" -
 typedef  ^               ParameterType         CHARACTER(1024) FTitle          -    - - "The description line from the primary FAST.Farm input file" -
@@ -108,7 +110,18 @@ typedef    ^    ^                 AWAE_InputType            u             -   - 
 typedef    ^    ^                 AWAE_OutputType           y             -   -         -   "System outputs"
 typedef    ^    ^                 AWAE_MiscVarType          m             -   -         -   "Misc/optimization variables"
 typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has AWAE_Init been called"
-
+# ..... SC data .......................................................................................................
+typedef    ^    SC_Data           SC_ContinuousStateType    x             -   -         -   "Continuous states" -
+typedef    ^    ^                 SC_DiscreteStateType      xd            -   -         -   "Discrete states"
+typedef    ^    ^                 SC_ConstraintStateType    z             -   -         -   "Constraint states"
+typedef    ^    ^                 SC_OtherStateType         OtherState    -   -         -   "Other states"
+typedef    ^    ^                 SC_ParameterType          p             -   -         -   "Parameters"
+typedef    ^    ^                 SC_InputType              u             -   -         -   "System inputs"
+typedef    ^    ^                 SC_InputType              uInputs      {1}  -         -   "System inputs"
+typedef    ^    ^                 DbKi                      utimes       {1}  -         -   "Current time" s
+typedef    ^    ^                 SC_OutputType             y             -   -         -   "System outputs"
+typedef    ^    ^                 SC_MiscVarType            m             -   -         -   "Misc/optimization variables"
+typedef    ^    ^                 logical                   IsInitialized -   .FALSE.   -   "Has SC_Init been called"
 
 # ..... All submodules' variables.................................................................................................
 typedef    ^   All_FastFarm_Data  Farm_ParameterType        p          -   -   -   "FAST.Farm parameter data" -
@@ -116,7 +129,7 @@ typedef    ^   All_FastFarm_Data  Farm_MiscVarType          m          -   -   -
 typedef    ^   All_FastFarm_Data  FASTWrapper_Data          FWrap     {:}  -   -   "FASTWrapper data (one instance per turbine)" -
 typedef    ^   All_FastFarm_Data  WakeDynamics_Data         WD        {:}  -   -   "WakeDynamics (WD) data" -
 typedef    ^   All_FastFarm_Data  AWAE_Data                 AWAE       -   -   -   "Ambient Wind & Array Effects (AWAE) data" -
-
+typedef    ^   All_FastFarm_Data  SC_Data                   SC         -   -   -   "Super Controller (SC) data" -
 
 # ..... FAST.Farm data ................................................................................................................
 #

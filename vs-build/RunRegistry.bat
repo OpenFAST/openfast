@@ -276,7 +276,7 @@ GOTO checkError
 
 :AWAE
 SET CURR_LOC=%AWAE_Loc%
-%REGISTRY% "%CURR_LOC%\AWAE_Registry.txt" -I %NWTC_Lib_Loc% -noextrap -O "%Output_Loc%"
+%REGISTRY% "%CURR_LOC%\AWAE_Registry.txt" -I %NWTC_Lib_Loc% -I %IfW_Loc% -noextrap -O "%Output_Loc%"
 GOTO checkError
 
 :WakeDynamics_Driver

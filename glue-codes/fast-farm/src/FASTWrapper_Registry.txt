@@ -33,7 +33,12 @@ typedef      ^            InitInputType       ReKi       dY_high                
 typedef      ^            InitInputType       ReKi       dZ_high                   -      -      -   "Z-component of the spatial increment of the high-resolution spatial domain for this turbine"      m
 typedef      ^            InitInputType       IntKi      TurbNum                   -      -      -   "Turbine ID number (start with 1; end with number of turbines)"      -
 typedef      ^            InitInputType CHARACTER(1024)  RootName                  -      -      -   "The root name derived from the primary FAST.Farm input file [For output reporting in this module we need to have Rootname include the turbine number]"      -
-
+typedef      ^            InitInputType       IntKi      NumSC2Ctrl                -      -      -   "Number of turbine-specific controller inputs [from supercontroller]" -
+typedef      ^            InitInputType       IntKi      NumSC2CtrlGlob            -      -      -   "Number of global controller inputs [from supercontroller]" -
+typedef      ^            InitInputType       IntKi      NumCtrl2SC                -      -      -   "Number of turbine-specific controller outputs [to supercontroller]" -
+typedef      ^            InitInputType       Logical    UseSC                     -      -      -   "Use the SuperController? (flag)" -
+typedef      ^            InitInputType       SiKi       fromSCGlob               {:}     -      -   "Global outputs from SuperController" -
+typedef      ^            InitInputType       SiKi       fromSC                   {:}     -      -   "Turbine-specific outputs from SuperController" -
 
 # Define outputs from the initialization routine here:
 #typedef   ^               InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
