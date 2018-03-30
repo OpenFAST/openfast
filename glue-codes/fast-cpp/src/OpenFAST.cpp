@@ -308,12 +308,12 @@ void fast::OpenFAST::stepNoWrite() {
 }
 
 void fast::OpenFAST::calc_nacelle_force(
-        float & u, 
-        float & v, 
-        float & w, 
-        float & cd, 
-        float & area, 
-        float & rho,
+        const float & u, 
+        const float & v, 
+        const float & w, 
+        const float & cd, 
+        const float & area, 
+        const float & rho,
         float & fx, 
         float & fy, 
         float & fz) {
@@ -321,23 +321,20 @@ void fast::OpenFAST::calc_nacelle_force(
             //   velocity sampled at the nacelle point (u,v,w), 
             //   drag coefficient 'cd' and nacelle area 'area'
     
-            // The constant pi
-            const float pi = acos(-1.0);
-    
             // The velocity magnitude
-            float Vmag = sqrt(pow(u,2) + pow(v,2) + pow(w,2));
+            float Vmag = std::sqrt(u * u + v * v + w * w);
     
             // Velocity correction based on Martinez-Tossas PhD Thesis 2017
             // The correction samples the velocity at the center of the
             // Gaussian kernel and scales it to obtain the inflow velocity 
-            float epsilon_d = sqrt(2.0 / pi * cd * area);
+            float epsilon_d = std::sqrt(2.0 / M_PI * cd * area);
             float correction = 1. / (1.0 - cd * area /
-                                        (4.0 * pi * pow(epsilon_d,2)));
+                                        (4.0 * M_PI * epsilon_d * epsilon_d));
     
             // Compute the force for each velocity component
-            fx = rho * 1./2. * cd * area * Vmag * u * pow(correction,2);
-            fy = rho * 1./2. * cd * area * Vmag * v * pow(correction,2);
-            fz = rho * 1./2. * cd * area * Vmag * w * pow(correction,2);
+            fx = rho * 1./2. * cd * area * Vmag * u * correction * correction;
+            fy = rho * 1./2. * cd * area * Vmag * v * correction * correction;
+            fz = rho * 1./2. * cd * area * Vmag * w * correction * correction;
         }
 
 void fast::OpenFAST::setInputs(const fast::fastInputs & fi ) {

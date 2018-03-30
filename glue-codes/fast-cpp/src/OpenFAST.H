@@ -30,9 +30,9 @@ struct globTurbineDataType {
   std::vector<double> TurbineHubPos;
   int numForcePtsBlade;
   int numForcePtsTwr;
-  float nacelle_cd;
-  float nacelle_area;
-  float air_density;
+  float nacelle_cd{0.0};
+  float nacelle_area{0.0};
+  float air_density{0.0};
 };
 
 enum ActuatorNodeType {
@@ -172,12 +172,12 @@ class OpenFAST {
   void end();
 
   // Compute the nacelle force
-  void calc_nacelle_force(float & u,
-                          float & v,
-                          float & w,
-                          float & cd,
-                          float & area,
-                          float & rho,
+  void calc_nacelle_force(const float & u,
+                          const float & v,
+                          const float & w,
+                          const float & cd,
+                          const float & area,
+                          const float & rho,
                           float & fx,
                           float & fy,
                           float & fz);
