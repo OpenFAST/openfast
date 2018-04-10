@@ -15,11 +15,6 @@
 ! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
-!
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
 !**********************************************************************************************************************************
 !> The modules ModMesh and ModMesh_Types provide data structures and subroutines for representing and manipulating meshes
 !! and meshed data in the FAST modular framework. 
@@ -2937,9 +2932,37 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE PackLoadMesh
 !...............................................................................................................................
+!> This subroutine computes the differences of two meshes and packs that value into appropriate locations in the dY array.
+!! Do not change this packing without making sure subroutine aerodyn::init_jacobian is consistant with this routine!
+   SUBROUTINE PackLoadMesh_dY(M_p, M_m, dY, indx_first)
+   
+      TYPE(MeshType)                    , INTENT(IN   ) :: M_p                        !< AD outputs on given mesh at \f$ u + \Delta u \f$ (p=plus)
+      TYPE(MeshType)                    , INTENT(IN   ) :: M_m                        !< AD outputs on given mesh at \f$ u - \Delta u \f$ (m=minus)   
+      REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)                      !< column of dYdu or dYdz \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ 
+      INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into dY array; gives location of next array position to fill
+   
+         ! local variables:
+      INTEGER(IntKi)                :: i, indx_last
+
+   
+      do i=1,M_p%NNodes
+         indx_last  = indx_first + 2 
+         dY(indx_first:indx_last) = M_p%Force(:,i) - M_m%Force(:,i)
+         indx_first = indx_last + 1
+      end do
+
+      do i=1,M_p%NNodes
+         indx_last  = indx_first + 2 
+         dY(indx_first:indx_last) = M_p%Moment(:,i) - M_m%Moment(:,i)
+         indx_first = indx_last + 1
+      end do
+
+   END SUBROUTINE PackLoadMesh_dY
+!...............................................................................................................................
 !> This subroutine returns the names of rows/columns of motion meshes in the Jacobian matrices. It assumes all fields marked
 !! by FieldMask are allocated; Some fields may be allocated by the ModMesh module and not used in
 !! the linearization procedure, thus I am not using the check if they are allocated to determine if they should be included.
+!...............................................................................................................................
    SUBROUTINE PackMotionMesh_Names(M, MeshName, Names, indx_first, FieldMask)
    
       TYPE(MeshType)                    , INTENT(IN   ) :: M                          !< Motion mesh
@@ -3097,7 +3120,88 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
 
    END SUBROUTINE PackMotionMesh
+!...............................................................................................................................
+!> This subroutine computes the differences of two meshes and packs that value into appropriate locations in the dY array.
+   SUBROUTINE PackMotionMesh_dY(M_p, M_m, dY, indx_first, FieldMask)
+   
+      TYPE(MeshType)                    , INTENT(IN   ) :: M_p                        !< ED outputs on given mesh at \f$ u + \Delta u \f$ (p=plus)
+      TYPE(MeshType)                    , INTENT(IN   ) :: M_m                        !< ED outputs on given mesh at \f$ u - \Delta u \f$ (m=minus)   
+      REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)                      !< column of dYdu \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ 
+      INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into dY array; gives location of next array position to fill
+      LOGICAL, OPTIONAL                 , INTENT(IN   ) :: FieldMask(FIELDMASK_SIZE)  !< flags to determine if this field is part of the packing
+   
+         ! local variables:
+      INTEGER(IntKi)                :: ErrStat2 ! we're ignoring the errors about small angles
+      CHARACTER(ErrMsgLen)          :: ErrMsg2  
+   
+      INTEGER(IntKi)                :: i, indx_last
+      REAL(R8Ki)                    :: smallAngles(3)
+      REAL(R8Ki)                    :: orientation(3,3)
+      LOGICAL                       :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
+
+      if (present(FieldMask)) then
+         Mask = FieldMask
+      else
+         Mask = .true.
+      end if
+
+   
+      if (Mask(MASKID_TRANSLATIONDISP)) then
+         do i=1,M_p%NNodes
+            indx_last  = indx_first + 2 
+            dY(indx_first:indx_last) = M_p%TranslationDisp(:,i) - M_m%TranslationDisp(:,i)
+            indx_first = indx_last + 1
+         end do
+      end if
+   
+      if (Mask(MASKID_ORIENTATION)) then
+         do i=1,M_p%NNodes
+            orientation = transpose(M_m%Orientation(:,:,i))
+            orientation = matmul(orientation, M_p%Orientation(:,:,i))
+            
+            smallAngles = GetSmllRotAngs( orientation, ErrStat2, ErrMsg2 )
+
+            indx_last  = indx_first + 2 
+            dY(indx_first:indx_last) = smallAngles
+            indx_first = indx_last + 1
+         end do
+      end if
+      
+      if (Mask(MASKID_TRANSLATIONVEL)) then
+         do i=1,M_p%NNodes
+            indx_last  = indx_first + 2 
+            dY(indx_first:indx_last) = M_p%TranslationVel(:,i) - M_m%TranslationVel(:,i)
+            indx_first = indx_last + 1
+         end do
+      end if
+      
+      if (Mask(MASKID_ROTATIONVEL)) then
+         do i=1,M_p%NNodes
+            indx_last  = indx_first + 2 
+            dY(indx_first:indx_last) = M_p%RotationVel(:,i) - M_m%RotationVel(:,i)
+            indx_first = indx_last + 1
+         end do
+      end if
          
+      if (Mask(MASKID_TRANSLATIONACC)) then
+         do i=1,M_p%NNodes
+            indx_last  = indx_first + 2 
+            dY(indx_first:indx_last) = M_p%TranslationAcc(:,i) - M_m%TranslationAcc(:,i)
+            indx_first = indx_last + 1
+         end do
+      end if
+   
+      if (Mask(MASKID_ROTATIONACC)) then
+         do i=1,M_p%NNodes
+            indx_last  = indx_first + 2 
+            dY(indx_first:indx_last) = M_p%RotationAcc(:,i) - M_m%RotationAcc(:,i)
+            indx_first = indx_last + 1
+         end do
+      end if
+
+
+   END SUBROUTINE PackMotionMesh_dY
+
 !...............................................................................................................................
 !> This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
 !! values of u (which has values associated with times in t).  Order of the interpolation is 1.

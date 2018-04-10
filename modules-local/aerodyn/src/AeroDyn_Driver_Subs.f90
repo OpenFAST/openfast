@@ -209,10 +209,10 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
 
    real(ReKi)                                  :: z             ! height (m)
    !real(ReKi)                                  :: angle
-   real(ReKi)                                  :: theta(3)
-   real(ReKi)                                  :: position(3)
-   real(ReKi)                                  :: orientation(3,3)
-   real(ReKi)                                  :: rotateMat(3,3)
+   real(R8Ki)                                  :: theta(3)
+   real(R8Ki)                                  :: position(3)
+   real(R8Ki)                                  :: orientation(3,3)
+   real(R8Ki)                                  :: rotateMat(3,3)
    
    
    errStat = ErrID_None

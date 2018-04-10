@@ -1579,16 +1579,16 @@ SUBROUTINE Get_phi_perturbations(p, m, z_op, dz_p, dz_m)
    type(BEMT_MiscVarType),         intent(in   )  :: m           ! Misc/optimization variables
 
    REAL(ReKi), intent(in    ) :: z_op     !< value of z%phi(i,j) at the operating point
-   REAL(ReKi), intent(   out) :: dz_p     !< change in z_op in the plus direction 
-   REAL(ReKi), intent(   out) :: dz_m     !< change in z_op in the minus direction
+   REAL(R8Ki), intent(   out) :: dz_p     !< change in z_op in the plus direction 
+   REAL(R8Ki), intent(   out) :: dz_m     !< change in z_op in the minus direction
 
       ! local variables
-   real(ReKi)                 :: dz         ! size of perturbation
-   real(ReKi)                 :: zp         ! z_op+dz
-   real(ReKi)                 :: zm         ! z_op-dz
+   real(R8Ki)                 :: dz         ! size of perturbation
+   real(R8Ki)                 :: zp         ! z_op+dz
+   real(R8Ki)                 :: zm         ! z_op-dz
 
    
-   dz = 2*D2R
+   dz = 2.0_R8Ki*D2R_D
    
       ! we'll assume a central difference unless we are on the boundaries below  [default]
    dz_p = dz
@@ -1601,27 +1601,27 @@ SUBROUTINE Get_phi_perturbations(p, m, z_op, dz_p, dz_m)
       zm = z_op-dz
    
          ! check if it goes past the pi-eps upper boundary
-      if ( zp > pi - BEMT_epsilon2 ) then
+      if ( zp > pi_D - BEMT_epsilon2 ) then
          ! 1-sided difference
-         dz_p = 0
+         dz_p = 0.0_R8Ki
          dz_m = dz
       
          ! next we care about the -pi/4-eps boundary:
-      else if ( zm < -pi/4 - BEMT_epsilon2) then
+      else if ( zm < -pi_D/4.0_R8Ki - BEMT_epsilon2) then
          ! 1-sided difference
          dz_p = dz
-         dz_m = 0
+         dz_m = 0.0_R8Ki
       
          ! next let's check the +eps boundaries:
-      else if ( z_op > 0.0_ReKi .and. zm < BEMT_epsilon2 ) then
+      else if ( z_op > 0.0_R8Ki .and. zm < BEMT_epsilon2 ) then
          ! 1-sided difference
          dz_p = dz
-         dz_m = 0
+         dz_m = 0.0_R8Ki
       
          ! next let's check the -eps boundaries:
       else if ( z_op < 0.0_ReKi .and. zp > -BEMT_epsilon2 ) then
          ! 1-sided difference
-         dz_p = 0
+         dz_p = 0.0_R8Ki
          dz_m = dz
       
       ! else ! we don't care about the pi/2 boundary, so let's do a central difference for everything else

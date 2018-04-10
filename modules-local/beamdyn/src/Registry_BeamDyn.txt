@@ -27,6 +27,7 @@ typedef   ^         InitInputType R8Ki            RootOri   {3}{3} - - "Initial 
 typedef   ^         InitInputType ReKi            RootVel   {6}    - - "Initial root velocities and angular veolcities"
 typedef   ^         InitInputType ReKi            HubPos    {3}    - - "Initial Hub position vector"
 typedef   ^         InitInputType R8Ki            HubRot    {3}{3} - - "Initial Hub direction cosine matrix"
+typedef   ^         InitInputType Logical         Linearize - .FALSE. - "Flag that tells this module if the glue code wants to linearize." -
 
 
 # Define outputs that the initialization routine may need here:
@@ -36,6 +37,15 @@ typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputUnt {:}  -   - 
 typedef   ^        InitOutputType ProgDesc            Ver             -   -   -   "This module's name, version, and date"  -
 typedef   ^        InitOutputType R8Ki                kp_coordinate  {:}{:} - -   "Key point coordinates array"            -
 typedef   ^        InitOutputType IntKi               kp_total        -   -   -   "Total number of key point" -
+typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_y   {:}  -   -   "Names of the outputs used in linearization" -
+#typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_z   {:}  -   -   "Names of the constraint states used in linearization" -
+typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_x   {:}  -   -   "Names of the continuous states used in linearization" -
+typedef   ^        InitOutputType CHARACTER(LinChanLen) LinNames_u   {:}  -   -   "Names of the inputs used in linearization" -
+typedef   ^        InitOutputType LOGICAL               RotFrame_y   {:}  -   -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
+#typedef   ^        InitOutputType LOGICAL               RotFrame_z   {:}  -   -   "Flag that tells FAST/MBC3 if the constraint states used in linearization are in the rotating frame (not used for glue)" -
+typedef   ^        InitOutputType LOGICAL               RotFrame_x   {:}  -   -   "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame (not used for glue)" -
+typedef   ^        InitOutputType LOGICAL               RotFrame_u   {:}  -   -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
+typedef   ^        InitOutputType LOGICAL               IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 
 # ..... Blade Input file data........................................................................
 typedef   ^        BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
@@ -77,6 +87,8 @@ typedef   ^        BD_InputFile     ^       pitchK - - -     "Pitch actuator sti
 typedef   ^        BD_InputFile     ^       pitchC - - -     "Pitch actuator damping" - (kg-m^2/s)
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+typedef   ^        BD_InputFile    Logical             RotStates -  .TRUE. - "Orient states in rotating frame during linearization? (flag)" -
+typedef   ^        BD_InputFile    Logical             RelStates -  .FALSE. - "Define states relative to root motion during linearization? (flag)" -
 typedef   ^        BD_InputFile    Logical             Echo      -  - - "Echo"
 typedef   ^        BD_InputFile    IntKi               NNodeOuts -  - - "Number of node outputs [0 - 9]"	-
 typedef   ^        BD_InputFile    IntKi               OutNd    {9} - - "Nodes whose values will be output"	-
@@ -202,6 +214,15 @@ typedef   ^        ParameterType    ^           QPtw_Shp_Jac           {:}{:}{:}
 typedef   ^        ParameterType    ^           QPtw_ShpDer            {:}{:}        - - "optimization variable: QPtw_ShpDer(idx_qp,i) = p%ShpDer(i,idx_qp)*p%QPtWeight(idx_qp)" -
 typedef   ^        ParameterType    ^           FEweight               {:}{:}        - - "weighting factors for integrating local sectional loads" -
 
+typedef   ^        ParameterType    Integer     Jac_u_indx             {:}{:}        - - "matrix to help fill/pack the u vector in computing the jacobian" -
+typedef   ^        ParameterType    R8Ki        du                     {:}           - - "vector that determines size of perturbation for u (inputs)"
+typedef   ^        ParameterType    R8Ki        dx                     {6}           - - "vector that determines size of perturbation for x (continuous states)"
+typedef   ^        ParameterType    Integer     Jac_ny                  -            - - "number of outputs in jacobian matrix" -
+typedef   ^        ParameterType    Integer     Jac_nx                  -            - - "half the number of continuous states in jacobian matrix" -
+typedef   ^        ParameterType    logical     RotStates               -            - - "Orient states in rotating frame during linearization? (flag)" -
+typedef   ^        ParameterType    Logical     RelStates               -            - - "Define states relative to root motion during linearization? (flag)" -
+
+
 # ..... Inputs
 # ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -284,6 +305,8 @@ typedef   ^        MiscVarType    MeshMapType Map_u_DistrLoad_to_y - - - "mappin
 typedef   ^        MiscVarType    MeshMapType Map_y_BldMotion_to_u - - - "mapping of output motions to input node locations (for load transfer)" -
 typedef   ^        MiscVarType    IntKi       Un_Sum               - - - "unit number of summary file"	-
 typedef   ^        MiscVarType    EqMotionQP  qp                   - - - "Quadrature point calculation info" -
+typedef   ^        MiscVarType    R8Ki        lin_A            {:}{:}  - - "A (dXdx) matrix used in linearization (before RotState is applied)" -
+typedef   ^        MiscVarType    R8Ki        lin_C            {:}{:}  - - "C (dYdx) matrix used in linearization (before RotState is applied)" -
 
 #
 # these are temporary variables placed in a type so we don't allocate and deallocate each time step
