@@ -17,8 +17,8 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(OpenFAST CXX C Fortran)
 
-include(${CMAKE_SOURCE_DIR}/cmake/FastCmakeUtils.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/FastFortranOptions.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/OpenfastCmakeUtils.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/OpenfastFortranOptions.cmake)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -151,7 +151,7 @@ else()
 endif()
 
 configure_package_config_file(
-  cmake/OpenFASTConfig.cmake.in
+  cmake/OpenfastConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
   INSTALL_DESTINATION lib/cmake/OpenFAST
   PATH_VARS INCLUDE_INSTALL_DIR LIB_INSTALL_DIR FTNMOD_INSTALL_DIR)

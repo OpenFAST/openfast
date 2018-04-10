@@ -47,7 +47,7 @@ function(generate_f90_types regfile outfile)
   set(output "${CMAKE_CURRENT_BINARY_DIR}/${output_base}")
   add_custom_command(
     OUTPUT ${output}
-    DEPENDS fast_registry ${input}
+    DEPENDS openfast_registry ${input}
     COMMAND ${CMAKE_BINARY_DIR}/modules-local/fast-registry/fast_registry
     ${input} ${FAST_REGISTRY_INCLUDES} ${ARGN})
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
