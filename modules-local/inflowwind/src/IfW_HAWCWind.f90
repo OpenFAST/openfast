@@ -96,6 +96,7 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, p, MiscVars, Interval, InitOut, ErrStat, E
    p%RefHt        = InitInp%RefHt
    p%URef         = InitInp%URef
    p%InitPosition = 0.0_ReKi  ! bjj: someday we may want to let the users give an offset time/position
+   p%InitPosition(1) = InitInp%dx
 
    p%deltaXInv   = 1.0 / InitInp%dx
    p%deltaYInv   = 1.0 / InitInp%dy

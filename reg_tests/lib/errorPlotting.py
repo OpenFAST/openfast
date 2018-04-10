@@ -25,10 +25,6 @@ import sys
 import os
 import numpy as np
 from fast_io import load_output
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from matplotlib.ticker import FormatStrFormatter
 import rtestlib as rtl
 
 def _validateAndExpandInputs(argv):
@@ -48,8 +44,13 @@ def _parseSolution(solution):
         rtl.exitWithError("Error: {}".format(e))
 
 def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.ticker import FormatStrFormatter
+
     plt.figure()
-    
+
     ax = plt.subplot(211)
     plt.title(title1)
     plt.grid(True)

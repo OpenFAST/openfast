@@ -14,11 +14,9 @@
 # limitations under the License.
 #
 
-if (APPLE OR UNIX)
-  if (FCNAME MATCHES "gfortran.*")
-    add_definitions(-DIMPLICIT_DLLEXPORT)
-  endif (FCNAME MATCHES "gfortran.*")
-endif (APPLE OR UNIX)
+if(APPLE OR UNIX)
+  add_definitions(-DIMPLICIT_DLLEXPORT)
+endif()
 
 generate_f90_types(src/FAST_Registry.txt FAST_Types.f90 -noextrap)
 

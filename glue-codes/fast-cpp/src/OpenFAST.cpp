@@ -1,4 +1,9 @@
 #include "OpenFAST.H"
+#include <iostream>
+#include <fstream>
+#include <cmath>
+
+int fast::OpenFAST::AbortErrLev = ErrID_Fatal; // abort error level; compare with NWTC Library
 
 //Constructor 
 fast::fastInputs::fastInputs():
@@ -73,6 +78,11 @@ void fast::OpenFAST::init() {
        timeZero = true;
 
        numVelPtsTwr[iTurb] = cDriver_Output_to_FAST[iTurb].u_Len - numBlades[iTurb]*numVelPtsBlade[iTurb] - 1;
+       if(numVelPtsTwr[iTurb] == 0) {
+           numForcePtsTwr[iTurb] = 0;
+           std::cout << "Aerodyn doesn't want to calculate forces on the tower. All actuator points on the tower are turned off for turbine " << turbineMapProcToGlob[iTurb] << "." << std::endl ;
+       }
+           
 
        int nfpts = get_numForcePtsLoc(iTurb);
        forceNodeVel[iTurb].resize(nfpts);
@@ -228,6 +238,8 @@ void fast::OpenFAST::step() {
    nt_global = nt_global + 1;
   
   if ( (((nt_global - ntStart) % nEveryCheckPoint) == 0 )  && (nt_global != ntStart) ) {
+    if (nTurbinesProc > 0) backupVelocityDataFile(nt_global, velNodeDataFile);
+      
     //sprintf(CheckpointFileRoot, "../../CertTest/Test18.%d", nt_global);
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
       CheckpointFileRoot[iTurb] = " "; // if blank, it will use FAST convention <RootName>.nt_global
@@ -475,7 +487,7 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
       std::vector<double> rDistForce(nForcePtsBlade) ;
       for(int j=0; j < nForcePtsBlade; j++) {
 	int iNodeForce = 1 + iBlade * nForcePtsBlade + j ; //The number of actuator force points is always the same for all blades
-	rDistForce[j] = sqrt( 
+	rDistForce[j] = std::sqrt( 
                              (cDriver_Input_from_FAST[iTurb].pxForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pxForce[0])*(cDriver_Input_from_FAST[iTurb].pxForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pxForce[0])  
 		           + (cDriver_Input_from_FAST[iTurb].pyForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pyForce[0])*(cDriver_Input_from_FAST[iTurb].pyForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pyForce[0])  
 		           + (cDriver_Input_from_FAST[iTurb].pzForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pzForce[0])*(cDriver_Input_from_FAST[iTurb].pzForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pzForce[0])  			
@@ -486,7 +498,7 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
       int nVelPtsBlade = get_numVelPtsBladeLoc(iTurb);
       for(int j=0; j < nVelPtsBlade; j++) {
 	int iNodeVel = 1 + iBlade * nVelPtsBlade + j ; //Assumes the same number of velocity (Aerodyn) nodes for all blades
-	double rDistVel = sqrt( 
+	double rDistVel = std::sqrt( 
 			      (cDriver_Input_from_FAST[iTurb].pxVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pxVel[0])*(cDriver_Input_from_FAST[iTurb].pxVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pxVel[0])  
 		            + (cDriver_Input_from_FAST[iTurb].pyVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pyVel[0])*(cDriver_Input_from_FAST[iTurb].pyVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pyVel[0])  
 		            + (cDriver_Input_from_FAST[iTurb].pzVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pzVel[0])*(cDriver_Input_from_FAST[iTurb].pzVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pzVel[0])  			
@@ -514,7 +526,7 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
       int iNodeBotTowerForce = 1 + nBlades * get_numForcePtsBladeLoc(iTurb); // The number of actuator force points is always the same for all blades
       for(int j=0; j < nForcePtsTower; j++) {
 	int iNodeForce = iNodeBotTowerForce + j ; 
-	hDistForce[j] = sqrt( 
+	hDistForce[j] = std::sqrt( 
 			     (cDriver_Input_from_FAST[iTurb].pxForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pxForce[iNodeBotTowerForce])*(cDriver_Input_from_FAST[iTurb].pxForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pxForce[iNodeBotTowerForce])  
                            + (cDriver_Input_from_FAST[iTurb].pyForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pyForce[iNodeBotTowerForce])*(cDriver_Input_from_FAST[iTurb].pyForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pyForce[iNodeBotTowerForce])  
 			   + (cDriver_Input_from_FAST[iTurb].pzForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pzForce[iNodeBotTowerForce])*(cDriver_Input_from_FAST[iTurb].pzForce[iNodeForce] - cDriver_Input_from_FAST[iTurb].pzForce[iNodeBotTowerForce])	
@@ -525,7 +537,7 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
       int iNodeBotTowerVel = 1 + nBlades * get_numVelPtsBladeLoc(iTurb); // Assumes the same number of velocity (Aerodyn) nodes for all blades
       for(int j=0; j < nVelPtsTower; j++) {
 	int iNodeVel = iNodeBotTowerVel + j ; 
-	double hDistVel = sqrt( 
+	double hDistVel = std::sqrt( 
 			       (cDriver_Input_from_FAST[iTurb].pxVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pxVel[iNodeBotTowerVel])*(cDriver_Input_from_FAST[iTurb].pxVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pxVel[iNodeBotTowerVel])  
                              + (cDriver_Input_from_FAST[iTurb].pyVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pyVel[iNodeBotTowerVel])*(cDriver_Input_from_FAST[iTurb].pyVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pyVel[iNodeBotTowerVel])  
                              + (cDriver_Input_from_FAST[iTurb].pzVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pzVel[iNodeBotTowerVel])*(cDriver_Input_from_FAST[iTurb].pzVel[iNodeVel] - cDriver_Input_from_FAST[iTurb].pzVel[iNodeBotTowerVel])  			
@@ -850,6 +862,20 @@ herr_t fast::OpenFAST::closeVelocityDataFile(int nt_global, hid_t velDataFile) {
   return status;
 }
 
+
+void fast::OpenFAST::backupVelocityDataFile(int curTimeStep, hid_t & velDataFile) {
+
+    closeVelocityDataFile(curTimeStep, velDataFile);
+        
+    std::ifstream source("velDatafile." + std::to_string(worldMPIRank) + ".h5", std::ios::binary);
+    std::ofstream dest("velDatafile." + std::to_string(worldMPIRank) + ".h5." + std::to_string(curTimeStep) + ".bak", std::ios::binary);
+
+    dest << source.rdbuf();
+    source.close();
+    dest.close();
+
+    velDataFile = openVelocityDataFile(false);
+}
 
 void fast::OpenFAST::writeVelocityData(hid_t h5File, int iTurb, int iTimestep, OpFM_InputType_t iData, OpFM_OutputType_t oData) {
 
