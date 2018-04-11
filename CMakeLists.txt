@@ -97,7 +97,7 @@ set(FAST_MODULES_LOCAL
   openfoam
   supercontroller
   turbsim
-  fast-library
+  openfast-library
   )
 
 ########################################################################
