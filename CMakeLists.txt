@@ -77,7 +77,7 @@ endif()
 ########################################################################
 # Build rules for FAST Registry
 #
-add_subdirectory(modules-local/fast-registry)
+add_subdirectory(modules-local/openfast-registry)
 
 ########################################################################
 # FAST Core modules
