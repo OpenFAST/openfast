@@ -3238,7 +3238,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
     REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
     REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd                                                                     
-    REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation    
+    REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation  
+    REAL(DbKi)                          :: scaleF1,scaleF2,scaleF3
     REAL(DbKi)                          :: tensor(3, order+1)        ! for extrapolation of orientations 
     REAL(DbKi)                          :: tensor_interp(3)          ! for extrapolation of orientations 
     REAL(DbKi)                          :: Orient(3,3)               ! for extrapolation of orientations    
@@ -3285,60 +3286,74 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
          ! Now let's interpolate/extrapolate:
 
       scaleFactor = t_out / ( t(2) * t(3) * (t(2) - t(3)) )
+      scaleF1 = 1 + scaleFactor * (t(3)-t(2)) * (t(3)+t(2)-t_out)
+      scaleF2 = scaleFactor * t(3) * (-t(3)+t_out)
+      scaleF3 = scaleFactor * t(2) * (t(2)-t_out)
+
 
       IF ( ALLOCATED(u1%Force) ) THEN
 
-         u_out%Force =   u1%Force &
-                       + ( t(3)**2 * (u1%Force - u2%Force) + t(2)**2*(-u1%Force + u3%Force) ) * scaleFactor &
-                       + ( (t(2)-t(3))*u1%Force + t(3)*u2%Force - t(2)*u3%Force ) *scaleFactor * t_out
+         u_out%Force = u1%Force * scaleF1 + u2%Force * scaleF2 + u3%Force * scaleF3
+         !write(*,*) 'A',u_out%Force
+         !u_out%Force =   u1%Force &
+         !              + ( t(3)**2 * (u1%Force - u2%Force) + t(2)**2*(-u1%Force + u3%Force) ) * scaleFactor &
+         !              + ( (t(2)-t(3))*u1%Force + t(3)*u2%Force - t(2)*u3%Force ) *scaleFactor * t_out
+         !write(*,*) 'B', u_out%Force
 
       END IF
       IF ( ALLOCATED(u1%Moment) ) THEN
-         u_out%Moment =   u1%Moment &
-                       + ( t(3)**2 * (u1%Moment - u2%Moment) + t(2)**2*(-u1%Moment + u3%Moment) ) * scaleFactor &
-                       + ( (t(2)-t(3))*u1%Moment + t(3)*u2%Moment - t(2)*u3%Moment ) *scaleFactor * t_out
+         u_out%Moment = u1%Moment * scaleF1 + u2%Moment * scaleF2 + u3%Moment * scaleF3
+         !u_out%Moment =   u1%Moment &
+         !              + ( t(3)**2 * (u1%Moment - u2%Moment) + t(2)**2*(-u1%Moment + u3%Moment) ) * scaleFactor &
+         !              + ( (t(2)-t(3))*u1%Moment + t(3)*u2%Moment - t(2)*u3%Moment ) *scaleFactor * t_out
       END IF
 
       IF ( ALLOCATED(u1%TranslationDisp) ) THEN
-         u_out%TranslationDisp =   u1%TranslationDisp &
-                               + ( t(3)**2 * ( u1%TranslationDisp - u2%TranslationDisp) &
-                                 + t(2)**2 * (-u1%TranslationDisp + u3%TranslationDisp) ) * scaleFactor &
-                               + ( (t(2)-t(3))*u1%TranslationDisp + t(3)*u2%TranslationDisp &
-                                                                  - t(2)*u3%TranslationDisp )*scaleFactor*t_out
+         u_out%TranslationDisp = u1%TranslationDisp * scaleF1 + u2%TranslationDisp * scaleF2 + u3%TranslationDisp * scaleF3
+         !u_out%TranslationDisp =   u1%TranslationDisp &
+         !                      + ( t(3)**2 * ( u1%TranslationDisp - u2%TranslationDisp) &
+         !                        + t(2)**2 * (-u1%TranslationDisp + u3%TranslationDisp) ) * scaleFactor &
+         !                      + ( (t(2)-t(3))*u1%TranslationDisp + t(3)*u2%TranslationDisp &
+         !                                                         - t(2)*u3%TranslationDisp )*scaleFactor*t_out
       END IF
 
       IF ( ALLOCATED(u1%RotationVel) ) THEN
-         u_out%RotationVel =   u1%RotationVel &
-                           + ( t(3)**2 * ( u1%RotationVel - u2%RotationVel) &
-                             + t(2)**2 * (-u1%RotationVel + u3%RotationVel) ) * scaleFactor &
-                           + ( (t(2)-t(3))*u1%RotationVel + t(3)*u2%RotationVel - t(2)*u3%RotationVel )*scaleFactor*t_out
+         u_out%RotationVel = u1%RotationVel * scaleF1 + u2%RotationVel * scaleF2 + u3%RotationVel * scaleF3
+         !u_out%RotationVel =   u1%RotationVel &
+         !                  + ( t(3)**2 * ( u1%RotationVel - u2%RotationVel) &
+         !                    + t(2)**2 * (-u1%RotationVel + u3%RotationVel) ) * scaleFactor &
+         !                  + ( (t(2)-t(3))*u1%RotationVel + t(3)*u2%RotationVel - t(2)*u3%RotationVel )*scaleFactor*t_out
       END IF
 
       IF ( ALLOCATED(u1%TranslationVel) ) THEN
-         u_out%TranslationVel =   u1%TranslationVel &
-                              +( t(3)**2 * ( u1%TranslationVel - u2%TranslationVel) &
-                               + t(2)**2 * (-u1%TranslationVel + u3%TranslationVel) ) * scaleFactor &
-                              +( (t(2)-t(3))*u1%TranslationVel + t(3)*u2%TranslationVel - t(2)*u3%TranslationVel)*scaleFactor*t_out
+         u_out%TranslationVel = u1%TranslationVel * scaleF1 + u2%TranslationVel * scaleF2 + u3%TranslationVel * scaleF3
+         !u_out%TranslationVel =   u1%TranslationVel &
+         !                     +( t(3)**2 * ( u1%TranslationVel - u2%TranslationVel) &
+         !                      + t(2)**2 * (-u1%TranslationVel + u3%TranslationVel) ) * scaleFactor &
+         !                     +( (t(2)-t(3))*u1%TranslationVel + t(3)*u2%TranslationVel - t(2)*u3%TranslationVel)*scaleFactor*t_out
       END IF
 
       IF ( ALLOCATED(u1%RotationAcc) ) THEN
-         u_out%RotationAcc =   u1%RotationAcc &
-                             + ( t(3)**2 * ( u1%RotationAcc - u2%RotationAcc) &
-                               + t(2)**2 * (-u1%RotationAcc + u3%RotationAcc) ) * scaleFactor &
-                            + ( (t(2)-t(3))*u1%RotationAcc  + t(3)*u2%RotationAcc - t(2)*u3%RotationAcc )*scaleFactor*t_out
+         u_out%RotationAcc = u1%RotationAcc * scaleF1 + u2%RotationAcc * scaleF2 + u3%RotationAcc * scaleF3
+         !u_out%RotationAcc =   u1%RotationAcc &
+         !                    + ( t(3)**2 * ( u1%RotationAcc - u2%RotationAcc) &
+         !                      + t(2)**2 * (-u1%RotationAcc + u3%RotationAcc) ) * scaleFactor &
+         !                   + ( (t(2)-t(3))*u1%RotationAcc  + t(3)*u2%RotationAcc - t(2)*u3%RotationAcc )*scaleFactor*t_out
       END IF
 
       IF ( ALLOCATED(u1%TranslationAcc) ) THEN
-         u_out%TranslationAcc =   u1%TranslationAcc &
-                              +( t(3)**2 * ( u1%TranslationAcc - u2%TranslationAcc) &
-                               + t(2)**2 * (-u1%TranslationAcc + u3%TranslationAcc) ) * scaleFactor &
-                              +( (t(2)-t(3))*u1%TranslationAcc + t(3)*u2%TranslationAcc - t(2)*u3%TranslationAcc)*scaleFactor*t_out
+         u_out%TranslationAcc = u1%TranslationAcc * scaleF1 + u2%TranslationAcc * scaleF2 + u3%TranslationAcc * scaleF3
+         !u_out%TranslationAcc =   u1%TranslationAcc &
+         !                     +( t(3)**2 * ( u1%TranslationAcc - u2%TranslationAcc) &
+         !                      + t(2)**2 * (-u1%TranslationAcc + u3%TranslationAcc) ) * scaleFactor &
+         !                     +( (t(2)-t(3))*u1%TranslationAcc + t(3)*u2%TranslationAcc - t(2)*u3%TranslationAcc)*scaleFactor*t_out
       END IF
 
       IF ( ALLOCATED(u1%Scalars) ) THEN
-         u_out%Scalars =   u1%Scalars &
-                       + ( t(3)**2 * (u1%Scalars - u2%Scalars) + t(2)**2*(-u1%Scalars + u3%Scalars) )*scaleFactor &
-                       + ( (t(2)-t(3))*u1%Scalars + t(3)*u2%Scalars - t(2)*u3%Scalars )*scaleFactor * t_out
+         u_out%Scalars = u1%Scalars * scaleF1 + u2%Scalars * scaleF2 + u3%Scalars * scaleF3
+         !u_out%Scalars =   u1%Scalars &
+         !              + ( t(3)**2 * (u1%Scalars - u2%Scalars) + t(2)**2*(-u1%Scalars + u3%Scalars) )*scaleFactor &
+         !              + ( (t(2)-t(3))*u1%Scalars + t(3)*u2%Scalars - t(2)*u3%Scalars )*scaleFactor * t_out
       END IF
 
       IF ( ALLOCATED(u1%Orientation) ) THEN
