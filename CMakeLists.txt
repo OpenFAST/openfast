@@ -39,7 +39,7 @@ option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" off)
-option(BUILD_FAST_CPP_API "Enable building FAST - C++ API" off)
+option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
 
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
@@ -75,14 +75,14 @@ if(BUILD_TESTING)
 endif()
 
 ########################################################################
-# Build rules for FAST Registry
+# Build rules for OpenFAST Registry
 #
 add_subdirectory(modules-local/openfast-registry)
 
 ########################################################################
-# FAST Core modules
+# OpenFAST Core modules
 #
-set(FAST_MODULES_LOCAL
+set(OPENFAST_MODULES_LOCAL
   nwtc-library
   inflowwind
   aerodyn
@@ -101,9 +101,9 @@ set(FAST_MODULES_LOCAL
   )
 
 ########################################################################
-# FAST External modules
+# OpenFAST External modules
 #
-set(FAST_MODULES_EXTERNAL
+set(OPENFAST_MODULES_EXTERNAL
   feamooring
   moordyn
   icedyn
@@ -111,21 +111,21 @@ set(FAST_MODULES_EXTERNAL
   map
   )
 
-set(FAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
-set_registry_includes("modules-local" ${FAST_MODULES_LOCAL})
-set_registry_includes("modules-ext" ${FAST_MODULES_EXTERNAL})
-# Fix non-standard path addition to FAST_REGISTRY_INCLUDES in icefloe module
-set(FAST_REGISTRY_INCLUDES
-  ${FAST_REGISTRY_INCLUDES} -I ${CMAKE_SOURCE_DIR}/modules-ext/icefloe/src/interfaces/FAST/
+set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
+set_registry_includes("modules-local" ${OPENFAST_MODULES_LOCAL})
+set_registry_includes("modules-ext" ${OPENFAST_MODULES_EXTERNAL})
+# Fix non-standard path addition to OPENFAST_REGISTRY_INCLUDES in icefloe module
+set(OPENFAST_REGISTRY_INCLUDES
+  ${OPENFAST_REGISTRY_INCLUDES} -I ${CMAKE_SOURCE_DIR}/modules-ext/icefloe/src/interfaces/FAST/
   CACHE INTERNAL "Registry includes paths")
 
-foreach(IDIR IN ITEMS ${FAST_MODULES_LOCAL})
+foreach(IDIR IN ITEMS ${OPENFAST_MODULES_LOCAL})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules-local/${IDIR}")
-endforeach(IDIR IN ITEMS ${FAST_MODULES_LOCAL})
+endforeach(IDIR IN ITEMS ${OPENFAST_MODULES_LOCAL})
 
-foreach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
+foreach(IDIR IN ITEMS ${OPENFAST_MODULES_EXTERNAL})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules-ext/${IDIR}")
-endforeach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
+endforeach(IDIR IN ITEMS ${OPENFAST_MODULES_EXTERNAL})
 
 add_subdirectory(glue-codes)
 
@@ -144,7 +144,7 @@ include(CMakePackageConfigHelpers)
 set(INCLUDE_INSTALL_DIR include/)
 set(LIB_INSTALL_DIR lib/)
 set(FTNMOD_INSTALL_DIR include/openfast/)
-if (BUILD_FAST_CPP_API)
+if (BUILD_OPENFAST_CPP_API)
   set(OpenFAST_HAS_CXX_API TRUE)
 else()
   set(OpenFAST_HAS_CXX_API FALSE)
