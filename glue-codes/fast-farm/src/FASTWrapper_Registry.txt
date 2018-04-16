@@ -81,13 +81,13 @@ typedef      ^            ParameterType       ReKi       p_ref_Turbine          
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
-typedef      ^            InputType           SiKi       FromSC_Global            {:}     -      -      "Global (turbine-independent) commands from the super controller"      "(various units)"
-typedef      ^            InputType           SiKi       FromSC_Turbine           {:}     -      -      "Turbine-dependent commands from the super controller from the super controller"      "(various units)"
+typedef      ^            InputType           SiKi       fromSCglob              {:}     -      -      "Global (turbine-independent) commands from the super controller"      "(various units)"
+typedef      ^            InputType           SiKi       fromSC                  {:}     -      -      "Turbine-dependent commands from the super controller from the super controller"      "(various units)"
 typedef      ^            InputType           SiKi       Vdist_High     {:}{:}{:}{:}{:}   -      -      "UVW components of disturbed wind [nx^high, ny^high, nz^high, n^high/low] (ambient + deficits) across the high-resolution domain around the turbine for each high-resolution time step within a low-resolution time step"      "(m/s)"
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef      ^            OutputType          SiKi       ToSC_Turbine              {:}    -      -      "Turbine-dependent commands to the super controller"      "(various units)"
+typedef      ^            OutputType          SiKi       toSC              {:}    -      -      "Turbine-dependent commands to the super controller"      "(various units)"
 typedef      ^            OutputType          ReKi       xHat_Disk                 {3}    -      -      "Orientation of rotor centerline, normal to disk"      "-"
 typedef      ^            OutputType          ReKi       YawErr                     -     -      -      "Nacelle-yaw error i.e. the angle about positive Z^ from the rotor centerline to the rotor-disk-averaged relative wind velocity (ambients + deficits + motion), both projected onto the horizontal plane"      "rad"
 typedef      ^            OutputType          ReKi       p_hub                     {3}    -      -      "Center position of hub"      "m"

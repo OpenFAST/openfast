@@ -484,7 +484,7 @@ abstract interface
       ! if we're statically loading the library (i.e., OpenFOAM), we can just call DISCON(); 
       ! I'll leave some options for whether the supercontroller is being used
 
-   !CALL DISCON( dll_data%avrSWAP, scInGlobFilter, scInFilter, dll_data%SCoutput, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
+   !CALL DISCON( dll_data%avrSWAP, filt_fromSCglob, filt_fromSC, dll_data%toSC, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
    call SC_DLL_UpdateStates ( t, p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u(1)%toSCglob, p%NumCtrl2SC, u(1)%toSC, &
                         p%NumStatesGlobal, xd%Global, p%NumStatesTurbine, xd%Turbine, errStat, errMsg )
 

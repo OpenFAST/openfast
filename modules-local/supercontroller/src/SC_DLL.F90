@@ -168,7 +168,7 @@ subroutine sc_calcOutputs ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurbi
    real(C_FLOAT),          intent(inout) :: from_SC      (*)  !< turbine specific outputs of the super controller (to the turbine controller)
    integer(C_INT),         intent(inout) :: errStat           !< error status code (uses NWTC_Library error codes)
    character(kind=C_CHAR), intent(inout) :: errMsg       (*)  !< Error Message from DLL to simulation code        
-   integer                               :: i, c
+   integer                               :: i, j, c
    
    ! For this demo control we have:
    ! nInpGlobal        = 0
@@ -180,15 +180,17 @@ subroutine sc_calcOutputs ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurbi
    ! NumSC2CtrlGlob    = 2 
    ! NumSC2Ctrl        = 3 
    
-   c = 1
-   do i = 1, nTurbines      
-      from_SC((i-1)*NumSC2Ctrl+1) = StatesTurbine(c) + StatesTurbine(c+2)
-      from_SC((i-1)*NumSC2Ctrl+2) = StatesTurbine(c+1) + StatesTurbine(c+2)
-      c = c+3
+   !c = 1
+   do j = 1, nTurbines  
+      do i = 1, NumSC2Ctrl
+         from_SC((j-1)*NumSC2Ctrl+i) = (j-1)*NumSC2Ctrl+i! StatesTurbine(c) + StatesTurbine(c+2)
+         !from_SC((i-1)*NumSC2Ctrl+2) = StatesTurbine(c+1) + StatesTurbine(c+2)
+         !c = c+3
+      end do
    end do
    
    do i = 1, NumSC2CtrlGlob
-      from_SCglob(i) = StatesGlob(i)
+      from_SCglob(i) = StatesGlob(1)
    end do
    
    !errMsg = TRANSFER( TRIM(avcMSG)//C_NULL_CHAR, avcMSG, SIZE(avcMSG) )
@@ -257,7 +259,7 @@ subroutine sc_updateStates ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurb
    ! NumSC2Ctrl        = 3 
    sum = 0.0
    do i = 1, nTurbines*nStatesTurbine
-   StatesTurbine(i) = paramGlobal(1)*to_SC(i)*paramTurbine(2*i-1) / paramTurbine(2*i) + (1-paramGlobal(1)*StatesTurbine(i))
+   StatesTurbine(i) = i !paramGlobal(1)*to_SC(i)*paramTurbine(2*i-1) / paramTurbine(2*i) + (1-paramGlobal(1)*StatesTurbine(i))
    sum = sum + StatesTurbine(i)
    end do
    

@@ -1698,9 +1698,9 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
       ! 2c. transfer y_SC to u_F         
    
       do nt = 1,farm%p%NumTurbines
-         farm%FWrap(nt)%u%FromSC_Global  = farm%SC%y%fromSCglob
+         farm%FWrap(nt)%u%fromSCglob  = farm%SC%y%fromSCglob
             ! SC stores all turbine-controller data in a 1D array, need to separate these out for each turbine
-         farm%FWrap(nt)%u%FromSC_Turbine(:) = farm%SC%y%fromSC( (nt-1)*farm%SC%p%NumSC2Ctrl+1:nt*farm%SC%p%NumSC2Ctrl ) 
+         farm%FWrap(nt)%u%fromSC(:) = farm%SC%y%fromSC( (nt-1)*farm%SC%p%NumSC2Ctrl+1:nt*farm%SC%p%NumSC2Ctrl ) 
       end do
       
    end if ! (farm%p%UseSC)
@@ -1729,7 +1729,7 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
       farm%SC%u%toSCglob = 0.0_SiKi  ! We currently do not have a way to set global SC inputs from FAST.Farm
    
       do nt = 1,farm%p%NumTurbines 
-        farm%SC%u%toSC( (nt-1)*farm%SC%p%NumCtrl2SC+1 : nt*farm%SC%p%NumCtrl2SC )   = farm%FWrap(nt)%y%ToSC_Turbine(:)
+        farm%SC%u%toSC( (nt-1)*farm%SC%p%NumCtrl2SC+1 : nt*farm%SC%p%NumCtrl2SC )   = farm%FWrap(nt)%y%toSC(:)
       end do
       
    end if
@@ -2150,11 +2150,11 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
       
       do nt = 1,farm%p%NumTurbines
             
-         farm%FWrap(nt)%u%FromSC_Global  = farm%SC%y%fromSCglob
-         farm%FWrap(nt)%u%FromSC_Turbine = farm%SC%y%fromSC( (nt-1)*farm%SC%p%NumSC2Ctrl + 1 : nt*farm%SC%p%NumSC2Ctrl )
+         farm%FWrap(nt)%u%fromSCglob  = farm%SC%y%fromSCglob
+         farm%FWrap(nt)%u%fromSC      = farm%SC%y%fromSC( (nt-1)*farm%SC%p%NumSC2Ctrl + 1 : nt*farm%SC%p%NumSC2Ctrl )
          !--------------------
          ! 3a. Transfer y_F to u_SC, at n+1
-         farm%SC%u%toSC( (nt-1)*farm%SC%p%NumCtrl2SC + 1 : nt*farm%SC%p%NumCtrl2SC ) = farm%FWrap(nt)%y%ToSC_Turbine
+         farm%SC%u%toSC( (nt-1)*farm%SC%p%NumCtrl2SC + 1 : nt*farm%SC%p%NumCtrl2SC ) = farm%FWrap(nt)%y%toSC
          
       end do
       

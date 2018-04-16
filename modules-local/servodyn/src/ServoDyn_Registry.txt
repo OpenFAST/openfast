@@ -136,7 +136,7 @@ typedef	^	BladedDLLType	IntKi	GenState	-	-	-	"Generator state from Bladed DLL"	N
 #typedef	^	BladedDLLType	ReKi	ElecPwr	-	-	-	"Electrical power sent to Bladed DLL"	W
 typedef	^	BladedDLLType	ReKi	BlPitchCom	3	-	-	"Commanded blade pitch angles"	radians
 typedef	^	BladedDLLType	ReKi	PrevBlPitch	3	-	-	"Previously commanded blade pitch angles"	radians
-typedef	^	BladedDLLType	SiKi	SCoutput	{:}	-	-	"controller output to supercontroller"	-
+typedef	^	BladedDLLType	SiKi	toSC	{:}	-	-	"controller output to supercontroller"	-
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -148,8 +148,8 @@ typedef	^	ContinuousStateType	TMD_ContinuousStateType	TTMD	-	-	-	"TMD module sta
 #typedef	^	DiscreteStateType	ReKi	BlPitchFilter	{:}	-	-	"blade pitch filter"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	TTMD	-	-	-	"TMD module states - tower"	-
-typedef ^       DiscreteStateType       SiKi                    ScInFilter    {:}     -       -       "Filtered turbine specific inputs from supercontroller" -
-typedef ^       DiscreteStateType       SiKi                    ScInGlobFilter    {:}     -       -       "Filtered global inputs from supercontroller" -
+typedef ^       DiscreteStateType       SiKi                    filt_fromSC    {:}     -       -       "Filtered turbine specific inputs from supercontroller" -
+typedef ^       DiscreteStateType       SiKi                    filt_fromSCglob    {:}     -       -       "Filtered global inputs from supercontroller" -
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
@@ -328,8 +328,8 @@ typedef	^	InputType	ReKi	ElecPwr_prev	-	-	-	"Electrical power (from previous ste
 typedef	^	InputType	ReKi	GenTrq_prev	-	-	-	"Electrical generator torque (from previous step), sent to Bladed DLL"	N-m
 typedef	^	InputType	TMD_InputType	NTMD	-	-	-	"TMD module inputs - nacelle"	-
 typedef	^	InputType	TMD_InputType	TTMD	-	-	-	"TMD module inputs - tower"	-
-typedef	^	InputType	SiKi	SuperControllerTurbine	{:}	-	-	"A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller"	-
-typedef	^	InputType	SiKi	SuperControllerGlob	{:}	-	-	"A swap array: used to pass global input data to the DLL controller from the supercontroller"	-
+typedef	^	InputType	SiKi	fromSC	{:}	-	-	"A swap array: used to pass turbine specific input data to the DLL controller from the supercontroller"	-
+typedef	^	InputType	SiKi	fromSCglob	{:}	-	-	"A swap array: used to pass global input data to the DLL controller from the supercontroller"	-
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
@@ -344,5 +344,5 @@ typedef	^	OutputType	ReKi	ElecPwr	-	-	-	"Electrical power"	W
 typedef	^	OutputType	ReKi	TBDrCon	{:}	-	-	"Instantaneous tip-brake drag constant, Cd*Area"
 typedef	^	OutputType	TMD_OutputType	NTMD	-	-	-	"TMD module outputs - nacelle"	-
 typedef	^	OutputType	TMD_OutputType	TTMD	-	-	-	"TMD module outputs - tower"	-
-typedef	^	OutputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-
+typedef	^	OutputType	SiKi	toSC	{:}	-	-	"A swap array: used to pass output data from the DLL controller to the supercontroller"	-
 
