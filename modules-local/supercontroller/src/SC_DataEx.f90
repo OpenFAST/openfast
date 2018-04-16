@@ -77,11 +77,8 @@ SUBROUTINE SC_DX_Init( NumSC2CtrlGlob, NumSC2Ctrl, NumCtrl2SC, SC_DX, ErrStat, E
    if (NumCtrl2SC > 0) then
       SC_DX%u%c_obj%toSC_Len = NumCtrl2SC
       SC_DX%u%c_obj%toSC     = C_LOC( SC_DX%u%toSC(1) )
-      SC_DX%u%toSC = 0.0_ReKi
    end if
       
-      ! initialize the arrays:
-      ! 
       
       !............................................................................................
       ! Define system output initializations (set up mesh) here:

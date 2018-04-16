@@ -273,7 +273,7 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
    if ( farm%p%useSC ) then
       SC_InitInp%nTurbines = farm%p%NumTurbines
       Interval = farm%p%DT
-      call SC_Init(SC_InitInp, farm%SC%u, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
+      call SC_Init(SC_InitInp, farm%SC%uInputs(1), farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
                      farm%SC%y, farm%SC%m, Interval, SC_InitOut, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             if (ErrStat >= AbortErrLev) then
@@ -1600,7 +1600,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, SC_InitOutput, SC_y
          FWrap_InitInp%dY_high       = AWAE_InitOutput%dY_high(nt)
          FWrap_InitInp%dZ_high       = AWAE_InitOutput%dZ_high(nt)
          if (SC_InitOutput%NumSC2Ctrl>0) then
-            FWrap_InitInp%fromSC = SC_y%fromSC((nt-1)*SC_InitOutput%NumSC2Ctrl+1:(nt-1)*SC_InitOutput%NumSC2Ctrl+SC_InitOutput%NumSC2Ctrl)
+            FWrap_InitInp%fromSC = SC_y%fromSC((nt-1)*SC_InitOutput%NumSC2Ctrl+1:nt*SC_InitOutput%NumSC2Ctrl)
          end if
             ! note that FWrap_Init has Interval as INTENT(IN) so, we don't need to worry about overwriting farm%p%dt here:
          call FWrap_Init( FWrap_InitInp, farm%FWrap(nt)%u, farm%FWrap(nt)%p, farm%FWrap(nt)%x, farm%FWrap(nt)%xd, farm%FWrap(nt)%z, &
@@ -1683,13 +1683,13 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
    if (farm%p%UseSC) then
       !--------------------
       ! 2a. u_SC=0         
-      if ( farm%SC%p%NInpGlobal > 0 ) farm%SC%u%toSCglob = 0.0_SiKi
-      if ( farm%SC%p%NumCtrl2SC > 0 ) farm%SC%u%toSC     = 0.0_SiKi
+      if ( farm%SC%p%NInpGlobal > 0 ) farm%SC%uInputs(1)%toSCglob = 0.0_SiKi
+      if ( farm%SC%p%NumCtrl2SC > 0 ) farm%SC%uInputs(1)%toSC     = 0.0_SiKi
       
       !--------------------
       ! 2b. CALL SC_CO 
    
-      call SC_CalcOutput(0.0_DbKi, farm%SC%u, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, &
+      call SC_CalcOutput(0.0_DbKi, farm%SC%uInputs(1), farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, &
                            farm%SC%OtherState, farm%SC%y, farm%SC%m, ErrStat, ErrMsg )         
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             if (ErrStat >= AbortErrLev) return
@@ -1726,10 +1726,10 @@ subroutine FARM_InitialCO(farm, ErrStat, ErrMsg)
       ! 1.  Transfer y_F to u_SC     
    if (farm%p%UseSC) then
       
-      farm%SC%u%toSCglob = 0.0_SiKi  ! We currently do not have a way to set global SC inputs from FAST.Farm
+      farm%SC%uInputs(1)%toSCglob = 0.0_SiKi  ! We currently do not have a way to set global SC inputs from FAST.Farm
    
       do nt = 1,farm%p%NumTurbines 
-        farm%SC%u%toSC( (nt-1)*farm%SC%p%NumCtrl2SC+1 : nt*farm%SC%p%NumCtrl2SC )   = farm%FWrap(nt)%y%toSC(:)
+        farm%SC%uInputs(1)%toSC( (nt-1)*farm%SC%p%NumCtrl2SC+1 : nt*farm%SC%p%NumCtrl2SC )   = farm%FWrap(nt)%y%toSC(:)
       end do
       
    end if
@@ -1837,8 +1837,6 @@ subroutine FARM_UpdateStates(t, n, farm, ErrStat, ErrMsg)
       ! 2. CALL SC_US  
    if (farm%p%useSC) then
       farm%SC%utimes(1) = t
-      farm%SC%uInputs(1)%toSCGlob = farm%SC%u%toSCGlob
-      farm%SC%uInputs(1)%toSC     = farm%SC%u%toSC
       call SC_UpdateStates(t, n, farm%SC%uInputs,farm%SC%utimes, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, farm%SC%m, errStat, errMsg ) ! implement framework interface arguments
       if (errStat >= AbortErrLev) return
    end if
@@ -2145,7 +2143,7 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
       !--------------------
       ! 2. call SC_CO and transfer y_SC to u_F, at n+1 
    if ( farm%p%UseSC ) then
-      call SC_CalcOutput(t, farm%SC%u, farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, &
+      call SC_CalcOutput(t, farm%SC%uInputs(1), farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, &
                            farm%SC%OtherState, farm%SC%y, farm%SC%m, ErrStat2, ErrMsg2 ) 
       
       do nt = 1,farm%p%NumTurbines
@@ -2154,7 +2152,7 @@ subroutine FARM_CalcOutput(t, farm, ErrStat, ErrMsg)
          farm%FWrap(nt)%u%fromSC      = farm%SC%y%fromSC( (nt-1)*farm%SC%p%NumSC2Ctrl + 1 : nt*farm%SC%p%NumSC2Ctrl )
          !--------------------
          ! 3a. Transfer y_F to u_SC, at n+1
-         farm%SC%u%toSC( (nt-1)*farm%SC%p%NumCtrl2SC + 1 : nt*farm%SC%p%NumCtrl2SC ) = farm%FWrap(nt)%y%toSC
+         farm%SC%uInputs(1)%toSC( (nt-1)*farm%SC%p%NumCtrl2SC + 1 : nt*farm%SC%p%NumCtrl2SC ) = farm%FWrap(nt)%y%toSC
          
       end do
       
@@ -2244,8 +2242,9 @@ subroutine FARM_End(farm, ErrStat, ErrMsg)
    
       !--------------
       ! 3. End supercontroller
-   
-   !CALL SC_End()
+                     
+   CALL SC_End(farm%SC%uInputs(1), farm%SC%p, farm%SC%x, farm%SC%xd, farm%SC%z, farm%SC%OtherState, &
+                     farm%SC%y, farm%SC%m, ErrStat2, ErrMsg2)
    
       !--------------
       ! 4. End each instance of FAST (each instance of FAST can be done in parallel, too)   

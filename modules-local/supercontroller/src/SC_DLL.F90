@@ -282,7 +282,34 @@ subroutine sc_updateStates ( t, nTurbines, nParamGlobal, paramGlobal, nParamTurb
    return
 end subroutine sc_updateStates
 
+subroutine sc_end ( errStat, errMsg )  bind (C, NAME='sc_end')
+         
+!DEC$ ATTRIBUTES DLLEXPORT :: sc_updateStates
 
+   ! This DLL super controller is used to implement a ...
+   
+   ! Modified by B. Jonkman to conform to ISO C Bindings (standard Fortran 2003) and 
+   ! compile with either gfortran or Intel Visual Fortran (IVF)
+   ! DO NOT REMOVE or MODIFY LINES starting with "!DEC$" or "!GCC$"
+   ! !DEC$ specifies attributes for IVF and !GCC$ specifies attributes for gfortran
+   !
+   ! Note that gfortran v5.x on Mac produces compiler errors with the DLLEXPORT attribute,
+   ! so I've added the compiler directive IMPLICIT_DLLEXPORT.
+   
+   use, intrinsic :: ISO_C_Binding
+
+   implicit                        none
+#ifndef IMPLICIT_DLLEXPORT
+!GCC$ ATTRIBUTES DLLEXPORT :: sc_updateStates
+#endif
+
+   integer(C_INT),         intent(inout) :: errStat           !< error status code (uses NWTC_Library error codes)
+   character(kind=C_CHAR), intent(inout) :: errMsg       (*)  !< Error Message from DLL to simulation code        
+ 
+
+   
+   return
+end subroutine sc_end
 
 
 

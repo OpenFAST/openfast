@@ -213,6 +213,23 @@ abstract interface
    end interface   
 #endif
 
+   abstract interface
+      subroutine SC_DLL_End_PROC ( errStat, errMsg )  BIND(C)
+         use, intrinsic :: ISO_C_Binding
+         integer(C_INT),         intent(inout) :: errStat           !< error status code (uses NWTC_Library error codes)
+         character(kind=C_CHAR), intent(inout) :: errMsg       (*)  !< Error Message from DLL to simulation code        
+      end subroutine SC_DLL_End_PROC   
+   end interface   
+ 
+#ifdef STATIC_DLL_LOAD   
+   interface
+      subroutine SC_DLL_End ( errStat, errMsg )  BIND(C)
+         use, intrinsic :: ISO_C_Binding
+         integer(C_INT),         intent(inout) :: errStat           !< error status code (uses NWTC_Library error codes)
+         character(kind=C_CHAR), intent(inout) :: errMsg       (*)  !< Error Message from DLL to simulation code        
+      end subroutine SC_DLL_End   
+   end interface   
+#endif
    public :: SC_Init                           ! Initialization routine
    public :: SC_End                            ! Ending routine (includes clean up)
    public :: SC_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
@@ -223,24 +240,44 @@ abstract interface
    
    contains   
    
+   SUBROUTINE SC_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+
+      TYPE(SC_InputType),           INTENT(INOUT)  :: u           !< System inputs
+      TYPE(SC_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
+      TYPE(SC_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+      TYPE(SC_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+      TYPE(SC_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+      TYPE(SC_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states
+      TYPE(SC_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+      TYPE(SC_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc (optimization) variables
+      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
    
-   subroutine SC_End(u,p,x,errStat,errMsg)
-
-      type(SC_InputType),           intent(in   )  :: u               !< System inputs
-      type(SC_ParameterType),       intent(inout)  :: p               !< Parameters
-      !type(SC_MiscVarType),         intent(inout)  :: m               !< misc (optimization) variables
-      type(SC_ContinuousStateType),   intent(in   )  :: x              !< Discrete states
-      integer(IntKi),                 intent(  out)  :: errStat         !< Error status of the operation
-      character(*),                   intent(  out)  :: errMsg          !< Error message if ErrStat /= ErrID_None
-
          ! local variables
       character(*), parameter                        :: routineName = 'SC_End'
       integer(IntKi)                                 :: errStat2       ! The error status code
       character(ErrMsgLen)                           :: errMsg2        ! The error message, if an error occurred
-      
+      procedure(SC_DLL_End_PROC),  pointer           :: DLL_SC_Subroutine              ! The address of the supercontroller sc_end procedure in the DLL
+  
       errStat = ErrID_None
       errMsg= ''
       
+#ifdef STATIC_DLL_LOAD
+
+      ! if we're statically loading the library (i.e., OpenFOAM), we can just call DISCON(); 
+      ! I'll leave some options for whether the supercontroller is being used
+
+      call SC_DLL_End ( errStat, errMsg )
+
+#else
+
+         ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
+      call C_F_PROCPOINTER( p%DLL_Trgt%ProcAddr(5), DLL_SC_Subroutine) 
+      call DLL_SC_Subroutine ( errStat, errMsg ) 
+                
+#endif
+
         
       call FreeDynamicLib( p%DLL_Trgt, errStat2, errMsg2 )  ! this doesn't do anything #ifdef STATIC_DLL_LOAD  because p%DLL_Trgt is 0 (NULL)
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )
@@ -304,6 +341,7 @@ abstract interface
       p%DLL_Trgt%ProcName(2) = 'sc_getInitData'
       p%DLL_Trgt%ProcName(3) = 'sc_updateStates'
       p%DLL_Trgt%ProcName(4) = 'sc_calcOutputs'
+      p%DLL_Trgt%ProcName(5) = 'sc_end'
 
       call LoadDynamicLib ( p%DLL_Trgt, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )

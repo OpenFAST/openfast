@@ -124,10 +124,10 @@ SUBROUTINE FWrap_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ExternInitData%NumSC2Ctrl     = InitInp%NumSC2Ctrl     ! "number of controller inputs [from supercontroller]"
          ExternInitData%NumCtrl2SC     = InitInp%NumCtrl2SC     ! "number of controller outputs [to supercontroller]"
          ExternInitData%NumSC2CtrlGlob = InitInp%NumSC2CtrlGlob ! "number of global controller inputs [from supercontroller]"
-         call AllocAry(ExternInitData%InitScOutputsGlob, InitInp%NumSC2CtrlGlob, 'ExternInitData%InitScOutputsGlob (global inputs to turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         call AllocAry(ExternInitData%InitScOutputsTurbine, InitInp%NumSC2Ctrl, ' ExternInitData%InitScOutputsTurbine (turbine-related inputs for turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         ExternInitData%InitScOutputsGlob = InitInp%fromSCGlob
-         ExternInitData%InitScOutputsTurbine =  InitInp%fromSC
+         call AllocAry(ExternInitData%fromSCGlob, InitInp%NumSC2CtrlGlob, 'ExternInitData%InitScOutputsGlob (global inputs to turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call AllocAry(ExternInitData%fromSC, InitInp%NumSC2Ctrl, ' ExternInitData%InitScOutputsTurbine (turbine-related inputs for turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ExternInitData%fromSCGlob = InitInp%fromSCGlob
+         ExternInitData%fromSC =  InitInp%fromSC
          call AllocAry(u%fromSCglob, InitInp%NumSC2CtrlGlob, 'u%fromSCglob (global inputs to turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          call AllocAry(u%fromSC, InitInp%NumSC2Ctrl, 'u%fromSC (turbine-related inputs for turbine controller from supercontroller)', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       else
@@ -650,7 +650,7 @@ SUBROUTINE FWrap_SetInputs(u, m, t)
       m%Turbine%IfW%m%FDext%TgridStart = t 
       
       ! do something with the inputs from the super-controller:
-   if ( m%Turbine%p_FAST%UseSupercontroller )  then
+   if ( m%Turbine%p_FAST%UseSC )  then
       
       if ( associated(m%Turbine%SC_DX%y%fromSCglob) ) then
          m%Turbine%SC_DX%y%fromSCglob = u%fromSCglob   ! Yes, we set the inputs of FWrap to the 'outputs' of the SC_DX object, GJH

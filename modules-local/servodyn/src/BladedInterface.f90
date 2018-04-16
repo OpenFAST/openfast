@@ -149,7 +149,7 @@ SUBROUTINE CallBladedDLL ( u, filt_fromSCglob, filt_fromSC, DLL, dll_data, p, Er
 
 #else
 
-   IF ( p%ScOn ) THEN
+   IF ( p%UseSC ) THEN
          ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
       CALL C_F_PROCPOINTER( DLL%ProcAddr(1), DLL_SC_Subroutine) 
       CALL DLL_SC_Subroutine ( dll_data%avrSWAP, filt_fromSCglob, filt_fromSC, dll_data%toSC, aviFAIL, accINFILE, avcOUTNAME, avcMSG ) 

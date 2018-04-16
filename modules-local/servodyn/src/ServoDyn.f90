@@ -316,23 +316,23 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       IF (ErrStat >= AbortErrLev) RETURN
 
    IF ( (InitInp%NumSC2CtrlGlob > 0) .or. (InitInp%NumSC2Ctrl > 0) .or. (InitInp%NumCtrl2SC > 0) ) THEN
-      p%ScOn = .TRUE.
+      p%UseSC = .TRUE.
    ElSE
-      p%ScOn = .FALSE.
+      p%UseSC = .FALSE.
    END IF
         
    IF (InitInp%NumSC2Ctrl > 0 .and. p%UseBladedInterface) THEN
       CALL AllocAry( u%fromSC, InitInp%NumSC2Ctrl, 'u%fromSC', ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      u%fromSC = InitInp%InitScOutputsTurbine
+      u%fromSC = InitInp%fromSC
 
       p%ScInAlpha = exp( -TwoPi*p%DT*InputFileData%ScInCutoff )
       if (InputFileData%ScInCutOff < EPSILON( InputFileData%ScInCutOff )) CALL CheckError( ErrID_Fatal, 'ScInCutoff must be greater than 0.')       
       CALL AllocAry( xd%filt_fromSC, InitInp%NumSC2Ctrl, 'xd%filt_fromSC', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-      xd%filt_fromSC = InitInp%InitScOutputsTurbine
+      xd%filt_fromSC = InitInp%fromSC
 
    END IF
                   
@@ -340,14 +340,14 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       CALL AllocAry( u%fromSCglob, InitInp%NumSC2CtrlGlob, 'u%fromSCglob', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-      u%fromSCglob = InitInp%InitScOutputsGlob
+      u%fromSCglob = InitInp%fromSCGlob
 
       p%ScInAlpha = exp( -TwoPi*p%DT*InputFileData%ScInCutoff )
       if (InputFileData%ScInCutOff < EPSILON( InputFileData%ScInCutOff )) CALL CheckError( ErrID_Fatal, 'ScInCutoff must be greater than 0.')       
       CALL AllocAry( xd%filt_fromSCglob, InitInp%NumSC2CtrlGlob, 'xd%filt_fromSCglob', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-      xd%filt_fromSCglob = InitInp%InitScOutputsGlob
+      xd%filt_fromSCglob = InitInp%fromSCGlob
 
    END IF
       

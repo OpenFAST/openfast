@@ -30,8 +30,8 @@ typedef	^	InitInputType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
 typedef	^	InitInputType	IntKi	NumSC2CtrlGlob	-	-	-	"number of global controller inputs [from supercontroller]"	-
 typedef	^	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of turbine specific controller inputs [from supercontroller]"	-
 typedef	^	InitInputType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
-typedef	^	InitInputType	ReKi	InitScOutputsGlob	{:}	-	-	"Initial global inputs to the controller [from the supercontroller]"	-
-typedef	^	InitInputType	ReKi	InitScOutputsTurbine	{:}	-	-	"Initial turbine specific inputs to the controller [from the supercontroller]"	-
+typedef	^	InitInputType	ReKi	fromSCGlob	{:}	-	-	"Initial global inputs to the controller [from the supercontroller]"	-
+typedef	^	InitInputType	ReKi	fromSC	{:}	-	-	"Initial turbine specific inputs to the controller [from the supercontroller]"	-
 
 
 # Define outputs from the initialization routine here:
@@ -284,7 +284,7 @@ typedef	^	ParameterType	TMD_ParameterType	NTMD	-	-	-	"TMD module parameters - na
 typedef	^	ParameterType	TMD_ParameterType	TTMD	-	-	-	"TMD module parameters - tower"	-
 typedef	^	ParameterType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
-typedef ^       ParameterType   LOGICAL ScOn    -       -       -       "Supercontroller on/off flag" -
+typedef ^       ParameterType   LOGICAL UseSC   -       -       -       "Supercontroller on/off flag" -
 typedef	^	ParameterType	SiKi	ScInAlpha       -       -       -  "Low pass filter cutoff parameter for Supercontroller inputs to ServoDyn" -
 
 # ..... Inputs ....................................................................................................................
