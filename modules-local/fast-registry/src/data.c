@@ -138,7 +138,6 @@ show_node1( node_t * p, int indent )
   char tmp[25] , t1[25] , t2[25] ;
   char * x, *ca, *ld, *ss, *se, *sg ;
   char *nodekind ;
-  node_t * q ;
   int nl ;
   int i ;
 
