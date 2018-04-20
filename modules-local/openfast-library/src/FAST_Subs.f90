@@ -1395,9 +1395,6 @@ SUBROUTINE GetInputFileName(InputFile,UseDWM,ErrStat,ErrMsg)
    IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
       ErrStat = ErrID_Fatal
       ErrMsg  = 'The required input file was not specified on the command line.'
-         !bjj:  if people have compiled themselves, they should be able to figure out the file name, right?         
-      CALL NWTC_DisplaySyntax( InputFile, 'openfast' )
-         
       RETURN
    END IF            
       

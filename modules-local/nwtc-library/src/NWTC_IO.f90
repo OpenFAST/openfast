@@ -1501,10 +1501,7 @@ CONTAINS
    CHARACTER(LEN(InputFile))            :: Arg                                          ! A command-line argument.
    
 
-
-
       ! Find out how many arguments were entered on the command line.
-
    NumArg   = COMMAND_ARGUMENT_COUNT()
    FirstArg = .TRUE.
 
@@ -1512,8 +1509,10 @@ CONTAINS
    IF ( PRESENT(flag) ) flag = ""
 
       ! Parse them.
+   IF ( NumArg .EQ. 0 ) THEN
+      CALL NWTC_DisplaySyntax( InputFile, ProgName )
 
-   IF ( NumArg .GT. 0 )  THEN
+   ELSE IF ( NumArg .GT. 0 ) THEN
 
       DO IArg=1,NumArg
 
@@ -1531,13 +1530,12 @@ CONTAINS
             IF (PRESENT(flag)) THEN
                CALL Conv2UC( Arg )
                Flag = Arg(2:) !this results in only the last flag
-               IF ( TRIM(Flag) == 'RESTART' )  CYCLE         ! Get next argument (which will be input [checkpoint] file name)
-
+               IF ( TRIM(Flag) == 'RESTART' ) CYCLE         ! Get next argument (which will be input [checkpoint] file name)
             END IF
                                                 
             CALL NWTC_DisplaySyntax( InputFile, ProgName )
 
-            IF ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )  THEN
+            IF ( INDEX( 'Hh?', Arg(2:2) ) > 0 )  THEN
                IF ( PRESENT(ErrStat) ) THEN
                   ErrStat = ErrID_Info !bjj? do we want to check if an input file was specified later?
                   RETURN
@@ -2650,15 +2648,18 @@ CONTAINS
       CALL WrScr ( NewLine//' Syntax is:' )
       IF ( LEN_TRIM( DefaultInputFile ) == 0 )  THEN
          CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] <InputFile>' )
+         CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' '//SwChar//'restart <ChkpFile>' )
          CALL WrScr ( NewLine//' where:' )
          CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
-         CALL WrScr    ( '    <InputFile> is the name of the required primary input file.' )
+         CALL WrScr ( '    <InputFile> is the name of the required primary input file.' )
+         CALL WrScr ( NewLine//'    '//SwChar//'restart directs to restart from the check point.' )
+         CALL WrScr ( '    <ChkpFile> is the name of the check point file (.chkp) without suffix.' )
       ELSE
          CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] [<InputFile>]' )
          CALL WrScr ( NewLine//' where:' )
          CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
-         CALL WrScr    ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
-                        //TRIM( DefaultInputFile )//'".' )
+         CALL WrScr ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
+                     //TRIM( DefaultInputFile )//'".' )
       END IF
       CALL WrScr    ( NewLine//' Note: values enclosed in square brackets [] are optional. Do not enter the brackets.')      
       CALL WrScr    ( ' ')
