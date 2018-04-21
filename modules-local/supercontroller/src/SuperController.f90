@@ -468,7 +468,7 @@ abstract interface
       ! if we're statically loading the library (i.e., OpenFOAM), we can just call DISCON(); 
       ! I'll leave some options for whether the supercontroller is being used
 
-   call SC_DLL_CalcOutput ( t, p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u%toSCglob, p%NumCtrl2SC, u%toSC, &
+   call SC_DLL_CalcOutput ( REAL(t,ReKi), p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u%toSCglob, p%NumCtrl2SC, u%toSC, &
                         p%nStatesGlobal, xd%Global, p%nStatesTurbine, xd%Turbine, p%NumSC2CtrlGlob, y%fromSCglob, &
                         p%NumSC2Ctrl, y%fromSC, errStat, errMsg )
 
@@ -476,7 +476,7 @@ abstract interface
 
          ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
       call C_F_PROCPOINTER( p%DLL_Trgt%ProcAddr(4), DLL_SC_Subroutine) 
-      call DLL_SC_Subroutine ( t, p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u%toSCglob, p%NumCtrl2SC, u%toSC, &
+      call DLL_SC_Subroutine ( REAL(t,ReKi), p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u%toSCglob, p%NumCtrl2SC, u%toSC, &
                         p%NumStatesGlobal, xd%Global, p%NumStatesTurbine, xd%Turbine, p%NumSC2CtrlGlob, y%fromSCglob, &
                         p%NumSC2Ctrl, y%fromSC, errStat, errMsg ) 
                 
@@ -523,14 +523,14 @@ abstract interface
       ! I'll leave some options for whether the supercontroller is being used
 
    !CALL DISCON( dll_data%avrSWAP, filt_fromSCglob, filt_fromSC, dll_data%toSC, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
-   call SC_DLL_UpdateStates ( t, p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u(1)%toSCglob, p%NumCtrl2SC, u(1)%toSC, &
+   call SC_DLL_UpdateStates ( REAL(t,ReKi), p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u(1)%toSCglob, p%NumCtrl2SC, u(1)%toSC, &
                         p%NumStatesGlobal, xd%Global, p%NumStatesTurbine, xd%Turbine, errStat, errMsg )
 
 #else
 
          ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
       call C_F_PROCPOINTER( p%DLL_Trgt%ProcAddr(3), DLL_SC_Subroutine) 
-      call DLL_SC_Subroutine ( t, p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u(1)%toSCglob, p%NumCtrl2SC, u(1)%toSC, &
+      call DLL_SC_Subroutine ( REAL(t,ReKi), p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u(1)%toSCglob, p%NumCtrl2SC, u(1)%toSC, &
                         p%NumStatesGlobal, xd%Global, p%NumStatesTurbine, xd%Turbine, errStat, errMsg ) 
                 
 #endif

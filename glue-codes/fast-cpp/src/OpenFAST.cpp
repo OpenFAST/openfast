@@ -975,7 +975,7 @@ void fast::OpenFAST::loadSuperController(const fast::fastInputs & fi) {
 
 }
 
-void fast::OpenFAST::fastScInputOutput(std::vector<SC_InputType_t> & scIT_from_FAST, std::vector<float> & scIT, std::vector<float> & scOT, std::vector<SC_OutputType_t> & scOT_to_FAST) {
+void fast::OpenFAST::fastScInputOutput(std::vector<SC_DX_InputType_t> & scIT_from_FAST, std::vector<float> & scIT, std::vector<float> & scOT, std::vector<SC_DX_OutputType_t> & scOT_to_FAST) {
   
     // Transfers
     // scIT <------ scIT_from_FAST 

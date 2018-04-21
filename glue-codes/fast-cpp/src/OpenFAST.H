@@ -19,7 +19,6 @@
  #define MPICH_SKIP_MPICXX
 #endif
 #include "mpi.h"
-#include "SuperController_Types.h"
 #include "SC.H"
 
 
@@ -136,8 +135,8 @@ class OpenFAST {
   std::vector<OpFM_InputType_t> cDriver_Input_from_FAST;
   std::vector<OpFM_OutputType_t> cDriver_Output_to_FAST;
 
-  std::vector<SC_InputType_t> scInputsTurbine_from_FAST; // At time step 'n+1'
-  std::vector<SC_OutputType_t> scOutputsTurbine_to_FAST;  // At time step 'n'
+  std::vector<SC_DX_InputType_t> scInputsTurbine_from_FAST; // At time step 'n+1'
+  std::vector<SC_DX_OutputType_t> scOutputsTurbine_to_FAST;  // At time step 'n'
 
   // Turbine Number is DIFFERENT from TurbID. Turbine Number simply runs from 0:n-1 locally and globally.
   std::map<int, int> turbineMapGlobToProc; // Mapping global turbine number to processor number
@@ -241,7 +240,7 @@ class OpenFAST {
   int get_numForcePtsLoc(int iTurbLoc) { return 1 + numBlades[iTurbLoc]*numForcePtsBlade[iTurbLoc] + numForcePtsTwr[iTurbLoc]; }
 
   void loadSuperController(const fastInputs & fi);
-  void fastScInputOutput(std::vector<SC_InputType_t> & scIT_from_FAST, std::vector<float> & scIT, std::vector<float> & scOT, std::vector<SC_OutputType_t> & scOT_to_FAST) ;
+  void fastScInputOutput(std::vector<SC_DX_InputType_t> & scIT_from_FAST, std::vector<float> & scIT, std::vector<float> & scOT, std::vector<SC_DX_OutputType_t> & scOT_to_FAST) ;
   void scAdvanceTime() ;
 
   void setOutputsToFAST(OpFM_InputType_t cDriver_Input_from_FAST, OpFM_OutputType_t cDriver_Output_to_FAST) ; // An example to set velocities at the Aerodyn nodes
