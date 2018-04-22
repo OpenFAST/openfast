@@ -10,9 +10,7 @@ nEveryCheckPoint(-1),
 tMax(0.0),
 dtFAST(0.0),
 scStatus(false),
-scLibFile(""),
-numScInputsTurbine(0),
-numScOutputsTurbine(0)
+scLibFile("")
 {
   //Nothing to do here
 }
@@ -44,7 +42,7 @@ void fast::OpenFAST::init() {
 
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
        /* note that this will set nt_global inside the FAST library */
-       FAST_OpFM_Restart(&iTurb, CheckpointFileRoot[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &ntStart, &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &scInputsTurbine_from_FAST[iTurb], &scOutputsTurbine_to_FAST[iTurb], &ErrStat, ErrMsg);
+       FAST_OpFM_Restart(&iTurb, CheckpointFileRoot[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &ntStart, &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &sc.ip_from_FAST[iTurb], &sc.op_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
        nt_global = ntStart;
 
@@ -65,13 +63,13 @@ void fast::OpenFAST::init() {
     case fast::init:
      
      if(scStatus) {
-        sc.init(nTurbinesGlob);
-        sc.calcOutputs_n(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
+        sc.init(scio);
+        sc.calcOutputs_n(0.0);
      }
 
      // this calls the Init() routines of each module
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-         FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &numScOutputsGlob, &numScOutputsTurbine, &numScInputsTurbine, scOutputsGlob_n.data(), scOutputsTurbine_n.data(), &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &scInputsTurbine_from_FAST[iTurb], &scOutputsTurbine_to_FAST[iTurb], &ErrStat, ErrMsg);
+         FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &scio.nSC2CtrlGlob, &scio.nSC2Ctrl, &scio.nCtrl2SC, scio.from_SCglob.data(), scio.from_SC[iTurb].data(), &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &sc.ip_from_FAST[iTurb], &sc.op_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
        
        timeZero = true;
@@ -96,12 +94,12 @@ void fast::OpenFAST::init() {
     case fast::restartDriverInitFAST:
 
      if(scStatus) {
-         sc.init(nTurbinesGlob);
-         sc.calcOutputs_n(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
+         sc.init(scio);
+         sc.calcOutputs_n(0.0);
      }
      
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-         FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &numScOutputsGlob, &numScOutputsTurbine, &numScInputsTurbine, scOutputsGlob_n.data(), scOutputsTurbine_n.data(), &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &scInputsTurbine_from_FAST[iTurb], &scOutputsTurbine_to_FAST[iTurb], &ErrStat, ErrMsg);
+         FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &scio.nSC2CtrlGlob, &scio.nSC2Ctrl, &scio.nCtrl2SC, scio.from_SCglob.data(), scio.from_SC[iTurb].data(), &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &sc.ip_from_FAST[iTurb], &sc.op_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
        
        timeZero = true;
@@ -159,7 +157,7 @@ void fast::OpenFAST::solution0() {
      
       
      if (scStatus) {
-         fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_np1, scOutputsTurbine_np1, scOutputsTurbine_to_FAST);
+         sc.fastSCInputOutput();
      }
      
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
@@ -172,8 +170,8 @@ void fast::OpenFAST::solution0() {
      timeZero = false;
 
      if (scStatus) {
-       sc.calcOutputs_n(0.0, scInputsGlob_n, scInputsTurbine_n, scOutputsGlob_n, scOutputsTurbine_n);
-       fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_n, scOutputsTurbine_n, scOutputsTurbine_to_FAST);
+       sc.calcOutputs_n(0.0);
+       sc.fastSCInputOutput();
      }
   }
 
@@ -223,15 +221,15 @@ void fast::OpenFAST::step() {
    }
 
    if(scStatus) {
-       sc.updateStates(nt_global * dtFAST, scInputsGlob_n, scInputsTurbine_n); // Predict state at 'n+1' based on inputs
-       sc.calcOutputs_np1( (nt_global + 1) * dtFAST, scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
-       fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_np1, scOutputsTurbine_np1, scOutputsTurbine_to_FAST);
+       sc.updateStates(nt_global * dtFAST); // Predict state at 'n+1' based on inputs
+       sc.calcOutputs_np1( (nt_global + 1) * dtFAST);
+       sc.fastSCInputOutput();
    }
 
    nt_global = nt_global + 1;
    
    if(scStatus) {
-     scAdvanceTime(); // Advance states, inputs and outputs from 'n' to 'n+1'
+     sc.advanceTime(); // Advance states, inputs and outputs from 'n' to 'n+1'
    }
   
   if ( (((nt_global - ntStart) % nEveryCheckPoint) == 0 )  && (nt_global != ntStart) ) {
@@ -269,15 +267,15 @@ void fast::OpenFAST::stepNoWrite() {
    }
 
    if(scStatus) {
-       sc.updateStates( nt_global * dtFAST, scInputsGlob_n, scInputsTurbine_n); // Predict state at 'n+1' based on inputs
-       sc.calcOutputs_np1( (nt_global+1) * dtFAST, scInputsGlob_np1, scInputsTurbine_np1, scOutputsGlob_np1, scOutputsTurbine_np1);
-       fastScInputOutput(scInputsTurbine_from_FAST, scInputsTurbine_np1, scOutputsTurbine_np1, scOutputsTurbine_to_FAST);
+       sc.updateStates( nt_global * dtFAST); // Predict state at 'n+1' based on inputs
+       sc.calcOutputs_np1( (nt_global+1) * dtFAST);
+       sc.fastSCInputOutput();
    }
 
    nt_global = nt_global + 1;
    
    if(scStatus) {
-       scAdvanceTime(); // Advance states, inputs and outputs from 'n' to 'n+1'
+       sc.advanceTime(); // Advance states, inputs and outputs from 'n' to 'n+1'
    }
   
 }
@@ -711,8 +709,6 @@ void fast::OpenFAST::allocateMemory() {
   cDriver_Input_from_FAST.resize(nTurbinesProc) ;
   cDriver_Output_to_FAST.resize(nTurbinesProc) ;
   
-  scInputsTurbine_from_FAST.resize(nTurbinesProc) ;
-  scOutputsTurbine_to_FAST.resize(nTurbinesProc) ;
 
 }
 
@@ -893,144 +889,15 @@ void fast::OpenFAST::applyVelocityData(int iPrestart, int iTurb, OpFM_OutputType
 
 void fast::OpenFAST::loadSuperController(const fast::fastInputs & fi) {
 
-  if(fi.scStatus) {
+    if(fi.scStatus) {
+        scStatus = fi.scStatus;
+        sc.load(fi.nTurbinesGlob, nTurbinesProc, fi.scLibFile, fastMPIComm, turbineMapProcToGlob, scio);
+       
+    } else {
+        
+        scStatus = false;
 
-    scStatus = fi.scStatus;
-
-    numScInputsTurbine = fi.numScInputsTurbine;
-    numScOutputsTurbine = fi.numScOutputsTurbine;
-    numScInputsGlob = fi.numScInputsGlob;
-    numScOutputsGlob = fi.numScOutputsGlob;
-
-    if ( numScOutputsTurbine > 0 ) {
-
-        scOutputsTurbine_nm1.resize(nTurbinesGlob*numScOutputsTurbine) ;
-        scOutputsTurbine_n.resize(nTurbinesGlob*numScOutputsTurbine) ;
-        scOutputsTurbine_np1.resize(nTurbinesGlob*numScOutputsTurbine) ;
-        for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-            for(int iOutput=0; iOutput < numScOutputsTurbine; iOutput++) {
-                scOutputsTurbine_nm1[iTurb*numScOutputsTurbine + iOutput] = 0.0 ; // Initialize to zero
-                scOutputsTurbine_n[iTurb*numScOutputsTurbine + iOutput] = 0.0 ; // Initialize to zero
-                scOutputsTurbine_np1[iTurb*numScOutputsTurbine + iOutput] = 0.0 ; // Initialize to zero
-            }
-        }
-    }
-
-    if ( numScInputsTurbine > 0 ) {
-
-        scInputsTurbine_nm1.resize(nTurbinesGlob*numScInputsTurbine) ;
-        scInputsTurbine_n.resize(nTurbinesGlob*numScInputsTurbine) ;
-        scInputsTurbine_np1.resize(nTurbinesGlob*numScInputsTurbine) ;
-        for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-            for(int iInput=0; iInput < numScInputsTurbine; iInput++) {
-                scInputsTurbine_nm1[iTurb*numScInputsTurbine + iInput] = 0.0 ; // Initialize to zero
-                scInputsTurbine_n[iTurb*numScInputsTurbine + iInput] = 0.0 ; // Initialize to zero
-                scInputsTurbine_np1[iTurb*numScInputsTurbine + iInput] = 0.0 ; // Initialize to zero
-            }
-        }
-    }
-
-    if ( numScOutputsGlob > 0 ) {
-    
-        scOutputsGlob_nm1.resize(numScOutputsGlob) ;
-        scOutputsGlob_n.resize(numScOutputsGlob) ;
-        scOutputsGlob_np1.resize(numScOutputsGlob) ;
-        for(int iOutput=0; iOutput < numScOutputsGlob; iOutput++) {
-            scOutputsGlob_nm1[iOutput] = 0.0 ; // Initialize to zero
-            scOutputsGlob_n[iOutput] = 0.0 ; // Initialize to zero
-            scOutputsGlob_np1[iOutput] = 0.0 ; // Initialize to zero
-        }
-    }
-
-    if ( numScInputsGlob > 0 ) {
-
-        scInputsGlob_nm1.resize(numScInputsGlob) ;
-        scInputsGlob_n.resize(numScInputsGlob) ;
-        scInputsGlob_np1.resize(numScInputsGlob) ;
-        for(int iInput=0; iInput < numScInputsGlob; iInput++) {
-            scInputsGlob_nm1[iInput] = 0.0 ; // Initialize to zero
-            scInputsGlob_n[iInput] = 0.0 ; // Initialize to zero
-            scInputsGlob_np1[iInput] = 0.0 ; // Initialize to zero
-        }
-    }
-
-    scInData sci ;
-    sci.nInputsTurbine = numScInputsTurbine ;
-    sci.nOutputsTurbine = numScOutputsTurbine ;
-    sci.nInputsGlob = numScInputsGlob ;
-    sci.nOutputsGlob = numScOutputsGlob ;
-    sci.nGlobStates = fi.numScGlobStates ;
-    sci.nTurbineStates = fi.numScTurbineStates ;
-    sci.scLibFile = fi.scLibFile ;
-    sc.load(sci);
-
-  } else {
-
-    scStatus = false;
-    numScInputsGlob = 0;
-    numScOutputsGlob = 0;
-    numScInputsTurbine = 0;
-    numScOutputsTurbine = 0;
-  }
-
-}
-
-void fast::OpenFAST::fastScInputOutput(std::vector<SC_DX_InputType_t> & scIT_from_FAST, std::vector<float> & scIT, std::vector<float> & scOT, std::vector<SC_DX_OutputType_t> & scOT_to_FAST) {
-  
-    // Transfers
-    // scIT <------ scIT_from_FAST 
-    // scOT_to_FAST <------- scOT
-    
-    for(int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-        for(int iInput=0; iInput < numScInputsTurbine; iInput++) {
-            scIT[iTurb*numScInputsTurbine + iInput] = 0.0; // Initialize to zero 
-        }
     }
     
-    for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-        for(int iInput=0; iInput < numScInputsTurbine; iInput++) {
-            scIT[turbineMapProcToGlob[iTurb]*numScInputsTurbine + iInput] = scIT_from_FAST[iTurb].toSC[iInput] ;
-        }
-    }
-    
-    if (MPI_COMM_NULL != fastMPIComm) {
-        MPI_Allreduce(MPI_IN_PLACE, scIT.data(), numScInputsTurbine*nTurbinesGlob, MPI_DOUBLE, MPI_SUM, fastMPIComm) ;
-    }
-    
-    
-    for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-        for(int iOutput=0; iOutput < numScOutputsTurbine; iOutput++) {
-            scOT_to_FAST[iTurb].fromSC[iOutput] = scOT[turbineMapProcToGlob[iTurb]*numScOutputsTurbine + iOutput] ;
-        }
-    }
-    
-}
-
-
-void fast::OpenFAST::scAdvanceTime() {
-
-    for(int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
-        for(int iInput=0; iInput < numScInputsTurbine; iInput++) {
-            scInputsTurbine_nm1[iTurb*numScInputsTurbine + iInput] = scInputsTurbine_n[iTurb*numScInputsTurbine + iInput];
-            scInputsTurbine_n[iTurb*numScInputsTurbine + iInput] = scInputsTurbine_np1[iTurb*numScInputsTurbine + iInput];
-//            scInputsTurbine_np1[iTurb*numScInputsTurbine + iInput] = Predictor?
-        }
-        for(int iOutput=0; iOutput < numScOutputsTurbine; iOutput++) {
-            scOutputsTurbine_nm1[iTurb*numScOutputsTurbine + iOutput] = scOutputsTurbine_n[iTurb*numScOutputsTurbine + iOutput];
-            scOutputsTurbine_n[iTurb*numScOutputsTurbine + iOutput] = scOutputsTurbine_np1[iTurb*numScOutputsTurbine + iOutput];
-        }
-    }
-    for(int iInput=0; iInput < numScInputsGlob; iInput++) {
-        scInputsGlob_nm1[iInput] = scInputsGlob_n[iInput];
-        scInputsGlob_n[iInput] = scInputsGlob_np1[iInput];
-        //scInputsGlob_np1[iInput] = Predictor?
-    }
-    for(int iOutput=0; iOutput < numScOutputsGlob; iOutput++) {
-        scOutputsGlob_nm1[iOutput] = scOutputsGlob_n[iOutput];
-        scOutputsGlob_n[iOutput] = scOutputsGlob_np1[iOutput];
-        //scOutputsGlob_np1[iOutput] = Predictor?
-    }
-    
-    sc.advanceStates();
 }
 
