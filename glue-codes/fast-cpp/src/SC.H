@@ -35,7 +35,7 @@ public:
  
 private:
     
-    MPI_Comm  openfastMPIComm;
+    MPI_Comm  fastMPIComm;
 
     int nTurbinesGlob;
     int nTurbinesProc;
@@ -103,9 +103,9 @@ public:
     
     ~SuperController() ;
     
-    void init(scInitOutData & scio);
+    void init(scInitOutData & scio, int inNTurbinesProc, std::map<int, int> iTurbineMapProcToGlob, MPI_Comm inFastMPIComm);
     
-    void load(int inNTurbinesGlob, int inNTurbinesProc, std::string inScLibFile, MPI_Comm fastMPIComm, std::map<int, int> iTurbineMapProcToGlob, scInitOutData & scio);
+    void load(int inNTurbinesGlob, std::string inScLibFile, scInitOutData & scio);
        
     void updateStates(double t) ; //Make a prediction for states at 'n+1' based on inputs and states at 'n'
 

@@ -63,7 +63,7 @@ void fast::OpenFAST::init() {
     case fast::init:
      
      if(scStatus) {
-        sc.init(scio);
+         sc.init(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
         sc.calcOutputs_n(0.0);
      }
 
@@ -94,7 +94,7 @@ void fast::OpenFAST::init() {
     case fast::restartDriverInitFAST:
 
      if(scStatus) {
-         sc.init(scio);
+         sc.init(scio, nTurbinesProc, turbineMapProcToGlob, fastMPIComm);
          sc.calcOutputs_n(0.0);
      }
      
@@ -709,7 +709,8 @@ void fast::OpenFAST::allocateMemory() {
   cDriver_Input_from_FAST.resize(nTurbinesProc) ;
   cDriver_Output_to_FAST.resize(nTurbinesProc) ;
   
-
+  if(!scStatus)
+      scio.from_SC.resize(nTurbinesProc);
 }
 
 void fast::OpenFAST::allocateTurbinesToProcsSimple() {
@@ -891,12 +892,11 @@ void fast::OpenFAST::loadSuperController(const fast::fastInputs & fi) {
 
     if(fi.scStatus) {
         scStatus = fi.scStatus;
-        sc.load(fi.nTurbinesGlob, nTurbinesProc, fi.scLibFile, fastMPIComm, turbineMapProcToGlob, scio);
+        sc.load(fi.nTurbinesGlob, fi.scLibFile, scio);
        
     } else {
         
         scStatus = false;
-
     }
     
 }

@@ -23,92 +23,92 @@ SuperController::~SuperController() {
     }
 }
 
-void SuperController::load(int inNTurbinesGlob, int inNTurbinesProc, std::string inScLibFile, MPI_Comm fastMPIComm, std::map<int, int> iTurbineMapProcToGlob, scInitOutData & scio)  {
+void SuperController::load(int inNTurbinesGlob, std::string inScLibFile, scInitOutData & scio)  {
 
     nTurbinesGlob = inNTurbinesGlob;
-    nTurbinesProc = inNTurbinesProc;
-    turbineMapProcToGlob = iTurbineMapProcToGlob;
     scLibFile = inScLibFile;
 
-    if (nTurbinesProc > 0) {
-        // open the library
-        scLibHandle = dlopen(scLibFile.c_str(), RTLD_LAZY);
-        if (!scLibHandle) {
-            std::cerr << "Cannot open library: " << dlerror() << '\n';
-        }
-        
-        sc_init = (sc_init_t*) dlsym(scLibHandle, "sc_init");
-        // reset errors
-        const char *dlsym_error_i = dlerror();
-        if (dlsym_error_i) {
-            std::cerr << "Cannot load symbol 'sc_init': " << dlsym_error_i << '\n';
-            dlclose(scLibHandle);
-        }
-        
-        sc_getInitData = (sc_getInitData_t*) dlsym(scLibHandle, "sc_getInitData");
-        // reset errors
-        const char *dlsym_error_gid = dlerror();
-        if (dlsym_error_gid) {
-            std::cerr << "Cannot load symbol 'sc_getInitData': " << dlsym_error_gid << '\n';
-            dlclose(scLibHandle);
-        }
-        
-        sc_updateStates = (sc_updateStates_t*) dlsym(scLibHandle, "sc_updateStates");
-        // reset errors
-        const char *dlsym_error_us = dlerror();
-        if (dlsym_error_us) {
-            std::cerr << "Cannot load symbol 'sc_updateStates': " << dlsym_error_us << '\n';
-            dlclose(scLibHandle);
-        }
-        
-        sc_calcOutputs = (sc_calcOutputs_t*) dlsym(scLibHandle, "sc_calcOutputs");
-        // reset errors
-        const char *dlsym_error_co = dlerror();
-        if (dlsym_error_co) {
-            std::cerr << "Cannot load symbol 'sc_calcOutputs': " << dlsym_error_co << '\n';
-            dlclose(scLibHandle);
-        }
-        
-        sc_init(&nTurbinesGlob, &nInpGlobal, &nCtrl2SC, &nParamGlobal, &nParamTurbine, &nStatesGlobal, &nStatesTurbine, &nSC2CtrlGlob, &nSC2Ctrl, &ErrStat, ErrMsg);
-        
-        if (nInpGlobal != 0) 
-            std::cerr << "Supercontroller: nInpGlobal has to be zero. Not implemented yet." << std::endl ;
-        
-        if (nCtrl2SC < 0) 
-            std::cerr << "Supercontroller: nCtrl2SC is less than zero." << std::endl ;
-        
-        if (nParamGlobal < 0) 
-            std::cerr << "Supercontroller: nParamGlobal is less than zero." << std::endl ;
-        
-        if (nParamTurbine < 0) 
-            std::cerr << "Supercontroller: nParamTurbine is less than zero." << std::endl ;
-        
-        if (nStatesGlobal < 0) 
-            std::cerr << "Supercontroller: nStatesGlobal is less than zero" << std::endl ;
-        
-        if (nStatesTurbine < 0)
-            std::cerr << "Supercontroller: nStatesTurbine is less than zero" << std::endl ;
-        
-        if (nSC2CtrlGlob < 0) 
-            std::cerr << "Supercontroller: nSC2CtrlGlob is less than zero." << std::endl ;
-        
-        if (nSC2Ctrl < 0) 
-            std::cerr << "Supercontroller: nSC2Ctrl is less than zero." << std::endl ;
-        
-        scio.nInpGlobal = nInpGlobal;
-        scio.nCtrl2SC = nCtrl2SC;
-        scio.nSC2Ctrl = nSC2Ctrl;
-        scio.nSC2CtrlGlob = nSC2CtrlGlob;
-             
+    // open the library
+    scLibHandle = dlopen(scLibFile.c_str(), RTLD_LAZY);
+    if (!scLibHandle) {
+        std::cerr << "Cannot open library: " << dlerror() << '\n';
     }
+    
+    sc_init = (sc_init_t*) dlsym(scLibHandle, "sc_init");
+    // reset errors
+    const char *dlsym_error_i = dlerror();
+    if (dlsym_error_i) {
+        std::cerr << "Cannot load symbol 'sc_init': " << dlsym_error_i << '\n';
+        dlclose(scLibHandle);
+    }
+    
+    sc_getInitData = (sc_getInitData_t*) dlsym(scLibHandle, "sc_getInitData");
+    // reset errors
+    const char *dlsym_error_gid = dlerror();
+    if (dlsym_error_gid) {
+        std::cerr << "Cannot load symbol 'sc_getInitData': " << dlsym_error_gid << '\n';
+        dlclose(scLibHandle);
+    }
+    
+    sc_updateStates = (sc_updateStates_t*) dlsym(scLibHandle, "sc_updateStates");
+    // reset errors
+    const char *dlsym_error_us = dlerror();
+    if (dlsym_error_us) {
+        std::cerr << "Cannot load symbol 'sc_updateStates': " << dlsym_error_us << '\n';
+        dlclose(scLibHandle);
+    }
+    
+    sc_calcOutputs = (sc_calcOutputs_t*) dlsym(scLibHandle, "sc_calcOutputs");
+    // reset errors
+    const char *dlsym_error_co = dlerror();
+    if (dlsym_error_co) {
+        std::cerr << "Cannot load symbol 'sc_calcOutputs': " << dlsym_error_co << '\n';
+        dlclose(scLibHandle);
+    }
+    
+    sc_init(&nTurbinesGlob, &nInpGlobal, &nCtrl2SC, &nParamGlobal, &nParamTurbine, &nStatesGlobal, &nStatesTurbine, &nSC2CtrlGlob, &nSC2Ctrl, &ErrStat, ErrMsg);
+    
+    if (nInpGlobal != 0) 
+        std::cerr << "Supercontroller: nInpGlobal has to be zero. Not implemented yet." << std::endl ;
+    
+    if (nCtrl2SC < 0) 
+        std::cerr << "Supercontroller: nCtrl2SC is less than zero." << std::endl ;
+    
+    if (nParamGlobal < 0) 
+        std::cerr << "Supercontroller: nParamGlobal is less than zero." << std::endl ;
+    
+    if (nParamTurbine < 0) 
+        std::cerr << "Supercontroller: nParamTurbine is less than zero." << std::endl ;
+    
+    if (nStatesGlobal < 0) 
+        std::cerr << "Supercontroller: nStatesGlobal is less than zero" << std::endl ;
+    
+    if (nStatesTurbine < 0)
+        std::cerr << "Supercontroller: nStatesTurbine is less than zero" << std::endl ;
+    
+    if (nSC2CtrlGlob < 0) 
+        std::cerr << "Supercontroller: nSC2CtrlGlob is less than zero." << std::endl ;
+    
+    if (nSC2Ctrl < 0) 
+        std::cerr << "Supercontroller: nSC2Ctrl is less than zero." << std::endl ;
+    
+    scio.nInpGlobal = nInpGlobal;
+    scio.nCtrl2SC = nCtrl2SC;
+    scio.nSC2Ctrl = nSC2Ctrl;
+    scio.nSC2CtrlGlob = nSC2CtrlGlob;
+    
 }
 
-void SuperController::init(scInitOutData & scio) {
+void SuperController::init(scInitOutData & scio, int inNTurbinesProc, std::map<int, int> iTurbineMapProcToGlob, MPI_Comm inFastMPIComm) {
 
+    fastMPIComm = inFastMPIComm;
+    nTurbinesProc = inNTurbinesProc; 
+    turbineMapProcToGlob = iTurbineMapProcToGlob;
+    
     if (nTurbinesProc > 0) {
 
         paramGlobal.resize(nParamGlobal);
-        paramTurbine.resize(nParamTurbine);
+        paramTurbine.resize(nTurbinesGlob*nParamTurbine);
         
         globStates.resize(nStatesGlobal); 
         globStates_np1.resize(nStatesGlobal); 
@@ -138,8 +138,8 @@ void SuperController::init(scInitOutData & scio) {
         sc_getInitData(&nTurbinesGlob, &nParamGlobal, &nParamTurbine, paramGlobal.data(), paramTurbine.data(), &nSC2CtrlGlob, from_SCglob_nm1.data(), &nSC2Ctrl, from_SC_nm1.data(), &ErrStat, ErrMsg);
 
         scio.from_SC.resize(nTurbinesProc);
-        for(int i=0; i < nTurbinesProc; i++)
-            scio.from_SC.resize(nSC2Ctrl);
+        for(int iTurb=0; iTurb < nTurbinesProc; iTurb++)
+            scio.from_SC[iTurb].resize(nSC2Ctrl);
         
         scio.from_SCglob.resize(nSC2CtrlGlob);
 
@@ -388,8 +388,8 @@ void SuperController::fastSCInputOutput() {
         }
     }
     
-    if (MPI_COMM_NULL != openfastMPIComm) {
-        MPI_Allreduce(MPI_IN_PLACE, to_SC_np1.data(), nCtrl2SC*nTurbinesGlob, MPI_FLOAT, MPI_SUM, openfastMPIComm) ;
+    if (MPI_COMM_NULL != fastMPIComm) {
+        MPI_Allreduce(MPI_IN_PLACE, to_SC_np1.data(), nCtrl2SC*nTurbinesGlob, MPI_FLOAT, MPI_SUM, fastMPIComm) ;
     }
     
     for(int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
@@ -423,7 +423,7 @@ void SuperController::advanceTime() {
             }
         }
         
-        for(int iInput=0; iInput < nCtrl2SC; iInput++) {
+        for(int iInput=0; iInput < nInpGlobal; iInput++) {
             to_SCglob_nm1[iInput] = to_SCglob_n[iInput];
             to_SCglob_n[iInput] = to_SCglob_np1[iInput];
             //to_SCglob_np1[iInput] = Predictor?
