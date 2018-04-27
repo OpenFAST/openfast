@@ -105,6 +105,7 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD14, u_AD, initOut_AD, y_AD, 
    if ( y_AD%TowerLoad%NNodes > 0 ) then
       OpFM%p%NMappings = OpFM%p%NumBl + 1
       OpFM%p%TowerHeight = InitInp%TowerHeight
+      OpFM%p%TowerBaseHeight = InitInp%TowerBaseHeight
       OpFM%p%NnodesForce = OpFM%p%NnodesForce + InitInp%NumActForcePtsTower
    else
       OpFM%p%NMappings = OpFM%p%NumBl
@@ -1061,7 +1062,7 @@ SUBROUTINE CalcForceActuatorPositionsTower(InitIn_OpFM, p_OpFM, structPositions,
   ALLOCATE(hStructNodes(nStructNodes), STAT=ErrStat2)
 
   ! Store the distance of the structural model nodes from the root into an array
-  hStructNodes(1) = 0.0 ! First node
+  hStructNodes(1) =  p_OpFM%TowerBaseHeight ! First node
   hStructNodes(2:nStructNodes-1) = InitIn_OpFM%StructTwrHnodes(:)
   hStructNodes(nStructNodes) = p_OpFM%TowerHeight
 
