@@ -53,8 +53,18 @@ if (FPE_TRAP_ENABLED)
 endif (FPE_TRAP_ENABLED)
 
 # Setup dependencies
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
+  find_package(MKL)
+endif()
+if (MKL_FOUND)
+  include_directories(${MKL_INCLUDE_DIRS})
+  set(BLAS_LIBRARIES ${MKL_LIBRARIES})
+  set(LAPACK_LIBRARIES ${MKL_LIBRARIES})
+  set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "ifport;ifcore;imf;svml;m;ipgo;intlc;c;irc_s;dl;c")
+else()
+  find_package(BLAS REQUIRED)
+  find_package(LAPACK REQUIRED)
+endif()
 
 ########################################################################
 # Test option configuration
