@@ -22,7 +22,9 @@ void readTurbineData(int iTurb, fast::fastInputs & fi, YAML::Node turbNode) {
   }
   fi.globTurbineData[iTurb].numForcePtsBlade = turbNode["num_force_pts_blade"].as<int>();
   fi.globTurbineData[iTurb].numForcePtsTwr = turbNode["num_force_pts_tower"].as<int>();
-
+  if (turbNode["nacelle_cd"]) {fi.globTurbineData[iTurb].nacelle_cd = turbNode["nacelle_cd"].as<float>();}
+  if (turbNode["nacelle_area"]) {fi.globTurbineData[iTurb].nacelle_area = turbNode["nacelle_area"].as<float>();}
+  if (turbNode["air_density"]) {fi.globTurbineData[iTurb].air_density = turbNode["air_density"].as<float>();}
 }
 
 void readInputFile(fast::fastInputs & fi, std::string cInterfaceInputFile, double * tEnd) {

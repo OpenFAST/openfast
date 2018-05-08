@@ -1523,7 +1523,7 @@ SUBROUTINE Linear_AD_InputSolve_du_AD( p_FAST, u_AD, y_ED, MeshMapData, dUdu, Er
                   
          end if        
          
-         AD_Start_td = AD_Start_td + u_AD%BladeMotion(k)%NNodes * 6 ! 3 fields (TranslationDisp, Orientation, TranslationVel) with 3 components
+         AD_Start_td = AD_Start_td + u_AD%BladeMotion(k)%NNodes * 9 ! 3 fields (TranslationDisp, Orientation, TranslationVel) with 3 components
             
       END DO
       
@@ -1711,7 +1711,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, u_ED, y_ED, y_AD, u_AD, MeshMapData,
                ED_Out_Start_tmp = ED_Out_Start_tmp + y_ED%BladeLn2Mesh(k)%NNodes*18 ! 6 fields with 3 components on each blade
             end do
          end if
-         ED_Out_Start_tmp = ED_Out_Start_tmp + y_ED%PlatformPtMesh%NNodes*6 ! 6 fields with 3 components
+         ED_Out_Start_tmp = ED_Out_Start_tmp + y_ED%PlatformPtMesh%NNodes*18 ! 6 fields with 3 components
             
             
             ! force equation:
