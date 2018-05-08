@@ -60,7 +60,7 @@ subroutine test_BD_InitShpDerJaco()
     parametertype%ShpDer(:,1) = (/ -0.5, -0.5 /)
     parametertype%ShpDer(:,2) = (/  0.5,  0.5 /)
     
-    ! shpder is of dimension (3 dof, nodes_per_elem, elem_total)
+    ! uuN0 is of dimension (3 dof, nodes_per_elem, elem_total)
     parametertype%uuN0(1:3,1,1) = (/  0.0,  0.0,  0.0 /)
     parametertype%uuN0(1:3,2,1) = (/  0.0,  0.0,  0.0 /)
     
