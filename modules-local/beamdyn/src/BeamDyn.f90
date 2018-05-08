@@ -3290,7 +3290,8 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
           if (i==1) call WrScr( "Warning: Load may be too large, BeamDyn will attempt to solve with additional steps.")
 
                ! Increment the number of steps
-          i=i+1          call WrScr( "  Load_Step="//trim(num2lstr(i)) )
+          i=i+1
+          call WrScr( "  Load_Step="//trim(num2lstr(i)) )
 
                ! Reset the displacements
           x%q = 0.0_BDKi
