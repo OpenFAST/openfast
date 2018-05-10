@@ -1608,7 +1608,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
     
    p%n_TMax_m1  = CEILING( ( (p%TMax - t_initial) / p%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
-   if (p%TMax < 1.0_DbKi) then !log10(0) is undefined
+   if (p%TMax < 1.0_DbKi) then ! log10(0) gives floating point divide-by-zero error
       p%TChanLen = 10
    else
       p%TChanLen = max( 10, int(log10(p%TMax))+7 )

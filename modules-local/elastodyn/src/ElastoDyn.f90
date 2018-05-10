@@ -11082,7 +11082,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    CALL AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
-   InitOut%RotFrame_y = .false.
+   InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
    
    ! note that this Mask is for the y%HubPtMotion mesh ONLY. The others pack *all* of the motion fields
    Mask  = .false.

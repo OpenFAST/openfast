@@ -3269,7 +3269,7 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev) return
    
          
-   InitOut%RotFrame_y = .false. ! default all to false, then set the true ones below
+   InitOut%RotFrame_y = .false. ! default all to false, then set the true ones below (note that meshes are in the global, not rotating frame)
    indx_next = 1  
    call PackLoadMesh_Names(y%TowerLoad, 'Tower', InitOut%LinNames_y, indx_next)
    
