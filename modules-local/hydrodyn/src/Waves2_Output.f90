@@ -17,10 +17,6 @@
 ! limitations under the License.
 !    
 !**********************************************************************************************************************************
-! File last committed: $Date: 2014-09-08 12:48:21 -0600 (Mon, 08 Sep 2014) $
-! (File) Revision #: $Rev: 503 $
-! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_2nd_order/Source/Waves2_Output.f90 $
-!**********************************************************************************************************************************
 MODULE Waves2_Output
 
       ! This MODULE stores variables used for output.

@@ -37,6 +37,7 @@ module AeroDyn
    ! ..... Public Subroutines ...................................................................................................
 
    public :: AD_Init                           ! Initialization routine
+   public :: AD_ReInit                         ! Routine to reinitialize driver (re-initializes the states)
    public :: AD_End                            ! Ending routine (includes clean up)
    public :: AD_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
                                                !   continuous states, and updating discrete states
@@ -217,9 +218,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    end if
    
    
-   ! set blade properties data
-
-   
+   ! set blade properties data  ! bjj: I would probably do a move_alloc() at the end of the init routine rather than make a copy like this.... 
    ALLOCATE(InitOut%BladeProps(p%numBlades), STAT = ErrStat2)
    IF (ErrStat2 /= 0) THEN
       CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
@@ -227,27 +226,8 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    END IF
    do k=1,p%numBlades
       ! allocate space and copy blade data:
-      CALL AllocAry( InitOut%BladeProps(k)%BlSpn,   InputFileData%BladeProps(k)%NumBlNds, 'BlSpn',   ErrStat2, ErrMsg2)
+      CALL AD_CopyBladePropsType(InputFileData%BladeProps(k), InitOut%BladeProps(k), MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      InitOut%BladeProps(k)%BlSpn(:) = InputFileData%BladeProps(k)%BlSpn(:)
-      CALL AllocAry( InitOut%BladeProps(k)%BlCrvAC, InputFileData%BladeProps(k)%NumBlNds, 'BlCrvAC', ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      InitOut%BladeProps(k)%BlCrvAC(:) = InputFileData%BladeProps(k)%BlCrvAC(:)
-      CALL AllocAry( InitOut%BladeProps(k)%BlSwpAC, InputFileData%BladeProps(k)%NumBlNds, 'BlSwpAC', ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      InitOut%BladeProps(k)%BlSwpAC(:) = InputFileData%BladeProps(k)%BlSwpAC(:)
-      CALL AllocAry( InitOut%BladeProps(k)%BlCrvAng,InputFileData%BladeProps(k)%NumBlNds, 'BlCrvAng',ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      InitOut%BladeProps(k)%BlCrvAng(:) = InputFileData%BladeProps(k)%BlCrvAng(:)
-      CALL AllocAry( InitOut%BladeProps(k)%BlTwist, InputFileData%BladeProps(k)%NumBlNds, 'BlTwist', ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      InitOut%BladeProps(k)%BlTwist(:) = InputFileData%BladeProps(k)%BlTwist(:)
-      CALL AllocAry( InitOut%BladeProps(k)%BlChord, InputFileData%BladeProps(k)%NumBlNds, 'BlChord', ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      InitOut%BladeProps(k)%BlChord(:) = InputFileData%BladeProps(k)%BlChord(:)
-      CALL AllocAry( InitOut%BladeProps(k)%BlAFID,  InputFileData%BladeProps(k)%NumBlNds, 'BlAFID',  ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      InitOut%BladeProps(k)%BlAFID(:) = InputFileData%BladeProps(k)%BlAFID(:)
    end do
 
    !Tower data
@@ -461,6 +441,41 @@ contains
    end subroutine Cleanup
 
 end subroutine AD_Init
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> This subroutine reinitializes BEMT and UA, assuming that we will start the simulation over again, with only the inputs being different.
+!! This allows us to bypass reading input files and allocating arrays because p is already set.
+subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )   
+
+   type(AD_ParameterType),       intent(in   ) :: p             !< Parameters
+   type(AD_ContinuousStateType), intent(inout) :: x             !< Initial continuous states
+   type(AD_DiscreteStateType),   intent(inout) :: xd            !< Initial discrete states
+   type(AD_ConstraintStateType), intent(inout) :: z             !< Initial guess of the constraint states
+   type(AD_OtherStateType),      intent(inout) :: OtherState    !< Initial other states
+   type(AD_MiscVarType),         intent(inout) :: m             !< Initial misc/optimization variables
+   real(DbKi),                   intent(in   ) :: interval      !< Coupling interval in seconds: the rate that
+                                                                !!   (1) AD_UpdateStates() is called in loose coupling &
+                                                                !!   (2) AD_UpdateDiscState() is called in tight coupling.
+                                                                !!   Input is the suggested time from the glue code;
+                                                                !!   Output is the actual coupling interval that will be used
+                                                                !!   by the glue code.
+   integer(IntKi),               intent(  out) :: errStat       !< Error status of the operation
+   character(*),                 intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
+
+   character(*), parameter                     :: RoutineName = 'AD_ReInit'
+
+   
+   ErrStat = ErrID_None
+   ErrMsg = ''
+   
+   if ( .not. EqualRealNos(p%DT, interval) ) then
+      call SetErrStat( ErrID_Fatal, 'When AD is reinitialized, DT must not change.', ErrStat, ErrMsg, RoutineName )
+      ! we could get around this by figuring out what needs to change when we modify the dt parameter... probably just some unused-parameters
+      ! and the UA filter
+   end if
+      
+   call BEMT_ReInit(p%BEMT,x%BEMT,xd%BEMT,z%BEMT,OtherState%BEMT,m%BEMT,p%AFI%AFInfo)
+      
+end subroutine AD_ReInit
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine initializes (allocates) the misc variables for use during the simulation.
 subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
@@ -1152,9 +1167,9 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%SigmaCavit(i,j)= SigmaCavit                 
       m%SigmaCavitCrit(i,j)=SigmaCavitCrit  
                            
-   end do   ! p%NumBlNds
-     end do  ! p%numBlades
-       end if   ! Cavitation check
+         end do   ! p%NumBlNds
+      end do  ! p%numBlades
+   end if   ! Cavitation check
       
 
    !-------------------------------------------------------   
@@ -1316,6 +1331,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    x_hat_disk = u%HubMotion%Orientation(1,:,1) !actually also x_hat_hub      
    
    m%V_dot_x  = dot_product( m%V_diskAvg, x_hat_disk )
+   m%BEMT_u(indx)%Un_disk  = m%V_dot_x
    tmp    = m%V_dot_x * x_hat_disk - m%V_diskAvg
    tmp_sz = TwoNorm(tmp)
    if ( EqualRealNos( tmp_sz, 0.0_ReKi ) ) then
@@ -1489,8 +1505,11 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    
    if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, ErrMsg, RoutineName )
    if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%WakeMod /= WakeMod_None .and. InputFileData%WakeMod /= WakeMod_BEMT) call SetErrStat ( ErrID_Fatal, &
-      'WakeMod must '//trim(num2lstr(WakeMod_None))//' (none) or '//trim(num2lstr(WakeMod_BEMT))//' (BEMT).', ErrStat, ErrMsg, RoutineName ) 
+   if (InputFileData%WakeMod /= WakeMod_None .and. InputFileData%WakeMod /= WakeMod_BEMT .and. InputFileData%WakeMod /= WakeMod_DBEMT) then
+      call SetErrStat ( ErrID_Fatal, 'WakeMod must '//trim(num2lstr(WakeMod_None))//' (none), '//trim(num2lstr(WakeMod_BEMT))//' (BEMT),'// &
+         'or '//trim(num2lstr(WakeMod_DBEMT))//' (DBEMT).', ErrStat, ErrMsg, RoutineName ) 
+   end if
+   
    if (InputFileData%AFAeroMod /= AFAeroMod_Steady .and. InputFileData%AFAeroMod /= AFAeroMod_BL_unsteady) then
       call SetErrStat ( ErrID_Fatal, 'AFAeroMod must be '//trim(num2lstr(AFAeroMod_Steady))//' (steady) or '//&
                         trim(num2lstr(AFAeroMod_BL_unsteady))//' (Beddoes-Leishman unsteady).', ErrStat, ErrMsg, RoutineName ) 
@@ -1508,9 +1527,9 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 
                        
    
-      ! BEMT inputs
+      ! BEMT/DBEMT inputs
       ! bjj: these checks should probably go into BEMT where they are used...
-   if (InputFileData%WakeMod == WakeMod_BEMT) then
+   if (InputFileData%WakeMod /= WakeMod_none) then
       if ( InputFileData%MaxIter < 1 ) call SetErrStat( ErrID_Fatal, 'MaxIter must be greater than 0.', ErrStat, ErrMsg, RoutineName )
       
       if ( InputFileData%IndToler < 0.0 .or. EqualRealNos(InputFileData%IndToler, 0.0_ReKi) ) &
@@ -1519,7 +1538,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       if ( InputFileData%SkewMod /= SkewMod_Uncoupled .and. InputFileData%SkewMod /= SkewMod_PittPeters) &  !  .and. InputFileData%SkewMod /= SkewMod_Coupled )
            call SetErrStat( ErrID_Fatal, 'SkewMod must be 1, or 2.  Option 3 will be implemented in a future version.', ErrStat, ErrMsg, RoutineName )      
       
-   end if !BEMT checks
+   end if !BEMT/DBEMT checks
    
       ! UA inputs
    if (InputFileData%AFAeroMod == AFAeroMod_BL_unsteady ) then
@@ -1529,7 +1548,7 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       if (.not. InputFileData%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    end if
    
-   if ( InputFileData%CavitCheck .and. InputFileData%AFAeroMod == 2) then
+   if ( InputFileData%CavitCheck .and. InputFileData%AFAeroMod == AFAeroMod_BL_unsteady) then
       call SetErrStat( ErrID_Fatal, 'Cannot use unsteady aerodynamics module with a cavitation check', ErrStat, ErrMsg, RoutineName )
    end if
         
@@ -1653,6 +1672,10 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
    if (InitInp%Linearize) then
       if (InputFileData%AFAeroMod /= AFAeroMod_Steady) then
          call SetErrStat( ErrID_Fatal, 'Steady blade airfoil aerodynamics must be used for linearization. Set AFAeroMod=1.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if (InputFileData%WakeMod == WakeMod_DBEMT) then
+         call SetErrStat( ErrID_Fatal, 'DBEMT cannot currently be used for linearization. Set WakeMod=0 or WakeMod=1.', ErrStat, ErrMsg, RoutineName )
       end if
    end if
    
@@ -1780,6 +1803,9 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
                                                  
    integer(intKi)                                :: j              ! node index
    integer(intKi)                                :: k              ! blade index
+   real(ReKi)                                    :: tmp(3), tmp_sz_y, tmp_sz
+   real(ReKi)                                    :: y_hat_disk(3)
+   real(ReKi)                                    :: z_hat_disk(3)
    integer(IntKi)                                :: ErrStat2
    character(ErrMsgLen)                          :: ErrMsg2
    character(*), parameter                       :: RoutineName = 'Init_BEMTmodule'
@@ -1800,7 +1826,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
    InitInp%useHubLoss       = InputFileData%HubLoss
-   InitInp%useInduction     = InputFileData%WakeMod == WakeMod_BEMT
+   InitInp%useInduction     = InputFileData%WakeMod /= WakeMod_none
    InitInp%useTanInd        = InputFileData%TanInd
    InitInp%useAIDrag        = InputFileData%AIDrag        
    InitInp%useTIDrag        = InputFileData%TIDrag  
@@ -1812,6 +1838,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    call AllocAry(InitInp%AFindx,InitInp%numBladeNodes,InitInp%numBlades,'AFindx',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
    call AllocAry(InitInp%zHub,                        InitInp%numBlades,'zHub',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(InitInp%zLocal,InitInp%numBladeNodes,InitInp%numBlades,'zLocal',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
+   call AllocAry(InitInp%rLocal,InitInp%numBladeNodes,InitInp%numBlades,'rLocal',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
    call AllocAry(InitInp%zTip,                        InitInp%numBlades,'zTip',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
    
@@ -1834,6 +1861,17 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
       
       InitInp%zTip(k) = InitInp%zLocal(p%NumBlNds,k)
       
+      y_hat_disk = u_AD%HubMotion%Orientation(2,:,1)
+      z_hat_disk = u_AD%HubMotion%Orientation(3,:,1)
+      
+      do j=1,p%NumBlNds
+               ! displaced position of the jth node in the kth blade relative to the hub:
+         tmp =  u_AD%BladeMotion(k)%Position(:,j)  - u_AD%HubMotion%Position(:,1) 
+            ! local radius (normalized distance from rotor centerline)
+         tmp_sz_y = dot_product( tmp, y_hat_disk )**2
+         tmp_sz   = dot_product( tmp, z_hat_disk )**2
+         InitInp%rLocal(j,k) = sqrt( tmp_sz + tmp_sz_y )
+      end do !j=nodes   
    end do !k=blades
    
                
@@ -1844,10 +1882,17 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
      end do
   end do
    
-   InitInp%UA_Flag  = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
-   InitInp%UAMod    = InputFileData%UAMod
-   InitInp%Flookup  = InputFileData%Flookup
-   InitInp%a_s      = InputFileData%SpdSound
+   InitInp%UA_Flag    = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   InitInp%UAMod      = InputFileData%UAMod
+   InitInp%Flookup    = InputFileData%Flookup
+   InitInp%a_s        = InputFileData%SpdSound
+   
+   if (InputFileData%WakeMod == WakeMod_DBEMT) then
+      InitInp%DBEMT_Mod  = InputFileData%DBEMT_Mod
+   else
+      InitInp%DBEMT_Mod  = DBEMT_none
+   end if
+   InitInp%tau1_const = InputFileData%tau1_const
    
    if (ErrStat >= AbortErrLev) then
       call cleanup()
@@ -3069,13 +3114,13 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
       call AD_DestroyConstrState( z_m, ErrStat2, ErrMsg2 ) ! we don't need this any more      
       
    END IF
-
+     
    call cleanup()
    
 contains
    subroutine cleanup()
       m%BEMT%UseFrozenWake = .false.
-   
+
       call AD_DestroyOutput(            y_p, ErrStat2, ErrMsg2 )
       call AD_DestroyOutput(            y_m, ErrStat2, ErrMsg2 )
       call AD_DestroyConstrState(       z_p, ErrStat2, ErrMsg2 )
