@@ -20,7 +20,7 @@ find_path(MKL_INCLUDE_DIRS
   PATH_SUFFIXES include)
 
 find_library(MKL_IFACE_LIB
-  NAMES mkl_intel_ilp64 libmkl_intel_ilp64.a
+  NAMES mkl_intel_lp64 libmkl_intel_lp64.a
   PATHS $ENV{MKLROOT}/lib $ENV{MKLROOT}/lib/intel64 $ENV{INTEL}/mkl/lib/intel64)
 
 find_library(MKL_SEQ_LIB
