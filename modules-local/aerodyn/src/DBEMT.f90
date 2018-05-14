@@ -89,7 +89,7 @@ end subroutine DBEMT_ValidateInitInp
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-subroutine DBEMT_Init( InitInp, u, p, x, OtherState, Interval, InitOut, ErrStat, ErrMsg )
+subroutine DBEMT_Init( InitInp, u, p, x, OtherState, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    type(DBEMT_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
@@ -97,7 +97,7 @@ subroutine DBEMT_Init( InitInp, u, p, x, OtherState, Interval, InitOut, ErrStat,
    type(DBEMT_ParameterType),       intent(  out) :: p             !< Parameters
    type(DBEMT_ContinuousStateType), intent(  out) :: x             !< Initial continuous states
    type(DBEMT_OtherStateType),      intent(  out) :: OtherState    !< Initial other/logical states
-  !type(DBEMT_MiscVarType),         intent(  out) :: m             !< Initial misc/optimization variables
+   type(DBEMT_MiscVarType),         intent(  out) :: m             !< Initial misc/optimization variables
    real(DbKi),                      intent(inout) :: interval      !< Coupling interval in seconds: the rate that
                                                                    !!   (1) DBEMT_UpdateStates() is called in loose coupling &
                                                                    !!   (2) DBEMT_UpdateDiscState() is called in tight coupling.
@@ -194,28 +194,31 @@ subroutine DBEMT_Init( InitInp, u, p, x, OtherState, Interval, InitOut, ErrStat,
          return
       end if
    
-   call DBEMT_ReInit(x,OtherState)
+   call DBEMT_ReInit(x,OtherState,m)
       
 end subroutine DBEMT_Init
 
 !..................................................................................................................................
-subroutine DBEMT_ReInit( x, OtherState )
+subroutine DBEMT_ReInit( x, OtherState, m )
 
    type(DBEMT_ContinuousStateType), intent(inout) :: x             !< Initial continuous states
    type(DBEMT_OtherStateType),      intent(inout) :: OtherState    !< Initial other/logical states
-   
+   type(DBEMT_MiscVarType),         intent(inout) :: m             !< Initial misc/optimization variables
+
       ! Initialize variables for this routine
 
    x%vind = 0.0                      ! This is the axial and tangential induced velocity
    x%vind_1 = 0.0                    ! This is the axial and tangential induced velocity
    OtherState%areStatesInitialized = .false.
-      
+   OtherState%tau1 = 0.0_ReKi
+   m%FirstWarn_tau1 = .true.
+
 end subroutine DBEMT_ReInit
 
 !!----------------------------------------------------------------------------------------------------------------------------------
 !> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
 !! Continuous, constraint, discrete, and other states are updated for t + Interval
-subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, errStat, errMsg )
+subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, m, errStat, errMsg )
 !..................................................................................................................................
    integer(IntKi),                  intent(in   ) :: i          !< blade node counter
    integer(IntKi),                  intent(in   ) :: j          !< blade counter
@@ -224,15 +227,20 @@ subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, errStat, errMsg )
    type(DBEMT_ParameterType),       intent(in   ) :: p          !< Parameters
    type(DBEMT_ContinuousStateType), intent(inout) :: x          !< Input: Continuous states at t;
                                                                 !!   Output: Continuous states at t + Interval
-  !type(DBEMT_MiscVarType),         intent(inout) :: m          !< Initial misc/optimization variables
+   type(DBEMT_MiscVarType),         intent(inout) :: m          !< Initial misc/optimization variables
    type(DBEMT_OtherStateType),      intent(inout) :: OtherState !< Other/logical states at t on input; at t+dt on output
    integer(IntKi),                  intent(  out) :: errStat    !< Error status of the operation
    character(*),                    intent(  out) :: errMsg     !< Error message if ErrStat /= ErrID_None
-  
+
    ! local variables
    real(ReKi)                                   :: spanRatio       ! local version of r / R
-   real(ReKi)                                   :: temp, tau1, tau2 , A, B, C0, k_tau, C0_2 ! tau1_plus1, C_tau1, C, K1
+   real(ReKi)                                   :: temp, tau2 , A, B, C0, k_tau, C0_2 ! tau1_plus1, C_tau1, C, K1
+   real(ReKi)                                   :: Un_disk
+   real(ReKi)                                   :: AxInd_disk
    integer(IntKi)                               :: indx
+   real(ReKi), parameter                        :: max_AxInd = 0.7_ReKi
+   real(ReKi), parameter                        :: min_Un = 0.0001_ReKi
+   
    character(*), parameter                      :: RoutineName = 'DBEMT_UpdateStates'
       
    ErrStat = ErrID_None
@@ -240,6 +248,9 @@ subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, errStat, errMsg )
    
   !if (p%DBEMT_Mod == DBEMT_none) return  ! DBEMT is turned off.
    
+   call ComputeTau1(u(1), p, m, OtherState%tau1, errStat, errMsg) ! place this here for DBEMTau1 output reasons
+      if (errStat >= AbortErrLev) return
+
    if ( .not. OtherState%areStatesInitialized(i,j) ) then
       x%vind_1(1,i,j) = u(1)%vind_s(1)
       x%vind_1(2,i,j) = u(1)%vind_s(2)
@@ -249,39 +260,10 @@ subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, errStat, errMsg )
       return
    end if
    
+   
    if ( p%DBEMT_Mod == DBEMT_tauConst ) then
-      tau1       = p%tau1_const
-    !  tau1_plus1 = tau1
-      spanRatio   = p%spanRatio(i,j)     
+      spanRatio   = p%spanRatio(i,j)
    else
-      
-   ! We need to extrapolate the radius and disk velocity to the i+1 timestep
-   ! We will grab the i+1 version of vind,s and the disk averaged induction by using the
-   ! the already updated states of the BEMT module.
-   
-      !bjj: I believe u(1) is at t, which seems inconsistant with this comment
-   
-         ! Check if input values are valid for this formulation:
-      if ( u(1)%AxInd_disk > 0.7_ReKi ) then
-         call setErrStat( ErrID_Fatal, 'Unable to compute time-varying tau1 (a > 0.7).', ErrStat, ErrMsg, RoutineName )
-         return
-      end if
-      
-      if ( u(1)%Un_disk < 0.0_ReKi .or. EqualRealNos( u(1)%Un_disk, 0.0_ReKi ) )then
-         call setErrStat( ErrID_Fatal, 'Unable to compute time-varying tau1 (U <= 0).', ErrStat, ErrMsg, RoutineName )
-         return
-      end if
-
-      temp   = (1-1.3*u(1)%AxInd_disk)*u(1)%Un_disk
-      
-      !!   ! Check if temp is zero, because that will cause the tau1 equation to blow up.
-      !!if ( EqualRealNos( temp, 0.0_ReKi) ) then
-      !!   call setErrStat( ErrID_Fatal, 'Unable to compute tau1; denominator is zero.', ErrStat, ErrMsg, RoutineName )
-      !!   return
-      !!end if
-      
-      tau1   = 1.1*u(1)%R_disk/temp                                                                      ! Eqn. 1.2
-      
       spanRatio = u(1)%spanRatio
    end if
    
@@ -292,16 +274,16 @@ subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, errStat, errMsg )
       ! TODO: Deal with initialization so that we avoid spikes???
       
       B =  ( u(2)%vind_s(indx) - u(1)%vind_s(indx) ) / p%dt                                              ! Eqn. 1.17c  ! bjj: note that interpOrder will affect this numerical derivative
-      A = u(1)%vind_s(indx) + B*p%k_0ye*tau1                                                             ! Eqn. 1.17b
+      A = u(1)%vind_s(indx) + B*p%k_0ye*OtherState%tau1                                                  ! Eqn. 1.17b
       
-      C0 = x%vind_1(indx,i,j) - A + B*tau1                                                               ! Eqn. 1.21b
+      C0 = x%vind_1(indx,i,j) - A + B*OtherState%tau1                                                    ! Eqn. 1.21b
       
-      x%vind_1(indx,i,j) = C0*exp(-p%dt/tau1) + A + B*(p%dt-tau1)                                        ! Eqn. 1.21a, but this is using p%dt instead of t
+      x%vind_1(indx,i,j) = C0*exp(-p%dt/OtherState%tau1) + A + B*(p%dt-OtherState%tau1)                  ! Eqn. 1.21a, but this is using p%dt instead of t
       
       k_tau = 0.39 - 0.26*spanRatio**2                                                                   ! Eqn. 1.23b
-      tau2 = k_tau*tau1                                                                                  ! Eqn. 1.7 or Eqn 1.23a
-      C0_2 = x%vind(indx,i,j) - C0/(1-k_tau) - A + B*(tau1 + tau2)                                       ! Eqn. 1.24c 
-      x%vind(indx,i,j) = C0_2*exp(-p%dt/tau2) + A + B*(p%dt-tau1-tau2) + (C0/(1-k_tau))*exp(-p%dt/tau1)  ! Eqn. 1.25
+      tau2 = k_tau*OtherState%tau1                                                                       ! Eqn. 1.7 or Eqn 1.23a
+      C0_2 = x%vind(indx,i,j) - C0/(1-k_tau) - A + B*(OtherState%tau1 + tau2)                            ! Eqn. 1.24c 
+      x%vind(indx,i,j) = C0_2*exp(-p%dt/tau2) + A + B*(p%dt-OtherState%tau1-tau2) + (C0/(1-k_tau))*exp(-p%dt/OtherState%tau1)  ! Eqn. 1.25
       
       
       !C      = (u(2)%vind_s(indx) - u(1)%vind_s(indx))/p%dt ! v_ind_s_future could come from BEMT update states, but this seems to violate the framework  !Eqn. 1.27C
@@ -316,12 +298,79 @@ subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, errStat, errMsg )
 end subroutine DBEMT_UpdateStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the (rotor) value of tau1 for DBEMT
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine ComputeTau1(u, p, m, tau1, errStat, errMsg)
+   type(DBEMT_InputType),         intent(inout) :: u          !< Inputs at u(1)
+   type(DBEMT_ParameterType),     intent(in   ) :: p          !< Parameters
+   type(DBEMT_MiscVarType),       intent(inout) :: m          !< Initial misc/optimization variables
+   real(ReKi)           ,         intent(inout) :: tau1       !< tau1 value used in DBEMT filter
+   integer(IntKi),                intent(  out) :: errStat    !< Error status of the operation
+   character(*),                  intent(  out) :: errMsg     !< Error message if ErrStat /= ErrID_None
+
+   ! local variables
+   real(ReKi)                                   :: temp
+
+   real(ReKi)                                   :: AxInd_disk
+   real(ReKi), parameter                        :: max_AxInd = 0.7_ReKi
+
+   real(ReKi)                                   :: Un_disk
+   real(ReKi), parameter                        :: min_Un = 0.0001_ReKi
+   
+   character(*), parameter                      :: RoutineName = 'ComputeTau1'
+
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   if ( p%DBEMT_Mod == DBEMT_tauConst ) then
+      tau1       = p%tau1_const
+   else
+      
+   ! We need to extrapolate the radius and disk velocity to the i+1 timestep
+   ! We will grab the i+1 version of vind,s and the disk averaged induction by using the
+   ! the already updated states of the BEMT module.
+   
+      !bjj: I believe u(1) is at t, which seems inconsistant with this comment
+   
+         ! Check if input values are valid for this formulation:
+      if ( u%AxInd_disk > max_AxInd ) then
+         AxInd_disk = max_AxInd
+         if (m%FirstWarn_tau1) then
+            call setErrStat( ErrID_Severe, 'Rotor-averaged axial induction factor is greater than 0.7; limiting time-varying tau1.' &
+                              //' This message will not be repeated though the condition may persist.', ErrStat, ErrMsg, RoutineName ) ! don't print this error more than one time
+            m%FirstWarn_tau1 = .false.
+         end if
+      else
+         AxInd_disk = u%AxInd_disk
+      end if
+      
+      if ( u%Un_disk < min_Un ) then
+         Un_disk = min_Un
+         if (m%FirstWarn_tau1) then
+            call setErrStat( ErrID_Severe, 'Induced axial relative air-speed, Un, is not positive; limiting time-varying tau1.' &
+                             //' This message will not be repeated though the condition may persist.', ErrStat, ErrMsg, RoutineName ) ! don't print this error more than one time
+            m%FirstWarn_tau1 = .false.
+         end if
+      else
+         Un_disk = u%Un_disk
+      end if
+      
+      temp   = (1.0-1.3*AxInd_disk)*Un_disk
+      
+      tau1   = 1.1*u%R_disk/temp                                                                      ! Eqn. 1.2 (note that we've eliminated possibility of temp being 0)
+      
+   end if
+
+end subroutine ComputeTau1
+
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
 !! This subroutine is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
 !! The descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 !! for a complete description of each output parameter.
-subroutine DBEMT_CalcOutput( i, j, t, u, y_vind, p, x, OtherState, errStat, errMsg )
-! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
+subroutine DBEMT_CalcOutput( i, j, t, u, y_vind, p, x, OtherState, m, errStat, errMsg )
+! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 ! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
@@ -334,7 +383,7 @@ subroutine DBEMT_CalcOutput( i, j, t, u, y_vind, p, x, OtherState, errStat, errM
    type(DBEMT_ParameterType),       intent(in   ) :: p          !< Parameters
    type(DBEMT_ContinuousStateType), intent(in   ) :: x          !< Input: Continuous states at t;
                                                                 !!   Output: Continuous states at t + Interval
-   !type(DBEMT_MiscVarType),         intent(inout) :: m          !< Initial misc/optimization variables
+   type(DBEMT_MiscVarType),         intent(inout) :: m          !< Initial misc/optimization variables
    type(DBEMT_OtherStateType),      intent(in   ) :: OtherState !< Other/logical states at t
 
    integer(IntKi),                  intent(  out) :: errStat    !< Error status of the operation

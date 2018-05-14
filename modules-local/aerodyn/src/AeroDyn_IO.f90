@@ -1587,12 +1587,13 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
 END SUBROUTINE Calc_WriteDbgOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteOutput( p, u, m, y, indx, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, u, m, y, OtherState, indx, ErrStat, ErrMsg )
    
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
    TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
    TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
+   TYPE(AD_OtherStateType),   INTENT(IN   )  :: OtherState                        ! other states at t (for DBEMT debugging)
    integer,                   intent(in   )  :: indx                              ! index into m%BEMT_u(indx) array; 1=t and 2=t+dt (but not checked here)
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
@@ -1771,6 +1772,8 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, indx, ErrStat, ErrMsg )
    end if              
    
    
+   !m%AllOuts( DBEMTau1 ) = OtherState%BEMT%DBEMT%tau1
+
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
@@ -3322,6 +3325,9 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       
    end if
       
+   !if (p%WakeMod /= WakeMod_DBEMT) then
+   !   InvalidOutput( DBEMTau1 ) = .true.
+   !end if
    
    DO i = p%NTwOuts+1,9  ! Invalid tower nodes
    

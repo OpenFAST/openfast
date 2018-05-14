@@ -611,12 +611,13 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
          call SetErrStat( ErrID_FATAL, " An InitInp%rlocal array has not been allocated and is required for DBEMT_Mod /= 0.", errStat, errMsg, RoutineName )
       end if
 
-      call DBEMT_Init(InitInp_DBEMT, u_DBEMT, p%DBEMT, x%DBEMT, OtherState%DBEMT, interval, InitOut_DBEMT, errStat2, errMsg2)
+      call DBEMT_Init(InitInp_DBEMT, u_DBEMT, p%DBEMT, x%DBEMT, OtherState%DBEMT, misc%DBEMT, interval, InitOut_DBEMT, errStat2, errMsg2)
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
          if (errStat >= AbortErrLev) return
 
       call MOVE_ALLOC( InitInp_DBEMT%rlocal, InitInp%rlocal )
-
+   else
+      OtherState%DBEMT%tau1 = 0.0_ReKi !we're going to output this value, so let's initialize it
    end if
       
    if ( p%UA_Flag ) then
@@ -768,7 +769,7 @@ subroutine BEMT_ReInit(p,x,xd,z,OtherState,misc,AFinfo)
       OtherState%ValidPhi = .true.
       
       if (p%DBEMT_Mod /= DBEMT_none ) then
-         call DBEMT_ReInit(x%DBEMT, OtherState%DBEMT)
+         call DBEMT_ReInit(x%DBEMT, OtherState%DBEMT, misc%DBEMT)
       end if
    
    end if
@@ -1062,7 +1063,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
                         !  "compute inputs to DBEMT" section above.
 
                         ! If we are using DBEMT, then we will obtain the time-filtered versions of axInduction, tanInduction
-                     call calculate_Inductions_from_DBEMT(i, j, u1%Vx(i,j), u1%Vy(i,j), t, p%DBEMT, x%DBEMT, OtherState%DBEMT, m%axInduction(i,j), m%tanInduction(i,j))
+                     call calculate_Inductions_from_DBEMT(i, j, u1%Vx(i,j), u1%Vy(i,j), t, p%DBEMT, x%DBEMT, OtherState%DBEMT, m%DBEMT, m%axInduction(i,j), m%tanInduction(i,j))
                   
                   end if !BEMT/DBEMT
                
@@ -1142,7 +1143,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
                call get_DBEMT_inputs(2,u2)  ! DBEMT inputs at t+dt (u2)
                   if (errStat >= AbortErrLev) return
                   
-               call DBEMT_UpdateStates(i, j, t, DBEMT_u, p%DBEMT, x%DBEMT, OtherState%DBEMT, errStat2, errMsg2)
+               call DBEMT_UpdateStates(i, j, t, DBEMT_u, p%DBEMT, x%DBEMT, OtherState%DBEMT, m%DBEMT, errStat2, errMsg2)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
                      if (errStat >= AbortErrLev) return
             end if
@@ -1224,7 +1225,7 @@ subroutine calculate_Inductions_from_BEMT(i,j,p,phi,u,OtherState,AFInfo,axInduct
    
 end subroutine calculate_Inductions_from_BEMT
 !..................................................................................................................................
-subroutine calculate_Inductions_from_DBEMT(i, j, Vx, Vy, t, p, x, OtherState, axInduction, tanInduction)
+subroutine calculate_Inductions_from_DBEMT(i, j, Vx, Vy, t, p, x, OtherState, m, axInduction, tanInduction)
 
    integer(IntKi),                  intent(in   ) :: i               !< blade node counter
    integer(IntKi),                  intent(in   ) :: j               !< blade counter
@@ -1233,7 +1234,7 @@ subroutine calculate_Inductions_from_DBEMT(i, j, Vx, Vy, t, p, x, OtherState, ax
    real(DbKi),                      intent(in   ) :: t               !< Current simulation time in seconds
    type(DBEMT_ParameterType),       intent(in   ) :: p               !< Parameters
    type(DBEMT_ContinuousStateType), intent(in   ) :: x               !< Continuous states at t
-  !type(DBEMT_MiscVarType),         intent(inout) :: m               !< Initial misc/optimization variables
+   type(DBEMT_MiscVarType),         intent(inout) :: m               !< Initial misc/optimization variables
    type(DBEMT_OtherStateType),      intent(in   ) :: OtherState      !< Other/logical states at t
    real(ReKi),                      intent(inout) :: axInduction     !< axial induction
    real(ReKi),                      intent(inout) :: tanInduction    !< tangential induction
@@ -1252,7 +1253,7 @@ subroutine calculate_Inductions_from_DBEMT(i, j, Vx, Vy, t, p, x, OtherState, ax
    u%vind_s(2)  =   Vy*tanInduction
 
    
-   call DBEMT_CalcOutput( i, j, t, u, dbemt_vind, p, x, OtherState, errStat, errMsg )
+   call DBEMT_CalcOutput( i, j, t, u, dbemt_vind, p, x, OtherState, m, errStat, errMsg )
       
    if ( EqualRealnos(Vx, 0.0_ReKi) ) then
       axInduction   = 0.0_ReKi
@@ -1436,7 +1437,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                      
                         ! If we are using DBEMT, then we will obtain the time-filtered versions of y%axInduction(i,j), y%tanInduction(i,j)
                         ! Note that the outputs of DBEMT are the state variables x%vind, so we don't need to set the inputs except on initialization step
-                     call calculate_Inductions_from_DBEMT(i, j, u%Vx(i,j), u%Vy(i,j), t, p%DBEMT, x%DBEMT, OtherState%DBEMT, y%axInduction(i,j), y%tanInduction(i,j))
+                     call calculate_Inductions_from_DBEMT(i, j, u%Vx(i,j), u%Vy(i,j), t, p%DBEMT, x%DBEMT, OtherState%DBEMT, m%DBEMT, y%axInduction(i,j), y%tanInduction(i,j))
 
                   end if ! BEMT/DBEMT
                   

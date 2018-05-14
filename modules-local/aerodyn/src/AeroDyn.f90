@@ -1179,7 +1179,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 #ifdef DBG_OUTS
       call Calc_WriteDbgOutput( p, u, m, y, ErrStat2, ErrMsg2 ) 
 #else
-      call Calc_WriteOutput( p, u, m, y, indx, ErrStat2, ErrMsg2 )   
+      call Calc_WriteOutput( p, u, m, y, OtherState, indx, ErrStat2, ErrMsg2 )   
 #endif   
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    

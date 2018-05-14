@@ -49,9 +49,11 @@ typedef   ^   ConstraintStateType     SiKi                DummyContState        
 #
 # Define "other" states here:
 typedef   ^   OtherStateType   Logical areStatesInitialized                {:}{:}       -        -        "Flag indicating whether the module's states have been initialized properly" -
+typedef   ^   OtherStateType   ReKi    tau1                                -            -        -        "value of tau1 used in updateStates (for output-to-file only)" -
+
 #
 # Define misc/optimization variables (any data that are not considered actual states) here:
-typedef   ^   MiscVarType   SiKi   DummyMiscVars   -   -   -   "Remove this variable if you have misc vars"   -
+typedef   ^   MiscVarType   Logical   FirstWarn_tau1                      -             -         -        "flag so tau1 limit warning doesn't get repeated forever" -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
