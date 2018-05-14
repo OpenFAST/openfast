@@ -1099,7 +1099,8 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             call Mpi2pi(u_UA%alpha) ! put alpha in [-pi,pi] before checking its value
             if ( abs(u_UA%alpha) >= AFInfo(p%AFIndx(i,j))%Table(1)%UA_BL%UACutout ) then  ! Is the angle of attack larger than the UA cut-out for this airfoil?
                OtherState%UA_Flag(i,j) = .FALSE.
-               call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack. BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
+               call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack. BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j))//&
+                           ', A0A = '//trim(num2lstr(u_UA%alpha*R2D))//' deg' )
             elseif (EqualRealNos(u_UA%U, 0.0_ReKi) ) then
                OtherState%UA_Flag(i,j) = .FALSE.
                call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to zero relative velocity. BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
