@@ -91,7 +91,7 @@ end subroutine Dvr_Init
 subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
 
    integer(IntKi),               intent(in   ) :: iCase         ! driver case
-   type(Dvr_SimData),            intent(inout) :: DvrData       ! Input data for initialization
+   type(Dvr_SimData),            intent(inout) :: DvrData       ! Input data for initialization (intent out for getting AD WriteOutput names/units)
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
    real(DbKi),                   intent(inout) :: dt            ! interval
       
@@ -151,8 +151,12 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
       
    call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, InitOutData, ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-      
-      
+
+   if (ErrStat >= AbortErrLev) then
+      call Cleanup()
+      return
+   end if   
+         
    do j = 2, numInp
       call AD_CopyInput (AD%u(1),  AD%u(j),  MESH_NEWCOPY, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -345,7 +349,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    character(  8)               :: TimeNow                                  ! Time of day shortly after the start of execution.
    
    integer, parameter           :: NumCols = 7                              ! number of columns to be read from the input file
-   real(ReKi)                   :: InpCase(NumCols)                         ! Temporary array to hold combined-case input parameters.
+   real(DbKi)                   :: InpCase(NumCols)                         ! Temporary array to hold combined-case input parameters. (note that we store in double precision so the time is read correctly)
    logical                      :: TabDel      
    logical                      :: echo   
 
