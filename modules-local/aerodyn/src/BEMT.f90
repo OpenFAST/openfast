@@ -1282,7 +1282,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
 ! This SUBROUTINE is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
 ! NOTE: the descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 ! for a complete description of each output parameter.
-! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
+! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 ! All of the calculated output channels are placed into the OtherState%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
@@ -2183,7 +2183,7 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
          if (FirstWarn) then
             call SetErrStat( ErrID_Info, 'There is no valid value of phi for these operating conditions: Vx = '//TRIM(Num2Lstr(Vx))//&
                ', Vy = '//TRIM(Num2Lstr(Vy))//', rlocal = '//TRIM(Num2Lstr(rLocal))//', theta = '//TRIM(Num2Lstr(theta))//', geometric phi = '//TRIM(Num2Lstr(phi)) &
-               //'This warning will not be repeated though the condition may persist. (See GeomPhi output channel.)', errStat, errMsg, RoutineName )
+               //'. This warning will not be repeated though the condition may persist. (See GeomPhi output channel.)', errStat, errMsg, RoutineName )
             FirstWarn = .false.
          end if !FirstWarn
       end if

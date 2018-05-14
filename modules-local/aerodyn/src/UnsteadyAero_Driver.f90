@@ -82,7 +82,7 @@ program UnsteadyAero_Driver
    ErrStat = ErrID_None
    
    RoutineName = 'UnsteadyAero_Driver'
-   
+    
    
       ! Display the copyright notice
    CALL DispCopyrightLicense( version )   
@@ -149,7 +149,7 @@ program UnsteadyAero_Driver
       dvrInitInp%Re           = 75  ! million
       dvrInitInp%UAMod        = 1
       dvrInitInp%Flookup      = .FALSE.
-      dvrInitInp%AirFoil1     = '.\OSU075_FAST.txt'
+      dvrInitInp%AirFoil1     = './OSU075_FAST.txt'
       dvrInitInp%SimMod       = 1
       dvrInitInp%NCycles      = 3.0
       dvrInitInp%Frequency    = 1.2 ! Hz

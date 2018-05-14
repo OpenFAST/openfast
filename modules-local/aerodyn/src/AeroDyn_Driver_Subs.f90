@@ -1,6 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
+! Copyright (C) 2016-2018  Envision Energy USA, LTD
 !
 !    This file is part of AeroDyn.
 !
@@ -617,8 +618,8 @@ subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errM
       integer(IntKi)         ,  intent(in   )   :: iCase                ! case number (to write in file description line and use for file name)
       type(Dvr_Case),           intent(in   )   :: CaseData
       
-      integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
-      character(*)           ,  intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
+      integer(IntKi)         ,  intent(  out)   :: errStat              ! Status of error message
+      character(*)           ,  intent(  out)   :: errMsg               ! Error message if ErrStat /= ErrID_None
 
          ! locals
       integer(IntKi)                            ::  i      
