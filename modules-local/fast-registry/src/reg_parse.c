@@ -58,12 +58,9 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
 {
   /* Decreased size for SOA from 8192 to 8000--double check if necessary, Manish Shrivastava 2010 */
   char inln[INLN_SIZE], parseline[PARSELINE_SIZE], parseline_save[PARSELINE_SIZE] ;
-  int found ;
   char *p, *q, *p1, *p2  ;
-  char *tokens[MAXTOKENS], *toktmp[MAXTOKENS], newdims[NAMELEN_LONG], newdims4d[NAMELEN_LONG],newname[NAMELEN_LONG] ;
-  int i, ii, ifile, len_of_tok ;
-  char x, xstr[NAMELEN_LONG] ;
-  int is4d, wantstend, wantsbdy ;
+  char *tokens[MAXTOKENS] ;
+  int i, ifile ;
   int ifdef_stack_ptr = 0 ;
   int ifdef_stack[100] ;
   int inquote, retval ;
@@ -278,9 +275,9 @@ reg_parse( FILE * infile )
 {
   /* Had to increase size for SOA from 4096 to 7000, Manish Shrivastava 2010 */
   char inln[INLN_SIZE], parseline[PARSELINE_SIZE] ;
-  char *p, *q ;
-  char *tokens[MAXTOKENS], *toktmp[MAXTOKENS],*ditto[MAXTOKENS] ;
-  int i, ii ;
+  char *p ;
+  char *tokens[MAXTOKENS], *ditto[MAXTOKENS] ;
+  int i ;
   int defining_state_field, defining_rconfig_field, defining_i1_field ;
 
   parseline[0] = '\0' ;

@@ -59,7 +59,7 @@ typedef   ^        BD_InputFile    IntKi           member_total   -  - - "Total 
 typedef   ^        BD_InputFile    IntKi           kp_total       -  - - "Total number of key point" -
 typedef   ^        BD_InputFile    IntKi           kp_member     {:} - - "Number of key points in each member" -
 typedef   ^        BD_InputFile    IntKi           order_elem     -  - - "Order of interpolation (basis) function" -
-typedef   ^        BD_InputFile    IntKi           NRMax          -  - - "Max number of iterations in Newton Ralphson algorithm" -
+typedef   ^        BD_InputFile    IntKi           NRMax          -  - - "Max number of iterations in Newton Raphson algorithm" -
 typedef   ^        BD_InputFile    IntKi           quadrature     -  - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
 typedef   ^        BD_InputFile    IntKi           n_fact         -  - - "Factorization frequency" -
 typedef   ^        BD_InputFile    IntKi           refine         -  - - "FE mesh refinement factor for trapezoidal quadrature" -
@@ -110,8 +110,8 @@ typedef   ^        ConstraintStateType ReKi DummyConstrState - - - "A variable, 
 # at a given time, etc.)
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
-typedef   ^        OtherStateType R8Ki  acc        {:}{:} - - "Acceleration in GA2"
-typedef   ^        OtherStateType  ^    xcc        {:}{:} - - "Algorithm acceleration in GA2"
+typedef   ^        OtherStateType R8Ki  acc        {:}{:} - - "Acceleration (dqdtdt)"
+typedef   ^        OtherStateType  ^    xcc        {:}{:} - - "Algorithm acceleration in GA2: (1-alpha_m)*xcc_(n+1) = (1-alpha_f)*Acc_(n+1) + alpha_f*Acc_n - alpha_m*xcc_n"
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef   ^        OtherStateType Logical  InitAcc  -  - - "flag to determine if accerlerations have been initialized in updateStates"
@@ -176,7 +176,7 @@ typedef   ^        ParameterType IntKi          dof_total        -         - -  
 typedef   ^        ParameterType IntKi          nqp              -         - -  "Number of quadrature points (per element)" -
 typedef   ^        ParameterType IntKi          analysis_type    -         - -  "analysis_type flag" -
 typedef   ^        ParameterType IntKi          damp_flag        -         - -  "damping flag" -
-typedef   ^        ParameterType IntKi          niter            -         - -  "Maximum number of iterations in Newton-Ralphson algorithm"  -
+typedef   ^        ParameterType IntKi          niter            -         - -  "Maximum number of iterations in Newton-Raphson algorithm"  -
 typedef   ^        ParameterType IntKi          quadrature       -         - -  "Quadrature method: 1 Gauss 2 Trapezoidal" -
 typedef   ^        ParameterType IntKi          n_fact           -         - -  "Factorization frequency" -
 typedef   ^        ParameterType Logical        OutInputs        -         - -  "Determines if we've asked to output the inputs (do we need mesh transfer?)" -
@@ -194,6 +194,13 @@ typedef   ^        ParameterType ReKi           pitchC           -         - -  
 typedef   ^        ParameterType ReKi           torqM           {2}{2}     - -  "Pitch actuator matrix: (I-hA)^-1" - 
 typedef   ^        ParameterType qpParam        qp               -         - -  "Quadrature point info that does not change during simulation" -
 typedef   ^        ParameterType IntKi          qp_indx_offset   -         - -  "Offset for computing index of the quadrature arrays (gauss skips the first [end-point] node)" -
+# .... arrays for optimization ........................................................................................................
+typedef   ^        ParameterType    R8Ki        QPtw_Shp_Shp_Jac       {:}{:}{:}{:}  - - "optimization variable: QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem) = p%Shp(i,idx_qp)*p%Shp(j,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
+typedef   ^        ParameterType    ^           QPtw_Shp_ShpDer        {:}{:}{:}     - - "optimization variable: QPtw_Shp_ShpDer(idx_qp,i,j) = p%Shp(i,idx_qp)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)" -
+typedef   ^        ParameterType    ^           QPtw_ShpDer_ShpDer_Jac {:}{:}{:}{:}  - - "optimization variable: QPtw_ShpDer_ShpDer_Jac(idx_qp,i,j,nelem) = p%ShpDer(i,idx_qp)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)/p%Jacobian(idx_qp,nelem)" -
+typedef   ^        ParameterType    ^           QPtw_Shp_Jac           {:}{:}{:}     - - "optimization variable: QPtw_Shp_Jac(idx_qp,i,nelem) = p%Shp(i,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
+typedef   ^        ParameterType    ^           QPtw_ShpDer            {:}{:}        - - "optimization variable: QPtw_ShpDer(idx_qp,i) = p%ShpDer(i,idx_qp)*p%QPtWeight(idx_qp)" -
+typedef   ^        ParameterType    ^           FEweight               {:}{:}        - - "weighting factors for integrating local sectional loads" -
 
 # ..... Inputs
 # ....................................................................................................................
@@ -239,6 +246,7 @@ typedef   ^        EqMotionQP      ^           Fc         :::    - - "Elastic fo
 typedef   ^        EqMotionQP      ^           Fd         :::    - - "Elastic force \f$ \underline{F}^d \f$ at current QP. 6" -
 typedef   ^        EqMotionQP      ^           Fg         :::    - - "Gravity forces at current QP. 6" -
 typedef   ^        EqMotionQP      ^           Fi         :::    - - "Inertial forces at current QP. 6" -
+typedef   ^        EqMotionQP      ^           Ftemp      :::    - - "Sum of some of the forces at current QP. 6" -
 
 typedef   ^        EqMotionQP      ^           RR0mEta    :::    - - "RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0" -
 typedef   ^        EqMotionQP      ^           rho        ::::   -  - "Tensor of inertia resolved in inertia frame at quadrature point. 3x3" -
@@ -282,17 +290,18 @@ typedef   ^        MiscVarType    EqMotionQP  qp                   - - - "Quadra
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
 typedef   ^        MiscVarType    R8Ki         Nrrr         :::           - - "Rotation parameters relative to root node, from Nuuu (at GLL points)" -
-typedef   ^        MiscVarType    ^            elf          {:}{:}{:}     - - "" -
+typedef   ^        MiscVarType    ^            elf          {:}{:}        - - "" -
+typedef   ^        MiscVarType    ^            EFint        {:}{:}{:}     - - "Elastic forces internal to blade.  For output calculations only." -
 typedef   ^        MiscVarType    ^            elk          {:}{:}{:}{:}  - - "" -
 typedef   ^        MiscVarType    ^            elg          {:}{:}{:}{:}  - - "" -
 typedef   ^        MiscVarType    ^            elm          {:}{:}{:}{:}  - - "" -
-typedef   ^        MiscVarType    ^            DistrLoad_QP {:}{:}{:}     - - "" -
+typedef   ^        MiscVarType    ^            DistrLoad_QP {:}{:}{:}     - - "Copy of the distributed load, in the BD reference frame" -
 typedef   ^        MiscVarType    ^            StifK_LU     {:}{:}{:}{:}  - - "Stiffness Matrix for LU" -
 typedef   ^        MiscVarType    ^            StifK        {:}{:}{:}{:}  - - "Stiffness Matrix" -
 typedef   ^        MiscVarType    ^            MassM        {:}{:}{:}{:}  - - "Mass Matrix" -
 typedef   ^        MiscVarType    ^            DampG        {:}{:}{:}{:}  - - "Damping Matrix" -
 typedef   ^        MiscVarType    ^            RHS          {:}{:}        - - "Right-hand-side vector" -
-typedef   ^        MiscVarType    ^            BldInternalForce   {:}{:}  - - "temporary force array used in dynamic calculations" -
+typedef   ^        MiscVarType    ^            BldInternalForceFE   {:}{:}  - - "Force/Moment array for internal force calculations at FE" -
 typedef   ^        MiscVarType    ^            Solution     {:}{:}        - - "Result from LAPACK solve (X from A*X = B solve)" -
 # arrays for lapack routines                 
 typedef   ^        MiscVarType    ^            LP_StifK     {:}{:}        - - "Stiffness Matrix" -
@@ -306,5 +315,4 @@ typedef   ^        MiscVarType    ^            LP_RHS_LU    {:}           - - "R
 typedef   ^        MiscVarType    IntKi        LP_indx      {:}           - - "Index vector for LU" -
 typedef   ^        MiscVarType    BD_InputType u             -            - - "Inputs converted to the internal BD coordinate system" -
 typedef   ^        MiscVarType    BD_InputType u2            -            - - "Inputs in the FAST coordinate system, possibly modified by pitch actuator" -
-
 

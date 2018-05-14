@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
-! Copyright (C) 2016-2017  Envision Energy USA, LTD   
+! Copyright (C) 2016-2017  Envision Energy USA, LTD
 !
 !    This file is part of the NWTC Subroutine Library.
 !
@@ -23,23 +23,25 @@ module BeamDyn_driver_subs
    USE BeamDyn
    USE BeamDyn_Subs
 
+   IMPLICIT NONE
+   
   ! Variables for multi-point loads
    TYPE , PUBLIC :: BD_DriverInternalType
       REAL(ReKi)     , DIMENSION(1:6)               :: DistrLoad        !< Constant distributed load along beam axis, 3 forces and 3 moments [-]
       REAL(ReKi)     , DIMENSION(1:6)               :: TipLoad          !< Constant point load applied at tip, 3 forces and 3 moments [-]
       INTEGER(IntKi)                                :: NumPointLoads    !< Number of constant point loads applied along beam axis, 3 forces and 3 moments, from the driver input file [-]
-      REAL(BDKi) ,     DIMENSION(:,:), ALLOCATABLE  :: MultiPointLoad   !< Constant point loads applied along beam axis, size (NumPointLoads,7); (dimension 2: index 1=Relative position along blade span; indices 2-7 = Fx, Fy, Fz, Mx, My, Mz) [-]            
-      
+      REAL(BDKi) ,     DIMENSION(:,:), ALLOCATABLE  :: MultiPointLoad   !< Constant point loads applied along beam axis, size (NumPointLoads,7); (dimension 2: index 1=Relative position along blade span; indices 2-7 = Fx, Fy, Fz, Mx, My, Mz) [-]
+            
       TYPE(MeshType)                                :: mplMotion        ! Mesh for blade motion at multipoint loads locations
       TYPE(MeshType)                                :: mplLoads         ! Mesh for multipoint loads
       TYPE(MeshMapType)                             :: Map_BldMotion_to_mplMotion
       TYPE(MeshMapType)                             :: Map_mplLoads_to_PointLoad
       TYPE(MeshType)                                :: y_BldMotion_at_u_point ! Intermediate mesh to transfer motion from output mesh to input mesh
       TYPE(MeshMapType)                             :: Map_y_BldMotion_to_u_point
-      
+                                                    
       TYPE(MeshType)                                :: RotationCenter
       TYPE(MeshMapType)                             :: Map_RotationCenter_to_RootMotion
-      
+                                                    
       REAL(DbKi)                                    :: t_initial
       REAL(DbKi)                                    :: t_final
       REAL(R8Ki)                                    :: w           ! magnitude of rotational velocity vector
@@ -79,8 +81,10 @@ module BeamDyn_driver_subs
    INTEGER(IntKi)               :: UnEc
    
    CHARACTER(1024)              :: FTitle                       ! "File Title": the 2nd line of the input file, which contains a description of its contents
+   CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
 
    INTEGER(IntKi)               :: i
+   INTEGER(IntKi)               :: IOS
 !------------------------------------------------------------------------------------
 
    ! Initialize some variables:
@@ -93,6 +97,9 @@ module BeamDyn_driver_subs
    CALL OpenFInpFile(UnIn,DvrInputFile,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
+      
+      
+   CALL GetPath( DvrInputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
       
    !-------------------------- HEADER ---------------------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'File Header: Module Version (line 1)',ErrStat2,ErrMsg2,UnEc)
@@ -266,6 +273,8 @@ module BeamDyn_driver_subs
       !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
    CALL ReadVar ( UnIn, DvrInputFile, InitInputData%InputFile, 'InputFile', 'Name of the primary input file', ErrStat2,ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( PathIsRelative( InitInputData%InputFile ) ) InitInputData%InputFile = TRIM(PriPath)//TRIM(InitInputData%InputFile)
+      
    if (ErrStat >= AbortErrLev) then
        call cleanup()
        return
