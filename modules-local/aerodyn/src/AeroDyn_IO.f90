@@ -2072,6 +2072,21 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%SkewMod, "SkewMod", "Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} (-) [unused when WakeMod=0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+      ! SkewModFactor - Constant used in Pitt/Peters skewed wake model {or default is 15/32*pi} (-) [used only when WakeMod/=0 and SkewMod=2]:
+   Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "SkewModFactor", "Constant used in Pitt/Peters skewed wake model {or default} (-)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the default value 15.0_ReKi * pi / 32.0_ReKi
+         READ( Line, *, IOSTAT=IOS) InputFileData%SkewModFactor
+            CALL CheckIOS ( IOS, InputFile, 'SkewModFactor', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      ELSE
+         InputFileData%SkewModFactor = 15.0_ReKi * pi / 32.0_ReKi
+      END IF
+      
+      
       ! TipLoss - Use the Prandtl tip-loss model? (flag) [unused when WakeMod=0]:
    CALL ReadVar( UnIn, InputFile, InputFileData%TipLoss, "TipLoss", "Use the Prandtl tip-loss model? (flag) [unused when WakeMod=0]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

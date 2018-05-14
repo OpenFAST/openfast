@@ -75,6 +75,7 @@ typedef	^	AD_InputFile	ReKi	Pvap 	-	-	-	"Vapour pressure" Pa
 typedef	^	AD_InputFile	ReKi	FluidDepth -	-	-	"Submerged hub depth" m
 typedef	^	AD_InputFile	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
 typedef	^	AD_InputFile	IntKi	SkewMod	-	-	-	"Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} [unused when WakeMod=0]"	-
+typedef	^	AD_InputFile	ReKi	SkewModFactor	-	-	-	"Constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
 typedef	^	AD_InputFile	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [unused when WakeMod=0]"	flag
 typedef	^	AD_InputFile	LOGICAL	HubLoss	-	-	-	"Use the Prandtl hub-loss model? [unused when WakeMod=0]"	flag
 typedef	^	AD_InputFile	LOGICAL	TanInd	-	-	-	"Include tangential induction in BEMT calculations? [unused when WakeMod=0]"	flag

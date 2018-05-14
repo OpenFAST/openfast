@@ -346,8 +346,9 @@ real(ReKi) function UncoupledErrFn(phi, theta, Re, numBlades, rlocal, chord, AFI
 end function UncoupledErrFn
 
                               
-subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, tipRatio, a, ap, chi, FirstWarn )
+subroutine ApplySkewedWakeCorrection( yawCorrFactor, Vx, Vy, azimuth, chi0, tipRatio, a, ap, chi, FirstWarn )
    
+   real(ReKi),                intent(in   ) :: yawCorrFactor ! set to 15*pi/32 previously; now allowed to be input (to better match data) 
    real(ReKi),                intent(in   ) :: Vx
    real(ReKi),                intent(in   ) :: Vy
    real(ReKi),                intent(in   ) :: azimuth
@@ -359,49 +360,34 @@ subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, tipRatio, a, ap, ch
    logical(IntKi),            intent(inout) :: FirstWarn       ! If this is the first warning about invalid skew
    
       ! Local variables      
-   real(ReKi)                               :: yawCorr, saz
+   real(ReKi)                               :: yawCorr
+   real(ReKi)                               :: yawCorr_tan ! magnitude of the tan(chi/2) correction term (with possible limits)
    
    
    ! Skewed wake correction
-   
-   saz = sin(azimuth)
-   chi = chi0
-   
-   if ( abs(saz) > 0.005_ReKi ) then  ! FIXME: bjj: not sure why this check is here....
       
-      chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
+   chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
       
-      call MPi2Pi( chi ) ! make sure chi is in [-pi, pi] before testing if it's outside a valid range
+   call MPi2Pi( chi ) ! make sure chi is in [-pi, pi] before testing if it's outside a valid range
       
-      if (abs(chi) > piBy2) then
-      !if (chi0 < 40.0*d2r .and. chi > 0.0 ) then
+   if (abs(chi) > piBy2) then
          
-         if (FirstWarn) then
-            call WrScr( 'Warning: SkewedWakeCorrection encountered a large value of chi ('//trim(num2lstr(chi*R2D))// &
-               ' deg). Correction factor will be disabled this time step. This warning will not be repeated though the condition may persist.' )
-            FirstWarn = .false.
-         end if
-         
-      else
-         ! TODO: Add check on chi to make sure it is < pi/2 and (positive check should be outside solve)  GJH 5/20/2015
-         !yawCorr = max(0.0,chi0-0.5236)
-         !yawCorr = min(0.785,yawCorr)
-         !bjj: modified 22-Sep-2015: RRD recommends 32 instead of 64 in the denominator (like AD14)
-         yawCorr = (15.0_ReKi*pi/32.0_ReKi*tan(chi/2.0_ReKi) * (tipRatio) * saz) ! bjj: note that when chi gets close to +/-pi this blows up
-               
-         a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
-         !if ((a > 1.0 .AND. ayaw < 1.0) .OR. (a < 1.0 .AND. ayaw > 1.0 )) then
-         !   call WrScr('Yaw correction crossed over 1.0.')
-         !   !a = max(1.0, ayaw)
-         !else if ((a < -1.0 .AND. ayaw > -1.0) .OR. (a > -1.0 .AND. ayaw < -1.0 )) then
-         !   call WrScr('Yaw correction crossed over -1.0.')
-         !
-         !end if
+      if (FirstWarn) then
+         call WrScr( 'Warning: SkewedWakeCorrection encountered a large value of chi ('//trim(num2lstr(chi*R2D))// &
+            ' deg), so the yaw correction will be limited. This warning will not be repeated though the condition may persist. See the AD15 chi output channels, and'// &
+            ' consider turning off the Pitt/Peters skew model (set SkewMod=1) if this condition persists.')
+         FirstWarn = .false.
       end if
+         
+      yawCorr_tan = sign( 1.0_ReKi, chi ) ! set to +/- 1 = +/- tan( pi/4 )
    else
-      chi = chi0
+      yawCorr_tan = tan(chi/2.0_ReKi)
    end if
       
+      !bjj: modified 22-Sep-2015: RRD recommends 32 instead of 64 in the denominator (like AD14)
+   yawCorr = ( yawCorrFactor * yawCorr_tan * (tipRatio) * sin(azimuth) ) ! bjj: note that when chi gets close to +/-pi this blows up
+      
+   a = a * (1.0 +  yawCorr)
    
    
 end subroutine ApplySkewedWakeCorrection

@@ -210,6 +210,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%airDens          = InitInp%airDens
    p%kinVisc          = InitInp%kinVisc
    p%skewWakeMod      = InitInp%skewWakeMod
+   p%yawCorrFactor    = InitInp%yawCorrFactor
    p%useTipLoss       = InitInp%useTipLoss
    p%useHubLoss       = InitInp%useHubLoss
    p%useInduction     = InitInp%useInduction
@@ -1068,7 +1069,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
                      ! Apply the skewed wake correction to the axial induction
                   if ( p%skewWakeMod == SkewMod_PittPeters ) then
                         ! Correct for skewed wake, by recomputing axInduction
-                     call ApplySkewedWakeCorrection( u1%Vx(i,j), u1%Vy(i,j), u1%psi(j), u1%chi0, u1%rlocal(i,j)/m%Rtip(j), m%axInduction(i,j), m%tanInduction(i,j), chi, m%FirstWarn_Skew )
+                     call ApplySkewedWakeCorrection( p%yawCorrFactor, u1%Vx(i,j), u1%Vy(i,j), u1%psi(j), u1%chi0, u1%rlocal(i,j)/m%Rtip(j), m%axInduction(i,j), m%tanInduction(i,j), chi, m%FirstWarn_Skew )
                   end if ! p%skewWakeMod == SkewMod_PittPeters
                      
 
@@ -1441,7 +1442,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                   
                   ! Apply the skewed wake correction to the axial induction (y%axInduction)
                   if ( p%skewWakeMod == SkewMod_PittPeters ) then
-                     call ApplySkewedWakeCorrection( u%Vx(i,j), u%Vy(i,j), u%psi(j), u%chi0, u%rlocal(i,j)/Rtip, y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), m%FirstWarn_Skew )
+                     call ApplySkewedWakeCorrection( p%yawCorrFactor, u%Vx(i,j), u%Vy(i,j), u%psi(j), u%chi0, u%rlocal(i,j)/Rtip, y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), m%FirstWarn_Skew )
                   end if
                   
                end if ! special case for tip and/or hub loss

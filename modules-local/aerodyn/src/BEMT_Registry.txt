@@ -53,6 +53,7 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            ^                             ReKi                     a_s                             -          -         -        "speed of sound"        m/s
 typedef   ^                            ^                             IntKi                    DBEMT_Mod                       -          -         -        "DBEMT model.  1 = constant tau1, 2 = time dependent tau1" -
 typedef   ^                            ^                             ReKi                     tau1_const                      -          -         -        "DBEMT time constant (when DBEMT_Mod=1)"        s
+typedef   ^                            ^                             ReKi                     yawCorrFactor                   -          -         -        "constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
 #
 #
 # Define outputs from the initialization routine here:
@@ -127,6 +128,7 @@ typedef   ^                            ^                             UA_Paramete
 typedef   ^                            ^                             DBEMT_ParameterType      DBEMT                           -             -         -        "parameters for DBEMT"        -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -             -         -        "logical flag indicating whether to use UnsteadyAero"        -
 typedef   ^                            ^                             IntKi                    DBEMT_Mod                       -             -         -        "DBEMT Model.  0 = constant tau1, 1 = time dependent tau1" -
+typedef   ^                            ^                             ReKi                     yawCorrFactor                   -             -         -        "constant used in Pitt/Peters skewed wake model (default is 15*pi/32)" -
 #
 
 #
