@@ -1260,9 +1260,8 @@ subroutine calculate_Inductions_from_DBEMT(i, j, Vx, Vy, t, p, x, OtherState, m,
    else
       axInduction   = -dbemt_vind(1)/Vx
 
-      if (abs(axInduction) > BEMT_MaxInduction(1)) then
-         axInduction = sign( BEMT_MaxInduction(1), axInduction )
-      end if
+      axInduction = min( axInduction, BEMT_MaxInduction(1))
+      axInduction = max( axInduction, BEMT_MinInduction(1))
    end if
 
    if ( EqualRealnos(Vy, 0.0_ReKi) ) then
@@ -1270,9 +1269,8 @@ subroutine calculate_Inductions_from_DBEMT(i, j, Vx, Vy, t, p, x, OtherState, m,
    else
       tanInduction  = dbemt_vind(2)/Vy
 
-      if (abs(tanInduction) > BEMT_MaxInduction(2)) then
-         tanInduction = sign( BEMT_MaxInduction(2), tanInduction )
-      end if
+      tanInduction = min( tanInduction, BEMT_MaxInduction(2))
+      tanInduction = max( tanInduction, BEMT_MinInduction(2))
    end if
 
 end subroutine calculate_Inductions_from_DBEMT

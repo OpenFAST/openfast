@@ -32,7 +32,8 @@ module BEMTUnCoupled
    integer(IntKi), public, parameter  :: SkewMod_PittPeters = 2            ! Pitt/Peters [-]
    integer(IntKi), public, parameter  :: SkewMod_Coupled    = 3            ! Coupled [-]
    
-   real(ReKi),     public, parameter  :: BEMT_MaxInduction(2) = 2.0_ReKi   ! largest magnitude of axial (1) and tangential (2) inductions
+   real(ReKi),     public, parameter  :: BEMT_MaxInduction(2) = (/1.5_ReKi, 1.0_ReKi /)  ! largest magnitude of axial (1) and tangential (2) induction factors
+   real(ReKi),     public, parameter  :: BEMT_MinInduction(2) = -1.0_ReKi
 
    
    !1e-6 works for double precision, but not single precision 
@@ -430,6 +431,8 @@ subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useH
    real(ReKi), parameter :: InductionLimit = 1000000.0_ReKi
    real(ReKi), parameter :: MaxTnInd = BEMT_MaxInduction(2)
    real(ReKi), parameter :: MaxAxInd = BEMT_MaxInduction(1)
+   real(ReKi), parameter :: MinTnInd = BEMT_MinInduction(2)
+   real(ReKi), parameter :: MinAxInd = BEMT_MinInduction(1)
    
    logical    :: momentumRegion
 
@@ -560,7 +563,8 @@ subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useH
          end if
          
          ! bandaid so that this doesn't blow up. Note that we're not using ap in the residual calculation, so we can modify it here.
-         if (abs(ap) > MaxTnInd) ap = sign(MaxTnInd, ap)
+         ap = min( ap, MaxTnInd)
+         ap = max( ap, MinTnInd)
          
       end if
          
@@ -586,7 +590,7 @@ subroutine inductionFactors(r, chord, phi, cn, ct, B, Vx, Vy, wakerotation, useH
          fzero = sphi/(1-a) - cphi/lambda_r*(1-kp)
 
          ! bandaid so that axial induction doesn't blow up
-         a = max(a,-MaxAxInd)
+         a = max(a,MinAxInd)
       end if
       
    else  ! propeller brake region
