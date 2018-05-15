@@ -2650,9 +2650,12 @@ CONTAINS
       CALL WrScr ( NewLine//' Syntax is:' )
       IF ( LEN_TRIM( DefaultInputFile ) == 0 )  THEN
          CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] <InputFile>' )
+         CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//'  '//SwChar//'restart <ChkpFile>' )
          CALL WrScr ( NewLine//' where:' )
          CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
          CALL WrScr    ( '    <InputFile> is the name of the required primary input file.' )
+         CALL WrScr ( NewLine//'    '//SwChar//'restart directs to restart from the check point.' )
+         CALL WrScr    ( '    <ChkpFile> is the name of the check point file(.chkp) without suffix.' )
       ELSE
          CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] [<InputFile>]' )
          CALL WrScr ( NewLine//' where:' )
