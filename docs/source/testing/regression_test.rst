@@ -4,7 +4,12 @@ Regression test
 ===============
 
 The regression test executes a series of test cases which intend to fully describe
-OpenFAST and its module's capabilities. Each locally computed result is compared
+OpenFAST and its module's capabilities.
+
+Jump to :ref:`regression_test_ctest`, :ref:`regression_test_example`, or :ref:`regression_test_windows`
+for instructions on running the regression tests locally.
+
+Each locally computed result is compared
 to a static set of baseline results. To account for system, hardware, and compiler
 differences, the regression test attempts to match the current machine and
 compiler type to the appropriate solution set from these combinations:
@@ -123,6 +128,8 @@ should be specified in the CMake configuration under the ``CTEST_OPENFAST_EXECUT
 flag. There is also a corresponding ``CTEST_[MODULE]_NAME`` flag for each module
 included in the regression test.
 
+.. _regression_test_ctest:
+
 Running the regression test with CTest
 --------------------------------------
 
@@ -152,6 +159,8 @@ The automated regression test writes new files only into the build directory. Sp
 all locally generated solutions are located in the corresponding glue-code or module within
 ``openfast/build/reg_tests``. The baseline solutions contained in ``openfast/reg_tests/r-test``
 are strictly read not modified by the automated process.
+
+.. _regression_test_example:
 
 Regression test example
 -----------------------
