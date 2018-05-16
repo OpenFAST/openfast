@@ -19,7 +19,7 @@ Portions of the test suite are linked to the OpenFAST repository through
 ``git submodule``. Specifically,
 
 - `r-test <https://github.com/openfast/r-test>`__
-- `pFUnit <http://pfunit.sourceforge.net>`__
+- `pFUnit <http://github.com/openfast/pfunit>`__
 
 Be sure to clone the repo with the ``--recursive`` flag or execute
 ``git submodule update --init --recursive`` after cloning.
