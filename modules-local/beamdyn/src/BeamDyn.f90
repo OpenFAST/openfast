@@ -262,12 +262,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
       ! initialization of output mesh values (used for initial guess to AeroDyn)
    CALL Set_BldMotion_NoAcc(p, x, MiscVar, y)
-   y%BldMotion%TranslationAcc  = 0.0_BDKi
-   y%BldMotion%RotationAcc     = 0.0_BDKi
-
-
+      y%BldMotion%TranslationAcc  = 0.0_BDKi
+      y%BldMotion%RotationAcc     = 0.0_BDKi
+      
+   
       ! set initialization outputs
-   call SetInitOut(p, InitOut, errStat, errMsg)
+   call SetInitOut(p, InitOut, errStat2, errMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
@@ -733,7 +733,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    CALL BD_CrvMatrixR(p%Glb_crv,p%GlbRot) ! ensure that the rotation matrix is a DCM in double precision (this should be the same as TRANSPOSE(InitInp%GlbRot))
 
       ! Gravity vector
-   p%gravity = MATMUL(TRANSPOSE(p%GlbRot),InitInp%gravity)
+   p%gravity = MATMUL(InitInp%gravity,p%GlbRot)
 
 
    !....................
@@ -741,7 +741,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    !....................
    p%RotStates      = InputFileData%RotStates      ! Rotate states in linearization?
    p%RelStates      = InputFileData%RelStates      ! Define states relative to root motion in linearization?
-
+   
    p%analysis_type  = InputFileData%analysis_type  ! Analysis type: 1 Static 2 Dynamic
    p%rhoinf         = InputFileData%rhoinf         ! Numerical damping coefficient: [0,1].  No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
    p%dt             = InputFileData%DTBeam         ! Time step size
