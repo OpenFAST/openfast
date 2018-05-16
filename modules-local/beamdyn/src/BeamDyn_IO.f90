@@ -1386,7 +1386,7 @@ SUBROUTINE BD_ValidateInputData( InitInp, InputFileData, ErrStat, ErrMsg )
 
    DO i=1,InputFileData%member_total
        IF(InputFileData%kp_member(i) .LT. 3) THEN
-          CALL SetErrStat(ErrID_Fatal,'There must be at least three key points in '//TRIM(Num2LStr(i))//'th member.', ErrStat, ErrMsg,RoutineName)
+          CALL SetErrStat(ErrID_Fatal,'There must be at least three key points in member number '//TRIM(Num2LStr(i))//'.', ErrStat, ErrMsg,RoutineName)
           EXIT
        ENDIF
    ENDDO
@@ -1817,7 +1817,7 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
        ENDDO
        k = k-1
    ENDDO
-   WRITE (UnSu,'(/,A)')  'Initial rotation vectors (IEC coordinate system)'
+   WRITE (UnSu,'(/,A)')  'Initial Weiner-Milenkovic rotation vectors (IEC coordinate system)'
    k=1
    DO i=1,p%elem_total
        WRITE (UnSu,'(2x,A,I4)')  'Element number: ',i
@@ -1837,7 +1837,7 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
       WRITE(UnSu,'(I4,3ES18.5)') i,p%QuadPt(1:3,i+p%qp_indx_offset)
    ENDDO
 
-   WRITE (UnSu,'(/,A)')  'Quadrature point initial rotation vectors'
+   WRITE (UnSu,'(/,A)')  'Quadrature point initial Weiner-Milenkovic rotation vectors'
    WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','      WM_x       ','      WM_y       ','      WM_z       '       
    WRITE (UnSu,'(A,1x,3(1x,A))')  '----','-----------------','-----------------','-----------------'
    DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset) 

@@ -49,8 +49,6 @@ MODULE BeamDyn
                                                !   states(z)
    PUBLIC :: BD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
 
-! A few notes on the differences between static and dynamic.
-!     -  From the BD_UpdateStaticConfiguration and BD_UpdateDynamicGA2, it is apparent that in the static case the p%coef values could be set to unity for static.
 
 
 CONTAINS
@@ -558,6 +556,11 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
 
 end subroutine InitializeNodalLocations
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This routine calculates the contributions of quadature points outboard of an FE node.  It is used to calculate the internal forces
+!! from the Fc and Fd terms.  This weighting is used in the integration of those loads.  However, this is likely not the most robust
+!! or clean approach and may contribute significant error to those calculations.
+!! Note from ADP: I don't like this method, but haven't found a better method yet.  I think a better approach may be to use the
+!!                inverse H' matrix and inverse shape functions, but I have not tried deriving that yet.
 subroutine Initialize_FEweights(p)
    type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters
 
@@ -575,9 +578,9 @@ subroutine Initialize_FEweights(p)
          SumShp=0.0_BDKi
          DO idx_qp=p%nqp,1,-1    ! Step inwards to find the first QP past the FE point
             IF ( TwoNorm(p%uu0(1:3,idx_qp,nelem)) >= TwoNorm(p%uuN0(1:3,i,nelem))) THEN
-               p%FEweight(i,nelem) = p%FEweight(i,nelem) + p%Shp(i,idx_qp)        !*p%Shp(j,idx_qp)
+               p%FEweight(i,nelem) = p%FEweight(i,nelem) + p%Shp(i,idx_qp)
             ENDIF
-            SumShp=SumShp+p%Shp(i,idx_qp)       !*p%Shp(j,idx_qp)
+            SumShp=SumShp+p%Shp(i,idx_qp)
          ENDDO
          p%FEweight(i,nelem) = p%FEweight(i,nelem) / SumShp
       ENDDO
@@ -1686,13 +1689,13 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! calculate accelerations and reaction loads (in m%RHS):
       CALL BD_CalcForceAcc(m%u, p, m, ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-          
+
 !FIXME: First node pointload is missing.  Same with first QP node and DistrLoad.       
       y%ReactionForce%Force(:,1)    = -MATMUL(p%GlbRot,m%RHS(1:3,1))
       y%ReactionForce%Moment(:,1)   = -MATMUL(p%GlbRot,m%RHS(4:6,1))
 
       CALL BD_InternalForceMoment( x, p, m )
-    
+
    ELSE
       m%RHS = 0.0_BdKi ! accelerations are set to zero in the static case 
 
@@ -1704,8 +1707,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       CALL BD_InternalForceMoment( x, p, m )
    
-         !FIXME: Check that this works for the static case. The internal force for dynamic case uses the reaction force for the first node.
-         ! Get the root force from the first finite element node.
+         ! Get the root force from the solution for first finite element node.
       y%ReactionForce%Force(:,1)  = m%BldInternalForceFE(1:3,1)
       y%ReactionForce%Moment(:,1) = m%BldInternalForceFE(4:6,1)
    ENDIF
@@ -1977,6 +1979,12 @@ END SUBROUTINE BD_QuadraturePointData
 !! The equations used here can be found in the NREL publication CP-2C00-60759
 !! "Nonlinear Legendre Spectral Finite Elements for Wind Turbine Blade Dynamics"
 !! http://www.nrel.gov/docs/fy14osti/60759.pdf
+!!
+!! NOTE: on coordinate frames of p%E10 nd m%qp%E1
+!! At first glance it appears that p%E10 and m%qp%E1 are in different coordinate frames (initial reference, and inertial with rotation).
+!! However, note that the m%qp%uup is rotating and compensates for the fact that p%E10 is in the initial reference frame.  If there is
+!! change in x%q due to inertial or other loading (such that x%q is purely due to rotation), the m%qp%E1 values are merely the rotated
+!! p%E10 values.
 SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< number of current element
@@ -2204,9 +2212,9 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
       tempR6 = 0.0_BDKi
       tempR6(1:3,1:3) = m%qp%RR0(:,:,idx_qp,nelem)       ! upper left   -- translation
       tempR6(4:6,4:6) = m%qp%RR0(:,:,idx_qp,nelem)       ! lower right  -- rotation
+!NOTE: Bauchau has the lower right corner multiplied by H
 
 
-!FIXME: is this assuming something about where the elastic center is???
          !> Modify the Mass matrix as
          !! \f$ \begin{bmatrix}
          !!        \left(\underline{\underline{R}} \underline{\underline{R}}_0\right)      &  0             \\
@@ -3197,7 +3205,7 @@ SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coordinate,SP_Coef,ErrStat,ErrMsg)
    CALL AllocAry( indx, n,  'IPIV', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   if (ErrStat < AbortErrLev) then
+   if (ErrStat < AbortErrLev) then ! do these calculations only if we could allocate space
      ! note that if we return here instead, we could have a memory leak unless we deallocate the local arrays
    
       ! compute K, the coefficient matrix, based on the z-component of the entered key points:
@@ -3270,7 +3278,8 @@ SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coordinate,SP_Coef,ErrStat,ErrMsg)
              ENDDO
           ENDDO
        ENDDO
-   end if
+
+   end if ! temp arrays are allocated
 
       ! this is the cleanup() routine:
    if (allocated(K   )) deallocate(K)
@@ -3859,7 +3868,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
             return
          end if
 
-         ! initialize the accelerations
+         ! initialize the accelerations in OtherState%Acc
       CALL BD_InitAcc( u_interp, p, x, m, OtherState%Acc, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
@@ -3867,7 +3876,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
             return
          end if
 
-      ! initialize GA2 algorithm acceleration variable (acts as a filtering value on OtherState%acc)
+         ! initialize GA2 algorithm acceleration variable, OtherState%Xcc (acts as a filtering value on OtherState%acc)
       OtherState%Xcc(:,:)  = OtherState%Acc(:,:)
  
          ! accelerations have been initialized
@@ -4416,8 +4425,6 @@ END SUBROUTINE BD_InputGlobalLocal
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine is just to clean up the code a bit.  This is called between the BD_InputGlobalLocal and BD_BoundaryGA2 routines.
 !! It could probably live in the BD_InputGlobablLocal except for the call just before the BD_CalcIC call (though it might not matter there).
-!! FIXME: explore moving this up to InputGlobalLocal: Not easy because BD_InputGlobalLocal is used in Init_ContinousStates, which is
-!!          before Init_MiscVars.
 ! NOTE: This routine could be entirely removed if the u%DistrLoad arrays are used directly, but that would require some messy indexing.
 SUBROUTINE BD_DistrLoadCopy( p, u, m )
 
@@ -4752,7 +4759,6 @@ END SUBROUTINE BD_ComputeBladeMassNew
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine total element forces and mass matrices
 !FIXME: this routine is only used in the BD_ComputeBladeMassNew subroutine.  Might make sense to combine with that, but low gains since only used in Init
-!FIXME: can pass parameters in
 SUBROUTINE BD_ComputeElementMass(nelem,p,NQPpos,EMass0_GL,elem_mass,elem_CG,elem_IN)
 
    INTEGER(IntKi),                  INTENT(IN   )  :: nelem             !< current element number

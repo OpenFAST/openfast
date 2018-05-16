@@ -340,7 +340,7 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
    call WrFileNR ( OutUnit, ' (s)            ' )
 
    do i=1,NumOuts
-      call WrFileNR ( Outunit, tab//IntOutput%WriteOutputUnt(i) )
+      call WrFileNR ( Outunit, tab//trim(IntOutput%WriteOutputUnt(i)) )
    end do ! i
 
    write (OutUnit,'()')  
@@ -365,9 +365,6 @@ SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output)
    character(200)                            :: frmt                 ! A string to hold a format specifier
    character(15)                             :: tmpStr               ! temporary string to print the time output as text
 
-   integer :: numOuts
-   
-   numOuts = size(Output%WriteOutput,1)
    frmt = '"'//tab//'"'//trim(OutFmt)      ! format for array elements from individual modules
    
       ! time
@@ -607,7 +604,7 @@ SUBROUTINE Init_RotationCenterMesh(DvrData, InitInputData, RootMotionMesh, ErrSt
          orientation(3,3) = -1.0_R8Ki
       else
          
-         Z_unit = (/0, 0, 1/)
+         Z_unit = (/0.0_R8Ki, 0.0_R8Ki, 1.0_R8Ki/)
          
          vec = Z_unit - z_hat*z_hat(3) ! vec = matmul( eye(3) - outerproduct(z_hat,z_hat), (/ 0,0,1/) )
          vec = vec / TwoNorm(vec)      ! we've already checked that this is not zero
