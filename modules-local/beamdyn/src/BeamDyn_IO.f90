@@ -2100,6 +2100,10 @@ SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    call PackLoadMesh_Names(  y%ReactionForce, 'Reaction force', InitOut%LinNames_y, index_next)
    call PackMotionMesh_Names(y%BldMotion,     'Blade motion',   InitOut%LinNames_y, index_next)
 
+   do i=1,p%NumOuts
+      InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
+   end do
+   
    AllOut = .true. ! all output values except those specifically in the global system are in the rotating system
    AllOut(TipTVXg) = .false.
    AllOut(TipTVYg) = .false.
@@ -2282,6 +2286,11 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    call PackLoadMesh_dY(  y_p%ReactionForce, y_m%ReactionForce, dY, indx_first)
    call PackMotionMesh_dY(y_p%BldMotion,     y_m%BldMotion,     dY, indx_first) ! all 6 motion fields
    
+   do i=1,p%NumOuts
+      dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
+   end do
+   
+   
    dY = dY / (2.0_R8Ki*delta)
    
 END SUBROUTINE Compute_dY
@@ -2380,8 +2389,6 @@ SUBROUTINE Compute_RelState_Matrix(p, u, x, RelState_x, RelState_xdot)
    INTEGER(IntKi)                                    :: i              ! loop counter
    INTEGER(IntKi)                                    :: j              ! loop counter
    INTEGER(IntKi)                                    :: dof            ! loop over dofs
-   INTEGER(IntKi)                                    :: col            ! column index (for RootMotion [field/dof])
-   INTEGER(IntKi)                                    :: index          ! index into the state arrays
    INTEGER(IntKi)                                    :: q_index        ! index into the state arrays
    INTEGER(IntKi)                                    :: dqdt_index     ! index into the state arrays
    INTEGER(IntKi)                                    :: node           ! node in the state arrays

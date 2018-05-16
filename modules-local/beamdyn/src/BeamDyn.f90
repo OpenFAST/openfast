@@ -5671,6 +5671,11 @@ SUBROUTINE BD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       FieldMask(MASKID_RotationAcc)     = .true.
       call PackMotionMesh(y%BldMotion, y_op, index, FieldMask=FieldMask)
          
+      index = index - 1
+      do i=1,p%NumOuts
+         y_op(i+index) = y%WriteOutput(i)
+      end do
+         
       
    END IF
 
