@@ -30,9 +30,8 @@ for particular build environments. See the installation documentation at :numref
 for more details on configuring the CMake targets.
 
 While the unit tests must be built with CMake due to its external dependencies,
-the regression test may be executed without building with CMake. :numref:`regression_test`
-and :numref:`unit_test` have more information on regression testing and unit testing,
-respectively.
+the regression test may be executed without building with CMake. :numref:`unit_test` and :numref:`regression_test`
+have more information on unit testing and regression testing, respectively.
 
 Test specific documentation
 ---------------------------

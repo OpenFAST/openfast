@@ -68,7 +68,7 @@ If all tools are available, move into ``openfast/build`` and run the `sphinx` co
 Documentation Output
 --------------------
 
-After building the documentation, it can be access by opening the output in a browser.
+After building the documentation, it can be accessed by opening the output in a browser.
 Open the high level html file generated at ``openfast/build/docs/html/index.html``
 and begin using the page as any other web page.
 

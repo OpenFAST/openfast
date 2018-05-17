@@ -177,11 +177,11 @@ Regression test example
   # - BUILD_TESTING
   # - CTEST_OPENFAST_EXECUTABLE
   # - CTEST_[MODULE]_EXECUTABLE
-  cmake ..
+  cmake .. -DBUILD_TESTING=ON
   make install
   ctest
 
-- Build only the test suite
+- Build only the test suite if an openfast binary already exists
 
 .. code-block:: bash
 
