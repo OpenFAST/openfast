@@ -191,7 +191,8 @@ contains
         character(1024)      :: ErrMsg
         
         ! scalars
-        i%analysis_type = 1   ! -  - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
+!        i%analysis_type = 1   ! -  - - "Analysis Type: 1-Static, 2-Dynamic" -
+        i%QuasiStaticInit = .false.   ! -  - - "QuasiStaticInit" -
         i%member_total = 1    ! -  - - "Total number of members" -
         i%kp_total = 3        ! -  - - "Total number of key point" -
         i%order_elem = 15     ! -  - - "Order of interpolation (basis) function" -
