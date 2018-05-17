@@ -746,7 +746,7 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
    call Set_BldMotion_NoAcc(p, x, m, y)
 
    ! Only need this bit for dynamic cases
-   IF (p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
+   IF ( p%analysis_type /= BD_STATIC_ANALYSIS ) THEN
 
        ! now set the accelerations:
        

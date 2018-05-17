@@ -349,6 +349,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    
    IF (p_FAST%CompElast == Module_BD) THEN
 
+      InitInData_BD%DynamicSolve = .TRUE.       ! FAST can only couple to BeamDyn when dynamic solve is used.
+
       InitInData_BD%Linearize = p_FAST%Linearize
       InitInData_BD%gravity      = (/ 0.0_ReKi, 0.0_ReKi, -InitOutData_ED%Gravity /)       ! "Gravitational acceleration" m/s^2
       
@@ -396,10 +398,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
             CALL SetErrStat(ErrID_Fatal,"All instances of BeamDyn (one per blade) must have the same time step.",ErrStat,ErrMsg,RoutineName)
          END IF
                        
-         ! HACK because BeamDyn shouldn't be run in static mode when coupled with FAST
-         if (BD%p(k)%analysis_type == BD_STATIC_ANALYSIS) then! static
-            CALL SetErrStat(ErrID_Fatal,"BeamDyn cannot perform static analysis when coupled with FAST.",ErrStat,ErrMsg,RoutineName)
-         end if         
             ! We're going to do fewer computations if the BD input and output meshes that couple to AD are siblings:
          if (BD%p(k)%BldMotionNodeLoc /= BD_MESH_QP) p_FAST%BD_OutputSibling = .false.
       
@@ -5038,8 +5036,8 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
       if (.not. p_FAST%BD_OutputSibling) then !otherwise this mesh has been put with the DistrLoad mesh
          do K=1,NumBl
                ! BeamDyn outputs
-         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
-      end do  
+            call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
+         end do  
       end if
       
       

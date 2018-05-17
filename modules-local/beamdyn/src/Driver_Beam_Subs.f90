@@ -41,7 +41,8 @@ module BeamDyn_driver_subs
                                                     
       TYPE(MeshType)                                :: RotationCenter
       TYPE(MeshMapType)                             :: Map_RotationCenter_to_RootMotion
-                                                    
+
+      LOGICAL                                       :: DynamicSolve 
       REAL(DbKi)                                    :: t_initial
       REAL(DbKi)                                    :: t_final
       REAL(R8Ki)                                    :: w           ! magnitude of rotational velocity vector
@@ -114,6 +115,9 @@ module BeamDyn_driver_subs
 
    !---------------------- SIMULATION CONTROL --------------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'Section Header: Simulation Control',ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%DynamicSolve,'DynamicSolve','Use Dynamic solve (false for static solve).',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL ReadVar(UnIn,DvrInputFile,DvrData%t_initial,'t_initial','Starting time of simulation',ErrStat2,ErrMsg2,UnEc)

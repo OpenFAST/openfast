@@ -647,7 +647,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
 
    END DO
 
-   CALL ReadVar(UnIn,InputFile,InputFileData%analysis_type,"analysis_type", "Analysis type",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,InputFile,InputFileData%QuasiStaticInit,"QuasiStaticInit", "QuasiStaticInit",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL ReadVar(UnIn,InputFile,InputFileData%rhoinf,"rhoinf", "Coefficient for GA2",ErrStat2,ErrMsg2,UnEc)
@@ -1344,18 +1344,20 @@ SUBROUTINE BD_ValidateInputData( InitInp, InputFileData, ErrStat, ErrMsg )
 
 
       ! local variables
-   INTEGER(IntKi)                     :: i,j                                 ! loop counters
-   INTEGER(IntKi)                     :: nNodes                              ! number of nodes that will be on the BldMotion mesh
-   REAL(SiKi)                         :: r1, r2                              ! use single-precision real numbers for validity check
+   INTEGER(IntKi)                          :: i,j                                 ! loop counters
+   INTEGER(IntKi)                          :: nNodes                              ! number of nodes that will be on the BldMotion mesh
+   REAL(SiKi)                              :: r1, r2                              ! use single-precision real numbers for validity check
 
-   CHARACTER(*), PARAMETER            :: RoutineName = 'BD_ValidateInputData'
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'BD_ValidateInputData'
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
 
-   IF(InputFileData%analysis_type .NE. BD_STATIC_ANALYSIS .AND. InputFileData%analysis_type .NE. BD_DYNAMIC_ANALYSIS) &
-       CALL SetErrStat ( ErrID_Fatal, 'Analysis type must be 1 (static) or 2 (dynamic)', ErrStat, ErrMsg, RoutineName )
+      ! QuasiStaticInit only valid with DynamicSolve.  Warn and ignore
+   IF(InputFileData%QuasiStaticInit .AND. (.NOT. InitInp%DynamicSolve)) & 
+      CALL SetErrStat ( ErrID_Warn, 'QuasiStaticInit option only valid with dynamic solve.  Ignoring.', ErrStat, ErrMsg, RoutineName )
+
    IF(InputFileData%rhoinf .LT. 0.0_BDKi .OR. InputFileData%rhoinf .GT. 1.0_BDKi) &
        CALL SetErrStat ( ErrID_Fatal, 'Numerical damping parameter \rho_{inf} must be in the range of [0.0,1.0]', ErrStat, ErrMsg, RoutineName )
    IF(InputFileData%quadrature .NE. GAUSS_QUADRATURE .AND. InputFileData%quadrature .NE. TRAP_QUADRATURE) &
@@ -1479,8 +1481,8 @@ SUBROUTINE BD_ValidateInputData( InitInp, InputFileData, ErrStat, ErrMsg )
    ! check for linearization
    !..................
    if (InitInp%Linearize) then
-      if (InputFileData%analysis_type == BD_STATIC_ANALYSIS) then
-         call SetErrStat( ErrID_Fatal, 'Static analysis cannot be used for BeamDyn linearization. Set analysis_type=2.', ErrStat, ErrMsg, RoutineName )
+      if (.NOT. InitInp%DynamicSolve) THEN
+         call SetErrStat( ErrID_Fatal, 'Static analysis cannot be used for BeamDyn linearization. Set DynamicSolve to TRUE.', ErrStat, ErrMsg, RoutineName )
       end if
       
       if (InputFileData%UsePitchAct) then
@@ -1827,13 +1829,19 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
        WRITE (UnSu,'(3ES18.5)' ) p%GlbRot(i,:)
    ENDDO
 
+   WRITE (UnSu,'(A)')  'Global rotation WM parameters (IEC coords):'
+   WRITE (UnSu,'(3ES18.5)' ) p%Glb_crv(:)
+
    WRITE (UnSu,'(A)')  'Gravity vector (m/s^2) (IEC coords):'
    WRITE (UnSu,'(3ES18.5)' ) p%gravity(:)
 
+!FIXME:analysis_type
    IF(p%analysis_type .EQ. BD_STATIC_ANALYSIS) THEN
        WRITE (UnSu,'(A,T59,A15)')  'Analysis type:','STATIC'
    ELSEIF(p%analysis_type .EQ. BD_DYNAMIC_ANALYSIS) THEN
        WRITE (UnSu,'(A,T59,A15)')  'Analysis type:','DYNAMIC'
+   ELSEIF(p%analysis_type .EQ. BD_DYN_SSS_ANALYSIS) THEN
+       WRITE (UnSu,'(A,T37,A)')  'Analysis type:','DYNAMIC with quasi-steady-state start'
    ENDIF
 
    WRITE (UnSu,'(A,T59,1ES15.5)')  'Numerical damping parameter:',p%rhoinf
@@ -1950,7 +1958,7 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
 
 
 
-   if (p%analysis_type == BD_DYNAMIC_ANALYSIS ) then
+   if ( p%analysis_type /= BD_STATIC_ANALYSIS ) then !dynamic analysis
       ! we'll add mass and stiffness matrices in the first call to UpdateStates
       m%Un_Sum = UnSu
    else
