@@ -1421,11 +1421,9 @@ SUBROUTINE BD_ValidateInputData( InitInp, InputFileData, ErrStat, ErrMsg )
       !  According to Qi, the damping values mu1 .. mu6 should be of the same order of magnitude.  If they aren't, BeamDyn will likely fail badly.
       !  Will assume for moment that they must be within a factor of 5 of the first value given.
 !FIXME: Check a valid range sometime.
-   DO j=1,6
-      IF ( maxval( abs(InputFileData%InpBl%beta / InputFileData%InpBl%beta(J) ) ) > 5.0_R8Ki ) THEN
-         call SetErrStat( ErrID_Warn,'Damping values in blade file are not of similar order of magnitude! BeamDyn will likely not converge!', ErrStat, ErrMsg, RoutineName )
-      ENDIF
-   ENDDO
+   IF ( (maxval(abs(InputFileData%InpBl%beta)) / minval(abs(InputFileData%InpBl%beta)) > 10.0_R8Ki) .AND. InputFileData%InpBl%damp_flag == 1 ) THEN
+      call SetErrStat( ErrID_Warn,'Damping values in blade file are not of similar order of magnitude. BeamDyn may not converge!', ErrStat, ErrMsg, RoutineName )
+   ENDIF
 
 
    DO j=1,InputFileData%InpBl%station_total
