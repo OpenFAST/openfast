@@ -2945,10 +2945,6 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
 
-   INTEGER(IntKi)              :: idx_qp
-   INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: j
-   INTEGER(IntKi)              :: idx_dof1, idx_dof2
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ElementMatrixAcc'
 
 
@@ -3431,8 +3427,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
          return
       end if
 
-
-   call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
+   call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ) ! make sure u_interp holds values at t
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -3736,8 +3731,7 @@ SUBROUTINE Integrate_ElementForce(nelem, p, m)
 
    INTEGER(IntKi)              :: idx_qp
    INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: j
-   INTEGER(IntKi)              :: idx_dof1, idx_dof2
+   INTEGER(IntKi)              :: idx_dof1
    CHARACTER(*), PARAMETER     :: RoutineName = 'Integrate_ElementForce'
 
    DO i=1,p%nodes_per_elem
@@ -4001,6 +3995,11 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+
+      !................
+      ! Initialize the accelerations with the input root accelerations:
+      !................
+      
          ! Transform quantities from global frame to local (blade) frame
       CALL BD_InputGlobalLocal(p,u_interp)
 
@@ -4765,23 +4764,21 @@ SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! Calculate the global mass matrix and force vector for the beam
-
       ! must initialize these because BD_AssembleStiffK and BD_AssembleRHS are INOUT
    m%RHS    =  0.0_BDKi
    m%MassM  =  0.0_BDKi
 
+      ! Store the root accelerations as they will be used multiple times
+   RootAcc(1:3) = u%RootMotion%TranslationAcc(1:3,1)
+   RootAcc(4:6) = u%RootMotion%RotationAcc(1:3,1)
 
+
+      ! Calculate the global mass matrix and force vector for the beam
    DO nelem=1,p%elem_total
-
-
-      CALL BD_ElementMatrixAcc( nelem, p, m )
-
-      CALL BD_AssembleStiffK(nelem,p,m%elm, m%MassM)
-      CALL BD_AssembleRHS(nelem,p,m%elf, m%RHS)
-
+      CALL BD_ElementMatrixAcc( nelem, p, m )            ! Calculate m%elm and m%elf
+      CALL BD_AssembleStiffK(nelem,p,m%elm, m%MassM)     ! Assemble full mass matrix
+      CALL BD_AssembleRHS(nelem,p,m%elf, m%RHS)          ! Assemble right hand side force terms
    ENDDO
-! ending of old BD_GenerateDynamicElementAcc
 
 
       ! Add point forces at GLL points to RHS of equation.
@@ -4790,9 +4787,6 @@ SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
       m%RHS(4:6,j) =  m%RHS(4:6,j) + u%PointLoad%Moment(1:3,j)
    ENDDO
 
-      ! Root accelerations
-   RootAcc(1:3) = u%RootMotion%TranslationAcc(1:3,1)
-   RootAcc(4:6) = u%RootMotion%RotationAcc(1:3,1)
 
       ! Subtract the first column of the mass stiffness matrix times accelerations from RHS
    m%RHS(:,1)  =  m%RHS(:,1)  -  MATMUL( RESHAPE(m%MassM(:,1,:,1),(/6,6/)), RootAcc)

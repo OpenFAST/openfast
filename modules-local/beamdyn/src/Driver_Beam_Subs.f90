@@ -325,7 +325,7 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
    write (OutUnit,'()')
    write (OutUnit,'()')
 
-   call WrFileNR ( OutUnit, 'Time        ' )
+   call WrFileNR ( OutUnit, 'Time' )
 
    do i=1,NumOuts
       call WrFileNR ( OutUnit, tab//IntOutput%WriteOutputHdr(i) )
@@ -337,7 +337,7 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
       ! Write the units of the output parameters on one line:
       !......................................................
 
-   call WrFileNR ( OutUnit, ' (s)            ' )
+   call WrFileNR ( OutUnit, '(s)' )
 
    do i=1,NumOuts
       call WrFileNR ( Outunit, tab//trim(IntOutput%WriteOutputUnt(i)) )

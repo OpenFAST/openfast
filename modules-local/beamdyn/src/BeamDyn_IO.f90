@@ -1459,7 +1459,7 @@ SUBROUTINE BD_ValidateInputData( InitInp, InputFileData, ErrStat, ErrMsg )
          if(InputFileData%quadrature .EQ. TRAP_QUADRATURE) then
             nNodes = (InputFileData%InpBl%station_total - 1)*InputFileData%refine + 1  ! number of nodes on y%BldMotion mesh
          else
-         nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total  ! = p%nodes_per_elem*p%elem_total (number of nodes on y%BldMotion mesh)
+            nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total  ! = p%nodes_per_elem*p%elem_total (number of nodes on y%BldMotion mesh)
          end if
 !      ELSE
 !         nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total + 1
@@ -1612,7 +1612,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
          ! Sectional force resultants at Node 1 expressed in l, given in N
       SELECT CASE (p%BldMotionNodeLoc)
       CASE (BD_MESH_FE)
-      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(1:3,j))
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(1:3,j))
       CASE (BD_MESH_QP)
          temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceQP(1:3,j))
       END SELECT
@@ -1624,7 +1624,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
          ! Sectional moment resultants at Node 1 expressed in l, given in N-m
       SELECT CASE (p%BldMotionNodeLoc)
       CASE (BD_MESH_FE)
-      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(4:6,j))
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(4:6,j))
       CASE (BD_MESH_QP)
          temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceQP(4:6,j))
       END SELECT
@@ -1687,19 +1687,19 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
 
       if (p%BldMotionNodeLoc == BD_MESH_FE) THEN !> FIXME: If we are on the finite element points, the input and output meshes are siblings, otherwise we need to multiply by a different orientation (if we're okay 
                                                  !! with the nodes meaning something different) or we need to map the u2%PointLoad like we do for the m%u2%DistrLoad%Force loads.
-         !-------------------------
-         ! Applied point forces at Node 1 expressed in l, given in N
-      temp_vec = MATMUL(y%BldMotion%Orientation(1:3,1:3,j_BldMotion),m%u2%PointLoad%Force(:,j))
-      AllOuts( NPFl( beta,1 ) ) = temp_vec(1)
-      AllOuts( NPFl( beta,2 ) ) = temp_vec(2)
-      AllOuts( NPFl( beta,3 ) ) = temp_vec(3)
+            !-------------------------
+            ! Applied point forces at Node 1 expressed in l, given in N
+         temp_vec = MATMUL(y%BldMotion%Orientation(1:3,1:3,j_BldMotion),m%u2%PointLoad%Force(:,j))
+         AllOuts( NPFl( beta,1 ) ) = temp_vec(1)
+         AllOuts( NPFl( beta,2 ) ) = temp_vec(2)
+         AllOuts( NPFl( beta,3 ) ) = temp_vec(3)
 
-         !-------------------------
-         ! Applied point moments at Node 1 expressed in l, given in N-m
-      temp_vec = MATMUL(y%BldMotion%Orientation(1:3,1:3,j_BldMotion),m%u2%PointLoad%Moment(:,j))
-      AllOuts( NPMl( beta,1 ) ) = temp_vec(1)
-      AllOuts( NPMl( beta,2 ) ) = temp_vec(2)
-      AllOuts( NPMl( beta,3 ) ) = temp_vec(3)
+            !-------------------------
+            ! Applied point moments at Node 1 expressed in l, given in N-m
+         temp_vec = MATMUL(y%BldMotion%Orientation(1:3,1:3,j_BldMotion),m%u2%PointLoad%Moment(:,j))
+         AllOuts( NPMl( beta,1 ) ) = temp_vec(1)
+         AllOuts( NPMl( beta,2 ) ) = temp_vec(2)
+         AllOuts( NPMl( beta,3 ) ) = temp_vec(3)
       end if
       
 

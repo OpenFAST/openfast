@@ -638,7 +638,6 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
    INTEGER(IntKi)                               :: temp_id2
    REAL(BDKi)                                   :: cc(3)
    REAL(BDKi)                                   :: cc0(3)
-   REAL(BDKi)                                   :: temp_cc(3)
    REAL(BDKi)                                   :: temp_R(3,3)
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Set_BldMotion_NoAcc'
 
@@ -878,9 +877,9 @@ subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, 
    type(BD_ParameterType),       intent(in   )  :: p                   !< Parameters
    INTEGER(IntKi),               intent(in   )  :: member_first_kp     !< index of the first key point on a particular member
    INTEGER(IntKi),               intent(in   )  :: member_last_kp      !< index of the last key point on a particular member
-   REAL(BDKi),                   intent(in   )  :: eta                 !! relative position of desired node, [0,1]
-   REAL(BDKi),                   intent(  out)  :: POS(3)              !! position of node (in BD coordinates)
-   REAL(BDKi),                   intent(  out)  :: CRV(3)              !! curvature of node (in BD coordinates)
+   REAL(BDKi),                   intent(in   )  :: eta                 !< relative position of desired node, [0,1]
+   REAL(BDKi),                   intent(  out)  :: POS(3)              !< position of node (in BD coordinates)
+   REAL(BDKi),                   intent(  out)  :: CRV(3)              !< curvature of node (in BD coordinates)
    integer(IntKi),               intent(  out)  :: ErrStat             !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
@@ -955,14 +954,14 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
    INTEGER(IntKi), INTENT(  OUT)  :: ErrStat       !< Error status of the operation
    CHARACTER(*),   INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
-   REAL(BDKi)                  :: e2(3)         !< Unit normal vector
-   REAL(BDKi)                  :: Rr(3,3)       !< Initial rotation matrix
-   REAL(BDKi)                  :: PhiRad        !< Phi in radians
-   REAL(BDKi)                  :: Delta
+   REAL(BDKi)                     :: e2(3)         !< Unit normal vector
+   REAL(BDKi)                     :: Rr(3,3)       !< Initial rotation matrix
+   REAL(BDKi)                     :: PhiRad        !< Phi in radians
+   REAL(BDKi)                     :: Delta
 
-   INTEGER(IntKi)              :: ErrStat2      ! Temporary Error status
-   CHARACTER(ErrMsgLen)        :: ErrMsg2       ! Temporary Error message
-   CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeIniNodalCrv'
+   INTEGER(IntKi)                 :: ErrStat2      ! Temporary Error status
+   CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Temporary Error message
+   CHARACTER(*), PARAMETER        :: RoutineName = 'BD_ComputeIniNodalCrv'
 
    ! Initialize ErrStat
    ErrStat = ErrID_None

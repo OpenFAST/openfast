@@ -5199,7 +5199,10 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW,
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_BasicMeshes'
    
    
-   NumBl = SIZE(ED%Output(1)%BladeRootMotion)            
+   NumBl = 0
+   if (allocated(ED%Output(1)%BladeRootMotion)) then
+      NumBl = SIZE(ED%Output(1)%BladeRootMotion)    
+   end if
 
 ! Nacelle
    call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%NacelleMotion, trim(p_FAST%OutFileRoot)//'.ED_Nacelle', y_FAST%VTK_count, &
@@ -5298,7 +5301,10 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, A
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_Surfaces'
    
    
-   NumBl = SIZE(ED%Output(1)%BladeRootMotion)            
+   NumBl = 0
+   if (allocated(ED%Output(1)%BladeRootMotion)) then
+      NumBl = SIZE(ED%Output(1)%BladeRootMotion)    
+   end if
 
 ! Ground (written at initialization)
    
@@ -5757,7 +5763,8 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
             
          BlankLine = ""
          CALL WrOver( BlankLine )  ! BlankLine contains MaxWrScrLen spaces
-         CALL WrOver ( ' Performing linearization at simulation time '//TRIM( Num2LStr(t_global) )//' s.' )
+         CALL WrOver ( ' Performing linearization at simulation time '//TRIM( Num2LStr(t_global) )//' s. (RotSpeed='&
+                       //trim(num2lstr(Turbine%ED%Output(1)%RotSpeed*RPS2RPM))//' rpm, BldPitch1='//trim(num2lstr(Turbine%ED%Output(1)%BlPitch(1)*R2D))//' deg)'  )
          CALL WrScr('')
 
 

@@ -91,16 +91,16 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, MeshMapData, ErrStat, ErrMsg )
             END DO
             
          else
-         DO K = 1,p_FAST%nBeams ! Loop through all blades
+            DO K = 1,p_FAST%nBeams ! Loop through all blades
             
-            ! need to transfer the BD output blade motions to nodes on a sibling of the BD blade motion mesh:
-            CALL Transfer_Line2_to_Line2( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(k), ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               ! need to transfer the BD output blade motions to nodes on a sibling of the BD blade motion mesh:
+               CALL Transfer_Line2_to_Line2( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(k), ErrStat2, ErrMsg2 )
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                         
-            CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
-               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
-         END DO
+            END DO
          end if
          
                   
@@ -3994,38 +3994,38 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !-------------------------
          if (.not. p_FAST%BD_OutputSibling) then
 
-         ! Blade meshes for load transfer: (allocate meshes at BD input locations for motions transferred from BD output locations)                  
-         ALLOCATE( MeshMapData%BD_L_2_BD_L(NumBl), MeshMapData%y_BD_BldMotion_4Loads(NumBl), STAT=ErrStat2 )
-            IF ( ErrStat2 /= 0 ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BD_L_2_BD_L and MeshMapData%y_BD_BldMotion_4Loads.', &
-                               ErrStat, ErrMsg, RoutineName )
-               RETURN
-            END IF
+            ! Blade meshes for load transfer: (allocate meshes at BD input locations for motions transferred from BD output locations)                  
+            ALLOCATE( MeshMapData%BD_L_2_BD_L(NumBl), MeshMapData%y_BD_BldMotion_4Loads(NumBl), STAT=ErrStat2 )
+               IF ( ErrStat2 /= 0 ) THEN
+                  CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BD_L_2_BD_L and MeshMapData%y_BD_BldMotion_4Loads.', &
+                                    ErrStat, ErrMsg, RoutineName )
+                  RETURN
+               END IF
          
-         DO K=1,NumBl         
-               ! create the new mesh:
-            CALL MeshCopy ( SrcMesh  = BD%Input(1,k)%DistrLoad &
-                          , DestMesh = MeshMapData%y_BD_BldMotion_4Loads(k) &
-                          , CtrlCode = MESH_SIBLING     &
-                          , IOS      = COMPONENT_OUTPUT &
-                          , TranslationDisp = .TRUE.    &
-                          , Orientation     = .TRUE.    &
-                          , RotationVel     = .TRUE.    &
-                          , TranslationVel  = .TRUE.    &
-                          , RotationAcc     = .TRUE.    &
-                          , TranslationAcc  = .TRUE.    &
-                          , ErrStat  = ErrStat2         &
-                          , ErrMess  = ErrMsg2          ) 
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
-               IF (ErrStat >= AbortErrLev) RETURN
+            DO K=1,NumBl         
+                  ! create the new mesh:
+               CALL MeshCopy ( SrcMesh  = BD%Input(1,k)%DistrLoad &
+                              , DestMesh = MeshMapData%y_BD_BldMotion_4Loads(k) &
+                              , CtrlCode = MESH_SIBLING     &
+                              , IOS      = COMPONENT_OUTPUT &
+                              , TranslationDisp = .TRUE.    &
+                              , Orientation     = .TRUE.    &
+                              , RotationVel     = .TRUE.    &
+                              , TranslationVel  = .TRUE.    &
+                              , RotationAcc     = .TRUE.    &
+                              , TranslationAcc  = .TRUE.    &
+                              , ErrStat  = ErrStat2         &
+                              , ErrMess  = ErrMsg2          ) 
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
+                  IF (ErrStat >= AbortErrLev) RETURN
                                     
-               ! create the mapping:
-            CALL MeshMapCreate( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(K), ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BD_2_BD_BladeMotion('//TRIM(Num2LStr(K))//')' )         
-         END DO
-         
+                  ! create the mapping:
+               CALL MeshMapCreate( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(K), ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BD_2_BD_BladeMotion('//TRIM(Num2LStr(K))//')' )         
+            END DO
+            
          end if !.not. p_FAST%BD_OutputSibling
-         
+      
       END IF ! CompElast
       
    END IF ! AeroDyn/AeroDyn14 to structural code
