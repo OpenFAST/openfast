@@ -1638,17 +1638,27 @@ SUBROUTINE Linear_BD_InputSolve_du( p_FAST, y_FAST, y_ED, y_AD, u_AD, BD, MeshMa
    
       ! BD inputs on blade from AeroDyn
    
-      
-     DO K = 1,p_FAST%nBeams ! Loop through all blades
-         !linearization for dUdy will need some matrix multiplies because of the transfer (chain rule!), but we will perform individual linearization calculations here
-         !!! need to transfer the BD output blade motions to nodes on a sibling of the BD blade motion mesh:
-         CALL Linearize_Line2_to_Line2( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(k), ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-         CALL Linearize_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      END DO
          
+      if (p_FAST%BD_OutputSibling) then
+            
+         DO K = 1,p_FAST%nBeams ! Loop through all blades
+            CALL Linearize_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), BD%y(k)%BldMotion )
+               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         END DO
+         
+      else
+      
+         DO K = 1,p_FAST%nBeams ! Loop through all blades
+            !linearization for dUdy will need some matrix multiplies because of the transfer (chain rule!), but we will perform individual linearization calculations here
+            !!! need to transfer the BD output blade motions to nodes on a sibling of the BD blade motion mesh:
+            CALL Linearize_Line2_to_Line2( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(k), ErrStat2, ErrMsg2 )
+               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+            CALL Linearize_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
+               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         END DO
+         
+      end if
 
       
       DO K = 1,p_FAST%nBeams ! Loop through all blades
@@ -2008,8 +2018,12 @@ SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
 
       !!! ! This linearization was done in forming dUdu (see Linear_BD_InputSolve_du()), so we don't need to re-calculate these matrices 
       !!! ! while forming dUdy, too.
+      !!!if (p_FAST%BD_OutputSibling) then
+      !!!   CALL Linearize_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), BD%y(k)%BldMotion )
+      !!!else
       !!!   CALL Linearize_Line2_to_Line2( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(k), ErrStat2, ErrMsg2 )
       !!!   CALL Linearize_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
+      !!!end if
 
       AD_Out_Start = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + y_AD%TowerLoad%NNodes * 6    ! start of y_AD%BladeLoad(1)%Force field [2 fields (force, moment) with 3 components]
       DO K = 1,p_FAST%nBeams ! Loop through all blades
@@ -2028,19 +2042,23 @@ SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
          BD_Out_Start  = y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%LinStartIndx(LIN_OUTPUT_COL) & ! start of BD%y(k)%BldMotion%TranslationDisp field
                        + BD%y(k)%ReactionForce%NNodes * 6 ! 2 fields with 3 components
 
-        call AllocAry(TempMat, size(MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD,1), size(MeshMapData%BD_L_2_BD_L(k)%dM%mi,2), 'TempMat', ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            if (ErrStat>=AbortErrLev) return
+         if (p_FAST%BD_OutputSibling) then
+            call SetBlockMatrix( dUdy, MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD, BD_Start, BD_Out_Start )
+         else
+            call AllocAry(TempMat, size(MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD,1), size(MeshMapData%BD_L_2_BD_L(k)%dM%mi,2), 'TempMat', ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               if (ErrStat>=AbortErrLev) return
             
-               ! these blocks should be small enough that we can use matmul instead of calling a LAPACK routine to do it.
-         TempMat = matmul(MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD,MeshMapData%BD_L_2_BD_L(k)%dM%mi)
-         call SetBlockMatrix( dUdy, TempMat, BD_Start, BD_Out_Start )
+                  ! these blocks should be small enough that we can use matmul instead of calling a LAPACK routine to do it.
+            TempMat = matmul(MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD,MeshMapData%BD_L_2_BD_L(k)%dM%mi)
+            call SetBlockMatrix( dUdy, TempMat, BD_Start, BD_Out_Start )
             
-         BD_Out_Start = BD_Out_Start + BD%y(k)%BldMotion%NNodes*3 ! start of BD%y(k)%BldMotion%Orientation field
-         TempMat = matmul(MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD,MeshMapData%BD_L_2_BD_L(k)%dM%fx_p)
-         call SetBlockMatrix( dUdy, TempMat, BD_Start, BD_Out_Start )
+            BD_Out_Start = BD_Out_Start + BD%y(k)%BldMotion%NNodes*3 ! start of BD%y(k)%BldMotion%Orientation field
+            TempMat = matmul(MeshMapData%AD_L_2_BDED_B(k)%dM%m_uD,MeshMapData%BD_L_2_BD_L(k)%dM%fx_p)
+            call SetBlockMatrix( dUdy, TempMat, BD_Start, BD_Out_Start )
 
-         deallocate(TempMat) ! the next blade may have a different number of nodes
+            deallocate(TempMat) ! the next blade may have a different number of nodes
+         end if
 
       END DO
             

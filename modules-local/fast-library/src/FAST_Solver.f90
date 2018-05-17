@@ -81,6 +81,16 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, MeshMapData, ErrStat, ErrMsg )
       
       IF ( p_FAST%CompAero == Module_AD ) THEN
          
+         if (p_FAST%BD_OutputSibling) then
+            
+            DO K = 1,p_FAST%nBeams ! Loop through all blades
+                                    
+               CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), BD%y(k)%BldMotion )
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               
+            END DO
+            
+         else
          DO K = 1,p_FAST%nBeams ! Loop through all blades
             
             ! need to transfer the BD output blade motions to nodes on a sibling of the BD blade motion mesh:
@@ -91,6 +101,8 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, MeshMapData, ErrStat, ErrMsg )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
          END DO
+         end if
+         
                   
       ELSE
 
@@ -3980,6 +3992,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
 !-------------------------
 !  BeamDyn <-> BeamDyn
 !-------------------------
+         if (.not. p_FAST%BD_OutputSibling) then
+
          ! Blade meshes for load transfer: (allocate meshes at BD input locations for motions transferred from BD output locations)                  
          ALLOCATE( MeshMapData%BD_L_2_BD_L(NumBl), MeshMapData%y_BD_BldMotion_4Loads(NumBl), STAT=ErrStat2 )
             IF ( ErrStat2 /= 0 ) THEN
@@ -4010,9 +4024,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BD_2_BD_BladeMotion('//TRIM(Num2LStr(K))//')' )         
          END DO
          
-      END IF ! BeamDyn
-      
+         end if !.not. p_FAST%BD_OutputSibling
          
+      END IF ! CompElast
       
    END IF ! AeroDyn/AeroDyn14 to structural code
    
