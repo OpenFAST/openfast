@@ -324,17 +324,19 @@ typedef   ^        MiscVarType    ^            elk          {:}{:}{:}{:}  - - ""
 typedef   ^        MiscVarType    ^            elg          {:}{:}{:}{:}  - - "" -
 typedef   ^        MiscVarType    ^            elm          {:}{:}{:}{:}  - - "" -
 typedef   ^        MiscVarType    ^            DistrLoad_QP {:}{:}{:}     - - "Copy of the distributed load, in the BD reference frame" -
-typedef   ^        MiscVarType    ^            StifK_LU     {:}{:}{:}{:}  - - "Stiffness Matrix for LU" -
+typedef   ^        MiscVarType    ^            PointLoadLcl {:}{:}        - - "Copy of the point loads, in the BD reference frame" -
 typedef   ^        MiscVarType    ^            StifK        {:}{:}{:}{:}  - - "Stiffness Matrix" -
 typedef   ^        MiscVarType    ^            MassM        {:}{:}{:}{:}  - - "Mass Matrix" -
 typedef   ^        MiscVarType    ^            DampG        {:}{:}{:}{:}  - - "Damping Matrix" -
 typedef   ^        MiscVarType    ^            RHS          {:}{:}        - - "Right-hand-side vector" -
 typedef   ^        MiscVarType    ^            BldInternalForceFE   {:}{:}  - - "Force/Moment array for internal force calculations at FE" -
+typedef   ^        MiscVarType    ^            BldInternalForceQP   {:}{:}  - - "Force/Moment array for internal force calculations at QP" -
+typedef   ^        MiscVarType    ^            FirstNodeReactionLclForceMoment   {:}  - - "Force/Moment array for first node reaction.  Needed in InternalForce calculations." -
 typedef   ^        MiscVarType    ^            Solution     {:}{:}        - - "Result from LAPACK solve (X from A*X = B solve)" -
 # arrays for lapack routines                 
 typedef   ^        MiscVarType    ^            LP_StifK     {:}{:}        - - "Stiffness Matrix" -
 typedef   ^        MiscVarType    ^            LP_MassM     {:}{:}        - - "Mass Matrix" -
-typedef   ^        MiscVarType    ^            LP_DampG     {:}{:}        - - "Damping Matrix" -
+typedef   ^        MiscVarType    ^            LP_MassM_LU  {:}{:}        - - "Mass Matrix for LU" -
 typedef   ^        MiscVarType    ^            LP_RHS       {:}           - - "Right-hand-side vector" -
 typedef   ^        MiscVarType    ^            LP_StifK_LU  {:}{:}        - - "Stiffness Matrix for LU" -
 typedef   ^        MiscVarType    ^            LP_RHS_LU    {:}           - - "Right-hand-side vector for LU" -

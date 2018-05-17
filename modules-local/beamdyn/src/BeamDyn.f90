@@ -1415,6 +1415,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
 
       CALL AllocAry(m%BldInternalForceFE, p%dof_node,p%node_total,         'Calculated Internal Force at FE',  ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%BldInternalForceQP, p%dof_node,y%BldMotion%NNodes,   'Calculated Internal Force at QP',  ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry(m%FirstNodeReactionLclForceMoment,   p%dof_node,       'Root node reaction force/moment',  ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       CALL AllocAry(m%Nrrr,         (p%dof_node/2),p%nodes_per_elem,p%elem_total,'Nrrr: rotation parameters relative to root',  ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -1426,6 +1427,9 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       CALL AllocAry(m%elk,          p%dof_node,p%nodes_per_elem,p%dof_node,p%nodes_per_elem,    'elk',         ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%elg,          p%dof_node,p%nodes_per_elem,p%dof_node,p%nodes_per_elem,    'elg',         ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%elm,          p%dof_node,p%nodes_per_elem,p%dof_node,p%nodes_per_elem,    'elm',         ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+         ! Point loads applied to FE nodes from driver code.
+      CALL AllocAry(m%PointLoadLcl, p%dof_node,p%nodes_per_elem,                       'PointLoadLcl',         ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Distributed load from mesh, on the quadrature points.  The ramping copy is for the quasi-static solve
       CALL AllocAry(m%DistrLoad_QP,            p%dof_node,p%nqp,p%elem_total,                   'DistrLoad_QP',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1788,14 +1792,14 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CALL BD_CalcForceAcc(m%u, p, m, ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-!FIXME: First node pointload is missing.  Same with first QP node and DistrLoad.       
-      y%ReactionForce%Force(:,1)    = -MATMUL(p%GlbRot,m%RHS(1:3,1))
-      y%ReactionForce%Moment(:,1)   = -MATMUL(p%GlbRot,m%RHS(4:6,1))
+      ! Transfer the FirstNodeReaction forces to the output ReactionForce
+      y%ReactionForce%Force(:,1)    =  MATMUL(p%GlbRot,m%FirstNodeReactionLclForceMoment(1:3))
+      y%ReactionForce%Moment(:,1)   =  MATMUL(p%GlbRot,m%FirstNodeReactionLclForceMoment(4:6))
 
+      !FIXME: This is not tested for Gauss quadrature we might need to map across to the root position.
       CALL BD_InternalForceMoment( x, p, m )
 
    ELSE
-      m%RHS = 0.0_BdKi ! accelerations are set to zero in the static case 
 
          ! Calculate the elastic forces for the static case.
       DO nelem=1,p%elem_total
@@ -3397,10 +3401,10 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    INTEGER(IntKi),                  INTENT(  OUT):: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT):: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   TYPE(BD_InputType)                            :: u_interp                     !
-   TYPE(BD_InputType)                            :: u_temp                       ! a temporary variable that holds gradual increase of loads
+   TYPE(BD_InputType)                            :: u_interp                     ! temporary copy of inputs, transferred to BD local system
+   REAL(BDKi)                                    :: ScaleFactor                  ! Factor for scaling applied loads at each step
    INTEGER(IntKi)                                :: i
-   INTEGER(IntKi)                                :: j
+   INTEGER(IntKi)                                :: j                            ! Generic counters
    INTEGER(IntKi)                                :: piter
    REAL(BDKi)                                    :: gravity_temp(3)
    REAL(BDKi)                                    :: load_works    
@@ -3410,16 +3414,21 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    LOGICAL                                       :: solved
    INTEGER(IntKi)                                :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                          :: ErrMsg2                      ! Temporary Error message
+   INTEGER(IntKi)                                :: ErrStat3                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)                          :: ErrMsg3                      ! Temporary Error message
    CHARACTER(*), PARAMETER                       :: RoutineName = 'BD_Static'
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-      ! allocate space for input type (mainly for meshes)
-   CALL BD_CopyInput(u(1),u_interp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
 
-   CALL BD_CopyInput(u(1),u_temp,MESH_NEWCOPY,ErrStat2,ErrMsg2) ! this just needs copies of
+      ! Create a copy, so we can reset when things don't converge.
+   CALL BD_CopyContState(x, x_works, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+
+      ! Get u_interp at t (call to extrapinterp in case driver sets u(:) or utimes(:) differently, though in the static case, the inputs shouldn't be changing)
+   call BD_CopyInput(u(1),u_interp,MESH_NEWCOPY,ErrStat2,ErrMsg2)          ! allocate space if necessary
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
 
       if (ErrStat >= AbortErrLev) then
@@ -3435,16 +3444,18 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
       end if
 
 
+      
       ! Transform quantities from global frame to local (blade in BD coords) frame
    CALL BD_InputGlobalLocal(p,u_interp)
 
-      ! Copy over the DistrLoads
-   CALL BD_DistrLoadCopy( p, u_interp, m )
 
       ! Incorporate boundary conditions
    CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
 
 
    ! new logic
@@ -3458,31 +3469,28 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    load_test      = 1.0_BDKi
    load_works_not = 1.0_BDKi
 
-   x_works = x  ! save initial guess
+   ! x_works = x  ! save initial guess (done above)
 
    !DO j=1,p%niter  ! original -- no need to this iteration number to the NR iteration number
    DO j=1,20  ! hard coded value for these static cases
 
-       u_temp%PointLoad%Force(:,:)  = u_interp%PointLoad%Force(:,:)  * load_test
-       u_temp%PointLoad%Moment(:,:) = u_interp%PointLoad%Moment(:,:) * load_test
-       u_temp%DistrLoad%Force(:,:)  = u_interp%DistrLoad%Force(:,:)  * load_test
-       u_temp%DistrLoad%Moment(:,:) = u_interp%DistrLoad%Moment(:,:) * load_test
+         CALL BD_DistrLoadCopy( p, u_interp, m, load_test ) ! move the input loads from u_interp into misc vars
        gravity_temp(:)              = p%gravity(:)                   * load_test
 
-           CALL BD_StaticSolution(x, gravity_temp, u_temp, p, m, piter, ErrStat2, ErrMsg2)
-           call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
-           ErrStat = ErrID_None
-           ErrMsg  = ""
+         CALL BD_StaticSolution(x, gravity_temp, p, m, piter, ErrStat2, ErrMsg2)
 
        ! note that if BD_StaticSolution converges, then piter will .le. p%niter
 
        if (piter .le. p%niter) then 
 
           ! save this successfully converged value
-          x_works = x
+          !x_works = x
+          CALL BD_CopyContState(x, x_works, MESH_UPDATECOPY, ErrStat3, ErrMsg3)
+
 
           if ( EqualRealNos(load_test,1.0_BDKi) ) then
              solved = .true.
+             EXIT
           else
              load_works = load_test
              ! if we found a convergent load, try full load next
@@ -3498,11 +3506,11 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
           load_test = 0.5_BDKi * (load_works + load_works_not)     
 
           ! reset best guess
-          x = x_works
+          !x = x_works
+          CALL BD_CopyContState(x_works, x, MESH_UPDATECOPY, ErrStat3, ErrMsg3)
  
-       endif 
 
-       if (solved) EXIT
+       endif 
 
        ! test halfway point between load_works and full load
 
@@ -3512,13 +3520,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    IF( .not. solved) then
                call SetErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of load steps.", &
                                 ErrStat,ErrMsg, RoutineName)
-               CALL WrScr( "Maxium number of load steps reached. Exit BeamDyn")
            ENDIF
-
-   if (ErrStat >= AbortErrLev) then
-      call cleanup()
-      return
-   end if
 
    call cleanup()
    return
@@ -3526,22 +3528,20 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 CONTAINS
       SUBROUTINE Cleanup()
          CALL BD_DestroyInput(u_interp, ErrStat2, ErrMsg2 )
-         CALL BD_DestroyInput(u_temp,   ErrStat2, ErrMsg2 )
+         CALL BD_DestroyContState(x_works, ErrStat2, ErrMsg2 )
       END SUBROUTINE Cleanup
 END SUBROUTINE BD_Static
 
-
 !-----------------------------------------------------------------------------------------------------------------------------------
-!FIXME: note similarities to BD_DynamicSolutionGA2
-SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
+
+SUBROUTINE BD_StaticSolution( x, gravity, p, m, piter, ErrStat, ErrMsg )
 
    TYPE(BD_ContinuousStateType),    INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
    REAL(BDKi),                      INTENT(IN   )  :: gravity(:)  !< not the same as p%gravity (used for ramp of loads and gravity)
-   TYPE(BD_InputType),              INTENT(IN   )  :: u           !< inputs
    TYPE(BD_ParameterType),          INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_MiscVarType),            INTENT(INOUT)  :: m           !< misc/optimization variables
 
-   INTEGER(IntKi),                  INTENT(  OUT)  :: piter       !< ADDED piter AS OUTPUT
+   INTEGER(IntKi),                  INTENT(  OUT)  :: piter
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -3564,8 +3564,8 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
 
          !  Point loads are on the GLL points.
        DO j=1,p%node_total
-           m%RHS(1:3,j) = m%RHS(1:3,j) + u%Pointload%Force(1:3,j)
-           m%RHS(4:6,j) = m%RHS(4:6,j) + u%Pointload%Moment(1:3,j)
+         m%RHS(1:3,j) = m%RHS(1:3,j) + m%PointLoadLcl(1:3,j)
+         m%RHS(4:6,j) = m%RHS(4:6,j) + m%PointLoadLcl(4:6,j)
        ENDDO
 
 
@@ -3623,8 +3623,8 @@ SUBROUTINE BD_StaticUpdateConfiguration(p,m,x)
    INTEGER(IntKi)                         :: i
    CHARACTER(*), PARAMETER                :: RoutineName = 'BD_StaticUpdateConfiguration'
 
-!FIXME: why is x%q(:,1) calculated??? Isn't that already known???
-   DO i=1, p%node_total
+      ! Root node is known, so do not calculate it.
+   DO i=2, p%node_total
 
          ! Calculate new position
        x%q(1:3,i)    =  x%q(1:3,i) + m%Solution(1:3,i)
@@ -3883,16 +3883,14 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
    ENDDO
 
       ! Now deal with the root node
-      ! For the root node: the root reaction force is contained in the m%RHS (root node is not a state)
-   IF(p%analysis_type .EQ. BD_DYNAMIC_ANALYSIS) THEN
-         ! Add root reaction
-      m%BldInternalForceFE(1:3,1) = -m%RHS(1:3,1)
-      m%BldInternalForceFE(4:6,1) = -m%RHS(4:6,1)
-   ELSE
+   IF(p%analysis_type /= BD_STATIC_ANALYSIS) THEN !dynamic analysis:
+         ! Add root reaction: This includes the mass*acceleration terms for the first node
+      m%BldInternalForceFE(1:6,1) =    m%FirstNodeReactionLclForceMoment(:)
+   ELSE ! static case:
          ! Add root reaction  -- This is in the first node for static case and does not need contributions from the outboard sections due
-         ! to how the solve is performed, but it is negative.
-      m%BldInternalForceFE(1:3,1) =   -m%EFint(1:3,1,1)
-      m%BldInternalForceFE(4:6,1) =   -m%EFint(4:6,1,1)
+         ! to how the solve is performed.
+      m%BldInternalForceFE(1:3,1) =   m%elf(1:3,1)
+      m%BldInternalForceFE(4:6,1) =   m%elf(4:6,1)
    ENDIF
 
          ! Rotate coords to global reference frame
@@ -4249,8 +4247,8 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
 
          ! Apply additional forces / loads at GLL points (such as aerodynamic loads)?
       DO j=1,p%node_total
-         m%RHS(1:3,j) = m%RHS(1:3,j) + u%PointLoad%Force(1:3,j)
-         m%RHS(4:6,j) = m%RHS(4:6,j) + u%PointLoad%Moment(1:3,j)
+         m%RHS(1:3,j) = m%RHS(1:3,j) + m%PointLoadLcl(1:3,j)
+         m%RHS(4:6,j) = m%RHS(4:6,j) + m%PointLoadLcl(4:6,j)
       ENDDO
 
 
@@ -4532,13 +4530,10 @@ END SUBROUTINE BD_ElementMatrixGA2
 !!  1 Displacements
 !!  2 Linear/Angular velocities
 !!  3 Linear/Angular accelerations
-!!  4 Point forces/moments
-!!  5 Distributed forces/moments
 !! It also transforms the DCM to rotation tensor in the input data structure
 SUBROUTINE BD_InputGlobalLocal(p, u)
    TYPE(BD_ParameterType), INTENT(IN   ):: p
    TYPE(BD_InputType),     INTENT(INOUT):: u
-   INTEGER(IntKi)                       :: i                          !< Generic counter
    CHARACTER(*), PARAMETER              :: RoutineName = 'BD_InputGlobalLocal'
 
 !FIXME: we might be able to get rid of the m%u now if we put the p%GlbRot multiplications elsewhere.   
@@ -4553,18 +4548,6 @@ SUBROUTINE BD_InputGlobalLocal(p, u)
    ! Transform DCM to Rotation Tensor (RT)   
    u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1)) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
    
-   ! Transform Applied Forces from Global to Local (Blade) frame
-   DO i=1,p%node_total
-      u%PointLoad%Force(1:3,i)  = MATMUL(u%PointLoad%Force(:,i),p%GlbRot)  !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%PointLoad%Force(:,i)) 
-      u%PointLoad%Moment(1:3,i) = MATMUL(u%PointLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Moment(:,i)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%PointLoad%Moment(:,i))
-   ENDDO
-   
-   ! transform distributed forces and moments
-   DO i=1,u%DistrLoad%Nnodes
-      u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),p%GlbRot)  !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Force(:,i)) 
-      u%DistrLoad%Moment(1:3,i) = MATMUL(u%DistrLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Moment(:,i)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Moment(:,i))
-   ENDDO
-
 END SUBROUTINE BD_InputGlobalLocal
 
 
@@ -4572,25 +4555,41 @@ END SUBROUTINE BD_InputGlobalLocal
 !> This subroutine is just to clean up the code a bit.  This is called between the BD_InputGlobalLocal and BD_BoundaryGA2 routines.
 !! It could probably live in the BD_InputGlobablLocal except for the call just before the BD_CalcIC call (though it might not matter there).
 ! NOTE: This routine could be entirely removed if the u%DistrLoad arrays are used directly, but that would require some messy indexing.
-SUBROUTINE BD_DistrLoadCopy( p, u, m )
+SUBROUTINE BD_DistrLoadCopy( p, u, m, RampScaling )
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p             !< Parameters
-   TYPE(BD_InputType),           INTENT(IN   )  :: u             !< Inputs at t (in BD coordinates)
+   TYPE(BD_InputType),           INTENT(INOUT)  :: u             !< Inputs at t (in BD coordinates)
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m             !< misc/optimization variables
+   REAL(BDKi),    OPTIONAL                      :: RampScaling
 
    INTEGER(IntKi)                               :: temp_id
    INTEGER(IntKi)                               :: idx_qp
    INTEGER(IntKi)                               :: nelem
+   INTEGER(IntKi)                               :: i
+   REAL(BDKi)                                   :: ScalingFactor
+
+      ! To simplify ramping with the static and quasi-static calculations, we add a ramping scale factor
+   IF (PRESENT(RampScaling)) THEN
+      ScalingFactor  =  RampScaling
+   ELSE
+      ScalingFactor  =  1.0_BDki
+   ENDIF
 
       ! Set the intermediate DistrLoad_QP array.
    DO nelem=1,p%elem_total
       temp_id  = (nelem-1)*p%nqp + p%qp_indx_offset
       DO idx_qp=1,p%nqp
-         m%DistrLoad_QP(1:3,idx_qp,nelem) = u%DistrLoad%Force(1:3,temp_id+idx_qp)
-         m%DistrLoad_QP(4:6,idx_qp,nelem) = u%DistrLoad%Moment(1:3,temp_id+idx_qp)
+         m%DistrLoad_QP(1:3,idx_qp,nelem) = MATMUL(u%DistrLoad%Force(1:3,temp_id+idx_qp),p%GlbRot)*ScalingFactor    !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Force(:,i)) 
+         m%DistrLoad_QP(4:6,idx_qp,nelem) = MATMUL(u%DistrLoad%Moment(1:3,temp_id+idx_qp),p%GlbRot)*ScalingFactor   !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Moment(:,i)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Moment(:,i))
       ENDDO
    ENDDO
 
+   ! Transform Applied Forces from Global to Local (Blade) frame
+   DO i=1,p%node_total
+      m%PointLoadLcl(1:3,i)   = MATMUL(u%PointLoad%Force(:,i), p%GlbRot)*ScalingFactor    ! Type conversion!!
+      m%PointLoadLcl(4:6,i)   = MATMUL(u%PointLoad%Moment(:,i),p%GlbRot)*ScalingFactor    ! Type conversion!!
+   ENDDO
+   
 END SUBROUTINE BD_DistrLoadCopy
 
 
@@ -4756,6 +4755,7 @@ SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
 
    INTEGER(IntKi)                               :: j
    REAL(BDKi)                                   :: RootAcc(6)
+   REAL(BDKi)                                   :: NodeMassAcc(6)
    INTEGER(IntKi)                               :: nelem ! number of elements
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
@@ -4783,43 +4783,54 @@ SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
 
       ! Add point forces at GLL points to RHS of equation.
    DO j=1,p%node_total
-      m%RHS(1:3,j) =  m%RHS(1:3,j) + u%PointLoad%Force(1:3,j)
-      m%RHS(4:6,j) =  m%RHS(4:6,j) + u%PointLoad%Moment(1:3,j)
+      m%RHS(1:3,j) =  m%RHS(1:3,j) + m%PointLoadLcl(1:3,j)
+      m%RHS(4:6,j) =  m%RHS(4:6,j) + m%PointLoadLcl(4:6,j)
    ENDDO
 
 
-      ! Subtract the first column of the mass stiffness matrix times accelerations from RHS
-   m%RHS(:,1)  =  m%RHS(:,1)  -  MATMUL( RESHAPE(m%MassM(:,1,:,1),(/6,6/)), RootAcc)
+      ! Now set the root reaction force.
+      ! Note: m%RHS currently holds the force terms for the RHS of the equation.
+      !> The root reaction force is first node force minus  mass time acceleration terms:
+      !! \f$ F_\textrm{root} = F_1 - \sum_{i} m_{1,i} a_{i} \f$.
+   m%FirstNodeReactionLclForceMoment(1:6) =  m%RHS(1:6,1)
+
+      ! Setup the RHS of the m*a=F equation. Skip the first node as that is handled separately.
    DO j=2,p%node_total
       m%RHS(:,j)  =  m%RHS(:,j)  -  MATMUL( RESHAPE(m%MassM(:,j,:,1),(/6,6/)), RootAcc)
    ENDDO
 
 
-      !Note we are only zeroing out the top row of 6x6 matrices of the MassM array, not all of it
-   m%MassM(:,:,:,1)  =  0.0_BDKi
-
-      ! Set diagonal set upper left corner to -1
-   DO j=1,p%dof_node
-      m%MassM(j,1,j,1)  =  -1.0_BDKi
-   ENDDO
-
-     ! Reshape for the use with the LAPACK solver
-   m%LP_RHS    =  RESHAPE(m%RHS,    (/p%dof_total/))
+      ! Solve for the accelerations!
+      !  Reshape for the use with the LAPACK solver.  Only solving for nodes 2:p%node_total (node 1 accelerations are known)
+   m%LP_RHS_LU =  RESHAPE(m%RHS(:,2:p%node_total),    (/p%dof_total-6/))
    m%LP_MassM  =  RESHAPE(m%MassM,  (/p%dof_total,p%dof_total/))     ! Flatten out the dof dimensions of the matrix.
+   m%LP_MassM_LU  = m%LP_MassM(7:p%dof_total,7:p%dof_total)
 
-
-      ! Solve linear equations A * X = B for acceleration (F=ma)
-   CALL LAPACK_getrf( p%dof_total, p%dof_total, m%LP_MassM, m%LP_indx, ErrStat2, ErrMsg2)
+      ! Solve linear equations A * X = B for acceleration (F=ma) for nodes 2:p%node_total
+   CALL LAPACK_getrf( p%dof_total-6, p%dof_total-6, m%LP_MassM_LU, m%LP_indx, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL LAPACK_getrs( 'N',p%dof_total, m%LP_MassM, m%LP_indx, m%LP_RHS,ErrStat2, ErrMsg2)
+   CALL LAPACK_getrs( 'N',p%dof_total-6, m%LP_MassM_LU, m%LP_indx, m%LP_RHS_LU,ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    if (ErrStat >= AbortErrLev) return
 
-
       ! Reshape for copy over to output overall accelerations of system
-   m%RHS = RESHAPE( m%LP_RHS, (/ p%dof_node, p%node_total /) )
-   !OS_tmp%Acc  =  m%RHS !bjj: these are not accelerations at the first node!!!!! Let's just use m%RHS instead of a copy of OS.
+   m%RHS(:,2:p%node_total) = RESHAPE( m%LP_RHS_LU, (/ p%dof_node, p%node_total-1 /) )
+   m%RHS(:,1) = RootAcc       ! This is known at the start.
+
+
+
+      !> Now that we have all the accelerations, complete the summation \f$ \sum_{i} m_{1,i} a_{i} \f$
+      ! First node:
+   NodeMassAcc = MATMUL( RESHAPE(m%MassM(:,1,:,1),(/6,6/)),m%RHS(:,1) )
+   m%FirstNodeReactionLclForceMoment(1:6)   =  m%FirstNodeReactionLclForceMoment(1:6)   - NodeMassAcc(1:6)
+
+      ! remaining nodes
+   DO j=2,p%Node_total
+      NodeMassAcc = MATMUL( RESHAPE(m%MassM(:,j,:,1),(/6,6/)),m%RHS(:,j) )
+      m%FirstNodeReactionLclForceMoment(1:6)   =  m%FirstNodeReactionLclForceMoment(1:6)   - NodeMassAcc(1:6)
+   ENDDO
+
 
    RETURN
 
