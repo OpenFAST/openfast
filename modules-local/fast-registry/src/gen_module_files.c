@@ -2092,7 +2092,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
 // generate each derived data type
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
-      if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , nonick ) ;
+      if (*q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , nonick ) ;
       fprintf(fp, "! =========  %s%s  =======\n", q->mapsto, (sw_ccode) ? "_C" : "");
     for ( ipass = (sw_ccode)?0:1 ; ipass < 2 ; ipass++ ) {   // 2 passes for C code, 1st pass generates bound ddt
       if ( q->usefrom == 0 ) {
@@ -2146,13 +2146,13 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
 
                // bjj: we need to make sure these types map to reals, too
                tmp[0] = '\0' ;
-               if ( q->mapsto ) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
+               if (*q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
                if ( must_have_real_or_double(tmp) ) checkOnlyReals( q->mapsto, r );
 
 
             } else {
               tmp[0] = '\0' ;
-              if ( q->mapsto ) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
+              if (*q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
               if ( must_have_real_or_double(tmp) ) {
                 if ( strncmp(r->type->mapsto,"REAL",4) ) {
                   fprintf(stderr,"Registry warning: %s contains a field (%s) whose type is not real or double: %s\n",
