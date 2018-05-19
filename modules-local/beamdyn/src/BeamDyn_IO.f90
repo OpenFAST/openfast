@@ -1210,7 +1210,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
 !   ..... Developer must add checking for invalid inputs here: .....
    DO I = p%NNodeOuts+1,9  ! Invalid nodes
-      
+
       InvalidOutput( NFl( i,:) ) = .true.
       InvalidOutput( NMl( i,:) ) = .true.
       InvalidOutput( NTDr(i,:) ) = .true.
@@ -1223,17 +1223,17 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( NPMl(i,:) ) = .true.
       InvalidOutput( NDFl(i,:) ) = .true.
       InvalidOutput( NDMl(i,:) ) = .true.
-         
-   END DO   
-   
+
+   END DO
+
    IF (.not. p%UsePitchAct) THEN
       InvalidOutput( PAngInp ) = .true.
       InvalidOutput( PAngAct ) = .true.
       InvalidOutput( PRatAct ) = .true.
       InvalidOutput( PAccAct ) = .true.
    END IF
-      
-   
+
+
 !   ................. End of validity checking .................
 
 
@@ -1303,7 +1303,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
             p%OutParam(I)%SignM = 0
          ELSE
             p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
-            
+
             if ( p%OutParam(I)%Indx >= N1DFxl .and. p%OutParam(I)%Indx <= N9DMzl ) p%OutInputs = .true.
          END IF
       ELSE ! this channel isn't valid
@@ -1364,7 +1364,7 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
       IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,3), 0.0_BDKi ) ) THEN
          CALL SetErrStat(ErrID_Fatal, 'kp_zr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
       END IF
-         !bjj: added checks on kp_xr(1) and kp_yr(1) because BeamDyn's equations currently assume that the blade root and the first FE node 
+         !bjj: added checks on kp_xr(1) and kp_yr(1) because BeamDyn's equations currently assume that the blade root and the first FE node
          !     are at the same point (i.e., u%BladeRoot is located at the first finite-element node)
       IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,2), 0.0_BDKi ) ) THEN
          CALL SetErrStat(ErrID_Fatal, 'kp_yr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
@@ -1445,7 +1445,7 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
 
    ! Check to see if all OutNd(:) analysis points are existing analysis points:
          nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total  ! = p%nodes_per_elem*p%elem_total (number of nodes on y%BldMotion mesh)
-      
+
 
       do j=1,InputFileData%NNodeOuts
          if ( InputFileData%OutNd(j) < 1_IntKi .OR. InputFileData%OutNd(j) > nNodes ) then
@@ -1524,7 +1524,7 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
    ! (but we did need RootMxr and RootMyr)
    if ( p%NumOuts <= 0 ) RETURN
    !-------------------------
-   
+
    ! compute the root relative orientation, RootRelOrient, which is used in several calculations below
    call LAPACK_DGEMM('T', 'N', 1.0_BDKi, m%u2%RootMotion%Orientation(:,:,1), m%u2%RootMotion%RefOrientation(:,:,1), 0.0_BDKi, RootRelOrient,   ErrStat2, ErrMsg2 )
 
@@ -1534,7 +1534,7 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
    d_ref = y%BldMotion%Position(       :, y%BldMotion%NNodes) - m%u2%RootMotion%Position(       :,1)
    temp_vec2 = d + d_ref - matmul( RootRelOrient, d_ref ) ! tip displacement
    temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2)
-      
+
    AllOuts( TipTDxr ) = temp_vec(1)
    AllOuts( TipTDyr ) = temp_vec(2)
    AllOuts( TipTDzr ) = temp_vec(3)
@@ -1567,14 +1567,14 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
 
    !-------------------------
    ! Tip translational accelerations (absolute) expressed in l, given in m/s^2
-   temp_vec = MATMUL(y%BldMotion%Orientation(:,:,y%BldMotion%NNodes), y%BldMotion%TranslationAcc(:,y%BldMotion%NNodes)) ! translate accelerations to local system for output   
+   temp_vec = MATMUL(y%BldMotion%Orientation(:,:,y%BldMotion%NNodes), y%BldMotion%TranslationAcc(:,y%BldMotion%NNodes)) ! translate accelerations to local system for output
    AllOuts( TipTAXl ) = temp_vec(1)
    AllOuts( TipTAYl ) = temp_vec(2)
    AllOuts( TipTAZl ) = temp_vec(3)
 
    !-------------------------
    ! Tip angular/rotational accelerations (absolute) expressed in l, given in deg/s^2
-   temp_vec = MATMUL(y%BldMotion%Orientation(:,:,y%BldMotion%NNodes), y%BldMotion%RotationAcc(:,y%BldMotion%NNodes)) ! translate accelerations to local system for output   
+   temp_vec = MATMUL(y%BldMotion%Orientation(:,:,y%BldMotion%NNodes), y%BldMotion%RotationAcc(:,y%BldMotion%NNodes)) ! translate accelerations to local system for output
    AllOuts( TipRAXl ) = temp_vec(1)*R2D
    AllOuts( TipRAYl ) = temp_vec(2)*R2D
    AllOuts( TipRAZl ) = temp_vec(3)*R2D
@@ -1610,10 +1610,8 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
 
       ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
       ! referenced against the DCM of the blade root at T=0.
-      cc = MATMUL(p%GlbRot,x%q(4:6,j_BldMotion))                 ! Global coordinate DCM times rotation parameters
-      cc0 = MATMUL(p%GlbRot, p%uuN0(4:6,ndid(beta),elid(beta)))  ! Global coordinate DCM times initial rotation parameter array
-      CALL BD_CrvCompose(temp_cc,cc0,p%Glb_crv,FLAG_R1R2)        ! temp_cc = cc0 composed with p%Glb_crv
-      CALL BD_CrvCompose(cc0,cc,temp_cc,FLAG_R1R2)               ! cc0 = cc composed with temp_cc
+      CALL BD_CrvCompose( cc, x%q(4:6,j_BldMotion), p%uuN0(4:6,ndid(beta),elid(beta)), FLAG_R1R2 )
+      CALL BD_CrvCompose( cc0, p%Glb_crv, cc, FLAG_R1R2 )
 
       ! Create the DCM from the rotation parameters
       CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
@@ -1638,7 +1636,7 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
       AllOuts( NFl( beta,1 ) ) = temp_vec(1)
       AllOuts( NFl( beta,2 ) ) = temp_vec(2)
       AllOuts( NFl( beta,3 ) ) = temp_vec(3)
-      
+
       !------------------------------------
       ! Sectional moment resultants at Node 1 expressed in l, given in N-m
       !FIXME:  N#Mxl & N#Myl are known to be incorrect!  See https://wind.nrel.gov/forum/wind/viewtopic.php?f=3&t=1622
@@ -1646,7 +1644,7 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
       AllOuts( NMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NMl( beta,3 ) ) = temp_vec(3)
-      
+
       !------------------------------------
       ! Sectional translational deflection (relative to the undeflected position) expressed in r
       ! Evaluate translational displacement at nodes
@@ -1654,7 +1652,7 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
       d_ref = p%uuN0(4:6,ndid(beta),elid(beta)) - m%u2%RootMotion%Position(       :,1)
       temp_vec2 = d + d_ref - matmul( RootRelOrient, d_ref ) ! tip displacement
       temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2)
-      
+
       AllOuts( NTDr( beta,1 ) ) = temp_vec(1)
       AllOuts( NTDr( beta,2 ) ) = temp_vec(2)
       AllOuts( NTDr( beta,3 ) ) = temp_vec(3)
@@ -1668,7 +1666,7 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2) ! translate these parameters to the correct system for output
-            
+
       AllOuts( NRDr( beta,1 ) ) = temp_vec(1)
       AllOuts( NRDr( beta,2 ) ) = temp_vec(2)
       AllOuts( NRDr( beta,3 ) ) = temp_vec(3)
@@ -1715,10 +1713,10 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
       AllOuts( NPMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NPMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NPMl( beta,3 ) ) = temp_vec(3)
-      
+
       ! to avoid unnecessary mesh mapping calculations, calculate these outputs only when we've requested them
       if (p%OutInputs) then
-               
+
          ! transfer the output motions to the input nodes for load transfer
          CALL Transfer_Line2_to_Line2( y%BldMotion, m%y_BldMotion_at_u, m%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1733,7 +1731,7 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
          AllOuts( NDFl( beta,1 ) ) = temp_vec(1)
          AllOuts( NDFl( beta,2 ) ) = temp_vec(2)
          AllOuts( NDFl( beta,3 ) ) = temp_vec(3)
-         
+
          !-------------------------
          ! Applied distributed moments at Node 1 expressed in l, in N-m/m
          temp_vec = MATMUL(NdOrientation(:,:), m%u_DistrLoad_at_y%Moment(:,j_BldMotion))
@@ -1853,16 +1851,16 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Quadrature point position vectors'
-   WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','        X        ','        Y        ','        Z        '       
+   WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','        X        ','        Y        ','        Z        '
    WRITE (UnSu,'(A,1x,3(1x,A))')  '----','-----------------','-----------------','-----------------'
-   DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset) 
+   DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset)
       WRITE(UnSu,'(I4,3ES18.5)') i,p%QuadPt(1:3,i+p%qp_indx_offset)
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Quadrature point initial rotation vectors'
-   WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','      WM_x       ','      WM_y       ','      WM_z       '       
+   WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','      WM_x       ','      WM_y       ','      WM_z       '
    WRITE (UnSu,'(A,1x,3(1x,A))')  '----','-----------------','-----------------','-----------------'
-   DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset) 
+   DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset)
       WRITE(UnSu,'(I4,3ES18.5)') i,p%QuadPt(4:6,i+p%qp_indx_offset)
    ENDDO
 
@@ -1900,9 +1898,9 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
 
 
       WRITE (UnSu, '(/,A)')  'Output nodes located at finite element nodes.'
-   
 
-   
+
+
    ! output channels:
    OutPFmt = '( I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
    WRITE (UnSu,'(//,A,/)')  'Requested Outputs:'

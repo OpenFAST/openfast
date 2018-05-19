@@ -225,7 +225,7 @@ SUBROUTINE BD_CrvMatrixH(cc,Hh)
    Hh(2,3) = cb2 * cf3 - cb1
    Hh(3,3) = cb3 * cf3 + cb0
 
-   
+
 END SUBROUTINE BD_CrvMatrixH
 !-----------------------------------------------------------------------------------------------------------------------------------
 !>   This subroutine composes two Wiener-Milenkovic parameters pp and qq to find the resulting parameter rr
@@ -325,7 +325,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    REAL(BDKi),       INTENT(  OUT)  :: cc(3)         !< Crv paramters
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat       !< Error status of the operation
    CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
-   
+
    REAL(BDKi)                  :: pivot(4) ! Trace of the rotation matrix and diagonal elements
    REAL(BDKi)                  :: sm(0:3)
    REAL(BDKi)                  :: em
@@ -339,7 +339,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-   
+
    ! use the local rotation matrix variable to avoid side effects
    Rr = R
 
@@ -406,7 +406,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
       sm(3)  = Rr(2,1) - Rr(1,2)                           !  4 c_3 c_0 t_{r0}
    end select
 
-   em = sm(0) + SIGN( 2.0_BDKi*SQRT(sm(i)), sm(0) ) 
+   em = sm(0) + SIGN( 2.0_BDKi*SQRT(sm(i)), sm(0) )
    em = 4.0_BDKi/em                                        ! 1 / ( 4 t_{r0} c_{i} ), assuming 0 <= c_0 < 4 and c_{i} > 0
    cc = em*sm(1:3)
 
@@ -418,7 +418,7 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    !> Returns:
    !>   ErrStat = 0 if valid
    !>   ErrStat = 4 (fatal error) if invalid
-   
+
    REAL(BDKi),       INTENT(IN   )  :: R(3,3)       !< Rotation Matrix
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat      !< Error status of the operation
    CHARACTER(*),     INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
@@ -431,25 +431,25 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    LOGICAL                          :: ortho        !mjs--logical value indicating whether R is orthogonal
    INTEGER                          :: i
    character(*), parameter          :: RoutineName = 'BD_CheckRotMat'
-   
+
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-   
+
    ! use the local rotation matrix variable to avoid side effects
    Rr = R
-   
+
    ! mjs--Start by determining if R is a valid rotation matrix using the properties:
    ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1, where
    !    the leading eigenvalue is +1 and the other two are a complex conjugate pair
-   ! 2) a valid rotation matrix must have determinant == +1 i.e., the singular values == 1 
-   
+   ! 2) a valid rotation matrix must have determinant == +1 i.e., the singular values == 1
+
    allocate(work(lwork))
    call LAPACK_gesvd('A', 'A', 3, 3, Rr, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    deallocate(work)
-   
+
    ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
    !    and the correction is desired,
    !    compute \f$ \underline{\underline{R_{out}} \f$, the nearest orthogonal tensor
@@ -457,7 +457,7 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    !    This is done via computing SVD for \f$ \underline{\underline{R}} = USV^T \f$
    !    and setting \f$ \underline{\underline{R_{out}} = UV^T \f$
    !    otherwise, assign \f$ \underline{\underline{R_{out}}}  = \underline{\underline{R}} \f$
-   
+
    do i = 1, 3
       ortho = equalrealnos(S(i), 1.0_BDKi)
       if (.not. ortho) then
@@ -465,7 +465,7 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       end if
    end do
-   
+
    ! mjs--after consulting with Mike Sprague, it was decided that instead of fixing the rotation matrix and
    ! notifying the user, the simulation should be stopped if an invalid rotation matrix is passed
    ! To change this and implement the fix, use the following lines
@@ -474,7 +474,7 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    ! CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    ! if (ErrStat >= AbortErrLev) return
    ! R = matmul(U, VT)
-   
+
 END SUBROUTINE BD_CheckRotMat
 
 
@@ -594,7 +594,7 @@ SUBROUTINE BD_TrapezoidalPointWeight(p, InputFileData)
    INTEGER(IntKi)             :: id1, j
 
 !bjj: this assumes there is only one member
-   
+
       ! compute the trapezoidal quadrature points, p%QPtN, and scale to range [-1,1]:
       !  If there is refinement, this will add new points between the specified ones. If p%refine == 1, can skip this.
    p%QPtN(1) = InputFileData%InpBl%station_eta(1)
@@ -635,7 +635,6 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
    INTEGER(IntKi)                               :: i,idx_qp,temp_id,temp_id2,endpt
    REAL(BDKi)                                   :: cc(3)
    REAL(BDKi)                                   :: cc0(3)
-   REAL(BDKi)                                   :: temp_cc(3)
    REAL(BDKi)                                   :: temp_R(3,3)
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Set_BldMotion_NoAcc'
 
@@ -653,10 +652,8 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
          ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
          ! referenced against the DCM of the blade root at T=0.
-         cc  = MATMUL( p%GlbRot, m%qp%uuu(4:6,idx_qp,i) )      ! Global coordinate DCM times rotation parameters
-         cc0 = MATMUL( p%GlbRot, p%uu0(4:6,idx_qp,i) )         ! Global coordinate DCM times initial rotation parameter array
-         CALL BD_CrvCompose(temp_cc,p%Glb_crv,cc0,FLAG_R1R2)   ! temp_cc = p%Glb_crv composed with cc0 ( p%Glb_crv + cc0 )
-         CALL BD_CrvCompose(cc0,cc,temp_cc,FLAG_R1R2)          ! cc0 = cc composed with temp_cc
+         CALL BD_CrvCompose( cc, m%qp%uuu(4:6,idx_qp,i), p%uu0(4:6,idx_qp,i), FLAG_R1R2 )
+         CALL BD_CrvCompose( cc0, p%Glb_crv, cc, FLAG_R1R2 )
 
          ! Create the DCM from the rotation parameters
          CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
@@ -695,10 +692,8 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
          ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
          ! referenced against the DCM of the blade root at T=0.
-         cc  = MATMUL( p%GlbRot, x%q(4:6,temp_id2) )         ! Global coordinate DCM times rotation parameters
-         cc0 = MATMUL( p%GlbRot, p%uuN0(4:6,idx_qp,i) )      ! Global coordinate DCM times initial rotation parameter array
-         CALL BD_CrvCompose(temp_cc,cc0,p%Glb_crv,FLAG_R1R2) ! temp_cc = cc0 composed with p%Glb_crv
-         CALL BD_CrvCompose(cc0,cc,temp_cc,FLAG_R1R2)        ! cc0 = cc composed with temp_cc
+         CALL BD_CrvCompose( cc, x%q(4:6,temp_id2), p%uuN0(4:6,idx_qp,i), FLAG_R1R2 )
+         CALL BD_CrvCompose( cc0, p%Glb_crv, cc, FLAG_R1R2 )
 
          ! Create the DCM from the rotation parameters
          CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
@@ -715,7 +710,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
          y%BldMotion%RotationVel(1:3,temp_id) = MATMUL(p%GlbRot,x%dqdt(4:6,temp_id2))
       ENDDO
    ENDIF
-      
+
 END SUBROUTINE Set_BldMotion_NoAcc
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -777,7 +772,7 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, OtherState, m, y)
 
          y%BldMotion%RotationAcc(1:3,temp_id) = MATMUL(p%GlbRot, m%RHS(4:6,p%node_total) )
       ENDIF
-      
+
    END IF
 
 END SUBROUTINE Set_BldMotion_Mesh
@@ -817,18 +812,18 @@ subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, 
 
    ! compute the dimensional distance along the full beam
    etaD = kp_coordinate(member_first_kp,3) + &
-          eta * (kp_coordinate(member_last_kp ,3) - kp_coordinate(member_first_kp,3)) 
+          eta * (kp_coordinate(member_last_kp ,3) - kp_coordinate(member_first_kp,3))
 
    ! find the first key point that is beyond where this node is on the member (element)
-   ! note that this is the index for p%SP_Coef, so the upper bound is member_last_kp-1 instead of member_last_kp 
+   ! note that this is the index for p%SP_Coef, so the upper bound is member_last_kp-1 instead of member_last_kp
    ! bjj: to be more efficient, we could probably just start at the kp we found for the previous eta
    kp = member_first_kp
-   DO WHILE ( (eta > p%segment_length(kp,3) + EPS) .and. kp < (member_last_kp-1) ) 
+   DO WHILE ( (eta > p%segment_length(kp,3) + EPS) .and. kp < (member_last_kp-1) )
       kp = kp + 1
    END DO
 
    ! using the spline coefficients at this key point, compute the position and orientation of the node
-   CALL BD_ComputeIniNodalPosition(p%SP_Coef(kp,:,:),etaD,POS,temp_e1,temp_twist) ! Compute point physical coordinates (POS) in blade frame                   
+   CALL BD_ComputeIniNodalPosition(p%SP_Coef(kp,:,:),etaD,POS,temp_e1,temp_twist) ! Compute point physical coordinates (POS) in blade frame
    CALL BD_ComputeIniNodalCrv(temp_e1, temp_twist, CRV, ErrStat2, ErrMsg2)        ! Compute initial rotation parameters (CRV) in blade frame
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -907,9 +902,9 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    real(BDKi),             INTENT(  OUT)     :: rr(3)        !< W-M parameters of relative rotation
    INTEGER(IntKi),         INTENT(  OUT)     :: ErrStat      !< Error status of the operation
    CHARACTER(*),           INTENT(  OUT)     :: ErrMsg       !< Error message if ErrStat /= ErrID_None
-   
-   real(BDKi)                                :: R_WM(3)      ! W-M parameters of R 
-   real(BDKi)                                :: R_BD(3,3)    ! input rotation matrix in BDKi precision 
+
+   real(BDKi)                                :: R_WM(3)      ! W-M parameters of R
+   real(BDKi)                                :: R_BD(3,3)    ! input rotation matrix in BDKi precision
    REAL(BDKi)                                :: temp_cc(3)   ! W-M parameters
 
    INTEGER(IntKi)                            :: ErrStat2     ! Temporary Error status
@@ -920,10 +915,10 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   
+
    ! note that the u%RootMotion mesh does not contain the initial twist, but p%Glb_crv does not have this twist, either.
    ! The relative rotation will be the same in this case.
-   
+
    R_BD = R ! possible type conversion (only if BDKi /= R8Ki)
 
    CALL BD_CrvExtractCrv(R_BD,R_WM, ErrStat2, ErrMsg2)
@@ -931,39 +926,39 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev) return
    CALL BD_CrvCompose(temp_cc,R_WM,p%Glb_crv,FLAG_R1R2T)   ! temp_cc = R_WM composed with p%Glb_crv^-
    rr = MATMUL(temp_cc,p%GlbRot)                           ! equation is MATMUL(TRANSPOSE(p%GlbRot),temp_cc), but this is the same as MATMUL(temp_cc,p%GlbRot) because Fortran treats row and column vectors the same (e.g.,  transpose(MATMUL(TRANSPOSE(p%GlbRot),temp_cc)) = matmul( transpose(temp_cc), p%GlbRot ) = matmul( temp_cc, p%GlbRot )
-      
+
 END SUBROUTINE ExtractRelativeRotation
 !-----------------------------------------------------------------------------------------------------------------------------------
 FUNCTION BDrot_to_FASTdcm(rr,p) RESULT(dcm)
-   real(BDKi),             intent(in) :: rr(3)        !< W-M parameters of relative rotation 
+   real(BDKi),             intent(in) :: rr(3)        !< W-M parameters of relative rotation
    type(BD_ParameterType), intent(in) :: p            !< Parameters
    real(BDKi)                         :: dcm(3,3)     !< input rotation matrix (transpose of DCM; in BD coords)
-   
+
 
    REAL(BDKi)                         :: temp_CRV( 3)   ! temp curvature parameters
    REAL(BDKi)                         :: temp_CRV2(3)   ! temp curvature parameters
    real(BDKi)                         :: R(3,3)         ! rotation matrix
-   
-! note differences in setting up meshes with Set_BldMotion_NoAcc  
+
+! note differences in setting up meshes with Set_BldMotion_NoAcc
 !adp: in the case of the meshes in Set_BldMotion_NoAcc, x%q(4:6,:) and m%qp%uuu(4:6,:,:) are not zero.  When this routine is called, they
 !     are zero, and the expression in Set_BldMotion_NoAcc simplifies to this expression.
-   
-   ! note that p%GlbRot = BD_CrvMatrixR(p%Glb_crv) 
-   
+
+   ! note that p%GlbRot = BD_CrvMatrixR(p%Glb_crv)
+
       ! rotate relative W-M rotations to global system?
    temp_CRV = MATMUL(p%GlbRot, rr)
-   
-       
+
+
    CALL BD_CrvCompose(temp_CRV2,temp_CRV,p%Glb_crv,FLAG_R1R2) !temp_CRV2 = temp_CRV composed with p%Glb_crv
-   
-   
+
+
       ! create rotation matrix from W-M parameters:
    CALL BD_CrvMatrixR(temp_CRV2,R) ! returns R (rotation matrix, the transpose of the DCM orientation matrix)
-   
+
       ! get DCM from rotation matrix:
    dcm = TRANSPOSE(R)
-   
-   
+
+
 END FUNCTION BDrot_to_FASTdcm
 !-----------------------------------------------------------------------------------------------------------------------------------
 END MODULE BeamDyn_Subs
