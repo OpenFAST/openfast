@@ -1509,10 +1509,8 @@ CONTAINS
    IF ( PRESENT(flag) ) flag = ""
 
       ! Parse them.
-   IF ( NumArg .EQ. 0 ) THEN
-      CALL NWTC_DisplaySyntax( InputFile, ProgName )
 
-   ELSE IF ( NumArg .GT. 0 ) THEN
+   IF ( NumArg .GT. 0 ) THEN
 
       DO IArg=1,NumArg
 
@@ -1526,7 +1524,7 @@ CONTAINS
             END IF
          END IF
 
-         IF ( Arg(1:1) == SwChar .OR. Arg(1:1) == '-' )  THEN
+         IF ( Arg(1:1) == SwChar .OR. Arg(1:1) == '-' ) THEN
             IF (PRESENT(flag)) THEN
                CALL Conv2UC( Arg )
                Flag = Arg(2:) !this results in only the last flag
@@ -1535,7 +1533,7 @@ CONTAINS
                                                 
             CALL NWTC_DisplaySyntax( InputFile, ProgName )
 
-            IF ( INDEX( 'Hh?', Arg(2:2) ) > 0 )  THEN
+            IF ( INDEX( 'Hh?', Arg(2:2) ) > 0 ) THEN
                IF ( PRESENT(ErrStat) ) THEN
                   ErrStat = ErrID_Info !bjj? do we want to check if an input file was specified later?
                   RETURN
@@ -2648,12 +2646,9 @@ CONTAINS
       CALL WrScr ( NewLine//' Syntax is:' )
       IF ( LEN_TRIM( DefaultInputFile ) == 0 )  THEN
          CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] <InputFile>' )
-         CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' '//SwChar//'restart <ChkpFile>' )
          CALL WrScr ( NewLine//' where:' )
          CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
          CALL WrScr ( '    <InputFile> is the name of the required primary input file.' )
-         CALL WrScr ( NewLine//'    '//SwChar//'restart directs to restart from the check point.' )
-         CALL WrScr ( '    <ChkpFile> is the name of the check point file (.chkp) without suffix.' )
       ELSE
          CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] [<InputFile>]' )
          CALL WrScr ( NewLine//' where:' )
