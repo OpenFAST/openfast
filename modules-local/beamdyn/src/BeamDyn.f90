@@ -869,6 +869,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
 
 
 end subroutine SetParameters
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this routine initializes the outputs, y, that are used in the BeamDyn interface for coupling in the FAST framework.
 subroutine Init_y( p, u, y, ErrStat, ErrMsg)
@@ -910,6 +911,10 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
                  , ErrMess  = ErrMsg2          )
    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    if (ErrStat>=AbortErrLev) RETURN
+
+   !.................................
+   ! y%BldMotion (for coupling with AeroDyn)
+   !.................................
 
    NNodes = p%nqp*p%elem_total + 2*p%qp_indx_offset ! this is the total number of points on the output mesh
                                                     ! it includes the quadrature points and also the end points if they aren't already included
@@ -997,6 +1002,7 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
    call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 end subroutine Init_y
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this routine initializes the inputs, u, that are used in the BeamDyn interface for coupling in the FAST framework.
 subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
