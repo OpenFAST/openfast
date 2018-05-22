@@ -1586,19 +1586,15 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
 
    ! Loop over all requested output nodes and extract corresponding node and element ids
    DO beta=1,p%NNodeOuts
-      j_BldMotion = p%NdIndx( p%OutNd(beta) )
-
       DO i=1,p%elem_total
          DO j=1,p%nodes_per_elem
             temp_id = (i-1)*(p%nodes_per_elem-1)+j ! The last node of the first element is used as the first node in the second element.
 
-            IF( j_BldMotion .EQ. temp_id ) THEN
+            IF( p%OutNd(beta) .EQ. temp_id ) THEN
                ndid(beta) = j
                elid(beta) = i
-               GOTO 10
             ENDIF
          ENDDO
-10       EXIT
       ENDDO
    ENDDO
 
@@ -1610,7 +1606,7 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
 
       ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
       ! referenced against the DCM of the blade root at T=0.
-      CALL BD_CrvCompose( cc, x%q(4:6,j_BldMotion), p%uuN0(4:6,ndid(beta),elid(beta)), FLAG_R1R2 )
+      CALL BD_CrvCompose( cc, x%q(4:6,j), p%uuN0(4:6,ndid(beta),elid(beta)), FLAG_R1R2 )
       CALL BD_CrvCompose( cc0, p%Glb_crv, cc, FLAG_R1R2 )
 
       ! Create the DCM from the rotation parameters
@@ -1618,21 +1614,21 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
 
       ! Store the DCM for the j'th node of the i'th element (in FAST coordinate system)
       NdOrientation(:,:) = TRANSPOSE(temp_R)
-      TranslationDisp    = MATMUL(p%GlbRot,x%q(1:3,j_BldMotion))
-      TranslationVel     = MATMUL(p%GlbRot,x%dqdt(1:3,j_BldMotion))
-      RotationVel        = MATMUL(p%GlbRot,x%dqdt(4:6,j_BldMotion))
+      TranslationDisp    = MATMUL(p%GlbRot,x%q(1:3,j))
+      TranslationVel     = MATMUL(p%GlbRot,x%dqdt(1:3,j))
+      RotationVel        = MATMUL(p%GlbRot,x%dqdt(4:6,j))
       if( j_BldMotion .EQ. 1 ) then ! Because the first node is tied to the root
          TranslationAcc     = u%RootMotion%TranslationAcc(:,1)
          RotationAcc        = u%RootMotion%RotationAcc(:,1)
       else
-         TranslationAcc     = MATMUL(p%GlbRot,m%RHS(1:3,j_BldMotion))
-         RotationAcc        = MATMUL(p%GlbRot,m%RHS(4:6,j_BldMotion))
+         TranslationAcc     = MATMUL(p%GlbRot,m%RHS(1:3,j))
+         RotationAcc        = MATMUL(p%GlbRot,m%RHS(4:6,j))
       endif
 
       !------------------------------------
       ! Sectional force resultants at Node 1 expressed in l, given in N
       !FIXME:  N#Mxl & N#Myl are known to be incorrect!  See https://wind.nrel.gov/forum/wind/viewtopic.php?f=3&t=1622
-      temp_vec = MATMUL(NdOrientation(:,:), m%BldInternalForceFE(1:3,j_BldMotion))
+      temp_vec = MATMUL(NdOrientation(:,:), m%BldInternalForceFE(1:3,j))
       AllOuts( NFl( beta,1 ) ) = temp_vec(1)
       AllOuts( NFl( beta,2 ) ) = temp_vec(2)
       AllOuts( NFl( beta,3 ) ) = temp_vec(3)
@@ -1640,7 +1636,7 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
       !------------------------------------
       ! Sectional moment resultants at Node 1 expressed in l, given in N-m
       !FIXME:  N#Mxl & N#Myl are known to be incorrect!  See https://wind.nrel.gov/forum/wind/viewtopic.php?f=3&t=1622
-      temp_vec = MATMUL(NdOrientation(:,:), m%BldInternalForceFE(4:6,j_BldMotion))
+      temp_vec = MATMUL(NdOrientation(:,:), m%BldInternalForceFE(4:6,j))
       AllOuts( NMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NMl( beta,3 ) ) = temp_vec(3)
@@ -1702,14 +1698,14 @@ SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg
 
       !-------------------------
       ! Applied point forces at Node 1 expressed in l, given in N
-      temp_vec = MATMUL(NdOrientation(:,:),m%u2%PointLoad%Force(:,j_BldMotion))
+      temp_vec = MATMUL(NdOrientation(:,:),m%u2%PointLoad%Force(:,j))
       AllOuts( NPFl( beta,1 ) ) = temp_vec(1)
       AllOuts( NPFl( beta,2 ) ) = temp_vec(2)
       AllOuts( NPFl( beta,3 ) ) = temp_vec(3)
 
       !-------------------------
       ! Applied point moments at Node 1 expressed in l, given in N-m
-      temp_vec = MATMUL(NdOrientation(:,:),m%u2%PointLoad%Moment(:,j_BldMotion))
+      temp_vec = MATMUL(NdOrientation(:,:),m%u2%PointLoad%Moment(:,j))
       AllOuts( NPMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NPMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NPMl( beta,3 ) ) = temp_vec(3)

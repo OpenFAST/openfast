@@ -174,8 +174,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
 
    call Initialize_FEweights(p) ! set p%FEweight; needs p%uuN0 and p%uu0
-      
-      
+
+
       ! compute blade mass, CG, and IN for summary file:
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -248,10 +248,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
-   ! initialization of output mesh values (used for initial guess to AeroDyn)
-   CALL BD_QuadraturePointData( p, x, MiscVar )   ! Calculate QP values uuu, uup, RR0, kappa, E1
-   CALL BD_QPDataVelocity( p, x, MiscVar )      ! x%dqdt --> m%qp%vvv, m%qp%vvp
-   CALL Set_BldMotion_NoAcc( p, x, MiscVar, y )
+      ! initialization of output mesh values (used for initial guess to AeroDyn)
+   CALL Set_BldMotion_NoAcc(p, x, MiscVar, y)
    y%BldMotion%TranslationAcc  = 0.0_BDKi
    y%BldMotion%RotationAcc     = 0.0_BDKi
 
@@ -560,7 +558,7 @@ subroutine Initialize_FEweights(p)
          ENDDO
          p%FEweight(i,nelem) = p%FEweight(i,nelem) / SumShp
       ENDDO
-      ! Tip contribution      
+      ! Tip contribution
       ! Setting FEWeight at the tip to 1. The contirbution of the tip of each element should be absolute, hence no weighting is required
       p%FEweight(p%nodes_per_elem,nelem) = 1.0_BDKi
    ENDDO
@@ -569,10 +567,10 @@ end subroutine Initialize_FEweights
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_InitShpDerJaco( GLL_Nodes, p )
 
-  ! Bauchau chapter 17.1 gives an intro to displacement fields, the shape functions and the jacobian 
+  ! Bauchau chapter 17.1 gives an intro to displacement fields, the shape functions and the jacobian
   ! see Bauchau equation 17.12
   ! also https://en.wikipedia.org/wiki/Jacobian_matrix_and_determinant
-  
+
    REAL(BDKi),             INTENT(IN   )  :: GLL_nodes(:)   !< p%GLL point locations
    TYPE(BD_ParameterType), INTENT(INOUT)  :: p              !< Parameters
 
@@ -595,7 +593,7 @@ SUBROUTINE BD_InitShpDerJaco( GLL_Nodes, p )
       ENDDO
    ENDDO
 
-   
+
    ! save some variables so we don't recalculate them so often:
    DO nelem=1,p%elem_total
       DO idx_qp=1,p%nqp
@@ -607,7 +605,7 @@ SUBROUTINE BD_InitShpDerJaco( GLL_Nodes, p )
          END DO
       END DO
    END DO
-   
+
 
    DO idx_qp=1,p%nqp
       DO j=1,p%nodes_per_elem
@@ -630,7 +628,7 @@ SUBROUTINE BD_InitShpDerJaco( GLL_Nodes, p )
          p%QPtw_ShpDer(idx_qp,i) = p%ShpDer(i,idx_qp)*p%QPtWeight(idx_qp)
       END DO
    END DO
-   
+
 END SUBROUTINE BD_InitShpDerJaco
 
 
@@ -765,8 +763,8 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    CALL AllocAry(p%QPtw_ShpDer_ShpDer_Jac,p%nqp,p%nodes_per_elem,p%nodes_per_elem,p%elem_total,'p%QPtw_ShpDer_ShpDer_Jac',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%QPtw_Shp_Jac          ,p%nqp                 ,p%nodes_per_elem,p%elem_total,'p%QPtw_Shp_Jac',          ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%QPtw_ShpDer           ,p%nqp                 ,p%nodes_per_elem,             'p%QPtw_ShpDer',           ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-   
+
+
    CALL AllocAry(p%uuN0, p%dof_node,p%nodes_per_elem,      p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%rrN0, (p%dof_node/2),p%nodes_per_elem,  p%elem_total,'p%rrN0',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%uu0,  p%dof_node,    p%nqp,             p%elem_total,'p%uu0', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -869,7 +867,6 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
 
 
 end subroutine SetParameters
-
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this routine initializes the outputs, y, that are used in the BeamDyn interface for coupling in the FAST framework.
 subroutine Init_y( p, u, y, ErrStat, ErrMsg)
@@ -881,16 +878,17 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
       ! local variables
-   real(R8Ki)                                   :: DCM(3,3)                 ! must be same type as mesh orientation fields
-   real(ReKi)                                   :: Pos(3)                   ! must be same type as mesh position fields
-   real(BDKi)                                   :: temp_pos_rot(p%dof_node) ! temporary array to store dof values at point of interest
+   real(R8Ki)                                   :: DCM(3,3)          ! must be same type as mesh orientation fields
+   real(ReKi)                                   :: Pos(3)            ! must be same type as mesh position fields
+
 
    integer(intKi)                               :: temp_id
-   integer(intKi)                               :: i,idx_qp          ! loop counters
-   integer(intKi)                               :: NNodes            ! number of points in output mesh
+   integer(intKi)                               :: i,j               ! loop counters
+   integer(intKi)                               :: NNodes            ! number of nodes in mesh
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'Init_y'
+
 
 
    ErrStat = ErrID_None
@@ -909,100 +907,83 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
                  , Moment   = .TRUE.           &
                  , ErrStat  = ErrStat2         &
                  , ErrMess  = ErrMsg2          )
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   if (ErrStat>=AbortErrLev) RETURN
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat>=AbortErrLev) RETURN
+
 
    !.................................
    ! y%BldMotion (for coupling with AeroDyn)
    !.................................
 
-   NNodes = p%nqp*p%elem_total + 2*p%qp_indx_offset ! this is the total number of points on the output mesh
-                                                    ! it includes the quadrature points and also the end points if they aren't already included
-   CALL MeshCreate( BlankMesh        = y%BldMotion        &
-                   ,IOS              = COMPONENT_OUTPUT   &
-                   ,NNodes           = NNodes             &
-                   ,TranslationDisp  = .TRUE.             &
-                   ,Orientation      = .TRUE.             &
-                   ,TranslationVel   = .TRUE.             &
-                   ,RotationVel      = .TRUE.             &
-                   ,TranslationAcc   = .TRUE.             &
-                   ,RotationAcc      = .TRUE.             &
-                   ,ErrStat          = ErrStat2           &
-                   ,ErrMess          = ErrMsg2             )
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   if (ErrStat>=AbortErrLev) RETURN
-
-   ! add the position of the quadrature points to the mesh
-   ! in case of Gauss quadrature, this only adds the nodes corresponding to the quadrature points
-   ! we need to separately add the end points after the loop in case of Gauss quadrature
-   DO i=1,p%elem_total
-      DO idx_qp=1,p%nqp
-
-         temp_id = (i-1)*p%nqp + idx_qp + p%qp_indx_offset ! get the index to the quadrature point
-
-         Pos(1:3) = p%GlbPos(1:3) + MATMUL( p%GlbRot, p%uu0(1:3,idx_qp,i) )
-
-         DCM = BDrot_to_FASTdcm( p%uu0(4:6,idx_qp,i), p )
-
-         CALL MeshPositionNode ( Mesh    = y%BldMotion   &
-                                ,INode   = temp_id       &
-                                ,Pos     = Pos           &
-                                ,ErrStat = ErrStat2      &
-                                ,ErrMess = ErrMsg2       &
-                                ,Orient  = DCM           )
+      NNodes = p%nodes_per_elem*p%elem_total ! this is the same as the number of FE nodes, with overlapping nodes at the element end points
+      CALL MeshCreate( BlankMesh        = y%BldMotion        &
+                      ,IOS              = COMPONENT_OUTPUT   &
+                      ,NNodes           = NNodes             &
+                      ,TranslationDisp  = .TRUE.             &
+                      ,Orientation      = .TRUE.             &
+                      ,TranslationVel   = .TRUE.             &
+                      ,RotationVel      = .TRUE.             &
+                      ,TranslationAcc   = .TRUE.             &
+                      ,RotationAcc      = .TRUE.             &
+                      ,ErrStat          = ErrStat2           &
+                      ,ErrMess          = ErrMsg2             )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>=AbortErrLev) RETURN
 
+         ! position nodes
+      DO i=1,p%elem_total
+         DO j=1,p%nodes_per_elem
+
+              temp_id = (j-1)*p%dof_node
+
+              Pos = p%GlbPos + MATMUL(p%GlbRot,p%uuN0(1:3,j,i))
+
+                  ! possible type conversions here:
+              DCM = BDrot_to_FASTdcm(p%uuN0(4:6,j,i),p)
+
+                  ! set the reference position and orientation for each node.
+              temp_id = (i-1)*p%nodes_per_elem+j
+              CALL MeshPositionNode ( Mesh    = y%BldMotion   &
+                                     ,INode   = temp_id       &
+                                     ,Pos     = Pos           &
+                                     ,ErrStat = ErrStat2      &
+                                     ,ErrMess = ErrMsg2       &
+                                     ,Orient  = DCM           )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+          ENDDO
       ENDDO
-   ENDDO
 
-   ! set the values at the end point for the mesh when using Gaussian (GL) quadrature.
-   IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
-      Pos(1:3) = p%GlbPos(1:3) + MATMUL( p%GlbRot, p%uuN0(1:3,1,1) )
-      DCM = BDrot_to_FASTdcm( p%uuN0(4:6,1,1), p )
-      CALL MeshPositionNode ( Mesh    = y%BldMotion   &
-                             ,INode   = 1             &
-                             ,Pos     = Pos           &
-                             ,ErrStat = ErrStat2      &
-                             ,ErrMess = ErrMsg2       &
-                             ,Orient  = DCM           )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         ! create elements
 
-      Pos(1:3) = p%GlbPos(1:3) + MATMUL( p%GlbRot, p%uuN0(1:3,p%nodes_per_elem,p%elem_total) )
-      DCM = BDrot_to_FASTdcm( p%uuN0(4:6,p%nodes_per_elem,p%elem_total), p )
-      CALL MeshPositionNode ( Mesh    = y%BldMotion   &
-                             ,INode   = NNodes        &
-                             ,Pos     = Pos           &
-                             ,ErrStat = ErrStat2      &
-                             ,ErrMess = ErrMsg2       &
-                             ,Orient  = DCM           )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ENDIF
+      DO i=1,p%elem_total
+         DO j=1,p%nodes_per_elem - 1
+            temp_id = (i-1)*p%nodes_per_elem + j ! first node of element
 
-   ! construct the elements based on the nodes defined above
-   DO i=1,NNodes-1
-      CALL MeshConstructElement( Mesh      = y%BldMotion      &
-                                 ,Xelement = ELEMENT_LINE2    &
-                                 ,P1       = i                &
-                                 ,P2       = i+1              &
-                                 ,ErrStat  = ErrStat2         &
-                                 ,ErrMess  = ErrMsg2          )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ENDDO
+            CALL MeshConstructElement( Mesh     = y%BldMotion      &
+                                      ,Xelement = ELEMENT_LINE2    &
+                                      ,P1       = temp_id          &
+                                      ,P2       = temp_id+1        &
+                                      ,ErrStat  = ErrStat2         &
+                                      ,ErrMess  = ErrMsg2          )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         END DO
+      ENDDO
 
-   CALL MeshCommit ( Mesh    = y%BldMotion     &
-                    ,ErrStat = ErrStat2        &
-                    ,ErrMess = ErrMsg2         )
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   if (ErrStat>=AbortErrLev) RETURN
+      CALL MeshCommit ( Mesh    = y%BldMotion     &
+                       ,ErrStat = ErrStat2        &
+                       ,ErrMess = ErrMsg2         )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>=AbortErrLev) RETURN
+
 
    !.................................
    ! y%WriteOutput (for writing columns to output file)
    !.................................
    call AllocAry( y%WriteOutput, p%numOuts, 'WriteOutput', errStat2, errMsg2 )
-   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 end subroutine Init_y
-
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this routine initializes the inputs, u, that are used in the BeamDyn interface for coupling in the FAST framework.
 subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
@@ -1186,7 +1167,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
       if (ErrStat>=AbortErrLev) return
 
 
- 
+
    DO i=1,p%elem_total
       DO j=1,p%nqp      !NOTE: if we add multi-element to trap, we will need to change this.
          temp_id = (i-1)*p%nqp + j + p%qp_indx_offset            ! Index to a node within element i
@@ -1218,8 +1199,8 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
                              ,ErrMess = ErrMsg2      &
                              ,Orient  = DCM )
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-  
-         ! Last node 
+
+         ! Last node
       Pos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,p%nodes_per_elem,p%elem_total))
       DCM = BDrot_to_FASTdcm(p%uuN0(4:6,p%nodes_per_elem,p%elem_total),p)
       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
@@ -1330,9 +1311,9 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       CALL AllocAry(m%qp%vvv,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%vvv velocity at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%vvp,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%vvp velocity prime at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%aaa,              p%dof_node  ,p%nqp,p%elem_total,                  'm%qp%aaa acceleration at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      ! Need to initialize this to zero especially for static cases      
+      ! Need to initialize this to zero especially for static cases
       m%qp%aaa = 0.0_BDKi
-      
+
          ! E1, kappa -- used in force calculations
       CALL AllocAry(m%qp%E1,               p%dof_node/2,p%nqp,p%elem_total,                  'm%qp%E1    at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%qp%kappa,            p%dof_node/2,p%nqp,p%elem_total,                  'm%qp%kappa at quadrature point',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1666,26 +1647,29 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    x_tmp%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
    x_tmp%dqdt(4:6,1) = m%u%Rootmotion%RotationVel(:,1)
 
-      ! Calculate Quadrature point values needed for BldForce results 
+      ! Calculate Quadrature point values needed for BldForce results
    CALL BD_QuadraturePointData( p,x_tmp,m )   ! Calculate QP values uuu, uup, RR0, kappa, E1
 
+
+
    IF(p%analysis_type .EQ. BD_DYNAMIC_ANALYSIS) THEN
-      ! These values have not been set yet for the QP
+
+         ! These values have not been set yet for the QP
       CALL BD_QPData_mEta_rho( p,m )                  ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
       CALL BD_QPDataVelocity( p, x_tmp, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
       ! calculate accelerations and reaction loads (in m%RHS):
       CALL BD_CalcForceAcc(m%u, p, m, ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-          
-!FIXME: First node pointload is missing.  Same with first QP node and DistrLoad.       
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+!FIXME: First node pointload is missing.  Same with first QP node and DistrLoad.
       y%ReactionForce%Force(:,1)    = -MATMUL(p%GlbRot,m%RHS(1:3,1))
       y%ReactionForce%Moment(:,1)   = -MATMUL(p%GlbRot,m%RHS(4:6,1))
 
       CALL BD_InternalForceMoment( x, p, m )
-    
+
    ELSE
-      m%RHS = 0.0_BdKi ! accelerations are set to zero in the static case 
+      m%RHS = 0.0_BdKi ! accelerations are set to zero in the static case
 
          ! Calculate the elastic forces for the static case.
       DO nelem=1,p%elem_total
@@ -1694,22 +1678,23 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
 
       CALL BD_InternalForceMoment( x, p, m )
-   
+
          !FIXME: Check that this works for the static case. The internal force for dynamic case uses the reaction force for the first node.
          ! Get the root force from the first finite element node.
       y%ReactionForce%Force(:,1)  = m%BldInternalForceFE(1:3,1)
       y%ReactionForce%Moment(:,1) = m%BldInternalForceFE(4:6,1)
    ENDIF
 
+
        ! set y%BldMotion fields:
-   CALL Set_BldMotion_Mesh( p, u, x, OtherState, m, y)
+   CALL Set_BldMotion_Mesh( p, m%u2, x, m, y)
 
    !-------------------------------------------------------
    !  compute RootMxr and RootMyr for ServoDyn and
    !  get values to output to file:
    !-------------------------------------------------------
-   call Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat2, ErrMsg2 )  !uses m%u2
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call Calc_WriteOutput( p, AllOuts, y, m, ErrStat2, ErrMsg2 )  !uses m%u2
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    y%RootMxr = AllOuts( RootMxr )
    y%RootMyr = AllOuts( RootMyr )
@@ -2008,7 +1993,7 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
       !> Find the transpose of the DCM orientation matrix of the root as
       !! \f$ \underline{\underline{R}}\left(\underline{\hat{c}}^1\right)\f$
    CALL BD_CrvMatrixR(x%q(4:6,elem_start),DCM_root)   ! returns DCM_root (the transpose of the DCM orientation matrix at the root (first node of the element))
- 
+
 
       ! Calculate the rotation parameters relative to the root for each node
    m%Nrrr(1:3,elem_start,nelem)  = (/ 0.0_BDKi, 0.0_BDKi, 0.0_BDKi /)  ! First node has no curvature relative to itself
@@ -2063,7 +2048,7 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
             !!          \underline{\underline{R}}\left(\underline{\underline{r}}^i\right) \f$
          CALL BD_CrvCompose(m%qp%uuu(4:6,idx_qp,nelem),x%q(4:6,elem_start),rrr,FLAG_R1R2)  ! m%qp%uuu(4:6,idx_qp,nelem) = x%q(4:6,elem_start) composed with rrr
 
-         
+
             !> ###Find the curvature field
             !!             \f$  \underline{k}(\xi)
             !!                = \underline{\underline{R}}\left(\underline{\hat{c}}^1\right)
@@ -2192,17 +2177,17 @@ SUBROUTINE BD_ElasticForce(nelem,p,m,fact)
 
    INTEGER(IntKi)                               :: idx_qp      !< Index to quadrature point currently being calculated
 
-   
+
    if (.not. fact) then
-   
+
       do idx_qp=1,p%nqp
          call Calc_Fc_Fd()
-      end do 
-      
+      end do
+
    else
-   
+
       do idx_qp=1,p%nqp
-      
+
          call Calc_Fc_Fd()
 
 
@@ -2263,7 +2248,7 @@ SUBROUTINE BD_ElasticForce(nelem,p,m,fact)
          m%qp%Qe(:,:,idx_qp,nelem)     = 0.0_BDKi
          m%qp%Qe(4:6,4:6,idx_qp,nelem) = -MATMUL(tildeE,m%qp%Oe(1:3,4:6,idx_qp,nelem))
       end do
-      
+
    ENDIF
 
 contains
@@ -2272,8 +2257,8 @@ contains
       REAL(BDKi)                                   :: eee(6)      !< intermediate array for calculation Strain and curvature terms of Fc
       REAL(BDKi)                                   :: fff(6)      !< intermediate array for calculation of the elastic force, Fc
      !REAL(BDKi)                                   :: Wrk(3)
-      
-   
+
+
          !> ### Calculate the 1D strain, \f$ \underline{\epsilon} \f$, equation (5)
          !! \f$ \underline{\epsilon} = \underline{x}^\prime_0 + \underline{u}^\prime -
          !!             \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \bar{\imath}_1
@@ -2286,7 +2271,7 @@ contains
          !!       and the transpose for the other direction.
       eee(1:3) = m%qp%E1(1:3,idx_qp,nelem) - m%qp%RR0(1:3,3,idx_qp,nelem)     ! Using RR0 z direction in IEC coords
 
-      
+
          !> ### Set the 1D sectional curvature, \f$ \underline{\kappa} \f$, equation (5)
          !! \f$ \underline{\kappa} = \underline{k} + \underline{\underline{R}}\underline{k}_i \f$
          !!          where \f$ \underline{k} = \text{axial}\left(\underline{\underline{R}}^\prime\underline{\underline{R}}^T \right) \f$
@@ -2322,7 +2307,7 @@ contains
          !!                                    \underline{\kappa}    \end{array} \right\}
          !!   \f$
          !!
-         !! Note then that the extension twist term is added to this so that we get 
+         !! Note then that the extension twist term is added to this so that we get
          !! \f$ \underline{\mathcal{F}}^C = \underline{F}^c_{a} + \underline{F}^c_{et} \f$
          !!
          !! where \f$ \underline{F}^c_{et} \f$ is the extension twist coupling term.
@@ -2386,9 +2371,9 @@ contains
          !!                \left(\underline{\mathcal{F}}^c \times \underline{E}_1 \right)^T
          !!       \end{bmatrix}  \f$
       m%qp%Fd(1:3,idx_qp,nelem)  = 0.0_BDKi
-   ! ADP uu0 ref: If E1 is referenced against a different curve than Stif0_QP, there will be strange coupling terms here. 
-      m%qp%Fd(4:6,idx_qp,nelem)  = cross_product(m%qp%Fc(1:3,idx_qp,nelem), m%qp%E1(:,idx_qp,nelem))   
-      
+   ! ADP uu0 ref: If E1 is referenced against a different curve than Stif0_QP, there will be strange coupling terms here.
+      m%qp%Fd(4:6,idx_qp,nelem)  = cross_product(m%qp%Fc(1:3,idx_qp,nelem), m%qp%E1(:,idx_qp,nelem))
+
    end subroutine Calc_Fc_Fd
 END SUBROUTINE BD_ElasticForce
 
@@ -2464,19 +2449,19 @@ SUBROUTINE BD_QPDataAcceleration( p, OtherState, m )
    m%qp%aaa = 0.0_BDKi
 
       ! Calculate the and acceleration term at t+dt (OtherState%acc is at t+dt)
-   
+
    DO nelem=1,p%elem_total
-      
+
       elem_start = p%node_elem_idx(nelem,1)
 
-      DO idx_qp=1,p%nqp   
+      DO idx_qp=1,p%nqp
          DO idx_node=1,p%nodes_per_elem
             m%qp%aaa(:,idx_qp,nelem) = m%qp%aaa(:,idx_qp,nelem) + p%Shp(idx_node,idx_qp) * OtherState%acc(:,elem_start-1+idx_node)
-         END DO         
-      END DO   
-      
+         END DO
+      END DO
+
    END DO
-   
+
 
 END SUBROUTINE BD_QPDataAcceleration
 
@@ -2496,7 +2481,7 @@ SUBROUTINE BD_InertialForce( nelem, p, m, fact )
    REAL(BDKi)                  :: nu(3)
    REAL(BDKi)                  :: epsi(3,3)
    REAL(BDKi)                  :: mu(3,3)
-   
+
    REAL(BDKi)                  :: SSmat_vvv(3,3)
    REAL(BDKi)                  :: SSmat_RR0mEta(3,3)
 
@@ -2521,7 +2506,7 @@ SUBROUTINE BD_InertialForce( nelem, p, m, fact )
                                 + cross_product(m%qp%vvv(4:6,idx_qp,nelem), beta)   ! MATMUL(SkewSymMat(aaa(4:6)),mEta)+MATMUL(SkewSymMat(ome),beta)
       m%qp%Fi(4:6,idx_qp,nelem) = cross_product(m%qp%RR0mEta(:,idx_qp,nelem), m%qp%aaa(1:3,idx_qp,nelem)) + nu + cross_product(m%qp%vvv(4:6,idx_qp,nelem), gama)                     ! MATMUL(SkewSymMat(mEta),aaa(1:3)) + nu + MATMUL(SkewSymMat(ome),gama)
    end do
-   
+
    IF(fact) THEN
       CALL BD_InertialMassMatrix( nelem, p, m ) ! compute Mi
       do idx_qp=1,p%nqp
@@ -2530,7 +2515,7 @@ SUBROUTINE BD_InertialForce( nelem, p, m, fact )
           m%qp%Gi(:,1:3,idx_qp,nelem)   = 0.0_BDKi
           SSmat_vvv        = SkewSymMat(m%qp%vvv(4:6,idx_qp,nelem))
           SSmat_RR0mEta    = SkewSymMat(m%qp%RR0mEta(:,idx_qp,nelem))
-          
+
           epsi             =  MATMUL(SSmat_vvv,m%qp%rho(:,:,idx_qp,nelem))
           mu               = -MATMUL(SSmat_vvv,SSmat_RR0mEta)
           nu               =  MATMUL(m%qp%rho(:,:,idx_qp,nelem),m%qp%aaa(4:6,idx_qp,nelem))
@@ -2576,7 +2561,7 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
    INTEGER(IntKi)              :: i, j
 
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
-   
+
    DO idx_qp=1,p%nqp
       !m%qp%betaC(:,:,idx_qp,nelem) = MATMUL( diag(p%beta(i)), temp_b,m%qp%Stif(:,:,idx_qp,nelem))
       DO j=1,6
@@ -2586,13 +2571,13 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
       END DO
    END DO
 
-   
+
    IF (.NOT. fact) then ! skip all but Fc and Fd terms
-   
-      DO idx_qp=1,p%nqp   
+
+      DO idx_qp=1,p%nqp
          call Calc_FC_FD_ffd() ! this modifies m%qp%Fc and m%qp%Fd
       END DO
-      
+
    ! bjj: we don't use these values when fact is FALSE, so let's save time and ignore them here, too.
    !    m%qp%Sd(:,:,:,nelem)    = 0.0_BDKi
    !    m%qp%Pd(:,:,:,nelem)    = 0.0_BDKi
@@ -2601,22 +2586,22 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
    !    m%qp%Gd(:,:,:,nelem)    = 0.0_BDKi
    !    m%qp%Xd(:,:,:,nelem)    = 0.0_BDKi
    !    m%qp%Yd(:,:,:,nelem)    = 0.0_BDKi
-      
-  ELSE 
+
+  ELSE
 !FIXME:  sometime we can condense this with vector arithmetic and removing some variables that aren't needed.
-   
-      DO idx_qp=1,p%nqp      
+
+      DO idx_qp=1,p%nqp
 
          CALL Calc_FC_FD_ffd()  ! this sets local variable ffd and modifies m%qp%Fc and m%qp%Fd
-                  
+
          D11 = m%qp%betaC(1:3,1:3,idx_qp,nelem)
          D12 = m%qp%betaC(1:3,4:6,idx_qp,nelem)
          D21 = m%qp%betaC(4:6,1:3,idx_qp,nelem)
          D22 = m%qp%betaC(4:6,4:6,idx_qp,nelem)
-         
+
          b11(1:3,1:3) = -MATMUL(SkewSymMat(m%qp%E1(:,idx_qp,nelem)),D11)
          b12(1:3,1:3) = -MATMUL(SkewSymMat(m%qp%E1(:,idx_qp,nelem)),D12)
-         
+
          SS_ome = SkewSymMat( m%qp%vvv(4:6,idx_qp,nelem) )
 
          ! Compute stiffness matrix Sd
@@ -2652,13 +2637,13 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
          m%qp%Yd(1:3,:,idx_qp,nelem)   = 0.0_BDKi
          m%qp%Yd(4:6,1:3,idx_qp,nelem) = b11
          m%qp%Yd(4:6,4:6,idx_qp,nelem) = b12
-      END DO   
+      END DO
    ENDIF
 
 CONTAINS
    SUBROUTINE Calc_FC_FD_ffd()
       REAL(BDKi)  :: eed(6)
-   
+
       ! Compute strain rates
       eed      = m%qp%vvp(1:6,idx_qp,nelem)
       eed(1:3) = eed(1:3) + cross_product(m%qp%E1(:,idx_qp,nelem),m%qp%vvv(4:6,idx_qp,nelem))
@@ -2668,7 +2653,7 @@ CONTAINS
 
       m%qp%Fc(1:6,idx_qp,nelem) = m%qp%Fc(1:6,idx_qp,nelem) + ffd
       m%qp%Fd(4:6,idx_qp,nelem) = m%qp%Fd(4:6,idx_qp,nelem) + cross_product(ffd(1:3),m%qp%E1(:,idx_qp,nelem))
-   
+
    END SUBROUTINE Calc_FC_FD_ffd
 END SUBROUTINE BD_DissipativeForce
 
@@ -2688,7 +2673,7 @@ SUBROUTINE BD_GravityForce( nelem,p,m,grav )
       m%qp%Fg(4:6,idx_qp,nelem) = cross_product(m%qp%RR0mEta(:,idx_qp,nelem),grav)
 
    end do
-   
+
 END SUBROUTINE BD_GravityForce
 
 
@@ -2762,15 +2747,15 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
    IF(p%damp_flag .NE. 0) THEN
       CALL BD_DissipativeForce( nelem, p, m, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
    ENDIF
-   CALL BD_GravityForce( nelem, p, m, p%gravity )              ! Calculate Fg      
+   CALL BD_GravityForce( nelem, p, m, p%gravity )              ! Calculate Fg
    CALL BD_GyroForce( nelem, p, m )                            ! Calculate Fb  (velocity terms from InertialForce with aaa=0)
 
-   
+
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) + m%qp%Fb(:,:,nelem) - m%DistrLoad_QP(:,:,nelem) - m%qp%Fg(:,:,nelem)
 
-   
+
    CALL BD_InertialMassMatrix( nelem, p, m )                   ! Calculate Mi
-   
+
    DO j=1,p%nodes_per_elem
       DO idx_dof2=1,p%dof_node
          DO i=1,p%nodes_per_elem
@@ -2778,27 +2763,27 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
                m%elm(idx_dof1,i,idx_dof2,j) = 0.0_BDKi
                DO idx_qp = 1,p%nqp
                   m%elm(idx_dof1,i,idx_dof2,j) = m%elm(idx_dof1,i,idx_dof2,j) + m%qp%Mi(idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem)
-               END DO                  
+               END DO
             ENDDO
          ENDDO
       ENDDO
    end do
-   
+
    DO i=1,p%nodes_per_elem
       DO idx_dof1=1,p%dof_node
-      
+
          m%elf(idx_dof1,i) = 0.0_BDKi
          DO idx_qp = 1,p%nqp ! dot_product(m%qp%Fc(idx_dof1,:,nelem),p%QPtw_ShpDer(:,i))
             m%elf(idx_dof1,i) = m%elf(idx_dof1,i) - m%qp%Fc(idx_dof1,idx_qp,nelem)*p%QPtw_ShpDer(idx_qp,i)
          END DO
-            
+
          DO idx_qp = 1,p%nqp ! dot_product(m%qp%Ftemp(idx_dof1,:,nelem), p%QPtw_Shp_Jac(:,i,nelem))
             m%elf(idx_dof1,i) = m%elf(idx_dof1,i) - m%qp%Ftemp(idx_dof1,idx_qp,nelem)*p%QPtw_Shp_Jac(idx_qp,i,nelem)
          END DO
 
       ENDDO
    ENDDO
-   
+
    RETURN
 END SUBROUTINE BD_ElementMatrixAcc
 
@@ -2832,7 +2817,7 @@ SUBROUTINE BD_InertialMassMatrix( nelem, p, m )
       m%qp%Mi(4:6,4:6,idx_qp,nelem) = m%qp%rho(:,:,idx_qp,nelem)
 
    end do
-   
+
 
 END SUBROUTINE BD_InertialMassMatrix
 
@@ -2855,7 +2840,7 @@ SUBROUTINE BD_GyroForce( nelem, p, m )
    m%qp%Fb(:,:,nelem) = 0.0_BDKi
 
    do idx_qp=1,p%nqp
-   
+
       beta = cross_product(m%qp%vvv(4:6,idx_qp,nelem), m%qp%RR0mEta(:,idx_qp,nelem)) !MATMUL(SkewSymMat(ome),mEta)
       gama = MATMUL(m%qp%rho(:,:,idx_qp,nelem),m%qp%vvv(4:6,idx_qp,nelem))
 
@@ -2874,7 +2859,7 @@ END SUBROUTINE BD_GyroForce
 SUBROUTINE BD_diffmtc( p,GLL_nodes,Shp,ShpDer )
 
    ! See Bauchau equations 17.1 - 17.5
-   
+
    TYPE(BD_ParameterType), INTENT(IN   )  :: p              !< Parameters
    REAL(BDKi),             INTENT(IN   )  :: GLL_nodes(:)   !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
    REAL(BDKi),             INTENT(INOUT)  :: Shp(:,:)       !< p%Shp    (or another Shp array for when we add outputs at arbitrary locations)
@@ -2891,7 +2876,7 @@ SUBROUTINE BD_diffmtc( p,GLL_nodes,Shp,ShpDer )
    ! initialize shape functions to 0
    Shp(:,:)     = 0.0_BDKi
    ShpDer(:,:)  = 0.0_BDKi
-   
+
    ! shape function derivative
    do j = 1,p%nqp
       do l = 1,p%nodes_per_elem
@@ -2923,7 +2908,7 @@ SUBROUTINE BD_diffmtc( p,GLL_nodes,Shp,ShpDer )
        endif
      enddo
    enddo
-   
+
    ! shape function
    do j = 1,p%nqp
       do l = 1,p%nodes_per_elem
@@ -3083,10 +3068,10 @@ subroutine ComputeSplineCoeffs(InputFileData, SP_Coef, ErrStat, ErrMsg)
        MemberLastKP = MemberFirstKP + InputFileData%kp_member(i) - 1
        CALL BD_ComputeIniCoef(InputFileData%kp_member(i),InputFileData%kp_coordinate(MemberFirstKP:MemberLastKP,:),&
                               SP_Coef(MemberFirstKP:MemberLastKP-1,:,:), ErrStat2, ErrMsg2)
-                              
+
        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        if (ErrStat >= AbortErrLev) return
-       
+
        MemberFirstKP = MemberLastKP ! if we have multiple members, there is an overlapping key point, thus we start at the previous end point
    ENDDO
 
@@ -3134,7 +3119,7 @@ SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coordinate,SP_Coef,ErrStat,ErrMsg)
 
    if (ErrStat < AbortErrLev) then
      ! note that if we return here instead, we could have a memory leak unless we deallocate the local arrays
-   
+
       ! compute K, the coefficient matrix, based on the z-component of the entered key points:
       ! all of the coefficients will depend on kp_zr
       K(:,:) = 0.0_BDKi
@@ -3235,7 +3220,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    INTEGER(IntKi)                                :: j
    INTEGER(IntKi)                                :: piter
    REAL(BDKi)                                    :: gravity_temp(3)
-   REAL(BDKi)                                    :: load_works    
+   REAL(BDKi)                                    :: load_works
    REAL(BDKi)                                    :: load_works_not
    REAL(BDKi)                                    :: load_test
    TYPE(BD_ContinuousStateType)                  :: x_works
@@ -3282,7 +3267,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
    ! new logic
    ! (1) try first with full load (load_reduce = 1)
-   ! (2) if that does not work, keep reducing until finding converged solution or reach 
+   ! (2) if that does not work, keep reducing until finding converged solution or reach
    !     maximum number of iterations; if found save as x_works
    ! (3) keep bisecting the load looking using lsat successful iteration (x_works)
 
@@ -3309,7 +3294,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
        ! note that if BD_StaticSolution converges, then piter will .le. p%niter
 
-       if (piter .le. p%niter) then 
+       if (piter .le. p%niter) then
 
           ! save this successfully converged value
           x_works = x
@@ -3325,15 +3310,15 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
        else
 
           ! last try did not converge -- save that load value as load_works_not
-          load_works_not = load_test 
+          load_works_not = load_test
 
           ! Take average of the works and works_not values for next test
-          load_test = 0.5_BDKi * (load_works + load_works_not)     
+          load_test = 0.5_BDKi * (load_works + load_works_not)
 
           ! reset best guess
           x = x_works
- 
-       endif 
+
+       endif
 
        if (solved) EXIT
 
@@ -3523,20 +3508,20 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, m )
    CALL BD_GravityForce( nelem,p,m,gravity )    ! Calculate Fg
 
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) - m%qp%Fg(:,:,nelem) - m%DistrLoad_QP(:,:,nelem)
-   
+
    DO j=1,p%nodes_per_elem
       DO idx_dof2=1,p%dof_node
          DO i=1,p%nodes_per_elem
             DO idx_dof1=1,p%dof_node
                m%elk(idx_dof1,i,idx_dof2,j) = 0.0_BDKi
-               DO idx_qp = 1,p%nqp ! dot_product( m%qp%Qe(  idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_Shp_Jac(      :,i,j,nelem)) 
+               DO idx_qp = 1,p%nqp ! dot_product( m%qp%Qe(  idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_Shp_Jac(      :,i,j,nelem))
                   m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + m%qp%Qe(  idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem)
                END DO
-                  
-               DO idx_qp = 1,p%nqp ! dot_product( m%qp%Pe(  idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_ShpDer(       :,i,j)      ) 
+
+               DO idx_qp = 1,p%nqp ! dot_product( m%qp%Pe(  idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_ShpDer(       :,i,j)      )
                   m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + m%qp%Pe(  idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_Shp_ShpDer(idx_qp,i,j)
                END DO
-               DO idx_qp = 1,p%nqp ! dot_product( m%qp%Oe(  idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_ShpDer(       :,j,i)      ) 
+               DO idx_qp = 1,p%nqp ! dot_product( m%qp%Oe(  idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_ShpDer(       :,j,i)      )
                   m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + m%qp%Oe(  idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_Shp_ShpDer(idx_qp,j,i)
                END DO
                DO idx_qp = 1,p%nqp ! dot_product( m%qp%Stif(idx_dof1,idx_dof2,:,nelem), p%QPtw_ShpDer_ShpDer_Jac(:,i,j,nelem))
@@ -3670,7 +3655,7 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
       m%BldInternalForceFE(1:3,i) =  MATMUL(p%GlbRot,m%BldInternalForceFE(1:3,i))
       m%BldInternalForceFE(4:6,i) =  MATMUL(p%GlbRot,m%BldInternalForceFE(4:6,i))
    ENDDO
-   
+
    RETURN
 END SUBROUTINE BD_InternalForceMoment
 
@@ -3718,7 +3703,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
     ! on first call, initialize accelerations at t=0 and put mass and stiffness matrices in the summary file:
    IF ( ( n .EQ. 0 .OR. .NOT. OtherState%InitAcc ) ) THEN
- 
+
          ! Set the inputs at t
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -3728,7 +3713,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
          ! Copy over the DistrLoads
       CALL BD_DistrLoadCopy( p, u_interp, m )
-   
+
          ! Incorporate boundary conditions
       CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -3747,7 +3732,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
       ! initialize GA2 algorithm acceleration variable (acts as a filtering value on OtherState%acc)
       OtherState%Xcc(:,:)  = OtherState%Acc(:,:)
- 
+
          ! accelerations have been initialized
       OtherState%InitAcc = .true.
 
@@ -3837,7 +3822,7 @@ SUBROUTINE BD_TiSchmPredictorStep( x, OtherState, p )
       OtherState%acc(:,i) = 0.0_BDKi                                                                                ! acc accelerations at t+dt
 
       x%q(1:3,i) = x%q(1:3,i) + tr(1:3)                                                                             ! position at t+dt
-      
+
       ! tr does not contain w-m parameters, yet we are treating them as such
       CALL BD_CrvCompose(rot_temp, tr(4:6), x%q(4:6,i), FLAG_R1R2) ! rot_temp = tr(4:6) composed with x%q(4:6,i) [rotations at t], is the output
       x%q(4:6,i) = rot_temp ! rotations at t+dt
@@ -3949,7 +3934,7 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
    INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
    CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_DynamicSolutionGA2'
-   
+
    REAL(DbKi)                                         :: Eref
    REAL(DbKi)                                         :: Enorm
    INTEGER(IntKi)                                     :: i
@@ -3963,7 +3948,7 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
    Eref  =  0.0_BDKi
    DO i=1,p%niter
 
-      fact = MOD(i-1,p%n_fact) .EQ. 0  ! when true, we factor the jacobian matrix 
+      fact = MOD(i-1,p%n_fact) .EQ. 0  ! when true, we factor the jacobian matrix
 
          ! Apply accelerations using F=ma ?  Is that what this routine does?
          ! Calculate Quadrature point values needed
@@ -4046,12 +4031,12 @@ SUBROUTINE BD_UpdateDynamicGA2( p, m, x, OtherState )
    ! The first node has no displacements by definition.
    DO i=2, p%node_total
        x%q(1:3,i) = x%q(1:3,i) + p%coef(8) * m%Solution(1:3,i)
-       
+
        roti_temp  =              p%coef(8) * m%Solution(4:6,i)  ! m%Solution(4:6,i) seems to contain accelerations (i.e., delta \omega dot), so I don't think this can be a w-m parameter
        CALL BD_CrvCompose(rot_temp,roti_temp,x%q(4:6,i),FLAG_R1R2) ! rot_temp = roti_temp composed with x%q(4:6,i)
-       x%q(4:6,i) = rot_temp(1:3) 
+       x%q(4:6,i) = rot_temp(1:3)
 
-       
+
        x%dqdt(:,i)           = x%dqdt(:,i)         + p%coef(7) * m%Solution(:,i)
        OtherState%acc(:,i)   = OtherState%acc(:,i) +             m%Solution(:,i)    ! update acceleration (dqdtdt: q dot dot) to next guess for values at t+dt
        OtherState%xcc(:,i)   = OtherState%xcc(:,i) + p%coef(9) * m%Solution(:,i)    ! update algorithm acceleration to next guess for values at t+dt:  (1-alpha_m)*xcc_(n+1) = (1-alpha_f)*dqdtdt_(n+1) + alpha_f*dqdtdt_n - alpha_m*xcc_n
@@ -4078,13 +4063,13 @@ SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
 
       ! must initialize these because BD_AssembleStiffK and BD_AssembleRHS are INOUT
    m%RHS    =  0.0_BDKi
-   
+
    IF(fact) THEN
       m%StifK  =  0.0_BDKi
       m%MassM  =  0.0_BDKi
       m%DampG  =  0.0_BDKi
    END IF
-      
+
 
 
       ! These values have not been set yet for the QP.
@@ -4127,33 +4112,33 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
    INTEGER(IntKi)               :: idx_dof1
    INTEGER(IntKi)               :: idx_dof2
    CHARACTER(*), PARAMETER      :: RoutineName = 'BD_ElementMatrixGA2'
-   
+
 
 !FIXME: adp: I don't see the gyroscopic term in here.  That is stored in m%qp%Fb
 !VA: The gyroscopic term is included in the m%qp%Gi. I think the m%qp%Fb term is used to calculate the accelerations
-      
-   
-   CALL BD_ElasticForce(  nelem,p,m,fact )                    ! Calculate Fc, Fd  [and if(fact): Oe, Pe, and Qe for N-R algorithm] using m%qp%E1, m%qp%RR0, m%qp%kappa, m%qp%Stif   
+
+
+   CALL BD_ElasticForce(  nelem,p,m,fact )                    ! Calculate Fc, Fd  [and if(fact): Oe, Pe, and Qe for N-R algorithm] using m%qp%E1, m%qp%RR0, m%qp%kappa, m%qp%Stif
    CALL BD_InertialForce( nelem,p,m,fact )                    ! Calculate Fi [and Mi,Gi,Ki IF(fact)]
-   
+
    IF(p%damp_flag .NE. 0) THEN
       CALL BD_DissipativeForce( nelem,p,m,fact )              ! Calculate dissipative terms on Fc, Fd [and Sd, Od, Pd and Qd, betaC, Gd, Xd, Yd for N-R algorithm]
    ENDIF
-   
+
    CALL BD_GravityForce( nelem, p, m, p%gravity )
-   
+
    ! F^ext is combined with F^D (F^D = F^D-F^ext), i.e. RHS of Equation 9 in Wang_2014
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) - m%qp%Fg(:,:,nelem) - m%DistrLoad_QP(:,:,nelem)
-   
+
 
       ! Equations 10, 11, 12 in Wang_2014
 
-   IF (fact) THEN  
+   IF (fact) THEN
       DO j=1,p%nodes_per_elem
          DO idx_dof2=1,p%dof_node
             DO i=1,p%nodes_per_elem
                DO idx_dof1=1,p%dof_node
-                  
+
                   m%elk(idx_dof1,i,idx_dof2,j) = 0.0_BDKi
                   DO idx_qp = 1,p%nqp ! dot_product(m%qp%Qe(  idx_dof1,idx_dof2,:,nelem) +  m%qp%Ki(idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_Shp_Jac(      :,i,j,nelem) )
                      m%elk(idx_dof1,i,idx_dof2,j) =  m%elk(idx_dof1,i,idx_dof2,j) + (m%qp%Qe(idx_dof1,idx_dof2,idx_qp,nelem) +  m%qp%Ki(idx_dof1,idx_dof2,idx_qp,nelem))*p%QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem)
@@ -4167,7 +4152,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
                   DO idx_qp = 1,p%nqp ! dot_product(m%qp%Stif(idx_dof1,idx_dof2,:,nelem)                                      , p%QPtw_ShpDer_ShpDer_Jac(:,i,j,nelem) )
                      m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) +  m%qp%Stif(idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_ShpDer_ShpDer_Jac(idx_qp,i,j,nelem)
                   END DO
-                  
+
                ENDDO
             ENDDO
          ENDDO
@@ -4177,12 +4162,12 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
          DO idx_dof2=1,p%dof_node
             DO i=1,p%nodes_per_elem
                DO idx_dof1=1,p%dof_node
-                  
+
                   m%elm(idx_dof1,i,idx_dof2,j) = 0.0_BDKi
                   DO idx_qp = 1,p%nqp ! dot_product( m%qp%Mi(idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_Shp_Jac(:,i,j,nelem) )
                      m%elm(idx_dof1,i,idx_dof2,j) = m%elm(idx_dof1,i,idx_dof2,j) + m%qp%Mi(idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem)
                   END DO
-                  
+
                ENDDO
             ENDDO
          ENDDO
@@ -4192,37 +4177,37 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
          DO idx_dof2=1,p%dof_node
             DO i=1,p%nodes_per_elem
                DO idx_dof1=1,p%dof_node
-                  
+
                   m%elg(idx_dof1,i,idx_dof2,j) = 0.0_BDKi
                   DO idx_qp = 1,p%nqp ! dot_product( m%qp%Gi(idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_Shp_Jac(:,i,j,nelem))
                      m%elg(idx_dof1,i,idx_dof2,j) = m%elg(idx_dof1,i,idx_dof2,j) + m%qp%Gi(idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem)
                   END DO
-                  
+
                ENDDO
             ENDDO
          ENDDO
       END DO
-   
+
          ! Dissipative terms
       IF (p%damp_flag .NE. 0) THEN
          DO j=1,p%nodes_per_elem
             DO idx_dof2=1,p%dof_node
                DO i=1,p%nodes_per_elem
                   DO idx_dof1=1,p%dof_node
-                     
+
                      DO idx_qp = 1,p%nqp ! dot_product(m%qp%Qd(idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_Shp_Jac(      :,i,j,nelem))
                         m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + m%qp%Qd(idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem)
                      END DO
                      DO idx_qp = 1,p%nqp ! dot_product(m%qp%Pd(idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_ShpDer(       :,i,j)      )
                         m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + m%qp%Pd(idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_Shp_ShpDer(idx_qp,i,j)
-                     END DO 
+                     END DO
                      DO idx_qp = 1,p%nqp ! dot_product(m%qp%Od(idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_ShpDer(       :,j,i)      )
                         m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + m%qp%Od(idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_Shp_ShpDer(idx_qp,j,i)
                      END DO
                      DO idx_qp = 1,p%nqp ! dot_product(m%qp%Sd(idx_dof1,idx_dof2,:,nelem), p%QPtw_ShpDer_ShpDer_Jac(:,i,j,nelem))
                         m%elk(idx_dof1,i,idx_dof2,j) = m%elk(idx_dof1,i,idx_dof2,j) + m%qp%Sd(idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_ShpDer_ShpDer_Jac(idx_qp,i,j,nelem)
                      END DO
-                     
+
                   ENDDO
                ENDDO
             ENDDO
@@ -4232,7 +4217,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
             DO idx_dof2=1,p%dof_node
                DO i=1,p%nodes_per_elem
                   DO idx_dof1=1,p%dof_node
-                     
+
                      DO idx_qp = 1,p%nqp ! dot_product(m%qp%Xd(   idx_dof1,idx_dof2,:,nelem), p%QPtw_Shp_Shp_Jac(      :,i,j,nelem))
                         m%elg(idx_dof1,i,idx_dof2,j) = m%elg(idx_dof1,i,idx_dof2,j) + m%qp%Xd(   idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem)
                      END DO
@@ -4245,20 +4230,20 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
                      DO idx_qp = 1,p%nqp ! dot_product(m%qp%betaC(idx_dof1,idx_dof2,:,nelem), p%QPtw_ShpDer_ShpDer_Jac(:,i,j,nelem))
                         m%elg(idx_dof1,i,idx_dof2,j) = m%elg(idx_dof1,i,idx_dof2,j) + m%qp%betaC(idx_dof1,idx_dof2,idx_qp,nelem)*p%QPtw_ShpDer_ShpDer_Jac(idx_qp,i,j,nelem)
                      END DO
-                     
+
                   ENDDO
                ENDDO
             ENDDO
-         END DO         
+         END DO
       ENDIF ! add the dissipative terms
 
    ENDIF
-   
+
       ! Equations 13 and 14 in Wang_2014. F^ext is combined with F^D (F^D = F^D-F^ext)
 
    DO i=1,p%nodes_per_elem
       DO idx_dof1=1,p%dof_node
-         
+
          m%elf(idx_dof1,i) = 0.0_BDKi
          DO idx_qp = 1,p%nqp ! dot_product( m%qp%Fc   (idx_dof1,:,nelem),                             p%QPtw_ShpDer( :,i))
             m%elf(idx_dof1,i) = m%elf(idx_dof1,i) - m%qp%Fc(idx_dof1,idx_qp,nelem)*p%QPtw_ShpDer(idx_qp,i)
@@ -4268,7 +4253,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
          END DO
       ENDDO
    ENDDO
-   
+
    RETURN
 
 END SUBROUTINE BD_ElementMatrixGA2
@@ -4288,7 +4273,7 @@ SUBROUTINE BD_InputGlobalLocal(p, u)
    INTEGER(IntKi)                       :: i                          !< Generic counter
    CHARACTER(*), PARAMETER              :: RoutineName = 'BD_InputGlobalLocal'
 
-!FIXME: we might be able to get rid of the m%u now if we put the p%GlbRot multiplications elsewhere.   
+!FIXME: we might be able to get rid of the m%u now if we put the p%GlbRot multiplications elsewhere.
 
    ! Transform Root Motion from Global to Local (Blade) frame
    u%RootMotion%TranslationDisp(:,1) = MATMUL(u%RootMotion%TranslationDisp(:,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationDisp(:,1)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationDisp(:,1))
@@ -4297,18 +4282,18 @@ SUBROUTINE BD_InputGlobalLocal(p, u)
    u%RootMotion%TranslationAcc(:,1)  = MATMUL(u%RootMotion%TranslationAcc( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationAcc(:,1))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationAcc(:,1))
    u%RootMotion%RotationAcc(:,1)     = MATMUL(u%RootMotion%RotationAcc(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationAcc(:,1))     = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%RotationAcc(:,1))
 
-   ! Transform DCM to Rotation Tensor (RT)   
+   ! Transform DCM to Rotation Tensor (RT)
    u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1)) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
-   
+
    ! Transform Applied Forces from Global to Local (Blade) frame
    DO i=1,p%node_total
-      u%PointLoad%Force(1:3,i)  = MATMUL(u%PointLoad%Force(:,i),p%GlbRot)  !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%PointLoad%Force(:,i)) 
+      u%PointLoad%Force(1:3,i)  = MATMUL(u%PointLoad%Force(:,i),p%GlbRot)  !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%PointLoad%Force(:,i))
       u%PointLoad%Moment(1:3,i) = MATMUL(u%PointLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Moment(:,i)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%PointLoad%Moment(:,i))
    ENDDO
-   
+
    ! transform distributed forces and moments
    DO i=1,u%DistrLoad%Nnodes
-      u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),p%GlbRot)  !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Force(:,i)) 
+      u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),p%GlbRot)  !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Force(:,i))
       u%DistrLoad%Moment(1:3,i) = MATMUL(u%DistrLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Moment(:,i)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Moment(:,i))
    ENDDO
 
