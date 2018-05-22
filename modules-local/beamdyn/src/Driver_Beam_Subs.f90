@@ -230,7 +230,9 @@ module BeamDyn_driver_subs
    READ( Line, *, IOSTAT=IOS) DvrData%NumPointLoads
    if (IOS == 0) then !this is numeric, so we can go ahead with the multi-point loads
             
-      CALL ReadCom(UnIn,DvrInputFile,'Section Header: Multiple Point Loads',ErrStat2,ErrMsg2,UnEc)
+      CALL ReadCom(UnIn,DvrInputFile,'Multiple Point Loads Table',ErrStat2,ErrMsg2,UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL ReadCom(UnIn,DvrInputFile,'Multiple Point Loads Table Units',ErrStat2,ErrMsg2,UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(DvrData%MultiPointLoad,max(1,DvrData%NumPointLoads),7,'Point loads input array',ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
