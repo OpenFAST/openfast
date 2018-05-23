@@ -137,14 +137,18 @@ When driven by CTest, the regression test can be executed by running various
 forms of the command ``ctest`` from the build directory. The basic commands are
 
 - ``ctest`` - Run the entire regression test
+- ``ctest -N`` - Disable actual execution of tests; this is helpful in formulating a particular ctest command
 - ``ctest -V`` - Run the entire regression test with verbose output
-- ``ctest -R [TestName]`` - Run a test by name
+- ``ctest -R [TestName]`` - Run a test by name where TestName is a regex to search
 - ``ctest -j [N]`` - Run all tests with N tests executing in parallel
-- ``ctest -N`` - List all of the tests available
 
 Each regression test case contains a series of labels associating all of the
 modules used. The labeling can be seen in the test instantiation in
-``reg_tests/CTestList.cmake`` and called directly with
+``reg_tests/CTestList.cmake`` or with the command
+
+- ``ctest --print-labels`` - Print all available test labels
+
+Labels can be called directoly with
 
 - ``ctest -L [Label]``
 
@@ -154,6 +158,7 @@ These flags can be compounded making useful variations of ``ctest`` such as
 - ``ctest -j 16 -L aerodyn14`` - Runs all cases that use AeroDyn14 in 16 concurrent processes
 - ``ctest -V -R 5MW_DLL_Potential_WTurb`` - Runs the case with name "5MW_DLL_Potential_WTurb"
 - ``ctest -N -L beamdyn`` - Lists all tests with the "beamdyn" label
+- ``ctest -N -R bd --print-labels`` - Lists the labels included in all tests matching the regex "bd"
 
 The automated regression test writes new files only into the build directory. Specifically,
 all locally generated solutions are located in the corresponding glue-code or module within
