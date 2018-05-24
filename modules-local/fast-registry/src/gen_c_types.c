@@ -354,7 +354,7 @@ gen_c_module( FILE * fph, node_t * ModName )
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       if ( q->usefrom == 0 ) {
-        if (q->mapsto) remove_nickname(ModName->nickname, make_lower_temp(q->mapsto), nonick);
+        if (*q->mapsto) remove_nickname(ModName->nickname, make_lower_temp(q->mapsto), nonick);
         fprintf(fph,  "  typedef struct %s {\n",q->mapsto) ;
         //if (!strcmp(make_lower_temp(nonick), "otherstatetype") !strcmp(make_lower_temp(nonick), "initinputtype")){
            fprintf(fph, "    void * object ;\n");
@@ -372,7 +372,7 @@ gen_c_module( FILE * fph, node_t * ModName )
               }
             } else {
               char tmp[NAMELEN] ; tmp[0] = '\0' ;
-              if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
+              if (*q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
               if (r->ndims > 0 && has_deferred_dim(r, 0)) {
                 fprintf(fph,"    %s * %s ; ",C_type( r->type->mapsto), r->name ) ;
                 fprintf(fph,"    int %s_Len ;",r->name ) ;
