@@ -5498,7 +5498,11 @@ SUBROUTINE BD_ComputeBladeMassNew( p, ErrStat, ErrMsg )
 
    ENDDO
 
-   p%blade_CG(:) = p%blade_CG(:) / p%blade_mass
+   if (.not. EqualRealNos( p%blade_mass, 0.0_BDKi )) then
+      p%blade_CG(:) = p%blade_CG(:) / p%blade_mass
+   else
+      p%blade_CG = 0.0_BDKi
+   end if
 
    CALL Cleanup()
    RETURN
