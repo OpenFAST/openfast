@@ -1829,7 +1829,7 @@ SUBROUTINE TimeSeriesScaling_IEC(p, V)
 
       HubFactor(IVec) = p%IEC%SigmaIEC(IVec)/ActualSigma(IVec)  ! factor = Target / actual
                   
-      IF (p%IEC%ScaleIEC == 1 .OR. IVec > 1) THEN ! v and w have no coherence, thus all points have same std, so we'll save some calculations
+      IF (p%IEC%ScaleIEC == 1 .OR. p%met%SCMod(IVec) == CohMod_None) THEN ! with no coherence, all points have same std, so we'll save some calculations
                
          V(:,:,IVec) =     HubFactor(IVec) * V(:,:,IVec)
                

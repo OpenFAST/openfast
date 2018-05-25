@@ -572,7 +572,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    getDefaultZJetMax = getDefaultZJetMax .AND. .NOT. IsUnusedParameter ! Jet height for 
 
    ! ------------ Read in the power law exponent, PLExp ---------------------------------------------
-   IsUnusedParameter = (TRIM(p%met%WindProfileType) /= "PL" .AND. TRIM(p%met%WindProfileType) /= "IEC")  .OR. p%IEC%IEC_WindType > IEC_ETM
+   IsUnusedParameter = (TRIM(p%met%WindProfileType) /= "PL" .AND. TRIM(p%met%WindProfileType) /= "IEC")
    CALL ReadRVarDefault( UI, InFile, p%met%PLExp, "PLExp", "Power law exponent [-]", UnEc, getDefaultPLExp, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
