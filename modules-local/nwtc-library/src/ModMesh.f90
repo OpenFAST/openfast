@@ -277,7 +277,7 @@ END SUBROUTINE MeshWrVTKreference
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes mesh information in VTK format.
 !! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
-SUBROUTINE MeshWrVTK ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, ErrStat, ErrMsg, Sib )
+SUBROUTINE MeshWrVTK ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, ErrStat, ErrMsg, Twidth, Sib )
       
    REAL(SiKi),      INTENT(IN)           :: RefPoint(3)     !< reference location, normally (0,0,0)
    TYPE(MeshType),  INTENT(IN)           :: M               !< mesh to be written
@@ -286,6 +286,7 @@ SUBROUTINE MeshWrVTK ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, Err
    LOGICAL,         INTENT(IN)           :: OutputFieldData !< flag to determine if we want to output field data or just the absolute position of this mesh
    INTEGER(IntKi),  INTENT(OUT)          :: ErrStat         !< Indicates whether an error occurred (see NWTC_Library)
    CHARACTER(*),    INTENT(OUT)          :: ErrMsg          !< Error message associated with the ErrStat
+   INTEGER(IntKi),  INTENT(IN)           :: Twidth          !< Number of digits in the maximum write-out step (used to pad the VTK write-out in the filename with zeros)
 
    TYPE(MeshType),  INTENT(IN), OPTIONAL :: Sib             !< "functional" Sibling of M that contains translational displacement information (used to place forces at displaced positions) 
 
@@ -293,6 +294,7 @@ SUBROUTINE MeshWrVTK ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, Err
    INTEGER(IntKi)                        :: Un            ! fortran unit number
    INTEGER(IntKi)                        :: i,j           ! loop counters
    CHARACTER(1024)                       :: FileName
+   CHARACTER(Twidth)                     :: Tstr          ! string for current VTK write-out step (padded with zeros)
       
    INTEGER(IntKi)                        :: ErrStat2 
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
@@ -317,9 +319,12 @@ SUBROUTINE MeshWrVTK ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, Err
    !.................................................................
    ! write the data that potentially changes each time step:
    !.................................................................
+
+   ! construct the string for the zero-padded VTK write-out step
+   write(Tstr, '(i' // trim(Num2LStr(Twidth)) //'.'// trim(Num2LStr(Twidth)) // ')') VTKcount
       
    ! PolyData (.vtp) - Serial vtkPolyData (unstructured) file
-   FileName = TRIM(FileRootName)//'.t'//TRIM(Num2LStr(VTKcount))//'.vtp'
+   FileName = TRIM(FileRootName)//'.'//Tstr//'.vtp'
       
    call WrVTK_header( trim(FileName), M%Nnodes, M%ElemTable(ELEMENT_LINE2)%nelem, 0, Un, ErrStat2, ErrMsg2 )    
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -513,13 +518,14 @@ END SUBROUTINE MeshWrVTKfields
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes line2 mesh surface information in VTK format.
 !! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
-SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, ErrStat, ErrMsg, NumSegments, Radius, verts, Sib )
+SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, ErrStat, ErrMsg, Twidth, NumSegments, Radius, verts, Sib )
       
    REAL(SiKi),      INTENT(IN)           :: RefPoint(3)     !< reference location, normally (0,0,0)
    TYPE(MeshType),  INTENT(IN)           :: M               !< mesh to be written
    CHARACTER(*),    INTENT(IN)           :: FileRootName    !< Name of the file to write the output in (excluding extension)
    INTEGER(IntKi),  INTENT(IN)           :: VTKcount        !< Indicates number for VTK output file (when 0, the routine will also write reference information)
    LOGICAL,         INTENT(IN)           :: OutputFieldData !< flag to determine if we want to output field data or just the absolute position of this mesh
+   INTEGER(IntKi),  INTENT(IN)           :: Twidth          !< Number of digits in the maximum write-out step (used to pad the VTK write-out in the filename with zeros)
    INTEGER(IntKi),  INTENT(IN), OPTIONAL :: NumSegments     !< Number of segments to split the circle into
    REAL(SiKi),      INTENT(IN), OPTIONAL :: Radius(:)       !< Radius of each node
    REAL(SiKi),      INTENT(IN), OPTIONAL :: verts(:,:,:)    !< X-Y verticies (2x{NumSegs}xNNodes) of points that define a shape around each node
@@ -536,6 +542,7 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFie
    CHARACTER(1024)                       :: FileName
    REAL(SiKi)                            :: angle
    REAL(SiKi)                            :: xyz(3)
+   CHARACTER(Twidth)                     :: Tstr          ! string for current write-out step (padded with zeros)
 
    INTEGER(IntKi)                        :: firstPntEnd, firstPntStart, secondPntStart, secondPntEnd  ! node indices for forming rectangle 
    INTEGER(IntKi)                        :: NumSegments1
@@ -566,9 +573,12 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFie
    !.................................................................
    ! write the data that potentially changes each time step:
    !.................................................................
+
+   ! construct the string for the zero-padded VTK write-out step
+   write(Tstr, '(i' // trim(Num2LStr(Twidth)) //'.'// trim(Num2LStr(Twidth)) // ')') VTKcount
       
    ! PolyData (.vtp) - Serial vtkPolyData (unstructured) file
-   FileName = TRIM(FileRootName)//'.t'//TRIM(Num2LStr(VTKcount))//'.vtp'
+   FileName = TRIM(FileRootName)//'.'//Tstr//'.vtp'
        
       ! Write a VTP mesh file (Polygonal VTK file) with positions and polygons (surfaces)
       ! (note alignment of WRITE statements to make sure spaces are lined up in XML file)
@@ -671,13 +681,14 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( RefPoint, M, FileRootName, VTKcount, OutputFie
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes point mesh surfaces information in VTK format.
 !! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
-SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, ErrStat, ErrMsg, NumSegments, Radius, verts, Sib )
+SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, ErrStat, ErrMsg, Twidth, NumSegments, Radius, verts, Sib )
       
    REAL(SiKi),      INTENT(IN)           :: RefPoint(3)     !< reference location, normally (0,0,0)
    TYPE(MeshType),  INTENT(IN)           :: M               !< mesh to be written
    CHARACTER(*),    INTENT(IN)           :: FileRootName    !< Name of the file to write the output in (excluding extension)
    INTEGER(IntKi),  INTENT(IN)           :: VTKcount        !< Indicates number for VTK output file (when 0, the routine will also write reference information)
    LOGICAL,         INTENT(IN)           :: OutputFieldData !< flag to determine if we want to output field data or just the absolute position of this mesh
+   INTEGER(IntKi),  INTENT(IN)           :: Twidth          !< Number of digits in the maximum write-out timestep (used to pad the VTK write-out in the filename with zeros)
    INTEGER(IntKi),  INTENT(IN), OPTIONAL :: NumSegments     !< Number of segments to split the circle into
    REAL(SiKi),      INTENT(IN), OPTIONAL :: Radius          !< Radius of each node
    REAL(SiKi),      INTENT(IN), OPTIONAL :: verts(:,:)      !< X-Y-Z verticies (3xn) of points that define a volume around each node
@@ -699,6 +710,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    CHARACTER(1024)                       :: FileName
    REAL(SiKi)                            :: angle, r, ratio
    REAL(SiKi)                            :: xyz(3)
+   CHARACTER(Twidth)                     :: Tstr          ! string for current VTK write-out step (padded with zeros)
 
    INTEGER(IntKi)                        :: firstPntEnd, firstPntStart, secondPntStart, secondPntEnd  ! node indices for forming rectangle 
    
@@ -757,9 +769,12 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    !.................................................................
    ! write the data that potentially changes each time step:
    !.................................................................
+
+   ! construct the string for the zero-padded VTK write-out step
+   write(Tstr, '(i' // trim(Num2LStr(Twidth)) //'.'// trim(Num2LStr(Twidth)) // ')') VTKcount
       
    ! PolyData (.vtp) - Serial vtkPolyData (unstructured) file
-   FileName = TRIM(FileRootName)//'.t'//TRIM(Num2LStr(VTKcount))//'.vtp'
+   FileName = TRIM(FileRootName)//'.'//Tstr//'.vtp'
       
       ! Write a VTP mesh file (Polygonal VTK file) with positions and polygons (surfaces)
       ! (note alignment of WRITE statements to make sure spaces are lined up in XML file)
