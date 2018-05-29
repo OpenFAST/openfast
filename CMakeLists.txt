@@ -34,11 +34,6 @@ if (NOT CMAKE_BUILD_TYPE)
     "Choose the build type: Debug Release" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
-# debug flags
-if(CMAKE_BUILD_TYPE MATCHES Debug)
-  set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all -pedantic -fbacktrace" )
-endif()
-
 option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
 option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
