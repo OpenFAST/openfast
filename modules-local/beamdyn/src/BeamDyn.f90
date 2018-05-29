@@ -1701,8 +1701,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       y%ReactionForce%Moment(:,1) = m%BldInternalForceFE(4:6,1)
    ENDIF
 
-       ! set y%BldMotion fields:
-   CALL Set_BldMotion_Mesh( p, u, x, m, y)
+   ! set y%BldMotion fields:
+   CALL Set_BldMotion_Mesh( p, m%u2, x, m, y)
 
    !-------------------------------------------------------
    !  compute RootMxr and RootMyr for ServoDyn and
