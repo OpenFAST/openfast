@@ -60,9 +60,9 @@ where large gradients are expected in the aerodynamic loads e.g. near
 the blade tip. Aerodynamic imbalances are possible through the use of
 geometrical differences between each blade.
 
-When the tower potential-flow (``TwrPotent`` > 0), tower shadow
-(``TwrShadow`` = TRUE), and/or the tower aerodynamic load
-(``TwrAero`` = TRUE) models are enabled, we also recommend that
+When the tower potential-flow (``TwrPotent > 0``), tower shadow
+(``TwrShadow = TRUE``), and/or the tower aerodynamic load
+(``TwrAero = TRUE``) models are enabled, we also recommend that
 ``NumTwrNds`` be between 10 and 20 to balance accuracy with
 computational expense. Normally the local elevation of the tower node
 above ground (or above MSL for offshore wind turbines or above the
@@ -94,7 +94,7 @@ we recommend setting ``IndToler`` to ``DEFAULT``.
 B-L model is not yet functional. Testing has shown that the González and
 Minnema/Pierce models produce reasonable hysteresis of the normal force,
 tangential force, and pitching-moment coefficients if the UA model
-parameters are set appropriately for a given airfoil, Reynold’s number,
+parameters are set appropriately for a given airfoil, Reynolds number,
 and/or Mach number. However, the results will differ a bit from earlier
 versions of AeroDyn, (which was based on the Minnema/Pierce extensions
 to B-L) even if the default UA model parameters are used, due to
@@ -116,7 +116,7 @@ speed, in which case we recommend that ``TwrAero = TRUE``. Otherwise,
 
 We recommend to include the influence of the tower on the fluid local to
 the blade for both operational and parked/idling rotors. We recommend
-that ``TwrPotent`` > 0 for upwind rotors and that ``TwrPotent = 2``
+that ``TwrPotent > 0`` for upwind rotors and that ``TwrPotent = 2``
 or ``TwrShadow = TRUE`` for downwind rotors.
 
 Linearization
