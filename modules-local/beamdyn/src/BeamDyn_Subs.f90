@@ -715,12 +715,11 @@ END SUBROUTINE Set_BldMotion_NoAcc
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates values for the y%BldMotion mesh.
-SUBROUTINE Set_BldMotion_Mesh(p, u, x, OtherState, m, y)
+SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t - in the FAST coordinate system (NOT BD)
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
-   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables ! intent(out) so that we can update the accelerations here...
    TYPE(BD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                !!   nectivity information does not have to be recalculated)

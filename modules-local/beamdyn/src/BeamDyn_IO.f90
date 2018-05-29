@@ -1461,12 +1461,11 @@ END SUBROUTINE BD_ValidateInputData
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> this routine fills the AllOuts array, which is used to send data to the glue code to be written to an output file.
-SUBROUTINE Calc_WriteOutput( u, p, x, OtherState, AllOuts, y, m, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( u, p, x, AllOuts, y, m, ErrStat, ErrMsg )
 
    TYPE(BD_InputType),           INTENT(INOUT)  :: u           !< Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< The module parameters
    TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
-   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
    REAL(ReKi),                   INTENT(INOUT)  :: AllOuts(0:) !< array of values to potentially write to file
    TYPE(BD_OutputType),          INTENT(IN   )  :: y           !< outputs
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables (for computing mesh transfers)

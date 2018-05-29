@@ -248,8 +248,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
-      ! initialization of output mesh values (used for initial guess to AeroDyn)
-   CALL Set_BldMotion_NoAcc(p, x, MiscVar, y)
+   ! initialization of output mesh values (used for initial guess to AeroDyn)
+   CALL BD_QuadraturePointData( p, x, MiscVar )   ! Calculate QP values uuu, uup, RR0, kappa, E1
+   CALL BD_QPDataVelocity( p, x, MiscVar )      ! x%dqdt --> m%qp%vvv, m%qp%vvp
+   CALL Set_BldMotion_NoAcc( p, x, MiscVar, y )
    y%BldMotion%TranslationAcc  = 0.0_BDKi
    y%BldMotion%RotationAcc     = 0.0_BDKi
 
@@ -867,6 +869,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
 
 
 end subroutine SetParameters
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this routine initializes the outputs, y, that are used in the BeamDyn interface for coupling in the FAST framework.
 subroutine Init_y( p, u, y, ErrStat, ErrMsg)
@@ -878,17 +881,16 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
    character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
       ! local variables
-   real(R8Ki)                                   :: DCM(3,3)          ! must be same type as mesh orientation fields
-   real(ReKi)                                   :: Pos(3)            ! must be same type as mesh position fields
-
+   real(R8Ki)                                   :: DCM(3,3)                 ! must be same type as mesh orientation fields
+   real(ReKi)                                   :: Pos(3)                   ! must be same type as mesh position fields
+   real(BDKi)                                   :: temp_pos_rot(p%dof_node) ! temporary array to store dof values at point of interest
 
    integer(intKi)                               :: temp_id
-   integer(intKi)                               :: i,j               ! loop counters
-   integer(intKi)                               :: NNodes            ! number of nodes in mesh
+   integer(intKi)                               :: i,idx_qp          ! loop counters
+   integer(intKi)                               :: NNodes            ! number of points in output mesh
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'Init_y'
-
 
 
    ErrStat = ErrID_None
@@ -907,83 +909,100 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
                  , Moment   = .TRUE.           &
                  , ErrStat  = ErrStat2         &
                  , ErrMess  = ErrMsg2          )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat>=AbortErrLev) RETURN
-
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat>=AbortErrLev) RETURN
 
    !.................................
    ! y%BldMotion (for coupling with AeroDyn)
    !.................................
 
-      NNodes = p%nodes_per_elem*p%elem_total ! this is the same as the number of FE nodes, with overlapping nodes at the element end points
-      CALL MeshCreate( BlankMesh        = y%BldMotion        &
-                      ,IOS              = COMPONENT_OUTPUT   &
-                      ,NNodes           = NNodes             &
-                      ,TranslationDisp  = .TRUE.             &
-                      ,Orientation      = .TRUE.             &
-                      ,TranslationVel   = .TRUE.             &
-                      ,RotationVel      = .TRUE.             &
-                      ,TranslationAcc   = .TRUE.             &
-                      ,RotationAcc      = .TRUE.             &
-                      ,ErrStat          = ErrStat2           &
-                      ,ErrMess          = ErrMsg2             )
+   NNodes = p%nqp*p%elem_total + 2*p%qp_indx_offset ! this is the total number of points on the output mesh
+                                                    ! it includes the quadrature points and also the end points if they aren't already included
+   CALL MeshCreate( BlankMesh        = y%BldMotion        &
+                   ,IOS              = COMPONENT_OUTPUT   &
+                   ,NNodes           = NNodes             &
+                   ,TranslationDisp  = .TRUE.             &
+                   ,Orientation      = .TRUE.             &
+                   ,TranslationVel   = .TRUE.             &
+                   ,RotationVel      = .TRUE.             &
+                   ,TranslationAcc   = .TRUE.             &
+                   ,RotationAcc      = .TRUE.             &
+                   ,ErrStat          = ErrStat2           &
+                   ,ErrMess          = ErrMsg2             )
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat>=AbortErrLev) RETURN
+
+   ! add the position of the quadrature points to the mesh
+   ! in case of Gauss quadrature, this only adds the nodes corresponding to the quadrature points
+   ! we need to separately add the end points after the loop in case of Gauss quadrature
+   DO i=1,p%elem_total
+      DO idx_qp=1,p%nqp
+
+         temp_id = (i-1)*p%nqp + idx_qp + p%qp_indx_offset ! get the index to the quadrature point
+
+         Pos(1:3) = p%GlbPos(1:3) + MATMUL( p%GlbRot, p%uu0(1:3,idx_qp,i) )
+
+         DCM = BDrot_to_FASTdcm( p%uu0(4:6,idx_qp,i), p )
+
+         CALL MeshPositionNode ( Mesh    = y%BldMotion   &
+                                ,INode   = temp_id       &
+                                ,Pos     = Pos           &
+                                ,ErrStat = ErrStat2      &
+                                ,ErrMess = ErrMsg2       &
+                                ,Orient  = DCM           )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat>=AbortErrLev) RETURN
 
-         ! position nodes
-      DO i=1,p%elem_total
-         DO j=1,p%nodes_per_elem
-
-              temp_id = (j-1)*p%dof_node
-
-              Pos = p%GlbPos + MATMUL(p%GlbRot,p%uuN0(1:3,j,i))
-
-                  ! possible type conversions here:
-              DCM = BDrot_to_FASTdcm(p%uuN0(4:6,j,i),p)
-
-                  ! set the reference position and orientation for each node.
-              temp_id = (i-1)*p%nodes_per_elem+j
-              CALL MeshPositionNode ( Mesh    = y%BldMotion   &
-                                     ,INode   = temp_id       &
-                                     ,Pos     = Pos           &
-                                     ,ErrStat = ErrStat2      &
-                                     ,ErrMess = ErrMsg2       &
-                                     ,Orient  = DCM           )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-          ENDDO
       ENDDO
+   ENDDO
 
-         ! create elements
+   ! set the values at the end point for the mesh when using Gaussian (GL) quadrature.
+   IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
+      Pos(1:3) = p%GlbPos(1:3) + MATMUL( p%GlbRot, p%uuN0(1:3,1,1) )
+      DCM = BDrot_to_FASTdcm( p%uuN0(4:6,1,1), p )
+      CALL MeshPositionNode ( Mesh    = y%BldMotion   &
+                             ,INode   = 1             &
+                             ,Pos     = Pos           &
+                             ,ErrStat = ErrStat2      &
+                             ,ErrMess = ErrMsg2       &
+                             ,Orient  = DCM           )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      DO i=1,p%elem_total
-         DO j=1,p%nodes_per_elem - 1
-            temp_id = (i-1)*p%nodes_per_elem + j ! first node of element
+      Pos(1:3) = p%GlbPos(1:3) + MATMUL( p%GlbRot, p%uuN0(1:3,p%nodes_per_elem,p%elem_total) )
+      DCM = BDrot_to_FASTdcm( p%uuN0(4:6,p%nodes_per_elem,p%elem_total), p )
+      CALL MeshPositionNode ( Mesh    = y%BldMotion   &
+                             ,INode   = NNodes        &
+                             ,Pos     = Pos           &
+                             ,ErrStat = ErrStat2      &
+                             ,ErrMess = ErrMsg2       &
+                             ,Orient  = DCM           )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDIF
 
-            CALL MeshConstructElement( Mesh     = y%BldMotion      &
-                                      ,Xelement = ELEMENT_LINE2    &
-                                      ,P1       = temp_id          &
-                                      ,P2       = temp_id+1        &
-                                      ,ErrStat  = ErrStat2         &
-                                      ,ErrMess  = ErrMsg2          )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         END DO
-      ENDDO
+   ! construct the elements based on the nodes defined above
+   DO i=1,NNodes-1
+      CALL MeshConstructElement( Mesh      = y%BldMotion      &
+                                 ,Xelement = ELEMENT_LINE2    &
+                                 ,P1       = i                &
+                                 ,P2       = i+1              &
+                                 ,ErrStat  = ErrStat2         &
+                                 ,ErrMess  = ErrMsg2          )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDDO
 
-      CALL MeshCommit ( Mesh    = y%BldMotion     &
-                       ,ErrStat = ErrStat2        &
-                       ,ErrMess = ErrMsg2         )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat>=AbortErrLev) RETURN
-
+   CALL MeshCommit ( Mesh    = y%BldMotion     &
+                    ,ErrStat = ErrStat2        &
+                    ,ErrMess = ErrMsg2         )
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat>=AbortErrLev) RETURN
 
    !.................................
    ! y%WriteOutput (for writing columns to output file)
    !.................................
    call AllocAry( y%WriteOutput, p%numOuts, 'WriteOutput', errStat2, errMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 end subroutine Init_y
+
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> this routine initializes the inputs, u, that are used in the BeamDyn interface for coupling in the FAST framework.
 subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
@@ -1650,17 +1669,14 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! Calculate Quadrature point values needed for BldForce results
    CALL BD_QuadraturePointData( p,x_tmp,m )   ! Calculate QP values uuu, uup, RR0, kappa, E1
 
-
-
    IF(p%analysis_type .EQ. BD_DYNAMIC_ANALYSIS) THEN
-
-         ! These values have not been set yet for the QP
+      ! These values have not been set yet for the QP
       CALL BD_QPData_mEta_rho( p,m )                  ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
       CALL BD_QPDataVelocity( p, x_tmp, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
       ! calculate accelerations and reaction loads (in m%RHS):
       CALL BD_CalcForceAcc(m%u, p, m, ErrStat2,ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 !FIXME: First node pointload is missing.  Same with first QP node and DistrLoad.
       y%ReactionForce%Force(:,1)    = -MATMUL(p%GlbRot,m%RHS(1:3,1))
@@ -1685,16 +1701,15 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       y%ReactionForce%Moment(:,1) = m%BldInternalForceFE(4:6,1)
    ENDIF
 
-
        ! set y%BldMotion fields:
-   CALL Set_BldMotion_Mesh( p, m%u2, x, m, y)
+   CALL Set_BldMotion_Mesh( p, u, x, m, y)
 
    !-------------------------------------------------------
    !  compute RootMxr and RootMyr for ServoDyn and
    !  get values to output to file:
    !-------------------------------------------------------
-   call Calc_WriteOutput( p, AllOuts, y, m, ErrStat2, ErrMsg2 )  !uses m%u2
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call Calc_WriteOutput( u, p, x, AllOuts, y, m, ErrStat2, ErrMsg2 )  !uses m%u2
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    y%RootMxr = AllOuts( RootMxr )
    y%RootMyr = AllOuts( RootMyr )
@@ -1996,7 +2011,7 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
 
 
       ! Calculate the rotation parameters relative to the root for each node
-   m%Nrrr(1:3,elem_start,nelem)  = (/ 0.0_BDKi, 0.0_BDKi, 0.0_BDKi /)  ! First node has no curvature relative to itself
+   m%Nrrr(1:3,1,nelem)  = (/ 0.0_BDKi, 0.0_BDKi, 0.0_BDKi /)  ! First node has no curvature relative to itself
    DO idx_node=2,p%nodes_per_elem
          ! Find resulting rotation parameters R(Nr) = Ri^T(x%q(1)) R(x%q(:))
          ! where R(x%q(1))^T is the transpose rotation parameters for the root node
