@@ -1708,7 +1708,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    !  compute RootMxr and RootMyr for ServoDyn and
    !  get values to output to file:
    !-------------------------------------------------------
-   call Calc_WriteOutput( u, p, x, AllOuts, y, m, ErrStat2, ErrMsg2 )  !uses m%u2
+   call Calc_WriteOutput( p, x, AllOuts, y, m, ErrStat2, ErrMsg2 )  !uses m%u2
    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    y%RootMxr = AllOuts( RootMxr )
