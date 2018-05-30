@@ -10,7 +10,7 @@ to publish your changes to the public facing site.
 
 Dependencies
 ------------
-The documentation is built in `Sphinx <http://www.sphinx-doc.org/en/master/>`__ with
+The documentation is built in `Sphinx <http://www.sphinx-doc.org/en/master/>`__ with optional support for 
 `Doxygen <http://www.stack.nl/~dimitri/doxygen/>`__, `Doxylink <https://pythonhosted.org/sphinxcontrib-doxylink/>`__, and
 `Graphviz <http://www.graphviz.org>`__. Therefore users will need to install these tools as well as several extensions of Sphinx that are utilized.
 
