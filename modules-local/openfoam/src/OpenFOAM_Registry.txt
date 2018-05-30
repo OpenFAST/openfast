@@ -23,6 +23,8 @@ typedef	^	^	ReKi	StructBldRNodes	{:}	-	-	"Radius to structural model analysis no
 typedef	^	^	ReKi	StructTwrHNodes	{:}	-	-	"Location of variable-spaced structural model tower nodes (relative to the tower rigid base height)"
 typedef	^       ^	ReKi	BladeLength	-	-	-	"Blade length"	meters
 typedef	^	^	ReKi	TowerHeight	-	-	-	"Tower Height"	meters
+typedef	^	^	ReKi	TowerBaseHeight	-	-	-	"Tower Base Height"	meters
+
 
 
 
@@ -56,6 +58,7 @@ typedef ^       ^       ReKi            forceBldRnodes             {:}     "Radi
 typedef ^       ^       ReKi            forceTwrHnodes             {:}     "Radial location of force nodes"  -
 typedef ^	^	ReKi	BladeLength	-	-	-	"Blade length (same for all blades)"	"m"
 typedef ^	^	ReKi	TowerHeight	-	-	-	"Tower height"	"m"
+typedef ^	^	ReKi	TowerBaseHeight	-	-	-	"Tower base height"	"m"
 
 
 # ..... OpenFOAM_InputType data .......................................................................................................
