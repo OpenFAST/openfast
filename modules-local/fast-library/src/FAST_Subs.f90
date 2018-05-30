@@ -576,6 +576,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF
       InitInData_OpFM%BladeLength = InitOutData_ED%BladeLength
       InitInData_OpFM%TowerHeight = InitOutData_ED%TowerHeight
+      InitInData_OpFM%TowerBaseHeight = InitOutData_ED%TowerBaseHeight
       ALLOCATE(InitInData_OpFM%StructBldRNodes( SIZE(InitOutData_ED%BldRNodes)),  STAT=ErrStat2)
       InitInData_OpFM%StructBldRNodes(:) = InitOutData_ED%BldRNodes(:)
       ALLOCATE(InitInData_OpFM%StructTwrHNodes( SIZE(InitOutData_ED%TwrHNodes)),  STAT=ErrStat2)
