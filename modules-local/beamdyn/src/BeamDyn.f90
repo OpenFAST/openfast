@@ -128,6 +128,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
 
+! @mjs: this an example of a good subroutine, in terms of passing only the pieces of "p" that are required
        CALL BD_GaussPointWeight(p%nqp,p%QPtN,p%QPtWeight,ErrStat2,ErrMsg2) !calculates p%QPtN and p%QPtWeight
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           if (ErrStat >= AbortErrLev) then
@@ -137,10 +138,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
 
-      CALL BD_TrapezoidalPointWeight(p, InputFileData)        ! computes p%QPtN and p%QPtWeight
+! @mjs: HERE
+      CALL BD_TrapezoidalPointWeight(p%QPtN, p%QPtWeight, p%nqp, p%refine, InputFileData%InpBl%station_eta, InputFileData%InpBl%station_total)
 
    ENDIF
 
+! @mjs: parameters
       ! compute physical distances to set positions of p%uuN0 (FE GLL_Nodes) and p%QuadPt (input quadrature nodes) (depends on p%QPtN and p%SP_Coef):
    call InitializeNodalLocations(InputFileData, p, GLL_nodes, ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -149,6 +152,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
+! @mjs: parameters
       ! set mass and stiffness matrices: p%Stif0_QP and p%Mass0_QP
    call InitializeMassStiffnessMatrices(InputFileData, p, ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -157,11 +161,11 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
-
+! @mjs: parameters
       ! compute p%Shp, p%ShpDer, and p%Jacobian:
    CALL BD_InitShpDerJaco( GLL_Nodes, p )
 
-
+! @mjs: parameters
       ! Set the initial displacements: p%uu0, p%rrN0, p%E10
    CALL BD_QuadraturePointDataAt0(p)
       if (ErrStat >= AbortErrLev) then
@@ -172,10 +176,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 !FIXME: shift mass stiffness matrices here from the keypoint line to the calculated curvature line in p%uu0
 !   CALL BD_KMshift2Ref(p)
 
-
+! @mjs: parameters
    call Initialize_FEweights(p) ! set p%FEweight; needs p%uuN0 and p%uu0
       
-      
+! @mjs: parameters     
       ! compute blade mass, CG, and IN for summary file:
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -210,7 +214,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       xd%thetaPD = 0.0_BDKi
    end if
 
-
+! @mjs: parameters
       ! Define and initialize system inputs (set up and initialize input meshes) here:
    call Init_u(InitInp, p, u, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -220,6 +224,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
+! @mjs: parameters
       ! allocate and initialize continuous states (need to do this after initializing inputs):
    call Init_ContinuousStates(p, u, x, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -229,10 +234,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
+! @mjs: parameters
       ! allocate and initialize other states:
    call Init_OtherStates(p, OtherState, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+! @mjs: parameters
       ! initialize outputs (need to do this after initializing inputs and parameters (p%nnu0))
    call Init_y(p, u, y, ErrStat2, ErrMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -242,18 +249,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
-
+! @mjs: parameters
       ! allocate and initialize misc vars (do this after initializing input and output meshes):
    call Init_MiscVars(p, u, y, MiscVar, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-
+! @mjs: parameters
       ! initialization of output mesh values (used for initial guess to AeroDyn)
    CALL Set_BldMotion_NoAcc(p, x, MiscVar, y)
    y%BldMotion%TranslationAcc  = 0.0_BDKi
    y%BldMotion%RotationAcc     = 0.0_BDKi
 
-
+! @mjs: parameters
       ! set initialization outputs
    call SetInitOut(p, InitOut, errStat, errMsg)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -263,6 +270,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
        ! Print the summary file if requested:
    if (InputFileData%SumPrint) then
+! @mjs: parameters
       call BD_PrintSum( p, x, MiscVar, InitInp%RootName, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end if
@@ -475,6 +483,7 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
 
            eta = (GLL_nodes(j) + 1.0_BDKi)/2.0_BDKi ! relative location where we are on the member (element), in range [0,1]
 
+! @mjs: paramters
            call Find_IniNode(InputFileData%kp_coordinate, p, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
            if (ErrStat >= AbortErrLev) return
@@ -580,7 +589,7 @@ SUBROUTINE BD_InitShpDerJaco( GLL_Nodes, p )
 
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_InitShpDerJaco'
 
-
+! @mjs: paramters--this is done very strangely
    CALL BD_diffmtc(p,GLL_nodes,p%Shp,p%ShpDer)
 
    DO nelem = 1,p%elem_total
@@ -1569,6 +1578,7 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+! @mjs: check and see what parameters are actually being used here--p appears to be passed, in full, a couple levels deep
    IF(p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
        CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
@@ -3254,12 +3264,15 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
+! @mjs: parameters
    CALL BD_InputGlobalLocal(p,u_interp)
 
       ! Copy over the DistrLoads
+! @mjs: parameters
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
       ! Incorporate boundary conditions
+! @mjs: parameters
    CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -3287,6 +3300,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
        u_temp%DistrLoad%Moment(:,:) = u_interp%DistrLoad%Moment(:,:) * load_test
        gravity_temp(:)              = p%gravity(:)                   * load_test
 
+! @mjs: parameters
        CALL BD_StaticSolution(x, gravity_temp, u_temp, p, m, piter, ErrStat2, ErrMsg2)
            call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
            ErrStat = ErrID_None
@@ -3709,12 +3723,15 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          ! Transform quantities from global frame to local (blade) frame
+! @mjs: parameters
       CALL BD_InputGlobalLocal(p,u_interp)
 
          ! Copy over the DistrLoads
+! @mjs: parameters
       CALL BD_DistrLoadCopy( p, u_interp, m )
    
          ! Incorporate boundary conditions
+! @mjs: parameters
       CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
@@ -3723,6 +3740,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
          end if
 
          ! initialize the accelerations
+! @mjs: parameters
       CALL BD_InitAcc( u_interp, p, x, m, OtherState%Acc, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
@@ -3742,7 +3760,9 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
          ! compute mass and stiffness matrices
             ! Calculate Quadrature point values needed
+! @mjs: parameters
          CALL BD_QuadraturePointData( p,x,m )         ! Calculate QP values uuu, uup, RR0, kappa, E1
+! @mjs: parameters
          CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE.)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -3761,22 +3781,27 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+! @mjs: parameters
    CALL BD_UpdateDiscState( t, n, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       ! Actuator
    IF( p%UsePitchAct ) THEN
+! @mjs: parameters
       CALL PitchActuator_SetBC(p, u_interp, xd)
    ENDIF
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
+! @mjs: parameters
    CALL BD_InputGlobalLocal(p,u_interp)
 
       ! Copy over the DistrLoads
+! @mjs: parameters
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
 
       ! GA2: prediction
+! @mjs: parameters
    CALL BD_TiSchmPredictorStep( x, OtherState, p ) ! updates x and OtherState accelerations (from values at t to predictions at t+dt)
 
       ! Incorporate boundary conditions (overwrite first node of continuous states and Acc array at t+dt)
@@ -3789,6 +3814,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
 
       ! find x, acc, and xcc at t+dt
+! @mjs: parameters
    CALL BD_DynamicSolutionGA2( x, OtherState, u_interp, p, m, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
