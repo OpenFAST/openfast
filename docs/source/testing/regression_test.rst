@@ -4,10 +4,15 @@ Regression test
 ===============
 
 The regression test executes a series of test cases which intend to fully describe
-OpenFAST and its module's capabilities. Each locally computed result is compared
+OpenFAST and its module's capabilities.
+
+Jump to :ref:`regression_test_ctest`, :ref:`regression_test_example`, or :ref:`regression_test_windows`
+for instructions on running the regression tests locally.
+
+Each locally computed result is compared
 to a static set of baseline results. To account for system, hardware, and compiler
 differences, the regression test attempts to match the current machine and
-compiler type to the appropriate solution set from these combinations
+compiler type to the appropriate solution set from these combinations:
 
 - macOS with GNU compiler (default)
 - Red Hat Enterprise Linux with Intel compiler
@@ -123,6 +128,8 @@ should be specified in the CMake configuration under the ``CTEST_OPENFAST_EXECUT
 flag. There is also a corresponding ``CTEST_[MODULE]_NAME`` flag for each module
 included in the regression test.
 
+.. _regression_test_ctest:
+
 Running the regression test with CTest
 --------------------------------------
 
@@ -130,14 +137,18 @@ When driven by CTest, the regression test can be executed by running various
 forms of the command ``ctest`` from the build directory. The basic commands are
 
 - ``ctest`` - Run the entire regression test
+- ``ctest -N`` - Disable actual execution of tests; this is helpful in formulating a particular ctest command
 - ``ctest -V`` - Run the entire regression test with verbose output
-- ``ctest -R [TestName]`` - Run a test by name
+- ``ctest -R [TestName]`` - Run a test by name where TestName is a regex to search
 - ``ctest -j [N]`` - Run all tests with N tests executing in parallel
-- ``ctest -N`` - List all of the tests available
 
 Each regression test case contains a series of labels associating all of the
 modules used. The labeling can be seen in the test instantiation in
-``reg_tests/CTestList.cmake`` and called directly with
+``reg_tests/CTestList.cmake`` or with the command
+
+- ``ctest --print-labels`` - Print all available test labels
+
+Labels can be called directoly with
 
 - ``ctest -L [Label]``
 
@@ -147,14 +158,17 @@ These flags can be compounded making useful variations of ``ctest`` such as
 - ``ctest -j 16 -L aerodyn14`` - Runs all cases that use AeroDyn14 in 16 concurrent processes
 - ``ctest -V -R 5MW_DLL_Potential_WTurb`` - Runs the case with name "5MW_DLL_Potential_WTurb"
 - ``ctest -N -L beamdyn`` - Lists all tests with the "beamdyn" label
+- ``ctest -N -R bd --print-labels`` - Lists the labels included in all tests matching the regex "bd"
 
 The automated regression test writes new files only into the build directory. Specifically,
 all locally generated solutions are located in the corresponding glue-code or module within
 ``openfast/build/reg_tests``. The baseline solutions contained in ``openfast/reg_tests/r-test``
 are strictly read not modified by the automated process.
 
-Regression test from scratch
-----------------------------
+.. _regression_test_example:
+
+Regression test example
+-----------------------
 
 - Build OpenFAST and the test suite
 
@@ -163,23 +177,23 @@ Regression test from scratch
   git clone --recursive https://github.com/openfast/openfast.git
   # The default git branch is 'master'. If necessary, switch to your target branch:
   # git checkout dev
-  mkdir build && cd build
+  mkdir build install && cd build
   # Configure CMake with openfast/CMakeLists.txt
   # - BUILD_TESTING
   # - CTEST_OPENFAST_EXECUTABLE
   # - CTEST_[MODULE]_EXECUTABLE
-  cmake ..
+  cmake .. -DBUILD_TESTING=ON
   make install
   ctest
 
-- Build only the test suite
+- Build only the test suite if an openfast binary already exists
 
 .. code-block:: bash
 
   git clone --recursive https://github.com/openfast/openfast.git
   # The default git branch is 'master'. If necessary, switch to your target branch:
   # git checkout dev
-  mkdir build && cd build
+  mkdir build install && cd build
   # Configure CMake with openfast/reg_tests/CMakeLists.txt
   # - BUILD_TESTING
   # - CTEST_OPENFAST_EXECUTABLE
