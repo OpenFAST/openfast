@@ -25,8 +25,7 @@ In the OpenFAST repository checkout, if it has not been created yet,
 create a ``build`` directory.  Change
 to the build directory and run CMake with ``BUILD_DOCUMENTATION`` on.  If all
 of the required tools are found successfully, CMake will configure with the
-ability to build the documentation. If Sphinx or Doxygen aren't found, the
-configure will skip the documentation.
+ability to build the documentation.
 
 Issue the command ``make docs`` which will first build the Doxygen
 documentation and then the Sphinx documentation. If this completes
