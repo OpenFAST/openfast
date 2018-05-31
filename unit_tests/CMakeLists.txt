@@ -97,13 +97,14 @@ set(testlist
     test_ExtractRelativeRotation
     test_BD_InputGlobalLocal
     test_BD_DistrLoadCopy
-    # test_BD_GravityForce
+    test_BD_GravityForce
     test_BD_QPData_mEta_rho
     test_BD_GenerateGLL
     test_BD_GaussPointWeight
     test_BD_diffmtc
     test_BD_InitShpDerJaco
     test_BD_TrapezoidalPointWeight
+    test_BD_ComputeIniNodalPosition
 )
 # it is important to keep the quotes around "${testlist}" in the call below
 build_utest("beamdyn" "${testlist}")

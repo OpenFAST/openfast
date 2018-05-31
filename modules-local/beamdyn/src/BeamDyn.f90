@@ -481,8 +481,6 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
        DO j=1,p%nodes_per_elem
 
            eta = (GLL_nodes(j) + 1.0_BDKi)/2.0_BDKi ! relative location where we are on the member (element), in range [0,1]
-
-! @mjs: paramters
            call Find_IniNode(InputFileData%kp_coordinate, p%segment_length, p%SP_Coef, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
            if (ErrStat >= AbortErrLev) return

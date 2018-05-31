@@ -615,7 +615,7 @@ SUBROUTINE BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, nqp, refine, station_et
    temp_id0 = (id0 - 1)*refine + 1            ! Starting index in QPtLocs --> always going to be 1
    temp_id1 = (id1 - 1)*refine + 1            ! ending index in QPtLocs --> will be  size(QPtLocs)
    denom = QPtLocs(temp_id1) - QPtLocs(temp_id0)  ! This is the range of QPtLocs --> for single member, is always == 2
-   ! @mjs: this seems like a strange way of getting the 2 that is desired
+   ! @mjs: this seems like a strange way of getting the 2 that is standard for a trapezoidal scheme
 
    QPtWeight(1)     =  (QPtLocs(temp_id0+1) - QPtLocs(temp_id0    ))/denom
    DO j=2,nqp-1
