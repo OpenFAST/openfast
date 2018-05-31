@@ -9,11 +9,11 @@ subroutine test_BD_ComputeIniNodalPosition()
     
     implicit none
     
-    REAL(BDKi) :: SP_Coef(4, 4) ! Coefficients for cubic spline interpolation
-    REAL(BDKi) :: eta          ! z-component of nodal location (that's how SP_Coef was computed), in meters
-    REAL(BDKi) :: PosiVec(3)   ! Physical coordinates of points in blade frame
-    REAL(BDKi) :: e1(3)        ! Tangent vector, normalized
-    REAL(BDKi) :: Twist_Angle  ! Twist angle at PosiVec
+    real(BDKi) :: SP_Coef(4, 4) ! Coefficients for cubic spline interpolation
+    real(BDKi) :: eta           ! z-component of nodal location (that's how SP_Coef was computed), in meters
+    real(BDKi) :: PosiVec(3)    ! Physical coordinates of points in blade frame
+    real(BDKi) :: e1(3)         ! Tangent vector, normalized
+    real(BDKi) :: Twist_Angle   ! Twist angle at PosiVec
     
     real(BDKi) :: BasePosiVec(3), Base_e1(3), Base_Twist_Angle ! Baseline quadrature point locations and weights
     
