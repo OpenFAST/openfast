@@ -122,7 +122,7 @@ contains
         call AllocAry(p%Jacobian, p%nqp, p%nodes_per_elem, 'Jacobian', ErrStat, ErrMsg)
 
         ! construct arrays
-        p%qp%mmm = getMassMatrix()
+        p%qp%mmm = 1.0
         
         do j=1, p%elem_total
             do i=1, p%nqp
