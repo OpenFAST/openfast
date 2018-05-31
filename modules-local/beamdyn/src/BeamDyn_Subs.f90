@@ -737,10 +737,11 @@ END SUBROUTINE Set_BldMotion_Mesh
 !> This subroutine finds the (initial) nodal position and curvature based on a relative position, eta, along the blade.
 !! The key points are used to obtain the z coordinate of the physical distance along the blade, and POS and CRV vectors are returned
 !! from that location.
-subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, POS, CRV, ErrStat, ErrMsg)
+subroutine Find_IniNode(kp_coordinate, segment_length, SP_Coef, member_first_kp, member_last_kp, eta, POS, CRV, ErrStat, ErrMsg)
 
    REAL(BDKi),                   intent(in   )  :: kp_coordinate(:,:)  !< Key Point coordinates
-   type(BD_ParameterType),       intent(in   )  :: p                   !< Parameters
+   REAL(BDKi),                   intent(in   )  :: segment_length(:,:) !< Array stored length of each segment
+   REAL(BDKi),                   intent(in   )  :: SP_Coef(:,:,:)        !< Coefficients for cubic spline interpolation
    INTEGER(IntKi),               intent(in   )  :: member_first_kp     !< index of the first key point on a particular member
    INTEGER(IntKi),               intent(in   )  :: member_last_kp      !< index of the last key point on a particular member
    REAL(BDKi),                   intent(in   )  :: eta                 !! relative position of desired node, [0,1]
@@ -771,15 +772,15 @@ subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, 
           eta * (kp_coordinate(member_last_kp ,3) - kp_coordinate(member_first_kp,3)) 
 
    ! find the first key point that is beyond where this node is on the member (element)
-   ! note that this is the index for p%SP_Coef, so the upper bound is member_last_kp-1 instead of member_last_kp 
+   ! note that this is the index for SP_Coef, so the upper bound is member_last_kp-1 instead of member_last_kp 
    ! bjj: to be more efficient, we could probably just start at the kp we found for the previous eta
    kp = member_first_kp
-   DO WHILE ( (eta > p%segment_length(kp,3) + EPS) .and. kp < (member_last_kp-1) ) 
+   DO WHILE ( (eta > segment_length(kp,3) + EPS) .and. kp < (member_last_kp-1) ) 
       kp = kp + 1
    END DO
 
    ! using the spline coefficients at this key point, compute the position and orientation of the node
-   CALL BD_ComputeIniNodalPosition(p%SP_Coef(kp,:,:),etaD,POS,temp_e1,temp_twist) ! Compute point physical coordinates (POS) in blade frame                   
+   CALL BD_ComputeIniNodalPosition(SP_Coef(kp,:,:),etaD,POS,temp_e1,temp_twist) ! Compute point physical coordinates (POS) in blade frame                   
    CALL BD_ComputeIniNodalCrv(temp_e1, temp_twist, CRV, ErrStat2, ErrMsg2)        ! Compute initial rotation parameters (CRV) in blade frame
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return

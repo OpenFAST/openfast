@@ -429,7 +429,7 @@ subroutine CreateMultiPointMeshes(DvrData,BD_InitOutput,BD_Parameter,y, u, ErrSt
       ! these nodes are placed along the key point line (as are the GLL nodes)
    DO i = 1,DvrData%NumPointLoads
 
-       call Find_IniNode(BD_InitOutput%kp_coordinate, BD_Parameter, 1, BD_InitOutput%kp_total, DvrData%MultiPointLoad(i,1), temp_POS, temp_CRV, ErrStat2, ErrMsg2)
+       call Find_IniNode(BD_InitOutput%kp_coordinate, BD_Parameter%segment_length, BD_Parameter%SP_Coef, 1, BD_InitOutput%kp_total, DvrData%MultiPointLoad(i,1), temp_POS, temp_CRV, ErrStat2, ErrMsg2)
        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
        if (ErrStat >= AbortErrLev) return
        
