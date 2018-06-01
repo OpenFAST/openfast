@@ -853,9 +853,10 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_ComputeIniNodalCrv
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
+SUBROUTINE ExtractRelativeRotation(R, Glb_crv, GlbRot, rr, ErrStat, ErrMsg)
    real(R8Ki),             INTENT(in   )     :: R(3,3)       !< input rotation matrix (transpose of DCM; in BD coords)
-   type(BD_ParameterType), INTENT(in   )     :: p            !< Parameters
+   real(R8Ki),             INTENT(in   )     :: Glb_crv(3)   !< CRV parameters of GlbRot
+   real(R8Ki),             INTENT(in   )     :: GlbRot(3,3)  !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
    real(BDKi),             INTENT(  OUT)     :: rr(3)        !< W-M parameters of relative rotation
    INTEGER(IntKi),         INTENT(  OUT)     :: ErrStat      !< Error status of the operation
    CHARACTER(*),           INTENT(  OUT)     :: ErrMsg       !< Error message if ErrStat /= ErrID_None
@@ -881,8 +882,8 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    CALL BD_CrvExtractCrv(R_BD,R_WM, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
-   CALL BD_CrvCompose(temp_cc,R_WM,p%Glb_crv,FLAG_R1R2T)   ! temp_cc = R_WM composed with p%Glb_crv^-
-   rr = MATMUL(temp_cc,p%GlbRot)                           ! equation is MATMUL(TRANSPOSE(p%GlbRot),temp_cc), but this is the same as MATMUL(temp_cc,p%GlbRot) because Fortran treats row and column vectors the same (e.g.,  transpose(MATMUL(TRANSPOSE(p%GlbRot),temp_cc)) = matmul( transpose(temp_cc), p%GlbRot ) = matmul( temp_cc, p%GlbRot )
+   CALL BD_CrvCompose(temp_cc,R_WM,Glb_crv,FLAG_R1R2T)   ! temp_cc = R_WM composed with Glb_crv^-
+   rr = MATMUL(temp_cc,GlbRot)                           ! equation is MATMUL(TRANSPOSE(GlbRot),temp_cc), but this is the same as MATMUL(temp_cc,GlbRot) because Fortran treats row and column vectors the same (e.g.,  transpose(MATMUL(TRANSPOSE(GlbRot),temp_cc)) = matmul( transpose(temp_cc), GlbRot ) = matmul( temp_cc, GlbRot )
       
 END SUBROUTINE ExtractRelativeRotation
 !-----------------------------------------------------------------------------------------------------------------------------------

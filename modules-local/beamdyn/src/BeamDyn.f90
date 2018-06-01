@@ -188,6 +188,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+! @mjs: put this in BD_subs
 
       ! Actuator
    p%UsePitchAct = InputFileData%UsePitchAct
@@ -218,7 +219,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       xd%thetaPD = 0.0_BDKi
    end if
 
-! @mjs: parameters
+! @mjs: this subroutine uses 15 individual variables from p and InitInp
       ! Define and initialize system inputs (set up and initialize input meshes) here:
    call Init_u(InitInp, p, u, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1481,6 +1482,8 @@ subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
          return
       end if
 
+! @mjs: this subroutine uses 11 variables from u and 2 from p
+   ! possibly only pass the couple from p?
       ! convert to BeamDyn-internal system inputs, u_tmp:
    CALL BD_InputGlobalLocal(p,u_tmp)
 
@@ -1652,7 +1655,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Incorporate boundary conditions (note that we are doing this because the first node isn't really a state. should fix x so we don't need a temp copy here.)
    x_tmp%q(   1:3,1) = m%u%RootMotion%TranslationDisp(:,1)
-   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1),p, x_tmp%q(   4:6,1), ErrStat2, ErrMsg2)
+   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p%Glb_crv, p%GlbRot, x_tmp%q(   4:6,1), ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    x_tmp%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
@@ -3932,7 +3935,7 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,OtherState, ErrStat, ErrMsg)
    x%q(1:3,1) = u%RootMotion%TranslationDisp(1:3,1)
 
       ! Root rotations
-   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1),p, x%q(4:6,1), ErrStat2, ErrMsg2)
+   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1), p%Glb_crv, p%GlbRot, x%q(4:6,1), ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
@@ -4388,7 +4391,7 @@ SUBROUTINE BD_CalcIC_Position( u, p, x, ErrStat, ErrMsg)
 
       !  Since RootMotion%Orientation is the transpose of the absolute orientation in the global frame,
       !  we need to find the relative change in orientation from the reference.
-   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1),p,temp_rv, ErrStat2, ErrMsg2)
+   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1), p%Glb_crv, p%GlbRot, temp_rv, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
