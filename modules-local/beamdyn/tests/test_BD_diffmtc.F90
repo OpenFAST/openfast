@@ -11,7 +11,9 @@ subroutine test_BD_diffmtc()
     implicit none
     
     integer                    :: n, i
-    type(BD_ParameterType)     :: parametertype
+    ! type(BD_ParameterType)     :: parametertype
+    integer(IntKi)             :: nqp, nodes_per_elem
+    real(BDKi), allocatable    :: QPtN(:)
     real(BDKi), allocatable    :: test_shape(:,:), test_shapederivative(:,:)
     real(BDKi), allocatable    :: baseline_shape(:,:), baseline_shapederivative(:,:)
     real(BDKi), allocatable    :: gll_nodes(:)
@@ -49,24 +51,23 @@ subroutine test_BD_diffmtc()
     ! shpder(1,:) = -0.5, -0.5
     ! shpder(2,:) =  0.5,  0.5
     
-    parametertype = simpleParameterType()
-    parametertype%nodes_per_elem = 2
-    parametertype%nqp = 2
-    n = parametertype%nodes_per_elem
+    nodes_per_elem = 2
+    nqp = 2
+    n = nodes_per_elem
     
-    call AllocAry(test_shape, parametertype%nodes_per_elem, parametertype%nqp, "test_shape", ErrStat, ErrMsg)
-    call AllocAry(test_shapederivative, parametertype%nodes_per_elem, parametertype%nqp, "test_shapederivative", ErrStat, ErrMsg)
+    call AllocAry(test_shape, nodes_per_elem, nqp, "test_shape", ErrStat, ErrMsg)
+    call AllocAry(test_shapederivative, nodes_per_elem, nqp, "test_shapederivative", ErrStat, ErrMsg)
     
-    call AllocAry(parametertype%QPtN, parametertype%nodes_per_elem, 'QPtN', ErrStat, ErrMsg)
-    parametertype%QPtN = (/ -1.0, 1.0 /)
+    call AllocAry(QPtN, nodes_per_elem, 'QPtN', ErrStat, ErrMsg)
+    QPtN = (/ -1.0, 1.0 /)
     
     call AllocAry(gll_nodes, n, "GLL points array", ErrStat, ErrMsg)
     gll_nodes = (/ -1.0, 1.0 /)
     
-    call BD_diffmtc(parametertype, gll_nodes, test_shape, test_shapederivative)
+    call BD_diffmtc(nqp, nodes_per_elem, QPtN, GLL_nodes, test_shape, test_shapederivative)
     
-    call AllocAry(baseline_shape, parametertype%nqp, parametertype%nodes_per_elem, "baseline_shape", ErrStat, ErrMsg)
-    call AllocAry(baseline_shapederivative, parametertype%nqp, parametertype%nodes_per_elem, "baseline_shapederivative", ErrStat, ErrMsg)
+    call AllocAry(baseline_shape, nqp, nodes_per_elem, "baseline_shape", ErrStat, ErrMsg)
+    call AllocAry(baseline_shapederivative, nqp, nodes_per_elem, "baseline_shapederivative", ErrStat, ErrMsg)
     baseline_shape(1,:) = (/ 1.0, 0.0 /)
     baseline_shape(2,:) = (/ 0.0, 1.0 /)
     baseline_shapederivative(1,:) = (/ -0.5, -0.5 /)

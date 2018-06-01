@@ -128,7 +128,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
 
-! @mjs: this an example of a good subroutine, in terms of passing only the pieces of "p" that are required
        CALL BD_GaussPointWeight(p%nqp,p%QPtN,p%QPtWeight,ErrStat2,ErrMsg2) !calculates p%QPtN and p%QPtWeight
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           if (ErrStat >= AbortErrLev) then
@@ -142,7 +141,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    ENDIF
 
-! @mjs: parameters
       ! compute physical distances to set positions of p%uuN0 (FE GLL_Nodes) and p%QuadPt (input quadrature nodes) (depends on p%QPtN and p%SP_Coef):
    call InitializeNodalLocations(InputFileData, p, GLL_nodes, ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -151,7 +149,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
-! @mjs: parameters
+! @mjs: this subroutine uses 14 individual variables from p and InputFileData
+   ! however, it is mostly doing simple computations and initializing p%Stif0_QP and p%Mass0_QP
+   ! Should this be broken into smaller pieces?
       ! set mass and stiffness matrices: p%Stif0_QP and p%Mass0_QP
    call InitializeMassStiffnessMatrices(InputFileData, p, ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -160,11 +160,15 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
-! @mjs: parameters
+! @mjs: this subroutine uses 14 individual variables from p
+   ! however, it is mostly doing calculating the optimization variables p%QPtW_*
+   ! Should this be broken into smaller pieces?
       ! compute p%Shp, p%ShpDer, and p%Jacobian:
    CALL BD_InitShpDerJaco( GLL_Nodes, p )
 
-! @mjs: parameters
+! @mjs: this subroutine is just initializing some variables in p and calling
+   ! BD_CrvCompose() and BD_CrvMatrixR()
+   ! it uses 7 variables in p
       ! Set the initial displacements: p%uu0, p%rrN0, p%E10
    CALL BD_QuadraturePointDataAt0(p)
       if (ErrStat >= AbortErrLev) then
@@ -175,10 +179,11 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 !FIXME: shift mass stiffness matrices here from the keypoint line to the calculated curvature line in p%uu0
 !   CALL BD_KMshift2Ref(p)
 
-! @mjs: parameters
+! @mjs: this subroutine uses 7 individual variables from p
+   ! should this go in BD_subs, or does all initialization stuff stay here 
    call Initialize_FEweights(p) ! set p%FEweight; needs p%uuN0 and p%uu0
       
-! @mjs: parameters     
+! @mjs: this subroutine uses 10 individual variables from p     
       ! compute blade mass, CG, and IN for summary file:
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -586,8 +591,7 @@ SUBROUTINE BD_InitShpDerJaco( GLL_Nodes, p )
 
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_InitShpDerJaco'
 
-! @mjs: paramters--this is done very strangely
-   CALL BD_diffmtc(p,GLL_nodes,p%Shp,p%ShpDer)
+   CALL BD_diffmtc(p%nqp, p%nodes_per_elem, p%QPtN, GLL_nodes, p%Shp, p%ShpDer)
 
    DO nelem = 1,p%elem_total
       DO idx_qp = 1, p%nqp
@@ -2863,48 +2867,50 @@ END SUBROUTINE BD_GyroForce
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> calculate Lagrangian interpolant tensor at ns points where basis
 !! functions are assumed to be associated with (np+1) GLL points on [-1,1]
-SUBROUTINE BD_diffmtc( p,GLL_nodes,Shp,ShpDer )
+SUBROUTINE BD_diffmtc( nqp, nodes_per_elem, QPtN, GLL_nodes, Shp, ShpDer )
 
    ! See Bauchau equations 17.1 - 17.5
    
-   TYPE(BD_ParameterType), INTENT(IN   )  :: p              !< Parameters
-   REAL(BDKi),             INTENT(IN   )  :: GLL_nodes(:)   !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
-   REAL(BDKi),             INTENT(INOUT)  :: Shp(:,:)       !< p%Shp    (or another Shp array for when we add outputs at arbitrary locations)
-   REAL(BDKi),             INTENT(INOUT)  :: ShpDer(:,:)    !< p%ShpDer (or another Shp array for when we add outputs at arbitrary locations)
+   INTEGER(IntKi), INTENT(IN   ) :: nqp            !< Number of quadrature points (per element)
+   INTEGER(IntKi), INTENT(IN   ) :: nodes_per_elem !< Finite element (GLL) nodes per element
+   REAL(BDKi),     INTENT(IN   ) :: QPtN(:)           !< Quadrature (QuadPt) point locations in natural frame [-1, 1]
+   REAL(BDKi),     INTENT(IN   ) :: GLL_nodes(:)   !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
+   REAL(BDKi),     INTENT(INOUT) :: Shp(:,:)       !< p%Shp    (or another Shp array for when we add outputs at arbitrary locations)
+   REAL(BDKi),     INTENT(INOUT) :: ShpDer(:,:)    !< p%ShpDer (or another Shp array for when we add outputs at arbitrary locations)
 
-   REAL(BDKi)                  :: dnum
-   REAL(BDKi)                  :: den
-   REAL(BDKi),        PARAMETER:: eps = SQRT(EPSILON(eps)) !1.0D-08
-   INTEGER(IntKi)              :: l
-   INTEGER(IntKi)              :: j
-   INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: k
+   REAL(BDKi)            :: dnum
+   REAL(BDKi)            :: den
+   REAL(BDKi), PARAMETER :: eps = SQRT(EPSILON(eps)) !1.0D-08
+   INTEGER(IntKi)        :: l
+   INTEGER(IntKi)        :: j
+   INTEGER(IntKi)        :: i
+   INTEGER(IntKi)        :: k
 
    ! initialize shape functions to 0
    Shp(:,:)     = 0.0_BDKi
    ShpDer(:,:)  = 0.0_BDKi
    
    ! shape function derivative
-   do j = 1,p%nqp
-      do l = 1,p%nodes_per_elem
+   do j = 1,nqp
+      do l = 1,nodes_per_elem
 
-       if ((abs(p%QPtN(j)-1.).LE.eps).AND.(l.EQ.p%nodes_per_elem)) then           !adp: FIXME: do we want to compare to eps, or EqualRealNos???
-         ShpDer(l,j) = REAL((p%nodes_per_elem)*(p%nodes_per_elem-1), BDKi)/4.0_BDKi
-       elseif ((abs(p%QPtN(j)+1.).LE.eps).AND.(l.EQ.1)) then
-         ShpDer(l,j) = -REAL((p%nodes_per_elem)*(p%nodes_per_elem-1), BDKi)/4.0_BDKi
-       elseif (abs(p%QPtN(j)-GLL_nodes(l)).LE.eps) then
+       if ((abs(QPtN(j)-1.).LE.eps).AND.(l.EQ.nodes_per_elem)) then           !adp: FIXME: do we want to compare to eps, or EqualRealNos???
+         ShpDer(l,j) = REAL((nodes_per_elem)*(nodes_per_elem-1), BDKi)/4.0_BDKi
+       elseif ((abs(QPtN(j)+1.).LE.eps).AND.(l.EQ.1)) then
+         ShpDer(l,j) = -REAL((nodes_per_elem)*(nodes_per_elem-1), BDKi)/4.0_BDKi
+       elseif (abs(QPtN(j)-GLL_nodes(l)).LE.eps) then
          ShpDer(l,j) = 0.0_BDKi
        else
          ShpDer(l,j) = 0.0_BDKi
          den = 1.0_BDKi
-         do i = 1,p%nodes_per_elem
+         do i = 1,nodes_per_elem
            if (i.NE.l) then
              den = den*(GLL_nodes(l)-GLL_nodes(i))
            endif
            dnum = 1.0_BDKi
-           do k = 1,p%nodes_per_elem
+           do k = 1,nodes_per_elem
              if ((k.NE.l).AND.(k.NE.i).AND.(i.NE.l)) then
-               dnum = dnum*(p%QPtN(j)-GLL_nodes(k))
+               dnum = dnum*(QPtN(j)-GLL_nodes(k))
              elseif (i.EQ.l) then
                dnum = 0.0_BDKi
              endif
@@ -2917,18 +2923,18 @@ SUBROUTINE BD_diffmtc( p,GLL_nodes,Shp,ShpDer )
    enddo
    
    ! shape function
-   do j = 1,p%nqp
-      do l = 1,p%nodes_per_elem
+   do j = 1,nqp
+      do l = 1,nodes_per_elem
 
-       if(abs(p%QPtN(j)-GLL_nodes(l)).LE.eps) then
+       if(abs(QPtN(j)-GLL_nodes(l)).LE.eps) then
          Shp(l,j) = 1.0_BDKi
        else
          dnum = 1.0_BDKi
          den  = 1.0_BDKi
-         do k = 1,p%nodes_per_elem
+         do k = 1,nodes_per_elem
            if (k.NE.l) then
              den  = den *(GLL_nodes(l) - GLL_nodes(k))
-             dnum = dnum*(p%QPtN(j) - GLL_nodes(k))
+             dnum = dnum*(QPtN(j) - GLL_nodes(k))
            endif
          enddo
          Shp(l,j) = dnum/den
