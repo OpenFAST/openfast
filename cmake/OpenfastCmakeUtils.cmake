@@ -47,11 +47,11 @@ function(generate_f90_types regfile outfile)
   set(output "${CMAKE_CURRENT_BINARY_DIR}/${output_base}")
   add_custom_command(
     OUTPUT ${output}
-    DEPENDS fast_registry ${input}
-    COMMAND ${CMAKE_BINARY_DIR}/modules-local/fast-registry/fast_registry
-    ${input} ${FAST_REGISTRY_INCLUDES} ${ARGN})
+    DEPENDS openfast_registry ${input}
+    COMMAND ${CMAKE_BINARY_DIR}/modules-local/openfast-registry/openfast_registry
+    ${input} ${OPENFAST_REGISTRY_INCLUDES} ${ARGN})
   set_source_files_properties(${output} PROPERTIES GENERATED TRUE)
-endfunction(generate_f90_types regfile outfile)
+endfunction(generate_f90_types)
 
 #
 # SET_REGISTRY_INCLUDES - Set includes path for generating *_Types.f90
@@ -61,8 +61,8 @@ endfunction(generate_f90_types regfile outfile)
 #
 function(set_registry_includes modules_location)
   foreach(IDIR IN ITEMS ${ARGN})
-    set(FAST_REGISTRY_INCLUDES
-      ${FAST_REGISTRY_INCLUDES} -I ${CMAKE_SOURCE_DIR}/${modules_location}/${IDIR}/src
+    set(OPENFAST_REGISTRY_INCLUDES
+      ${OPENFAST_REGISTRY_INCLUDES} -I ${CMAKE_SOURCE_DIR}/${modules_location}/${IDIR}/src
       CACHE INTERNAL "Registry includes paths")
   endforeach(IDIR IN ITEMS ${ARGN})
-endfunction(set_registry_includes reg_inc_var)
+endfunction(set_registry_includes)
