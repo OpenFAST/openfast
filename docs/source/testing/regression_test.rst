@@ -66,7 +66,7 @@ Manual driver configuration
 
 The regression test can be executed manually with the included driver
 ``openfast/reg_tests/manualRegressionTest.py``. This program reads a case list file at
-``openfast/reg_tests/r-test/glue-codes/fast/CaseList.md``. Cases can be removed
+``openfast/reg_tests/r-test/glue-codes/openfast/CaseList.md``. Cases can be removed
 or ignored with a ``#``. This driver program includes multiple optional flags
 which can be obtained by executing with the help option:
 ``openfast/reg_tests/manualRegressionTest.py -h``
@@ -105,12 +105,12 @@ but be aware that these three DISCON controllers must exist
 
 .. code-block:: bash
 
-  openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoDyn/DISCON.dll
-  openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoDyn/DISCON_ITIBarge.dll
-  openfast/build/reg_tests/glue-codes/fast/5MW_Baseline/ServoDyn/DISCON_OC3Hywind.dll
+  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoDyn/DISCON.dll
+  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoDyn/DISCON_ITIBarge.dll
+  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoDyn/DISCON_OC3Hywind.dll
 
 This can be accomplished manually with the CMake projects included with the DISCON source codes
-at ``openfast/reg_tests/r-test/glue-codes/fast/5MW_Baseline/ServoDyn/``
+at ``openfast/reg_tests/r-test/glue-codes/openfast/5MW_Baseline/ServoDyn/``
 or during CMake configuration by setting the ``CMAKE_INSTALL_PREFIX`` CMake variable.
 If using this method, the install prefix variable should point to an existing and appropriate
 location for CMake to place the compiled binaries. This is important because the NREL 5MW turbine external
@@ -122,7 +122,7 @@ the install step may fail or openfast binaries may be placed in some inappropria
 After CMake configuration, the automated regression test can be executed
 by running either of the commands ``make test`` or ``ctest`` from the build
 directory. If the entire OpenFAST package is to be built, CMake will configure
-CTest to find the new binary at ``openfast/build/glue-codes/fast/openfast``.
+CTest to find the new binary at ``openfast/build/glue-codes/openfast/openfast``.
 However, if the intention is to build only the test suite, the OpenFAST binary
 should be specified in the CMake configuration under the ``CTEST_OPENFAST_EXECUTABLE``
 flag. There is also a corresponding ``CTEST_[MODULE]_NAME`` flag for each module
