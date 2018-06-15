@@ -1189,15 +1189,14 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat>= AbortErrLev) return
             
-      
-      T_sh = 2.0_ReKi*(1.0_ReKi-fprimeprime) / St_sh
-      
-      !---------------------------------------------------------
-      ! Update the OtherStates
-      !---------------------------------------------------------
-   
-      LESF = (Cn_prime > Cn1) .or. ( Cn_prime < Cn2 ) ! LE separation can occur when this is .true.; assumption is that Cn2 <  0.0 and Cn1 > 0
-      TESF = fprimeprime < xd%fprimeprime_minus1(i,j) ! Separation point is moving towards the Leading Edge when .true.; otherwise separation point is moving toward trailing edge   
+
+   T_sh = 2.0_ReKi*(1.0_ReKi-fprimeprime) / St_sh  ! The shedding frequency for a vortices which have extended past the chord (it takes T_VL amount of time to travel along the chord)
+
+      ! Are we in the stall region?  If yes, then LESF is set to true.  This means we may have conditions for tracking a new vortex at the leading edge.
+   LESF = (Cn_prime > Cn1) .or. ( Cn_prime < Cn2 ) ! LE separation can occur when this is .true.; assumption is that Cn2 <  0.0 and Cn1 > 0
+
+      ! Determine if any vortex we are tracking is continuing to separate or is reattaching to the airfoil
+   TESF = fprimeprime < xd%fprimeprime_minus1(i,j) ! Separation point is moving towards the Leading Edge when .true.; otherwise separation point is moving toward trailing edge   
             
       ! Process VRTX-related quantities
       !!!!!!!!!!!!!!!!!!!!!
@@ -1205,62 +1204,81 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       VRTX = (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) > 0.0_ReKi)
       
 
+   !---------------------------------------------------------
+   ! Update the OtherStates
+   !---------------------------------------------------------
       
-!bjj: update sigma1 to value at t + dt      
-      OtherState%sigma1(i,j) = 1.0_ReKi
-      Kafactor      = Kalpha_f*dalpha0
-     ! if ( fprimeprime < 0.7 .AND.  fprimeprime > 0.3 ) then 
-         if ( TESF ) then  ! Separating flow
-            if (Kafactor < 0.0_ReKi) then
-               OtherState%sigma1(i,j) = 2.0_ReKi  ! This must be the first check
-            else if (.not. LESF ) then
-               OtherState%sigma1(i,j) = 1.0_ReKi !.4_ReKi    ! Leading edge separation has not occurred
-            else if (xd%fprimeprime_minus1(i,j) <= 0.7_ReKi) then ! For this else, LESF = True
-               OtherState%sigma1(i,j) = 2.0_ReKi !1.0_ReKi 
-            else
-               OtherState%sigma1(i,j) = 1.75_ReKi
-            end if
-         else ! Reattaching flow
-        
-            if (.not. LESF ) then
-               OtherState%sigma1(i,j) = 0.5_ReKi
-            end if
+!bjj: update sigma1 to value at t + dt 
+   
+      ! Set sigma1 to the default value.  T_f = T_f0 / sigma1
+   OtherState%sigma1(i,j) = 1.0_ReKi
+   
+   Kafactor      = Kalpha_f*dalpha0  ! indicates if the airfoil is moving towards alpha0 [ Kafactor < 0.0 ] or away [ Kafactor > 0.0]
+   
+   if ( TESF ) then  ! Flow is continuing or starting to separate
+      if (Kafactor < 0.0_ReKi) then
+            ! We are moving towards alpha0
+         OtherState%sigma1(i,j) = 2.0_ReKi  ! This must be the first check
+      else if (.not. LESF ) then
+         OtherState%sigma1(i,j) = 1.0_ReKi                  ! Leading edge separation has not occurred and we are moving away from alpha0
+      else if (xd%fprimeprime_minus1(i,j) <= 0.7_ReKi) then ! For this else, LESF = True and we are moving away from alpha0
+         OtherState%sigma1(i,j) = 2.0_ReKi 
+      else
+         OtherState%sigma1(i,j) = 1.75_ReKi
+      end if
+   else ! Reattaching flow 
+      
+      if (.not. LESF ) then
+         OtherState%sigma1(i,j) = 0.5_ReKi
+      end if
 
-            if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then  ! Still shedding a vortex?
-               OtherState%sigma1(i,j) = 0.25_ReKi
-            end if
-            if (Kafactor > 0.0_ReKi) then
-               OtherState%sigma1(i,j) = 0.75_ReKi
-            end if
+      if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then  ! Still shedding a vortex?
+         OtherState%sigma1(i,j) = 0.25_ReKi
+      end if
+
+      if (Kafactor > 0.0_ReKi) then
+         OtherState%sigma1(i,j) = 0.75_ReKi
+      end if
             
-         end if
+   end if
       
-!bjj: update sigma3 to value at t + dt      
-         
-      OtherState%sigma3(i,j) = 1.0_ReKi
       
-      if ( (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) >= T_VL) ) then
-         OtherState%sigma3(i,j) = 3.0_ReKi
-         if (.not. TESF) then
-            OtherState%sigma3(i,j) = 4.0_ReKi
-            if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then
-               if (Kafactor < 0.0_ReKi) then
-                  OtherState%sigma3(i,j) = 2.0_ReKi
-               else
-                  OtherState%sigma3(i,j) = 1.0_ReKi
-               end if
-            end if
-         end if
-      else if (Kafactor < 0 ) then 
+!bjj: update sigma3 to value at t + dt   
+   
+      ! This is the default value for sigma3 which effects T_V = T_V0 / sigma3
+   OtherState%sigma3(i,j) = 1.0_ReKi
+   
+      ! Identify where the vortex is located relative to the chord 
+   
+      ! 1) Is the vortex past the trailing edge, but less than 2 chords?
+   if ( (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) >= T_VL) ) then
+         ! We want to diminish the effects of this vortex on Cn by setting a high value of sigma3
+      OtherState%sigma3(i,j) = 3.0_ReKi
+      if (.not. TESF) then
+            ! If we are reattaching the flow, then we when to diminish the current vortex's effects on Cn further
          OtherState%sigma3(i,j) = 4.0_ReKi
+            if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then
+            if (Kafactor < 0.0_ReKi) then
+               ! If we are moving towards alpha0, then we want to reduce the contribution of the vortex to Cn
+               OtherState%sigma3(i,j) = 2.0_ReKi
+            else
+               OtherState%sigma3(i,j) = 1.0_ReKi
+            end if
+            end if
       end if
+   else if (Kafactor < 0 ) then 
+         ! In this case, we want to diminish the effects of this vortex on Cn by setting a high value of sigma3
+      OtherState%sigma3(i,j) = 4.0_ReKi
+   end if
       
-      if ((.not. TESF) .and. (Kq_f*dalpha0 < 0.0_ReKi)) then
-         OtherState%sigma3(i,j) = 1.0_ReKi
-      end if
+      ! Finally, we will override all the previous values of sigma1 if we are reattaching flow and the rate of change of the of the angle of attack is slowing down
+      ! In this case we want to enhance the contribute of the vortex and set sigma3 = 1.0
+   if ((.not. TESF) .and. (Kq_f*dalpha0 < 0.0_ReKi)) then
+      OtherState%sigma3(i,j) = 1.0_ReKi
+   end if
    
       
-     
+   
       !---------------------------------------------------------
       ! Update the Discrete States, xd
       !---------------------------------------------------------
@@ -1294,11 +1312,11 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       xd%Cn_v_minus1(i,j)         = Cn_v
       xd%C_V_minus1(i,j)          = C_V
       OtherState%FirstPass(i,j)   = .false.
-   
-      if ( xd%tau_V(i,j) > 0.0 .or. LESF ) then                !! TODO:  Verify this condition 2/20/2015 GJH
-         xd%tau_V(i,j)          = xd%tau_V(i,j) + 2.0_ReKi*p%dt*u%U / p%c(i,j)  
+ 
+         ! If we are currently tracking a vortex, or we are in the stall region, increment tau_V
+      if ( xd%tau_V(i,j) > 0.0 .or. LESF ) then
+         xd%tau_V(i,j) = xd%tau_V(i,j) + 2.0_ReKi*p%dt*u%U / p%c(i,j)
       end if
-   
       
          ! If we a have been tracking a vortex and 1) it is now past the chord [T_VL] and 2) we have gone beyond the next shedding period [T_sh], and 
          !   3) we are continuing the flow serparation, we will shed the existing vortex so that we can create a new one at the leading edge
