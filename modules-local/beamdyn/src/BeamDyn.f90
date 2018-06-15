@@ -75,6 +75,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    REAL(BDKi)              :: denom
 
 
+   INTEGER(IntKi)          :: nelem
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
    character(*), parameter :: RoutineName = 'BD_Init'
@@ -249,6 +250,17 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
 
       ! initialization of output mesh values (used for initial guess to AeroDyn)
+   if (p%BldMotionNodeLoc==BD_MESH_QP) then
+      DO nelem=1,p%elem_total
+         CALL BD_DisplacementQP( nelem, p, x, MiscVar )
+         CALL BD_RotationalInterpQP( nelem, p, x, MiscVar )
+      end do
+   
+      call BD_QPDataVelocity( p, x, MiscVar ) ! set MiscVar%qp%vvv
+      call BD_QPDataAcceleration( p, OtherState, MiscVar ) ! set MiscVar%qp%aaa
+      
+   end if
+         
    CALL Set_BldMotion_NoAcc(p, x, MiscVar, y)
    y%BldMotion%TranslationAcc  = 0.0_BDKi
    y%BldMotion%RotationAcc     = 0.0_BDKi
@@ -684,6 +696,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    !local variables
    INTEGER(IntKi)                               :: i, j              ! generic counter index
    INTEGER(IntKi)                               :: indx              ! counter into index array (p%NdIndx)
+   INTEGER(IntKi)                               :: nUniqueQP         ! number of unique quadrature points (not double-counting nodes at element boundaries)
 
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
@@ -726,6 +739,8 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    p%n_fact     = InputFileData%n_fact             ! Factorization frequency
    p%quadrature = InputFileData%quadrature         ! Quadrature method: 1 Gauss 2 Trapezoidal
 
+   p%BldMotionNodeLoc = BD_MESH_FE
+   
    IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
        ! Number of Gauss points
        p%nqp = p%nodes_per_elem !- 1
@@ -734,6 +749,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
        p%refine = InputFileData%refine
        p%nqp = (InputFileData%InpBl%station_total - 1)*p%refine + 1
        p%qp_indx_offset = 0
+       p%BldMotionNodeLoc = BD_MESH_QP ! we want to output y%BldMotion at the blade input property stations, and this will be a short-cut       
    ENDIF
 
 
@@ -800,6 +816,8 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    ENDDO
 
 
+   SELECT CASE(p%BldMotionNodeLoc)
+   CASE (BD_MESH_FE)      
       CALL AllocAry(p%NdIndx,p%node_total,'p%NdIndx',ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(p%OutNd2NdElem,2,p%node_total,'p%OutNd2NdElem',ErrStat2,ErrMsg2)
@@ -818,6 +836,57 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
          END DO
       ENDDO
 
+   CASE (BD_MESH_QP)
+      IF (p%quadrature .EQ. GAUSS_QUADRATURE) THEN
+         nUniqueQP = p%nqp*p%elem_total + 2*p%qp_indx_offset
+          
+         CALL AllocAry(p%NdIndx, nUniqueQP,'p%NdIndx',ErrStat2,ErrMsg2)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         CALL AllocAry(p%OutNd2NdElem,2,nUniqueQP,'p%OutNd2NdElem',ErrStat2,ErrMsg2)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            if (ErrStat >= AbortErrLev) return
+            
+         DO i=1,nUniqueQP ! gauss quadrature doesn't have overlapping nodes
+            p%NdIndx(i) = i
+         END DO
+
+         indx = 2
+         DO i=1,p%elem_total
+            DO j=1,p%nqp ! gauss quadrature doesn't have overlapping nodes, but it does contain two end points 
+               p%OutNd2NdElem(1,indx) = j                       ! Node number. To go from an output node number to a node/elem pair
+               p%OutNd2NdElem(2,indx) = i                       ! Element number. To go from an output node number to a node/elem pair
+               indx = indx + 1;
+            END DO
+         ENDDO
+         p%OutNd2NdElem(1,1)         = 0             ! node: this end point isn't really a quadrature node - need to check how this is used!!!!
+         p%OutNd2NdElem(2,1)         = 1             ! element: this end point isn't really a quadrature node - need to check how this is used!!!!
+         p%OutNd2NdElem(1,nUniqueQP) = 0             ! node: this end point isn't really a quadrature node - need to check how this is used!!!!
+         p%OutNd2NdElem(2,nUniqueQP) = p%elem_total  ! element: this end point isn't really a quadrature node - need to check how this is used!!!!               
+
+      ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN  ! at least one quadrature point associated with each blade station
+         nUniqueQP = (p%nqp-1)*p%elem_total + 1
+          
+         CALL AllocAry(p%NdIndx, nUniqueQP,'p%NdIndx',ErrStat2,ErrMsg2)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         CALL AllocAry(p%OutNd2NdElem,2,nUniqueQP,'p%OutNd2NdElem',ErrStat2,ErrMsg2)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            if (ErrStat >= AbortErrLev) return
+         
+         p%NdIndx(1) = 1
+         p%OutNd2NdElem(:,1) = 1 ! note this is an array 
+         indx = 2   
+         DO i=1,p%elem_total
+            DO j=2,p%nqp ! trap quadrature contains overlapping nodes at element end points; we will skip the first node of each element (after the first one) 
+               p%NdIndx(indx) = (i-1)*p%nqp + j                 ! Index into BldMotion mesh (to number the nodes for output without using collocated nodes) 
+               p%OutNd2NdElem(1,indx) = j                       ! Node number. To go from an output node number to a node/elem pair
+               p%OutNd2NdElem(2,indx) = i                       ! Element number. To go from an output node number to a node/elem pair
+               indx = indx + 1;
+            END DO
+         ENDDO
+            
+      ENDIF
+      
+   END SELECT
 
    !...............................................
    ! Physical damping flag and 6 damping coefficients
@@ -915,6 +984,9 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
    ! y%BldMotion (for coupling with AeroDyn)
    !.................................
 
+   SELECT CASE (p%BldMotionNodeLoc)
+   CASE (BD_MESH_FE) ! This is how the NREL-version of BeamDyn works (output nodes at the finite element nodes)
+      
       NNodes = p%nodes_per_elem*p%elem_total ! this is the same as the number of FE nodes, with overlapping nodes at the element end points
       CALL MeshCreate( BlankMesh        = y%BldMotion        &
                       ,IOS              = COMPONENT_OUTPUT   &
@@ -975,6 +1047,31 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
                        ,ErrMess = ErrMsg2         )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat>=AbortErrLev) RETURN
+         
+   CASE (BD_MESH_QP) ! create the mesh at the quadrature points, which are the same as the blade input property stations for trapezoidal quadrature
+      
+      CALL MeshCopy( SrcMesh           = u%DistrLoad      &
+                    , DestMesh         = y%BldMotion      &
+                    , CtrlCode         = MESH_SIBLING     &
+                    , IOS              = COMPONENT_OUTPUT &
+                    , TranslationDisp  = .TRUE.           &
+                    , Orientation      = .TRUE.           &
+                    , TranslationVel   = .TRUE.           &
+                    , RotationVel      = .TRUE.           &
+                    , TranslationAcc   = .TRUE.           &
+                    , RotationAcc      = .TRUE.           &
+                    , ErrStat          = ErrStat2         &
+                    , ErrMess          = ErrMsg2          )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat>=AbortErrLev) RETURN
+      
+      
+   CASE DEFAULT
+   
+      CALL SetErrStat(ErrID_Fatal, "Invalid p%BldMotionNodeLoc.", ErrStat, ErrMsg, RoutineName )
+      
+   END SELECT   
+
 
 
    !.................................
@@ -1288,7 +1385,8 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       CALL AllocAry(m%MassM,        p%dof_node,p%node_total,p%dof_node,p%node_total,            'MassM',       ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%DampG,        p%dof_node,p%node_total,p%dof_node,p%node_total,            'DampG',       ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL AllocAry(m%BldInternalForceFE, p%dof_node,p%node_total,                     'Blade Internal Force info',  ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry(m%BldInternalForceFE, p%dof_node,p%node_total,         'Calculated Internal Force at FE',  ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry(m%BldInternalForceQP, p%dof_node,y%BldMotion%NNodes,   'Calculated Internal Force at QP',  ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       CALL AllocAry(m%Nrrr,         (p%dof_node/2),p%nodes_per_elem,p%elem_total,'Nrrr: rotation parameters relative to root',  ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -1356,7 +1454,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       m%qp%Fi = 0.0_BDKi      ! This could be output before it gets set.
 
    ! create copy of u%DistrLoad at y%BldMotion locations (for WriteOutput only)
-   if (p%OutInputs) then
+   if (p%OutInputs .and. p%BldMotionNodeLoc /= BD_MESH_QP ) then
 
          ! y%BldMotion and u%DistrLoad are not siblings, so we need to create
          ! mapping to output u%DistrLoad values at y%BldMotion nodes
@@ -1676,7 +1774,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          CALL BD_StaticElementMatrix( nelem, p%gravity, p, m )
       ENDDO
 
-
+      !FIXME: This is not tested for Gauss quadrature we might need to map across to the root position.
       CALL BD_InternalForceMoment( x, p, m )
    
          !FIXME: Check that this works for the static case. The internal force for dynamic case uses the reaction force for the first node.
@@ -3564,25 +3662,32 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
    INTEGER(IntKi)                :: idx_node_in_elem
    INTEGER(IntKi)                :: idx_node
    INTEGER(IntKi)                :: idx_qp
+   REAL(BDKi)                    :: Tmp6(6)
    REAL(BDKi)                    :: Tmp3(3)
    REAL(BDKi)                    :: PrevNodePos(3)
    INTEGER(IntKi)                :: i                          !< generic counter
    INTEGER(IntKi)                :: LastNode                   !< Last node in element to consider in integration in FE points
+   INTEGER(IntKi)                :: StartNode                  !< First node to consider in integration for QP points
    CHARACTER(*),        PARAMETER:: RoutineName = 'BD_InternalForceMoment'
 
 
       ! Initialize all values to zero.
    m%BldInternalForceFE(:,:) = 0.0_BDKi
+   m%BldInternalForceQP(:,:) = 0.0_BDKi
 
    m%EFint(:,:,:) = 0.0_BDKi
 
-!FIXME: these need to be computed based on jmj's equations
+
+      ! Note from ADP:  I expect the FE nodes to be correct with this approach.  The QP calculations further down are going to be inexact
+      !                 due to the integration weighting I am using (FEweights).  This needs further review.
+      !                 I don't like this method, but haven't found a better method yet.  I think a better approach may be to use the
+      !                inverse H' matrix and inverse shape functions, but I have not tried deriving that yet.
 
       ! Integrate the elastic force contributions from the tip inwards.  We only consider the shape function contributions at each QP beyond the current FE node.
       ! Note that FE node contributions at the start of an element should be contained in the last node of the preceeding element.
    DO nelem=p%elem_total,1,-1
       DO i=p%nodes_per_elem,1,-1
-            ! Integrate shape functions across the quadrature points (only consider the portion of the shape function beyond the current FE point location)
+            ! Integrate shape functions across the quadrature points to get FE nodes.
          DO idx_qp=p%nqp,1,-1
                ! Force contributions from current node
             m%EFint(1:3,i,nelem) =  m%EFint(1:3,i,nelem) &
@@ -3650,12 +3755,54 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
       m%BldInternalForceFE(4:6,1) =   -m%EFint(4:6,1,1)
    ENDIF
 
-         ! Rotate coords
+         ! Rotate coords to global reference frame
    DO i=1,SIZE(m%BldInternalForceFE,DIM=2)
       m%BldInternalForceFE(1:3,i) =  MATMUL(p%GlbRot,m%BldInternalForceFE(1:3,i))
       m%BldInternalForceFE(4:6,i) =  MATMUL(p%GlbRot,m%BldInternalForceFE(4:6,i))
    ENDDO
    
+
+
+   !  Internal reaction force at QP (if trap quadrature is used)
+   !  NOTE: the elastic force contributions are already calculated and stored at the quadrature point, but prior to the use
+   !        of the shape functions.  Therefore, some additional mathematics are required.
+
+   SELECT CASE (p%BldMotionNodeLoc)
+   CASE (BD_MESH_QP)
+
+      !  Using the FE node information above which includes the root reactions, we can reconstruct exactly what the QP data
+      !  is using the shape functions.  The reason for doing this is that the original QP information stored in m%qp%Fc is not
+      !  the elastic force directly, but rather must be integrated with ShpDer before yielding the FE point information.  To
+      !  retrieve the QP data, we take the FE node result with the root reaction, and perform an integration using the pseudo-
+      !  inverse of the ShpDer function to retrieve the QP reaction info.  Since the starting info includes the coordinate
+      !  transforms, we do not need to transform again.
+
+
+      DO idx_node=1,size(p%NdIndx)
+
+            ! Get the element and qp information
+         nelem    = p%OutNd2NdElem(2,idx_node)
+         idx_qp   = p%OutNd2NdElem(1,idx_node)
+
+            ! Integrate over the FE point information
+         Tmp6 = 0.0_BDKi
+         StartNode=p%node_elem_idx(p%elem_total,1)
+         DO i=1,p%nodes_per_elem
+            Tmp6 = Tmp6 + m%BldInternalForceFE(:,StartNode+i-1) * p%Shp(i,idx_qp)
+         ENDDO
+
+         m%BldInternalForceQP(:,idx_node) = Tmp6
+
+      ENDDO
+
+         ! Rotate coords to global reference frame
+      DO i=1,SIZE(m%BldInternalForceQP,DIM=2)
+         m%BldInternalForceQP(1:3,i) =  MATMUL(p%GlbRot,m%BldInternalForceQP(1:3,i))
+         m%BldInternalForceQP(4:6,i) =  MATMUL(p%GlbRot,m%BldInternalForceQP(4:6,i))
+      ENDDO
+   
+   END SELECT
+
    RETURN
 END SUBROUTINE BD_InternalForceMoment
 

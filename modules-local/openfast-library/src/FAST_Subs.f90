@@ -351,7 +351,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_BD%HubPos = ED%Output(1)%HubPtMotion%Position(:,1)
       InitInData_BD%HubRot = ED%Output(1)%HubPtMotion%RefOrientation(:,:,1)
             
-      DO k=1,p_FAST%nBeams  
+      p_FAST%BD_OutputSibling = .true.
+
+      DO k=1,p_FAST%nBeams
          InitInData_BD%RootName     = TRIM(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_BD))//TRIM( Num2LStr(k) )
          
          
@@ -379,12 +381,15 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          ELSEIF ( .NOT. EqualRealNos( p_FAST%dt_module( MODULE_BD ),dt_BD )) THEN
             CALL SetErrStat(ErrID_Fatal,"All instances of BeamDyn (one per blade) must have the same time step.",ErrStat,ErrMsg,RoutineName)
          END IF
-                        
-         ! HACK because BeamDyn shouldn't be run in static mode when coupled with FAST         
-         if (BD%p(k)%analysis_type == BD_STATIC_ANALYSIS) then! static
+                       
+         ! BeamDyn shouldn't be run in static mode when coupled with FAST
+         if (BD%p(k)%analysis_type == BD_STATIC_ANALYSIS) then ! static
             CALL SetErrStat(ErrID_Fatal,"BeamDyn cannot perform static analysis when coupled with FAST.",ErrStat,ErrMsg,RoutineName)
-         end if         
-         
+         end if
+
+            ! We're going to do fewer computations if the BD input and output meshes that couple to AD are siblings:
+         if (BD%p(k)%BldMotionNodeLoc /= BD_MESH_QP) p_FAST%BD_OutputSibling = .false.
+      
          if (ErrStat>=AbortErrLev) exit !exit this loop so we don't get p_FAST%nBeams of the same errors
          
       END DO
@@ -1511,7 +1516,8 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
    y_FAST%Module_Abrev( Module_IceD   ) = 'IceD'   
    
    p%n_substeps = 1                                                ! number of substeps for between modules and global/FAST time
-         
+   p%BD_OutputSibling = .false.
+   
    !...............................................................................................................................
    ! Read the primary file for the glue code:
    !...............................................................................................................................
@@ -4958,15 +4964,26 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
             call MeshWrVTK(p_FAST%TurbinePos, BD%Input(1,k)%DistrLoad, trim(p_FAST%OutFileRoot)//'.BD_DistrLoad'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, MeshMapData%y_BD_BldMotion_4Loads(k) )
             ! skipping PointLoad
          end do
+      elseif (p_FAST%BD_OutputSibling) then
+         do K=1,NumBl
+            call MeshWrVTK(p_FAST%TurbinePos, BD%Input(1,k)%DistrLoad, trim(p_FAST%OutFileRoot)//'.BD_Blade'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, BD%y(k)%BldMotion )
+            ! skipping PointLoad
+         end do
       end if
       
       
       do K=1,NumBl        
             ! BeamDyn outputs
          call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%ReactionForce, trim(p_FAST%OutFileRoot)//'.BD_ReactionForce_RootMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, BD%Input(1,k)%RootMotion )
-         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
-         ! skipping BldForce         
       end do  
+      
+      if (.not. p_FAST%BD_OutputSibling) then !otherwise this mesh has been put with the DistrLoad mesh
+         do K=1,NumBl
+               ! BeamDyn outputs
+         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
+      end do  
+      end if
+      
       
    ELSE if (allocated(ED%Input) .and. allocated(ED%Output)) then
       ! ElastoDyn
