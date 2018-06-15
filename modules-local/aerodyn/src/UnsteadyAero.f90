@@ -1204,11 +1204,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       !! NEW CODE 2/19/2015
       VRTX = (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) > 0.0_ReKi)
       
-      
-      if (( xd%tau_V(i,j) >= (T_VL + T_sh) ) .and. TESF)  then !.and. (TESF) RRD added 
-         xd%tau_V(i,j)     = 0.0_ReKi
-        ! LESF=.FALSE. !also added this
-      end if
+
       
 !bjj: update sigma1 to value at t + dt      
       OtherState%sigma1(i,j) = 1.0_ReKi
@@ -1238,9 +1234,6 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
             end if
             
          end if
-      !!!if (.not. LESF ) then  !RRD: trying to emulate the old AD14 SEPAR.f90 with SHIFT=NOT(LESF), go back to original commented!!! out above when done
-      !!!        OtherState%sigma1(i,j) = 0.667_ReKi
-      !!!end if
       
 !bjj: update sigma3 to value at t + dt      
          
@@ -1261,27 +1254,6 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       else if (Kafactor < 0 ) then 
          OtherState%sigma3(i,j) = 4.0_ReKi
       end if
-      
-      !   ! We are testing this heirarchical logic instead of the above block 5/29/2015
-      !if ( (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) >= T_VL) ) then
-      !   OtherState%sigma3(i,j) =  3.0_ReKi
-      !else if (.not. TESF) then
-      !   OtherState%sigma3(i,j) =  4.0_ReKi
-      !else if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then
-      !   if (Kafactor < 0.0_ReKi) then
-      !      OtherState%sigma3(i,j) =  2.0_ReKi
-      !   else
-      !      OtherState%sigma3(i,j) = 1.0_ReKi
-      !    end if           
-      !else if (Kafactor < 0 ) then 
-      !   OtherState%sigma3(i,j) =  4.0_ReKi
-      !end if
-      
-      !!!if ( (.not. VRTX) .OR. (.not. TESF) ) then !RRD: trying to emulate the old AD14 SEPAR.f90 with SHIFT=NOT(TESF), go back to original commented!!! out above when done
-      !!!       OtherState%sigma3(i,j) =  2_ReKi
-      !!!   else
-      !!!      OtherState%sigma3(i,j) = 1.0_ReKi
-      !!!endif
       
       if ((.not. TESF) .and. (Kq_f*dalpha0 < 0.0_ReKi)) then
          OtherState%sigma3(i,j) = 1.0_ReKi
@@ -1327,6 +1299,12 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
          xd%tau_V(i,j)          = xd%tau_V(i,j) + 2.0_ReKi*p%dt*u%U / p%c(i,j)  
       end if
    
+      
+         ! If we a have been tracking a vortex and 1) it is now past the chord [T_VL] and 2) we have gone beyond the next shedding period [T_sh], and 
+         !   3) we are continuing the flow serparation, we will shed the existing vortex so that we can create a new one at the leading edge
+      if (( xd%tau_V(i,j) >= (T_VL + T_sh) ) .and. TESF)  then !.and. (TESF) RRD added
+         xd%tau_V(i,j)          = 0.0_ReKi
+      end if
       
 #ifdef UA_OUTS
    m%TESF(i,j) = TESF  
