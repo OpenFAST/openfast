@@ -1198,10 +1198,8 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       ! Determine if any vortex we are tracking is continuing to separate or is reattaching to the airfoil
    TESF = fprimeprime < xd%fprimeprime_minus1(i,j) ! Separation point is moving towards the Leading Edge when .true.; otherwise separation point is moving toward trailing edge   
             
-      ! Process VRTX-related quantities
-      !!!!!!!!!!!!!!!!!!!!!
-      !! NEW CODE 2/19/2015
-      VRTX = (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) > 0.0_ReKi)
+      ! Is the vortex over the chord?  
+   VRTX = (xd%tau_V(i,j) > 0.0_ReKi) .and. (xd%tau_V(i,j) <= T_VL)
       
 
    !---------------------------------------------------------
@@ -1232,7 +1230,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
          OtherState%sigma1(i,j) = 0.5_ReKi
       end if
 
-      if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then  ! Still shedding a vortex?
+      if ( VRTX ) then  ! Still shedding a vortex, i.e., the current vortex is still over the chord?
          OtherState%sigma1(i,j) = 0.25_ReKi
       end if
 
@@ -1257,15 +1255,20 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       if (.not. TESF) then
             ! If we are reattaching the flow, then we when to diminish the current vortex's effects on Cn further
          OtherState%sigma3(i,j) = 4.0_ReKi
-            if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then
-            if (Kafactor < 0.0_ReKi) then
-               ! If we are moving towards alpha0, then we want to reduce the contribution of the vortex to Cn
-               OtherState%sigma3(i,j) = 2.0_ReKi
-            else
-               OtherState%sigma3(i,j) = 1.0_ReKi
-            end if
-            end if
+         
       end if
+      
+      ! 2) Is the vortex over the chord
+   else if ( VRTX ) then
+      if (Kafactor < 0.0_ReKi) then
+            ! If we are moving towards alpha0, then we want to reduce the contribution of the vortex to Cn
+         OtherState%sigma3(i,j) = 2.0_ReKi
+      else
+         OtherState%sigma3(i,j) = 1.0_ReKi
+      end if
+   
+      ! 3) Is the vortex ((past 2 chords or at the leading edge), and is the airfoil moving away from the stall region (towards alpha0).
+      ! NOTE: We could also end up here if tau_V = 0.0
    else if (Kafactor < 0 ) then 
          ! In this case, we want to diminish the effects of this vortex on Cn by setting a high value of sigma3
       OtherState%sigma3(i,j) = 4.0_ReKi
