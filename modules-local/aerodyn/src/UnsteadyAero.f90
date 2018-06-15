@@ -703,10 +703,10 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    
       ! Compute Cn_v using either Eqn 1.47 or 1.52 depending on operating conditions
 
-   factor = (alpha_filt_cur - alpha0) * Kalpha_f
    
-   if (xd%tau_V(i,j) > T_VL .AND. (factor > 0)) then 
-         ! The assertion is the T_V will always equal T_V0/2 when this condition is satisfied
+   if (xd%tau_V(i,j) > T_VL .AND. (Kalpha_f*dalpha0 < 0)) then ! .AND. (.not. LESF)
+         ! We no longer require that T_V will always equal T_V0/2 when this condition is satisfied as was the case in AD v13 GJH 7/20/2017
+         ! If we fall into this condition, we need to require we stay here until the current vortex is shed (i.e., tauV is reset to zero)
       Cn_v = xd%Cn_v_minus1(i,j)*exp(-ds/T_V)   ! Eqn 1.52    
    else      
       Cn_v = Get_ExpEqn( ds, T_V, xd%Cn_v_minus1(i,j), C_V, xd%C_V_minus1(i,j) )   ! Eqn 1.47
