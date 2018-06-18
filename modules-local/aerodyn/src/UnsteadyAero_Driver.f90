@@ -72,7 +72,8 @@ program UnsteadyAero_Driver
    real(DbKi), allocatable                       :: timeArr(:)
    real(ReKi), allocatable                       :: AOAarr(:)
    real(ReKi), allocatable                       :: Uarr(:) !RRD
-   
+   CHARACTER(200)                                :: git_commit
+   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'UnsteadyAero Driver', '', '' )  ! The version number of this program.
       ! Initialize the NWTC library
    call NWTC_Init()
    
@@ -81,8 +82,15 @@ program UnsteadyAero_Driver
    ErrStat = ErrID_None
    
    RoutineName = 'UnsteadyAero_Driver'
-    
-   print *, 'Running UnsteadyAero_Driver'
+   
+   
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( version )   
+      ! Obtain OpenFAST git commit hash
+   git_commit = QueryGitVersion()
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//GetNVD( version )//' a part of OpenFAST - '//TRIM(git_Commit)//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   
    
    
    
@@ -141,7 +149,7 @@ program UnsteadyAero_Driver
       dvrInitInp%Re           = 75  ! million
       dvrInitInp%UAMod        = 1
       dvrInitInp%Flookup      = .FALSE.
-      dvrInitInp%AirFoil1     = './OSU075_FAST.txt'
+      dvrInitInp%AirFoil1     = '.\OSU075_FAST.txt'
       dvrInitInp%SimMod       = 1
       dvrInitInp%NCycles      = 3.0
       dvrInitInp%Frequency    = 1.2 ! Hz

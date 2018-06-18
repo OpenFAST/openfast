@@ -24,7 +24,6 @@
 !**********************************************************************************************************************************
 MODULE NWTC_Library
 
-
          ! Compiling Notes:
          ! -----------------------------------
          ! Your project must include the following files:
@@ -76,71 +75,45 @@ MODULE NWTC_Library
          !!  (without this, it is possible [depending on the Sys*.f90 file used] that the screen output will be written to a 
          !!  file called "fort.7")
 
-
-
-   USE NWTC_Num  ! technically we don't need to specify this if we have ModMesh (because ModMesh USEs NWTC_Num)
-   USE ModMesh
+    USE NWTC_Num  ! technically we don't need to specify this if we have ModMesh (because ModMesh USEs NWTC_Num)
+    USE ModMesh
+    
 #ifndef NO_MESHMAPPING
-      ! Note that ModMesh_Mapping also includes LAPACK routines
-   USE ModMesh_Mapping  !contains PRIVATE statement so we must also include ModMesh
+    ! Note that ModMesh_Mapping also includes LAPACK routines
+    USE ModMesh_Mapping  !contains PRIVATE statement so we must also include ModMesh
 #endif
 
-   
+    IMPLICIT  NONE
 
-   IMPLICIT  NONE
+    CONTAINS
 
+    SUBROUTINE NWTC_Init( ProgNameIn, ProgVerIn, EchoLibVer )
+        ! Initializes use of NWTC library routines.
+        ! It sets constants (like pi) and opens the console
+        ! for writing if necessary. If requested, it will also 
+        ! write the NWTC version information to the screen.
+        
+        ! passed parameters
+        LOGICAL,      INTENT(IN), OPTIONAL :: EchoLibVer  ! A flag to tell NWTC_Init whether to echo the version of the Library to the screen.
+        CHARACTER(*), INTENT(IN), OPTIONAL :: ProgNameIn  ! The name of the program calling the library. (Note, modules should not use this input)
+        CHARACTER(*), INTENT(IN), OPTIONAL :: ProgVerIn   ! The version of the program calling the library. (Note, modules should not use this input)
 
-CONTAINS
+        ! Initialize ProgName and ProgVer if parameters have been passed
+        IF ( PRESENT(ProgNameIN) ) ProgName = ProgNameIN
+        IF ( PRESENT(ProgVerIn) ) ProgVer = ProgVerIn
+        
+        ! This routine calls all required initialization routines.
+        CALL SetConstants()
 
-!=======================================================================
-   SUBROUTINE NWTC_Init( ProgNameIn, ProgVerIn, EchoLibVer )
+        !mlb Let's get rid of this once FLUSH works.
+        !bjj: let's keep it so that we can open files or DLL to write somewhere besides the screen.... (we can get rid of FLUSH from OpenCon, though)
+        CALL OpenCon( )
 
-      ! Initializes use of NWTC library routines.
-      ! It sets constants (like pi) and opens the console
-      ! for writing if necessary. If requested, it will also 
-      ! write the NWTC version information to the screen.
-      
-      
-      ! passed parameters
-
-   LOGICAL, INTENT(IN), OPTIONAL             :: EchoLibVer                    ! A flag to tell NWTC_Init whether to echo the version of the Library to the screen.
-
-   CHARACTER(*), INTENT(IN), OPTIONAL        :: ProgNameIn                    ! The name of the program calling the library. (Note, modules should not use this input)
-   CHARACTER(*), INTENT(IN), OPTIONAL        :: ProgVerIn                     ! The version of the program calling the library. (Note, modules should not use this input)
-
-
-
-      ! Initialize ProgName and ProgVer if parameters have been passed
-
-   IF ( PRESENT( ProgNameIN ) ) THEN
-      ProgName = ProgNameIN
-   END IF
-
-   IF ( PRESENT( ProgVerIn ) ) THEN
-      ProgVer = ProgVerIn
-   END IF
-
-
-      ! This routine calls all required initialization routines.
-
-   CALL SetConstants()
-
-!mlb Let's get rid of this once FLUSH works.
-!bjj: let's keep it so that we can open files or DLL to write somewhere besides the screen.... (we can get rid of FLUSH from OpenCon, though)
-   CALL OpenCon( )
-
-
-      ! Write the version of the NWTC subroutine library that we are running
-
-   IF ( PRESENT( EchoLibVer ) ) THEN
-      IF ( EchoLibVer )   CALL DispNVD ( NWTC_Ver )
-   !ELSE
-   !   CALL DispNVD ( NWTC_Ver )
-   ENDIF
-
-
-   RETURN
-   END SUBROUTINE NWTC_Init
-!=======================================================================
-
+        ! Write the version of the NWTC subroutine library that we are running
+        IF ( PRESENT(EchoLibVer) ) THEN
+            IF (EchoLibVer) CALL DispNVD (NWTC_Ver)
+        ENDIF
+        
+    END SUBROUTINE NWTC_Init
+    
 END MODULE NWTC_Library

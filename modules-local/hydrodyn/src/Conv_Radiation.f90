@@ -40,7 +40,7 @@ MODULE Conv_Radiation
    REAL(DbKi), PARAMETER, PRIVATE       :: OnePlusEps  = 1.0 + EPSILON(OnePlusEps)   !< The number slighty greater than unity in the precision of DbKi.
 
 
-   TYPE(ProgDesc), PARAMETER            :: Conv_Rdtn_ProgDesc = ProgDesc( 'Conv_Radiation', 'v1.01.00', '23-Dec-2015' )
+   TYPE(ProgDesc), PARAMETER            :: Conv_Rdtn_ProgDesc = ProgDesc( 'Conv_Radiation', '', '' )
 
    
       ! ..... Public Subroutines ...................................................................................................
