@@ -4416,7 +4416,7 @@ END SUBROUTINE BD_CalcIC_Position
 !! The initial displacements/rotations and linear velocities are
 !! set to the root value; the angular velocities over the beam
 !! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
-SUBROUTINE BD_CalcIC_Velocity( TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
+SUBROUTINE BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
 
    REAL(BDKi),                   INTENT(IN   ):: TranslationVel(:,:) !< Translational velocities (3,NNodes)
    REAL(BDKi),                   INTENT(IN   ):: RotationVel(:,:)    !< Rotational velocities (3,NNodes)

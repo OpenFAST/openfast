@@ -1,7 +1,8 @@
 @test
 subroutine test_BD_ComputeIniNodalPosition()
     ! test branches
-    ! - calculation made for bd_5MW_dynamic regression test
+    ! - simple coefficients and eta--all 1.0
+    ! - random coefficients and eta
     
     use pFUnit_mod
     use BeamDyn_Subs

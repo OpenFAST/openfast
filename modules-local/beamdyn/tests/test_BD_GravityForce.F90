@@ -1,5 +1,7 @@
 @test
 subroutine test_BD_GravityForce()
+    ! test branches
+    ! - static simple beam under gravity
     
     use pFUnit_mod
     use BeamDyn

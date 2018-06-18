@@ -183,6 +183,18 @@ contains
         end do
         
     end function
+
+    type(BD_ContinuousStateType) function simpleContinuousStateType(dof_node, node_total) RESULT(x)
+        
+        integer, intent(in)  :: dof_node, node_total
+        integer              :: ErrStat
+        character(1024)      :: ErrMsg
+        
+        ! allocate arrays
+        CALL AllocAry(x%q, dof_node, node_total, 'x%q', ErrStat, ErrMsg)
+        CALL AllocAry(x%dqdt, dof_node, node_total, 'x%dqdt', ErrStat, ErrMsg)
+        
+    end function
     
     type(BD_InputFile) function simpleInputFile() RESULT(i)
         

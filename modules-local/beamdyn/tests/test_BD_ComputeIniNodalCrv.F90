@@ -1,7 +1,12 @@
 @test
 subroutine test_BD_ComputeIniNodalCrv()
     ! test branches
-    ! - calculation made for bd_5MW_dynamic regression test
+    ! - z-axis unit tangent vector, no rotation
+    ! - non-unit tanget vector, generates invalid rotation matrix
+    ! - random unit tanget vector, random positive rotation < 90 degrees
+    ! - random unit tanget vector, random negative rotation < 90 degrees
+    ! - random unit tanget vector, random positive rotation > 90 degrees
+    ! - random unit tanget vector, random negative rotation > 90 degrees
     
     use pFUnit_mod
     use BeamDyn_Subs
