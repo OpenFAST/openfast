@@ -695,7 +695,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
          fprime_m_minus1 = xd%fprime_m_minus1(i,j)        
       end if
    
-         ! Compute Df using Eqn 1.36b   
+         ! Compute Df using Eqn 1.36b   !BJJ: Note, for UAMod/=2, T_fc=T_f  
       Df_c            = Get_ExpEqn( ds, T_fc, xd%Df_c_minus1(i,j), fprime_c, fprime_c_minus1 )
    
          ! Compute fprimeprime using Eqn 1.36a
@@ -1336,6 +1336,9 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       end if
             
    end if
+
+   OtherState%sigma1c(i,j) = OtherState%sigma1(i,j) ! BJJ: set this new variable to get same results for Df_c in KelvinChain
+
       endif
       
       
@@ -1749,6 +1752,8 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       
          else ! UAMod == 2
                ! Eqn 1.45   : NOTE: This differs from manual in that Cm0 is added because it is subtracted in our version of fprimeprime_m
+!bjj: fprimeprime_m isn't initialized in this model any more!!!!
+fprimeprime_m = 0.0_ReKi
             Cm_FS = Cm0 + Cn_FS*fprimeprime_m + Cm_common
             alpha_prime_f = 0.0_ReKi
          end if   
