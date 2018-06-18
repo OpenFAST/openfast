@@ -1477,7 +1477,7 @@ subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
       ! initialize states, given parameters and initial inputs (in BD coordinates)
    CALL BD_CalcIC_Position(u_tmp,p,x, ErrStat2, ErrMsg2)
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL BD_CalcIC_Velocity(u_tmp,p,x)
+   CALL BD_CalcIC_Velocity(u_tmp%RootMotion%TranslationVel, u_tmp%RootMotion%RotationVel, p%elem_total, p%node_elem_idx, p%nodes_per_elem, p%uuN0, x)
    CALL Cleanup()
 
 CONTAINS
@@ -4416,11 +4416,15 @@ END SUBROUTINE BD_CalcIC_Position
 !! The initial displacements/rotations and linear velocities are
 !! set to the root value; the angular velocities over the beam
 !! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
-SUBROUTINE BD_CalcIC_Velocity( u, p, x)
+SUBROUTINE BD_CalcIC_Velocity( TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
 
-   TYPE(BD_InputType),           INTENT(IN   ):: u             !< Inputs at t (in BD coordinates)
-   TYPE(BD_ParameterType),       INTENT(IN   ):: p             !< Parameters
-   TYPE(BD_ContinuousStateType), INTENT(INOUT):: x             !< Continuous states at t
+   REAL(BDKi),                   INTENT(IN   ):: TranslationVel(:,:) !< Translational velocities (3,NNodes)
+   REAL(BDKi),                   INTENT(IN   ):: RotationVel(:,:)    !< Rotational velocities (3,NNodes)
+   INTEGER(IntKi),               INTENT(IN   ):: elem_total          !< Total number of elements
+   INTEGER(IntKi),               INTENT(IN   ):: node_elem_idx(:,:)  !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi),               INTENT(IN   ):: nodes_per_elem      !< Finite element (GLL) nodes per element
+   REAL(BDKi),                   INTENT(IN   ):: uuN0(:,:,:)         !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   TYPE(BD_ContinuousStateType), INTENT(INOUT):: x                   !< Continuous states at t
 
 
    INTEGER(IntKi)                             :: i
@@ -4436,17 +4440,17 @@ SUBROUTINE BD_CalcIC_Velocity( u, p, x)
 
    ! these values don't change in the loop:
    k=1 !when i=1, k=1
-   DO i=1,p%elem_total
-      temp_id = p%node_elem_idx(i,1)-1      ! Node just before the start of this element
-      DO j=k,p%nodes_per_elem
+   DO i=1,elem_total
+      temp_id = node_elem_idx(i,1)-1      ! Node just before the start of this element
+      DO j=k,nodes_per_elem
 
             ! Find distance vector from root
-         temp3 = (p%uuN0(1:3,j,i) + x%q(1:3,temp_id+j)) - (p%uuN0(1:3,1,1) + x%q(1:3,1))
+         temp3 = (uuN0(1:3,j,i) + x%q(1:3,temp_id+j)) - (uuN0(1:3,1,1) + x%q(1:3,1))
             ! Calculate translational velocity of tip relative to root, and add it to the root translational velocity
-         x%dqdt(1:3,temp_id+j) = u%RootMotion%TranslationVel(:,1) + cross_product(u%RootMotion%RotationVel(:,1),temp3)
+         x%dqdt(1:3,temp_id+j) = TranslationVel(:,1) + cross_product(RotationVel(:,1),temp3)
 
             ! Rotational velocity is the same as the root rotational velocity
-         x%dqdt(4:6,temp_id+j) = u%RootMotion%RotationVel(1:3,1)
+         x%dqdt(4:6,temp_id+j) = RotationVel(1:3,1)
       ENDDO
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
