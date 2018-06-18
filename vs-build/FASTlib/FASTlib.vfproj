@@ -557,6 +557,32 @@
 			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\build\types-files\Morison_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\build\types-files\Morison_Types.f90"/>
+		<File RelativePath="..\..\modules-local\hydrodyn\src\SS_Excitation.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\build\types-files\SS_Excitation_Types.f90"/>
 		<File RelativePath="..\..\modules-local\hydrodyn\src\SS_Radiation.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\build\types-files\SS_Radiation_Types.f90"/></FileConfiguration>
@@ -694,6 +720,7 @@
 		<File RelativePath="..\..\modules-local\hydrodyn\src\HydroDyn_Output.f90"/>
 		<File RelativePath="..\..\modules-local\hydrodyn\src\Morison.f90"/>
 		<File RelativePath="..\..\modules-local\hydrodyn\src\Morison_Output.f90"/>
+		<File RelativePath="..\..\modules-local\hydrodyn\src\SS_Excitation.f90"/>
 		<File RelativePath="..\..\modules-local\hydrodyn\src\SS_Radiation.f90"/>
 		<File RelativePath="..\..\modules-local\hydrodyn\src\UserWaves.f90"/>
 		<File RelativePath="..\..\modules-local\hydrodyn\src\WAMIT.f90"/>

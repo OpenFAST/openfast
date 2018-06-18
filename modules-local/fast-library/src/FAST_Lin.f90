@@ -94,7 +94,17 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, NumBl, ErrStat, ErrMsg)
       p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
       p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_AD
    end if
-   
+
+   ! LIN-TODO: Here is HydroDyn?
+   if ( p_FAST%CompHydro  == Module_HD ) then 
+      p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
+      p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_HD
+   end if
+   ! LIN-TODO: Here is MAP?
+   !if ( p_FAST%CompMooring  == Module_MAP ) then 
+   !   p_FAST%Lin_NumMods = p_FAST%Lin_NumMods + 1
+   !   p_FAST%Lin_ModOrder( p_FAST%Lin_NumMods ) = Module_MAP
+   !end if
    
    !.....................
    ! determine total number of inputs/outputs/contStates:
@@ -785,6 +795,57 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
    end if
    
    !.....................
+   ! HydroDyn
+   !.....................
+   
+      ! get the jacobians
+   call HD_JacobianPInput( t_global, HD%Input(1), HD%p, HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt(STATE_CURR), &
+                              HD%Output(1), HD%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_HD)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_HD)%Instance(1)%B )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+   call HD_JacobianPContState( t_global, HD%Input(1), HD%p, HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt(STATE_CURR), &
+                                  HD%Output(1), HD%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_HD)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_HD)%Instance(1)%A )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   
+      ! get the operating point
+   call HD_GetOP( t_global, HD%Input(1), HD%p, HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt(STATE_CURR), &
+                     HD%Output(1), HD%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_u, y_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_y, &
+                    x_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_x, dx_op=y_FAST%Lin%Modules(Module_HD)%Instance(1)%op_dx )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >=AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
+      ! write the module matrices:
+   if (p_FAST%LinOutMod) then
+            
+      OutFileName = trim(LinRootName)//'.'//TRIM(y_FAST%Module_Abrev(Module_HD))      
+      call WrLinFile_txt_Head(t_global, p_FAST, y_FAST, y_FAST%Lin%Modules(Module_HD)%Instance(1), OutFileName, Un, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >=AbortErrLev) then
+            call cleanup()
+            return
+         end if
+         
+      if (p_FAST%LinOutJac) then
+         ! Jacobians
+         !dXdx:
+         call WrPartialMatrix( y_FAST%Lin%Modules(Module_HD)%Instance(1)%A, Un, p_FAST%OutFmt, 'dXdx' )
+         
+         !dXdu:
+         call WrPartialMatrix( y_FAST%Lin%Modules(Module_HD)%Instance(1)%B, Un, p_FAST%OutFmt, 'dXdu', UseCol=y_FAST%Lin%Modules(Module_HD)%Instance(1)%use_u )
+         
+         ! dYdx:
+         call WrPartialMatrix( y_FAST%Lin%Modules(Module_HD)%Instance(1)%C, Un, p_FAST%OutFmt, 'dYdx', UseRow=y_FAST%Lin%Modules(Module_HD)%Instance(1)%use_y )
+         
+         !dYdu:
+         call WrPartialMatrix( y_FAST%Lin%Modules(Module_HD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', UseRow=y_FAST%Lin%Modules(Module_HD)%Instance(1)%use_y, &
+                                                                                                       UseCol=y_FAST%Lin%Modules(Module_HD)%Instance(1)%use_u )
+         
+      end if 
+      
+   !.....................
    ! Linearization of glue code Input/Output solve:
    !.....................
    
@@ -1409,7 +1470,23 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
 
    end if
       
-   
+! LIN-TODO: Implement HD-related solve
+      !............
+      ! \f$ \frac{\partial U_\Lambda^{HD}}{\partial y^{ED}} \end{bmatrix} = \f$ (dUdy block row 6=HD)
+      !............
+   if (p_FAST%CompHydro == MODULE_HD) then
+      call Linear_HD_InputSolve_dy( p_FAST, y_FAST, HD%Input(1), ED%Output(1), MeshMapData, dUdy, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   end if
+
+! LIN-TODO: Implement Map-related solve
+      !............
+      ! \f$ \frac{\partial U_\Lambda^{MAP}}{\partial y^{ED}} \end{bmatrix} = \f$ (dUdy block row 7=MAP)
+      !............
+   if (p_FAST%CompMooring == MODULE_MAP) then
+      call Linear_MAP_InputSolve_dy( p_FAST, y_FAST, MAPp%Input(1), ED%Output(1), MeshMapData, dUdy, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   end if
    
 END SUBROUTINE Glue_Jacobians
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1475,7 +1552,7 @@ END SUBROUTINE Linear_IfW_InputSolve_du_AD
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{ED}/du^{BD} and dU^{ED}/du^{AD} blocks (ED row) of dUdu. (i.e., how do changes in the AD and BD inputs affect the ED inputs?)
 SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, MeshMapData, dUdu, ErrStat, ErrMsg )
-
+!LIN-TODO: Augment this interface for HD and MAP
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST         !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST         !< Glue-code output parameters (for linearization)
    TYPE(ED_InputType),             INTENT(INOUT)  :: u_ED           !< ED Inputs at t
@@ -1597,6 +1674,36 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
          end do ! k
    
    END IF
+   
+   !..........
+   ! dU^{HD}/du^{BD}
+   !..........
+   
+   if ( p_FAST%CompHydro == Module_HD ) then 
+
+         HD_Start_mt = y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
+        
+         if ( u_HD%%Morison%DistribMesh%Committed ) then
+         HD_Start_mt = HD_Start_mt + u_HD%%Morison%DistribMesh%NNodes * 18      &      ! 3 forces + 3 moments at each node
+                                   + u_HD%%Morison%LumpedMesh%NNodes  * 18      &      ! 3 forces + 3 moments at each node
+                                   + u_HD%HubPtLoad%NNodes      * 3             ! 3 forces at the hub (so we start at the moments)
+   
+         ! Transfer HD loads to ED hub input:
+         ! we're mapping loads, so we also need the sibling meshes' displacements:
+         do k=1,p_FAST%nBeams
+            BD_Start = y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%LinStartIndx(LIN_INPUT_COL)
+            
+            CALL Linearize_Point_to_Point( BD%y(k)%ReactionForce, u_ED%HubPtLoad, MeshMapData%BD_P_2_ED_P(k), ErrStat2, ErrMsg2, BD%Input(1,k)%RootMotion, y_ED%HubPtMotion) !u_BD%RootMotion and y_ED%HubPtMotion contain the displaced positions for load calculations
+               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               
+               ! BD is source in the mapping, so we want M_{uSm}
+            if (allocated(MeshMapData%BD_P_2_ED_P(k)%dM%m_us )) then
+               call SetBlockMatrix( dUdu, MeshMapData%BD_P_2_ED_P(k)%dM%m_us, ED_Start_mt, BD_Start )
+            end if
+               
+         end do ! k
+   
+   end if
       
 END SUBROUTINE Linear_ED_InputSolve_du
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2536,9 +2643,9 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
    !  A
    !----------------------         
    !> \f{equation}{ A = 
-   !! \begin{bmatrix} A^{ED} & 0 \\ 0 & A^{BD} \end{bmatrix} - 
-   !! \begin{bmatrix} 0 & 0 & B^{ED} & 0 & 0 \\ 0 & 0 & 0 & B^{BD} & 0\end{bmatrix} \,
-   !! \begin{bmatrix} G \end{bmatrix}^{-1} \, \frac{\partial U}{\partial y} \, \begin{bmatrix} 0 & 0 \\ 0 & 0 \\ C^{ED} & 0 \\ 0 & C^{BD} \\ 0 & 0 \end{bmatrix}
+   !! \begin{bmatrix} A^{ED} & 0 & 0 \\ 0 & A^{BD} & 0 \\ 0 & 0 & A^{HD}\end{bmatrix} - 
+   !! \begin{bmatrix} 0 & 0 & B^{ED} & 0 & 0 & 0 & 0 \\ 0 & 0 & 0 & B^{BD} & 0 & 0 & 0 \\ 0 & 0 & 0 & 0 & 0 & B^{HD}\end{bmatrix} \,
+   !! \begin{bmatrix} G \end{bmatrix}^{-1} \, \frac{\partial U}{\partial y} \, \begin{bmatrix} 0 & 0 & 0 \\ 0 & 0 & 0 \\ C^{ED} & 0 & 0 \\ 0 & C^{BD} & 0 \\ 0 & 0 & 0 \\ 0 & 0 & C^{HD} \\ 0 & 0 & 0\end{bmatrix}
    !! \f}
    !y_FAST%Lin%Glue%A = y_FAST%Lin%Glue%A - matmul( y_FAST%Lin%Glue%B, tmp )  
    call LAPACK_GEMM( 'N', 'N', -1.0_R8Ki, y_FAST%Lin%Glue%B, tmp, 1.0_R8Ki, y_FAST%Lin%Glue%A, ErrStat2, ErrMsg2 )

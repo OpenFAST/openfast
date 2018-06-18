@@ -798,7 +798,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_HD%OutRootName   = p_FAST%OutFileRoot
       InitInData_HD%TMax          = p_FAST%TMax
       InitInData_HD%hasIce        = p_FAST%CompIce /= Module_None
-            
+      InitInData_HD%Linearize     = p_FAST%Linearize      
       
          ! if wave field needs an offset, modify these values (added at request of SOWFA developers):
       InitInData_HD%PtfmLocationX = p_FAST%TurbinePos(1) 
@@ -1761,7 +1761,6 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
       ! now, make sure we haven't asked for any modules that we can't yet linearize:
       if (p%CompInflow == MODULE_OpFM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the OpenFOAM coupling.',ErrStat, ErrMsg, RoutineName)
       if (p%CompAero == MODULE_AD14) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the AeroDyn v14 module.',ErrStat, ErrMsg, RoutineName)
-      if (p%CompHydro == MODULE_HD) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the HydroDyn module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompSub /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the substructure modules.',ErrStat, ErrMsg, RoutineName)
       if (p%CompMooring /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the mooring modules.',ErrStat, ErrMsg, RoutineName)
       if (p%CompIce /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the ice loading modules.',ErrStat, ErrMsg, RoutineName)
