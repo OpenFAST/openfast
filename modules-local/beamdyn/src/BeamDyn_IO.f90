@@ -1444,8 +1444,16 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    else
 
    ! Check to see if all OutNd(:) analysis points are existing analysis points:
+!bjj: FIXME!!!! THIS ISN'T NECESSARIALLY THE NUMBER OF NODES ON THIS MESH
+!      IF (p%BldMotionNodeLoc == BD_MESH_QP) THEN
+         if(InputFileData%quadrature .EQ. TRAP_QUADRATURE) then
+            nNodes = (InputFileData%InpBl%station_total - 1)*InputFileData%refine + 1  ! number of nodes on y%BldMotion mesh
+         else
          nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total  ! = p%nodes_per_elem*p%elem_total (number of nodes on y%BldMotion mesh)
-      
+         end if
+!      ELSE
+!         nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total + 1
+!      END IF
 
       do j=1,InputFileData%NNodeOuts
          if ( InputFileData%OutNd(j) < 1_IntKi .OR. InputFileData%OutNd(j) > nNodes ) then
@@ -1579,14 +1587,24 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
 
          !------------------------------------
          ! Sectional force resultants at Node 1 expressed in l, given in N
-      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(1:3,j))
+      SELECT CASE (p%BldMotionNodeLoc)
+      CASE (BD_MESH_FE)
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(1:3,j))
+      CASE (BD_MESH_QP)
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceQP(1:3,j))
+      END SELECT
       AllOuts( NFl( beta,1 ) ) = temp_vec(1)
       AllOuts( NFl( beta,2 ) ) = temp_vec(2)
       AllOuts( NFl( beta,3 ) ) = temp_vec(3)
       
          !------------------------------------
          ! Sectional moment resultants at Node 1 expressed in l, given in N-m
+      SELECT CASE (p%BldMotionNodeLoc)
+      CASE (BD_MESH_FE)
       temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(4:6,j))
+      CASE (BD_MESH_QP)
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceQP(4:6,j))
+      END SELECT
       AllOuts( NMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NMl( beta,3 ) ) = temp_vec(3)
@@ -1644,6 +1662,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       AllOuts( NRAl( beta,3 ) ) = temp_vec(3)*R2D
 
 
+      if (p%BldMotionNodeLoc == BD_MESH_FE) THEN !> FIXME: If we are on the finite element points, the input and output meshes are siblings, otherwise we need to multiply by a different orientation (if we're okay 
+                                                 !! with the nodes meaning something different) or we need to map the u2%PointLoad like we do for the m%u2%DistrLoad%Force loads.
          !-------------------------
          ! Applied point forces at Node 1 expressed in l, given in N
       temp_vec = MATMUL(y%BldMotion%Orientation(1:3,1:3,j_BldMotion),m%u2%PointLoad%Force(:,j))
@@ -1657,6 +1677,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       AllOuts( NPMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NPMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NPMl( beta,3 ) ) = temp_vec(3)
+      end if
       
 
    end do ! nodes
@@ -1664,6 +1685,33 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       ! to avoid unnecessary mesh mapping calculations, calculate these outputs only when we've requested them
    if (p%OutInputs) then
                
+      if (p%BldMotionNodeLoc == BD_MESH_QP) THEN ! If we are on the quadrature points, the input and output meshes are siblings
+         
+         do beta=1,p%NNodeOuts
+
+            j=p%OutNd(beta)
+            j_BldMotion = p%NdIndx(j)
+
+               !-------------------------
+               ! Applied distributed forces at Node 1 expressed in l, in N/m
+            temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%u2%DistrLoad%Force( :,j_BldMotion))
+            AllOuts( NDFl( beta,1 ) ) = temp_vec(1)
+            AllOuts( NDFl( beta,2 ) ) = temp_vec(2)
+            AllOuts( NDFl( beta,3 ) ) = temp_vec(3)
+         
+               !-------------------------
+               ! Applied distributed moments at Node 1 expressed in l, in N-m/m
+            temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%u2%DistrLoad%Moment(:,j_BldMotion))
+            AllOuts( NDMl( beta,1 ) ) = temp_vec(1)
+            AllOuts( NDMl( beta,2 ) ) = temp_vec(2)
+            AllOuts( NDMl( beta,3 ) ) = temp_vec(3)
+
+         end do ! nodes
+         
+         
+      else
+         
+         
             ! transfer the output motions to the input nodes for load transfer
          CALL Transfer_Line2_to_Line2( y%BldMotion, m%y_BldMotion_at_u, m%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1694,6 +1742,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
 
          end do ! nodes
          
+      end if
+
 
    end if
 
@@ -1854,7 +1904,15 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    ENDDO
 
 
+   select case (p%BldMotionNodeLoc)
+   case (BD_MESH_FE)  
       WRITE (UnSu, '(/,A)')  'Output nodes located at finite element nodes.'
+   case (BD_MESH_QP)  
+      WRITE (UnSu, '(/,A)')  'Output nodes located at quadrature points.'
+   case (BD_MESH_STATIONS)  
+      WRITE (UnSu, '(/,A)')  'Output nodes located at blade propery input station locations.'
+      !bjj: need to write where these nodes are located...
+   end select
    
 
    

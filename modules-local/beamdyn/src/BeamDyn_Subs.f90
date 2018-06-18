@@ -646,7 +646,9 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
    ! RootMotion orientation (due to blade twist), we will calculated it as though it was a regular node
          
    ! now fill in the other nodes
+   SELECT CASE (p%BldMotionNodeLoc)
       
+   CASE (BD_MESH_FE)
       
       DO i=1,p%elem_total
          DO j=1,p%nodes_per_elem
@@ -684,6 +686,45 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
          ENDDO
       ENDDO
       
+   CASE (BD_MESH_QP)
+      
+      DO i=1,p%elem_total
+         DO j=1,p%nqp
+            temp_id2 = (i-1)*p%nqp + j + p%qp_indx_offset            ! Index to a node within element i           
+
+               ! Calculate the translational displacement of each quadrature node in the FAST coordinate system,
+               ! referenced against the DCM of the blade root at T=0.
+            y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%uuu(1:3,j,i) )
+
+
+!bjj: note differences here compared to BDrot_to_FASTdcm
+!adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotatinoal displacement yet
+               ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
+               ! referenced against the DCM of the blade root at T=0.
+            CALL BD_CrvCompose( cc, m%qp%uuu(4:6,j,i), p%uu0(4:6,j,i), FLAG_R1R2 )
+            CALL BD_CrvCompose( cc0, p%Glb_crv, cc, FLAG_R1R2 )
+
+            CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
+               ! Store the DCM for the j'th node of the i'th element (in FAST coordinate system)
+            y%BldMotion%Orientation(1:3,1:3,temp_id2) = TRANSPOSE(temp_R)
+
+               ! Calculate the translation velocity and store in FAST coordinate system
+               ! referenced against the DCM of the blade root at T=0.
+            y%BldMotion%TranslationVel(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%vvv(1:3,j,i))
+
+               ! Calculate the rotational velocity and store in FAST coordinate system
+               ! referenced against the DCM of the blade root at T=0.
+            y%BldMotion%RotationVel(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%vvv(4:6,j,i))
+            
+         ENDDO
+      ENDDO
+      
+
+
+   CASE (BD_MESH_STATIONS)
+   END SELECT
+   
+      
 END SUBROUTINE Set_BldMotion_NoAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This routine calculates values for the y%BldMotion mesh.
@@ -698,6 +739,7 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
    INTEGER(IntKi)                               :: i
    INTEGER(IntKi)                               :: j
    INTEGER(IntKi)                               :: j_start !starting node on this element
+   INTEGER(IntKi)                               :: idx_node
    INTEGER(IntKi)                               :: temp_id
    INTEGER(IntKi)                               :: temp_id2
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Set_BldMotion_Mesh'
@@ -715,6 +757,10 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
        y%BldMotion%TranslationAcc(:,1)    = u%RootMotion%TranslationAcc(:,1)
        y%BldMotion%RotationAcc(:,1)       = u%RootMotion%RotationAcc(:,1)
          
+       SELECT CASE (p%BldMotionNodeLoc)
+      
+       CASE (BD_MESH_FE) ! This is how the NREL-version of BeamDyn works (output nodes at the finite element nodes)
+         
           j_start = 2 ! we'll skip the first node on the first element; otherwise we will start at the first node on the other elements
           DO i=1,p%elem_total
              DO j=j_start,p%nodes_per_elem
@@ -728,9 +774,102 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
              j_start = 1
           ENDDO
       
+       CASE (BD_MESH_QP)      
+      
+
+          m%qp%aaa(1:3,1,1) = u%RootMotion%TranslationAcc(:,1)
+          m%qp%aaa(4:6,1,1) = u%RootMotion%RotationAcc(:,1)
+
+            ! Calculate the and acceleration term at t+dt (OtherState%acc is at t+dt)
+            j_start = 2 ! we'll skip the first node on the first element; otherwise we will start at the first node on the other elements
+            DO i=1,p%elem_total
+                DO j=j_start,p%nqp
+            
+                ! Initialize to zero for summation, then recalculate accelerations at quadrature nodes based on accelerations at FE nodes
+                m%qp%aaa(:,j,i) = 0.0_BDKi
+                DO idx_node=j_start,p%nodes_per_elem
+                    m%qp%aaa(:,j,i) = m%qp%aaa(:,j,i) + p%Shp(idx_node,j) * m%RHS(:,p%node_elem_idx(i,1)-1+idx_node)
+                ENDDO 
+            
+                temp_id2 = (i-1)*p%nqp + j + p%qp_indx_offset            ! Index to a node within element i           
+
+                    ! Calculate the translational acceleration of each quadrature node in the FAST coordinate system,
+                    ! referenced against the DCM of the blade root at T=0.
+                y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%aaa(1:3,j,i) )
+
+                y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, m%qp%aaa(4:6,j,i) )
+                ENDDO
+                j_start = 1
+            ENDDO
+          
+       CASE (BD_MESH_STATIONS)
+       END SELECT
+
    END IF
    
 END SUBROUTINE Set_BldMotion_Mesh
+!> This routine calculates values for the y%BldMotion mesh.
+!-----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Set_BldMotion_InitAcc(p, u, OtherState, m, y)
+
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t - in the FAST coordinate system (NOT BD)
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
+   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables ! intent(out) so that we can update the accelerations here...
+   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
+                                                               !!   nectivity information does not have to be recalculated)
+   INTEGER(IntKi)                               :: i
+   INTEGER(IntKi)                               :: j
+   INTEGER(IntKi)                               :: j_start !starting node on this element
+   INTEGER(IntKi)                               :: temp_id
+   INTEGER(IntKi)                               :: temp_id2
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'Set_BldMotion_InitAcc'
+
+
+      ! The first node on the mesh is just the root location:   
+      y%BldMotion%TranslationAcc(:,1)    = u%RootMotion%TranslationAcc(:,1)
+      y%BldMotion%RotationAcc(:,1)       = u%RootMotion%RotationAcc(:,1)
+         
+      SELECT CASE (p%BldMotionNodeLoc)
+      
+      CASE (BD_MESH_FE) ! This is how the NREL-version of BeamDyn works (output nodes at the finite element nodes)
+         
+         j_start = 2 ! we'll skip the first node on the first element; otherwise we will start at the first node on the other elements
+         DO i=1,p%elem_total
+            DO j=j_start,p%nodes_per_elem
+               temp_id = (i-1)*(p%nodes_per_elem-1)+j
+               temp_id2= (i-1)*p%nodes_per_elem+j
+               
+               y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, OtherState%Acc(1:3,temp_id) )
+
+               y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, OtherState%Acc(4:6,temp_id) )
+            ENDDO
+            j_start = 1
+         ENDDO
+      
+      CASE (BD_MESH_QP)      
+      
+         ! Calculate the and acceleration term at t+dt (OtherState%acc is at t+dt)
+         j_start = 2 ! we'll skip the first node on the first element; otherwise we will start at the first node on the other elements
+         DO i=1,p%elem_total
+            DO j=j_start,p%nqp
+                        
+               temp_id2 = (i-1)*p%nqp + j + p%qp_indx_offset            ! Index to a node within element i           
+
+                  ! Calculate the translational acceleration of each quadrature node in the FAST coordinate system,
+                  ! referenced against the DCM of the blade root at T=0.
+               y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot,m%qp%aaa(1:3,j,i) )
+
+               y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot, m%qp%aaa(4:6,j,i) )
+            ENDDO
+            j_start = 1
+         ENDDO
+          
+      CASE (BD_MESH_STATIONS)
+      END SELECT
+
+      
+END SUBROUTINE Set_BldMotion_InitAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine finds the (initial) nodal position and curvature based on a relative position, eta, along the blade.
 !! The key points are used to obtain the z coordinate of the physical distance along the blade, and POS and CRV vectors are returned
