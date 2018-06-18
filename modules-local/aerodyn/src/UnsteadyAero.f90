@@ -240,9 +240,9 @@ real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha, AFI
       if (ErrStat >= AbortErrLev) return
    
    if (UAMod == 2) then
-       denom = ( alpha-alpha0 )*(alpha)    !NOTE: Added back (alpha) because idling cases with alpha 90º show problems with tan(alpha), the code should match steady state if the formulation in the calculation of Cc is in agreement with this formulation
+      denom = ( alpha-alpha0 )*(alpha)    !NOTE: Added back (alpha) because idling cases with alpha 90º show problems with tan(alpha), the code should match steady state if the formulation in the calculation of Cc is in agreement with this formulation
    else
-   denom = ( alpha-alpha0 )*tan(alpha)  !NOTE,NOTE: On 8/27/15 GJH Added back tan(alpha) because results for Fy did not match steady state without it. ! NOTE: We removed the tan(alpha) term from the equation and repace with another (alpha-alpha0) term, per Rick's suggestion 8/13/2015.    *tan(alpha)
+      denom = ( alpha-alpha0 )*tan(alpha)  !NOTE,NOTE: On 8/27/15 GJH Added back tan(alpha) because results for Fy did not match steady state without it. ! NOTE: We removed the tan(alpha) term from the equation and repace with another (alpha-alpha0) term, per Rick's suggestion 8/13/2015.    *tan(alpha)
    endif
    
    !denom = ( alpha-alpha0 )**2  !testing again On 9/16/15
@@ -390,10 +390,10 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    real(ReKi)                :: beta_M                                        ! Prandtl-Glauert compressibility correction factor,  sqrt(1-M**2)
    real(ReKi)                :: beta_M_Sqrd                                   ! square of the Prandtl-Glauert compressibility correction factor,  (1-M**2)
                  
-   real(ReKi)				 :: Cn_temp
-   real(ReKi)				 :: Cm_temp
-   real(ReKi)				 :: Cl_temp
-   real(ReKi)				 :: Cd_temp                                  
+   real(ReKi)                 :: Cn_temp
+   real(ReKi)                 :: Cm_temp
+   real(ReKi)                 :: Cl_temp
+   real(ReKi)                 :: Cd_temp
    
    real(ReKi)                :: T_fc
    real(ReKi)                :: T_fm
@@ -526,10 +526,11 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       
       ! These quantities are needed for the update state calculations, but are then updated themselves based on the logic which follows
    T_f           = T_f0 / OtherState%sigma1(i,j)       ! Eqn 1.37
-   T_fc           = T_f0 / OtherState%sigma1c(i,j)     ! NOTE: Added equations for time constants of fc (for Cc) and fm (for Cm) with UAMod=2
-   T_fm           = T_f0 / OtherState%sigma1m(i,j)
+   T_fc          = T_f0 / OtherState%sigma1c(i,j)      ! NOTE: Added equations for time constants of fc (for Cc) and fm (for Cm) with UAMod=2
+   T_fm          = T_f0 / OtherState%sigma1m(i,j)
    T_V           = T_V0 / OtherState%sigma3(i,j)       ! Eqn 1.48
    
+    
    ! Compute Kq  using Eqn 1.9  with time-shifted q s
 #ifdef TEST_THEORY
    Kq            = ( q_f_cur  - q_f_minus1 ) / p%dt
@@ -609,7 +610,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    end if
    
    if ( p%UAMod == 2 ) then
-      Cc_pot          = C_nalpha_circ * alpha_e*(u%alpha)    !Added this equation with (u%alpha) instead of tan(alpha_e+alpha0). First, tangent gives problems in idling conditions at angles of attack of 90º. Second, the angle there is a physical concept according to the original BL model, and u%alpha could be more suitable
+      Cc_pot          = C_nalpha_circ * alpha_e*(u%alpha)    !Added this equation with (u%alpha) instead of tan(alpha_e+alpha0). First, tangent gives problems in idling conditions at angles of attack of 90 degrees. Second, the angle there is a physical concept according to the original BL model, and u%alpha could be more suitable
    else   
       ! Compute Cc_pot using eqn 1.21
    Cc_pot          = Cn_alpha_q_circ*tan(alpha_e+alpha0)
@@ -637,13 +638,13 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  
 ! This code is taken from ADv14 but doesn't reflect the original intent of the UA theory document
 #ifdef TEST_THEORY
-   IF  (( alpha_filt_cur * Cn_prime_diff < 0. ).AND.(.NOT.(p%UAMod == 2))) THEN
-
+IF ( p%UAMod /= 2 ) THEN
+   IF ( alpha_filt_cur * Cn_prime_diff < 0. ) THEN
       T_f   = T_f0*1.5
-   ELSEIF (.NOT.(p%UAMod == 2)) THEN
-
+   ELSE
       T_f   = T_f0
    ENDIF
+ENDIF
 #endif   
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  
       ! Compute alpha_f using Eqn 1.34
@@ -676,15 +677,16 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
 
-      if ( p%UAMod == 2 ) then	!Added this part of the code to obtain fm
+      if ( p%UAMod == 2 ) then   !Added this part of the code to obtain fm
          call GetSteadyOutputs(AFInfo, u%alpha, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat2, ErrMsg2)
-	     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-	     Cn_temp = Cl_temp*cos(alpha_f) + (Cd_temp-Cd0)*sin(alpha_f)
-	     if (abs(Cn_temp) < 0.01 ) then
-	        fprime_m = 0.0
-	     else            
-	        fprime_m = (Cm_temp - Cm0) / Cn_temp 
-	     end if
+           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         Cn_temp = Cl_temp*cos(alpha_f) + (Cd_temp-Cd0)*sin(alpha_f)
+         if (abs(Cn_temp) < 0.01 ) then
+            fprime_m = 0.0
+         else
+            fprime_m = (Cm_temp - Cm0) / Cn_temp 
+         end if
       endif
      
       if (OtherState%FirstPass(i,j)) then
@@ -702,7 +704,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       fprimeprime_c   = fprime_c - Df_c
       if ( p%UAMod == 2 ) then  !Added this part of the code to obtain the delayed fm
          Df_m            = Get_ExpEqn( ds, T_fm, xd%Df_m_minus1(i,j), fprime_m, fprime_m_minus1 )
-	 fprimeprime_m   = fprime_m - Df_m
+         fprimeprime_m   = fprime_m - Df_m
       endif
    else
       fprimeprime_c   = fprimeprime
@@ -888,8 +890,8 @@ subroutine UA_InitStates_Misc( p, xd, OtherState, m, ErrStat, ErrMsg )
    m%FirstWarn_M = .true.   
    
    OtherState%sigma1    = 1.0_ReKi
-   OtherState%sigma1c    = 1.0_ReKi
-   OtherState%sigma1m    = 1.0_ReKi
+   OtherState%sigma1c   = 1.0_ReKi
+   OtherState%sigma1m   = 1.0_ReKi
    OtherState%sigma3    = 1.0_ReKi
    
 #ifdef UA_OUTS
@@ -1252,7 +1254,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
 
       ! Determine if any vortex we are tracking is continuing to separate or is reattaching to the airfoil
    if (p%UAMod == 2) then   !Added specific logic for UAMod=2
-      TESF = ((ABS(Cn_prime)>ABS(xd%Cn_prime_minus1(i,j))))
+      TESF = ABS( Cn_prime ) > ABS( xd%Cn_prime_minus1(i,j) )
    else
       TESF = fprimeprime < xd%fprimeprime_minus1(i,j) ! Separation point is moving towards the Leading Edge when .true.; otherwise separation point is moving toward trailing edge   
    end if
@@ -1274,43 +1276,48 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
    
    Kafactor      = Kalpha_f*dalpha0  ! indicates if the airfoil is moving towards alpha0 [ Kafactor < 0.0 ] or away [ Kafactor > 0.0]
    
-   if (p%UAMod == 2) then   !Added modifiers for Tfn, Tfc and Tfm depending on the aerodynamic state, this set of values can be optimized for different airfoils or wind conditions
-      if ( fprimeprime>0.7 .AND. TESF .AND. .NOT.LESF .AND. .NOT.VRTX ) then
-	      OtherState%sigma1(i,j)=1.0!0.2
-	      OtherState%sigma1c(i,j)=1.0!0.2
-	      OtherState%sigma1m(i,j)=1.0!0.1
-      elseif ((fprimeprime<=0.7).AND.(TESF).AND.(.NOT.LESF).AND. NOT.VRTX ) then
-	      OtherState%sigma1(i,j)=1.0!0.5
-	      OtherState%sigma1c(i,j)=1.0!0.8
-	      OtherState%sigma1m(i,j)=1.0!0.3
-	  elseif ((xd%tau_V(i,j)<T_VL).AND.(xd%tau_V(i,j)>0.001).AND.(TESF)) then
-          OtherState%sigma1(i,j)=2.0!4.0
-          OtherState%sigma1c(i,j)=1.0!1.0
-          OtherState%sigma1m(i,j)=1.0!0.2
-     elseif ((TESF).AND.(LESF)) then
-	   OtherState%sigma1(i,j)=2.0!4.0
-	   OtherState%sigma1c(i,j)=1.0!1.0
-	   OtherState%sigma1m(i,j)=1.0!0.3
-	elseif ((LESF).AND.(.NOT.TESF)) then
-	   OtherState%sigma1(i,j)=1.0!0.2
-	   OtherState%sigma1c(i,j)=1.0!0.2
-	   OtherState%sigma1m(i,j)=1.0!0.2
-	elseif ((fprimeprime<=0.7).AND.(.NOT.TESF)) then
-	   OtherState%sigma1(i,j)=0.5!0.5
-	   OtherState%sigma1c(i,j)=1.0!0.5
-	   OtherState%sigma1m(i,j)=1.0!2.0
-	elseif ((fprimeprime>0.7).AND.(.NOT.TESF)) then
-	   OtherState%sigma1(i,j)=0.5!4.0
-	   OtherState%sigma1c(i,j)=1.0!0.4
-	   OtherState%sigma1m(i,j)=1.0!2.0
-	else
-	   OtherState%sigma1(i,j)=1.0_ReKi
-	   OtherState%sigma1c(i,j)=1.0_ReKi
-	   OtherState%sigma1m(i,j)=1.0_ReKi
-        endif
-     else
+if (p%UAMod == 2) then   !Added modifiers for Tfn, Tfc and Tfm depending on the aerodynamic state, this set of values can be optimized for different airfoils or wind conditions
+      if ( TESF .AND. .NOT.LESF .AND. .NOT.VRTX ) then
+         if ( fprimeprime>0.7 ) then
+            OtherState%sigma1( i,j)=1.0!0.2
+            OtherState%sigma1c(i,j)=1.0!0.2
+            OtherState%sigma1m(i,j)=1.0!0.1
+         else !if ((fprimeprime<=0.7).AND.(TESF).AND.(.NOT.LESF).AND. NOT.VRTX ) then
+            OtherState%sigma1( i,j)=1.0!0.5
+            OtherState%sigma1c(i,j)=1.0!0.8
+            OtherState%sigma1m(i,j)=1.0!0.3
+         endif
+      elseif ((xd%tau_V(i,j)<T_VL).AND.(xd%tau_V(i,j)>0.001).AND.(TESF)) then
+         OtherState%sigma1( i,j)=2.0!4.0
+         OtherState%sigma1c(i,j)=1.0!1.0
+         OtherState%sigma1m(i,j)=1.0!0.2
+      elseif ( LESF ) then
+         if (TESF) then
+            OtherState%sigma1( i,j)=2.0!4.0
+            OtherState%sigma1c(i,j)=1.0!1.0
+            OtherState%sigma1m(i,j)=1.0!0.3
+         else !if ((LESF).AND.(.NOT.TESF)) then
+            OtherState%sigma1( i,j)=1.0!0.2
+            OtherState%sigma1c(i,j)=1.0!0.2
+            OtherState%sigma1m(i,j)=1.0!0.2
+         endif
+      elseif ( .NOT.TESF ) then
+         if (fprimeprime<=0.7) then
+            OtherState%sigma1( i,j)=0.5!0.5
+            OtherState%sigma1c(i,j)=1.0!0.5
+            OtherState%sigma1m(i,j)=1.0!2.0
+          else !if ((fprimeprime>0.7).AND.(.NOT.TESF)) then
+            OtherState%sigma1( i,j)=0.5!4.0
+            OtherState%sigma1c(i,j)=1.0!0.4
+            OtherState%sigma1m(i,j)=1.0!2.0
+         endif
+      else
+         OtherState%sigma1( i,j)=1.0_ReKi
+         OtherState%sigma1c(i,j)=1.0_ReKi
+         OtherState%sigma1m(i,j)=1.0_ReKi
+      endif
+else
    if ( TESF ) then  ! Flow is continuing or starting to separate
-
       if (Kafactor < 0.0_ReKi) then
             ! We are moving towards alpha0
          OtherState%sigma1(i,j) = 2.0_ReKi  ! This must be the first check
@@ -1339,7 +1346,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
 
    OtherState%sigma1c(i,j) = OtherState%sigma1(i,j) ! BJJ: set this new variable to get same results for Df_c in KelvinChain
 
-      endif
+end if
       
       
 !bjj: update sigma3 to value at t + dt   
@@ -1347,7 +1354,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       ! This is the default value for sigma3 which effects T_V = T_V0 / sigma3
    OtherState%sigma3(i,j) = 1.0_ReKi
    
-      if (p%UAMod /= 2) then  !this is not applied for UAMod=2, Tv has always the same value
+if (p%UAMod /= 2) then  !this is not applied for UAMod=2, Tv has always the same value
       ! Identify where the vortex is located relative to the chord 
    
       ! 1) Is the vortex past the trailing edge, but less than 2 chords?
@@ -1375,7 +1382,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
          ! In this case, we want to diminish the effects of this vortex on Cn by setting a high value of sigma3
       OtherState%sigma3(i,j) = 4.0_ReKi
    end if
-      endif  
+endif  
       
       ! Finally, we will override all the previous values of sigma1 if we are reattaching flow and the rate of change of the of the angle of attack is slowing down
       ! In this case we want to enhance the contribute of the vortex and set sigma3 = 1.0
@@ -1404,7 +1411,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       xd%Kprime_q_minus1(i,j)     = Kprime_q
       xd%Dp_minus1(i,j)           = Dp
       xd%Cn_pot_minus1(i,j)       = Cn_pot
-      xd%Cn_prime_minus1(i,j)  = Cn_prime
+      xd%Cn_prime_minus1(i,j)     = Cn_prime
       xd%fprimeprime_minus1(i,j)  = fprimeprime
       xd%Df_minus1(i,j)           = Df
       if (p%Flookup) then
@@ -1424,30 +1431,32 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       OtherState%FirstPass(i,j)   = .false.
  
          ! If we are currently tracking a vortex, or we are in the stall region, increment tau_V
-      if (p%UAMod == 2) then    !Added specific logic for UAMod=2 
+      if (p%UAMod == 2) then    !Added specific logic for UAMod=2
+      
          if ( (.NOT.LESF .AND. .NOT.VRTX) .OR. & 
               (.NOT.TESF .AND. xd%tau_V(i,j)<0.0001) .OR.& 
               (.NOT.TESF .AND. xd%tau_V(i,j) + 2.0_ReKi*p%dt*u%U/p%c(i,j) > 2.*T_VL) ) then 
             xd%tau_V(i,j)=0.0 
          else 
-         xd%tau_V(i,j) = xd%tau_V(i,j) + 2.0_ReKi*p%dt*u%U / p%c(i,j)
+            xd%tau_V(i,j) = xd%tau_V(i,j) + 2.0_ReKi*p%dt*u%U / p%c(i,j)
             if (( xd%tau_V(i,j) >= (T_VL + T_sh) ) .and. TESF)  then !.and. (TESF) RRD added  
                xd%tau_V(i,j) = xd%tau_V(i,j)-(T_VL + T_sh) 
                ! LESF=.FALSE. !also added this 
             end if 
-      end if
-      else 
+         endif 
+         
+      else
          if ( xd%tau_V(i,j) > 0.0 .or. LESF ) then
             xd%tau_V(i,j) = xd%tau_V(i,j) + 2.0_ReKi*p%dt*u%U / p%c(i,j)
-      endif
+         end if
       
 !BJJ: check this logic because it's not clear what UAMod=2 should be doing with this merge conflict
 
-         ! If we a have been tracking a vortex and 1) it is now past the chord [T_VL] and 2) we have gone beyond the next shedding period [T_sh], and 
-         !   3) we are continuing the flow serparation, we will shed the existing vortex so that we can create a new one at the leading edge
-      if (( xd%tau_V(i,j) >= (T_VL + T_sh) ) .and. TESF)  then !.and. (TESF) RRD added
-         xd%tau_V(i,j)          = 0.0_ReKi
-      end if
+            ! If we a have been tracking a vortex and 1) it is now past the chord [T_VL] and 2) we have gone beyond the next shedding period [T_sh], and 
+            !   3) we are continuing the flow serparation, we will shed the existing vortex so that we can create a new one at the leading edge
+         if (( xd%tau_V(i,j) >= (T_VL + T_sh) ) .and. TESF)  then !.and. (TESF) RRD added
+            xd%tau_V(i,j)          = 0.0_ReKi
+         end if
       end if
       
 #ifdef UA_OUTS
@@ -1761,15 +1770,13 @@ fprimeprime_m = 0.0_ReKi
             ! Eqn 1.57
          Cm_v     = -x_cp_bar*( 1-cos( pi*xd%tau_v(misc%iBladeNode, misc%iBlade)/T_VL ) )*Cn_v
    
-         if ((xd%tau_v(misc%iBladeNode, misc%iBlade) > 0.0).AND.(p%UAMod == 2)) then   !Added specific logic for UAMod=2
-            y%Cm   = Cm_FS + Cm_v   ! Eqn 1.58 - 1.60
-         elseif (p%UAMod == 2) then 
+         if (p%UAMod == 2 .and. xd%tau_v(misc%iBladeNode, misc%iBlade) <= 0.0 ) then !Added specific logic for UAMod=2
             y%Cm   = Cm_FS
          else
                ! Eqn 1.58 - 1.60
             y%Cm   = Cm_FS + Cm_v
+         end if
       end if
-   end if
    end if
    
 #ifdef UA_OUTS
