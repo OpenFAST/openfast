@@ -622,6 +622,10 @@ ENDIF
    
          ! Compute fprimeprime using Eqn 1.36a
       KC%fprimeprime_c   = KC%fprime_c - KC%Df_c
+      
+      IF ( p%UAMod == UA_Gonzalez ) THEN
+         KC%fprimeprime_m   = KC%fprime_m - KC%Df_m
+      END IF
    else
       KC%fprime_c = KC%fprime
       KC%Df_c = KC%Df
@@ -1556,7 +1560,6 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             end if       ! Removed part of the code related to fprimeprime_m, which has been added in other part of the code        
          
             
-            KC%fprimeprime_m = 0.0_ReKi
             Cm_temp = 0.0_ReKi !reset this to zero, only for output purposes
          
          else
@@ -1584,7 +1587,6 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             Cm_FS = Cm_temp + Cm_common                                                                                                            ! Eqn 1.44
       
          else ! UAMod == UA_Gonzalez
-                  !bjj: Note that fprimeprime_m is 0 in this equation now.
             Cm_FS = BL_p%Cm0 + KC%Cn_FS*KC%fprimeprime_m + Cm_common                                                                               ! Eqn 1.45
             alpha_prime_f = 0.0_ReKi
          end if   
