@@ -77,7 +77,7 @@ subroutine test_BD_InputGlobalLocal()
     inputtype%RootMotion%Orientation(:,:,1) = parametertype%GlbRot
     
     ! call the subroutine to test
-    call BD_InputGlobalLocal(parametertype, inputtype)
+    call BD_InputGlobalLocal(parametertype%GlbRot, parametertype%node_total, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad)
     
     ! test the values
     @assertEqual(inputtype%RootMotion%TranslationDisp(:,1), vectorAfterRotation, tolerance, testname)

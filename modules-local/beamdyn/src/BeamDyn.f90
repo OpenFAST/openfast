@@ -181,7 +181,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-! @mjs: this looks like it should be put in a subroutine, but as far as I can tell, none of the tests use it
+! FIXME: @mjs: this looks like it should be put in a subroutine, but as far as I can tell, none of the tests use it, so I can't test it
 
       ! Actuator
    p%UsePitchAct = InputFileData%UsePitchAct
@@ -1569,7 +1569,7 @@ subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
       end if
 
       ! convert to BeamDyn-internal system inputs, u_tmp:
-   CALL BD_InputGlobalLocal(p,u_tmp)
+   CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_tmp%RootMotion, u_tmp%PointLoad, u_tmp%DistrLoad)
 
 
       ! initialize states, given parameters and initial inputs (in BD coordinates)
@@ -1670,6 +1670,7 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    IF(p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
        CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
+      ! @mjs: ***HERE***
        CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
    ENDIF
 
@@ -1732,7 +1733,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       end if
 
       ! convert to BD coordinates and apply boundary conditions
-   CALL BD_InputGlobalLocal(p,m%u)
+   CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, m%u%RootMotion, m%u%PointLoad, m%u%DistrLoad)
 
       ! Copy over the DistrLoads
    CALL BD_DistrLoadCopy( p, m%u, m )
@@ -3354,15 +3355,15 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
-! @mjs: parameters
-   CALL BD_InputGlobalLocal(p,u_interp)
+! @mjs: parameters--this only uses two pieces from p but already has a unit test
+   CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
 
       ! Copy over the DistrLoads
-! @mjs: parameters
+! @mjs: parameters--this doesn't use a lot from any of these, but is just assigning variables
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
       ! Incorporate boundary conditions
-! @mjs: parameters
+! @mjs: parameters--this is the same as above, but calls ExtractRelativeRotation(), which has a unit test
    CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -3862,8 +3863,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          ! Transform quantities from global frame to local (blade) frame
-! @mjs: parameters
-      CALL BD_InputGlobalLocal(p,u_interp)
+      CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
 
          ! Copy over the DistrLoads
 ! @mjs: parameters
@@ -3931,9 +3931,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
    ENDIF
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
-! @mjs: parameters
-   CALL BD_InputGlobalLocal(p,u_interp)
-
+   CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
       ! Copy over the DistrLoads
 ! @mjs: parameters
    CALL BD_DistrLoadCopy( p, u_interp, m )
@@ -4432,34 +4430,39 @@ END SUBROUTINE BD_ElementMatrixGA2
 !!  4 Point forces/moments
 !!  5 Distributed forces/moments
 !! It also transforms the DCM to rotation tensor in the input data structure
-SUBROUTINE BD_InputGlobalLocal(p, u)
-   TYPE(BD_ParameterType), INTENT(IN   ):: p
-   TYPE(BD_InputType),     INTENT(INOUT):: u
-   INTEGER(IntKi)                       :: i                          !< Generic counter
-   CHARACTER(*), PARAMETER              :: RoutineName = 'BD_InputGlobalLocal'
+SUBROUTINE BD_InputGlobalLocal(GlbRot, node_total, RootMotion, PointLoad, DistrLoad)
+   ! TYPE(BD_ParameterType), INTENT(IN   ):: p
+   REAL(BDKi),              INTENT(IN   ):: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
+   INTEGER(IntKi),          INTENT(IN   ):: node_total   !< Total number of finite element (GLL) nodes
+   ! TYPE(BD_InputType),     INTENT(INOUT):: u
+   TYPE(MeshType),          INTENT(INOUT):: RootMotion   !< contains motion
+   TYPE(MeshType),          INTENT(INOUT):: PointLoad    !< Applied point forces along beam axis
+   TYPE(MeshType),          INTENT(INOUT):: DistrLoad    !< Applied distributed forces along beam axis
+   INTEGER(IntKi)                        :: i            !< Generic counter
+   CHARACTER(*), PARAMETER               :: RoutineName = 'BD_InputGlobalLocal'
 
 !FIXME: we might be able to get rid of the m%u now if we put the p%GlbRot multiplications elsewhere.   
 
    ! Transform Root Motion from Global to Local (Blade) frame
-   u%RootMotion%TranslationDisp(:,1) = MATMUL(u%RootMotion%TranslationDisp(:,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationDisp(:,1)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationDisp(:,1))
-   u%RootMotion%TranslationVel(:,1)  = MATMUL(u%RootMotion%TranslationVel( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationVel(:,1))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationVel(:,1))
-   u%RootMotion%RotationVel(:,1)     = MATMUL(u%RootMotion%RotationVel(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationVel(:,1))     = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%RotationVel(:,1))
-   u%RootMotion%TranslationAcc(:,1)  = MATMUL(u%RootMotion%TranslationAcc( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationAcc(:,1))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationAcc(:,1))
-   u%RootMotion%RotationAcc(:,1)     = MATMUL(u%RootMotion%RotationAcc(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationAcc(:,1))     = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%RotationAcc(:,1))
+   RootMotion%TranslationDisp(:,1) = MATMUL(RootMotion%TranslationDisp(:,1),GlbRot)  ! = MATMUL(TRANSPOSE(GlbRot),RootMotion%TranslationDisp(:,1)) = MATMUL(RootMotion%RefOrientation(:,:,1),RootMotion%TranslationDisp(:,1))
+   RootMotion%TranslationVel(:,1)  = MATMUL(RootMotion%TranslationVel( :,1),GlbRot)  ! = MATMUL(TRANSPOSE(GlbRot),RootMotion%TranslationVel(:,1))  = MATMUL(RootMotion%RefOrientation(:,:,1),RootMotion%TranslationVel(:,1))
+   RootMotion%RotationVel(:,1)     = MATMUL(RootMotion%RotationVel(    :,1),GlbRot)  ! = MATMUL(TRANSPOSE(GlbRot),RootMotion%RotationVel(:,1))     = MATMUL(RootMotion%RefOrientation(:,:,1),RootMotion%RotationVel(:,1))
+   RootMotion%TranslationAcc(:,1)  = MATMUL(RootMotion%TranslationAcc( :,1),GlbRot)  ! = MATMUL(TRANSPOSE(GlbRot),RootMotion%TranslationAcc(:,1))  = MATMUL(RootMotion%RefOrientation(:,:,1),RootMotion%TranslationAcc(:,1))
+   RootMotion%RotationAcc(:,1)     = MATMUL(RootMotion%RotationAcc(    :,1),GlbRot)  ! = MATMUL(TRANSPOSE(GlbRot),RootMotion%RotationAcc(:,1))     = MATMUL(RootMotion%RefOrientation(:,:,1),RootMotion%RotationAcc(:,1))
 
    ! Transform DCM to Rotation Tensor (RT)   
-   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1)) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
+   RootMotion%Orientation(:,:,1) = TRANSPOSE(RootMotion%Orientation(:,:,1)) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
    
    ! Transform Applied Forces from Global to Local (Blade) frame
-   DO i=1,p%node_total
-      u%PointLoad%Force(1:3,i)  = MATMUL(u%PointLoad%Force(:,i),p%GlbRot)  !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%PointLoad%Force(:,i)) 
-      u%PointLoad%Moment(1:3,i) = MATMUL(u%PointLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Moment(:,i)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%PointLoad%Moment(:,i))
+   DO i=1,node_total
+      PointLoad%Force(1:3,i)  = MATMUL(PointLoad%Force(:,i),GlbRot)  !=MATMUL(TRANSPOSE(GlbRot),PointLoad%Force(:,i))  = MATMUL(RootMotion%RefOrientation(:,:,1),PointLoad%Force(:,i)) 
+      PointLoad%Moment(1:3,i) = MATMUL(PointLoad%Moment(:,i),GlbRot) !=MATMUL(TRANSPOSE(GlbRot),PointLoad%Moment(:,i)) = MATMUL(RootMotion%RefOrientation(:,:,1),PointLoad%Moment(:,i))
    ENDDO
    
    ! transform distributed forces and moments
-   DO i=1,u%DistrLoad%Nnodes
-      u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),p%GlbRot)  !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Force(:,i)) 
-      u%DistrLoad%Moment(1:3,i) = MATMUL(u%DistrLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Moment(:,i)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Moment(:,i))
+   DO i=1,DistrLoad%Nnodes
+      DistrLoad%Force(1:3,i)  = MATMUL(DistrLoad%Force(:,i),GlbRot)  !=MATMUL(TRANSPOSE(GlbRot),DistrLoad%Force(:,i))  = MATMUL(RootMotion%RefOrientation(:,:,1),DistrLoad%Force(:,i)) 
+      DistrLoad%Moment(1:3,i) = MATMUL(DistrLoad%Moment(:,i),GlbRot) !=MATMUL(TRANSPOSE(GlbRot),DistrLoad%Moment(:,i)) = MATMUL(RootMotion%RefOrientation(:,:,1),DistrLoad%Moment(:,i))
    ENDDO
 
 END SUBROUTINE BD_InputGlobalLocal
