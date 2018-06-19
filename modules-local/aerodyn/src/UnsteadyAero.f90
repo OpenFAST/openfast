@@ -1404,7 +1404,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
    
    real(ReKi)                                             :: Cm_FS  
    real(ReKi)                                             :: Cc_FS
-   real(ReKi)                                             :: Cl_temp, Cd_temp, Cm_temp, Cn_temp, Cm_alpha_nc
+   real(ReKi)                                             :: Cl_temp, Cd_temp, Cm_temp, Cm_alpha_nc
    real(ReKi)                                             :: M, f, k2_hat
    real(ReKi)                                             :: Cm_v, alpha_prime_f
    real(ReKi)                                             :: x_cp_hat                      ! center-of-pressure distance from LE in chord fraction

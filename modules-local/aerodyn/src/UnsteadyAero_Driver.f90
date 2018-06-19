@@ -65,7 +65,6 @@ program UnsteadyAero_Driver
    character(200)                                :: TimeFrmt, Frmt 
    CHARACTER(1024)                               :: dvrFilename          ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
    TYPE(UA_Dvr_InitInput)                        :: dvrInitInp           ! Initialization data for the driver program
-   integer                                       :: nSteps
    real(DbKi)                                    :: simTime  
    integer                                       :: nSimSteps
    character(1024)                               :: RoutineName

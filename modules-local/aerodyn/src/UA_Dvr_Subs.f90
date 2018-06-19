@@ -41,20 +41,12 @@ module UA_Dvr_Subs
    
          ! Local variables  
          
-      integer                                          :: i                    ! generic integer for counting
-      integer                                          :: j                    ! generic integer for counting
-      character(   2)                                  :: strI                 ! string version of the loop counter
 
       integer                                          :: UnIn                 ! Unit number for the input file
       integer                                          :: UnEchoLocal          ! The local unit number for this module's echo file
       character(1024)                                  :: EchoFile             ! Name of HydroDyn echo file  
-      character(1024)                                  :: Line                 ! String to temporarially hold value of read line   
-      character(1024)                                  :: TmpPath              ! Temporary storage for relative path name
-      character(1024)                                  :: TmpFmt               ! Temporary storage for format statement
       character(1024)                                  :: FileName             ! Name of HydroDyn input file  
 
-      real(ReKi)                                       :: TmpRealVar2(2)       !< Temporary real    array size 2
-      integer(IntKi)                                   :: TmpIntVar2(2)        !< Temporary integer array size 2
       integer(IntKi)                                   :: errStat2    ! Status of error message
       character(1024)                                  :: errMsg2     ! Error message if ErrStat /= ErrID_None
       character(1024)                                  :: RoutineName
