@@ -1587,8 +1587,8 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             Cm_FS = Cm_temp + Cm_common                                                                                                            ! Eqn 1.44
       
          else ! UAMod == UA_Gonzalez
-!bjj: Note that fprimeprime_m is 0 in this equation now.
-            Cm_FS = BL_p%Cm0 + KC%Cn_FS*KC%fprimeprime_m + Cm_common                                                                               ! Eqn 1.45 (NOTE: This differs from manual in that Cm0 is added because it is subtracted in our version of fprimeprime_m
+                  !bjj: Note that fprimeprime_m is 0 in this equation now.
+            Cm_FS = BL_p%Cm0 + KC%Cn_FS*KC%fprimeprime_m + Cm_common                                                                               ! Eqn 1.45
             alpha_prime_f = 0.0_ReKi
          end if   
       
