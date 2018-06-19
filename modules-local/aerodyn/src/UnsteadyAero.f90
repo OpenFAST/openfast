@@ -614,7 +614,7 @@ ENDIF
          KC%Df_c = 0.0_ReKi
          KC%Df_m = 0.0_ReKi
       else
-         KC%Df_c = Get_ExpEqn( KC%ds, KC%T_fc, xd%Df_c_minus1(i,j), KC%fprime_c, xd%fprime_c_minus1(i,j)  )  !BJJ: Note, for UAMod/=UA_Gonzalez, T_fc=T_f 
+         KC%Df_c = Get_ExpEqn( KC%ds, KC%T_fc, xd%Df_c_minus1(i,j), KC%fprime_c, xd%fprime_c_minus1(i,j)  )
          KC%Df_m = Get_ExpEqn( KC%ds, KC%T_fm, xd%Df_m_minus1(i,j), KC%fprime_m, xd%fprime_m_minus1(i,j)  )  ! used in UAMod=UA_Gonzalez only
       end if
    
@@ -1186,9 +1186,6 @@ else
       end if
             
    end if
-
-   OtherState%sigma1c(i,j) = OtherState%sigma1(i,j) ! BJJ: set this new variable to get same results for Df_c in KelvinChain
-   OtherState%sigma1m(i,j) = OtherState%sigma1(i,j)
 
 end if
       
