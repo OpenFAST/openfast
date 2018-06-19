@@ -253,7 +253,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
       ! initialization of output mesh values (used for initial guess to AeroDyn)
    if (p%BldMotionNodeLoc==BD_MESH_QP) then
       DO nelem=1,p%elem_total
-         CALL BD_DisplacementQP( nelem, p, x, MiscVar )
+         CALL BD_DisplacementQP( nelem, p%nqp, p%node_elem_idx, p%nodes_per_elem,&
+                                 p%Shp, p%ShpDer, p%Jacobian, p%E10, x%q, MiscVar%qp%uuu, MiscVar%qp%uup, MiscVar%qp%E1 )
          CALL BD_RotationalInterpQP( nelem, p, x, MiscVar )
       end do
    
@@ -1957,8 +1958,10 @@ SUBROUTINE BD_QuadraturePointData( p, x, m )
    INTEGER(IntKi)                :: nelem          !< index to the current element
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_QuadraturePointData'
 
+! @mjs: ***HERE***
    DO nelem=1,p%elem_total
-      CALL BD_DisplacementQP( nelem, p, x, m )
+      CALL BD_DisplacementQP( nelem, p%nqp, p%node_elem_idx, p%nodes_per_elem,&
+                              p%Shp, p%ShpDer, p%Jacobian, p%E10, x%q, m%qp%uuu, m%qp%uup, m%qp%E1 )
       CALL BD_RotationalInterpQP( nelem, p, x, m )
       CALL BD_StifAtDeformedQP( nelem, p, m )
    ENDDO
@@ -1973,12 +1976,20 @@ END SUBROUTINE BD_QuadraturePointData
 !! The equations used here can be found in the NREL publication CP-2C00-60759
 !! "Nonlinear Legendre Spectral Finite Elements for Wind Turbine Blade Dynamics"
 !! http://www.nrel.gov/docs/fy14osti/60759.pdf
-SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
+SUBROUTINE BD_DisplacementQP( nelem, nqp, node_elem_idx, nodes_per_elem, Shp, ShpDer, Jacobian, E10, q, uuu, uup, E1 )
 
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< number of current element
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
+   INTEGER(IntKi),               INTENT(IN   )  :: nelem               !< number of current element
+   INTEGER(IntKi),               INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
+   INTEGER(IntKi),               INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi),               INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   REAL(BDKi),                   INTENT(IN   )  :: Shp(:, :)           !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),                   INTENT(IN   )  :: ShpDer(:, :)        !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),                   INTENT(IN   )  :: Jacobian(:, :)      !< Jacobian value at each quadrature point
+   REAL(BDKi),                   INTENT(IN   )  :: E10(:, :, :)        !< Initial E10 at quadrature point [-]
+   REAL(BDKi),                   INTENT(IN   )  :: q(:, :)             !< q - displacement (1:3), and rotation displacement parameters (4:6)
+   REAL(BDKi),                   INTENT(INOUT)  :: uuu(:, :, :)        !< Displacement and rotation field [u c] at current QP
+   REAL(BDKi),                   INTENT(INOUT)  :: uup(:, :, :)        !< Derivative of uuu with respect to X at current QP
+   REAL(BDKi),                   INTENT(INOUT)  :: E1(:, :, :)         !< \vec{e_1} = x_0^\prime + u^\prime (3) at current QP [-]
 
    INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
    INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
@@ -1986,9 +1997,9 @@ SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_DisplacementQP'
 
 
-   DO idx_qp=1,p%nqp
+   DO idx_qp=1,nqp
             ! Node point before start of this element
-         elem_start = p%node_elem_idx( nelem,1 )
+         elem_start = node_elem_idx( nelem,1 )
 
 
             !> ### Calculate the the displacement fields in an element
@@ -2010,16 +2021,16 @@ SUBROUTINE BD_DisplacementQP( nelem, p, x, m )
             !! | \f$ \underline{\hat{u}}^i \f$           |  \f$ k^\text{th} \f$ nodal value                                            |
 
             ! Initialize values for summation
-         m%qp%uuu(:,idx_qp,nelem) = 0.0_BDKi    ! displacement field \f$ \underline{u}        \left( \xi \right) \f$
-         m%qp%uup(:,idx_qp,nelem) = 0.0_BDKi    ! displacement field \f$ \underline{u}^\prime \left( \xi \right) \f$
+         uuu(:,idx_qp,nelem) = 0.0_BDKi    ! displacement field \f$ \underline{u}        \left( \xi \right) \f$
+         uup(:,idx_qp,nelem) = 0.0_BDKi    ! displacement field \f$ \underline{u}^\prime \left( \xi \right) \f$
 
-         DO idx_node=1,p%nodes_per_elem
-            m%qp%uuu(1:3,idx_qp,nelem) = m%qp%uuu(1:3,idx_qp,nelem)  + p%Shp(idx_node,idx_qp)                            *x%q(1:3,elem_start - 1 + idx_node)
-            m%qp%uup(1:3,idx_qp,nelem) = m%qp%uup(1:3,idx_qp,nelem)  + p%ShpDer(idx_node,idx_qp)/p%Jacobian(idx_qp,nelem)*x%q(1:3,elem_start - 1 + idx_node)
+         DO idx_node=1,nodes_per_elem
+            uuu(1:3,idx_qp,nelem) = uuu(1:3,idx_qp,nelem)  + Shp(idx_node,idx_qp)                          *q(1:3,elem_start - 1 + idx_node)
+            uup(1:3,idx_qp,nelem) = uup(1:3,idx_qp,nelem)  + ShpDer(idx_node,idx_qp)/Jacobian(idx_qp,nelem)*q(1:3,elem_start - 1 + idx_node)
          ENDDO
 
             !> Calculate \f$ \underline{E}_1 = x_0^\prime + u^\prime \f$ (equation 23).  Note E_1 is along the z direction.
-         m%qp%E1(1:3,idx_qp,nelem) = p%E10(1:3,idx_qp,nelem) + m%qp%uup(1:3,idx_qp,nelem)
+         E1(1:3,idx_qp,nelem) = E10(1:3,idx_qp,nelem) + uup(1:3,idx_qp,nelem)
 
    ENDDO
 END SUBROUTINE  BD_DisplacementQP
@@ -3355,7 +3366,6 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
-! @mjs: parameters--this only uses two pieces from p but already has a unit test
    CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
 
       ! Copy over the DistrLoads
