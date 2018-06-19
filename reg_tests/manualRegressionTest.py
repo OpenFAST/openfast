@@ -63,7 +63,7 @@ pythonCommand = sys.executable
 if case is not "":
     caselist = [case]
 else:
-    with open(os.path.join("r-test", "glue-codes", "fast", "CaseList.md")) as listfile:
+    with open(os.path.join("r-test", "glue-codes", "openfast", "CaseList.md")) as listfile:
         caselist = listfile.readlines()
 casenames = [c.rstrip("\n\r").strip() for c in caselist if "#" not in c]
 
