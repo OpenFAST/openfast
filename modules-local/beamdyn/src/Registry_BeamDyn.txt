@@ -12,6 +12,10 @@ include Registry_NWTC_Library.txt
 param   BeamDyn/BD   -           IntKi    BD_STATIC_ANALYSIS   -  1  -  "Constant for static analysis" -
 param   ^            -           IntKi    BD_DYNAMIC_ANALYSIS  -  2  -  "Constant for dynamic analysis" -
 
+param   ^            -           IntKi    BD_MESH_FE           -  1  -  "Constant for creating y%BldMotion at the FE (GLL) nodes" -
+param   ^            -           IntKi    BD_MESH_QP           -  2  -  "Constant for creating y%BldMotion at the quadrature nodes" -
+param   ^            -           IntKi    BD_MESH_STATIONS     -  3  -  "Constant for creating y%BldMotion at the blade property input stations" -
+
 
 # ..... Initialization data
 # .......................................................................................................
@@ -194,6 +198,7 @@ typedef   ^        ParameterType ReKi           pitchC           -         - -  
 typedef   ^        ParameterType ReKi           torqM           {2}{2}     - -  "Pitch actuator matrix: (I-hA)^-1" - 
 typedef   ^        ParameterType qpParam        qp               -         - -  "Quadrature point info that does not change during simulation" -
 typedef   ^        ParameterType IntKi          qp_indx_offset   -         - -  "Offset for computing index of the quadrature arrays (gauss skips the first [end-point] node)" -
+typedef   ^        ParameterType IntKi          BldMotionNodeLoc -         - -  "switch to determine where the nodes on the blade motion mesh should be located 1=FE (GLL) nodes; 2=quadrature nodes; 3=blade input stations"
 # .... arrays for optimization ........................................................................................................
 typedef   ^        ParameterType    R8Ki        QPtw_Shp_Shp_Jac       {:}{:}{:}{:}  - - "optimization variable: QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem) = p%Shp(i,idx_qp)*p%Shp(j,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
 typedef   ^        ParameterType    ^           QPtw_Shp_ShpDer        {:}{:}{:}     - - "optimization variable: QPtw_Shp_ShpDer(idx_qp,i,j) = p%Shp(i,idx_qp)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)" -
@@ -302,6 +307,7 @@ typedef   ^        MiscVarType    ^            MassM        {:}{:}{:}{:}  - - "M
 typedef   ^        MiscVarType    ^            DampG        {:}{:}{:}{:}  - - "Damping Matrix" -
 typedef   ^        MiscVarType    ^            RHS          {:}{:}        - - "Right-hand-side vector" -
 typedef   ^        MiscVarType    ^            BldInternalForceFE   {:}{:}  - - "Force/Moment array for internal force calculations at FE" -
+typedef   ^        MiscVarType    ^            BldInternalForceQP   {:}{:}  - - "Force/Moment array for internal force calculations at QP" -
 typedef   ^        MiscVarType    ^            Solution     {:}{:}        - - "Result from LAPACK solve (X from A*X = B solve)" -
 # arrays for lapack routines                 
 typedef   ^        MiscVarType    ^            LP_StifK     {:}{:}        - - "Stiffness Matrix" -
