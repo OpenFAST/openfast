@@ -109,6 +109,7 @@ set(testlist
     test_BD_ComputeIniNodalCrv
     test_BD_CalcIC_Velocity
     test_BD_DisplacementQP
+    test_BD_ComputeIniCoef
 )
 # it is important to keep the quotes around "${testlist}" in the call below
 build_utest("beamdyn" "${testlist}")

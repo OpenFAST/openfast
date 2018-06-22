@@ -596,8 +596,6 @@ SUBROUTINE BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, nqp, refine, station_et
    INTEGER(IntKi)             :: id1, j
 
 !bjj: this assumes there is only one member
-
-! @mjs: HERE
    
       ! compute the trapezoidal quadrature points, QPtLocs, and scale to range [-1,1]:
       !  If there is refinement, this will add new points between the specified ones. If refine == 1, can skip this.
@@ -615,11 +613,10 @@ SUBROUTINE BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, nqp, refine, station_et
    temp_id0 = (id0 - 1)*refine + 1            ! Starting index in QPtLocs --> always going to be 1
    temp_id1 = (id1 - 1)*refine + 1            ! ending index in QPtLocs --> will be  size(QPtLocs)
    denom = QPtLocs(temp_id1) - QPtLocs(temp_id0)  ! This is the range of QPtLocs --> for single member, is always == 2
-   ! @mjs: this seems like a strange way of getting the 2 that is standard for a trapezoidal scheme
 
    QPtWeight(1)     =  (QPtLocs(temp_id0+1) - QPtLocs(temp_id0    ))/denom
    DO j=2,nqp-1
-      QPtWeight(j)  =  (QPtLocs(temp_id0+j) - QPtLocs(temp_id0+j-2))/denom ! @mjs: why j-2 here? this seems incorrect to me
+      QPtWeight(j)  =  (QPtLocs(temp_id0+j) - QPtLocs(temp_id0+j-2))/denom
    ENDDO
    QPtWeight(nqp) =  (QPtLocs(temp_id1  ) - QPtLocs(temp_id1-1  ))/denom
 
