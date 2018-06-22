@@ -711,15 +711,15 @@ We note that if structural damping is considered in the analysis, the
 elastic forces, :math:`{\underline{\mathcal{F}}}^C` and
 :math:`{\underline{\mathcal{F}}}^D`, for calculation.
 
-Algorithm for ``ComputeIniCoef()``
-----------------------------------
+Algorithm for ``BD_ComputeIniCoef()``
+-------------------------------------
 
 -  This subroutine computes the :math:`z`-coordinate weights to
    interpolate the positions in :math:`x`, :math:`y`, :math:`z`, and
    negative twist (:math:`-t`)
 
--  We start with the ``kpcoordinate`` matrix (:math:`C`), of dimension
-   ``kpmember`` :math:`\times` 4, where the 4 columns are
+-  We start with the :math:`\texttt{kp_coordinate}` matrix (:math:`C`), of dimension
+   :math:`\texttt{kp_member}` :math:`\times` 4, where the 4 columns are
    :math:`(x, y, z, -t)`, with :math:`-t` being negative twist.
 
 -  For a 3 key point example, we have
@@ -734,8 +734,8 @@ Algorithm for ``ComputeIniCoef()``
             \end{pmatrix}
 
 -  From this, we build the coefficient matrix, :math:`K`, based on the
-   z-component of the key points, where :math:`K` has dimension
-   :math:`4 (\texttt{kp\textunderscore member} - 1) \times 4 (\texttt{kp\textunderscore member} - 1)`
+   :math:`z`-component of the key points, where :math:`K` has dimension
+   :math:`4 ( \texttt{kp_member} - 1) \times 4 ( \texttt{kp_member} - 1)`
 
    .. math::
 
@@ -751,9 +751,9 @@ Algorithm for ``ComputeIniCoef()``
                0 & 0 & 0 & 0 & 0 & 0 & 2 & 6z_3
             \end{pmatrix}
 
--  Next, the coefficient matrices (for the first ``kpmember`` - 1 key
+-  Next, the coefficient matrices (for the first :math:`\texttt{kp_member}` - 1 key
    points),
-   :math:`S_j, \ j = 1, \dots, \texttt{kp\textunderscore member} - 1`,
+   :math:`S_j, \ j = 1, \dots, \texttt{kp_member} - 1`,
    are solved for
 
    -  This is done sequentially for each column of :math:`C`, i.e., each
@@ -779,54 +779,54 @@ Algorithm for ``ComputeIniCoef()``
    -  The system is solved for :math:`u_i` in
       :math:`K u_i = b_i,\ i = x, y, z, -t`
 
-   -  Thus the equations look like (using the :math:`x`-interpolation
+   -  Thus the equations are (using the :math:`x`-interpolation
       for illustration)
 
       .. math::
 
          \begin{aligned}
-                  2 u_x^{(3)} + 6 z_1 u_x^{(4)} &= 0,\label{sys1}\\
-                  u_x^{(1)} + z_1 u_x^{(2)} + z_1^2 u_x^{(3)} + z_1^3 u_x^{(4)} &= x_1,\label{sys2}\\
-                  u_x^{(1)} + z_2 u_x^{(2)} + z_2^2 u_x^{(3)} + z_2^3 u_x^{(4)} &= x_2,\label{sys3}\\
-                  u_x^{(2)} + 2 z_2 u_x^{(3)} + 3 z_2^2 u_x^{(4)} - u_x^{(6)} - 2 z_2 u_x^{(7)} - 3 z_2^2 u_x^{(8)} &= 0,\nonumber\\
-                  \iff u_x^{(2)} + 2 z_2 u_x^{(3)} + 3 z_2^2 u_x^{(4)} &= u_x^{(6)} + 2 z_2 u_x^{(7)} + 3 z_2^2 u_x^{(8)},\label{sys4}\\
-                  2 u_x^{(3)} + 6 z_2 u_x^{(4)} - 2 u_x^{(7)} - 6 z_2 u_x^{(8)} &= 0,\nonumber\\
-                  \iff 2 u_x^{(3)} + 6 z_2 u_x^{(4)} &= 2 u_x^{(7)} + 6 z_2 u_x^{(8)},\label{sys5}\\
-                  u_x^{(5)} + z_2 u_x^{(6)} + z_2^2 u_x^{(7)} + z_2^3 u_x^{(8)} &= x_2,\label{sys6}\\
-                  u_x^{(5)} + z_3 u_x^{(6)} + z_3^2 u_x^{(7)} + z_3^3 u_x^{(8)} &= x_3,\label{sys7}\\
-                  2 u_x^{(7)} + 6 z_3 u_x^{(8)} &= 0,\label{sys8}
+                  2 u_x^{(3)} + 6 z_1 u_x^{(4)} &= 0,\\
+                  u_x^{(1)} + z_1 u_x^{(2)} + z_1^2 u_x^{(3)} + z_1^3 u_x^{(4)} &= x_1,\\
+                  u_x^{(1)} + z_2 u_x^{(2)} + z_2^2 u_x^{(3)} + z_2^3 u_x^{(4)} &= x_2,\\
+                  u_x^{(2)} + 2 z_2 u_x^{(3)} + 3 z_2^2 u_x^{(4)} - u_x^{(6)} - 2 z_2 u_x^{(7)} - 3 z_2^2 u_x^{(8)} &= 0,\\
+                  \iff u_x^{(2)} + 2 z_2 u_x^{(3)} + 3 z_2^2 u_x^{(4)} &= u_x^{(6)} + 2 z_2 u_x^{(7)} + 3 z_2^2 u_x^{(8)},\\
+                  2 u_x^{(3)} + 6 z_2 u_x^{(4)} - 2 u_x^{(7)} - 6 z_2 u_x^{(8)} &= 0,\\
+                  \iff 2 u_x^{(3)} + 6 z_2 u_x^{(4)} &= 2 u_x^{(7)} + 6 z_2 u_x^{(8)},\\
+                  u_x^{(5)} + z_2 u_x^{(6)} + z_2^2 u_x^{(7)} + z_2^3 u_x^{(8)} &= x_2,\\
+                  u_x^{(5)} + z_3 u_x^{(6)} + z_3^2 u_x^{(7)} + z_3^3 u_x^{(8)} &= x_3,\\
+                  2 u_x^{(7)} + 6 z_3 u_x^{(8)} &= 0,\\
                \end{aligned}
 
-       where
+      where
 
-      -  `[sys1] <#sys1>`__ imposes the zero second derivative at the
+      -  The first equation imposes the zero second derivative at the
          first key point/boundary
 
-      -  `[sys2] <#sys2>`__ is equality at the first key point/boundary
+      -  The second equation is equality at the first key point/boundary
 
-      -  `[sys3] <#sys3>`__ is equality at the second key
+      -  The third equation is equality at the second key
          point/interface
 
-      -  `[sys4] <#sys4>`__ is equality of first derivative at second
+      -  The fourth equation is equality of first derivative at second
          key point/interface
 
-      -  `[sys5] <#sys5>`__ is equality of second derivative at second
+      -  The fifth equation is equality of second derivative at second
          key point/interface
 
-      -  `[sys6] <#sys6>`__ is equality at the second key
+      -  The sixth equation is equality at the second key
          point/interface
 
-      -  `[sys7] <#sys7>`__ is equality at the third key point/boundary
+      -  The seventh equation is equality at the third key point/boundary
 
-      -  `[sys8] <#sys8>`__ imposes the zero second derivative at the
+      -  The eighth equation imposes the zero second derivative at the
          third key point/boundary
 
    -  The coordinate-wise vectors are then stored in the relevant
       coefficient matrix,
-      :math:`S_j, \ j = 1, \dots, \text{\texttt{kp\textunderscore member} - 1}`,
+      :math:`S_j, \ j = 1, \dots, \texttt{kp_member} - 1`,
       where the dimension of :math:`S_j` is :math:`4 \times 4` (order of
       spline coefficient :math:`\times` number of columns of
-      ``kpcoordinate``, :math:`x`, :math:`y`, :math:`z`, :math:`-t`)
+      :math:`\texttt{kp_coordinate}`, :math:`x`, :math:`y`, :math:`z`, :math:`-t`)
 
       .. math::
 
@@ -847,4 +847,3 @@ Algorithm for ``ComputeIniCoef()``
                      u_x^{(7)} & u_y^{(7)} & u_z^{(7)} & u_{-t}^{(7)}\\
                      u_x^{(8)} & u_y^{(8)} & u_z^{(8)} & u_{-t}^{(8)}\\
                   \end{pmatrix}
-
