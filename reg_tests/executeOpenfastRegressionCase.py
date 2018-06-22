@@ -92,7 +92,7 @@ compilerId_map = {
     "intel": "intel"
 }
 # Build the target output directory name or choose the default
-supportedBaselines = ["macos-gnu", "linux-intel", "windows-intel"]
+supportedBaselines = ["macos-gnu", "linux-intel", "linux-gnu", "windows-intel"]
 targetSystem = systemName_map.get(systemName.lower(), "")
 targetCompiler = compilerId_map.get(compilerId.lower(), "")
 outputType = os.path.join(targetSystem+"-"+targetCompiler)
