@@ -227,7 +227,7 @@ contains
         
         ! fixed size arrays
         i%kp_member = (/ 3 /) !{:} - - "Number of key points in each member" -
-        i%OutList = (/ "TipTDxr, TipTDyr, TipTDzr", "TipRDxr, TipRDyr, TipRDzr" /)	      ! {:}	- -	"List of user-requested output channels"	-
+        i%OutList = (/ "TipTDxr, TipTDyr, TipTDzr", "TipRDxr, TipRDyr, TipRDzr" /)      ! {:}	- -	"List of user-requested output channels"	-
         
         ! allocate arrays
         call AllocAry(i%kp_coordinate, 3, 4, 'kp_coordinate', ErrStat, ErrMsg)

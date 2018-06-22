@@ -2,7 +2,7 @@
 subroutine test_BD_ComputeIniCoef()
     ! test branches
     ! - test the inputs/outputs from static_cantilever_beam
-    ! - "test randomly chosen integer position, no twist
+    ! - test randomly chosen integer position, no twist
     ! - test randomly chosen real-valued position, no twist
     ! - test randomly chosen real-valued position, with twist
     
