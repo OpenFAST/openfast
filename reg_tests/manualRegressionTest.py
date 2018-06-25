@@ -46,7 +46,7 @@ parser.add_argument("-case", dest="case", default="", metavar="Case-Name", type=
 args = parser.parse_args()
 openfast_executable = args.executable[0]
 sourceDirectory = ".."
-buildDirectory = os.path.join("..", "build", "reg_tests", "glue-codes", "fast")
+buildDirectory = os.path.join("..", "build", "reg_tests", "glue-codes", "openfast")
 machine = args.systemName[0]
 compiler = args.compilerId[0]
 tolerance = args.tolerance[0]
