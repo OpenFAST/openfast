@@ -26,6 +26,7 @@ OpenFAST Documentation
    source/license.rst
    source/help.rst
    source/acknowledgements.rst
+   source/zrefs.rst
 
    Nightly Testing Results <http://my.cdash.org/index.php?project=OpenFAST>
    github.com Repository <https://github.com/openfast/openfast>

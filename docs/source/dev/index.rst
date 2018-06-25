@@ -16,4 +16,5 @@ However, documentation can be generated on a local machine as described in :numr
    github_workflow.rst
    build_doc.rst
    doxy_doc.rst
+   cppapi/index.rst
 

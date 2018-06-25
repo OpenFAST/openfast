@@ -4,23 +4,29 @@
 #
 
 #Total number of turbines in the simulation
-nTurbinesGlob: 3
+n_turbines_glob: 3
 #Enable debug outputs if set to true
 debug: False
 #The simulation will not run if dryRun is set to true
-dryRun:  False
+dry_run:  False
 #Flag indicating whether the simulation starts from scratch or restart
-simStart: init # init/trueRestart/restartDriverInitFAST
+sim_start: init # init/trueRestart/restartDriverInitFAST
+#Coupling mode
+coupling_mode: strong # strong/classic
 #Start time of the simulation
-tStart:  0.0
+t_start:  0.0
 #End time of the simulation. tEnd <= tMax
-tEnd:    1.0
+t_end:    1.0
 #Max time of the simulation
-tMax:    4.0
+t_max:    4.0
 #Time step for FAST. All turbines should have the same time step.
-dtFAST:  0.00625
+dt_FAST:  0.00625
+#Number of substeps per timestep of the glue-code
+n_substeps: 1
 #Restart files will be written every so many time steps
-nEveryCheckPoint: 160
+n_checkpoint: 160
+#Set velocity at the the turbine using an exponential law profile.
+set_exp_law_wind: false
 
 Turbine0:
   #The position of the turbine base for actuator-line simulations

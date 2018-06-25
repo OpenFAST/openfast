@@ -27,12 +27,16 @@ readTheDocs = os.environ.get('READTHEDOCS', None) == 'True'
 sourcedir = sys.argv[-2]
 builddir = sys.argv[-1]
 
+# Only build API docs if the user specifically requests it. On RTD we build it
+# all the time
+use_breathe = tags.has("use_breathe") or readTheDocs
+
 # Use this to turn Doxygen on or off
-useDoxygen=False
+useDoxygen=True
 
 # This function was adapted from https://gitlab.kitware.com/cmb/smtk
 # Only run when on readthedocs
-def runDoxygen(sourcfile, doxyfileIn, doxyfileOut):
+def runDoxygen(sourcefile, doxyfileIn, doxyfileOut):
     dx = open(os.path.join(sourcedir, doxyfileIn), 'r')
     cfg = dx.read()
     srcdir = os.path.abspath(os.path.join(os.getcwd(), '..'))
@@ -47,7 +51,12 @@ def runDoxygen(sourcfile, doxyfileIn, doxyfileOut):
     doxproc = subprocess.call(('doxygen', doxname))
 
 if readTheDocs and useDoxygen:
-    runDoxygen(sourcedir, 'Doxyfile.in', 'Doxyfile')
+    try:
+        runDoxygen(sourcedir, 'Doxyfile.rtd', 'Doxyfile')
+    except:
+        # Gracefully bailout if doxygen encounters errors
+        use_breathe = False
+        
 
 # -- General configuration ------------------------------------------------
 
@@ -66,6 +75,9 @@ extensions = [
               'sphinxcontrib.doxylink',
               'sphinxcontrib.bibtex',
              ]
+
+if use_breathe:
+    extensions.append('breathe')
 
 autodoc_default_flags = ['members','show-inheritance','undoc-members']
 
@@ -223,6 +235,21 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+
+### Breathe configuration
+if readTheDocs:
+    breathe_projects = {
+        'openfast' : os.path.join(builddir, '../../', 'doxygen/xml/')
+    }
+else:
+    breathe_projects = {
+        'openfast' : os.path.join(builddir, '../', 'doxygen/xml/')
+    }
+
+breathe_default_project = "openfast"
+
+primary_domain = "cpp"
+
 def setup(app):
     app.add_object_type("confval", "confval",
                         objname="input file parameter",
@@ -231,3 +258,5 @@ def setup(app):
                         objname="CMake configuration value",
                         indextemplate="pair: %s; CMake configuration")
     
+    app.add_config_value("use_breathe", use_breathe, 'env')
+    app.add_config_value("readTheDocs", readTheDocs, 'env')
