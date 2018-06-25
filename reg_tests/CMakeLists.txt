@@ -37,6 +37,9 @@ option(CTEST_PLOT_ERRORS "Generate plots of regression test errors." OFF)
 # Set the OpenFAST executable configuration option and default
 set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast" CACHE FILEPATH "Specify the OpenFAST executable to use in testing.")
 
+# Set the OpenFAST-C++ executable configuration option and default
+set(CTEST_OPENFASTCPP_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast-cpp/openfast-cpp" CACHE FILEPATH "Specify the OpenFAST-C++ executable to use in testing.")
+
 # Set the BeamDyn executable configuration option and default
 set(CTEST_BEAMDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules-local/beamdyn/beamdyn_driver" CACHE FILEPATH "Specify the BeamDyn driver executable to use in testing.")
 
@@ -61,7 +64,7 @@ add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/r-test")
 
 # build and seed the test directories with the data they need to run the tests
 file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
-foreach(regTest glue-codes/openfast modules-local/beamdyn)
+foreach(regTest glue-codes/openfast glue-codes/openfast-cpp modules-local/beamdyn)
   file(MAKE_DIRECTORY ${CTEST_BINARY_DIR}/${regTest})
 endforeach()
 
@@ -69,6 +72,12 @@ endforeach()
 foreach(turbineDirectory 5MW_Baseline AOC AWT27 SWRT UAE_VI WP_Baseline)
   file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast/${turbineDirectory}"
   DESTINATION "${CTEST_BINARY_DIR}/glue-codes/openfast/")
+endforeach()
+
+## openfast-cpp seed
+foreach(turbineDirectory 5MW_Baseline)
+  file(COPY "${CMAKE_CURRENT_LIST_DIR}/r-test/glue-codes/openfast-cpp/${turbineDirectory}"
+  DESTINATION "${CTEST_BINARY_DIR}/glue-codes/openfast-cpp/")
 endforeach()
 
 # add the tests
