@@ -27,11 +27,12 @@ include(CTest)
 include(ExternalProject)
 set(ExternalProjectCMakeArgs
   -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}/pfunit
+  -DROBUST=OFF
 )
 set(PFUNIT_INSTALL ${PROJECT_BINARY_DIR}/pfunit)
 
 ExternalProject_Add(pfunit
-  DOWNLOAD_COMMAND git submodule update
+  # DOWNLOAD_COMMAND git submodule update
   DOWNLOAD_DIR ${PROJECT_SOURCE_DIR}
   SOURCE_DIR ${PROJECT_SOURCE_DIR}/pfunit
   BINARY_DIR ${PROJECT_BINARY_DIR}/pfunit-build

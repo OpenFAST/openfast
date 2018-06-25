@@ -519,7 +519,7 @@ input file):
    to 1, based on experimental results;
 
 -  ``S1`` is the constant in the best fit curve of *f* for
-   ``alpha0`` ≤ AoA ≤ ``alpha1`` for ``UAMod = 1`` (and is unused
+   ``alpha0`` :math:`\le` AoA :math:`\le` ``alpha1`` for ``UAMod = 1`` (and is unused
    otherwise); by definition, it depends on the airfoil;
 
 -  ``S2`` is the constant in the best fit curve of *f* for AoA >
@@ -527,7 +527,7 @@ input file):
    definition, it depends on the airfoil;
 
 -  ``S3`` is the constant in the best fit curve of *f* for
-   ``alpha2`` ≤ AoA ≤ ``alpha0`` for ``UAMod = 1`` (and is unused
+   ``alpha2`` :math:`\le` AoA :math:`\le` ``alpha0`` for ``UAMod = 1`` (and is unused
    otherwise); by definition, it depends on the airfoil;
 
 -  ``S4`` is the constant in the best fit curve of *f* for AoA <

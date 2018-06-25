@@ -3,9 +3,8 @@
 Building OpenFAST with Spack
 ============================
 
-OpenFAST uses the `CMake <https://cmake.org>`_ build system. 
-We recommend building OpenFAST using `Spack <https://spack.readthedocs.io/en/latest>`__. 
-However, we also provide some sample scripts in ``openfast/share`` if you choose to proceed without `Spack`.
+The process to build and install OpenFAST with `Spack <https://spack.readthedocs.io/en/latest>`__ 
+on Linux or macOS is described here.
 
 Dependencies
 ------------
@@ -14,37 +13,7 @@ OpenFAST has the following dependencies:
 
 - LAPACK libraries. Users should set ``BLAS_LIBRARIES`` and ``LAPACK_LIBRARIES`` appropriately for cmake if the library isn't found in standard paths. Use `BLASLIB` as an example when using Intel MKL.
 - For the optional C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`__ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`__ (provided by ``YAML_ROOT``)
-- For the optional testing framework, Python 3+
-
-CMake Build Instructions
-------------------------
-::
-
-    git clone https://github.com/OpenFAST/OpenFAST.git
-    cd OpenFAST
-    mkdir build && cd build
-    cmake ../ 
-    make 
-    
-A sample installation shell script is also provided in the ``openfast/share``. Update the location of ``openfast_dir`` in the ``fast-build*`` scripts and run the script from ``openfast/`` as:
-::
-
-    git clone https://github.com/OpenFAST/OpenFAST.git
-    cd OpenFAST
-    bash share/fast-install.sh
-
-Current CMake Options
-~~~~~~~~~~~~~~~~~~~~~
-
--  ``BUILD_DOCUMENTATION`` -  Build documentation (Default: OFF)
--  ``BUILD_FAST_CPP_API`` - Enable building OpenFAST - C++ API (Default: OFF)
--  ``BUILD_SHARED_LIBS`` - Enable building shared libraries (Default: OFF)
--  ``CMAKE_BUILD_TYPE`` - Choose the build type: Debug Release (Default: Release)
--  ``CMAKE_INSTALL_PREFIX`` - Install path prefix, prepended onto install directories.
--  ``DOUBLE_PRECISION`` - Treat REAL as double precision (Default: ON)
--  ``FPE_TRAP_ENABLED`` -  Enable Floating Point Exception (FPE) trap in compiler options (Default: OFF)
--  ``ORCA_DLL_LOAD`` - Enable OrcaFlex library load (Default: OFF)
--  ``USE_DLL_INTERFACE`` - Enable runtime loading of dynamic libraries (Default: ON)
+- For the optional testing framework, Python 3+ and Numpy
 
 Building OpenFAST Semi-Automatically Using Spack on macOS or Linux
 ---------------------------------------------------------------------

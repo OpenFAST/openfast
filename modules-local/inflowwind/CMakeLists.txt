@@ -53,10 +53,10 @@ set(IFW_DRIVER_SOURCES
   src/InflowWind_Driver_Subs.f90
   src/InflowWind_Driver.f90)
 
-add_executable(inflowwind ${IFW_DRIVER_SOURCES})
-target_link_libraries(inflowwind ifwlib ${CMAKE_DL_LIBS})
+add_executable(inflowwind_driver ${IFW_DRIVER_SOURCES})
+target_link_libraries(inflowwind_driver ifwlib ${CMAKE_DL_LIBS})
 
-install(TARGETS inflowwind ifwlib
+install(TARGETS inflowwind_driver ifwlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

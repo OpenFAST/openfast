@@ -36,7 +36,7 @@ subroutine test_BD_GravityForce()
     gravity = getGravityInZ()
     
     ! call the subroutine to test
-    call BD_GravityForce(1, 1, parametertype, miscvartype, gravity)
+    call BD_GravityForce(1, parametertype, miscvartype, gravity)
     
     ! test the values
     @assertEqual(baseline, miscvartype%qp%Fg(:,1,1), tolerance, testname)

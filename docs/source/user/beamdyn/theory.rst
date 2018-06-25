@@ -471,7 +471,6 @@ null matrix. The :math:`{\underline{\underline{\mathcal{G}}}}^I`,
       {\underline{\underline{0}}} & {\underline{\underline{C}}}_{11} \tilde{E_1} - \tilde{F} \\
       {\underline{\underline{0}}}& {\underline{\underline{C}}}_{21} \tilde{E_1} - \tilde{M}
       \end{bmatrix} \\
-      \label{mathcalP}
       \mathcal{{\underline{\underline{P}}}} &= \begin{bmatrix}
       {\underline{\underline{0}}} & {\underline{\underline{0}}} \\
       \tilde{F} +  ({\underline{\underline{C}}}_{11} \tilde{E_1})^T & ({\underline{\underline{C}}}_{21} \tilde{E_1})^T

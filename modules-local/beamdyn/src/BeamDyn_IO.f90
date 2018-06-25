@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
-! Copyright (C) 2016-2017  Envision Energy USA, LTD       
+! Copyright (C) 2016-2017  Envision Energy USA, LTD
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ MODULE BeamDyn_IO
    USE BeamDyn_Types
    USE BeamDyn_Subs
    USE NWTC_Library
-   USE NWTC_LAPACK
+   !USE NWTC_LAPACK
 
    IMPLICIT NONE
 
@@ -564,7 +564,6 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
    LOGICAL                      :: Echo                         ! Determines if an echo file should be written
    INTEGER(IntKi)               :: IOS                          ! Temporary Error status
    CHARACTER(ErrMsgLen)         :: ErrMsg2                      ! Temporary Error message
-   CHARACTER(ErrMsgLen)         :: ErrMsg_NoBldNdOuts           ! Temporary Error message
    character(*), parameter      :: RoutineName = 'BD_ReadPrimaryFile'
 
    CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
@@ -1345,7 +1344,7 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    ErrMsg  = ""
 
 
-   IF(InputFileData%analysis_type .NE. 1 .AND. InputFileData%analysis_type .NE. 2) &
+   IF(InputFileData%analysis_type .NE. BD_STATIC_ANALYSIS .AND. InputFileData%analysis_type .NE. BD_DYNAMIC_ANALYSIS) &
        CALL SetErrStat ( ErrID_Fatal, 'Analysis type must be 1 (static) or 2 (dynamic)', ErrStat, ErrMsg, RoutineName )
    IF(InputFileData%rhoinf .LT. 0.0_BDKi .OR. InputFileData%rhoinf .GT. 1.0_BDKi) &
        CALL SetErrStat ( ErrID_Fatal, 'Numerical damping parameter \rho_{inf} must be in the range of [0.0,1.0]', ErrStat, ErrMsg, RoutineName )
@@ -1359,11 +1358,21 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
        CALL SetErrStat ( ErrID_Fatal, 'member_total must be greater than 0', ErrStat, ErrMsg, RoutineName )
    IF(InputFileData%member_total .NE. 1 .AND. InputFileData%quadrature .EQ. TRAP_QUADRATURE) &
        CALL SetErrStat ( ErrID_Fatal, 'Trapzoidal quadrature only allows one member (element)', ErrStat, ErrMsg, RoutineName )
-   IF(InputFileData%kp_total .LT. 3 ) then
+   IF(InputFileData%kp_total .LT. 3 ) THEN
        CALL SetErrStat ( ErrID_Fatal, 'kp_total must be greater than or equal to 3', ErrStat, ErrMsg, RoutineName )
-   else IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,3), 0.0_BDKi ) ) then ! added this in the "else" in case InputFileData%kp_coordinate isn't allocated with at least 1 point
-      CALL SetErrStat(ErrID_Fatal, 'kp_zr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
-   end if
+   ELSE ! added this in the "else" in case InputFileData%kp_coordinate isn't allocated with at least 1 point
+      IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,3), 0.0_BDKi ) ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'kp_zr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
+      END IF
+         !bjj: added checks on kp_xr(1) and kp_yr(1) because BeamDyn's equations currently assume that the blade root and the first FE node 
+         !     are at the same point (i.e., u%BladeRoot is located at the first finite-element node)
+      IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,2), 0.0_BDKi ) ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'kp_yr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
+      END IF
+      IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,1), 0.0_BDKi ) ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'kp_xr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
+      END IF
+   END IF
 
    DO i=1,InputFileData%member_total
        IF(InputFileData%kp_member(i) .LT. 3) THEN
@@ -1399,6 +1408,7 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
       ! Check that the values for the damping are similar.
       !  According to Qi, the damping values mu1 .. mu6 should be of the same order of magnitude.  If they aren't, BeamDyn will likely fail badly.
       !  Will assume for moment that they must be within a factor of 5 of the first value given.
+!FIXME: Check a valid range sometime.
    DO j=1,6
       IF ( maxval( abs(InputFileData%InpBl%beta / InputFileData%InpBl%beta(J) ) ) > 5.0_R8Ki ) THEN
          call SetErrStat( ErrID_Warn,'Damping values in blade file are not of similar order of magnitude! BeamDyn will likely not converge!', ErrStat, ErrMsg, RoutineName )
@@ -1434,8 +1444,16 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    else
 
    ! Check to see if all OutNd(:) analysis points are existing analysis points:
+!bjj: FIXME!!!! THIS ISN'T NECESSARIALLY THE NUMBER OF NODES ON THIS MESH
+!      IF (p%BldMotionNodeLoc == BD_MESH_QP) THEN
+         if(InputFileData%quadrature .EQ. TRAP_QUADRATURE) then
+            nNodes = (InputFileData%InpBl%station_total - 1)*InputFileData%refine + 1  ! number of nodes on y%BldMotion mesh
+         else
          nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total  ! = p%nodes_per_elem*p%elem_total (number of nodes on y%BldMotion mesh)
-      
+         end if
+!      ELSE
+!         nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total + 1
+!      END IF
 
       do j=1,InputFileData%NNodeOuts
          if ( InputFileData%OutNd(j) < 1_IntKi .OR. InputFileData%OutNd(j) > nNodes ) then
@@ -1522,8 +1540,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    call LAPACK_DGEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,y%BldMotion%NNodes), RootRelOrient,   0.0_BDKi, temp33_2, ErrStat2, ErrMsg2 )
    call LAPACK_DGEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,y%BldMotion%NNodes), temp33_2,        0.0_BDKi, temp33,   ErrStat2, ErrMsg2 )
    call BD_CrvExtractCrv(temp33,temp_vec2, ErrStat2, ErrMsg2) ! temp_vec2 = the Wiener-Milenkovic parameters of the tip angular/rotational defelctions
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
    temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2) ! translate these parameters to the correct system for output
    
    AllOuts( TipRDxr ) = temp_vec(1)
@@ -1562,23 +1580,31 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    !------------------------------------
 
       ! outputs on the nodes
-   do beta=1,p%NNodeOuts
+   DO beta=1,p%NNodeOuts
 
       j=p%OutNd(beta)
       j_BldMotion = p%NdIndx(j)
 
          !------------------------------------
          ! Sectional force resultants at Node 1 expressed in l, given in N
-      !FIXME:  N#Mxl & N#Myl are known to be incorrect!  See https://wind.nrel.gov/forum/wind/viewtopic.php?f=3&t=1622
-      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForce(1:3,j_BldMotion))
+      SELECT CASE (p%BldMotionNodeLoc)
+      CASE (BD_MESH_FE)
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(1:3,j))
+      CASE (BD_MESH_QP)
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceQP(1:3,j))
+      END SELECT
       AllOuts( NFl( beta,1 ) ) = temp_vec(1)
       AllOuts( NFl( beta,2 ) ) = temp_vec(2)
       AllOuts( NFl( beta,3 ) ) = temp_vec(3)
       
          !------------------------------------
          ! Sectional moment resultants at Node 1 expressed in l, given in N-m
-      !FIXME:  N#Mxl & N#Myl are known to be incorrect!  See https://wind.nrel.gov/forum/wind/viewtopic.php?f=3&t=1622
-      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForce(4:6,j_BldMotion))
+      SELECT CASE (p%BldMotionNodeLoc)
+      CASE (BD_MESH_FE)
+      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(4:6,j))
+      CASE (BD_MESH_QP)
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceQP(4:6,j))
+      END SELECT
       AllOuts( NMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NMl( beta,3 ) ) = temp_vec(3)
@@ -1588,7 +1614,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
          ! Sectional translational deflection (relative to the undeflected position) expressed in r   
       d     = y%BldMotion%TranslationDisp(:, j_BldMotion) - m%u2%RootMotion%TranslationDisp(:,1)
       d_ref = y%BldMotion%Position(       :, j_BldMotion) - m%u2%RootMotion%Position(       :,1)
-      temp_vec2 = d + d_ref - matmul( RootRelOrient, d_ref ) ! tip displacement
+      temp_vec2 = d + d_ref - MATMUL( RootRelOrient, d_ref ) ! tip displacement
       temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2)
       
       AllOuts( NTDr( beta,1 ) ) = temp_vec(1)
@@ -1600,8 +1626,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       call LAPACK_DGEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,j_BldMotion), RootRelOrient,  0.0_BDKi, temp33_2, ErrStat2, ErrMsg2 )
       call LAPACK_DGEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,j_BldMotion), temp33_2,       0.0_BDKi, temp33,   ErrStat2, ErrMsg2 )
       call BD_CrvExtractCrv(temp33,temp_vec2, ErrStat2, ErrMsg2) ! temp_vec2 = the Wiener-Milenkovic parameters of the node's angular/rotational defelctions
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
       temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2) ! translate these parameters to the correct system for output
             
       AllOuts( NRDr( beta,1 ) ) = temp_vec(1)
@@ -1636,6 +1662,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       AllOuts( NRAl( beta,3 ) ) = temp_vec(3)*R2D
 
 
+      if (p%BldMotionNodeLoc == BD_MESH_FE) THEN !> FIXME: If we are on the finite element points, the input and output meshes are siblings, otherwise we need to multiply by a different orientation (if we're okay 
+                                                 !! with the nodes meaning something different) or we need to map the u2%PointLoad like we do for the m%u2%DistrLoad%Force loads.
          !-------------------------
          ! Applied point forces at Node 1 expressed in l, given in N
       temp_vec = MATMUL(y%BldMotion%Orientation(1:3,1:3,j_BldMotion),m%u2%PointLoad%Force(:,j))
@@ -1649,6 +1677,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       AllOuts( NPMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NPMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NPMl( beta,3 ) ) = temp_vec(3)
+      end if
       
 
    end do ! nodes
@@ -1656,6 +1685,33 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       ! to avoid unnecessary mesh mapping calculations, calculate these outputs only when we've requested them
    if (p%OutInputs) then
                
+      if (p%BldMotionNodeLoc == BD_MESH_QP) THEN ! If we are on the quadrature points, the input and output meshes are siblings
+         
+         do beta=1,p%NNodeOuts
+
+            j=p%OutNd(beta)
+            j_BldMotion = p%NdIndx(j)
+
+               !-------------------------
+               ! Applied distributed forces at Node 1 expressed in l, in N/m
+            temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%u2%DistrLoad%Force( :,j_BldMotion))
+            AllOuts( NDFl( beta,1 ) ) = temp_vec(1)
+            AllOuts( NDFl( beta,2 ) ) = temp_vec(2)
+            AllOuts( NDFl( beta,3 ) ) = temp_vec(3)
+         
+               !-------------------------
+               ! Applied distributed moments at Node 1 expressed in l, in N-m/m
+            temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%u2%DistrLoad%Moment(:,j_BldMotion))
+            AllOuts( NDMl( beta,1 ) ) = temp_vec(1)
+            AllOuts( NDMl( beta,2 ) ) = temp_vec(2)
+            AllOuts( NDMl( beta,3 ) ) = temp_vec(3)
+
+         end do ! nodes
+         
+         
+      else
+         
+         
             ! transfer the output motions to the input nodes for load transfer
          CALL Transfer_Line2_to_Line2( y%BldMotion, m%y_BldMotion_at_u, m%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1686,6 +1742,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
 
          end do ! nodes
          
+      end if
+
 
    end if
 
@@ -1759,9 +1817,9 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
 
    WRITE (UnSu,'(A,1ES18.5)')  'Time increment:',p%dt
 
-   WRITE (UnSu,'(A,I4)' ) 'Maximum number of iterations in Newton-Ralphson solution:', p%niter
+   WRITE (UnSu,'(A,I4)' ) 'Maximum number of iterations in Newton-Raphson solution:', p%niter
    WRITE (UnSu,'(A,1ES18.5)' ) 'Convergence parameter:', p%tol
-   WRITE (UnSu,'(A,I4)' ) 'Factorization frequency in Newton-Ralphson solution:', p%n_fact
+   WRITE (UnSu,'(A,I4)' ) 'Factorization frequency in Newton-Raphson solution:', p%n_fact
 
    IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
        WRITE (UnSu,'(A)')  'Quadrature method: Gauss quadrature'
@@ -1806,6 +1864,13 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
       WRITE(UnSu,'(I4,3ES18.5)') i,p%QuadPt(1:3,i+p%qp_indx_offset)
    ENDDO
 
+   WRITE (UnSu,'(/,A)')  'Quadrature point initial rotation vectors'
+   WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','      WM_x       ','      WM_y       ','      WM_z       '       
+   WRITE (UnSu,'(A,1x,3(1x,A))')  '----','-----------------','-----------------','-----------------'
+   DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset) 
+      WRITE(UnSu,'(I4,3ES18.5)') i,p%QuadPt(4:6,i+p%qp_indx_offset)
+   ENDDO
+
    WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at quadrature points (in IEC coordinates)'
    DO i=1,size(p%Stif0_QP,3)
       WRITE (UnSu,'(/,A,I4)')  'Quadrature point number: ',i
@@ -1839,7 +1904,15 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    ENDDO
 
 
+   select case (p%BldMotionNodeLoc)
+   case (BD_MESH_FE)  
       WRITE (UnSu, '(/,A)')  'Output nodes located at finite element nodes.'
+   case (BD_MESH_QP)  
+      WRITE (UnSu, '(/,A)')  'Output nodes located at quadrature points.'
+   case (BD_MESH_STATIONS)  
+      WRITE (UnSu, '(/,A)')  'Output nodes located at blade propery input station locations.'
+      !bjj: need to write where these nodes are located...
+   end select
    
 
    
@@ -1853,7 +1926,8 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
 
 
 
-   if (p%analysis_type == BD_DYNAMIC_ANALYSIS) then
+
+   if (p%analysis_type == BD_DYNAMIC_ANALYSIS ) then
       ! we'll add mass and stiffness matrices in the first call to UpdateStates
       m%Un_Sum = UnSu
    else

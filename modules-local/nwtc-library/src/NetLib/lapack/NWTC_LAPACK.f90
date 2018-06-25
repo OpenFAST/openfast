@@ -1403,7 +1403,6 @@ MODULE NWTC_LAPACK
       INTEGER                        :: LDU               ! The leading dimension of the array U.  LDU >= 1; if JOBU = 'S' or 'A', LDU >= M.
       INTEGER                        :: LDVT              ! The leading dimension of the array VT.  LDVT >= 1; if
                                                           !! JOBVT = 'A', LDVT >= N; if JOBVT = 'S', LDVT >= min(M,N).
-      CHARACTER(20)                  :: n_str
 
       LDA  = SIZE(A,1)
       LDU  = SIZE(U,1)
@@ -1508,7 +1507,6 @@ MODULE NWTC_LAPACK
       INTEGER                        :: LDU               ! The leading dimension of the array U.  LDU >= 1; if JOBU = 'S' or 'A', LDU >= M.
       INTEGER                        :: LDVT              ! The leading dimension of the array VT.  LDVT >= 1; if
                                                           !! JOBVT = 'A', LDVT >= N; if JOBVT = 'S', LDVT >= min(M,N).
-      CHARACTER(20)                  :: n_str
 
       LDA  = SIZE(A,1)
       LDU  = SIZE(U,1)

@@ -707,7 +707,10 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
 !> * Record 98: Safety system number to activate; not used in ServoDyn
 
 !> * Records 102-104: Yaw control/stiffness/damping; ignored in ServoDyn
-!> * Record 107: Brake torque demand; ignored in ServoDyn
+
+!> * Record 107: Brake torque demand
+   dll_data%HSSBrTrqC = dll_data%avrSWAP(107)
+
 !> * Record 108: Yaw brake torque demand; ignored in ServoDyn
 
 !> * Records 120-129: User-defined variables 1-10; ignored in ServoDyn

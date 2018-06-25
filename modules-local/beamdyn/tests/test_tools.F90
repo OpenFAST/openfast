@@ -91,9 +91,8 @@ contains
         getGravityInZ = (/ 0.0, 0.0, -9.806 /)
     end function
     
-    type(BD_ParameterType) function simpleParameterType()
+    type(BD_ParameterType) function simpleParameterType() RESULT(p)
         
-        type(BD_ParameterType) :: p
         integer                :: i, j
         integer                :: ErrStat
         character(1024)        :: ErrMsg
@@ -112,9 +111,18 @@ contains
         call AllocAry(p%qp%mmm, p%nqp, p%elem_total, 'qp_mmm', ErrStat, ErrMsg)
         call AllocAry(p%qp%mEta, 3, p%nqp, p%elem_total, 'qp_RR0mEta', ErrStat, ErrMsg)
         call AllocAry(p%Mass0_QP, 6, 6, p%nqp*p%elem_total, 'Mass0_QP', ErrStat, ErrMsg)
-        
+        call AllocAry(p%QPtw_Shp_Shp_Jac, p%nqp, p%nodes_per_elem, p%nodes_per_elem, p%elem_total, 'QPtw_Shp_Shp_Jac', ErrStat, ErrMsg)
+        call AllocAry(p%QPtw_ShpDer_ShpDer_Jac, p%nqp, p%nodes_per_elem, p%nodes_per_elem, p%elem_total, 'QPtw_ShpDer_ShpDer_Jac', ErrStat, ErrMsg)
+        call AllocAry(p%QPtw_Shp_ShpDer, p%nqp, p%nodes_per_elem, p%nodes_per_elem, 'QPtw_Shp_ShpDer', ErrStat, ErrMsg)
+        call AllocAry(p%QPtw_Shp_Jac, p%nqp, p%nodes_per_elem, p%elem_total, 'QPtw_Shp_Jac', ErrStat, ErrMsg)
+        call AllocAry(p%Shp, p%nodes_per_elem, p%nqp, 'Shp', ErrStat, ErrMsg)
+        call AllocAry(p%ShpDer, p%nodes_per_elem, p%nqp, 'ShpDer', ErrStat, ErrMsg)
+        call AllocAry(p%QPtWeight, p%nqp, 'QPtWeightShp', ErrStat, ErrMsg)
+        call AllocAry(p%QPtw_ShpDer, p%nqp, p%nodes_per_elem, 'QPtw_ShpDer', ErrStat, ErrMsg)
+        call AllocAry(p%Jacobian, p%nqp, p%nodes_per_elem, 'Jacobian', ErrStat, ErrMsg)
+
         ! construct arrays
-        p%qp%mmm = getMassMatrix()
+        p%qp%mmm = 1.0
         
         do j=1, p%elem_total
             do i=1, p%nqp
@@ -123,14 +131,10 @@ contains
             end do
         end do
         
-        ! set the return value
-        simpleParameterType = p
-        
     end function
     
-    type(BD_MiscVarType) function simpleMiscVarType(nqp, nelem)
+    type(BD_MiscVarType) function simpleMiscVarType(nqp, nelem) RESULT(m)
         
-        type(BD_MiscVarType) :: m
         integer, intent(in)  :: nqp, nelem
         integer              :: i, j
         integer              :: ErrStat
@@ -155,14 +159,10 @@ contains
             end do
         end do
         
-        ! set the return value
-        simpleMiscVarType = m
-        
     end function
 
-    type(BD_InputType) function simpleInputType(nqp, nelem)
+    type(BD_InputType) function simpleInputType(nqp, nelem) RESULT(i)
         
-        type(BD_InputType)   :: i
         integer, intent(in)  :: nqp, nelem
         integer              :: j
         integer              :: ErrStat
@@ -182,14 +182,10 @@ contains
             i%DistrLoad%Moment(:,j) = (/ -3*(j-1)-1, -3*(j-1)-2, -3*(j-1)-3 /)
         end do
         
-        ! set the return value
-        simpleInputType = i
-        
     end function
     
-    type(BD_InputFile) function simpleInputFile()
+    type(BD_InputFile) function simpleInputFile() RESULT(i)
         
-        type(BD_InputFile)   :: i
         integer              :: j
         integer              :: ErrStat
         character(1024)      :: ErrMsg
@@ -228,9 +224,6 @@ contains
         i%kp_coordinate(1,:) = (/ 0.000000, 0.000000,  0.0000, 0.00000 /) !  {:}{:} - - "Key point coordinates array" -
         i%kp_coordinate(2,:) = (/ 0.000000, 0.000000,  5.0000, 0.00000 /)
         i%kp_coordinate(3,:) = (/ 0.000000, 0.000000, 10.0000, 0.00000 /)
-        
-        ! set the return value
-        simpleInputFile = i
         
     end function
     
