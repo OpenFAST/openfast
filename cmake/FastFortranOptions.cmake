@@ -39,6 +39,7 @@
 #
 macro(set_fast_fortran)
   get_filename_component(FCNAME "${CMAKE_Fortran_COMPILER}" NAME)
+  message("-------Using compiler  ${FCNAME} -------")
 
   # Abort if we do not have gfortran or Intel Fortran Compiler.
   if (NOT (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU" OR
