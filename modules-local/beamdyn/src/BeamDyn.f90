@@ -675,6 +675,13 @@ subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) return
 
+
+   call AllocAry(InitOut%QPtN,  p%nqp, 'InitOut%QPtN', ErrStat2,ErrMsg2)
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+   if(ErrStat >= AbortErrLev) return
+
+   InitOut%QPtN = (p%QPtN + 1.0)*0.5
+   
    do i=1,p%NumOuts
       InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
       InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units

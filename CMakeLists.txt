@@ -94,7 +94,7 @@ set(OPENFAST_MODULES_LOCAL
   hydrodyn
   orcaflex-interface
   extptfm
-  openfoam
+  externalinflow
   supercontroller
   turbsim
   openfast-library

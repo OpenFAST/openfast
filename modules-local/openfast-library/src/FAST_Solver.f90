@@ -46,7 +46,7 @@ MODULE FAST_Solver
    USE IceFloe
    USE ServoDyn
    USE SubDyn
-   USE OpenFOAM
+   USE ExternalInflow
    USE SuperController
    Use ExtPtfm_MCKF
    
@@ -362,13 +362,13 @@ SUBROUTINE IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW )
 END SUBROUTINE IfW_SetExternalInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the AeroDyn wind inflow inputs.
-SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
+SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_ExtInfw, ErrStat, ErrMsg )
 
       ! Passed variables
    TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< FAST parameter data    
    TYPE(AD_InputType),          INTENT(INOUT)   :: u_AD        !< The inputs to AeroDyn
    TYPE(InflowWind_OutputType), INTENT(IN)      :: y_IfW       !< The outputs from InflowWind
-   TYPE(OpFM_OutputType),       INTENT(IN)      :: y_OpFM      !< outputs from the OpenFOAM integration module
+   TYPE(ExtInfw_OutputType),       INTENT(IN)      :: y_ExtInfw      !< outputs from the ExternalInflow integration module
    
    INTEGER(IntKi)                               :: ErrStat     !< Error status of the operation
    CHARACTER(*)                                 :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -415,7 +415,7 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
          end do      
       end if
          
-   ELSEIF ( p_FAST%CompInflow == MODULE_OpFM ) THEN
+   ELSEIF ( p_FAST%CompInflow == MODULE_ExtInfw ) THEN
       node = 2 !start of inputs to AD15
 
       NumBl  = size(u_AD%InflowOnBlade,3)
@@ -423,9 +423,9 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
       
       do k=1,NumBl
          do j=1,Nnodes
-            u_AD%InflowOnBlade(1,j,k) = y_OpFM%u(node)
-            u_AD%InflowOnBlade(2,j,k) = y_OpFM%v(node)
-            u_AD%InflowOnBlade(3,j,k) = y_OpFM%w(node)
+            u_AD%InflowOnBlade(1,j,k) = y_ExtInfw%u(node)
+            u_AD%InflowOnBlade(2,j,k) = y_ExtInfw%v(node)
+            u_AD%InflowOnBlade(3,j,k) = y_ExtInfw%w(node)
             node = node + 1
          end do
       end do
@@ -433,9 +433,9 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
       if ( allocated(u_AD%InflowOnTower) ) then
          Nnodes = size(u_AD%InflowOnTower,2)
          do j=1,Nnodes
-            u_AD%InflowOnTower(1,j) = y_OpFM%u(node)
-            u_AD%InflowOnTower(2,j) = y_OpFM%v(node)
-            u_AD%InflowOnTower(3,j) = y_OpFM%w(node)
+            u_AD%InflowOnTower(1,j) = y_ExtInfw%u(node)
+            u_AD%InflowOnTower(2,j) = y_ExtInfw%v(node)
+            u_AD%InflowOnTower(3,j) = y_ExtInfw%w(node)
             node = node + 1
          end do      
       end if      
@@ -522,14 +522,14 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_ED, BD, MeshMapData, ErrStat, Er
 END SUBROUTINE AD_InputSolve_NoIfW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the AeroDyn14 wind inflow inputs.
-SUBROUTINE AD14_InputSolve_IfW( p_FAST, u_AD14, y_IfW, y_OpFM, ErrStat, ErrMsg )
+SUBROUTINE AD14_InputSolve_IfW( p_FAST, u_AD14, y_IfW, y_ExtInfw, ErrStat, ErrMsg )
 !,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
       ! Passed variables
    TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      !< parameter FAST data    
    TYPE(AD14_InputType),        INTENT(INOUT)   :: u_AD14      !< The inputs to AeroDyn14
    TYPE(InflowWind_OutputType), INTENT(IN)      :: y_IfW       !< The outputs from InflowWind
-   TYPE(OpFM_OutputType),       INTENT(IN)      :: y_OpFM      !< outputs from the OpenFOAM integration module
+   TYPE(ExtInfw_OutputType),       INTENT(IN)      :: y_ExtInfw      !< outputs from the ExternalInflow integration module
    
    INTEGER(IntKi)                               :: ErrStat     !< Error status of the operation
    CHARACTER(*)                                 :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -555,10 +555,10 @@ SUBROUTINE AD14_InputSolve_IfW( p_FAST, u_AD14, y_IfW, y_OpFM, ErrStat, ErrMsg )
       ELSE
          u_AD14%InflowVelocity = y_IfW%VelocityUVW(:,:)  
       END IF               
-   ELSEIF ( p_FAST%CompInflow == MODULE_OpFM ) THEN
-      u_AD14%InflowVelocity(1,:) = y_OpFM%u(2:)      
-      u_AD14%InflowVelocity(2,:) = y_OpFM%v(2:)
-      u_AD14%InflowVelocity(3,:) = y_OpFM%w(2:)  
+   ELSEIF ( p_FAST%CompInflow == MODULE_ExtInfw ) THEN
+      u_AD14%InflowVelocity(1,:) = y_ExtInfw%u(2:)      
+      u_AD14%InflowVelocity(2,:) = y_ExtInfw%v(2:)
+      u_AD14%InflowVelocity(3,:) = y_ExtInfw%w(2:)  
    ELSE
       u_AD14%InflowVelocity = 0.0_ReKi           ! whole array
    END IF
@@ -707,7 +707,7 @@ SUBROUTINE AD14_InputSolve_NoIfW( p_FAST, u_AD14, y_ED, MeshMapData, ErrStat, Er
 END SUBROUTINE AD14_InputSolve_NoIfW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets the inputs required for ServoDyn
-SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, MeshMapData, ErrStat, ErrMsg, y_SrvD_prev )
+SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_ExtInfw, y_BD, MeshMapData, ErrStat, ErrMsg, y_SrvD_prev )
 !..................................................................................................................................
 
    TYPE(FAST_ParameterType),         INTENT(IN)     :: p_FAST       !< Glue-code simulation parameters
@@ -715,7 +715,7 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, M
    TYPE(SrvD_InputType),             INTENT(INOUT)  :: u_SrvD       !< ServoDyn Inputs at t
    TYPE(ED_OutputType),              INTENT(IN)     :: y_ED         !< ElastoDyn outputs
    TYPE(InflowWind_OutputType),      INTENT(IN)     :: y_IfW        !< InflowWind outputs
-   TYPE(OpFM_OutputType),            INTENT(IN)     :: y_OpFM       !< InflowWind outputs
+   TYPE(ExtInfw_OutputType),            INTENT(IN)     :: y_ExtInfw       !< InflowWind outputs
    TYPE(BD_OutputType),              INTENT(IN)     :: y_BD(:)      !< BD Outputs
    TYPE(SrvD_OutputType), OPTIONAL,  INTENT(IN)     :: y_SrvD_prev  !< ServoDyn outputs from t - dt
    TYPE(FAST_ModuleMapType),         INTENT(INOUT)  :: MeshMapData  !< Data for mapping between modules
@@ -747,14 +747,14 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, M
       u_SrvD%YawErr   = u_SrvD%WindDir - y_ED%YawAngle
       u_SrvD%HorWindV = SQRT( y_IfW%VelocityUVW(1,1)**2 + y_IfW%VelocityUVW(2,1)**2 )
 
-   ELSEIF ( p_FAST%CompInflow == Module_OpFM )  THEN 
+   ELSEIF ( p_FAST%CompInflow == Module_ExtInfw )  THEN 
       
-      u_SrvD%WindDir  = ATAN2( y_OpFM%v(1), y_OpFM%u(1) )
+      u_SrvD%WindDir  = ATAN2( y_ExtInfw%v(1), y_ExtInfw%u(1) )
       u_SrvD%YawErr   = u_SrvD%WindDir - y_ED%YawAngle
-      u_SrvD%HorWindV = SQRT( y_OpFM%u(1)**2 + y_OpFM%v(1)**2 )
+      u_SrvD%HorWindV = SQRT( y_ExtInfw%u(1)**2 + y_ExtInfw%v(1)**2 )
       
       if ( allocated(u_SrvD%SuperController) ) then
-         u_SrvD%SuperController = y_OpFM%SuperController
+         u_SrvD%SuperController = y_ExtInfw%SuperController
       end if
       
       
@@ -861,7 +861,7 @@ SUBROUTINE SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
    u_SrvD%ExternalYawRateCom   =  m_FAST%ExternInput%YawRateCom 
    u_SrvD%ExternalHSSBrFrac    =  m_FAST%ExternInput%HSSBrFrac 
 
-   if (ALLOCATED(u_SrvD%ExternalBlPitchCom)) then !there should be no reason this isn't allocated, but OpenFOAM is acting strange...
+   if (ALLOCATED(u_SrvD%ExternalBlPitchCom)) then !there should be no reason this isn't allocated, but ExternalInflow is acting strange...
       do i=1,SIZE(u_SrvD%ExternalBlPitchCom)
          u_SrvD%ExternalBlPitchCom(i)   = m_FAST%ExternInput%BlPitchCom(i)
       end do
@@ -4334,7 +4334,7 @@ END SUBROUTINE InitModuleMappings
 !! once at the start of the n_t_global loop and once in the j_pc loop, using different states.
 !! *** Note that modules that do not have direct feedthrough should be called first. ***
 SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, calcJacobian, NextJacCalcTime, p_FAST, m_FAST, &
-               ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+               ED, BD, SrvD, AD14, AD, IfW, ExtInfw, HD, SD, ExtPtfm, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
    REAL(DbKi)              , intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)
    INTEGER(IntKi)          , intent(in   ) :: this_state          !< Index into the state array (current or predicted states)
    INTEGER(IntKi)          , intent(in   ) :: n_t_global          !< current time step (used only for SrvD hack)
@@ -4350,7 +4350,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    TYPE(AeroDyn14_Data),     INTENT(INOUT) :: AD14                !< AeroDyn14 data
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
-   TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
+   TYPE(ExternalInflow_Data),      INTENT(INOUT) :: ExtInfw                !< ExternalInflow data
    TYPE(HydroDyn_Data),      INTENT(INOUT) :: HD                  !< HydroDyn data
    TYPE(SubDyn_Data),        INTENT(INOUT) :: SD                  !< SubDyn data
    TYPE(ExtPtfm_Data),       INTENT(INOUT) :: ExtPtfm             !< ExtPtfm data
@@ -4401,7 +4401,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
       
    CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
+   CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, ExtInfw, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
                   
 #else
@@ -4435,7 +4435,7 @@ end if
 #endif
 
       !> Solve option 2 (modules without direct feedthrough):
-   CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
+   CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, ExtInfw, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
                
       !> transfer ED outputs to other modules used in option 1:
@@ -4456,9 +4456,9 @@ end if
       CALL AD14_InputSolve_NoIfW( p_FAST, AD14%Input(1), ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )   
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )        
                
-         ! because we're not calling InflowWind_CalcOutput or getting new values from OpenFOAM, 
+         ! because we're not calling InflowWind_CalcOutput or getting new values from ExternalInflow, 
          ! this probably can be skipped
-      CALL AD14_InputSolve_IfW( p_FAST, AD14%Input(1), IfW%y, OpFM%y, ErrStat2, ErrMsg2 )   
+      CALL AD14_InputSolve_IfW( p_FAST, AD14%Input(1), IfW%y, ExtInfw%y, ErrStat2, ErrMsg2 )   
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                       
          
    ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
@@ -4466,10 +4466,10 @@ end if
       CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), ED%Output(1), BD, MeshMapData, ErrStat2, ErrMsg2 )   
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )        
 
-         ! because we're not calling InflowWind_CalcOutput or getting new values from OpenFOAM, 
+         ! because we're not calling InflowWind_CalcOutput or getting new values from ExternalInflow, 
          ! this probably can be skipped; 
          ! @todo: alternatively, we could call InflowWind_CalcOutput, too.
-      CALL AD_InputSolve_IfW( p_FAST, AD%Input(1), IfW%y, OpFM%y, ErrStat2, ErrMsg2 )   
+      CALL AD_InputSolve_IfW( p_FAST, AD%Input(1), IfW%y, ExtInfw%y, ErrStat2, ErrMsg2 )   
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                       
 
    END IF
@@ -4477,17 +4477,17 @@ end if
    IF ( p_FAST%CompInflow == Module_IfW ) THEN
       CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(1), IfW%p, AD14%Input(1), AD%Input(1), ED%Output(1), ErrStat2, ErrMsg2 )       
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
-   ! OpenFOAM is the driver and it sets these inputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
-   !   in this scenario until OpenFOAM takes another step  **this is a source of error, but it is the way the OpenFOAM-FAST7 coupling
-   !   works, so I'm not going to spend time that I don't have now to fix it**
-      CALL OpFM_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), SrvD%y, OpFM, ErrStat2, ErrMsg2 )
+   ELSE IF ( p_FAST%CompInflow == Module_ExtInfw ) THEN
+   ! ExternalInflow is the driver and it sets these inputs outside of this solve; the ExternalInflow inputs and outputs thus don't change 
+   !   in this scenario until ExternalInflow takes another step  **this is a source of error, but it is the way the ExternalInflow-FAST7 coupling
+    !   works, so I'm not going to spend time that I don't have now to fix it**
+      CALL ExtInfw_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), BD%y, SrvD%y, ExtInfw, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )        
    END IF
    
    
    IF ( p_FAST%CompServo == Module_SrvD  ) THEN         
-      CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, BD%y, MeshmapData, ErrStat2, ErrMsg2, SrvD%y )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
+      CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, ExtInfw%y, BD%y, MeshmapData, ErrStat2, ErrMsg2, SrvD%y )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    END IF         
              
@@ -4695,7 +4695,7 @@ END SUBROUTINE SolveOption1
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine implements the "option 2" solve for all inputs without direct links to HD, SD, MAP, or the ED platform reference 
 !! point.
-SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat, ErrMsg, firstCall)
+SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, ExtInfw, MeshMapData, ErrStat, ErrMsg, firstCall)
 !...............................................................................................................................
    LOGICAL                 , intent(in   ) :: firstCall           !< flag to determine how to call ServoDyn (a hack)
    REAL(DbKi)              , intent(in   ) :: this_time           !< The current simulation time (actual or time of prediction)
@@ -4710,7 +4710,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
    TYPE(AeroDyn14_Data),     INTENT(INOUT) :: AD14                !< AeroDyn14 data
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  !< AeroDyn data
    TYPE(InflowWind_Data),    INTENT(INOUT) :: IfW                 !< InflowWind data
-   TYPE(OpenFOAM_Data),      INTENT(INOUT) :: OpFM                !< OpenFOAM data
+   TYPE(ExternalInflow_Data),      INTENT(INOUT) :: ExtInfw                !< ExternalInflow data
 
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
    
@@ -4769,20 +4769,20 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
       CALL InflowWind_CalcOutput( this_time, IfW%Input(1), IfW%p, IfW%x(this_state), IfW%xd(this_state), IfW%z(this_state), &
                                   IfW%OtherSt(this_state), IfW%y, IfW%m, ErrStat2, ErrMsg2 )         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
-   !ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
-   ! ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
-   ! !   in this scenario until OpenFOAM takes another step  **this is a source of error, but it is the way the OpenFOAM-FAST7 coupling
+   !ELSE IF ( p_FAST%CompInflow == Module_ExtInfw ) THEN
+   ! ! ExternalInflow is the driver and it computes outputs outside of this solve; the ExternalInflow inputs and outputs thus don't change 
+   ! !   in this scenario until ExternalInflow takes another step  **this is a source of error, but it is the way the ExternalInflow-FAST7 coupling
    ! !   works, so I'm not going to spend time that I don't have now to fix it**
-   !   CALL OpFM_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), SrvD%y, OpFM, ErrStat2, ErrMsg2 )
+   !   CALL ExtInfw_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), BD%y, SrvD%y, ExtInfw, ErrStat2, ErrMsg2 )
    !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-   !   CALL OpFM_SetWriteOutput(OpFM)
+   !   CALL ExtInfw_SetWriteOutput(ExtInfw)
       
    END IF
    
    
    IF ( p_FAST%CompAero == Module_AD14 ) THEN 
                         
-      CALL AD14_InputSolve_IfW( p_FAST, AD14%Input(1), IfW%y, OpFM%y, ErrStat2, ErrMsg2 )
+      CALL AD14_InputSolve_IfW( p_FAST, AD14%Input(1), IfW%y, ExtInfw%y, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
       CALL AD14_CalcOutput( this_time, AD14%Input(1), AD14%p, AD14%x(this_state), AD14%xd(this_state), AD14%z(this_state), &
@@ -4791,7 +4791,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
         
    ELSE IF ( p_FAST%CompAero == Module_AD ) THEN 
                         
-      CALL AD_InputSolve_IfW( p_FAST, AD%Input(1), IfW%y, OpFM%y, ErrStat2, ErrMsg2 )
+      CALL AD_InputSolve_IfW( p_FAST, AD%Input(1), IfW%y, ExtInfw%y, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
       CALL AD_CalcOutput( this_time, AD%Input(1), AD%p, AD%x(this_state), AD%xd(this_state), AD%z(this_state), &
@@ -4804,9 +4804,9 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
          
          ! note that the inputs at step(n) for ServoDyn include the outputs from step(n-1)
       IF ( firstCall ) THEN
-         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, BD%y, MeshMapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
+         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, ExtInfw%y, BD%y, MeshMapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
       ELSE
-         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, BD%y, MeshMapData, ErrStat2, ErrMsg2, SrvD%y ) ! note that this uses the outputs from the previous step, violating the framework for the Bladed DLL (if SrvD%y is used in another way, this will need to be changed)
+         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, ExtInfw%y, BD%y, MeshMapData, ErrStat2, ErrMsg2, SrvD%y ) ! note that this uses the outputs from the previous step, violating the framework for the Bladed DLL (if SrvD%y is used in another way, this will need to be changed)
       END IF
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -4816,14 +4816,14 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
 
    END IF
       
-   IF ( p_FAST%CompInflow == Module_OpFM ) THEN
-   ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
-   !   in this scenario until OpenFOAM takes another step  **this is a source of error, but it is the way the OpenFOAM-FAST7 coupling
+   IF ( p_FAST%CompInflow == Module_ExtInfw ) THEN
+   ! ExternalInflow is the driver and it computes outputs outside of this solve; the ExternalInflow inputs and outputs thus don't change 
+   !   in this scenario until ExternalInflow takes another step  **this is a source of error, but it is the way the ExternalInflow-FAST7 coupling
    !   works, so I'm not going to spend time that I don't have now to fix it** 
-   ! note that I'm setting these inputs AFTER the call to ServoDyn so OpenFOAM gets all the inputs updated at the same step
-      CALL OpFM_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), SrvD%y, OpFM, ErrStat2, ErrMsg2 )
+   ! note that I'm setting these inputs AFTER the call to ServoDyn so ExternalInflow gets all the inputs updated at the same step
+      CALL ExtInfw_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), BD%y, SrvD%y, ExtInfw, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      CALL OpFM_SetWriteOutput(OpFM)
+      CALL ExtInfw_SetWriteOutput(ExtInfw)
       
    END IF   
               

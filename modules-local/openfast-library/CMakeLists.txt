@@ -34,7 +34,7 @@ target_link_libraries(openfast_prelib
   hydrodynlib
   orcaflexlib
   extptfm_mckflib
-  openfoamtypeslib
+  externalinflowtypeslib
   sctypeslib
   feamlib
   moordynlib

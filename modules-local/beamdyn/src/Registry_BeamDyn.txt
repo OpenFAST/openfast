@@ -40,6 +40,8 @@ typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputUnt {:}  -   - 
 typedef   ^        InitOutputType ProgDesc            Ver             -   -   -   "This module's name, version, and date"  -
 typedef   ^        InitOutputType R8Ki                kp_coordinate  {:}{:} - -   "Key point coordinates array"            -
 typedef   ^        InitOutputType IntKi               kp_total        -   -   -   "Total number of key point" -
+typedef   ^        InitOutputType R8Ki                QPtN           {:}  -   -   "Quadrature (QuadPt) point locations in natural frame [-1, 1]" -
+
 
 # ..... Blade Input file data........................................................................
 typedef   ^        BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"

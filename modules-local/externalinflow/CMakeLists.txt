@@ -14,23 +14,23 @@
 # limitations under the License.
 #
 
-generate_f90_types(src/OpenFOAM_Registry.txt OpenFOAM_Types.f90 -ccode)
+generate_f90_types(src/ExternalInflow_Registry.txt ExternalInflow_Types.f90 -ccode)
 
-add_library(openfoamtypeslib
-  OpenFOAM_Types.f90)
-target_link_libraries(openfoamtypeslib nwtclibs)
+add_library(externalinflowtypeslib
+  ExternalInflow_Types.f90)
+target_link_libraries(externalinflowtypeslib nwtclibs)
 
 add_library(foamfastlib
-  src/OpenFOAM.f90
+  src/ExternalInflow.f90
   )
-target_link_libraries(foamfastlib openfoamtypeslib openfast_prelib nwtclibs)
+target_link_libraries(foamfastlib externalinflowtypeslib openfast_prelib nwtclibs)
 
-install(TARGETS openfoamtypeslib foamfastlib
+install(TARGETS externalinflowtypeslib foamfastlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
 
 install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/OpenFOAM_Types.h
+  ${CMAKE_CURRENT_BINARY_DIR}/ExternalInflow_Types.h
   DESTINATION include)

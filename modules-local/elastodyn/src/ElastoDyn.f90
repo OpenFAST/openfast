@@ -230,8 +230,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%NumBl       = p%NumBl
    InitOut%Gravity     = p%Gravity
    InitOut%BladeLength = p%TipRad - p%HubRad
-   InitOut%TowerHeight = p%TwrFlexL
-   InitOut%TowerBaseHeight = p%TowerBsHt
+   InitOut%TowerFlexL  = p%TwrFlexL
    InitOut%PlatformPos = x%QT(1:6)
    InitOut%HubHt       = p%HubHt
    InitOut%TwrBasePos  = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
