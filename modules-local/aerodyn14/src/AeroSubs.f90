@@ -55,6 +55,7 @@ SUBROUTINE AD14_GetInput(InitInp, P, x, xd, z, m, y, ErrStat, ErrMess )
    character(*), parameter    :: RoutineName = 'AD14_GetInput'
 
    !bjj: error handling here needs to be fixed! (we overwrite any non-AbortErrLev errors)
+   print *, '********************* CP - Inside AeroDyn14!!!'
    
    ErrStat = ErrID_None
    ErrMess = ''

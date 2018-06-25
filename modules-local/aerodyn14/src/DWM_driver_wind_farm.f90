@@ -1,9 +1,9 @@
 PROGRAM DWM_driver_wind_farm
    USE IFPORT
-   USE DFLIB
+   USE IFCORE
    USE DWM_driver_wind_farm_sub
    USE read_wind_farm_parameter_data, ONLY: NumWT, DWM_exe_name
-   USE IFQWIN
+   ! USE IFQWIN
    USE DWM_init_data, ONLY:InputFile
    
    IMPLICIT NONE
@@ -11,7 +11,8 @@ PROGRAM DWM_driver_wind_farm
    INTEGER :: simulation_index
    INTEGER :: RESULT
    REAL :: T1,T2
-    
+   
+   RESULT = system("echo CP 1") 
       ! pre-processing
    CALL Driver_Init
    CALL read_wind_farm_parameter
@@ -31,7 +32,10 @@ PROGRAM DWM_driver_wind_farm
    !RESULT = system(TRIM(DWM_exe_name)//".exe "// TRIM(Int2LStr(simulation_index)) //" "//TRIM(InputFile)//".fst")
    
    ! FAST 8
-   RESULT = system(TRIM(DWM_exe_name)//".exe "// TRIM(InputFile)//".fst" // " " //TRIM(Int2LStr(simulation_index)) //" "// "DWM")
+   print*, 'about to run FAST:',TRIM(InputFile),'----------------'
+   RESULT = system("echo "//TRIM(DWM_exe_name)//" "//TRIM(InputFile)//".fst" // " " //TRIM(Int2LStr(simulation_index)) //" "// "DWM")
+   RESULT = system(TRIM(DWM_exe_name) // " " // TRIM(InputFile)//".fst" // " " // TRIM(Int2LStr(simulation_index)) //" "// "DWM")
+   print*, 'fast runned.'
    
    !result = SetExitQQ (QWin$ExitNoPersist)
    
@@ -50,9 +54,9 @@ PROGRAM DWM_driver_wind_farm
        !RESULT = system(TRIM(DWM_exe_name)//".exe "// TRIM(Int2LStr(simulation_index)) //" "//TRIM(InputFile)//".fst")
        
        ! FAST 8
-       RESULT = system(TRIM(DWM_exe_name)//".exe "// TRIM(InputFile)//".fst" // " " //TRIM(Int2LStr(simulation_index)) //" "// "DWM")
+       RESULT = system(TRIM(DWM_exe_name)//" "// TRIM(InputFile)//".fst" // " " //TRIM(Int2LStr(simulation_index)) //" "// "DWM")
        
-       result = SetExitQQ (QWIN$EXITNOPERSIST)
+       result = 0 !SetExitQQ (QWIN$EXITNOPERSIST)
        CALL rename_FAST_output(simulation_index)
    END DO
    

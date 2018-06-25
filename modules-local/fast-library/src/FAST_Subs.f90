@@ -1409,6 +1409,7 @@ SUBROUTINE GetInputFileName(InputFile,UseDWM,ErrStat,ErrMsg)
    IF (LEN_TRIM(LastArg) > 0) THEN ! see if DWM was specified as the second option
       CALL Conv2UC( LastArg )
       IF ( TRIM(LastArg) == "DWM" ) THEN
+         PRINT *, "Using the DWM module."
          UseDWM    = .TRUE.
       END IF
    END IF   
