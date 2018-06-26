@@ -2239,6 +2239,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%UseBlCm, "UseBlCm", "Include aerodynamic pitching moment in calculations? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) RETURN
+      IF (.not. InputFileData%UseBlCm) InputFileData%InCol_Cm = 0  ! don't use cm column is UseBlCm is false
             
    !   ! NumBlNds - Number of blade nodes used in the analysis (-):
    !CALL ReadVar( UnIn, InputFile, InputFileData%NumBlNds, "NumBlNds", "Number of blade nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc)
