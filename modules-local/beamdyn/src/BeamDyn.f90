@@ -2493,7 +2493,7 @@ SUBROUTINE Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
       !!       \end{bmatrix}  \f$
    mqp%Fd(1:3,idx_qp,nelem)  = 0.0_BDKi
 ! ADP uu0 ref: If E1 is referenced against a different curve than Stif0_QP, there will be strange coupling terms here. 
-   mqp%Fd(4:6,idx_qp,nelem)  = cross_product(mqp%Fc(1:3,idx_qp,nelem), mqp%E1(:,idx_qp,nelem))   
+   mqp%Fd(4:6,idx_qp,nelem)  = cross_product(mqp%Fc(1:3,idx_qp,nelem), mqp%E1(:,idx_qp,nelem))
    
 END SUBROUTINE Calc_Fc_Fd
 
