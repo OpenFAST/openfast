@@ -113,10 +113,14 @@ typedef   ^ OtherStateType      InflowWind_OtherStateType     IfW  - - -  "Dummy
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef   ^ MiscVarType    SiKi     Vamb_low     {:}{:}{:}{:} - -  "UVW components of ambient wind across the low-resolution domain throughout the farm" m/s
+typedef   ^ MiscVarType    SiKi     Vamb_lowpol     {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + wakes) at points in the polar grid for each wake plane for each turbine" m/s
 typedef   ^ MiscVarType    SiKi     Vdist_low    {:}{:}{:}{:} - -  "UVW components of disturbed wind (ambient + deficits) across the low-resolution domain throughout the farm" m/s
 typedef   ^ MiscVarType    AWAE_HighWindGrid Vamb_High   {:} - -  "UVW components of ambient wind across each high-resolution domain around a turbine (one for each turbine) for each high-resolution time step within a low-resolution time step" m/s
 typedef   ^ MiscVarType    IntKi    N_wind       {:}{:}    - -  "Number of grid points contained in a given wake plane volume" -
+typedef   ^ MiscVarType    IntKi    N_rp         {:}{:}    - -  "Number of points in the polar grid for each wake plane of each turbine" -
 typedef   ^ MiscVarType    ReKi     xhat_plane   {:}{:} - -  "Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain Orientations of wake planes, normal to wake planes, associated with a given point in the wind spatial domain" -
+typedef   ^ MiscVarType      ReKi       yhat_plane   {:}{:}              -      -      "Horizontal orientations (horizontal to XY plane), normal to plane"      -
+typedef   ^ MiscVarType      ReKi       zhat_plane   {:}{:}              -      -      "Nominally vertical orientations, normal to both wake centerlines/xhat_plane and the horizontal/yhat_plane, for each wake plane of each turbine (tilt will cause zhat_plane to be lanted from actual vertical)"      -
 typedef   ^ MiscVarType    ReKi     rhat_plane   {:}{:}    - -  "" -
 typedef   ^ MiscVarType    Logical  parallelFlag   {:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     r_s   {:}{:}    - -  "" -
@@ -127,7 +131,7 @@ typedef   ^ MiscVarType    ReKi     pvec_cs   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     pvec_ce   {:}{:}{:}    - -  "" -
 typedef   ^ MiscVarType    ReKi     Vx_wake      {:}       - - "" m/s
 typedef   ^ MiscVarType    ReKi     Vr_wake      {:}       - - "" m/s
-typedef   ^ MiscVarType    ReKi     w            {:}{:}{:}    - - "" -
+typedef   ^ MiscVarType    ReKi     w            {:}{:}{:}    - - "" -  "Weighting for spatial averaging/filtering for points in the polar grid for each wake plane of each turbine" -
 typedef   ^ MiscVarType    ReKi     w_Amb        {:}{:}       - - "" -
 typedef   ^ MiscVarType    ReKi     wsum         {:}          - - "" -
 typedef   ^ MiscVarType    IntKi    nx_wind      {:}{:}{:}    - - "" -     
@@ -154,6 +158,9 @@ typedef   ^ ^              IntKi            Mod_AmbWind        -  - -   "Ambient
 typedef   ^ ParameterType  IntKi            nX_low             -  - -   "Number of low-resolution spatial nodes in X direction" -
 typedef   ^ ParameterType  IntKi            nY_low             -  - -   "Number of low-resolution spatial nodes in Y direction" -
 typedef   ^ ParameterType  IntKi            nZ_low             -  - -   "Number of low-resolution spatial nodes in Z direction" -
+typedef   ^ ParameterType  IntKi            n_rp_max          -  - -   "Maximum possible number of points in the polar grid for the wake plane at each rotor" -
+typedef   ^ ParameterTYpe  ReKi             dpol             -  - -   "Spatial resolution of the polar grid for each wake plane of each turbine" m
+typedef   ^ ParameterType  ReKi             dXYZ_low        {3} - -   "XYZ-components of the spatial increment of the low-resolution domain" m
 typedef   ^ ParameterType  ReKi             dX_low           -  - -   "The spacing of the low-resolution nodes in X direction" m
 typedef   ^ ParameterType  ReKi             dY_low           -  - -   "The spacing of the low-resolution nodes in Y direction" m
 typedef   ^ ParameterType  ReKi             dZ_low           -  - -   "The spacing of the low-resolution nodes in Z direction" m
@@ -206,7 +213,10 @@ typedef   ^ OutputType     ReKi       Vx_wind_disk {:}                    -     
 # ..... Inputs ...........................................................................................................
 # Define inputs that are contained on the mesh here:
 typedef   ^ InputType      ReKi       xhat_plane   {:}{:}{:}              -      -      "Orientations of wake planes, normal to wake planes, for each turbine"      -
+typedef   ^ InputType      ReKi       yhat_plane   {:}{:}{:}              -      -      "Horizontal orientations (horizontal to XY plane), normal to plane"      -
+typedef   ^ InputType      ReKi       zhat_plane   {:}{:}{:}              -      -      "Nominally vertical orientations, normal to both wake centerlines/xhat_plane and the horizontal/yhat_plane, for each wake plane of each turbine (tilt will cause zhat_plane to be lanted from actual vertical)"      -
 typedef   ^ InputType      ReKi       p_plane      {:}{:}{:}              -      -      "Center positions of wake planes for each turbine"      m
+typedef   ^ InputType      ReKi       p_polar      {:}{:}{:}{:}              -      -      "Positions to points in the polar grid for each wake plane of each turbine"      m
 typedef   ^ InputType      ReKi       Vx_wake      {:}{:}{:}              -      -      "Axial wake velocity deficit at wake planes, distributed radially, for each turbine"      m/s
 typedef   ^ InputType      ReKi       Vr_wake      {:}{:}{:}              -      -      "Radial wake velocity deficit at wake planes, distributed radially, for each turbine"      m/s
 typedef   ^ InputType      ReKi       D_wake       {:}{:}                 -      -      "Wake diameters at wake planes for each turbine"     m

@@ -460,7 +460,7 @@ PRINT*, 'nt: ', nt
       do np = 0,tmpPln   !tmpPln  !!KLS -- Added
 PRINT*, 'np: ', np
          !!Defining yhat and zhat ###BEGINNING OF ADD KLS
-PRINT*, 'u%xhat_plane(:,np,nt): ', m%xhat_plane
+PRINT*, 'u%xhat_plane(:,np,nt): ', tmp_xhat_plane(:,np)
          xxplane = (/u%xhat_plane(1,np,nt), 0.0_ReKi, 0.0_ReKi/)
          xyplane = (/0.0_ReKi, u%xhat_plane(1,np,nt), 0.0_ReKi/)
          yyplane = (/0.0_ReKi, u%xhat_plane(2,np,nt), 0.0_ReKi/)

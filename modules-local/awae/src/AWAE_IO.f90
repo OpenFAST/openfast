@@ -274,8 +274,10 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    NumGrid_low        = p%nX_Low*p%nY_Low*p%nZ_Low
    p%n_wind_min = 100
    
-   p%n_wind_max = ceiling(30.0_ReKi*pi*(2.0_ReKi*p%C_ScaleDiam*p%r(p%NumRadii-1))**2*p%dt/(gridSpacing(1)*gridSpacing(2)*gridSpacing(3)))
-
+   p%dXYZ_Low = gridSpacing
+   p%dpol = (gridSpacing(1)+gridSpacing(2)+gridSpacing(3))/3.d0
+   !p%n_wind_max = ceiling(30.0_ReKi*pi*(2.0_ReKi*p%C_ScaleDiam*p%r(p%NumRadii-1))**2*p%dt/(gridSpacing(1)*gridSpacing(2)*gridSpacing(3)))
+   p%n_rp_max = ceiling(pi*((p%C_Meander*(p%r(p%NumRadii-1)+p%dpol))/p%dpol)**2.d0)
       ! Grid runs from (X0_low, Y0_low, Z0_low) to (X0_low + (p%nX_Low-1)*dX_low, Y0_low+ (p%nY_Low-1)*dY_low, Z0_low+ (p%nZ_Low-1)*dZ_low)
       ! (0,0,0) to (180,180,180) 
      
