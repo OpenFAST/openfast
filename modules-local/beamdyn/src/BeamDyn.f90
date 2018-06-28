@@ -2269,35 +2269,36 @@ END SUBROUTINE BD_QPData_mEta_rho
 !!
 !! The equations used here can be found in the NREL publication CP-2C00-60759
 !! (http://www.nrel.gov/docs/fy14osti/60759.pdf)
-SUBROUTINE BD_ElasticForce(nelem,p,m,fact)
+SUBROUTINE BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
 
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< number of current element
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables.
-   LOGICAL,                      INTENT(IN   )  :: fact        !< Boolean to calculate the Jacobian
-
-   REAL(BDKi)                                   :: cet         !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
-   REAL(BDKi)                                   :: k1s
-   REAL(BDKi)                                   :: Wrk33(3,3)
-   REAL(BDKi)                                   :: tildeE(3,3)
-   REAL(BDKi)                                   :: C21(3,3)
-   REAL(BDKi)                                   :: epsi(3,3)
-   REAL(BDKi)                                   :: mu(3,3)
-
-   INTEGER(IntKi)                               :: idx_qp      !< Index to quadrature point currently being calculated
+   INTEGER(IntKi),         INTENT(IN   ) :: nelem             !< number of current element
+   INTEGER(IntKi),         INTENT(IN   ) :: nqp               !< Number of quadrature points (per element)
+   REAL(BDKi),             INTENT(IN   ) :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
+   TYPE(EqMotionQP),       INTENT(INOUT) :: mqp               !< qp type within misc/optimization variables
+   LOGICAL,                INTENT(IN   ) :: fact              !< Boolean to calculate the Jacobian
+   
+   REAL(BDKi)                            :: cet               !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
+   REAL(BDKi)                            :: k1s
+   REAL(BDKi)                            :: Wrk33(3,3)
+   REAL(BDKi)                            :: tildeE(3,3)
+   REAL(BDKi)                            :: C21(3,3)
+   REAL(BDKi)                            :: epsi(3,3)
+   REAL(BDKi)                            :: mu(3,3)
+   
+   INTEGER(IntKi)                        :: idx_qp            !< Index to quadrature point currently being calculated
 
    
    if (.not. fact) then
    
-      do idx_qp=1,p%nqp
-         call Calc_Fc_Fd(nelem, idx_qp, p%Stif0_QP, p%nqp, m%qp, cet, k1s)
+      do idx_qp=1,nqp
+         call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
       end do 
       
    else
    
-      do idx_qp=1,p%nqp
+      do idx_qp=1,nqp
       
-         call Calc_Fc_Fd(nelem, idx_qp, p%Stif0_QP, p%nqp, m%qp, cet, k1s)
+         call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
 
 
             !> ###Calculate the \f$ \underline{\underline{\mathcal{O}}} \f$ from equation (19)
@@ -2312,16 +2313,16 @@ SUBROUTINE BD_ElasticForce(nelem,p,m,fact)
             !!          \underline{\underline{0}}        &     \mu      - \tilde{M}
             !!       \end{bmatrix}
             !! \f$
-         Wrk33(:,:) = OuterProduct(m%qp%RR0(1:3,3,idx_qp,nelem), m%qp%RR0(1:3,3,idx_qp,nelem))     ! z-direction in IEC coords
-         C21(:,:)   = m%qp%Stif(4:6,1:3,idx_qp,nelem) + cet*k1s*Wrk33(:,:)
+         Wrk33(:,:) = OuterProduct(mqp%RR0(1:3,3,idx_qp,nelem), mqp%RR0(1:3,3,idx_qp,nelem))     ! z-direction in IEC coords
+         C21(:,:)   = mqp%Stif(4:6,1:3,idx_qp,nelem) + cet*k1s*Wrk33(:,:)
 
-         tildeE     = SkewSymMat(m%qp%E1(:,idx_qp,nelem))
-         epsi(:,:)  = MATMUL(m%qp%Stif(1:3,1:3,idx_qp,nelem),tildeE)    ! Stif is RR0 * p%Stif0_QP * RR0^T
+         tildeE     = SkewSymMat(mqp%E1(:,idx_qp,nelem))
+         epsi(:,:)  = MATMUL(mqp%Stif(1:3,1:3,idx_qp,nelem),tildeE)    ! Stif is RR0 * Stif0_QP * RR0^T
          mu(:,:)    = MATMUL(C21,tildeE)
 
-         m%qp%Oe(:,:,idx_qp,nelem)     = 0.0_BDKi
-         m%qp%Oe(1:3,4:6,idx_qp,nelem) = epsi(1:3,1:3) - SkewSymMat(m%qp%Fc(1:3,idx_qp,nelem))
-         m%qp%Oe(4:6,4:6,idx_qp,nelem) =   mu(1:3,1:3) - SkewSymMat(m%qp%Fc(4:6,idx_qp,nelem))
+         mqp%Oe(:,:,idx_qp,nelem)     = 0.0_BDKi
+         mqp%Oe(1:3,4:6,idx_qp,nelem) = epsi(1:3,1:3) - SkewSymMat(mqp%Fc(1:3,idx_qp,nelem))
+         mqp%Oe(4:6,4:6,idx_qp,nelem) =   mu(1:3,1:3) - SkewSymMat(mqp%Fc(4:6,idx_qp,nelem))
 
 
             !> ###Calculated \f$ \underline{\underline{\mathcal{P}}} \f$ from equation (20)
@@ -2336,9 +2337,9 @@ SUBROUTINE BD_ElasticForce(nelem,p,m,fact)
             !!          \underline{\underline{0}}        &     \underline{\underline{0}}     \\
             !!          \psi_E^T + \tilde{F}             &     \mu^T
             !!    \end{bmatrix}  \f$
-         m%qp%Pe(:,:,idx_qp,nelem)     = 0.0_BDKi
-         m%qp%Pe(4:6,1:3,idx_qp,nelem) = TRANSPOSE(epsi) + SkewSymMat(m%qp%Fc(1:3,idx_qp,nelem))
-         m%qp%Pe(4:6,4:6,idx_qp,nelem) = TRANSPOSE(mu)
+         mqp%Pe(:,:,idx_qp,nelem)     = 0.0_BDKi
+         mqp%Pe(4:6,1:3,idx_qp,nelem) = TRANSPOSE(epsi) + SkewSymMat(mqp%Fc(1:3,idx_qp,nelem))
+         mqp%Pe(4:6,4:6,idx_qp,nelem) = TRANSPOSE(mu)
 
             !> ###Calculated \f$ \underline{\underline{\mathcal{Q}}} \f$ from equation (21)
             !!
@@ -2354,8 +2355,8 @@ SUBROUTINE BD_ElasticForce(nelem,p,m,fact)
             !!    =   - \tilde{E}_1   \underline{\underline{\mathcal{O}}}_{12}
             !! \f}\n
             !! Note: \f$ \tilde{E}_1^T = - \tilde{E}_1 \f$
-         m%qp%Qe(:,:,idx_qp,nelem)     = 0.0_BDKi
-         m%qp%Qe(4:6,4:6,idx_qp,nelem) = -MATMUL(tildeE,m%qp%Oe(1:3,4:6,idx_qp,nelem))
+         mqp%Qe(:,:,idx_qp,nelem)     = 0.0_BDKi
+         mqp%Qe(4:6,4:6,idx_qp,nelem) = -MATMUL(tildeE,mqp%Oe(1:3,4:6,idx_qp,nelem))
       end do
       
    ENDIF
@@ -2368,7 +2369,7 @@ SUBROUTINE Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
 
    INTEGER(IntKi),   INTENT(IN   ) :: nelem             !< number of current element
    INTEGER(IntKi),   INTENT(IN   ) :: idx_qp            !< Index to quadrature point currently being calculated
-   REAL(BDKi),       INTENT(IN   ) :: Stif0_QP(:, :, :) !< Index to quadrature point currently being calculated
+   REAL(BDKi),       INTENT(IN   ) :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
    INTEGER(IntKi),   INTENT(IN   ) :: nqp               !< Number of quadrature points (per element)
    TYPE(EqMotionQP), INTENT(INOUT) :: mqp               !< qp type within misc/optimization variables
    REAL(BDKi),       INTENT(OUT  ) :: cet               !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
@@ -2862,7 +2863,7 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ElementMatrixAcc'
 
 
-   CALL BD_ElasticForce( nelem, p, m, .FALSE. )                ! Calculate Fc, Fd only
+   CALL BD_ElasticForce( nelem, p%nqp, p%Stif0_QP, m%qp, .FALSE. )                ! Calculate Fc, Fd only
    IF(p%damp_flag .NE. 0) THEN
       CALL BD_DissipativeForce( nelem, p, m, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
    ENDIF
@@ -3630,7 +3631,7 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, m )
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_StaticElementMatrix'
 
 ! @mjs: ***HERE***
-   CALL BD_ElasticForce( nelem,p,m,.true. )     ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
+   CALL BD_ElasticForce( nelem,p%nqp,p%Stif0_QP,m%qp,.true. )     ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
    CALL BD_GravityForce( nelem,p,m,gravity )    ! Calculate Fg
 
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) - m%qp%Fg(:,:,nelem) - m%DistrLoad_QP(:,:,nelem)
@@ -4303,7 +4304,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
 !VA: The gyroscopic term is included in the m%qp%Gi. I think the m%qp%Fb term is used to calculate the accelerations
       
    
-   CALL BD_ElasticForce(  nelem,p,m,fact )                    ! Calculate Fc, Fd  [and if(fact): Oe, Pe, and Qe for N-R algorithm] using m%qp%E1, m%qp%RR0, m%qp%kappa, m%qp%Stif   
+   CALL BD_ElasticForce(  nelem,p%nqp,p%Stif0_QP,m%qp,fact )                    ! Calculate Fc, Fd  [and if(fact): Oe, Pe, and Qe for N-R algorithm] using m%qp%E1, m%qp%RR0, m%qp%kappa, m%qp%Stif   
    CALL BD_InertialForce( nelem,p,m,fact )                    ! Calculate Fi [and Mi,Gi,Ki IF(fact)]
    
    IF(p%damp_flag .NE. 0) THEN
