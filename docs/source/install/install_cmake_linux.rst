@@ -28,7 +28,10 @@ OpenFAST has the following dependencies:
 
 - LAPACK libraries. Users should set ``BLAS_LIBRARIES`` and ``LAPACK_LIBRARIES`` appropriately for CMake if the library is not found in standard paths. Use `BLASLIB` as an example when using Intel MKL.
 
-- **Optional:** For the C++ API, `HDF5 <https://support.hdfgroup.org/HDF5/>`_ (provided by ``HDF5_ROOT``) and `yaml-cpp <https://github.com/jbeder/yaml-cpp>`_ (provided by ``YAML_ROOT``)
+- **Optional:** For the C++ API
+
+ - `HDF5 <https://support.hdfgroup.org/HDF5/>`_ with MPI support (provided by ``HDF5_ROOT``)
+ - `yaml-cpp <https://github.com/jbeder/yaml-cpp>`_ (provided by ``YAML_ROOT``)
 
 - **Optional:** For the testing framework, Python 3+
 

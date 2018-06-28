@@ -12,7 +12,7 @@ Wind-Turbine Structural Dynamics”, see References :cite:`Wang:SFE2013,Wang:GE
 The module has been coupled into the FAST aero-hydro-servo-elastic wind
 turbine multi-physics engineering tool where it used to model blade
 structural dynamics. The BeamDyn module follows the requirements of the
-FAST modularization framework, see References :cite:`Jonkman:2013`;
+FAST modularization framework, see References :cite:`fastv8ModFramework`;
 :cite:`Sprague:2013,Sprague:2014,website:FASTModularizationFramework`,
 couples to FAST version 8, and provides new capabilities for modeling
 initially curved and twisted composite wind turbine blades undergoing

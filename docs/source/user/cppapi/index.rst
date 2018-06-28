@@ -16,7 +16,7 @@ A sample glue-code `FAST_Prog.cpp <https://github.com/OpenFAST/openfast/blob/dev
 .. literalinclude:: files/cDriver.i
    :language: yaml
 
-Command line invovation
+Command line invocation
 -----------------------
 
 .. code-block:: bash
