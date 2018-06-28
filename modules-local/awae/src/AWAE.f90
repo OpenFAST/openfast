@@ -216,14 +216,14 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: delta, deltad
    real(ReKi)          :: wsum_tmp
    real(ReKi)          :: tmp_x,tmp_y,tmp_z !, tm1, tm2
-   real(ReKi)          :: xxplane(3), xyplane(3), yyplane(3), yxplane(3)  !!!KLS -- added
+   real(ReKi)          :: xxplane(3), xyplane(3), yyplane(3), yxplane(3), psi_polar, r_polar, p_polar(3)  !!!KLS -- added
    real(ReKi)          :: yxplane_Y(3), yzplane_Y(3), xyplane_norm     !!!KLS -- added
    real(ReKi)          :: xplane_sq, yplane_sq, xysq_Z(3), xzplane_X(3), yzplane(3)   !!!KLS -- added
    !real(ReKi)          :: tmp_yhat_plane(3), tmp_zhat_plane(3)
    real(ReKi), ALLOCATABLE :: tmp_rhat_plane(:,:), tmp_xhat_plane(:,:), tmp_yhat_plane(:,:,:), tmp_zhat_plane(:,:,:)    !!KLS -- added yhat and zhat
    real(ReKi), ALLOCATABLE, DIMENSION(:)     :: Vbar_amb_low
-   real(ReKi), ALLOCATABLE, DIMENSION(:,:,:,:) :: p_polar
-   real(ReKi), ALLOCATABLE, DIMENSION(:,:,:) :: r_polar, dist_low, wgt, psi_polar
+   !real(ReKi), ALLOCATABLE, DIMENSION(:,:,:,:) :: p_polar
+   real(ReKi), ALLOCATABLE, DIMENSION(:,:,:) :: dist_low, wgt!, psi_polar, r_polar
    real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vr_wake(:)
    integer(IntKi)      :: ILo
    integer(IntKi)      :: maxPln, tmpPln !!KLS -- added tmpPln for indexin -- not needed
@@ -237,7 +237,6 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
    maxPln =  min(n,p%NumPlanes-2)
    tmpPln = min(p%NumPlanes-1, n+1)
-   PRINT*, 'tmpPln: ', tmpPln
    
    
    
@@ -267,12 +266,12 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    allocate ( tmp_zhat_plane ( 3,0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
 
-   allocate ( r_polar ( 0:p%n_rp_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 )
-       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( p_polar ( 3, 0:p%n_rp_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 )
-       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( psi_polar ( 0:p%n_rp_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 )
-       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
+   !allocate ( r_polar ( 0:p%n_rp_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 )
+   !    if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
+   !allocate ( p_polar ( 3, 0:p%n_rp_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 )
+   !    if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
+   !allocate ( psi_polar ( 0:p%n_rp_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 )
+   !    if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
 
    if (ErrStat >= AbortErrLev) return
 
@@ -308,11 +307,12 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                x_end_plane = tmp_x + tmp_y + tmp_z
 
                do np = 0, maxPln  
-                  
                      ! Reset interpolation counter
                   ILo = 0
                   np1 = np + 1
-                  
+                  !PRINT*, 'From Orig Code:'
+                  !PRINT*, 'np1: ', np1, 'nt:', nt
+                  !PRINT*, 'u%xhat_plane(:,np1,nt): ', u%xhat_plane(:,np1,nt)
                      ! Construct the endcaps of the current wake plane volume
                   x_start_plane = x_end_plane
                   ! H Long: again, replace intrinsic dot_product 
@@ -363,8 +363,10 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         tmp_xhat_plane(:,n_wake) = delta*u%xhat_plane(:,np1,nt) + deltad*u%xhat_plane(:,np,nt)
                         tmp_xhat_plane(:,n_wake) = tmp_xhat_plane(:,n_wake) / TwoNorm(tmp_xhat_plane(:,n_wake))
                         xhatBar_plane = xhatBar_plane + abs(tmp_Vx_wake(n_wake))*tmp_xhat_plane(:,n_wake)
-      
                      end if  ! if the point is within radial finite-difference grid
+                end if
+            end do
+        end do
                      
                         ! test if the point is within the radius of the wake volume cylinder                   
                      
@@ -414,11 +416,11 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      
                      !exit
  !!!!!!!!!!!END REMOVE - KLS!!!!!!!!!!
-PRINT*, 'AFTER 1ST REMOVE'
-                  end if  ! if the point is within the endcaps of the wake volume 
+!PRINT*, 'AFTER 1ST REMOVE'
+                  !end if  ! if the point is within the endcaps of the wake volume 
                
-               end do     ! do np = 0, p%NumPlanes-2
-            end do        ! do nt = 1,p%NumTurbines
+!               end do     ! do np = 0, p%NumPlanes-2
+!            end do        ! do nt = 1,p%NumTurbines
 
 
             if (n_wake > 0) then
@@ -452,73 +454,84 @@ PRINT*, 'AFTER 1ST REMOVE'
       return  
    endif
    !!!!!BEGIN ADDITIONS KLS !!!!!!!
-PRINT*, 'BEGINNING OF 1ST ADDITION'
+!PRINT*, 'BEGINNING OF 1ST ADDITION'
+!   IF (EqualRealNos(m%xhat_plane(:,:), 0.0_ReKi)) THEN
+!      return
+!   ELSE
    do nt = 1,p%NumTurbines  !!KLS -- same
-PRINT*, 'nt: ', nt
+!PRINT*, 'nt: ', nt
       !if ( m%N_wind(0,nt) > 0 ) then
       !tmpPln = min(p%NumPlanes-1, nt+1) !!KLS -- Added!! Not sure what "n+1" is supposed to be, so for now setting to "nt+1", but I don't think that's right
       do np = 0,tmpPln   !tmpPln  !!KLS -- Added
-PRINT*, 'np: ', np
+!PRINT*, 'np: ', np
          !!Defining yhat and zhat ###BEGINNING OF ADD KLS
-PRINT*, 'u%xhat_plane(:,np,nt): ', m%xhat_plane
+!PRINT*, 'u%xhat_plane(:,np,nt): ', m%xhat_plane
+!PRINT*, 'u%p_plane(1,np,nt): ', u%p_plane(1,np,nt)
          xxplane = (/u%xhat_plane(1,np,nt), 0.0_ReKi, 0.0_ReKi/)
          xyplane = (/0.0_ReKi, u%xhat_plane(1,np,nt), 0.0_ReKi/)
          yyplane = (/0.0_ReKi, u%xhat_plane(2,np,nt), 0.0_ReKi/)
          yxplane = (/u%xhat_plane(2,np,nt), 0.0_ReKi, 0.0_ReKi/)
-PRINT*, 'a'
+!PRINT*, 'a'
+!PRINT*, 'xxplane: ', xxplane
+!PRINT*, 'yyplane: ', yyplane
          xyplane_norm = TwoNorm(xxplane+yyplane)
-PRINT*, 'b'
+        IF (EqualRealNos(xyplane_norm, 0.0_ReKi)) THEN
+            return
+        END IF
+!PRINT*, 'b'
          xplane_sq = u%xhat_plane(1,np,nt)**2
          yplane_sq = u%xhat_plane(2,np,nt)**2
-PRINT*, 'c'
+!PRINT*, 'c'
          xysq_Z = (/0.0_ReKi, 0.0_ReKi, xplane_sq+yplane_sq/)
          xzplane_X = (/u%xhat_plane(1,np,nt)*u%xhat_plane(3,np,nt), 0.0_ReKi, 0.0_ReKi/)
          yzplane_Y = (/0.0_ReKi, u%xhat_plane(2,np,nt)*u%xhat_plane(3,np,nt), 0.0_ReKi/)
-PRINT*, 'd'
+!PRINT*, 'd'
          !tmp_yhat_plane(np,nt) =  xyplane-yxplane
-PRINT*, 'xyplane: ', xyplane
-PRINT*, 'yxplane: ', yxplane
-PRINT*, 'xyplane_norm: ', xyplane_norm
+!PRINT*, 'xyplane: ', xyplane
+!PRINT*, 'yxplane: ', yxplane
+!PRINT*, 'xyplane_norm: ', xyplane_norm
          tmp_yhat_plane(:,np,nt) = (xyplane-yxplane)/xyplane_norm
 
          !tmp_zhat_plane = xysq_Z-xzplane_X-yzplane_Y
          tmp_zhat_plane(:,np,nt) = (xysq_Z-xzplane_X-yzplane_Y)/xyplane_norm
          !!                       ###ENDING OF ADD KLS
-PRINT*, 'e'
+!PRINT*, 'e'
          if ( np .EQ. 0 ) then!( EqualRealNos(np, 0.0_ReKi) ) then  !!KLS -- Added
          !      call SetErrStat( ErrID_Fatal, 'The sum of the weightings for ambient spatial-averaging in the low-resolution domain associated with the wake volume at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
          !      return
          !end if
             Vsum_low  = 0.0_ReKi
-         PRINT*, 'f'
+         !PRINT*, 'f'
          !m%wsum(0) = 0.0_ReKi  !!KLS -- Removed
             iwsum = 0!.0_ReKi      !!KLS -- Added
             n_r_polar = FLOOR((p%C_Meander*u%D_wake(np,nt))/(2.0_ReKi*p%dpol))  !!KLS -- Added
-PRINT*, 'n_r_polar: ', n_r_polar
+
+!PRINT*, 'n_r_polar: ', n_r_polar
 
          !do nw=1,m%N_wind(0,nt)   !!KLS -- Removed
             do nr = 0,n_r_polar   !!KLS -- Added
-PRINT*, 'nr: ',nr
-               r_polar(nr,np,nt) = nr*p%dpol  !!KLS -- Added
+!PRINT*, 'nr: ',nr
+               r_polar = nr*p%dpol  !!KLS -- Added
                n_psi_polar = MAX(CEILING(2.0_ReKi*pi*nr)-1.0_ReKi,0.0_ReKi)  !!KLS -- Added
-PRINT*, 'n_psi_polar: ', n_psi_polar
+!PRINT*, 'n_psi_polar: ', n_psi_polar
 
                do npsi = 0,n_psi_polar
-PRINT*, 'npsi: ', npsi
-                  psi_polar(nr,np,nt) = (2.0_ReKi*pi*npsi)/(n_psi_polar+1)
-PRINT*, 'p_plane: ', u%p_plane(:,np,nt)
-PRINT*, 'r_polar: ', r_polar(nr,np,nt)
-PRINT*, 'psi_polar: ', psi_polar(nr,np,nt)
-PRINT*, 'tmp_yhat_plane: ', tmp_yhat_plane(:,np,nt)
-PRINT*, 'tmp_zhat_plane(:,np,nt): ', tmp_zhat_plane(:,np,nt)
-                  p_polar(:,nr,np,nt) = u%p_plane(:,np,nt) + r_polar(nr,np,nt)*COS(psi_polar(nr,np,nt))*tmp_yhat_plane(:,np,nt) + r_polar(nr,np,nt)*SIN(psi_polar(nr,np,nt))*tmp_zhat_plane(:,np,nt)
-PRINT*, 'f'
-PRINT*, 'nr: ', nr, 'np: ', np, 'nt: ', nt
-PRINT*, 'p_polar shape: ', SHAPE(p_polar)
-PRINT*, 'p_polar(:,nr,np,nt): ', p_polar(:,nr,np,nt)
+                  !nrpsi = nr + nrpsi
+!PRINT*, 'npsi: ', npsi
+                  psi_polar = (2.0_ReKi*pi*npsi)/(n_psi_polar+1)
+!PRINT*, 'p_plane: ', u%p_plane(:,np,nt)
+!PRINT*, 'r_polar: ', r_polar(nr,np,nt)
+!PRINT*, 'psi_polar: ', psi_polar(nr,np,nt)
+!PRINT*, 'tmp_yhat_plane: ', tmp_yhat_plane(:,np,nt)
+!PRINT*, 'tmp_zhat_plane(:,np,nt): ', tmp_zhat_plane(:,np,nt)
+                  p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*tmp_yhat_plane(:,np,nt) + r_polar*SIN(psi_polar)*tmp_zhat_plane(:,np,nt)
+!PRINT*, 'f'
+!PRINT*, 'nr: ', nr, 'np: ', npsi, 'nt: ', nt
+!PRINT*, 'p_polar shape: ', SHAPE(p_polar)
+!PRINT*, 'p_polar(:,nr,np,nt): ', p_polar(:,nr,np,nt)
 
-                  m%Vamb_lowpol(:,nr,np,nt) = INTERP3D(p_polar(:,nr,np,nt),p%Grid_Low,p%dXYZ_Low,m%Vamb_low,within,p%nX_low, p%nY_low, p%nZ_low)
-PRINT*, 'g'
+                  m%Vamb_lowpol(:,nr,np,nt) = INTERP3D(p_polar,p%Grid_Low,p%dXYZ_Low,m%Vamb_low,within,p%nX_low, p%nY_low, p%nZ_low)
+!PRINT*, 'g'
                   if ( within ) then
                      Vsum_low = Vsum_low + m%Vamb_lowpol(:,nr,np,nt)
                      iwsum = iwsum + 1!.0_ReKi
@@ -545,9 +558,9 @@ PRINT*, 'g'
             else
                call SetErrStat( ErrID_Fatal, 'The sum of the weightings for ambient spatial-averaging in the low-resolution domain associated with the wake volume at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
                return
-            end if !wsum_tmp
+            end if !iwsum
          end if
-PRINT*, 'END OF 1ST ADDITION'
+!PRINT*, 'END OF 1ST ADDITION'
 !!!!!!!End of Addition  ---  KLS
 !!! Begin removal --- KLS
             !Vsum_low  = Vsum_low  + m%w_Amb(nw,nt)*real(m%Vamb_Low(:, m%nx_wind(nw,0,nt), m%ny_wind(nw,0,nt), m%nz_wind(nw,0,nt)),ReKi)
@@ -577,7 +590,7 @@ PRINT*, 'END OF 1ST ADDITION'
          !   y%TI_amb(nt)       = 0.0_ReKi 
          !end if
       !end do
-      PRINT*, 'END OF 2ND REMOVAL/BEGINNING OF 2ND ADDITION'
+      !PRINT*, 'END OF 2ND REMOVAL/BEGINNING OF 2ND ADDITION'
    !!!!KLS -- begin final addition
          Vsum_low   = 0.0_ReKi   !V_plane
          wsum_tmp = 0.0_ReKi
@@ -585,22 +598,22 @@ PRINT*, 'END OF 1ST ADDITION'
          n_r_polar = FLOOR(p%C_ScaleDiam*u%D_wake(np,nt)/(p%dpol))
 
          do nr = 0, n_r_polar
-            r_polar(nr,np,nt) = nr*p%dpol
+            r_polar = nr*p%dpol
             D_wake_tmp = delta*u%D_wake(np+1,nt) + deltad*u%D_wake(np,nt)
             select case ( p%Mod_Meander )
               case (MeanderMod_Uniform) 
                     m%w(   n_r_polar,np,nt) = 1.0_ReKi
                case (MeanderMod_TruncJinc)  
-                    m%w(   n_r_polar,np,nt) = jinc( r_polar(nr,np,nt)/(p%C_Meander*D_wake_tmp ) )
+                    m%w(   n_r_polar,np,nt) = jinc( r_polar/(p%C_Meander*D_wake_tmp ) )
                case (MeanderMod_WndwdJinc) 
-                    m%w(   n_r_polar,np,nt) = jinc( r_polar(nr,np,nt)/(p%C_Meander*D_wake_tmp ) )*jinc( r_polar(nr,np,nt)/(2.0_ReKi*p%C_Meander*D_wake_tmp ) )
+                    m%w(   n_r_polar,np,nt) = jinc( r_polar/(p%C_Meander*D_wake_tmp ) )*jinc( r_polar/(2.0_ReKi*p%C_Meander*D_wake_tmp ) )
             end select
 
             n_psi_polar = MAX(CEILING(2.0_ReKi*pi*nr)-1.0_ReKi,0.0_ReKi)
             do npsi = 0,n_psi_polar
-               psi_polar(nr,np,nt) = (2.0_ReKi*pi*npsi)/(n_psi_polar+1)
-               p_polar(:,nr,np,nt) = u%p_plane(:,np,nt) + r_polar(nr,np,nt)*COS(psi_polar(nr,np,nt))*tmp_yhat_plane(:,np,nt) + r_polar(nr,np,nt)*SIN(psi_polar(nr,np,nt))*tmp_zhat_plane(:,np,nt)
-               m%Vamb_lowpol(:,nr,np,nt) = INTERP3D(p_polar(:,nr,np,nt),p%Grid_Low,p%dXYZ_Low,m%Vamb_low,within,p%nX_low, p%nY_low, p%nZ_low)
+               psi_polar = (2.0_ReKi*pi*npsi)/(n_psi_polar+1)
+               p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*tmp_yhat_plane(:,np,nt) + r_polar*SIN(psi_polar)*tmp_zhat_plane(:,np,nt)
+               m%Vamb_lowpol(:,nr,np,nt) = INTERP3D(p_polar,p%Grid_Low,p%dXYZ_Low,m%Vamb_low,within,p%nX_low, p%nY_low, p%nZ_low)
                if ( within ) then
                   Vsum_low = Vsum_low + m%w(n_r_polar,np,nt)*m%Vamb_lowpol(:,nr,np,nt)
                   wsum_tmp = wsum_tmp + m%w(n_r_polar,np,nt)
@@ -617,8 +630,7 @@ PRINT*, 'END OF 1ST ADDITION'
          end if !!wsum_tmp
       end do
    end do
-
-PRINT*, 'END OF FINAL ADDITION'
+!PRINT*, 'END OF FINAL ADDITION'
 !!!!!FINAL REMOVAL -- KLS
 
       !do np = 0, maxPln !p%NumPlanes-2
@@ -667,11 +679,11 @@ PRINT*, 'END OF FINAL ADDITION'
    
    if (allocated(tmp_yhat_plane)) deallocate(tmp_yhat_plane)
    if (allocated(tmp_zhat_plane)) deallocate(tmp_zhat_plane)
-   if (allocated(r_polar)) deallocate(r_polar)
-   if (allocated(p_polar)) deallocate(p_polar)
-   if (allocated(psi_polar)) deallocate(psi_polar)
+   !if (allocated(r_polar)) deallocate(r_polar)
+   !if (allocated(p_polar)) deallocate(p_polar)
+   !if (allocated(psi_polar)) deallocate(psi_polar)
 
-PRINT*, 'END OF DEALLOCATION STATEMENTS'
+!PRINT*, 'END OF DEALLOCATION STATEMENTS'
 end subroutine LowResGridCalcOutput
 
 
@@ -798,6 +810,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      end do     ! np = 0, p%NumPlanes-2
                   end if    ! nt /= nt2          
                end do        ! nt2 = 1,p%NumTurbines
+        !PRINT*, 'n_wake: ', n_wake
                if (n_wake > 0) then
                   
                   tmp_xhatBar_plane = TwoNorm(xhatBar_plane)
@@ -1046,10 +1059,10 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%xhat_plane.', errStat, errMsg, RoutineName )     
    allocate ( u%p_plane   (3,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%p_plane.', errStat, errMsg, RoutineName )  
-   PRINT*, 'Before addition'
-   allocate ( u%p_polar   (3,0:p%n_rp_max,0:p%NumPlanes-2,1:p%NumTurbines), STAT=ErrStat2 )  !!KLS -- added
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%p_polar.', errStat, errMsg, RoutineName )
-PRINT*, 'After addition'
+   !PRINT*, 'Before addition'
+   !allocate ( u%p_polar   (3,0:p%n_rp_max,0:p%NumPlanes-2,1:p%NumTurbines), STAT=ErrStat2 )  !!KLS -- added
+   !   if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%p_polar.', errStat, errMsg, RoutineName )
+!PRINT*, 'After addition'
    allocate ( u%Vx_wake   (0:p%NumRadii-1,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vx_wake.', errStat, errMsg, RoutineName )  
    allocate ( u%Vr_wake   (0:p%NumRadii-1,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 )
@@ -1136,12 +1149,12 @@ PRINT*, 'After addition'
       
    allocate ( m%Vamb_high(1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_high.', errStat, errMsg, RoutineName )  
-PRINT*, 'b'
+!PRINT*, 'b'
    do i = 1, p%NumTurbines
          allocate ( m%Vamb_high(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 ) !!KLS -- changed 4th dimension form "n_high_low-1" to "n_high_low"
             if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_high%data.', errStat, errMsg, RoutineName ) 
    end do   
-      PRINT*, 'c'
+      !PRINT*, 'c'
    allocate ( m%N_wind     ( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%N_wind.', errStat, errMsg, RoutineName )  
    allocate ( m%N_rp     ( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )  !!KLS -- Added
@@ -1320,7 +1333,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    !   write(*,*) '        AWAE_UpdateStates: Time spent reading Low Res data : '//trim(num2lstr(t2-t1))//' seconds'            
    !#endif   
       
-      PRINT*, 'd'
+      !PRINT*, 'd'
  
       do nt = 1,p%NumTurbines
          do n_hl=0, n_high_low !!KLS -- removed (-1)
@@ -1333,7 +1346,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       end do
       
    else
-      PRINT*, 'e'
+      !PRINT*, 'e'
       ! Set low-resolution inflow wind velocities
       call InflowWind_CalcOutput(t+p%dt, m%u_IfW_Low, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_Low, m%IfW, errStat, errMsg)
       if ( errStat >= AbortErrLev ) then
@@ -1348,7 +1361,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             end do
          end do
       end do
-      PRINT*,'f'
+      !PRINT*,'f'
       ! Set the high-resoultion inflow wind velocities for each turbine
       do nt = 1,p%NumTurbines
          m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
@@ -1369,7 +1382,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
             
          end do
       end do
-PRINT*, 'g'
+!PRINT*, 'g'
    end if
 
 !#ifdef _OPENMP
@@ -1793,27 +1806,32 @@ FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ)
       !  Local variables
          INTEGER        :: i !loop counters
          Real(ReKi)     :: f(3), N(8), Vtmp(3,8)
-         INTEGER        :: n_lo(3), n_hi(3)
+         INTEGER        :: n_lo(3), n_hi(3), tmp(4)
+    
 
 !allocate (V ( 3, 0:nX-1 , 0:nY-1 , 0:nZ-1 ))
      !!! CHECK BOUNDS
-PRINT*, 'Size of V: ', SHAPE(V)
-PRINT*, 'IN INTERP3D'
    within = .TRUE.
+!PRINT*, shape(V)
+tmp=shape(V)
+!PRINT*, size(V,1)-1
+!PRINT*, size(V,2)-1
+!PRINT*, size(V,3)-1
    do i = 1, 3
-PRINT*, 'p(i): ', p(i), 'p0(i): ', p0(i), 'del(i)', del(i)
       f(i) = (p(i)-p0(i))/del(i)
-PRINT*, 'f(i): ', f(i)
       n_lo(i) = FLOOR(f(i))
       n_hi(i) = n_lo(i)+1
       f(i) = 2.0_ReKi*(f(i)-n_lo(i))-1.0_ReKi
-      if (( n_lo(i) < 0) .OR. (n_hi(i) > size(V,i)-1)) within = .FALSE.
+      if (( n_lo(i) < 0) .OR. (n_hi(i) > tmp(i+1)-1)) THEN
+         within = .FALSE.
+      END IF
    end do
-PRINT*, 'AFTER CHECK BOUNDS'
+ !     PRINT*, 'n_lo: ', n_lo, 'n_hi: ', n_hi
      !!! INTERPOLATE
    !Vint = 0.0_ReKi
    INTERP3D = 0.0_ReKi
    if (within) then
+ !    PRINT*, 'within is true!'
       N(1) = ((1.0_ReKi-f(1))*(1.0_ReKi-f(2))*(1.0_ReKi-f(3)))/8.0_ReKi
       N(2) = ((1.0_ReKi+f(1))*(1.0_ReKi-f(2))*(1.0_ReKi-f(3)))/8.0_ReKi
       N(3) = ((1.0_ReKi-f(1))*(1.0_ReKi+f(2))*(1.0_ReKi-f(3)))/8.0_ReKi
@@ -1822,8 +1840,6 @@ PRINT*, 'AFTER CHECK BOUNDS'
       N(6) = ((1.0_ReKi+f(1))*(1.0_ReKi-f(2))*(1.0_ReKi+f(3)))/8.0_ReKi
       N(7) = ((1.0_ReKi-f(1))*(1.0_ReKi+f(2))*(1.0_ReKi+f(3)))/8.0_ReKi
       N(8) = ((1.0_ReKi+f(1))*(1.0_ReKi+f(2))*(1.0_ReKi+f(3)))/8.0_ReKi
-PRINT*, 'AFTER Ns'
-PRINT*, 'n_lo: ', n_lo, 'n_hi', n_hi
       Vtmp(:,1) = V(:,n_lo(1),n_lo(2),n_lo(3))
       Vtmp(:,2) = V(:,n_hi(1),n_lo(2),n_lo(3))
       Vtmp(:,3) = V(:,n_lo(1),n_hi(2),n_lo(3))
@@ -1832,17 +1848,14 @@ PRINT*, 'n_lo: ', n_lo, 'n_hi', n_hi
       Vtmp(:,6) = V(:,n_hi(1),n_lo(2),n_hi(3))
       Vtmp(:,7) = V(:,n_lo(1),n_hi(2),n_hi(3))
       Vtmp(:,8) = V(:,n_hi(1),n_hi(2),n_hi(3))
-PRINT*, 'AFTER Vtmps'
       do i=1,8
          !Vint(:) = Vint(:) + N(i)*Vtmp(:,i)
          INTERP3D(:) = INTERP3D(:) + N(i)*Vtmp(:,i)
       end do
-PRINT*, 'AFTER Sum'
    !else      !!!!I took this part out b/c already initializing Vint to 0 before
    !the loop
    !   Vint = 0.0_ReKi    
    end if
-PRINT*, 'END OF INTERP3D'
 !deallocate(V)
 END FUNCTION
 

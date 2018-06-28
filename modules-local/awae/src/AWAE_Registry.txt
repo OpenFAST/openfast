@@ -216,7 +216,6 @@ typedef   ^ InputType      ReKi       xhat_plane   {:}{:}{:}              -     
 typedef   ^ InputType      ReKi       yhat_plane   {:}{:}{:}              -      -      "Horizontal orientations (horizontal to XY plane), normal to plane"      -
 typedef   ^ InputType      ReKi       zhat_plane   {:}{:}{:}              -      -      "Nominally vertical orientations, normal to both wake centerlines/xhat_plane and the horizontal/yhat_plane, for each wake plane of each turbine (tilt will cause zhat_plane to be lanted from actual vertical)"      -
 typedef   ^ InputType      ReKi       p_plane      {:}{:}{:}              -      -      "Center positions of wake planes for each turbine"      m
-typedef   ^ InputType      ReKi       p_polar      {:}{:}{:}{:}              -      -      "Positions to points in the polar grid for each wake plane of each turbine"      m
 typedef   ^ InputType      ReKi       Vx_wake      {:}{:}{:}              -      -      "Axial wake velocity deficit at wake planes, distributed radially, for each turbine"      m/s
 typedef   ^ InputType      ReKi       Vr_wake      {:}{:}{:}              -      -      "Radial wake velocity deficit at wake planes, distributed radially, for each turbine"      m/s
 typedef   ^ InputType      ReKi       D_wake       {:}{:}                 -      -      "Wake diameters at wake planes for each turbine"     m
