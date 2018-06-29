@@ -2779,18 +2779,20 @@ END SUBROUTINE BD_DissipativeForce
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the gravity forces `m%qp%Fg`
-SUBROUTINE BD_GravityForce( nelem,p,m,grav )
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< index of current element in loop
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables.
-   REAL(BDKi),                   INTENT(IN   )  :: grav(:)     !< Gravity, which is scaled in the case of Static analysis
+SUBROUTINE BD_GravityForce( nelem,nqp,qp_mmm,qp_Fg,qp_RR0mEta,grav )
+   INTEGER(IntKi),               INTENT(IN   )  :: nelem               !< index of current element in loop
+   INTEGER(IntKi),               INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
+   REAL(BDKi),                   INTENT(IN   )  :: qp_mmm(:, :)        !< Mass at current QP
+   REAL(BDKi),                   INTENT(INOUT)  :: qp_Fg(:, :, :)      !< Gravity forces at current QP. 6
+   REAL(BDKi),                   INTENT(IN   )  :: qp_RR0mEta(:, :, :) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
+   REAL(BDKi),                   INTENT(IN   )  :: grav(:)             !< Gravity, which is scaled in the case of Static analysis
 
-   INTEGER(IntKi)                               :: idx_qp      !< index of current quadrature point
+   INTEGER(IntKi)                               :: idx_qp              !< index of current quadrature point
 
-   do idx_qp=1,p%nqp
+   do idx_qp=1,nqp
 
-      m%qp%Fg(1:3,idx_qp,nelem) = p%qp%mmm(idx_qp,nelem) * grav(1:3)
-      m%qp%Fg(4:6,idx_qp,nelem) = cross_product(m%qp%RR0mEta(:,idx_qp,nelem),grav)
+      qp_Fg(1:3,idx_qp,nelem) = qp_mmm(idx_qp,nelem) * grav(1:3)
+      qp_Fg(4:6,idx_qp,nelem) = cross_product(qp_RR0mEta(:,idx_qp,nelem),grav)
 
    end do
    
@@ -2867,7 +2869,7 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
    IF(p%damp_flag .NE. 0) THEN
       CALL BD_DissipativeForce( nelem, p, m, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
    ENDIF
-   CALL BD_GravityForce( nelem, p, m, p%gravity )              ! Calculate Fg      
+   CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, p%gravity ) ! Calculate Fg
    CALL BD_GyroForce( nelem, p, m )                            ! Calculate Fb  (velocity terms from InertialForce with aaa=0)
 
    
@@ -3630,9 +3632,10 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, m )
    INTEGER(IntKi)              :: idx_qp
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_StaticElementMatrix'
 
-! @mjs: ***HERE***
+
    CALL BD_ElasticForce( nelem,p%nqp,p%Stif0_QP,m%qp,.true. )     ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
-   CALL BD_GravityForce( nelem,p,m,gravity )    ! Calculate Fg
+   ! @mjs: ***HERE***
+   CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, gravity )    ! Calculate Fg
 
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) - m%qp%Fg(:,:,nelem) - m%DistrLoad_QP(:,:,nelem)
    
@@ -4311,7 +4314,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
       CALL BD_DissipativeForce( nelem,p,m,fact )              ! Calculate dissipative terms on Fc, Fd [and Sd, Od, Pd and Qd, betaC, Gd, Xd, Yd for N-R algorithm]
    ENDIF
    
-   CALL BD_GravityForce( nelem, p, m, p%gravity )
+   CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, p%gravity )
    
    ! F^ext is combined with F^D (F^D = F^D-F^ext), i.e. RHS of Equation 9 in Wang_2014
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) - m%qp%Fg(:,:,nelem) - m%DistrLoad_QP(:,:,nelem)
