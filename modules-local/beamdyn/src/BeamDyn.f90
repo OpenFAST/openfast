@@ -1669,9 +1669,9 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
 
 ! @mjs: check and see what parameters are actually being used here--p appears to be passed, in full, a couple levels deep
    IF(p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
+! @mjs: ***HERE***
        CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
-      ! @mjs: ***HERE***
        CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
    ENDIF
 
@@ -1962,7 +1962,8 @@ SUBROUTINE BD_QuadraturePointData( p, x, m )
       CALL BD_DisplacementQP( nelem, p%nqp, p%node_elem_idx, p%nodes_per_elem,&
                               p%Shp, p%ShpDer, p%Jacobian, p%E10, x%q, m%qp%uuu, m%qp%uup, m%qp%E1 )
       CALL BD_RotationalInterpQP( nelem, p, x, m )
-      CALL BD_StifAtDeformedQP( nelem, p, m )
+! @mjs: ***HERE***
+      CALL BD_StifAtDeformedQP( nelem, p%nqp, p%Stif0_QP, m%qp%RR0, m%qp%Stif )
    ENDDO
 
 END SUBROUTINE BD_QuadraturePointData
@@ -2170,7 +2171,7 @@ SUBROUTINE BD_RotationalInterpQP( nelem, p, x, m )
          CALL BD_CrvMatrixH(rrr,temp33)         ! retrieve the tangent tensor given rrr
          cc = MATMUL(temp33,rrp)                ! \underline{k} in eq (5) http://www.nrel.gov/docs/fy14osti/60759.pdf
 
-            !> Assemble \f$\underline{kappa}\f$ by adding in the root rotation.
+            !> Assemble \f$\underline{\kappa}\f$ by adding in the root rotation.
             !! This is \f$\underline{\kappa} = \underline{k} + \underline{\underline{R}}\underline{k}_i \f$
          m%qp%kappa(:,idx_qp,nelem) = MATMUL(DCM_root,cc)
 
@@ -2189,10 +2190,13 @@ END SUBROUTINE BD_RotationalInterpQP
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> Transform the \f$\underline{\underline{C}}\f$ stiffness matrix to the local quadrature point deformed orientation.
 !! Returns new value for m%qp%Stif
-SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< number of current element
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables
+! @mjs: ***HERE***
+SUBROUTINE BD_StifAtDeformedQP( nelem, nqp, Stif0_QP, RR0, Stif )
+   INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< number of current element
+   INTEGER(IntKi),               INTENT(IN   )  :: nqp               !< Number of quadrature points (per element)
+   REAL(BDKi),                   INTENT(IN   )  :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
+   REAL(BDKi),                   INTENT(IN   )  :: RR0(:, :, :, :)   !< Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$
+   REAL(BDKi),                   INTENT(  OUT)  :: Stif(:, :, :, :)  !< C/S stiffness matrix resolved in inertial frame at current QP
 
    INTEGER(IntKi)                :: idx_qp         !< index counter for quadrature point
    INTEGER(IntKi)                :: temp_id2       !< Index to last node of previous element
@@ -2201,15 +2205,15 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
    ! see Bauchau 2011 Flexible Multibody Dynamics p 692-693, section 17.7.2
 
          ! extract the mass and stiffness matrices for the current element
-   temp_id2 = (nelem-1)*p%nqp
+   temp_id2 = (nelem-1)*nqp
 
-   DO idx_qp=1,p%nqp
+   DO idx_qp=1,nqp
       !> RR0 is the rotation tensor at quadrature point \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$ (3x3)
 
          ! Setup the temporary matrix for modifying the stiffness matrix. RR0 is changing with time.
       tempR6 = 0.0_BDKi
-      tempR6(1:3,1:3) = m%qp%RR0(:,:,idx_qp,nelem)       ! upper left   -- translation
-      tempR6(4:6,4:6) = m%qp%RR0(:,:,idx_qp,nelem)       ! lower right  -- rotation
+      tempR6(1:3,1:3) = RR0(:,:,idx_qp,nelem)       ! upper left   -- translation
+      tempR6(4:6,4:6) = RR0(:,:,idx_qp,nelem)       ! lower right  -- rotation
 
 
 !FIXME: is this assuming something about where the elastic center is???
@@ -2223,7 +2227,7 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
          !!        \left(\underline{\underline{R}} \underline{\underline{R}}_0\right)^T    &  0             \\
          !!                      0  &  \left(\underline{\underline{R}} \underline{\underline{R}}_0\right)^T
          !!     \end{bmatrix} \f$
-      m%qp%Stif(:,:,idx_qp,nelem) = MATMUL(tempR6,MATMUL(p%Stif0_QP(1:6,1:6,temp_id2+idx_qp),TRANSPOSE(tempR6)))
+      Stif(:,:,idx_qp,nelem) = MATMUL(tempR6,MATMUL(Stif0_QP(1:6,1:6,temp_id2+idx_qp),TRANSPOSE(tempR6)))
    ENDDO
 
 END SUBROUTINE BD_StifAtDeformedQP
@@ -3504,7 +3508,6 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
    DO piter=1,p%niter
          ! Calculate Quadrature point values needed
        CALL BD_QuadraturePointData( p,x,m )      ! Calculate QP values uuu, uup, RR0, kappa, E1
-       ! @mjs: ***HERE***
        CALL BD_GenerateStaticElement(gravity, p, m)
 
          !  Point loads are on the GLL points.
@@ -3607,7 +3610,6 @@ SUBROUTINE BD_GenerateStaticElement( gravity, p, m )
 
    DO nelem=1,p%elem_total
 
-      ! @mjs: ***HERE***
       CALL BD_StaticElementMatrix( nelem, gravity, p, m )
       CALL BD_AssembleStiffK(nelem,p,m%elk,m%StifK)
       CALL BD_AssembleRHS(nelem,p,m%elf,m%RHS)
@@ -3634,7 +3636,6 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, m )
 
 
    CALL BD_ElasticForce( nelem,p%nqp,p%Stif0_QP,m%qp,.true. )     ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
-   ! @mjs: ***HERE***
    CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, gravity )    ! Calculate Fg
 
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) - m%qp%Fg(:,:,nelem) - m%DistrLoad_QP(:,:,nelem)
@@ -3891,11 +3892,9 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
       CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
 
          ! Copy over the DistrLoads
-! @mjs: parameters
       CALL BD_DistrLoadCopy( p, u_interp, m )
    
          ! Incorporate boundary conditions
-! @mjs: parameters
       CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
@@ -3904,7 +3903,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
          end if
 
          ! initialize the accelerations
-! @mjs: parameters
+! @mjs: ***HERE***
       CALL BD_InitAcc( u_interp, p, x, m, OtherState%Acc, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
@@ -4657,6 +4656,7 @@ SUBROUTINE BD_InitAcc( u, p, x, m, qdotdot, ErrStat, ErrMsg )
 
 
       ! Calculate Quadrature point values needed
+! @mjs: ***HERE***
    CALL BD_QuadraturePointData( p, x, m )     ! Calculate QP values uuu, uup, RR0, kappa, E1
 
       ! set misc vars, particularly m%RHS
