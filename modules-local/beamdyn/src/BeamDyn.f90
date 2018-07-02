@@ -1962,7 +1962,6 @@ SUBROUTINE BD_QuadraturePointData( p, x, m )
       CALL BD_DisplacementQP( nelem, p%nqp, p%node_elem_idx, p%nodes_per_elem,&
                               p%Shp, p%ShpDer, p%Jacobian, p%E10, x%q, m%qp%uuu, m%qp%uup, m%qp%E1 )
       CALL BD_RotationalInterpQP( nelem, p, x, m )
-! @mjs: ***HERE***
       CALL BD_StifAtDeformedQP( nelem, p%nqp, p%Stif0_QP, m%qp%RR0, m%qp%Stif )
    ENDDO
 
@@ -2190,7 +2189,6 @@ END SUBROUTINE BD_RotationalInterpQP
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> Transform the \f$\underline{\underline{C}}\f$ stiffness matrix to the local quadrature point deformed orientation.
 !! Returns new value for m%qp%Stif
-! @mjs: ***HERE***
 SUBROUTINE BD_StifAtDeformedQP( nelem, nqp, Stif0_QP, RR0, Stif )
    INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< number of current element
    INTEGER(IntKi),               INTENT(IN   )  :: nqp               !< Number of quadrature points (per element)
@@ -2667,10 +2665,12 @@ END SUBROUTINE BD_InertialForce
 !> This subroutine calculates the dissipative forces and added it to Fc and Fd
 !! It also calcuates the linearized matrices Sd, Od, Pd and Qd
 !! betaC, Gd, Xd, Yd for N-R algorithm
-SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< index of current element in loop
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+! @mjs: ***HERE***
+SUBROUTINE BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
+   INTEGER(IntKi),               INTENT(IN   )  :: nelem    !< index of current element in loop
+   INTEGER(IntKi),               INTENT(IN   )  :: nqp      !< Number of quadrature points (per element)
+   REAL(BDKi),                   INTENT(IN   )  :: beta(:)  !< Damping Coefficient
+   TYPE(EqMotionQP),             INTENT(INOUT)  :: mqp      !< qp type within misc/optimization variables
    LOGICAL,                      INTENT(IN   )  :: fact
 
    REAL(BDKi)                  :: SS_ome(3,3)
@@ -2686,11 +2686,11 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
 
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
    
-   DO idx_qp=1,p%nqp
+   DO idx_qp=1,nqp
       !m%qp%betaC(:,:,idx_qp,nelem) = MATMUL( diag(p%beta(i)), temp_b,m%qp%Stif(:,:,idx_qp,nelem))
       DO j=1,6
          DO i=1,6
-            m%qp%betaC(i,j,idx_qp,nelem) = p%beta(i)*m%qp%Stif(i,j,idx_qp,nelem)
+            mqp%betaC(i,j,idx_qp,nelem) = beta(i)*mqp%Stif(i,j,idx_qp,nelem)
          END DO
       END DO
    END DO
@@ -2698,69 +2698,70 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
    
    IF (.NOT. fact) then ! skip all but Fc and Fd terms
    
-      DO idx_qp=1,p%nqp   
-         call Calc_FC_FD_ffd() ! this modifies m%qp%Fc and m%qp%Fd
+      DO idx_qp=1,nqp
+         call Calc_FC_FD_ffd() ! this modifies mqp%Fc and mqp%Fd
       END DO
       
    ! bjj: we don't use these values when fact is FALSE, so let's save time and ignore them here, too.
-   !    m%qp%Sd(:,:,:,nelem)    = 0.0_BDKi
-   !    m%qp%Pd(:,:,:,nelem)    = 0.0_BDKi
-   !    m%qp%Od(:,:,:,nelem)    = 0.0_BDKi
-   !    m%qp%Qd(:,:,:,nelem)    = 0.0_BDKi
-   !    m%qp%Gd(:,:,:,nelem)    = 0.0_BDKi
-   !    m%qp%Xd(:,:,:,nelem)    = 0.0_BDKi
-   !    m%qp%Yd(:,:,:,nelem)    = 0.0_BDKi
+   !    mqp%Sd(:,:,:,nelem)    = 0.0_BDKi
+   !    mqp%Pd(:,:,:,nelem)    = 0.0_BDKi
+   !    mqp%Od(:,:,:,nelem)    = 0.0_BDKi
+   !    mqp%Qd(:,:,:,nelem)    = 0.0_BDKi
+   !    mqp%Gd(:,:,:,nelem)    = 0.0_BDKi
+   !    mqp%Xd(:,:,:,nelem)    = 0.0_BDKi
+   !    mqp%Yd(:,:,:,nelem)    = 0.0_BDKi
       
   ELSE 
 !FIXME:  sometime we can condense this with vector arithmetic and removing some variables that aren't needed.
    
-      DO idx_qp=1,p%nqp      
+      DO idx_qp=1,nqp
 
-         CALL Calc_FC_FD_ffd()  ! this sets local variable ffd and modifies m%qp%Fc and m%qp%Fd
+         CALL Calc_FC_FD_ffd()  ! this sets local variable ffd and modifies mqp%Fc and mqp%Fd
                   
-         D11 = m%qp%betaC(1:3,1:3,idx_qp,nelem)
-         D12 = m%qp%betaC(1:3,4:6,idx_qp,nelem)
-         D21 = m%qp%betaC(4:6,1:3,idx_qp,nelem)
-         D22 = m%qp%betaC(4:6,4:6,idx_qp,nelem)
+         D11 = mqp%betaC(1:3,1:3,idx_qp,nelem)
+         D12 = mqp%betaC(1:3,4:6,idx_qp,nelem)
+         D21 = mqp%betaC(4:6,1:3,idx_qp,nelem)
+         D22 = mqp%betaC(4:6,4:6,idx_qp,nelem)
          
-         b11(1:3,1:3) = -MATMUL(SkewSymMat(m%qp%E1(:,idx_qp,nelem)),D11)
-         b12(1:3,1:3) = -MATMUL(SkewSymMat(m%qp%E1(:,idx_qp,nelem)),D12)
+         b11(1:3,1:3) = -MATMUL(SkewSymMat(mqp%E1(:,idx_qp,nelem)),D11)
+         b12(1:3,1:3) = -MATMUL(SkewSymMat(mqp%E1(:,idx_qp,nelem)),D12)
          
-         SS_ome = SkewSymMat( m%qp%vvv(4:6,idx_qp,nelem) )
+         SS_ome = SkewSymMat( mqp%vvv(4:6,idx_qp,nelem) )
 
          ! Compute stiffness matrix Sd
-         m%qp%Sd(1:3,1:3,idx_qp,nelem) = -MATMUL(D11,SS_ome)
-         m%qp%Sd(1:3,4:6,idx_qp,nelem) = -MATMUL(D12,SS_ome)
-         m%qp%Sd(4:6,1:3,idx_qp,nelem) = -MATMUL(D21,SS_ome)
-         m%qp%Sd(4:6,4:6,idx_qp,nelem) = -MATMUL(D22,SS_ome)
+         mqp%Sd(1:3,1:3,idx_qp,nelem) = -MATMUL(D11,SS_ome)
+         mqp%Sd(1:3,4:6,idx_qp,nelem) = -MATMUL(D12,SS_ome)
+         mqp%Sd(4:6,1:3,idx_qp,nelem) = -MATMUL(D21,SS_ome)
+         mqp%Sd(4:6,4:6,idx_qp,nelem) = -MATMUL(D22,SS_ome)
 
          ! Compute stiffness matrix Pd
-         m%qp%Pd(:,:,idx_qp,nelem) = 0.0_BDKi
-         m%qp%Pd(4:6,1:3,idx_qp,nelem) = SkewSymMat(ffd(1:3)) - MATMUL(b11,SS_ome)
-         m%qp%Pd(4:6,4:6,idx_qp,nelem) = -MATMUL(b12,SS_ome)
+         mqp%Pd(:,:,idx_qp,nelem) = 0.0_BDKi
+         mqp%Pd(4:6,1:3,idx_qp,nelem) = SkewSymMat(ffd(1:3)) - MATMUL(b11,SS_ome)
+         mqp%Pd(4:6,4:6,idx_qp,nelem) = -MATMUL(b12,SS_ome)
 
          ! Compute stiffness matrix Od
-         m%qp%Od(:,1:3,idx_qp,nelem) = 0.0_BDKi
-         alpha = SkewSymMat(m%qp%vvp(1:3,idx_qp,nelem)) - MATMUL(SS_ome,SkewSymMat(m%qp%E1(:,idx_qp,nelem)))
-         m%qp%Od(1:3,4:6,idx_qp,nelem) = MATMUL(D11,alpha) - SkewSymMat(ffd(1:3))
-         m%qp%Od(4:6,4:6,idx_qp,nelem) = MATMUL(D21,alpha) - SkewSymMat(ffd(4:6))
+         mqp%Od(:,1:3,idx_qp,nelem) = 0.0_BDKi
+         alpha = SkewSymMat(mqp%vvp(1:3,idx_qp,nelem)) - MATMUL(SS_ome,SkewSymMat(mqp%E1(:,idx_qp,nelem)))
+         mqp%Od(1:3,4:6,idx_qp,nelem) = MATMUL(D11,alpha) - SkewSymMat(ffd(1:3))
+         mqp%Od(4:6,4:6,idx_qp,nelem) = MATMUL(D21,alpha) - SkewSymMat(ffd(4:6))
 
          ! Compute stiffness matrix Qd
-         m%qp%Qd(:,:,idx_qp,nelem)    = 0.0_BDKi
-         m%qp%Qd(4:6,4:6,idx_qp,nelem) = -MATMUL(SkewSymMat(m%qp%E1(:,idx_qp,nelem)),m%qp%Od(1:3,4:6,idx_qp,nelem))
+         mqp%Qd(:,:,idx_qp,nelem)    = 0.0_BDKi
+         mqp%Qd(4:6,4:6,idx_qp,nelem) = -MATMUL(SkewSymMat(mqp%E1(:,idx_qp,nelem)),mqp%Od(1:3,4:6,idx_qp,nelem))
+
          ! Compute gyroscopic matrix Gd
-         m%qp%Gd(:,1:3,idx_qp,nelem)   = 0.0_BDKi
-         m%qp%Gd(1:3,4:6,idx_qp,nelem) = TRANSPOSE(b11)
-         m%qp%Gd(4:6,4:6,idx_qp,nelem) = TRANSPOSE(b12)
+         mqp%Gd(:,1:3,idx_qp,nelem)   = 0.0_BDKi
+         mqp%Gd(1:3,4:6,idx_qp,nelem) = TRANSPOSE(b11)
+         mqp%Gd(4:6,4:6,idx_qp,nelem) = TRANSPOSE(b12)
 
          ! Compute gyroscopic matrix Xd
-         m%qp%Xd(:,:,idx_qp,nelem)    = 0.0_BDKi
-         m%qp%Xd(4:6,4:6,idx_qp,nelem) = -MATMUL(SkewSymMat(m%qp%E1(:,idx_qp,nelem)),m%qp%Gd(1:3,4:6,idx_qp,nelem))
+         mqp%Xd(:,:,idx_qp,nelem)    = 0.0_BDKi
+         mqp%Xd(4:6,4:6,idx_qp,nelem) = -MATMUL(SkewSymMat(mqp%E1(:,idx_qp,nelem)),mqp%Gd(1:3,4:6,idx_qp,nelem))
 
          ! Compute gyroscopic matrix Yd
-         m%qp%Yd(1:3,:,idx_qp,nelem)   = 0.0_BDKi
-         m%qp%Yd(4:6,1:3,idx_qp,nelem) = b11
-         m%qp%Yd(4:6,4:6,idx_qp,nelem) = b12
+         mqp%Yd(1:3,:,idx_qp,nelem)   = 0.0_BDKi
+         mqp%Yd(4:6,1:3,idx_qp,nelem) = b11
+         mqp%Yd(4:6,4:6,idx_qp,nelem) = b12
       END DO   
    ENDIF
 
@@ -2769,15 +2770,14 @@ CONTAINS
       REAL(BDKi)  :: eed(6)
    
       ! Compute strain rates
-      eed      = m%qp%vvp(1:6,idx_qp,nelem)
-      eed(1:3) = eed(1:3) + cross_product(m%qp%E1(:,idx_qp,nelem),m%qp%vvv(4:6,idx_qp,nelem))
+      eed      = mqp%vvp(1:6,idx_qp,1)
+      eed(1:3) = eed(1:3) + cross_product(mqp%E1(:,idx_qp,nelem),mqp%vvv(4:6,idx_qp,nelem))
 
       ! Compute dissipative force
-      ffd(1:6) = MATMUL(m%qp%betaC(:,:,idx_qp,nelem),eed)
+      ffd(1:6) = MATMUL(mqp%betaC(:,:,idx_qp,nelem),eed)
 
-      m%qp%Fc(1:6,idx_qp,nelem) = m%qp%Fc(1:6,idx_qp,nelem) + ffd
-      m%qp%Fd(4:6,idx_qp,nelem) = m%qp%Fd(4:6,idx_qp,nelem) + cross_product(ffd(1:3),m%qp%E1(:,idx_qp,nelem))
-   
+      mqp%Fc(1:6,idx_qp,nelem) = mqp%Fc(1:6,idx_qp,nelem) + ffd
+      mqp%Fd(4:6,idx_qp,nelem) = mqp%Fd(4:6,idx_qp,nelem) + cross_product(ffd(1:3),mqp%E1(:,idx_qp,nelem))
    END SUBROUTINE Calc_FC_FD_ffd
 END SUBROUTINE BD_DissipativeForce
 
@@ -2871,7 +2871,8 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
 
    CALL BD_ElasticForce( nelem, p%nqp, p%Stif0_QP, m%qp, .FALSE. )                ! Calculate Fc, Fd only
    IF(p%damp_flag .NE. 0) THEN
-      CALL BD_DissipativeForce( nelem, p, m, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
+! @mjs: ***HERE***
+      CALL BD_DissipativeForce( nelem, p%nqp, p%beta, m%qp, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
    ENDIF
    CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, p%gravity ) ! Calculate Fg
    CALL BD_GyroForce( nelem, p, m )                            ! Calculate Fb  (velocity terms from InertialForce with aaa=0)
@@ -4310,7 +4311,7 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
    CALL BD_InertialForce( nelem,p,m,fact )                    ! Calculate Fi [and Mi,Gi,Ki IF(fact)]
    
    IF(p%damp_flag .NE. 0) THEN
-      CALL BD_DissipativeForce( nelem,p,m,fact )              ! Calculate dissipative terms on Fc, Fd [and Sd, Od, Pd and Qd, betaC, Gd, Xd, Yd for N-R algorithm]
+      CALL BD_DissipativeForce( nelem, p%nqp, p%beta, m%qp, fact )              ! Calculate dissipative terms on Fc, Fd [and Sd, Od, Pd and Qd, betaC, Gd, Xd, Yd for N-R algorithm]
    ENDIF
    
    CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, p%gravity )
@@ -4656,10 +4657,10 @@ SUBROUTINE BD_InitAcc( u, p, x, m, qdotdot, ErrStat, ErrMsg )
 
 
       ! Calculate Quadrature point values needed
-! @mjs: ***HERE***
    CALL BD_QuadraturePointData( p, x, m )     ! Calculate QP values uuu, uup, RR0, kappa, E1
 
       ! set misc vars, particularly m%RHS
+! @mjs: ***HERE***
    CALL BD_CalcForceAcc( u, p, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -4705,7 +4706,7 @@ SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
 
    DO nelem=1,p%elem_total
 
-
+! @mjs: ***HERE***
       CALL BD_ElementMatrixAcc( nelem, p, m )
 
       CALL BD_AssembleStiffK(nelem,p,m%elm, m%MassM)

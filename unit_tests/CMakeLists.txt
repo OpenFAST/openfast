@@ -113,6 +113,7 @@ set(testlist
     test_Calc_Fc_Fd
     test_BD_ElasticForce
     test_BD_StifAtDeformedQP
+    test_BD_DissipativeForce
 )
 # it is important to keep the quotes around "${testlist}" in the call below
 build_utest("beamdyn" "${testlist}")

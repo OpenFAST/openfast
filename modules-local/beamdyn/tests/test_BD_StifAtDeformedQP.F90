@@ -14,9 +14,9 @@ subroutine test_BD_StifAtDeformedQP()
     integer(IntKi)  :: nelem                 !< number of current element
     integer(IntKi)  :: nqp                   !< Number of quadrature points (per element)
     real(BDKi)      :: Stif0_QP(6, 6, 1)     !< Sectional Stiffness Properties at quadrature points (6x6xqp)
-    REAL(BDKi)      :: RR0(3, 3, 1, 1)       !< Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$
-    REAL(BDKi)      :: Stif(6, 6, 1, 1)      !< C/S stiffness matrix resolved in inertial frame at current QP
-    REAL(BDKi)      :: base_Stif(6, 6, 1, 1)
+    real(BDKi)      :: RR0(3, 3, 1, 1)       !< Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$
+    real(BDKi)      :: Stif(6, 6, 1, 1)      !< C/S stiffness matrix resolved in inertial frame at current QP
+    real(BDKi)      :: base_Stif(6, 6, 1, 1)
     
     
     integer(IntKi)  :: ErrStat ! Error status of the operation

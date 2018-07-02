@@ -1,0 +1,207 @@
+@test
+subroutine test_bd_dissipativeforce()
+    ! test branches
+    ! - inputs from bd_static_cantilever_beam reg test--no rotation
+    ! - inputs from bd_static_twisted_with_k1 reg test--nonzero rotation
+    
+    use pFUnit_mod
+    use BeamDyn
+    use NWTC_Num
+    
+    implicit none
+    
+    integer(IntKi)   :: nelem    !< index of current element in loop
+    integer(IntKi)   :: nqp      !< Number of quadrature points (per element)
+    real(BDKi)       :: beta(6)  !< Damping Coefficient
+    type(EqMotionQP) :: mqp      !< qp type within misc/optimization variables
+    logical          :: fact
+    real(BDKi)       :: base_betaC(6, 6), base_Sd(6, 6), base_Pd(6, 6), base_Od(6, 6), base_Qd(6, 6),&
+                        base_Gd(6, 6), base_Xd(6, 6), base_Yd(6, 6), base_Fc(6), base_Fd(6)
+    
+    
+    integer(IntKi)   :: ErrStat ! Error status of the operation
+    character(1024)  :: ErrMsg  ! Error message if ErrStat /= ErrID_None
+    
+    character(1024)  :: testname
+    real(BDKi)       :: tolerance
+    
+    ! initialize NWTC_Num constants
+    call SetConstants()
+
+    nelem = 1
+    nqp   = 1
+
+    call AllocAry(mqp%betaC, 6, 6, nqp, nelem, 'qp_betaC', ErrStat, ErrMsg)
+    call AllocAry(mqp%Stif, 6, 6, nqp, nelem, 'qp_Stif', ErrStat, ErrMsg)
+    call AllocAry(mqp%E1, 3, nqp, nelem, 'qp_E1', ErrStat, ErrMsg)
+    call AllocAry(mqp%vvv, 6, nqp, nelem, 'qp_vvv', ErrStat, ErrMsg)
+    call AllocAry(mqp%vvp, 6, nqp, nelem, 'qp_vvp', ErrStat, ErrMsg)
+    call AllocAry(mqp%Sd, 6, 6, nqp, nelem, 'qp_Sd', ErrStat, ErrMsg)
+    call AllocAry(mqp%Pd, 6, 6, nqp, nelem, 'qp_Pd', ErrStat, ErrMsg)
+    call AllocAry(mqp%Od, 6, 6, nqp, nelem, 'qp_Od', ErrStat, ErrMsg)
+    call AllocAry(mqp%Qd, 6, 6, nqp, nelem, 'qp_Qd', ErrStat, ErrMsg)
+    call AllocAry(mqp%Gd, 6, 6, nqp, nelem, 'qp_Gd', ErrStat, ErrMsg)
+    call AllocAry(mqp%Xd, 6, 6, nqp, nelem, 'qp_Xd', ErrStat, ErrMsg)
+    call AllocAry(mqp%Yd, 6, 6, nqp, nelem, 'qp_Yd', ErrStat, ErrMsg)
+    call AllocAry(mqp%Fc, 6, nqp, nelem, 'qp_Fc', ErrStat, ErrMsg)
+    call AllocAry(mqp%Fd, 6, nqp, nelem, 'qp_Fd', ErrStat, ErrMsg)
+
+    tolerance = 1e-14
+   
+    ! --------------------------------------------------------------------------
+    testname = "inputs from bd_5MW_dynamic reg test--simple case with fact == false:"
+      ! this essentially tests the internal subroutine Calc_FC_FD_ffd()
+
+    fact = .false.
+    beta = 1.0d-3
+
+    call initialize_vars_base()
+
+    mqp%Stif(1, 1, nqp, nelem) = 972948000.00000095
+    mqp%Stif(2, 2, nqp, nelem) = 972948000.00000095
+    mqp%Stif(3, 3, nqp, nelem) = 9729480000.0000076
+    mqp%Stif(4, 4, nqp, nelem) = 18113409252.495316
+    mqp%Stif(4, 5, nqp, nelem) = -806415.77761942265
+    mqp%Stif(5, 4, nqp, nelem) = -806415.77762025257
+    mqp%Stif(5, 5, nqp, nelem) = 18110190747.504726
+    mqp%Stif(6, 6, nqp, nelem) = 5564400000.0000057
+
+    mqp%E1(3, nqp, nelem) = 1.0000000000000004
+
+    mqp%vvv(:, nqp, nelem) = (/ 0.0000000000000000, -1.0005999999999999, 0.0000000000000000,&
+                                1.0005999999999999, 0.0000000000000000, 0.0000000000000000 /)
+    mqp%vvp(:, nqp, nelem) = (/ 0.0000000000000000, -1.0006000000000004, 0.0000000000000000,&
+                                8.3266726846886741E-017, 0.0000000000000000, 0.0000000000000000 /)
+
+    base_Fc(4) = 1.5082443004933982E-009
+    base_Fc(5) = -6.7147602280125327E-014
+
+    base_betaC(1, 1) = 972948.00000000093
+    base_betaC(2, 2) = 972948.00000000093
+    base_betaC(3, 3) = 9729480.0000000075
+    base_betaC(4, 4) = 18113409.252495315
+    base_betaC(4, 5) = -806.41577761942267
+    base_betaC(5, 4) = -806.41577762025258
+    base_betaC(5, 5) = 18110190.747504726
+    base_betaC(6, 6) = 5564400.0000000056
+
+    call BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
+    
+    @assertEqual(base_betaC, mqp%betaC(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Sd, mqp%Sd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Pd, mqp%Pd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Od, mqp%Od(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Qd, mqp%Qd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Gd, mqp%Gd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Xd, mqp%Xd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Yd, mqp%Yd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Fc, mqp%Fc(:, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Fd, mqp%Fd(:, nqp, nelem), tolerance, testname)
+
+    ! --------------------------------------------------------------------------
+    testname = "inputs from bd_5MW_dynamic reg test--simple case with fact == true:"
+      ! this essentially tests the internal subroutine Calc_FC_FD_ffd()
+
+    fact = .true.
+    beta = 1.0d-3
+
+    call initialize_vars_base()
+
+    mqp%Stif(1, 1, nqp, nelem) = 972948000.00000095
+    mqp%Stif(2, 2, nqp, nelem) = 972948000.00000095
+    mqp%Stif(3, 3, nqp, nelem) = 9729480000.0000076
+    mqp%Stif(4, 4, nqp, nelem) = 18113409252.495316
+    mqp%Stif(4, 5, nqp, nelem) = -806415.77761942265
+    mqp%Stif(5, 4, nqp, nelem) = -806415.77762025257
+    mqp%Stif(5, 5, nqp, nelem) = 18110190747.504726
+    mqp%Stif(6, 6, nqp, nelem) = 5564400000.0000057
+
+    mqp%E1(3, nqp, nelem) = 1.0000000000000004
+
+    mqp%vvv(:, nqp, nelem) = (/ 0.0000000000000000, -1.0005999999999999, 0.0000000000000000,&
+                                1.0005999999999999, 0.0000000000000000, 0.0000000000000000 /)
+    mqp%vvp(:, nqp, nelem) = (/ 0.0000000000000000, -1.0006000000000004, 0.0000000000000000,&
+                                8.3266726846886741E-017, 0.0000000000000000, 0.0000000000000000 /)
+    
+    base_betaC(1, 1) = 972948.00000000093
+    base_betaC(2, 2) = 972948.00000000093
+    base_betaC(3, 3) = 9729480.0000000075
+    base_betaC(4, 4) = 18113409.252495315
+    base_betaC(4, 5) = -806.41577761942267
+    base_betaC(5, 4) = -806.41577762025258
+    base_betaC(5, 5) = 18110190.747504726
+    base_betaC(6, 6) = 5564400.0000000056
+    
+    base_Sd(2, 3)    = 973531.76880000089
+    base_Sd(3, 2)    = -9735317.6880000066
+    base_Sd(4, 6)    = -806.89962708599433
+    base_Sd(5, 6)    = 18121056.861953229
+    base_Sd(6, 5)    = -5567738.6400000053
+    
+    base_Pd(4, 3)    = 973531.76880000136
+    
+    base_Od(1, 6)    = -973531.76880000124
+    base_Od(4, 6)    = 6.7147602280125327E-014
+    base_Od(5, 6)    = 1.5082443004933982E-009
+    base_Od(6, 4)    = -6.7147602280125327E-014
+    base_Od(6, 5)    = -1.5082443004933982E-009
+    
+    base_Qd(5, 6)    = 973531.76880000171
+    
+    base_Gd(1, 5)    = -972948.00000000140
+    base_Gd(2, 4)    = 972948.00000000140
+    
+    base_Xd(4, 4)    = 972948.00000000186
+    base_Xd(5, 5)    = 972948.00000000186
+    
+    base_Yd(4, 2)    = 972948.00000000140
+    base_Yd(5, 1)    = -972948.00000000140
+    
+    base_Fc(4)       = 1.5082443004933982E-009
+    base_Fc(5)       = -6.7147602280125327E-014
+
+    call BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
+    
+    @assertEqual(base_betaC, mqp%betaC(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Sd, mqp%Sd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Pd, mqp%Pd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Od, mqp%Od(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Qd, mqp%Qd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Gd, mqp%Gd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Xd, mqp%Xd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Yd, mqp%Yd(:, :, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Fc, mqp%Fc(:, nqp, nelem), tolerance, testname)
+    @assertEqual(base_Fd, mqp%Fd(:, nqp, nelem), tolerance, testname)
+
+    ! --------------------------------------------------------------------------
+    
+    contains
+       subroutine initialize_vars_base()
+          mqp%betaC  = 0.0d0
+          mqp%Stif   = 0.0d0
+          mqp%E1     = 0.0d0
+          mqp%vvv    = 0.0d0
+          mqp%vvp    = 0.0d0
+          mqp%Sd     = 0.0d0
+          mqp%Pd     = 0.0d0
+          mqp%Od     = 0.0d0
+          mqp%Qd     = 0.0d0
+          mqp%Gd     = 0.0d0
+          mqp%Xd     = 0.0d0
+          mqp%Yd     = 0.0d0
+          mqp%Fc     = 0.0d0
+          mqp%Fd     = 0.0d0
+          
+          base_betaC = 0.0d0
+          base_Sd    = 0.0d0
+          base_Pd    = 0.0d0
+          base_Od    = 0.0d0
+          base_Qd    = 0.0d0
+          base_Gd    = 0.0d0
+          base_Xd    = 0.0d0
+          base_Yd    = 0.0d0
+          base_Fc    = 0.0d0
+          base_Fd    = 0.0d0
+       end subroutine initialize_vars_base
+
+end subroutine test_BD_DissipativeForce
