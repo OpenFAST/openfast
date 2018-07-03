@@ -57,20 +57,20 @@ subroutine test_bd_dissipativeforce()
 
     call initialize_vars_base()
 
-    mqp%Stif(1, 1, nqp, nelem) = 972948000.00000095
-    mqp%Stif(2, 2, nqp, nelem) = 972948000.00000095
-    mqp%Stif(3, 3, nqp, nelem) = 9729480000.0000076
-    mqp%Stif(4, 4, nqp, nelem) = 18113409252.495316
-    mqp%Stif(4, 5, nqp, nelem) = -806415.77761942265
-    mqp%Stif(5, 4, nqp, nelem) = -806415.77762025257
-    mqp%Stif(5, 5, nqp, nelem) = 18110190747.504726
-    mqp%Stif(6, 6, nqp, nelem) = 5564400000.0000057
+    mqp%Stif(1, 1, 1, nelem) = 972948000.00000095
+    mqp%Stif(2, 2, 1, nelem) = 972948000.00000095
+    mqp%Stif(3, 3, 1, nelem) = 9729480000.0000076
+    mqp%Stif(4, 4, 1, nelem) = 18113409252.495316
+    mqp%Stif(4, 5, 1, nelem) = -806415.77761942265
+    mqp%Stif(5, 4, 1, nelem) = -806415.77762025257
+    mqp%Stif(5, 5, 1, nelem) = 18110190747.504726
+    mqp%Stif(6, 6, 1, nelem) = 5564400000.0000057
 
-    mqp%E1(3, nqp, nelem) = 1.0000000000000004
+    mqp%E1(3, 1, nelem) = 1.0000000000000004
 
-    mqp%vvv(:, nqp, nelem) = (/ 0.0000000000000000, -1.0005999999999999, 0.0000000000000000,&
+    mqp%vvv(:, 1, nelem) = (/ 0.0000000000000000, -1.0005999999999999, 0.0000000000000000,&
                                 1.0005999999999999, 0.0000000000000000, 0.0000000000000000 /)
-    mqp%vvp(:, nqp, nelem) = (/ 0.0000000000000000, -1.0006000000000004, 0.0000000000000000,&
+    mqp%vvp(:, 1, nelem) = (/ 0.0000000000000000, -1.0006000000000004, 0.0000000000000000,&
                                 8.3266726846886741E-017, 0.0000000000000000, 0.0000000000000000 /)
 
     base_Fc(4) = 1.5082443004933982E-009
@@ -87,16 +87,16 @@ subroutine test_bd_dissipativeforce()
 
     call BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
     
-    @assertEqual(base_betaC, mqp%betaC(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Sd, mqp%Sd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Pd, mqp%Pd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Od, mqp%Od(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Qd, mqp%Qd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Gd, mqp%Gd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Xd, mqp%Xd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Yd, mqp%Yd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Fc, mqp%Fc(:, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Fd, mqp%Fd(:, nqp, nelem), tolerance, testname)
+    @assertEqual(base_betaC, mqp%betaC(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Sd, mqp%Sd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Pd, mqp%Pd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Od, mqp%Od(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Qd, mqp%Qd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Gd, mqp%Gd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Xd, mqp%Xd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Yd, mqp%Yd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Fc, mqp%Fc(:, 1, nelem), tolerance, testname)
+    @assertEqual(base_Fd, mqp%Fd(:, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--simple case with fact == true:"
@@ -107,20 +107,20 @@ subroutine test_bd_dissipativeforce()
 
     call initialize_vars_base()
 
-    mqp%Stif(1, 1, nqp, nelem) = 972948000.00000095
-    mqp%Stif(2, 2, nqp, nelem) = 972948000.00000095
-    mqp%Stif(3, 3, nqp, nelem) = 9729480000.0000076
-    mqp%Stif(4, 4, nqp, nelem) = 18113409252.495316
-    mqp%Stif(4, 5, nqp, nelem) = -806415.77761942265
-    mqp%Stif(5, 4, nqp, nelem) = -806415.77762025257
-    mqp%Stif(5, 5, nqp, nelem) = 18110190747.504726
-    mqp%Stif(6, 6, nqp, nelem) = 5564400000.0000057
+    mqp%Stif(1, 1, 1, nelem) = 972948000.00000095
+    mqp%Stif(2, 2, 1, nelem) = 972948000.00000095
+    mqp%Stif(3, 3, 1, nelem) = 9729480000.0000076
+    mqp%Stif(4, 4, 1, nelem) = 18113409252.495316
+    mqp%Stif(4, 5, 1, nelem) = -806415.77761942265
+    mqp%Stif(5, 4, 1, nelem) = -806415.77762025257
+    mqp%Stif(5, 5, 1, nelem) = 18110190747.504726
+    mqp%Stif(6, 6, 1, nelem) = 5564400000.0000057
 
-    mqp%E1(3, nqp, nelem) = 1.0000000000000004
+    mqp%E1(3, 1, nelem) = 1.0000000000000004
 
-    mqp%vvv(:, nqp, nelem) = (/ 0.0000000000000000, -1.0005999999999999, 0.0000000000000000,&
+    mqp%vvv(:, 1, nelem) = (/ 0.0000000000000000, -1.0005999999999999, 0.0000000000000000,&
                                 1.0005999999999999, 0.0000000000000000, 0.0000000000000000 /)
-    mqp%vvp(:, nqp, nelem) = (/ 0.0000000000000000, -1.0006000000000004, 0.0000000000000000,&
+    mqp%vvp(:, 1, nelem) = (/ 0.0000000000000000, -1.0006000000000004, 0.0000000000000000,&
                                 8.3266726846886741E-017, 0.0000000000000000, 0.0000000000000000 /)
     
     base_betaC(1, 1) = 972948.00000000093
@@ -162,16 +162,16 @@ subroutine test_bd_dissipativeforce()
 
     call BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
     
-    @assertEqual(base_betaC, mqp%betaC(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Sd, mqp%Sd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Pd, mqp%Pd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Od, mqp%Od(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Qd, mqp%Qd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Gd, mqp%Gd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Xd, mqp%Xd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Yd, mqp%Yd(:, :, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Fc, mqp%Fc(:, nqp, nelem), tolerance, testname)
-    @assertEqual(base_Fd, mqp%Fd(:, nqp, nelem), tolerance, testname)
+    @assertEqual(base_betaC, mqp%betaC(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Sd, mqp%Sd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Pd, mqp%Pd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Od, mqp%Od(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Qd, mqp%Qd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Gd, mqp%Gd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Xd, mqp%Xd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Yd, mqp%Yd(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Fc, mqp%Fc(:, 1, nelem), tolerance, testname)
+    @assertEqual(base_Fd, mqp%Fd(:, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
     

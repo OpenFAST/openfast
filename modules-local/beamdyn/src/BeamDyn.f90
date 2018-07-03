@@ -2665,7 +2665,6 @@ END SUBROUTINE BD_InertialForce
 !> This subroutine calculates the dissipative forces and added it to Fc and Fd
 !! It also calcuates the linearized matrices Sd, Od, Pd and Qd
 !! betaC, Gd, Xd, Yd for N-R algorithm
-! @mjs: ***HERE***
 SUBROUTINE BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
    INTEGER(IntKi),               INTENT(IN   )  :: nelem    !< index of current element in loop
    INTEGER(IntKi),               INTENT(IN   )  :: nqp      !< Number of quadrature points (per element)
@@ -2871,12 +2870,11 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
 
    CALL BD_ElasticForce( nelem, p%nqp, p%Stif0_QP, m%qp, .FALSE. )                ! Calculate Fc, Fd only
    IF(p%damp_flag .NE. 0) THEN
-! @mjs: ***HERE***
       CALL BD_DissipativeForce( nelem, p%nqp, p%beta, m%qp, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
    ENDIF
    CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, p%gravity ) ! Calculate Fg
-   CALL BD_GyroForce( nelem, p, m )                            ! Calculate Fb  (velocity terms from InertialForce with aaa=0)
-
+! @mjs: ***HERE***
+   CALL BD_GyroForce( nelem, p%nqp, m%qp%vvv, m%qp%RR0mEta, m%qp%rho, m%qp%Fb )   ! Calculate Fb  (velocity terms from InertialForce with aaa=0)
    
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) + m%qp%Fb(:,:,nelem) - m%DistrLoad_QP(:,:,nelem) - m%qp%Fg(:,:,nelem)
 
@@ -2951,12 +2949,15 @@ END SUBROUTINE BD_InertialMassMatrix
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes gyroscopic forces
-!! Returns new value for `m%qp%Fb`  Note that the equations here are the inertial equations with the acceleration terms set to zero.
+!! Returns new value for `Fb`  Note that the equations here are the inertial equations with the acceleration terms set to zero.
 ! called by BD_ElementMatrixAcc and BD_ElementMatrixForce
-SUBROUTINE BD_GyroForce( nelem, p, m )
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< index of current element in loop
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables
+SUBROUTINE BD_GyroForce( nelem, nqp, vvv, RR0mEta, rho, Fb )
+   INTEGER(IntKi),               INTENT(IN   )  :: nelem            !< index of current element in loop
+   INTEGER(IntKi),               INTENT(IN   )  :: nqp              !< Number of quadrature points (per element)
+   REAL(BDKi),                   INTENT(IN   )  :: vvv(:, :, :)     !< Translational velocity and rotational parameter velocity (at current QP)
+   REAL(BDKi),                   INTENT(IN   )  :: RR0mEta(:, :, :) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
+   REAL(BDKi),                   INTENT(IN   )  :: rho(:, :, :, :)  !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
+   REAL(BDKi),                   INTENT(  OUT)  :: Fb(:, :, :)      !< Gyroscopic forces at current QP. 6
 
 
 !   REAL(BDKi)                  :: Bi(6,6)
@@ -2964,16 +2965,16 @@ SUBROUTINE BD_GyroForce( nelem, p, m )
    REAL(BDKi)                  :: gama(3)
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
 
-   m%qp%Fb(:,:,nelem) = 0.0_BDKi
+   Fb(:,:,nelem) = 0.0_BDKi
 
-   do idx_qp=1,p%nqp
+   do idx_qp=1,nqp
    
-      beta = cross_product(m%qp%vvv(4:6,idx_qp,nelem), m%qp%RR0mEta(:,idx_qp,nelem)) !MATMUL(SkewSymMat(ome),mEta)
-      gama = MATMUL(m%qp%rho(:,:,idx_qp,nelem),m%qp%vvv(4:6,idx_qp,nelem))
+      beta = cross_product(vvv(4:6,idx_qp,nelem), RR0mEta(:,idx_qp,nelem)) !MATMUL(SkewSymMat(ome),mEta)
+      gama = MATMUL(rho(:,:,idx_qp,nelem),vvv(4:6,idx_qp,nelem))
 
       !Compute Fb (Equation 22 in Wang_2014 with aaa = 0)
-      m%qp%Fb(1:3,idx_qp,nelem) = cross_product(m%qp%vvv(4:6,idx_qp,nelem), beta)
-      m%qp%Fb(4:6,idx_qp,nelem) = cross_product(m%qp%vvv(4:6,idx_qp,nelem), gama)
+      Fb(1:3,idx_qp,nelem) = cross_product(vvv(4:6,idx_qp,nelem), beta)
+      Fb(4:6,idx_qp,nelem) = cross_product(vvv(4:6,idx_qp,nelem), gama)
 
    end do
 
