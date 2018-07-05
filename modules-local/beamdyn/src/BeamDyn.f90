@@ -1755,7 +1755,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    IF(p%analysis_type .EQ. BD_DYNAMIC_ANALYSIS) THEN
 
          ! These values have not been set yet for the QP
-      CALL BD_QPData_mEta_rho( p,m )                  ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
+      CALL BD_QPData_mEta_rho( p%elem_total, p%nqp, p%Mass0_QP, p%qp%mEta, m%qp%RR0, m%qp%RR0mEta, m%qp%rho ) ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
       CALL BD_QPDataVelocity( p, x_tmp, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
       ! calculate accelerations and reaction loads (in m%RHS):
@@ -2236,29 +2236,35 @@ END SUBROUTINE BD_StifAtDeformedQP
 !! Returns values for `m%qp%RR0mEta` and `m%qp%rho`
 !
 !  Input:      Mass0_QP    RR0
-!  Output:     m%qp%RR0mEta   m%qp%rho
+!  Output:     RR0mEta   rho
 !
 !  mEta is a 3 element array
 !  rho is a 3x3 matrix
-SUBROUTINE BD_QPData_mEta_rho( p, m )
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
+SUBROUTINE BD_QPData_mEta_rho( elem_total, nqp, Mass0_QP, mEta, RR0, RR0mEta, rho )
+   INTEGER(IntKi),               INTENT(IN   )  :: elem_total !< Total number of elements
+   INTEGER(IntKi),               INTENT(IN   )  :: nqp !< Number of quadrature points (per element)
+   REAL(BDKi),                   INTENT(IN   )  :: Mass0_QP(:, :, :)      !< Sectional Mass Properties at quadrature points (6x6xqp)
+   REAL(BDKi),                   INTENT(IN   )  :: mEta(:, :, :) !< Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
+   REAL(BDKi),                   INTENT(IN   )  :: RR0(:, :, :, :)      !< Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$
+   REAL(BDKi),                   INTENT(  OUT)  :: RR0mEta(:, :, :)      !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
+   REAL(BDKi),                   INTENT(  OUT)  :: rho(:, :, :, :)      !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
+
 
    INTEGER(IntKi)                               :: nelem             !< index to current element number
    INTEGER(IntKi)                               :: idx_qp            !< index to the current quadrature point
 
-   DO nelem=1,p%elem_total
-      DO idx_qp=1,p%nqp
+   DO nelem=1,elem_total
+      DO idx_qp=1,nqp
          !> Calculate the new center of mass times mass at the deflected location
          !! as \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) m \underline{\eta} \f$
-         m%qp%RR0mEta(:,idx_qp,nelem)  =  MATMUL(m%qp%RR0(:,:,idx_qp,nelem),p%qp%mEta(:,idx_qp,nelem))
+         RR0mEta(:,idx_qp,nelem)  =  MATMUL(RR0(:,:,idx_qp,nelem),mEta(:,idx_qp,nelem))
 
          !> Calculate \f$ \rho = \left(\underline{\underline{R}}\underline{\underline{R}}_0\right)
          !!                      \underline{\underline{M}}_{2,2}
          !!                      \left(\underline{\underline{R}}\underline{\underline{R}}_0\right)^T \f$ where
          !! \f$ \underline{\underline{M}}_{2,2} \f$ is the inertial terms of the undeflected mass matrix at this quadrature point
-         m%qp%rho(:,:,idx_qp,nelem) =  p%Mass0_QP(4:6,4:6,(nelem-1)*p%nqp+idx_qp)
-         m%qp%rho(:,:,idx_qp,nelem) =  MATMUL(m%qp%RR0(:,:,idx_qp,nelem),MATMUL(m%qp%rho(:,:,idx_qp,nelem),TRANSPOSE(m%qp%RR0(:,:,idx_qp,nelem))))
+         rho(:,:,idx_qp,nelem) =  Mass0_QP(4:6,4:6,(nelem-1)*nqp+idx_qp)
+         rho(:,:,idx_qp,nelem) =  MATMUL(RR0(:,:,idx_qp,nelem),MATMUL(rho(:,:,idx_qp,nelem),TRANSPOSE(RR0(:,:,idx_qp,nelem))))
       ENDDO
    ENDDO
 
@@ -2877,7 +2883,6 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
    
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) + m%qp%Fb(:,:,nelem) - m%DistrLoad_QP(:,:,nelem) - m%qp%Fg(:,:,nelem)
 
-! @mjs: ***HERE***
    CALL BD_InertialMassMatrix( nelem, p%nqp, p%qp%mmm, m%qp%RR0mEta, m%qp%rho, m%qp%Mi )   ! Calculate Mi
    
    DO j=1,p%nodes_per_elem
@@ -2915,7 +2920,6 @@ END SUBROUTINE BD_ElementMatrixAcc
 !> This subroutine computes the mass matrix.
 !! Returns value for `m%qp%Mi`
 ! used in BD_ElementMatrixAcc and BD_InertialForce
-! @mjs: ***HERE***
 SUBROUTINE BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< index of current element in loop
@@ -3611,7 +3615,7 @@ SUBROUTINE BD_GenerateStaticElement( gravity, p, m )
    m%StifK  =  0.0_BDKi
 
       ! These values have not been set yet for the QP
-   CALL BD_QPData_mEta_rho( p,m )            ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
+   CALL BD_QPData_mEta_rho( p%elem_total, p%nqp, p%Mass0_QP, p%qp%mEta, m%qp%RR0, m%qp%RR0mEta, m%qp%rho ) ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
 
    DO nelem=1,p%elem_total
 
@@ -3908,7 +3912,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
          end if
 
          ! initialize the accelerations
-! @mjs: ***HERE***
       CALL BD_InitAcc( u_interp, p, x, m, OtherState%Acc, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
@@ -3928,9 +3931,8 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
          ! compute mass and stiffness matrices
             ! Calculate Quadrature point values needed
-! @mjs: parameters
          CALL BD_QuadraturePointData( p,x,m )         ! Calculate QP values uuu, uup, RR0, kappa, E1
-! @mjs: parameters
+! @mjs: ***HERE***
          CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE.)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -4267,7 +4269,8 @@ SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
 
       ! These values have not been set yet for the QP.
       ! We can leave these inside this subroutine rather than move them up.
-   CALL BD_QPData_mEta_rho( p,m )               ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
+! @mjs: ***HERE***
+   CALL BD_QPData_mEta_rho( p%elem_total, p%nqp, p%Mass0_QP, p%qp%mEta, m%qp%RR0, m%qp%RR0mEta, m%qp%rho ) ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
    CALL BD_QPDataVelocity( p, x, m )            ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
    CALL BD_QPDataAcceleration( p, OtherState, m )     ! Naaa --> aaa (OtherState%Acc --> m%qp%aaa)
@@ -4664,7 +4667,6 @@ SUBROUTINE BD_InitAcc( u, p, x, m, qdotdot, ErrStat, ErrMsg )
    CALL BD_QuadraturePointData( p, x, m )     ! Calculate QP values uuu, uup, RR0, kappa, E1
 
       ! set misc vars, particularly m%RHS
-! @mjs: ***HERE***
    CALL BD_CalcForceAcc( u, p, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -4710,7 +4712,6 @@ SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
 
    DO nelem=1,p%elem_total
 
-! @mjs: ***HERE***
       CALL BD_ElementMatrixAcc( nelem, p, m )
 
       CALL BD_AssembleStiffK(nelem,p,m%elm, m%MassM)

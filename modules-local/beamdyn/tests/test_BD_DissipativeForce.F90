@@ -1,5 +1,5 @@
 @test
-subroutine test_bd_dissipativeforce()
+subroutine test_BD_DissipativeForce()
     ! test branches
     ! - inputs from bd_5MW_dynamic reg test--simple case with fact == false
     ! - inputs from bd_5MW_dynamic reg test--simple case with fact == true

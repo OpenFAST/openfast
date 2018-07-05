@@ -38,7 +38,9 @@ subroutine test_BD_QPData_mEta_rho()
     miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%elem_total)
     
     ! allocate the results
-    call BD_QPData_mEta_rho(parametertype, miscvartype)
+    CALL BD_QPData_mEta_rho( parametertype%elem_total, parametertype%nqp,&
+                             parametertype%Mass0_QP, parametertype%qp%mEta,&
+                             miscvartype%qp%RR0, miscvartype%qp%RR0mEta, miscvartype%qp%rho )
     
     do j=1, parametertype%elem_total
         do i=1, parametertype%nqp
