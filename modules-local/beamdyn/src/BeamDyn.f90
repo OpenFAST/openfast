@@ -2630,7 +2630,7 @@ SUBROUTINE BD_InertialForce( nelem, p, m, fact )
    end do
    
    IF(fact) THEN
-      CALL BD_InertialMassMatrix( nelem, p, m ) ! compute Mi
+      CALL BD_InertialMassMatrix( nelem, p%nqp, p%qp%mmm, m%qp%RR0mEta, m%qp%rho, m%qp%Mi ) ! compute Mi
       do idx_qp=1,p%nqp
 
           !Gyroscopic Matrix (Equation 17 in Wang_2014)
@@ -2873,13 +2873,12 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
       CALL BD_DissipativeForce( nelem, p%nqp, p%beta, m%qp, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
    ENDIF
    CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, p%gravity ) ! Calculate Fg
-! @mjs: ***HERE***
    CALL BD_GyroForce( nelem, p%nqp, m%qp%vvv, m%qp%RR0mEta, m%qp%rho, m%qp%Fb )   ! Calculate Fb  (velocity terms from InertialForce with aaa=0)
    
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) + m%qp%Fb(:,:,nelem) - m%DistrLoad_QP(:,:,nelem) - m%qp%Fg(:,:,nelem)
 
-   
-   CALL BD_InertialMassMatrix( nelem, p, m )                   ! Calculate Mi
+! @mjs: ***HERE***
+   CALL BD_InertialMassMatrix( nelem, p%nqp, p%qp%mmm, m%qp%RR0mEta, m%qp%rho, m%qp%Mi )   ! Calculate Mi
    
    DO j=1,p%nodes_per_elem
       DO idx_dof2=1,p%dof_node
@@ -2916,30 +2915,34 @@ END SUBROUTINE BD_ElementMatrixAcc
 !> This subroutine computes the mass matrix.
 !! Returns value for `m%qp%Mi`
 ! used in BD_ElementMatrixAcc and BD_InertialForce
-SUBROUTINE BD_InertialMassMatrix( nelem, p, m )
+! @mjs: ***HERE***
+SUBROUTINE BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< index of current element in loop
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+   INTEGER(IntKi),               INTENT(IN   )  :: nqp              !< Number of quadrature points (per element)
+   REAL(BDKi),                   INTENT(IN   )  :: mmm(:, :)      !< Mass at current QP
+   REAL(BDKi),                   INTENT(IN   )  :: RR0mEta(:, :, :) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
+   REAL(BDKi),                   INTENT(IN   )  :: rho(:, :, :, :)  !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
+   REAL(BDKi),                   INTENT(  OUT)  :: Mi(:, :, :, :)      !< Mass matrix for inertial force. 6x6
 
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
 
-   do idx_qp=1,p%nqp
+   do idx_qp=1,nqp
 
-      m%qp%Mi(:,:,idx_qp,nelem) = 0.0_BDKi
+      Mi(:,:,idx_qp,nelem) = 0.0_BDKi
 
          ! Set diagonal values for mass
       DO i=1,3
-          m%qp%Mi(i,i,idx_qp,nelem) = p%qp%mmm(idx_qp,nelem)
+          Mi(i,i,idx_qp,nelem) = mmm(idx_qp,nelem)
       ENDDO
 
          ! set mass-inertia coupling terms
-      m%qp%Mi(1:3,4:6,idx_qp,nelem) = -SkewSymMat(m%qp%RR0mEta(:,idx_qp,nelem))
-      m%qp%Mi(4:6,1:3,idx_qp,nelem) =  SkewSymMat(m%qp%RR0mEta(:,idx_qp,nelem))
+      Mi(1:3,4:6,idx_qp,nelem) = -SkewSymMat(RR0mEta(:,idx_qp,nelem))
+      Mi(4:6,1:3,idx_qp,nelem) =  SkewSymMat(RR0mEta(:,idx_qp,nelem))
 
          ! Set inertia terms
-      m%qp%Mi(4:6,4:6,idx_qp,nelem) = m%qp%rho(:,:,idx_qp,nelem)
+      Mi(4:6,4:6,idx_qp,nelem) = rho(:,:,idx_qp,nelem)
 
    end do
    

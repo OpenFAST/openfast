@@ -1,8 +1,8 @@
 @test
 subroutine test_bd_dissipativeforce()
     ! test branches
-    ! - inputs from bd_static_cantilever_beam reg test--no rotation
-    ! - inputs from bd_static_twisted_with_k1 reg test--nonzero rotation
+    ! - inputs from bd_5MW_dynamic reg test--simple case with fact == false
+    ! - inputs from bd_5MW_dynamic reg test--simple case with fact == true
     
     use pFUnit_mod
     use BeamDyn
