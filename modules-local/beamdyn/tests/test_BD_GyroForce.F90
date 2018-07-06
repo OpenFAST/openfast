@@ -35,7 +35,6 @@ subroutine test_BD_GyroForce()
    
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--simple case:"
-      ! this essentially tests the internal subroutine Calc_FC_FD_ffd()
 
     call initialize_vars_base()
 
@@ -54,7 +53,6 @@ subroutine test_BD_GyroForce()
 
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--more complex case:"
-      ! this essentially tests the internal subroutine Calc_FC_FD_ffd()
 
     call initialize_vars_base()
 
