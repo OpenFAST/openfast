@@ -258,7 +258,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          CALL BD_RotationalInterpQP( nelem, p, x, MiscVar )
       end do
    
-      call BD_QPDataVelocity( p, x, MiscVar ) ! set MiscVar%qp%vvv
+      call BD_QPDataVelocity( p%elem_total, p%node_elem_idx, p%nqp, p%nodes_per_elem, p%Shp, p%ShpDer, p%Jacobian, x%dqdt, MiscVar%qp%vvv, MiscVar%qp%vvp ) ! set MiscVar%qp%vvv
       call BD_QPDataAcceleration( p, OtherState, MiscVar ) ! set MiscVar%qp%aaa
       
    end if
@@ -1756,7 +1756,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
          ! These values have not been set yet for the QP
       CALL BD_QPData_mEta_rho( p%elem_total, p%nqp, p%Mass0_QP, p%qp%mEta, m%qp%RR0, m%qp%RR0mEta, m%qp%rho ) ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
-      CALL BD_QPDataVelocity( p, x_tmp, m )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
+      CALL BD_QPDataVelocity( p%elem_total, p%node_elem_idx, p%nqp, p%nodes_per_elem, p%Shp, p%ShpDer, p%Jacobian, x_tmp%dqdt, m%qp%vvv, m%qp%vvp )           ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
       ! calculate accelerations and reaction loads (in m%RHS):
       CALL BD_CalcForceAcc(m%u, p, m, ErrStat2,ErrMsg2)
@@ -2508,40 +2508,48 @@ END SUBROUTINE Calc_Fc_Fd
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the mass quantities at the quadrature point
-!! 1) velocity (vvv); 2) derivative of velocity wrt axis (vvp); 3) acceleration (aaa)
+!! 1) velocity (vvv); 2) derivative of velocity wrt axis (vvp)
 !!
 !! These values are used in the calculations for inertial and dissipative forces.
 !
-!  Input:   x%dqdt   p%Shp    p%ShpDer
-!  Output:  m%qp%vvv m%qp%vvp
+!  Input:   dqdt   Shp    ShpDer
+!  Output:  vvv vvp
 !
-SUBROUTINE BD_QPDataVelocity( p, x, m )
+! @mjs: ***HERE***
+SUBROUTINE BD_QPDataVelocity( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, ShpDer, Jacobian, dqdt, vvv, vvp )
 
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< Misc/optimization variables
+   INTEGER(IntKi),               INTENT(IN   )  :: elem_total          !< Total number of elements
+   INTEGER(IntKi),               INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi),               INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
+   INTEGER(IntKi),               INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   REAL(BDKi),                   INTENT(IN   )  :: Shp(:, :)           !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),                   INTENT(IN   )  :: ShpDer(:, :)        !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),                   INTENT(IN   )  :: Jacobian(:, :)      !< Jacobian value at each quadrature point
+   REAL(BDKi),                   INTENT(IN   )  :: dqdt(:, :)          !< velocity
+   REAL(BDKi),                   INTENT(  OUT)  :: vvv(:, :, :)        !< Translational velocity and rotational parameter velocity (at current QP)
+   REAL(BDKi),                   INTENT(  OUT)  :: vvp(:, :, :)        !< Derivative of vvv with respect to X
 
-   INTEGER(IntKi)                               :: nelem             !< index to current element
-   INTEGER(IntKi)                               :: idx_qp            !< index to quadrature point
-   INTEGER(IntKi)                               :: idx_node          !< index to the GLL node
-   INTEGER(IntKi)                               :: elem_start        !< Starting quadrature point of current element
+   INTEGER(IntKi)                               :: nelem               !< index to current element
+   INTEGER(IntKi)                               :: idx_qp              !< index to quadrature point
+   INTEGER(IntKi)                               :: idx_node            !< index to the GLL node
+   INTEGER(IntKi)                               :: elem_start          !< Starting quadrature point of current element
 
-   DO nelem=1,p%elem_total
+   DO nelem=1,elem_total
 
-      elem_start = p%node_elem_idx(nelem,1)
+      elem_start = node_elem_idx(nelem,1)
 
-   DO idx_qp=1,p%nqp
+   DO idx_qp=1,nqp
 
       !> Calculate the values for the
 
          ! Initialize to zero for summation
-      m%qp%vvv(:,idx_qp,nelem) = 0.0_BDKi
-      m%qp%vvp(:,idx_qp,nelem) = 0.0_BDKi
+      vvv(:,idx_qp,nelem) = 0.0_BDKi
+      vvp(:,idx_qp,nelem) = 0.0_BDKi
 
          ! Calculate the velocity term, velocity prime (derivative of velocity with respect to X-axis), and acceleration terms
-      DO idx_node=1,p%nodes_per_elem
-         m%qp%vvv(:,idx_qp,nelem) = m%qp%vvv(:,idx_qp,nelem) + p%Shp(idx_node,idx_qp)                             * x%dqdt(:,elem_start-1+idx_node)
-         m%qp%vvp(:,idx_qp,nelem) = m%qp%vvp(:,idx_qp,nelem) + p%ShpDer(idx_node,idx_qp)/p%Jacobian(idx_qp,nelem) * x%dqdt(:,elem_start-1+idx_node)
+      DO idx_node=1,nodes_per_elem
+         vvv(:,idx_qp,nelem) = vvv(:,idx_qp,nelem) + Shp(idx_node,idx_qp)                           * dqdt(:,elem_start-1+idx_node)
+         vvp(:,idx_qp,nelem) = vvp(:,idx_qp,nelem) + ShpDer(idx_node,idx_qp)/Jacobian(idx_qp,nelem) * dqdt(:,elem_start-1+idx_node)
       ENDDO
 
    ENDDO
@@ -4269,9 +4277,9 @@ SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
 
       ! These values have not been set yet for the QP.
       ! We can leave these inside this subroutine rather than move them up.
-! @mjs: ***HERE***
    CALL BD_QPData_mEta_rho( p%elem_total, p%nqp, p%Mass0_QP, p%qp%mEta, m%qp%RR0, m%qp%RR0mEta, m%qp%rho ) ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
-   CALL BD_QPDataVelocity( p, x, m )            ! x%dqdt --> m%qp%vvv, m%qp%vvp
+! @mjs: ***HERE***
+   CALL BD_QPDataVelocity( p%elem_total, p%node_elem_idx, p%nqp, p%nodes_per_elem, p%Shp, p%ShpDer, p%Jacobian, x%dqdt, m%qp%vvv, m%qp%vvp ) ! x%dqdt --> m%qp%vvv, m%qp%vvp
 
    CALL BD_QPDataAcceleration( p, OtherState, m )     ! Naaa --> aaa (OtherState%Acc --> m%qp%aaa)
 
