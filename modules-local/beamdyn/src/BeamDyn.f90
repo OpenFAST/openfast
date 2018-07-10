@@ -2610,8 +2610,8 @@ END SUBROUTINE BD_QPDataAcceleration
 !! It also calcuates the linearized matrices `m%qp%Mi`, `m%qp%Gi`, and `m%qp%Ki` for N-R algorithm
 SUBROUTINE BD_InertialForce( nelem, p, m, fact )
 
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< index of current element
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
+   INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< index of current element
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables.
    LOGICAL,                      INTENT(IN   )  :: fact
 
@@ -2821,21 +2821,24 @@ END SUBROUTINE BD_GravityForce
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine assembles total stiffness matrix.
-SUBROUTINE BD_AssembleStiffK(nelem,p,ElemK,GlobalK)
-   INTEGER(IntKi),            INTENT(IN   )  :: nelem             !< Number of elements
-   TYPE(BD_ParameterType),    INTENT(IN   )  :: p                 !< Parameters
-   REAL(BDKi),                INTENT(IN   )  :: ElemK(:,:,:,:)    !< Element  matrix
-   REAL(BDKi),                INTENT(INOUT)  :: GlobalK(:,:,:,:)  !< Global stiffness matrix
+! @mjs: ***HERE***
+SUBROUTINE BD_AssembleStiffK( nelem, node_elem_idx, nodes_per_elem, dof_node, ElemK, GlobalK )
+   INTEGER(IntKi),            INTENT(IN   )  :: nelem               !< Number of elements
+   INTEGER(IntKi),            INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi),            INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   INTEGER(IntKi),            INTENT(IN   )  :: dof_node            !< dof per node
+   REAL(BDKi),                INTENT(IN   )  :: ElemK(:,:,:,:)      !< Element  matrix
+   REAL(BDKi),                INTENT(INOUT)  :: GlobalK(:,:,:,:)    !< Global stiffness matrix
 
    INTEGER(IntKi)                            :: i
    INTEGER(IntKi)                            :: j
    INTEGER(IntKi)                            :: idx_dof2
    INTEGER(IntKi)                            :: temp_id
 
-   temp_id = p%node_elem_idx(nelem,1)-1      ! Node just before the start of this element
-   DO j=1,p%nodes_per_elem
-      DO idx_dof2=1,p%dof_node
-         DO i=1,p%nodes_per_elem
+   temp_id = node_elem_idx(nelem,1)-1      ! Node just before the start of this element
+   DO j=1,nodes_per_elem
+      DO idx_dof2=1,dof_node
+         DO i=1,nodes_per_elem
             GlobalK( :,i+temp_id,idx_dof2,j+temp_id ) = GlobalK( :,i+temp_id,idx_dof2,j+temp_id ) + ElemK( :,i,idx_dof2,j )
          ENDDO
       ENDDO
@@ -3631,7 +3634,7 @@ SUBROUTINE BD_GenerateStaticElement( gravity, p, m )
    DO nelem=1,p%elem_total
 
       CALL BD_StaticElementMatrix( nelem, gravity, p, m )
-      CALL BD_AssembleStiffK(nelem,p,m%elk,m%StifK)
+      CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elk, m%StifK)
       CALL BD_AssembleRHS(nelem,p,m%elf,m%RHS)
 
    ENDDO
@@ -4282,7 +4285,6 @@ SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
       ! We can leave these inside this subroutine rather than move them up.
    CALL BD_QPData_mEta_rho( p%elem_total, p%nqp, p%Mass0_QP, p%qp%mEta, m%qp%RR0, m%qp%RR0mEta, m%qp%rho ) ! Calculate the \f$ m \eta \f$ and \f$ \rho \f$ terms
    CALL BD_QPDataVelocity( p%elem_total, p%node_elem_idx, p%nqp, p%nodes_per_elem, p%Shp, p%ShpDer, p%Jacobian, x%dqdt, m%qp%vvv, m%qp%vvp ) ! x%dqdt --> m%qp%vvv, m%qp%vvp
-! @mjs: ***HERE***
    CALL BD_QPDataAcceleration( p%elem_total, p%node_elem_idx, p%nqp, p%nodes_per_elem, p%Shp, OtherState%acc, m%qp%aaa )     ! Naaa --> aaa (OtherState%Acc --> m%qp%aaa)
 
    DO nelem=1,p%elem_total
@@ -4291,9 +4293,10 @@ SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
       CALL BD_ElementMatrixGA2(fact, nelem, p, m )
 
       IF(fact) THEN
-         CALL BD_AssembleStiffK(nelem,p,m%elk,m%StifK)
-         CALL BD_AssembleStiffK(nelem,p,m%elm,m%MassM)
-         CALL BD_AssembleStiffK(nelem,p,m%elg,m%DampG)
+! @mjs: ***HERE***
+         CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elk,m%StifK)
+         CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elm,m%MassM)
+         CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elg,m%DampG)
       ENDIF
       CALL BD_AssembleRHS(nelem,p,m%elf,m%RHS)
 
@@ -4724,7 +4727,7 @@ SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
 
       CALL BD_ElementMatrixAcc( nelem, p, m )
 
-      CALL BD_AssembleStiffK(nelem,p,m%elm, m%MassM)
+      CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elm, m%MassM)
       CALL BD_AssembleRHS(nelem,p,m%elf, m%RHS)
 
    ENDDO
