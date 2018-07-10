@@ -2821,7 +2821,6 @@ END SUBROUTINE BD_GravityForce
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine assembles total stiffness matrix.
-! @mjs: ***HERE***
 SUBROUTINE BD_AssembleStiffK( nelem, node_elem_idx, nodes_per_elem, dof_node, ElemK, GlobalK )
    INTEGER(IntKi),            INTENT(IN   )  :: nelem               !< Number of elements
    INTEGER(IntKi),            INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
@@ -2849,12 +2848,12 @@ END SUBROUTINE BD_AssembleStiffK
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine assembles global force vector.
-SUBROUTINE BD_AssembleRHS(nelem,p,ElemRHS,GlobalRHS)
-
-   INTEGER(IntKi),            INTENT(IN   )  :: nelem          !< Number of elements
-   TYPE(BD_ParameterType),    INTENT(IN   )  :: p              !< Parameters
-   REAL(BDKi),                INTENT(IN   )  :: ElemRHS(:,:)   !< Total element force (Fc, Fd, Fb) (size = p%dofnode x p%nodes_per_elem)
-   REAL(BDKi),                INTENT(INOUT)  :: GlobalRHS(:,:) !< Global force vector (size = p%dofnode x p%nodes_per_elem)
+SUBROUTINE BD_AssembleRHS( nelem, node_elem_idx, nodes_per_elem, ElemRHS, GlobalRHS )
+   INTEGER(IntKi),            INTENT(IN   )  :: nelem               !< Number of elements
+   INTEGER(IntKi),            INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi),            INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   REAL(BDKi),                INTENT(IN   )  :: ElemRHS(:,:)        !< Total element force (Fc, Fd, Fb) (size = p%dofnode x p%nodes_per_elem)
+   REAL(BDKi),                INTENT(INOUT)  :: GlobalRHS(:,:)      !< Global force vector (size = p%dofnode x p%nodes_per_elem)
 
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: temp_id
@@ -2864,8 +2863,8 @@ SUBROUTINE BD_AssembleRHS(nelem,p,ElemRHS,GlobalRHS)
 !
 !  Will need to redimension GlobalRHS to p%dof_node,p%node_total
 
-   temp_id = p%node_elem_idx(nelem,1)-1      ! Node just before the start of this element
-   DO i=1,p%nodes_per_elem
+   temp_id = node_elem_idx(nelem,1)-1      ! Node just before the start of this element
+   DO i=1,nodes_per_elem
       GlobalRHS(:,i+temp_id) = GlobalRHS(:,i+temp_id)+ElemRHS(:,i)
    ENDDO
 
@@ -3635,7 +3634,7 @@ SUBROUTINE BD_GenerateStaticElement( gravity, p, m )
 
       CALL BD_StaticElementMatrix( nelem, gravity, p, m )
       CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elk, m%StifK)
-      CALL BD_AssembleRHS(nelem,p,m%elf,m%RHS)
+      CALL BD_AssembleRHS(nelem, p%node_elem_idx, p%nodes_per_elem, m%elf, m%RHS)
 
    ENDDO
 
@@ -4293,12 +4292,12 @@ SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
       CALL BD_ElementMatrixGA2(fact, nelem, p, m )
 
       IF(fact) THEN
-! @mjs: ***HERE***
          CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elk,m%StifK)
          CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elm,m%MassM)
          CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elg,m%DampG)
       ENDIF
-      CALL BD_AssembleRHS(nelem,p,m%elf,m%RHS)
+! @mjs: ***HERE***
+      CALL BD_AssembleRHS(nelem, p%node_elem_idx, p%nodes_per_elem, m%elf, m%RHS)
 
    ENDDO
    RETURN
@@ -4728,7 +4727,7 @@ SUBROUTINE BD_CalcForceAcc( u, p, m, ErrStat, ErrMsg )
       CALL BD_ElementMatrixAcc( nelem, p, m )
 
       CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elm, m%MassM)
-      CALL BD_AssembleRHS(nelem,p,m%elf, m%RHS)
+      CALL BD_AssembleRHS(nelem, p%node_elem_idx, p%nodes_per_elem, m%elf, m%RHS)
 
    ENDDO
 ! ending of old BD_GenerateDynamicElementAcc
