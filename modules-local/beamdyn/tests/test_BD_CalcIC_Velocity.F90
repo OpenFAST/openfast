@@ -29,7 +29,7 @@ subroutine test_BD_CalcIC_Velocity()
     ! initialize NWTC_Num constants
     call SetConstants()
 
-    ! @mjs: FIXME--the test using the inputs from 5MW_Land_BD_DLL_WTurb only passes with a tolerance of 1e-13
+    ! mjs: FIXME--the test using the inputs from 5MW_Land_BD_DLL_WTurb only passes with a tolerance of 1e-13
     tolerance = 1e-13
 
     dof_node = 6

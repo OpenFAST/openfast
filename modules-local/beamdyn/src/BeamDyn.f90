@@ -181,7 +181,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-! FIXME: @mjs: this looks like it should be put in a subroutine, but as far as I can tell, none of the tests use it, so I can't test it
+! FIXME: mjs: this looks like it should be put in a subroutine, but as far as I can tell, none of the tests use it, so I can't test it
 
       ! Actuator
    p%UsePitchAct = InputFileData%UsePitchAct
@@ -1667,9 +1667,9 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-! @mjs: check and see what parameters are actually being used here--p appears to be passed, in full, a couple levels deep
+! mjs: check and see what parameters are actually being used here--p appears to be passed, in full, a couple levels deep
    IF(p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
-! @mjs: ***HERE***
+! mjs: ***HERE***
        CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
        CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
@@ -1822,49 +1822,47 @@ END SUBROUTINE BD_CalcOutput
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for updating discrete states
-SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-
-   REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
-   INTEGER(IntKi),                    INTENT(IN   )  :: n           !< Current step of the simulation: t = n*dt
-   TYPE(BD_InputType),                INTENT(IN   )  :: u           !< Inputs at t
-   TYPE(BD_ParameterType),            INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_ContinuousStateType),      INTENT(IN   )  :: x           !< Continuous states at t
-   TYPE(BD_DiscreteStateType),        INTENT(INOUT)  :: xd          !< Input: Discrete states at t;
-                                                                    !!   Output: Discrete states at t + dt
-   TYPE(BD_ConstraintStateType),      INTENT(IN   )  :: z           !< Constraint states at t
-   TYPE(BD_OtherStateType),           INTENT(IN   )  :: OtherState  !< Other states at t
-   TYPE(BD_MiscVarType),              INTENT(INOUT)  :: m           !< misc/optimization variables
-   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+! mjs: this subroutine had a lot of unused arguments and variables in it--they are left at the bottom in a comment block, just in case
+SUBROUTINE BD_UpdateDiscState( RM_Orientation, HM_Orientation, UsePitchAct, torqM, pitchK, dt, pitchJ, xd )
+   REAL(BDKi),                        INTENT(IN   )  :: RM_Orientation(:, :, :) !< from u%RootMotion: Direction Cosine Matrix (DCM) (3,3,NNodes) (Inputs at t)
+   REAL(BDKi),                        INTENT(IN   )  :: HM_Orientation(:, :, :) !< from u%HubMotion: Direction Cosine Matrix (DCM) (3,3,NNodes) (Inputs at t)
+   LOGICAL,                           INTENT(IN   )  :: UsePitchAct             !< Whether to use a pitch actuator inside BeamDyn
+   REAL(BDKi),                        INTENT(IN   )  :: torqM(2, 2)             !< Pitch actuator matrix: (I-hA)^-1
+   REAL(BDKi),                        INTENT(IN   )  :: pitchK                  !< Pitch actuator stiffness [(kg-m^2/s^2)]
+   REAL(DbKi),                        INTENT(IN   )  :: dt                      !< module dt
+   REAL(BDKi),                        INTENT(IN   )  :: pitchJ                  !< Pitch actuator inertia [(kg-m^2)]
+   TYPE(BD_DiscreteStateType),        INTENT(INOUT)  :: xd                      !< Input: Discrete states at t;
+                                                                                !<   Output: Discrete states at t + dt
 
    ! local variables
    REAL(BDKi)                                        :: temp_R(3,3)
    REAL(BDKi)                                        :: Hub_theta_Root(3)
-   REAL(BDKi)                                        :: u_theta_pitch
-
-      ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
 
       ! Update discrete states here:
 
 ! Actuator
-   IF( p%UsePitchAct ) THEN
+   IF( UsePitchAct ) THEN
       !bjj: note that we've cheated a bit here because we have inputs at t+dt
-       temp_R = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
+       temp_R = MATMUL(RM_Orientation(:,:,1),TRANSPOSE(HM_Orientation(:,:,1)))
        Hub_theta_Root = EulerExtract(temp_R)
-       u_theta_pitch = -Hub_theta_Root(3)
+       ! u_theta_pitch = -Hub_theta_Root(3)
 
-       xd%thetaP  = p%torqM(1,1)*xd%thetaP + p%torqM(1,2)*xd%thetaPD + p%torqM(1,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
-       xd%thetaPD = p%torqM(2,1)*xd%thetaP + p%torqM(2,2)*xd%thetaPD + p%torqM(2,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
-
-
+       xd%thetaP  = torqM(1,1)*xd%thetaP + torqM(1,2)*xd%thetaPD + torqM(1,2)*(pitchK*dt/pitchJ)*(-Hub_theta_Root(3))
+       xd%thetaPD = torqM(2,1)*xd%thetaP + torqM(2,2)*xd%thetaPD + torqM(2,2)*(pitchK*dt/pitchJ)*(-Hub_theta_Root(3))
    ENDIF
 ! END Actuator
 
 END SUBROUTINE BD_UpdateDiscState
 
+! REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
+! INTEGER(IntKi),                    INTENT(IN   )  :: n           !< Current step of the simulation: t = n*dt
+! TYPE(BD_ContinuousStateType),      INTENT(IN   )  :: x           !< Continuous states at t
+! TYPE(BD_ConstraintStateType),      INTENT(IN   )  :: z           !< Constraint states at t
+! TYPE(BD_OtherStateType),           INTENT(IN   )  :: OtherState  !< Other states at t
+! TYPE(BD_MiscVarType),              INTENT(INOUT)  :: m           !< misc/optimization variables
+! INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+! CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+! REAL(BDKi)                                        :: u_theta_pitch
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes initial Gauss point values: uu0, E10
@@ -3407,11 +3405,11 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
 
       ! Copy over the DistrLoads
-! @mjs: parameters--this doesn't use a lot from any of these, but is just assigning variables
+! mjs: parameters--this doesn't use a lot from any of these, but is just assigning variables
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
       ! Incorporate boundary conditions
-! @mjs: parameters--this is the same as above, but calls ExtractRelativeRotation(), which has a unit test
+! mjs: parameters--this is the same as above, but calls ExtractRelativeRotation(), which has a unit test
    CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -3439,7 +3437,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
        u_temp%DistrLoad%Moment(:,:) = u_interp%DistrLoad%Moment(:,:) * load_test
        gravity_temp(:)              = p%gravity(:)                   * load_test
 
-! @mjs: parameters
+! mjs: parameters
        CALL BD_StaticSolution(x, gravity_temp, u_temp, p, m, piter, ErrStat2, ErrMsg2)
            call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
            ErrStat = ErrID_None
@@ -3945,7 +3943,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
          ! compute mass and stiffness matrices
             ! Calculate Quadrature point values needed
          CALL BD_QuadraturePointData( p,x,m )         ! Calculate QP values uuu, uup, RR0, kappa, E1
-! @mjs: ***HERE***
          CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE.)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -3960,29 +3957,28 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
    END IF
 
-
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-! @mjs: parameters
-   CALL BD_UpdateDiscState( t, n, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+! mjs: ***HERE***
+   CALL BD_UpdateDiscState( u_interp%RootMotion%Orientation, u_interp%HubMotion%Orientation, p%UsePitchAct, p%torqM, p%pitchK, p%dt, p%pitchJ, xd )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       ! Actuator
    IF( p%UsePitchAct ) THEN
-! @mjs: parameters
+! mjs: parameters
       CALL PitchActuator_SetBC(p, u_interp, xd)
    ENDIF
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
    CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
       ! Copy over the DistrLoads
-! @mjs: parameters
+! mjs: parameters
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
 
       ! GA2: prediction
-! @mjs: parameters
+! mjs: parameters
    CALL BD_TiSchmPredictorStep( x, OtherState, p ) ! updates x and OtherState accelerations (from values at t to predictions at t+dt)
 
       ! Incorporate boundary conditions (overwrite first node of continuous states and Acc array at t+dt)
@@ -3995,7 +3991,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
 
       ! find x, acc, and xcc at t+dt
-! @mjs: parameters
+! mjs: parameters
    CALL BD_DynamicSolutionGA2( x, OtherState, u_interp, p, m, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -4043,7 +4039,7 @@ END SUBROUTINE BD_TiSchmPredictorStep
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the Timoshenko coefficients, p%coef, used in generalized-alpha
 !! time integrator. It requires that p%rhoinf and p%dt have been set
-! @mjs: parameters
+! mjs: parameters
 SUBROUTINE BD_TiSchmComputeCoefficients(p)
 
    TYPE(BD_ParameterType), INTENT(inout) :: p
@@ -4296,7 +4292,6 @@ SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
          CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elm,m%MassM)
          CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elg,m%DampG)
       ENDIF
-! @mjs: ***HERE***
       CALL BD_AssembleRHS(nelem, p%node_elem_idx, p%nodes_per_elem, m%elf, m%RHS)
 
    ENDDO
