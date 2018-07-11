@@ -3405,11 +3405,10 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
 
       ! Copy over the DistrLoads
-! mjs: parameters--this doesn't use a lot from any of these, but is just assigning variables
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
       ! Incorporate boundary conditions
-! mjs: parameters--this is the same as above, but calls ExtractRelativeRotation(), which has a unit test
+! mjs: ***HERE***
    CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -3960,26 +3959,24 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-! mjs: ***HERE***
    CALL BD_UpdateDiscState( u_interp%RootMotion%Orientation, u_interp%HubMotion%Orientation, p%UsePitchAct, p%torqM, p%pitchK, p%dt, p%pitchJ, xd )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ! BD_UpdateDiscState doesn't contain anything to generate ErrStat/ErrMsg
+      ! call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       ! Actuator
    IF( p%UsePitchAct ) THEN
-! mjs: parameters
       CALL PitchActuator_SetBC(p, u_interp, xd)
    ENDIF
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
    CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
       ! Copy over the DistrLoads
-! mjs: parameters
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
 
       ! GA2: prediction
-! mjs: parameters
-   CALL BD_TiSchmPredictorStep( x, OtherState, p ) ! updates x and OtherState accelerations (from values at t to predictions at t+dt)
+! mjs: ***HERE***
+   CALL BD_TiSchmPredictorStep( x, OtherState, p%dt, p%coef, p%node_total ) ! updates x and OtherState accelerations (from values at t to predictions at t+dt)
 
       ! Incorporate boundary conditions (overwrite first node of continuous states and Acc array at t+dt)
    CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
@@ -4007,24 +4004,27 @@ END SUBROUTINE BD_GA2
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the predicted values (initial guess)
 !! of u,v,acc, and xcc in generalized-alpha algorithm
-SUBROUTINE BD_TiSchmPredictorStep( x, OtherState, p )
+SUBROUTINE BD_TiSchmPredictorStep( x, OtherState, dt, coef, node_total )
 
-   TYPE(BD_ParameterType),            INTENT(IN   )  :: p           !< Parameters
+   REAL(DbKi),                        INTENT(IN   )  :: dt      !< module dt
+   REAL(DbKi),                        INTENT(IN   )  :: coef(9)      !< GA2 Coefficient
+   INTEGER(IntKi),                    INTENT(IN   )  :: node_total      !< Total number of finite element (GLL) nodes
    TYPE(BD_ContinuousStateType),      INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
    TYPE(BD_OtherStateType),           INTENT(INOUT)  :: OtherState  !< Other states at t on input; at t+dt on outputs
 
-   REAL(BDKi)                  ::tr(6)
-   REAL(BDKi)                  ::rot_temp(3)
-   INTEGER                     ::i              ! generic counter
+   REAL(BDKi)                  :: tr(6)
+   REAL(BDKi)                  :: rot_temp(3)
+   INTEGER                     :: i              ! generic counter
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_TiSchmPredictorStep'
-   DO i=2,p%node_total
 
-      tr                  = p%dt * x%dqdt(:,i) + p%coef(1) * OtherState%acc(:,i) + p%coef(2) * OtherState%xcc(:,i)  ! displacements at t+dt
-      x%dqdt(:,i)         =        x%dqdt(:,i) + p%coef(3) * OtherState%acc(:,i) + p%coef(4) * OtherState%xcc(:,i)  ! velocities at t+dt
-      OtherState%xcc(:,i) =                      p%coef(5) * OtherState%acc(:,i) + p%coef(6) * OtherState%xcc(:,i)  ! xcc accelerations at t+dt: ((1-alpha_m)*xcc_(t+dt) = (1-alpha_f)*Acc_(t+dt) + alpha_f*Acc_t - alpha_m*xcc_t
-      OtherState%acc(:,i) = 0.0_BDKi                                                                                ! acc accelerations at t+dt
+   DO i=2,node_total
 
-      x%q(1:3,i) = x%q(1:3,i) + tr(1:3)                                                                             ! position at t+dt
+      tr                  = dt * x%dqdt(:,i) + coef(1) * OtherState%acc(:,i) + coef(2) * OtherState%xcc(:,i)  ! displacements at t+dt
+      x%dqdt(:,i)         =      x%dqdt(:,i) + coef(3) * OtherState%acc(:,i) + coef(4) * OtherState%xcc(:,i)  ! velocities at t+dt
+      OtherState%xcc(:,i) =                    coef(5) * OtherState%acc(:,i) + coef(6) * OtherState%xcc(:,i)  ! xcc accelerations at t+dt: ((1-alpha_m)*xcc_(t+dt) = (1-alpha_f)*Acc_(t+dt) + alpha_f*Acc_t - alpha_m*xcc_t
+      OtherState%acc(:,i) = 0.0_BDKi                                                                          ! acc accelerations at t+dt
+      
+      x%q(1:3,i) = x%q(1:3,i) + tr(1:3)                                                                       ! position at t+dt
       
       ! tr does not contain w-m parameters, yet we are treating them as such
       CALL BD_CrvCompose(rot_temp, tr(4:6), x%q(4:6,i), FLAG_R1R2) ! rot_temp = tr(4:6) composed with x%q(4:6,i) [rotations at t], is the output

@@ -121,6 +121,7 @@ set(testlist
     test_BD_AssembleStiffK
     test_BD_AssembleRHS
     test_BD_UpdateDiscState
+    test_BD_TiSchmPredictorStep
 )
 # it is important to keep the quotes around "${testlist}" in the call below
 build_utest("beamdyn" "${testlist}")
