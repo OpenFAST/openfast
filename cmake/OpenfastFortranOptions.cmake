@@ -58,9 +58,6 @@ macro(set_fast_fortran)
     endif()
   endif()
 
-  # Set the preprocessor for all source files by default
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -cpp ")
-
   # Force all .mod files to be stored in a single directory
   set(CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/ftnmods"
     CACHE STRING "Set the Fortran Modules directory" FORCE)
@@ -89,7 +86,7 @@ macro(set_fast_gfortran)
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
     add_definitions(-DDOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -cpp -fdefault-real-8")
   endif (DOUBLE_PRECISION)
 
   # debug flags
@@ -118,7 +115,7 @@ macro(set_fast_intel_fortran_posix)
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
     add_definitions(-DDOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double_size 128")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpp -r8 -double_size 128")
   endif (DOUBLE_PRECISION)
 endmacro(set_fast_intel_fortran_posix)
 
@@ -130,7 +127,7 @@ macro(set_fast_intel_fortran_windows)
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
     add_definitions(-DDOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:128")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /fpp /real_size:64 /double_size:128")
   endif (DOUBLE_PRECISION)
 
   # Turn off specific warnings
