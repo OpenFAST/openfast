@@ -36,7 +36,7 @@ from errorPlotting import exportCaseSummary
 
 ##### Helper functions
 def ignoreBaselineItems(directory, contents):
-    itemFilter = ['linux-intel', 'macos-gnu', 'windows-intel']
+    itemFilter = ['linux-intel', 'linux-gnu', 'macos-gnu', 'windows-intel']
     caught = []
     for c in contents:
         if c in itemFilter:
