@@ -3409,7 +3409,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
       ! Incorporate boundary conditions
 ! mjs: ***HERE***
-   CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
+   CALL BD_BoundaryGA2(x, u_interp%RootMotion, p%GlbRot, p%Glb_crv, OtherState%acc, ErrStat, ErrMsg)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
@@ -3914,7 +3914,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
       CALL BD_DistrLoadCopy( p, u_interp, m )
    
          ! Incorporate boundary conditions
-      CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
+      CALL BD_BoundaryGA2(x, u_interp%RootMotion, p%GlbRot, p%Glb_crv, OtherState%acc, ErrStat, ErrMsg)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
             call cleanup()
@@ -3975,11 +3975,11 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
 
       ! GA2: prediction
-! mjs: ***HERE***
    CALL BD_TiSchmPredictorStep( x, OtherState, p%dt, p%coef, p%node_total ) ! updates x and OtherState accelerations (from values at t to predictions at t+dt)
 
       ! Incorporate boundary conditions (overwrite first node of continuous states and Acc array at t+dt)
-   CALL BD_BoundaryGA2(x,p,u_interp,OtherState, ErrStat2, ErrMsg2)
+! mjs: ***HERE***
+   CALL BD_BoundaryGA2(x, u_interp%RootMotion, p%GlbRot, p%Glb_crv, OtherState%acc, ErrStat, ErrMsg)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -4086,36 +4086,39 @@ END SUBROUTINE BD_TiSchmComputeCoefficients
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine applies the prescribed boundary conditions (from the input RootMotion mesh)
 !! into states and otherstates at the root finite element node
-SUBROUTINE BD_BoundaryGA2(x,p,u,OtherState, ErrStat, ErrMsg)
+SUBROUTINE BD_BoundaryGA2(x, RootMotion, GlbRot, Glb_crv, acc, ErrStat, ErrMsg)
 
-   TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t (in local BD coords)
-   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Inputs at t
-   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Continuous states at t
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x            !< Continuous states at t
+   TYPE(MeshType),               INTENT(IN   )  :: RootMotion   !< contains motion--Inputs at t (in local BD coords)
+   REAL(BDKi),                   INTENT(IN   )  :: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)--Inputs at t
+   REAL(BDKi),                   INTENT(IN   )  :: Glb_crv(3)   !< CRV parameters of GlbRot--Inputs at t
+   REAL(BDKi),                   INTENT(  OUT)  :: acc(:, :)    !< Acceleration (dqdtdt)--Inputs at t
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat      !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
-   CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
-   CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
+   INTEGER(IntKi)          :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)    :: ErrMsg2     ! Temporary Error message
+   CHARACTER(*), PARAMETER :: RoutineName = 'BD_BoundaryGA2'
+
+   integer :: i
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
       ! Root displacements
-   x%q(1:3,1) = u%RootMotion%TranslationDisp(1:3,1)
+   x%q(1:3,1) = RootMotion%TranslationDisp(1:3,1)
 
       ! Root rotations
-   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1), p%Glb_crv, p%GlbRot, x%q(4:6,1), ErrStat2, ErrMsg2)
+   CALL ExtractRelativeRotation(RootMotion%Orientation(:,:,1), Glb_crv, GlbRot, x%q(4:6,1), ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
       ! Root velocities/angular velocities and accelerations/angular accelerations
-   x%dqdt(1:3,1)         = u%RootMotion%TranslationVel(1:3,1)
-   x%dqdt(4:6,1)         = u%Rootmotion%RotationVel(1:3,1)
-   OtherState%acc(1:3,1) = u%RootMotion%TranslationAcc(1:3,1)
-   OtherState%acc(4:6,1) = u%RootMotion%RotationAcc(1:3,1)
+   x%dqdt(1:3,1) = RootMotion%TranslationVel(1:3,1)
+   x%dqdt(4:6,1) = Rootmotion%RotationVel(1:3,1)
+   acc(1:3,1)    = RootMotion%TranslationAcc(1:3,1)
+   acc(4:6,1)    = RootMotion%RotationAcc(1:3,1)
 
 END SUBROUTINE BD_BoundaryGA2
 
