@@ -3524,7 +3524,6 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
    DO piter=1,p%niter
          ! Calculate Quadrature point values needed
        CALL BD_QuadraturePointData( p,x,m )      ! Calculate QP values uuu, uup, RR0, kappa, E1
-! mjs: ***HERE***
        CALL BD_GenerateStaticElement(gravity, p, m)
 
          !  Point loads are on the GLL points.
@@ -3553,7 +3552,8 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
       m%Solution(:,2:p%node_total) = RESHAPE( m%LP_RHS_LU, (/ p%dof_node, (p%node_total - 1) /) )
 
 
-       CALL BD_StaticUpdateConfiguration(p,m,x)
+! mjs: ***HERE***
+       CALL BD_StaticUpdateConfiguration( p%node_total, m%Solution, x%q )
 
          ! Check if solution has converged.
        IF(piter .EQ. 1) THEN
@@ -3577,10 +3577,11 @@ END SUBROUTINE BD_StaticSolution
 !> This subroutine updates the static configuration
 !! given incremental value calculated by the
 !! Newton-Raphson algorithm
-SUBROUTINE BD_StaticUpdateConfiguration(p,m,x)
-   TYPE(BD_ParameterType),             INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_MiscVarType),               INTENT(IN   )  :: m           !< misc/optimization variables
-   TYPE(BD_ContinuousStateType),       INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+! mjs: ***HERE***
+SUBROUTINE BD_StaticUpdateConfiguration( node_total, Solution, q )
+   INTEGER(IntKi),                     INTENT(IN   )  :: node_total     !< Total number of finite element (GLL) nodes
+   REAL(BDKi),                         INTENT(IN   )  :: Solution(:, :) !< Result from LAPACK solve (X from A*X = B solve)
+   REAL(BDKi),                         INTENT(INOUT)  :: q(:, :)        !< displacement (1:3), and rotation displacement parameters (4:6)--(at time at t on input, t + dt on output)
 
    REAL(BDKi)                             :: rotf_temp(3)
    REAL(BDKi)                             :: roti_temp(3)
@@ -3589,18 +3590,18 @@ SUBROUTINE BD_StaticUpdateConfiguration(p,m,x)
    CHARACTER(*), PARAMETER                :: RoutineName = 'BD_StaticUpdateConfiguration'
 
 !FIXME: why is x%q(:,1) calculated??? Isn't that already known???
-   DO i=1, p%node_total
+   DO i=1, node_total
 
          ! Calculate new position
-       x%q(1:3,i)    =  x%q(1:3,i) + m%Solution(1:3,i)
+       q(1:3,i)    =  q(1:3,i) + Solution(1:3,i)
 
-         ! Calculate the new rotation.  Combine the original rotation parameters, x%q(4:6,:),
-         ! with the rotation displacement parameters, m%Solution(4:6,i).  Note that the result must
+         ! Calculate the new rotation.  Combine the original rotation parameters, q(4:6,:),
+         ! with the rotation displacement parameters, Solution(4:6,i).  Note that the result must
          ! be composed from the two sets of rotation parameters
-       rotf_temp(:)  =  x%q(4:6,i)
-       roti_temp(:)  =  m%Solution(4:6,i)
+       rotf_temp(:)  =  q(4:6,i)
+       roti_temp(:)  =  Solution(4:6,i)
        CALL BD_CrvCompose(rot_temp,roti_temp,rotf_temp,FLAG_R1R2) ! R(rot_temp) = R(roti_temp) R(rotf_temp)
-       x%q(4:6,i) = rot_temp(:)
+       q(4:6,i) = rot_temp(:)
 
    ENDDO
 
@@ -3627,7 +3628,6 @@ SUBROUTINE BD_GenerateStaticElement( gravity, p, m )
 
    DO nelem=1,p%elem_total
 
-! mjs: ***HERE***
       CALL BD_StaticElementMatrix( nelem, gravity, p, m )
       CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elk, m%StifK)
       CALL BD_AssembleRHS(nelem, p%node_elem_idx, p%nodes_per_elem, m%elf, m%RHS)
@@ -3639,7 +3639,6 @@ END SUBROUTINE BD_GenerateStaticElement
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-! mjs: ***HERE***
 SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, m )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< current element number

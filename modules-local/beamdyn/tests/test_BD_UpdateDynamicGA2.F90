@@ -7,7 +7,6 @@ subroutine test_BD_UpdateDynamicGA2()
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
-    use test_tools
     
     implicit none
     
