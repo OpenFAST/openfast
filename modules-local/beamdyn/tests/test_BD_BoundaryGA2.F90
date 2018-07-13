@@ -11,11 +11,11 @@ subroutine test_BD_BoundaryGA2()
     
     implicit none
     
-    TYPE(BD_ContinuousStateType) :: x
-    TYPE(MeshType)               :: RootMotion
-    REAL(BDKi)                   :: GlbRot(3, 3)
-    REAL(BDKi)                   :: Glb_crv(3)
-    REAL(BDKi)                   :: acc(6, 6)
+    type(BD_ContinuousStateType) :: x
+    type(MeshType)               :: RootMotion
+    real(BDKi)                   :: GlbRot(3, 3)
+    real(BDKi)                   :: Glb_crv(3)
+    real(BDKi)                   :: acc(6, 6)
     real(BDKi)                   :: base_q(6), base_dqdt(6), base_acc(6)
 
     

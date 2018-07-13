@@ -1667,11 +1667,10 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-! mjs: check and see what parameters are actually being used here--p appears to be passed, in full, a couple levels deep
    IF(p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
-! mjs: ***HERE***
        CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
+! mjs: ***HERE***
        CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
    ENDIF
 
@@ -3392,7 +3391,6 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
          return
       end if
 
-
    call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) then
@@ -3408,7 +3406,6 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
       ! Incorporate boundary conditions
-! mjs: ***HERE***
    CALL BD_BoundaryGA2(x, u_interp%RootMotion, p%GlbRot, p%Glb_crv, OtherState%acc, ErrStat, ErrMsg)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -3436,7 +3433,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
        u_temp%DistrLoad%Moment(:,:) = u_interp%DistrLoad%Moment(:,:) * load_test
        gravity_temp(:)              = p%gravity(:)                   * load_test
 
-! mjs: parameters
+! mjs: ***HERE***
        CALL BD_StaticSolution(x, gravity_temp, u_temp, p, m, piter, ErrStat2, ErrMsg2)
            call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
            ErrStat = ErrID_None
@@ -3527,6 +3524,7 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
    DO piter=1,p%niter
          ! Calculate Quadrature point values needed
        CALL BD_QuadraturePointData( p,x,m )      ! Calculate QP values uuu, uup, RR0, kappa, E1
+! mjs: ***HERE***
        CALL BD_GenerateStaticElement(gravity, p, m)
 
          !  Point loads are on the GLL points.
@@ -3629,6 +3627,7 @@ SUBROUTINE BD_GenerateStaticElement( gravity, p, m )
 
    DO nelem=1,p%elem_total
 
+! mjs: ***HERE***
       CALL BD_StaticElementMatrix( nelem, gravity, p, m )
       CALL BD_AssembleStiffK(nelem, p%node_elem_idx, p%nodes_per_elem, p%dof_node, m%elk, m%StifK)
       CALL BD_AssembleRHS(nelem, p%node_elem_idx, p%nodes_per_elem, m%elf, m%RHS)
@@ -3640,6 +3639,7 @@ END SUBROUTINE BD_GenerateStaticElement
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
+! mjs: ***HERE***
 SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, m )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< current element number
@@ -3978,7 +3978,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
    CALL BD_TiSchmPredictorStep( x, OtherState, p%dt, p%coef, p%node_total ) ! updates x and OtherState accelerations (from values at t to predictions at t+dt)
 
       ! Incorporate boundary conditions (overwrite first node of continuous states and Acc array at t+dt)
-! mjs: ***HERE***
    CALL BD_BoundaryGA2(x, u_interp%RootMotion, p%GlbRot, p%Glb_crv, OtherState%acc, ErrStat, ErrMsg)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
@@ -3988,7 +3987,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
 
       ! find x, acc, and xcc at t+dt
-! mjs: parameters
    CALL BD_DynamicSolutionGA2( x, OtherState, u_interp, p, m, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -4128,6 +4126,7 @@ END SUBROUTINE BD_BoundaryGA2
 !! Given states (u,v) and accelerations (acc,xcc) at the initial of a time step (t_i),
 !! it returns the values of states and accelerations at the end of a time step (t_f)
 !FIXME: note similarities to BD_StaticSolution.  May be able to combine
+! mjs: ***HERE***
 SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
 
    TYPE(BD_ContinuousStateType),       INTENT(INOUT)  :: x           !< Continuous states: input are the predicted values at t+dt; output are calculated values at t + dt
@@ -4197,7 +4196,7 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
       m%Solution(:,1)   = 0.0_BDKi    ! first node is not set below. By definition, there is no displacement of the first node.
       m%Solution(:,2:p%node_total) = RESHAPE( m%LP_RHS_LU, (/ p%dof_node, (p%node_total - 1) /) )
 
-       CALL BD_UpdateDynamicGA2(p,m,x,OtherState)
+       CALL BD_UpdateDynamicGA2( p%node_total, p%coef, m%Solution, x, OtherState )
 
          ! Check for convergence
        Enorm = SQRT(abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total))))
@@ -4222,12 +4221,13 @@ END SUBROUTINE BD_DynamicSolutionGA2
 !! 2) linear/angular velocities(vf); 3) linear/angular accelerations(af); and
 !! 4) algorithmic accelerations(xf) given the increments obtained through
 !! N-R algorithm
-SUBROUTINE BD_UpdateDynamicGA2( p, m, x, OtherState )
+SUBROUTINE BD_UpdateDynamicGA2( node_total, coef, Solution, x, OtherState )
 
-   TYPE(BD_ParameterType),             INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_MiscVarType),               INTENT(IN   )  :: m           !< misc/optimization variables
-   TYPE(BD_ContinuousStateType),       INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
-   TYPE(BD_OtherStateType),            INTENT(INOUT)  :: OtherState  !< Other states at t on input; at t+dt on outputs
+   INTEGER(IntKi),                     INTENT(IN   )  :: node_total     !< Total number of finite element (GLL) nodes
+   REAL(DbKi),                         INTENT(IN   )  :: coef(9)        !< GA2 Coefficient
+   REAL(BDKi),                         INTENT(IN   )  :: Solution(:, :) !< Result from LAPACK solve (X from A*X = B solve)
+   TYPE(BD_ContinuousStateType),       INTENT(INOUT)  :: x              !< Continuous states at t on input at t + dt on output
+   TYPE(BD_OtherStateType),            INTENT(INOUT)  :: OtherState     !< Other states at t on input; at t+dt on outputs
 
    REAL(BDKi)                  :: roti_temp(3)
    REAL(BDKi)                  :: rot_temp(3)
@@ -4236,17 +4236,17 @@ SUBROUTINE BD_UpdateDynamicGA2( p, m, x, OtherState )
 
    ! m%Solution contains (\delta q dot dot)
    ! The first node has no displacements by definition.
-   DO i=2, p%node_total
-       x%q(1:3,i) = x%q(1:3,i) + p%coef(8) * m%Solution(1:3,i)
+   DO i=2, node_total
+       x%q(1:3,i) = x%q(1:3,i) + coef(8) * Solution(1:3,i)
        
-       roti_temp  =              p%coef(8) * m%Solution(4:6,i)  ! m%Solution(4:6,i) seems to contain accelerations (i.e., delta \omega dot), so I don't think this can be a w-m parameter
+       roti_temp  =              coef(8) * Solution(4:6,i)  ! Solution(4:6,i) seems to contain accelerations (i.e., delta \omega dot), so I don't think this can be a w-m parameter
        CALL BD_CrvCompose(rot_temp,roti_temp,x%q(4:6,i),FLAG_R1R2) ! rot_temp = roti_temp composed with x%q(4:6,i)
        x%q(4:6,i) = rot_temp(1:3) 
 
        
-       x%dqdt(:,i)           = x%dqdt(:,i)         + p%coef(7) * m%Solution(:,i)
-       OtherState%acc(:,i)   = OtherState%acc(:,i) +             m%Solution(:,i)    ! update acceleration (dqdtdt: q dot dot) to next guess for values at t+dt
-       OtherState%xcc(:,i)   = OtherState%xcc(:,i) + p%coef(9) * m%Solution(:,i)    ! update algorithm acceleration to next guess for values at t+dt:  (1-alpha_m)*xcc_(n+1) = (1-alpha_f)*dqdtdt_(n+1) + alpha_f*dqdtdt_n - alpha_m*xcc_n
+       x%dqdt(:,i)           = x%dqdt(:,i)         + coef(7) * Solution(:,i)
+       OtherState%acc(:,i)   = OtherState%acc(:,i) +           Solution(:,i)    ! update acceleration (dqdtdt: q dot dot) to next guess for values at t+dt
+       OtherState%xcc(:,i)   = OtherState%xcc(:,i) + coef(9) * Solution(:,i)    ! update algorithm acceleration to next guess for values at t+dt:  (1-alpha_m)*xcc_(n+1) = (1-alpha_f)*dqdtdt_(n+1) + alpha_f*dqdtdt_n - alpha_m*xcc_n
    ENDDO
 
 END SUBROUTINE BD_UpdateDynamicGA2
