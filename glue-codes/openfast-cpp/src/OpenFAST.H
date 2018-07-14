@@ -72,9 +72,9 @@ enum ActuatorNodeType {
  * restartDriverInitFAST - Start all turbines from scratch and use the velocity data in 'velData.h5' file to run upto desired restart time, then continue the simulation like ''trueRestart'.
  */
 enum simStartType {
-  init = 0,
-  trueRestart = 1,
-  restartDriverInitFAST = 2,
+  INIT = 0,
+  TRUERESTART = 1,
+  RESTARTDRIVERINITFAST = 2,
   simStartType_END    
 };
 
@@ -108,10 +108,10 @@ struct turbVelForceNodeDataType {
 
 //! An enum to keep track of information stored at different time steps
 enum timeStep {
-    nm2 = 0,
-    nm1 = 1,
-    n = 2,
-    np1 = 3,
+    STATE_NM2 = 0,
+    STATE_NM1 = 1,
+    STATE_N = 2,
+    STATE_NP1 = 3,
     timeStep_END
 };
 
@@ -134,7 +134,7 @@ class fastInputs {
   bool debug;
   //! Start time of the simulation
   double tStart;
-  //! Start type of the simulation: 'init', 'trueRestart' or 'restartDriverInitFAST'.
+  //! Start type of the simulation: 'INIT', 'TRUERESTART' or 'RESTARTDRIVERINITFAST'.
   simStartType simStart;
   //!Restart files will be written every so many time stneps
   int nEveryCheckPoint;
@@ -181,7 +181,7 @@ class OpenFAST {
   int nTurbinesProc;
   //! Total number of turbines in the simulation
   int nTurbinesGlob;
-  //! Start type of the simulation: 'init', 'trueRestart' or 'restartDriverInitFAST'.
+  //! Start type of the simulation: 'INIT', 'TRUERESTART' or 'RESTARTDRIVERINITFAST'.
   simStartType simStart;
   //! Is the time now zero: True/False
   bool timeZero;
@@ -281,37 +281,120 @@ class OpenFAST {
   //! Destructor
   ~OpenFAST() {} ;
 
-  //! Set inputs to OpenFAST through an object of the class fastInputs
+  //! Set inputs to OpenFAST through an object of the class fastInputs. Should be called on all MPI ranks. 
   void setInputs(const fastInputs &);  
 
-  //! Initialize the simulation - allocate memory for all data structures and initialize all turbines
+  //! Initialize the simulation - allocate memory for all data structures and initialize all turbines. Safe to call on all MPI ranks. 
   void init();
-  //! Call FAST->solution0 for all turbines
+  //! Call FAST->solution0 for all turbines. Safe to call on all MPI ranks. 
   void solution0();
-  //! Initialize velocity and force node data 
+  //! Initialize velocity and force node data. Safe to call on all MPI ranks. 
   void init_velForceNodeData();
-  //! Set up before every OpenFAST time step
+  //! Set up before every OpenFAST time step. Safe to call on all MPI ranks. 
   void prework();
-  //! Update states to next time step by calling FAST_AdvanceStates_T and CalcOutputs_And_SolveForInputs
+  //! Update states to next time step by calling FAST_AdvanceStates_T and CalcOutputs_And_SolveForInputs. Safe to call on all MPI ranks. 
   void update_states_driver_time_step();
-  //! Copy the final predicted states from step t_global_next to actual states for that step
+  //! Copy the final predicted states from step t_global_next to actual states for that step. Safe to call on all MPI ranks. 
   void advance_to_next_driver_time_step();
-  //! Set external inputs for OpenFAST modules by interpolating to substep
+  //! Set external inputs for OpenFAST modules by interpolating to substep. Safe to call on all MPI ranks. 
   void send_data_to_openfast(double ss_time);
-  //! Set external inputs for OpenFAST modules at time step 't'
+  //! Set external inputs for OpenFAST modules at time step 't'. Safe to call on all MPI ranks. 
   void send_data_to_openfast(fast::timeStep t);
-  //! Get ouput data from OpenFAST modules 
+  //! Get ouput data from OpenFAST modules. Safe to call on all MPI ranks.  
   void get_data_from_openfast(fast::timeStep t);
-  //! Extrapolate velocity and force node data to time step 'n+1' using data at 'n', 'n-1' and 'n-2'
+  //! Extrapolate velocity and force node data to time step 'n+1' using data at 'n', 'n-1' and 'n-2'. Safe to call on all MPI ranks. 
   void predict_states();
-  //! Advance all turbines by 1 OpenFAST timestep. Also write velocity data at the Aerodyn nodes for all turbines to 'velData.h5'
+  //! Advance all turbines by 1 OpenFAST timestep. Safe to call on all MPI ranks. 
   void step();
-  //! Step function to be used with sub-stepping fast between time steps of the driver program
+  //! Step function to be used with sub-stepping fast between time steps of the driver program. Safe to call on all MPI ranks. 
   void step(double ss_time); 
-  //! Advance all turbines by 1 OpenFAST timestep. Will not write any velocity data to file
+  //! Advance all turbines by 1 OpenFAST timestep. Will not write any velocity data to file. Safe to call on all MPI ranks. 
   void stepNoWrite();
-  //! Call FAST->end for all turbines
+  //! Call FAST->end for all turbines. Safe to call on all MPI ranks. 
   void end();
+
+  //! Allocate turbine number 'iTurbGlob' to the processor with global MPI rank 'procNo'. MUST be called from every MPI rank.
+  void setTurbineProcNo(int iTurbGlob, int procNo) { turbineMapGlobToProc[iTurbGlob] = procNo; }
+  //! Allocate all turbines to processors in a round-robin fashion. MUST be called from every MPI rank.
+  void allocateTurbinesToProcsSimple();
+    
+  //! Get the approximate hub position for turbine number 'iTurbGlob'. This is the value specified in the input to OpenFAST. Must be called only from the processor containing the turbine. 
+  void getApproxHubPos(std::vector<double> & currentCoords, int iTurbGlob);
+  //! Get the exact hub position for turbine number 'iTurbGlob'. This is avaiable only after OpenFAST has been initialized for a given turbine. Must be called only from the processor containing the turbine. 
+  void getHubPos(std::vector<double> & currentCoords, int iTurbGlob, fast::timeStep t);
+  //! Get a vector pointing downstream along the hub for turbine number 'iTurbGlob'. Must be called only from the processor containing the turbine. 
+  void getHubShftDir(std::vector<double> & hubShftVec, int iTurbGlob, fast::timeStep t);
+
+  //! Get the node type (HUB, BLADE, TOWER) of velocity node number 'iNode' for turbine number 'iTurbGlob'. Must be called only from the processor containing the turbine. 
+  ActuatorNodeType getVelNodeType(int iTurbGlob, int iNode);
+  //! Get the coordinates of velocity node number 'iNode' for turbine number 'iTurbGlob'. Must be called only from the processor containing the turbine. 
+  void getVelNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob, fast::timeStep t);
+  //! Set the velocity at velocity node 'iNode' for turbine number 'iTurbGlob'. Must be called only from the processor containing the turbine. 
+  void setVelocity(std::vector<double> & velocity, int iNode, int iTurbGlob);
+  //! Set the velocity at force node 'iNode' for turbine number 'iTurbGlob'. Must be called only from the processor containing the turbine. 
+  void setVelocityForceNode(std::vector<double> & velocity, int iNode, int iTurbGlob);
+  //! Map the velocity from the force nodes to the velocity nodes using linear interpolation along each blade and the tower. Safe to call from every MPI rank.
+  void interpolateVel_ForceToVelNodes();
+  //! Get the node type (HUB, BLADE, TOWER) of force node number 'iNode' for turbine number 'iTurbGlob'. Must be called only from the processor containing the turbine. 
+  ActuatorNodeType getForceNodeType(int iTurbGlob, int iNode);
+  //! Get the coordinates of force node number 'iNode' for turbine number 'iTurbGlob'. Must be called only from the processor containing the turbine. 
+  void getForceNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob, fast::timeStep t);
+  //! Get the tensor orientation of force node number 'iNode' for turbine number 'iTurbGlob'. Must be called only from the processor containing the turbine. 
+  void getForceNodeOrientation(std::vector<double> & currentOrientation, int iNode, int iTurbGlob, fast::timeStep t);
+  //! Get the actuator force at force node 'iNode' for turbine number 'iTurbGlob'. Must be called only from the processor containing the turbine. 
+  void getForce(std::vector<double> & force, int iNode, int iTurbGlob, fast::timeStep t);
+  //! Get the chord at force node 'iNode' for turbine number 'iTurbGlob'. Must be called only from the processor containing the turbine. 
+  double getChord(int iNode, int iTurbGlob);
+
+  //! Get the starting time step of the simulation. Safe to call from every MPI rank.
+  int get_ntStart() { return ntStart; }
+  //! Return a boolean flag whether the simulation is dryRun. Safe to call from every MPI rank.
+  bool isDryRun() { return dryRun; }
+  //! Return a boolean flag whether the simulation is debug. Safe to call from every MPI rank.
+  bool isDebug() { return debug; }
+  //! Get an enum of type 'simStartType' indicating the start type of the simulation. Safe to call from every MPI rank.
+  simStartType get_simStartType() { return simStart; }
+  //! Is the simulation time zero right now? Safe to call from every MPI rank.
+  bool isTimeZero() { return timeZero; }
+  //! Get the global MPI rank of the processor containing turbine number 'iTurbGlob'. Safe to call from every MPI rank.
+  int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; }
+  //! Get the local turbine number of the turbine number 'iTurbGlob'. Safe to call from every MPI rank.
+  int get_localTurbNo(int iTurbGlob) { return reverseTurbineMapProcToGlob[iTurbGlob]; }
+  //! Get the total number of turbines in the simulation. Safe to call from every MPI rank.
+  int get_nTurbinesGlob() { return nTurbinesGlob; } 
+
+  //! Get the nacelle area of turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  float get_nacelleArea(int iTurbGlob) { return get_nacelleAreaLoc(get_localTurbNo(iTurbGlob)); }
+  //! Get the nacelle drag coefficient of turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  float get_nacelleCd(int iTurbGlob) { return get_nacelleCdLoc(get_localTurbNo(iTurbGlob)); }
+  //! Get the air density around turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  float get_airDensity(int iTurbGlob) { return get_airDensityLoc(get_localTurbNo(iTurbGlob)); }
+    
+  //! Get the number of blades in turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  int get_numBlades(int iTurbGlob) { return get_numBladesLoc(get_localTurbNo(iTurbGlob)); }
+  //! Get the number of Aerodyn/velocity nodes on each blade in turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  int get_numVelPtsBlade(int iTurbGlob) { return get_numVelPtsBladeLoc(get_localTurbNo(iTurbGlob)); }
+  //! Get the number of Aerodyn/velocity nodes on the tower in turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  int get_numVelPtsTwr(int iTurbGlob) { return get_numVelPtsTwrLoc(get_localTurbNo(iTurbGlob)); }
+  //! Get the total number of Aerodyn/velocity nodes in turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  int get_numVelPts(int iTurbGlob) { return get_numVelPtsLoc(get_localTurbNo(iTurbGlob)); }
+  //! Get the number of Actuator/force nodes on each blade in turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  int get_numForcePtsBlade(int iTurbGlob) { return get_numForcePtsBladeLoc(get_localTurbNo(iTurbGlob)); }
+  //! Get the number of Actuator/force nodes on the tower in turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  int get_numForcePtsTwr(int iTurbGlob) { return get_numForcePtsTwrLoc(get_localTurbNo(iTurbGlob)); }
+  //! Get the total number of Actuator/force nodes in turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  int get_numForcePts(int iTurbGlob) { return get_numForcePtsLoc(get_localTurbNo(iTurbGlob)); }
+
+  //! Compute the torque and thrust for turbine number 'iTurbGlob'. Must be called only from processor containing the turbine. 
+  void computeTorqueThrust(int iTurGlob, std::vector<double> &  torque, std::vector<double> &  thrust);
+
+  //! An example function to set velocities at the Aerodyn nodes using a power law wind profile using an exponent of 0.2 and a reference wind speed of 10 m/s at 90 meters. Safe to call from every MPI rank.
+  void setExpLawWindSpeed() ; // An example to set velocities at the Aerodyn nodes    
+
+private:
+
+  //! Set state from another state
+  void set_state_from_state(fast::timeStep fromState, fast::timeStep toState);
 
   //! Read velocity and force node data at time step 'n', 'n-1' and 'n-2' to allow for a clean restart
   void readRestartFile(int iTurbLoc, int n_t_global);
@@ -339,95 +422,16 @@ class OpenFAST {
   herr_t closeVelocityDataFile(int nt_global, hid_t velDataFile);
   //! Backup the velocity data file
   void backupVelocityDataFile(int curTimeStep, hid_t & velDataFile);
-
-  //! Allocate turbine number 'iTurbGlob' to the processor with global MPI rank 'procNo'
-  void setTurbineProcNo(int iTurbGlob, int procNo) { turbineMapGlobToProc[iTurbGlob] = procNo; }
-  //! Allocate all turbines to processors in a round-robin fashion
-  void allocateTurbinesToProcsSimple();
-  //! Get the approximate hub position for turbine number 'iTurbGlob'. This is the value specified in the input to OpenFAST. 
-  void getApproxHubPos(std::vector<double> & currentCoords, int iTurbGlob);
-  //! Get the exact hub position for turbine number 'iTurbGlob'. This is avaiable only after OpenFAST has been initialized for a given turbine.
-  void getHubPos(std::vector<double> & currentCoords, int iTurbGlob, fast::timeStep t);
-  //! Get a vector pointing downstream along the hub for turbine number 'iTurbGlob'
-  void getHubShftDir(std::vector<double> & hubShftVec, int iTurbGlob, fast::timeStep t);
-
-  //! Get the node type (HUB, BLADE, TOWER) of velocity node number 'iNode' for turbine number 'iTurbGlob'
-  ActuatorNodeType getVelNodeType(int iTurbGlob, int iNode);
-  //! Get the coordinates of velocity node number 'iNode' for turbine number 'iTurbGlob'
-  void getVelNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob, fast::timeStep t);
-  //! Set the velocity at velocity node 'iNode' for turbine number 'iTurbGlob'
-  void setVelocity(std::vector<double> & velocity, int iNode, int iTurbGlob);
-  //! Set the velocity at force node 'iNode' for turbine number 'iTurbGlob'
-  void setVelocityForceNode(std::vector<double> & velocity, int iNode, int iTurbGlob);
-  //! Map the velocity from the force nodes to the velocity nodes using linear interpolation along each blade and the tower.
-  void interpolateVel_ForceToVelNodes();
-  //! Get the node type (HUB, BLADE, TOWER) of force node number 'iNode' for turbine number 'iTurbGlob'
-  ActuatorNodeType getForceNodeType(int iTurbGlob, int iNode);
-  //! Get the coordinates of force node number 'iNode' for turbine number 'iTurbGlob'
-  void getForceNodeCoordinates(std::vector<double> & currentCoords, int iNode, int iTurbGlob, fast::timeStep t);
-  //! Get the tensor orientation of force node number 'iNode' for turbine number 'iTurbGlob'
-  void getForceNodeOrientation(std::vector<double> & currentOrientation, int iNode, int iTurbGlob, fast::timeStep t);
-  //! Get the actuator force at force node 'iNode' for turbine number 'iTurbGlob'
-  void getForce(std::vector<double> & force, int iNode, int iTurbGlob, fast::timeStep t);
-  //! Get the chord at force node 'iNode' for turbine number 'iTurbGlob'
-  double getChord(int iNode, int iTurbGlob);
-
-  //! Get the starting time step of the simulation
-  int get_ntStart() { return ntStart; }
-  //! Return a boolean flag whether the simulation is dryRun
-  bool isDryRun() { return dryRun; }
-  //! Return a boolean flag whether the simulation is debug
-  bool isDebug() { return debug; }
-  //! Get an enum of type 'simStartType' indicating the start type of the simulation
-  simStartType get_simStartType() { return simStart; }
-  //! Is the simulation time zero right now?
-  bool isTimeZero() { return timeZero; }
-  //! Get the global MPI rank of the processor containing turbine number 'iTurbGlob'
-  int get_procNo(int iTurbGlob) { return turbineMapGlobToProc[iTurbGlob] ; }
-  //! Get the local turbine number of the turbine number 'iTurbGlob'
-  int get_localTurbNo(int iTurbGlob) { return reverseTurbineMapProcToGlob[iTurbGlob]; }
-  //! Get the total number of turbines in the simulation
-  int get_nTurbinesGlob() { return nTurbinesGlob; } 
-
-  //! Get the nacelle drag coefficient of turbine number 'iTurbGlob'
-  float get_nacelleArea(int iTurbGlob) { return get_nacelleAreaLoc(get_localTurbNo(iTurbGlob)); }
-  //! Get the nacelle area of turbine number 'iTurbGlob'
-  float get_nacelleCd(int iTurbGlob) { return get_nacelleCdLoc(get_localTurbNo(iTurbGlob)); }
-  //! Get the air density around turbine number 'iTurbGlob'
-  float get_airDensity(int iTurbGlob) { return get_airDensityLoc(get_localTurbNo(iTurbGlob)); }
     
-  //! Get the number of blades in turbine number 'iTurbGlob'
-  int get_numBlades(int iTurbGlob) { return get_numBladesLoc(get_localTurbNo(iTurbGlob)); }
-  //! Get the number of Aerodyn/velocity nodes on each blade in turbine number 'iTurbGlob'
-  int get_numVelPtsBlade(int iTurbGlob) { return get_numVelPtsBladeLoc(get_localTurbNo(iTurbGlob)); }
-  //! Get the number of Aerodyn/velocity nodes on the tower in turbine number 'iTurbGlob'
-  int get_numVelPtsTwr(int iTurbGlob) { return get_numVelPtsTwrLoc(get_localTurbNo(iTurbGlob)); }
-  //! Get the total number of Aerodyn/velocity nodes in turbine number 'iTurbGlob'
-  int get_numVelPts(int iTurbGlob) { return get_numVelPtsLoc(get_localTurbNo(iTurbGlob)); }
-  //! Get the number of Actuator/force nodes on each blade in turbine number 'iTurbGlob'
-  int get_numForcePtsBlade(int iTurbGlob) { return get_numForcePtsBladeLoc(get_localTurbNo(iTurbGlob)); }
-  //! Get the number of Actuator/force nodes on the tower in turbine number 'iTurbGlob'
-  int get_numForcePtsTwr(int iTurbGlob) { return get_numForcePtsTwrLoc(get_localTurbNo(iTurbGlob)); }
-  //! Get the total number of Actuator/force nodes in turbine number 'iTurbGlob'
-  int get_numForcePts(int iTurbGlob) { return get_numForcePtsLoc(get_localTurbNo(iTurbGlob)); }
-
-  //! Compute the torque and thrust for turbine number 'iTurbGlob'
-  void computeTorqueThrust(int iTurGlob, std::vector<double> &  torque, std::vector<double> &  thrust);
-
-  //! An example function to set velocities at the Aerodyn nodes using a power law wind profile using an exponent of 0.2 and a reference wind speed of 10 m/s at 90 meters.
-  void setExpLawWindSpeed() ; // An example to set velocities at the Aerodyn nodes    
-
- private:
-
   //! Check whether the error status is ok. If not quit gracefully by printing the error message
   void checkError(const int ErrStat, const char * ErrMsg);
   //! Check whether a file with name "name" exists
   inline bool checkFileExists(const std::string& name);
 
   //! Allocate memory for data structures for all turbines on this processor
-  void allocateMemory();
+  void allocateMemory_preInit();
   //! Allocate more memory for each turbine after intialization/restart    
-  void allocateMemory2(int iTurbLoc);  
+  void allocateMemory_postInit(int iTurbLoc);  
 
   //! Get the nacelle drag coefficient of local turbine number 'iTurbLoc'
   float get_nacelleCdLoc(int iTurbLoc) { return turbineData[iTurbLoc].nacelle_cd; }

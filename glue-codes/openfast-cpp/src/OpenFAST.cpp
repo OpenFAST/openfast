@@ -29,7 +29,7 @@ fast::OpenFAST::OpenFAST():
     nTurbinesGlob(0),
     nTurbinesProc(0),
     scStatus(false),
-    simStart(fast::init),
+    simStart(fast::INIT),
     timeZero(false),
     firstPass_(true)
 {
@@ -42,12 +42,12 @@ inline bool fast::OpenFAST::checkFileExists(const std::string& name) {
 
 void fast::OpenFAST::init() {
     
-    allocateMemory();
+    allocateMemory_preInit();
     
     if (!dryRun) {
         switch (simStart) {
             
-        case fast::trueRestart:
+        case fast::TRUERESTART:
             
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
                 /* note that this will set nt_global inside the FAST library */
@@ -55,7 +55,7 @@ void fast::OpenFAST::init() {
                 checkError(ErrStat, ErrMsg);
                 nt_global = ntStart;
                 
-                allocateMemory2(iTurb);
+                allocateMemory_postInit(iTurb);
                 
                 readRestartFile(iTurb, nt_global);
                 
@@ -69,7 +69,7 @@ void fast::OpenFAST::init() {
             
             break ;
             
-        case fast::init:
+        case fast::INIT:
             
             // this calls the Init() routines of each module
             
@@ -84,12 +84,12 @@ void fast::OpenFAST::init() {
                     turbineData[iTurb].numForcePtsTwr = 0;
                     std::cout << "Aerodyn doesn't want to calculate forces on the tower. All actuator points on the tower are turned off for turbine " << turbineMapProcToGlob[iTurb] << "." << std::endl ;
                 }
-                allocateMemory2(iTurb);
+                allocateMemory_postInit(iTurb);
                 
-                get_data_from_openfast(fast::nm2);
-                get_data_from_openfast(fast::nm1);
-                get_data_from_openfast(fast::n);
-                get_data_from_openfast(fast::np1);
+                get_data_from_openfast(fast::STATE_NM2);
+                get_data_from_openfast(fast::STATE_NM1);
+                get_data_from_openfast(fast::STATE_N);
+                get_data_from_openfast(fast::STATE_NP1);
                 
             }
             
@@ -97,7 +97,7 @@ void fast::OpenFAST::init() {
             
             break ;
             
-        case fast::restartDriverInitFAST:
+        case fast::RESTARTDRIVERINITFAST:
             
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
                 FAST_AL_CFD_Init(&iTurb, &tMax, turbineData[iTurb].FASTInputFileName.data(), &turbineData[iTurb].TurbID, &numScOutputs, &numScInputs, &turbineData[iTurb].numForcePtsBlade, &turbineData[iTurb].numForcePtsTwr, turbineData[iTurb].TurbineBasePos.data(), &AbortErrLev, &dtFAST, &turbineData[iTurb].inflowType, &turbineData[iTurb].numBlades, &turbineData[iTurb].numVelPtsBlade, &turbineData[iTurb].numVelPtsTwr, &i_f_FAST[iTurb], &o_t_FAST[iTurb], &sc_i_f_FAST[iTurb], &sc_o_t_FAST[iTurb], &ErrStat, ErrMsg);
@@ -111,12 +111,12 @@ void fast::OpenFAST::init() {
                     std::cout << "Aerodyn doesn't want to calculate forces on the tower. All actuator points on the tower are turned off for turbine " << turbineMapProcToGlob[iTurb] << "." << std::endl ;
                 }
 
-                allocateMemory2(iTurb);
+                allocateMemory_postInit(iTurb);
                 
-                get_data_from_openfast(fast::nm2);
-                get_data_from_openfast(fast::nm1);
-                get_data_from_openfast(fast::n);
-                get_data_from_openfast(fast::np1);
+                get_data_from_openfast(fast::STATE_NM2);
+                get_data_from_openfast(fast::STATE_NM1);
+                get_data_from_openfast(fast::STATE_N);
+                get_data_from_openfast(fast::STATE_NP1);
                 
             }
             
@@ -169,7 +169,7 @@ void fast::OpenFAST::solution0() {
         
         // Unfortunately setVelocity only sets the velocity at 'n+1'. Need to copy 'n+1' to 'n'
         init_velForceNodeData() ;
-        send_data_to_openfast(fast::np1);
+        send_data_to_openfast(fast::STATE_NP1);
         
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
             
@@ -180,9 +180,9 @@ void fast::OpenFAST::solution0() {
             checkError(ErrStat, ErrMsg);       
         }
         
-        get_data_from_openfast(fast::n);
-        get_data_from_openfast(fast::nm1);
-        get_data_from_openfast(fast::nm2);        
+        get_data_from_openfast(fast::STATE_N);
+        get_data_from_openfast(fast::STATE_NM1);
+        get_data_from_openfast(fast::STATE_NM2);        
         
         timeZero = false;
 
@@ -193,46 +193,37 @@ void fast::OpenFAST::solution0() {
     
 }
 
-void fast::OpenFAST::init_velForceNodeData() {
+void fast::OpenFAST::set_state_from_state(fast::timeStep fromState, fast::timeStep toState) {
 
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
         int nvelpts = get_numVelPtsLoc(iTurb);
         int nfpts = get_numForcePtsLoc(iTurb);
         for (int i=0; i<nvelpts; i++) {
             for (int j=0 ; j < 3; j++) {
-                velForceNodeData[iTurb][fast::n].x_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].x_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].x_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].x_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].x_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].x_vel[i*3+j];
-                velForceNodeData[iTurb][fast::n].xdot_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].xdot_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].xdot_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].xdot_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].xdot_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].xdot_vel[i*3+j];
-                velForceNodeData[iTurb][fast::n].vel_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].vel_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].vel_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].vel_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].vel_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].vel_vel[i*3+j];
+                velForceNodeData[iTurb][toState].x_vel[i*3+j] = velForceNodeData[iTurb][fromState].x_vel[i*3+j];
+                velForceNodeData[iTurb][toState].xdot_vel[i*3+j] = velForceNodeData[iTurb][fromState].xdot_vel[i*3+j];
+                velForceNodeData[iTurb][toState].vel_vel[i*3+j] = velForceNodeData[iTurb][fromState].vel_vel[i*3+j];
             }
         }
         for (int i=0; i<nfpts; i++) {
             for (int j=0 ; j < 3; j++) {
-                velForceNodeData[iTurb][fast::n].x_force[i*3+j] = velForceNodeData[iTurb][fast::np1].x_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].x_force[i*3+j] = velForceNodeData[iTurb][fast::np1].x_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].x_force[i*3+j] = velForceNodeData[iTurb][fast::np1].x_force[i*3+j];
-                velForceNodeData[iTurb][fast::n].xdot_force[i*3+j] = velForceNodeData[iTurb][fast::np1].xdot_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].xdot_force[i*3+j] = velForceNodeData[iTurb][fast::np1].xdot_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].xdot_force[i*3+j] = velForceNodeData[iTurb][fast::np1].xdot_force[i*3+j];
-                velForceNodeData[iTurb][fast::n].vel_force[i*3+j] = velForceNodeData[iTurb][fast::np1].vel_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].vel_force[i*3+j] = velForceNodeData[iTurb][fast::np1].vel_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].vel_force[i*3+j] = velForceNodeData[iTurb][fast::np1].vel_force[i*3+j];
-                velForceNodeData[iTurb][fast::n].force[i*3+j] = velForceNodeData[iTurb][fast::np1].force[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].force[i*3+j] = velForceNodeData[iTurb][fast::np1].force[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].force[i*3+j] = velForceNodeData[iTurb][fast::np1].force[i*3+j];
+                velForceNodeData[iTurb][toState].x_force[i*3+j] = velForceNodeData[iTurb][fromState].x_force[i*3+j];
+                velForceNodeData[iTurb][toState].xdot_force[i*3+j] = velForceNodeData[iTurb][fromState].xdot_force[i*3+j];
+                velForceNodeData[iTurb][toState].vel_force[i*3+j] = velForceNodeData[iTurb][fromState].vel_force[i*3+j];
+                velForceNodeData[iTurb][toState].force[i*3+j] = velForceNodeData[iTurb][fromState].force[i*3+j];
             }
-            for (int j=0;j<9;j++) {
-                velForceNodeData[iTurb][fast::n].orient_force[i*9+j] = velForceNodeData[iTurb][fast::np1].orient_force[i*9+j];
-                velForceNodeData[iTurb][fast::nm1].orient_force[i*9+j] = velForceNodeData[iTurb][fast::np1].orient_force[i*9+j];
-                velForceNodeData[iTurb][fast::nm2].orient_force[i*9+j] = velForceNodeData[iTurb][fast::np1].orient_force[i*9+j];                 
-            }
+            for (int j=0;j<9;j++)
+                velForceNodeData[iTurb][toState].orient_force[i*9+j] = velForceNodeData[iTurb][fromState].orient_force[i*9+j];
         }
     }
+
+}
+
+void fast::OpenFAST::init_velForceNodeData() {
+
+    set_state_from_state(fast::STATE_NP1, fast::STATE_N);
+    set_state_from_state(fast::STATE_NP1, fast::STATE_NM1);
+    set_state_from_state(fast::STATE_NP1, fast::STATE_NM2);
     
 }
 
@@ -244,29 +235,29 @@ void fast::OpenFAST::predict_states() {
             int nfpts = get_numForcePtsLoc(iTurb);
             for (int i=0; i<nvelpts; i++) {
                 for (int j=0 ; j < 3; j++) {
-                    velForceNodeData[iTurb][fast::np1].x_vel[i*3+j] = velForceNodeData[iTurb][fast::nm2].x_vel[i*3+j] + 3.0*velForceNodeData[iTurb][fast::n].x_vel[i*3+j] - 3.0*velForceNodeData[iTurb][fast::nm1].x_vel[i*3+j];
-                    velForceNodeData[iTurb][fast::np1].xdot_vel[i*3+j] = velForceNodeData[iTurb][fast::nm2].xdot_vel[i*3+j] + 3.0*velForceNodeData[iTurb][fast::n].xdot_vel[i*3+j] - 3.0*velForceNodeData[iTurb][fast::nm1].xdot_vel[i*3+j];
-                    velForceNodeData[iTurb][fast::np1].vel_vel[i*3+j] = velForceNodeData[iTurb][fast::nm2].vel_vel[i*3+j] + 3.0*velForceNodeData[iTurb][fast::n].vel_vel[i*3+j] - 3.0*velForceNodeData[iTurb][fast::nm1].vel_vel[i*3+j];
+                    velForceNodeData[iTurb][fast::STATE_NP1].x_vel[i*3+j] = velForceNodeData[iTurb][fast::STATE_NM2].x_vel[i*3+j] + 3.0*velForceNodeData[iTurb][fast::STATE_N].x_vel[i*3+j] - 3.0*velForceNodeData[iTurb][fast::STATE_NM1].x_vel[i*3+j];
+                    velForceNodeData[iTurb][fast::STATE_NP1].xdot_vel[i*3+j] = velForceNodeData[iTurb][fast::STATE_NM2].xdot_vel[i*3+j] + 3.0*velForceNodeData[iTurb][fast::STATE_N].xdot_vel[i*3+j] - 3.0*velForceNodeData[iTurb][fast::STATE_NM1].xdot_vel[i*3+j];
+                    velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[i*3+j] = velForceNodeData[iTurb][fast::STATE_NM2].vel_vel[i*3+j] + 3.0*velForceNodeData[iTurb][fast::STATE_N].vel_vel[i*3+j] - 3.0*velForceNodeData[iTurb][fast::STATE_NM1].vel_vel[i*3+j];
                 }
             }
-            velForceNodeData[iTurb][fast::np1].x_vel_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].xdot_vel_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].vel_vel_resid = 0.0;        
+            velForceNodeData[iTurb][fast::STATE_NP1].x_vel_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].xdot_vel_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].vel_vel_resid = 0.0;        
             for (int i=0; i<nfpts; i++) {
                 for (int j=0 ; j < 3; j++) {
-                    velForceNodeData[iTurb][fast::np1].x_force[i*3+j] = velForceNodeData[iTurb][fast::nm2].x_force[i*3+j] + 3.0*velForceNodeData[iTurb][fast::n].x_force[i*3+j] - 3.0*velForceNodeData[iTurb][fast::nm1].x_force[i*3+j];
-                    velForceNodeData[iTurb][fast::np1].xdot_force[i*3+j] = velForceNodeData[iTurb][fast::nm2].xdot_force[i*3+j] + 3.0*velForceNodeData[iTurb][fast::n].xdot_force[i*3+j] - 3.0*velForceNodeData[iTurb][fast::nm1].xdot_force[i*3+j];
-                    velForceNodeData[iTurb][fast::np1].vel_force[i*3+j] = velForceNodeData[iTurb][fast::nm2].vel_force[i*3+j] + 3.0*velForceNodeData[iTurb][fast::n].vel_force[i*3+j] - 3.0*velForceNodeData[iTurb][fast::nm1].vel_force[i*3+j];
-                    velForceNodeData[iTurb][fast::np1].force[i*3+j] = velForceNodeData[iTurb][fast::nm2].force[i*3+j] + 3.0*velForceNodeData[iTurb][fast::n].force[i*3+j] - 3.0*velForceNodeData[iTurb][fast::nm1].force[i*3+j];
+                    velForceNodeData[iTurb][fast::STATE_NP1].x_force[i*3+j] = velForceNodeData[iTurb][fast::STATE_NM2].x_force[i*3+j] + 3.0*velForceNodeData[iTurb][fast::STATE_N].x_force[i*3+j] - 3.0*velForceNodeData[iTurb][fast::STATE_NM1].x_force[i*3+j];
+                    velForceNodeData[iTurb][fast::STATE_NP1].xdot_force[i*3+j] = velForceNodeData[iTurb][fast::STATE_NM2].xdot_force[i*3+j] + 3.0*velForceNodeData[iTurb][fast::STATE_N].xdot_force[i*3+j] - 3.0*velForceNodeData[iTurb][fast::STATE_NM1].xdot_force[i*3+j];
+                    velForceNodeData[iTurb][fast::STATE_NP1].vel_force[i*3+j] = velForceNodeData[iTurb][fast::STATE_NM2].vel_force[i*3+j] + 3.0*velForceNodeData[iTurb][fast::STATE_N].vel_force[i*3+j] - 3.0*velForceNodeData[iTurb][fast::STATE_NM1].vel_force[i*3+j];
+                    velForceNodeData[iTurb][fast::STATE_NP1].force[i*3+j] = velForceNodeData[iTurb][fast::STATE_NM2].force[i*3+j] + 3.0*velForceNodeData[iTurb][fast::STATE_N].force[i*3+j] - 3.0*velForceNodeData[iTurb][fast::STATE_NM1].force[i*3+j];
                 }
                 for (int j=0;j<9;j++)
-                    velForceNodeData[iTurb][fast::np1].orient_force[i*9+j] = velForceNodeData[iTurb][fast::nm2].orient_force[i*3+j] + 3.0*velForceNodeData[iTurb][fast::n].orient_force[i*3+j] - 3.0*velForceNodeData[iTurb][fast::nm1].orient_force[i*3+j];
+                    velForceNodeData[iTurb][fast::STATE_NP1].orient_force[i*9+j] = velForceNodeData[iTurb][fast::STATE_NM2].orient_force[i*3+j] + 3.0*velForceNodeData[iTurb][fast::STATE_N].orient_force[i*3+j] - 3.0*velForceNodeData[iTurb][fast::STATE_NM1].orient_force[i*3+j];
             }
-            velForceNodeData[iTurb][fast::np1].x_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].xdot_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].orient_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].vel_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].x_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].xdot_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].orient_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].vel_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].force_resid = 0.0;
         }
     }
 }
@@ -315,32 +306,32 @@ void fast::OpenFAST::update_states_driver_time_step() {
             step(ss_time);
         }
         
-        get_data_from_openfast(fast::np1);
+        get_data_from_openfast(fast::STATE_NP1);
 
         if ( isDebug() ) {
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
                 std::ofstream fastcpp_velocity_file;
                 fastcpp_velocity_file.open("fastcpp_residual." + std::to_string(turbineMapProcToGlob[iTurb]) + ".csv", std::ios_base::app) ;
-                fastcpp_velocity_file << "Time step " << nt_global << " Velocity residual at the force nodes = " << velForceNodeData[iTurb][fast::np1].vel_force_resid << std::endl ;
-                fastcpp_velocity_file << "          " << nt_global << " Position residual at the force nodes = " << velForceNodeData[iTurb][fast::np1].x_force_resid << std::endl ;
-                fastcpp_velocity_file << "          " << nt_global << " Force residual at the force nodes = " << velForceNodeData[iTurb][fast::np1].force_resid << std::endl ;
+                fastcpp_velocity_file << "Time step " << nt_global << " Velocity residual at the force nodes = " << velForceNodeData[iTurb][fast::STATE_NP1].vel_force_resid << std::endl ;
+                fastcpp_velocity_file << "          " << nt_global << " Position residual at the force nodes = " << velForceNodeData[iTurb][fast::STATE_NP1].x_force_resid << std::endl ;
+                fastcpp_velocity_file << "          " << nt_global << " Force residual at the force nodes = " << velForceNodeData[iTurb][fast::STATE_NP1].force_resid << std::endl ;
                 fastcpp_velocity_file.close() ;
             }
         }
         
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-            velForceNodeData[iTurb][fast::np1].x_vel_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].xdot_vel_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].vel_vel_resid = 0.0;        
-            velForceNodeData[iTurb][fast::np1].x_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].xdot_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].orient_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].vel_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].x_vel_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].xdot_vel_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].vel_vel_resid = 0.0;        
+            velForceNodeData[iTurb][fast::STATE_NP1].x_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].xdot_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].orient_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].vel_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].force_resid = 0.0;
         }        
     } else {
         
-        send_data_to_openfast(fast::np1);
+        send_data_to_openfast(fast::STATE_NP1);
         
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
             FAST_CFD_UpdateStates(&iTurb, &ErrStat, ErrMsg);
@@ -368,28 +359,28 @@ void fast::OpenFAST::update_states_driver_time_step() {
             
         }
         
-        get_data_from_openfast(fast::np1);
+        get_data_from_openfast(fast::STATE_NP1);
 
         if ( isDebug() ) {
             for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
                 std::ofstream fastcpp_velocity_file;
                 fastcpp_velocity_file.open("fastcpp_residual." + std::to_string(turbineMapProcToGlob[iTurb]) + ".csv", std::ios_base::app) ;
-                fastcpp_velocity_file << "Time step " << nt_global << " Velocity residual at the force nodes = " << velForceNodeData[iTurb][fast::np1].vel_force_resid << std::endl ;
-                fastcpp_velocity_file << "          " << nt_global << " Position residual at the force nodes = " << velForceNodeData[iTurb][fast::np1].x_force_resid << std::endl ;
-                fastcpp_velocity_file << "          " << nt_global << " Force residual at the force nodes = " << velForceNodeData[iTurb][fast::np1].force_resid << std::endl ;
+                fastcpp_velocity_file << "Time step " << nt_global << " Velocity residual at the force nodes = " << velForceNodeData[iTurb][fast::STATE_NP1].vel_force_resid << std::endl ;
+                fastcpp_velocity_file << "          " << nt_global << " Position residual at the force nodes = " << velForceNodeData[iTurb][fast::STATE_NP1].x_force_resid << std::endl ;
+                fastcpp_velocity_file << "          " << nt_global << " Force residual at the force nodes = " << velForceNodeData[iTurb][fast::STATE_NP1].force_resid << std::endl ;
                 fastcpp_velocity_file.close() ;
             }
         }
 
         for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-            velForceNodeData[iTurb][fast::np1].x_vel_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].xdot_vel_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].vel_vel_resid = 0.0;        
-            velForceNodeData[iTurb][fast::np1].x_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].xdot_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].orient_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].vel_force_resid = 0.0;
-            velForceNodeData[iTurb][fast::np1].force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].x_vel_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].xdot_vel_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].vel_vel_resid = 0.0;        
+            velForceNodeData[iTurb][fast::STATE_NP1].x_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].xdot_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].orient_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].vel_force_resid = 0.0;
+            velForceNodeData[iTurb][fast::STATE_NP1].force_resid = 0.0;
         }        
 
     }
@@ -462,46 +453,10 @@ void fast::OpenFAST::advance_to_next_driver_time_step() {
             }
         }
     }
-    
-    for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-        int nvelpts = get_numVelPtsLoc(iTurb);
-        int nfpts = get_numForcePtsLoc(iTurb);
-        for (int i=0; i<nvelpts; i++) {
-            for (int j=0 ; j < 3; j++) {
-                velForceNodeData[iTurb][fast::nm2].x_vel[i*3+j] = velForceNodeData[iTurb][fast::nm1].x_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].x_vel[i*3+j] = velForceNodeData[iTurb][fast::n].x_vel[i*3+j];
-                velForceNodeData[iTurb][fast::n].x_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].x_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].xdot_vel[i*3+j] = velForceNodeData[iTurb][fast::nm1].xdot_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].xdot_vel[i*3+j] = velForceNodeData[iTurb][fast::n].xdot_vel[i*3+j];
-                velForceNodeData[iTurb][fast::n].xdot_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].xdot_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].vel_vel[i*3+j] = velForceNodeData[iTurb][fast::nm1].vel_vel[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].vel_vel[i*3+j] = velForceNodeData[iTurb][fast::n].vel_vel[i*3+j];
-                velForceNodeData[iTurb][fast::n].vel_vel[i*3+j] = velForceNodeData[iTurb][fast::np1].vel_vel[i*3+j];
-            }
-        }
-        
-        for (int i=0; i<nfpts; i++) {
-            for (int j=0 ; j < 3; j++) {
-                velForceNodeData[iTurb][fast::nm2].x_force[i*3+j] = velForceNodeData[iTurb][fast::nm1].x_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].x_force[i*3+j] = velForceNodeData[iTurb][fast::n].x_force[i*3+j];
-                velForceNodeData[iTurb][fast::n].x_force[i*3+j] = velForceNodeData[iTurb][fast::np1].x_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].xdot_force[i*3+j] = velForceNodeData[iTurb][fast::nm1].xdot_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].xdot_force[i*3+j] = velForceNodeData[iTurb][fast::n].xdot_force[i*3+j];
-                velForceNodeData[iTurb][fast::n].xdot_force[i*3+j] = velForceNodeData[iTurb][fast::np1].xdot_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].vel_force[i*3+j] = velForceNodeData[iTurb][fast::nm1].vel_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].vel_force[i*3+j] = velForceNodeData[iTurb][fast::n].vel_force[i*3+j];
-                velForceNodeData[iTurb][fast::n].vel_force[i*3+j] = velForceNodeData[iTurb][fast::np1].vel_force[i*3+j];
-                velForceNodeData[iTurb][fast::nm2].force[i*3+j] = velForceNodeData[iTurb][fast::nm1].force[i*3+j];
-                velForceNodeData[iTurb][fast::nm1].force[i*3+j] = velForceNodeData[iTurb][fast::n].force[i*3+j];
-                velForceNodeData[iTurb][fast::n].force[i*3+j] = velForceNodeData[iTurb][fast::np1].force[i*3+j];
-            }
-            for (int j=0;j<9;j++) {
-                velForceNodeData[iTurb][fast::nm2].orient_force[i*9+j] = velForceNodeData[iTurb][fast::nm1].orient_force[i*9+j];
-                velForceNodeData[iTurb][fast::nm1].orient_force[i*9+j] = velForceNodeData[iTurb][fast::n].orient_force[i*9+j];
-                velForceNodeData[iTurb][fast::n].orient_force[i*9+j] = velForceNodeData[iTurb][fast::np1].orient_force[i*9+j];
-            }
-        }
-    }
+
+    set_state_from_state(fast::STATE_NM1, fast::STATE_NM2);
+    set_state_from_state(fast::STATE_N, fast::STATE_NM1);
+    set_state_from_state(fast::STATE_NP1, fast::STATE_N);
 
     firstPass_ = true ; // Set firstPass_ to true for the next time step
     
@@ -605,10 +560,10 @@ void fast::OpenFAST::step() {
         
         FAST_CFD_Prework(&iTurb, &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
-        send_data_to_openfast(fast::np1);
+        send_data_to_openfast(fast::STATE_NP1);
         FAST_CFD_UpdateStates(&iTurb, &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
-        get_data_from_openfast(fast::np1);
+        get_data_from_openfast(fast::STATE_NP1);
         FAST_CFD_AdvanceToNextTimeStep(&iTurb, &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
 
@@ -688,10 +643,10 @@ void fast::OpenFAST::stepNoWrite() {
         // (note CFD could do subcycling around this step)
         FAST_CFD_Prework(&iTurb, &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
-        send_data_to_openfast(fast::np1);
+        send_data_to_openfast(fast::STATE_NP1);
         FAST_CFD_UpdateStates(&iTurb, &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
-        get_data_from_openfast(fast::np1);
+        get_data_from_openfast(fast::STATE_NP1);
         FAST_CFD_AdvanceToNextTimeStep(&iTurb, &ErrStat, ErrMsg);
         checkError(ErrStat, ErrMsg);
 
@@ -782,7 +737,7 @@ void fast::OpenFAST::setInputs(const fast::fastInputs & fi ) {
         
         ntStart = int(tStart/dtFAST);
         
-        if (simStart == fast::restartDriverInitFAST) {
+        if (simStart == fast::RESTARTDRIVERINITFAST) {
             nt_global = 0;
         } else {
             nt_global = ntStart;
@@ -818,7 +773,7 @@ void fast::OpenFAST::setExpLawWindSpeed(){
         for (int j = 0; j < nVelPts; j++){
             std::vector<double> coords(3,0.0);
             std::vector<double> tmpVel(3,0.0);
-            getVelNodeCoordinates(coords, j, iTurbGlob, fast::np1);
+            getVelNodeCoordinates(coords, j, iTurbGlob, fast::STATE_NP1);
             tmpVel[0] = (float) 10.0*pow((coords[2] / 90.0), 0.2); // 0.2 power law wind profile using reference 10 m/s at 90 meters
             setVelocity(tmpVel, j, iTurbGlob);
         }
@@ -913,8 +868,8 @@ void fast::OpenFAST::setVelocity(std::vector<double> & currentVelocity, int iNod
     int iTurbLoc = get_localTurbNo(iTurbGlob);
     for(int j=0; j < iTurbLoc; j++) iNode = iNode - get_numVelPtsLoc(iTurbLoc);
     for(int k=0; k < 3; k++) {
-        velForceNodeData[iTurbLoc][fast::np1].vel_vel_resid += (velForceNodeData[iTurbLoc][fast::np1].vel_vel[iNode*3+k] - currentVelocity[k])*(velForceNodeData[iTurbLoc][fast::np1].vel_vel[iNode*3+k] - currentVelocity[k]);
-        velForceNodeData[iTurbLoc][fast::np1].vel_vel[iNode*3+k] = currentVelocity[k];
+        velForceNodeData[iTurbLoc][fast::STATE_NP1].vel_vel_resid += (velForceNodeData[iTurbLoc][fast::STATE_NP1].vel_vel[iNode*3+k] - currentVelocity[k])*(velForceNodeData[iTurbLoc][fast::STATE_NP1].vel_vel[iNode*3+k] - currentVelocity[k]);
+        velForceNodeData[iTurbLoc][fast::STATE_NP1].vel_vel[iNode*3+k] = currentVelocity[k];
     }
     
     // Put this in send_data_to_openfast
@@ -929,8 +884,8 @@ void fast::OpenFAST::setVelocityForceNode(std::vector<double> & currentVelocity,
     int iTurbLoc = get_localTurbNo(iTurbGlob);
     for(int j=0; j < iTurbLoc; j++) iNode = iNode - get_numForcePtsLoc(iTurbLoc);
     for(int k=0; k < 3; k++) {
-        velForceNodeData[iTurbLoc][fast::np1].vel_force_resid += (velForceNodeData[iTurbLoc][fast::np1].vel_force[iNode*3+k] - currentVelocity[k])*(velForceNodeData[iTurbLoc][fast::np1].vel_force[iNode*3+k] - currentVelocity[k]);
-        velForceNodeData[iTurbLoc][fast::np1].vel_force[iNode*3+k] = currentVelocity[k];
+        velForceNodeData[iTurbLoc][fast::STATE_NP1].vel_force_resid += (velForceNodeData[iTurbLoc][fast::STATE_NP1].vel_force[iNode*3+k] - currentVelocity[k])*(velForceNodeData[iTurbLoc][fast::STATE_NP1].vel_force[iNode*3+k] - currentVelocity[k]);
+        velForceNodeData[iTurbLoc][fast::STATE_NP1].vel_force[iNode*3+k] = currentVelocity[k];
     }
 }
 
@@ -942,9 +897,9 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
         // Hub location
         
         for (int k=0; k < 3; k++) {
-            double tmp = velForceNodeData[iTurb][fast::np1].vel_force[k];
-            velForceNodeData[iTurb][fast::np1].vel_vel_resid += (velForceNodeData[iTurb][fast::np1].vel_vel[k] - tmp)*(velForceNodeData[iTurb][fast::np1].vel_vel[k] - tmp);
-            velForceNodeData[iTurb][fast::np1].vel_vel[k] = tmp;
+            double tmp = velForceNodeData[iTurb][fast::STATE_NP1].vel_force[k];
+            velForceNodeData[iTurb][fast::STATE_NP1].vel_vel_resid += (velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[k] - tmp)*(velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[k] - tmp);
+            velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[k] = tmp;
         }
         
         if ( isDebug() ) {
@@ -952,7 +907,7 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
             actuatorVelFile.open("actuator_velocity." + std::to_string(turbineMapProcToGlob[iTurb]) + ".csv") ;
             actuatorVelFile << "# x, y, z, Vx, Vy, Vz" << std::endl ;
             for (int iNode=0; iNode < get_numForcePtsLoc(iTurb); iNode++) {
-                actuatorVelFile << velForceNodeData[iTurb][fast::np1].force[iNode*3+0] << ", " << velForceNodeData[iTurb][fast::np1].force[iNode*3+0] << ", " << velForceNodeData[iTurb][fast::np1].force[iNode*3+0] << ", " << velForceNodeData[iTurb][fast::np1].vel_force[iNode*3+0] << ", " << velForceNodeData[iTurb][fast::np1].vel_force[iNode*3+0] << ", " << velForceNodeData[iTurb][fast::np1].vel_force[iNode*3+0] << " " << std::endl ;
+                actuatorVelFile << velForceNodeData[iTurb][fast::STATE_NP1].force[iNode*3+0] << ", " << velForceNodeData[iTurb][fast::STATE_NP1].force[iNode*3+0] << ", " << velForceNodeData[iTurb][fast::STATE_NP1].force[iNode*3+0] << ", " << velForceNodeData[iTurb][fast::STATE_NP1].vel_force[iNode*3+0] << ", " << velForceNodeData[iTurb][fast::STATE_NP1].vel_force[iNode*3+0] << ", " << velForceNodeData[iTurb][fast::STATE_NP1].vel_force[iNode*3+0] << " " << std::endl ;
             }
             actuatorVelFile.close() ;
         }
@@ -990,9 +945,9 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
                 int iNodeForceLower = 1 + iBlade * nForcePtsBlade + jForceLower ; 
                 double rInterp = (rDistVel - rDistForce[jForceLower])/(rDistForce[jForceLower+1]-rDistForce[jForceLower]);
                 for (int k=0; k < 3; k++) {
-                    double tmp = velForceNodeData[iTurb][fast::np1].vel_force[iNodeForceLower*3+k] + rInterp * (velForceNodeData[iTurb][fast::np1].vel_force[(iNodeForceLower+1)*3+k] - velForceNodeData[iTurb][fast::np1].vel_force[iNodeForceLower*3+k]);
-                    velForceNodeData[iTurb][fast::np1].vel_vel_resid += (velForceNodeData[iTurb][fast::np1].vel_vel[iNodeVel*3+k] - tmp)*(velForceNodeData[iTurb][fast::np1].vel_vel[iNodeVel*3+k] - tmp);
-                    velForceNodeData[iTurb][fast::np1].vel_vel[iNodeVel*3+k] = tmp;
+                    double tmp = velForceNodeData[iTurb][fast::STATE_NP1].vel_force[iNodeForceLower*3+k] + rInterp * (velForceNodeData[iTurb][fast::STATE_NP1].vel_force[(iNodeForceLower+1)*3+k] - velForceNodeData[iTurb][fast::STATE_NP1].vel_force[iNodeForceLower*3+k]);
+                    velForceNodeData[iTurb][fast::STATE_NP1].vel_vel_resid += (velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[iNodeVel*3+k] - tmp)*(velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[iNodeVel*3+k] - tmp);
+                    velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[iNodeVel*3+k] = tmp;
                 }
             }
         }
@@ -1031,9 +986,9 @@ void fast::OpenFAST::interpolateVel_ForceToVelNodes() {
                 int iNodeForceLower = iNodeBotTowerForce + jForceLower ; 
                 double rInterp = (hDistVel - hDistForce[jForceLower])/(hDistForce[jForceLower+1]-hDistForce[jForceLower]);
                 for (int k=0; k < 3; k++) {
-                    double tmp = velForceNodeData[iTurb][fast::np1].vel_force[iNodeForceLower*3+k] + rInterp * (velForceNodeData[iTurb][fast::np1].vel_force[(iNodeForceLower+1)*3+k] - velForceNodeData[iTurb][fast::np1].vel_force[iNodeForceLower*3+k]);
-                    velForceNodeData[iTurb][fast::np1].vel_vel_resid += (velForceNodeData[iTurb][fast::np1].vel_vel[iNodeVel*3+k] - tmp)*(velForceNodeData[iTurb][fast::np1].vel_vel[iNodeVel*3+k] - tmp);
-                    velForceNodeData[iTurb][fast::np1].vel_vel[iNodeVel*3+k] = tmp;
+                    double tmp = velForceNodeData[iTurb][fast::STATE_NP1].vel_force[iNodeForceLower*3+k] + rInterp * (velForceNodeData[iTurb][fast::STATE_NP1].vel_force[(iNodeForceLower+1)*3+k] - velForceNodeData[iTurb][fast::STATE_NP1].vel_force[iNodeForceLower*3+k]);
+                    velForceNodeData[iTurb][fast::STATE_NP1].vel_vel_resid += (velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[iNodeVel*3+k] - tmp)*(velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[iNodeVel*3+k] - tmp);
+                    velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[iNodeVel*3+k] = tmp;
                 }
             }
         }
@@ -1051,7 +1006,7 @@ void fast::OpenFAST::computeTorqueThrust(int iTurbGlob, std::vector<double> & to
     torque[0] = 0.0; torque[1] = 0.0; torque[2] = 0.0;    
     
     std::vector<double> hubShftVec(3);
-    getHubShftDir(hubShftVec, iTurbGlob, fast::np1);
+    getHubShftDir(hubShftVec, iTurbGlob, fast::STATE_NP1);
     
     int iTurbLoc = get_localTurbNo(iTurbGlob) ;
     int nfpts = get_numForcePtsBlade(iTurbLoc);
@@ -1126,7 +1081,7 @@ fast::ActuatorNodeType fast::OpenFAST::getForceNodeType(int iTurbGlob, int iNode
     
 }
 
-void fast::OpenFAST::allocateMemory() {
+void fast::OpenFAST::allocateMemory_preInit() {
     
     for (int iTurb=0; iTurb < nTurbinesGlob; iTurb++) {
         if (dryRun) {
@@ -1202,7 +1157,7 @@ void fast::OpenFAST::allocateMemory() {
     
 }
 
-void fast::OpenFAST::allocateMemory2(int iTurbLoc) {
+void fast::OpenFAST::allocateMemory_postInit(int iTurbLoc) {
     
     if ( turbineData[iTurbLoc].inflowType == 1) {
         // Inflow data is coming from inflow module
@@ -1456,9 +1411,9 @@ void fast::OpenFAST::send_data_to_openfast(double ss_time) {
         if (turbineData[iTurb].inflowType == 2) {
             int nvelpts = get_numVelPtsLoc(iTurb);
             for (int iNodeVel=0; iNodeVel < nvelpts; iNodeVel++) {
-                o_t_FAST[iTurb].u[iNodeVel] = velForceNodeData[iTurb][fast::n].vel_vel[iNodeVel*3+0] + ss_time * (velForceNodeData[iTurb][fast::np1].vel_vel[iNodeVel*3+0] - velForceNodeData[iTurb][fast::n].vel_vel[iNodeVel*3+0]);
-                o_t_FAST[iTurb].v[iNodeVel] = velForceNodeData[iTurb][fast::n].vel_vel[iNodeVel*3+1] + ss_time * (velForceNodeData[iTurb][fast::np1].vel_vel[iNodeVel*3+1] - velForceNodeData[iTurb][fast::n].vel_vel[iNodeVel*3+1]);
-                o_t_FAST[iTurb].w[iNodeVel] = velForceNodeData[iTurb][fast::n].vel_vel[iNodeVel*3+2] + ss_time * (velForceNodeData[iTurb][fast::np1].vel_vel[iNodeVel*3+2] - velForceNodeData[iTurb][fast::n].vel_vel[iNodeVel*3+2]);
+                o_t_FAST[iTurb].u[iNodeVel] = velForceNodeData[iTurb][fast::STATE_N].vel_vel[iNodeVel*3+0] + ss_time * (velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[iNodeVel*3+0] - velForceNodeData[iTurb][fast::STATE_N].vel_vel[iNodeVel*3+0]);
+                o_t_FAST[iTurb].v[iNodeVel] = velForceNodeData[iTurb][fast::STATE_N].vel_vel[iNodeVel*3+1] + ss_time * (velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[iNodeVel*3+1] - velForceNodeData[iTurb][fast::STATE_N].vel_vel[iNodeVel*3+1]);
+                o_t_FAST[iTurb].w[iNodeVel] = velForceNodeData[iTurb][fast::STATE_N].vel_vel[iNodeVel*3+2] + ss_time * (velForceNodeData[iTurb][fast::STATE_NP1].vel_vel[iNodeVel*3+2] - velForceNodeData[iTurb][fast::STATE_N].vel_vel[iNodeVel*3+2]);
             }
         }
     }
@@ -1537,7 +1492,7 @@ void fast::OpenFAST::readRestartFile(int iTurbLoc, int n_t_global) {
         throw std::runtime_error("Number of velocity or force nodes from restart file does not match input.");
     
     if (nvelpts > 0) {  
-        for (int j=0; j < 4; j++) {  // Loop over states - NM2, NM1, N, NP1
+        for (int j=0; j < 4; j++) {  // Loop over states - NM2, STATE_NM1, N, NP1
 
             std::string gName = "/data/" + std::to_string(j);
             hid_t group_id = H5Gopen2(restartFile, gName.c_str(), H5P_DEFAULT);
@@ -1613,7 +1568,7 @@ void fast::OpenFAST::writeRestartFile(int iTurbLoc, int n_t_global) {
         /* Create groups */
         hid_t group_id = H5Gcreate2(restartFile, "/data", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         herr_t status = H5Gclose(group_id);
-        for (int j=0; j < 4; j++) { // Loop over states - NM2, NM1, N, NP1
+        for (int j=0; j < 4; j++) { // Loop over states - NM2, STATE_NM1, N, NP1
             std::string gName = "/data/" + std::to_string(j);
             group_id = H5Gcreate2(restartFile, gName.c_str(), H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 

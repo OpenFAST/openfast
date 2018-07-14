@@ -8,25 +8,44 @@ inline bool checkFileExists(const std::string& name) {
   return (stat (name.c_str(), &buffer) == 0); 
 }
 
+/// Optionally read in a value from a yaml node if present, else set it to a default value. Copied from github.com/Exawind/nalu-wind/include/NaluParsing.h
+template<typename T>
+void get_if_present(const YAML::Node & node, const std::string& key, T& result, const T& default_if_not_present = T())
+{
+    if (node[key]) {
+        const YAML::Node value = node[key];
+        result = value.as<T>();
+    }
+    else {
+        int rank;
+        int iErr = MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+        if(!rank)
+            std::cout << key << " is missing in the input file. Proceeding with assumption " << key << " = " << default_if_not_present << std::endl ;
+        result = default_if_not_present;
+    }
+}
+
+/// Read a 'key' from a yaml node if it exists, else throw an error
+template<typename T>
+void get_required(const YAML::Node & node, const std::string& key, T& result)
+{
+    if (node[key]) {
+        const YAML::Node value = node[key];
+        result = value.as<T>();
+    }
+    else    {
+        throw std::runtime_error("Error: parsing missing required key: " + key);
+    }
+}
+
 void readTurbineData(int iTurb, fast::fastInputs & fi, YAML::Node turbNode) {
 
   //Read turbine data for a given turbine using the YAML node
-  if (turbNode["turb_id"]) {
-      fi.globTurbineData[iTurb].TurbID = turbNode["turb_id"].as<int>();
-  } else {
-      turbNode["turb_id"] = iTurb;
-  }
-  if (turbNode["FAST_input_filename"]) {
-      fi.globTurbineData[iTurb].FASTInputFileName = turbNode["FAST_input_filename"].as<std::string>() ;  
-  } else {
-      fi.globTurbineData[iTurb].FASTInputFileName = "";
-  }
-  if (turbNode["restart_filename"]) {
-      fi.globTurbineData[iTurb].FASTRestartFileName = turbNode["restart_filename"].as<std::string>() ;
-  } else {
-      fi.globTurbineData[iTurb].FASTRestartFileName = "";
-  }
-  if ( (fi.globTurbineData[iTurb].FASTRestartFileName == "") && (fi.globTurbineData[iTurb].FASTInputFileName == "") )
+  get_if_present(turbNode, "turb_id", fi.globTurbineData[iTurb].TurbID, iTurb);
+  std::string emptyString = "";  
+  get_if_present(turbNode, "FAST_input_filename", fi.globTurbineData[iTurb].FASTInputFileName, emptyString);
+  get_if_present(turbNode, "restart_filename", fi.globTurbineData[iTurb].FASTRestartFileName, emptyString);
+  if ( (fi.globTurbineData[iTurb].FASTRestartFileName == emptyString) && (fi.globTurbineData[iTurb].FASTInputFileName == emptyString) )
       throw std::runtime_error("Both FAST_input_filename and restart_filename are empty or not specified for Turbine " + std::to_string(iTurb));
   if (turbNode["turbine_base_pos"].IsSequence() ) {
       fi.globTurbineData[iTurb].TurbineBasePos = turbNode["turbine_base_pos"].as<std::vector<float> >() ;
@@ -38,31 +57,12 @@ void readTurbineData(int iTurb, fast::fastInputs & fi, YAML::Node turbNode) {
   } else {
       fi.globTurbineData[iTurb].TurbineHubPos =  std::vector<double>(3,0.0);
   }
-  if (turbNode["num_force_pts_blade"]) {
-      fi.globTurbineData[iTurb].numForcePtsBlade = turbNode["num_force_pts_blade"].as<int>();
-  } else {
-      fi.globTurbineData[iTurb].numForcePtsBlade = 0;
-  }
-  if (turbNode["num_force_pts_tower"]) {
-      fi.globTurbineData[iTurb].numForcePtsTwr = turbNode["num_force_pts_tower"].as<int>();
-  } else {
-      fi.globTurbineData[iTurb].numForcePtsTwr = 0;
-  }
-  if (turbNode["nacelle_cd"]) {
-      fi.globTurbineData[iTurb].nacelle_cd = turbNode["nacelle_cd"].as<float>();
-  } else {
-      fi.globTurbineData[iTurb].nacelle_cd = 0.0;
-  }
-  if (turbNode["nacelle_area"]) {
-      fi.globTurbineData[iTurb].nacelle_area = turbNode["nacelle_area"].as<float>();
-  } else {
-      fi.globTurbineData[iTurb].nacelle_area = 0.0;
-  }
-  if (turbNode["air_density"]) {
-      fi.globTurbineData[iTurb].air_density = turbNode["air_density"].as<float>();
-  } else {
-      fi.globTurbineData[iTurb].air_density = 0.0;
-  }
+  get_if_present(turbNode, "num_force_pts_blade", fi.globTurbineData[iTurb].numForcePtsBlade, 0);
+  get_if_present(turbNode, "num_force_pts_tower", fi.globTurbineData[iTurb].numForcePtsTwr, 0);
+  float fZero = 0.0;
+  get_if_present(turbNode, "nacelle_cd", fi.globTurbineData[iTurb].nacelle_cd, fZero);
+  get_if_present(turbNode, "nacelle_area", fi.globTurbineData[iTurb].nacelle_area, fZero);
+  get_if_present(turbNode, "air_density", fi.globTurbineData[iTurb].air_density, fZero);
 }
 
 void readInputFile(fast::fastInputs & fi, std::string cInterfaceInputFile, double * tEnd, int * couplingMode, bool * setExpLawWind) {
@@ -74,103 +74,68 @@ void readInputFile(fast::fastInputs & fi, std::string cInterfaceInputFile, doubl
 
     YAML::Node cDriverInp = YAML::LoadFile(cInterfaceInputFile);
 
-    fi.nTurbinesGlob = cDriverInp["n_turbines_glob"].as<int>();
+    get_required(cDriverInp, "n_turbines_glob", fi.nTurbinesGlob);
 
     if (fi.nTurbinesGlob > 0) {
       
-      if(cDriverInp["dry_run"]) {
-	fi.dryRun = cDriverInp["dry_run"].as<bool>();
-      } 
-      
-      if(cDriverInp["debug"]) {
-	fi.debug = cDriverInp["debug"].as<bool>();
-      }
+        get_if_present(cDriverInp, "dry_run", fi.dryRun, false);
+        get_if_present(cDriverInp, "debug", fi.debug, false);
 
-      *couplingMode = 0; //CLASSIC is default
-      if(cDriverInp["coupling_mode"]) {
-          if ( cDriverInp["coupling_mode"].as<std::string>() == "strong" ) {
-              *couplingMode = 1;
-          } else if ( cDriverInp["coupling_mode"].as<std::string>() == "classic" ) {
-              *couplingMode = 0;
-          } else {
-              throw std::runtime_error("coupling_mode is not well defined in the input file");
-          }
-      }
-      
-      if(cDriverInp["sim_start"]) {
-	if (cDriverInp["sim_start"].as<std::string>() == "init") {
-	  fi.simStart = fast::init;
-	} else if(cDriverInp["sim_start"].as<std::string>() == "trueRestart") {
-	  fi.simStart = fast::trueRestart;
-	} else if(cDriverInp["sim_start"].as<std::string>() == "restartDriverInitFAST") {
-	  fi.simStart = fast::restartDriverInitFAST;
-	} else {
-	  throw std::runtime_error("sim_start is not well defined in the input file");
-	}
-      }
-
-      if(cDriverInp["t_start"]) { 
-          fi.tStart = cDriverInp["t_start"].as<double>();
-      } else {
-          throw std::runtime_error("t_start is missing in the input file");
-      }
-      if(cDriverInp["t_end"]) {
-          *tEnd = cDriverInp["t_end"].as<double>();
-      } else {
-          throw std::runtime_error("t_end is missing in the input file");
-      }
-      if(cDriverInp["n_checkpoint"]) {
-          fi.nEveryCheckPoint = cDriverInp["n_checkpoint"].as<int>();
-      } else {
-          throw std::runtime_error("n_checkpoint is missing in the input file");
-      }
-      if (cDriverInp["dt_FAST"]) {
-          fi.dtFAST = cDriverInp["dt_FAST"].as<double>();
-      } else {
-          throw std::runtime_error("dt_FAST is missing in the input file");
-      }
-      if (cDriverInp["n_substeps"]) {
-          fi.nSubsteps = cDriverInp["n_substeps"].as<int>();
-      } else {
-          std::cout << "n_substeps is missing in the input file. Proceeding with assumption n_substeps=1." << std::endl ;
-          fi.nSubsteps = 1;
-      }
-      if (cDriverInp["t_max"]) {
-          fi.tMax = cDriverInp["t_max"].as<double>(); // t_max is the total duration to which you want to run FAST. This should be the same or greater than the max time given in the FAST fst file. Choose this carefully as FAST writes the output file only at this point if you choose the binary file output.
-      } else {
-          fi.tMax = 0;
-      }
-
-      if(cDriverInp["set_exp_law_wind"]) {
-        *setExpLawWind = cDriverInp["set_exp_law_wind"].as<bool>();
-      } else {
-          *setExpLawWind = false;
-      }
-      
-      if(cDriverInp["super_controller"]) {
-	fi.scStatus = cDriverInp["super_controller"].as<bool>();
-	fi.scLibFile = cDriverInp["sc_libfile"].as<std::string>();
-	fi.numScInputs = cDriverInp["num_scinputs"].as<int>();
-	fi.numScOutputs = cDriverInp["num_scoutputs"].as<int>();
-      }
-      
-      fi.globTurbineData.resize(fi.nTurbinesGlob);
-      for (int iTurb=0; iTurb < fi.nTurbinesGlob; iTurb++) {
-	if (cDriverInp["Turbine" + std::to_string(iTurb)]) {
-	  readTurbineData(iTurb, fi, cDriverInp["Turbine" + std::to_string(iTurb)] );
-	} else {
-	  throw std::runtime_error("Node for Turbine" + std::to_string(iTurb) + " not present in input file or I cannot read it");
-	}
-      }
-      
+        *couplingMode = 0; //CLASSIC is default
+        if(cDriverInp["coupling_mode"]) {
+            if ( cDriverInp["coupling_mode"].as<std::string>() == "strong" ) {
+                *couplingMode = 1;
+            } else if ( cDriverInp["coupling_mode"].as<std::string>() == "classic" ) {
+                *couplingMode = 0;
+            } else {
+                throw std::runtime_error("coupling_mode is not well defined in the input file");
+            }
+        }
+        
+        if(cDriverInp["sim_start"]) {
+            if (cDriverInp["sim_start"].as<std::string>() == "init") {
+                fi.simStart = fast::INIT;
+            } else if(cDriverInp["sim_start"].as<std::string>() == "trueRestart") {
+                fi.simStart = fast::TRUERESTART;
+            } else if(cDriverInp["sim_start"].as<std::string>() == "restartDriverInitFAST") {
+                fi.simStart = fast::RESTARTDRIVERINITFAST;
+            } else {
+                throw std::runtime_error("sim_start is not well defined in the input file");
+            }
+        }
+        
+        get_required(cDriverInp, "t_start", fi.tStart);
+        get_required(cDriverInp, "t_end", *tEnd);
+        get_required(cDriverInp, "n_checkpoint", fi.nEveryCheckPoint);
+        get_required(cDriverInp, "dt_FAST", fi.dtFAST);
+        get_if_present(cDriverInp, "n_substeps", fi.nSubsteps, 1);
+        get_required(cDriverInp, "t_max", fi.tMax); // t_max is the total duration to which you want to run FAST. This should be the same or greater than the max time given in the FAST fst file. 
+        get_if_present(cDriverInp, "set_exp_law_wind", *setExpLawWind, false);
+        
+        get_if_present(cDriverInp, "super_controller", fi.scStatus, false);
+        if(fi.scStatus) {
+            get_required(cDriverInp, "sc_libfile", fi.scLibFile);
+            get_required(cDriverInp, "num_scinputs", fi.numScInputs);
+            get_required(cDriverInp, "num_scoutputs", fi.numScOutputs);
+        }
+        
+        fi.globTurbineData.resize(fi.nTurbinesGlob);
+        for (int iTurb=0; iTurb < fi.nTurbinesGlob; iTurb++) {
+            if (cDriverInp["Turbine" + std::to_string(iTurb)]) {
+                readTurbineData(iTurb, fi, cDriverInp["Turbine" + std::to_string(iTurb)] );
+            } else {
+                throw std::runtime_error("Node for Turbine" + std::to_string(iTurb) + " not present in input file or I cannot read it");
+            }
+        }
+        
     } else {
-      throw std::runtime_error("Number of turbines <= 0 ");
+        throw std::runtime_error("Number of turbines <= 0 ");
     }
     
   } else {
-    throw std::runtime_error("Input file " + cInterfaceInputFile + " does not exist or I cannot access it");
+      throw std::runtime_error("Input file " + cInterfaceInputFile + " does not exist or I cannot access it");
   }
-
+  
 }
 
 int main() {
@@ -192,14 +157,7 @@ int main() {
   std::string cDriverInputFile="cDriver.i";
   fast::OpenFAST FAST;
   fast::fastInputs fi ;
-  try {
-      readInputFile(fi, cDriverInputFile, &tEnd, &couplingMode, &setExpLawWind);
-  }
-  catch( const std::runtime_error & ex) {
-    std::cerr << ex.what() << std::endl ;
-    std::cerr << "Program quitting now" << std::endl ;
-    return 1;
-  }
+  readInputFile(fi, cDriverInputFile, &tEnd, &couplingMode, &setExpLawWind);
 
   FAST.setInputs(fi);
   FAST.allocateTurbinesToProcsSimple(); 
@@ -210,13 +168,11 @@ int main() {
   ntStart = fi.tStart/fi.dtFAST/fi.nSubsteps;  //Calculate the first time step
   ntEnd = tEnd/fi.dtFAST/fi.nSubsteps;  //Calculate the last time step
 
-  if (setExpLawWind) {
+  if (setExpLawWind)
       FAST.setExpLawWindSpeed();   
-  }
   
-  if (FAST.isTimeZero()) {
+  if (FAST.isTimeZero())
     FAST.solution0();
-  }
   
   if( !FAST.isDryRun() ) {
     for (int nt = ntStart; nt < ntEnd; nt++) {
