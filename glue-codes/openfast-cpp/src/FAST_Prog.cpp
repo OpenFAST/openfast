@@ -43,8 +43,8 @@ void readTurbineData(int iTurb, fast::fastInputs & fi, YAML::Node turbNode) {
   //Read turbine data for a given turbine using the YAML node
   get_if_present(turbNode, "turb_id", fi.globTurbineData[iTurb].TurbID, iTurb);
   std::string emptyString = "";  
-  get_if_present(turbNode, "FAST_input_filename", fi.globTurbineData[iTurb].FASTInputFileName, emptyString);
-  get_if_present(turbNode, "restart_filename", fi.globTurbineData[iTurb].FASTRestartFileName, emptyString);
+  get_if_present(turbNode, "FAST_input_filename", fi.globTurbineData[iTurb].FASTInputFileName);
+  get_if_present(turbNode, "restart_filename", fi.globTurbineData[iTurb].FASTRestartFileName);
   if ( (fi.globTurbineData[iTurb].FASTRestartFileName == emptyString) && (fi.globTurbineData[iTurb].FASTInputFileName == emptyString) )
       throw std::runtime_error("Both FAST_input_filename and restart_filename are empty or not specified for Turbine " + std::to_string(iTurb));
   if (turbNode["turbine_base_pos"].IsSequence() ) {
