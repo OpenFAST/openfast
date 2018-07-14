@@ -55,6 +55,6 @@ def runOpenfastcppCase(inputFile, executable, testDir, verbose=False):
     return _runGenericCase(inputFile, executable, verbose)
 
 def runBeamdynDriverCase(inputFile, executable, verbose=False):
-    caseDirectory = os.path.sep.join(inputFile.split("/")[:-1])
+    caseDirectory = os.path.sep.join(inputFile.split(os.path.sep)[:-1])
     os.chdir(caseDirectory)
     return _runGenericCase(inputFile, executable, verbose)

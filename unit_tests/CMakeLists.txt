@@ -23,6 +23,14 @@ project(OpenFAST_UnitTest Fortran)
 
 include(CTest)
 
+# Set the python executable configuration option and default
+if(NOT EXISTS ${PYTHON_EXECUTABLE})
+  find_program(PYTHON_EXECUTABLE NAMES python3 python py)
+  if(NOT EXISTS ${PYTHON_EXECUTABLE})
+    message(FATAL_ERROR "CMake cannot find a Python interpreter in your path. Python is required to run OpenFAST tests." )
+  endif()
+endif()
+
 ### pfunit
 include(ExternalProject)
 set(ExternalProjectCMakeArgs
@@ -32,8 +40,6 @@ set(ExternalProjectCMakeArgs
 set(PFUNIT_INSTALL ${PROJECT_BINARY_DIR}/pfunit)
 
 ExternalProject_Add(pfunit
-  # DOWNLOAD_COMMAND git submodule update
-  DOWNLOAD_DIR ${PROJECT_SOURCE_DIR}
   SOURCE_DIR ${PROJECT_SOURCE_DIR}/pfunit
   BINARY_DIR ${PROJECT_BINARY_DIR}/pfunit-build
   STAMP_DIR ${PROJECT_BINARY_DIR}/pfunit-stamp
@@ -64,7 +70,7 @@ function(build_utest module testlist)
     set(test_dependency pfunit ${source_modulesdirectory}/${module}/tests/${test}.F90)
     add_custom_command(
       OUTPUT ${build_testdirectory}/${test}.F90
-      COMMAND python ${pfunit_directory}/bin/pFUnitParser.py ${source_modulesdirectory}/${module}/tests/${test}.F90 ${build_testdirectory}/${test}.F90
+      COMMAND ${PYTHON_EXECUTABLE} ${pfunit_directory}/bin/pFUnitParser.py ${source_modulesdirectory}/${module}/tests/${test}.F90 ${build_testdirectory}/${test}.F90 
       DEPENDS ${test_dependency}
     )
     set(test_sources ${test_sources} ${build_testdirectory}/${test}.F90)
