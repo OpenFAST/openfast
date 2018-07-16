@@ -7,6 +7,7 @@ subroutine test_BD_InertialMassMatrix()
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
+    use test_tools
     
     implicit none
     
@@ -23,6 +24,7 @@ subroutine test_BD_InertialMassMatrix()
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024) :: testname
+    integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
@@ -31,7 +33,8 @@ subroutine test_BD_InertialMassMatrix()
     nelem = 1
     nqp   = 1
 
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
    
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--simple case:"
@@ -55,6 +58,7 @@ subroutine test_BD_InertialMassMatrix()
 
     call BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
 
+    tolerance = AdjustTol(accuracy, base_Mi)
     @assertEqual(base_Mi, Mi(:, :, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -80,6 +84,7 @@ subroutine test_BD_InertialMassMatrix()
 
     call BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
 
+    tolerance = AdjustTol(accuracy, base_Mi)
     @assertEqual(base_Mi, Mi(:, :, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------

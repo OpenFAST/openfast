@@ -24,12 +24,14 @@ subroutine test_BD_ElasticForce()
     character(1024)  :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024)  :: testname
+    integer(IntKi)   :: accuracy
     real(BDKi)       :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
     
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_static_cantilever_beam reg test--no elastic forces:"
@@ -84,8 +86,11 @@ subroutine test_BD_ElasticForce()
 
     call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
     
+    tolerance = AdjustTol(accuracy, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :,idx_qp,nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Pe)
     @assertEqual(base_Pe, mqp%Pe(:, :,idx_qp,nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Qe)
     @assertEqual(base_Qe, mqp%Qe(:, :,idx_qp,nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -151,8 +156,11 @@ subroutine test_BD_ElasticForce()
 
     call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
     
+    tolerance = AdjustTol(accuracy, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :,idx_qp,nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Pe)
     @assertEqual(base_Pe, mqp%Pe(:, :,idx_qp,nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Qe)
     @assertEqual(base_Qe, mqp%Qe(:, :,idx_qp,nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -215,12 +223,11 @@ subroutine test_BD_ElasticForce()
 
     call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
 
-    ! adjust the tolerance for large numbers to still achieve 16 digits of accuracy
-    tolerance = AdjustTol(16, base_Oe)
+    tolerance = AdjustTol(accuracy, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :,idx_qp,nelem), tolerance, testname)
-    tolerance = AdjustTol(16, base_Pe)
+    tolerance = AdjustTol(accuracy, base_Pe)
     @assertEqual(base_Pe, mqp%Pe(:, :,idx_qp,nelem), tolerance, testname)
-    tolerance = 1e-14
+    tolerance = AdjustTol(accuracy, base_Qe)
     @assertEqual(base_Qe, mqp%Qe(:, :,idx_qp,nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -282,12 +289,11 @@ subroutine test_BD_ElasticForce()
 
     call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
     
-    ! adjust the tolerance for large numbers to still achieve 16 digits of accuracy
-    tolerance = AdjustTol(16, base_Oe)
+    tolerance = AdjustTol(accuracy, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :,idx_qp,nelem), tolerance, testname)
-    tolerance = AdjustTol(16, base_Pe)
+    tolerance = AdjustTol(accuracy, base_Pe)
     @assertEqual(base_Pe, mqp%Pe(:, :,idx_qp,nelem), tolerance, testname)
-    tolerance = 1e-14
+    tolerance = AdjustTol(accuracy, base_Qe)
     @assertEqual(base_Qe, mqp%Qe(:, :,idx_qp,nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------

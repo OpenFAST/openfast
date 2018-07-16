@@ -16,19 +16,21 @@ subroutine test_BD_StifAtDeformedQP()
     real(BDKi)      :: Stif0_QP(6, 6, 1)     !< Sectional Stiffness Properties at quadrature points (6x6xqp)
     real(BDKi)      :: RR0(3, 3, 1, 1)       !< Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$
     real(BDKi)      :: Stif(6, 6, 1, 1)      !< C/S stiffness matrix resolved in inertial frame at current QP
-    real(BDKi)      :: base_Stif(6, 6, 1, 1)
+    real(BDKi)      :: base_Stif(6, 6)
     
     
     integer(IntKi)  :: ErrStat ! Error status of the operation
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024) :: testname
+    integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
    
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_static_cantilever_beam reg test--no rotation:"
@@ -46,11 +48,12 @@ subroutine test_BD_StifAtDeformedQP()
     
     RR0(:, :, 1, nelem) = identity()
     
-    base_Stif(:, :, 1, nelem) = Stif0_QP(:, :, 1)
+    base_Stif(:, :) = Stif0_QP(:, :, 1)
 
     call BD_StifAtDeformedQP( nelem, nqp, Stif0_QP, RR0, Stif )
     
-    @assertEqual(base_Stif, Stif, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Stif)
+    @assertEqual(base_Stif, Stif(:, :, 1, 1), tolerance, testname)
 
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_static_twisted_with_k1 reg test--nonzero rotation:"
@@ -72,18 +75,19 @@ subroutine test_BD_StifAtDeformedQP()
     RR0(3, 3, 1, nelem) = 1.0d0
     
     base_Stif = 0.0d0
-    base_Stif(1, 1, 1, nelem) = 8260416699.9999990
-    base_Stif(2, 2, 1, nelem) = 8260416699.9999990
-    base_Stif(3, 3, 1, nelem) = 25000000000.000000
-    base_Stif(4, 4, 1, nelem) = 520453159.21663064
-    base_Stif(4, 5, 1, nelem) = -12175011.313997522
-    base_Stif(5, 4, 1, nelem) = -12175011.313997524
-    base_Stif(5, 5, 1, nelem) = 130588173.78336938
-    base_Stif(6, 6, 1, nelem) = 141872656.00000000
+    base_Stif(1, 1) = 8260416699.9999990
+    base_Stif(2, 2) = 8260416699.9999990
+    base_Stif(3, 3) = 25000000000.000000
+    base_Stif(4, 4) = 520453159.21663064
+    base_Stif(4, 5) = -12175011.313997522
+    base_Stif(5, 4) = -12175011.313997524
+    base_Stif(5, 5) = 130588173.78336938
+    base_Stif(6, 6) = 141872656.00000000
 
     call BD_StifAtDeformedQP( nelem, nqp, Stif0_QP, RR0, Stif )
     
-    @assertEqual(base_Stif, Stif, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Stif)
+    @assertEqual(base_Stif, Stif(:, :, 1, 1), tolerance, testname)
 
     ! --------------------------------------------------------------------------
     

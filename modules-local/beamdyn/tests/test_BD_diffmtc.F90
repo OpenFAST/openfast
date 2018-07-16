@@ -17,15 +17,19 @@ subroutine test_BD_diffmtc()
     real(BDKi), allocatable    :: test_shape(:,:), test_shapederivative(:,:)
     real(BDKi), allocatable    :: baseline_shape(:,:), baseline_shapederivative(:,:)
     real(BDKi), allocatable    :: gll_nodes(:)
+
     integer(IntKi)             :: ErrStat
     character                  :: ErrMsg
+
     character(1024)            :: testname
+    integer(IntKi)             :: accuracy
     real(BDKi)                 :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
     
     
     ! --------------------------------------------------------------------------
@@ -72,8 +76,10 @@ subroutine test_BD_diffmtc()
     baseline_shape(2,:) = (/ 0.0, 1.0 /)
     baseline_shapederivative(1,:) = (/ -0.5, -0.5 /)
     baseline_shapederivative(2,:) = (/  0.5,  0.5 /)
-    
+
+    tolerance = AdjustTol(accuracy, baseline_shape)
     @assertEqual(baseline_shape, test_shape, tolerance, testname)
+    tolerance = AdjustTol(accuracy, baseline_shapederivative)
     @assertEqual(baseline_shapederivative, test_shapederivative, tolerance, testname)
     
 end subroutine

@@ -7,6 +7,7 @@ subroutine test_BD_AssembleRHS()
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
+    use test_tools
     
     implicit none
     
@@ -22,16 +23,18 @@ subroutine test_BD_AssembleRHS()
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024) :: testname
+    integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
 
+    ! digits of desired accuracy
+    accuracy = 16
+
     nelem               = 1
     node_elem_idx(1, :) = (/ 1, 6 /)
     nodes_per_elem      = 6
-    
-    tolerance           = 1e-14
    
     ! --------------------------------------------------------------------------
     testname = "trivial case--zero global and element stiffness matrices:"
@@ -40,6 +43,7 @@ subroutine test_BD_AssembleRHS()
 
     call BD_AssembleRHS( nelem, node_elem_idx, nodes_per_elem, ElemRHS, GlobalRHS )
     
+    tolerance = AdjustTol(accuracy, base_GlobalRHS)
     @assertEqual(base_GlobalRHS, GlobalRHS, tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -52,6 +56,7 @@ subroutine test_BD_AssembleRHS()
 
     call BD_AssembleRHS( nelem, node_elem_idx, nodes_per_elem, ElemRHS, GlobalRHS )
     
+    tolerance = AdjustTol(accuracy, base_GlobalRHS)
     @assertEqual(base_GlobalRHS, GlobalRHS, tolerance, testname)
 
     ! --------------------------------------------------------------------------

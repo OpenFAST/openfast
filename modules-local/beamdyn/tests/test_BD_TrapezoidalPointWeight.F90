@@ -11,6 +11,7 @@ subroutine test_BD_TrapezoidalPointWeight()
     use pFUnit_mod
     use BeamDyn_Subs
     use NWTC_Num
+    use test_tools
     
     implicit none
     
@@ -22,13 +23,16 @@ subroutine test_BD_TrapezoidalPointWeight()
     
     real(BDKi), allocatable :: BaseLocs(:), BaseWeight(:) ! Baseline quadrature point locations and weights
     
-    character(1024)         :: testname
-    real(BDKi)              :: tolerance
+    character(1024) :: testname
+    integer(IntKi)  :: accuracy
+    real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! FIXME(mjs): seem to only get 14 sig. digit accuracy on this test
+    ! digits of desired accuracy
+    accuracy = 14
     
     ! --------------------------------------------------------------------------
     testname = "test the inputs/outputs from bd_5MW_dynamic:"
@@ -99,7 +103,9 @@ subroutine test_BD_TrapezoidalPointWeight()
     
     call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, numpts, refine, station_eta, station_total)
     
+    tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
+    tolerance = AdjustTol(accuracy, BaseWeight)
     @assertEqual(BaseWeight, QPtWeight, tolerance, testname)
 
     deallocate(QPtLocs, QPtWeight, station_eta, BaseLocs, BaseWeight)
@@ -136,7 +142,9 @@ subroutine test_BD_TrapezoidalPointWeight()
 
     call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, numpts, refine, station_eta, station_total)
     
+    tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
+    tolerance = AdjustTol(accuracy, BaseWeight)
     @assertEqual(BaseWeight, QPtWeight, tolerance, testname)
 
     deallocate(QPtLocs, QPtWeight, station_eta, BaseLocs, BaseWeight)
@@ -175,7 +183,9 @@ subroutine test_BD_TrapezoidalPointWeight()
 
     call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, numpts, refine, station_eta, station_total)
     
+    tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
+    tolerance = AdjustTol(accuracy, BaseWeight)
     @assertEqual(BaseWeight, QPtWeight, tolerance, testname)
 
     deallocate(QPtLocs, QPtWeight, station_eta, BaseLocs, BaseWeight)
@@ -220,7 +230,9 @@ subroutine test_BD_TrapezoidalPointWeight()
 
     call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, numpts, refine, station_eta, station_total)
     
+    tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
+    tolerance = AdjustTol(accuracy, BaseWeight)
     @assertEqual(BaseWeight, QPtWeight, tolerance, testname)
 
     deallocate(QPtLocs, QPtWeight, station_eta, BaseLocs, BaseWeight)
@@ -271,7 +283,9 @@ subroutine test_BD_TrapezoidalPointWeight()
 
     call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, numpts, refine, station_eta, station_total)
     
+    tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
+    tolerance = AdjustTol(accuracy, BaseWeight)
     @assertEqual(BaseWeight, QPtWeight, tolerance, testname)
 
     deallocate(QPtLocs, QPtWeight, station_eta, BaseLocs, BaseWeight)
@@ -307,7 +321,9 @@ subroutine test_BD_TrapezoidalPointWeight()
 
     call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, numpts, refine, station_eta, station_total)
     
+    tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
+    tolerance = AdjustTol(accuracy, BaseWeight)
     @assertEqual(BaseWeight, QPtWeight, tolerance, testname)
 
     deallocate(QPtLocs, QPtWeight, station_eta, BaseLocs, BaseWeight)

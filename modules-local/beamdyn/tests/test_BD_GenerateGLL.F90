@@ -13,17 +13,21 @@ subroutine test_BD_GenerateGLL()
     
     implicit none
     
-    integer                    :: p
-    real(BDKi), allocatable    :: gll_nodes(:), baseline(:)
-    integer(IntKi)             :: ErrStat
-    character                  :: ErrMsg
-    character(1024)            :: testname
-    real(BDKi)                 :: tolerance
+    integer                 :: p
+    real(BDKi), allocatable :: gll_nodes(:), baseline(:)
+    
+    integer(IntKi)          :: ErrStat
+    character               :: ErrMsg
+    
+    character(1024)         :: testname
+    integer(IntKi)          :: accuracy
+    real(BDKi)              :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 15
   
     
     ! the baseline solutions for this unit test can be calculated using the Gauss-Lobatto quadrature
@@ -40,6 +44,7 @@ subroutine test_BD_GenerateGLL()
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
     
+    tolerance = AdjustTol(accuracy, baseline)
     @assertEqual(baseline, gll_nodes, tolerance, testname)
     
     deallocate(baseline)
@@ -54,6 +59,7 @@ subroutine test_BD_GenerateGLL()
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
     
+    tolerance = AdjustTol(accuracy, baseline)
     @assertEqual(baseline, gll_nodes, tolerance, testname)
     
     deallocate(baseline)
@@ -69,6 +75,7 @@ subroutine test_BD_GenerateGLL()
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
     
+    tolerance = AdjustTol(accuracy, baseline)
     @assertEqual(baseline, gll_nodes, tolerance, testname)
     
     deallocate(baseline)
@@ -109,6 +116,7 @@ subroutine test_BD_GenerateGLL()
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
     
+    tolerance = AdjustTol(accuracy, baseline)
     @assertEqual(baseline, gll_nodes, tolerance, testname)
 
     deallocate(baseline)

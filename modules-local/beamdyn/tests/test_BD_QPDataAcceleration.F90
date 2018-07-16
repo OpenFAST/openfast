@@ -7,6 +7,7 @@ subroutine test_BD_QPDataAcceleration()
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
+    use test_tools
     
     implicit none
     
@@ -24,6 +25,7 @@ subroutine test_BD_QPDataAcceleration()
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024) :: testname
+    integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
@@ -34,7 +36,8 @@ subroutine test_BD_QPDataAcceleration()
     nqp                 = 1
     nodes_per_elem      = 6
 
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
    
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--no acceleration:"
@@ -45,6 +48,7 @@ subroutine test_BD_QPDataAcceleration()
 
     call BD_QPDataAcceleration( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, acc, aaa )
 
+    tolerance = AdjustTol(accuracy, base_aaa)
     @assertEqual(base_aaa, aaa(:, 1, 1), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -62,6 +66,7 @@ subroutine test_BD_QPDataAcceleration()
 
     call BD_QPDataAcceleration( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, acc, aaa )
 
+    tolerance = AdjustTol(accuracy, base_aaa)
     @assertEqual(base_aaa, aaa(:, 1, 1), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -89,6 +94,7 @@ subroutine test_BD_QPDataAcceleration()
 
     call BD_QPDataAcceleration( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, acc, aaa )
 
+    tolerance = AdjustTol(accuracy, base_aaa)
     @assertEqual(base_aaa, aaa(:, 1, 1), tolerance, testname)
 
     ! --------------------------------------------------------------------------

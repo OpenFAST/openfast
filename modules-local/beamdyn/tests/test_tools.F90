@@ -5,8 +5,11 @@ use BeamDyn_Types
 implicit none
 
 INTERFACE AdjustTol 
+   MODULE PROCEDURE AdjustTol0
    MODULE PROCEDURE AdjustTol1
    MODULE PROCEDURE AdjustTol2
+   MODULE PROCEDURE AdjustTol3
+   MODULE PROCEDURE AdjustTol4
 END INTERFACE
   
 contains  
@@ -244,7 +247,22 @@ contains
         
     end function
 
-    ! these adjust the tolerance to capture 'acc' digits of accuracy, based on the order of 'param' (given a 1 or 2 dimensional array)
+    ! these adjust the tolerance to capture 'acc' digits of accuracy, based on the order of 'param' (given a scalar, 1-4 dimensional array)
+
+    real(BDKi) function AdjustTol0(acc, param)
+        use BeamDyn_Subs
+        implicit none
+        
+        integer(IntKi) :: acc
+        real(BDKi)     :: param
+
+        if (param == 0.0d0) then
+            AdjustTol0 = 10.0d0**(-acc)
+        else
+            AdjustTol0 = 10.0d0**max((-acc + ceiling(log10(abs(param)))), -acc)
+        endif
+
+    end function
 
     real(BDKi) function AdjustTol1(acc, param)
         use BeamDyn_Subs
@@ -252,8 +270,12 @@ contains
         
         integer(IntKi) :: acc
         real(BDKi)     :: param(:)
-        
-        AdjustTol1 = 1.0d0 * 10.0d0**(-acc + ceiling(maxval(log10(abs(param)))))
+
+        if (all(param == 0.0d0)) then
+            AdjustTol1 = 10.0d0**(-acc)
+        else
+            AdjustTol1 = 10.0d0**max((-acc + ceiling(maxval(log10(abs(param))))), -acc)
+        endif
 
     end function
 
@@ -263,8 +285,42 @@ contains
         
         integer(IntKi) :: acc
         real(BDKi)     :: param(:, :)
+
+        if (all(param == 0.0d0)) then
+            AdjustTol2 = 10.0d0**(-acc)
+        else
+            AdjustTol2 = 10.0d0**max((-acc + ceiling(maxval(log10(abs(param))))), -acc)
+        endif
+
+    end function
+
+    real(BDKi) function AdjustTol3(acc, param)
+        use BeamDyn_Subs
+        implicit none
         
-        AdjustTol2 = 1.0d0 * 10.0d0**(-acc + ceiling(maxval(log10(abs(param)))))
+        integer(IntKi) :: acc
+        real(BDKi)     :: param(:, :, :)
+
+        if (all(param == 0.0d0)) then
+            AdjustTol3 = 10.0d0**(-acc)
+        else
+            AdjustTol3 = 10.0d0**max((-acc + ceiling(maxval(log10(abs(param))))), -acc)
+        endif
+
+    end function
+
+    real(BDKi) function AdjustTol4(acc, param)
+        use BeamDyn_Subs
+        implicit none
+        
+        integer(IntKi) :: acc
+        real(BDKi)     :: param(:, :, :, :)
+
+        if (all(param == 0.0d0)) then
+            AdjustTol4 = 10.0d0**(-acc)
+        else
+            AdjustTol4 = 10.0d0**max((-acc + ceiling(maxval(log10(abs(param))))), -acc)
+        endif
 
     end function
     

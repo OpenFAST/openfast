@@ -10,20 +10,24 @@ subroutine test_BD_GravityForce()
     
     implicit none
     
-    integer                    :: i, j
-    real(BDKi)                 :: gravity(3)
-    type(BD_ParameterType)     :: parametertype
-    type(BD_MiscVarType)       :: miscvartype
-    real(BDKi)                 :: baseline(6)
-    integer(IntKi)             :: ErrStat
-    character                  :: ErrMsg
-    character(1024)            :: testname
-    real(BDKi)                 :: tolerance
+    integer                :: i, j
+    real(BDKi)             :: gravity(3)
+    type(BD_ParameterType) :: parametertype
+    type(BD_MiscVarType)   :: miscvartype
+    real(BDKi)             :: baseline(6)
+    
+    integer(IntKi)         :: ErrStat
+    character              :: ErrMsg
+    
+    character(1024)        :: testname
+    integer(IntKi)         :: accuracy
+    real(BDKi)             :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
     
     
     ! --------------------------------------------------------------------------
@@ -41,6 +45,7 @@ subroutine test_BD_GravityForce()
     call BD_GravityForce(1, parametertype%nqp, parametertype%qp%mmm, miscvartype%qp%Fg, miscvartype%qp%RR0mEta, gravity)
     
     ! test the values
+    tolerance = AdjustTol(accuracy, baseline)
     @assertEqual(baseline, miscvartype%qp%Fg(:,1,1), tolerance, testname)
     
 end subroutine

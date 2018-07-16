@@ -7,6 +7,7 @@ subroutine test_BD_DissipativeForce()
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
+    use test_tools
     
     implicit none
     
@@ -23,6 +24,7 @@ subroutine test_BD_DissipativeForce()
     character(1024)  :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024)  :: testname
+    integer(IntKi)   :: accuracy
     real(BDKi)       :: tolerance
     
     ! initialize NWTC_Num constants
@@ -46,7 +48,8 @@ subroutine test_BD_DissipativeForce()
     call AllocAry(mqp%Fc, 6, nqp, nelem, 'qp_Fc', ErrStat, ErrMsg)
     call AllocAry(mqp%Fd, 6, nqp, nelem, 'qp_Fd', ErrStat, ErrMsg)
 
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
    
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--simple case with fact == false:"
@@ -87,15 +90,25 @@ subroutine test_BD_DissipativeForce()
 
     call BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
     
+    tolerance = AdjustTol(accuracy, base_betaC)
     @assertEqual(base_betaC, mqp%betaC(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Sd)
     @assertEqual(base_Sd, mqp%Sd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Pd)
     @assertEqual(base_Pd, mqp%Pd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Od)
     @assertEqual(base_Od, mqp%Od(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Qd)
     @assertEqual(base_Qd, mqp%Qd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Gd)
     @assertEqual(base_Gd, mqp%Gd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Xd)
     @assertEqual(base_Xd, mqp%Xd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Yd)
     @assertEqual(base_Yd, mqp%Yd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Fc)
     @assertEqual(base_Fc, mqp%Fc(:, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -162,15 +175,25 @@ subroutine test_BD_DissipativeForce()
 
     call BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
     
+    tolerance = AdjustTol(accuracy, base_betaC)
     @assertEqual(base_betaC, mqp%betaC(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Sd)
     @assertEqual(base_Sd, mqp%Sd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Pd)
     @assertEqual(base_Pd, mqp%Pd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Od)
     @assertEqual(base_Od, mqp%Od(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Qd)
     @assertEqual(base_Qd, mqp%Qd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Gd)
     @assertEqual(base_Gd, mqp%Gd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Xd)
     @assertEqual(base_Xd, mqp%Xd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Yd)
     @assertEqual(base_Yd, mqp%Yd(:, :, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Fc)
     @assertEqual(base_Fc, mqp%Fc(:, 1, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------

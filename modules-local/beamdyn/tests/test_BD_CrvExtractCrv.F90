@@ -15,15 +15,19 @@ subroutine test_BD_CrvExtractCrv()
     real(BDKi), dimension(3,3) :: r
     real(BDKi), dimension(3)   :: test_wmparams, baseline_wmparams
     real(BDKi)                 :: angle, n(3)
+    
     character(1024)            :: testname
+    integer(IntKi)             :: accuracy
     real(BDKi)                 :: tolerance
+    
     integer(IntKi)             :: ErrStat
     character                  :: ErrMsg
 
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
     
     ! set the rotation axis for all tests
     n = (/ 1, 0, 0 /) ! x axis
@@ -39,7 +43,9 @@ subroutine test_BD_CrvExtractCrv()
     r = RonXAxis(angle)
     call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
     
+    tolerance = AdjustTol(accuracy, 0.0)
     @assertEqual(0.0, ErrStat, tolerance, testname)
+    tolerance = AdjustTol(accuracy, baseline_wmparams)
     @assertEqual(baseline_wmparams, test_wmparams, tolerance, testname)
     
     
@@ -53,7 +59,9 @@ subroutine test_BD_CrvExtractCrv()
     r = RonXAxis(angle)
     call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
     
+    tolerance = AdjustTol(accuracy, 0.0)
     @assertEqual(0.0, ErrStat, tolerance, testname)
+    tolerance = AdjustTol(accuracy, baseline_wmparams)
     @assertEqual(baseline_wmparams, test_wmparams, tolerance, testname)
     
     
@@ -67,7 +75,9 @@ subroutine test_BD_CrvExtractCrv()
     r = RonXAxis(angle)
     call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
     
+    tolerance = AdjustTol(accuracy, 0.0)
     @assertEqual(0.0, ErrStat, tolerance, testname)
+    tolerance = AdjustTol(accuracy, baseline_wmparams)
     @assertEqual(baseline_wmparams, test_wmparams, tolerance, testname)
         
 end subroutine test_BD_CrvExtractCrv

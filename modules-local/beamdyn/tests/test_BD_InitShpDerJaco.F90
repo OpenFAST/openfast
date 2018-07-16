@@ -10,21 +10,25 @@ subroutine test_BD_InitShpDerJaco()
     
     implicit none
     
-    integer(IntKi)             :: i, j, idx_qp, nelem
-    type(BD_ParameterType)     :: p
-    real(BDKi), allocatable    :: gll_nodes(:), inp_QPtWeight(:)
-    real(BDKi), allocatable    :: baseline_Shp(:,:), baseline_ShpDer(:,:), baseline_jacobian(:,:), baseline_QPtw_ShpDer(:,:)
-    real(BDKi), allocatable    :: baseline_QPtw_Shp_ShpDer(:,:,:), baseline_QPtw_Shp_Jac(:,:,:)
-    real(BDKi), allocatable    :: baseline_QPtw_Shp_Shp_Jac(:,:,:,:), baseline_QPtw_ShpDer_ShpDer_Jac(:,:,:,:)
-    integer(IntKi)             :: ErrStat
-    character                  :: ErrMsg
-    character(1024)            :: testname
-    real(BDKi)                 :: tolerance
+    integer(IntKi)          :: i, j, idx_qp, nelem
+    type(BD_ParameterType)  :: p
+    real(BDKi), allocatable :: gll_nodes(:), inp_QPtWeight(:)
+    real(BDKi), allocatable :: baseline_Shp(:,:), baseline_ShpDer(:,:), baseline_jacobian(:,:), baseline_QPtw_ShpDer(:,:)
+    real(BDKi), allocatable :: baseline_QPtw_Shp_ShpDer(:,:,:), baseline_QPtw_Shp_Jac(:,:,:)
+    real(BDKi), allocatable :: baseline_QPtw_Shp_Shp_Jac(:,:,:,:), baseline_QPtw_ShpDer_ShpDer_Jac(:,:,:,:)
+    
+    integer(IntKi)          :: ErrStat
+    character               :: ErrMsg
+    
+    character(1024)         :: testname
+    integer(IntKi)          :: accuracy
+    real(BDKi)              :: tolerance
 
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
     
     
     ! --------------------------------------------------------------------------
@@ -120,7 +124,9 @@ subroutine test_BD_InitShpDerJaco()
     ! check the baseline shape functions and their derivatives
     do idx_qp = 1, p%nqp
        do j = 1, p%nodes_per_elem
+           tolerance = AdjustTol(accuracy, baseline_Shp(j,idx_qp))
            @assertEqual(baseline_Shp(j,idx_qp)   , p%Shp(j,idx_qp)   , tolerance, testname)
+           tolerance = AdjustTol(accuracy, baseline_ShpDer(j,idx_qp))
            @assertEqual(baseline_ShpDer(j,idx_qp), p%ShpDer(j,idx_qp), tolerance, testname)
        end do
     end do
@@ -128,6 +134,7 @@ subroutine test_BD_InitShpDerJaco()
     ! check the baseline jacobian
     do nelem = 1, p%elem_total
         do idx_qp = 1, p%nqp
+            tolerance = AdjustTol(accuracy, baseline_jacobian(nelem,idx_qp))
             @assertEqual(baseline_jacobian(nelem,idx_qp), p%jacobian(nelem,idx_qp), tolerance, testname)
         end do
     end do
@@ -139,10 +146,12 @@ subroutine test_BD_InitShpDerJaco()
                 do i = 1, p%nodes_per_elem
                     ! Check the variable N*N^T*Jacobian
                     baseline_QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem) = baseline_Shp(i,idx_qp)*baseline_Shp(j,idx_qp)*inp_QPtWeight(idx_qp)*baseline_jacobian(idx_qp,nelem)
+                    tolerance = AdjustTol(accuracy, baseline_QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem))
                     @assertEqual(baseline_QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem), p%QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem), tolerance, testname)
 
                     ! Check the variable dN*dN^T*Jacobian
                     baseline_QPtw_ShpDer_ShpDer_Jac(idx_qp,i,j,nelem) = baseline_ShpDer(i,idx_qp)*baseline_ShpDer(j,idx_qp)*inp_QPtWeight(idx_qp)/baseline_jacobian(idx_qp,nelem)
+                    tolerance = AdjustTol(accuracy, baseline_QPtw_ShpDer_ShpDer_Jac(idx_qp,i,j,nelem))
                     @assertEqual(baseline_QPtw_ShpDer_ShpDer_Jac(idx_qp,i,j,nelem), p%QPtw_ShpDer_ShpDer_Jac(idx_qp,i,j,nelem), tolerance, testname)
                 end do
             end do
@@ -154,6 +163,7 @@ subroutine test_BD_InitShpDerJaco()
         do j = 1, p%nodes_per_elem
             do i = 1, p%nodes_per_elem
                 baseline_QPtw_Shp_ShpDer(idx_qp,i,j) = baseline_Shp(i,idx_qp)*baseline_ShpDer(j,idx_qp)*inp_QPtWeight(idx_qp)
+                tolerance = AdjustTol(accuracy, baseline_QPtw_Shp_ShpDer(idx_qp,i,j))
                 @assertEqual(baseline_QPtw_Shp_ShpDer(idx_qp,i,j), p%QPtw_Shp_ShpDer(idx_qp,i,j), tolerance, testname)
             end do
         end do
@@ -164,6 +174,7 @@ subroutine test_BD_InitShpDerJaco()
         do i = 1, p%nodes_per_elem
             do idx_qp = 1, p%nqp
                 baseline_QPtw_Shp_Jac(idx_qp,i,nelem) = baseline_Shp(i,idx_qp)*inp_QPtWeight(idx_qp)*baseline_Jacobian(idx_qp,nelem)
+                tolerance = AdjustTol(accuracy, baseline_QPtw_Shp_Jac(idx_qp,i,nelem))
                 @assertEqual(baseline_QPtw_Shp_Jac(idx_qp,i,nelem), p%QPtw_Shp_Jac(idx_qp,i,nelem), tolerance, testname)
             end do
         end do
@@ -173,6 +184,7 @@ subroutine test_BD_InitShpDerJaco()
     do i = 1, p%nodes_per_elem
         do idx_qp = 1, p%nqp
             baseline_QPtw_ShpDer(idx_qp,i) = baseline_ShpDer(i,idx_qp)*inp_QPtWeight(idx_qp)
+            tolerance = AdjustTol(accuracy, baseline_QPtw_ShpDer(idx_qp,i))
             @assertEqual(baseline_QPtw_ShpDer(idx_qp,i), p%QPtw_ShpDer(idx_qp,i), tolerance, testname)
         end do
     end do

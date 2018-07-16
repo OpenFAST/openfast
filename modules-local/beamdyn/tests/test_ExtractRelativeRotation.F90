@@ -11,8 +11,12 @@ subroutine test_ExtractRelativeRotation()
     
     real(BDKi), dimension(3)    :: rr, Glb_crv
     real(BDKi), dimension(3, 3) :: GlbRot
+    real(BDKi),  dimension(3)   :: base_rr
+
     character(1024)             :: testname
+    integer(IntKi)              :: accuracy
     real(BDKi)                  :: tolerance
+
     integer(IntKi)              :: ErrStat
     character                   :: ErrMsg
     
@@ -21,7 +25,8 @@ subroutine test_ExtractRelativeRotation()
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
     
     
     ! --------------------------------------------------------------------------
@@ -29,8 +34,10 @@ subroutine test_ExtractRelativeRotation()
 
     Glb_crv = (/ 0.0, 0.0, 0.0 /)
     GlbRot = identity()
+    base_rr = (/ 0.0, 0.0, 0.0 /)
     
     call ExtractRelativeRotation(identity(), Glb_crv, GlbRot, rr, ErrStat, ErrMsg)
     
-    @assertEqual((/ 0.0, 0.0, 0.0 /), rr, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_rr)
+    @assertEqual(base_rr, rr, tolerance, testname)
 end subroutine

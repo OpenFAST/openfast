@@ -10,19 +10,24 @@ subroutine test_BD_DistrLoadCopy()
     
     implicit none
     
-    integer                    :: i, j
-    type(BD_ParameterType)     :: parametertype
-    type(BD_InputType)         :: inputtype
-    type(BD_MiscVarType)       :: miscvartype
-    integer(IntKi)             :: ErrStat
-    character                  :: ErrMsg
-    character(1024)            :: testname
-    real(BDKi)                 :: tolerance
+    integer                :: i, j
+    type(BD_ParameterType) :: parametertype
+    type(BD_InputType)     :: inputtype
+    type(BD_MiscVarType)   :: miscvartype
+    real(BDKi)             :: baseline(3)
+    
+    integer(IntKi)         :: ErrStat
+    character              :: ErrMsg
+    
+    character(1024)        :: testname
+    integer(IntKi)         :: accuracy
+    real(BDKi)             :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
     
     
     ! --------------------------------------------------------------------------
@@ -37,8 +42,12 @@ subroutine test_BD_DistrLoadCopy()
 
     do j = 1, parametertype%elem_total
         do i = 1, parametertype%nqp
-            @assertEqual((/  9*(j-1)+3*(i-1)+1,  9*(j-1)+3*(i-1)+2,  9*(j-1)+3*(i-1)+3 /), miscvartype%DistrLoad_QP(1:3,i,j))
-            @assertEqual((/ -9*(j-1)-3*(i-1)-1, -9*(j-1)-3*(i-1)-2, -9*(j-1)-3*(i-1)-3 /), miscvartype%DistrLoad_QP(4:6,i,j))
+            baseline = (/  9*(j-1)+3*(i-1)+1,  9*(j-1)+3*(i-1)+2,  9*(j-1)+3*(i-1)+3 /)
+            tolerance = AdjustTol(accuracy, baseline)
+            @assertEqual(baseline, miscvartype%DistrLoad_QP(1:3,i,j))
+            baseline = (/ -9*(j-1)-3*(i-1)-1, -9*(j-1)-3*(i-1)-2, -9*(j-1)-3*(i-1)-3 /)
+            tolerance = AdjustTol(accuracy, baseline)
+            @assertEqual(baseline, miscvartype%DistrLoad_QP(4:6,i,j))
         end do
     end do
 end subroutine

@@ -24,12 +24,14 @@ subroutine test_BD_BoundaryGA2()
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024) :: testname
+    integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance  = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
 
     call AllocAry(x%q, 6, 6, 'x_q', ErrStat, ErrMsg)
     call AllocAry(x%dqdt, 6, 6, 'x_dqdt', ErrStat, ErrMsg)
@@ -59,8 +61,11 @@ subroutine test_BD_BoundaryGA2()
 
     call BD_BoundaryGA2(x, RootMotion, GlbRot, Glb_crv, acc, ErrStat, ErrMsg)
     
+    tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, x%q(:, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_dqdt)
     @assertEqual(base_dqdt, x%dqdt(:, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_acc)
     @assertEqual(base_acc, acc(:, 1), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -88,8 +93,11 @@ subroutine test_BD_BoundaryGA2()
 
     call BD_BoundaryGA2(x, RootMotion, GlbRot, Glb_crv, acc, ErrStat, ErrMsg)
     
+    tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, x%q(:, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_dqdt)
     @assertEqual(base_dqdt, x%dqdt(:, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_acc)
     @assertEqual(base_acc, acc(:, 1), tolerance, testname)
 
     ! --------------------------------------------------------------------------

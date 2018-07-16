@@ -25,13 +25,15 @@ subroutine test_Calc_Fc_Fd()
     integer(IntKi)   :: ErrStat ! Error status of the operation
     character(1024)  :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
-    character(1024)  :: testname
-    real(BDKi)       :: tolerance
+    character(1024) :: testname
+    integer(IntKi)  :: accuracy
+    real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
    
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_static_cantilever_beam reg test--no elastic forces:"
@@ -75,9 +77,13 @@ subroutine test_Calc_Fc_Fd()
 
     call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
     
+    tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, idx_qp, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Fc)
     @assertEqual(base_Fc, mqp%Fc(:, idx_qp, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_cet)
     @assertEqual(base_cet, cet, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_k1s)
     @assertEqual(base_k1s, k1s, tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -126,9 +132,13 @@ subroutine test_Calc_Fc_Fd()
 
     call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
     
+    tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, idx_qp, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Fc)
     @assertEqual(base_Fc, mqp%Fc(:, idx_qp, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_cet)
     @assertEqual(base_cet, cet, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_k1s)
     @assertEqual(base_k1s, k1s, tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -174,9 +184,13 @@ subroutine test_Calc_Fc_Fd()
 
     call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
     
+    tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, idx_qp, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_Fc)
     @assertEqual(base_Fc, mqp%Fc(:, idx_qp, nelem), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_cet)
     @assertEqual(base_cet, cet, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_k1s)
     @assertEqual(base_k1s, k1s, tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -222,12 +236,13 @@ subroutine test_Calc_Fc_Fd()
 
     call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
     
+    tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, idx_qp, nelem), tolerance, testname)
-    ! adjust the tolerance for large numbers to still achieve 16 digits of accuracy
-    tolerance = AdjustTol(16, base_Fc)
+    tolerance = AdjustTol(accuracy, base_Fc)
     @assertEqual(base_Fc, mqp%Fc(:, idx_qp, nelem), tolerance, testname)
-    tolerance = 1e-14
+    tolerance = AdjustTol(accuracy, base_cet)
     @assertEqual(base_cet, cet, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_k1s)
     @assertEqual(base_k1s, k1s, tolerance, testname)
 
     ! --------------------------------------------------------------------------

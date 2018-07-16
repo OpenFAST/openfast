@@ -8,20 +8,24 @@ subroutine test_BD_QPData_mEta_rho()
     
     implicit none
     
-    integer                    :: i, j
-    type(BD_MiscVarType)       :: miscvartype
-    type(BD_ParameterType)     :: parametertype
-    real(BDKi)                 :: baselineRho(3,3), baselineRR0mEta(3)
-    character(1024)            :: testname
-    real(BDKi)                 :: tolerance
-    integer(IntKi)             :: ErrStat
-    character                  :: ErrMsg
+    integer                :: i, j
+    type(BD_MiscVarType)   :: miscvartype
+    type(BD_ParameterType) :: parametertype
+    real(BDKi)             :: baselineRho(3,3), baselineRR0mEta(3)
+
+    character(1024)        :: testname
+    integer(IntKi)         :: accuracy
+    real(BDKi)             :: tolerance
+    
+    integer(IntKi)         :: ErrStat
+    character              :: ErrMsg
     
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
     
     
     ! --------------------------------------------------------------------------
@@ -44,7 +48,9 @@ subroutine test_BD_QPData_mEta_rho()
     
     do j=1, parametertype%elem_total
         do i=1, parametertype%nqp
+            tolerance = AdjustTol(accuracy, baselineRho)
             @assertEqual(baselineRho, miscvartype%qp%rho(:,:,i,j), tolerance, testname)
+            tolerance = AdjustTol(accuracy, baselineRR0mEta)
             @assertEqual(baselineRR0mEta, miscvartype%qp%RR0mEta(:,i,j), tolerance, testname)
         end do
     end do

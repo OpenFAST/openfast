@@ -19,15 +19,19 @@ subroutine test_BD_CrvMatrixR()
     real(BDKi), dimension(3,3) :: testR, baselineR
     real(BDKi), dimension(3)   :: wmparams
     real(BDKi)                 :: angle, n(3)
+    
     character(1024)            :: testname
+    integer(IntKi)             :: accuracy
     real(BDKi)                 :: tolerance
+    
     integer(IntKi)             :: ErrStat
     character                  :: ErrMsg
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 15
     
     ! set the rotation axis for all tests
     n = (/ 1, 0, 0 /) ! x axis
@@ -43,6 +47,7 @@ subroutine test_BD_CrvMatrixR()
     wmparams = (/ 4.0, 0.0, 0.0 /)
     call BD_CrvMatrixR(wmparams, testR)
     
+    tolerance = AdjustTol(accuracy, baselineR)
     @assertEqual(baselineR, testR, tolerance, testname)
     
     
@@ -56,6 +61,7 @@ subroutine test_BD_CrvMatrixR()
     wmparams = (/ 0.0, 0.0, 0.0 /)
     call BD_CrvMatrixR(wmparams, testR)
     
+    tolerance = AdjustTol(accuracy, baselineR)
     @assertEqual(baselineR, testR, tolerance, testname)
     
     
@@ -69,6 +75,7 @@ subroutine test_BD_CrvMatrixR()
     wmparams = 4*tan(angle/4)*n
     call BD_CrvMatrixR(wmparams, testR)
     
+    tolerance = AdjustTol(accuracy, baselineR)
     @assertEqual(baselineR, testR, tolerance, testname)
       
 end subroutine test_BD_CrvMatrixR

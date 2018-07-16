@@ -20,23 +20,28 @@ subroutine test_BD_InputGlobalLocal()
     
     implicit none
     
-    integer                    :: i, totalnodes
-    type(BD_ParameterType)     :: parametertype
-    type(BD_InputType)         :: inputtype
-    real(BDKi), dimension(3)   :: vectorInit, vectorAfterRotation, rotationaxis
-    integer(IntKi)             :: ErrStat
-    character                  :: ErrMsg
-    character(1024)            :: testname
-    real(BDKi)                 :: tolerance
+    integer                  :: i, totalnodes
+    type(BD_ParameterType)   :: parametertype
+    type(BD_InputType)       :: inputtype
+    real(BDKi), dimension(3) :: vectorInit, vectorAfterRotation, rotationaxis
+    
+    integer(IntKi)           :: ErrStat
+    character                :: ErrMsg
+    
+    character(1024)          :: testname
+    integer(IntKi)           :: accuracy
+    real(BDKi)               :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
-    
+
+    ! digits of desired accuracy
+    accuracy = 15
+
     
     ! --------------------------------------------------------------------------
     testname = "test_BD_InputGlobalLocal:"
     
-    tolerance = 1e-14
     totalnodes = 2
     vectorInit = (/ 0.0, 0.0, 1.0 /)
     vectorAfterRotation = (/ 0.0, 0.0, -1.0 /)
@@ -80,6 +85,7 @@ subroutine test_BD_InputGlobalLocal()
     call BD_InputGlobalLocal(parametertype%GlbRot, parametertype%node_total, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad)
     
     ! test the values
+    tolerance = AdjustTol(accuracy, vectorAfterRotation)
     @assertEqual(inputtype%RootMotion%TranslationDisp(:,1), vectorAfterRotation, tolerance, testname)
     @assertEqual(inputtype%RootMotion%TranslationVel(:,1) , vectorAfterRotation, tolerance, testname)
     @assertEqual(inputtype%RootMotion%RotationVel(:,1)    , vectorAfterRotation, tolerance, testname)

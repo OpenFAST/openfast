@@ -8,6 +8,7 @@ subroutine test_BD_UpdateDiscState()
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
+    use test_tools
     
     implicit none
     
@@ -27,12 +28,14 @@ subroutine test_BD_UpdateDiscState()
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024) :: testname
+    integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance           = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
    
     ! --------------------------------------------------------------------------
     testname = "trivial case--UsePitchAct == false => discrete states should not change:"
@@ -49,7 +52,9 @@ subroutine test_BD_UpdateDiscState()
 
     call BD_UpdateDiscState( RM_Orientation, HM_Orientation, UsePitchAct, torqM, pitchK, dt, pitchJ, xd )
     
+    tolerance = AdjustTol(accuracy, base_thetaP)
     @assertEqual(base_thetaP, xd%thetaP, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_thetaPD)
     @assertEqual(base_thetaPD, xd%thetaPD, tolerance, testname)
 
     ! --------------------------------------------------------------------------

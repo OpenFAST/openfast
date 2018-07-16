@@ -7,6 +7,7 @@ subroutine test_BD_UpdateDynamicGA2()
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
+    use test_tools
     
     implicit none
     
@@ -24,12 +25,14 @@ subroutine test_BD_UpdateDynamicGA2()
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024) :: testname
+    integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance  = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
     
     node_total = 2
     idx        = 2
@@ -71,9 +74,13 @@ subroutine test_BD_UpdateDynamicGA2()
 
     call BD_UpdateDynamicGA2( node_total, coef, Solution, x, OtherState )
     
+    tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, x%q(:, idx), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_dqdt)
     @assertEqual(base_dqdt, x%dqdt(:, idx), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_acc)
     @assertEqual(base_acc, OtherState%acc(:, idx), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_xcc)
     @assertEqual(base_xcc, OtherState%xcc(:, idx), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -110,9 +117,13 @@ subroutine test_BD_UpdateDynamicGA2()
 
     call BD_UpdateDynamicGA2( node_total, coef, Solution, x, OtherState )
     
+    tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, x%q(:, idx), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_dqdt)
     @assertEqual(base_dqdt, x%dqdt(:, idx), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_acc)
     @assertEqual(base_acc, OtherState%acc(:, idx), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_xcc)
     @assertEqual(base_xcc, OtherState%xcc(:, idx), tolerance, testname)
 
     ! --------------------------------------------------------------------------

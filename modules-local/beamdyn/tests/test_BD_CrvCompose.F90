@@ -26,12 +26,14 @@ subroutine test_BD_CrvCompose()
     ! other test settings
     integer                    :: flag
     character(1024)            :: testname
+    integer(IntKi)             :: accuracy
     real(BDKi)                 :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
     
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 15
     
     ! set the rotation axes for all tests
     n1 = (/ 1, 0, 0 /) ! x axis
@@ -52,6 +54,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
     
+    tolerance = AdjustTol(accuracy, baselinerotation)
     @assertEqual(baselinerotation, testrotation, tolerance, testname)
     
     
@@ -68,6 +71,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
     
+    tolerance = AdjustTol(accuracy, baselinerotation)
     @assertEqual(baselinerotation, testrotation, tolerance, testname)
       
     
@@ -84,6 +88,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
     
+    tolerance = AdjustTol(accuracy, baselinerotation)
     @assertEqual(baselinerotation, testrotation, tolerance, testname)
     
     
@@ -100,6 +105,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
     
+    tolerance = AdjustTol(accuracy, baselinerotation)
     @assertEqual(baselinerotation, testrotation, tolerance, testname)
     
     
@@ -116,6 +122,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
     
+    tolerance = AdjustTol(accuracy, baselinerotation)
     @assertEqual(baselinerotation, testrotation, tolerance, testname)
     
     
@@ -132,6 +139,7 @@ subroutine test_BD_CrvCompose()
     call BD_CrvCompose(composedparams, 4*tan(angle1/4)*n1, 4*tan(angle2/4)*n2, flag)
     call BD_CrvMatrixR(composedparams, testrotation)
     
+    tolerance = AdjustTol(accuracy, baselinerotation)
     @assertEqual(baselinerotation, testrotation, tolerance, testname)
     
 end subroutine

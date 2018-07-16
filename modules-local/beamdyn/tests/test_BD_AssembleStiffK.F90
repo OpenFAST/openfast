@@ -7,6 +7,7 @@ subroutine test_BD_AssembleStiffK()
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
+    use test_tools
     
     implicit none
     
@@ -23,17 +24,20 @@ subroutine test_BD_AssembleStiffK()
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024) :: testname
+    integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
     call SetConstants()
 
+    ! digits of desired accuracy
+    accuracy = 16
+
     nelem               = 1
     node_elem_idx(1, :) = (/ 1, 6 /)
     nodes_per_elem      = 6
     dof_node            = 6
-    
-    tolerance           = 1e-14
+
    
     ! --------------------------------------------------------------------------
     testname = "trivial case--zero global and element stiffness matrices:"
@@ -42,6 +46,7 @@ subroutine test_BD_AssembleStiffK()
 
     call BD_AssembleStiffK( nelem, node_elem_idx, nodes_per_elem, dof_node, ElemK, GlobalK )
     
+    tolerance = AdjustTol(accuracy, base_GlobalK)
     @assertEqual(base_GlobalK, GlobalK, tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -54,6 +59,7 @@ subroutine test_BD_AssembleStiffK()
 
     call BD_AssembleStiffK( nelem, node_elem_idx, nodes_per_elem, dof_node, ElemK, GlobalK )
     
+    tolerance = AdjustTol(accuracy, base_GlobalK)
     @assertEqual(base_GlobalK, GlobalK, tolerance, testname)
 
     ! --------------------------------------------------------------------------

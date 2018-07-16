@@ -7,6 +7,7 @@ subroutine test_BD_GyroForce()
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
+    use test_tools
     
     implicit none
     
@@ -23,6 +24,7 @@ subroutine test_BD_GyroForce()
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
     
     character(1024) :: testname
+    integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
     
     ! initialize NWTC_Num constants
@@ -31,7 +33,8 @@ subroutine test_BD_GyroForce()
     nelem = 1
     nqp   = 1
 
-    tolerance = 1e-14
+    ! digits of desired accuracy
+    accuracy = 16
    
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--simple case:"
@@ -49,6 +52,7 @@ subroutine test_BD_GyroForce()
 
     call BD_GyroForce( nelem, nqp, vvv, RR0mEta, rho, Fb )
 
+    tolerance = AdjustTol(accuracy, base_Fb)
     @assertEqual(base_Fb, Fb(:, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -68,6 +72,7 @@ subroutine test_BD_GyroForce()
 
     call BD_GyroForce( nelem, nqp, vvv, RR0mEta, rho, Fb )
 
+    tolerance = AdjustTol(accuracy, base_Fb)
     @assertEqual(base_Fb, Fb(:, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
