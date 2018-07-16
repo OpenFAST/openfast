@@ -493,7 +493,7 @@ SUBROUTINE BD_GaussPointWeight(n, x, w, ErrStat, ErrMsg)
    REAL(BDKi),    INTENT(  OUT):: x(n)    !< Gauss point location (p%QPtN)
    REAL(BDKi),    INTENT(  OUT):: w(n)    !< Gauss point weight (p%QPtWeight)
    INTEGER(IntKi),INTENT(  OUT):: ErrStat !< Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg  !< Error message if ErrStat /=
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg  !< Error message if ErrStat /= ErrID_None
 
    ! local variables
 
@@ -877,7 +877,7 @@ subroutine Find_IniNode(kp_coordinate, segment_length, SP_Coef, member_first_kp,
 
    REAL(BDKi),                   intent(in   )  :: kp_coordinate(:,:)  !< Key Point coordinates
    REAL(BDKi),                   intent(in   )  :: segment_length(:,:) !< Array stored length of each segment
-   REAL(BDKi),                   intent(in   )  :: SP_Coef(:,:,:)        !< Coefficients for cubic spline interpolation
+   REAL(BDKi),                   intent(in   )  :: SP_Coef(:,:,:)      !< Coefficients for cubic spline interpolation
    INTEGER(IntKi),               intent(in   )  :: member_first_kp     !< index of the first key point on a particular member
    INTEGER(IntKi),               intent(in   )  :: member_last_kp      !< index of the last key point on a particular member
    REAL(BDKi),                   intent(in   )  :: eta                 !! relative position of desired node, [0,1]

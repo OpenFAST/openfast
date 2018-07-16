@@ -1672,7 +1672,7 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    ErrMsg  = ""
 
    IF(p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
-       CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+       CALL BD_GA2( t, n, u, utimes, p, x, xd, OtherState, m, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
        CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
    ENDIF
@@ -3373,7 +3373,6 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
    TYPE(BD_InputType)                            :: u_interp                     !
    TYPE(BD_InputType)                            :: u_temp                       ! a temporary variable that holds gradual increase of loads
-   INTEGER(IntKi)                                :: i
    INTEGER(IntKi)                                :: j
    INTEGER(IntKi)                                :: piter
    REAL(BDKi)                                    :: gravity_temp(3)
@@ -3864,13 +3863,9 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
    RETURN
 END SUBROUTINE BD_InternalForceMoment
 
-
-
-
-
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine performs time marching from t_i to t_f
-SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
+SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,OtherState,m,ErrStat,ErrMsg)
 
    REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
    INTEGER(IntKi),                    INTENT(IN   )  :: n           !< time step number
@@ -3879,7 +3874,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
    TYPE(BD_ParameterType),            INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_ContinuousStateType),      INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
    TYPE(BD_DiscreteStateType),        INTENT(INOUT)  :: xd          !< Discrete states at t
-   TYPE(BD_ConstraintStateType),      INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
    TYPE(BD_OtherStateType),           INTENT(INOUT)  :: OtherState  !< Other states at t on input; at t+dt on outputs
    TYPE(BD_MiscVarType),              INTENT(INOUT)  :: m           !< misc/optimization variables
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
@@ -4103,8 +4097,6 @@ SUBROUTINE BD_BoundaryGA2(x, RootMotion, GlbRot, Glb_crv, acc, ErrStat, ErrMsg)
    INTEGER(IntKi)          :: ErrStat2    ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER :: RoutineName = 'BD_BoundaryGA2'
-
-   integer :: i
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
