@@ -3,6 +3,11 @@ module test_tools
 use BeamDyn_Types
 
 implicit none
+
+INTERFACE AdjustTol 
+   MODULE PROCEDURE AdjustTol1
+   MODULE PROCEDURE AdjustTol2
+END INTERFACE
   
 contains  
     
@@ -55,7 +60,7 @@ contains
         r(2,:) = (/  0.0,  cos(angle), -sin(angle) /)
         r(3,:) = (/  0.0,  sin(angle),  cos(angle) /)
         RonXAxis = r
-    end function  
+    end function
         
     function getMassMatrix()
         use BeamDyn_Subs
@@ -207,7 +212,7 @@ contains
         i%member_total = 1    ! -  - - "Total number of members" -
         i%kp_total = 3        ! -  - - "Total number of key point" -
         i%order_elem = 15     ! -  - - "Order of interpolation (basis) function" -
-        i%NRMax = 10          ! -  - - "Max number of iterations in Newton Ralphson algorithm" -
+        i%NRMax = 10          ! -  - - "Max number of iterations in Newton Raphson algorithm" -
         i%quadrature = 1      ! -  - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
         i%n_fact = 5          ! -  - - "Factorization frequency" -
         i%refine = 1          ! -  - - "FE mesh refinement factor for trapezoidal quadrature" -
@@ -237,6 +242,30 @@ contains
         i%kp_coordinate(2,:) = (/ 0.000000, 0.000000,  5.0000, 0.00000 /)
         i%kp_coordinate(3,:) = (/ 0.000000, 0.000000, 10.0000, 0.00000 /)
         
+    end function
+
+    ! these adjust the tolerance to capture 'acc' digits of accuracy, based on the order of 'param' (given a 1 or 2 dimensional array)
+
+    real(BDKi) function AdjustTol1(acc, param)
+        use BeamDyn_Subs
+        implicit none
+        
+        integer(IntKi) :: acc
+        real(BDKi)     :: param(:)
+        
+        AdjustTol1 = 1.0d0 * 10.0d0**(-acc + ceiling(maxval(log10(abs(param)))))
+
+    end function
+
+    real(BDKi) function AdjustTol2(acc, param)
+        use BeamDyn_Subs
+        implicit none
+        
+        integer(IntKi) :: acc
+        real(BDKi)     :: param(:, :)
+        
+        AdjustTol2 = 1.0d0 * 10.0d0**(-acc + ceiling(maxval(log10(abs(param)))))
+
     end function
     
 end module

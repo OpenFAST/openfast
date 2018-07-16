@@ -223,7 +223,10 @@ subroutine test_Calc_Fc_Fd()
     call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
     
     @assertEqual(base_Fd, mqp%Fd(:, idx_qp, nelem), tolerance, testname)
+    ! adjust the tolerance for large numbers to still achieve 16 digits of accuracy
+    tolerance = AdjustTol(16, base_Fc)
     @assertEqual(base_Fc, mqp%Fc(:, idx_qp, nelem), tolerance, testname)
+    tolerance = 1e-14
     @assertEqual(base_cet, cet, tolerance, testname)
     @assertEqual(base_k1s, k1s, tolerance, testname)
 

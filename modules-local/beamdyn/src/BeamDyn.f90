@@ -2572,7 +2572,7 @@ SUBROUTINE BD_QPDataAcceleration( elem_total, node_elem_idx, nqp, nodes_per_elem
    INTEGER(IntKi),               INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
    REAL(BDKi),                   INTENT(IN   )  :: Shp(:, :)           !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
    REAL(BDKi),                   INTENT(IN   )  :: acc(:, :)           !< Acceleration (dqdtdt): at t on input; at t+dt on outputs
-   REAL(BDKi),                   INTENT(  OUT)  :: aaa(:, :, :)        !< Translational acceleration and rotational parameter acceration (at current QP)
+   REAL(BDKi),                   INTENT(  OUT)  :: aaa(:, :, :)        !< Translational acceleration and rotational parameter acceleration (at current QP)
 
    INTEGER(IntKi)                               :: nelem               !< index of current element
    INTEGER(IntKi)                               :: idx_qp              !< index of current quadrature point
@@ -2604,7 +2604,7 @@ END SUBROUTINE BD_QPDataAcceleration
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the inertial force `m%qp%Fi`
-!! It also calcuates the linearized matrices `m%qp%Mi`, `m%qp%Gi`, and `m%qp%Ki` for N-R algorithm
+!! It also calculates the linearized matrices `m%qp%Mi`, `m%qp%Gi`, and `m%qp%Ki` for N-R algorithm
 SUBROUTINE BD_InertialForce( nelem, p, m, fact )
 
    INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< index of current element
@@ -2677,7 +2677,7 @@ END SUBROUTINE BD_InertialForce
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the dissipative forces and added it to Fc and Fd
-!! It also calcuates the linearized matrices Sd, Od, Pd and Qd
+!! It also calculates the linearized matrices Sd, Od, Pd and Qd
 !! betaC, Gd, Xd, Yd for N-R algorithm
 SUBROUTINE BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
    INTEGER(IntKi),               INTENT(IN   )  :: nelem    !< index of current element in loop
@@ -3735,7 +3735,7 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
       !                inverse H' matrix and inverse shape functions, but I have not tried deriving that yet.
 
       ! Integrate the elastic force contributions from the tip inwards.  We only consider the shape function contributions at each QP beyond the current FE node.
-      ! Note that FE node contributions at the start of an element should be contained in the last node of the preceeding element.
+      ! Note that FE node contributions at the start of an element should be contained in the last node of the preceding element.
    DO nelem=p%elem_total,1,-1
       DO i=p%nodes_per_elem,1,-1
             ! Integrate shape functions across the quadrature points to get FE nodes.
@@ -4253,7 +4253,7 @@ END SUBROUTINE BD_UpdateDynamicGA2
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! this routine computes m%LP_MassM, m%LP_RHS, m%LP_StifK
-!FIXME: this routine is really similar to the begining section of BD_GenerateDynamicElementAcc.  Only real difference is that it calculates the m%Stif and m%LP_DampG as well.
+!FIXME: this routine is really similar to the beginning section of BD_GenerateDynamicElementAcc.  Only real difference is that it calculates the m%Stif and m%LP_DampG as well.
 SUBROUTINE BD_GenerateDynamicElementGA2( x, OtherState, p, m, fact )
 
    TYPE(BD_ContinuousStateType),      INTENT(IN   )  :: x           !< Continuous states at t on input at t + dt on output
@@ -4615,7 +4615,7 @@ SUBROUTINE BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem
    INTEGER(IntKi),               INTENT(IN   ):: elem_total          !< Total number of elements
    INTEGER(IntKi),               INTENT(IN   ):: node_elem_idx(:,:)  !< Index to first and last nodes of element in p%node_total sized arrays
    INTEGER(IntKi),               INTENT(IN   ):: nodes_per_elem      !< Finite element (GLL) nodes per element
-   REAL(BDKi),                   INTENT(IN   ):: uuN0(:,:,:)         !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),                   INTENT(IN   ):: uuN0(:,:,:)         !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
    TYPE(BD_ContinuousStateType), INTENT(INOUT):: x                   !< Continuous states at t
 
 

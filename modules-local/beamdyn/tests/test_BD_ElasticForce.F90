@@ -1,7 +1,7 @@
 @test
 subroutine test_BD_ElasticForce()
     ! NOTE: we need only test the calculation of Oe, Pe, and Qe (in mqp) for the fact == true case
-            ! becuase the other case is taken care of by test_Calc_Fc_Fd()
+            ! because the other case is taken care of by test_Calc_Fc_Fd()
     ! test branches
     ! - 
     
@@ -214,9 +214,13 @@ subroutine test_BD_ElasticForce()
     base_Qe(6, 6) = 21468.895204929508
 
     call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
-    
+
+    ! adjust the tolerance for large numbers to still achieve 16 digits of accuracy
+    tolerance = AdjustTol(16, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :,idx_qp,nelem), tolerance, testname)
+    tolerance = AdjustTol(16, base_Pe)
     @assertEqual(base_Pe, mqp%Pe(:, :,idx_qp,nelem), tolerance, testname)
+    tolerance = 1e-14
     @assertEqual(base_Qe, mqp%Qe(:, :,idx_qp,nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
@@ -278,8 +282,12 @@ subroutine test_BD_ElasticForce()
 
     call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
     
+    ! adjust the tolerance for large numbers to still achieve 16 digits of accuracy
+    tolerance = AdjustTol(16, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :,idx_qp,nelem), tolerance, testname)
+    tolerance = AdjustTol(16, base_Pe)
     @assertEqual(base_Pe, mqp%Pe(:, :,idx_qp,nelem), tolerance, testname)
+    tolerance = 1e-14
     @assertEqual(base_Qe, mqp%Qe(:, :,idx_qp,nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
