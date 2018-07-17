@@ -164,7 +164,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
 
       ! Set the initial displacements: p%uu0, p%rrN0, p%E10
-   CALL BD_QuadraturePointDataAt0(p)
+   CALL BD_QuadraturePointDataAt0( p%nodes_per_elem, p%elem_total, p%nqp, p%Shp, p%uuN0, p%uu0, p%rrN0, p%E10 )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
@@ -173,7 +173,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 !FIXME: shift mass stiffness matrices here from the keypoint line to the calculated curvature line in p%uu0
 !   CALL BD_KMshift2Ref(p)
 
-! mjs: ***HERE***
    call Initialize_FEweights( p%elem_total, p%nodes_per_elem, p%nqp, p%Shp, p%uu0, p%uuN0, p%FEweight ) ! set p%FEweight; needs p%uuN0 and p%uu0
       
       
@@ -548,7 +547,6 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
 
 end subroutine InitializeNodalLocations
 !-----------------------------------------------------------------------------------------------------------------------------------
-! mjs: ***HERE***
 subroutine Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0, FEweight )
    INTEGER(IntKi),               intent(in   )  :: elem_total     !< Total number of elements
    INTEGER(IntKi),               intent(in   )  :: nodes_per_elem !< Finite element (GLL) nodes per element
@@ -1745,7 +1743,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Incorporate boundary conditions (note that we are doing this because the first node isn't really a state. should fix x so we don't need a temp copy here.)
    x_tmp%q(   1:3,1) = m%u%RootMotion%TranslationDisp(:,1)
-   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p%Glb_crv, p%GlbRot, x_tmp%q(   4:6,1), ErrStat2, ErrMsg2)
+   CALL ExtractRelativeRotation(m%u%RootMotion%Orientation(:,:,1), p%Glb_crv, p%GlbRot, x_tmp%q(4:6,1), ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    x_tmp%dqdt(1:3,1) = m%u%RootMotion%TranslationVel(:,1)
@@ -1871,9 +1869,15 @@ END SUBROUTINE BD_UpdateDiscState
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes initial Gauss point values: uu0, E10
 ! Note similarities to BD_QuadraturePointData
-SUBROUTINE BD_QuadraturePointDataAt0( p )
-
-   TYPE(BD_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
+SUBROUTINE BD_QuadraturePointDataAt0( nodes_per_elem, elem_total, nqp, Shp, uuN0, uu0, rrN0, E10 )
+   INTEGER(IntKi),               INTENT(IN   )  :: nodes_per_elem !< Finite element (GLL) nodes per element
+   INTEGER(IntKi),               INTENT(IN   )  :: elem_total     !< Total number of elements
+   INTEGER(IntKi),               INTENT(IN   )  :: nqp            !< Number of quadrature points (per element)
+   REAL(BDKi),                   INTENT(IN   )  :: Shp(:, :)      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),                   INTENT(IN   )  :: uuN0(:, :, :)  !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),                   INTENT(  OUT)  :: uu0(:, :, :)   !< Initial Disp/Rot value at quadrature point (at T=0)
+   REAL(BDKi),                   INTENT(  OUT)  :: rrN0(:, :, :)  !< Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),                   INTENT(  OUT)  :: E10(:, :, :)   !< Initial E10 at quadrature point
 
    REAL(BDKi)                    :: rot0_temp(3)
    REAL(BDKi)                    :: rotu_temp(3)
@@ -1888,24 +1892,24 @@ SUBROUTINE BD_QuadraturePointDataAt0( p )
 
 
       ! Initialize to zero for the summation
-   p%uu0(:,:,:)   = 0.0_BDKi
-   p%rrN0(:,:,:)  = 0.0_BDKi
-   p%E10(:,:,:)   = 0.0_BDKi
+   uu0(:,:,:)   = 0.0_BDKi
+   rrN0(:,:,:)  = 0.0_BDKi
+   E10(:,:,:)   = 0.0_BDKi
 
 
       ! calculate rrN0 (Initial relative rotation array)
-   DO nelem = 1,p%elem_total
-      p%rrN0(1:3,1,nelem) = (/ 0.0_BDKi, 0.0_BDKi, 0.0_BDKi /)    ! first node has no rotation relative to itself.
-      DO idx_node=2,p%nodes_per_elem
+   DO nelem = 1,elem_total
+      rrN0(1:3,1,nelem) = (/ 0.0_BDKi, 0.0_BDKi, 0.0_BDKi /)    ! first node has no rotation relative to itself.
+      DO idx_node=2,nodes_per_elem
             ! Find resulting rotation parameters R(Nr) = Ri^T(Nu(1)) R(Nu(:))
             ! where R(Nu(1))^T is the transpose rotation parameters for the root node
-         CALL BD_CrvCompose(p%rrN0(1:3,idx_node,nelem),p%uuN0(4:6,1,nelem),p%uuN0(4:6,idx_node,nelem),FLAG_R1TR2)  ! rrN0  = node composed with root
+         CALL BD_CrvCompose(rrN0(1:3,idx_node,nelem),uuN0(4:6,1,nelem),uuN0(4:6,idx_node,nelem),FLAG_R1TR2)  ! rrN0  = node composed with root
       ENDDO
    ENDDO
 
 
-   DO nelem = 1,p%elem_total
-       DO idx_qp = 1,p%nqp
+   DO nelem = 1,elem_total
+       DO idx_qp = 1,nqp
             !> ### Calculate the the initial displacement fields in an element
             !! Initial displacement field \n
             !!    \f$   \underline{u_0}\left( \xi \right) =
@@ -1916,28 +1920,28 @@ SUBROUTINE BD_QuadraturePointDataAt0( p )
             !!                \sum_{k=1}^{p+1} h^k\left( \xi \right) \underline{\hat{c}_0}^k
             !!    \f$
 
-            ! Note that p%uu0 was set to zero prior to this routine call, so the following is the summation.
+            ! Note that uu0 was set to zero prior to this routine call, so the following is the summation.
 
-         DO idx_node=1,p%nodes_per_elem
-            p%uu0(1:3,idx_qp,nelem) =  p%uu0(1:3,idx_qp,nelem) + p%Shp(idx_node,idx_qp)*p%uuN0(1:3,idx_node,nelem)
-            p%uu0(4:6,idx_qp,nelem) =  p%uu0(4:6,idx_qp,nelem) + p%Shp(idx_node,idx_qp)*p%rrN0(1:3,idx_node,nelem)
+         DO idx_node=1,nodes_per_elem
+            uu0(1:3,idx_qp,nelem) =  uu0(1:3,idx_qp,nelem) + Shp(idx_node,idx_qp)*uuN0(1:3,idx_node,nelem)
+            uu0(4:6,idx_qp,nelem) =  uu0(4:6,idx_qp,nelem) + Shp(idx_node,idx_qp)*rrN0(1:3,idx_node,nelem)
          ENDDO
 
 
             !> Add the blade root rotation parameters. That is,
             !! compose the rotation parameters calculated with the shape functions with the rotation parameters
             !! for the blade root.
-         rot0_temp(:) = p%uuN0(4:6,1,nelem)        ! Rotation at root
-         rotu_temp(:) = p%uu0( 4:6,idx_qp,nelem)   ! Rotation at current GLL point without root rotation
+         rot0_temp(:) = uuN0(4:6,1,nelem)        ! Rotation at root
+         rotu_temp(:) = uu0( 4:6,idx_qp,nelem)   ! Rotation at current GLL point without root rotation
 
          CALL BD_CrvCompose(rot_temp,rot0_temp,rotu_temp,FLAG_R1R2)  ! rot_temp = rot0_temp composed with rotu_temp
-         p%uu0(4:6,idx_qp,nelem) = rot_temp(:)     ! Rotation parameters at current GLL point with the root orientation
+         uu0(4:6,idx_qp,nelem) = rot_temp(:)     ! Rotation parameters at current GLL point with the root orientation
 
 
             !> Set the initial value of \f$ x_0^\prime \f$, the derivative with respect to \f$ \hat{x} \f$-direction
             !! (tangent to curve through this GLL point).  This is simply the
-         CALL BD_CrvMatrixR(p%uu0(4:6,idx_qp,nelem),R0_temp)         ! returns R0_temp (the transpose of the DCM orientation matrix)
-         p%E10(:,idx_qp,nelem) = R0_temp(:,3)                        ! unit vector tangent to curve through this GLL point (derivative with respect to z in IEC coords).
+         CALL BD_CrvMatrixR(uu0(4:6,idx_qp,nelem),R0_temp)         ! returns R0_temp (the transpose of the DCM orientation matrix)
+         E10(:,idx_qp,nelem) = R0_temp(:,3)                        ! unit vector tangent to curve through this GLL point (derivative with respect to z in IEC coords).
       ENDDO
    ENDDO
 
@@ -3088,18 +3092,19 @@ SUBROUTINE BD_diffmtc( nqp, nodes_per_elem, QPtN, GLL_nodes, Shp, ShpDer )
 !! It also computes the ration between the segment/member and total length.
 !! Segment: defined by two adjacent key points
 !FIXME: Is there an advantage to passing in InputFile stuff here: member_total, kp_member, kp_coordinate all come from InputFileData
+! mjs: ***HERE***
 SUBROUTINE BD_ComputeMemberLength(member_total, kp_member, kp_coordinate, SP_Coef, segment_length, member_length, total_length)
    !type(BD_InputFile),           intent(in   )  :: InputFileData     !< data from the input file
-   INTEGER(IntKi),INTENT(IN   ):: member_total        !< number of total members that make up the beam, InputFileData%member_total from BD input file
-   INTEGER(IntKi),INTENT(IN   ):: kp_member(:)        !< Number of key points of each member, InputFileData%kp_member from BD input file
-   REAL(BDKi),    INTENT(IN   ):: SP_Coef(:,:,:)      !< cubic spline coefficients; index 1 = [1, kp_member-1];
-                                                      !! index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms);
-                                                      !! index 3 = [1,4] (each column of kp_coord)
-   REAL(BDKi),    INTENT(IN   ):: kp_coordinate(:,:)  !< Keypoints coordinates, from BD input file InputFileData%kp_coordinate(member key points,1:4);
-                                                      !! The last index refers to [1=x;2=y;3=z;4=-twist] compared to what was entered in the input file
-   REAL(BDKi),    INTENT(  OUT):: segment_length(:,:) !< length of each segment of a beam's member (index 2: [1=absolute length;2=?;3=ratio of length to member length)
-   REAL(BDKi),    INTENT(  OUT):: member_length(:,:)  !< length of each member of a beam (index 2: [1=absolute length;2:=ratio of length to beam length)
-   REAL(BDKi),    INTENT(  OUT):: total_length        !< total length of the beam
+   INTEGER(IntKi), INTENT(IN   ):: member_total        !< number of total members that make up the beam, InputFileData%member_total from BD input file
+   INTEGER(IntKi), INTENT(IN   ):: kp_member(:)        !< Number of key points of each member, InputFileData%kp_member from BD input file
+   REAL(BDKi),     INTENT(IN   ):: SP_Coef(:,:,:)      !< cubic spline coefficients; index 1 = [1, kp_member-1];
+                                                       !! index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms);
+                                                       !! index 3 = [1,4] (each column of kp_coord)
+   REAL(BDKi),     INTENT(IN   ):: kp_coordinate(:,:)  !< Keypoints coordinates, from BD input file InputFileData%kp_coordinate(member key points,1:4);
+                                                       !! The last index refers to [1=x;2=y;3=z;4=-twist] compared to what was entered in the input file
+   REAL(BDKi),     INTENT(  OUT):: segment_length(:,:) !< length of each segment of a beam's member (index 2: [1=absolute length;2=?;3=ratio of length to member length)
+   REAL(BDKi),     INTENT(  OUT):: member_length(:,:)  !< length of each member of a beam (index 2: [1=absolute length;2:=ratio of length to beam length)
+   REAL(BDKi),     INTENT(  OUT):: total_length        !< total length of the beam
 
    REAL(BDKi)                  :: eta0
    REAL(BDKi)                  :: eta1
@@ -4127,7 +4132,6 @@ END SUBROUTINE BD_BoundaryGA2
 !! Given states (u,v) and accelerations (acc,xcc) at the initial of a time step (t_i),
 !! it returns the values of states and accelerations at the end of a time step (t_f)
 !FIXME: note similarities to BD_StaticSolution.  May be able to combine
-! mjs: ***HERE***
 SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
 
    TYPE(BD_ContinuousStateType),       INTENT(INOUT)  :: x           !< Continuous states: input are the predicted values at t+dt; output are calculated values at t + dt

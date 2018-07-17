@@ -132,6 +132,7 @@ set(testlist
     test_BD_UpdateDynamicGA2
     test_BD_StaticUpdateConfiguration
     test_Initialize_FEweights
+    test_BD_QuadraturePointDataAt0
 )
 # it is important to keep the quotes around "${testlist}" in the call below
 build_utest("beamdyn" "${testlist}")

@@ -1,7 +1,8 @@
 @test
 subroutine test_Initialize_FEweights()
     ! test branches
-    ! - 
+    ! - inputs from bd_static_cantilever_beam regression test
+    ! - inputs from bd_static_twisted_with_k1 regression test
     
     use pFUnit_mod
     use BeamDyn
@@ -41,7 +42,7 @@ subroutine test_Initialize_FEweights()
     nodes_per_elem = 6
     nqp            = 6
 
-    allocate(Shp(nodes_per_elem, nqp), uu0(6, nqp, elem_total), uuN0(6, nodes_per_elem,elem_total),&
+    allocate(Shp(nodes_per_elem, nqp), uu0(6, nqp, elem_total), uuN0(6, nodes_per_elem, elem_total),&
              FEweight(nodes_per_elem, elem_total), base_FEweight(nodes_per_elem, elem_total))
 
     call initialize_vars_base()
@@ -81,7 +82,7 @@ subroutine test_Initialize_FEweights()
     nodes_per_elem = 8
     nqp            = 8
 
-    allocate(Shp(nodes_per_elem, nqp), uu0(6, nqp, elem_total), uuN0(6, nodes_per_elem,elem_total),&
+    allocate(Shp(nodes_per_elem, nqp), uu0(6, nqp, elem_total), uuN0(6, nodes_per_elem, elem_total),&
              FEweight(nodes_per_elem, elem_total), base_FEweight(nodes_per_elem, elem_total))
 
     call initialize_vars_base()
