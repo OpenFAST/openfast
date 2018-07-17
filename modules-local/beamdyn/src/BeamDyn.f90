@@ -173,15 +173,15 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 !FIXME: shift mass stiffness matrices here from the keypoint line to the calculated curvature line in p%uu0
 !   CALL BD_KMshift2Ref(p)
 
-
-   call Initialize_FEweights(p) ! set p%FEweight; needs p%uuN0 and p%uu0
+! mjs: ***HERE***
+   call Initialize_FEweights( p%elem_total, p%nodes_per_elem, p%nqp, p%Shp, p%uu0, p%uuN0, p%FEweight ) ! set p%FEweight; needs p%uuN0 and p%uu0
       
       
       ! compute blade mass, CG, and IN for summary file:
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-! FIXME: mjs: this looks like it should be put in a subroutine, but as far as I can tell, none of the tests use it, so I can't test it
+! FIXME(mjs): this looks like it should be put in a subroutine, but as far as I can tell, none of the tests use it, so I can't test it
 
       ! Actuator
    p%UsePitchAct = InputFileData%UsePitchAct
@@ -548,9 +548,15 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
 
 end subroutine InitializeNodalLocations
 !-----------------------------------------------------------------------------------------------------------------------------------
-subroutine Initialize_FEweights(p)
-   type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters
-
+! mjs: ***HERE***
+subroutine Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0, FEweight )
+   INTEGER(IntKi),               intent(in   )  :: elem_total     !< Total number of elements
+   INTEGER(IntKi),               intent(in   )  :: nodes_per_elem !< Finite element (GLL) nodes per element
+   INTEGER(IntKi),               intent(in   )  :: nqp            !< Number of quadrature points (per element)
+   REAL(BDKi),                   intent(in   )  :: Shp(:, :)      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),                   intent(in   )  :: uu0(:, :, :)   !< Initial Disp/Rot value at quadrature point (at T=0)
+   REAL(BDKi),                   intent(in   )  :: uuN0(:, :, :)  !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),                   intent(  out)  :: FEweight(:, :) !< weighting factors for integrating local sectional loads
 
    ! local variables
    INTEGER(IntKi)          :: i                ! do-loop counter
@@ -558,22 +564,22 @@ subroutine Initialize_FEweights(p)
    INTEGER(IntKi)          :: idx_qp           !< index of current quadrature point in loop
    REAL(BDKi)              :: SumShp
 
-   p%FEweight= 0.0_BDKi
+   FEweight= 0.0_BDKi
       ! First we find which QP points are the first QP to consider for each node in each element
-   DO nelem=1,p%elem_total
-      DO i=1,p%nodes_per_elem
+   DO nelem=1,elem_total
+      DO i=1,nodes_per_elem
          SumShp=0.0_BDKi
-         DO idx_qp=p%nqp,1,-1    ! Step inwards to find the first QP past the FE point
-            IF ( TwoNorm(p%uu0(1:3,idx_qp,nelem)) >= TwoNorm(p%uuN0(1:3,i,nelem))) THEN
-               p%FEweight(i,nelem) = p%FEweight(i,nelem) + p%Shp(i,idx_qp)        !*p%Shp(j,idx_qp)
+         DO idx_qp=nqp,1,-1    ! Step inwards to find the first QP past the FE point
+            IF ( TwoNorm(uu0(1:3,idx_qp,nelem)) >= TwoNorm(uuN0(1:3,i,nelem))) THEN
+               FEweight(i,nelem) = FEweight(i,nelem) + Shp(i,idx_qp)        !*Shp(j,idx_qp)
             ENDIF
-            SumShp=SumShp+p%Shp(i,idx_qp)       !*p%Shp(j,idx_qp)
+            SumShp=SumShp+Shp(i,idx_qp)       !*Shp(j,idx_qp)
          ENDDO
-         p%FEweight(i,nelem) = p%FEweight(i,nelem) / SumShp
+         FEweight(i,nelem) = FEweight(i,nelem) / SumShp
       ENDDO
       ! Tip contribution      
       ! Setting FEWeight at the tip to 1. The contirbution of the tip of each element should be absolute, hence no weighting is required
-      p%FEweight(p%nodes_per_elem,nelem) = 1.0_BDKi
+      FEweight(nodes_per_elem,nelem) = 1.0_BDKi
    ENDDO
 
 end subroutine Initialize_FEweights
@@ -1670,7 +1676,6 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    IF(p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
        CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
-! mjs: ***HERE***
        CALL BD_Static( t, u, utimes, p, x, OtherState, m, ErrStat, ErrMsg )
    ENDIF
 
@@ -3433,7 +3438,6 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
        u_temp%DistrLoad%Moment(:,:) = u_interp%DistrLoad%Moment(:,:) * load_test
        gravity_temp(:)              = p%gravity(:)                   * load_test
 
-! mjs: ***HERE***
        CALL BD_StaticSolution(x, gravity_temp, u_temp, p, m, piter, ErrStat2, ErrMsg2)
            call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
            ErrStat = ErrID_None
@@ -3552,7 +3556,6 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
       m%Solution(:,2:p%node_total) = RESHAPE( m%LP_RHS_LU, (/ p%dof_node, (p%node_total - 1) /) )
 
 
-! mjs: ***HERE***
        CALL BD_StaticUpdateConfiguration( p%node_total, m%Solution, x%q )
 
          ! Check if solution has converged.
@@ -3577,7 +3580,6 @@ END SUBROUTINE BD_StaticSolution
 !> This subroutine updates the static configuration
 !! given incremental value calculated by the
 !! Newton-Raphson algorithm
-! mjs: ***HERE***
 SUBROUTINE BD_StaticUpdateConfiguration( node_total, Solution, q )
    INTEGER(IntKi),                     INTENT(IN   )  :: node_total     !< Total number of finite element (GLL) nodes
    REAL(BDKi),                         INTENT(IN   )  :: Solution(:, :) !< Result from LAPACK solve (X from A*X = B solve)
