@@ -3092,7 +3092,6 @@ SUBROUTINE BD_diffmtc( nqp, nodes_per_elem, QPtN, GLL_nodes, Shp, ShpDer )
 !! It also computes the ration between the segment/member and total length.
 !! Segment: defined by two adjacent key points
 !FIXME: Is there an advantage to passing in InputFile stuff here: member_total, kp_member, kp_coordinate all come from InputFileData
-! mjs: ***HERE***
 SUBROUTINE BD_ComputeMemberLength(member_total, kp_member, kp_coordinate, SP_Coef, segment_length, member_length, total_length)
    !type(BD_InputFile),           intent(in   )  :: InputFileData     !< data from the input file
    INTEGER(IntKi), INTENT(IN   ):: member_total        !< number of total members that make up the beam, InputFileData%member_total from BD input file
@@ -3709,6 +3708,7 @@ END SUBROUTINE BD_StaticElementMatrix
 ! nodes along beam axis for the static case. This is more involved than in the dynamic case because m%EFint is not calculated beforehand.
 ! Nodal forces = K u
 !FIXME:  NOTE: if we go to multiple elements for trap quadrature, we will need to double check this routine.
+! mjs: ***HERE***
 SUBROUTINE BD_InternalForceMoment( x, p, m )
 
    TYPE(BD_ContinuousStateType), INTENT(IN   ) :: x            !< Continuous states at t
