@@ -22,7 +22,7 @@ MODULE SysSubs
    ! It also contains standard (but not system-specific) routines it uses.
    ! SysIFL.f90 is specifically for the Intel Fortran for Linux compiler.
    ! It contains the following routines:
-  !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
+   !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
    !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
    !     FUNCTION    NWTC_ERF( x )
    !     FUNCTION    NWTC_gamma( x )                                          ! Returns the gamma value of its argument.   
@@ -75,9 +75,11 @@ FUNCTION FileSize( Unit )
    ! This function calls the portability routine, FSTAT, to obtain the file size
    ! in bytes corresponding to a file unit number or returns -1 on error.
 
+   USE IFPORT
+
    INTEGER(B8Ki)                             :: FileSize                      ! The size of the file in bytes to be returned.
    INTEGER, INTENT(IN)                       :: Unit                          ! The I/O unit number of the pre-opened file.
-   INTEGER                                   :: StatArray(13)                 ! An array returned by FSTAT that includes the file size.
+   INTEGER                                   :: StatArray(12)                 ! An array returned by FSTAT that includes the file size.
    INTEGER                                   :: Status                        ! The status returned by
 
    Status = FSTAT( INT( Unit, B4Ki ), StatArray )

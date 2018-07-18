@@ -207,6 +207,26 @@ SUBROUTINE Get_CWD ( DirName, Status )
    RETURN
 END SUBROUTINE Get_CWD
 !=======================================================================
+SUBROUTINE MKDIR ( new_directory_path )
+
+   ! This routine creates a given directory if it does not exist.
+
+   implicit none
+
+   character(*), intent(in) :: new_directory_path
+   character(1024)          :: make_command
+   logical                  :: directory_exists
+
+   ! Check if the directory exists first
+   inquire( file=trim(new_directory_path), exist=directory_exists )
+
+   if ( .NOT. directory_exists ) then
+      make_command = 'mkdir -p '//trim(new_directory_path)
+      call system( make_command )
+   endif
+
+END SUBROUTINE MKDIR
+!=======================================================================
 SUBROUTINE OpenCon
 
    ! This routine opens the console for standard output.
