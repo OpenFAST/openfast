@@ -731,17 +731,17 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    ! data copied/derived from input file
    !....................
 
-   p%analysis_type  = InputFileData%analysis_type  ! Analysis type: 1 Static 2 Dynamic
-   p%rhoinf         = InputFileData%rhoinf         ! Numerical damping coefficient: [0,1].  No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
-   p%dt             = InputFileData%DTBeam         ! Time step size
-   CALL BD_TiSchmComputeCoefficients(p)            ! Compute generalized-alpha time integrator coefficients requires p%rhoinf,p%dt; sets p%coef
+   p%analysis_type  = InputFileData%analysis_type              ! Analysis type: 1 Static 2 Dynamic
+   p%rhoinf         = InputFileData%rhoinf                     ! Numerical damping coefficient: [0,1].  No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
+   p%dt             = InputFileData%DTBeam                     ! Time step size
+   CALL BD_TiSchmComputeCoefficients( p%dt, p%rhoinf, p%coef ) ! Compute generalized-alpha time integrator coefficients requires p%rhoinf,p%dt; sets p%coef
 
-   p%niter      = InputFileData%NRMax              ! Maximum number of iterations in Newton-Raphson algorithm
-   p%tol        = InputFileData%stop_tol           ! Tolerance used in stopping criterion
-   p%elem_total = InputFileData%member_total       ! Total number of elements
-   p%nodes_per_elem  = InputFileData%order_elem + 1     ! Number of GLL nodes per element
-   p%n_fact     = InputFileData%n_fact             ! Factorization frequency
-   p%quadrature = InputFileData%quadrature         ! Quadrature method: 1 Gauss 2 Trapezoidal
+   p%niter      = InputFileData%NRMax                          ! Maximum number of iterations in Newton-Raphson algorithm
+   p%tol        = InputFileData%stop_tol                       ! Tolerance used in stopping criterion
+   p%elem_total = InputFileData%member_total                   ! Total number of elements
+   p%nodes_per_elem  = InputFileData%order_elem + 1            ! Number of GLL nodes per element
+   p%n_fact     = InputFileData%n_fact                         ! Factorization frequency
+   p%quadrature = InputFileData%quadrature                     ! Quadrature method: 1 Gauss 2 Trapezoidal
 
    p%BldMotionNodeLoc = BD_MESH_FE
    
@@ -3708,7 +3708,6 @@ END SUBROUTINE BD_StaticElementMatrix
 ! nodes along beam axis for the static case. This is more involved than in the dynamic case because m%EFint is not calculated beforehand.
 ! Nodal forces = K u
 !FIXME:  NOTE: if we go to multiple elements for trap quadrature, we will need to double check this routine.
-! mjs: ***HERE***
 SUBROUTINE BD_InternalForceMoment( x, p, m )
 
    TYPE(BD_ContinuousStateType), INTENT(IN   ) :: x            !< Continuous states at t
@@ -3725,7 +3724,7 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
    INTEGER(IntKi)                :: i                          !< generic counter
    INTEGER(IntKi)                :: LastNode                   !< Last node in element to consider in integration in FE points
    INTEGER(IntKi)                :: StartNode                  !< First node to consider in integration for QP points
-   CHARACTER(*),        PARAMETER:: RoutineName = 'BD_InternalForceMoment'
+   CHARACTER(*), PARAMETER       :: RoutineName = 'BD_InternalForceMoment'
 
 
       ! Initialize all values to zero.
@@ -4037,46 +4036,46 @@ END SUBROUTINE BD_TiSchmPredictorStep
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the Timoshenko coefficients, p%coef, used in generalized-alpha
 !! time integrator. It requires that p%rhoinf and p%dt have been set
-! mjs: parameters
-SUBROUTINE BD_TiSchmComputeCoefficients(p)
+SUBROUTINE BD_TiSchmComputeCoefficients( dt, rhoinf, coef )
+   REAL(DbKi), INTENT(IN   ) :: dt      !< module dt
+   REAL(DbKi), INTENT(IN   ) :: rhoinf  !< Numerical Damping Coefficient for GA2
+   REAL(DbKi), INTENT(  OUT) :: coef(9) !< GA2 Coefficient
 
-   TYPE(BD_ParameterType), INTENT(inout) :: p
-
-   REAL(DbKi)                  :: tr0
-   REAL(DbKi)                  :: tr1
-   REAL(DbKi)                  :: tr2
-   REAL(DbKi)                  :: alfam      ! \alpha_M
-   REAL(DbKi)                  :: alfaf      ! \alpha_F
-   REAL(DbKi)                  :: gama
-   REAL(DbKi)                  :: beta
-   REAL(DbKi)                  :: oalfaM     ! 1 - \alpha_M
-   REAL(DbKi)                  :: deltat2    ! {\delta t}^2 = dt^2
+   REAL(DbKi)                :: tr0
+   REAL(DbKi)                :: tr1
+   REAL(DbKi)                :: tr2
+   REAL(DbKi)                :: alfam      ! \alpha_M
+   REAL(DbKi)                :: alfaf      ! \alpha_F
+   REAL(DbKi)                :: gama
+   REAL(DbKi)                :: beta
+   REAL(DbKi)                :: oalfaM     ! 1 - \alpha_M
+   REAL(DbKi)                :: deltat2    ! {\delta t}^2 = dt^2
 
       ! Bauchau equations 17.39
-   tr0 = p%rhoinf + 1.0_BDKi
-   alfam = (2.0_BDKi * p%rhoinf - 1.0_BDKi) / tr0
-   alfaf = p%rhoinf / tr0
+   tr0 = rhoinf + 1.0_BDKi
+   alfam = (2.0_BDKi * rhoinf - 1.0_BDKi) / tr0
+   alfaf = rhoinf / tr0
 
       ! Bauchau equations 17.40
    gama = 0.5_BDKi - alfam + alfaf
    beta = 0.25 * (1.0_BDKi - alfam + alfaf)**2
 
       ! The coefficents are then found using equations 17.41a - 17.41c
-   deltat2 = p%dt**2
+   deltat2 = dt**2
    oalfaM = 1.0_BDKi - alfam
    tr0 = alfaf / oalfaM
    tr1 = alfam / oalfaM
    tr2 = (1.0_BDKi - alfaf) / oalfaM
 
-   p%coef(1) = beta * tr0 * deltat2
-   p%coef(2) = (0.5_BDKi - beta/oalfaM) * deltat2
-   p%coef(3) = gama * tr0 * p%dt
-   p%coef(4) = (1.0_BDKi - gama / oalfaM) * p%dt
-   p%coef(5) = tr0
-   p%coef(6) = -tr1
-   p%coef(7) = gama * tr2 * p%dt
-   p%coef(8) = beta * tr2 * deltat2
-   p%coef(9) = tr2
+   coef(1) = beta * tr0 * deltat2
+   coef(2) = (0.5_BDKi - beta/oalfaM) * deltat2
+   coef(3) = gama * tr0 * dt
+   coef(4) = (1.0_BDKi - gama / oalfaM) * dt
+   coef(5) = tr0
+   coef(6) = -tr1
+   coef(7) = gama * tr2 * dt
+   coef(8) = beta * tr2 * deltat2
+   coef(9) = tr2
 
 END SUBROUTINE BD_TiSchmComputeCoefficients
 

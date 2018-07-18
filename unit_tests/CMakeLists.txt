@@ -134,6 +134,7 @@ set(testlist
     test_Initialize_FEweights
     test_BD_QuadraturePointDataAt0
     test_BD_ComputeMemberLength
+    test_BD_TiSchmComputeCoefficients
 )
 # it is important to keep the quotes around "${testlist}" in the call below
 build_utest("beamdyn" "${testlist}")
