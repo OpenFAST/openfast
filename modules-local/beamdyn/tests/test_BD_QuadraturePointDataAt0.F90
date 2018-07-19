@@ -3,14 +3,14 @@ subroutine test_BD_QuadraturePointDataAt0()
     ! test branches
     ! - inputs from bd_static_cantilever_beam regression test
     ! - inputs from bd_static_twisted_with_k1 regression test
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer(IntKi)          :: nodes_per_elem
     integer(IntKi)          :: elem_total
     integer(IntKi)          :: nqp
@@ -22,22 +22,22 @@ subroutine test_BD_QuadraturePointDataAt0()
     real(BDKi), allocatable :: base_uu0(:, :, :)
     real(BDKi), allocatable :: base_rrN0(:, :, :)
     real(BDKi), allocatable :: base_E10(:, :, :)
-    
-    
+
+
     integer(IntKi)  :: ErrStat ! Error status of the operation
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
-    
+
     character(1024) :: testname
     integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
 
     ! digits of desired accuracy
     accuracy = 16
 
-   
+
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_static_cantilever_beam regression test:"
 
@@ -64,7 +64,7 @@ subroutine test_BD_QuadraturePointDataAt0()
                            -7.2277727371205441E-002, 0.89325443712116881, 0.54600529904618200 /)
     Shp(6, :)         = (/ 1.9852365830306046E-002, -2.3435601993343175E-002, 1.2892827638118033E-002,&
                            2.0974134603267913E-002, -0.11491298888938237, 0.56810033719119879 /)
-    
+
     uuN0(3, :, 1)     = (/ 0.0000000000000000, 1.1747233803526762, 3.5738424175967740,&
                            6.4261575824032260, 8.8252766196473242, 10.000000000000000 /)
     base_uu0(3, :, 1) = (/ 0.33765242898423986, 1.6939530676686769, 3.8069040695840148,&
@@ -72,7 +72,7 @@ subroutine test_BD_QuadraturePointDataAt0()
     base_E10(3, :, 1) = 1.0d0
 
     call BD_QuadraturePointDataAt0( nodes_per_elem, elem_total, nqp, Shp, uuN0, uu0, rrN0, E10 )
-    
+
     tolerance = AdjustTol(accuracy, base_uu0)
     @assertEqual(base_uu0, uu0, tolerance, testname)
     tolerance = AdjustTol(accuracy, base_rrN0)
@@ -121,7 +121,7 @@ subroutine test_BD_QuadraturePointDataAt0()
     Shp(8, :)          = (/ 1.0848468082518804E-002, -1.4352428788134695E-002, 1.3214695862124462E-002,&
                            -6.3895106188629159E-003, -9.2602118684858709E-003, 4.2488564543055538E-002,&
                            -0.12681887051926777, 0.53553425057201054 /)
-    
+
     uuN0(3, :, 1)      = (/ 0.0000000000000000, 0.64129925745196714, 2.0414990928342887,&
                             3.9535039104876057, 6.0464960895123943, 7.9585009071657105,&
                             9.3587007425480326, 10.000000000000000 /)
@@ -142,7 +142,7 @@ subroutine test_BD_QuadraturePointDataAt0()
                             0.99999999999999956, 1.0000000000000004 /)
 
     call BD_QuadraturePointDataAt0( nodes_per_elem, elem_total, nqp, Shp, uuN0, uu0, rrN0, E10 )
-    
+
     tolerance = AdjustTol(accuracy, base_uu0)
     @assertEqual(base_uu0, uu0, tolerance, testname)
     tolerance = AdjustTol(accuracy, base_rrN0)
@@ -153,7 +153,7 @@ subroutine test_BD_QuadraturePointDataAt0()
     deallocate(Shp, uuN0, uu0, rrN0, E10, base_uu0, base_rrN0, base_E10)
 
     ! --------------------------------------------------------------------------
-    
+
     contains
        subroutine initialize_vars_base()
           Shp = 0.0d0
@@ -161,7 +161,7 @@ subroutine test_BD_QuadraturePointDataAt0()
           uu0 = 0.0d0
           rrN0 = 0.0d0
           E10 = 0.0d0
-          
+
           base_uu0 = 0.0d0
           base_rrN0 = 0.0d0
           base_E10 = 0.0d0

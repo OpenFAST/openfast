@@ -3,40 +3,40 @@ subroutine test_BD_ComputeMemberLength()
     ! test branches
     ! - inputs from bd_static_cantilever_beam regression test
     ! - inputs from bd_curved_beam regression test
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer(IntKi)              :: member_total
     integer(IntKi), allocatable :: kp_member(:)
-    real(BDKi), allocatable     :: SP_Coef(:,:,:)
-    real(BDKi), allocatable     :: kp_coordinate(:,:)
-    real(BDKi), allocatable     :: segment_length(:,:)
-    real(BDKi), allocatable     :: member_length(:,:)
+    real(BDKi), allocatable     :: SP_Coef(:, :, :)
+    real(BDKi), allocatable     :: kp_coordinate(:, :)
+    real(BDKi), allocatable     :: segment_length(:, :)
+    real(BDKi), allocatable     :: member_length(:, :)
     real(BDKi)                  :: total_length
-    real(BDKi), allocatable     :: base_segment_length(:,:)
-    real(BDKi), allocatable     :: base_member_length(:,:)
+    real(BDKi), allocatable     :: base_segment_length(:, :)
+    real(BDKi), allocatable     :: base_member_length(:, :)
     real(BDKi)                  :: base_total_length
-    
-    
+
+
     integer(IntKi)  :: ErrStat ! Error status of the operation
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
-    
+
     character(1024) :: testname
     integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
 
     ! digits of desired accuracy
     accuracy = 16
 
-   
+
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_static_cantilever_beam regression test:"
 
@@ -62,7 +62,7 @@ subroutine test_BD_ComputeMemberLength()
     base_total_length         = 10.0d0
 
     call BD_ComputeMemberLength(member_total, kp_member, kp_coordinate, SP_Coef, segment_length, member_length, total_length)
-    
+
     tolerance = AdjustTol(accuracy, base_segment_length)
     @assertEqual(base_segment_length, segment_length, tolerance, testname)
     tolerance = AdjustTol(accuracy, base_member_length)
@@ -79,7 +79,7 @@ subroutine test_BD_ComputeMemberLength()
     member_total = 1
 
     allocate(kp_member(member_total))
-    
+
     kp_member(1) = 3
 
     allocate(SP_Coef(kp_member(1) - 1, 4, 4), kp_coordinate(kp_member(1), 4),&
@@ -115,7 +115,7 @@ subroutine test_BD_ComputeMemberLength()
     base_total_length         = 78.260390741926784
 
     call BD_ComputeMemberLength(member_total, kp_member, kp_coordinate, SP_Coef, segment_length, member_length, total_length)
-    
+
     tolerance = AdjustTol(accuracy, base_segment_length)
     @assertEqual(base_segment_length, segment_length, tolerance, testname)
     tolerance = AdjustTol(accuracy, base_member_length)
@@ -127,7 +127,7 @@ subroutine test_BD_ComputeMemberLength()
              base_segment_length, base_member_length)
 
     ! --------------------------------------------------------------------------
-    
+
     contains
        subroutine initialize_vars_base()
           SP_Coef             = 0.0d0

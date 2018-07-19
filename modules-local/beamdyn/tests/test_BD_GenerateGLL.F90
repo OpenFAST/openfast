@@ -5,88 +5,92 @@ subroutine test_BD_GenerateGLL()
   ! - p = 5, odd number
   ! - p = 6, even number
   ! - p = 97, large, prime number
-      
+
     use pFUnit_mod
     use BeamDyn_Subs
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer                 :: p
     real(BDKi), allocatable :: gll_nodes(:), baseline(:)
-    
+
     integer(IntKi)          :: ErrStat
     character               :: ErrMsg
-    
+
     character(1024)         :: testname
     integer(IntKi)          :: accuracy
     real(BDKi)              :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
-    
+
     ! digits of desired accuracy
     accuracy = 15
-  
-    
+
+
     ! the baseline solutions for this unit test can be calculated using the Gauss-Lobatto quadrature
     ! this website provides the nodes and weights:
     ! http://keisan.casio.com/exec/system/1280801905
-  
-    
+
+
     ! --------------------------------------------------------------------------
     testname = "p = 2, boundaries only:"
+
     p = 2
     allocate(baseline(p))
     baseline = (/ -1.0, 1.0 /)
-    
+
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
-    
+
     tolerance = AdjustTol(accuracy, baseline)
     @assertEqual(baseline, gll_nodes, tolerance, testname)
-    
+
     deallocate(baseline)
     deallocate(gll_nodes)
-    
+
     ! --------------------------------------------------------------------------
     testname = "p = 5, odd number:"
+
     p = 5
     allocate(baseline(p))
     baseline = (/ -1.0, -0.6546536707079771437983, 0.0, 0.654653670707977143798, 1.0 /)
 
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
-    
+
     tolerance = AdjustTol(accuracy, baseline)
     @assertEqual(baseline, gll_nodes, tolerance, testname)
-    
+
     deallocate(baseline)
     deallocate(gll_nodes)
-    
-    
+
+
     ! --------------------------------------------------------------------------
     testname = "p = 6, even number:"
+
     p = 6
     allocate(baseline(p))
     baseline = (/ -1.0, -0.765055323929464692851, -0.2852315164806450963142, 0.2852315164806450963142, 0.765055323929464692851, 1.0 /)
 
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
-    
+
     tolerance = AdjustTol(accuracy, baseline)
     @assertEqual(baseline, gll_nodes, tolerance, testname)
-    
+
     deallocate(baseline)
     deallocate(gll_nodes)
-    
-    
+
+
     ! --------------------------------------------------------------------------
     testname = "p = 97, large, prime number:"
+
     p = 97
     allocate(baseline(p))
-    baseline = (/                                                                                                          & 
+    baseline = (/                                                                                                          &
      -1.0,                          -0.9992117675187679372925,     -0.997358420211575308381,     -0.994447829238317218534, &
      -0.9904833045655763827779,     -0.9854690874505481580336,     -0.9794105031099910659294,    -0.972313976393383949863, &
      -0.964187029755659609253,      -0.955038276712134050045,      -0.944877413224633009627,     -0.933715207638498109806, &
@@ -115,11 +119,11 @@ subroutine test_BD_GenerateGLL()
 
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
-    
+
     tolerance = AdjustTol(accuracy, baseline)
     @assertEqual(baseline, gll_nodes, tolerance, testname)
 
     deallocate(baseline)
     deallocate(gll_nodes)
-    
+
 end subroutine

@@ -3,14 +3,14 @@ subroutine test_BD_GyroForce()
     ! test branches
     ! - inputs from bd_5MW_dynamic reg test--simple case
     ! - inputs from bd_5MW_dynamic reg test--more complex case
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer(IntKi)  :: nelem            !< index of current element in loop
     integer(IntKi)  :: nqp              !< Number of quadrature points (per element)
     real(BDKi)      :: vvv(6, 1, 1)     !< Translational velocity and rotational parameter velocity (at current QP)
@@ -18,24 +18,25 @@ subroutine test_BD_GyroForce()
     real(BDKi)      :: rho(3, 3, 1, 1)  !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
     real(BDKi)      :: Fb(6, 1, 1)      !< Gyroscopic forces at current QP. 6
     real(BDKi)      :: base_Fb(6)
-    
-    
+
+
     integer(IntKi)  :: ErrStat ! Error status of the operation
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
-    
+
     character(1024) :: testname
     integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
+
+    ! digits of desired accuracy
+    accuracy = 16
 
     nelem = 1
     nqp   = 1
 
-    ! digits of desired accuracy
-    accuracy = 16
-   
+
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--simple case:"
 
@@ -43,7 +44,7 @@ subroutine test_BD_GyroForce()
 
     vvv(2, 1, nelem)    = -1.0005999999999999
     vvv(4, 1, nelem)    = 1.0005999999999999
-    
+
     rho(1, :, 1, nelem) = (/ 973.03046262476562, -4.0320788880971827E-002, 0.0000000000000000 /)
     rho(2, :, 1, nelem) = (/ -4.0320788880975254E-002, 972.86953737523640, 0.0000000000000000 /)
     rho(3, :, 1, nelem) = (/ 0.0000000000000000, 0.0000000000000000, 1945.9000000000019 /)
@@ -76,14 +77,14 @@ subroutine test_BD_GyroForce()
     @assertEqual(base_Fb, Fb(:, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    
+
     contains
        subroutine initialize_vars_base()
           vvv     = 0.0d0
           RR0mEta = 0.0d0
           rho     = 0.0d0
           Fb      = 0.0d0
-          
+
           base_Fb = 0.0d0
        end subroutine initialize_vars_base
 

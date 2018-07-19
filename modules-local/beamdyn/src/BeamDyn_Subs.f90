@@ -412,6 +412,7 @@ SUBROUTINE BD_CrvExtractCrv(R, cc, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_CrvExtractCrv
 
+!------------------------------------------------------------------------------
 
 SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    !> This subroutine checks for rotation matrix validity.
@@ -419,16 +420,16 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    !>   ErrStat = 0 if valid
    !>   ErrStat = 4 (fatal error) if invalid
    
-   REAL(BDKi),       INTENT(IN   )  :: R(3,3)       !< Rotation Matrix
-   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat      !< Error status of the operation
-   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
-   REAL(BDKi)                       :: Rr(3,3)      !< Local Rotation Matrix variable
-   INTEGER(IntKi)                   :: lwork = 27   !mjs--from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
-   REAL(BDKi), ALLOCATABLE          :: work(:)      ! where M x N is dimension of R, and lwork is the dimension of work
-   REAL(BDKi)                       :: S(3), U(3,3), VT(3,3) !mjs--these three are the SVD matrices (S is actually a vector)
-   INTEGER(IntKi)                   :: ErrStat2     ! Temporary Error status
-   CHARACTER(ErrMsgLen)             :: ErrMsg2      ! Temporary Error message
-   LOGICAL                          :: ortho        !mjs--logical value indicating whether R is orthogonal
+   REAL(BDKi),       INTENT(IN   )  :: R(3,3)                !< Rotation Matrix
+   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat               !< Error status of the operation
+   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg                !< Error message if ErrStat /= ErrID_None
+   REAL(BDKi)                       :: Rr(3,3)               !< Local Rotation Matrix variable
+   INTEGER(IntKi)                   :: lwork = 27            !< from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
+   REAL(BDKi), ALLOCATABLE          :: work(:)                  ! where M x N is dimension of R, and lwork is the dimension of work
+   REAL(BDKi)                       :: S(3), U(3,3), VT(3,3) !<these three are the SVD matrices (S is actually a vector)
+   INTEGER(IntKi)                   :: ErrStat2              ! Temporary Error status
+   CHARACTER(ErrMsgLen)             :: ErrMsg2               ! Temporary Error message
+   LOGICAL                          :: ortho                 ! logical value indicating whether R is orthogonal
    INTEGER                          :: i
    character(*), parameter          :: RoutineName = 'BD_CheckRotMat'
    
@@ -439,7 +440,7 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    ! use the local rotation matrix variable to avoid side effects
    Rr = R
    
-   ! mjs--Start by determining if R is a valid rotation matrix using the properties:
+   ! Start by determining if R is a valid rotation matrix using the properties:
    ! 1) the eigenvalues of an orthogonal matrix have complex modulus == 1, where
    !    the leading eigenvalue is +1 and the other two are a complex conjugate pair
    ! 2) a valid rotation matrix must have determinant == +1 i.e., the singular values == 1 
@@ -450,7 +451,7 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    if (ErrStat >= AbortErrLev) return
    deallocate(work)
    
-   ! mjs--If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
+   !    If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
    !    and the correction is desired,
    !    compute \f$ \underline{\underline{R_{out}} \f$, the nearest orthogonal tensor
    !    to \f$ \underline{\underline{R}} \f$.
@@ -809,6 +810,7 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
 END SUBROUTINE Set_BldMotion_Mesh
 !> This routine calculates values for the y%BldMotion mesh.
 !-----------------------------------------------------------------------------------------------------------------------------------
+! mjs: ***TEST***
 SUBROUTINE Set_BldMotion_InitAcc(p, u, OtherState, m, y)
 
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
@@ -875,25 +877,25 @@ END SUBROUTINE Set_BldMotion_InitAcc
 !! from that location.
 subroutine Find_IniNode(kp_coordinate, segment_length, SP_Coef, member_first_kp, member_last_kp, eta, POS, CRV, ErrStat, ErrMsg)
 
-   REAL(BDKi),                   intent(in   )  :: kp_coordinate(:,:)  !< Key Point coordinates
-   REAL(BDKi),                   intent(in   )  :: segment_length(:,:) !< Array stored length of each segment
-   REAL(BDKi),                   intent(in   )  :: SP_Coef(:,:,:)      !< Coefficients for cubic spline interpolation
-   INTEGER(IntKi),               intent(in   )  :: member_first_kp     !< index of the first key point on a particular member
-   INTEGER(IntKi),               intent(in   )  :: member_last_kp      !< index of the last key point on a particular member
-   REAL(BDKi),                   intent(in   )  :: eta                 !! relative position of desired node, [0,1]
-   REAL(BDKi),                   intent(  out)  :: POS(3)              !! position of node (in BD coordinates)
-   REAL(BDKi),                   intent(  out)  :: CRV(3)              !! curvature of node (in BD coordinates)
-   integer(IntKi),               intent(  out)  :: ErrStat             !< Error status of the operation
-   character(*),                 intent(  out)  :: ErrMsg              !< Error message if ErrStat /= ErrID_None
+   REAL(BDKi),                   INTENT(IN   )  :: kp_coordinate(:,:)  !< Key Point coordinates
+   REAL(BDKi),                   INTENT(IN   )  :: segment_length(:,:) !< Array stored length of each segment
+   REAL(BDKi),                   INTENT(IN   )  :: SP_Coef(:,:,:)      !< Coefficients for cubic spline interpolation
+   INTEGER(IntKi),               INTENT(IN   )  :: member_first_kp     !< index of the first key point on a particular member
+   INTEGER(IntKi),               INTENT(IN   )  :: member_last_kp      !< index of the last key point on a particular member
+   REAL(BDKi),                   INTENT(IN   )  :: eta                 !! relative position of desired node, [0,1]
+   REAL(BDKi),                   INTENT(  OUT)  :: POS(3)              !! position of node (in BD coordinates)
+   REAL(BDKi),                   INTENT(  OUT)  :: CRV(3)              !! curvature of node (in BD coordinates)
+   integer(IntKi),               INTENT(  OUT)  :: ErrStat             !< Error status of the operation
+   character(*),                 INTENT(  OUT)  :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
-   REAL(BDKi),PARAMETER    :: EPS = 1.0D-10
+   REAL(BDKi),PARAMETER                         :: EPS = 1.0D-10
 
 
    ! local variables
-   INTEGER(IntKi)          :: kp                ! key point
-   REAL(BDKi)              :: etaD              ! distance (in z coordinate) associated with eta along this member, in meters
-   REAL(BDKi)              :: temp_twist
-   REAL(BDKi)              :: temp_e1(3)
+   INTEGER(IntKi)                               :: kp                ! key point
+   REAL(BDKi)                                   :: etaD              ! distance (in z coordinate) associated with eta along this member, in meters
+   REAL(BDKi)                                   :: temp_twist
+   REAL(BDKi)                                   :: temp_e1(3)
 
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
@@ -905,18 +907,18 @@ subroutine Find_IniNode(kp_coordinate, segment_length, SP_Coef, member_first_kp,
 
    ! compute the dimensional distance along the full beam
    etaD = kp_coordinate(member_first_kp,3) + &
-          eta * (kp_coordinate(member_last_kp ,3) - kp_coordinate(member_first_kp,3)) 
+          eta * (kp_coordinate(member_last_kp ,3) - kp_coordinate(member_first_kp,3))
 
    ! find the first key point that is beyond where this node is on the member (element)
-   ! note that this is the index for SP_Coef, so the upper bound is member_last_kp-1 instead of member_last_kp 
+   ! note that this is the index for SP_Coef, so the upper bound is member_last_kp-1 instead of member_last_kp
    ! bjj: to be more efficient, we could probably just start at the kp we found for the previous eta
    kp = member_first_kp
-   DO WHILE ( (eta > segment_length(kp,3) + EPS) .and. kp < (member_last_kp-1) ) 
+   DO WHILE ( (eta > segment_length(kp,3) + EPS) .and. kp < (member_last_kp-1) )
       kp = kp + 1
    END DO
 
    ! using the spline coefficients at this key point, compute the position and orientation of the node
-   CALL BD_ComputeIniNodalPosition(SP_Coef(kp,:,:),etaD,POS,temp_e1,temp_twist) ! Compute point physical coordinates (POS) in blade frame                   
+   CALL BD_ComputeIniNodalPosition(SP_Coef(kp,:,:),etaD,POS,temp_e1,temp_twist) ! Compute point physical coordinates (POS) in blade frame
    CALL BD_ComputeIniNodalCrv(temp_e1, temp_twist, CRV, ErrStat2, ErrMsg2)        ! Compute initial rotation parameters (CRV) in blade frame
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
@@ -928,13 +930,13 @@ end subroutine Find_IniNode
 !! cubic spline fit. It also computes the unit tangent vector e1 for further use.
 SUBROUTINE BD_ComputeIniNodalPosition(SP_Coef,eta,PosiVec,e1,Twist_Angle)
 
-   REAL(BDKi),    INTENT(IN   ):: SP_Coef(:,:)  !< Coefficients for cubic spline interpolation
-   REAL(BDKi),    INTENT(IN   ):: eta           !< z-component of nodal location (that's how SP_Coef was computed), in meters
-   REAL(BDKi),    INTENT(  OUT):: PosiVec(:)    !< Physical coordinates of points in blade frame
-   REAL(BDKi),    INTENT(  OUT):: e1(:)         !< Tangent vector, normalized
-   REAL(BDKi),    INTENT(  OUT):: Twist_Angle   !< Twist angle at PosiVec
+   REAL(BDKi), INTENT(IN   ) :: SP_Coef(:,:)  !< Coefficients for cubic spline interpolation
+   REAL(BDKi), INTENT(IN   ) :: eta           !< z-component of nodal location (that's how SP_Coef was computed), in meters
+   REAL(BDKi), INTENT(  OUT) :: PosiVec(:)    !< Physical coordinates of points in blade frame
+   REAL(BDKi), INTENT(  OUT) :: e1(:)         !< Tangent vector, normalized
+   REAL(BDKi), INTENT(  OUT) :: Twist_Angle   !< Twist angle at PosiVec
 
-   INTEGER(IntKi)              :: i
+   INTEGER(IntKi)            :: i
 
 
    DO i=1,3

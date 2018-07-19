@@ -2,38 +2,38 @@
 subroutine test_BD_InitShpDerJaco()
     ! branches to test
     ! - 3 node, 1 element; undeformed
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer(IntKi)          :: i, j, idx_qp, nelem
     type(BD_ParameterType)  :: p
     real(BDKi), allocatable :: gll_nodes(:), inp_QPtWeight(:)
-    real(BDKi), allocatable :: baseline_Shp(:,:), baseline_ShpDer(:,:), baseline_jacobian(:,:), baseline_QPtw_ShpDer(:,:)
-    real(BDKi), allocatable :: baseline_QPtw_Shp_ShpDer(:,:,:), baseline_QPtw_Shp_Jac(:,:,:)
-    real(BDKi), allocatable :: baseline_QPtw_Shp_Shp_Jac(:,:,:,:), baseline_QPtw_ShpDer_ShpDer_Jac(:,:,:,:)
-    
+    real(BDKi), allocatable :: baseline_Shp(:, :), baseline_ShpDer(:, :), baseline_jacobian(:, :), baseline_QPtw_ShpDer(:, :)
+    real(BDKi), allocatable :: baseline_QPtw_Shp_ShpDer(:, :, :), baseline_QPtw_Shp_Jac(:, :, :)
+    real(BDKi), allocatable :: baseline_QPtw_Shp_Shp_Jac(:, :, :, :), baseline_QPtw_ShpDer_ShpDer_Jac(:, :, :, :)
+
     integer(IntKi)          :: ErrStat
     character               :: ErrMsg
-    
+
     character(1024)         :: testname
     integer(IntKi)          :: accuracy
     real(BDKi)              :: tolerance
 
     ! initialize NWTC_Num constants
     call SetConstants()
-    
+
     ! digits of desired accuracy
     accuracy = 16
-    
-    
+
+
     ! --------------------------------------------------------------------------
     testname = "3 node, 1 element, undeformed:"
-    
+
     ! Lets assume a 3 node element with parametric coordinate s where s lies in [-1 1]
     ! The three nodes lie at s1 = -1, s2 = 0, and s3 = 1
     ! The corresponding positions of the nodes in physical space are assumed to be
@@ -55,10 +55,10 @@ subroutine test_BD_InitShpDerJaco()
     ! The Jacobian for this element is given by 20/2  = 10
 
     ! build the p object based on the above mentioned test model
-    p = simpleparametertype()
-    p%elem_total = 1
+    p                = simpleparametertype()
+    p%elem_total     = 1
     p%nodes_per_elem = 3
-    p%nqp = 1
+    p%nqp            = 1
 
     ! Allocate memory for baseline results
     call AllocAry(baseline_Shp     , p%nodes_per_elem, p%nqp, 'Reference Shp'     , ErrStat, ErrMsg)
@@ -106,21 +106,21 @@ subroutine test_BD_InitShpDerJaco()
     call AllocAry(p%QPtw_ShpDer           , p%nqp, p%nodes_per_elem                                             , 'QPtw_ShpDer',            ErrStat, ErrMsg)
 
     ! uuN0 is of dimension (3 dof, nodes_per_elem, elem_total)
-    p%uuN0(1:3,1,1) = (/  0.0,  0.0, 0.0 /)
+    p%uuN0(1:3,1,1) = (/  0.0,  0.0, 0.0  /)
     p%uuN0(1:3,2,1) = (/  0.0,  0.0, 10.0 /)
     p%uuN0(1:3,3,1) = (/  0.0,  0.0, 20.0 /)
-    
+
     p%QPtN = (/ 0.5 /) ! Note, we assume 1 quadrature point
-    
+
     p%QPtWeight = inp_QPtWeight ! Since we assume 1 quadrature point, the weight by defualt = 1
 
     ! Allocate memory for GLL node positions in 1D parametric space
     call AllocAry(gll_nodes, p%nodes_per_elem, "GLL points array", ErrStat, ErrMsg)
     gll_nodes = (/ -1.0, 0.0, 1.0 /)
-    
+
     ! call the test subroutine
     call BD_InitShpDerJaco(gll_nodes, p)
-    
+
     ! check the baseline shape functions and their derivatives
     do idx_qp = 1, p%nqp
        do j = 1, p%nodes_per_elem

@@ -3,14 +3,14 @@ subroutine test_BD_DissipativeForce()
     ! test branches
     ! - inputs from bd_5MW_dynamic reg test--simple case with fact == false
     ! - inputs from bd_5MW_dynamic reg test--simple case with fact == true
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer(IntKi)   :: nelem    !< index of current element in loop
     integer(IntKi)   :: nqp      !< Number of quadrature points (per element)
     real(BDKi)       :: beta(6)  !< Damping Coefficient
@@ -18,15 +18,15 @@ subroutine test_BD_DissipativeForce()
     logical          :: fact
     real(BDKi)       :: base_betaC(6, 6), base_Sd(6, 6), base_Pd(6, 6), base_Od(6, 6), base_Qd(6, 6),&
                         base_Gd(6, 6), base_Xd(6, 6), base_Yd(6, 6), base_Fc(6), base_Fd(6)
-    
-    
+
+
     integer(IntKi)   :: ErrStat ! Error status of the operation
     character(1024)  :: ErrMsg  ! Error message if ErrStat /= ErrID_None
-    
+
     character(1024)  :: testname
     integer(IntKi)   :: accuracy
     real(BDKi)       :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
 
@@ -50,7 +50,7 @@ subroutine test_BD_DissipativeForce()
 
     ! digits of desired accuracy
     accuracy = 16
-   
+
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--simple case with fact == false:"
       ! this essentially tests the internal subroutine Calc_FC_FD_ffd()
@@ -89,7 +89,7 @@ subroutine test_BD_DissipativeForce()
     base_betaC(6, 6) = 5564400.0000000056
 
     call BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
-    
+
     tolerance = AdjustTol(accuracy, base_betaC)
     @assertEqual(base_betaC, mqp%betaC(:, :, 1, nelem), tolerance, testname)
     tolerance = AdjustTol(accuracy, base_Sd)
@@ -135,7 +135,7 @@ subroutine test_BD_DissipativeForce()
                                 1.0005999999999999, 0.0000000000000000, 0.0000000000000000 /)
     mqp%vvp(:, 1, nelem) = (/ 0.0000000000000000, -1.0006000000000004, 0.0000000000000000,&
                                 8.3266726846886741E-017, 0.0000000000000000, 0.0000000000000000 /)
-    
+
     base_betaC(1, 1) = 972948.00000000093
     base_betaC(2, 2) = 972948.00000000093
     base_betaC(3, 3) = 9729480.0000000075
@@ -144,37 +144,37 @@ subroutine test_BD_DissipativeForce()
     base_betaC(5, 4) = -806.41577762025258
     base_betaC(5, 5) = 18110190.747504726
     base_betaC(6, 6) = 5564400.0000000056
-    
+
     base_Sd(2, 3)    = 973531.76880000089
     base_Sd(3, 2)    = -9735317.6880000066
     base_Sd(4, 6)    = -806.89962708599433
     base_Sd(5, 6)    = 18121056.861953229
     base_Sd(6, 5)    = -5567738.6400000053
-    
+
     base_Pd(4, 3)    = 973531.76880000136
-    
+
     base_Od(1, 6)    = -973531.76880000124
     base_Od(4, 6)    = 6.7147602280125327E-014
     base_Od(5, 6)    = 1.5082443004933982E-009
     base_Od(6, 4)    = -6.7147602280125327E-014
     base_Od(6, 5)    = -1.5082443004933982E-009
-    
+
     base_Qd(5, 6)    = 973531.76880000171
-    
+
     base_Gd(1, 5)    = -972948.00000000140
     base_Gd(2, 4)    = 972948.00000000140
-    
+
     base_Xd(4, 4)    = 972948.00000000186
     base_Xd(5, 5)    = 972948.00000000186
-    
+
     base_Yd(4, 2)    = 972948.00000000140
     base_Yd(5, 1)    = -972948.00000000140
-    
+
     base_Fc(4)       = 1.5082443004933982E-009
     base_Fc(5)       = -6.7147602280125327E-014
 
     call BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
-    
+
     tolerance = AdjustTol(accuracy, base_betaC)
     @assertEqual(base_betaC, mqp%betaC(:, :, 1, nelem), tolerance, testname)
     tolerance = AdjustTol(accuracy, base_Sd)
@@ -197,7 +197,7 @@ subroutine test_BD_DissipativeForce()
     @assertEqual(base_Fd, mqp%Fd(:, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    
+
     contains
        subroutine initialize_vars_base()
           mqp%betaC  = 0.0d0
@@ -214,7 +214,7 @@ subroutine test_BD_DissipativeForce()
           mqp%Yd     = 0.0d0
           mqp%Fc     = 0.0d0
           mqp%Fd     = 0.0d0
-          
+
           base_betaC = 0.0d0
           base_Sd    = 0.0d0
           base_Pd    = 0.0d0

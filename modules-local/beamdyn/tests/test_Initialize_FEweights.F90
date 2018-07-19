@@ -3,14 +3,14 @@ subroutine test_Initialize_FEweights()
     ! test branches
     ! - inputs from bd_static_cantilever_beam regression test
     ! - inputs from bd_static_twisted_with_k1 regression test
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer(IntKi)          :: elem_total
     integer(IntKi)          :: nodes_per_elem
     integer(IntKi)          :: nqp
@@ -19,22 +19,22 @@ subroutine test_Initialize_FEweights()
     real(BDKi), allocatable :: uuN0(:, :, :)
     real(BDKi), allocatable :: FEweight(:, :)
     real(BDKi), allocatable :: base_FEweight(:, :)
-    
-    
+
+
     integer(IntKi)  :: ErrStat ! Error status of the operation
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
-    
+
     character(1024) :: testname
     integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
 
     ! digits of desired accuracy
     accuracy = 16
 
-   
+
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_static_cantilever_beam regression test:"
 

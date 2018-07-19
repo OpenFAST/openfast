@@ -4,14 +4,14 @@ subroutine test_BD_UpdateDiscState()
     ! - trivial case--UsePitchAct == false => discrete states should not change:
       ! mjs--FIXME: I don't have a test case with UsePitchAct == true, so I don't
                     ! have test values
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     real(BDKi)                 :: RM_Orientation(3, 3, 1)
     real(BDKi)                 :: HM_Orientation(3, 3, 1)
     logical                    :: UsePitchAct
@@ -22,21 +22,21 @@ subroutine test_BD_UpdateDiscState()
     type(BD_DiscreteStateType) :: xd
     real(BDKi)                 :: base_thetaP, base_thetaPD
 
-    
-    
+
+
     integer(IntKi)  :: ErrStat ! Error status of the operation
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
-    
+
     character(1024) :: testname
     integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
-    
+
     ! digits of desired accuracy
     accuracy = 16
-   
+
     ! --------------------------------------------------------------------------
     testname = "trivial case--UsePitchAct == false => discrete states should not change:"
 
@@ -51,14 +51,14 @@ subroutine test_BD_UpdateDiscState()
     base_thetaPD = xd%thetaPD
 
     call BD_UpdateDiscState( RM_Orientation, HM_Orientation, UsePitchAct, torqM, pitchK, dt, pitchJ, xd )
-    
+
     tolerance = AdjustTol(accuracy, base_thetaP)
     @assertEqual(base_thetaP, xd%thetaP, tolerance, testname)
     tolerance = AdjustTol(accuracy, base_thetaPD)
     @assertEqual(base_thetaPD, xd%thetaPD, tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    
+
     contains
        subroutine initialize_vars_base()
           RM_Orientation = 0.0d0
@@ -69,7 +69,7 @@ subroutine test_BD_UpdateDiscState()
           pitchJ         = 0.0d0
           xd%thetaP      = 0.0d0
           xd%thetaPD     = 0.0d0
-          
+
           base_thetaP    = 0.0d0
           base_thetaPD   = 0.0d0
        end subroutine initialize_vars_base

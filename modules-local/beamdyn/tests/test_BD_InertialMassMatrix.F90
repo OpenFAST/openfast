@@ -3,14 +3,14 @@ subroutine test_BD_InertialMassMatrix()
     ! test branches
     ! - inputs from bd_5MW_dynamic reg test--simple case
     ! - inputs from bd_5MW_dynamic reg test--more complex case
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer(IntKi)  :: nelem            !< index of current element in loop
     integer(IntKi)  :: nqp              !< Number of quadrature points (per element)
     real(BDKi)      :: mmm(1, 1)        !< Mass at current QP
@@ -19,23 +19,24 @@ subroutine test_BD_InertialMassMatrix()
     real(BDKi)      :: Mi(6, 6, 1, 1)   !< Mass matrix for inertial force. 6x6
     real(BDKi)      :: base_Mi(6, 6)
 
-    
+
     integer(IntKi)  :: ErrStat ! Error status of the operation
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
-    
+
     character(1024) :: testname
     integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
+
+    ! digits of desired accuracy
+    accuracy = 16
 
     nelem = 1
     nqp   = 1
 
-    ! digits of desired accuracy
-    accuracy = 16
-   
+
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--simple case:"
 
@@ -88,14 +89,14 @@ subroutine test_BD_InertialMassMatrix()
     @assertEqual(base_Mi, Mi(:, :, 1, nelem), tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    
+
     contains
        subroutine initialize_vars_base()
           mmm     = 0.0d0
           RR0mEta = 0.0d0
           rho     = 0.0d0
           Mi      = 0.0d0
-          
+
           base_Mi = 0.0d0
        end subroutine initialize_vars_base
 

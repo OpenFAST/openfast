@@ -2,14 +2,14 @@
 subroutine test_BD_DisplacementQP()
     ! test branches
     ! - inputs from static_cantilever_beam reg test
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer(IntKi)  :: nelem
     integer(IntKi)  :: nqp
     integer(IntKi)  :: node_elem_idx(1, 2)
@@ -22,17 +22,17 @@ subroutine test_BD_DisplacementQP()
     real(BDKi)      :: uuu(6, 6, 1), base_uuu(6, 6)
     real(BDKi)      :: uup(3, 6, 1), base_uup(3, 6)
     real(BDKi)      :: E1(3, 6, 1), base_E1(3, 6)
-    
+
     character(1024) :: testname
     integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
-    
+
     ! digits of desired accuracy
     accuracy = 16
-    
+
     ! --------------------------------------------------------------------------
     testname = "inputs from static_cantilever_beam reg test:"
 
@@ -83,16 +83,16 @@ subroutine test_BD_DisplacementQP()
     base_uuu       = 0.0d0
     base_uup       = 0.0d0
     base_E1(:, :)  = E10(:, :, 1)
-    
+
     call BD_DisplacementQP( nelem, nqp, node_elem_idx, nodes_per_elem, Shp, ShpDer, Jacobian, E10, q, uuu, uup, E1 )
-    
+
     tolerance = AdjustTol(accuracy, Base_uuu)
     @assertEqual(Base_uuu, uuu(:, :, 1), tolerance, testname)
     tolerance = AdjustTol(accuracy, Base_uup)
     @assertEqual(Base_uup, uup(:, :, 1), tolerance, testname)
     tolerance = AdjustTol(accuracy, Base_E1)
     @assertEqual(Base_E1, E1(:, :, 1), tolerance, testname)
-    
+
     ! --------------------------------------------------------------------------
-    
+
 end subroutine test_BD_DisplacementQP

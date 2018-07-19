@@ -11,27 +11,27 @@ subroutine test_BD_GaussPointWeight()
     use BeamDyn_Subs
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer                 :: p
     real(BDKi), allocatable :: locations(:), weights(:)
     real(BDKi), allocatable :: baselinelocations(:), baselineweights(:)
-    
+
     integer(IntKi)          :: ErrStat
     character               :: ErrMsg
-    
+
     character(1024)         :: testname
     integer(IntKi)          :: accuracy
     real(BDKi)              :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
-    
+
     ! FIXME(mjs): the baselines only have 12 sig. digits, so that is all the accuracy we can expect
     ! digits of desired accuracy
     accuracy = 12
-  
+
 
     ! the baseline solutions for this unit test can be calculated using the Gauss-Lobatto quadrature
     ! the Python Numpy package provides this functionality with numpy.polynomial.legendre.leggauss.
@@ -45,6 +45,7 @@ subroutine test_BD_GaussPointWeight()
 
     ! --------------------------------------------------------------------------
     testname = "p = 1, invalid value:"
+
     p = 1
     call AllocAry(baselinelocations, p, "GLL baseline", ErrStat, ErrMsg)
     call AllocAry(baselineweights, p, "GLL baseline", ErrStat, ErrMsg)
@@ -65,6 +66,7 @@ subroutine test_BD_GaussPointWeight()
 
     ! --------------------------------------------------------------------------
     testname = "p = 2, boundaries only:"
+
     p = 2
     call AllocAry(baselinelocations, p, "GLL baseline", ErrStat, ErrMsg)
     call AllocAry(baselineweights, p, "GLL baseline", ErrStat, ErrMsg)
@@ -74,35 +76,36 @@ subroutine test_BD_GaussPointWeight()
     call AllocAry(locations, p, "GLL nodes", ErrStat, ErrMsg)
     call AllocAry(weights, p, "GLL weights", ErrStat, ErrMsg)
     call BD_GaussPointWeight(p, locations, weights, ErrStat, ErrMsg)
-    
+
     tolerance = AdjustTol(accuracy, baselinelocations)
     @assertEqual(baselinelocations, locations, tolerance, testname)
     tolerance = AdjustTol(accuracy, baselineweights)
     @assertEqual(baselineweights, weights, tolerance, testname)
-    
+
     deallocate(baselinelocations)
     deallocate(baselineweights)
     deallocate(locations)
     deallocate(weights)
-    
-    
+
+
     ! --------------------------------------------------------------------------
     testname = "p = 5, odd number:"
+
     p = 5
     call AllocAry(baselinelocations, p, "GLL baseline", ErrStat, ErrMsg)
     call AllocAry(baselineweights, p, "GLL baseline", ErrStat, ErrMsg)
     baselinelocations = (/ -0.906179845939, -0.538469310106, 0.0, 0.538469310106, 0.906179845939 /)
     baselineweights = (/ 0.236926885056, 0.478628670499, 0.568888888889, 0.478628670499, 0.236926885056 /)
-    
+
     call AllocAry(locations, p, "GLL nodes", ErrStat, ErrMsg)
     call AllocAry(weights, p, "GLL weights", ErrStat, ErrMsg)
     call BD_GaussPointWeight(p, locations, weights, ErrStat, ErrMsg)
-    
+
     tolerance = AdjustTol(accuracy, baselinelocations)
     @assertEqual(baselinelocations, locations, tolerance, testname)
     tolerance = AdjustTol(accuracy, baselineweights)
     @assertEqual(baselineweights, weights, tolerance, testname)
-    
+
     deallocate(baselinelocations)
     deallocate(baselineweights)
     deallocate(locations)
@@ -111,21 +114,22 @@ subroutine test_BD_GaussPointWeight()
 
     ! --------------------------------------------------------------------------
     testname = "p = 6, even number:"
+
     p = 6
     call AllocAry(baselinelocations, p, "GLL baseline", ErrStat, ErrMsg)
     call AllocAry(baselineweights, p, "GLL baseline", ErrStat, ErrMsg)
     baselinelocations = (/ -0.932469514203, -0.661209386466, -0.238619186083, 0.238619186083, 0.661209386466, 0.932469514203 /)
     baselineweights = (/ 0.171324492379, 0.360761573048, 0.467913934573, 0.467913934573, 0.360761573048, 0.171324492379 /)
-    
+
     call AllocAry(locations, p, "GLL nodes", ErrStat, ErrMsg)
     call AllocAry(weights, p, "GLL weights", ErrStat, ErrMsg)
     call BD_GaussPointWeight(p, locations, weights, ErrStat, ErrMsg)
-    
+
     tolerance = AdjustTol(accuracy, baselinelocations)
     @assertEqual(baselinelocations, locations, tolerance, testname)
     tolerance = AdjustTol(accuracy, baselineweights)
     @assertEqual(baselineweights, weights, tolerance, testname)
-    
+
     deallocate(baselinelocations)
     deallocate(baselineweights)
     deallocate(locations)
@@ -133,6 +137,7 @@ subroutine test_BD_GaussPointWeight()
 
     ! --------------------------------------------------------------------------
     testname = "p = 97, large prime number:"
+
     p = 97
     call AllocAry(baselinelocations, p, "GLL baseline", ErrStat, ErrMsg)
     call AllocAry(baselineweights, p, "GLL baseline", ErrStat, ErrMsg)

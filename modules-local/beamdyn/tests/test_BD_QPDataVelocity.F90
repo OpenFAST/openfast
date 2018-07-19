@@ -3,34 +3,34 @@ subroutine test_BD_QPDataVelocity()
     ! test branches
     ! - inputs from bd_5MW_dynamic reg test--simple case
     ! - inputs from bd_5MW_dynamic reg test--more complex case
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
-    implicit none
-    
-    integer(IntKi) :: elem_total
-    integer(IntKi) :: node_elem_idx(1, 2)
-    integer(IntKi) :: nqp
-    integer(IntKi) :: nodes_per_elem
-    real(BDKi)     :: Shp(6, 1)
-    real(BDKi)     :: ShpDer(6, 1)
-    real(BDKi)     :: Jacobian(1, 1)
-    real(BDKi)     :: dqdt(6, 6)
-    real(BDKi)     :: vvv(6, 1, 1)
-    real(BDKi)     :: vvp(6, 1, 1)
-    real(BDKi)     :: base_vvv(6), base_vvp(6)
 
-    
+    implicit none
+
+    integer(IntKi)  :: elem_total
+    integer(IntKi)  :: node_elem_idx(1, 2)
+    integer(IntKi)  :: nqp
+    integer(IntKi)  :: nodes_per_elem
+    real(BDKi)      :: Shp(6, 1)
+    real(BDKi)      :: ShpDer(6, 1)
+    real(BDKi)      :: Jacobian(1, 1)
+    real(BDKi)      :: dqdt(6, 6)
+    real(BDKi)      :: vvv(6, 1, 1)
+    real(BDKi)      :: vvp(6, 1, 1)
+    real(BDKi)      :: base_vvv(6), base_vvp(6)
+
+
     integer(IntKi)  :: ErrStat ! Error status of the operation
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
-    
+
     character(1024) :: testname
     integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
 
@@ -41,7 +41,7 @@ subroutine test_BD_QPDataVelocity()
 
     ! digits of desired accuracy
     accuracy = 16
-   
+
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test--simple case:"
 
@@ -102,7 +102,7 @@ subroutine test_BD_QPDataVelocity()
     @assertEqual(base_vvp, vvp(:, 1, 1), tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    
+
     contains
        subroutine initialize_vars_base()
          Shp      = 0.0d0
@@ -111,7 +111,7 @@ subroutine test_BD_QPDataVelocity()
          dqdt     = 0.0d0
          vvv      = 0.0d0
          vvp      = 0.0d0
-         
+
          base_vvv = 0.0d0
          base_vvp = 0.0d0
        end subroutine initialize_vars_base

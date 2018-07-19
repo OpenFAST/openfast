@@ -548,13 +548,13 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
 end subroutine InitializeNodalLocations
 !-----------------------------------------------------------------------------------------------------------------------------------
 subroutine Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0, FEweight )
-   INTEGER(IntKi),               intent(in   )  :: elem_total     !< Total number of elements
-   INTEGER(IntKi),               intent(in   )  :: nodes_per_elem !< Finite element (GLL) nodes per element
-   INTEGER(IntKi),               intent(in   )  :: nqp            !< Number of quadrature points (per element)
-   REAL(BDKi),                   intent(in   )  :: Shp(:, :)      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
-   REAL(BDKi),                   intent(in   )  :: uu0(:, :, :)   !< Initial Disp/Rot value at quadrature point (at T=0)
-   REAL(BDKi),                   intent(in   )  :: uuN0(:, :, :)  !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
-   REAL(BDKi),                   intent(  out)  :: FEweight(:, :) !< weighting factors for integrating local sectional loads
+   INTEGER(IntKi), INTENT(IN   ) :: elem_total     !< Total number of elements
+   INTEGER(IntKi), INTENT(IN   ) :: nodes_per_elem !< Finite element (GLL) nodes per element
+   INTEGER(IntKi), INTENT(IN   ) :: nqp            !< Number of quadrature points (per element)
+   REAL(BDKi),     INTENT(IN   ) :: Shp(:, :)      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),     INTENT(IN   ) :: uu0(:, :, :)   !< Initial Disp/Rot value at quadrature point (at T=0)
+   REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)  !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),     INTENT(  OUT) :: FEweight(:, :) !< weighting factors for integrating local sectional loads
 
    ! local variables
    INTEGER(IntKi)          :: i                ! do-loop counter
@@ -575,7 +575,7 @@ subroutine Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0
          ENDDO
          FEweight(i,nelem) = FEweight(i,nelem) / SumShp
       ENDDO
-      ! Tip contribution      
+      ! Tip contribution
       ! Setting FEWeight at the tip to 1. The contirbution of the tip of each element should be absolute, hence no weighting is required
       FEweight(nodes_per_elem,nelem) = 1.0_BDKi
    ENDDO
@@ -1826,19 +1826,19 @@ END SUBROUTINE BD_CalcOutput
 !> Routine for updating discrete states
 ! mjs: this subroutine had a lot of unused arguments and variables in it--they are left at the bottom in a comment block, just in case
 SUBROUTINE BD_UpdateDiscState( RM_Orientation, HM_Orientation, UsePitchAct, torqM, pitchK, dt, pitchJ, xd )
-   REAL(BDKi),                        INTENT(IN   )  :: RM_Orientation(:, :, :) !< from u%RootMotion: Direction Cosine Matrix (DCM) (3,3,NNodes) (Inputs at t)
-   REAL(BDKi),                        INTENT(IN   )  :: HM_Orientation(:, :, :) !< from u%HubMotion: Direction Cosine Matrix (DCM) (3,3,NNodes) (Inputs at t)
-   LOGICAL,                           INTENT(IN   )  :: UsePitchAct             !< Whether to use a pitch actuator inside BeamDyn
-   REAL(BDKi),                        INTENT(IN   )  :: torqM(2, 2)             !< Pitch actuator matrix: (I-hA)^-1
-   REAL(BDKi),                        INTENT(IN   )  :: pitchK                  !< Pitch actuator stiffness [(kg-m^2/s^2)]
-   REAL(DbKi),                        INTENT(IN   )  :: dt                      !< module dt
-   REAL(BDKi),                        INTENT(IN   )  :: pitchJ                  !< Pitch actuator inertia [(kg-m^2)]
-   TYPE(BD_DiscreteStateType),        INTENT(INOUT)  :: xd                      !< Input: Discrete states at t;
+   REAL(BDKi),                 INTENT(IN   )  :: RM_Orientation(:, :, :) !< from u%RootMotion: Direction Cosine Matrix (DCM) (3,3,NNodes) (Inputs at t)
+   REAL(BDKi),                 INTENT(IN   )  :: HM_Orientation(:, :, :) !< from u%HubMotion: Direction Cosine Matrix (DCM) (3,3,NNodes) (Inputs at t)
+   LOGICAL,                    INTENT(IN   )  :: UsePitchAct             !< Whether to use a pitch actuator inside BeamDyn
+   REAL(BDKi),                 INTENT(IN   )  :: torqM(2, 2)             !< Pitch actuator matrix: (I-hA)^-1
+   REAL(BDKi),                 INTENT(IN   )  :: pitchK                  !< Pitch actuator stiffness [(kg-m^2/s^2)]
+   REAL(DbKi),                 INTENT(IN   )  :: dt                      !< module dt
+   REAL(BDKi),                 INTENT(IN   )  :: pitchJ                  !< Pitch actuator inertia [(kg-m^2)]
+   TYPE(BD_DiscreteStateType), INTENT(INOUT)  :: xd                      !< Input: Discrete states at t;
                                                                                 !<   Output: Discrete states at t + dt
 
    ! local variables
-   REAL(BDKi)                                        :: temp_R(3,3)
-   REAL(BDKi)                                        :: Hub_theta_Root(3)
+   REAL(BDKi)                                 :: temp_R(3,3)
+   REAL(BDKi)                                 :: Hub_theta_Root(3)
 
       ! Update discrete states here:
 
@@ -1870,14 +1870,14 @@ END SUBROUTINE BD_UpdateDiscState
 !> This subroutine computes initial Gauss point values: uu0, E10
 ! Note similarities to BD_QuadraturePointData
 SUBROUTINE BD_QuadraturePointDataAt0( nodes_per_elem, elem_total, nqp, Shp, uuN0, uu0, rrN0, E10 )
-   INTEGER(IntKi),               INTENT(IN   )  :: nodes_per_elem !< Finite element (GLL) nodes per element
-   INTEGER(IntKi),               INTENT(IN   )  :: elem_total     !< Total number of elements
-   INTEGER(IntKi),               INTENT(IN   )  :: nqp            !< Number of quadrature points (per element)
-   REAL(BDKi),                   INTENT(IN   )  :: Shp(:, :)      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
-   REAL(BDKi),                   INTENT(IN   )  :: uuN0(:, :, :)  !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
-   REAL(BDKi),                   INTENT(  OUT)  :: uu0(:, :, :)   !< Initial Disp/Rot value at quadrature point (at T=0)
-   REAL(BDKi),                   INTENT(  OUT)  :: rrN0(:, :, :)  !< Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element)
-   REAL(BDKi),                   INTENT(  OUT)  :: E10(:, :, :)   !< Initial E10 at quadrature point
+   INTEGER(IntKi), INTENT(IN   )  :: nodes_per_elem !< Finite element (GLL) nodes per element
+   INTEGER(IntKi), INTENT(IN   )  :: elem_total     !< Total number of elements
+   INTEGER(IntKi), INTENT(IN   )  :: nqp            !< Number of quadrature points (per element)
+   REAL(BDKi),     INTENT(IN   )  :: Shp(:, :)      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),     INTENT(IN   )  :: uuN0(:, :, :)  !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),     INTENT(  OUT)  :: uu0(:, :, :)   !< Initial Disp/Rot value at quadrature point (at T=0)
+   REAL(BDKi),     INTENT(  OUT)  :: rrN0(:, :, :)  !< Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),     INTENT(  OUT)  :: E10(:, :, :)   !< Initial E10 at quadrature point
 
    REAL(BDKi)                    :: rot0_temp(3)
    REAL(BDKi)                    :: rotu_temp(3)
@@ -1957,9 +1957,9 @@ END SUBROUTINE BD_QuadraturePointDataAt0
 !! a loop over quadrature points).
 SUBROUTINE BD_QuadraturePointData( p, x, m )
 
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states at t
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m                 !< misc/optimization variables
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x !< Continuous states at t
+   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m !< misc/optimization variables
 
    INTEGER(IntKi)                :: nelem          !< index to the current element
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_QuadraturePointData'
@@ -1983,18 +1983,18 @@ END SUBROUTINE BD_QuadraturePointData
 !! http://www.nrel.gov/docs/fy14osti/60759.pdf
 SUBROUTINE BD_DisplacementQP( nelem, nqp, node_elem_idx, nodes_per_elem, Shp, ShpDer, Jacobian, E10, q, uuu, uup, E1 )
 
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem               !< number of current element
-   INTEGER(IntKi),               INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
-   INTEGER(IntKi),               INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
-   INTEGER(IntKi),               INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
-   REAL(BDKi),                   INTENT(IN   )  :: Shp(:, :)           !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
-   REAL(BDKi),                   INTENT(IN   )  :: ShpDer(:, :)        !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points)
-   REAL(BDKi),                   INTENT(IN   )  :: Jacobian(:, :)      !< Jacobian value at each quadrature point
-   REAL(BDKi),                   INTENT(IN   )  :: E10(:, :, :)        !< Initial E10 at quadrature point [-]
-   REAL(BDKi),                   INTENT(IN   )  :: q(:, :)             !< q - displacement (1:3), and rotation displacement parameters (4:6)
-   REAL(BDKi),                   INTENT(INOUT)  :: uuu(:, :, :)        !< Displacement and rotation field [u c] at current QP
-   REAL(BDKi),                   INTENT(INOUT)  :: uup(:, :, :)        !< Derivative of uuu with respect to X at current QP
-   REAL(BDKi),                   INTENT(INOUT)  :: E1(:, :, :)         !< \vec{e_1} = x_0^\prime + u^\prime (3) at current QP [-]
+   INTEGER(IntKi), INTENT(IN   )  :: nelem               !< number of current element
+   INTEGER(IntKi), INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
+   INTEGER(IntKi), INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi), INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   REAL(BDKi),     INTENT(IN   )  :: Shp(:, :)           !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),     INTENT(IN   )  :: ShpDer(:, :)        !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),     INTENT(IN   )  :: Jacobian(:, :)      !< Jacobian value at each quadrature point
+   REAL(BDKi),     INTENT(IN   )  :: E10(:, :, :)        !< Initial E10 at quadrature point [-]
+   REAL(BDKi),     INTENT(IN   )  :: q(:, :)             !< q - displacement (1:3), and rotation displacement parameters (4:6)
+   REAL(BDKi),     INTENT(INOUT)  :: uuu(:, :, :)        !< Displacement and rotation field [u c] at current QP
+   REAL(BDKi),     INTENT(INOUT)  :: uup(:, :, :)        !< Derivative of uuu with respect to X at current QP
+   REAL(BDKi),     INTENT(INOUT)  :: E1(:, :, :)         !< \vec{e_1} = x_0^\prime + u^\prime (3) at current QP [-]
 
    INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
    INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
@@ -2196,11 +2196,11 @@ END SUBROUTINE BD_RotationalInterpQP
 !> Transform the \f$\underline{\underline{C}}\f$ stiffness matrix to the local quadrature point deformed orientation.
 !! Returns new value for m%qp%Stif
 SUBROUTINE BD_StifAtDeformedQP( nelem, nqp, Stif0_QP, RR0, Stif )
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem             !< number of current element
-   INTEGER(IntKi),               INTENT(IN   )  :: nqp               !< Number of quadrature points (per element)
-   REAL(BDKi),                   INTENT(IN   )  :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
-   REAL(BDKi),                   INTENT(IN   )  :: RR0(:, :, :, :)   !< Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$
-   REAL(BDKi),                   INTENT(  OUT)  :: Stif(:, :, :, :)  !< C/S stiffness matrix resolved in inertial frame at current QP
+   INTEGER(IntKi), INTENT(IN   ) :: nelem             !< number of current element
+   INTEGER(IntKi), INTENT(IN   ) :: nqp               !< Number of quadrature points (per element)
+   REAL(BDKi),     INTENT(IN   ) :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
+   REAL(BDKi),     INTENT(IN   ) :: RR0(:, :, :, :)   !< Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$
+   REAL(BDKi),     INTENT(  OUT) :: Stif(:, :, :, :)  !< C/S stiffness matrix resolved in inertial frame at current QP
 
    INTEGER(IntKi)                :: idx_qp         !< index counter for quadrature point
    INTEGER(IntKi)                :: temp_id2       !< Index to last node of previous element
@@ -2247,17 +2247,17 @@ END SUBROUTINE BD_StifAtDeformedQP
 !  mEta is a 3 element array
 !  rho is a 3x3 matrix
 SUBROUTINE BD_QPData_mEta_rho( elem_total, nqp, Mass0_QP, mEta, RR0, RR0mEta, rho )
-   INTEGER(IntKi),               INTENT(IN   )  :: elem_total !< Total number of elements
-   INTEGER(IntKi),               INTENT(IN   )  :: nqp !< Number of quadrature points (per element)
-   REAL(BDKi),                   INTENT(IN   )  :: Mass0_QP(:, :, :)      !< Sectional Mass Properties at quadrature points (6x6xqp)
-   REAL(BDKi),                   INTENT(IN   )  :: mEta(:, :, :) !< Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
-   REAL(BDKi),                   INTENT(IN   )  :: RR0(:, :, :, :)      !< Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$
-   REAL(BDKi),                   INTENT(  OUT)  :: RR0mEta(:, :, :)      !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
-   REAL(BDKi),                   INTENT(  OUT)  :: rho(:, :, :, :)      !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
+   INTEGER(IntKi), INTENT(IN   ) :: elem_total        !< Total number of elements
+   INTEGER(IntKi), INTENT(IN   ) :: nqp               !< Number of quadrature points (per element)
+   REAL(BDKi),     INTENT(IN   ) :: Mass0_QP(:, :, :) !< Sectional Mass Properties at quadrature points (6x6xqp)
+   REAL(BDKi),     INTENT(IN   ) :: mEta(:, :, :)     !< Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
+   REAL(BDKi),     INTENT(IN   ) :: RR0(:, :, :, :)   !< Rotation tensor at current QP \f$ \left(\underline{\underline{R}}\underline{\underline{R}}_0\right) \f$
+   REAL(BDKi),     INTENT(  OUT) :: RR0mEta(:, :, :)  !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
+   REAL(BDKi),     INTENT(  OUT) :: rho(:, :, :, :)   !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
 
 
-   INTEGER(IntKi)                               :: nelem             !< index to current element number
-   INTEGER(IntKi)                               :: idx_qp            !< index to the current quadrature point
+   INTEGER(IntKi)                :: nelem             !< index to current element number
+   INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
 
    DO nelem=1,elem_total
       DO idx_qp=1,nqp
@@ -2285,33 +2285,33 @@ END SUBROUTINE BD_QPData_mEta_rho
 !! (http://www.nrel.gov/docs/fy14osti/60759.pdf)
 SUBROUTINE BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
 
-   INTEGER(IntKi),         INTENT(IN   ) :: nelem             !< number of current element
-   INTEGER(IntKi),         INTENT(IN   ) :: nqp               !< Number of quadrature points (per element)
-   REAL(BDKi),             INTENT(IN   ) :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
-   TYPE(EqMotionQP),       INTENT(INOUT) :: mqp               !< qp type within misc/optimization variables
-   LOGICAL,                INTENT(IN   ) :: fact              !< Boolean to calculate the Jacobian
-   
-   REAL(BDKi)                            :: cet               !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
-   REAL(BDKi)                            :: k1s
-   REAL(BDKi)                            :: Wrk33(3,3)
-   REAL(BDKi)                            :: tildeE(3,3)
-   REAL(BDKi)                            :: C21(3,3)
-   REAL(BDKi)                            :: epsi(3,3)
-   REAL(BDKi)                            :: mu(3,3)
-   
-   INTEGER(IntKi)                        :: idx_qp            !< Index to quadrature point currently being calculated
+   INTEGER(IntKi),   INTENT(IN   ) :: nelem             !< number of current element
+   INTEGER(IntKi),   INTENT(IN   ) :: nqp               !< Number of quadrature points (per element)
+   REAL(BDKi),       INTENT(IN   ) :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
+   TYPE(EqMotionQP), INTENT(INOUT) :: mqp               !< qp type within misc/optimization variables
+   LOGICAL,          INTENT(IN   ) :: fact              !< Boolean to calculate the Jacobian
 
-   
+   REAL(BDKi)                      :: cet               !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
+   REAL(BDKi)                      :: k1s
+   REAL(BDKi)                      :: Wrk33(3,3)
+   REAL(BDKi)                      :: tildeE(3,3)
+   REAL(BDKi)                      :: C21(3,3)
+   REAL(BDKi)                      :: epsi(3,3)
+   REAL(BDKi)                      :: mu(3,3)
+
+   INTEGER(IntKi)                  :: idx_qp            !< Index to quadrature point currently being calculated
+
+
    if (.not. fact) then
-   
+
       do idx_qp=1,nqp
          call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
       end do 
-      
+
    else
-   
+
       do idx_qp=1,nqp
-      
+
          call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
 
 
@@ -2372,7 +2372,7 @@ SUBROUTINE BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
          mqp%Qe(:,:,idx_qp,nelem)     = 0.0_BDKi
          mqp%Qe(4:6,4:6,idx_qp,nelem) = -MATMUL(tildeE,mqp%Oe(1:3,4:6,idx_qp,nelem))
       end do
-      
+
    ENDIF
 
 END SUBROUTINE BD_ElasticForce
@@ -2393,7 +2393,7 @@ SUBROUTINE Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
    REAL(BDKi)                      :: eee(6)            !< intermediate array for calculation Strain and curvature terms of Fc
    REAL(BDKi)                      :: fff(6)            !< intermediate array for calculation of the elastic force, Fc
   !REAL(BDKi)                      :: Wrk(3)
-   
+
 
       !> ### Calculate the 1D strain, \f$ \underline{\epsilon} \f$, equation (5)
       !! \f$ \underline{\epsilon} = \underline{x}^\prime_0 + \underline{u}^\prime -
@@ -2406,8 +2406,8 @@ SUBROUTINE Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
       !! Note: \f$ \underline{\underline{R}}\underline{\underline{R}}_0 \f$ is used to go from the material basis into the inertial basis
       !!       and the transpose for the other direction.
    eee(1:3) = mqp%E1(1:3,idx_qp,nelem) - mqp%RR0(1:3,3,idx_qp,nelem)     ! Using RR0 z direction in IEC coords
-   
-   
+
+
       !> ### Set the 1D sectional curvature, \f$ \underline{\kappa} \f$, equation (5)
       !! \f$ \underline{\kappa} = \underline{k} + \underline{\underline{R}}\underline{k}_i \f$
       !!          where \f$ \underline{k} = \text{axial}\left(\underline{\underline{R}}^\prime\underline{\underline{R}}^T \right) \f$
@@ -2443,7 +2443,7 @@ SUBROUTINE Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
       !!                                    \underline{\kappa}    \end{array} \right\}
       !!   \f$
       !!
-      !! Note then that the extension twist term is added to this so that we get 
+      !! Note then that the extension twist term is added to this so that we get
       !! \f$ \underline{\mathcal{F}}^C = \underline{F}^c_{a} + \underline{F}^c_{et} \f$
       !!
       !! where \f$ \underline{F}^c_{et} \f$ is the extension twist coupling term.
@@ -2507,9 +2507,9 @@ SUBROUTINE Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
       !!                \left(\underline{\mathcal{F}}^c \times \underline{E}_1 \right)^T
       !!       \end{bmatrix}  \f$
    mqp%Fd(1:3,idx_qp,nelem)  = 0.0_BDKi
-! ADP uu0 ref: If E1 is referenced against a different curve than Stif0_QP, there will be strange coupling terms here. 
+! ADP uu0 ref: If E1 is referenced against a different curve than Stif0_QP, there will be strange coupling terms here.
    mqp%Fd(4:6,idx_qp,nelem)  = cross_product(mqp%Fc(1:3,idx_qp,nelem), mqp%E1(:,idx_qp,nelem))
-   
+
 END SUBROUTINE Calc_Fc_Fd
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -2522,42 +2522,41 @@ END SUBROUTINE Calc_Fc_Fd
 !  Output:  vvv vvp
 !
 SUBROUTINE BD_QPDataVelocity( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, ShpDer, Jacobian, dqdt, vvv, vvp )
+   INTEGER(IntKi), INTENT(IN   )  :: elem_total          !< Total number of elements
+   INTEGER(IntKi), INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi), INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
+   INTEGER(IntKi), INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   REAL(BDKi),     INTENT(IN   )  :: Shp(:, :)           !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),     INTENT(IN   )  :: ShpDer(:, :)        !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),     INTENT(IN   )  :: Jacobian(:, :)      !< Jacobian value at each quadrature point
+   REAL(BDKi),     INTENT(IN   )  :: dqdt(:, :)          !< velocity
+   REAL(BDKi),     INTENT(  OUT)  :: vvv(:, :, :)        !< Translational velocity and rotational parameter velocity (at current QP)
+   REAL(BDKi),     INTENT(  OUT)  :: vvp(:, :, :)        !< Derivative of vvv with respect to X
 
-   INTEGER(IntKi),               INTENT(IN   )  :: elem_total          !< Total number of elements
-   INTEGER(IntKi),               INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
-   INTEGER(IntKi),               INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
-   INTEGER(IntKi),               INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
-   REAL(BDKi),                   INTENT(IN   )  :: Shp(:, :)           !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
-   REAL(BDKi),                   INTENT(IN   )  :: ShpDer(:, :)        !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points)
-   REAL(BDKi),                   INTENT(IN   )  :: Jacobian(:, :)      !< Jacobian value at each quadrature point
-   REAL(BDKi),                   INTENT(IN   )  :: dqdt(:, :)          !< velocity
-   REAL(BDKi),                   INTENT(  OUT)  :: vvv(:, :, :)        !< Translational velocity and rotational parameter velocity (at current QP)
-   REAL(BDKi),                   INTENT(  OUT)  :: vvp(:, :, :)        !< Derivative of vvv with respect to X
-
-   INTEGER(IntKi)                               :: nelem               !< index to current element
-   INTEGER(IntKi)                               :: idx_qp              !< index to quadrature point
-   INTEGER(IntKi)                               :: idx_node            !< index to the GLL node
-   INTEGER(IntKi)                               :: elem_start          !< Starting quadrature point of current element
+   INTEGER(IntKi)                 :: nelem               !< index to current element
+   INTEGER(IntKi)                 :: idx_qp              !< index to quadrature point
+   INTEGER(IntKi)                 :: idx_node            !< index to the GLL node
+   INTEGER(IntKi)                 :: elem_start          !< Starting quadrature point of current element
 
    DO nelem=1,elem_total
 
       elem_start = node_elem_idx(nelem,1)
 
-   DO idx_qp=1,nqp
+      DO idx_qp=1,nqp
 
-      !> Calculate the values for the
+         !> Calculate the values for the
 
-         ! Initialize to zero for summation
-      vvv(:,idx_qp,nelem) = 0.0_BDKi
-      vvp(:,idx_qp,nelem) = 0.0_BDKi
+            ! Initialize to zero for summation
+         vvv(:,idx_qp,nelem) = 0.0_BDKi
+         vvp(:,idx_qp,nelem) = 0.0_BDKi
 
-         ! Calculate the velocity term, velocity prime (derivative of velocity with respect to X-axis), and acceleration terms
-      DO idx_node=1,nodes_per_elem
-         vvv(:,idx_qp,nelem) = vvv(:,idx_qp,nelem) + Shp(idx_node,idx_qp)                           * dqdt(:,elem_start-1+idx_node)
-         vvp(:,idx_qp,nelem) = vvp(:,idx_qp,nelem) + ShpDer(idx_node,idx_qp)/Jacobian(idx_qp,nelem) * dqdt(:,elem_start-1+idx_node)
+            ! Calculate the velocity term, velocity prime (derivative of velocity with respect to X-axis), and acceleration terms
+         DO idx_node=1,nodes_per_elem
+            vvv(:,idx_qp,nelem) = vvv(:,idx_qp,nelem) + Shp(idx_node,idx_qp)                           * dqdt(:,elem_start-1+idx_node)
+            vvp(:,idx_qp,nelem) = vvp(:,idx_qp,nelem) + ShpDer(idx_node,idx_qp)/Jacobian(idx_qp,nelem) * dqdt(:,elem_start-1+idx_node)
+         ENDDO
+
       ENDDO
-
-   ENDDO
 
    ENDDO
 
@@ -2574,19 +2573,18 @@ END SUBROUTINE BD_QPDataVelocity
 !
 !NOTE: This routine used to be part of BD_QPDataVelocity
 SUBROUTINE BD_QPDataAcceleration( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, acc, aaa )
+   INTEGER(IntKi), INTENT(IN   )  :: elem_total          !< Total number of elements
+   INTEGER(IntKi), INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi), INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
+   INTEGER(IntKi), INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   REAL(BDKi),     INTENT(IN   )  :: Shp(:, :)           !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
+   REAL(BDKi),     INTENT(IN   )  :: acc(:, :)           !< Acceleration (dqdtdt): at t on input; at t+dt on outputs
+   REAL(BDKi),     INTENT(  OUT)  :: aaa(:, :, :)        !< Translational acceleration and rotational parameter acceleration (at current QP)
 
-   INTEGER(IntKi),               INTENT(IN   )  :: elem_total          !< Total number of elements
-   INTEGER(IntKi),               INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
-   INTEGER(IntKi),               INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
-   INTEGER(IntKi),               INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
-   REAL(BDKi),                   INTENT(IN   )  :: Shp(:, :)           !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
-   REAL(BDKi),                   INTENT(IN   )  :: acc(:, :)           !< Acceleration (dqdtdt): at t on input; at t+dt on outputs
-   REAL(BDKi),                   INTENT(  OUT)  :: aaa(:, :, :)        !< Translational acceleration and rotational parameter acceleration (at current QP)
-
-   INTEGER(IntKi)                               :: nelem               !< index of current element
-   INTEGER(IntKi)                               :: idx_qp              !< index of current quadrature point
-   INTEGER(IntKi)                               :: idx_node
-   INTEGER(IntKi)                               :: elem_start
+   INTEGER(IntKi)                 :: nelem               !< index of current element
+   INTEGER(IntKi)                 :: idx_qp              !< index of current quadrature point
+   INTEGER(IntKi)                 :: idx_node
+   INTEGER(IntKi)                 :: elem_start
 
 
 
@@ -2603,7 +2601,7 @@ SUBROUTINE BD_QPDataAcceleration( elem_total, node_elem_idx, nqp, nodes_per_elem
          DO idx_node=1,nodes_per_elem
             aaa(:,idx_qp,nelem) = aaa(:,idx_qp,nelem) + Shp(idx_node,idx_qp) * acc(:,elem_start-1+idx_node)
          END DO
-      END DO   
+      END DO
       
    END DO
    
@@ -2689,25 +2687,25 @@ END SUBROUTINE BD_InertialForce
 !! It also calculates the linearized matrices Sd, Od, Pd and Qd
 !! betaC, Gd, Xd, Yd for N-R algorithm
 SUBROUTINE BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem    !< index of current element in loop
-   INTEGER(IntKi),               INTENT(IN   )  :: nqp      !< Number of quadrature points (per element)
-   REAL(BDKi),                   INTENT(IN   )  :: beta(:)  !< Damping Coefficient
-   TYPE(EqMotionQP),             INTENT(INOUT)  :: mqp      !< qp type within misc/optimization variables
-   LOGICAL,                      INTENT(IN   )  :: fact
+   INTEGER(IntKi),   INTENT(IN   ) :: nelem   !< index of current element in loop
+   INTEGER(IntKi),   INTENT(IN   ) :: nqp     !< Number of quadrature points (per element)
+   REAL(BDKi),       INTENT(IN   ) :: beta(:) !< Damping Coefficient
+   TYPE(EqMotionQP), INTENT(INOUT) :: mqp     !< qp type within misc/optimization variables
+   LOGICAL,          INTENT(IN   ) :: fact
 
-   REAL(BDKi)                  :: SS_ome(3,3)
-   REAL(BDKi)                  :: ffd(6)
-   REAL(BDKi)                  :: D11(3,3)
-   REAL(BDKi)                  :: D12(3,3)
-   REAL(BDKi)                  :: D21(3,3)
-   REAL(BDKi)                  :: D22(3,3)
-   REAL(BDKi)                  :: b11(3,3)
-   REAL(BDKi)                  :: b12(3,3)
-   REAL(BDKi)                  :: alpha(3,3)
-   INTEGER(IntKi)              :: i, j
+   REAL(BDKi)                      :: SS_ome(3,3)
+   REAL(BDKi)                      :: ffd(6)
+   REAL(BDKi)                      :: D11(3,3)
+   REAL(BDKi)                      :: D12(3,3)
+   REAL(BDKi)                      :: D21(3,3)
+   REAL(BDKi)                      :: D22(3,3)
+   REAL(BDKi)                      :: b11(3,3)
+   REAL(BDKi)                      :: b12(3,3)
+   REAL(BDKi)                      :: alpha(3,3)
+   INTEGER(IntKi)                  :: i, j
 
-   INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
-   
+   INTEGER(IntKi)                  :: idx_qp      !< index of current quadrature point
+
    DO idx_qp=1,nqp
       !m%qp%betaC(:,:,idx_qp,nelem) = MATMUL( diag(p%beta(i)), temp_b,m%qp%Stif(:,:,idx_qp,nelem))
       DO j=1,6
@@ -2717,13 +2715,13 @@ SUBROUTINE BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
       END DO
    END DO
 
-   
+
    IF (.NOT. fact) then ! skip all but Fc and Fd terms
-   
+
       DO idx_qp=1,nqp
          call Calc_FC_FD_ffd() ! this modifies mqp%Fc and mqp%Fd
       END DO
-      
+
    ! bjj: we don't use these values when fact is FALSE, so let's save time and ignore them here, too.
    !    mqp%Sd(:,:,:,nelem)    = 0.0_BDKi
    !    mqp%Pd(:,:,:,nelem)    = 0.0_BDKi
@@ -2732,22 +2730,22 @@ SUBROUTINE BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
    !    mqp%Gd(:,:,:,nelem)    = 0.0_BDKi
    !    mqp%Xd(:,:,:,nelem)    = 0.0_BDKi
    !    mqp%Yd(:,:,:,nelem)    = 0.0_BDKi
-      
-  ELSE 
+
+  ELSE
 !FIXME:  sometime we can condense this with vector arithmetic and removing some variables that aren't needed.
-   
+
       DO idx_qp=1,nqp
 
          CALL Calc_FC_FD_ffd()  ! this sets local variable ffd and modifies mqp%Fc and mqp%Fd
-                  
+
          D11 = mqp%betaC(1:3,1:3,idx_qp,nelem)
          D12 = mqp%betaC(1:3,4:6,idx_qp,nelem)
          D21 = mqp%betaC(4:6,1:3,idx_qp,nelem)
          D22 = mqp%betaC(4:6,4:6,idx_qp,nelem)
-         
+
          b11(1:3,1:3) = -MATMUL(SkewSymMat(mqp%E1(:,idx_qp,nelem)),D11)
          b12(1:3,1:3) = -MATMUL(SkewSymMat(mqp%E1(:,idx_qp,nelem)),D12)
-         
+
          SS_ome = SkewSymMat( mqp%vvv(4:6,idx_qp,nelem) )
 
          ! Compute stiffness matrix Sd
@@ -2784,7 +2782,7 @@ SUBROUTINE BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
          mqp%Yd(1:3,:,idx_qp,nelem)   = 0.0_BDKi
          mqp%Yd(4:6,1:3,idx_qp,nelem) = b11
          mqp%Yd(4:6,4:6,idx_qp,nelem) = b12
-      END DO   
+      END DO
    ENDIF
 
 CONTAINS
@@ -2806,14 +2804,14 @@ END SUBROUTINE BD_DissipativeForce
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the gravity forces `m%qp%Fg`
 SUBROUTINE BD_GravityForce( nelem,nqp,qp_mmm,qp_Fg,qp_RR0mEta,grav )
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem               !< index of current element in loop
-   INTEGER(IntKi),               INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
-   REAL(BDKi),                   INTENT(IN   )  :: qp_mmm(:, :)        !< Mass at current QP
-   REAL(BDKi),                   INTENT(INOUT)  :: qp_Fg(:, :, :)      !< Gravity forces at current QP. 6
-   REAL(BDKi),                   INTENT(IN   )  :: qp_RR0mEta(:, :, :) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
-   REAL(BDKi),                   INTENT(IN   )  :: grav(:)             !< Gravity, which is scaled in the case of Static analysis
+   INTEGER(IntKi), INTENT(IN   )  :: nelem               !< index of current element in loop
+   INTEGER(IntKi), INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
+   REAL(BDKi),     INTENT(IN   )  :: qp_mmm(:, :)        !< Mass at current QP
+   REAL(BDKi),     INTENT(INOUT)  :: qp_Fg(:, :, :)      !< Gravity forces at current QP. 6
+   REAL(BDKi),     INTENT(IN   )  :: qp_RR0mEta(:, :, :) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
+   REAL(BDKi),     INTENT(IN   )  :: grav(:)             !< Gravity, which is scaled in the case of Static analysis
 
-   INTEGER(IntKi)                               :: idx_qp              !< index of current quadrature point
+   INTEGER(IntKi)                 :: idx_qp              !< index of current quadrature point
 
    do idx_qp=1,nqp
 
@@ -2821,7 +2819,7 @@ SUBROUTINE BD_GravityForce( nelem,nqp,qp_mmm,qp_Fg,qp_RR0mEta,grav )
       qp_Fg(4:6,idx_qp,nelem) = cross_product(qp_RR0mEta(:,idx_qp,nelem),grav)
 
    end do
-   
+
 END SUBROUTINE BD_GravityForce
 
 
@@ -2855,14 +2853,14 @@ END SUBROUTINE BD_AssembleStiffK
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine assembles global force vector.
 SUBROUTINE BD_AssembleRHS( nelem, node_elem_idx, nodes_per_elem, ElemRHS, GlobalRHS )
-   INTEGER(IntKi),            INTENT(IN   )  :: nelem               !< Number of elements
-   INTEGER(IntKi),            INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
-   INTEGER(IntKi),            INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
-   REAL(BDKi),                INTENT(IN   )  :: ElemRHS(:,:)        !< Total element force (Fc, Fd, Fb) (size = p%dofnode x p%nodes_per_elem)
-   REAL(BDKi),                INTENT(INOUT)  :: GlobalRHS(:,:)      !< Global force vector (size = p%dofnode x p%nodes_per_elem)
+   INTEGER(IntKi), INTENT(IN   )  :: nelem               !< Number of elements
+   INTEGER(IntKi), INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi), INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   REAL(BDKi),     INTENT(IN   )  :: ElemRHS(:,:)        !< Total element force (Fc, Fd, Fb) (size = p%dofnode x p%nodes_per_elem)
+   REAL(BDKi),     INTENT(INOUT)  :: GlobalRHS(:,:)      !< Global force vector (size = p%dofnode x p%nodes_per_elem)
 
-   INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: temp_id
+   INTEGER(IntKi)   :: i
+   INTEGER(IntKi)   :: temp_id
 
 !  GlobalRHS -->  p%dof_total =  p%node_total   * p%dof_node   =  [p%elem_total*(p%nodes_per_elem-1) + 1]  *  p%dof_node
 !  ElemRHS   -->  p%dof_elem  =                                =  p%nodes_per_elem                         *  p%dof_node
@@ -2941,15 +2939,15 @@ END SUBROUTINE BD_ElementMatrixAcc
 ! used in BD_ElementMatrixAcc and BD_InertialForce
 SUBROUTINE BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
 
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem       !< index of current element in loop
-   INTEGER(IntKi),               INTENT(IN   )  :: nqp              !< Number of quadrature points (per element)
-   REAL(BDKi),                   INTENT(IN   )  :: mmm(:, :)      !< Mass at current QP
-   REAL(BDKi),                   INTENT(IN   )  :: RR0mEta(:, :, :) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
-   REAL(BDKi),                   INTENT(IN   )  :: rho(:, :, :, :)  !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
-   REAL(BDKi),                   INTENT(  OUT)  :: Mi(:, :, :, :)      !< Mass matrix for inertial force. 6x6
+   INTEGER(IntKi), INTENT(IN   ) :: nelem            !< index of current element in loop
+   INTEGER(IntKi), INTENT(IN   ) :: nqp              !< Number of quadrature points (per element)
+   REAL(BDKi),     INTENT(IN   ) :: mmm(:, :)        !< Mass at current QP
+   REAL(BDKi),     INTENT(IN   ) :: RR0mEta(:, :, :) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
+   REAL(BDKi),     INTENT(IN   ) :: rho(:, :, :, :)  !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
+   REAL(BDKi),     INTENT(  OUT) :: Mi(:, :, :, :)   !< Mass matrix for inertial force. 6x6
 
-   INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
+   INTEGER(IntKi)                :: i
+   INTEGER(IntKi)                :: idx_qp      !< index of current quadrature point
 
    do idx_qp=1,nqp
 
@@ -2968,7 +2966,7 @@ SUBROUTINE BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
       Mi(4:6,4:6,idx_qp,nelem) = rho(:,:,idx_qp,nelem)
 
    end do
-   
+
 
 END SUBROUTINE BD_InertialMassMatrix
 
@@ -2978,23 +2976,23 @@ END SUBROUTINE BD_InertialMassMatrix
 !! Returns new value for `Fb`  Note that the equations here are the inertial equations with the acceleration terms set to zero.
 ! called by BD_ElementMatrixAcc and BD_ElementMatrixForce
 SUBROUTINE BD_GyroForce( nelem, nqp, vvv, RR0mEta, rho, Fb )
-   INTEGER(IntKi),               INTENT(IN   )  :: nelem            !< index of current element in loop
-   INTEGER(IntKi),               INTENT(IN   )  :: nqp              !< Number of quadrature points (per element)
-   REAL(BDKi),                   INTENT(IN   )  :: vvv(:, :, :)     !< Translational velocity and rotational parameter velocity (at current QP)
-   REAL(BDKi),                   INTENT(IN   )  :: RR0mEta(:, :, :) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
-   REAL(BDKi),                   INTENT(IN   )  :: rho(:, :, :, :)  !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
-   REAL(BDKi),                   INTENT(  OUT)  :: Fb(:, :, :)      !< Gyroscopic forces at current QP. 6
+   INTEGER(IntKi), INTENT(IN   ) :: nelem            !< index of current element in loop
+   INTEGER(IntKi), INTENT(IN   ) :: nqp              !< Number of quadrature points (per element)
+   REAL(BDKi),     INTENT(IN   ) :: vvv(:, :, :)     !< Translational velocity and rotational parameter velocity (at current QP)
+   REAL(BDKi),     INTENT(IN   ) :: RR0mEta(:, :, :) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
+   REAL(BDKi),     INTENT(IN   ) :: rho(:, :, :, :)  !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
+   REAL(BDKi),     INTENT(  OUT) :: Fb(:, :, :)      !< Gyroscopic forces at current QP. 6
 
 
-!   REAL(BDKi)                  :: Bi(6,6)
-   REAL(BDKi)                  :: beta(3)
-   REAL(BDKi)                  :: gama(3)
-   INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
+   ! REAL(BDKi)                :: Bi(6,6)
+   REAL(BDKi)                    :: beta(3)
+   REAL(BDKi)                    :: gama(3)
+   INTEGER(IntKi)                :: idx_qp      !< index of current quadrature point
 
    Fb(:,:,nelem) = 0.0_BDKi
 
    do idx_qp=1,nqp
-   
+
       beta = cross_product(vvv(4:6,idx_qp,nelem), RR0mEta(:,idx_qp,nelem)) !MATMUL(SkewSymMat(ome),mEta)
       gama = MATMUL(rho(:,:,idx_qp,nelem),vvv(4:6,idx_qp,nelem))
 
@@ -3010,16 +3008,14 @@ END SUBROUTINE BD_GyroForce
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> calculate Lagrangian interpolant tensor at ns points where basis
 !! functions are assumed to be associated with (np+1) GLL points on [-1,1]
+! See Bauchau equations 17.1 - 17.5
 SUBROUTINE BD_diffmtc( nqp, nodes_per_elem, QPtN, GLL_nodes, Shp, ShpDer )
-
-   ! See Bauchau equations 17.1 - 17.5
-   
    INTEGER(IntKi), INTENT(IN   ) :: nqp            !< Number of quadrature points (per element)
    INTEGER(IntKi), INTENT(IN   ) :: nodes_per_elem !< Finite element (GLL) nodes per element
-   REAL(BDKi),     INTENT(IN   ) :: QPtN(:)           !< Quadrature (QuadPt) point locations in natural frame [-1, 1]
+   REAL(BDKi),     INTENT(IN   ) :: QPtN(:)        !< Quadrature (QuadPt) point locations in natural frame [-1, 1]
    REAL(BDKi),     INTENT(IN   ) :: GLL_nodes(:)   !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
-   REAL(BDKi),     INTENT(INOUT) :: Shp(:,:)       !< p%Shp    (or another Shp array for when we add outputs at arbitrary locations)
-   REAL(BDKi),     INTENT(INOUT) :: ShpDer(:,:)    !< p%ShpDer (or another Shp array for when we add outputs at arbitrary locations)
+   REAL(BDKi),     INTENT(INOUT) :: Shp(:, :)      !< p%Shp    (or another Shp array for when we add outputs at arbitrary locations)
+   REAL(BDKi),     INTENT(INOUT) :: ShpDer(:, :)   !< p%ShpDer (or another Shp array for when we add outputs at arbitrary locations)
 
    REAL(BDKi)            :: dnum
    REAL(BDKi)            :: den
@@ -3064,7 +3060,7 @@ SUBROUTINE BD_diffmtc( nqp, nodes_per_elem, QPtN, GLL_nodes, Shp, ShpDer )
        endif
      enddo
    enddo
-   
+
    ! shape function
    do j = 1,nqp
       do l = 1,nodes_per_elem
@@ -3584,15 +3580,15 @@ END SUBROUTINE BD_StaticSolution
 !! given incremental value calculated by the
 !! Newton-Raphson algorithm
 SUBROUTINE BD_StaticUpdateConfiguration( node_total, Solution, q )
-   INTEGER(IntKi),                     INTENT(IN   )  :: node_total     !< Total number of finite element (GLL) nodes
-   REAL(BDKi),                         INTENT(IN   )  :: Solution(:, :) !< Result from LAPACK solve (X from A*X = B solve)
-   REAL(BDKi),                         INTENT(INOUT)  :: q(:, :)        !< displacement (1:3), and rotation displacement parameters (4:6)--(at time at t on input, t + dt on output)
+   INTEGER(IntKi), INTENT(IN   ) :: node_total     !< Total number of finite element (GLL) nodes
+   REAL(BDKi),     INTENT(IN   ) :: Solution(:, :) !< Result from LAPACK solve (X from A*X = B solve)
+   REAL(BDKi),     INTENT(INOUT) :: q(:, :)        !< displacement (1:3), and rotation displacement parameters (4:6)--(at time at t on input, t + dt on output)
 
-   REAL(BDKi)                             :: rotf_temp(3)
-   REAL(BDKi)                             :: roti_temp(3)
-   REAL(BDKi)                             :: rot_temp(3)
-   INTEGER(IntKi)                         :: i
-   CHARACTER(*), PARAMETER                :: RoutineName = 'BD_StaticUpdateConfiguration'
+   REAL(BDKi)                    :: rotf_temp(3)
+   REAL(BDKi)                    :: roti_temp(3)
+   REAL(BDKi)                    :: rot_temp(3)
+   INTEGER(IntKi)                :: i
+   CHARACTER(*), PARAMETER       :: RoutineName = 'BD_StaticUpdateConfiguration'
 
 !FIXME: why is x%q(:,1) calculated??? Isn't that already known???
    DO i=1, node_total
@@ -4002,17 +3998,16 @@ END SUBROUTINE BD_GA2
 !> This subroutine calculates the predicted values (initial guess)
 !! of u,v,acc, and xcc in generalized-alpha algorithm
 SUBROUTINE BD_TiSchmPredictorStep( x, OtherState, dt, coef, node_total )
+   REAL(DbKi),                   INTENT(IN   ) :: dt         !< module dt
+   REAL(DbKi),                   INTENT(IN   ) :: coef(9)    !< GA2 Coefficient
+   INTEGER(IntKi),               INTENT(IN   ) :: node_total !< Total number of finite element (GLL) nodes
+   TYPE(BD_ContinuousStateType), INTENT(INOUT) :: x          !< Continuous states at t on input at t + dt on output
+   TYPE(BD_OtherStateType),      INTENT(INOUT) :: OtherState !< Other states at t on input; at t+dt on outputs
 
-   REAL(DbKi),                        INTENT(IN   )  :: dt      !< module dt
-   REAL(DbKi),                        INTENT(IN   )  :: coef(9)      !< GA2 Coefficient
-   INTEGER(IntKi),                    INTENT(IN   )  :: node_total      !< Total number of finite element (GLL) nodes
-   TYPE(BD_ContinuousStateType),      INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
-   TYPE(BD_OtherStateType),           INTENT(INOUT)  :: OtherState  !< Other states at t on input; at t+dt on outputs
-
-   REAL(BDKi)                  :: tr(6)
-   REAL(BDKi)                  :: rot_temp(3)
-   INTEGER                     :: i              ! generic counter
-   CHARACTER(*), PARAMETER     :: RoutineName = 'BD_TiSchmPredictorStep'
+   REAL(BDKi)              :: tr(6)
+   REAL(BDKi)              :: rot_temp(3)
+   INTEGER                 :: i           ! generic counter
+   CHARACTER(*), PARAMETER :: RoutineName = 'BD_TiSchmPredictorStep'
 
    DO i=2,node_total
 
@@ -4044,12 +4039,12 @@ SUBROUTINE BD_TiSchmComputeCoefficients( dt, rhoinf, coef )
    REAL(DbKi)                :: tr0
    REAL(DbKi)                :: tr1
    REAL(DbKi)                :: tr2
-   REAL(DbKi)                :: alfam      ! \alpha_M
-   REAL(DbKi)                :: alfaf      ! \alpha_F
+   REAL(DbKi)                :: alfam   ! \alpha_M
+   REAL(DbKi)                :: alfaf   ! \alpha_F
    REAL(DbKi)                :: gama
    REAL(DbKi)                :: beta
-   REAL(DbKi)                :: oalfaM     ! 1 - \alpha_M
-   REAL(DbKi)                :: deltat2    ! {\delta t}^2 = dt^2
+   REAL(DbKi)                :: oalfaM  ! 1 - \alpha_M
+   REAL(DbKi)                :: deltat2 ! {\delta t}^2 = dt^2
 
       ! Bauchau equations 17.39
    tr0 = rhoinf + 1.0_BDKi
@@ -4084,7 +4079,6 @@ END SUBROUTINE BD_TiSchmComputeCoefficients
 !> This subroutine applies the prescribed boundary conditions (from the input RootMotion mesh)
 !! into states and otherstates at the root finite element node
 SUBROUTINE BD_BoundaryGA2(x, RootMotion, GlbRot, Glb_crv, acc, ErrStat, ErrMsg)
-
    TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x            !< Continuous states at t
    TYPE(MeshType),               INTENT(IN   )  :: RootMotion   !< contains motion--Inputs at t (in local BD coords)
    REAL(BDKi),                   INTENT(IN   )  :: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)--Inputs at t
@@ -4124,24 +4118,23 @@ END SUBROUTINE BD_BoundaryGA2
 !! it returns the values of states and accelerations at the end of a time step (t_f)
 !FIXME: note similarities to BD_StaticSolution.  May be able to combine
 SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x          !< Continuous states: input are the predicted values at t+dt; output are calculated values at t + dt
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState !< Other states: input are the predicted accelerations at t+dt; output are calculated values at t + dt
+   TYPE(BD_InputType),           INTENT(IN   )  :: u          !< inputs in the local coordinate system (not FAST's global system)
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p          !< Parameters
+   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m          !< misc/optimization variables
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
-   TYPE(BD_ContinuousStateType),       INTENT(INOUT)  :: x           !< Continuous states: input are the predicted values at t+dt; output are calculated values at t + dt
-   TYPE(BD_OtherStateType),            INTENT(INOUT)  :: OtherState  !< Other states: input are the predicted accelerations at t+dt; output are calculated values at t + dt
-   TYPE(BD_InputType),                 INTENT(IN   )  :: u           !< inputs in the local coordinate system (not FAST's global system)
-   TYPE(BD_ParameterType),             INTENT(IN   )  :: p           !< Parameters
-   TYPE(BD_MiscVarType),               INTENT(INOUT)  :: m           !< misc/optimization variables
-   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)          :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)    :: ErrMsg2     ! Temporary Error message
+   CHARACTER(*), PARAMETER :: RoutineName = 'BD_DynamicSolutionGA2'
 
-   INTEGER(IntKi)                                     :: ErrStat2    ! Temporary Error status
-   CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! Temporary Error message
-   CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_DynamicSolutionGA2'
-   
-   REAL(DbKi)                                         :: Eref
-   REAL(DbKi)                                         :: Enorm
-   INTEGER(IntKi)                                     :: i
-   INTEGER(IntKi)                                     :: j
-   LOGICAL                                            :: fact
+   REAL(DbKi)              :: Eref
+   REAL(DbKi)              :: Enorm
+   INTEGER(IntKi)          :: i
+   INTEGER(IntKi)          :: j
+   LOGICAL                 :: fact
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -4219,27 +4212,27 @@ END SUBROUTINE BD_DynamicSolutionGA2
 !! N-R algorithm
 SUBROUTINE BD_UpdateDynamicGA2( node_total, coef, Solution, x, OtherState )
 
-   INTEGER(IntKi),                     INTENT(IN   )  :: node_total     !< Total number of finite element (GLL) nodes
-   REAL(DbKi),                         INTENT(IN   )  :: coef(9)        !< GA2 Coefficient
-   REAL(BDKi),                         INTENT(IN   )  :: Solution(:, :) !< Result from LAPACK solve (X from A*X = B solve)
-   TYPE(BD_ContinuousStateType),       INTENT(INOUT)  :: x              !< Continuous states at t on input at t + dt on output
-   TYPE(BD_OtherStateType),            INTENT(INOUT)  :: OtherState     !< Other states at t on input; at t+dt on outputs
+   INTEGER(IntKi),               INTENT(IN   ) :: node_total     !< Total number of finite element (GLL) nodes
+   REAL(DbKi),                   INTENT(IN   ) :: coef(9)        !< GA2 Coefficient
+   REAL(BDKi),                   INTENT(IN   ) :: Solution(:, :) !< Result from LAPACK solve (X from A*X = B solve)
+   TYPE(BD_ContinuousStateType), INTENT(INOUT) :: x              !< Continuous states at t on input at t + dt on output
+   TYPE(BD_OtherStateType),      INTENT(INOUT) :: OtherState     !< Other states at t on input; at t+dt on outputs
 
-   REAL(BDKi)                  :: roti_temp(3)
-   REAL(BDKi)                  :: rot_temp(3)
-   INTEGER(IntKi)              :: i
-   CHARACTER(*), PARAMETER     :: RoutineName = 'BD_UpdateDynamicGA2'
+   REAL(BDKi)              :: roti_temp(3)
+   REAL(BDKi)              :: rot_temp(3)
+   INTEGER(IntKi)          :: i
+   CHARACTER(*), PARAMETER :: RoutineName = 'BD_UpdateDynamicGA2'
 
    ! m%Solution contains (\delta q dot dot)
    ! The first node has no displacements by definition.
    DO i=2, node_total
        x%q(1:3,i) = x%q(1:3,i) + coef(8) * Solution(1:3,i)
-       
+
        roti_temp  =              coef(8) * Solution(4:6,i)  ! Solution(4:6,i) seems to contain accelerations (i.e., delta \omega dot), so I don't think this can be a w-m parameter
        CALL BD_CrvCompose(rot_temp,roti_temp,x%q(4:6,i),FLAG_R1R2) ! rot_temp = roti_temp composed with x%q(4:6,i)
        x%q(4:6,i) = rot_temp(1:3) 
 
-       
+
        x%dqdt(:,i)           = x%dqdt(:,i)         + coef(7) * Solution(:,i)
        OtherState%acc(:,i)   = OtherState%acc(:,i) +           Solution(:,i)    ! update acceleration (dqdtdt: q dot dot) to next guess for values at t+dt
        OtherState%xcc(:,i)   = OtherState%xcc(:,i) + coef(9) * Solution(:,i)    ! update algorithm acceleration to next guess for values at t+dt:  (1-alpha_m)*xcc_(n+1) = (1-alpha_f)*dqdtdt_(n+1) + alpha_f*dqdtdt_n - alpha_m*xcc_n
@@ -4479,7 +4472,7 @@ SUBROUTINE BD_InputGlobalLocal(GlbRot, node_total, RootMotion, PointLoad, DistrL
    INTEGER(IntKi)                :: i            !< Generic counter
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_InputGlobalLocal'
 
-!FIXME: we might be able to get rid of the m%u now if we put the p%GlbRot multiplications elsewhere.   
+!FIXME: we might be able to get rid of the m%u now if we put the p%GlbRot multiplications elsewhere.
 
    ! Transform Root Motion from Global to Local (Blade) frame
    RootMotion%TranslationDisp(:,1) = MATMUL(RootMotion%TranslationDisp(:,1),GlbRot)  ! = MATMUL(TRANSPOSE(GlbRot),RootMotion%TranslationDisp(:,1)) = MATMUL(RootMotion%RefOrientation(:,:,1),RootMotion%TranslationDisp(:,1))
@@ -4488,18 +4481,18 @@ SUBROUTINE BD_InputGlobalLocal(GlbRot, node_total, RootMotion, PointLoad, DistrL
    RootMotion%TranslationAcc(:,1)  = MATMUL(RootMotion%TranslationAcc( :,1),GlbRot)  ! = MATMUL(TRANSPOSE(GlbRot),RootMotion%TranslationAcc(:,1))  = MATMUL(RootMotion%RefOrientation(:,:,1),RootMotion%TranslationAcc(:,1))
    RootMotion%RotationAcc(:,1)     = MATMUL(RootMotion%RotationAcc(    :,1),GlbRot)  ! = MATMUL(TRANSPOSE(GlbRot),RootMotion%RotationAcc(:,1))     = MATMUL(RootMotion%RefOrientation(:,:,1),RootMotion%RotationAcc(:,1))
 
-   ! Transform DCM to Rotation Tensor (RT)   
+   ! Transform DCM to Rotation Tensor (RT)
    RootMotion%Orientation(:,:,1) = TRANSPOSE(RootMotion%Orientation(:,:,1)) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
-   
+
    ! Transform Applied Forces from Global to Local (Blade) frame
    DO i=1,node_total
-      PointLoad%Force(1:3,i)  = MATMUL(PointLoad%Force(:,i),GlbRot)  !=MATMUL(TRANSPOSE(GlbRot),PointLoad%Force(:,i))  = MATMUL(RootMotion%RefOrientation(:,:,1),PointLoad%Force(:,i)) 
+      PointLoad%Force(1:3,i)  = MATMUL(PointLoad%Force(:,i),GlbRot)  !=MATMUL(TRANSPOSE(GlbRot),PointLoad%Force(:,i))  = MATMUL(RootMotion%RefOrientation(:,:,1),PointLoad%Force(:,i))
       PointLoad%Moment(1:3,i) = MATMUL(PointLoad%Moment(:,i),GlbRot) !=MATMUL(TRANSPOSE(GlbRot),PointLoad%Moment(:,i)) = MATMUL(RootMotion%RefOrientation(:,:,1),PointLoad%Moment(:,i))
    ENDDO
-   
+
    ! transform distributed forces and moments
    DO i=1,DistrLoad%Nnodes
-      DistrLoad%Force(1:3,i)  = MATMUL(DistrLoad%Force(:,i),GlbRot)  !=MATMUL(TRANSPOSE(GlbRot),DistrLoad%Force(:,i))  = MATMUL(RootMotion%RefOrientation(:,:,1),DistrLoad%Force(:,i)) 
+      DistrLoad%Force(1:3,i)  = MATMUL(DistrLoad%Force(:,i),GlbRot)  !=MATMUL(TRANSPOSE(GlbRot),DistrLoad%Force(:,i))  = MATMUL(RootMotion%RefOrientation(:,:,1),DistrLoad%Force(:,i))
       DistrLoad%Moment(1:3,i) = MATMUL(DistrLoad%Moment(:,i),GlbRot) !=MATMUL(TRANSPOSE(GlbRot),DistrLoad%Moment(:,i)) = MATMUL(RootMotion%RefOrientation(:,:,1),DistrLoad%Moment(:,i))
    ENDDO
 
@@ -4541,19 +4534,19 @@ END SUBROUTINE BD_DistrLoadCopy
 !! set to the root value; the angular velocities over the beam
 !! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
 SUBROUTINE BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
-   REAL(BDKi),     INTENT(IN   ) :: URM_Orientation(:, :, :)   !< Direction Cosine Matrix (DCM)--from u%RootMotion (3,3,NNodes)
-   REAL(BDKi),     INTENT(IN   ) :: URM_TranslationDisp(:, :)  !< Translational displacements--from u%RootMotion (3,NNodes)
-   INTEGER(IntKi), INTENT(IN   ) :: node_elem_idx(:, :)        !< Index to first and last nodes of element in p%node_total sized arrays
-   INTEGER(IntKi), INTENT(IN   ) :: elem_total                 !< Total number of elements
-   INTEGER(IntKi), INTENT(IN   ) :: nodes_per_elem             !< Finite element (GLL) nodes per element
-   REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)              !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
-   REAL(BDKi),     INTENT(IN   ) :: GlbRot(3, 3)               !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
-   REAL(BDKi),     INTENT(IN   ) :: Glb_crv(3)                 !< CRV parameters of GlbRot
-   REAL(BDKi),     INTENT(  OUT) :: q(:, :)                    !< q - displacement (1:3), and rotation displacement parameters (4:6)
-   INTEGER(IntKi), INTENT(  OUT) :: ErrStat                    !< Error status of the operation
-   CHARACTER(*),   INTENT(  OUT) :: ErrMsg                     !< Error message if ErrStat /= ErrID_None
-   
-   
+   REAL(BDKi),     INTENT(IN   ) :: URM_Orientation(:, :, :)  !< Direction Cosine Matrix (DCM)--from u%RootMotion (3,3,NNodes)
+   REAL(BDKi),     INTENT(IN   ) :: URM_TranslationDisp(:, :) !< Translational displacements--from u%RootMotion (3,NNodes)
+   INTEGER(IntKi), INTENT(IN   ) :: node_elem_idx(:, :)       !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi), INTENT(IN   ) :: elem_total                !< Total number of elements
+   INTEGER(IntKi), INTENT(IN   ) :: nodes_per_elem            !< Finite element (GLL) nodes per element
+   REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)             !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),     INTENT(IN   ) :: GlbRot(3, 3)              !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
+   REAL(BDKi),     INTENT(IN   ) :: Glb_crv(3)                !< CRV parameters of GlbRot
+   REAL(BDKi),     INTENT(  OUT) :: q(:, :)                   !< q - displacement (1:3), and rotation displacement parameters (4:6)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat                   !< Error status of the operation
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg                    !< Error message if ErrStat /= ErrID_None
+
+
    INTEGER(IntKi)                :: i
    INTEGER(IntKi)                :: j
    INTEGER(IntKi)                :: k
@@ -4611,21 +4604,21 @@ END SUBROUTINE BD_CalcIC_Position
 !! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
 SUBROUTINE BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
 
-   REAL(BDKi),                   INTENT(IN   ):: TranslationVel(:,:) !< Translational velocities (3,NNodes)
-   REAL(BDKi),                   INTENT(IN   ):: RotationVel(:,:)    !< Rotational velocities (3,NNodes)
-   INTEGER(IntKi),               INTENT(IN   ):: elem_total          !< Total number of elements
-   INTEGER(IntKi),               INTENT(IN   ):: node_elem_idx(:,:)  !< Index to first and last nodes of element in p%node_total sized arrays
-   INTEGER(IntKi),               INTENT(IN   ):: nodes_per_elem      !< Finite element (GLL) nodes per element
-   REAL(BDKi),                   INTENT(IN   ):: uuN0(:,:,:)         !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
-   TYPE(BD_ContinuousStateType), INTENT(INOUT):: x                   !< Continuous states at t
+   REAL(BDKi),                   INTENT(IN   ) :: TranslationVel(:,:) !< Translational velocities (3,NNodes)
+   REAL(BDKi),                   INTENT(IN   ) :: RotationVel(:,:)    !< Rotational velocities (3,NNodes)
+   INTEGER(IntKi),               INTENT(IN   ) :: elem_total          !< Total number of elements
+   INTEGER(IntKi),               INTENT(IN   ) :: node_elem_idx(:,:)  !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi),               INTENT(IN   ) :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   REAL(BDKi),                   INTENT(IN   ) :: uuN0(:,:,:)         !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   TYPE(BD_ContinuousStateType), INTENT(INOUT) :: x                   !< Continuous states at t
 
 
-   INTEGER(IntKi)                             :: i
-   INTEGER(IntKi)                             :: j
-   INTEGER(IntKi)                             :: k
-   INTEGER(IntKi)                             :: temp_id
-   REAL(BDKi)                                 :: temp3(3)
-   CHARACTER(*), PARAMETER                    :: RoutineName = 'BD_CalcIC_Velocity'
+   INTEGER(IntKi)          :: i
+   INTEGER(IntKi)          :: j
+   INTEGER(IntKi)          :: k
+   INTEGER(IntKi)          :: temp_id
+   REAL(BDKi)              :: temp3(3)
+   CHARACTER(*), PARAMETER :: RoutineName = 'BD_CalcIC_Velocity'
 
 
    !Initialize velocities and angular velocities
@@ -4856,20 +4849,19 @@ END SUBROUTINE BD_ComputeBladeMassNew
 !FIXME: this routine is only used in the BD_ComputeBladeMassNew subroutine.  Might make sense to combine with that, but low gains since only used in Init
 !FIXME: can pass parameters in
 SUBROUTINE BD_ComputeElementMass( nelem, nqp, QPtWeight, Jacobian, NQPpos, EMass0_GL, elem_mass, elem_CG, elem_IN )
+   INTEGER(IntKi), INTENT(IN   ) :: nelem              !< current element number
+   INTEGER(IntKi), INTENT(IN   ) :: nqp                !< Number of quadrature points (per element)
+   REAL(BDKi),     INTENT(IN   ) :: QPtWeight(:)       !< Weights at each quadrature point (QuadPt)
+   REAL(BDKi),     INTENT(IN   ) :: Jacobian(:, :)     !< Jacobian value at each quadrature point
+   REAL(BDKi),     INTENT(IN   ) :: NQPpos(:, :)
+   REAL(BDKi),     INTENT(IN   ) :: EMass0_GL(:, :, :) !< Nodal material properties for each element
+   REAL(BDKi),     INTENT(  OUT) :: elem_mass          !< Total element force (Fd, Fc, Fb)
+   REAL(BDKi),     INTENT(  OUT) :: elem_CG(:)
+   REAL(BDKi),     INTENT(  OUT) :: elem_IN(:, :)
 
-   INTEGER(IntKi), INTENT(IN   )  :: nelem            !< current element number
-   INTEGER(IntKi), INTENT(IN   )  :: nqp              !< Number of quadrature points (per element)
-   REAL(BDKi),     INTENT(IN   )  :: QPtWeight(:)     !< Weights at each quadrature point (QuadPt)
-   REAL(BDKi),     INTENT(IN   )  :: Jacobian(:,:)    !< Jacobian value at each quadrature point
-   REAL(BDKi),     INTENT(IN   )  :: NQPpos(:,:)
-   REAL(BDKi),     INTENT(IN   )  :: EMass0_GL(:,:,:) !< Nodal material properties for each element
-   REAL(BDKi),     INTENT(  OUT)  :: elem_mass        !< Total element force (Fd, Fc, Fb)
-   REAL(BDKi),     INTENT(  OUT)  :: elem_CG(:)
-   REAL(BDKi),     INTENT(  OUT)  :: elem_IN(:,:)
-
-   REAL(BDKi)                  :: mmm
-   INTEGER(IntKi)              :: idx_qp
-   CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeElementMass'
+   REAL(BDKi)                    :: mmm
+   INTEGER(IntKi)                :: idx_qp
+   CHARACTER(*), PARAMETER       :: RoutineName = 'BD_ComputeElementMass'
 
    elem_mass  = 0.0_BDKi
    elem_CG(:) = 0.0_BDKi

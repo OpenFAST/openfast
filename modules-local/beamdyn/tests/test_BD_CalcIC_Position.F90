@@ -1,15 +1,16 @@
 @test
 subroutine test_BD_CalcIC_Position()
     ! test branches
-    ! - 
-    
+    ! - inputs from bd_static_cantilever_beam regression test
+    ! - inputs from bd_static_twisted_with_k1 regression test
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     real(BDKi)              :: URM_Orientation(3, 3, 1)
     real(BDKi)              :: URM_TranslationDisp(3, 1)
     integer(IntKi)          :: node_elem_idx(1, 2)
@@ -28,14 +29,14 @@ subroutine test_BD_CalcIC_Position()
     character(1024) :: testname
     integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
 
     ! digits of desired accuracy
     accuracy = 16
 
-   
+
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_static_cantilever_beam regression test:"
 
@@ -54,7 +55,7 @@ subroutine test_BD_CalcIC_Position()
                                   6.4261575824032260, 8.8252766196473242, 10.000000000000000 /)
 
     call BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
-    
+
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, q, tolerance, testname)
 
@@ -84,14 +85,14 @@ subroutine test_BD_CalcIC_Position()
                                  -1.5400297463046355, -1.6568542494923804 /)
 
     call BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
-    
+
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, q, tolerance, testname)
 
     deallocate(uuN0, q, base_q)
 
     ! --------------------------------------------------------------------------
-    
+
     contains
        subroutine initialize_vars_base()
           URM_Orientation     = 0.0d0

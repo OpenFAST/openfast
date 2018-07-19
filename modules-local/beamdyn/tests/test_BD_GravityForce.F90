@@ -2,50 +2,51 @@
 subroutine test_BD_GravityForce()
     ! test branches
     ! - static simple beam under gravity
-    
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer                :: i, j
     real(BDKi)             :: gravity(3)
     type(BD_ParameterType) :: parametertype
     type(BD_MiscVarType)   :: miscvartype
     real(BDKi)             :: baseline(6)
-    
+
     integer(IntKi)         :: ErrStat
     character              :: ErrMsg
-    
+
     character(1024)        :: testname
     integer(IntKi)         :: accuracy
     real(BDKi)             :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
-    
+
     ! digits of desired accuracy
     accuracy = 16
-    
-    
+
+
     ! --------------------------------------------------------------------------
     testname = "static simple beam under gravity:"
+
     baseline(1:3) = getGravityInZ()
     baseline(4:6) = (/ 0.0, 0.0, 0.0 /)
-    
+
     ! allocate and build the custom types
     parametertype = simpleParameterType()
     miscvartype = simpleMiscVarType(parametertype%nqp, parametertype%elem_total)
-    
+
     gravity = getGravityInZ()
-    
+
     ! call the subroutine to test
     call BD_GravityForce(1, parametertype%nqp, parametertype%qp%mmm, miscvartype%qp%Fg, miscvartype%qp%RR0mEta, gravity)
-    
+
     ! test the values
     tolerance = AdjustTol(accuracy, baseline)
     @assertEqual(baseline, miscvartype%qp%Fg(:,1,1), tolerance, testname)
-    
+
 end subroutine

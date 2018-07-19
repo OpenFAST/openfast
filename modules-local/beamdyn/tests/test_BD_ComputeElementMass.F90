@@ -1,15 +1,15 @@
 @test
 subroutine test_BD_ComputeElementMass()
     ! test branches
-    ! - 
-    
+    ! -
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     integer(IntKi)          :: nelem
     integer(IntKi)          :: nqp
     real(BDKi), allocatable :: QPtWeight(:)
@@ -22,15 +22,15 @@ subroutine test_BD_ComputeElementMass()
     real(BDKi)              :: base_elem_mass
     real(BDKi)              :: base_elem_CG(3)
     real(BDKi)              :: base_elem_IN(3, 3)
-    
-    
+
+
     integer(IntKi)  :: ErrStat ! Error status of the operation
     character(1024) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
-    
+
     character(1024) :: testname
     integer(IntKi)  :: accuracy
     real(BDKi)      :: tolerance
-    
+
     ! initialize NWTC_Num constants
     call SetConstants()
 
@@ -62,7 +62,7 @@ subroutine test_BD_ComputeElementMass()
     base_elem_IN(2, 2)   = 333.33333333333206
 
     call BD_ComputeElementMass( nelem, nqp, QPtWeight, Jacobian, NQPpos, EMass0_GL, elem_mass, elem_CG, elem_IN )
-    
+
     tolerance = AdjustTol(accuracy, base_elem_mass)
     @assertEqual(base_elem_mass, elem_mass, tolerance, testname)
     tolerance = AdjustTol(accuracy, base_elem_CG)
@@ -99,7 +99,7 @@ subroutine test_BD_ComputeElementMass()
     base_elem_IN(2, 2)   = 226311.66666666637
 
     call BD_ComputeElementMass( nelem, nqp, QPtWeight, Jacobian, NQPpos, EMass0_GL, elem_mass, elem_CG, elem_IN )
-    
+
     tolerance = AdjustTol(accuracy, base_elem_mass)
     @assertEqual(base_elem_mass, elem_mass, tolerance, testname)
     tolerance = AdjustTol(accuracy, base_elem_CG)

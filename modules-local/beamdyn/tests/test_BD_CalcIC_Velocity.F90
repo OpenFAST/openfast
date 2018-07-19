@@ -9,22 +9,22 @@ subroutine test_BD_CalcIC_Velocity()
     use BeamDyn
     use NWTC_Num
     use test_tools
-    
+
     implicit none
-    
+
     type(BD_ContinuousStateType) :: x, x_test
     integer(IntKi)               :: dof_node, node_total
-    
+
     real(BDKi)                   :: TranslationVel(3, 1)
     real(BDKi)                   :: RotationVel(3, 1)
     integer(IntKi)               :: elem_total
     integer(IntKi)               :: node_elem_idx(1, 2)
     integer(IntKi)               :: nodes_per_elem
     real(BDKi)                   :: uuN0(6, 6, 1)
-    
+
     integer(IntKi)               :: ErrStat
     character(ErrMsgLen)         :: ErrMsg
-    
+
     character(1024)              :: testname
     integer(IntKi)               :: accuracy
     real(BDKi)                   :: tolerance
@@ -35,16 +35,16 @@ subroutine test_BD_CalcIC_Velocity()
     ! FIXME(mjs): the test using the inputs from 5MW_Land_BD_DLL_WTurb only passes with 13 digit accuracy
     ! digits of desired accuracy
     accuracy   = 13
-    
+
     dof_node   = 6
     node_total = 6
-    
+
     x          = simpleContinuousStateType(dof_node, node_total)
     x_test     = simpleContinuousStateType(dof_node, node_total)
-    
+
     x%q        = 0.0d0
     x%dqdt     = 0.0d0
-    
+
     ! --------------------------------------------------------------------------
     testname = "inputs from bd_5MW_dynamic reg test:"
 
@@ -96,7 +96,7 @@ subroutine test_BD_CalcIC_Velocity()
 
     x_test%q            = 0.0d0
     x_test%dqdt         = 0.0d0
-    
+
     TranslationVel      = 0.0d0
     RotationVel         = 0.0d0
     elem_total          = 1
