@@ -61,7 +61,7 @@ subroutine test_BD_CalcIC_Position()
     deallocate(uuN0, q, base_q)
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from bd_static_cantilever_beam regression test:"
+    testname = "inputs from bd_static_twisted_with_k1 regression test:"
 
     node_elem_idx(1, :) = (/ 1, 8 /)
     elem_total          = 1

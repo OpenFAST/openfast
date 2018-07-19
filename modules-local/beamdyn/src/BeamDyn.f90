@@ -4830,7 +4830,7 @@ SUBROUTINE BD_ComputeBladeMassNew( p, ErrStat, ErrMsg )
            NQPpos(1:3,j)        = p%QuadPt(1:3,temp_id+j+p%qp_indx_offset)
        ENDDO
 
-       CALL BD_ComputeElementMass(nelem,p,NQPpos,EMass0_GL,elem_mass,elem_CG,elem_IN)
+       CALL BD_ComputeElementMass( nelem, p%nqp, p%QPtWeight, p%Jacobian, NQPpos, EMass0_GL, elem_mass, elem_CG, elem_IN )
 
        p%blade_mass     = p%blade_mass    + elem_mass
        p%blade_CG(:)    = p%blade_CG(:)   + elem_CG(:)
@@ -4855,15 +4855,17 @@ END SUBROUTINE BD_ComputeBladeMassNew
 !> This subroutine total element forces and mass matrices
 !FIXME: this routine is only used in the BD_ComputeBladeMassNew subroutine.  Might make sense to combine with that, but low gains since only used in Init
 !FIXME: can pass parameters in
-SUBROUTINE BD_ComputeElementMass(nelem,p,NQPpos,EMass0_GL,elem_mass,elem_CG,elem_IN)
+SUBROUTINE BD_ComputeElementMass( nelem, nqp, QPtWeight, Jacobian, NQPpos, EMass0_GL, elem_mass, elem_CG, elem_IN )
 
-   INTEGER(IntKi),                  INTENT(IN   )  :: nelem             !< current element number
-   TYPE(BD_ParameterType),          INTENT(IN   )  :: p                 !< Parameters
-   REAL(BDKi),                      INTENT(IN   )  :: NQPpos(:,:)
-   REAL(BDKi),                      INTENT(IN   )  :: EMass0_GL(:,:,:)  !< Nodal material properties for each element
-   REAL(BDKi),                      INTENT(  OUT)  :: elem_mass         !< Total element force (Fd, Fc, Fb)
-   REAL(BDKi),                      INTENT(  OUT)  :: elem_CG(:)
-   REAL(BDKi),                      INTENT(  OUT)  :: elem_IN(:,:)
+   INTEGER(IntKi), INTENT(IN   )  :: nelem            !< current element number
+   INTEGER(IntKi), INTENT(IN   )  :: nqp              !< Number of quadrature points (per element)
+   REAL(BDKi),     INTENT(IN   )  :: QPtWeight(:)     !< Weights at each quadrature point (QuadPt)
+   REAL(BDKi),     INTENT(IN   )  :: Jacobian(:,:)    !< Jacobian value at each quadrature point
+   REAL(BDKi),     INTENT(IN   )  :: NQPpos(:,:)
+   REAL(BDKi),     INTENT(IN   )  :: EMass0_GL(:,:,:) !< Nodal material properties for each element
+   REAL(BDKi),     INTENT(  OUT)  :: elem_mass        !< Total element force (Fd, Fc, Fb)
+   REAL(BDKi),     INTENT(  OUT)  :: elem_CG(:)
+   REAL(BDKi),     INTENT(  OUT)  :: elem_IN(:,:)
 
    REAL(BDKi)                  :: mmm
    INTEGER(IntKi)              :: idx_qp
@@ -4874,17 +4876,16 @@ SUBROUTINE BD_ComputeElementMass(nelem,p,NQPpos,EMass0_GL,elem_mass,elem_CG,elem
    elem_IN(:,:) = 0.0_BDKi
 
 
-   DO idx_qp=1,p%nqp
+   DO idx_qp=1,nqp
 
        mmm  = EMass0_GL(1,1,idx_qp)
 
-       elem_mass = elem_mass + p%QPtWeight(idx_qp) * p%Jacobian(idx_qp,nelem) * mmm
-       elem_CG(1:3) = elem_CG(1:3) + p%QPtWeight(idx_qp) * p%Jacobian(idx_qp,nelem) * mmm * NQPpos(1:3,idx_qp)
-       elem_IN(1:3,1:3) = elem_IN(1:3,1:3) - p%QPtWeight(idx_qp) * p%Jacobian(idx_qp,nelem) * mmm * &
+       elem_mass = elem_mass + QPtWeight(idx_qp) * Jacobian(idx_qp,nelem) * mmm
+       elem_CG(1:3) = elem_CG(1:3) + QPtWeight(idx_qp) * Jacobian(idx_qp,nelem) * mmm * NQPpos(1:3,idx_qp)
+       elem_IN(1:3,1:3) = elem_IN(1:3,1:3) - QPtWeight(idx_qp) * Jacobian(idx_qp,nelem) * mmm * &
                           MATMUL(SkewSymMat(NQPpos(1:3,idx_qp)),SkewSymMat(NQPpos(1:3,idx_qp)))
 
    ENDDO
-
 
    RETURN
 
@@ -4895,10 +4896,10 @@ END SUBROUTINE BD_ComputeElementMass
 !> This routine alters the RootMotion inputs based on the pitch-actuator parameters and discrete states
 SUBROUTINE PitchActuator_SetBC(p, u, xd, AllOuts)
 
-   TYPE(BD_ParameterType),    INTENT(IN   )  :: p                                 !< The module parameters
-   TYPE(BD_InputType),        INTENT(INOUT)  :: u                                 !< inputs
-   TYPE(BD_DiscreteStateType),INTENT(IN   )  :: xd                                !< The module discrete states
-   REAL(ReKi),       OPTIONAL,INTENT(INOUT)  :: AllOuts(0:)                       !< all output array for writing to file
+   TYPE(BD_ParameterType),     INTENT(IN   ) :: p           !< The module parameters
+   TYPE(BD_InputType),         INTENT(INOUT) :: u           !< inputs
+   TYPE(BD_DiscreteStateType), INTENT(IN   ) :: xd          !< The module discrete states
+   REAL(ReKi), OPTIONAL,       INTENT(INOUT) :: AllOuts(0:) !< all output array for writing to file
    ! local variables
    REAL(BDKi)                                :: temp_R(3,3)
    REAL(BDKi)                                :: temp_cc(3)
