@@ -1578,7 +1578,7 @@ subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
 
 
       ! initialize states, given parameters and initial inputs (in BD coordinates)
-   CALL BD_CalcIC_Position(u_tmp,p,x, ErrStat2, ErrMsg2)
+   CALL BD_CalcIC_Position( u_tmp%RootMotion%Orientation, u_tmp%RootMotion%TranslationDisp, p%node_elem_idx, p%elem_total, p%nodes_per_elem, p%uuN0, p%GlbRot, p%Glb_crv, x%q, ErrStat2, ErrMsg2)
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL BD_CalcIC_Velocity(u_tmp%RootMotion%TranslationVel, u_tmp%RootMotion%RotationVel, p%elem_total, p%node_elem_idx, p%nodes_per_elem, p%uuN0, x)
    CALL Cleanup()
@@ -4470,15 +4470,14 @@ END SUBROUTINE BD_ElementMatrixGA2
 !!  5 Distributed forces/moments
 !! It also transforms the DCM to rotation tensor in the input data structure
 SUBROUTINE BD_InputGlobalLocal(GlbRot, node_total, RootMotion, PointLoad, DistrLoad)
-   ! TYPE(BD_ParameterType), INTENT(IN   ):: p
-   REAL(BDKi),              INTENT(IN   ):: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
-   INTEGER(IntKi),          INTENT(IN   ):: node_total   !< Total number of finite element (GLL) nodes
-   ! TYPE(BD_InputType),     INTENT(INOUT):: u
-   TYPE(MeshType),          INTENT(INOUT):: RootMotion   !< contains motion
-   TYPE(MeshType),          INTENT(INOUT):: PointLoad    !< Applied point forces along beam axis
-   TYPE(MeshType),          INTENT(INOUT):: DistrLoad    !< Applied distributed forces along beam axis
-   INTEGER(IntKi)                        :: i            !< Generic counter
-   CHARACTER(*), PARAMETER               :: RoutineName = 'BD_InputGlobalLocal'
+   REAL(BDKi),     INTENT(IN   ) :: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
+   INTEGER(IntKi), INTENT(IN   ) :: node_total   !< Total number of finite element (GLL) nodes
+   TYPE(MeshType), INTENT(INOUT) :: RootMotion   !< contains motion
+   TYPE(MeshType), INTENT(INOUT) :: PointLoad    !< Applied point forces along beam axis
+   TYPE(MeshType), INTENT(INOUT) :: DistrLoad    !< Applied distributed forces along beam axis
+
+   INTEGER(IntKi)                :: i            !< Generic counter
+   CHARACTER(*), PARAMETER       :: RoutineName = 'BD_InputGlobalLocal'
 
 !FIXME: we might be able to get rid of the m%u now if we put the p%GlbRot multiplications elsewhere.   
 
@@ -4515,13 +4514,13 @@ END SUBROUTINE BD_InputGlobalLocal
 ! NOTE: This routine could be entirely removed if the u%DistrLoad arrays are used directly, but that would require some messy indexing.
 SUBROUTINE BD_DistrLoadCopy( p, u, m )
 
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p             !< Parameters
-   TYPE(BD_InputType),           INTENT(IN   )  :: u             !< Inputs at t (in BD coordinates)
-   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m             !< misc/optimization variables
+   TYPE(BD_ParameterType), INTENT(IN   ) :: p !< Parameters
+   TYPE(BD_InputType),     INTENT(IN   ) :: u !< Inputs at t (in BD coordinates)
+   TYPE(BD_MiscVarType),   INTENT(INOUT) :: m !< misc/optimization variables
 
-   INTEGER(IntKi)                               :: temp_id
-   INTEGER(IntKi)                               :: idx_qp
-   INTEGER(IntKi)                               :: nelem
+   INTEGER(IntKi)                        :: temp_id
+   INTEGER(IntKi)                        :: idx_qp
+   INTEGER(IntKi)                        :: nelem
 
       ! Set the intermediate DistrLoad_QP array.
    DO nelem=1,p%elem_total
@@ -4541,24 +4540,29 @@ END SUBROUTINE BD_DistrLoadCopy
 !! The initial displacements/rotations and linear velocities are
 !! set to the root value; the angular velocities over the beam
 !! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
-SUBROUTINE BD_CalcIC_Position( u, p, x, ErrStat, ErrMsg)
-
-   TYPE(BD_InputType),           INTENT(IN   )  :: u              !< Inputs at t (in BD coordinates)
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p              !< Parameters
-   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x              !< Continuous states at t
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat        !< Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
-
-   INTEGER(IntKi)                               :: i
-   INTEGER(IntKi)                               :: j
-   INTEGER(IntKi)                               :: k
-   INTEGER(IntKi)                               :: temp_id
-   REAL(BDKi)                                   :: temp_p0(3)
-   REAL(BDKi)                                   :: temp_rv(3)
-   CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_CalcIC_Position'
-   INTEGER(IntKi)                             :: ErrStat2    ! Temporary Error status
-   CHARACTER(ErrMsgLen)                       :: ErrMsg2     ! Temporary Error message
+SUBROUTINE BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
+   REAL(BDKi),     INTENT(IN   ) :: URM_Orientation(:, :, :)   !< Direction Cosine Matrix (DCM)--from u%RootMotion (3,3,NNodes)
+   REAL(BDKi),     INTENT(IN   ) :: URM_TranslationDisp(:, :)  !< Translational displacements--from u%RootMotion (3,NNodes)
+   INTEGER(IntKi), INTENT(IN   ) :: node_elem_idx(:, :)        !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi), INTENT(IN   ) :: elem_total                 !< Total number of elements
+   INTEGER(IntKi), INTENT(IN   ) :: nodes_per_elem             !< Finite element (GLL) nodes per element
+   REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)              !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),     INTENT(IN   ) :: GlbRot(3, 3)               !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
+   REAL(BDKi),     INTENT(IN   ) :: Glb_crv(3)                 !< CRV parameters of GlbRot
+   REAL(BDKi),     INTENT(  OUT) :: q(:, :)                    !< q - displacement (1:3), and rotation displacement parameters (4:6)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat                    !< Error status of the operation
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg                     !< Error message if ErrStat /= ErrID_None
+   
+   
+   INTEGER(IntKi)                :: i
+   INTEGER(IntKi)                :: j
+   INTEGER(IntKi)                :: k
+   INTEGER(IntKi)                :: temp_id
+   REAL(BDKi)                    :: temp_p0(3)
+   REAL(BDKi)                    :: temp_rv(3)
+   CHARACTER(*), PARAMETER       :: RoutineName = 'BD_CalcIC_Position'
+   INTEGER(IntKi)                :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)          :: ErrMsg2     ! Temporary Error message
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -4566,31 +4570,31 @@ SUBROUTINE BD_CalcIC_Position( u, p, x, ErrStat, ErrMsg)
 
       !  Since RootMotion%Orientation is the transpose of the absolute orientation in the global frame,
       !  we need to find the relative change in orientation from the reference.
-   CALL ExtractRelativeRotation(u%RootMotion%Orientation(:,:,1), p%Glb_crv, p%GlbRot, temp_rv, ErrStat2, ErrMsg2)
+   CALL ExtractRelativeRotation(URM_Orientation(:,:,1), Glb_crv, GlbRot, temp_rv, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
 
    !Initialize displacements and rotations
    k = 1 !when i=1, k=1
-   DO i=1,p%elem_total
-      temp_id = p%node_elem_idx(i,1)-1      ! Node just before the start of this element
-      DO j=k,p%nodes_per_elem
+   DO i=1,elem_total
+      temp_id = node_elem_idx(i,1)-1      ! Node just before the start of this element
+      DO j=k,nodes_per_elem
             ! reference at current root orientation.
-         temp_p0 = MATMUL(u%rootmotion%orientation(:,:,1),p%uuN0(1:3,j,i))    ! Global frame
-         temp_p0 = MATMUL(temp_p0, p%GlbRot )                                 ! Into the local frame
+         temp_p0 = MATMUL(URM_orientation(:,:,1),uuN0(1:3,j,i))    ! Global frame
+         temp_p0 = MATMUL(temp_p0, GlbRot )                                 ! Into the local frame
             !  Add the root displacement (in local frame) to the reference at current root orientation in local frame,
             !  and subtract the reference to get the displacement.  This is equivalent to TranslationDisp in the local frame.
-         x%q(1:3,temp_id+j) = u%RootMotion%TranslationDisp(1:3,1) + temp_p0 - p%uuN0(1:3,j,i)
+         q(1:3,temp_id+j) = URM_TranslationDisp(1:3,1) + temp_p0 - uuN0(1:3,j,i)
       ENDDO
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
 
    k = 1 !when i=1, k=1
-   DO i=1,p%elem_total
-      temp_id = p%node_elem_idx(i,1)-1      ! Node just before the start of this element
-      DO j=k,p%nodes_per_elem
-         x%q(4:6,temp_id+j) = temp_rv  ! each node is assumed to have the same initial relative rotation as the root
+   DO i=1,elem_total
+      temp_id = node_elem_idx(i,1)-1      ! Node just before the start of this element
+      DO j=k,nodes_per_elem
+         q(4:6,temp_id+j) = temp_rv  ! each node is assumed to have the same initial relative rotation as the root
       ENDDO
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
@@ -4670,6 +4674,7 @@ SUBROUTINE BD_InitAcc( u, p, x, m, qdotdot, ErrStat, ErrMsg )
 
 
       ! Calculate Quadrature point values needed
+! mjs: ***HERE***
    CALL BD_QuadraturePointData( p, x, m )     ! Calculate QP values uuu, uup, RR0, kappa, E1
 
       ! set misc vars, particularly m%RHS

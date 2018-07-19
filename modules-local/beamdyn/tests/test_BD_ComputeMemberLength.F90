@@ -11,16 +11,16 @@ subroutine test_BD_ComputeMemberLength()
     
     implicit none
     
-    INTEGER(IntKi)              :: member_total
-    INTEGER(IntKi), allocatable :: kp_member(:)
-    REAL(BDKi), allocatable     :: SP_Coef(:,:,:)
-    REAL(BDKi), allocatable     :: kp_coordinate(:,:)
-    REAL(BDKi), allocatable     :: segment_length(:,:)
-    REAL(BDKi), allocatable     :: member_length(:,:)
-    REAL(BDKi)                  :: total_length
-    REAL(BDKi), allocatable     :: base_segment_length(:,:)
-    REAL(BDKi), allocatable     :: base_member_length(:,:)
-    REAL(BDKi)                  :: base_total_length
+    integer(IntKi)              :: member_total
+    integer(IntKi), allocatable :: kp_member(:)
+    real(BDKi), allocatable     :: SP_Coef(:,:,:)
+    real(BDKi), allocatable     :: kp_coordinate(:,:)
+    real(BDKi), allocatable     :: segment_length(:,:)
+    real(BDKi), allocatable     :: member_length(:,:)
+    real(BDKi)                  :: total_length
+    real(BDKi), allocatable     :: base_segment_length(:,:)
+    real(BDKi), allocatable     :: base_member_length(:,:)
+    real(BDKi)                  :: base_total_length
     
     
     integer(IntKi)  :: ErrStat ! Error status of the operation

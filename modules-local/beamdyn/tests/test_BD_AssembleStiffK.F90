@@ -16,8 +16,8 @@ subroutine test_BD_AssembleStiffK()
     integer(IntKi)  :: nodes_per_elem
     integer(IntKi)  :: dof_node
     real(BDKi)      :: ElemK(6, 6, 6, 6)
-    REAL(BDKi)      :: GlobalK(6, 6, 6, 6)
-    REAL(BDKi)      :: base_GlobalK(6, 6, 6, 6)
+    real(BDKi)      :: GlobalK(6, 6, 6, 6)
+    real(BDKi)      :: base_GlobalK(6, 6, 6, 6)
     
     
     integer(IntKi)  :: ErrStat ! Error status of the operation

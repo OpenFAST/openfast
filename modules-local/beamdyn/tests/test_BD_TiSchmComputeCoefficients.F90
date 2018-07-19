@@ -10,10 +10,10 @@ subroutine test_BD_TiSchmComputeCoefficients()
     
     implicit none
     
-    REAL(DbKi)      :: dt
-    REAL(DbKi)      :: rhoinf
-    REAL(DbKi)      :: coef(9)
-    REAL(DbKi)      :: base_coef(9)
+    real(DbKi)      :: dt
+    real(DbKi)      :: rhoinf
+    real(DbKi)      :: coef(9)
+    real(DbKi)      :: base_coef(9)
     
     
     integer(IntKi)  :: ErrStat ! Error status of the operation
