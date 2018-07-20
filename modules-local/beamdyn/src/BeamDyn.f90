@@ -1015,7 +1015,7 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
               Pos = p%GlbPos + MATMUL(p%GlbRot,p%uuN0(1:3,j,i))
 
                   ! possible type conversions here:
-              DCM = BDrot_to_FASTdcm(p%uuN0(4:6,j,i),p)
+              DCM = BDrot_to_FASTdcm( p%uuN0(4:6,j,i), p%GlbRot, p%Glb_crv )
 
                   ! set the reference position and orientation for each node.
               temp_id = (i-1)*p%nodes_per_elem+j
@@ -1219,7 +1219,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
 
             ! Note:  Here we can use this subroutine to get the DCM.  This is under the assumption
             !        that there is no rotational displacement yet, so x%q is zero
-           DCM = BDrot_to_FASTdcm(p%uuN0(4:6,j,i),p)
+           DCM = BDrot_to_FASTdcm( p%uuN0(4:6,j,i), p%GlbRot, p%Glb_crv )
 
            temp_id = (i-1)*(p%nodes_per_elem-1)+j
            CALL MeshPositionNode ( Mesh    = u%PointLoad  &
@@ -1276,7 +1276,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
 
             ! Note:  Here we can use this subroutine to get the DCM.  This is under the assumption
             !        that there is no rotational displacement yet, so m%qp%uuu is zero
-         DCM = BDrot_to_FASTdcm(p%uu0(4:6,j,i),p)
+         DCM = BDrot_to_FASTdcm( p%uu0(4:6,j,i), p%GlbRot, p%Glb_crv )
 
          CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
                                 ,INode   = temp_id     &
@@ -1292,7 +1292,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
    IF (p%quadrature .EQ. GAUSS_QUADRATURE) THEN
          ! First node
       Pos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1,1))
-      DCM = BDrot_to_FASTdcm(p%uuN0(4:6,1,1),p)
+      DCM = BDrot_to_FASTdcm( p%uuN0(4:6,1,1), p%GlbRot, p%Glb_crv )
       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
                              ,INode   = 1            &
                              ,Pos     = Pos          &
@@ -1303,7 +1303,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
   
          ! Last node 
       Pos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,p%nodes_per_elem,p%elem_total))
-      DCM = BDrot_to_FASTdcm(p%uuN0(4:6,p%nodes_per_elem,p%elem_total),p)
+      DCM = BDrot_to_FASTdcm( p%uuN0(4:6,p%nodes_per_elem,p%elem_total), p%GlbRot, p%Glb_crv )
       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
                              ,INode   = NNodes       &
                              ,Pos     = Pos          &

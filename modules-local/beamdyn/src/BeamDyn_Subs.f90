@@ -29,7 +29,7 @@ MODULE BeamDyn_Subs
    INTEGER, PARAMETER :: FLAG_R1TR2T = 3 !<   BD_CrvCompose flag = 3: R(rr) = R(T) (pp) R(T) (qq)
 
    INTEGER, PARAMETER :: GAUSS_QUADRATURE = 1 !<   p%quadrature method: gaussian quadrature
-   INTEGER, PARAMETER :: TRAP_QUADRATURE  = 2 !<   p%quadrature method: trapeziodal quadrature
+   INTEGER, PARAMETER :: TRAP_QUADRATURE  = 2 !<   p%quadrature method: trapezoidal quadrature
 
 CONTAINS
 
@@ -661,7 +661,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
             y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,x%q(1:3,temp_id))
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
-!adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotatinoal displacement yet
+!adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotational displacement yet
                ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
                ! referenced against the DCM of the blade root at T=0.
             cc = MATMUL(p%GlbRot,x%q(4:6,temp_id))                ! Global coordinate DCM times rotation parameters
@@ -698,7 +698,7 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 
 
 !bjj: note differences here compared to BDrot_to_FASTdcm
-!adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotatinoal displacement yet
+!adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotational displacement yet
                ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
                ! referenced against the DCM of the blade root at T=0.
             CALL BD_CrvCompose( cc, m%qp%uuu(4:6,j,i), p%uu0(4:6,j,i), FLAG_R1R2 )
@@ -1025,36 +1025,35 @@ SUBROUTINE ExtractRelativeRotation(R, Glb_crv, GlbRot, rr, ErrStat, ErrMsg)
       
 END SUBROUTINE ExtractRelativeRotation
 !-----------------------------------------------------------------------------------------------------------------------------------
-FUNCTION BDrot_to_FASTdcm(rr,p) RESULT(dcm)
-   real(BDKi),             intent(in) :: rr(3)        !< W-M parameters of relative rotation 
-   type(BD_ParameterType), intent(in) :: p            !< Parameters
-   real(BDKi)                         :: dcm(3,3)     !< input rotation matrix (transpose of DCM; in BD coords)
+FUNCTION BDrot_to_FASTdcm( rr, GlbRot, Glb_crv ) RESULT(dcm)
+   real(BDKi), intent(in) :: rr(3)        !< W-M parameters of relative rotation
+   real(BDKi), intent(in) :: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
+   real(BDKi), intent(in) :: Glb_crv(3)   !< CRV parameters of GlbRot
+   real(BDKi)             :: dcm(3, 3)    !< input rotation matrix (transpose of DCM; in BD coords)
+
+
+   real(BDKi)             :: temp_CRV( 3) ! temp curvature parameters
+   real(BDKi)             :: temp_CRV2(3) ! temp curvature parameters
+   real(BDKi)             :: R(3, 3)      ! rotation matrix
    
 
-   REAL(BDKi)                         :: temp_CRV( 3)   ! temp curvature parameters
-   REAL(BDKi)                         :: temp_CRV2(3)   ! temp curvature parameters
-   real(BDKi)                         :: R(3,3)         ! rotation matrix
-   
-! note differences in setting up meshes with Set_BldMotion_NoAcc  
+! note differences in setting up meshes with Set_BldMotion_NoAcc
 !adp: in the case of the meshes in Set_BldMotion_NoAcc, x%q(4:6,:) and m%qp%uuu(4:6,:,:) are not zero.  When this routine is called, they
 !     are zero, and the expression in Set_BldMotion_NoAcc simplifies to this expression.
-   
-   ! note that p%GlbRot = BD_CrvMatrixR(p%Glb_crv) 
-   
+
+   ! note that GlbRot = BD_CrvMatrixR(Glb_crv)
+
       ! rotate relative W-M rotations to global system?
-   temp_CRV = MATMUL(p%GlbRot, rr)
-   
-       
-   CALL BD_CrvCompose(temp_CRV2,temp_CRV,p%Glb_crv,FLAG_R1R2) !temp_CRV2 = temp_CRV composed with p%Glb_crv
-   
-   
+   temp_CRV = MATMUL(GlbRot, rr)
+
+   CALL BD_CrvCompose(temp_CRV2,temp_CRV,Glb_crv,FLAG_R1R2) !temp_CRV2 = temp_CRV composed with Glb_crv
+
       ! create rotation matrix from W-M parameters:
    CALL BD_CrvMatrixR(temp_CRV2,R) ! returns R (rotation matrix, the transpose of the DCM orientation matrix)
-   
+
       ! get DCM from rotation matrix:
    dcm = TRANSPOSE(R)
-   
-   
+
 END FUNCTION BDrot_to_FASTdcm
 !-----------------------------------------------------------------------------------------------------------------------------------
 END MODULE BeamDyn_Subs
