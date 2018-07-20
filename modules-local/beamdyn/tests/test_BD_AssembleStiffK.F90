@@ -1,8 +1,9 @@
 @test
 subroutine test_BD_AssembleStiffK()
     ! test branches
-    ! - trivial case--zero global and element stiffness matrices
-    ! - simple case--initially zero global stiffness matrix should equal random element matrix
+    ! - 
+    ! - 
+    ! - 
 
     use pFUnit_mod
     use BeamDyn
@@ -11,13 +12,13 @@ subroutine test_BD_AssembleStiffK()
 
     implicit none
 
-    integer(IntKi)  :: nelem
-    integer(IntKi)  :: node_elem_idx(1, 2)
-    integer(IntKi)  :: nodes_per_elem
-    integer(IntKi)  :: dof_node
-    real(BDKi)      :: ElemK(6, 6, 6, 6)
-    real(BDKi)      :: GlobalK(6, 6, 6, 6)
-    real(BDKi)      :: base_GlobalK(6, 6, 6, 6)
+    integer(IntKi)          :: nelem
+    integer(IntKi)          :: node_elem_idx(1, 2)
+    integer(IntKi)          :: nodes_per_elem
+    integer(IntKi)          :: dof_node
+    real(BDKi), allocatable :: ElemK(:, :, :, :)
+    real(BDKi), allocatable :: GlobalK(:, :, :, :)
+    real(BDKi), allocatable :: base_GlobalK(:, :, :, :)
 
 
     integer(IntKi)  :: ErrStat ! Error status of the operation
@@ -33,14 +34,16 @@ subroutine test_BD_AssembleStiffK()
     ! digits of desired accuracy
     accuracy = 16
 
+
+    ! --------------------------------------------------------------------------
+    testname = "trivial case--single element, zero global and element stiffness matrices:"
+
     nelem               = 1
     node_elem_idx(1, :) = (/ 1, 6 /)
     nodes_per_elem      = 6
     dof_node            = 6
 
-
-    ! --------------------------------------------------------------------------
-    testname = "trivial case--zero global and element stiffness matrices:"
+    allocate(ElemK(6, 6, 6, 6), GlobalK(6, 6, 6, 6), base_GlobalK(6, 6, 6, 6))
 
     call initialize_vars_base()
 
@@ -50,12 +53,34 @@ subroutine test_BD_AssembleStiffK()
     @assertEqual(base_GlobalK, GlobalK, tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    testname = "simple case--initially zero global stiffness matrix should equal random element matrix:"
+    testname = "single element, initially zero global stiffness matrix should equal random element matrix:"
 
     call initialize_vars_base()
 
     call random_number(ElemK)
     base_GlobalK = ElemK
+
+    call BD_AssembleStiffK( nelem, node_elem_idx, nodes_per_elem, dof_node, ElemK, GlobalK )
+
+    tolerance = AdjustTol(accuracy, base_GlobalK)
+    @assertEqual(base_GlobalK, GlobalK, tolerance, testname)
+
+    deallocate(ElemK, GlobalK, base_GlobalK)
+
+    ! --------------------------------------------------------------------------
+    testname = "simulate 2 element case--should write to indices 7-12 in the second and fourth entries:"
+
+    nelem               = 1
+    node_elem_idx(1, :) = (/ 7, 12 /)
+    nodes_per_elem      = 6
+    dof_node            = 6
+
+    allocate(ElemK(6, 6, 6, 6), GlobalK(6, 12, 6, 12), base_GlobalK(6, 12, 6, 12))
+
+    call initialize_vars_base()
+
+    call random_number(ElemK)
+    base_GlobalK(:, 7:12, :, 7:12) = ElemK
 
     call BD_AssembleStiffK( nelem, node_elem_idx, nodes_per_elem, dof_node, ElemK, GlobalK )
 

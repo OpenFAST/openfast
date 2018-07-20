@@ -1,8 +1,9 @@
 @test
 subroutine test_BD_AssembleRHS()
     ! test branches
-    ! - trivial case--zero global and element RHS
-    ! - simple case--initially zero global RHS should equal random element RHS
+    ! - trivial case--single element, zero global and element stiffness matrices
+    ! - single element, initially zero global RHS should equal random element RHS
+    ! - simulate 2 element case--should write to rows 7-12
 
     use pFUnit_mod
     use BeamDyn
@@ -34,7 +35,7 @@ subroutine test_BD_AssembleRHS()
 
 
     ! --------------------------------------------------------------------------
-    testname = "trivial case--single element zero global and element stiffness matrices:"
+    testname = "trivial case--single element, zero global and element stiffness matrices:"
 
     nelem               = 1
     node_elem_idx(1, :) = (/ 1, 6 /)
@@ -52,7 +53,7 @@ subroutine test_BD_AssembleRHS()
     deallocate(GlobalRHS, base_GlobalRHS)
 
     ! --------------------------------------------------------------------------
-    testname = "single element initially zero global RHS should equal random element RHS:"
+    testname = "single element, initially zero global RHS should equal random element RHS:"
 
     allocate(GlobalRHS(6, 6), base_GlobalRHS(6, 6))
 
