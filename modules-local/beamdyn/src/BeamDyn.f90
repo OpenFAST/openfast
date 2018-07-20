@@ -2826,17 +2826,17 @@ END SUBROUTINE BD_GravityForce
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine assembles total stiffness matrix.
 SUBROUTINE BD_AssembleStiffK( nelem, node_elem_idx, nodes_per_elem, dof_node, ElemK, GlobalK )
-   INTEGER(IntKi),            INTENT(IN   )  :: nelem               !< Number of elements
-   INTEGER(IntKi),            INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
-   INTEGER(IntKi),            INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
-   INTEGER(IntKi),            INTENT(IN   )  :: dof_node            !< dof per node
-   REAL(BDKi),                INTENT(IN   )  :: ElemK(:,:,:,:)      !< Element  matrix
-   REAL(BDKi),                INTENT(INOUT)  :: GlobalK(:,:,:,:)    !< Global stiffness matrix
+   INTEGER(IntKi), INTENT(IN   )  :: nelem               !< Number of elements
+   INTEGER(IntKi), INTENT(IN   )  :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi), INTENT(IN   )  :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   INTEGER(IntKi), INTENT(IN   )  :: dof_node            !< dof per node
+   REAL(BDKi),     INTENT(IN   )  :: ElemK(:,:,:,:)      !< Element  matrix
+   REAL(BDKi),     INTENT(INOUT)  :: GlobalK(:,:,:,:)    !< Global stiffness matrix
 
-   INTEGER(IntKi)                            :: i
-   INTEGER(IntKi)                            :: j
-   INTEGER(IntKi)                            :: idx_dof2
-   INTEGER(IntKi)                            :: temp_id
+   INTEGER(IntKi)                 :: i
+   INTEGER(IntKi)                 :: j
+   INTEGER(IntKi)                 :: idx_dof2
+   INTEGER(IntKi)                 :: temp_id
 
    temp_id = node_elem_idx(nelem,1)-1      ! Node just before the start of this element
    DO j=1,nodes_per_elem
@@ -2859,8 +2859,8 @@ SUBROUTINE BD_AssembleRHS( nelem, node_elem_idx, nodes_per_elem, ElemRHS, Global
    REAL(BDKi),     INTENT(IN   )  :: ElemRHS(:,:)        !< Total element force (Fc, Fd, Fb) (size = p%dofnode x p%nodes_per_elem)
    REAL(BDKi),     INTENT(INOUT)  :: GlobalRHS(:,:)      !< Global force vector (size = p%dofnode x p%nodes_per_elem)
 
-   INTEGER(IntKi)   :: i
-   INTEGER(IntKi)   :: temp_id
+   INTEGER(IntKi)                 :: i
+   INTEGER(IntKi)                 :: temp_id
 
 !  GlobalRHS -->  p%dof_total =  p%node_total   * p%dof_node   =  [p%elem_total*(p%nodes_per_elem-1) + 1]  *  p%dof_node
 !  ElemRHS   -->  p%dof_elem  =                                =  p%nodes_per_elem                         *  p%dof_node
