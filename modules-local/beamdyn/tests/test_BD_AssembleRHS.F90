@@ -5,6 +5,15 @@ subroutine test_BD_AssembleRHS()
     ! - single element, initially zero global RHS should equal random element RHS
     ! - simulate 2 element case--should write to rows 7-12
 
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_AssembleRHS(), a given element's RHS is assigned to the proper place
+      ! in a Global RHS matrix
+    ! This test verifies that this occurs and that the indexing scheme is
+      ! functioning properly.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num

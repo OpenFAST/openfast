@@ -1,8 +1,25 @@
 @test
 subroutine test_BD_BoundaryGA2()
     ! test branches
-    ! - simple case--no rotational vel/acc, identity orientation
-    ! - more complex case--nonzero rotational vel, non-identity orientation
+    ! - verify proper assignment of variables
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_BoundaryGA2(), x%q(4:6, 1) is calculated using ExtractRelativeRotation(),
+    ! with x%q(1:3, 1) = RootMotion%TranslationDisp(1:3,1), x%dqdt(:, 1) and
+    ! acc(:, 1) are assigned in the following way:
+
+    ! x%dqdt(1:3,1) = RootMotion%TranslationVel(1:3,1)
+    ! x%dqdt(4:6,1) = RootMotion%RotationVel(1:3,1)
+    ! acc(1:3,1)    = RootMotion%TranslationAcc(1:3,1)
+    ! acc(4:6,1)    = RootMotion%RotationAcc(1:3,1)
+
+    ! NOTE: this is probably more of an integration test
+      ! thus, the inputs that go to ExtractRelativeRotation() are the same as in
+      ! test_ExtractRelativeRotation(), and we simply ensure that the variables
+      ! are properly assigned
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn
@@ -17,7 +34,6 @@ subroutine test_BD_BoundaryGA2()
     real(BDKi)                   :: Glb_crv(3)
     real(BDKi)                   :: acc(6, 6)
     real(BDKi)                   :: base_q(6), base_dqdt(6), base_acc(6)
-
 
 
     integer(IntKi)  :: ErrStat ! Error status of the operation
@@ -43,53 +59,25 @@ subroutine test_BD_BoundaryGA2()
     call AllocAry(RootMotion%RotationAcc, 3, 1, 'rm_RotationAcc', ErrStat, ErrMsg)
 
     ! --------------------------------------------------------------------------
-    testname = "simple case--no rotational vel/acc, identity orientation:"
+    testname = "verify proper assignment of variables:"
 
     call initialize_vars_base()
 
     RootMotion%Orientation(:, :, 1) = identity()
 
-    RootMotion%TranslationVel(2, 1) = -1.0005999999999999
-    RootMotion%TranslationAcc(3, 1) = -1.0012003599999999
-    RootMotion%RotationVel(1, 1)    =  1.0005999999999999
+    RootMotion%TranslationVel(:, 1)  = (/ 1.0d0, 2.0d0, 3.0d0 /)
+    RootMotion%RotationVel(:, 1)     = (/ 4.0d0, 5.0d0, 6.0d0 /)
+    RootMotion%TranslationAcc(:, 1)  = (/ 7.0d0, 8.0d0, 9.0d0 /)
+    RootMotion%RotationAcc(:, 1)     = (/ 10.0d0, 11.0d0, 12.0d0 /)
+    RootMotion%TranslationDisp(:, 1) = (/ 13.0d0, 14.0d0, 15.0d0 /)
 
-    GlbRot                          = identity()
+    GlbRot         = identity()
 
-    base_dqdt(2)                    = -1.0005999999999999
-    base_dqdt(4)                    =  1.0005999999999999
-    base_acc(3)                     = -1.0012003599999999
-
-    call BD_BoundaryGA2(x, RootMotion, GlbRot, Glb_crv, acc, ErrStat, ErrMsg)
-
-    tolerance = AdjustTol(accuracy, base_q)
-    @assertEqual(base_q, x%q(:, 1), tolerance, testname)
-    tolerance = AdjustTol(accuracy, base_dqdt)
-    @assertEqual(base_dqdt, x%dqdt(:, 1), tolerance, testname)
-    tolerance = AdjustTol(accuracy, base_acc)
-    @assertEqual(base_acc, acc(:, 1), tolerance, testname)
-
-    ! --------------------------------------------------------------------------
-    testname = "more complex case--nonzero rotational vel, non-identity orientation:"
-
-    call initialize_vars_base()
-
-    RootMotion%Orientation(1, 1, 1)  = 1.0d0
-    RootMotion%Orientation(2, :, 1)  = (/ 0.0000000000000000, 0.89234557233263234, -0.45135283264686277 /)
-    RootMotion%Orientation(3, :, 1)  = (/ 0.0000000000000000, 0.45135283264686277, 0.89234557233263234 /)
-
-    RootMotion%TranslationDisp(:, 1) = (/ 0.0000000000000000, -0.45135283264686277, -0.10765442766736766 /)
-    RootMotion%TranslationVel(:, 1)  = (/ 0.0000000000000000, -0.89288097967603186, -0.45162364434645086 /)
-    RootMotion%TranslationAcc(:, 1)  = (/ 0.0000000000000000, 0.45189461853305868, -0.89341670826383746 /)
-    RootMotion%RotationVel(1, 1)     = 1.0005999999999999
-
-    GlbRot                           = identity()
-
-    base_q                           = (/ 0.0000000000000000, -0.45135283264686277, -0.10765442766736766,&
-                                          0.47043192378014287, 0.0000000000000000, 0.0000000000000000 /)
-    base_dqdt                        = (/ 0.0000000000000000, -0.89288097967603186, -0.45162364434645086,&
-                                          1.0005999999999999, 0.0000000000000000, 0.0000000000000000 /)
-    base_acc                         = (/ 0.0000000000000000, 0.45189461853305868, -0.89341670826383746,&
-                                          0.0000000000000000, 0.0000000000000000, 0.0000000000000000 /)
+    base_dqdt(1:3) = (/ 1.0d0, 2.0d0, 3.0d0 /)
+    base_dqdt(4:6) = (/ 4.0d0, 5.0d0, 6.0d0 /)
+    base_acc(1:3)  = (/ 7.0d0, 8.0d0, 9.0d0 /)
+    base_acc(4:6)  = (/ 10.0d0, 11.0d0, 12.0d0 /)
+    base_q(1:3)    = (/ 13.0d0, 14.0d0, 15.0d0 /)
 
     call BD_BoundaryGA2(x, RootMotion, GlbRot, Glb_crv, acc, ErrStat, ErrMsg)
 
@@ -122,3 +110,4 @@ subroutine test_BD_BoundaryGA2()
        end subroutine initialize_vars_base
 
 end subroutine test_BD_BoundaryGA2
+

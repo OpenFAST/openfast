@@ -1,9 +1,18 @@
 @test
 subroutine test_BD_AssembleStiffK()
     ! test branches
-    ! - 
-    ! - 
-    ! - 
+    ! - trivial case--single element, zero global and element stiffness matrices
+    ! - single element, initially zero global stiffness matrix should equal random element matrix
+    ! - simulate 2 element case--should write to indices 7-12 in the second and fourth entries
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_AssembleStiffK(), a given element's stiffness matrix is assigned to the
+      ! proper place in a Global stiffness matrix
+    ! This test verifies that this occurs and that the indexing scheme is
+      ! functioning properly.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn

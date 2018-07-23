@@ -4105,7 +4105,7 @@ SUBROUTINE BD_BoundaryGA2(x, RootMotion, GlbRot, Glb_crv, acc, ErrStat, ErrMsg)
 
       ! Root velocities/angular velocities and accelerations/angular accelerations
    x%dqdt(1:3,1) = RootMotion%TranslationVel(1:3,1)
-   x%dqdt(4:6,1) = Rootmotion%RotationVel(1:3,1)
+   x%dqdt(4:6,1) = RootMotion%RotationVel(1:3,1)
    acc(1:3,1)    = RootMotion%TranslationAcc(1:3,1)
    acc(4:6,1)    = RootMotion%RotationAcc(1:3,1)
 
