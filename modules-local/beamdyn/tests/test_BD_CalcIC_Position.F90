@@ -1,8 +1,20 @@
 @test
 subroutine test_BD_CalcIC_Position()
     ! test branches
-    ! - inputs from bd_static_cantilever_beam regression test
-    ! - inputs from bd_static_twisted_with_k1 regression test
+    ! - single element/node, zero/identity positions and rotations
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_CalcIC_Position(), the initial translations and rotations are
+      ! computed for all nodes. This is done by calling ExtractRelativeRotation()
+      ! and BD_CalcIC_Disp(). After calling ExtractRelativeRotation(), the root
+      ! relative rotation is assigned to all nodes.
+
+    ! NOTE: this is probably more of an integration test
+      ! thus, we test only the simplest case and one with nonzero Global CRV to
+      ! ensure the relative rotation is assigned properly.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn
@@ -38,11 +50,11 @@ subroutine test_BD_CalcIC_Position()
 
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from bd_static_cantilever_beam regression test:"
+    testname = "single element/node, zero/identity positions and rotations:"
 
-    node_elem_idx(1, :) = (/ 1, 6 /)
+    node_elem_idx(1, :) = (/ 1, 1 /)
     elem_total          = 1
-    nodes_per_elem      = 6
+    nodes_per_elem      = 1
 
     allocate(uuN0(6, nodes_per_elem, elem_total), q(6, nodes_per_elem), base_q(6, nodes_per_elem))
 
@@ -51,10 +63,8 @@ subroutine test_BD_CalcIC_Position()
     URM_Orientation(:, :, 1) = identity()
     GlbRot                   = identity()
 
-    uuN0(3, :, 1)            = (/ 0.0000000000000000, 1.1747233803526762, 3.5738424175967740,&
-                                  6.4261575824032260, 8.8252766196473242, 10.000000000000000 /)
-
-    call BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
+    call BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx,&
+                             elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, q, tolerance, testname)
@@ -62,11 +72,11 @@ subroutine test_BD_CalcIC_Position()
     deallocate(uuN0, q, base_q)
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from bd_static_twisted_with_k1 regression test:"
+    testname = "single element/node, zero/identity positions and rotations:"
 
-    node_elem_idx(1, :) = (/ 1, 8 /)
+    node_elem_idx(1, :) = (/ 1, 1 /)
     elem_total          = 1
-    nodes_per_elem      = 8
+    nodes_per_elem      = 1
 
     allocate(uuN0(6, nodes_per_elem, elem_total), q(6, nodes_per_elem), base_q(6, nodes_per_elem))
 
@@ -74,17 +84,12 @@ subroutine test_BD_CalcIC_Position()
 
     URM_Orientation(:, :, 1) = identity()
     GlbRot                   = identity()
+    Glb_crv                  = (/ 1.0d0, 2.0d0, 3.0d0 /)
 
-    uuN0(3, :, 1)            = (/ 0.0000000000000000, 0.64129925745196714,&
-                                  2.0414990928342887, 3.9535039104876057,&
-                                  6.0464960895123943, 7.9585009071657105,&
-                                  9.3587007425480326, 10.000000000000000 /)
-    uuN0(6, :, 1)            = (/ 0.0000000000000000, -0.10075635332802292,&
-                                 -0.32136671304351155, -0.62605311370206906,&
-                                 -0.96804298404628186, -1.2924757368995752,&
-                                 -1.5400297463046355, -1.6568542494923804 /)
+    base_q(4:6, 1)           = -Glb_crv
 
-    call BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
+    call BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx,&
+                             elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, q, tolerance, testname)
@@ -97,9 +102,6 @@ subroutine test_BD_CalcIC_Position()
        subroutine initialize_vars_base()
           URM_Orientation     = 0.0d0
           URM_TranslationDisp = 0.0d0
-          node_elem_idx       = 0.0d0
-          elem_total          = 0.0d0
-          nodes_per_elem      = 0.0d0
           uuN0                = 0.0d0
           GlbRot              = 0.0d0
           Glb_crv             = 0.0d0

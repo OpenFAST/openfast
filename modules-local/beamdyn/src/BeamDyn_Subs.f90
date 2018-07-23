@@ -1056,4 +1056,40 @@ FUNCTION BDrot_to_FASTdcm( rr, GlbRot, Glb_crv ) RESULT(dcm)
 
 END FUNCTION BDrot_to_FASTdcm
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the displacements at the nodes
+!! Called by BD_CalcIC_Velocity()
+SUBROUTINE BD_CalcIC_Disp( Orientation, TranslationDisp, node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, q )
+   REAL(BDKi),     INTENT(IN   ) :: Orientation(:, :)   !< Direction Cosine Matrix (DCM)--from u%RootMotion (3,3,NNodes)
+   REAL(BDKi),     INTENT(IN   ) :: TranslationDisp(:)  !< Translational displacements--from u%RootMotion (3,NNodes)
+   INTEGER(IntKi), INTENT(IN   ) :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   INTEGER(IntKi), INTENT(IN   ) :: elem_total          !< Total number of elements
+   INTEGER(IntKi), INTENT(IN   ) :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)       !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),     INTENT(IN   ) :: GlbRot(3, 3)        !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
+   REAL(BDKi),     INTENT(  OUT) :: q(:, :)             !< displacement (1:3)
+
+
+   INTEGER(IntKi)                :: i
+   INTEGER(IntKi)                :: j
+   INTEGER(IntKi)                :: k
+   INTEGER(IntKi)                :: temp_id
+   REAL(BDKi)                    :: temp_p0(3)
+
+
+   k = 1 !when i=1, k=1
+   DO i=1,elem_total
+      temp_id = node_elem_idx(i,1)-1      ! Node just before the start of this element
+      DO j=k,nodes_per_elem
+            ! reference at current root orientation.
+         temp_p0 = MATMUL(Orientation(:,:),uuN0(1:3,j,i)) ! Global frame
+         temp_p0 = MATMUL(temp_p0, GlbRot )               ! Into the local frame
+            !  Add the root displacement (in local frame) to the reference at current root orientation in local frame,
+            !  and subtract the reference to get the displacement.  This is equivalent to TranslationDisp in the local frame.
+         q(1:3,temp_id+j) = TranslationDisp(1:3) + temp_p0 - uuN0(1:3,j,i)
+      ENDDO
+      k = 2 ! start j loop at k=2 for remaining elements (i>1)
+   ENDDO
+
+END SUBROUTINE BD_CalcIC_Disp
+!-----------------------------------------------------------------------------------------------------------------------------------
 END MODULE BeamDyn_Subs

@@ -4539,7 +4539,7 @@ SUBROUTINE BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_i
    INTEGER(IntKi), INTENT(IN   ) :: node_elem_idx(:, :)       !< Index to first and last nodes of element in p%node_total sized arrays
    INTEGER(IntKi), INTENT(IN   ) :: elem_total                !< Total number of elements
    INTEGER(IntKi), INTENT(IN   ) :: nodes_per_elem            !< Finite element (GLL) nodes per element
-   REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)             !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)             !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
    REAL(BDKi),     INTENT(IN   ) :: GlbRot(3, 3)              !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
    REAL(BDKi),     INTENT(IN   ) :: Glb_crv(3)                !< CRV parameters of GlbRot
    REAL(BDKi),     INTENT(  OUT) :: q(:, :)                   !< q - displacement (1:3), and rotation displacement parameters (4:6)
@@ -4561,39 +4561,27 @@ SUBROUTINE BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_i
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+
       !  Since RootMotion%Orientation is the transpose of the absolute orientation in the global frame,
       !  we need to find the relative change in orientation from the reference.
    CALL ExtractRelativeRotation(URM_Orientation(:,:,1), Glb_crv, GlbRot, temp_rv, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
 
-
-   !Initialize displacements and rotations
+   ! initialize rotations with output from ExtractRelativeRotation()
    k = 1 !when i=1, k=1
    DO i=1,elem_total
-      temp_id = node_elem_idx(i,1)-1      ! Node just before the start of this element
-      DO j=k,nodes_per_elem
-            ! reference at current root orientation.
-         temp_p0 = MATMUL(URM_orientation(:,:,1),uuN0(1:3,j,i))    ! Global frame
-         temp_p0 = MATMUL(temp_p0, GlbRot )                                 ! Into the local frame
-            !  Add the root displacement (in local frame) to the reference at current root orientation in local frame,
-            !  and subtract the reference to get the displacement.  This is equivalent to TranslationDisp in the local frame.
-         q(1:3,temp_id+j) = URM_TranslationDisp(1:3,1) + temp_p0 - uuN0(1:3,j,i)
-      ENDDO
-      k = 2 ! start j loop at k=2 for remaining elements (i>1)
-   ENDDO
-
-   k = 1 !when i=1, k=1
-   DO i=1,elem_total
-      temp_id = node_elem_idx(i,1)-1      ! Node just before the start of this element
+      temp_id = node_elem_idx(i,1)-1 ! Node just before the start of this element
       DO j=k,nodes_per_elem
          q(4:6,temp_id+j) = temp_rv  ! each node is assumed to have the same initial relative rotation as the root
       ENDDO
       k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
 
-END SUBROUTINE BD_CalcIC_Position
+   ! Initialize displacements
+   CALL BD_CalcIC_Disp( URM_Orientation(:, :, 1), URM_TranslationDisp(:, 1), node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, q )
 
+END SUBROUTINE BD_CalcIC_Position
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
