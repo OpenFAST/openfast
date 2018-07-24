@@ -138,12 +138,11 @@ typedef   ^        ParameterType DbKi           rhoinf           -         - -  
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
 typedef   ^        ParameterType R8Ki           uuN0             {:}{:}{:} - -  "Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)" -
-typedef   ^        ParameterType  ^             QuadPt           {:}{:}    - -  "Quadrature point postion vectors" -
 typedef   ^        ParameterType  ^             Stif0_QP         {:}{:}{:} - -  "Sectional Stiffness Properties at quadrature points (6x6xqp)" -
 typedef   ^        ParameterType  ^             Mass0_QP         {:}{:}{:} - -  "Sectional Mass Properties at quadrature points (6x6xqp)" -
 typedef   ^        ParameterType  ^             gravity          {3}       - -  "Gravitational acceleration" m/s^2
-typedef   ^        ParameterType  ^             segment_length   {:}{:}    - -  "Array stored length of each segment" -
-typedef   ^        ParameterType  ^             member_length    {:}{:}    - -  "Array stored length of each member (index 1: element #; index 2: [1=absolute length;2:=ratio of length to beam length])" -
+typedef   ^        ParameterType  ^             segment_eta      {:}       - -  "Array stored length ratio of each segment w.r.t. member it lies in" -
+typedef   ^        ParameterType  ^             member_eta       {:}       - -  "Array stored length ratio of each member  w.r.t. entire blade" -
 typedef   ^        ParameterType  ^             blade_length      -        - -  "Blade Length" -
 typedef   ^        ParameterType  ^             blade_mass        -        - -  "Blade mass" -
 typedef   ^        ParameterType  ^             blade_CG         {3}       - -  "Blade center of gravity" -

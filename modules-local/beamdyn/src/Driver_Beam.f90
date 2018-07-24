@@ -57,6 +57,7 @@ PROGRAM BeamDyn_Driver_Program
    CHARACTER(256)                   :: RootName
    INTEGER(IntKi)                   :: j             ! counter for various loops
    INTEGER(IntKi)                   :: i             ! counter for various loops   
+   INTEGER(IntKi)                   :: stat_max = 8  ! maximum load steps for static runs.
    REAL(DbKi)                       :: TiLstPrn      ! The simulation time of the last print (to file) [(s)]
    REAL(ReKi)                       :: PrevClockTime ! Clock time at start of simulation in seconds [(s)]
    REAL(ReKi)                       :: UsrTime1      ! User CPU time for simulation initialization [(s)]
@@ -151,9 +152,6 @@ PROGRAM BeamDyn_Driver_Program
       !.........................
       ! calculate outputs at t=0
       !.........................
-   CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, t_global, DvrData%t_final )
-    
-    
    CALL BD_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                            BD_ConstraintState, BD_OtherState,  BD_Output, BD_MiscVar, ErrStat, ErrMsg)
       CALL CheckError()
@@ -165,10 +163,23 @@ PROGRAM BeamDyn_Driver_Program
       !.........................
      
    DO n_t_global = 0, n_t_final
-      
+
+      ! print the load/time step information for static/dynamic runs
+      IF(BD_Parameter%analysis_type .EQ. BD_STATIC_ANALYSIS) then
+         write (*,*)
+         write (*,"(a)", advance='no') "load step "
+         write (*,"(I0)", advance='no') n_t_global
+         write (*,*)
+      ELSE
+         write (*,*)
+         write (*,"(a)", advance='no') "time step "
+         write (*,"(I0)", advance='no') n_t_global
+         write (*,"(a)", advance='no') " of "
+         write (*,"(I0)", advance='no') n_t_final
+         write (*,*)
+      ENDIF
 
       ! Shift "window" of BD_Input 
-  
       DO j = BD_interp_order, 1, -1
          CALL BD_CopyInput (BD_Input(j),  BD_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
             CALL CheckError()
@@ -180,7 +191,7 @@ PROGRAM BeamDyn_Driver_Program
          CALL CheckError()
       
                        
-     IF(BD_Parameter%analysis_type .EQ. BD_STATIC_ANALYSIS .AND. n_t_global > 8) EXIT 
+     IF(BD_Parameter%analysis_type .EQ. BD_STATIC_ANALYSIS .AND. n_t_global > stat_max) EXIT
 
       ! update states from n_t_global to n_t_global + 1
      CALL BD_UpdateStates( t_global, n_t_global, BD_Input, BD_InputTimes, BD_Parameter, &
@@ -200,7 +211,6 @@ PROGRAM BeamDyn_Driver_Program
 
      CALL Dvr_WriteOutputLine(t_global,DvrOut,BD_Parameter%OutFmt,BD_Output)
                 
-     if ( MOD( n_t_global + 1, 100 ) == 0 ) call SimStatus( TiLstPrn, PrevClockTime, t_global, DvrData%t_final )
    ENDDO
       
    CALL RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global )

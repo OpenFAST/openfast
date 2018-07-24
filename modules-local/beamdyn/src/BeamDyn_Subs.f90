@@ -76,7 +76,6 @@ SUBROUTINE BD_GenerateGLL(N1, GLL_nodes, ErrStat, ErrMsg)
 
 
    CALL AllocAry(GLL_nodes,N1,'GLL points array',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-  !CALL AllocAry(GLL_weights,N1,'GLL weight array',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) return
 
 
@@ -772,7 +771,7 @@ subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, 
    ! note that this is the index for p%SP_Coef, so the upper bound is member_last_kp-1 instead of member_last_kp 
    ! bjj: to be more efficient, we could probably just start at the kp we found for the previous eta
    kp = member_first_kp
-   DO WHILE ( (eta > p%segment_length(kp,3) + EPS) .and. kp < (member_last_kp-1) ) 
+   DO WHILE ( (eta > p%segment_eta(kp) + EPS) .and. kp < (member_last_kp-1) )
       kp = kp + 1
    END DO
 

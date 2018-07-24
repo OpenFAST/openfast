@@ -1741,10 +1741,10 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(A)')  'Blade center of mass (IEC coords): '
    WRITE (UnSu,'(3ES18.5)' ) p%blade_CG(:)
 
-!   WRITE (UnSu,'(A)')  'Blade mass moment of inertia: '
-!   DO i=1,3
-!       WRITE (UnSu,'(3ES18.5)' ) p%blade_IN(i,:)
-!   ENDDO
+   WRITE (UnSu,'(A)')  'Blade mass moment of inertia: '
+   DO i=1,3
+       WRITE (UnSu,'(3ES18.5)' ) p%blade_IN(i,:)
+   ENDDO
 
    WRITE (UnSu,'(A)')  'Global position vector (IEC coords):'
    WRITE (UnSu,'(3ES18.5)' ) p%GlbPos(:)
@@ -1808,17 +1808,28 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Quadrature point position vectors'
-   WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','        X        ','        Y        ','        Z        '       
-   WRITE (UnSu,'(A,1x,3(1x,A))')  '----','-----------------','-----------------','-----------------'
-   DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset) 
-      WRITE(UnSu,'(I4,3ES18.5)') i,p%QuadPt(1:3,i+p%qp_indx_offset)
+   k=1
+   DO i=1,p%elem_total
+       WRITE (UnSu,'(2x,A,I4)')  'Element number: ',i
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') ' QP ', ' Global QP ','        X        ','        Y        ','        Z        '
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') '----', '-----------','-----------------','-----------------','-----------------'
+       DO j = 1, p%nqp
+           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uu0(1:3,j,i)
+           k=k+1
+       ENDDO
+       k = k-1
    ENDDO
-
-   WRITE (UnSu,'(/,A)')  'Quadrature point initial rotation vectors'
-   WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','      WM_x       ','      WM_y       ','      WM_z       '       
-   WRITE (UnSu,'(A,1x,3(1x,A))')  '----','-----------------','-----------------','-----------------'
-   DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset) 
-      WRITE(UnSu,'(I4,3ES18.5)') i,p%QuadPt(4:6,i+p%qp_indx_offset)
+   WRITE (UnSu,'(/,A)')  'Quadrature point rotation vectors'
+   k=1
+   DO i=1,p%elem_total
+       WRITE (UnSu,'(2x,A,I4)')  'Element number: ',i
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') ' QP ', ' Global QP ','      WM_x       ','      WM_y       ','      WM_z       '
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') '----', '-----------','-----------------','-----------------','-----------------'
+       DO j = 1, p%nqp
+           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uu0(4:6,j,i)
+           k=k+1
+       ENDDO
+       k = k-1
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at quadrature points (in IEC coordinates)'
