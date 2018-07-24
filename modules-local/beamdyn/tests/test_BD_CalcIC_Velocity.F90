@@ -1,9 +1,24 @@
 @test
 subroutine test_BD_CalcIC_Velocity()
     ! test branches
-    ! - inputs from bd_5MW_dynamic reg test
-    ! - inputs from bd_static_cantilever_beam reg test
-    ! - inputs from 5MW_Land_BD_DLL_WTurb reg test
+    ! - single element/node, zero velocities and reference position
+    ! - single element, 6 nodes, zero velocities and reference position
+    ! - 2 elements, 6 nodes, zero velocities and reference position
+    ! - single element/node, nonzero root trans/rot velocity
+    ! - single element, 2 nodes, rotation from positive x-axis to positive z-axis--integer velocities
+    ! - single element, 2 nodes, rotation from positive x-axis to positive z-axis--random real-valued velocities
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_CalcIC_Velocity(), the initial translational and rotational velocities
+    ! (x%dqdt) are computed for all nodes, based on the velocities at the root 
+    ! (TranslationVel and RotationVel), and the  position of the node (x%q,
+    ! relative to uuN0).
+    ! This test verifies that the subroutine correctly handles the simplest case
+      ! for a differing numbers of nodes/elements and also tests non-trivial
+      ! examples for a single node/element and single element/two nodes.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn
@@ -12,15 +27,13 @@ subroutine test_BD_CalcIC_Velocity()
 
     implicit none
 
-    type(BD_ContinuousStateType) :: x, x_test
-    integer(IntKi)               :: dof_node, node_total
-
+    type(BD_ContinuousStateType) :: x, base_x
     real(BDKi)                   :: TranslationVel(3, 1)
     real(BDKi)                   :: RotationVel(3, 1)
     integer(IntKi)               :: elem_total
-    integer(IntKi)               :: node_elem_idx(1, 2)
+    integer(IntKi), allocatable  :: node_elem_idx(:, :)
     integer(IntKi)               :: nodes_per_elem
-    real(BDKi)                   :: uuN0(6, 6, 1)
+    real(BDKi), allocatable      :: uuN0(:, :, :)
 
     integer(IntKi)               :: ErrStat
     character(ErrMsgLen)         :: ErrMsg
@@ -32,157 +45,188 @@ subroutine test_BD_CalcIC_Velocity()
     ! initialize NWTC_Num constants
     call SetConstants()
 
-    ! FIXME(mjs): the test using the inputs from 5MW_Land_BD_DLL_WTurb only passes with 13 digit accuracy
     ! digits of desired accuracy
-    accuracy   = 13
-
-    dof_node   = 6
-    node_total = 6
-
-    x          = simpleContinuousStateType(dof_node, node_total)
-    x_test     = simpleContinuousStateType(dof_node, node_total)
-
-    x%q        = 0.0d0
-    x%dqdt     = 0.0d0
+    accuracy   = 16
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from bd_5MW_dynamic reg test:"
+    testname = "single element/node, zero velocities and reference position:"
 
-    x_test%q             = 0.0d0
-    x_test%dqdt          = reshape((/ 0.0000000000000000, -1.0005999999999999, 0.0000000000000000,&
-                                      1.0005999999999999, 0.0000000000000000, 0.0000000000000000,&
-                                      0.0000000000000000, -8.2294835184424606, 0.0000000000000000,&
-                                      1.0005999999999999, 0.0000000000000000, 0.0000000000000000,&
-                                      0.0000000000000000, -22.992918346741089, 0.0000000000000000,&
-                                      1.0005999999999999, 0.0000000000000000, 0.0000000000000000,&
-                                      0.0000000000000000, -40.545181653258901, 0.0000000000000000,&
-                                      1.0005999999999999, 0.0000000000000000, 0.0000000000000000,&
-                                      0.0000000000000000, -55.308616481557529, 0.0000000000000000,&
-                                      1.0005999999999999, 0.0000000000000000, 0.0000000000000000,&
-                                      0.0000000000000000, -62.537499999999994, 0.0000000000000000,&
-                                      1.0005999999999999, 0.0000000000000000, 0.0000000000000000 /),&
-                                    (/ 6, 6 /))
+    elem_total     = 1
+    nodes_per_elem = 1
 
-    TranslationVel(:, 1) = (/ 0.0000000000000000, -1.0005999999999999, 0.0000000000000000 /)
-    RotationVel(:, 1)    = (/ 1.0005999999999999, 0.0000000000000000, 0.0000000000000000 /)
-    elem_total           = 1
-    node_elem_idx(1, :)  = (/ 1, 6 /)
-    nodes_per_elem       = 6
-    uuN0(:, :, 1)        = reshape((/ 0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                      0.0000000000000000, 0.0000000000000000, -0.23252982275596848,&
-                                      0.0000000000000000, 0.0000000000000000, 7.2245487891689590,&
-                                      0.0000000000000000, 0.0000000000000000, -0.23253023469778927,&
-                                      0.0000000000000000, 0.0000000000000000, 21.979130868220160,&
-                                      0.0000000000000000, 0.0000000000000000, -0.16017880145433533,&
-                                      0.0000000000000000, 0.0000000000000000, 39.520869131779840,&
-                                      0.0000000000000000, 0.0000000000000000, -7.0205801098801590E-002,&
-                                      0.0000000000000000, 0.0000000000000000, 54.275451210831037,&
-                                      0.0000000000000000, 0.0000000000000000, -1.6394170303009263E-002,&
-                                      0.0000000000000000, 0.0000000000000000, 61.500000000000000,&
-                                      0.0000000000000000, 0.0000000000000000, 0.0000000000000000 /),&
-                                   (/ 6, 6 /))
+    allocate(node_elem_idx(elem_total, 2), uuN0(6, nodes_per_elem, elem_total),&
+             x%q(6, nodes_per_elem * elem_total), x%dqdt(6, nodes_per_elem * elem_total),&
+             base_x%dqdt(6, nodes_per_elem * elem_total))
 
+    node_elem_idx(1, :) = (/ 1, 1 /)
+
+    call initialize_vars_base()
 
     call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
 
-    tolerance = AdjustTol(accuracy, x_test%q)
-    @assertEqual(x%q, x_test%q, tolerance, testname)
-    tolerance = AdjustTol(accuracy, x_test%dqdt)
-    @assertEqual(x%dqdt, x_test%dqdt, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_x%dqdt)
+    @assertEqual(x%dqdt, base_x%dqdt, tolerance, testname)
+
+    deallocate(node_elem_idx, uuN0, x%q, x%dqdt, base_x%dqdt)
 
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from bd_static_cantilever_beam reg test:"
+    testname = "single element, 6 nodes, zero velocities and reference position:"
 
-    x_test%q            = 0.0d0
-    x_test%dqdt         = 0.0d0
+    elem_total     = 1
+    nodes_per_elem = 6
 
-    TranslationVel      = 0.0d0
-    RotationVel         = 0.0d0
-    elem_total          = 1
+    allocate(node_elem_idx(elem_total, 2), uuN0(6, nodes_per_elem, elem_total),&
+             x%q(6, nodes_per_elem * elem_total), x%dqdt(6, nodes_per_elem * elem_total),&
+             base_x%dqdt(6, nodes_per_elem * elem_total))
+
     node_elem_idx(1, :) = (/ 1, 6 /)
-    nodes_per_elem      = 6
-    uuN0(:, :, 1)       = reshape((/ 0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                     0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                     0.0000000000000000, 0.0000000000000000, 1.1747233803526762,&
-                                     0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                     0.0000000000000000, 0.0000000000000000, 3.5738424175967740,&
-                                     0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                     0.0000000000000000, 0.0000000000000000, 6.4261575824032260,&
-                                     0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                     0.0000000000000000, 0.0000000000000000, 8.8252766196473242,&
-                                     0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                     0.0000000000000000, 0.0000000000000000, 10.000000000000000,&
-                                     0.0000000000000000, 0.0000000000000000, 0.0000000000000000 /),&
-                                  (/ 6, 6 /))
 
+    call initialize_vars_base()
 
     call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
 
-    tolerance = AdjustTol(accuracy, x_test%q)
-    @assertEqual(x%q, x_test%q, tolerance, testname)
-    tolerance = AdjustTol(accuracy, x_test%dqdt)
-    @assertEqual(x%dqdt, x_test%dqdt, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_x%dqdt)
+    @assertEqual(x%dqdt, base_x%dqdt, tolerance, testname)
+
+    deallocate(node_elem_idx, uuN0, x%q, x%dqdt, base_x%dqdt)
 
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from 5MW_Land_BD_DLL_WTurb reg test:"
+    testname = "2 elements, 6 nodes, zero velocities and reference position:"
 
-    x_test%q             = reshape((/ 0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                      0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                      1.4841721480239521E-016, 3.7204582198806444E-031, 7.9936057773011271E-015,&
-                                      0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                      4.2332272134075524E-016, 1.5190918514543691E-030, 2.4868995751603507E-014,&
-                                      0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                      1.0438701334199723E-015, 3.7767515344857961E-030, 4.2632564145606011E-014,&
-                                      0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                      1.2684675818798541E-015, 3.4392499169218608E-030, 6.3948846218409017E-014,&
-                                      0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                                      1.1780708390643919E-015, 5.1571219687488728E-030, 6.3948846218409017E-014,&
-                                      0.0000000000000000, 0.0000000000000000, 0.0000000000000000 /),&
-                                   (/ 6, 6 /))
-    x_test%dqdt          = reshape((/ 1.3851257465364026E-032, -1.8988545448696266, 2.2848305735639622E-031,&
-                                      1.2659030299130847, -3.9314002008544970E-033, -5.5270519916747633E-002,&
-                                      6.0118309186760929E-033, -11.044432746833529, 6.9945699067759111E-031,&
-                                      1.2659030299130847, -3.9314002008544970E-033, -5.5270519916747633E-002,&
-                                      1.1403494386613660E-032, -29.722302905805766, 2.1515060348287595E-030,&
-                                      1.2659030299130847, -3.9314002008544970E-033, -5.5270519916747633E-002,&
-                                      6.7221925530144695E-032, -51.928442523588281, 5.0094842680908571E-030,&
-                                      1.2659030299130847, -3.9314002008544970E-033, -5.5270519916747633E-002,&
-                                     -9.4381312944634894E-033, -70.606312682560514, 4.5822399478161044E-030,&
-                                      1.2659030299130847, -3.9314002008544970E-033, -5.5270519916747633E-002,&
-                                      5.7106957599643532E-032, -79.751890884524414, 6.7568993832269263E-030,&
-                                      1.2659030299130847, -3.9314002008544970E-033, -5.5270519916747633E-002 /),&
-                                   (/ 6, 6 /))
+    elem_total     = 2
+    nodes_per_elem = 6
 
-    TranslationVel(:, 1) = (/ 1.3851257465364026E-032, -1.8988545448696266, 2.2848305735639622E-031 /)
-    RotationVel(:, 1)    = (/ 1.2659030299130847, -3.9314002008544970E-033, -5.5270519916747633E-002 /)
-    elem_total           = 1
-    node_elem_idx(1, :)  = (/ 1, 6 /)
-    nodes_per_elem       = 6
-    uuN0(:, :, 1)        = reshape((/ 0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                               0.0000000000000000, 0.0000000000000000, -0.23252982275596848,&
-                               0.0000000000000000, 0.0000000000000000, 7.2245487891689590,&
-                               0.0000000000000000, 0.0000000000000000, -0.23253023469778927,&
-                               0.0000000000000000, 0.0000000000000000, 21.979130868220160,&
-                               0.0000000000000000, 0.0000000000000000, -0.16017880145433533,&
-                               0.0000000000000000, 0.0000000000000000, 39.520869131779840,&
-                               0.0000000000000000, 0.0000000000000000, -7.0205801098801590E-002,&
-                               0.0000000000000000, 0.0000000000000000, 54.275451210831037,&
-                               0.0000000000000000, 0.0000000000000000, -1.6394170303009263E-002,&
-                               0.0000000000000000, 0.0000000000000000, 61.500000000000000,&
-                               0.0000000000000000, 0.0000000000000000, 0.0000000000000000 /),&
-                            (/ 6, 6 /))
+    allocate(node_elem_idx(elem_total, 2), uuN0(6, nodes_per_elem, elem_total),&
+             x%q(6, nodes_per_elem * elem_total), x%dqdt(6, nodes_per_elem * elem_total),&
+             base_x%dqdt(6, nodes_per_elem * elem_total))
 
+    node_elem_idx(1, :) = (/ 1, 6 /)
+    node_elem_idx(2, :) = (/ 7, 12 /)
+
+    call initialize_vars_base()
 
     call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
 
-    tolerance = AdjustTol(accuracy, x_test%q)
-    @assertEqual(x%q, x_test%q, tolerance, testname)
-    tolerance = AdjustTol(accuracy, x_test%dqdt)
-    @assertEqual(x%dqdt, x_test%dqdt, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_x%dqdt)
+    @assertEqual(x%dqdt, base_x%dqdt, tolerance, testname)
+
+    deallocate(node_elem_idx, uuN0, x%q, x%dqdt, base_x%dqdt)
 
 
     ! --------------------------------------------------------------------------
+    testname = "single element/node, nonzero root trans/rot velocity:"
+      ! x%dqdt(:, 1) = (/ TranslationVel, RotationVel /)
+
+    elem_total     = 1
+    nodes_per_elem = 1
+
+    allocate(node_elem_idx(elem_total, 2), uuN0(6, nodes_per_elem, elem_total),&
+             x%q(6, nodes_per_elem * elem_total), x%dqdt(6, nodes_per_elem * elem_total),&
+             base_x%dqdt(6, nodes_per_elem * elem_total))
+
+    node_elem_idx(1, :) = (/ 1, 1 /)
+
+    call initialize_vars_base()
+
+    TranslationVel(:, 1) = (/ 1.0d0, 2.0d0, 3.0d0 /)
+    RotationVel(:, 1)    = (/ 4.0d0, 5.0d0, 6.0d0 /)
+
+    base_x%dqdt(:, 1)    = (/ 1.0d0, 2.0d0, 3.0d0, 4.0d0, 5.0d0, 6.0d0 /)
+
+    call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
+
+    tolerance = AdjustTol(accuracy, base_x%dqdt)
+    @assertEqual(x%dqdt, base_x%dqdt, tolerance, testname)
+
+    deallocate(node_elem_idx, uuN0, x%q, x%dqdt, base_x%dqdt)
+
+
+    ! --------------------------------------------------------------------------
+    testname = "single element, 2 nodes, rotation from positive x-axis to positive z-axis--integer velocities:"
+      ! x%dqdt(:, 1) = (/ TranslationVel, RotationVel /)
+      ! x%dqdt(:, 2) = (/ TranslationVel + crossproduct(RotationVel, distance from root), RotationVel /)
+
+    elem_total     = 1
+    nodes_per_elem = 2
+
+    allocate(node_elem_idx(elem_total, 2), uuN0(6, nodes_per_elem, elem_total),&
+             x%q(6, nodes_per_elem * elem_total), x%dqdt(6, nodes_per_elem * elem_total),&
+             base_x%dqdt(6, nodes_per_elem * elem_total))
+
+    node_elem_idx(1, :) = (/ 1, 2 /)
+
+    call initialize_vars_base()
+
+    uuN0(:, 1, 1) = (/ 1.0d0, 0.0d0, 0.0d0 /)
+    uuN0(:, 2, 1) = (/ 2.0d0, 0.0d0, 0.0d0 /)
+
+    x%q(:, 1)     = (/ 0.0d0, 0.0d0, 1.0d0 /)
+    x%q(:, 2)     = (/ 0.0d0, 0.0d0, 2.0d0 /)
+
+    TranslationVel(:, 1) = (/ 1.0d0, 2.0d0, 3.0d0 /)
+    RotationVel(:, 1)    = (/ 0.0d0, -1.0d0, 0.0d0 /)
+
+    base_x%dqdt(:, 1)    = (/ 1.0d0, 2.0d0, 3.0d0, 0.0d0, -1.0d0, 0.0d0 /)
+    base_x%dqdt(:, 2)    = (/ 0.0d0, 2.0d0, 4.0d0, 0.0d0, -1.0d0, 0.0d0 /)
+
+    call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
+
+    tolerance = AdjustTol(accuracy, base_x%dqdt)
+    @assertEqual(base_x%dqdt, x%dqdt, tolerance, testname)
+
+    deallocate(node_elem_idx, uuN0, x%q, x%dqdt, base_x%dqdt)
+
+
+    ! --------------------------------------------------------------------------
+    testname = "single element, 2 nodes, rotation from positive x-axis to positive z-axis--random real-valued velocities:"
+      ! x%dqdt(:, 1) = (/ TranslationVel, RotationVel /)
+      ! x%dqdt(:, 2) = (/ TranslationVel + crossproduct(RotationVel, distance from root), RotationVel /)
+
+    elem_total     = 1
+    nodes_per_elem = 2
+
+    allocate(node_elem_idx(elem_total, 2), uuN0(6, nodes_per_elem, elem_total),&
+             x%q(6, nodes_per_elem * elem_total), x%dqdt(6, nodes_per_elem * elem_total),&
+             base_x%dqdt(6, nodes_per_elem * elem_total))
+
+    node_elem_idx(1, :) = (/ 1, 2 /)
+
+    call initialize_vars_base()
+
+    uuN0(:, 1, 1) = (/ 1.0d0, 0.0d0, 0.0d0 /)
+    uuN0(:, 2, 1) = (/ 2.0d0, 0.0d0, 0.0d0 /)
+
+    x%q(:, 1)     = (/ 0.0d0, 0.0d0, 1.0d0 /)
+    x%q(:, 2)     = (/ 0.0d0, 0.0d0, 2.0d0 /)
+
+    TranslationVel(:, 1) = (/ 4.187296617161451, -4.479498460028433,  3.101960079476813 /)
+    RotationVel(:, 1)    = (/ 5.093733639647217,  3.594053537073496, -6.747765296107389 /)
+
+    base_x%dqdt(:, 1)    = (/ 4.187296617161451,  -4.479498460028433,  3.101960079476813,&
+                              5.093733639647217,   3.594053537073496, -6.747765296107389 /)
+    base_x%dqdt(:, 2)    = (/ 7.781350154234946, -16.320997395783039, -0.492093457596683,&
+                              5.093733639647217,   3.594053537073496, -6.747765296107389 /)
+
+    call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
+
+    tolerance = AdjustTol(accuracy, base_x%dqdt)
+    @assertEqual(base_x%dqdt, x%dqdt, tolerance, testname)
+
+    deallocate(node_elem_idx, uuN0, x%q, x%dqdt, base_x%dqdt)
+
+
+    ! --------------------------------------------------------------------------
+    contains
+       subroutine initialize_vars_base()
+          x%q            = 0.0d0
+          x%dqdt         = 0.0d0
+          TranslationVel = 0.0d0
+          RotationVel    = 0.0d0
+          uuN0           = 0.0d0
+
+          base_x%dqdt    = 0.0d0
+       end subroutine initialize_vars_base
 
 end subroutine test_BD_CalcIC_Velocity

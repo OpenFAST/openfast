@@ -8,7 +8,7 @@ subroutine test_BD_CalcIC_Disp()
 
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
-    ! In BD_CalcIC_Disp(), the initial displacement  is computed for all nodes.
+    ! In BD_CalcIC_Disp(), the initial displacement is computed for all nodes.
     ! This test verifies that the subroutine can handle the simplest case for a
       ! for differing numbers of nodes/elements and also tests a non-trivial
       ! example for a single node/element.
@@ -53,8 +53,8 @@ subroutine test_BD_CalcIC_Disp()
     ! --------------------------------------------------------------------------
     testname = "single element/node, zero/identity positions and rotations:"
 
-    elem_total          = 1
-    nodes_per_elem      = 1
+    elem_total     = 1
+    nodes_per_elem = 1
 
     allocate(node_elem_idx(elem_total, 2), uuN0(6, nodes_per_elem, elem_total),&
              q(6, nodes_per_elem * elem_total), base_q(6, nodes_per_elem * elem_total))
@@ -77,8 +77,8 @@ subroutine test_BD_CalcIC_Disp()
     ! --------------------------------------------------------------------------
     testname = "single element, 6 nodes, zero/identity positions and rotations:"
 
-    elem_total          = 1
-    nodes_per_elem      = 6
+    elem_total     = 1
+    nodes_per_elem = 6
 
     allocate(node_elem_idx(elem_total, 2), uuN0(6, nodes_per_elem, elem_total),&
              q(6, nodes_per_elem * elem_total), base_q(6, nodes_per_elem * elem_total))
@@ -101,8 +101,8 @@ subroutine test_BD_CalcIC_Disp()
     ! --------------------------------------------------------------------------
     testname = "2 elements, 6 nodes, zero/identity positions and rotations:"
 
-    elem_total          = 2
-    nodes_per_elem      = 6
+    elem_total     = 2
+    nodes_per_elem = 6
 
     allocate(node_elem_idx(elem_total, 2), uuN0(6, nodes_per_elem, elem_total),&
              q(6, nodes_per_elem * elem_total), base_q(6, nodes_per_elem * elem_total))
@@ -126,8 +126,8 @@ subroutine test_BD_CalcIC_Disp()
     ! --------------------------------------------------------------------------
     testname = "total rotation of pi about x-axis, unit initial y-position, and unit x-TranslationDisp:"
 
-    elem_total          = 1
-    nodes_per_elem      = 1
+    elem_total     = 1
+    nodes_per_elem = 1
 
     allocate(node_elem_idx(elem_total, 2), uuN0(6, nodes_per_elem, elem_total),&
              q(6, nodes_per_elem * elem_total), base_q(6, nodes_per_elem * elem_total))

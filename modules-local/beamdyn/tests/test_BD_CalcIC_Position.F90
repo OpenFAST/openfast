@@ -2,6 +2,7 @@
 subroutine test_BD_CalcIC_Position()
     ! test branches
     ! - single element/node, zero/identity positions and rotations
+    ! - single element/node, nonzero global CRV
 
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
@@ -72,7 +73,7 @@ subroutine test_BD_CalcIC_Position()
     deallocate(uuN0, q, base_q)
 
     ! --------------------------------------------------------------------------
-    testname = "single element/node, zero/identity positions and rotations:"
+    testname = "single element/node, nonzero global CRV:"
 
     node_elem_idx(1, :) = (/ 1, 1 /)
     elem_total          = 1
