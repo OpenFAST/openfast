@@ -4,6 +4,15 @@ subroutine test_BD_CheckRotMat()
     ! - known valid rotation matrix: pi about x-axis
     ! - known invalid rotation matrix: halve the angle of the diagonal elements
 
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_CheckRotMat(), it is determined whether the passed rotation matrix
+    ! is valid (i.e., the singular values are 1).
+    ! This test verifies that the subroutine does not flag a valid rotation
+    ! matrix and does flag an invalid rotation matrix with a fatal error status.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+
     use pFUnit_mod
     use BeamDyn_Subs
     use NWTC_Num
