@@ -4,7 +4,7 @@
 		<Platform Name="Win32"/>
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
-		<Configuration Name="Debug|Win32" OutputDirectory="..\..\reg_tests\r-test\glue-codes\fast\5MW_Baseline\ServoData" IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
+		<Configuration Name="Debug|Win32" OutputDirectory="..\..\reg_tests\r-test\glue-codes\openfast\5MW_Baseline\ServoData" IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemWindows" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
@@ -14,7 +14,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Release|Win32" OutputDirectory="..\..\reg_tests\r-test\glue-codes\fast\5MW_Baseline\ServoData" IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
+		<Configuration Name="Release|Win32" OutputDirectory="..\..\reg_tests\r-test\glue-codes\openfast\5MW_Baseline\ServoData" IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" RuntimeLibrary="rtMultiThreadedDLL"/>
 				<Tool Name="VFLinkerTool" SuppressStartupBanner="true" SubSystem="subSystemWindows" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
@@ -24,7 +24,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Debug|x64" OutputDirectory="..\..\reg_tests\r-test\glue-codes\fast\5MW_Baseline\ServoData" IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
+		<Configuration Name="Debug|x64" OutputDirectory="..\..\reg_tests\r-test\glue-codes\openfast\5MW_Baseline\ServoData" IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" WarnInterfaces="true" Traceback="true" BoundsCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateDebugInformation="true" SubSystem="subSystemWindows" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
@@ -34,7 +34,7 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Release|x64" OutputDirectory="..\..\reg_tests\r-test\glue-codes\fast\5MW_Baseline\ServoData" IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
+		<Configuration Name="Release|x64" OutputDirectory="..\..\reg_tests\r-test\glue-codes\openfast\5MW_Baseline\ServoData" IntermediateDirectory="$(ProjectName)\$(PlatformName)\$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
 				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Optimization="optimizeDisabled" Preprocess="preprocessYes" FloatingPointModel="precise" RuntimeLibrary="rtMultiThreadedDLL"/>
 				<Tool Name="VFLinkerTool" SuppressStartupBanner="true" SubSystem="subSystemWindows" LinkDLL="true"/>
 				<Tool Name="VFResourceCompilerTool"/>
@@ -48,5 +48,5 @@
 		<Filter Name="Header Files" Filter="fi;fd;h;inc"/>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
-		<File RelativePath="..\..\reg_tests\r-test\glue-codes\fast\5MW_Baseline\ServoData\DISCON_OC3\DISCON_OC3Hywind.F90"/></Filter></Files>
+		<File RelativePath="..\..\reg_tests\r-test\glue-codes\openfast\5MW_Baseline\ServoData\DISCON_OC3\DISCON_OC3Hywind.F90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
