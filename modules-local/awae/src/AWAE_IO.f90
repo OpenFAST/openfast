@@ -479,14 +479,14 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          do n=0,p%NumDT-1  ! We have already checked the first high-res files associated with n=0, but need to check the remaining, so for simplicity of code we will repeat the check on the first file
   
                ! We only have one high res input for for the very last low res timestep
-            if ( (n) == (p%NumDT-1) ) then
+            if ( (n) == (p%NumDT) ) then !!KLS -- removed (-1)
                n_high_low = 1
             else
                n_high_low = p%n_high_low
             end if
             
             do nh=1,n_high_low
-               nhigh = nh+n*p%n_high_low-1
+               nhigh = nh+n*p%n_high_low!-1 -- KLS -- removed -1
                FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(nhigh))//".vtk"  !TODO: Should the turbine numbers be padding with leading zero(es)? 
                Un = -1 ! Set to force closing of file on return
                call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 

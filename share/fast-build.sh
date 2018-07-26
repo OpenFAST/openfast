@@ -6,7 +6,7 @@ EXTRA_ARGS=$@
 
 CC=mpicc CXX=mpic++ FC=gfortran cmake \
    -DCMAKE_INSTALL_PREFIX=$openfast_dir/install/ \
-   -DCMAKE_BUILD_TYPE=RELEASE \
+   -DCMAKE_BUILD_TYPE=DEBUG \
    -DYAML_ROOT:PATH=$yaml_install_dir \
    -DHDF5_USE_STATIC_LIBRARIES=ON \
    -DHDF5_ROOT:PATH=$hdf5_install_dir \

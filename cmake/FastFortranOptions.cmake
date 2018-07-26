@@ -67,7 +67,7 @@ endmacro(set_fast_fortran)
 #
 macro(set_fast_gfortran)
   if(NOT WIN32)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic ")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic")# -fbacktrace -fcheck=bounds")
   endif(NOT WIN32)
 
   # Fix free-form compilation for OpenFAST
@@ -96,7 +96,7 @@ endmacro(set_fast_intel_fortran)
 # arch
 #
 macro(set_fast_intel_fortran_posix)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic ")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic")# -traceback -check bounds")
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
     add_definitions(-DDOUBLE_PRECISION)
