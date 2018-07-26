@@ -2,11 +2,21 @@
 subroutine test_BD_ComputeIniNodalCrv()
     ! test branches
     ! - z-axis unit tangent vector, no rotation
-    ! - non-unit tanget vector, generates invalid rotation matrix
-    ! - random unit tanget vector, random positive rotation < 90 degrees
-    ! - random unit tanget vector, random negative rotation < 90 degrees
-    ! - random unit tanget vector, random positive rotation > 90 degrees
-    ! - random unit tanget vector, random negative rotation > 90 degrees
+    ! - non-unit tangent vector, generates invalid rotation matrix
+    ! - random unit tangent vector, random positive rotation < 90 degrees
+    ! - random unit tangent vector, random negative rotation < 90 degrees
+    ! - random unit tangent vector, random positive rotation > 90 degrees
+    ! - random unit tangent vector, random negative rotation > 90 degrees
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_ComputeIniNodalCrv(), the unit tangent vector and angle of rotation
+    ! are used to compute the corresponding CRV by first forming a rotation
+    ! matrix and then calling BD_CrvExtractCrv().
+    ! This test verifies that this is handled properly for a variety of axis/angle
+    ! combinations.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn_Subs
@@ -47,7 +57,7 @@ subroutine test_BD_ComputeIniNodalCrv()
     @assertEqual(Base_cc, cc, tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    testname = "non-unit tanget vector, generates invalid rotation matrix:"
+    testname = "non-unit tangent vector, generates invalid rotation matrix:"
 
     e1  = (/ 0.0, 0.0, -2.0 /)
     phi = 0.0
@@ -57,7 +67,7 @@ subroutine test_BD_ComputeIniNodalCrv()
     @assertEqual(4, ErrStat, testname)
 
     ! --------------------------------------------------------------------------
-    testname = "random unit tanget vector, random positive rotation < 90 degrees:"
+    testname = "random unit tangent vector, random positive rotation < 90 degrees:"
 
     e1      = (/ 0.225420111501399, -0.924753406904143, -0.306621769856411 /)
     phi     = 13.3251
@@ -70,7 +80,7 @@ subroutine test_BD_ComputeIniNodalCrv()
     @assertEqual(Base_cc, cc, tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    testname = "random unit tanget vector, random negative rotation < 90 degrees:"
+    testname = "random unit tangent vector, random negative rotation < 90 degrees:"
 
     e1      = (/ 0.640381703895931, -0.312136686798122, 0.701770590770257 /)
     phi     = -86.1756
@@ -83,7 +93,7 @@ subroutine test_BD_ComputeIniNodalCrv()
     @assertEqual(Base_cc, cc, tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    testname = "random unit tanget vector, random positive rotation > 90 degrees:"
+    testname = "random unit tangent vector, random positive rotation > 90 degrees:"
 
     e1      = (/ 0.795675734368097, 0.558972426373958, -0.233345135564040 /)
     phi     = 162.0252
@@ -96,7 +106,7 @@ subroutine test_BD_ComputeIniNodalCrv()
     @assertEqual(Base_cc, cc, tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    testname = "random unit tanget vector, random negative rotation > 90 degrees:"
+    testname = "random unit tangent vector, random negative rotation > 90 degrees:"
 
     e1      = (/ 0.388342992479864, 0.882677543196496, 0.264707527147192 /)
     phi     = -102.7698
