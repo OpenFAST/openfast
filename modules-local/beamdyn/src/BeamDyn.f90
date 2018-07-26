@@ -3236,27 +3236,27 @@ END SUBROUTINE ComputeSplineCoeffs
 !! two end nodes: f''(0) = f''(1) = 0
 SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coordinate,SP_Coef,ErrStat,ErrMsg)
 
-   REAL(BDKi),    INTENT(IN   ):: kp_coordinate(:,:)  !< Keypoints coordinates, from BD input file InputFileData%kp_coordinate(member key points,1:4);
-                                                      !! The last index refers to [1=x;2=y;3=z;4=-twist] compared to what was entered in the input file
-   INTEGER(IntKi),INTENT(IN   ):: kp_member           !< Number of key points of each member, InputFileData%kp_member(i) from BD input file
-   REAL(BDKi),    INTENT(INOUT):: SP_Coef(:,:,:)      !< Coefficients for cubic spline interpolation (intent "inout" instead of "out" only because this is a portion of an allocatable array, which sometimes does weird stuff in gfortran);
-                                                      !! index 1 = [1, kp_member-1];
-                                                      !! index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms);
-                                                      !! index 3 = [1,4] (each column of kp_coord)
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat             !< Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg              !< Error message if ErrStat /= ErrID_None
+   REAL(BDKi),     INTENT(IN   ) :: kp_coordinate(:,:) !< Keypoints coordinates, from BD input file InputFileData%kp_coordinate(member key points,1:4);
+                                                       !! The last index refers to [1=x;2=y;3=z;4=-twist] compared to what was entered in the input file
+   INTEGER(IntKi), INTENT(IN   ) :: kp_member          !< Number of key points of each member, InputFileData%kp_member(i) from BD input file
+   REAL(BDKi),     INTENT(INOUT) :: SP_Coef(:,:,:)     !< Coefficients for cubic spline interpolation (intent "inout" instead of "out" only because this is a portion of an allocatable array, which sometimes does weird stuff in gfortran);
+                                                       !! index 1 = [1, kp_member-1];
+                                                       !! index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms);
+                                                       !! index 3 = [1,4] (each column of kp_coord)
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat            !< Error status of the operation
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg             !< Error message if ErrStat /= ErrID_None
 
-   REAL(BDKi),      ALLOCATABLE:: K(:,:)              ! coefficient matrix
-   REAL(BDKi),      ALLOCATABLE:: RHS(:)              ! right hand side of equation we're solving to get the cubic-spline coefficients
-   INTEGER(IntKi),  ALLOCATABLE:: indx(:)
-   INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: j                   ! loop over key points in this member
-   INTEGER(IntKi)              :: m
-   INTEGER(IntKi)              :: n                   ! size of matrices = 4*(kp_member-1)
-   INTEGER(IntKi)              :: temp_id1
-   INTEGER(IntKi)              :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)        :: ErrMsg2                      ! Temporary Error message
-   CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeIniCoef'
+   REAL(BDKi), ALLOCATABLE       :: K(:,:)             ! coefficient matrix
+   REAL(BDKi), ALLOCATABLE       :: RHS(:)             ! right hand side of equation we're solving to get the cubic-spline coefficients
+   INTEGER(IntKi), ALLOCATABLE   :: indx(:)
+   INTEGER(IntKi)                :: i
+   INTEGER(IntKi)                :: j                  ! loop over key points in this member
+   INTEGER(IntKi)                :: m
+   INTEGER(IntKi)                :: n                  ! size of matrices = 4*(kp_member-1)
+   INTEGER(IntKi)                :: temp_id1
+   INTEGER(IntKi)                :: ErrStat2           ! Temporary Error status
+   CHARACTER(ErrMsgLen)          :: ErrMsg2            ! Temporary Error message
+   CHARACTER(*), PARAMETER       :: RoutineName = 'BD_ComputeIniCoef'
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -4796,11 +4796,11 @@ SUBROUTINE BD_ComputeBladeMassNew( p, ErrStat, ErrMsg )
        call Cleanup()
        return
    end if
-   NQPpos(:,:)  = 0.0_BDKi
-   EMass0_GL(:,:,:)  = 0.0_BDKi        !FIXME: there is a miscvar by this name.  Should we be using that here?
-   elem_mass= 0.0_BDKi
-   elem_CG(:)= 0.0_BDKi
-   elem_IN(:,:)= 0.0_BDKi
+   NQPpos(:,:)      = 0.0_BDKi
+   EMass0_GL(:,:,:) = 0.0_BDKi !FIXME: there is a miscvar by this name.  Should we be using that here?
+   elem_mass        = 0.0_BDKi
+   elem_CG(:)       = 0.0_BDKi
+   elem_IN(:,:)     = 0.0_BDKi
 
    DO nelem=1,p%elem_total
 
@@ -4826,8 +4826,8 @@ SUBROUTINE BD_ComputeBladeMassNew( p, ErrStat, ErrMsg )
 
 CONTAINS
       SUBROUTINE Cleanup()
-         if (allocated(NQPpos      )) deallocate(NQPpos      )
-         if (allocated(EMass0_GL   )) deallocate(EMass0_GL   )
+         if (allocated(NQPpos   )) deallocate(NQPpos   )
+         if (allocated(EMass0_GL)) deallocate(EMass0_GL)
       END SUBROUTINE Cleanup
 END SUBROUTINE BD_ComputeBladeMassNew
 
@@ -4844,24 +4844,24 @@ SUBROUTINE BD_ComputeElementMass( nelem, nqp, QPtWeight, Jacobian, NQPpos, EMass
    REAL(BDKi),     INTENT(IN   ) :: NQPpos(:, :)
    REAL(BDKi),     INTENT(IN   ) :: EMass0_GL(:, :, :) !< Nodal material properties for each element
    REAL(BDKi),     INTENT(  OUT) :: elem_mass          !< Total element force (Fd, Fc, Fb)
-   REAL(BDKi),     INTENT(  OUT) :: elem_CG(:)
-   REAL(BDKi),     INTENT(  OUT) :: elem_IN(:, :)
+   REAL(BDKi),     INTENT(  OUT) :: elem_CG(:)         !< Blade center of gravity
+   REAL(BDKi),     INTENT(  OUT) :: elem_IN(:, :)      !< Blade mass moment of inertia
 
    REAL(BDKi)                    :: mmm
    INTEGER(IntKi)                :: idx_qp
    CHARACTER(*), PARAMETER       :: RoutineName = 'BD_ComputeElementMass'
 
-   elem_mass  = 0.0_BDKi
-   elem_CG(:) = 0.0_BDKi
-   elem_IN(:,:) = 0.0_BDKi
 
+   elem_mass    = 0.0_BDKi
+   elem_CG(:)   = 0.0_BDKi
+   elem_IN(:,:) = 0.0_BDKi
 
    DO idx_qp=1,nqp
 
        mmm  = EMass0_GL(1,1,idx_qp)
 
-       elem_mass = elem_mass + QPtWeight(idx_qp) * Jacobian(idx_qp,nelem) * mmm
-       elem_CG(1:3) = elem_CG(1:3) + QPtWeight(idx_qp) * Jacobian(idx_qp,nelem) * mmm * NQPpos(1:3,idx_qp)
+       elem_mass        = elem_mass        + QPtWeight(idx_qp) * Jacobian(idx_qp,nelem) * mmm
+       elem_CG(1:3)     = elem_CG(1:3)     + QPtWeight(idx_qp) * Jacobian(idx_qp,nelem) * mmm * NQPpos(1:3,idx_qp)
        elem_IN(1:3,1:3) = elem_IN(1:3,1:3) - QPtWeight(idx_qp) * Jacobian(idx_qp,nelem) * mmm * &
                           MATMUL(SkewSymMat(NQPpos(1:3,idx_qp)),SkewSymMat(NQPpos(1:3,idx_qp)))
 

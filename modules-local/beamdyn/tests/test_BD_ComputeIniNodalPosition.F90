@@ -1,8 +1,18 @@
 @test
 subroutine test_BD_ComputeIniNodalPosition()
     ! test branches
-    ! - simple coefficients and eta--all 1.0
-    ! - random coefficients and eta
+    ! - all coefficients and eta == 1.0
+    ! - randomly chosen coefficients and eta
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_ComputeIniNodalPosition(), the nodal position (including twist angle)
+    ! and unit normal vector are computed using the cubic spline coefficients
+    ! and eta (the z-component of the node location).
+    ! This test verifies that this occurs properly both for a simple case and a
+    ! case with randomly chosen coefficients.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn_Subs
@@ -30,14 +40,14 @@ subroutine test_BD_ComputeIniNodalPosition()
     accuracy = 16
 
     ! --------------------------------------------------------------------------
-    testname = "simple coefficients and eta--all 1.0:"
+    testname = "all coefficients and eta == 1.0:"
 
-    SP_Coef          = 1.0
-    eta              = 1.0
+    SP_Coef          = 1.0d0
+    eta              = 1.0d0
 
-    BasePosiVec      = 4.0
-    Base_e1          = 0.57735026918962573
-    Base_Twist_Angle = 4.0
+    BasePosiVec      = 4.0d0
+    Base_e1          = sqrt(3.0d0) / 3.0d0
+    Base_Twist_Angle = 4.0d0
 
     call BD_ComputeIniNodalPosition(SP_Coef, eta, PosiVec, e1, Twist_Angle)
 
@@ -49,17 +59,17 @@ subroutine test_BD_ComputeIniNodalPosition()
     @assertEqual(Base_Twist_Angle, Twist_Angle, tolerance, testname)
 
     ! --------------------------------------------------------------------------
-    testname = "random coefficients and eta:"
+    testname = "randomly chosen coefficients and eta:"
 
-    SP_Coef(1, :)    = (/ 0.8147, 0.9058, 0.1270, 0.5469 /)
-    SP_Coef(2, :)    = (/ 0.9575, 0.9649, 0.1576, 0.9706 /)
-    SP_Coef(3, :)    = (/ 0.9572, 0.4854, 0.8003, 0.1419 /)
-    SP_Coef(4, :)    = (/ 0.4218, 0.9157, 0.7922, 0.9595 /)
-    eta              = 0.9134
+    SP_Coef(1, :)    = (/ -1.564774347474501,  3.114813983131736,  3.574703097155469,  3.109557803551134 /)
+    SP_Coef(2, :)    = (/  8.314710503781342, -9.285766428516208,  5.154802611566669, -6.576266243768765 /)
+    SP_Coef(3, :)    = (/  5.844146591191087,  6.982586117375543,  4.862649362498324,  4.120921760392175 /)
+    SP_Coef(4, :)    = (/  9.189848527858061,  8.679864955151011, -2.155459609316637, -9.363343072451586 /)
+    eta              = 0.276922984960890
 
-    BasePosiVec      = (/ 2.8093043990282673, 2.8899171354418329, 1.5423371684499889 /)
-    Base_e1          = (/ 0.56521082196049255, 0.62256035367992302, 0.54125348291227982 /)
-    Base_Twist_Angle = 2.2830193723347882
+    BasePosiVec      = (/  1.3810838683080706,   1.2631682319247644,  5.3293114105454640 /)
+    Base_e1          = (/ 0.85998489672033263, -0.21532278605903435, 0.46266842902525146 /)
+    Base_Twist_Angle = 1.4056150105880219
 
     call BD_ComputeIniNodalPosition(SP_Coef, eta, PosiVec, e1, Twist_Angle)
 

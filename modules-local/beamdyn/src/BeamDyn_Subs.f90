@@ -420,18 +420,18 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    !>   ErrStat = 0 if valid
    !>   ErrStat = 4 (fatal error) if invalid
    
-   REAL(BDKi),       INTENT(IN   )  :: R(3,3)                !< Rotation Matrix
-   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat               !< Error status of the operation
-   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg                !< Error message if ErrStat /= ErrID_None
-   REAL(BDKi)                       :: Rr(3,3)               !< Local Rotation Matrix variable
-   INTEGER(IntKi)                   :: lwork = 27            !< from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
-   REAL(BDKi), ALLOCATABLE          :: work(:)                  ! where M x N is dimension of R, and lwork is the dimension of work
-   REAL(BDKi)                       :: S(3), U(3,3), VT(3,3) !<these three are the SVD matrices (S is actually a vector)
-   INTEGER(IntKi)                   :: ErrStat2              ! Temporary Error status
-   CHARACTER(ErrMsgLen)             :: ErrMsg2               ! Temporary Error message
-   LOGICAL                          :: ortho                 ! logical value indicating whether R is orthogonal
-   INTEGER                          :: i
-   character(*), parameter          :: RoutineName = 'BD_CheckRotMat'
+   REAL(BDKi),       INTENT(IN   ) :: R(3,3)                !< Rotation Matrix
+   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat               !< Error status of the operation
+   CHARACTER(*),     INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
+   REAL(BDKi)                      :: Rr(3,3)               !< Local Rotation Matrix variable
+   INTEGER(IntKi)                  :: lwork = 27            !< from LAPACK: dgesvd doc page, lwork >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N))
+   REAL(BDKi)                      :: work(27)                  ! where M x N is dimension of R, and lwork is the dimension of work
+   REAL(BDKi)                      :: S(3), U(3,3), VT(3,3) !<these three are the SVD matrices (S is actually a vector)
+   INTEGER(IntKi)                  :: ErrStat2              ! Temporary Error status
+   CHARACTER(ErrMsgLen)            :: ErrMsg2               ! Temporary Error message
+   LOGICAL                         :: ortho                 ! logical value indicating whether R is orthogonal
+   INTEGER                         :: i
+   character(*), parameter         :: RoutineName = 'BD_CheckRotMat'
    
    ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -445,13 +445,11 @@ SUBROUTINE BD_CheckRotMat(R, ErrStat, ErrMsg)
    !    the leading eigenvalue is +1 and the other two are a complex conjugate pair
    ! 2) a valid rotation matrix must have determinant == +1 i.e., the singular values == 1 
    
-   allocate(work(lwork))
    call LAPACK_gesvd('A', 'A', 3, 3, Rr, S, U, VT, work, lwork, ErrStat2, ErrMsg2)
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
-   deallocate(work)
    
-   !    If \f$ \underline{\underline{R}} \f$ is not a valid roatation tensor,
+   !    If \f$ \underline{\underline{R}} \f$ is not a valid rotation tensor,
    !    and the correction is desired,
    !    compute \f$ \underline{\underline{R_{out}} \f$, the nearest orthogonal tensor
    !    to \f$ \underline{\underline{R}} \f$.
