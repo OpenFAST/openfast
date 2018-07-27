@@ -86,23 +86,24 @@ subroutine test_BD_InputGlobalLocal()
 
     ! test the values
     tolerance = AdjustTol(accuracy, vectorAfterRotation)
-    @assertEqual(inputtype%RootMotion%TranslationDisp(:,1), vectorAfterRotation, tolerance, testname)
-    @assertEqual(inputtype%RootMotion%TranslationVel(:,1) , vectorAfterRotation, tolerance, testname)
-    @assertEqual(inputtype%RootMotion%RotationVel(:,1)    , vectorAfterRotation, tolerance, testname)
-    @assertEqual(inputtype%RootMotion%TranslationAcc(:,1) , vectorAfterRotation, tolerance, testname)
-    @assertEqual(inputtype%RootMotion%RotationAcc(:,1)    , vectorAfterRotation, tolerance, testname)
+    @assertEqual(vectorAfterRotation, inputtype%RootMotion%TranslationDisp(:,1), tolerance, testname)
+    @assertEqual(vectorAfterRotation, inputtype%RootMotion%TranslationVel(:,1) , tolerance, testname)
+    @assertEqual(vectorAfterRotation, inputtype%RootMotion%RotationVel(:,1)    , tolerance, testname)
+    @assertEqual(vectorAfterRotation, inputtype%RootMotion%TranslationAcc(:,1) , tolerance, testname)
+    @assertEqual(vectorAfterRotation, inputtype%RootMotion%RotationAcc(:,1)    , tolerance, testname)
 
     do i = 1, parametertype%node_total
-       @assertEqual(inputtype%PointLoad%Force(1:3,i) , vectorAfterRotation, tolerance, testname)
-       @assertEqual(inputtype%PointLoad%Moment(1:3,i), vectorAfterRotation, tolerance, testname)
+       @assertEqual(vectorAfterRotation, inputtype%PointLoad%Force(1:3,i) , tolerance, testname)
+       @assertEqual(vectorAfterRotation, inputtype%PointLoad%Moment(1:3,i), tolerance, testname)
     end do
 
     inputtype%DistrLoad%Nnodes = totalnodes
     do i = 1, inputtype%DistrLoad%Nnodes
-       @assertEqual(inputtype%DistrLoad%Force(1:3,i) , vectorAfterRotation, tolerance, testname)
-       @assertEqual(inputtype%DistrLoad%Moment(1:3,i), vectorAfterRotation, tolerance, testname)
+       @assertEqual(vectorAfterRotation, inputtype%DistrLoad%Force(1:3,i) , tolerance, testname)
+       @assertEqual(vectorAfterRotation, inputtype%DistrLoad%Moment(1:3,i), tolerance, testname)
     end do
 
-    @assertEqual(inputtype%RootMotion%Orientation(:,:,1), transpose(parametertype%GlbRot), tolerance, testname)
+    tolerance = AdjustTol(accuracy, parametertype%GlbRot)
+    @assertEqual(transpose(parametertype%GlbRot), inputtype%RootMotion%Orientation(:,:,1), tolerance, testname)
 
 end subroutine
