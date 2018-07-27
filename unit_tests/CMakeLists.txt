@@ -96,48 +96,49 @@ endfunction(build_utest)
 ### beamdyn unit tests
 set(testlist
     test_tools
-    test_BD_CrvCompose
-    test_BD_CheckRotMat
-    test_BD_CrvExtractCrv
-    test_BD_CrvMatrixR
-    test_BD_CrvMatrixH
-    test_ExtractRelativeRotation
-    test_BD_InputGlobalLocal
-    test_BD_DistrLoadCopy
-    test_BD_GravityForce
-    test_BD_QPData_mEta_rho
-    test_BD_GenerateGLL
-    test_BD_GaussPointWeight
-    test_BD_diffmtc
-    test_BD_InitShpDerJaco
-    test_BD_TrapezoidalPointWeight
-    test_BD_ComputeIniNodalPosition
-    test_BD_ComputeIniNodalCrv
+    test_BD_AssembleRHS
+    test_BD_AssembleStiffK
+    test_BD_BoundaryGA2
+    test_BD_CalcIC_Disp
+    test_BD_CalcIC_Position
     test_BD_CalcIC_Velocity
-    test_BD_DisplacementQP
+    test_BD_CheckRotMat
+    test_BD_ComputeElementMass
     test_BD_ComputeIniCoef
-    test_Calc_Fc_Fd
-    test_BD_ElasticForce
-    test_BD_StifAtDeformedQP
+    test_BD_ComputeIniNodalCrv
+    test_BD_ComputeIniNodalPosition
+    test_BD_ComputeMemberLength
+    test_BD_CrvCompose
+    test_BD_CrvExtractCrv
+    test_BD_CrvMatrixH
+    test_BD_CrvMatrixR
+    test_BD_DisplacementQP
     test_BD_DissipativeForce
+    test_BD_DistrLoadCopy
+    test_BD_ElasticForce
+    test_BD_GaussPointWeight
+    test_BD_GenerateGLL
+    test_BD_GravityForce
     test_BD_GyroForce
     test_BD_InertialMassMatrix
-    test_BD_QPDataVelocity
+    test_BD_InitShpDerJaco
+    test_BD_InputGlobalLocal
     test_BD_QPDataAcceleration
-    test_BD_AssembleStiffK
-    test_BD_AssembleRHS
-    test_BD_UpdateDiscState
-    test_BD_TiSchmPredictorStep
-    test_BD_BoundaryGA2
-    test_BD_UpdateDynamicGA2
-    test_BD_StaticUpdateConfiguration
-    test_Initialize_FEweights
+    test_BD_QPDataVelocity
+    test_BD_QPData_mEta_rho
     test_BD_QuadraturePointDataAt0
-    test_BD_ComputeMemberLength
+    test_BD_StaticUpdateConfiguration
+    test_BD_StifAtDeformedQP
     test_BD_TiSchmComputeCoefficients
-    test_BD_CalcIC_Position
-    test_BD_ComputeElementMass
+    test_BD_TiSchmPredictorStep
+    test_BD_TrapezoidalPointWeight
+    test_BD_UpdateDiscState
+    test_BD_UpdateDynamicGA2
+    test_BD_diffmtc
     test_BDrot_to_FASTdcm
+    test_Calc_Fc_Fd
+    test_ExtractRelativeRotation
+    test_Initialize_FEweights
 )
 # it is important to keep the quotes around "${testlist}" in the call below
 build_utest("beamdyn" "${testlist}")

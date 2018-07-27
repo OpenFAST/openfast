@@ -252,8 +252,8 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
    REAL(BDKi)                  :: tr1
    REAL(BDKi)                  :: Delta1
    REAL(BDKi)                  :: Delta2
-   REAL(BDKi)                  :: dd1
-   REAL(BDKi)                  :: dd2
+   ! REAL(BDKi)                  :: dd1
+   ! REAL(BDKi)                  :: dd2
 
 
       ! Set the local values pp and qq allowing for the transpose
@@ -298,15 +298,19 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
 
    Delta1 = (4.0_BDKi - pp0) * (4.0_BDKi - qq0)   ! Delta_1 in Bauchau
    Delta2 = pp0 * qq0 - dot_product(p,q)          ! Delta_2 in Bauchau
-   dd1 = Delta1 + Delta2                          ! Denominator term for \Delta_2 >= 0
-   dd2 = Delta1 - Delta2                          ! Denominator term for \Delta_2 <  0
+
+   ! mjs: let's only do one of these calculations
+   ! dd1 = Delta1 + Delta2                          ! Denominator term for \Delta_2 >= 0
+   ! dd2 = Delta1 - Delta2                          ! Denominator term for \Delta_2 <  0
 
       ! Rescaling to remove singularities at +/- 2 \pi
       ! Note: changed this to test on \Delta_2 (instead of dd1 > dd2) for better consistency with documentation.
    IF ( Delta2 >= 0.0_BDKi ) THEN
-       tr1 = 4.0_BDKi / dd1
+       tr1 = 4.0_BDKi / (Delta1 + Delta2)
+       ! tr1 = 4.0_BDKi / dd1
    ELSE
-       tr1 = -4.0_BDKi / dd2
+       tr1 = -4.0_BDKi / (Delta1 - Delta2)
+       ! tr1 = -4.0_BDKi / dd2
    ENDIF
 
    rr = tr1 * (qq0*p + pp0*q + cross_product(p,q))

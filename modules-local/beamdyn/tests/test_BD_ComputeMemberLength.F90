@@ -4,6 +4,14 @@ subroutine test_BD_ComputeMemberLength()
     ! - inputs from bd_static_cantilever_beam regression test
     ! - inputs from bd_curved_beam regression test
 
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! FIXME(mjs): As of 7.27.18, Ashesh has mentioned that he has changed the 
+      ! form of BD_ComputeMemberLength(), so this test has not been updated to
+      ! more directly test the theory of the subroutine.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+
     use pFUnit_mod
     use BeamDyn
     use NWTC_Num
