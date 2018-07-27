@@ -231,7 +231,7 @@ END SUBROUTINE BD_CrvMatrixH
 !>   This subroutine composes two Wiener-Milenkovic parameters pp and qq to find the resulting parameter rr
 !!   This method is detailed in the paper: Bauchau, O.A., 2008, "Interpolation of finite rotations in flexible
 !!   multi-body dynamics simulations", IMechE, Equation (9).
-!!   see http://www.dymoresolutions.com/publications/BauchauEppleHeo08.pdf \n
+!!   see http://www.dymoresolutions.com/resume/publications/BauchauEppleHeo08.pdf \n
 !!   FLAG_R1R2:   flag = 0: R(rr) = R    (pp) R    (qq) \n
 !!   FLAG_R1TR2:  flag = 1: R(rr) = R(T) (pp) R    (qq) \n
 !!   FLAG_R1R2T:  flag = 2: R(rr) = R    (pp) R(T) (qq) \n
@@ -278,7 +278,7 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
       !!    \f$ \underline{r} = 4 \frac{ q_0 \underline{p} + p_0 \underline{q} + \tilde{p} \underline{q} }
       !!                               { \Delta_1 + \Delta_2 }          \f$
       !!
-      !! where
+      !! where \f$ \tilde{p} \f$ denotes the skew-symmetric cross product matrix, and
       !!
       !!    \f$ p_0        =  2 - \frac{1}{8} \underline{p}^T \underline{p}
       !!                   = 2 - \frac{1}{8} \left( p_1 p_1 + p_2 p_2 + p_3 p_3 \right)   \f$ \n
@@ -291,15 +291,15 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag)
       !!
 
 
-      ! Calculate pp0 and qq0. See Bauchau for the mathematics here (equations 8 to 9 and interviening text)
+      ! Calculate pp0 and qq0. See Bauchau for the mathematics here (equations 8 to 9 and intervening text)
 
    pp0 = 2.0_BDKi - dot_product(p,p) / 8.0_BDKi   ! p_0
    qq0 = 2.0_BDKi - dot_product(q,q) / 8.0_BDKi   ! q_0
 
    Delta1 = (4.0_BDKi - pp0) * (4.0_BDKi - qq0)   ! Delta_1 in Bauchau
    Delta2 = pp0 * qq0 - dot_product(p,q)          ! Delta_2 in Bauchau
-   dd1 = Delta1 + Delta2                          ! Denomimator term for \Delta_2 >= 0
-   dd2 = Delta1 - Delta2                          ! Denomimator term for \Delta_2 <  0
+   dd1 = Delta1 + Delta2                          ! Denominator term for \Delta_2 >= 0
+   dd2 = Delta1 - Delta2                          ! Denominator term for \Delta_2 <  0
 
       ! Rescaling to remove singularities at +/- 2 \pi
       ! Note: changed this to test on \Delta_2 (instead of dd1 > dd2) for better consistency with documentation.
