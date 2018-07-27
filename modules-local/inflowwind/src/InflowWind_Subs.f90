@@ -1831,12 +1831,14 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          ! If the PropagationDir is zero, we don't need to apply this and will simply copy the data.  Repeat for the WindViXYZ.
       IF ( EqualRealNos (p%PropagationDir, 0.0_ReKi) ) THEN
          PositionXYZprime  =  InputData%PositionXYZ
+        !PRINT*, 'Here1'
       ELSE
          DO I  = 1,SIZE(InputData%PositionXYZ,DIM=2)
             PositionXYZprime(:,I)   =  MATMUL( p%RotToWind, InputData%PositionXYZ(:,I) )
+         !       PRINT*, 'Here2'
          ENDDO
       ENDIF
-
+        !PRINT*, 'PositionXYZprime: ', PositionXYZprime
 
       !---------------------------------
       !  

@@ -7888,14 +7888,15 @@ QueryGitVersion = GIT_VERSION_INFO
       
          ! Vector Label
       Line = ""
-      CALL ReadStr( Un, FileName, Line, "Vectors", "VECTORS label", ErrStat2, ErrMsg2 )
+      CALL ReadStr( Un, FileName, Line, "VECTOR", "VECTOR label", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
       
       Line = trim(Line)
       Line2 = Line
       CALL Conv2UC( Line2 )
-      IF ( INDEX(Line2, "VECTORS" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a bad file header
-         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find VECTORS label', ErrStat, ErrMsg, RoutineName )
+      IF ( INDEX(Line2, "VECTOR" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a DIFFERENT file header !!!HACK HACK HACK
+         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find U label', ErrStat, ErrMsg, RoutineName )
       ELSE
          sz = INDEX(Line2, "FLOAT" )
          IF ( sz == 0 ) THEN
