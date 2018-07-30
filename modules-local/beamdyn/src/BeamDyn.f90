@@ -4984,24 +4984,37 @@ END SUBROUTINE BD_ElementMatrixGA2
 !!  1 Displacements
 !!  2 Linear/Angular velocities
 !!  3 Linear/Angular accelerations
+!!  4 Point forces/moments
+!!  5 Distributed forces/moments
 !! It also transforms the DCM to rotation tensor in the input data structure
-SUBROUTINE BD_InputGlobalLocal( p, u)
+SUBROUTINE BD_InputGlobalLocal(p, u)
    TYPE(BD_ParameterType), INTENT(IN   ):: p
    TYPE(BD_InputType),     INTENT(INOUT):: u
+   INTEGER(IntKi)                       :: i                          !< Generic counter
    CHARACTER(*), PARAMETER              :: RoutineName = 'BD_InputGlobalLocal'
 
-!FIXME: we might be able to get rid of the m%u now if we put the p%GlbRot multiplications elsewhere.   
-
    ! Transform Root Motion from Global to Local (Blade) frame
-   u%RootMotion%TranslationDisp(:,1) = MATMUL(u%RootMotion%TranslationDisp(:,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationDisp(:,1)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationDisp(:,1))
-   u%RootMotion%TranslationVel(:,1)  = MATMUL(u%RootMotion%TranslationVel( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationVel(:,1))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationVel(:,1))
-   u%RootMotion%RotationVel(:,1)     = MATMUL(u%RootMotion%RotationVel(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationVel(:,1))     = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%RotationVel(:,1))
-   u%RootMotion%TranslationAcc(:,1)  = MATMUL(u%RootMotion%TranslationAcc( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationAcc(:,1))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%TranslationAcc(:,1))
-   u%RootMotion%RotationAcc(:,1)     = MATMUL(u%RootMotion%RotationAcc(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationAcc(:,1))     = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%RootMotion%RotationAcc(:,1))
+   u%RootMotion%TranslationDisp(:,1) = MATMUL(u%RootMotion%TranslationDisp(:,1),p%GlbRot)
+   u%RootMotion%TranslationVel(:,1)  = MATMUL(u%RootMotion%TranslationVel( :,1),p%GlbRot)
+   u%RootMotion%RotationVel(:,1)     = MATMUL(u%RootMotion%RotationVel(    :,1),p%GlbRot)
+   u%RootMotion%TranslationAcc(:,1)  = MATMUL(u%RootMotion%TranslationAcc( :,1),p%GlbRot)
+   u%RootMotion%RotationAcc(:,1)     = MATMUL(u%RootMotion%RotationAcc(    :,1),p%GlbRot)
 
    ! Transform DCM to Rotation Tensor (RT)   
    u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1)) ! matrix that now transfers from local to global (FAST's DCMs convert from global to local)
    
+   ! Transform Applied Forces from Global to Local (Blade) frame
+   DO i=1,p%node_total
+      u%PointLoad%Force(1:3,i)  = MATMUL(u%PointLoad%Force(:,i),p%GlbRot)
+      u%PointLoad%Moment(1:3,i) = MATMUL(u%PointLoad%Moment(:,i),p%GlbRot)
+   ENDDO
+   
+   ! transform distributed forces and moments
+   DO i=1,u%DistrLoad%Nnodes
+      u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),p%GlbRot)
+      u%DistrLoad%Moment(1:3,i) = MATMUL(u%DistrLoad%Moment(:,i),p%GlbRot)
+   ENDDO
+
 END SUBROUTINE BD_InputGlobalLocal
 
 
@@ -5033,15 +5046,15 @@ SUBROUTINE BD_DistrLoadCopy( p, u, m, RampScaling )
    DO nelem=1,p%elem_total
       temp_id  = (nelem-1)*p%nqp + p%qp_indx_offset
       DO idx_qp=1,p%nqp
-         m%DistrLoad_QP(1:3,idx_qp,nelem) = MATMUL(u%DistrLoad%Force(1:3,temp_id+idx_qp),p%GlbRot)*ScalingFactor    !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Force(:,i))  = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Force(:,i)) 
-         m%DistrLoad_QP(4:6,idx_qp,nelem) = MATMUL(u%DistrLoad%Moment(1:3,temp_id+idx_qp),p%GlbRot)*ScalingFactor   !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Moment(:,i)) = MATMUL(u%RootMotion%RefOrientation(:,:,1),u%DistrLoad%Moment(:,i))
+         m%DistrLoad_QP(1:3,idx_qp,nelem) = u%DistrLoad%Force(1:3,temp_id+idx_qp) * ScalingFactor
+         m%DistrLoad_QP(4:6,idx_qp,nelem) = u%DistrLoad%Moment(1:3,temp_id+idx_qp) * ScalingFactor
       ENDDO
    ENDDO
 
    ! Transform Applied Forces from Global to Local (Blade) frame
    DO i=1,p%node_total
-      m%PointLoadLcl(1:3,i)   = MATMUL(u%PointLoad%Force(:,i), p%GlbRot)*ScalingFactor    ! Type conversion!!
-      m%PointLoadLcl(4:6,i)   = MATMUL(u%PointLoad%Moment(:,i),p%GlbRot)*ScalingFactor    ! Type conversion!!
+      m%PointLoadLcl(1:3,i) = u%PointLoad%Force(:,i) * ScalingFactor    ! Type conversion!!
+      m%PointLoadLcl(4:6,i) = u%PointLoad%Moment(:,i) * ScalingFactor    ! Type conversion!!
    ENDDO
    
 END SUBROUTINE BD_DistrLoadCopy
