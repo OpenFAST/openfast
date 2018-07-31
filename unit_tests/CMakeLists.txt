@@ -64,6 +64,12 @@ include_directories(
 )
 
 set_source_files_properties(${pfunit_directory}/include/driver.F90 PROPERTIES GENERATED 1)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  set(pfunit_lib "/lib/libpfunit.a")
+else()
+  # Windows
+  set(pfunit_lib "/lib/pfunit.a")
+endif()
 
 function(build_utest module testlist)
   foreach(test ${testlist})
@@ -85,7 +91,7 @@ function(build_utest module testlist)
   
   target_link_libraries(
     ${module}_utest
-    ${pfunit_directory}/lib/libpfunit.a
+    ${pfunit_directory}${pfunit_lib}
     ${module}lib
   )
 
