@@ -169,8 +169,8 @@ SUBROUTINE BD_CrvMatrixR(cc,Rr)
 END SUBROUTINE BD_CrvMatrixR
 !-----------------------------------------------------------------------------------------------------------------------------------
 
-!> This subroutine calculutates the tangent vector, \f$ \underline{\underline{H}} \f$ defined in equation (35) of Wang, et. al.,
-!! "BeamDyn: A hig-fidelity wind turbine blade solver in the FAST modular framework", Wind Energy, 2016.
+!> This subroutine calculates the tangent tensor, \f$ \underline{\underline{H}} \f$ defined in equation (35) of Wang, et. al.,
+!! "BeamDyn: A high-fidelity wind turbine blade solver in the FAST modular framework", Wind Energy, 2016.
 !!
 !! Note that the formulation here is slightly different than in the WE paper, but is algebraically equivalent.
 SUBROUTINE BD_CrvMatrixH(cc,Hh)
@@ -195,14 +195,14 @@ SUBROUTINE BD_CrvMatrixH(cc,Hh)
 
       !> The equation given in the WE paper is given as \n
       !! \f$
-      !!    \underline{\underline{H}(\vec{c})} = 2/(4-c_0)^2 \left[ c_0 + \tilde{c} + \frac{1}{4} \underline{\vec{c}\vec{c}^T} \right]
+      !!    \underline{\underline{H}}(\vec{c}) = 2/(4-c_0)^2 \left[ c_0 + \tilde{c} + \frac{1}{4} \underline{\vec{c}\vec{c}^T} \right]
       !! \f$
       !! where \f$ c_0 = 2 - \frac{1}{8} \underline{\vec{c}}^T \underline{\vec{c}} \f$
       !!
       !! This gives the matrix
       !!
       !! \f$
-      !!  \underline{\underline{R} (\vec{c}) } =    \frac{2}{(4-c_0)^2}
+      !!  \underline{\underline{H}} (\vec{c}) =    \frac{2}{(4-c_0)^2}
       !!    \begin{bmatrix}
       !!       c_1 c_1 + c_0        &  c_1 c_2 - c_3     &  c_1 c_3 + c_2  \\
       !!       c_2 c_1 + c_3        &  c_2 c_2 + c_0     &  c_2 c_3 - c_1  \\
