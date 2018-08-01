@@ -13,5 +13,6 @@ The developer team is moving towards a CMake-only approach that well supports Wi
    install_cmake_linux.rst
    install_spack.rst
    install_cmake_cygwin.rst
+   install_cmake_windows.rst
    install_vs_windows.rst
 

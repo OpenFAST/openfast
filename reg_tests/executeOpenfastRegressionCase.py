@@ -36,7 +36,7 @@ from errorPlotting import exportCaseSummary
 
 ##### Helper functions
 def ignoreBaselineItems(directory, contents):
-    itemFilter = ['linux-intel', 'macos-gnu', 'windows-intel']
+    itemFilter = ['linux-intel', 'linux-gnu', 'macos-gnu', 'windows-intel']
     caught = []
     for c in contents:
         if c in itemFilter:
@@ -92,7 +92,7 @@ compilerId_map = {
     "intel": "intel"
 }
 # Build the target output directory name or choose the default
-supportedBaselines = ["macos-gnu", "linux-intel", "windows-intel"]
+supportedBaselines = ["macos-gnu", "linux-intel", "linux-gnu", "windows-intel"]
 targetSystem = systemName_map.get(systemName.lower(), "")
 targetCompiler = compilerId_map.get(compilerId.lower(), "")
 outputType = os.path.join(targetSystem+"-"+targetCompiler)
@@ -104,7 +104,7 @@ print("-- Using gold standard files with machine-compiler type {}".format(output
 regtests = os.path.join(sourceDirectory, "reg_tests")
 lib = os.path.join(regtests, "lib")
 rtest = os.path.join(regtests, "r-test")
-moduleDirectory = os.path.join(rtest, "glue-codes", "fast")
+moduleDirectory = os.path.join(rtest, "glue-codes", "openfast")
 inputsDirectory = os.path.join(moduleDirectory, caseName)
 targetOutputDirectory = os.path.join(inputsDirectory, outputType)
 testBuildDirectory = os.path.join(buildDirectory, caseName)

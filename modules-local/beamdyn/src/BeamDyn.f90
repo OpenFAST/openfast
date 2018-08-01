@@ -6318,13 +6318,7 @@ SUBROUTINE BD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
                                                                                !!  the constraint states (z) [intent in to avoid deallocation]
 
       ! local variables
-   integer(intKi)                                                :: ErrStat2
-   character(ErrMsgLen)                                          :: ErrMsg2
    character(*), parameter                                       :: RoutineName = 'BD_JacobianPConstrState'
-
-   
-      ! local variables
-      
    
       ! Initialize ErrStat
 

@@ -61,7 +61,7 @@ function(of_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastRegressionCase.py")
   set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
-  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/fast")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
   regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(of_regression)
 
