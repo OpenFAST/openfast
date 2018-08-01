@@ -15,8 +15,8 @@ subroutine test_BD_CalcIC_Velocity()
     ! (TranslationVel and RotationVel), and the  position of the node (x%q,
     ! relative to uuN0).
     ! This test verifies that the subroutine correctly handles the simplest case
-      ! for a differing numbers of nodes/elements and also tests non-trivial
-      ! examples for a single node/element and single element/two nodes.
+    ! for a differing numbers of nodes/elements and also tests non-trivial
+    ! examples for a single node/element and single element/two nodes.
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
 

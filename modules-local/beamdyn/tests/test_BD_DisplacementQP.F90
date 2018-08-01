@@ -1,7 +1,24 @@
 @test
 subroutine test_BD_DisplacementQP()
     ! test branches
-    ! - inputs from static_cantilever_beam reg test
+    ! - single quad. pt/node--all zero inputs (except Jacobian to avoid division by zero)
+    ! - single quad pt/node, simulate second element--all zero inputs (except Jacobian to avoid division by zero)
+    ! - 3 quad pts/nodes--integer inputs
+    ! - 3 quad pts/nodes--randomly-generated real-valued inputs
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_DisplacementQP(), quadrature point values for displacement
+    ! [uuu(1 : 3, :, :)], its derivative [uup(1 : 3, :, :)], and the quantity
+    ! E1 := x_0' + u', are interpolated in the inertial frame based on equations
+    ! 27, 28, and 23 in:
+      ! https://www.nrel.gov/docs/fy14osti/60759.pdf
+    ! This test verifies that these quantities are properly calculated for the
+    ! simplest case of a single element, and for a second of two elements (to 
+    ! test that the subroutine indexing scheme functions properly). As well,
+    ! non-trivial inputs are tested to ensure proper mathematical calculations.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn
@@ -10,18 +27,18 @@ subroutine test_BD_DisplacementQP()
 
     implicit none
 
-    integer(IntKi)  :: nelem
-    integer(IntKi)  :: nqp
-    integer(IntKi)  :: node_elem_idx(1, 2)
-    integer(IntKi)  :: nodes_per_elem
-    real(BDKi)      :: Shp(6, 6)
-    real(BDKi)      :: ShpDer(6, 6)
-    real(BDKi)      :: Jacobian(6, 1)
-    real(BDKi)      :: E10(3, 6, 1)
-    real(BDKi)      :: q(6, 6)
-    real(BDKi)      :: uuu(6, 6, 1), base_uuu(6, 6)
-    real(BDKi)      :: uup(3, 6, 1), base_uup(3, 6)
-    real(BDKi)      :: E1(3, 6, 1), base_E1(3, 6)
+    integer(IntKi)              :: nelem
+    integer(IntKi)              :: nqp
+    integer(IntKi), allocatable :: node_elem_idx(:, :)
+    integer(IntKi)              :: nodes_per_elem
+    real(BDKi), allocatable     :: Shp(:, :)
+    real(BDKi), allocatable     :: ShpDer(:, :)
+    real(BDKi), allocatable     :: Jacobian(:, :)
+    real(BDKi), allocatable     :: E10(:, :, :)
+    real(BDKi), allocatable     :: q(:, :)
+    real(BDKi), allocatable     :: uuu(:, :, :), base_uuu(:, :)
+    real(BDKi), allocatable     :: uup(:, :, :), base_uup(:, :)
+    real(BDKi), allocatable     :: E1(:, :, :), base_E1(:, :)
 
     character(1024) :: testname
     integer(IntKi)  :: accuracy
@@ -31,68 +48,181 @@ subroutine test_BD_DisplacementQP()
     call SetConstants()
 
     ! digits of desired accuracy
-    accuracy = 16
+    accuracy = 15
+
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from static_cantilever_beam reg test:"
+    testname = "single quad. pt/node--all zero inputs (except Jacobian to avoid division by zero):"
 
-    nelem               = 1
-    nqp                 = 6
-    node_elem_idx(1, :) = (/ 1, 6 /)
-    nodes_per_elem      = 6
+    nelem          = 1
+    nqp            = 1
+    nodes_per_elem = 1
 
-    Shp            = reshape((/ 0.56810033719119868, 0.54600529904618211, -0.17100059377928215,&
-                                9.0891014410089913E-002, -5.3848422698494762E-002, 1.9852365830306046E-002,&
-                               -0.11491298888938235, 0.89325443712116914, 0.29872729762554340,&
-                               -0.11867075135711064, 6.5037607493123609E-002, -2.3435601993343175E-002,&
-                                2.0974134603267917E-002, -7.2277727371205455E-002, 0.98837526121682617,&
-                                8.7945809764163108E-002, -3.7910305851169689E-002, 1.2892827638118033E-002,&
-                                1.2892827638118030E-002, -3.7910305851169702E-002, 8.7945809764163094E-002,&
-                                0.98837526121682640, -7.2277727371205441E-002, 2.0974134603267913E-002,&
-                               -2.3435601993343175E-002, 6.5037607493123623E-002, -0.11867075135711061,&
-                                0.29872729762554345, 0.89325443712116881, -0.11491298888938237,&
-                                1.9852365830306043E-002, -5.3848422698494769E-002, 9.0891014410089926E-002,&
-                               -0.17100059377928217, 0.54600529904618200, 0.56810033719119879 /),&
-                             (/ 6, 6 /))
-    ShpDer         = reshape((/ -5.3662878602968807, 6.1891420050127399, -1.1811237271300947,&
-                                 0.56200870295456273, -0.32046265756488884, 0.11672353702456187,&
-                                -0.52977478969671288, -1.8470255894016800, 3.0534805435837153,&
-                                -1.0227628175586183, 0.53740791255480702, -0.19132525948151155,&
-                                 0.41194219818106076, -1.3772032075754475, -0.49385314772443095,&
-                                 2.0106901064298413, -0.83213986458353861, 0.28056391527251617,&
-                                -0.28056391527251606, 0.83213986458353861, -2.0106901064298404,&
-                                 0.49385314772443106, 1.3772032075754475, -0.41194219818106081,&
-                                 0.19132525948151144, -0.53740791255480713, 1.0227628175586179,&
-                                -3.0534805435837162, 1.8470255894016798, 0.52977478969671266,&
-                                -0.11672353702456185, 0.32046265756488879, -0.56200870295456284,&
-                                 1.1811237271300949, -6.1891420050127381, 5.3662878602968815 /),&
-                             (/ 6, 6 /))
-    Jacobian(:, 1) = (/ 5.0000000000000000, 4.9999999999999964, 5.0000000000000071,&
-                        5.0000000000000009, 4.9999999999999920, 5.0000000000000213 /)
-    E10(:, :, 1)   = reshape((/ 0.0000000000000000, 0.0000000000000000, 1.0000000000000000,&
-                                0.0000000000000000, 0.0000000000000000, 1.0000000000000000,&
-                                0.0000000000000000, 0.0000000000000000, 1.0000000000000000,&
-                                0.0000000000000000, 0.0000000000000000, 1.0000000000000000,&
-                                0.0000000000000000, 0.0000000000000000, 1.0000000000000000,&
-                                0.0000000000000000, 0.0000000000000000, 1.0000000000000000 /),&
-                             (/ 3, 6 /))
-    q              = 0.0d0
-    uuu            = 0.0d0
-    uup            = 0.0d0
-    E1             = 0.0d0
-    base_uuu       = 0.0d0
-    base_uup       = 0.0d0
-    base_E1(:, :)  = E10(:, :, 1)
+    allocate(Shp(nodes_per_elem, nqp), ShpDer(nodes_per_elem, nqp), Jacobian(nqp, nelem),&
+             q(6, nelem * nodes_per_elem), uuu(6, nqp, nelem), uup(3, nqp, nelem),&
+             E1(3, nqp, nelem), E10(3, nqp, nelem), node_elem_idx(nelem, 2))
+    allocate(base_uuu(6, nqp), base_uup(3, nqp), base_E1(3, nqp))
+
+    node_elem_idx(1, :) = (/ 1, 1 /)
+
+    call initialize_vars_base()
+
+    Jacobian = 1.0d0
 
     call BD_DisplacementQP( nelem, nqp, node_elem_idx, nodes_per_elem, Shp, ShpDer, Jacobian, E10, q, uuu, uup, E1 )
 
-    tolerance = AdjustTol(accuracy, Base_uuu)
-    @assertEqual(Base_uuu, uuu(:, :, 1), tolerance, testname)
-    tolerance = AdjustTol(accuracy, Base_uup)
-    @assertEqual(Base_uup, uup(:, :, 1), tolerance, testname)
-    tolerance = AdjustTol(accuracy, Base_E1)
-    @assertEqual(Base_E1, E1(:, :, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_uuu)
+    @assertEqual(base_uuu, uuu(:, :, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_uup)
+    @assertEqual(base_uup, uup(:, :, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_E1)
+    @assertEqual(base_E1, E1(:, :, 1), tolerance, testname)
+
+    deallocate(Shp, ShpDer, Jacobian, q, uuu, uup, E1, E10, base_uuu, base_uup,&
+               base_E1, node_elem_idx)
 
     ! --------------------------------------------------------------------------
+    testname = "single quad pt/node, simulate second element--all zero inputs (except Jacobian to avoid division by zero):"
+
+    nelem          = 2
+    nqp            = 1
+    nodes_per_elem = 1
+
+    allocate(Shp(nodes_per_elem, nqp), ShpDer(nodes_per_elem, nqp), Jacobian(nqp, nelem),&
+             q(6, nelem * nodes_per_elem), uuu(6, nqp, nelem), uup(3, nqp, nelem),&
+             E1(3, nqp, nelem), E10(3, nqp, nelem), node_elem_idx(nelem, 2))
+    allocate(base_uuu(6, nqp), base_uup(3, nqp), base_E1(3, nqp))
+
+    node_elem_idx(2, :) = (/ 2, 2 /)
+
+    call initialize_vars_base()
+
+    Jacobian = 1.0d0
+
+    call BD_DisplacementQP( nelem, nqp, node_elem_idx, nodes_per_elem, Shp, ShpDer, Jacobian, E10, q, uuu, uup, E1 )
+
+    tolerance = AdjustTol(accuracy, base_uuu)
+    @assertEqual(base_uuu, uuu(:, :, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_uup)
+    @assertEqual(base_uup, uup(:, :, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_E1)
+    @assertEqual(base_E1, E1(:, :, 1), tolerance, testname)
+
+    deallocate(Shp, ShpDer, Jacobian, q, uuu, uup, E1, E10, base_uuu, base_uup,&
+               base_E1, node_elem_idx)
+
+    ! --------------------------------------------------------------------------
+    testname = "3 quad pts/nodes--integer inputs:"
+
+    nelem          = 1
+    nqp            = 3
+    nodes_per_elem = 3
+
+    allocate(Shp(nodes_per_elem, nqp), ShpDer(nodes_per_elem, nqp), Jacobian(nqp, nelem),&
+             q(6, nelem * nodes_per_elem), uuu(6, nqp, nelem), uup(3, nqp, nelem),&
+             E1(3, nqp, nelem), E10(3, nqp, nelem), node_elem_idx(nelem, 2))
+    allocate(base_uuu(6, nqp), base_uup(3, nqp), base_E1(3, nqp))
+
+    node_elem_idx(1, :) = (/ 1, 3 /)
+
+    call initialize_vars_base()
+
+    q(1 : 3, 1)  = (/ 1.0d0, 2.0d0, 3.0d0 /)
+    q(1 : 3, 2)  = (/ 4.0d0, 5.0d0, 6.0d0 /)
+    q(1 : 3, 3)  = (/ 7.0d0, 8.0d0, 9.0d0 /)
+
+    Shp(1, :)    = (/ 1.0d0, 2.0d0, 3.0d0 /)
+    Shp(2, :)    = (/ 4.0d0, 5.0d0, 6.0d0 /)
+    Shp(3, :)    = (/ 7.0d0, 8.0d0, 9.0d0 /)
+
+    ShpDer(1, :) = (/ 1.0d0, 2.0d0, 3.0d0 /)
+    ShpDer(2, :) = (/ 4.0d0, 5.0d0, 6.0d0 /)
+    ShpDer(3, :) = (/ 7.0d0, 8.0d0, 9.0d0 /)
+
+    Jacobian     = 2.0d0
+    E10          = 3.0d0
+
+    base_uuu(1 : 3, 1) = matmul(q(1 : 3, :), Shp(:, 1))
+    base_uuu(1 : 3, 2) = matmul(q(1 : 3, :), Shp(:, 2))
+    base_uuu(1 : 3, 3) = matmul(q(1 : 3, :), Shp(:, 3))
+
+    base_uup(1 : 3, 1) = matmul(q(1 : 3, :), ShpDer(:, 1) / Jacobian(1, 1))
+    base_uup(1 : 3, 2) = matmul(q(1 : 3, :), ShpDer(:, 2) / Jacobian(2, 1))
+    base_uup(1 : 3, 3) = matmul(q(1 : 3, :), ShpDer(:, 3) / Jacobian(3, 1))
+
+    base_E1(1 : 3, :)  = E10(1 : 3, :, 1) + base_uup(1 : 3, :)
+
+    call BD_DisplacementQP( nelem, nqp, node_elem_idx, nodes_per_elem, Shp, ShpDer, Jacobian, E10, q, uuu, uup, E1 )
+
+    tolerance = AdjustTol(accuracy, base_uuu)
+    @assertEqual(base_uuu, uuu(:, :, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_uup)
+    @assertEqual(base_uup, uup(:, :, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_E1)
+    @assertEqual(base_E1, E1(:, :, 1), tolerance, testname)
+
+    deallocate(Shp, ShpDer, Jacobian, q, uuu, uup, E1, E10, base_uuu, base_uup,&
+               base_E1, node_elem_idx)
+
+    ! --------------------------------------------------------------------------
+    testname = "3 quad pts/nodes--randomly-generated real-valued inputs:"
+
+    nelem          = 1
+    nqp            = 3
+    nodes_per_elem = 3
+
+    allocate(Shp(nodes_per_elem, nqp), ShpDer(nodes_per_elem, nqp), Jacobian(nqp, nelem),&
+             q(6, nelem * nodes_per_elem), uuu(6, nqp, nelem), uup(3, nqp, nelem),&
+             E1(3, nqp, nelem), E10(3, nqp, nelem), node_elem_idx(nelem, 2))
+    allocate(base_uuu(6, nqp), base_uup(3, nqp), base_E1(3, nqp))
+
+    node_elem_idx(1, :) = (/ 1, 3 /)
+
+    call initialize_vars_base()
+
+    call random_number(q)
+    call random_number(Shp)
+    call random_number(ShpDer) 
+    call random_number(Jacobian)
+    call random_number(E10)
+
+    base_uuu(1 : 3, 1) = matmul(q(1 : 3, :), Shp(:, 1))
+    base_uuu(1 : 3, 2) = matmul(q(1 : 3, :), Shp(:, 2))
+    base_uuu(1 : 3, 3) = matmul(q(1 : 3, :), Shp(:, 3))
+
+    base_uup(1 : 3, 1) = matmul(q(1 : 3, :), ShpDer(:, 1) / Jacobian(1, 1))
+    base_uup(1 : 3, 2) = matmul(q(1 : 3, :), ShpDer(:, 2) / Jacobian(2, 1))
+    base_uup(1 : 3, 3) = matmul(q(1 : 3, :), ShpDer(:, 3) / Jacobian(3, 1))
+
+    base_E1(1 : 3, :)  = E10(1 : 3, :, 1) + base_uup(1 : 3, :)
+
+    call BD_DisplacementQP( nelem, nqp, node_elem_idx, nodes_per_elem, Shp, ShpDer, Jacobian, E10, q, uuu, uup, E1 )
+
+    tolerance = AdjustTol(accuracy, base_uuu)
+    @assertEqual(base_uuu, uuu(:, :, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_uup)
+    @assertEqual(base_uup, uup(:, :, 1), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_E1)
+    @assertEqual(base_E1, E1(:, :, 1), tolerance, testname)
+
+    deallocate(Shp, ShpDer, Jacobian, q, uuu, uup, E1, E10, base_uuu, base_uup,&
+               base_E1, node_elem_idx)
+
+    ! --------------------------------------------------------------------------
+    contains
+       subroutine initialize_vars_base()
+          Shp      = 0.0d0
+          ShpDer   = 0.0d0
+          Jacobian = 0.0d0
+          E10      = 0.0d0
+          q        = 0.0d0
+          uuu      = 0.0d0
+          uup      = 0.0d0
+          E1       = 0.0d0
+
+          base_uuu = 0.0d0
+          base_uup = 0.0d0
+          base_E1  = 0.0d0
+       end subroutine initialize_vars_base
 
 end subroutine test_BD_DisplacementQP

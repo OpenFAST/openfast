@@ -1990,16 +1990,16 @@ SUBROUTINE BD_DisplacementQP( nelem, nqp, node_elem_idx, nodes_per_elem, Shp, Sh
    REAL(BDKi),     INTENT(IN   )  :: Shp(:, :)           !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
    REAL(BDKi),     INTENT(IN   )  :: ShpDer(:, :)        !< Derivative of shape function matrix (index 1 = FE nodes; index 2=quadrature points)
    REAL(BDKi),     INTENT(IN   )  :: Jacobian(:, :)      !< Jacobian value at each quadrature point
-   REAL(BDKi),     INTENT(IN   )  :: E10(:, :, :)        !< Initial E10 at quadrature point [-]
+   REAL(BDKi),     INTENT(IN   )  :: E10(:, :, :)        !< Initial E10 at quadrature point
    REAL(BDKi),     INTENT(IN   )  :: q(:, :)             !< q - displacement (1:3), and rotation displacement parameters (4:6)
    REAL(BDKi),     INTENT(INOUT)  :: uuu(:, :, :)        !< Displacement and rotation field [u c] at current QP
    REAL(BDKi),     INTENT(INOUT)  :: uup(:, :, :)        !< Derivative of uuu with respect to X at current QP
-   REAL(BDKi),     INTENT(INOUT)  :: E1(:, :, :)         !< \vec{e_1} = x_0^\prime + u^\prime (3) at current QP [-]
+   REAL(BDKi),     INTENT(INOUT)  :: E1(:, :, :)         !< \f$ \vec{e_1} = x_0^\prime + u^\prime \f$ at current QP
 
-   INTEGER(IntKi)                :: idx_qp            !< index to the current quadrature point
-   INTEGER(IntKi)                :: elem_start        !< Node point of first node in current element
-   INTEGER(IntKi)                :: idx_node
-   CHARACTER(*), PARAMETER       :: RoutineName = 'BD_DisplacementQP'
+   INTEGER(IntKi)                 :: idx_qp            !< index to the current quadrature point
+   INTEGER(IntKi)                 :: elem_start        !< Node point of first node in current element
+   INTEGER(IntKi)                 :: idx_node
+   CHARACTER(*), PARAMETER        :: RoutineName = 'BD_DisplacementQP'
 
 
    DO idx_qp=1,nqp
@@ -2020,10 +2020,10 @@ SUBROUTINE BD_DisplacementQP( nelem, nqp, node_elem_idx, nodes_per_elem, Shp, Sh
             !! |  Variable                               |  Value                                                                      |
             !! | :---------:                             |  :------------------------------------------------------------------------- |
             !! | \f$ \xi \f$                             |  Element natural coordinate \f$ \in [-1,1] \f$                              |
-            !! | \f$ k \f$                               |  Node number of a \f$ p^\text{th} \f$ order Langrangian-interpolant         |
+            !! | \f$ k \f$                               |  Node number of a \f$ p^\text{th} \f$ order Lagrangian-interpolant          |
             !! | \f$ h^i \left( \xi \right ) \f$         |  Component of the shape function matrix, \f$ \underline{\underline{N}} \f$  |
-            !! | \f$ h^{k\prime} \left( \xi \right ) \f$ |  \f$ \frac{\mathrm{d}}{\mathrm{d}x_1} h^i \left( \xi \right) \f$            |
-            !! | \f$ \underline{\hat{u}}^i \f$           |  \f$ k^\text{th} \f$ nodal value                                            |
+            !! | \f$ h^{k\prime} \left( \xi \right ) \f$ |  \f$ \frac{\mathrm{d}}{\mathrm{d}x_1} h^k \left( \xi \right) \f$            |
+            !! | \f$ \underline{\hat{u}}^k \f$           |  \f$ k^\text{th} \f$ nodal value                                            |
 
             ! Initialize values for summation
          uuu(:,idx_qp,nelem) = 0.0_BDKi    ! displacement field \f$ \underline{u}        \left( \xi \right) \f$
