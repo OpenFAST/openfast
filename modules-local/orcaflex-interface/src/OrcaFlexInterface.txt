@@ -9,10 +9,6 @@
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
-# File last committed $Date: 2015-06-17 22:15:31 -0600 (Wed, 17 Jun 2015) $
-# (File) Revision #: $Rev: 1037 $
-# URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/OrcaFlexCoupling/Source/OrcaFlexInterface_Registry.txt $
-###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include   Registry_NWTC_Library.txt
 

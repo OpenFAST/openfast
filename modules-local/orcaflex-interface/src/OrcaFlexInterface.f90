@@ -677,7 +677,7 @@ END SUBROUTINE Orca_End
 !! This SUBROUTINE is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
 !! NOTE: the descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 !! for a complete description of each output parameter.
-!! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
+!! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 !! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
 !! placed in the y%WriteOutput(:) array.
 SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )

@@ -39,3 +39,4 @@ vs-build/
 .DS_Store
 .vscode
 .atom
+.fortls

@@ -6,10 +6,6 @@
 !! code to compile in double vs. single precision.   
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2016-07-16 14:54:28 -0600 (Sat, 16 Jul 2016) $
-! (File) Revision #: $Rev: 391 $
-! URL: $HeadURL: https://windsvn2.nrel.gov/NWTC_Library/branches/NetLib/NWTC_source/NWTC_LAPACK.f90 $
-!**********************************************************************************************************************************
 MODULE NWTC_LAPACK
 
    USE NWTC_Base        ! we only need the precision and error level constants

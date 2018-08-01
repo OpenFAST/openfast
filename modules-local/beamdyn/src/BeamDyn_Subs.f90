@@ -638,7 +638,6 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
    INTEGER(IntKi)                               :: temp_id2
    REAL(BDKi)                                   :: cc(3)
    REAL(BDKi)                                   :: cc0(3)
-   REAL(BDKi)                                   :: temp_cc(3)
    REAL(BDKi)                                   :: temp_R(3,3)
    CHARACTER(*), PARAMETER                      :: RoutineName = 'Set_BldMotion_NoAcc'
 
@@ -664,10 +663,8 @@ SUBROUTINE Set_BldMotion_NoAcc(p, x, m, y)
 !adp: in BDrot_to_FASTdcm we are assuming that x%q(4:6,:) is zero because there is no rotatinoal displacement yet
                ! Find the rotation parameter in global coordinates (initial orientation + rotation parameters)
                ! referenced against the DCM of the blade root at T=0.
-            cc = MATMUL(p%GlbRot,x%q(4:6,temp_id))                ! Global coordinate DCM times rotation parameters
-            cc0 = MATMUL(p%GlbRot, p%uuN0(4:6,j,i) )              ! Global coordinate DCM times initial rotation parameter array
-            CALL BD_CrvCompose(temp_cc,cc0,p%Glb_crv,FLAG_R1R2)   ! temp_cc = cc0 composed with p%Glb_crv
-            CALL BD_CrvCompose(cc0,cc,temp_cc,FLAG_R1R2)          ! cc0 = cc composed with temp_cc
+            CALL BD_CrvCompose( cc, x%q(4:6,temp_id), p%uuN0(4:6,j,i), FLAG_R1R2 )
+            CALL BD_CrvCompose( cc0, p%Glb_crv, cc, FLAG_R1R2 )
 
                ! Create the DCM from the rotation parameters
             CALL BD_CrvMatrixR(cc0,temp_R)  ! returns temp_R (the transpose of the DCM orientation matrix)
@@ -749,7 +746,7 @@ SUBROUTINE Set_BldMotion_Mesh(p, u, x, m, y)
    call Set_BldMotion_NoAcc(p, x, m, y)
 
    ! Only need this bit for dynamic cases
-   IF (p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
+   IF ( p%analysis_type /= BD_STATIC_ANALYSIS ) THEN
 
        ! now set the accelerations:
        
@@ -880,9 +877,9 @@ subroutine Find_IniNode(kp_coordinate, p, member_first_kp, member_last_kp, eta, 
    type(BD_ParameterType),       intent(in   )  :: p                   !< Parameters
    INTEGER(IntKi),               intent(in   )  :: member_first_kp     !< index of the first key point on a particular member
    INTEGER(IntKi),               intent(in   )  :: member_last_kp      !< index of the last key point on a particular member
-   REAL(BDKi),                   intent(in   )  :: eta                 !! relative position of desired node, [0,1]
-   REAL(BDKi),                   intent(  out)  :: POS(3)              !! position of node (in BD coordinates)
-   REAL(BDKi),                   intent(  out)  :: CRV(3)              !! curvature of node (in BD coordinates)
+   REAL(BDKi),                   intent(in   )  :: eta                 !< relative position of desired node, [0,1]
+   REAL(BDKi),                   intent(  out)  :: POS(3)              !< position of node (in BD coordinates)
+   REAL(BDKi),                   intent(  out)  :: CRV(3)              !< curvature of node (in BD coordinates)
    integer(IntKi),               intent(  out)  :: ErrStat             !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
@@ -957,14 +954,14 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
    INTEGER(IntKi), INTENT(  OUT)  :: ErrStat       !< Error status of the operation
    CHARACTER(*),   INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
-   REAL(BDKi)                  :: e2(3)         !< Unit normal vector
-   REAL(BDKi)                  :: Rr(3,3)       !< Initial rotation matrix
-   REAL(BDKi)                  :: PhiRad        !< Phi in radians
-   REAL(BDKi)                  :: Delta
+   REAL(BDKi)                     :: e2(3)         !< Unit normal vector
+   REAL(BDKi)                     :: Rr(3,3)       !< Initial rotation matrix
+   REAL(BDKi)                     :: PhiRad        !< Phi in radians
+   REAL(BDKi)                     :: Delta
 
-   INTEGER(IntKi)              :: ErrStat2      ! Temporary Error status
-   CHARACTER(ErrMsgLen)        :: ErrMsg2       ! Temporary Error message
-   CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeIniNodalCrv'
+   INTEGER(IntKi)                 :: ErrStat2      ! Temporary Error status
+   CHARACTER(ErrMsgLen)           :: ErrMsg2       ! Temporary Error message
+   CHARACTER(*), PARAMETER        :: RoutineName = 'BD_ComputeIniNodalCrv'
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -998,7 +995,6 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    
    real(BDKi)                                :: R_WM(3)      ! W-M parameters of R 
    real(BDKi)                                :: R_BD(3,3)    ! input rotation matrix in BDKi precision 
-   REAL(BDKi)                                :: temp_cc(3)   ! W-M parameters
 
    INTEGER(IntKi)                            :: ErrStat2     ! Temporary Error status
    CHARACTER(ErrMsgLen)                      :: ErrMsg2      ! Temporary Error message
@@ -1008,6 +1004,9 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+! Calculate p(rr) = p(Glb_crv)^- (+) p(R)       where (+) is the curve compose
+!  which is the same as operation as
+!     R(rr) = R(Glb_crv)^T R
    
    ! note that the u%RootMotion mesh does not contain the initial twist, but p%Glb_crv does not have this twist, either.
    ! The relative rotation will be the same in this case.
@@ -1017,8 +1016,11 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    CALL BD_CrvExtractCrv(R_BD,R_WM, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
-   CALL BD_CrvCompose(temp_cc,R_WM,p%Glb_crv,FLAG_R1R2T)   ! temp_cc = R_WM composed with p%Glb_crv^-
-   rr = MATMUL(temp_cc,p%GlbRot)                           ! equation is MATMUL(TRANSPOSE(p%GlbRot),temp_cc), but this is the same as MATMUL(temp_cc,p%GlbRot) because Fortran treats row and column vectors the same (e.g.,  transpose(MATMUL(TRANSPOSE(p%GlbRot),temp_cc)) = matmul( transpose(temp_cc), p%GlbRot ) = matmul( temp_cc, p%GlbRot )
+   CALL BD_CrvCompose(rr,p%Glb_crv,R_WM,FLAG_R1TR2)         ! rr = p%Glb_crv^- composed with R_WM
+
+   ! NOTE: the above calculation is not the inverse of what is in Set_BldMotion_NoAcc.  The reason is that this
+   !       routine is only looking at RootMotion.  The Set_BldMotion_NoAcc routine is looking at the blade motion
+   !       which at the root differs by the WM values in p%uuN0(4:6,1,1) from the RootMotion mesh.
       
 END SUBROUTINE ExtractRelativeRotation
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -1028,7 +1030,6 @@ FUNCTION BDrot_to_FASTdcm(rr,p) RESULT(dcm)
    real(BDKi)                         :: dcm(3,3)     !< input rotation matrix (transpose of DCM; in BD coords)
    
 
-   REAL(BDKi)                         :: temp_CRV( 3)   ! temp curvature parameters
    REAL(BDKi)                         :: temp_CRV2(3)   ! temp curvature parameters
    real(BDKi)                         :: R(3,3)         ! rotation matrix
    
@@ -1036,14 +1037,8 @@ FUNCTION BDrot_to_FASTdcm(rr,p) RESULT(dcm)
 !adp: in the case of the meshes in Set_BldMotion_NoAcc, x%q(4:6,:) and m%qp%uuu(4:6,:,:) are not zero.  When this routine is called, they
 !     are zero, and the expression in Set_BldMotion_NoAcc simplifies to this expression.
    
-   ! note that p%GlbRot = BD_CrvMatrixR(p%Glb_crv) 
-   
       ! rotate relative W-M rotations to global system?
-   temp_CRV = MATMUL(p%GlbRot, rr)
-   
-       
-   CALL BD_CrvCompose(temp_CRV2,temp_CRV,p%Glb_crv,FLAG_R1R2) !temp_CRV2 = temp_CRV composed with p%Glb_crv
-   
+   CALL BD_CrvCompose(temp_CRV2,p%Glb_crv,rr,FLAG_R1R2) !temp_CRV2 = p%Glb_crv composed with rr
    
       ! create rotation matrix from W-M parameters:
    CALL BD_CrvMatrixR(temp_CRV2,R) ! returns R (rotation matrix, the transpose of the DCM orientation matrix)
