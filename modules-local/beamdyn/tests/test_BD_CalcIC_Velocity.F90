@@ -218,6 +218,7 @@ subroutine test_BD_CalcIC_Velocity()
 
 
     ! --------------------------------------------------------------------------
+    
     contains
        subroutine initialize_vars_base()
           x%q            = 0.0d0

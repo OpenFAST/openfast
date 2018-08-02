@@ -2279,7 +2279,7 @@ END SUBROUTINE BD_QPData_mEta_rho
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the elastic forces Fc and Fd
-!! It also calcuates the linearized matrices Oe, Pe, and Qe for N-R algorithm.
+!! It also calculates the linearized matrices Oe, Pe, and Qe for N-R algorithm.
 !!
 !! The equations used here can be found in the NREL publication CP-2C00-60759
 !! (http://www.nrel.gov/docs/fy14osti/60759.pdf)
@@ -2386,8 +2386,8 @@ SUBROUTINE Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
    REAL(BDKi),       INTENT(IN   ) :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
    INTEGER(IntKi),   INTENT(IN   ) :: nqp               !< Number of quadrature points (per element)
    TYPE(EqMotionQP), INTENT(INOUT) :: mqp               !< qp type within misc/optimization variables
-   REAL(BDKi),       INTENT(OUT  ) :: cet               !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
-   REAL(BDKi),       INTENT(OUT  ) :: k1s
+   REAL(BDKi),       INTENT(  OUT) :: cet               !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
+   REAL(BDKi),       INTENT(  OUT) :: k1s
 
    REAL(BDKi)                      :: e1s
    REAL(BDKi)                      :: eee(6)            !< intermediate array for calculation Strain and curvature terms of Fc
@@ -2490,7 +2490,7 @@ SUBROUTINE Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
    !! \f$
    !!
    !! Where  \f$  C_{et} = C_{5,5} + C_{6,6} \f$ is the inertial term along major axis, \f$x\f$, in the material coordinate system \n
-   !! Note that with coverting to the FAST / IEC coordinate system, we now are using the Ixx and Iyy terms which are located at
+   !! Note that with converting to the FAST / IEC coordinate system, we now are using the Ixx and Iyy terms which are located at
    !! \f$  C_{et} = C_{4,4} + C_{5,5} \f$ \n
    !! Refer Section 1.4 in "Dymore User's Manual - Formulation and finite element implementation of beam elements".
    cet =  Stif0_QP(4,4,(nelem-1)*nqp+idx_qp) + Stif0_QP(5,5,(nelem-1)*nqp+idx_qp)    ! Dymore theory (22)
