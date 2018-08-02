@@ -1,7 +1,16 @@
 @test
 subroutine test_BD_DistrLoadCopy()
     ! branches to test
-    ! - the 2D array is correctly stored in the 3D array
+    ! - the 2D array is correctly copied into the 3D array
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_DistrLoadCopy(), the 2D arrays u%DistrLoad%Force and
+    ! u%DistrLoad%Moment are copied into the 3D array m%DistrLoad_QP, and
+    ! indexed separately by quadrature point index and element index.
+    ! This test verifies that the copying occurs properly.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn
@@ -31,7 +40,7 @@ subroutine test_BD_DistrLoadCopy()
 
 
     ! --------------------------------------------------------------------------
-    testname = "static simple beam under gravity:"
+    testname = "the 2D array is correctly copied into the 3D array:"
 
     ! build the parametertype, inputtype, and miscvartype
     parametertype = simpleParameterType()
