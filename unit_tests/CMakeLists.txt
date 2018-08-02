@@ -143,6 +143,8 @@ set(testlist
     test_BD_diffmtc
     test_BDrot_to_FASTdcm
     test_Calc_Fc_Fd
+    test_Calc_Fc_Fd_ffd
+    test_Calc_LinMats
     test_ExtractRelativeRotation
     test_Initialize_FEweights
 )
