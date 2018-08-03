@@ -91,14 +91,6 @@ contains
         getStiffnessMatrix(6,:) = (/    0.0,    0.0,    0.0,    0.0,    0.0, 200.E0 /)
     end function
 
-    function getGravityInZ()
-        use BeamDyn_Subs
-        implicit none
-
-        real(BDKi), dimension(3) :: getGravityInZ
-        getGravityInZ = (/ 0.0, 0.0, -9.806 /)
-    end function
-
     type(BD_ParameterType) function simpleParameterType() RESULT(p)
 
         integer                :: i, j
