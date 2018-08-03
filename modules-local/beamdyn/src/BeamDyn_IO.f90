@@ -691,13 +691,28 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
       END IF
 
    Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "load_retries", "Tolerance for stopping criterion", ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+          InputFileData%load_retries = 20
+      ELSE ! If it's not "default", read this variable;
+         READ( Line, *, IOSTAT=IOS) InputFileData%load_retries
+            CALL CheckIOS ( IOS, InputFile, 'load_retries', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+
+   Line = ""
    CALL ReadVar( UnIn, InputFile, Line, "NRMax", "Max number of interations in Newton-Raphson algorithm", ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
-
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
           InputFileData%NRMax = 10
@@ -723,10 +738,77 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
 
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_fd','finite difference for tangent stiffness flag', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_fd = .FALSE.
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_fd
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_fd', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+   if (InputFileData%tngt_stf_fd) CALL WrScr( 'Using finite difference to compute tangent stiffness matrix'//NewLine )
+
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_comp','compare tangent stiffness using finite difference flag', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_comp = .FALSE.
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_comp
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_comp', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+   if (InputFileData%tngt_stf_comp) CALL WrScr( 'WARNING: tngt_stf_comp set to true. Output will be verbose'//NewLine )
+
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_pert','perturbation size for finite differenced tangent stiffness', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_pert = 1.0D-06
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_pert
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_pert', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_difftol','tolerance for difference between analytical and fd tangent stiffness', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_difftol = 1.0D-01
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_difftol
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_difftol', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+
+   ! return on error at end of section
+   if (ErrStat >= AbortErrLev) then
+       call cleanup()
+       return
+   end if
 
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)

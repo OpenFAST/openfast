@@ -685,6 +685,12 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    p%dt             = InputFileData%DTBeam         ! Time step size
    CALL BD_TiSchmComputeCoefficients(p)            ! Compute generalized-alpha time integrator coefficients requires p%rhoinf,p%dt; sets p%coef
 
+   p%tngt_stf_fd      = InputFileData%tngt_stf_fd      ! flag used to compute tangent stiffness matrix using finite differencing
+   p%tngt_stf_comp    = InputFileData%tngt_stf_comp    ! flag used to compare finite differenced and analytical tangent stiffness matrix
+   p%tngt_stf_pert    = InputFileData%tngt_stf_pert    ! perturbation size used to compute finite differenced tangent stiffness matrix
+   p%tngt_stf_difftol = InputFileData%tngt_stf_difftol ! tolerance for informing user of significant differences in analytical and fd tangent stiffness
+
+   p%ld_retries = InputFileData%load_retries       ! Maximum number of iterations in Newton-Raphson algorithm
    p%niter      = InputFileData%NRMax              ! Maximum number of iterations in Newton-Raphson algorithm
    p%tol        = InputFileData%stop_tol           ! Tolerance used in stopping criterion
    p%elem_total = InputFileData%member_total       ! Total number of elements
@@ -3074,7 +3080,6 @@ SUBROUTINE BD_MemberEta(member_total, QPtW, Jac, member_eta, total_length)
            member_length(i) = member_length(i) + QPtW(j)*Jac(j,i)
        ENDDO
        total_length = total_length + member_length(i)
-       print *, total_length
    ENDDO
 
    ! ratio of member's length to the total beam length
@@ -3325,11 +3330,12 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
    x_works = x  ! save initial guess
 
-   DO j=1,20  ! hard coded value for these static cases
+   DO j=1,p%ld_retries
 
        ! Write load retry info to log file
        write (*,*)
-       write (*,"(a)", advance='no') "load try "
+       write (*,*)
+       write (*,"(a)", advance='no') " load try "
        write (*,"(I0)", advance='no') j
        write (*,"(a)", advance='no') " load factor "
        write (*,"(ES12.4)") load_test
@@ -3383,7 +3389,7 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    IF( .not. solved) then
        call SetErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of load steps.", &
                             ErrStat,ErrMsg, RoutineName)
-       CALL WrScr( "Maxium number of load steps reached. Exit BeamDyn")
+       CALL WrScr( NewLine//"Maxium number of load steps reached. Exit BeamDyn")
    ENDIF
 
    if (ErrStat >= AbortErrLev) then
@@ -3419,8 +3425,9 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
    ! local variables
    REAL(BDKi)                                      :: Eref
    REAL(BDKi)                                      :: Enorm
-   REAL(BDKi), allocatable                         :: StifK_fd(:,:,:,:)
-   REAL(BDKi), allocatable                         :: K_diff(:,:,:,:)
+   REAL(BDKi), allocatable                         :: StifK_fd(:,:,:,:) ! finite differenced tangent stiffness matrix
+   REAL(BDKi), allocatable                         :: K_diff(:,:,:,:) ! array containing the relative differences between
+                                                                      ! finite differenced and analytical tangent stiffness matrices
    INTEGER(IntKi)                                  :: j
    INTEGER(IntKi)                                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                            :: ErrMsg2                      ! Temporary Error message
@@ -3429,20 +3436,21 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ! Allocate arrays
-!   IF ( p%use_fd_jac .OR. p%check_jac )
-!      CALL AllocAry( StifK_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,  'FD StifK',ErrStat2,ErrMsg2);
-!      CALL AllocAry(   K_diff,p%dof_node,p%node_total,p%dof_node,p%node_total,'StifK Diff',ErrStat2,ErrMsg2);
-!   ENDIF
+   ! Allocate local arrays
+   IF ( p%tngt_stf_fd .OR. p%tngt_stf_comp ) CALL AllocAry( StifK_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD StifK',ErrStat2,ErrMsg2);
 
    Eref  = 0.0_BDKi
    DO piter=1,p%niter
 
-!       IF ( p%use_fd_jac .OR. p%check_jac ) CALL BD_FD_Stat( x, gravity, u, p, m, StifK_fd )
+       ! compute the finite differenced stiffness matrix
+       IF ( p%tngt_stf_fd .or. p%tngt_stf_comp ) CALL BD_FD_Stat( x, gravity, u, p, m, StifK_fd )
 
-       ! Calculate Quadrature point values needed
-       CALL BD_QuadraturePointData( p,x,m )      ! Calculate QP values uuu, uup, RR0, kappa, E1
-       CALL BD_GenerateStaticElement(gravity, p, m)
+       CALL BD_QuadraturePointData( p,x,m )         ! Calculate QP values uuu, uup, RR0, kappa, E1
+       CALL BD_GenerateStaticElement(gravity, p, m) ! Calculate RHS and analytical tangent stiffness matrix
+
+       ! compare the finite differenced stiffness matrix against the analytical tangent stiffness matrix is flag is set
+       IF ( p%tngt_stf_comp ) CALL BD_CompTngtStiff( RESHAPE (m%StifK,(/p%dof_total,p%dof_total/)), &
+                                                     RESHAPE(StifK_fd,(/p%dof_total,p%dof_total/)), p%tngt_stf_difftol )
 
          !  Point loads are on the GLL points.
        DO j=1,p%node_total
@@ -3450,13 +3458,17 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
            m%RHS(4:6,j) = m%RHS(4:6,j) + u%Pointload%Moment(1:3,j)
        ENDDO
 
+          ! Reshape for the use with the LAPACK solver
+       m%LP_RHS      = RESHAPE(m%RHS, (/p%dof_total/))
+       m%LP_RHS_LU   = m%LP_RHS(7:p%dof_total)
 
-         ! Reshape for the use with the LAPACK solver
-      m%LP_RHS      = RESHAPE(m%RHS, (/p%dof_total/))
-      m%LP_RHS_LU   = m%LP_RHS(7:p%dof_total)
-      m%LP_StifK    = RESHAPE(m%StifK, (/p%dof_total,p%dof_total/))
-      m%LP_StifK_LU = m%LP_StifK(7:p%dof_total,7:p%dof_total)
-
+       ! Set tangnet stiffness matrix based on flag for finite differencing
+       IF ( p%tngt_stf_fd ) THEN
+           m%LP_StifK = RESHAPE(StifK_fd, (/p%dof_total,p%dof_total/));
+       ELSE
+           m%LP_StifK = RESHAPE(m%StifK, (/p%dof_total,p%dof_total/));
+       ENDIF
+       m%LP_StifK_LU = m%LP_StifK(7:p%dof_total,7:p%dof_total)
 
          ! Solve for X in A*X=B to get the displacement of blade under static load.
        CALL LAPACK_getrf( p%dof_total-p%dof_node, p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2)
@@ -3464,37 +3476,33 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
        CALL LAPACK_getrs( 'N',p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, m%LP_RHS_LU, ErrStat2, ErrMsg2)
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-
          ! Reshape to BeamDyn arrays
       m%Solution(:,1)   = 0.0_BDKi    ! first node is not set below
       m%Solution(:,2:p%node_total) = RESHAPE( m%LP_RHS_LU, (/ p%dof_node, (p%node_total - 1) /) )
 
+      CALL BD_StaticUpdateConfiguration(p,m,x)
 
-       CALL BD_StaticUpdateConfiguration(p,m,x)
+      Enorm = abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total))) ! compute the energy of the current system (note - not a norm!)
 
-       Enorm = abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total))) ! compute the energy of the current system (note - not a norm!)
+      ! Check if solution has converged.
+      IF(piter .EQ. 1) THEN
+          Eref = Enorm
+          ! Write the relative residual norms to the log file
+          write (*,"(a)", advance='no') " Linear Iteration "
+          write (*,"(I4.1)", advance='no') piter ! spacing format assumes max newton iterations = 9999
+          write (*,"(a)", advance='no') "    Relative Residual Norm: "
+          write (*,"(ES12.4)") Eref/Eref
 
-       ! Check if solution has converged.
-       IF(piter .EQ. 1) THEN
-           Eref = Enorm
+          IF(Eref .LE. p%tol) RETURN
+      ELSE
+           ! Write the relative residual norms to the log file
+           write (*,"(a)", advance='no') " Linear Iteration "
+           write (*,"(I4.1)", advance='no') piter ! spacing format assumes max newton iterations = 9999
+           write (*,"(a)", advance='no') "    Relative Residual Norm: "
+           write (*,"(ES12.4)") Enorm/Eref
 
-            ! Write the relative residual norms to the log file
-            write (*,"(a)", advance='no') "Linear Iteration "
-            write (*,"(I4.1)", advance='no') piter ! spacing format assumes max newton iterations = 9999
-            write (*,"(a)", advance='no') "    Relative Residual Norm: "
-            write (*,"(ES12.4)") Eref/Eref
-
-           IF(Eref .LE. p%tol) RETURN
-       ELSE
-
-            ! Write the relative residual norms to the log file
-            write (*,"(a)", advance='no') "Linear Iteration "
-            write (*,"(I4.1)", advance='no') piter ! spacing format assumes max newton iterations = 9999
-            write (*,"(a)", advance='no') "    Relative Residual Norm: "
-            write (*,"(ES12.4)") Enorm/Eref
-
-           IF(Enorm/Eref .LE. p%tol) RETURN
-       ENDIF
+          IF(Enorm/Eref .LE. p%tol) RETURN
+      ENDIF
 
    ENDDO
 
@@ -3506,7 +3514,7 @@ END SUBROUTINE BD_StaticSolution
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the finite differenced tangent stiffness matrix
-SUBROUTINE BD_FD_Stat( x, gravity, u, p, m, RHS_m, RHS_p, StifK_fd )
+SUBROUTINE BD_FD_Stat( x, gravity, u, p, m, StifK_fd )
 
     ! Function arguments
     TYPE(BD_ContinuousStateType),    INTENT(INOUT) :: x                 !< Continuous states at t on input at t + dt on output
@@ -3516,53 +3524,55 @@ SUBROUTINE BD_FD_Stat( x, gravity, u, p, m, RHS_m, RHS_p, StifK_fd )
     TYPE(BD_MiscVarType),            INTENT(INOUT) :: m                 !< misc/optimization variables
     REAL(BDKi),                      INTENT(INOUT) :: StifK_fd(:,:,:,:) !< finite differenced stiffness matrix
 
-   ! local variables
-   INTEGER(IntKi)                                  :: ErrStat2 ! Temporary Error status
-   CHARACTER(ErrMsgLen)                            :: ErrMsg2  ! Temporary Error message
-
-    ! Local variables
-    REAL(BDKi)                                     :: pert_size
-    REAL(BDKi), allocatable                        :: RHS_m(:,:), RHS_p(:,:)
+    ! local variables
     INTEGER(IntKi)                                 :: i
-    INTEGER(IntKi)                                 :: idx_dof1
+    INTEGER(IntKi)                                 :: idx_dof
+    INTEGER(IntKi)                                 :: ErrStat2 ! Temporary Error status
+    REAL(BDKi), allocatable                        :: RHS_m(:,:), RHS_p(:,:)
+    CHARACTER(ErrMsgLen)                           :: ErrMsg2  ! Temporary Error message
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_Stat'
 
+    ! allocate local arrays
     CALL AllocAry(RHS_m,p%dof_node,p%node_total,'RHS Neg Per',ErrStat2,ErrMsg2);
     CALL AllocAry(RHS_p,p%dof_node,p%node_total,'RHS Pos Per',ErrStat2,ErrMsg2);
 
-    ! zero out the local matrices. Not sure where these should be initailzed
+    ! zero out the local matrices.
     RHS_m    = 0.0_BDKi
     RHS_p    = 0.0_BDKi
     StifK_fd = 0.0_BDKi
 
-    ! This should ideally be an input
-    pert_size = 1E-5
-
-    ! Perform finite differencing first because of the convuluted manner in
-    ! in which RHS and Stif matrices are stored
+    ! perform a central finite difference to obtain
     DO i=1,p%nodes_per_elem
-        DO idx_dof1=1,p%dof_node
+        DO idx_dof=1,p%dof_node
 
             ! Perturb in the negative direction
-            x%q(idx_dof1,i) = x%q(idx_dof1,i) - pert_size
+            x%q(idx_dof,i) = x%q(idx_dof,i) - p%tngt_stf_pert
 
-            ! Calculate weak for for current solution vector
-            CALL BD_QuadraturePointData( p,x,m )
-            CALL BD_GenerateStaticElement(gravity, p, m)
+            ! Evaluate governing equations for current solution vector
+            CALL BD_QuadraturePointData(p,x,m)
+            CALL BD_GenerateStaticElement(gravity,p,m)
+
+            ! Account for externally applied point loads
+            RHS_m(1:3,:) = m%RHS(1:3,:) + u%Pointload%Force(1:3,:)
+            RHS_m(4:6,:) = m%RHS(4:6,:) + u%Pointload%Moment(1:3,:)
 
             ! Perturb in the positive direction
-            x%q(idx_dof1,i) = x%q(idx_dof1,i) + 2*pert_size
+            x%q(idx_dof,i) = x%q(idx_dof,i) + 2*p%tngt_stf_pert
 
-            ! Calculate weak for for current solution vector
-            CALL BD_QuadraturePointData( p,x,m )
-            CALL BD_GenerateStaticElement(gravity, p, m)
+            ! Evaluate governing equations for current solution vector
+            CALL BD_QuadraturePointData(p,x,m)
+            CALL BD_GenerateStaticElement(gravity,p,m)
+
+            ! Account for externally applied point loads
+            RHS_p(1:3,:) = m%RHS(1:3,:) + u%Pointload%Force(1:3,:)
+            RHS_p(4:6,:) = m%RHS(4:6,:) + u%Pointload%Moment(1:3,:)
 
             ! The negative sign is because we are finite differencing
-            ! f_ext - f_int instead of f_int
-            StifK_fd(:,:,idx_dof1,i) = -(RHS_p - RHS_m)/(2*pert_size)
+            ! f_ext - f_int instead of just f_int
+            StifK_fd(:,:,idx_dof,i) = -(RHS_p - RHS_m)/(2*p%tngt_stf_pert)
 
             ! Reset the solution vector entry to unperturbed state
-            x%q(idx_dof1,i) = x%q(idx_dof1,i) - pert_size
+            x%q(idx_dof,i) = x%q(idx_dof,i) - p%tngt_stf_pert
 
         ENDDO
     ENDDO
@@ -4130,6 +4140,9 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
    
    REAL(DbKi)                                         :: Eref
    REAL(DbKi)                                         :: Enorm
+   REAL(BDKi), allocatable                            :: DampG_fd(:,:,:,:)
+   REAL(BDKi), allocatable                            :: MassM_fd(:,:,:,:)
+   REAL(BDKi), allocatable                            :: StifK_fd(:,:,:,:)
    INTEGER(IntKi)                                     :: piter
    INTEGER(IntKi)                                     :: j
    LOGICAL                                            :: fact
@@ -4137,11 +4150,18 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   IF ( p%tngt_stf_fd .OR. p%tngt_stf_comp ) THEN
+       CALL AllocAry( StifK_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD StifK', ErrStat2,ErrMsg2);
+       CALL AllocAry( DampG_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD DampC', ErrStat2,ErrMsg2);
+       CALL AllocAry( MassM_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD MassM', ErrStat2,ErrMsg2);
+   END IF
 
    Eref  =  0.0_BDKi
    DO piter=1,p%niter
 
       fact = MOD(piter-1,p%n_fact) .EQ. 0  ! when true, we factor the jacobian matrix
+
+      IF ( (p%tngt_stf_fd .OR. p%tngt_stf_comp) .AND. fact ) CALL BD_FD_GA2( x, OtherState, u, p, m, StifK_fd, DampG_fd, MassM_fd )
 
          ! Apply accelerations using F=ma ?  Is that what this routine does?
          ! Calculate Quadrature point values needed
@@ -4154,23 +4174,28 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
          m%RHS(4:6,j) = m%RHS(4:6,j) + u%PointLoad%Moment(1:3,j)
       ENDDO
 
-
       IF(fact) THEN
+          m%StifK  =  m%MassM + p%coef(7) *  m%DampG + p%coef(8) *  m%StifK
+          StifK_fd = MassM_fd + p%coef(7) * DampG_fd + p%coef(8) * StifK_fd
 
-         m%StifK = m%MassM + p%coef(7) * m%DampG + p%coef(8) * m%StifK
+          ! compare the finite differenced stiffness matrix against the analytical tangent stiffness matrix is flag is set
+          IF ( p%tngt_stf_comp ) CALL BD_CompTngtStiff( RESHAPE (m%StifK,(/p%dof_total,p%dof_total/)), &
+                                                        RESHAPE(StifK_fd,(/p%dof_total,p%dof_total/)), p%tngt_stf_difftol )
 
+          ! Reshape 4d array into 2d for the use with the LAPACK solver
+          IF ( p%tngt_stf_fd ) THEN
+              m%LP_StifK = RESHAPE(StifK_fd, (/p%dof_total,p%dof_total/));
+          ELSE
+              m%LP_StifK = RESHAPE( m%StifK, (/p%dof_total,p%dof_total/));
+          ENDIF
+          ! extract the unconstrained stifness matrix
+          m%LP_StifK_LU  =  m%LP_StifK(7:p%dof_total,7:p%dof_total)
 
-            ! Reshape 4d array into 2d for the use with the LAPACK solver
-         m%LP_StifK     =  RESHAPE(m%StifK, (/p%dof_total,p%dof_total/))
-         m%LP_StifK_LU  =  m%LP_StifK(7:p%dof_total,7:p%dof_total)
-
-
-            ! note m%LP_indx is allocated larger than necessary (to allow us to use it in multiple places)
-         CALL LAPACK_getrf( p%dof_total-6, p%dof_total-6, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2)
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            if (ErrStat >= AbortErrLev) return
+          ! note m%LP_indx is allocated larger than necessary (to allow us to use it in multiple places)
+          CALL LAPACK_getrf( p%dof_total-6, p%dof_total-6, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          if (ErrStat >= AbortErrLev) return
       ENDIF
-
 
          ! Reshape 2d array into 1d for the use with the LAPACK solver
       m%LP_RHS       =  RESHAPE(m%RHS(:,:), (/p%dof_total/))
@@ -4183,34 +4208,31 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
       m%Solution(:,1)   = 0.0_BDKi    ! first node is not set below. By definition, there is no displacement of the first node.
       m%Solution(:,2:p%node_total) = RESHAPE( m%LP_RHS_LU, (/ p%dof_node, (p%node_total - 1) /) )
 
-       CALL BD_UpdateDynamicGA2(p,m,x,OtherState)
+      CALL BD_UpdateDynamicGA2(p,m,x,OtherState)
 
       ! Compute energy of the current system (note - not a norm!)
-       m%LP_RHS = RESHAPE(x%q(:,:), (/p%dof_total/))
-       Enorm    = abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total)))
+      m%LP_RHS = RESHAPE(x%q(:,:), (/p%dof_total/))
+      Enorm    = abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total)))
 
-       ! Check if solution has converged.
-       IF(piter .EQ. 1) THEN
-           Eref = Enorm
-
-            ! Write the relative residual norms to the log file
-            write (*,*)
-            write (*,"(a)", advance='no') "Linear Iteration "
-            write (*,"(I4.1)", advance='no') piter ! spacing format assumes max newton iterations = 9999
-            write (*,"(a)", advance='no') "    Relative Residual Norm: "
-            write (*,"(ES12.4)") Eref/Eref
+      ! Check if solution has converged.
+      IF(piter .EQ. 1) THEN
+          Eref = Enorm
+           ! Write the relative residual norms to the log file
+           write (*,"(a)", advance='no') " Linear Iteration "
+           write (*,"(I4.1)", advance='no') piter ! spacing format assumes max newton iterations = 9999
+           write (*,"(a)", advance='no') "    Relative Residual Norm: "
+           write (*,"(ES12.4)") Eref/Eref
 
            IF(Eref .LE. p%tol) RETURN
-       ELSE
-
-            ! Write the relative residual norms to the log file
-            write (*,"(a)", advance='no') "Linear Iteration "
-            write (*,"(I4.1)", advance='no') piter ! spacing format assumes max newton iterations = 9999
-            write (*,"(a)", advance='no') "    Relative Residual Norm: "
-            write (*,"(ES12.4)") Enorm/Eref
+      ELSE
+           ! Write the relative residual norms to the log file
+           write (*,"(a)", advance='no') " Linear Iteration "
+           write (*,"(I4.1)", advance='no') piter ! spacing format assumes max newton iterations = 9999
+           write (*,"(a)", advance='no') "    Relative Residual Norm: "
+           write (*,"(ES12.4)") Enorm/Eref
 
            IF(Enorm/Eref .LE. p%tol) RETURN
-       ENDIF
+      ENDIF
 
    ENDDO
 
@@ -4221,7 +4243,7 @@ END SUBROUTINE BD_DynamicSolutionGA2
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the finite differenced tangent stiffness matrix
-SUBROUTINE BD_FD_GA2( x, OtherState, u, p, m, RHS_m, RHS_p, StifK_fd, DampG_fd, MassM_fd )
+SUBROUTINE BD_FD_GA2( x, OtherState, u, p, m, StifK_fd, DampG_fd, MassM_fd )
 
     ! Function arguments
     TYPE(BD_ContinuousStateType),    INTENT(INOUT) :: x                 !< Continuous states at t on input at t + dt on output
@@ -4229,17 +4251,21 @@ SUBROUTINE BD_FD_GA2( x, OtherState, u, p, m, RHS_m, RHS_p, StifK_fd, DampG_fd, 
     TYPE(BD_InputType),              INTENT(IN   ) :: u                 !< inputs
     TYPE(BD_ParameterType),          INTENT(IN   ) :: p                 !< Parameters
     TYPE(BD_MiscVarType),            INTENT(INOUT) :: m                 !< misc/optimization variables
-    REAL(BDKi),                      INTENT(INOUT) :: RHS_m             !< residual vector upon negative perturbation
-    REAL(BDKi),                      INTENT(INOUT) :: RHS_p(:,:)        !< residual vector upon positive perturbation
     REAL(BDKi),                      INTENT(INOUT) :: StifK_fd(:,:,:,:) !< finite differenced stiffness matrix
     REAL(BDKi),                      INTENT(INOUT) :: DampG_fd(:,:,:,:) !< finite differenced damping   matrix
     REAL(BDKi),                      INTENT(INOUT) :: MassM_fd(:,:,:,:) !< finite differenced mass      matrix
 
     ! Local variables
-    REAL(BDKi)                                     :: pert_size
+    REAL(BDKi), allocatable                        :: RHS_m(:,:), RHS_p(:,:)
     INTEGER(IntKi)                                 :: i
-    INTEGER(IntKi)                                 :: idx_dof1
+    INTEGER(IntKi)                                 :: idx_dof
+    INTEGER(IntKi)                                 :: ErrStat2 ! Temporary Error status
+    CHARACTER(ErrMsgLen)                           :: ErrMsg2  ! Temporary Error message
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_GA2'
+
+    ! allocate local arrays
+    CALL AllocAry(RHS_m,p%dof_node,p%node_total,'RHS Neg Per',ErrStat2,ErrMsg2);
+    CALL AllocAry(RHS_p,p%dof_node,p%node_total,'RHS Pos Per',ErrStat2,ErrMsg2);
 
     ! zero out the local matrices. Not sure where these should be initailzed
     RHS_m    = 0.0_BDKi
@@ -4248,33 +4274,38 @@ SUBROUTINE BD_FD_GA2( x, OtherState, u, p, m, RHS_m, RHS_p, StifK_fd, DampG_fd, 
     DampG_fd = 0.0_BDKi
     MassM_fd = 0.0_BDKi
 
-    ! This should ideally be an input
-    pert_size = 1E-5
-
     ! Perform finite differencing for velocity dofs
     DO i=1,p%nodes_per_elem
-        DO idx_dof1=1,p%dof_node
+        DO idx_dof=1,p%dof_node
 
             ! Perturb in the negative direction
-            x%q(idx_dof1,i) = x%q(idx_dof1,i) - pert_size
+            x%q(idx_dof,i) = x%q(idx_dof,i) - p%tngt_stf_pert
 
             ! Calculate weak for for current solution vector
             CALL BD_QuadraturePointData( p,x,m )
             CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            RHS_m(1:3,:) = m%RHS(1:3,:) + u%Pointload%Force(1:3,:)
+            RHS_m(4:6,:) = m%RHS(4:6,:) + u%Pointload%Moment(1:3,:)
 
             ! Perturb in the positive direction
-            x%q(idx_dof1,i) = x%q(idx_dof1,i) + 2*pert_size
+            x%q(idx_dof,i) = x%q(idx_dof,i) + 2*p%tngt_stf_pert
 
             ! Calculate weak for for current solution vector
             CALL BD_QuadraturePointData( p,x,m )
             CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            RHS_p(1:3,:) = m%RHS(1:3,:) + u%Pointload%Force(1:3,:)
+            RHS_p(4:6,:) = m%RHS(4:6,:) + u%Pointload%Moment(1:3,:)
 
             ! The negative sign is because we are finite differencing
             ! f_ext - f_int instead of f_int
-            StifK_fd(:,:,idx_dof1,i) = -(RHS_p - RHS_m)/(2*pert_size)
+            StifK_fd(:,:,idx_dof,i) = -(RHS_p - RHS_m)/(2*p%tngt_stf_pert)
 
             ! Reset the solution vector entry to unperturbed state
-            x%q(idx_dof1,i) = x%q(idx_dof1,i) - pert_size
+            x%q(idx_dof,i) = x%q(idx_dof,i) - p%tngt_stf_pert
 
         ENDDO
     ENDDO
@@ -4285,28 +4316,36 @@ SUBROUTINE BD_FD_GA2( x, OtherState, u, p, m, RHS_m, RHS_p, StifK_fd, DampG_fd, 
 
     ! Perform finite differencing for velocity dofs
     DO i=1,p%nodes_per_elem
-        DO idx_dof1=1,p%dof_node
+        DO idx_dof=1,p%dof_node
 
             ! Perturb in the negative direction
-            x%dqdt(idx_dof1,i) = x%dqdt(idx_dof1,i) - pert_size
+            x%dqdt(idx_dof,i) = x%dqdt(idx_dof,i) - p%tngt_stf_pert
 
             ! Calculate weak for for current solution vector
             CALL BD_QuadraturePointData( p,x,m )
             CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            RHS_m(1:3,:) = m%RHS(1:3,:) + u%Pointload%Force(1:3,:)
+            RHS_m(4:6,:) = m%RHS(4:6,:) + u%Pointload%Moment(1:3,:)
 
             ! Perturb in the positive direction
-            x%dqdt(idx_dof1,i) = x%dqdt(idx_dof1,i) + 2*pert_size
+            x%dqdt(idx_dof,i) = x%dqdt(idx_dof,i) + 2*p%tngt_stf_pert
 
             ! Calculate weak for for current solution vector
             CALL BD_QuadraturePointData( p,x,m )
             CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            RHS_p(1:3,:) = m%RHS(1:3,:) + u%Pointload%Force(1:3,:)
+            RHS_p(4:6,:) = m%RHS(4:6,:) + u%Pointload%Moment(1:3,:)
 
             ! The negative sign is because we are finite differencing
             ! f_ext - f_int instead of f_int
-            DampG_fd(:,:,idx_dof1,i) = -(RHS_p - RHS_m)/(2*pert_size)
+            DampG_fd(:,:,idx_dof,i) = -(RHS_p - RHS_m)/(2*p%tngt_stf_pert)
 
             ! Reset the solution vector entry to unperturbed state
-            x%dqdt(idx_dof1,i) = x%dqdt(idx_dof1,i) - pert_size
+            x%dqdt(idx_dof,i) = x%dqdt(idx_dof,i) - p%tngt_stf_pert
 
         ENDDO
     ENDDO
@@ -4317,28 +4356,36 @@ SUBROUTINE BD_FD_GA2( x, OtherState, u, p, m, RHS_m, RHS_p, StifK_fd, DampG_fd, 
 
     ! Perform finite differencing for acceleration dofss
     DO i=1,p%nodes_per_elem
-        DO idx_dof1=1,p%dof_node
+        DO idx_dof=1,p%dof_node
 
             ! Perturb in the negative direction
-            OtherState%acc(idx_dof1,i) = OtherState%acc(idx_dof1,i) - pert_size
+            OtherState%acc(idx_dof,i) = OtherState%acc(idx_dof,i) - p%tngt_stf_pert
 
             ! Calculate weak for for current solution vector
             CALL BD_QuadraturePointData( p,x,m )
             CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            RHS_m(1:3,:) = m%RHS(1:3,:) + u%Pointload%Force(1:3,:)
+            RHS_m(4:6,:) = m%RHS(4:6,:) + u%Pointload%Moment(1:3,:)
 
             ! Perturb in the positive direction
-            OtherState%acc(idx_dof1,i) = OtherState%acc(idx_dof1,i) + 2*pert_size
+            OtherState%acc(idx_dof,i) = OtherState%acc(idx_dof,i) + 2*p%tngt_stf_pert
 
             ! Calculate weak for for current solution vector
             CALL BD_QuadraturePointData( p,x,m )
             CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            RHS_p(1:3,:) = m%RHS(1:3,:) + u%Pointload%Force(1:3,:)
+            RHS_p(4:6,:) = m%RHS(4:6,:) + u%Pointload%Moment(1:3,:)
 
             ! The negative sign is because we are finite differencing
             ! f_ext - f_int instead of f_int
-            MassM_fd(:,:,idx_dof1,i) = -(RHS_p - RHS_m)/(2*pert_size)
+            MassM_fd(:,:,idx_dof,i) = -(RHS_p - RHS_m)/(2*p%tngt_stf_pert)
 
             ! Reset the solution vector entry to unperturbed state
-            OtherState%acc(idx_dof1,i) = OtherState%acc(idx_dof1,i) - pert_size
+            OtherState%acc(idx_dof,i) = OtherState%acc(idx_dof,i) - p%tngt_stf_pert
 
         ENDDO
     ENDDO
@@ -4593,6 +4640,61 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
 
 END SUBROUTINE BD_ElementMatrixGA2
 
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine compares the tangent stiffness matrix against the finite differenced tangent stiffness matrix
+SUBROUTINE BD_CompTngtStiff( K_anlyt, K_fd, errtol )
+
+    ! Function arguments
+    REAL(BDKi),   INTENT(IN) :: K_anlyt(:,:)    ! analytical tangent stiffness matrix
+    REAL(BDKi),   INTENT(IN) :: K_fd(:,:)       ! finite differenced tangent stiffness matrix
+    REAL(BDKi),   INTENT(IN) :: errtol          ! allowable difference tolerance for comparison
+                                                ! any relative difference greater than this will stop the ongoing
+                                                ! simulation
+
+    ! local variables
+    REAL(BDKi)               :: ignore_fac=1e-3 ! values smaller than this times maximum value in corresponding
+                                                ! row will be ignored during the comparison of matrices
+                                                ! In doing so we hope to avoid comparison of entries that are
+                                                ! less significant in terms of inverting the matrix
+    REAL(BDKi), allocatable  :: K_diff(:,:)     ! array containing the relative differences between
+                                                ! finite differenced and analytical tangent stiffness matrices
+    INTEGER(IntKi)           :: max_diff_loc(2)
+    INTEGER(IntKi)           :: idof
+    INTEGER(IntKi)           :: ErrStat2        ! Temporary Error status
+    CHARACTER(ErrMsgLen)     :: ErrMsg2         ! Temporary Error message
+    CHARACTER(*), PARAMETER  :: RoutineName = 'BD_CompTngtStiff'
+
+    ! allocate local array and initialize to all zeros
+    CALL AllocAry(K_diff,size(K_fd,1),size(K_fd,2),'StifK Diff',ErrStat2,ErrMsg2);
+    K_diff = 0.0_BDKi
+
+    ! Compute the relative difference. abs allows user to set a difference tolerance without worrying about the sign
+    K_diff = abs( (K_anlyt-K_fd) / K_fd )
+
+    ! ignore differences for entries that are smaller than ignore_fac*max(element in row)
+    DO idof=1,size(K_fd,1)
+        WHERE( K_fd(idof,:) < ignore_fac*maxval(K_fd(idof,:)) ) K_diff(idof,:) = 0.0
+    END DO
+
+    CALL WrMatrix( K_diff, 10, "ES15.5E2", 'rel diff')
+
+    max_diff_loc = maxloc( K_diff )
+    write (*,*)
+    write (*,"(a)", advance='no') " Maximum difference between analytical and fd tangent stiffness occurred for entry ("
+    write (*,"(I0)", advance='no') max_diff_loc(1)
+    write (*,"(a)", advance='no') " , "
+    write (*,"(I0)", advance='no') max_diff_loc(2)
+    write (*,"(a)") ")"
+    write (*,"(a)", advance='no') " Max relative difference is "
+    write (*,"(ES12.4)") maxval(K_diff)
+    write (*,*)
+
+    ! check that the flags set are consistent before moving further
+    if ( maxval(K_diff) > errtol ) then
+        stop 'In subroutine BD_CompTngtStiff, maximum relative difference between analytical and fd tangent stiffness exceeded tngt_stf_difftol'
+    end if
+
+END SUBROUTINE BD_CompTngtStiff
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine tranforms the following quantities in Input data structure from global frame to local (blade) frame:
