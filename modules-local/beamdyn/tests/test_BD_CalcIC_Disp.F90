@@ -10,8 +10,8 @@ subroutine test_BD_CalcIC_Disp()
     ! --------------------------------------------------------------------------
     ! In BD_CalcIC_Disp(), the initial displacement is computed for all nodes.
     ! This test verifies that the subroutine can handle the simplest case for a
-      ! for differing numbers of nodes/elements and also tests a non-trivial
-      ! example for a single node/element.
+    ! for differing numbers of nodes/elements and also tests a non-trivial
+    ! example for a single node/element.
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
 
