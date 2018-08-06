@@ -2841,13 +2841,13 @@ END SUBROUTINE Calc_LinMats
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the gravity forces `m%qp%Fg`
-SUBROUTINE BD_GravityForce( nelem,nqp,qp_mmm,qp_Fg,qp_RR0mEta,grav )
+SUBROUTINE BD_GravityForce( nelem, nqp, qp_mmm, qp_Fg, qp_RR0mEta, grav )
    INTEGER(IntKi), INTENT(IN   )  :: nelem               !< index of current element in loop
    INTEGER(IntKi), INTENT(IN   )  :: nqp                 !< Number of quadrature points (per element)
    REAL(BDKi),     INTENT(IN   )  :: qp_mmm(:, :)        !< Mass at current QP
-   REAL(BDKi),     INTENT(INOUT)  :: qp_Fg(:, :, :)      !< Gravity forces at current QP. 6
    REAL(BDKi),     INTENT(IN   )  :: qp_RR0mEta(:, :, :) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
    REAL(BDKi),     INTENT(IN   )  :: grav(:)             !< Gravity, which is scaled in the case of Static analysis
+   REAL(BDKi),     INTENT(INOUT)  :: qp_Fg(:, :, :)      !< Gravity forces at current QP. 6
 
    INTEGER(IntKi)                 :: idx_qp              !< index of current quadrature point
 
@@ -2975,6 +2975,7 @@ END SUBROUTINE BD_ElementMatrixAcc
 !> This subroutine computes the mass matrix.
 !! Returns value for `m%qp%Mi`
 ! used in BD_ElementMatrixAcc and BD_InertialForce
+! The matrix is constructed according to Bauchau Eq. 17.107
 SUBROUTINE BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
 
    INTEGER(IntKi), INTENT(IN   ) :: nelem            !< index of current element in loop
@@ -4493,7 +4494,7 @@ END SUBROUTINE BD_ElementMatrixGA2
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine tranforms the following quantities in Input data structure from global frame to local (blade) frame:
+!> This subroutine transforms the following quantities in Input data structure from global frame to local (blade) frame:
 !!  1 Displacements
 !!  2 Linear/Angular velocities
 !!  3 Linear/Angular accelerations
