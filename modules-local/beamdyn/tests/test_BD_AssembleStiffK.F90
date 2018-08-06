@@ -8,9 +8,9 @@ subroutine test_BD_AssembleStiffK()
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
     ! In BD_AssembleStiffK(), a given element's stiffness matrix is assigned to the
-      ! proper place in a Global stiffness matrix
+    ! proper place in a Global stiffness matrix
     ! This test verifies that this occurs and that the indexing scheme is
-      ! functioning properly.
+    ! functioning properly.
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
 

@@ -8,9 +8,9 @@ subroutine test_BD_AssembleRHS()
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
     ! In BD_AssembleRHS(), a given element's RHS is assigned to the proper place
-      ! in a Global RHS matrix
+    ! in a Global RHS matrix
     ! This test verifies that this occurs and that the indexing scheme is
-      ! functioning properly.
+    ! functioning properly.
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
 

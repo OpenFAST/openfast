@@ -1,12 +1,20 @@
 @test
 subroutine test_BD_QPDataAcceleration()
     ! test branches
-    ! - 
+    ! - single quad pt/element/node--all zero inputs/outputs
+    ! - simulate 2 quad pts/elements/nodes to ensure proper indexing--all zero inputs/outputs
+    ! - single quad pt/element/node--integer-valued inputs
+    ! - simulate 2 quad pts/elements/nodes to ensure proper indexing--integer-valued inputs
+    ! - single quad pt/element, 2 nodes--randomly-chosen real-valued inputs
 
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
-    ! In BD_QPDataAcceleration(), 
-    ! This test 
+    ! In BD_QPDataAcceleration(), the acceleration at the quadrature points (aaa)
+    ! is calculated, using the shape function (Shp) and the solved-for
+    ! acceleration (acc).
+    ! This test verifies that indexing occurs properly and that the calculations
+    ! are done properly for all zero inputs, integer-valued inputs, and
+    ! randomly-chosen real-valued inputs.
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
 

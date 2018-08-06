@@ -1,8 +1,23 @@
 @test
 subroutine test_BD_QPDataVelocity()
     ! test branches
-    ! - inputs from bd_5MW_dynamic reg test--simple case
-    ! - inputs from bd_5MW_dynamic reg test--more complex case
+    ! - single quad pt/element/node--all zero inputs/outputs (except Jacobian to avoid division by zero)
+    ! - simulate 2 quad pts/elements/nodes to ensure proper indexing--all zero inputs/outputs (except Jacobian to avoid division by zero)
+    ! - single quad pt/element/node--integer-valued inputs
+    ! - simulate 2 quad pts/elements/nodes to ensure proper indexing--integer-valued inputs
+    ! - single quad pt/element, 2 nodes--randomly-chosen real-valued inputs
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_QPDataVelocity(), the velocity at the quadrature points (vvv) and
+    ! the derivative of velocity, with respect to x (vvp) are calculated, using
+    ! the shape function (Shp), its derivative (ShpDer), the Jacobian, and the
+    ! solved-for velocity (dqdt).
+    ! This test verifies that indexing occurs properly and that the calculations
+    ! are done properly for all zero inputs, integer-valued inputs, and
+    ! randomly-chosen real-valued inputs.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn
@@ -11,17 +26,17 @@ subroutine test_BD_QPDataVelocity()
 
     implicit none
 
-    integer(IntKi)  :: elem_total
-    integer(IntKi)  :: node_elem_idx(1, 2)
-    integer(IntKi)  :: nqp
-    integer(IntKi)  :: nodes_per_elem
-    real(BDKi)      :: Shp(6, 1)
-    real(BDKi)      :: ShpDer(6, 1)
-    real(BDKi)      :: Jacobian(1, 1)
-    real(BDKi)      :: dqdt(6, 6)
-    real(BDKi)      :: vvv(6, 1, 1)
-    real(BDKi)      :: vvp(6, 1, 1)
-    real(BDKi)      :: base_vvv(6), base_vvp(6)
+    integer(IntKi)              :: elem_total
+    integer(IntKi), allocatable :: node_elem_idx(:, :)
+    integer(IntKi)              :: nqp
+    integer(IntKi)              :: nodes_per_elem
+    real(BDKi), allocatable     :: Shp(:, :)
+    real(BDKi), allocatable     :: ShpDer(:, :)
+    real(BDKi), allocatable     :: Jacobian(:, :)
+    real(BDKi), allocatable     :: dqdt(:, :)
+    real(BDKi), allocatable     :: vvv(:, :, :)
+    real(BDKi), allocatable     :: vvp(:, :, :)
+    real(BDKi)                  :: base_vvv(6), base_vvp(6)
 
 
     integer(IntKi)  :: ErrStat ! Error status of the operation
@@ -34,72 +49,170 @@ subroutine test_BD_QPDataVelocity()
     ! initialize NWTC_Num constants
     call SetConstants()
 
-    elem_total          = 1
-    node_elem_idx(1, :) = (/ 1, 6 /)
-    nqp                 = 1
-    nodes_per_elem      = 6
-
     ! digits of desired accuracy
     accuracy = 16
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from bd_5MW_dynamic reg test--simple case:"
+    testname = "single quad pt/element/node--all zero inputs/outputs (except Jacobian to avoid division by zero):"
+
+    elem_total          = 1
+    nqp                 = 1
+    nodes_per_elem      = 1
+
+    allocate(node_elem_idx(elem_total, 2), Shp(nodes_per_elem, nqp),&
+             ShpDer(nodes_per_elem, nqp), Jacobian(nodes_per_elem, nqp),&
+             dqdt(6, nodes_per_elem * elem_total), vvv(6, nqp, elem_total), vvp(6, nqp, elem_total))
+
+    node_elem_idx(1, :) = (/ 1, 1 /)
 
     call initialize_vars_base()
 
-    Shp(1, 1)    = 1.0d0
-    ShpDer(:, 1) = (/ -7.5000000000000000, 10.141415936319669, -4.0361872703053470,&
-                       2.2446846481761669, -1.3499133141904875, 0.50000000000000011 /)
-    Jacobian     = 30.750000000000064
-    dqdt(2, :)   = (/ -1.0005999999999999, -8.2294835184424606, -22.992918346741089,&
-                     -40.545181653258901, -55.308616481557529, -62.537499999999994 /)
-    dqdt(4, :)   = 1.0005999999999999
-
-    base_vvv(2) = -1.0005999999999999
-    base_vvv(4) = 1.0005999999999999
-    base_vvp(2) = -1.0006000000000004
+    Jacobian(nodes_per_elem, nqp)  = 1.0d0
 
     call BD_QPDataVelocity( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, ShpDer, Jacobian, dqdt, vvv, vvp )
 
     tolerance = AdjustTol(accuracy, base_vvv)
-    @assertEqual(base_vvv, vvv(:, 1, 1), tolerance, testname)
+    @assertEqual(base_vvv, vvv(:, nqp, elem_total), tolerance, testname)
     tolerance = AdjustTol(accuracy, base_vvp)
-    @assertEqual(base_vvp, vvp(:, 1, 1), tolerance, testname)
+    @assertEqual(base_vvp, vvp(:, nqp, elem_total), tolerance, testname)
+
+    deallocate(node_elem_idx, Shp, ShpDer, Jacobian, dqdt, vvv, vvp)
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from bd_5MW_dynamic reg test--more complex case:"
+    testname = "simulate 2 quad pts/elements/nodes to ensure proper indexing--all zero inputs/outputs (except Jacobian to avoid division by zero):"
+
+    elem_total          = 2
+    nqp                 = 2
+    nodes_per_elem      = 2
+
+    allocate(node_elem_idx(elem_total, 2), Shp(nodes_per_elem, nqp),&
+             ShpDer(nodes_per_elem, nqp), Jacobian(nodes_per_elem, nqp),&
+             dqdt(6, nodes_per_elem * elem_total), vvv(6, nqp, elem_total), vvp(6, nqp, elem_total))
+
+    node_elem_idx(1, :) = (/ 1, 2 /)
+    node_elem_idx(2, :) = (/ 3, 4 /)
 
     call initialize_vars_base()
 
-    Shp(:, 1)    = (/ 1.1860483407262711E-002, -3.4850610694450751E-002, 8.0578126908102302E-002,&
-                      0.99012345632292742, -6.7157514458877257E-002, 1.9446058515035586E-002 /)
-    ShpDer(:, 1) = (/ -0.28034999222899570, 0.83031773993428537, -1.9925342000687072,&
-                       0.45600520629317015, 1.4048960136877524, -0.41833476761750432 /)
-    Jacobian     = 30.750000000000018
-    dqdt(1, :)   = (/ 0.0000000000000000, 9.3235439910946752E-004, 3.3005333306119844E-003,&
-                     -1.8929200494633895E-003, -4.1022699850625091E-004, 6.7726154639898310E-003 /)
-    dqdt(2, :)   = (/ -0.99987678675750624, -8.2645971498225013, -23.268071529541796,&
-                     -40.929294956556291, -55.565125160592252, -63.067992076688789 /)
-    dqdt(3, :)   = (/ -3.8036447040755712E-002, -0.32270794664495456, -0.92705623402622539,&
-                      -1.6773231371358219, -2.3407181372269505, -2.6678532078129353 /)
-    dqdt(4, :)   = (/ 1.0005999999999999, 1.0086870596698656, 1.0167223077625316,&
-                      0.99784449629056615, 1.0037058255818441, 1.0279256786186375 /)
-    dqdt(5, :)   = (/ 0.0000000000000000, 2.0755782517059831E-004, 1.1150140020736783E-004,&
-                     -7.0940331538101400E-004, 7.6299221208885211E-004, 1.1414026968306181E-003 /)
-    dqdt(6, :)   = (/ 0.0000000000000000, 3.3617202677963713E-005, 7.8843820269762022E-004,&
-                      2.5350761192596957E-003, 9.4589433654366573E-004, -2.6664390862029355E-003 /)
-
-    base_vvv = (/ -1.4815163663356200E-003, -39.618593540051307, -1.6193444158637977,&
-                   0.99921177475498968, -7.2969068242084050E-004, 2.4570219796760410E-003 /)
-    base_vvp = (/ -3.2764238475044375E-004,  -0.99392385378942527, -4.3817017079651327E-002,&
-                  -1.0970362265469366E-003, 7.1906754848461453E-006, 6.6903354251695178E-005 /)
+    Jacobian(nodes_per_elem, nqp)  = 1.0d0
 
     call BD_QPDataVelocity( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, ShpDer, Jacobian, dqdt, vvv, vvp )
 
     tolerance = AdjustTol(accuracy, base_vvv)
-    @assertEqual(base_vvv, vvv(:, 1, 1), tolerance, testname)
+    @assertEqual(base_vvv, vvv(:, nqp, elem_total), tolerance, testname)
     tolerance = AdjustTol(accuracy, base_vvp)
-    @assertEqual(base_vvp, vvp(:, 1, 1), tolerance, testname)
+    @assertEqual(base_vvp, vvp(:, nqp, elem_total), tolerance, testname)
+
+    deallocate(node_elem_idx, Shp, ShpDer, Jacobian, dqdt, vvv, vvp)
+
+    ! --------------------------------------------------------------------------
+    testname = "single quad pt/element/node--integer-valued inputs:"
+
+    elem_total          = 1
+    nqp                 = 1
+    nodes_per_elem      = 1
+
+    allocate(node_elem_idx(elem_total, 2), Shp(nodes_per_elem, nqp),&
+             ShpDer(nodes_per_elem, nqp), Jacobian(nodes_per_elem, nqp),&
+             dqdt(6, nodes_per_elem * elem_total), vvv(6, nqp, elem_total), vvp(6, nqp, elem_total))
+
+    node_elem_idx(1, :) = (/ 1, 1 /)
+
+    call initialize_vars_base()
+
+    Shp(nodes_per_elem, nqp)             = 2.0d0
+    ShpDer(nodes_per_elem, nqp)          = 4.0d0
+    Jacobian(nodes_per_elem, nqp)        = 2.0d0
+    dqdt(:, nodes_per_elem * elem_total) = (/ 1.0d0,  2.0d0,  3.0d0,  4.0d0,   5.0d0,   6.0d0 /)
+
+    base_vvv(:) = (/ 2.0d0,  4.0d0,  6.0d0,  8.0d0,  10.0d0,  12.0d0 /)
+    base_vvp(:) = (/ 2.0d0,  4.0d0,  6.0d0,  8.0d0,  10.0d0,  12.0d0 /)
+
+    call BD_QPDataVelocity( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, ShpDer, Jacobian, dqdt, vvv, vvp )
+
+    tolerance = AdjustTol(accuracy, base_vvv)
+    @assertEqual(base_vvv, vvv(:, nqp, elem_total), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_vvp)
+    @assertEqual(base_vvp, vvp(:, nqp, elem_total), tolerance, testname)
+
+    deallocate(node_elem_idx, Shp, ShpDer, Jacobian, dqdt, vvv, vvp)
+
+    ! --------------------------------------------------------------------------
+    testname = "simulate 2 quad pts/elements/nodes to ensure proper indexing--integer-valued inputs:"
+
+    elem_total          = 2
+    nqp                 = 2
+    nodes_per_elem      = 2
+
+    allocate(node_elem_idx(elem_total, 2), Shp(nodes_per_elem, nqp),&
+             ShpDer(nodes_per_elem, nqp), Jacobian(nodes_per_elem, nqp),&
+             dqdt(6, nodes_per_elem * elem_total), vvv(6, nqp, elem_total), vvp(6, nqp, elem_total))
+
+    node_elem_idx(1, :) = (/ 1, 2 /)
+    node_elem_idx(2, :) = (/ 3, 4 /)
+
+    call initialize_vars_base()
+
+    Shp(1, nqp)               = 2.0d0
+    Shp(2, nqp)               = 3.0d0
+    ShpDer(1, nqp)            = 4.0d0
+    ShpDer(2, nqp)            = 6.0d0
+    Jacobian(nqp, elem_total) = 2.0d0
+
+    dqdt(:, 3)  = (/ 1.0d0,  2.0d0,  3.0d0,   4.0d0,    5.0d0,    6.0d0 /)
+    dqdt(:, 4)  = (/ 7.0d0,  8.0d0,  9.0d0,  10.0d0,   11.0d0,   12.0d0 /)
+
+    base_vvv(:) = (/ 23.0d0,  28.0d0,  33.0d0,  38.0d0,  43.0d0,  48.0d0 /)
+    base_vvp(:) = (/ 23.0d0,  28.0d0,  33.0d0,  38.0d0,  43.0d0,  48.0d0 /)
+
+    call BD_QPDataVelocity( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, ShpDer, Jacobian, dqdt, vvv, vvp )
+
+    tolerance = AdjustTol(accuracy, base_vvv)
+    @assertEqual(base_vvv, vvv(:, nqp, elem_total), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_vvp)
+    @assertEqual(base_vvp, vvp(:, nqp, elem_total), tolerance, testname)
+
+    deallocate(node_elem_idx, Shp, ShpDer, Jacobian, dqdt, vvv, vvp)
+
+    ! --------------------------------------------------------------------------
+    testname = "single quad pt/element, 2 nodes--randomly-chosen real-valued inputs:"
+
+    elem_total          = 1
+    nqp                 = 1
+    nodes_per_elem      = 2
+
+    allocate(node_elem_idx(elem_total, 2), Shp(nodes_per_elem, nqp),&
+             ShpDer(nodes_per_elem, nqp), Jacobian(nodes_per_elem, nqp),&
+             dqdt(6, nodes_per_elem * elem_total), vvv(6, nqp, elem_total), vvp(6, nqp, elem_total))
+
+    node_elem_idx(elem_total, :) = (/ 1, 2 /)
+
+    call initialize_vars_base()
+
+    Shp(1, nqp)               = -4.461540300782200
+    Shp(2, nqp)               = -9.076572187376922
+    ShpDer(1, nqp)            = -8.057364375283049
+    ShpDer(2, nqp)            = 6.469156566545852
+    Jacobian(nqp, elem_total) = 6.948286229758170
+
+    dqdt(:, 1)  = (/   9.004440976767100,  -9.311078389941825,  -1.225112806872035,&
+                      -2.368830858139832,   5.310335762980047,   5.903998022741263 /)
+    dqdt(:, 2)  = (/  -6.262547908912428,  -0.204712084235378,  -1.088275985782010,&
+                       2.926260202225293,   4.187296617161451,   5.093733639647217 /)
+
+    base_vvv(:) = (/  16.668791868288984,  43.399835490658496,  15.343705705603181,&
+                     -15.991777625218722, -61.698577032845570, -72.574566197726710 /)
+    base_vvp(:) = (/ -16.272424758432283,  10.606707086269177,   0.407431768431399,&
+                       5.471416621738358,  -2.259410777179241,  -2.103900506344929 /)
+
+    call BD_QPDataVelocity( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, ShpDer, Jacobian, dqdt, vvv, vvp )
+
+    tolerance = AdjustTol(accuracy, base_vvv)
+    @assertEqual(base_vvv, vvv(:, nqp, elem_total), tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_vvp)
+    @assertEqual(base_vvp, vvp(:, nqp, elem_total), tolerance, testname)
+
+    deallocate(node_elem_idx, Shp, ShpDer, Jacobian, dqdt, vvv, vvp)
 
     ! --------------------------------------------------------------------------
 
