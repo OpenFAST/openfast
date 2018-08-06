@@ -1,8 +1,23 @@
 @test
 subroutine test_BD_InertialMassMatrix()
     ! test branches
-    ! - inputs from bd_5MW_dynamic reg test--simple case
-    ! - inputs from bd_5MW_dynamic reg test--more complex case
+    ! - single quad pt/element--all zero inputs/outputs
+    ! - simulate 2 quad pts/elements to ensure proper indexing--all zero inputs/outputs
+    ! - single quad pt/element--integer-valued inputs
+    ! - simulate 2 quad pts/elements to ensure proper indexing--integer-valued inputs
+    ! - single quad pt/element--randomly-chosen real-valued inputs
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_InertialMassMatrix(), the mass matrix for a given element, for all
+    ! quadrature points, is constructed in the inertial frame, using the mass of
+    ! the section, the tensor of inertia (in the inertial frame) [rho], and
+    ! RR0mEta, according to Eq. 17.107 in Bauchau.
+    ! This test verifies that indexing occurs properly and that the calculations
+    ! are done properly for all zero inputs, integer-valued inputs, and
+    ! randomly-chosen real-valued inputs.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn
@@ -11,13 +26,13 @@ subroutine test_BD_InertialMassMatrix()
 
     implicit none
 
-    integer(IntKi)  :: nelem            !< index of current element in loop
-    integer(IntKi)  :: nqp              !< Number of quadrature points (per element)
-    real(BDKi)      :: mmm(1, 1)        !< Mass at current QP
-    real(BDKi)      :: RR0mEta(3, 1, 1) !< RR0 times Center of mass location times mass: (m*X_cm, m*Y_cm, m*Z_cm) where X_cm = 0
-    real(BDKi)      :: rho(3, 3, 1, 1)  !< Tensor of inertia resolved in inertia frame at quadrature point. 3x3
-    real(BDKi)      :: Mi(6, 6, 1, 1)   !< Mass matrix for inertial force. 6x6
-    real(BDKi)      :: base_Mi(6, 6)
+    integer(IntKi)          :: nelem
+    integer(IntKi)          :: nqp
+    real(BDKi), allocatable :: mmm(:, :)
+    real(BDKi), allocatable :: RR0mEta(:, :, :)
+    real(BDKi), allocatable :: rho(:, :, :, :)
+    real(BDKi), allocatable :: Mi(:, :, :, :)
+    real(BDKi)              :: base_Mi(6, 6)
 
 
     integer(IntKi)  :: ErrStat ! Error status of the operation
@@ -33,60 +48,136 @@ subroutine test_BD_InertialMassMatrix()
     ! digits of desired accuracy
     accuracy = 16
 
+
+    ! --------------------------------------------------------------------------
+    testname = "single quad pt/element--all zero inputs/outputs:"
+
     nelem = 1
     nqp   = 1
 
-
-    ! --------------------------------------------------------------------------
-    testname = "inputs from bd_5MW_dynamic reg test--simple case:"
+    allocate(mmm(nqp, nelem), RR0mEta(3, nqp, nelem), rho(3, 3, nqp, nelem), Mi(6, 6, nqp, nelem))
 
     call initialize_vars_base()
-
-    mmm = 678.93499999999995
-
-    rho(1, :, 1, nelem) = (/ 973.03046262476562, -4.0320788880971827E-002, 0.0000000000000000 /)
-    rho(2, :, 1, nelem) = (/ -4.0320788880975254E-002, 972.86953737523640, 0.0000000000000000 /)
-    rho(3, :, 1, nelem) = (/ 0.0000000000000000, 0.0000000000000000, 1945.9000000000019 /)
-
-    base_Mi(1, 1) = 678.93499999999995
-    base_Mi(2, 2) = 678.93499999999995
-    base_Mi(3, 3) = 678.93499999999995
-    base_Mi(4, 4) = 973.03046262476562
-    base_Mi(4, 5) = -4.0320788880971827E-002
-    base_Mi(5, 4) = -4.0320788880975254E-002
-    base_Mi(5, 5) = 972.86953737523640
-    base_Mi(6, 6) = 1945.9000000000019
 
     call BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
 
     tolerance = AdjustTol(accuracy, base_Mi)
-    @assertEqual(base_Mi, Mi(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Mi, Mi(:, :, nqp, nelem), tolerance, testname)
+
+    deallocate(mmm, RR0mEta, rho, Mi)
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from bd_5MW_dynamic reg test--more complex case:"
+    testname = "simulate 2 quad pts/elements to ensure proper indexing--all zero inputs/outputs:"
+
+    nelem = 2
+    nqp   = 2
+
+    allocate(mmm(nqp, nelem), RR0mEta(3, nqp, nelem), rho(3, 3, nqp, nelem), Mi(6, 6, nqp, nelem))
 
     call initialize_vars_base()
-
-    mmm = 55.914000000000001
-
-    rho(1, :, 1, nelem) = (/ 9.7698112230961858, -3.8736664093691281E-002, -1.5151740801774670E-002 /)
-    rho(2, :, 1, nelem) = (/ -3.8736664093691274E-002, 1.8546128236768915, -2.9141162181471096 /)
-    rho(3, :, 1, nelem) = (/ -1.5151740801774666E-002, -2.9141162181471096, 9.6955759532269035 /)
-
-    base_Mi(1, 1) = 55.914000000000001
-    base_Mi(2, 2) = 55.914000000000001
-    base_Mi(3, 3) = 55.914000000000001
-    base_Mi(4, :) = (/ 0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                       9.7698112230961858, -3.8736664093691281E-002, -1.5151740801774670E-002 /)
-    base_Mi(5, :) = (/ 0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                      -3.8736664093691274E-002, 1.8546128236768915, -2.9141162181471096 /)
-    base_Mi(6, :) = (/ 0.0000000000000000, 0.0000000000000000, 0.0000000000000000,&
-                      -1.5151740801774666E-002, -2.9141162181471096, 9.6955759532269035 /)
 
     call BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
 
     tolerance = AdjustTol(accuracy, base_Mi)
-    @assertEqual(base_Mi, Mi(:, :, 1, nelem), tolerance, testname)
+    @assertEqual(base_Mi, Mi(:, :, nqp, nelem), tolerance, testname)
+
+    deallocate(mmm, RR0mEta, rho, Mi)
+
+    ! --------------------------------------------------------------------------
+    testname = "single quad pt/element--integer-valued inputs:"
+
+    nelem = 1
+    nqp   = 1
+
+    allocate(mmm(nqp, nelem), RR0mEta(3, nqp, nelem), rho(3, 3, nqp, nelem), Mi(6, 6, nqp, nelem))
+
+    call initialize_vars_base()
+
+    mmm(nqp, nelem)        = 2.0d0
+    RR0mEta(:, nqp, nelem) = (/ 1.0d0,  2.0d0,  3.0d0 /)
+    rho(1, :, nqp, nelem)  = (/ 1.0d0,  2.0d0,  3.0d0 /)
+    rho(2, :, nqp, nelem)  = (/ 4.0d0,  5.0d0,  6.0d0 /)
+    rho(3, :, nqp, nelem)  = (/ 7.0d0,  8.0d0,  9.0d0 /)
+
+    base_Mi(1, :)   = (/  2.0d0,  0.0d0,  0.0d0,  0.0d0,  3.0d0, -2.0d0 /)
+    base_Mi(2, :)   = (/  0.0d0,  2.0d0,  0.0d0, -3.0d0,  0.0d0,  1.0d0 /)
+    base_Mi(3, :)   = (/  0.0d0,  0.0d0,  2.0d0,  2.0d0, -1.0d0,  0.0d0 /)
+    base_Mi(4, :)   = (/  0.0d0, -3.0d0,  2.0d0,  1.0d0,  2.0d0,  3.0d0 /)
+    base_Mi(5, :)   = (/  3.0d0,  0.0d0, -1.0d0,  4.0d0,  5.0d0,  6.0d0 /)
+    base_Mi(6, :)   = (/ -2.0d0,  1.0d0,  0.0d0,  7.0d0,  8.0d0,  9.0d0 /)
+
+    call BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
+
+    tolerance = AdjustTol(accuracy, base_Mi)
+    @assertEqual(base_Mi, Mi(:, :, nqp, nelem), tolerance, testname)
+
+    deallocate(mmm, RR0mEta, rho, Mi)
+
+    ! --------------------------------------------------------------------------
+    testname = "simulate 2 quad pts/elements to ensure proper indexing--integer-valued inputs:"
+
+    nelem = 2
+    nqp   = 2
+
+    allocate(mmm(nqp, nelem), RR0mEta(3, nqp, nelem), rho(3, 3, nqp, nelem), Mi(6, 6, nqp, nelem))
+
+    call initialize_vars_base()
+
+    mmm(nqp, nelem)        = 2.0d0
+    RR0mEta(:, nqp, nelem) = (/ 1.0d0,  2.0d0,  3.0d0 /)
+    rho(1, :, nqp, nelem)  = (/ 1.0d0,  2.0d0,  3.0d0 /)
+    rho(2, :, nqp, nelem)  = (/ 4.0d0,  5.0d0,  6.0d0 /)
+    rho(3, :, nqp, nelem)  = (/ 7.0d0,  8.0d0,  9.0d0 /)
+
+    base_Mi(1, :)   = (/  2.0d0,  0.0d0,  0.0d0,  0.0d0,  3.0d0, -2.0d0 /)
+    base_Mi(2, :)   = (/  0.0d0,  2.0d0,  0.0d0, -3.0d0,  0.0d0,  1.0d0 /)
+    base_Mi(3, :)   = (/  0.0d0,  0.0d0,  2.0d0,  2.0d0, -1.0d0,  0.0d0 /)
+    base_Mi(4, :)   = (/  0.0d0, -3.0d0,  2.0d0,  1.0d0,  2.0d0,  3.0d0 /)
+    base_Mi(5, :)   = (/  3.0d0,  0.0d0, -1.0d0,  4.0d0,  5.0d0,  6.0d0 /)
+    base_Mi(6, :)   = (/ -2.0d0,  1.0d0,  0.0d0,  7.0d0,  8.0d0,  9.0d0 /)
+
+    call BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
+
+    tolerance = AdjustTol(accuracy, base_Mi)
+    @assertEqual(base_Mi, Mi(:, :, nqp, nelem), tolerance, testname)
+
+    deallocate(mmm, RR0mEta, rho, Mi)
+
+    ! --------------------------------------------------------------------------
+    testname = "single quad pt/element--randomly-chosen real-valued inputs:"
+
+    nelem = 1
+    nqp   = 1
+
+    allocate(mmm(nqp, nelem), RR0mEta(3, nqp, nelem), rho(3, 3, nqp, nelem), Mi(6, 6, nqp, nelem))
+
+    call initialize_vars_base()
+
+    mmm(nqp, nelem)        = 9.122690804596047
+    RR0mEta(:, nqp, nelem) = (/  1.504171901569311, -8.804409141056883, -5.304401732551874 /)
+    rho(1, :, nqp, nelem)  = (/ -2.936828575558579, -9.139523966843843,  4.634447713173406 /)
+    rho(2, :, nqp, nelem)  = (/  6.423880803959182, -6.620199410745913,  2.954919262726134 /)
+    rho(3, :, nqp, nelem)  = (/ -9.691931246968899,  2.982309499129041, -0.981525871381102 /)
+
+    base_Mi(1, :)   = (/  9.122690804596047,                0.0,                0.0,&
+                                        0.0, -5.304401732551874,  8.804409141056883 /)
+    base_Mi(2, :)   = (/                0.0,  9.122690804596047,                0.0,&
+                          5.304401732551874,                0.0,  1.504171901569311 /)
+    base_Mi(3, :)   = (/                0.0,                0.0,  9.122690804596047,&
+                         -8.804409141056883, -1.504171901569311,                0.0 /)
+    base_Mi(4, :)   = (/                0.0,  5.304401732551874, -8.804409141056883,&
+                         -2.936828575558579, -9.139523966843843,  4.634447713173406 /)
+    base_Mi(5, :)   = (/ -5.304401732551874,                0.0, -1.504171901569311,&
+                          6.423880803959182, -6.620199410745913,  2.954919262726134 /)
+    base_Mi(6, :)   = (/  8.804409141056883,  1.504171901569311,                0.0,&
+                         -9.691931246968899,  2.982309499129041, -0.981525871381102 /)
+
+    call BD_InertialMassMatrix( nelem, nqp, mmm, RR0mEta, rho, Mi )
+
+    tolerance = AdjustTol(accuracy, base_Mi)
+    @assertEqual(base_Mi, Mi(:, :, nqp, nelem), tolerance, testname)
+
+    deallocate(mmm, RR0mEta, rho, Mi)
 
     ! --------------------------------------------------------------------------
 
