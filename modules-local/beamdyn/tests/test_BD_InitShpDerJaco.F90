@@ -1,7 +1,17 @@
 @test
 subroutine test_BD_InitShpDerJaco()
-    ! branches to test
+    ! test branches
     ! - 3 node, 1 element; undeformed
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_InitShpDerJaco(), various quantities are calculated, including the:
+    ! Jacobian, shape functions, shape function derivatives, and some related
+    ! optimization variables.
+    ! This test verifies the the above quantities are calculated properly for
+    ! a relatively simple case with an analytic solution.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn
@@ -47,11 +57,11 @@ subroutine test_BD_InitShpDerJaco()
     ! We are interested in testing the function test_BD_InitShpDerJaco for s = 0.5
     ! At s = 0.5, the above values are computed to be N1 = -0.125, N2 = 0.75, and N3 = -0.375
     !
-    ! The derivatives dN/ds are computed to be dN1 = -, dN2 = -1, and dN3 = 1
+    ! The derivatives dN/ds are computed to be dN1 = 0, dN2 = -1, and dN3 = 1
     !
     ! the Jacobian is invariant of the quadrature point and account for change in volume
     ! between physical and parametric space. Jacobian = meas(x)/meas(s), where meas is the
-    ! measured quantity (volume in 3D, area in 2D, and lenght in 1D)
+    ! measured quantity (volume in 3D, area in 2D, and length in 1D)
     ! The Jacobian for this element is given by 20/2  = 10
 
     ! build the p object based on the above mentioned test model
@@ -64,17 +74,17 @@ subroutine test_BD_InitShpDerJaco()
     call AllocAry(baseline_Shp     , p%nodes_per_elem, p%nqp, 'Reference Shp'     , ErrStat, ErrMsg)
     call AllocAry(baseline_ShpDer  , p%nodes_per_elem, p%nqp, 'Reference ShpDer'  , ErrStat, ErrMsg)
     call AllocAry(baseline_Jacobian, p%elem_total    , p%nqp, 'Reference Jacobian', ErrStat, ErrMsg)
-    call AllocAry(inp_QPtWeight    , p%nqp                              , 'QPtWeight'         , ErrStat, ErrMsg)
+    call AllocAry(inp_QPtWeight    , p%nqp           , 'QPtWeight'                , ErrStat, ErrMsg)
 
     ! Allocate memory for other relevant variables belonging to module p
     call AllocAry(baseline_QPtw_Shp_Shp_Jac      , p%nqp, p%nodes_per_elem, p%nodes_per_elem, p%elem_total, 'reference QPtw_Shp_Shp_Jac'               , ErrStat, ErrMsg)
     call AllocAry(baseline_QPtw_ShpDer_ShpDer_Jac, p%nqp, p%nodes_per_elem, p%nodes_per_elem, p%elem_total, 'reference baseline_QPtw_ShpDer_ShpDer_Jac', ErrStat, ErrMsg)
-    call AllocAry(baseline_QPtw_Shp_ShpDer       , p%nqp, p%nodes_per_elem, p%nodes_per_elem                          , 'reference QPtw_Shp_ShpDer'                , ErrStat, ErrMsg)
-    call AllocAry(baseline_QPtw_Shp_Jac          , p%nqp, p%nodes_per_elem, p%elem_total                              , 'reference QPtw_Shp_Jac'                   , ErrStat, ErrMsg)
-    call AllocAry(baseline_QPtw_ShpDer           , p%nqp, p%nodes_per_elem                                                        , 'reference QPtw_ShpDer'                    , ErrStat, ErrMsg)
+    call AllocAry(baseline_QPtw_Shp_ShpDer       , p%nqp, p%nodes_per_elem, p%nodes_per_elem              , 'reference QPtw_Shp_ShpDer'                , ErrStat, ErrMsg)
+    call AllocAry(baseline_QPtw_Shp_Jac          , p%nqp, p%nodes_per_elem, p%elem_total                  , 'reference QPtw_Shp_Jac'                   , ErrStat, ErrMsg)
+    call AllocAry(baseline_QPtw_ShpDer           , p%nqp, p%nodes_per_elem                                , 'reference QPtw_ShpDer'                    , ErrStat, ErrMsg)
 
-    ! assign baseling results
-    ! assign baseline jacobian based on example as described above
+    ! assign baseline results
+    ! assign baseline Jacobian based on example as described above
     baseline_jacobian(1,1) = 10.0 ! we assume 1 element quadrature point. Hence we set only the index (1,1)
 
     ! assign baseline shape functions based on example as described above
@@ -95,15 +105,15 @@ subroutine test_BD_InitShpDerJaco()
     call AllocAry(p%ShpDer   , p%nodes_per_elem, p%nqp, 'ShpDer'   , ErrStat, ErrMsg)
     call AllocAry(p%uuN0,   3, p%nodes_per_elem, p%nqp, 'uuN0'     , ErrStat, ErrMsg)
     call AllocAry(p%Jacobian , p%elem_total    , p%nqp, 'Jacobian' , ErrStat, ErrMsg)
-    call AllocAry(p%QPtN     , p%nodes_per_elem                   , 'QPtN'     , ErrStat, ErrMsg)
-    call AllocAry(p%QPtWeight, p%nqp                              , 'QPtWeight', ErrStat, ErrMsg)
+    call AllocAry(p%QPtN     , p%nodes_per_elem       , 'QPtN'     , ErrStat, ErrMsg)
+    call AllocAry(p%QPtWeight, p%nqp                  , 'QPtWeight', ErrStat, ErrMsg)
 
     ! Allocate memory for other relevant variables belonging to module p
     call AllocAry(p%QPtw_Shp_Shp_Jac      , p%nqp, p%nodes_per_elem, p%nodes_per_elem,p%elem_total, 'QPtw_Shp_Shp_Jac',       ErrStat, ErrMsg)
-    call AllocAry(p%QPtw_Shp_ShpDer       , p%nqp, p%nodes_per_elem, p%nodes_per_elem               , 'QPtw_Shp_ShpDer',        ErrStat, ErrMsg)
+    call AllocAry(p%QPtw_Shp_ShpDer       , p%nqp, p%nodes_per_elem, p%nodes_per_elem             , 'QPtw_Shp_ShpDer',        ErrStat, ErrMsg)
     call AllocAry(p%QPtw_ShpDer_ShpDer_Jac, p%nqp, p%nodes_per_elem, p%nodes_per_elem,p%elem_total, 'QPtw_ShpDer_ShpDer_Jac', ErrStat, ErrMsg)
-    call AllocAry(p%QPtw_Shp_Jac          , p%nqp, p%nodes_per_elem, p%elem_total                   , 'QPtw_Shp_Jac',           ErrStat, ErrMsg)
-    call AllocAry(p%QPtw_ShpDer           , p%nqp, p%nodes_per_elem                                             , 'QPtw_ShpDer',            ErrStat, ErrMsg)
+    call AllocAry(p%QPtw_Shp_Jac          , p%nqp, p%nodes_per_elem, p%elem_total                 , 'QPtw_Shp_Jac',           ErrStat, ErrMsg)
+    call AllocAry(p%QPtw_ShpDer           , p%nqp, p%nodes_per_elem                               , 'QPtw_ShpDer',            ErrStat, ErrMsg)
 
     ! uuN0 is of dimension (3 dof, nodes_per_elem, elem_total)
     p%uuN0(1:3,1,1) = (/  0.0,  0.0, 0.0  /)
@@ -112,7 +122,7 @@ subroutine test_BD_InitShpDerJaco()
 
     p%QPtN = (/ 0.5 /) ! Note, we assume 1 quadrature point
 
-    p%QPtWeight = inp_QPtWeight ! Since we assume 1 quadrature point, the weight by defualt = 1
+    p%QPtWeight = inp_QPtWeight ! Since we assume 1 quadrature point, the weight by default = 1
 
     ! Allocate memory for GLL node positions in 1D parametric space
     call AllocAry(gll_nodes, p%nodes_per_elem, "GLL points array", ErrStat, ErrMsg)
@@ -131,7 +141,7 @@ subroutine test_BD_InitShpDerJaco()
        end do
     end do
 
-    ! check the baseline jacobian
+    ! check the baseline Jacobian
     do nelem = 1, p%elem_total
         do idx_qp = 1, p%nqp
             tolerance = AdjustTol(accuracy, baseline_jacobian(nelem,idx_qp))
@@ -189,7 +199,7 @@ subroutine test_BD_InitShpDerJaco()
         end do
     end do
 
-    ! dealocate baseline variables
+    ! deallocate baseline variables
     deallocate(baseline_Shp)
     deallocate(baseline_ShpDer)
     deallocate(baseline_Jacobian)
