@@ -1,10 +1,19 @@
 @test
 subroutine test_BD_GenerateGLL()
-  ! test branches
-  ! - p = 2, boundaries only
-  ! - p = 5, odd number
-  ! - p = 6, even number
-  ! - p = 97, large, prime number
+    ! test branches
+    ! - p = 2, boundaries only
+    ! - p = 5, odd number
+    ! - p = 6, even number
+    ! - p = 97, large, prime number
+ 
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_GenerateGLL(), the Gauss-Lobatto-Legendre quadrature points are
+    ! calculated, provided the desired number of points (p).
+    ! This test verifies that the calculations are correct for a range of
+    ! values of p.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn_Subs
@@ -30,7 +39,6 @@ subroutine test_BD_GenerateGLL()
     accuracy = 15
 
 
-    ! the baseline solutions for this unit test can be calculated using the Gauss-Lobatto quadrature
     ! this website provides the nodes and weights:
     ! http://keisan.casio.com/exec/system/1280801905
 
@@ -43,6 +51,7 @@ subroutine test_BD_GenerateGLL()
     baseline = (/ -1.0, 1.0 /)
 
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
+
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
 
     tolerance = AdjustTol(accuracy, baseline)
@@ -59,6 +68,7 @@ subroutine test_BD_GenerateGLL()
     baseline = (/ -1.0, -0.6546536707079771437983, 0.0, 0.654653670707977143798, 1.0 /)
 
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
+
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
 
     tolerance = AdjustTol(accuracy, baseline)
@@ -73,9 +83,11 @@ subroutine test_BD_GenerateGLL()
 
     p = 6
     allocate(baseline(p))
-    baseline = (/ -1.0, -0.765055323929464692851, -0.2852315164806450963142, 0.2852315164806450963142, 0.765055323929464692851, 1.0 /)
+    baseline = (/                     -1.0, -0.765055323929464692851, -0.2852315164806450963142,&
+                  0.2852315164806450963142,  0.765055323929464692851,                       1.0 /)
 
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
+
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
 
     tolerance = AdjustTol(accuracy, baseline)
@@ -118,6 +130,7 @@ subroutine test_BD_GenerateGLL()
       1.0 /)
 
     call AllocAry(gll_nodes, p, "GLL points array", ErrStat, ErrMsg)
+
     call BD_GenerateGLL(p, gll_nodes, ErrStat, ErrMsg)
 
     tolerance = AdjustTol(accuracy, baseline)
