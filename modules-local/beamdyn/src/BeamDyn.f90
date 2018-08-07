@@ -1874,7 +1874,7 @@ SUBROUTINE BD_QuadraturePointDataAt0( nodes_per_elem, elem_total, nqp, Shp, uuN0
    INTEGER(IntKi), INTENT(IN   )  :: elem_total     !< Total number of elements
    INTEGER(IntKi), INTENT(IN   )  :: nqp            !< Number of quadrature points (per element)
    REAL(BDKi),     INTENT(IN   )  :: Shp(:, :)      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
-   REAL(BDKi),     INTENT(IN   )  :: uuN0(:, :, :)  !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),     INTENT(IN   )  :: uuN0(:, :, :)  !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
    REAL(BDKi),     INTENT(  OUT)  :: uu0(:, :, :)   !< Initial Disp/Rot value at quadrature point (at T=0)
    REAL(BDKi),     INTENT(  OUT)  :: rrN0(:, :, :)  !< Initial relative rotation array, relative to root (at T=0) (index 1=rot DOF; index 2=FE nodes; index 3=element)
    REAL(BDKi),     INTENT(  OUT)  :: E10(:, :, :)   !< Initial E10 at quadrature point
