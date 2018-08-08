@@ -237,7 +237,9 @@ contains
         
     end function
 
-    ! these adjust the tolerance to capture 'acc' digits of accuracy, based on the order of 'param' (given a scalar, 1-4 dimensional array)
+    ! These adjust the tolerance to capture 'acc' digits of accuracy, based on
+      ! the order of 'param' (scalar or 1-4 dimensional array).
+    ! These can be accessed, generically, using the interface, above.
 
     real(BDKi) function AdjustTol0(acc, param)
         use BeamDyn_Subs

@@ -4078,7 +4078,6 @@ SUBROUTINE BD_TiSchmComputeCoefficients( dt, rhoinf, coef )
    REAL(DbKi), INTENT(  OUT) :: coef(9) !< GA2 Coefficient
 
    REAL(DbKi)                :: tr0
-   REAL(DbKi)                :: tr1
    REAL(DbKi)                :: tr2
    REAL(DbKi)                :: alfam   ! \alpha_M
    REAL(DbKi)                :: alfaf   ! \alpha_F
@@ -4100,7 +4099,6 @@ SUBROUTINE BD_TiSchmComputeCoefficients( dt, rhoinf, coef )
    deltat2 = dt**2
    oalfaM = 1.0_BDKi - alfam
    tr0 = alfaf / oalfaM
-   tr1 = alfam / oalfaM
    tr2 = (1.0_BDKi - alfaf) / oalfaM
 
    coef(1) = beta * tr0 * deltat2
@@ -4108,7 +4106,7 @@ SUBROUTINE BD_TiSchmComputeCoefficients( dt, rhoinf, coef )
    coef(3) = gama * tr0 * dt
    coef(4) = (1.0_BDKi - gama / oalfaM) * dt
    coef(5) = tr0
-   coef(6) = -tr1
+   coef(6) = -alfam / oalfaM
    coef(7) = gama * tr2 * dt
    coef(8) = beta * tr2 * deltat2
    coef(9) = tr2
