@@ -4035,7 +4035,9 @@ END SUBROUTINE BD_GA2
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the predicted values (initial guess)
-!! of u,v,acc, and xcc in generalized-alpha algorithm
+!! of u,v,acc, and xcc in generalized-alpha algorithm.
+!! This follows Eq's 14(a)-(c) in Dymore User's Manual--<em>The generalized-\f$\alpha\f$ time integration scheme</em>, Equations 9, 11, 13. \n
+!! http://www.dymoresolutions.com/UsersManual/AnalysisControls/GeneralizedAlpha.pdf
 SUBROUTINE BD_TiSchmPredictorStep( x, OtherState, dt, coef, node_total )
    REAL(DbKi),                   INTENT(IN   ) :: dt         !< module dt
    REAL(DbKi),                   INTENT(IN   ) :: coef(9)    !< GA2 Coefficient
