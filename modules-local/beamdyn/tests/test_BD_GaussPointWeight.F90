@@ -38,10 +38,6 @@ subroutine test_BD_GaussPointWeight()
     ! initialize NWTC_Num constants
     call SetConstants()
 
-    ! FIXME(mjs): it seems odd that we are only getting 14-digit accuracy, as
-      ! compared to numpy (also checked with a matlab script, included below
-      ! whose answers correspond to numpy)
-
     ! digits of desired accuracy
     accuracy = 14
 

@@ -44,8 +44,6 @@ subroutine test_BD_CrvMatrixR()
     ! initialize NWTC_Num constants
     call SetConstants()
 
-    ! FIXME(mjs): strange that only branch 2 attains 16-digit accuracy
-
     ! digits of desired accuracy
     accuracy = 15
 
