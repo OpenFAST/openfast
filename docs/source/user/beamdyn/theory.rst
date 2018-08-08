@@ -637,8 +637,9 @@ Time integration is performed using the generalized-\ :math:`\alpha`
 scheme in BeamDyn, which is an unconditionally stable (for linear
 systems), second-order accurate algorithm. The scheme allows for users
 to choose integration parameters that introduce high-frequency numerical
-dissipation. More details regarding the generalized-\ :math:`\alpha`
-method can be found in :cite:`Chung-Hulbert:1993,Bauchau:2010`.
+dissipation. For more details regarding the generalized-\ :math:`\alpha`
+method, as employed in BeamDyn, see :cite:`Bauchau:DymoreMan`, the
+method of which is based on the formulation of :cite:`Arnold:2007`.
 
 Calculation of Reaction Loads
 -----------------------------

@@ -4068,8 +4068,10 @@ END SUBROUTINE BD_TiSchmPredictorStep
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine calculates the Timoshenko coefficients, p%coef, used in generalized-alpha
-!! time integrator. It requires that p%rhoinf and p%dt have been set
+!> This subroutine calculates the Timoshenko coefficients, p\%coef, used in generalized-alpha
+!! time integrator. It requires that p\%rhoinf and p\%dt have been set.
+!! These coefficients come from the Dymore User's Manual--<em>The generalized-\f$\alpha\f$ time integration scheme</em>, Equations 9, 11, 13. \n
+!! http://www.dymoresolutions.com/UsersManual/AnalysisControls/GeneralizedAlpha.pdf
 SUBROUTINE BD_TiSchmComputeCoefficients( dt, rhoinf, coef )
    REAL(DbKi), INTENT(IN   ) :: dt      !< module dt
    REAL(DbKi), INTENT(IN   ) :: rhoinf  !< Numerical Damping Coefficient for GA2
@@ -4085,16 +4087,16 @@ SUBROUTINE BD_TiSchmComputeCoefficients( dt, rhoinf, coef )
    REAL(DbKi)                :: oalfaM  ! 1 - \alpha_M
    REAL(DbKi)                :: deltat2 ! {\delta t}^2 = dt^2
 
-      ! Bauchau equations 17.39
+      ! Dymore manual, Eq. 5
    tr0 = rhoinf + 1.0_BDKi
    alfam = (2.0_BDKi * rhoinf - 1.0_BDKi) / tr0
    alfaf = rhoinf / tr0
 
-      ! Bauchau equations 17.40
+      ! Dymore manual, Eq. 6
    gama = 0.5_BDKi - alfam + alfaf
-   beta = 0.25 * (1.0_BDKi - alfam + alfaf)**2
+   beta = 0.25_BDKi * (1.0_BDKi - alfam + alfaf)**2
 
-      ! The coefficents are then found using equations 17.41a - 17.41c
+      ! The coefficients are then found using Eq's 9, 11, 13
    deltat2 = dt**2
    oalfaM = 1.0_BDKi - alfam
    tr0 = alfaf / oalfaM
