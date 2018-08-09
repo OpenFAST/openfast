@@ -1,7 +1,11 @@
 @test
 subroutine test_BD_TiSchmPredictorStep()
     ! test branches
-    ! - 
+    ! - single node--all zero inputs/outputs
+    ! - simulate 2 nodes to ensure proper indexing--all zero inputs/outputs
+    ! - single node--integer-valued inputs (should remain unchanged)
+    ! - simulate 2 nodes to ensure proper indexing--integer-valued inputs
+    ! - simulate 2 nodes to ensure proper indexing--randomly-generated real-valued inputs
 
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------

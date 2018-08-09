@@ -4036,7 +4036,7 @@ END SUBROUTINE BD_GA2
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the predicted values (initial guess)
 !! of u,v,acc, and xcc in generalized-alpha algorithm.
-!! This follows Eq's 14(a)-(c) in Dymore User's Manual--<em>The generalized-\f$\alpha\f$ time integration scheme</em>, Equations 9, 11, 13. \n
+!! This follows Eq's 14(a)-(c) in Dymore User's Manual--<em>The generalized-\f$\alpha\f$ time integration scheme</em>. \n
 !! http://www.dymoresolutions.com/UsersManual/AnalysisControls/GeneralizedAlpha.pdf
 SUBROUTINE BD_TiSchmPredictorStep( x, OtherState, dt, coef, node_total )
    REAL(DbKi),                   INTENT(IN   ) :: dt         !< module dt
@@ -4250,7 +4250,9 @@ END SUBROUTINE BD_DynamicSolutionGA2
 !> This subroutine updates the 1) displacements/rotations(uf)
 !! 2) linear/angular velocities(vf); 3) linear/angular accelerations(af); and
 !! 4) algorithmic accelerations(xf) given the increments obtained through
-!! N-R algorithm
+!! N-R algorithm.
+!! This is done according to Eq's 28(a)-(d) in Dymore User's Manual--<em>The generalized-\f$\alpha\f$ time integration scheme</em>. \n
+!! http://www.dymoresolutions.com/UsersManual/AnalysisControls/GeneralizedAlpha.pdf
 SUBROUTINE BD_UpdateDynamicGA2( node_total, coef, Solution, x, OtherState )
 
    INTEGER(IntKi),               INTENT(IN   ) :: node_total     !< Total number of finite element (GLL) nodes
