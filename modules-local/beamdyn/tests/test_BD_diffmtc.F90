@@ -1,7 +1,17 @@
 @test
 subroutine test_BD_diffmtc()
     ! branches to test
-    ! - 2 node, 1 element
+    ! - 2 nodes/quad pts--simple case with analytic solution
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BD_diffmtc(), the shape function (Shp) and its derivative (ShpDer) are
+    ! computed at the quadrature points for all nodes, using the quadrature point
+    ! locations (in the natural frame [QPtN]) and the GLL nodes.
+    ! This test verifies the the above quantities are calculated properly for
+    ! a relatively simple case with an analytic solution.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn
@@ -10,11 +20,10 @@ subroutine test_BD_diffmtc()
 
     implicit none
 
-    integer                    :: n, i
     integer(IntKi)             :: nqp, nodes_per_elem
     real(BDKi), allocatable    :: QPtN(:)
-    real(BDKi), allocatable    :: test_shape(:, :), test_shapederivative(:, :)
-    real(BDKi), allocatable    :: baseline_shape(:, :), baseline_shapederivative(:, :)
+    real(BDKi), allocatable    :: Shp(:, :), ShpDer(:, :)
+    real(BDKi), allocatable    :: baseline_Shp(:, :), baseline_ShpDer(:, :)
     real(BDKi), allocatable    :: gll_nodes(:)
 
     integer(IntKi)             :: ErrStat
@@ -32,7 +41,7 @@ subroutine test_BD_diffmtc()
 
 
     ! --------------------------------------------------------------------------
-    testname = "2 node, 1 element; all quadrature points are at GLL nodes:"
+    testname = "2 nodes/quad pts--simple case with analytic solution:"
 
     ! the shape functions should be:
     ! h1(-1) = 1,  h1(+1) = 0
@@ -55,31 +64,30 @@ subroutine test_BD_diffmtc()
     ! shpder(2,:) =  0.5,  0.5
 
     nodes_per_elem = 2
-    nqp = 2
-    n = nodes_per_elem
+    nqp            = 2
 
-    call AllocAry(test_shape, nodes_per_elem, nqp, "test_shape", ErrStat, ErrMsg)
-    call AllocAry(test_shapederivative, nodes_per_elem, nqp, "test_shapederivative", ErrStat, ErrMsg)
+    call AllocAry(Shp,             nodes_per_elem, nqp,            'Shp',              ErrStat, ErrMsg)
+    call AllocAry(ShpDer,          nodes_per_elem, nqp,            'ShpDer',           ErrStat, ErrMsg)
+    call AllocAry(QPtN,            nodes_per_elem,                 'QPtN',             ErrStat, ErrMsg)
+    call AllocAry(gll_nodes,       nodes_per_elem,                 'GLL points array', ErrStat, ErrMsg)
+    call AllocAry(baseline_Shp,    nodes_per_elem, nqp,            'baseline_Shp',     ErrStat, ErrMsg)
+    call AllocAry(baseline_ShpDer, nodes_per_elem, nqp,            'baseline_ShpDer',  ErrStat, ErrMsg)
+    
 
-    call AllocAry(QPtN, nodes_per_elem, 'QPtN', ErrStat, ErrMsg)
-    QPtN = (/ -1.0, 1.0 /)
-
-    call AllocAry(gll_nodes, n, "GLL points array", ErrStat, ErrMsg)
+    QPtN      = (/ -1.0, 1.0 /)
     gll_nodes = (/ -1.0, 1.0 /)
 
-    call BD_diffmtc(nqp, nodes_per_elem, QPtN, GLL_nodes, test_shape, test_shapederivative)
+    baseline_Shp(1,:)    = (/  1.0,  0.0 /)
+    baseline_Shp(2,:)    = (/  0.0,  1.0 /)
+    baseline_ShpDer(1,:) = (/ -0.5, -0.5 /)
+    baseline_ShpDer(2,:) = (/  0.5,  0.5 /)
 
-    call AllocAry(baseline_shape, nqp, nodes_per_elem, "baseline_shape", ErrStat, ErrMsg)
-    call AllocAry(baseline_shapederivative, nqp, nodes_per_elem, "baseline_shapederivative", ErrStat, ErrMsg)
-    baseline_shape(1,:) = (/ 1.0, 0.0 /)
-    baseline_shape(2,:) = (/ 0.0, 1.0 /)
-    baseline_shapederivative(1,:) = (/ -0.5, -0.5 /)
-    baseline_shapederivative(2,:) = (/  0.5,  0.5 /)
+    call BD_diffmtc(nqp, nodes_per_elem, QPtN, GLL_nodes, Shp, ShpDer)
 
-    tolerance = AdjustTol(accuracy, baseline_shape)
-    @assertEqual(baseline_shape, test_shape, tolerance, testname)
-    tolerance = AdjustTol(accuracy, baseline_shapederivative)
-    @assertEqual(baseline_shapederivative, test_shapederivative, tolerance, testname)
+    tolerance = AdjustTol(accuracy, baseline_Shp)
+    @assertEqual(baseline_Shp, Shp, tolerance, testname)
+    tolerance = AdjustTol(accuracy, baseline_ShpDer)
+    @assertEqual(baseline_ShpDer, ShpDer, tolerance, testname)
 
     ! --------------------------------------------------------------------------
 
