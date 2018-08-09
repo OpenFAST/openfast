@@ -1,6 +1,18 @@
 @test
 subroutine test_ExtractRelativeRotation()
-    ! this is actually an integration test not a unit test...
+    ! test branches
+    ! - static simple beam under gravity--identity input/global rotation matrix and zero global CRV
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In ExtractRelativeRotation(), the relative CRV (WM parameters) is computed
+    ! from a given rotation matrix using the global rotation matrix and CRV.
+    ! This test verifies that this happens correctly for the trivial case of
+    ! identity input/global rotation matrix and zero global CRV.
+    ! NOTE: This is probably more of an integration test, as the subroutine
+      ! mainly relies on calls to BD_CrvExtractCrv() and BD_CrvCompose().
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn_Subs
@@ -30,7 +42,7 @@ subroutine test_ExtractRelativeRotation()
 
 
     ! --------------------------------------------------------------------------
-    testname = "static simple beam under gravity:"
+    testname = "static simple beam under gravity--identity input/global rotation matrix and zero global CRV:"
 
     Glb_crv = (/ 0.0, 0.0, 0.0 /)
     GlbRot = identity()
