@@ -1,8 +1,21 @@
 @test
 subroutine test_BDrot_to_FASTdcm()
     ! test branches
-    ! - zero blade rotation CRV, identity global rotation tensor, zero global rotation CRV--yields identity DCM
-    ! NOTE: this is probably more of an integration test
+    ! - zero relative rotation CRV, identity global rotation tensor, zero global rotation CRV--yields identity DCM
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In BDrot_to_FASTdcm(), the relative rotation CRV (rr) is first rotated to
+    ! the global frame, using GlbRot, then composed with the global CRV (Glb_crv),
+    ! and then a rotation matrix is formed using this composed CRV, which is 
+    ! transposed into a DCM.
+    ! This test verifies that this happens correctly for the trivial case of
+    ! zero relative rotation and identity global rotation tensor.
+    ! NOTE: This is probably more of an integration test, as the subroutine
+      ! mainly relies on calls to BD_CrvCompose() and BD_CrvMatrixR(). Also,
+      ! it doesn't appear to ever be called.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn_Subs
@@ -33,7 +46,7 @@ subroutine test_BDrot_to_FASTdcm()
 
 
     ! --------------------------------------------------------------------------
-    testname = "zero blade rotation CRV, identity global rotation tensor, zero global rotation CRV--yields identity DCM:"
+    testname = "zero relative rotation CRV, identity global rotation tensor, zero global rotation CRV--yields identity DCM:"
 
     call initialize_vars_base()
 
