@@ -272,12 +272,10 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    InitOut%dZ_low     = gridSpacing(3)
    
    NumGrid_low        = p%nX_Low*p%nY_Low*p%nZ_Low
-   p%n_wind_min = 100
    
    p%dXYZ_Low = gridSpacing
-   p%dpol = (gridSpacing(1)+gridSpacing(2)+gridSpacing(3))/3.d0
-   !p%n_wind_max = ceiling(30.0_ReKi*pi*(2.0_ReKi*p%C_ScaleDiam*p%r(p%NumRadii-1))**2*p%dt/(gridSpacing(1)*gridSpacing(2)*gridSpacing(3)))
-   p%n_rp_max = ceiling(pi*((p%C_Meander*(p%r(p%NumRadii-1)+p%dpol))/p%dpol)**2.d0)
+   p%dpol = (gridSpacing(1)+gridSpacing(2)+gridSpacing(3))/3.0_ReKi
+   p%n_rp_max = ceiling(pi*((p%C_Meander*(p%r(p%NumRadii-1)+p%dpol))/p%dpol)**2.0_ReKi)
       ! Grid runs from (X0_low, Y0_low, Z0_low) to (X0_low + (p%nX_Low-1)*dX_low, Y0_low+ (p%nY_Low-1)*dY_low, Z0_low+ (p%nZ_Low-1)*dZ_low)
       ! (0,0,0) to (180,180,180) 
      
@@ -479,14 +477,14 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
          do n=0,p%NumDT-1  ! We have already checked the first high-res files associated with n=0, but need to check the remaining, so for simplicity of code we will repeat the check on the first file
   
                ! We only have one high res input for for the very last low res timestep
-            if ( (n) == (p%NumDT) ) then !!KLS -- removed (-1)
+            if ( n == (p%NumDT-1) ) then
                n_high_low = 1
             else
                n_high_low = p%n_high_low
             end if
             
             do nh=1,n_high_low
-               nhigh = nh+n*p%n_high_low!-1 -- KLS -- removed -1
+               nhigh = nh+n*p%n_high_low-1
                FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(nhigh))//".vtk"  !TODO: Should the turbine numbers be padding with leading zero(es)? 
                Un = -1 ! Set to force closing of file on return
                call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 

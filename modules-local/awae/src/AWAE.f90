@@ -191,19 +191,14 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    integer(IntKi),                 intent(  out)  :: errStat     !< Error status of the operation
    character(*),                   intent(  out)  :: errMsg      !< Error message if errStat /= ErrID_None
    
-   integer(IntKi)      :: nx, ny, nz, nt, np, nw, nx_low, ny_low, nz_low, nr, npsi, nrpsi, nrp, wamb, iwsum !< loop counters
+   integer(IntKi)      :: nx, ny, nz, nt, np, nw, nx_low, ny_low, nz_low, nr, npsi, wamb, iwsum !< loop counters
    integer(IntKi)      :: nXYZ_low, n_wake, n_r_polar, n_psi_polar       !< accumulating counters
    real(ReKi)          :: xhatBar_plane(3)       !< 
    real(ReKi)          :: x_end_plane
    real(ReKi)          :: x_start_plane
    real(ReKi)          :: r_vec_plane(3)
-   real(ReKi)          :: r_vec_polar(3)    !!KLS -- added
-   real(ReKi)          :: psi_vec_polar(3)  !!KLS -- added
    real(ReKi)          :: tmp_xhatBar_plane
    real(ReKi)          :: r_tmp_plane
-   real(ReKi)          :: r_tmp_polar      !!KLS -- added
-   real(ReKi)          :: psi_tmp_polar    !!KLS -- added
-   real(ReKi)          :: D_wake_tmp
    real(ReKi)          :: Vx_wake_tmp
    real(ReKi)          :: Vr_wake_tmp(3)
    real(ReKi)          :: Vr_term(3)
@@ -211,30 +206,26 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: Vsum_low(3)
    real(ReKi)          :: p_tmp_plane(3)
    real(ReKi)          :: tmp_vec(3)
-   real(ReKi)          :: Vave_amb_low_norm
+   real(ReKi)          :: Vave_amb_low_norm, Vamb_lowpol_tmp(3), Vdist_lowpol_tmp(3)
    real(ReKi)          :: delta, deltad
-   real(ReKi)          :: wsum_tmp
+   real(ReKi)          :: wsum_tmp, w
    real(ReKi)          :: tmp_x,tmp_y,tmp_z !, tm1, tm2
-   real(ReKi)          :: xxplane(3), xyplane(3), yyplane(3), yxplane(3), psi_polar, r_polar, p_polar(3)  !!!KLS -- added
-   real(ReKi)          :: yxplane_Y(3), yzplane_Y(3), xyplane_norm     !!!KLS -- added
-   real(ReKi)          :: xplane_sq, yplane_sq, xysq_Z(3), xzplane_X(3), yzplane(3), tmp_yhat_plane(3), tmp_zhat_plane(3)   !!!KLS -- added
-   real(ReKi), ALLOCATABLE :: tmp_rhat_plane(:,:), tmp_xhat_plane(:,:)!, tmp_yhat_plane(:,:,:), tmp_zhat_plane(:,:,:)    !!KLS -- added yhat and zhat
-   real(ReKi), ALLOCATABLE, DIMENSION(:)     :: Vbar_amb_low
-   real(ReKi), ALLOCATABLE, DIMENSION(:,:,:) :: dist_low, wgt!, psi_polar, r_polar
+   real(ReKi)          :: xxplane(3), xyplane(3), yyplane(3), yxplane(3), psi_polar, r_polar, p_polar(3)
+   real(ReKi)          :: yzplane_Y(3), xyplane_norm
+   real(ReKi)          :: xplane_sq, yplane_sq, xysq_Z(3), xzplane_X(3), tmp_yhat_plane(3), tmp_zhat_plane(3)
+   real(ReKi), ALLOCATABLE :: tmp_rhat_plane(:,:), tmp_xhat_plane(:,:)
    real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vr_wake(:)
    integer(IntKi)      :: ILo
-   integer(IntKi)      :: maxPln, tmpPln !!KLS -- added tmpPln for indexin -- not needed
-   integer(IntKi)      :: i,np1,errStat2,tmp_N_wind, tmp_N_rp
+   integer(IntKi)      :: maxPln, tmpPln
+   integer(IntKi)      :: i,np1,errStat2
    character(*), parameter   :: RoutineName = 'LowResGridCalcOutput' 
-   logical             :: boundary_error, within
+   logical             :: within
   
    errStat = ErrID_None
    errMsg  = ""
-   boundary_error = .FALSE.
 
    maxPln =  min(n,p%NumPlanes-2)
-   tmpPln = min(p%NumPlanes-1, n+1)
-   !PRINT*, 'tmpPln: ', tmpPln
+   tmpPln =  min(p%NumPlanes-1, n+1)
    
    
    
@@ -252,24 +243,17 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vx_wake.', errStat, errMsg, RoutineName )
    allocate ( tmp_Vr_wake    ( 1:p%NumTurbines ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vr_wake.', errStat, errMsg, RoutineName )
-
-   !allocate ( tmp_yhat_plane ( 3,0:p%NumPlanes-1, 1:p%NumTurbines ), STAT=errStat2 )
-   !    if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_yhat_plane.', errStat, errMsg, RoutineName )
-   !allocate ( tmp_zhat_plane ( 3,0:p%NumPlanes-1, 1:p%NumTurbines ), STAT=errStat2 )
-   !    if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_zhat_plane.', errStat, errMsg, RoutineName )
-
-
    if (ErrStat >= AbortErrLev) return
 
  
       ! Loop over the entire grid of low resolution ambient wind data to compute:
       !    1) the disturbed flow at each point and 2) the averaged disturbed velocity of each wake plane
    
-   !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, D_wake_tmp, xhatBar_plane, x_end_plane,nt,np,ILo,x_start_plane,delta,deltad,p_tmp_plane,tmp_vec,r_vec_plane,r_tmp_plane,tmp_xhatBar_plane, Vx_wake_tmp,Vr_wake_tmp,nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,wsum_tmp,tmp_xhat_plane,tmp_rhat_plane,tmp_Vx_wake,tmp_Vr_wake,tmp_N_wind,i,np1,errStat2) SHARED(m,u,p,maxPln,errStat,errMsg,boundary_error) DEFAULT(NONE) 
+   !$OMP PARALLEL DO PRIVATE(nx_low,ny_low,nz_low, nXYZ_low, n_wake, xhatBar_plane, x_end_plane,nt,np,ILo,x_start_plane,delta,deltad,p_tmp_plane,tmp_vec,r_vec_plane,r_tmp_plane,tmp_xhatBar_plane, Vx_wake_tmp,Vr_wake_tmp,nw,Vr_term,Vx_term,tmp_x,tmp_y,tmp_z,tmp_xhat_plane,tmp_rhat_plane,tmp_Vx_wake,tmp_Vr_wake,i,np1,errStat2) SHARED(m,u,p,maxPln,errStat,errMsg) DEFAULT(NONE) 
    !do nz_low=0, p%nZ_low-1
    !   do ny_low=0, p%yZ_low-1
    !      do nx_low=0, p%nX_low-1
-   nXYZ_low=0
+   !         nXYZ_low=0
    do i = 0 , p%nX_low*p%nY_low*p%nZ_low - 1
 
             nx_low = mod(     i                        ,p%nX_low)
@@ -348,15 +332,10 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         tmp_xhat_plane(:,n_wake) = tmp_xhat_plane(:,n_wake) / TwoNorm(tmp_xhat_plane(:,n_wake))
                         xhatBar_plane = xhatBar_plane + abs(tmp_Vx_wake(n_wake))*tmp_xhat_plane(:,n_wake)
                      end if  ! if the point is within radial finite-difference grid
+                   exit
                 end if
-            end do
-        end do
-                     
-                        ! test if the point is within the radius of the wake volume cylinder                   
-                     
-!!!!!!!!!!!BEGIN REMOVE - KLS!!!!!!!!!!
- !!!!!!!!!!!END REMOVE - KLS!!!!!!!!!!
-!PRINT*, 'AFTER 1ST REMOVE'
+            end do  ! do np = 0, p%NumPlanes-2
+        end do      ! do nt = 1,p%NumTurbines
 
         if (n_wake > 0) then
            tmp_xhatBar_plane = TwoNorm(xhatBar_plane)
@@ -384,140 +363,137 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    !end do       ! do nz_low=0, p%nZ_low-1 
    !$OMP END PARALLEL DO
 
-   if(boundary_error) then                           
-      call SetErrStat( ErrID_Fatal, 'A wake plane volume contains more points than the maximum predicted points: 30*pi*DT(2*C_ScaleDiam*r*[Nr-1])**2/(dx*dy*dz)', errStat, errMsg, RoutineName )
-      return  
-   endif
-   !!!!!BEGIN ADDITIONS KLS !!!!!!!
-!PRINT*, 'BEGINNING OF 1ST ADDITION'
-   do nt = 1,p%NumTurbines  !!KLS -- same
-      do np = 0,tmpPln   !tmpPln  !!KLS -- Added
-!PRINT*, 'np: ', np
-         !!Defining yhat and zhat ###BEGINNING OF ADD KLS
+   do nt = 1,p%NumTurbines
+      do np = 0,tmpPln
+
+      !!Defining yhat and zhat
          xxplane = (/u%xhat_plane(1,np,nt), 0.0_ReKi, 0.0_ReKi/)
          xyplane = (/0.0_ReKi, u%xhat_plane(1,np,nt), 0.0_ReKi/)
          yyplane = (/0.0_ReKi, u%xhat_plane(2,np,nt), 0.0_ReKi/)
          yxplane = (/u%xhat_plane(2,np,nt), 0.0_ReKi, 0.0_ReKi/)
          xyplane_norm = TwoNorm(xxplane+yyplane)
-        IF (EqualRealNos(xyplane_norm, 0.0_ReKi)) THEN
-            return
-        END IF
-         xplane_sq = u%xhat_plane(1,np,nt)**2.0_ReKi
-         yplane_sq = u%xhat_plane(2,np,nt)**2.0_ReKi
-         xysq_Z = (/0.0_ReKi, 0.0_ReKi, xplane_sq+yplane_sq/)
-         xzplane_X = (/u%xhat_plane(1,np,nt)*u%xhat_plane(3,np,nt), 0.0_ReKi, 0.0_ReKi/)
-         yzplane_Y = (/0.0_ReKi, u%xhat_plane(2,np,nt)*u%xhat_plane(3,np,nt), 0.0_ReKi/)
-         tmp_yhat_plane = (xyplane-yxplane)/xyplane_norm
 
-         tmp_zhat_plane = (xysq_Z-xzplane_X-yzplane_Y)/xyplane_norm
-         !!                       ###ENDING OF ADD KLS
-         if ( EqualRealNos(REAL(np), 0.0_ReKi) ) then  !!KLS -- Added
-            Vsum_low  = 0.0_ReKi
-            iwsum = 0!.0_ReKi      !!KLS -- Added
-            n_r_polar = FLOOR((p%C_Meander*u%D_wake(np,nt))/(2.0_ReKi*p%dpol))  !!KLS -- Added
+         IF (EqualRealNos(xyplane_norm, 0.0_ReKi)) THEN ! This should only be true during the first call to AWAE_CalcOutput at model initialization
 
-!PRINT*, 'n_r_polar: ', n_r_polar
-nrpsi=0
-            do nr = 0,n_r_polar   !!KLS -- Added
-               r_polar = DBLE(nr)*p%dpol  !!KLS -- Added
-               n_psi_polar = MAX(CEILING(2.0_ReKi*pi*DBLE(nr))-1.0_ReKi,0.0_ReKi)  !!KLS -- Added
-!PRINT*, 'n_psi_polar: ', n_psi_polar
+            y%Vx_wind_disk(nt) = 0.0_ReKi
+            y%TI_amb(      nt) = 0.0_ReKi
+            y%V_plane(:,np,nt) = 0.0_ReKi
 
-               do npsi = 0,n_psi_polar
-                  nrpsi = nr + npsi
-                !PRINT*, 'nrpsi1: ', nrpsi
-                  psi_polar = (2.0_ReKi*pi*DBLE(npsi))/(DBLE(n_psi_polar)+1.0_ReKi)
-!PRINT*, 'p_plane: ', u%p_plane(:,np,nt)
-!PRINT*, 'r_polar: ', r_polar(nr,np,nt)
-!PRINT*, 'psi_polar: ', psi_polar(nr,np,nt)
-                  p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*tmp_yhat_plane + r_polar*SIN(psi_polar)*tmp_zhat_plane
-!PRINT*, 'nr: ', nr, 'np: ', npsi, 'nt: ', nt
-!PRINT*, 'p_polar shape: ', SHAPE(p_polar)
-!PRINT*, 'p_polar(:,nr,np,nt): ', p_polar(:,nr,np,nt)
-!PRINT*, 'p%Grid_Low(:,1): ', p%Grid_Low(:,1)
-                  m%Vamb_lowpol(:,nrpsi) = INTERP3D(p_polar,p%Grid_Low(:,1),p%dXYZ_Low,m%Vamb_low,within,p%nX_low, p%nY_low, p%nZ_low)
-                  if ( within ) then
-                     Vsum_low = Vsum_low + m%Vamb_lowpol(:,nrpsi)
-                     iwsum = iwsum + 1!.0_ReKi
-                     m%Vamb_lowpol(:,iwsum) = m%Vamb_lowpol(:,nrpsi)!!!!!! I am confused on what the indexing should be here
-                  end if
-               end do
-            end do
-!!!! Changing order a bit to use the EqualRealNos function
-            if ( EqualRealNos(REAL(iwsum), 0.0_ReKi) ) then !I'm confused by indexing of wsum...for the past version it was always wsum(0)...is that still the case? If not, what should the indexing be?
-               call SetErrStat( ErrID_Fatal, 'The sum of the weightings for ambient spatial-averaging in the low-resolution domain associated with the wake volume at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
-               return
-            else
-      
-               Vsum_low = Vsum_low/DBLE(iwsum)
-               Vave_amb_low_norm  = TwoNorm(Vsum_low)
+         ELSE                                           ! All subsequent calls to AWAE_CalcOutput
 
+             xplane_sq = u%xhat_plane(1,np,nt)**2.0_ReKi
+             yplane_sq = u%xhat_plane(2,np,nt)**2.0_ReKi
+             xysq_Z = (/0.0_ReKi, 0.0_ReKi, xplane_sq+yplane_sq/)
+             xzplane_X = (/u%xhat_plane(1,np,nt)*u%xhat_plane(3,np,nt), 0.0_ReKi, 0.0_ReKi/)
+             yzplane_Y = (/0.0_ReKi, u%xhat_plane(2,np,nt)*u%xhat_plane(3,np,nt), 0.0_ReKi/)
+             tmp_yhat_plane = (xyplane-yxplane)/xyplane_norm
+             tmp_zhat_plane = (xysq_Z-xzplane_X-yzplane_Y)/xyplane_norm
+
+             
+             ! Calculate y%Vx_wind_disk and y%TI_amb at the rotor disk
+             
+             if ( np == 0 ) then
+            
+                Vsum_low  = 0.0_ReKi
+                iwsum = 0
+                n_r_polar = FLOOR((p%C_Meander*u%D_wake(np,nt))/(2.0_ReKi*p%dpol))
+            
+                do nr = 0,n_r_polar
                
-               if ( EqualRealNos(Vave_amb_low_norm, 0.0_ReKi ) )  then
-        PRINT*, ''
-        PRINT*, 'Vsum_low After: ', Vsum_low
-        PRINT*, 'iwsum: ', iwsum
-        PRINT*, 'Vave_amb_low_norm: ', Vave_amb_low_norm
-                  call SetErrStat( ErrID_Fatal, 'Average ambient wind of low-res grid for turbine number '//trim(num2lstr(nt))//' is <= zero.', errStat, errMsg, RoutineName )
-                  return
-               else
-                  y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,np,nt),Vsum_low )  !!!Double-check that this is right
-                  y%TI_amb(nt) = 0.0_ReKi
-                  do wamb = 1, iwsum
-                     y%TI_amb(nt) = y%TI_amb(nt)+TwoNorm(m%Vamb_lowpol(:,wamb)-Vsum_low)**2.0_ReKi
-                  end do  !m%w_AMB
+                   r_polar = REAL(nr,ReKi)*p%dpol
+                   n_psi_polar = MAX(CEILING(TwoPi*REAL(nr,ReKi))-1,0)
+               
+                   do npsi = 0,n_psi_polar
+                  
+                      psi_polar = (TwoPi*REAL(npsi,ReKi))/(REAL(n_psi_polar+1,ReKi))
+                      p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*tmp_yhat_plane + r_polar*SIN(psi_polar)*tmp_zhat_plane
+                      Vamb_lowpol_tmp = INTERP3D(p_polar,p%Grid_Low(:,1),p%dXYZ_Low,m%Vamb_low,within,p%nX_low, p%nY_low, p%nZ_low)
+                      if ( within ) then
+                         Vsum_low = Vsum_low + Vamb_lowpol_tmp
+                         iwsum = iwsum + 1
+                         m%Vamb_lowpol(:,iwsum) = Vamb_lowpol_tmp
+                      end if
+               
+                   end do
+            
+                end do
 
-                  y%TI_amb(nt) = sqrt(y%TI_amb(nt)/(3.0_ReKi*DBLE(iwsum)))/Vave_amb_low_norm
-               end if !Vave_amb_low_norm
-            end if
+                if ( iwsum == 0 ) then
+
+                   call SetErrStat( ErrID_Fatal, 'The wake plane for turbine '//trim(num2lstr(nt))//' has left the low-resolution domain (i.e., there are no points in the polar grid that lie within the low-resolution domain).', errStat, errMsg, RoutineName )
+                   return
+
+                else
+      
+                   Vsum_low = Vsum_low/REAL(iwsum,ReKi)
+                   Vave_amb_low_norm  = TwoNorm(Vsum_low)
+                   if ( EqualRealNos(Vave_amb_low_norm, 0.0_ReKi ) )  then
+                      call SetErrStat( ErrID_Fatal, 'The magnitude of the spatial-averaged ambient wind speed in the low-resolution domain associated with the wake plane at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
+                      return
+                   else
+                      y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,np,nt),Vsum_low )
+                      y%TI_amb(nt) = 0.0_ReKi
+                      do wamb = 1, iwsum
+                         y%TI_amb(nt) = y%TI_amb(nt)+TwoNorm(m%Vamb_lowpol(:,wamb)-Vsum_low)**2.0_ReKi
+                      end do  !wamb
+                      y%TI_amb(nt) = sqrt(y%TI_amb(nt)/(3.0_ReKi*REAL(iwsum,ReKi)))/Vave_amb_low_norm
+                   end if !Vave_amb_low_norm
+            
+                 end if
+         
+             end if
+
+             
+             ! Calculate y%V_plane
+             
+             y%V_plane(:,np,nt) = 0.0_ReKi
+             wsum_tmp = 0.0_ReKi
+             n_r_polar = FLOOR((p%C_ScaleDiam*u%D_wake(np,nt))/p%dpol)
+         
+             do nr = 0, n_r_polar
+            
+                r_polar = REAL(nr,ReKi)*p%dpol
+            
+                select case ( p%Mod_Meander )
+                case (MeanderMod_Uniform) 
+                   w = 1.0_ReKi
+                case (MeanderMod_TruncJinc)  
+                   w = jinc( r_polar/(p%C_Meander*u%D_wake(np,nt) ) )
+                case (MeanderMod_WndwdJinc) 
+                   w = jinc( r_polar/(p%C_Meander*u%D_wake(np,nt) ) )*jinc( r_polar/(2.0_ReKi*p%C_Meander*u%D_wake(np,nt) ) )
+                end select
+
+                n_psi_polar = MAX(CEILING(TwoPi*REAL(nr,ReKi))-1,0)
+            
+                do npsi = 0,n_psi_polar
+            
+                   psi_polar = (TwoPi*REAL(npsi,ReKi))/(REAL(n_psi_polar+1,ReKi))
+                   p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*tmp_yhat_plane + r_polar*SIN(psi_polar)*tmp_zhat_plane
+                   Vdist_lowpol_tmp = INTERP3D(p_polar,p%Grid_Low(:,1),p%dXYZ_Low,m%Vdist_low,within,p%nX_low, p%nY_low, p%nZ_low) 
+                   if ( within ) then
+                      y%V_plane(:,np,nt) = y%V_plane(:,np,nt) + w*Vdist_lowpol_tmp
+                      wsum_tmp = wsum_tmp + w
+                   end if
+
+                end do !npsi
+
+             end do!nr
+
+             if ( EqualRealNos(wsum_tmp, 0.0_ReKi) ) then
+                call SetErrStat( ErrID_Fatal, 'Wake plane '//trim(num2lstr(np))//' for turbine number '//trim(num2lstr(nt))//' has left the low-resolution domain (i.e., there are no points in the polar grid that lie within the low-resolution domain)', errStat, errMsg, RoutineName )
+                return
+             else
+                y%V_plane(:,np,nt) = y%V_plane(:,np,nt)/wsum_tmp
+             end if !!wsum_tmp
+
          end if
-   !!!!KLS -- begin final addition
-         y%V_plane(:,np,nt)   = 0.0_ReKi   !V_plane  For some reason had it Vsum_low before. changed to y%V_plane(:,np,nt)
-         wsum_tmp = 0.0_ReKi
 
-         n_r_polar = FLOOR((p%C_ScaleDiam*u%D_wake(np,nt))/(p%dpol))
-         nrpsi=0
-         do nr = 0, n_r_polar
-            r_polar = DBLE(nr)*p%dpol
-            select case ( p%Mod_Meander )
-              case (MeanderMod_Uniform) 
-                    m%w(   nr,np,nt) = 1.0_ReKi  !!Changed indexing from n_r_polar to nr!! 7.11.18
-               case (MeanderMod_TruncJinc)  
-                    m%w(   nr,np,nt) = jinc( r_polar/(p%C_Meander*u%D_wake(np,nt) ) )
-               case (MeanderMod_WndwdJinc) 
-                    m%w(   nr,np,nt) = jinc( r_polar/(p%C_Meander*u%D_wake(np,nt) ) )*jinc( r_polar/(2.0_ReKi*p%C_Meander*u%D_wake(np,nt) ) )
-            end select
-
-            n_psi_polar = MAX(CEILING(2.0_ReKi*pi*DBLE(nr))-1.0_ReKi,0.0_ReKi)
-            do npsi = 0,n_psi_polar
-               nrpsi = nr+npsi
-               psi_polar = (2.0_ReKi*pi*DBLE(npsi))/(DBLE(n_psi_polar)+1.0_ReKi)
-               p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*tmp_yhat_plane + r_polar*SIN(psi_polar)*tmp_zhat_plane
-               m%Vamb_lowpol(:,nrpsi) = INTERP3D(p_polar,p%Grid_Low(:,1),p%dXYZ_Low,m%Vamb_low,within,p%nX_low, p%nY_low, p%nZ_low)!! Changed from nr to npsi 7.11.17 
-               if ( within ) then
-                  y%V_plane(:,np,nt) = y%V_plane(:,np,nt) + m%w(nr,np,nt)*m%Vamb_lowpol(:,nrpsi)
-                  wsum_tmp = wsum_tmp + m%w(nr,np,nt)
-               end if
-            end do !npsi
-
-         end do!nr
-
-
-         if ( EqualRealNos(wsum_tmp, 0.0_ReKi) ) then
-         !   call SetErrStat( ErrID_Fatal, 'Wake plane '//trim(num2lstr(np))//' for turbine number '//trim(num2lstr(nt))//' has completely left the low-resolution domain (i.e., there are no points in the polar grid that lie within the low-resolution domain. Location2', errStat, errMsg, RoutineName )
-         !   return
-        PRINT*, 'Wake plane '//trim(num2lstr(np))//' for turbine number '//trim(num2lstr(nt))//' has completely left the low-resolution domain (i.e., there are no points in the polar grid that lie within the low-resolution domain. but am not crashing the code right now.'
-         else
-            y%V_plane(:,np,nt) = y%V_plane(:,np,nt)/wsum_tmp
-         end if !!wsum_tmp
       end do
    end do
-!PRINT*, 'END OF FINAL ADDITION'
-!!!!!FINAL REMOVAL -- KLS
 
 !#ifdef _OPENMP  
 !   tm2 =  omp_get_wtime() 
-!   write(*,*)  'Total AWAELowResGridCalcOutput using '//trim(num2lstr(tm2-tm1))//' seconds'
+!   write(*,*)  'Total AWAE:LowResGridCalcOutput using '//trim(num2lstr(tm2-tm1))//' seconds'
 
 !#endif 
 
@@ -525,9 +501,6 @@ nrpsi=0
    if (allocated(tmp_rhat_plane)) deallocate(tmp_rhat_plane)
    if (allocated(tmp_Vx_wake)) deallocate(tmp_Vx_wake)
    if (allocated(tmp_Vr_wake)) deallocate(tmp_Vr_wake)
-   
-   !if (allocated(tmp_yhat_plane)) deallocate(tmp_yhat_plane)
-   !if (allocated(tmp_zhat_plane)) deallocate(tmp_zhat_plane)
 
 end subroutine LowResGridCalcOutput
 
@@ -572,8 +545,8 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    maxPln =  min(n,p%NumPlanes-2)
      
       ! We only need one high res file for that last simulation time
-   if ( (n/p%n_high_low) == (p%NumDT) ) then  !KLS -- removed (-1) from p%NumDT
-      n_high_low = 1
+   if ( (n/p%n_high_low) == (p%NumDT-1) ) then
+      n_high_low = 0
    else
       n_high_low = p%n_high_low
    end if
@@ -655,7 +628,6 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                      end do     ! np = 0, p%NumPlanes-2
                   end if    ! nt /= nt2          
                end do        ! nt2 = 1,p%NumTurbines
-        !PRINT*, 'n_wake: ', n_wake
                if (n_wake > 0) then
                   
                   tmp_xhatBar_plane = TwoNorm(xhatBar_plane)
@@ -675,7 +647,7 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                   end do
                      ! [I - XX']V = V - (V dot X)X
                   Vr_wake_tmp = Vr_wake_tmp - dot_product(Vr_wake_tmp,xhatBar_plane)*xhatBar_plane 
-                  do n_hl=0, n_high_low  !! KLS -- removed (-1)
+                  do n_hl=0, n_high_low
                      y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) = y%Vdist_high(nt)%data(:,nx_high,ny_high,nz_high,n_hl) + real(Vr_wake_tmp - xhatBar_plane*sqrt(Vx_wake_tmp),SiKi)
                   end do
                      
@@ -816,7 +788,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       ! This will establish certain parameters as well as all of the initialization outputs
       ! Sets:
       ! Parameters: nX_low, nY_low, nZ_low, nX_high, nY_high, nZ_high, Grid_low, 
-      !             Grid_high, n_high_low, n_wind_max, n_wind_min
+      !             Grid_high, n_high_low, n_rp_max
       ! InitOutput: X0_high, Y0_high, Z0_high, dX_high, dY_high, dZ_high, nX_high, nY_high, nZ_high
    
 
@@ -904,8 +876,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%xhat_plane.', errStat, errMsg, RoutineName )     
    allocate ( u%p_plane   (3,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%p_plane.', errStat, errMsg, RoutineName )  
-   !allocate ( u%p_polar   (3,0:p%n_rp_max,0:p%NumPlanes-2,1:p%NumTurbines), STAT=ErrStat2 )  !!KLS -- added
-   !   if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%p_polar.', errStat, errMsg, RoutineName )
    allocate ( u%Vx_wake   (0:p%NumRadii-1,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for u%Vx_wake.', errStat, errMsg, RoutineName )  
    allocate ( u%Vr_wake   (0:p%NumRadii-1,0:p%NumPlanes-1,1:p%NumTurbines), STAT=ErrStat2 )
@@ -926,7 +896,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    allocate ( y%Vdist_High(1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vdist_High.', errStat, errMsg, RoutineName )  
    do i = 1, p%NumTurbines
-      allocate ( y%Vdist_High(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 )  !KS -- changed 4th dimension from "n_high_low-1" to "n_high_low"
+      allocate ( y%Vdist_High(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 )
          if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for y%Vdist_High%data.', errStat, errMsg, RoutineName ) 
       y%Vdist_High(i)%data    = 0.0_Siki
    end do
@@ -981,29 +951,17 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
  
    allocate ( m%Vamb_low   ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 ) 
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_low.', errStat, errMsg, RoutineName )  
-   allocate ( m%Vamb_lowpol   ( 3, 0:p%n_rp_max ) , STAT=errStat2 ) !!KLS -- changing 3rd index from -2 to -1
+   allocate ( m%Vamb_lowpol   ( 3, 0:p%n_rp_max ) , STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_lowpol.', errStat, errMsg, RoutineName )
    allocate ( m%Vdist_low  ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 ) 
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vdist_low.', errStat, errMsg, RoutineName ) 
       
-      
-   !allocate ( m%Vamb_high  ( 3, 0:p%nX_high-1, 0:p%nY_high-1, 0:p%nZ_high-1 ), STAT=errStat2 ) 
-   !   if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_High.', errStat, errMsg, RoutineName )  
-      
    allocate ( m%Vamb_high(1:p%NumTurbines), STAT=ErrStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_high.', errStat, errMsg, RoutineName )  
    do i = 1, p%NumTurbines
-         allocate ( m%Vamb_high(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 ) !!KLS -- changed 4th dimension form "n_high_low-1" to "n_high_low"
+         allocate ( m%Vamb_high(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 )
             if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_high%data.', errStat, errMsg, RoutineName ) 
    end do   
-   allocate ( m%N_wind     ( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%N_wind.', errStat, errMsg, RoutineName )  
-   !allocate ( m%N_rp     ( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )  !!KLS -- Added
-   !   if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%N_rp.', errStat, errMsg, RoutineName )
-   !allocate ( m%N_r_polar     ( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )  !!KLS -- Added
-   !   if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%N_r_polar.', errStat, errMsg, RoutineName )
-   !allocate ( m%N_p_polar     ( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )  !!KLS -- Added
-   !   if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%N_p_polar.', errStat, errMsg, RoutineName )
    allocate ( m%xhat_plane ( 3, 1:p%NumTurbines ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%xhat_plane.', errStat, errMsg, RoutineName )  
    allocate ( m%rhat_plane ( 3, 1:p%NumTurbines ), STAT=errStat2 ) 
@@ -1012,28 +970,6 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_wake.', errStat, errMsg, RoutineName )  
    allocate ( m%Vr_wake    ( 1:p%NumTurbines ), STAT=errStat2 ) 
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vr_wake.', errStat, errMsg, RoutineName )  
-      
-      
-   !allocate ( m%w          ( p%n_wind_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 )  !!KLS -- chaning 1st index of these variables below
-   !   if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%w.', errStat, errMsg, RoutineName )  
-   !allocate ( m%w_Amb      ( p%n_wind_max, 1:p%NumTurbines ), STAT=errStat2 ) 
-   !   if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%w_Amb.', errStat, errMsg, RoutineName )  
-   !allocate ( m%wsum       ( 0:p%NumPlanes-2 ), STAT=errStat2 ) 
-   !   if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%wsum.', errStat, errMsg, RoutineName )  
-
-   allocate ( m%w          ( 0:p%n_rp_max, 0:p%NumPlanes-1, 1:p%NumTurbines ), STAT=errStat2 ) !KLS -- changing 2nd index from -2 to -1
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%w.', errStat, errMsg, RoutineName )  
-   allocate ( m%w_Amb      ( 0:p%n_rp_max, 1:p%NumTurbines ), STAT=errStat2 )
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%w_Amb.', errStat, errMsg, RoutineName )
-   allocate ( m%wsum       ( 0:p%NumPlanes-1 ), STAT=errStat2 ) !!KLS -- same as above
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%wsum.', errStat, errMsg, RoutineName  )
-
-   allocate ( m%nx_wind    ( p%n_wind_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 )  !KS -- changing 2nd index from -2 to -1
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%nx_wind.', errStat, errMsg, RoutineName )  
-   allocate ( m%ny_wind    ( p%n_wind_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 ) !KS -- changing 2nd index from -2 to -1     
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%ny_wind.', errStat, errMsg, RoutineName )  
-   allocate ( m%nz_wind    ( p%n_wind_max, 0:p%NumPlanes-2, 1:p%NumTurbines ), STAT=errStat2 ) 
-      if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%nz_wind.', errStat, errMsg, RoutineName )  
    
    allocate ( m%parallelFlag( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%parallelFlag.', errStat, errMsg, RoutineName )
@@ -1157,8 +1093,8 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
 !   t1 = omp_get_wtime()  
 !#endif 
    
-   if ( (n+1) == (p%NumDT) ) then !!KLS -- removed (-1) from p%NumDT
-      n_high_low = 1
+   if ( (n+1) == (p%NumDT-1) ) then
+      n_high_low = 0
    else
       n_high_low = p%n_high_low
    end if
@@ -1175,7 +1111,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
    !#endif   
       
       do nt = 1,p%NumTurbines
-         do n_hl=0, n_high_low !!KLS -- removed (-1)
+         do n_hl=0, n_high_low
                ! read from file the ambient flow for the current time step
             call ReadHighResWindFile(nt, (n+1)*p%n_high_low + n_hl, p, m%Vamb_high(nt)%data(:,:,:,:,n_hl), errStat, errMsg)
                if ( errStat >= AbortErrLev ) then
@@ -1202,7 +1138,7 @@ subroutine AWAE_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errM
       ! Set the high-resoultion inflow wind velocities for each turbine
       do nt = 1,p%NumTurbines
          m%u_IfW_High%PositionXYZ = p%Grid_high(:,:,nt)
-         do n_hl=0, n_high_low   !!KLS -- removed (-1)
+         do n_hl=0, n_high_low
             call InflowWind_CalcOutput(t+p%dt+n_hl*p%DT_high, m%u_IfW_High, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, m%y_IfW_High, m%IfW, errStat, errMsg)
             if ( errStat >= AbortErrLev ) then
                return
@@ -1632,37 +1568,36 @@ end subroutine AWAE_TEST_CalcOutput
 FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ)
       !  I/O variables
          Real(ReKi), INTENT( IN    ) :: p(3)            !< Position where the 3D velocity field will be interpreted (m)
-         Real(SiKi), INTENT( IN    ) :: V(3,0:nX-1,0:nY-1,0:nZ-1)        !< 3D velocity field to be interpolated
-         INTEGER(IntKi), INTENT( IN    ) :: p0(3), nX, nY, nZ           !< Origin of the spatial domain (m)
+         Real(ReKi), INTENT( IN    ) :: p0(3)           !< Origin of the spatial domain (m)
          Real(ReKi), INTENT( IN    ) :: del(3)          !< XYZ-components of the spatial increment of the domain (m)
+         Real(SiKi), INTENT( IN    ) :: V(3,0:nX-1,0:nY-1,0:nZ-1)        !< 3D velocity field to be interpolated
+         INTEGER(IntKi), INTENT( IN    ) :: nX, nY, nZ      !< Size of XYZ spatial dimensions   
 
-         Real(ReKi) :: INTERP3D(3)!Vint(3)         !< Interpolated velocity (m/s)
+         Real(SiKi) :: INTERP3D(3)     !Vint(3)         !< Interpolated velocity (m/s)
          Logical,    INTENT(   OUT ) :: within          !< Logical flag indicating weather or not the input position lies within the domain (flag)
 
       !  Local variables
          INTEGER(IntKi)        :: i !loop counters
-         Real(ReKi)     :: f(3), N(8), Vtmp(3,8)
-         INTEGER(IntKi)        :: n_lo(3), n_hi(3)!, tmp(4)
+         Real(ReKi)            :: f(3), N(8)
+         Real(SiKi)            :: Vtmp(3,8)
+         INTEGER(IntKi)        :: n_lo(3), n_hi(3)
     
 
      !!! CHECK BOUNDS
-!PRINT*, 'p0: ', p0
-!PRINT*, 'Vshape: ', SHAPE(V)
    within = .TRUE.
-!  tmp=shape(V)
    do i = 1, 3
-      f(i) = (p(i)-DBLE(p0(i)))/del(i)
-      n_lo(i) = FLOOR(f(i))!+1  !! added +1 b/c that's what was done in IfW routine b/c arrays start at 1
-      n_hi(i) = n_lo(i)+1
-      f(i) = 2.0_ReKi*(f(i)-DBLE(n_lo(i)))-1.0_ReKi
-      if (( n_lo(i) .LT. 0) .OR. (n_hi(i) .GT. size(V,i+1)-1)) THEN
+      f(i) = (p(i)-p0(i))/del(i)
+      n_lo(i) = FLOOR(f(i))
+      n_hi(i) = n_lo(i)+1_IntKi
+      f(i) = 2.0_ReKi*( f(i)-REAL(n_lo(i),ReKi) )-1.0_ReKi  ! convert to value between -1 and 1 
+      if (( n_lo(i) < 0) .OR. (n_hi(i) > size(V,i+1)-1)) THEN
          within = .FALSE.
       END IF
    end do
+   
      !!! INTERPOLATE
-   INTERP3D = 0.0_ReKi
+   INTERP3D = 0.0_SiKi
    if (within) then
-!     PRINT*, 'within is true!'
       N(1) = ((1.0_ReKi-f(1))*(1.0_ReKi-f(2))*(1.0_ReKi-f(3)))/8.0_ReKi
       N(2) = ((1.0_ReKi+f(1))*(1.0_ReKi-f(2))*(1.0_ReKi-f(3)))/8.0_ReKi
       N(3) = ((1.0_ReKi-f(1))*(1.0_ReKi+f(2))*(1.0_ReKi-f(3)))/8.0_ReKi
@@ -1682,9 +1617,6 @@ FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ)
       do i=1,8
          INTERP3D(:) = INTERP3D(:) + N(i)*Vtmp(:,i)
       end do
-   !else      !!!!I took this part out b/c already initializing Vint to 0 before
-   !the loop
-   !   Vint = 0.0_ReKi    
    end if
 END FUNCTION
 

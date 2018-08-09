@@ -1528,7 +1528,7 @@ SUBROUTINE Farm_InitFAST( farm, WD_InitInp, AWAE_InitOutput, ErrStat, ErrMsg )
       FWrap_InitInp%nr            = WD_InitInp%NumRadii
       FWrap_InitInp%dr            = WD_InitInp%dr
       FWrap_InitInp%tmax          = farm%p%TMax
-      FWrap_InitInp%n_high_low    = farm%p%n_high_low
+      FWrap_InitInp%n_high_low    = farm%p%n_high_low + 1   ! Add 1 because the FAST wrapper uses an index that starts at 1
       FWrap_InitInp%dt_high       = farm%p%dt_high
      
       FWrap_InitInp%nX_high       = AWAE_InitOutput%nX_high
@@ -1998,20 +1998,12 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
       
          ! Loop over user-requested, velocity locations  
       do iVelPt = 1, farm%p%NWindVel        
-!PRINT*, 'iVelPt: ', iVelPt         
+
             ! Determine the requested pt in grid coordinates
          pt = (/farm%p%WindVelX(iVelPt), farm%p%WindVelY(iVelPt),farm%p%WindVelZ(iVelPt)/)
-!PRINT*, 'pt: ', pt
-!PRINT*, 'farm%p%X0_low: ', farm%p%X0_low, farm%p%dX_low
-!PRINT*, 'farm%p%X0_low: ', farm%p%Y0_low, farm%p%dY_low
-!PRINT*, 'farm%p%X0_low: ', farm%p%Z0_low, farm%p%dZ_low
-
          pt(1) = (pt(1) - farm%p%X0_low)/ farm%p%dX_low
          pt(2) = (pt(2) - farm%p%Y0_low)/ farm%p%dY_low
          pt(3) = (pt(3) - farm%p%Z0_low)/ farm%p%dZ_low
-      IF (pt(2) .le. 0) THEN !!KLS -- HACK HACK HACK
-        pt(2) = 1
-      END IF
          
             ! Ambient wind velocity (not including wakes) for point, pt,  in global coordinates (from the low-resolution domain), m/s
          call TrilinearInterpRegGrid(farm%AWAE%m%Vamb_low, pt, (/farm%p%nX_low,farm%p%nY_low,farm%p%nZ_low/), vel)

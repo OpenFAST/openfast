@@ -165,8 +165,7 @@ SUBROUTINE IfW_4Dext_CalcOutput(Time, PositionXYZ, p, Velocity, m, ErrStat, ErrM
       ! Step through all the positions and get the velocities
    DO PointNum = 1, NumPoints
 
-        !PRINT*, 'PointNum: ', PointNum
-        !PRINT*, 'Position: ', PositionXYZ(:,PointNum)
+
          ! Calculate the velocity for the position
       Velocity(:,PointNum) = Interp4D(Time, PositionXYZ(:,PointNum), p, m, ErrStat2, ErrMsg2 )
 
@@ -223,16 +222,14 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""   
                   
-        !PRINT*, 'Position: ', Position
-        !PRINT*, 'p%pZero: ', p%pZero
-        !PRINT*, 'p%delta: ', p%delta
 
+   
    !-------------------------------------------------------------------------------------------------
    ! Find the bounding indices for XYZ position
    !-------------------------------------------------------------------------------------------------
    do i=1,3      
       Tmp = (Position(i) - p%pZero(i)) / p%delta(i)         
-      Indx_Lo(i) = INT( Tmp ) + 1     ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0       KLS -- but they DO start at 0!
+      Indx_Lo(i) = INT( Tmp ) + 1     ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
       isopc(i) = 2.0_ReKi * (Tmp - REAL(Indx_Lo(i) - 1_IntKi, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
    enddo
                                        
@@ -242,13 +239,16 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
    i=4      
       Tmp = (Time - m%TgridStart) / p%delta(i)
       Indx_Lo(i) = INT( Tmp ) + 1     ! convert REAL to INTEGER, then add one since our grid indices start at 1, not 0
-      isopc(i) = 2.0_ReKi * (Tmp - REAL(Indx_Lo(i) - 1_IntKi, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1           !!KLS -- uncommented this one b/c of code change
-      !isopc(i) = -1.0_ReKi ! For consistency, we're not going to interpolate in time; this is because we can't interpolate the last time grid in FAST.Farm anyway
+      isopc(i) = 2.0_ReKi * (Tmp - REAL(Indx_Lo(i) - 1_IntKi, ReKi)) - 1.0_ReKi  ! convert to value between -1 and 1
+      IF ( ( Indx_Lo(i) == p%n(i) ) .AND. ( EqualRealNos( isopc(i), -1.0_SiKi ) ) ) THEN    ! Allow for the special case where Time = TgridStart + deltat*( n_high_low - 1 ) 
+         Indx_Lo(i) = Indx_Lo(i) - 1
+         isopc(i) = 1.0_SiKi
+      END IF 
       
    !-------------------------------------------------------------------------------------------------
    ! to verify that we don't extrapolate, make sure isopc is bound between -1 and 1 (effectively nearest neighbor)
    !-------------------------------------------------------------------------------------------------            
-   DO i=1,size(isopc) !! KLS -- tried shifting and it broke
+   DO i=1,size(isopc)
       isopc(i) = min( 1.0_SiKi, isopc(i) )
       isopc(i) = max(-1.0_SiKi, isopc(i) )
    END DO
@@ -256,23 +256,18 @@ FUNCTION Interp4D( Time, Position, p, m, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! also make sure we're not outside the bounds
    !-------------------------------------------------------------------------------------------------            
-   DO i=1,size(p%n) !!KLS -- tried shifting and it broke
+   DO i=1,size(p%n)
       IF (Indx_Lo(i) <= 0) THEN
          Indx_Lo(i) = 1
-         CALL SetErrStat(ErrID_Fatal,'Outside the grid bounds.',ErrStat,ErrMsg,RoutineName) !error out if x,y,z, or time is outside the the lower bounds
+         CALL SetErrStat(ErrID_Fatal,'Outside the grid bounds.',ErrStat,ErrMsg,RoutineName) !error out if x,y,z, or time is outside the lower bounds
          RETURN
-      ELSEIF (Indx_Lo(i) >= p%n(i)-1 ) THEN
-         IF (i < 4) THEN
-            CALL SetErrStat(ErrID_Fatal,'Outside the grid bounds.',ErrStat,ErrMsg,RoutineName) !error out if x,y,z is outside the the lower bounds
-            RETURN
-         END IF
-         
+      ELSEIF (Indx_Lo(i) >= p%n(i) ) THEN
          Indx_Lo(i) = max( p%n(i) - 1, 1 )           ! make sure it's a valid index
+         CALL SetErrStat(ErrID_Fatal,'Outside the grid bounds.',ErrStat,ErrMsg,RoutineName) !error out if x,y,z, or time is outside the upper bounds
+         RETURN
       END IF      
       Indx_Hi(i) = min( Indx_Lo(i) + 1, p%n(i) )     ! make sure it's a valid index
    END DO
-
-      !PRINT*, 'Indx_Hi(i): ', Indx_Hi, 'Indx_Lo(i): ', Indx_Lo, 'p%n(i):', p%n
             
    !-------------------------------------------------------------------------------------------------
    ! compute weighting factors
