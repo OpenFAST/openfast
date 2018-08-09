@@ -93,7 +93,10 @@ subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, N
    ExternInitData%NumCtrl2SC = 0
    ExternInitData%NumSC2Ctrl = 0
    ExternInitData%SensorType = NINT(InitInpAry(1))   
-   
+   ! -- MATLAB Integration --
+   ! Make sure fast farm integration is false
+   ExternInitData%FarmIntegration = .false.
+
    IF ( NINT(InitInpAry(2)) == 1 ) THEN
       ExternInitData%LidRadialVel = .true.
    ELSE
@@ -321,9 +324,17 @@ subroutine FAST_End(iTurb, StopTheProgram) BIND (C, NAME='FAST_End')
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
-   LOGICAL(C_BOOL),        INTENT(IN)    :: StopTheProgram   ! flag indicating if the program should end (false if there are more turbines to end)
+   ! LOGICAL(C_BOOL),        INTENT(IN)    :: StopTheProgram   ! flag indicating if the program should end (false if there are more turbines to end)
+   LOGICAL(C_INT),         INTENT(IN)    :: StopTheProgram   ! flag indicating if the program should end (false if there are more turbines to end)
 
-   CALL ExitThisProgram_T( Turbine(iTurb), ErrID_None, LOGICAL(StopTheProgram))
+   ! CALL ExitThisProgram_T( Turbine(iTurb), ErrID_None, LOGICAL(StopTheProgram))
+
+   IF ( StopTheProgram == 0 ) THEN
+      CALL ExitThisProgram_T( Turbine(iTurb), ErrID_None, .false.)
+   ELSE
+      CALL ExitThisProgram_T( Turbine(iTurb), ErrID_None, .true.)
+   END IF
+
    
 end subroutine FAST_End
 !==================================================================================================================================

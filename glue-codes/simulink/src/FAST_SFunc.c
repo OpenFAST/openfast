@@ -28,6 +28,8 @@
 #include "mex.h"     // for mexPutVariable
 #include "matrix.h"  // for mxCreateDoubleScalar
 #include "FAST_Library.h"
+#include <math.h>
+#define min(a,b) fmin(a,b)
 
 
 #define PARAM_FILENAME 0
@@ -56,7 +58,9 @@ static int checkError(SimStruct *S);
 static void mdlTerminate(SimStruct *S); // defined here so I can call it from checkError
 static void getInputs(SimStruct *S, double *InputAry);
 static void setOutputs(SimStruct *S, double *OutputAry);
-
+// Hard coding single Turbine 
+static int iTurb = 0; //zero based
+static int nTurbines = 1;
 
 /* Error handling
 * --------------
@@ -190,8 +194,8 @@ static void mdlInitializeSizes(SimStruct *S)
 
     /*  ---------------------------------------------  */
     //   strcpy(InputFileName, "../../CertTest/Test01.fst");
-
-       FAST_Sizes(&TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
+       FAST_AllocateTurbines(&nTurbines, &ErrStat, ErrMsg);
+       FAST_Sizes(&iTurb, &TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
 
        n_t_global = -1;
        if (checkError(S)) return;
@@ -333,7 +337,7 @@ static void mdlInitializeSampleTimes(SimStruct *S)
 
 //        getInputs(S, InputAry);
 
-        FAST_Start(&NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
+        FAST_Start(&iTurb, &NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
         n_t_global = 0;
         if (checkError(S)) return;
 
@@ -375,7 +379,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
 
        getInputs(S, InputAry);
 
-       FAST_Start(&NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
+       FAST_Start(&iTurb, &NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
        n_t_global = 0;
        if (checkError(S)) return;
 
@@ -415,7 +419,7 @@ static void mdlUpdate(SimStruct *S, int_T tid)
 
     /* ==== Call the Fortran routine (args are pass-by-reference) */
     
-    FAST_Update(&NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
+    FAST_Update(&iTurb, &NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
     n_t_global = n_t_global + 1;
 
     if (checkError(S)) return;
@@ -437,7 +441,8 @@ static void mdlUpdate(SimStruct *S, int_T tid)
 static void mdlTerminate(SimStruct *S)
 {
    if (n_t_global > -2){ // just in case we've never initialized, check this time step
-      FAST_End();
+      static int tr = 1; // Yes, stoptheprogram
+      FAST_End(&iTurb, &tr);
       n_t_global = -2;
    }  
 
