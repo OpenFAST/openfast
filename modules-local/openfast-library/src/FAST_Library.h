@@ -25,7 +25,6 @@ EXTERNAL_ROUTINE void FAST_Restart(int * iTurb, const char *CheckpointRootName, 
 EXTERNAL_ROUTINE void FAST_Sizes(int * iTurb, double *TMax, double *InitInputAry, const char *InputFileName, int *AbortErrLev, int * NumOuts, double * dt, int *ErrStat, char *ErrMsg, char *ChannelNames);
 EXTERNAL_ROUTINE void FAST_Start(int * iTurb, int *NumInputs_c, int *NumOutputs_c, double *InputAry, double *OutputAry, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_Update(int * iTurb, int *NumInputs_c, int *NumOutputs_c, double *InputAry, double *OutputAry, int *ErrStat, char *ErrMsg);
-// EXTERNAL_ROUTINE void FAST_End(int * iTurb, bool * stopThisProgram);
 EXTERNAL_ROUTINE void FAST_End(int * iTurb, int * stopThisProgram);
 EXTERNAL_ROUTINE void FAST_CreateCheckpoint(int * iTurb, const char *CheckpointRootName, int *ErrStat, char *ErrMsg);
 
