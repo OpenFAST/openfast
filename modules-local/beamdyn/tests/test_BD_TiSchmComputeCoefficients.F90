@@ -62,16 +62,16 @@ subroutine test_BD_TiSchmComputeCoefficients()
 
     call initialize_vars_base()
 
-    dt           = 1.0d0
-    rhoinf       = 1.0d0
+    dt           =  1.0d0
+    rhoinf       =  1.0d0
 
-    base_coef(1) = 0.25d0
-    base_coef(3) = 0.5d0
-    base_coef(5) = 1.0d0
+    base_coef(1) =  0.25d0
+    base_coef(3) =  0.5d0
+    base_coef(5) =  1.0d0
     base_coef(6) = -1.0d0
-    base_coef(7) = 0.5d0
-    base_coef(8) = 0.25d0
-    base_coef(9) = 1.0d0
+    base_coef(7) =  0.5d0
+    base_coef(8) =  0.25d0
+    base_coef(9) =  1.0d0
 
     call BD_TiSchmComputeCoefficients( dt, rhoinf, coef )
 
@@ -86,8 +86,8 @@ subroutine test_BD_TiSchmComputeCoefficients()
     dt           = 0.7734072557766418
     rhoinf       = 0.4803235937435106
 
-    base_coef =(/ 0.8627519729886736E-01, 0.33185290708788936E-01,     0.20804110592886182,&
-                     0.13223917328715273,     0.31606965256947084,  0.2589552114579372E-01,&
+    base_coef =(/ 0.8627519729886736E-01,  0.33185290708788936E-01,     0.20804110592886182,&
+                     0.13223917328715273,      0.31606965256947084,  0.2589552114579372E-01,&
                       0.4331269765606274,       0.1796189036363217,      0.6580348262847354 /)
 
     call BD_TiSchmComputeCoefficients( dt, rhoinf, coef )

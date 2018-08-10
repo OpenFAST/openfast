@@ -52,7 +52,7 @@ subroutine test_Calc_LinMats()
     call SetConstants()
 
     ! digits of desired accuracy
-    accuracy = 16
+    accuracy = 15
 
     ! --------------------------------------------------------------------------
     testname = "single quad pt/element--all zero inputs/outputs:"

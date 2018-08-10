@@ -14,7 +14,6 @@ subroutine test_BD_ElasticForce()
     ! This test verifies that indexing occurs properly and that the calculations
     ! are done properly for all zero inputs, integer-valued inputs, and
     ! randomly-chosen real-valued inputs
-    ! 
     ! NOTE: We need only test the calculation of Oe, Pe, and Qe (in mqp) for the
       ! fact == true case because the other case is taken care of by test_Calc_Fc_Fd()
     ! --------------------------------------------------------------------------
@@ -203,12 +202,12 @@ subroutine test_BD_ElasticForce()
 
     call initialize_vars_base()
 
-    mqp%E1(:, nqp, nelem)        = (/ 1.0d0,  2.0d0,  3.0d0 /)
-    mqp%kappa(:, nqp, nelem)     = (/ 1.0d0,  2.0d0,  3.0d0 /)
+    mqp%E1(:, nqp, nelem)        = (/  1.0d0,  2.0d0,  3.0d0 /)
+    mqp%kappa(:, nqp, nelem)     = (/  1.0d0,  2.0d0,  3.0d0 /)
 
-    mqp%RR0(1, :, nqp, nelem)    = (/ 1.0d0,  2.0d0,  3.0d0 /)
-    mqp%RR0(2, :, nqp, nelem)    = (/ 4.0d0,  5.0d0,  6.0d0 /)
-    mqp%RR0(3, :, nqp, nelem)    = (/ 7.0d0,  8.0d0,  9.0d0 /)
+    mqp%RR0(1, :, nqp, nelem)    = (/  1.0d0,  2.0d0,  3.0d0 /)
+    mqp%RR0(2, :, nqp, nelem)    = (/  4.0d0,  5.0d0,  6.0d0 /)
+    mqp%RR0(3, :, nqp, nelem)    = (/  7.0d0,  8.0d0,  9.0d0 /)
 
     mqp%Stif(1, :, nqp, nelem)   = (/  1.0d0,  2.0d0,  3.0d0,  4.0d0,  5.0d0,  6.0d0 /)
     mqp%Stif(2, :, nqp, nelem)   = (/  7.0d0,  8.0d0,  9.0d0, 10.0d0, 11.0d0, 12.0d0 /)
@@ -272,8 +271,8 @@ subroutine test_BD_ElasticForce()
 
     call initialize_vars_base()
 
-    mqp%E1(:, nqp, nelem)        = (/ 4.634447713173406,  2.954919262726134, -0.981525871381102 /)
-    mqp%kappa(:, nqp, nelem)     = (/ 0.940177845726900, -4.073583887844537,  4.893856141483123 /)
+    mqp%E1(:, nqp, nelem)        = (/  4.634447713173406,  2.954919262726134, -0.981525871381102 /)
+    mqp%kappa(:, nqp, nelem)     = (/  0.940177845726900, -4.073583887844537,  4.893856141483123 /)
 
     mqp%RR0(1, :, nqp, nelem)    = (/ -6.220899699349109, -2.630308070193270, -8.377484622684294 /)
     mqp%RR0(2, :, nqp, nelem)    = (/  3.735508667306300,  2.512371214593808,  8.587719419374601 /)

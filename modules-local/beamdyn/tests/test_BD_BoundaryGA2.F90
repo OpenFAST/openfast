@@ -8,14 +8,12 @@ subroutine test_BD_BoundaryGA2()
     ! In BD_BoundaryGA2(), x%q(4:6, 1) is calculated using ExtractRelativeRotation(),
     ! with x%q(1:3, 1) = RootMotion%TranslationDisp(1:3,1), x%dqdt(:, 1) and
     ! acc(:, 1) are assigned in the following way:
-
-    ! x%dqdt(1:3,1) = RootMotion%TranslationVel(1:3,1)
-    ! x%dqdt(4:6,1) = RootMotion%RotationVel(1:3,1)
-    ! acc(1:3,1)    = RootMotion%TranslationAcc(1:3,1)
-    ! acc(4:6,1)    = RootMotion%RotationAcc(1:3,1)
-
-    ! NOTE: this is probably more of an integration test
-      ! thus, the inputs that go to ExtractRelativeRotation() are the same as in
+       ! x%dqdt(1:3,1) = RootMotion%TranslationVel(1:3,1)
+       ! x%dqdt(4:6,1) = RootMotion%RotationVel(1:3,1)
+       ! acc(1:3,1)    = RootMotion%TranslationAcc(1:3,1)
+       ! acc(4:6,1)    = RootMotion%RotationAcc(1:3,1)
+    ! NOTE: This is probably more of an integration test
+      ! Thus, the inputs that go to ExtractRelativeRotation() are the same as in
       ! test_ExtractRelativeRotation(), and we simply ensure that the variables
       ! are properly assigned
     ! --------------------------------------------------------------------------
@@ -49,14 +47,14 @@ subroutine test_BD_BoundaryGA2()
     ! digits of desired accuracy
     accuracy = 16
 
-    call AllocAry(x%q, 6, 6, 'x_q', ErrStat, ErrMsg)
-    call AllocAry(x%dqdt, 6, 6, 'x_dqdt', ErrStat, ErrMsg)
-    call AllocAry(RootMotion%Orientation, 3, 3, 1, 'rm_Orientation', ErrStat, ErrMsg)
-    call AllocAry(RootMotion%TranslationDisp, 3, 1, 'rm_TranslationDisp', ErrStat, ErrMsg)
-    call AllocAry(RootMotion%TranslationVel, 3, 1, 'rm_TranslationVel', ErrStat, ErrMsg)
-    call AllocAry(RootMotion%TranslationAcc, 3, 1, 'rm_TranslationAcc', ErrStat, ErrMsg)
-    call AllocAry(RootMotion%RotationVel, 3, 1, 'rm_RotationVel', ErrStat, ErrMsg)
-    call AllocAry(RootMotion%RotationAcc, 3, 1, 'rm_RotationAcc', ErrStat, ErrMsg)
+    call AllocAry(x%q,                        6, 6,    'x_q',                ErrStat, ErrMsg)
+    call AllocAry(x%dqdt,                     6, 6,    'x_dqdt',             ErrStat, ErrMsg)
+    call AllocAry(RootMotion%Orientation,     3, 3, 1, 'rm_Orientation',     ErrStat, ErrMsg)
+    call AllocAry(RootMotion%TranslationDisp, 3, 1,    'rm_TranslationDisp', ErrStat, ErrMsg)
+    call AllocAry(RootMotion%TranslationVel,  3, 1,    'rm_TranslationVel',  ErrStat, ErrMsg)
+    call AllocAry(RootMotion%TranslationAcc,  3, 1,    'rm_TranslationAcc',  ErrStat, ErrMsg)
+    call AllocAry(RootMotion%RotationVel,     3, 1,    'rm_RotationVel',     ErrStat, ErrMsg)
+    call AllocAry(RootMotion%RotationAcc,     3, 1,    'rm_RotationAcc',     ErrStat, ErrMsg)
 
     ! --------------------------------------------------------------------------
     testname = "verify proper assignment of variables:"
@@ -65,17 +63,17 @@ subroutine test_BD_BoundaryGA2()
 
     RootMotion%Orientation(:, :, 1) = identity()
 
-    RootMotion%TranslationVel(:, 1)  = (/ 1.0d0, 2.0d0, 3.0d0 /)
-    RootMotion%RotationVel(:, 1)     = (/ 4.0d0, 5.0d0, 6.0d0 /)
-    RootMotion%TranslationAcc(:, 1)  = (/ 7.0d0, 8.0d0, 9.0d0 /)
+    RootMotion%TranslationVel(:, 1)  = (/  1.0d0,  2.0d0,  3.0d0 /)
+    RootMotion%RotationVel(:, 1)     = (/  4.0d0,  5.0d0,  6.0d0 /)
+    RootMotion%TranslationAcc(:, 1)  = (/  7.0d0,  8.0d0,  9.0d0 /)
     RootMotion%RotationAcc(:, 1)     = (/ 10.0d0, 11.0d0, 12.0d0 /)
     RootMotion%TranslationDisp(:, 1) = (/ 13.0d0, 14.0d0, 15.0d0 /)
 
     GlbRot         = identity()
 
-    base_dqdt(1:3) = (/ 1.0d0, 2.0d0, 3.0d0 /)
-    base_dqdt(4:6) = (/ 4.0d0, 5.0d0, 6.0d0 /)
-    base_acc(1:3)  = (/ 7.0d0, 8.0d0, 9.0d0 /)
+    base_dqdt(1:3) = (/  1.0d0,  2.0d0,  3.0d0 /)
+    base_dqdt(4:6) = (/  4.0d0,  5.0d0,  6.0d0 /)
+    base_acc(1:3)  = (/  7.0d0,  8.0d0,  9.0d0 /)
     base_acc(4:6)  = (/ 10.0d0, 11.0d0, 12.0d0 /)
     base_q(1:3)    = (/ 13.0d0, 14.0d0, 15.0d0 /)
 

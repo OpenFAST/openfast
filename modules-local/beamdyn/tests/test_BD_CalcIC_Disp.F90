@@ -136,16 +136,16 @@ subroutine test_BD_CalcIC_Disp()
 
     call initialize_vars_base()
 
-    n                 = (/ 1, 0, 0 /) ! x axis
+    n                 = (/ 1.0d0,  0.0d0, 0.0d0 /) ! x axis
     angle             = Pi / 2.0d0
     Orientation(:, :) = calcRotationMatrix(angle, n)
 
-    n                 = (/ 1, 0, 0 /) ! x axis
+    n                 = (/ 1.0d0,  0.0d0, 0.0d0 /) ! x axis
     angle             = Pi / 2.0d0
     GlbRot            = transpose(calcRotationMatrix(angle, n))
 
-    TranslationDisp   = (/ 1.0d0, 0.0d0, 0.0d0 /)
-    uuN0(:, 1, 1)     = (/ 0.0d0, 1.0d0, 0.0d0 /)
+    TranslationDisp   = (/ 1.0d0,  0.0d0, 0.0d0 /)
+    uuN0(:, 1, 1)     = (/ 0.0d0,  1.0d0, 0.0d0 /)
 
     base_q(1:3, 1)    = (/ 1.0d0, -2.0d0, 0.0d0 /)
 

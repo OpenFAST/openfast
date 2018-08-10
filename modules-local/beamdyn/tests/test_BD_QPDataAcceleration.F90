@@ -106,9 +106,9 @@ subroutine test_BD_QPDataAcceleration()
     call initialize_vars_base()
 
     Shp(nodes_per_elem, nqp)            = 2.0d0
-    acc(:, nodes_per_elem * elem_total) = (/ 1.0d0,  2.0d0,  3.0d0,  4.0d0,   5.0d0,   6.0d0 /)
+    acc(:, nodes_per_elem * elem_total) = (/ 1.0d0, 2.0d0, 3.0d0, 4.0d0,  5.0d0,  6.0d0 /)
 
-    base_aaa(:)                         = (/ 2.0d0,  4.0d0,  6.0d0,  8.0d0,  10.0d0,  12.0d0 /)
+    base_aaa(:)                         = (/ 2.0d0, 4.0d0, 6.0d0, 8.0d0, 10.0d0, 12.0d0 /)
 
     call BD_QPDataAcceleration( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, acc, aaa )
 
@@ -134,10 +134,10 @@ subroutine test_BD_QPDataAcceleration()
 
     Shp(1, nqp) = 2.0d0
     Shp(2, nqp) = 3.0d0
-    acc(:, 3)   = (/ 1.0d0,  2.0d0,  3.0d0,   4.0d0,    5.0d0,    6.0d0 /)
-    acc(:, 4)   = (/ 7.0d0,  8.0d0,  9.0d0,  10.0d0,   11.0d0,   12.0d0 /)
+    acc(:, 3)   = (/  1.0d0,  2.0d0,  3.0d0,  4.0d0,  5.0d0,  6.0d0 /)
+    acc(:, 4)   = (/  7.0d0,  8.0d0,  9.0d0, 10.0d0, 11.0d0, 12.0d0 /)
 
-    base_aaa(:) = (/ 23.0d0,  28.0d0,  33.0d0,  38.0d0,  43.0d0,  48.0d0 /)
+    base_aaa(:) = (/ 23.0d0, 28.0d0, 33.0d0, 38.0d0, 43.0d0, 48.0d0 /)
 
     call BD_QPDataAcceleration( elem_total, node_elem_idx, nqp, nodes_per_elem, Shp, acc, aaa )
 

@@ -5,7 +5,7 @@ subroutine test_BD_UpdateDynamicGA2()
     ! - simulate 2 nodes to ensure proper indexing--all zero inputs/outputs
     ! - single node--integer-valued inputs (should remain unchanged)
     ! - simulate 2 nodes to ensure proper indexing--integer-valued inputs
-    ! - simulate 2 nodes to ensure proper indexing--randomly-generated real-valued inputs
+    ! - simulate 2 nodes to ensure proper indexing--randomly-chosen real-valued inputs
 
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
@@ -191,7 +191,7 @@ subroutine test_BD_UpdateDynamicGA2()
     deallocate(x%q, x%dqdt, OtherState%acc, OtherState%xcc, Solution)
 
     ! --------------------------------------------------------------------------
-    testname = "simulate 2 nodes to ensure proper indexing--randomly-generated real-valued inputs:"
+    testname = "simulate 2 nodes to ensure proper indexing--randomly-chosen real-valued inputs:"
 
     node_total = 2
 
@@ -204,9 +204,9 @@ subroutine test_BD_UpdateDynamicGA2()
 
     call initialize_vars_base()
 
-    coef                          = (/ -7.460263674129878, 8.267517122780387, 2.647184924508190,&
-                                       -8.049191900011810, -4.430035622659032, 0.937630384099677,&
-                                        9.150136708685952, 9.297770703985531, -6.847738366449034 /)
+    coef                          = (/ -7.460263674129878,  8.267517122780387,  2.647184924508190,&
+                                       -8.049191900011810, -4.430035622659032,  0.937630384099677,&
+                                        9.150136708685952,  9.297770703985531, -6.847738366449034 /)
 
     Solution(:, node_total)       = (/  9.411855635212312, -1.564774347474501, -9.285766428516208,&
                                         4.862649362498324, -9.363343072451586,  3.896572459516340 /)

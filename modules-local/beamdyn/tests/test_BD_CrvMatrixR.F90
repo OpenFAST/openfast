@@ -18,7 +18,7 @@ subroutine test_BD_CrvMatrixR()
          ! Wang, et. al, AIAA
     ! This test verifies proper calculation for some simple rotations about the
     ! x-axis, as well as some randomly-chosen axis/angle combinations.
-    ! NOTE: WM parameters are only valid for rotation angles < 2 pi
+    ! NOTE: WM parameters are only valid for rotation angles in (-2 pi, 2 pi)
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
 
@@ -153,7 +153,7 @@ subroutine test_BD_CrvMatrixR()
             real(BDKi) :: axis(3), angle
             real(BDKi) :: WM(3)
 
-            WM = 4.0d0 * tan(angle / 4.0d0) * axis;
+            WM = 4.0d0 * tan(angle / 4.0d0) * axis
 
         end function
 

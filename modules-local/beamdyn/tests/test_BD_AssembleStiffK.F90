@@ -89,7 +89,7 @@ subroutine test_BD_AssembleStiffK()
     call initialize_vars_base()
 
     call random_number(ElemK)
-    base_GlobalK(:, 7:12, :, 7:12) = ElemK
+    base_GlobalK(:, 7 : 12, :, 7 : 12) = ElemK
 
     call BD_AssembleStiffK( nelem, node_elem_idx, nodes_per_elem, dof_node, ElemK, GlobalK )
 

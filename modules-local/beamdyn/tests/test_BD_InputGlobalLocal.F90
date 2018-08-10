@@ -2,10 +2,10 @@
 subroutine test_BD_InputGlobalLocal()
     ! branches to test
     ! - rotation of unit vector from positive z-axis to negative z-axis (pi radians), about x-axis
-    ! - rotation of unit vector, randomly-generated vector, axis, angle--large, negative angle
-    ! - rotation of unit vector, randomly-generated vector, axis, angle--small, negative angle
-    ! - rotation of unit vector, randomly-generated vector, axis, angle--large, positive angle
-    ! - rotation of unit vector, randomly-generated vector, axis, angle--small, positive angle
+    ! - rotation of unit vector, randomly-chosen vector, axis, angle--large, negative angle
+    ! - rotation of unit vector, randomly-chosen vector, axis, angle--small, negative angle
+    ! - rotation of unit vector, randomly-chosen vector, axis, angle--large, positive angle
+    ! - rotation of unit vector, randomly-chosen vector, axis, angle--small, positive angle
 
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
@@ -123,7 +123,7 @@ subroutine test_BD_InputGlobalLocal()
     tolerance = AdjustTol(accuracy, parametertype%GlbRot)
     @assertEqual(transpose(parametertype%GlbRot), inputtype%RootMotion%Orientation(:,:,1), tolerance, testname)
     ! --------------------------------------------------------------------------
-    testname = "rotation of unit vector, randomly-generated vector, axis, angle--large, negative angle:"
+    testname = "rotation of unit vector, randomly-chosen vector, axis, angle--large, negative angle:"
 
     totalnodes          = 2
     vectorInit          = (/ 0.692082277502986, -0.715650461227567, -0.094162298777430 /)
@@ -191,7 +191,7 @@ subroutine test_BD_InputGlobalLocal()
     tolerance = AdjustTol(accuracy, parametertype%GlbRot)
     @assertEqual(transpose(parametertype%GlbRot), inputtype%RootMotion%Orientation(:,:,1), tolerance, testname)
     ! --------------------------------------------------------------------------
-    testname = "rotation of unit vector, randomly-generated vector, axis, angle--small, negative angle:"
+    testname = "rotation of unit vector, randomly-chosen vector, axis, angle--small, negative angle:"
 
     totalnodes          = 2
     vectorInit          = (/  0.584698235180346, -0.133643540334069,  0.800167093739779 /)
@@ -259,7 +259,7 @@ subroutine test_BD_InputGlobalLocal()
     tolerance = AdjustTol(accuracy, parametertype%GlbRot)
     @assertEqual(transpose(parametertype%GlbRot), inputtype%RootMotion%Orientation(:,:,1), tolerance, testname)
     ! --------------------------------------------------------------------------
-    testname = "rotation of unit vector, randomly-generated vector, axis, angle--large, positive angle:"
+    testname = "rotation of unit vector, randomly-chosen vector, axis, angle--large, positive angle:"
 
     totalnodes          = 2
     vectorInit          = (/  0.698202129544796, -0.228199720323129, -0.678556315970574 /)
@@ -327,7 +327,7 @@ subroutine test_BD_InputGlobalLocal()
     tolerance = AdjustTol(accuracy, parametertype%GlbRot)
     @assertEqual(transpose(parametertype%GlbRot), inputtype%RootMotion%Orientation(:,:,1), tolerance, testname)
     ! --------------------------------------------------------------------------
-    testname = "rotation of unit vector, randomly-generated vector, axis, angle--small, positive angle:"
+    testname = "rotation of unit vector, randomly-chosen vector, axis, angle--small, positive angle:"
 
     totalnodes          = 2
     vectorInit          = (/  0.969088664380999,  0.209159062978165,  0.130842068702488 /)

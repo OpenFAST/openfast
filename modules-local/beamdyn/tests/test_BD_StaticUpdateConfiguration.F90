@@ -5,8 +5,8 @@ subroutine test_BD_StaticUpdateConfiguration()
     ! - simulate 2 nodes to ensure proper indexing--all zero inputs/outputs
     ! - single node--simple displacement and 2 rotations of pi about x-axis
     ! - simulate 2 nodes to ensure proper indexing--simple displacement and 2 rotations of pi about x-axis
-    ! - single node--randomly-chosen, real-valued displacements and rotations:"
-    ! - simulate 2 nodes to ensure proper indexing--randomly-chosen, real-valued displacements and rotations:"
+    ! - single node--randomly-chosen, real-valued displacements and rotations
+    ! - simulate 2 nodes to ensure proper indexing--randomly-chosen, real-valued displacements and rotations
 
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
@@ -157,7 +157,7 @@ subroutine test_BD_StaticUpdateConfiguration()
     call calcWMParameters(       q(4 : 6, node_total), angle, axis)
 
     base_q(1 : 3) = (/  7.781350154234946,  8.195693719124030, -11.227263756135821 /)
-    base_q(4 : 6) = (/ -0.260799479588254, -2.341677300232876, -0.804324460533652 /)
+    base_q(4 : 6) = (/ -0.260799479588254, -2.341677300232876,  -0.804324460533652 /)
 
     call BD_StaticUpdateConfiguration( node_total, Solution, q )
 

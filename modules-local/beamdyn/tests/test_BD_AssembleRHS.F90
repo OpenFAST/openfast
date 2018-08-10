@@ -90,7 +90,7 @@ subroutine test_BD_AssembleRHS()
     call initialize_vars_base()
 
     call random_number(ElemRHS)
-    base_GlobalRHS(:, 7:12) = ElemRHS
+    base_GlobalRHS(:, 7 : 12) = ElemRHS
 
     call BD_AssembleRHS( nelem, node_elem_idx, nodes_per_elem, ElemRHS, GlobalRHS )
 

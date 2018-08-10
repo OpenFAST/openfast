@@ -5,7 +5,7 @@ subroutine test_BD_TiSchmPredictorStep()
     ! - simulate 2 nodes to ensure proper indexing--all zero inputs/outputs
     ! - single node--integer-valued inputs (should remain unchanged)
     ! - simulate 2 nodes to ensure proper indexing--integer-valued inputs
-    ! - simulate 2 nodes to ensure proper indexing--randomly-generated real-valued inputs
+    ! - simulate 2 nodes to ensure proper indexing--randomly-chosen real-valued inputs
 
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
@@ -180,7 +180,7 @@ subroutine test_BD_TiSchmPredictorStep()
     deallocate(x%q, x%dqdt, OtherState%acc, OtherState%xcc)
 
     ! --------------------------------------------------------------------------
-    testname = "simulate 2 nodes to ensure proper indexing--randomly-generated real-valued inputs:"
+    testname = "simulate 2 nodes to ensure proper indexing--randomly-chosen real-valued inputs:"
 
     node_total = 2
 

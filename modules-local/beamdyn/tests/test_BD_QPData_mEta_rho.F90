@@ -51,7 +51,7 @@ subroutine test_BD_QPData_mEta_rho()
     call SetConstants()
 
     ! digits of desired accuracy
-    ! accuracy = 15
+    accuracy = 14
 
 
     ! --------------------------------------------------------------------------

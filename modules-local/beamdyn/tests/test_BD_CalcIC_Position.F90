@@ -10,9 +10,8 @@ subroutine test_BD_CalcIC_Position()
     ! computed for all nodes. This is done by calling ExtractRelativeRotation()
     ! and BD_CalcIC_Disp(). After calling ExtractRelativeRotation(), the root
     ! relative rotation is assigned to all nodes.
-
-    ! NOTE: this is probably more of an integration test
-      ! thus, we test only the simplest case and one with nonzero Global CRV to
+    ! NOTE: This is probably more of an integration test
+      ! Thus, we test only the simplest case and one with nonzero Global CRV to
       ! ensure the relative rotation is assigned properly.
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------

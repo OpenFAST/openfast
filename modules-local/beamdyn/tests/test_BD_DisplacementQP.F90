@@ -4,7 +4,7 @@ subroutine test_BD_DisplacementQP()
     ! - single quad. pt/node--all zero inputs (except Jacobian to avoid division by zero)
     ! - single quad pt/node, simulate second element--all zero inputs (except Jacobian to avoid division by zero)
     ! - 3 quad pts/nodes--integer inputs
-    ! - 3 quad pts/nodes--randomly-generated real-valued inputs
+    ! - 3 quad pts/nodes--randomly-chosen real-valued inputs
 
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
@@ -13,10 +13,9 @@ subroutine test_BD_DisplacementQP()
     ! E1 := x_0' + u', are interpolated in the inertial frame based on equations
     ! 27, 28, and 23 in:
       ! https://www.nrel.gov/docs/fy14osti/60759.pdf
-    ! This test verifies that these quantities are properly calculated for the
-    ! simplest case of a single element, and for a second of two elements (to 
-    ! test that the subroutine indexing scheme functions properly). As well,
-    ! non-trivial inputs are tested to ensure proper mathematical calculations.
+    ! This test verifies that indexing occurs properly and that the calculations
+    ! are done properly for all zero inputs, integer-valued inputs, and
+    ! randomly-chosen real-valued inputs.
     ! --------------------------------------------------------------------------
     ! --------------------------------------------------------------------------
 
@@ -165,7 +164,7 @@ subroutine test_BD_DisplacementQP()
                base_E1, node_elem_idx)
 
     ! --------------------------------------------------------------------------
-    testname = "3 quad pts/nodes--randomly-generated real-valued inputs:"
+    testname = "3 quad pts/nodes--randomly-chosen real-valued inputs:"
 
     nelem          = 1
     nqp            = 3

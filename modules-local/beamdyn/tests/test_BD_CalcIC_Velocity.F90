@@ -165,7 +165,7 @@ subroutine test_BD_CalcIC_Velocity()
     x%q(:, 1)     = (/ 0.0d0, 0.0d0, 1.0d0 /)
     x%q(:, 2)     = (/ 0.0d0, 0.0d0, 2.0d0 /)
 
-    TranslationVel(:, 1) = (/ 1.0d0, 2.0d0, 3.0d0 /)
+    TranslationVel(:, 1) = (/ 1.0d0,  2.0d0, 3.0d0 /)
     RotationVel(:, 1)    = (/ 0.0d0, -1.0d0, 0.0d0 /)
 
     base_x%dqdt(:, 1)    = (/ 1.0d0, 2.0d0, 3.0d0, 0.0d0, -1.0d0, 0.0d0 /)
