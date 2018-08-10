@@ -584,12 +584,11 @@ SUBROUTINE BD_GaussPointWeight(n, x, w, ErrStat, ErrMsg)
 END SUBROUTINE BD_GaussPointWeight
 !-----------------------------------------------------------------------------------------------------------------------------------
 ! This subroutine computes trapezoidal quadrature points and weights, QPtLocs and QPtWeight
-SUBROUTINE BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, nqp, refine, station_eta, station_total)
-
+SUBROUTINE BD_TrapezoidalPointWeight( nqp, refine, station_eta, station_total, QPtLocs, QPtWeight )
    INTEGER(IntKi),        INTENT(IN   ) :: nqp, refine                  !< Number of quadrature points per element and FE mesh refinement factor
-   REAL(BDKi),            INTENT(INOUT) :: QPtLocs(nqp), QPtWeight(nqp) !< Quadrature point locations and weights
    INTEGER(IntKi),        INTENT(IN   ) :: station_total                !< Number of blade input stations
    REAL(BDKi),            INTENT(IN   ) :: station_eta(:)               !< Station location in eta [0,1] @FIXME: will this always have size = nqp (i.e., station_total == nqp)?
+   REAL(BDKi),            INTENT(INOUT) :: QPtLocs(nqp), QPtWeight(nqp) !< Quadrature point locations and weights
 
    ! local variables
    REAL(BDKi)                 :: denom ! denominator for quadrature weight computations
@@ -877,13 +876,12 @@ END SUBROUTINE Set_BldMotion_Mesh
 !> This subroutine finds the (initial) nodal position and curvature based on a relative position, eta, along the blade.
 !! The key points are used to obtain the z coordinate of the physical distance along the blade, and POS and CRV vectors are returned
 !! from that location.
-subroutine Find_IniNode(kp_coordinate, segment_length, SP_Coef, member_first_kp, member_last_kp, eta, POS, CRV, ErrStat, ErrMsg)
-
+subroutine Find_IniNode( member_first_kp, member_last_kp, kp_coordinate, segment_length, SP_Coef, eta, POS, CRV, ErrStat, ErrMsg )
+   INTEGER(IntKi),               INTENT(IN   )  :: member_first_kp     !< index of the first key point on a particular member
+   INTEGER(IntKi),               INTENT(IN   )  :: member_last_kp      !< index of the last key point on a particular member
    REAL(BDKi),                   INTENT(IN   )  :: kp_coordinate(:,:)  !< Key Point coordinates
    REAL(BDKi),                   INTENT(IN   )  :: segment_length(:,:) !< Array stored length of each segment
    REAL(BDKi),                   INTENT(IN   )  :: SP_Coef(:,:,:)      !< Coefficients for cubic spline interpolation
-   INTEGER(IntKi),               INTENT(IN   )  :: member_first_kp     !< index of the first key point on a particular member
-   INTEGER(IntKi),               INTENT(IN   )  :: member_last_kp      !< index of the last key point on a particular member
    REAL(BDKi),                   INTENT(IN   )  :: eta                 !! relative position of desired node, [0,1]
    REAL(BDKi),                   INTENT(  OUT)  :: POS(3)              !! position of node (in BD coordinates)
    REAL(BDKi),                   INTENT(  OUT)  :: CRV(3)              !! curvature of node (in BD coordinates)
@@ -994,20 +992,20 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
 END SUBROUTINE BD_ComputeIniNodalCrv
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ExtractRelativeRotation(R, Glb_crv, GlbRot, rr, ErrStat, ErrMsg)
-   real(R8Ki),             INTENT(in   )     :: R(3,3)       !< input rotation matrix (transpose of DCM; in BD coords)
-   real(R8Ki),             INTENT(in   )     :: Glb_crv(3)   !< CRV parameters of GlbRot
-   real(R8Ki),             INTENT(in   )     :: GlbRot(3,3)  !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
-   real(BDKi),             INTENT(  OUT)     :: rr(3)        !< W-M parameters of relative rotation
-   INTEGER(IntKi),         INTENT(  OUT)     :: ErrStat      !< Error status of the operation
-   CHARACTER(*),           INTENT(  OUT)     :: ErrMsg       !< Error message if ErrStat /= ErrID_None
-   
-   real(BDKi)                                :: R_WM(3)      ! W-M parameters of R 
-   real(BDKi)                                :: R_BD(3,3)    ! input rotation matrix in BDKi precision 
-   REAL(BDKi)                                :: temp_cc(3)   ! W-M parameters
+   REAL(BDKi),     INTENT(IN   ) :: R(3,3)      !< input rotation matrix (transpose of DCM; in BD coords)
+   REAL(BDKi),     INTENT(IN   ) :: Glb_crv(3)  !< CRV parameters of GlbRot
+   REAL(BDKi),     INTENT(IN   ) :: GlbRot(3,3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
+   REAL(BDKi),     INTENT(  OUT) :: rr(3)       !< W-M parameters of relative rotation
+   INTEGER(IntKi), INTENT(  OUT) :: ErrStat     !< Error status of the operation
+   CHARACTER(*),   INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi)                            :: ErrStat2     ! Temporary Error status
-   CHARACTER(ErrMsgLen)                      :: ErrMsg2      ! Temporary Error message
-   CHARACTER(*), PARAMETER                   :: RoutineName = 'ExtractRelativeRotation'
+   real(BDKi)                    :: R_WM(3)      ! W-M parameters of R 
+   real(BDKi)                    :: R_BD(3,3)    ! input rotation matrix in BDKi precision 
+   REAL(BDKi)                    :: temp_cc(3)   ! W-M parameters
+
+   INTEGER(IntKi)                :: ErrStat2     ! Temporary Error status
+   CHARACTER(ErrMsgLen)          :: ErrMsg2      ! Temporary Error message
+   CHARACTER(*), PARAMETER       :: RoutineName = 'ExtractRelativeRotation'
 
    ! Initialize ErrStat
    ErrStat = ErrID_None
@@ -1028,15 +1026,15 @@ SUBROUTINE ExtractRelativeRotation(R, Glb_crv, GlbRot, rr, ErrStat, ErrMsg)
 END SUBROUTINE ExtractRelativeRotation
 !-----------------------------------------------------------------------------------------------------------------------------------
 FUNCTION BDrot_to_FASTdcm( rr, GlbRot, Glb_crv ) RESULT(dcm)
-   real(BDKi), intent(in) :: rr(3)        !< W-M parameters of relative rotation
-   real(BDKi), intent(in) :: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
-   real(BDKi), intent(in) :: Glb_crv(3)   !< CRV parameters of GlbRot
-   real(BDKi)             :: dcm(3, 3)    !< input rotation matrix (transpose of DCM; in BD coords)
+   REAL(BDKi), INTENT(IN) :: rr(3)        !< W-M parameters of relative rotation
+   REAL(BDKi), INTENT(IN) :: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
+   REAL(BDKi), INTENT(IN) :: Glb_crv(3)   !< CRV parameters of GlbRot
+   REAL(BDKi)             :: dcm(3, 3)    !< input rotation matrix (transpose of DCM; in BD coords)
 
 
-   real(BDKi)             :: temp_CRV( 3) ! temp curvature parameters
-   real(BDKi)             :: temp_CRV2(3) ! temp curvature parameters
-   real(BDKi)             :: R(3, 3)      ! rotation matrix
+   REAL(BDKi)             :: temp_CRV( 3) ! temp curvature parameters
+   REAL(BDKi)             :: temp_CRV2(3) ! temp curvature parameters
+   REAL(BDKi)             :: R(3, 3)      ! rotation matrix
    
 
 ! note differences in setting up meshes with Set_BldMotion_NoAcc
@@ -1060,12 +1058,12 @@ END FUNCTION BDrot_to_FASTdcm
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the displacements at the nodes
 !! Called by BD_CalcIC_Velocity()
-SUBROUTINE BD_CalcIC_Disp( Orientation, TranslationDisp, node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, q )
-   REAL(BDKi),     INTENT(IN   ) :: Orientation(:, :)   !< Direction Cosine Matrix (DCM)--from u%RootMotion (3,3,NNodes)
-   REAL(BDKi),     INTENT(IN   ) :: TranslationDisp(:)  !< Translational displacements--from u%RootMotion (3,NNodes)
-   INTEGER(IntKi), INTENT(IN   ) :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+SUBROUTINE BD_CalcIC_Disp( elem_total, nodes_per_elem, node_elem_idx, Orientation, TranslationDisp, uuN0, GlbRot, q )
    INTEGER(IntKi), INTENT(IN   ) :: elem_total          !< Total number of elements
    INTEGER(IntKi), INTENT(IN   ) :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   INTEGER(IntKi), INTENT(IN   ) :: node_elem_idx(:, :) !< Index to first and last nodes of element in p%node_total sized arrays
+   REAL(BDKi),     INTENT(IN   ) :: Orientation(:, :)   !< Direction Cosine Matrix (DCM)--from u%RootMotion (3,3,NNodes)
+   REAL(BDKi),     INTENT(IN   ) :: TranslationDisp(:)  !< Translational displacements--from u%RootMotion (3,NNodes)
    REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)       !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
    REAL(BDKi),     INTENT(IN   ) :: GlbRot(3, 3)        !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
    REAL(BDKi),     INTENT(  OUT) :: q(:, :)             !< displacement (1:3)

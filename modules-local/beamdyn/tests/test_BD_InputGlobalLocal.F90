@@ -99,7 +99,7 @@ subroutine test_BD_InputGlobalLocal()
     inputtype%RootMotion%Orientation(:,:,1) = parametertype%GlbRot
 
     ! call the subroutine to test
-    call BD_InputGlobalLocal(parametertype%GlbRot, parametertype%node_total, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad)
+    call BD_InputGlobalLocal( parametertype%node_total, parametertype%GlbRot, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad )
 
     ! test the values
     tolerance = AdjustTol(accuracy, vectorAfterRotation)
@@ -167,7 +167,7 @@ subroutine test_BD_InputGlobalLocal()
     inputtype%RootMotion%Orientation(:,:,1) = parametertype%GlbRot
 
     ! call the subroutine to test
-    call BD_InputGlobalLocal(parametertype%GlbRot, parametertype%node_total, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad)
+    call BD_InputGlobalLocal( parametertype%node_total, parametertype%GlbRot, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad )
 
     ! test the values
     tolerance = AdjustTol(accuracy, vectorAfterRotation)
@@ -235,7 +235,7 @@ subroutine test_BD_InputGlobalLocal()
     inputtype%RootMotion%Orientation(:,:,1) = parametertype%GlbRot
 
     ! call the subroutine to test
-    call BD_InputGlobalLocal(parametertype%GlbRot, parametertype%node_total, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad)
+    call BD_InputGlobalLocal( parametertype%node_total, parametertype%GlbRot, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad )
 
     ! test the values
     tolerance = AdjustTol(accuracy, vectorAfterRotation)
@@ -303,7 +303,7 @@ subroutine test_BD_InputGlobalLocal()
     inputtype%RootMotion%Orientation(:,:,1) = parametertype%GlbRot
 
     ! call the subroutine to test
-    call BD_InputGlobalLocal(parametertype%GlbRot, parametertype%node_total, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad)
+    call BD_InputGlobalLocal( parametertype%node_total, parametertype%GlbRot, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad )
 
     ! test the values
     tolerance = AdjustTol(accuracy, vectorAfterRotation)
@@ -371,7 +371,7 @@ subroutine test_BD_InputGlobalLocal()
     inputtype%RootMotion%Orientation(:,:,1) = parametertype%GlbRot
 
     ! call the subroutine to test
-    call BD_InputGlobalLocal(parametertype%GlbRot, parametertype%node_total, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad)
+    call BD_InputGlobalLocal( parametertype%node_total, parametertype%GlbRot, inputtype%RootMotion, inputtype%PointLoad, inputtype%DistrLoad )
 
     ! test the values
     tolerance = AdjustTol(accuracy, vectorAfterRotation)

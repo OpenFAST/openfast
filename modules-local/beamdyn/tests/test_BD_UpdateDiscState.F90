@@ -62,7 +62,7 @@ subroutine test_BD_UpdateDiscState()
     base_thetaP  = xd%thetaP
     base_thetaPD = xd%thetaPD
 
-    call BD_UpdateDiscState( RM_Orientation, HM_Orientation, UsePitchAct, torqM, pitchK, dt, pitchJ, xd )
+    call BD_UpdateDiscState( UsePitchAct, RM_Orientation, HM_Orientation, torqM, pitchK, dt, pitchJ, xd )
 
     tolerance = AdjustTol(accuracy, base_thetaP)
     @assertEqual(base_thetaP, xd%thetaP, tolerance, testname)
@@ -78,7 +78,7 @@ subroutine test_BD_UpdateDiscState()
 
     pitchJ         = 1.0d0
 
-    call BD_UpdateDiscState( RM_Orientation, HM_Orientation, UsePitchAct, torqM, pitchK, dt, pitchJ, xd )
+    call BD_UpdateDiscState( UsePitchAct, RM_Orientation, HM_Orientation, torqM, pitchK, dt, pitchJ, xd )
 
     tolerance = AdjustTol(accuracy, base_thetaP)
     @assertEqual(base_thetaP, xd%thetaP, tolerance, testname)
@@ -108,7 +108,7 @@ subroutine test_BD_UpdateDiscState()
     base_thetaP    = 6.0d0
     base_thetaPD   = 26.0d0
 
-    call BD_UpdateDiscState( RM_Orientation, HM_Orientation, UsePitchAct, torqM, pitchK, dt, pitchJ, xd )
+    call BD_UpdateDiscState( UsePitchAct, RM_Orientation, HM_Orientation, torqM, pitchK, dt, pitchJ, xd )
 
     tolerance = AdjustTol(accuracy, base_thetaP)
     @assertEqual(base_thetaP, xd%thetaP, tolerance, testname)
@@ -143,7 +143,7 @@ subroutine test_BD_UpdateDiscState()
     base_thetaP    = 123.78439241760138
     base_thetaPD   = 532.76193287943408
 
-    call BD_UpdateDiscState( RM_Orientation, HM_Orientation, UsePitchAct, torqM, pitchK, dt, pitchJ, xd )
+    call BD_UpdateDiscState( UsePitchAct, RM_Orientation, HM_Orientation, torqM, pitchK, dt, pitchJ, xd )
 
 
     tolerance = AdjustTol(accuracy, base_thetaP)

@@ -62,7 +62,7 @@ subroutine test_BD_CalcIC_Velocity()
 
     call initialize_vars_base()
 
-    call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
+    call BD_CalcIC_Velocity( elem_total, nodes_per_elem, node_elem_idx, TranslationVel, RotationVel, uuN0, x )
 
     tolerance = AdjustTol(accuracy, base_x%dqdt)
     @assertEqual(base_x%dqdt, x%dqdt, tolerance, testname)
@@ -84,7 +84,7 @@ subroutine test_BD_CalcIC_Velocity()
 
     call initialize_vars_base()
 
-    call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
+    call BD_CalcIC_Velocity( elem_total, nodes_per_elem, node_elem_idx, TranslationVel, RotationVel, uuN0, x )
 
     tolerance = AdjustTol(accuracy, base_x%dqdt)
     @assertEqual(base_x%dqdt, x%dqdt, tolerance, testname)
@@ -107,7 +107,7 @@ subroutine test_BD_CalcIC_Velocity()
 
     call initialize_vars_base()
 
-    call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
+    call BD_CalcIC_Velocity( elem_total, nodes_per_elem, node_elem_idx, TranslationVel, RotationVel, uuN0, x )
 
     tolerance = AdjustTol(accuracy, base_x%dqdt)
     @assertEqual(base_x%dqdt, x%dqdt, tolerance, testname)
@@ -135,7 +135,7 @@ subroutine test_BD_CalcIC_Velocity()
 
     base_x%dqdt(:, 1)    = (/ 1.0d0, 2.0d0, 3.0d0, 4.0d0, 5.0d0, 6.0d0 /)
 
-    call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
+    call BD_CalcIC_Velocity( elem_total, nodes_per_elem, node_elem_idx, TranslationVel, RotationVel, uuN0, x )
 
     tolerance = AdjustTol(accuracy, base_x%dqdt)
     @assertEqual(base_x%dqdt, x%dqdt, tolerance, testname)
@@ -171,7 +171,7 @@ subroutine test_BD_CalcIC_Velocity()
     base_x%dqdt(:, 1)    = (/ 1.0d0, 2.0d0, 3.0d0, 0.0d0, -1.0d0, 0.0d0 /)
     base_x%dqdt(:, 2)    = (/ 0.0d0, 2.0d0, 4.0d0, 0.0d0, -1.0d0, 0.0d0 /)
 
-    call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
+    call BD_CalcIC_Velocity( elem_total, nodes_per_elem, node_elem_idx, TranslationVel, RotationVel, uuN0, x )
 
     tolerance = AdjustTol(accuracy, base_x%dqdt)
     @assertEqual(base_x%dqdt, x%dqdt, tolerance, testname)
@@ -209,7 +209,7 @@ subroutine test_BD_CalcIC_Velocity()
     base_x%dqdt(:, 2)    = (/ 7.781350154234946, -16.320997395783039, -0.492093457596683,&
                               5.093733639647217,   3.594053537073496, -6.747765296107389 /)
 
-    call BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
+    call BD_CalcIC_Velocity( elem_total, nodes_per_elem, node_elem_idx, TranslationVel, RotationVel, uuN0, x )
 
     tolerance = AdjustTol(accuracy, base_x%dqdt)
     @assertEqual(base_x%dqdt, x%dqdt, tolerance, testname)

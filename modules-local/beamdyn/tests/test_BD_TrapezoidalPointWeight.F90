@@ -75,7 +75,7 @@ subroutine test_BD_TrapezoidalPointWeight()
                     0.033389666742410, 0.054266826884232, 0.320297323146325,&
                     0.290635169141927 /)
 
-    call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, nqp, refine, station_eta, station_total)
+    call BD_TrapezoidalPointWeight( nqp, refine, station_eta, station_total, QPtLocs, QPtWeight )
 
     tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
@@ -117,7 +117,7 @@ subroutine test_BD_TrapezoidalPointWeight()
                     0.214783951749652, 0.191977661926680, 0.169171372103709,&
                     0.084585686051855 /)
 
-    call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, nqp, refine, station_eta, station_total)
+    call BD_TrapezoidalPointWeight( nqp, refine, station_eta, station_total, QPtLocs, QPtWeight )
 
     tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
@@ -165,7 +165,7 @@ subroutine test_BD_TrapezoidalPointWeight()
                     0.083949469058764, 0.116122015006968, 0.116122015006968,&
                     0.058061007503484 /)
 
-    call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, nqp, refine, station_eta, station_total)
+    call BD_TrapezoidalPointWeight( nqp, refine, station_eta, station_total, QPtLocs, QPtWeight )
 
     tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
@@ -219,7 +219,7 @@ subroutine test_BD_TrapezoidalPointWeight()
                     0.128433765937542, 0.128433765937542, 0.128433765937542,&
                     0.064216882968771 /)
 
-    call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, nqp, refine, station_eta, station_total)
+    call BD_TrapezoidalPointWeight( nqp, refine, station_eta, station_total, QPtLocs, QPtWeight )
 
     tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
@@ -258,7 +258,7 @@ subroutine test_BD_TrapezoidalPointWeight()
                     0.230975986236828, 0.069223727415782, 0.146968882278106,&
                     0.130707792359911 /)
 
-    call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, nqp, refine, station_eta, station_total)
+    call BD_TrapezoidalPointWeight( nqp, refine, station_eta, station_total, QPtLocs, QPtWeight )
 
     tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)
@@ -381,7 +381,7 @@ subroutine test_BD_TrapezoidalPointWeight()
                     0.001414515499106, 0.001400324657204, 0.016947533530144,&
                     0.015936275620846 /)
 
-    call BD_TrapezoidalPointWeight(QPtLocs, QPtWeight, nqp, refine, station_eta, station_total)
+    call BD_TrapezoidalPointWeight( nqp, refine, station_eta, station_total, QPtLocs, QPtWeight )
 
     tolerance = AdjustTol(accuracy, BaseLocs)
     @assertEqual(BaseLocs, QPtLocs, tolerance, testname)

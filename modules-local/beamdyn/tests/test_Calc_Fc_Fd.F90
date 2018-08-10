@@ -67,7 +67,7 @@ subroutine test_Calc_Fc_Fd()
 
     call initialize_vars_base()
 
-    call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
+    call Calc_Fc_Fd(nelem, idx_qp, nqp, Stif0_QP, mqp, cet, k1s)
 
     tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, idx_qp, nelem), tolerance, testname)
@@ -98,7 +98,7 @@ subroutine test_Calc_Fc_Fd()
 
     call initialize_vars_base()
 
-    call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
+    call Calc_Fc_Fd(nelem, idx_qp, nqp, Stif0_QP, mqp, cet, k1s)
 
     tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, idx_qp, nelem), tolerance, testname)
@@ -155,7 +155,7 @@ subroutine test_Calc_Fc_Fd()
     base_cet = 51.0d0
     base_k1s = 42.0d0
 
-    call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
+    call Calc_Fc_Fd(nelem, idx_qp, nqp, Stif0_QP, mqp, cet, k1s)
 
     tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, idx_qp, nelem), tolerance, testname)
@@ -212,7 +212,7 @@ subroutine test_Calc_Fc_Fd()
     base_cet = 51.0d0
     base_k1s = 42.0d0
 
-    call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
+    call Calc_Fc_Fd(nelem, idx_qp, nqp, Stif0_QP, mqp, cet, k1s)
 
     tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, idx_qp, nelem), tolerance, testname)
@@ -282,7 +282,7 @@ subroutine test_Calc_Fc_Fd()
     base_cet       = 2.759687380913576
     base_k1s       = -15.873157195409721
 
-    call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
+    call Calc_Fc_Fd(nelem, idx_qp, nqp, Stif0_QP, mqp, cet, k1s)
 
     tolerance = AdjustTol(accuracy, base_Fd)
     @assertEqual(base_Fd, mqp%Fd(:, idx_qp, nelem), tolerance, testname)

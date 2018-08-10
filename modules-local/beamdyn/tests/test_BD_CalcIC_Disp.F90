@@ -66,8 +66,7 @@ subroutine test_BD_CalcIC_Disp()
     Orientation(:, :) = identity()
     GlbRot            = identity()
 
-    call BD_CalcIC_Disp( Orientation, TranslationDisp, node_elem_idx, elem_total,&
-                         nodes_per_elem, uuN0, GlbRot, q )
+    call BD_CalcIC_Disp( elem_total, nodes_per_elem, node_elem_idx, Orientation, TranslationDisp, uuN0, GlbRot, q )
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, q, tolerance, testname)
@@ -90,8 +89,7 @@ subroutine test_BD_CalcIC_Disp()
     Orientation(:, :) = identity()
     GlbRot            = identity()
 
-    call BD_CalcIC_Disp( Orientation, TranslationDisp, node_elem_idx, elem_total,&
-                         nodes_per_elem, uuN0, GlbRot, q )
+    call BD_CalcIC_Disp( elem_total, nodes_per_elem, node_elem_idx, Orientation, TranslationDisp, uuN0, GlbRot, q )
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, q, tolerance, testname)
@@ -115,8 +113,7 @@ subroutine test_BD_CalcIC_Disp()
     Orientation(:, :) = identity()
     GlbRot            = identity()
 
-    call BD_CalcIC_Disp( Orientation, TranslationDisp, node_elem_idx, elem_total,&
-                         nodes_per_elem, uuN0, GlbRot, q )
+    call BD_CalcIC_Disp( elem_total, nodes_per_elem, node_elem_idx, Orientation, TranslationDisp, uuN0, GlbRot, q )
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, q, tolerance, testname)
@@ -149,8 +146,7 @@ subroutine test_BD_CalcIC_Disp()
 
     base_q(1:3, 1)    = (/ 1.0d0, -2.0d0, 0.0d0 /)
 
-    call BD_CalcIC_Disp( Orientation, TranslationDisp, node_elem_idx, elem_total,&
-                         nodes_per_elem, uuN0, GlbRot, q )
+    call BD_CalcIC_Disp( elem_total, nodes_per_elem, node_elem_idx, Orientation, TranslationDisp, uuN0, GlbRot, q )
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, q, tolerance, testname)

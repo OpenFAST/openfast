@@ -63,8 +63,8 @@ subroutine test_BD_CalcIC_Position()
     URM_Orientation(:, :, 1) = identity()
     GlbRot                   = identity()
 
-    call BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx,&
-                             elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
+    call BD_CalcIC_Position( elem_total, nodes_per_elem, node_elem_idx, URM_Orientation,&
+                             URM_TranslationDisp, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, q, tolerance, testname)
@@ -88,8 +88,8 @@ subroutine test_BD_CalcIC_Position()
 
     base_q(4:6, 1)           = -Glb_crv
 
-    call BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx,&
-                             elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
+    call BD_CalcIC_Position( elem_total, nodes_per_elem, node_elem_idx, URM_Orientation,&
+                             URM_TranslationDisp, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, q, tolerance, testname)

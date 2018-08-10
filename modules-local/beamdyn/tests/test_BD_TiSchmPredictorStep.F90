@@ -63,7 +63,7 @@ subroutine test_BD_TiSchmPredictorStep()
 
     call initialize_vars_base()
 
-    call BD_TiSchmPredictorStep( x, OtherState, dt, coef, node_total )
+    call BD_TiSchmPredictorStep( node_total, x, OtherState, dt, coef )
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, x%q(:, node_total), tolerance, testname)
@@ -88,7 +88,7 @@ subroutine test_BD_TiSchmPredictorStep()
 
     call initialize_vars_base()
 
-    call BD_TiSchmPredictorStep( x, OtherState, dt, coef, node_total )
+    call BD_TiSchmPredictorStep( node_total, x, OtherState, dt, coef )
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, x%q(:, node_total), tolerance, testname)
@@ -126,7 +126,7 @@ subroutine test_BD_TiSchmPredictorStep()
     base_acc  = OtherState%acc(:, node_total)
     base_xcc  = OtherState%xcc(:, node_total)
 
-    call BD_TiSchmPredictorStep( x, OtherState, dt, coef, node_total )
+    call BD_TiSchmPredictorStep( node_total, x, OtherState, dt, coef )
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, x%q(:, node_total), tolerance, testname)
@@ -159,7 +159,7 @@ subroutine test_BD_TiSchmPredictorStep()
     OtherState%acc(:, node_total) = (/ 1.0d0, 2.0d0, 3.0d0, 4.0d0, 5.0d0, 6.0d0 /)
     OtherState%xcc(:, node_total) = (/ 1.0d0, 2.0d0, 3.0d0, 4.0d0, 5.0d0, 6.0d0 /)
 
-    call BD_TiSchmPredictorStep( x, OtherState, dt, coef, node_total )
+    call BD_TiSchmPredictorStep( node_total, x, OtherState, dt, coef )
 
     base_q    = (/ 5.0000000000000000,  10.000000000000000,  15.000000000000000,&
                   -1.0958904109589040, -1.3698630136986303, -1.6438356164383563 /)
@@ -205,7 +205,7 @@ subroutine test_BD_TiSchmPredictorStep()
     OtherState%xcc(:, node_total) = (/  5.025341186113057, -4.898097690814618,  0.119141033302848,&
                                         3.981534453133719,  7.818065050715969,  9.185828504108887 /)
 
-    call BD_TiSchmPredictorStep( x, OtherState, dt, coef, node_total )
+    call BD_TiSchmPredictorStep( node_total, x, OtherState, dt, coef )
 
     base_q    = (/  5.1845547529729332,  5.2237664135108997, -0.64301025395048494,&
                     2.1250566913300268, 0.89828437367971492,  -2.5270390603430970 /)

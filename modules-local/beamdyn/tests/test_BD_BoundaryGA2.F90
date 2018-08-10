@@ -77,7 +77,7 @@ subroutine test_BD_BoundaryGA2()
     base_acc(4:6)  = (/ 10.0d0, 11.0d0, 12.0d0 /)
     base_q(1:3)    = (/ 13.0d0, 14.0d0, 15.0d0 /)
 
-    call BD_BoundaryGA2(x, RootMotion, GlbRot, Glb_crv, acc, ErrStat, ErrMsg)
+    call BD_BoundaryGA2( GlbRot, Glb_crv, RootMotion, x, acc, ErrStat, ErrMsg )
 
     tolerance = AdjustTol(accuracy, base_q)
     @assertEqual(base_q, x%q(:, 1), tolerance, testname)

@@ -69,7 +69,7 @@ subroutine test_BD_ElasticForce()
 
     call initialize_vars_base()
 
-    call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
+    call BD_ElasticForce(fact, nelem, nqp, Stif0_QP, mqp)
 
     tolerance = AdjustTol(accuracy, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :, nqp, nelem), tolerance, testname)
@@ -101,7 +101,7 @@ subroutine test_BD_ElasticForce()
 
     call initialize_vars_base()
 
-    call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
+    call BD_ElasticForce(fact, nelem, nqp, Stif0_QP, mqp)
 
     tolerance = AdjustTol(accuracy, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :, nqp, nelem), tolerance, testname)
@@ -170,7 +170,7 @@ subroutine test_BD_ElasticForce()
     base_Qe(6, 4 : 6) = (/   404764.0d0,   809552.0d0, -674676.0d0 /)
 
 
-    call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
+    call BD_ElasticForce(fact, nelem, nqp, Stif0_QP, mqp)
 
     tolerance = AdjustTol(accuracy, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :, nqp, nelem), tolerance, testname)
@@ -239,7 +239,7 @@ subroutine test_BD_ElasticForce()
     base_Qe(6, 4 : 6) = (/   404764.0d0,   809552.0d0, -674676.0d0 /)
 
 
-    call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
+    call BD_ElasticForce(fact, nelem, nqp, Stif0_QP, mqp)
 
     tolerance = AdjustTol(accuracy, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :, nqp, nelem), tolerance, testname)
@@ -323,7 +323,7 @@ subroutine test_BD_ElasticForce()
     base_Qe(6, 4 : 6) = (/  0.895744179617717E04,  0.538822394099851E04,  0.511506606020909E04 /)
 
 
-    call BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
+    call BD_ElasticForce(fact, nelem, nqp, Stif0_QP, mqp)
 
     tolerance = AdjustTol(accuracy, base_Oe)
     @assertEqual(base_Oe, mqp%Oe(:, :, nqp, nelem), tolerance, testname)

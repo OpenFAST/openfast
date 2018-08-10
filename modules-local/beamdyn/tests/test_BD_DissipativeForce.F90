@@ -102,7 +102,7 @@ subroutine test_BD_DissipativeForce()
     base_betaC(5, 5) =  18110190.747504726
     base_betaC(6, 6) =  5564400.0000000056
 
-    call BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
+    call BD_DissipativeForce( fact, nelem, nqp, beta, mqp )
 
     tolerance = AdjustTol(accuracy, base_betaC)
     @assertEqual(base_betaC, mqp%betaC(:, :, 1, nelem), tolerance, testname)
@@ -186,7 +186,7 @@ subroutine test_BD_DissipativeForce()
     base_Fc(4)       =  1.5082443004933982E-009
     base_Fc(5)       = -6.7147602280125327E-014
 
-    call BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
+    call BD_DissipativeForce( fact, nelem, nqp, beta, mqp )
 
     tolerance = AdjustTol(accuracy, base_betaC)
     @assertEqual(base_betaC, mqp%betaC(:, :, 1, nelem), tolerance, testname)

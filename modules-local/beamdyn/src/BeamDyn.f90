@@ -138,7 +138,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
 
-      CALL BD_TrapezoidalPointWeight(p%QPtN, p%QPtWeight, p%nqp, p%refine, InputFileData%InpBl%station_eta, InputFileData%InpBl%station_total)
+      CALL BD_TrapezoidalPointWeight( p%nqp, p%refine, InputFileData%InpBl%station_eta, InputFileData%InpBl%station_total, p%QPtN, p%QPtWeight )
 
    ENDIF
 
@@ -487,7 +487,7 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
        DO j=1,p%nodes_per_elem
 
            eta = (GLL_nodes(j) + 1.0_BDKi)/2.0_BDKi ! relative location where we are on the member (element), in range [0,1]
-           call Find_IniNode(InputFileData%kp_coordinate, p%segment_length, p%SP_Coef, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
+           call Find_IniNode( member_first_kp, member_last_kp, InputFileData%kp_coordinate, p%segment_length, p%SP_Coef, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2 )
            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
            if (ErrStat >= AbortErrLev) return
            p%uuN0(1:3,j,i) = temp_POS
@@ -518,7 +518,7 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
       DO idx_qp=1,p%nqp
          eta = (p%QPtN(idx_qp) + 1.0_BDKi)/2.0_BDKi  ! translate quadrature points in [-1,1] to eta in [0,1]
 
-         call Find_IniNode(InputFileData%kp_coordinate, p%segment_length, p%SP_Coef, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
+         call Find_IniNode( member_first_kp, member_last_kp, InputFileData%kp_coordinate, p%segment_length, p%SP_Coef, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat >= AbortErrLev) return
          temp_id2 = (i-1)*p%nqp + idx_qp + p%qp_indx_offset
@@ -553,7 +553,7 @@ subroutine Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0
    INTEGER(IntKi), INTENT(IN   ) :: nqp            !< Number of quadrature points (per element)
    REAL(BDKi),     INTENT(IN   ) :: Shp(:, :)      !< Shape function matrix (index 1 = FE nodes; index 2=quadrature points)
    REAL(BDKi),     INTENT(IN   ) :: uu0(:, :, :)   !< Initial Disp/Rot value at quadrature point (at T=0)
-   REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)  !< Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
+   REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)  !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
    REAL(BDKi),     INTENT(  OUT) :: FEweight(:, :) !< weighting factors for integrating local sectional loads
 
    ! local variables
@@ -576,7 +576,7 @@ subroutine Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0
          FEweight(i,nelem) = FEweight(i,nelem) / SumShp
       ENDDO
       ! Tip contribution
-      ! Setting FEWeight at the tip to 1. The contirbution of the tip of each element should be absolute, hence no weighting is required
+      ! Setting FEWeight at the tip to 1. The contribution of the tip of each element should be absolute, hence no weighting is required
       FEweight(nodes_per_elem,nelem) = 1.0_BDKi
    ENDDO
 
@@ -1574,13 +1574,13 @@ subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
       end if
 
       ! convert to BeamDyn-internal system inputs, u_tmp:
-   CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_tmp%RootMotion, u_tmp%PointLoad, u_tmp%DistrLoad)
+   CALL BD_InputGlobalLocal( p%node_total, p%GlbRot, u_tmp%RootMotion, u_tmp%PointLoad, u_tmp%DistrLoad )
 
 
       ! initialize states, given parameters and initial inputs (in BD coordinates)
-   CALL BD_CalcIC_Position( u_tmp%RootMotion%Orientation, u_tmp%RootMotion%TranslationDisp, p%node_elem_idx, p%elem_total, p%nodes_per_elem, p%uuN0, p%GlbRot, p%Glb_crv, x%q, ErrStat2, ErrMsg2)
+   CALL BD_CalcIC_Position( p%elem_total, p%nodes_per_elem, p%node_elem_idx, u_tmp%RootMotion%Orientation, u_tmp%RootMotion%TranslationDisp, p%uuN0, p%GlbRot, p%Glb_crv, x%q, ErrStat2, ErrMsg2)
      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   CALL BD_CalcIC_Velocity(u_tmp%RootMotion%TranslationVel, u_tmp%RootMotion%RotationVel, p%elem_total, p%node_elem_idx, p%nodes_per_elem, p%uuN0, x)
+   CALL BD_CalcIC_Velocity( p%elem_total, p%nodes_per_elem, p%node_elem_idx, u_tmp%RootMotion%TranslationVel, u_tmp%RootMotion%RotationVel, p%uuN0, x )
    CALL Cleanup()
 
 CONTAINS
@@ -1736,7 +1736,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       end if
 
       ! convert to BD coordinates and apply boundary conditions
-   CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, m%u%RootMotion, m%u%PointLoad, m%u%DistrLoad)
+   CALL BD_InputGlobalLocal( p%node_total, p%GlbRot, m%u%RootMotion, m%u%PointLoad, m%u%DistrLoad )
 
       ! Copy over the DistrLoads
    CALL BD_DistrLoadCopy( p, m%u, m )
@@ -1825,10 +1825,10 @@ END SUBROUTINE BD_CalcOutput
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for updating discrete states
 ! mjs: this subroutine had a lot of unused arguments and variables in it--they are left at the bottom in a comment block, just in case
-SUBROUTINE BD_UpdateDiscState( RM_Orientation, HM_Orientation, UsePitchAct, torqM, pitchK, dt, pitchJ, xd )
+SUBROUTINE BD_UpdateDiscState( UsePitchAct, RM_Orientation, HM_Orientation, torqM, pitchK, dt, pitchJ, xd )
+   LOGICAL,                    INTENT(IN   )  :: UsePitchAct             !< Whether to use a pitch actuator inside BeamDyn
    REAL(BDKi),                 INTENT(IN   )  :: RM_Orientation(:, :, :) !< from u%RootMotion: Direction Cosine Matrix (DCM) (3,3,NNodes) (Inputs at t)
    REAL(BDKi),                 INTENT(IN   )  :: HM_Orientation(:, :, :) !< from u%HubMotion: Direction Cosine Matrix (DCM) (3,3,NNodes) (Inputs at t)
-   LOGICAL,                    INTENT(IN   )  :: UsePitchAct             !< Whether to use a pitch actuator inside BeamDyn
    REAL(BDKi),                 INTENT(IN   )  :: torqM(2, 2)             !< Pitch actuator matrix: (I-hA)^-1
    REAL(BDKi),                 INTENT(IN   )  :: pitchK                  !< Pitch actuator stiffness [(kg-m^2/s^2)]
    REAL(DbKi),                 INTENT(IN   )  :: dt                      !< module dt
@@ -2283,13 +2283,12 @@ END SUBROUTINE BD_QPData_mEta_rho
 !!
 !! The equations used here can be found in the NREL publication CP-2C00-60759
 !! (http://www.nrel.gov/docs/fy14osti/60759.pdf)
-SUBROUTINE BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
-
+SUBROUTINE BD_ElasticForce( fact, nelem, nqp, Stif0_QP, mqp )
+   LOGICAL,          INTENT(IN   ) :: fact              !< Boolean to calculate the Jacobian
    INTEGER(IntKi),   INTENT(IN   ) :: nelem             !< number of current element
    INTEGER(IntKi),   INTENT(IN   ) :: nqp               !< Number of quadrature points (per element)
    REAL(BDKi),       INTENT(IN   ) :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
    TYPE(EqMotionQP), INTENT(INOUT) :: mqp               !< qp type within misc/optimization variables
-   LOGICAL,          INTENT(IN   ) :: fact              !< Boolean to calculate the Jacobian
 
    REAL(BDKi)                      :: cet               !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
    REAL(BDKi)                      :: k1s
@@ -2305,14 +2304,14 @@ SUBROUTINE BD_ElasticForce(nelem, nqp, Stif0_QP, mqp, fact)
    if (.not. fact) then
 
       do idx_qp=1,nqp
-         call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
+         call Calc_Fc_Fd(nelem, idx_qp, nqp, Stif0_QP, mqp, cet, k1s)
       end do 
 
    else
 
       do idx_qp=1,nqp
 
-         call Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
+         call Calc_Fc_Fd(nelem, idx_qp, nqp, Stif0_QP, mqp, cet, k1s)
 
 
             !> ###Calculate the \f$ \underline{\underline{\mathcal{O}}} \f$ from equation (19)
@@ -2379,12 +2378,12 @@ END SUBROUTINE BD_ElasticForce
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the elastic forces Fc and Fd
-SUBROUTINE Calc_Fc_Fd(nelem, idx_qp, Stif0_QP, nqp, mqp, cet, k1s)
+SUBROUTINE Calc_Fc_Fd(nelem, idx_qp, nqp, Stif0_QP, mqp, cet, k1s)
 
    INTEGER(IntKi),   INTENT(IN   ) :: nelem             !< number of current element
    INTEGER(IntKi),   INTENT(IN   ) :: idx_qp            !< Index to quadrature point currently being calculated
-   REAL(BDKi),       INTENT(IN   ) :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
    INTEGER(IntKi),   INTENT(IN   ) :: nqp               !< Number of quadrature points (per element)
+   REAL(BDKi),       INTENT(IN   ) :: Stif0_QP(:, :, :) !< Sectional Stiffness Properties at quadrature points (6x6xqp)
    TYPE(EqMotionQP), INTENT(INOUT) :: mqp               !< qp type within misc/optimization variables
    REAL(BDKi),       INTENT(  OUT) :: cet               !< for storing the \f$ I_{yy} + I_{zz} \f$ inertia term
    REAL(BDKi),       INTENT(  OUT) :: k1s
@@ -2686,12 +2685,12 @@ END SUBROUTINE BD_InertialForce
 !> This subroutine calculates the dissipative forces and adds it to Fc and Fd
 !! It also calculates the linearized matrices Sd, Od, Pd and Qd
 !! betaC, Gd, Xd, Yd for N-R algorithm
-SUBROUTINE BD_DissipativeForce( nelem, nqp, beta, mqp, fact )
+SUBROUTINE BD_DissipativeForce( fact, nelem, nqp, beta, mqp )
+   LOGICAL,          INTENT(IN   ) :: fact
    INTEGER(IntKi),   INTENT(IN   ) :: nelem   !< index of current element in loop
    INTEGER(IntKi),   INTENT(IN   ) :: nqp     !< Number of quadrature points (per element)
    REAL(BDKi),       INTENT(IN   ) :: beta(:) !< Damping Coefficient
    TYPE(EqMotionQP), INTENT(INOUT) :: mqp     !< qp type within misc/optimization variables
-   LOGICAL,          INTENT(IN   ) :: fact
 
    REAL(BDKi)                      :: ffd(6)  !< dissipative force
    INTEGER(IntKi)                  :: i, j
@@ -2929,9 +2928,9 @@ SUBROUTINE BD_ElementMatrixAcc(  nelem, p, m )
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ElementMatrixAcc'
 
 
-   CALL BD_ElasticForce( nelem, p%nqp, p%Stif0_QP, m%qp, .FALSE. )                ! Calculate Fc, Fd only
+   CALL BD_ElasticForce( .FALSE., nelem, p%nqp, p%Stif0_QP, m%qp )                ! Calculate Fc, Fd only
    IF(p%damp_flag .NE. 0) THEN
-      CALL BD_DissipativeForce( nelem, p%nqp, p%beta, m%qp, .FALSE. )         ! Calculate dissipative terms on Fc, Fd
+      CALL BD_DissipativeForce( .FALSE., nelem, p%nqp, p%beta, m%qp )         ! Calculate dissipative terms on Fc, Fd
    ENDIF
    CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, p%gravity ) ! Calculate Fg
    CALL BD_GyroForce( nelem, p%nqp, m%qp%vvv, m%qp%RR0mEta, m%qp%rho, m%qp%Fb )   ! Calculate Fb  (velocity terms from InertialForce with aaa=0)
@@ -3443,13 +3442,13 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
-   CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
+   CALL BD_InputGlobalLocal( p%node_total, p%GlbRot, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad )
 
       ! Copy over the DistrLoads
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
       ! Incorporate boundary conditions
-   CALL BD_BoundaryGA2(x, u_interp%RootMotion, p%GlbRot, p%Glb_crv, OtherState%acc, ErrStat, ErrMsg)
+   CALL BD_BoundaryGA2( p%GlbRot, p%Glb_crv, u_interp%RootMotion, x, OtherState%acc, ErrStat, ErrMsg )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
 
@@ -3693,7 +3692,7 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, m )
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_StaticElementMatrix'
 
 
-   CALL BD_ElasticForce( nelem,p%nqp,p%Stif0_QP,m%qp,.true. )     ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
+   CALL BD_ElasticForce( .true., nelem, p%nqp, p%Stif0_QP, m%qp )     ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
    CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, gravity )    ! Calculate Fg
 
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) - m%qp%Fg(:,:,nelem) - m%DistrLoad_QP(:,:,nelem)
@@ -3942,13 +3941,13 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,OtherState,m,ErrStat,ErrMsg)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          ! Transform quantities from global frame to local (blade) frame
-      CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
+      CALL BD_InputGlobalLocal( p%node_total, p%GlbRot, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad )
 
          ! Copy over the DistrLoads
       CALL BD_DistrLoadCopy( p, u_interp, m )
    
          ! Incorporate boundary conditions
-      CALL BD_BoundaryGA2(x, u_interp%RootMotion, p%GlbRot, p%Glb_crv, OtherState%acc, ErrStat, ErrMsg)
+      CALL BD_BoundaryGA2( p%GlbRot, p%Glb_crv, u_interp%RootMotion, x, OtherState%acc, ErrStat, ErrMsg )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
             call cleanup()
@@ -3993,7 +3992,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,OtherState,m,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-   CALL BD_UpdateDiscState( u_interp%RootMotion%Orientation, u_interp%HubMotion%Orientation, p%UsePitchAct, p%torqM, p%pitchK, p%dt, p%pitchJ, xd )
+   CALL BD_UpdateDiscState( p%UsePitchAct, u_interp%RootMotion%Orientation, u_interp%HubMotion%Orientation, p%torqM, p%pitchK, p%dt, p%pitchJ, xd )
       ! BD_UpdateDiscState doesn't contain anything to generate ErrStat/ErrMsg
       ! call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -4003,16 +4002,16 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,OtherState,m,ErrStat,ErrMsg)
    ENDIF
 
       ! Transform quantities from global frame to local (blade in BD coords) frame
-   CALL BD_InputGlobalLocal(p%GlbRot, p%node_total, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad)
+   CALL BD_InputGlobalLocal( p%node_total, p%GlbRot, u_interp%RootMotion, u_interp%PointLoad, u_interp%DistrLoad )
       ! Copy over the DistrLoads
    CALL BD_DistrLoadCopy( p, u_interp, m )
 
 
       ! GA2: prediction
-   CALL BD_TiSchmPredictorStep( x, OtherState, p%dt, p%coef, p%node_total ) ! updates x and OtherState accelerations (from values at t to predictions at t+dt)
+   CALL BD_TiSchmPredictorStep( p%node_total, x, OtherState, p%dt, p%coef ) ! updates x and OtherState accelerations (from values at t to predictions at t+dt)
 
       ! Incorporate boundary conditions (overwrite first node of continuous states and Acc array at t+dt)
-   CALL BD_BoundaryGA2(x, u_interp%RootMotion, p%GlbRot, p%Glb_crv, OtherState%acc, ErrStat, ErrMsg)
+   CALL BD_BoundaryGA2( p%GlbRot, p%Glb_crv, u_interp%RootMotion, x, OtherState%acc, ErrStat, ErrMsg )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -4038,10 +4037,10 @@ END SUBROUTINE BD_GA2
 !! of u,v,acc, and xcc in generalized-alpha algorithm.
 !! This follows Eq's 14(a)-(c) in Dymore User's Manual--<em>The generalized-\f$\alpha\f$ time integration scheme</em>. \n
 !! http://www.dymoresolutions.com/UsersManual/AnalysisControls/GeneralizedAlpha.pdf
-SUBROUTINE BD_TiSchmPredictorStep( x, OtherState, dt, coef, node_total )
+SUBROUTINE BD_TiSchmPredictorStep( node_total, x, OtherState, dt, coef )
+   INTEGER(IntKi),               INTENT(IN   ) :: node_total !< Total number of finite element (GLL) nodes
    REAL(DbKi),                   INTENT(IN   ) :: dt         !< module dt
    REAL(DbKi),                   INTENT(IN   ) :: coef(9)    !< GA2 Coefficient
-   INTEGER(IntKi),               INTENT(IN   ) :: node_total !< Total number of finite element (GLL) nodes
    TYPE(BD_ContinuousStateType), INTENT(INOUT) :: x          !< Continuous states at t on input at t + dt on output
    TYPE(BD_OtherStateType),      INTENT(INOUT) :: OtherState !< Other states at t on input; at t+dt on outputs
 
@@ -4119,11 +4118,11 @@ END SUBROUTINE BD_TiSchmComputeCoefficients
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine applies the prescribed boundary conditions (from the input RootMotion mesh)
 !! into states and otherstates at the root finite element node
-SUBROUTINE BD_BoundaryGA2(x, RootMotion, GlbRot, Glb_crv, acc, ErrStat, ErrMsg)
-   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x            !< Continuous states at t
-   TYPE(MeshType),               INTENT(IN   )  :: RootMotion   !< contains motion--Inputs at t (in local BD coords)
+SUBROUTINE BD_BoundaryGA2( GlbRot, Glb_crv, RootMotion, x, acc, ErrStat, ErrMsg )
    REAL(BDKi),                   INTENT(IN   )  :: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)--Inputs at t
    REAL(BDKi),                   INTENT(IN   )  :: Glb_crv(3)   !< CRV parameters of GlbRot--Inputs at t
+   TYPE(MeshType),               INTENT(IN   )  :: RootMotion   !< contains motion--Inputs at t (in local BD coords)
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x            !< Continuous states at t
    REAL(BDKi),                   INTENT(  OUT)  :: acc(:, :)    !< Acceleration (dqdtdt)--Inputs at t
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat      !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
@@ -4254,7 +4253,6 @@ END SUBROUTINE BD_DynamicSolutionGA2
 !! This is done according to Eq's 28(a)-(d) in Dymore User's Manual--<em>The generalized-\f$\alpha\f$ time integration scheme</em>. \n
 !! http://www.dymoresolutions.com/UsersManual/AnalysisControls/GeneralizedAlpha.pdf
 SUBROUTINE BD_UpdateDynamicGA2( node_total, coef, Solution, x, OtherState )
-
    INTEGER(IntKi),               INTENT(IN   ) :: node_total     !< Total number of finite element (GLL) nodes
    REAL(DbKi),                   INTENT(IN   ) :: coef(9)        !< GA2 Coefficient
    REAL(BDKi),                   INTENT(IN   ) :: Solution(:, :) !< Result from LAPACK solve (X from A*X = B solve)
@@ -4356,11 +4354,11 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
 !VA: The gyroscopic term is included in the m%qp%Gi. I think the m%qp%Fb term is used to calculate the accelerations
       
    
-   CALL BD_ElasticForce(  nelem,p%nqp,p%Stif0_QP,m%qp,fact )                    ! Calculate Fc, Fd  [and if(fact): Oe, Pe, and Qe for N-R algorithm] using m%qp%E1, m%qp%RR0, m%qp%kappa, m%qp%Stif   
+   CALL BD_ElasticForce( fact, nelem, p%nqp, p%Stif0_QP, m%qp )                    ! Calculate Fc, Fd  [and if(fact): Oe, Pe, and Qe for N-R algorithm] using m%qp%E1, m%qp%RR0, m%qp%kappa, m%qp%Stif   
    CALL BD_InertialForce( nelem,p,m,fact )                    ! Calculate Fi [and Mi,Gi,Ki IF(fact)]
    
    IF(p%damp_flag .NE. 0) THEN
-      CALL BD_DissipativeForce( nelem, p%nqp, p%beta, m%qp, fact )              ! Calculate dissipative terms on Fc, Fd [and Sd, Od, Pd and Qd, betaC, Gd, Xd, Yd for N-R algorithm]
+      CALL BD_DissipativeForce( fact, nelem, p%nqp, p%beta, m%qp )              ! Calculate dissipative terms on Fc, Fd [and Sd, Od, Pd and Qd, betaC, Gd, Xd, Yd for N-R algorithm]
    ENDIF
    
    CALL BD_GravityForce( nelem, p%nqp, p%qp%mmm, m%qp%Fg, m%qp%RR0mEta, p%gravity )
@@ -4505,9 +4503,9 @@ END SUBROUTINE BD_ElementMatrixGA2
 !!  4 Point forces/moments
 !!  5 Distributed forces/moments
 !! It also transforms the DCM to rotation tensor in the input data structure
-SUBROUTINE BD_InputGlobalLocal(GlbRot, node_total, RootMotion, PointLoad, DistrLoad)
-   REAL(BDKi),     INTENT(IN   ) :: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
+SUBROUTINE BD_InputGlobalLocal( node_total, GlbRot, RootMotion, PointLoad, DistrLoad )
    INTEGER(IntKi), INTENT(IN   ) :: node_total   !< Total number of finite element (GLL) nodes
+   REAL(BDKi),     INTENT(IN   ) :: GlbRot(3, 3) !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
    TYPE(MeshType), INTENT(INOUT) :: RootMotion   !< contains motion
    TYPE(MeshType), INTENT(INOUT) :: PointLoad    !< Applied point forces along beam axis
    TYPE(MeshType), INTENT(INOUT) :: DistrLoad    !< Applied distributed forces along beam axis
@@ -4576,12 +4574,12 @@ END SUBROUTINE BD_DistrLoadCopy
 !! The initial displacements/rotations and linear velocities are
 !! set to the root value; the angular velocities over the beam
 !! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
-SUBROUTINE BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
-   REAL(BDKi),     INTENT(IN   ) :: URM_Orientation(:, :, :)  !< Direction Cosine Matrix (DCM)--from u%RootMotion (3,3,NNodes)
-   REAL(BDKi),     INTENT(IN   ) :: URM_TranslationDisp(:, :) !< Translational displacements--from u%RootMotion (3,NNodes)
-   INTEGER(IntKi), INTENT(IN   ) :: node_elem_idx(:, :)       !< Index to first and last nodes of element in p%node_total sized arrays
+SUBROUTINE BD_CalcIC_Position( elem_total, nodes_per_elem, node_elem_idx, URM_Orientation, URM_TranslationDisp, uuN0, GlbRot, Glb_crv, q, ErrStat, ErrMsg)
    INTEGER(IntKi), INTENT(IN   ) :: elem_total                !< Total number of elements
    INTEGER(IntKi), INTENT(IN   ) :: nodes_per_elem            !< Finite element (GLL) nodes per element
+   INTEGER(IntKi), INTENT(IN   ) :: node_elem_idx(:, :)       !< Index to first and last nodes of element in p%node_total sized arrays
+   REAL(BDKi),     INTENT(IN   ) :: URM_Orientation(:, :, :)  !< Direction Cosine Matrix (DCM)--from u%RootMotion (3,3,NNodes)
+   REAL(BDKi),     INTENT(IN   ) :: URM_TranslationDisp(:, :) !< Translational displacements--from u%RootMotion (3,NNodes)
    REAL(BDKi),     INTENT(IN   ) :: uuN0(:, :, :)             !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
    REAL(BDKi),     INTENT(IN   ) :: GlbRot(3, 3)              !< Initial Rotation Tensor between Global and Blade frames (BD coordinates; transfers local to global)
    REAL(BDKi),     INTENT(IN   ) :: Glb_crv(3)                !< CRV parameters of GlbRot
@@ -4622,7 +4620,7 @@ SUBROUTINE BD_CalcIC_Position( URM_Orientation, URM_TranslationDisp, node_elem_i
    ENDDO
 
    ! Initialize displacements
-   CALL BD_CalcIC_Disp( URM_Orientation(:, :, 1), URM_TranslationDisp(:, 1), node_elem_idx, elem_total, nodes_per_elem, uuN0, GlbRot, q )
+   CALL BD_CalcIC_Disp( elem_total, nodes_per_elem, node_elem_idx, URM_Orientation(:, :, 1), URM_TranslationDisp(:, 1), uuN0, GlbRot, q )
 
 END SUBROUTINE BD_CalcIC_Position
 
@@ -4633,13 +4631,12 @@ END SUBROUTINE BD_CalcIC_Position
 !! The initial displacements/rotations and linear velocities are
 !! set to the root value; the angular velocities over the beam
 !! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
-SUBROUTINE BD_CalcIC_Velocity(TranslationVel, RotationVel, elem_total, node_elem_idx, nodes_per_elem, uuN0, x)
-
+SUBROUTINE BD_CalcIC_Velocity( elem_total, nodes_per_elem, node_elem_idx, TranslationVel, RotationVel, uuN0, x )
+   INTEGER(IntKi),               INTENT(IN   ) :: elem_total          !< Total number of elements
+   INTEGER(IntKi),               INTENT(IN   ) :: nodes_per_elem      !< Finite element (GLL) nodes per element
+   INTEGER(IntKi),               INTENT(IN   ) :: node_elem_idx(:,:)  !< Index to first and last nodes of element in p%node_total sized arrays
    REAL(BDKi),                   INTENT(IN   ) :: TranslationVel(:,:) !< Translational velocities (3,NNodes)
    REAL(BDKi),                   INTENT(IN   ) :: RotationVel(:,:)    !< Rotational velocities (3,NNodes)
-   INTEGER(IntKi),               INTENT(IN   ) :: elem_total          !< Total number of elements
-   INTEGER(IntKi),               INTENT(IN   ) :: node_elem_idx(:,:)  !< Index to first and last nodes of element in p%node_total sized arrays
-   INTEGER(IntKi),               INTENT(IN   ) :: nodes_per_elem      !< Finite element (GLL) nodes per element
    REAL(BDKi),                   INTENT(IN   ) :: uuN0(:,:,:)         !< Initial Position Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)
    TYPE(BD_ContinuousStateType), INTENT(INOUT) :: x                   !< Continuous states at t
 
