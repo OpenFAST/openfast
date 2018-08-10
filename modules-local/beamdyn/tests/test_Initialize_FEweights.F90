@@ -1,8 +1,26 @@
 @test
 subroutine test_Initialize_FEweights()
     ! test branches
-    ! - inputs from bd_static_cantilever_beam regression test
-    ! - inputs from bd_static_twisted_with_k1 regression test
+    ! - single quad pt/element/node--all zero inputs => final node on each element := 1
+    ! - simulate 2 quad pts/elements/nodes to ensure proper indexing--all zero inputs (except Shp, to avoid division by zero) => final node on each element := 1
+    ! - single quad pt/element/node--integer-valued inputs
+    ! - simulate 2 quad pts/elements/nodes to ensure proper indexing--integer-valued inputs
+    ! - single quad pt/element/node--randomly-chosen real-valued inputs
+    ! - single element, 2 quad pts, nodes--construct case where all weights are not 0 or 1
+
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
+    ! In Initialize_FEweights(), the weighting factors for integrating local
+    ! sectional loads (FEweight) are calculated for elements/nodes using the
+    ! shape functions (Shp), and the initial displacement/rotation values at 
+    ! the quadrature points and GLL (FE) nodes (uu0 and uuN0).
+    ! This test verifies that indexing occurs properly and that the calculations
+    ! are done properly for all zero inputs, integer-valued inputs, and
+    ! randomly-chosen real-valued inputs.
+    ! NOTE: The final node on each element is defined to have a weight of 1
+      ! i.e., FEweight(nodes_per_elem, :) := 1.
+    ! --------------------------------------------------------------------------
+    ! --------------------------------------------------------------------------
 
     use pFUnit_mod
     use BeamDyn
@@ -36,102 +54,149 @@ subroutine test_Initialize_FEweights()
 
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from bd_static_cantilever_beam regression test:"
+    testname = "single quad pt/element/node--all zero inputs => final node on each element := 1:"
 
     elem_total     = 1
-    nodes_per_elem = 6
-    nqp            = 6
+    nodes_per_elem = 1
+    nqp            = 1
 
     allocate(Shp(nodes_per_elem, nqp), uu0(6, nqp, elem_total), uuN0(6, nodes_per_elem, elem_total),&
              FEweight(nodes_per_elem, elem_total), base_FEweight(nodes_per_elem, elem_total))
 
     call initialize_vars_base()
 
-    Shp(1, :)           = (/ 0.56810033719119868, -0.11491298888938235, 2.0974134603267917E-002,&
-                             1.2892827638118030E-002, -2.3435601993343175E-002, 1.9852365830306043E-002 /)
-    Shp(2, :)           = (/ 0.54600529904618211, 0.89325443712116914, -7.2277727371205455E-002,&
-                             -3.7910305851169702E-002, 6.5037607493123623E-002, -5.3848422698494769E-002 /)
-    Shp(3, :)           = (/ -0.17100059377928215, 0.29872729762554340, 0.98837526121682617,&
-                             8.7945809764163094E-002, -0.11867075135711061, 9.0891014410089926E-002 /)
-    Shp(4, :)           = (/ 9.0891014410089913E-002, -0.11867075135711064, 8.7945809764163108E-002,&
-                             0.98837526121682640, 0.29872729762554345, -0.17100059377928217 /)
-    Shp(5, :)           = (/ -5.3848422698494762E-002, 6.5037607493123609E-002, -3.7910305851169689E-002,&
-                             -7.2277727371205441E-002, 0.89325443712116881, 0.54600529904618200 /)
-    Shp(6, :)           = (/ 1.9852365830306046E-002, -2.3435601993343175E-002, 1.2892827638118033E-002,&
-                             2.0974134603267913E-002, -0.11491298888938237, 0.56810033719119879 /)
-
-    uu0(3, :, 1)        = (/ 0.33765242898423986, 1.6939530676686769, 3.8069040695840148,&
-                             6.1930959304159874, 8.3060469323313200, 9.6623475710157596 /)
-    uuN0(3, :, 1)       = (/ 0.0000000000000000, 1.1747233803526762, 3.5738424175967740,&
-                             6.4261575824032260, 8.8252766196473242, 10.000000000000000 /)
-
-    base_FEweight(:, 1) = (/ 1.0000000000000000, 0.59261267411374030, 0.89141360665002911,&
-                             0.10858639334997101, 0.40738732588625964,  1.0000000000000000 /)
+    base_FEweight(nodes_per_elem, elem_total) = 1.0d0
 
     call Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0, FEweight )
     
-    tolerance = AdjustTol(accuracy, base_FEweight)
-    @assertEqual(base_FEweight, FEweight, tolerance, testname)
+    tolerance = AdjustTol(accuracy, base_FEweight(nodes_per_elem, elem_total))
+    @assertEqual(base_FEweight(nodes_per_elem, elem_total), FEweight(nodes_per_elem, elem_total), tolerance, testname)
 
     deallocate(Shp, uu0, uuN0, FEweight, base_FEweight)
 
     ! --------------------------------------------------------------------------
-    testname = "inputs from bd_static_twisted_with_k1 regression test:"
+    testname = "simulate 2 quad pts/elements/nodes to ensure proper indexing--all zero inputs (except Shp, to avoid division by zero) => final node on each element := 1:"
 
-    elem_total     = 1
-    nodes_per_elem = 8
-    nqp            = 8
+    elem_total     = 2
+    nodes_per_elem = 2
+    nqp            = 2
 
     allocate(Shp(nodes_per_elem, nqp), uu0(6, nqp, elem_total), uuN0(6, nodes_per_elem, elem_total),&
              FEweight(nodes_per_elem, elem_total), base_FEweight(nodes_per_elem, elem_total))
 
     call initialize_vars_base()
 
-    Shp(1, :)           = (/ 0.53553425057201065, -0.12681887051926782, 4.2488564543055544E-002,&
-                            -9.2602118684858743E-003, -6.3895106188629168E-003, 1.3214695862124464E-002,&
-                            -1.4352428788134695E-002, 1.0848468082518809E-002 /)
-    Shp(2, :)           = (/ 0.58333389861396934, 0.83429732674128210, -0.14143519045975092,&
-                             2.6683713600426651E-002, 1.7406165451105505E-002, -3.5043955562786770E-002,&
-                             3.7541065907342047E-002, -2.8194978379475939E-002 /)
-    Shp(3, :)           = (/ -0.17831170954458994, 0.38881654217409123, 0.94159994368919941,&
-                             -5.7240507049237374E-002, -3.0148724761279812E-002, 5.5765979632778732E-002,&
-                             -5.7401469530794155E-002, 4.2348116595418914E-002 /)
-    Shp(4, :)           = (/ 9.6232880307526913E-002, -0.14919436846736275, 0.21664090384901866,&
-                             0.99351818524305013, 6.5430890003283421E-002, -9.3230941553639105E-002,&
-                             8.7112202482843737E-002, -6.1790926247378773E-002 /)
-    Shp(5, :)           = (/ -6.1790926247378787E-002, 8.7112202482843751E-002, -9.3230941553639132E-002,&
-                              6.5430890003283435E-002, 0.99351818524305047, 0.21664090384901871,&
-                             -0.14919436846736275,  9.6232880307526927E-002 /)
-    Shp(6, :)           = (/ 4.2348116595418900E-002, -5.7401469530794134E-002, 5.5765979632778725E-002,&
-                            -3.0148724761279794E-002, -5.7240507049237360E-002, 0.94159994368919941,&
-                             0.38881654217409112, -0.17831170954458986 /)
-    Shp(7, :)           = (/ -2.8194978379475943E-002, 3.7541065907342040E-002, -3.5043955562786777E-002,&
-                              1.7406165451105505E-002, 2.6683713600426651E-002, -0.14143519045975098,&
-                              0.83429732674128221, 0.58333389861396956 /)
-    Shp(8, :)           = (/ 1.0848468082518804E-002, -1.4352428788134695E-002, 1.3214695862124462E-002,&
-                            -6.3895106188629159E-003, -9.2602118684858709E-003, 4.2488564543055538E-002,&
-                            -0.12681887051926777, 0.53553425057201054 /)
+    Shp = 1.0d0
+    base_FEweight(nodes_per_elem, elem_total) = 1.0d0
 
-    uu0(3, :, 1)        = (/ 0.19855071751231829, 1.0166676129318664, 2.3723379504183550,&
-                             4.0828267875217499, 5.9171732124782501, 7.6276620495816445,&
-                             8.9833323870681312, 9.8014492824876811 /)
-    uu0(6, :, 1)        = (/ -3.1188908374165332E-002, -0.15978267682793110, -0.37372780504509734,&
-                             -0.64688145696123944, -0.94656543111513558, -1.2353186535010092,&
-                             -1.4727041460392181, -1.6204318111815870 /)
+    call Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0, FEweight )
+    
+    tolerance = AdjustTol(accuracy, base_FEweight(nodes_per_elem, elem_total))
+    @assertEqual(base_FEweight(nodes_per_elem, elem_total), FEweight(nodes_per_elem, elem_total), tolerance, testname)
 
-    uuN0(3, :, 1)       = (/ 0.0000000000000000, 0.64129925745196714, 2.0414990928342887,&
-                             3.9535039104876057, 6.0464960895123943, 7.9585009071657105,&
-                             9.3587007425480326, 10.000000000000000 /)
-    uuN0(4, :, 1)       = (/ 0.0000000000000000, -0.0000000000000000, -0.0000000000000000,&
-                            -0.0000000000000000, -0.0000000000000000, -0.0000000000000000,&
-                            -0.0000000000000000, -0.0000000000000000 /)
-    uuN0(6, :, 1)       = (/ 0.0000000000000000, -0.10075635332802292, -0.32136671304351155,&
-                            -0.62605311370206906, -0.96804298404628186, -1.2924757368995752,&
-                            -1.5400297463046355, -1.6568542494923804 /)
+    deallocate(Shp, uu0, uuN0, FEweight, base_FEweight)
 
-    base_FEweight(:, 1) = (/ 1.0000000000000000, 0.54940577394025225, 0.80957167719009415,&
-                             0.85825171283435542, 0.14174828716564453, 0.19042832280990571,&
-                             0.45059422605974792,  1.0000000000000000 /)
+    ! --------------------------------------------------------------------------
+    testname = "single quad pt/element/node--integer-valued inputs:"
+
+    elem_total     = 1
+    nodes_per_elem = 1
+    nqp            = 1
+
+    allocate(Shp(nodes_per_elem, nqp), uu0(6, nqp, elem_total), uuN0(6, nodes_per_elem, elem_total),&
+             FEweight(nodes_per_elem, elem_total), base_FEweight(nodes_per_elem, elem_total))
+
+    call initialize_vars_base()
+
+    Shp(nodes_per_elem, nqp)            = 2.0d0
+    uu0(:, nqp, elem_total)             = (/ 1.0d0, 2.0d0, 3.0d0, 4.0d0, 5.0d0, 6.0d0 /)
+    uuN0(:, nodes_per_elem, elem_total) = (/ 1.0d0, 2.0d0, 3.0d0, 4.0d0, 5.0d0, 6.0d0 /)
+
+    base_FEweight(nodes_per_elem, elem_total) = 1.0d0
+
+    call Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0, FEweight )
+    
+    tolerance = AdjustTol(accuracy, base_FEweight(nodes_per_elem, elem_total))
+    @assertEqual(base_FEweight(nodes_per_elem, elem_total), FEweight(nodes_per_elem, elem_total), tolerance, testname)
+
+    deallocate(Shp, uu0, uuN0, FEweight, base_FEweight)
+
+    ! --------------------------------------------------------------------------
+    testname = "simulate 2 quad pts/elements/nodes to ensure proper indexing--integer-valued inputs:"
+
+    elem_total     = 2
+    nodes_per_elem = 2
+    nqp            = 2
+
+    allocate(Shp(nodes_per_elem, nqp), uu0(6, nqp, elem_total), uuN0(6, nodes_per_elem, elem_total),&
+             FEweight(nodes_per_elem, elem_total), base_FEweight(nodes_per_elem, elem_total))
+
+    call initialize_vars_base()
+
+    Shp(nodes_per_elem, nqp)            = 2.0d0
+    uu0(:, nqp, elem_total)             = (/ 1.0d0, 2.0d0, 3.0d0, 4.0d0, 5.0d0, 6.0d0 /)
+    uuN0(:, nodes_per_elem, elem_total) = (/ 1.0d0, 2.0d0, 3.0d0, 4.0d0, 5.0d0, 6.0d0 /)
+
+    base_FEweight(nodes_per_elem, elem_total) = 1.0d0
+
+    call Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0, FEweight )
+    
+    tolerance = AdjustTol(accuracy, base_FEweight(nodes_per_elem, elem_total))
+    @assertEqual(base_FEweight(nodes_per_elem, elem_total), FEweight(nodes_per_elem, elem_total), tolerance, testname)
+
+    deallocate(Shp, uu0, uuN0, FEweight, base_FEweight)
+
+    ! --------------------------------------------------------------------------
+    testname = "single quad pt/element/node--randomly-chosen real-valued inputs:"
+
+    elem_total     = 1
+    nodes_per_elem = 1
+    nqp            = 1
+
+    allocate(Shp(nodes_per_elem, nqp), uu0(6, nqp, elem_total), uuN0(6, nodes_per_elem, elem_total),&
+             FEweight(nodes_per_elem, elem_total), base_FEweight(nodes_per_elem, elem_total))
+
+    call initialize_vars_base()
+
+    Shp(nodes_per_elem, nqp)            = 8.115838741512384
+    uu0(:, nqp, elem_total)             = (/ -7.460263674129878,  2.647184924508190, -4.430035622659032,&
+                                              9.150136708685952, -6.847738366449034,  9.143338964858913 /)
+    uuN0(:, nodes_per_elem, elem_total) = (/  8.267517122780387, -8.049191900011810,  0.937630384099677,&
+                                              9.297770703985531,  9.411855635212312, -0.292487025543176 /)
+
+    base_FEweight(nodes_per_elem, elem_total) = 1.0d0
+
+    call Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0, FEweight )
+    
+    tolerance = AdjustTol(accuracy, base_FEweight(nodes_per_elem, elem_total))
+    @assertEqual(base_FEweight(nodes_per_elem, elem_total), FEweight(nodes_per_elem, elem_total), tolerance, testname)
+
+    deallocate(Shp, uu0, uuN0, FEweight, base_FEweight)
+
+    ! --------------------------------------------------------------------------
+    testname = "single element, 2 quad pts, nodes--construct case where all weights are not 0 or 1:"
+
+    elem_total     = 1
+    nodes_per_elem = 2
+    nqp            = 2
+
+    allocate(Shp(nodes_per_elem, nqp), uu0(6, nqp, elem_total), uuN0(6, nodes_per_elem, elem_total),&
+             FEweight(nodes_per_elem, elem_total), base_FEweight(nodes_per_elem, elem_total))
+
+    call initialize_vars_base()
+
+    Shp(1, :)              = (/  3.7481341839479505,  8.9817034170396752 /)
+    Shp(2, :)              = (/ -0.9611457794303834, -1.0792915393984241 /)
+    uu0(:, 1, elem_total)  = (/ -3.5042083550884495, -3.7674097989412125, -7.8288767426099053,&
+                                -0.4220990938163673,  1.6746878453533913,  5.5180718972318630 /)
+    uu0(:, 2, elem_total)  = (/ -1.7436851329975198, -6.2021353161731341, -1.8614262009724936,&
+                                 4.7482320135583507,  4.0141810010515044, -8.3326150240504866 /)
+    uuN0(:, 1, elem_total) = (/ -3.5590211237529390,  7.0716880126727268,  2.7974258069555518,&
+                                -4.9254761201700248,  8.5055846477845378, -8.4306718710854014 /)
+    uuN0(:, 2, elem_total) = (/  1.1659950888116022,  6.7087522416242074,  6.8269619610460168,&
+                                 9.6565694118795555, -1.4437103856860070,  4.7034150385675382 /)
+
+    base_FEweight(:, elem_total) = (/ 0.29443692067659660, 1.0000000000000000 /)
 
     call Initialize_FEweights( elem_total, nodes_per_elem, nqp, Shp, uu0, uuN0, FEweight )
     
