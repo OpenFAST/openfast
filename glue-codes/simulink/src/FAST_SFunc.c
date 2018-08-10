@@ -441,7 +441,7 @@ static void mdlUpdate(SimStruct *S, int_T tid)
 static void mdlTerminate(SimStruct *S)
 {
    if (n_t_global > -2){ // just in case we've never initialized, check this time step
-      static int tr = 1; // Yes, stoptheprogram
+      bool tr = 1; // Yes, stoptheprogram
       FAST_End(&iTurb, &tr);
       n_t_global = -2;
    }  

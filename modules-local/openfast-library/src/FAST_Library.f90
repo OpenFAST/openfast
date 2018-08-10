@@ -326,12 +326,7 @@ subroutine FAST_End(iTurb, StopTheProgram) BIND (C, NAME='FAST_End')
    INTEGER(C_INT),         INTENT(IN   ) :: iTurb            ! Turbine number 
    LOGICAL(C_INT),         INTENT(IN)    :: StopTheProgram   ! flag indicating if the program should end (false if there are more turbines to end)
 
-   IF ( StopTheProgram == 0 ) THEN
-      CALL ExitThisProgram_T( Turbine(iTurb), ErrID_None, .false.)
-   ELSE
-      CALL ExitThisProgram_T( Turbine(iTurb), ErrID_None, .true.)
-   END IF
-
+   CALL ExitThisProgram_T( Turbine(iTurb), ErrID_None, LOGICAL(StopTheProgram))
    
 end subroutine FAST_End
 !==================================================================================================================================
