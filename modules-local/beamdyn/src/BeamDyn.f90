@@ -3348,9 +3348,11 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
        gravity_temp(:)              = p%gravity(:)                   * load_test
 
        CALL BD_StaticSolution(x, gravity_temp, u_temp, p, m, piter, ErrStat2, ErrMsg2)
-           call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
-           ErrStat = ErrID_None
-           ErrMsg  = ""
+       call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
+       if (ErrStat >= AbortErrLev) then
+           call cleanup()
+           return
+       end if
 
        ! note that if BD_StaticSolution converges, then piter will .le. p%niter
 
@@ -3438,19 +3440,23 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
 
    ! Allocate local arrays
    IF ( p%tngt_stf_fd .OR. p%tngt_stf_comp ) CALL AllocAry( StifK_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD StifK',ErrStat2,ErrMsg2);
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    Eref  = 0.0_BDKi
    DO piter=1,p%niter
 
        ! compute the finite differenced stiffness matrix
-       IF ( p%tngt_stf_fd .or. p%tngt_stf_comp ) CALL BD_FD_Stat( x, gravity, u, p, m, StifK_fd )
+       IF ( p%tngt_stf_fd .or. p%tngt_stf_comp ) CALL BD_FD_Stat( x, gravity, u, p, m, StifK_fd, ErrStat, ErrMsg )
 
        CALL BD_QuadraturePointData( p,x,m )         ! Calculate QP values uuu, uup, RR0, kappa, E1
        CALL BD_GenerateStaticElement(gravity, p, m) ! Calculate RHS and analytical tangent stiffness matrix
 
        ! compare the finite differenced stiffness matrix against the analytical tangent stiffness matrix is flag is set
        IF ( p%tngt_stf_comp ) CALL BD_CompTngtStiff( RESHAPE (m%StifK,(/p%dof_total,p%dof_total/)), &
-                                                     RESHAPE(StifK_fd,(/p%dof_total,p%dof_total/)), p%tngt_stf_difftol )
+                                                     RESHAPE(StifK_fd,(/p%dof_total,p%dof_total/)), p%tngt_stf_difftol, &
+                                                     ErrStat, ErrMsg )
+       IF (ErrStat >= AbortErrLev) return
+
 
          !  Point loads are on the GLL points.
        DO j=1,p%node_total
@@ -3499,22 +3505,18 @@ SUBROUTINE BD_StaticSolution( x, gravity, u, p, m, piter, ErrStat, ErrMsg )
            write (*,"(a)", advance='no') " Linear Iteration "
            write (*,"(I4.1)", advance='no') piter ! spacing format assumes max newton iterations = 9999
            write (*,"(a)", advance='no') "    Relative Residual Norm: "
-           write (*,"(ES12.4)") Enorm/Eref
-
+           write (*,"(ES12.4)", advance='no') Enorm/Eref
+           write (*,*) p%tol
           IF(Enorm/Eref .LE. p%tol) RETURN
       ENDIF
 
    ENDDO
 
-   CALL setErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of iterations", ErrStat, ErrMsg, RoutineName)
-
-   RETURN
-
 END SUBROUTINE BD_StaticSolution
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the finite differenced tangent stiffness matrix
-SUBROUTINE BD_FD_Stat( x, gravity, u, p, m, StifK_fd )
+SUBROUTINE BD_FD_Stat( x, gravity, u, p, m, StifK_fd, ErrStat, ErrMsg )
 
     ! Function arguments
     TYPE(BD_ContinuousStateType),    INTENT(INOUT) :: x                 !< Continuous states at t on input at t + dt on output
@@ -3523,6 +3525,8 @@ SUBROUTINE BD_FD_Stat( x, gravity, u, p, m, StifK_fd )
     TYPE(BD_ParameterType),          INTENT(IN   ) :: p                 !< Parameters
     TYPE(BD_MiscVarType),            INTENT(INOUT) :: m                 !< misc/optimization variables
     REAL(BDKi),                      INTENT(INOUT) :: StifK_fd(:,:,:,:) !< finite differenced stiffness matrix
+    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
     ! local variables
     INTEGER(IntKi)                                 :: i
@@ -3533,8 +3537,8 @@ SUBROUTINE BD_FD_Stat( x, gravity, u, p, m, StifK_fd )
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_Stat'
 
     ! allocate local arrays
-    CALL AllocAry(RHS_m,p%dof_node,p%node_total,'RHS Neg Per',ErrStat2,ErrMsg2);
-    CALL AllocAry(RHS_p,p%dof_node,p%node_total,'RHS Pos Per',ErrStat2,ErrMsg2);
+    CALL AllocAry(RHS_m,p%dof_node,p%node_total,'RHS Neg Per',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    CALL AllocAry(RHS_p,p%dof_node,p%node_total,'RHS Pos Per',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
     ! zero out the local matrices.
     RHS_m    = 0.0_BDKi
@@ -4151,9 +4155,9 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
    ErrMsg  = ""
 
    IF ( p%tngt_stf_fd .OR. p%tngt_stf_comp ) THEN
-       CALL AllocAry( StifK_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD StifK', ErrStat2,ErrMsg2);
-       CALL AllocAry( DampG_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD DampC', ErrStat2,ErrMsg2);
-       CALL AllocAry( MassM_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD MassM', ErrStat2,ErrMsg2);
+       CALL AllocAry( StifK_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD StifK', ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+       CALL AllocAry( DampG_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD DampC', ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+       CALL AllocAry( MassM_fd,p%dof_node,p%node_total,p%dof_node,p%node_total,'FD MassM', ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END IF
 
    Eref  =  0.0_BDKi
@@ -4161,7 +4165,7 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
 
       fact = MOD(piter-1,p%n_fact) .EQ. 0  ! when true, we factor the jacobian matrix
 
-      IF ( (p%tngt_stf_fd .OR. p%tngt_stf_comp) .AND. fact ) CALL BD_FD_GA2( x, OtherState, u, p, m, StifK_fd, DampG_fd, MassM_fd )
+      IF ( (p%tngt_stf_fd .OR. p%tngt_stf_comp) .AND. fact ) CALL BD_FD_GA2( x, OtherState, u, p, m, StifK_fd, DampG_fd, MassM_fd, ErrStat, ErrMsg )
 
          ! Apply accelerations using F=ma ?  Is that what this routine does?
          ! Calculate Quadrature point values needed
@@ -4180,7 +4184,10 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
 
           ! compare the finite differenced stiffness matrix against the analytical tangent stiffness matrix is flag is set
           IF ( p%tngt_stf_comp ) CALL BD_CompTngtStiff( RESHAPE (m%StifK,(/p%dof_total,p%dof_total/)), &
-                                                        RESHAPE(StifK_fd,(/p%dof_total,p%dof_total/)), p%tngt_stf_difftol )
+                                                        RESHAPE(StifK_fd,(/p%dof_total,p%dof_total/)), p%tngt_stf_difftol, &
+                                                        ErrStat, ErrMsg )
+          IF (ErrStat >= AbortErrLev) return
+
 
           ! Reshape 4d array into 2d for the use with the LAPACK solver
           IF ( p%tngt_stf_fd ) THEN
@@ -4243,7 +4250,7 @@ END SUBROUTINE BD_DynamicSolutionGA2
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the finite differenced tangent stiffness matrix
-SUBROUTINE BD_FD_GA2( x, OtherState, u, p, m, StifK_fd, DampG_fd, MassM_fd )
+SUBROUTINE BD_FD_GA2( x, OtherState, u, p, m, StifK_fd, DampG_fd, MassM_fd, ErrStat, ErrMsg )
 
     ! Function arguments
     TYPE(BD_ContinuousStateType),    INTENT(INOUT) :: x                 !< Continuous states at t on input at t + dt on output
@@ -4254,6 +4261,8 @@ SUBROUTINE BD_FD_GA2( x, OtherState, u, p, m, StifK_fd, DampG_fd, MassM_fd )
     REAL(BDKi),                      INTENT(INOUT) :: StifK_fd(:,:,:,:) !< finite differenced stiffness matrix
     REAL(BDKi),                      INTENT(INOUT) :: DampG_fd(:,:,:,:) !< finite differenced damping   matrix
     REAL(BDKi),                      INTENT(INOUT) :: MassM_fd(:,:,:,:) !< finite differenced mass      matrix
+    INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat          !< Error status of the operation
+    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
     ! Local variables
     REAL(BDKi), allocatable                        :: RHS_m(:,:), RHS_p(:,:)
@@ -4264,8 +4273,8 @@ SUBROUTINE BD_FD_GA2( x, OtherState, u, p, m, StifK_fd, DampG_fd, MassM_fd )
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_GA2'
 
     ! allocate local arrays
-    CALL AllocAry(RHS_m,p%dof_node,p%node_total,'RHS Neg Per',ErrStat2,ErrMsg2);
-    CALL AllocAry(RHS_p,p%dof_node,p%node_total,'RHS Pos Per',ErrStat2,ErrMsg2);
+    CALL AllocAry(RHS_m,p%dof_node,p%node_total,'RHS Neg Per',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    CALL AllocAry(RHS_p,p%dof_node,p%node_total,'RHS Pos Per',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
     ! zero out the local matrices. Not sure where these should be initailzed
     RHS_m    = 0.0_BDKi
@@ -4642,30 +4651,33 @@ END SUBROUTINE BD_ElementMatrixGA2
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine compares the tangent stiffness matrix against the finite differenced tangent stiffness matrix
-SUBROUTINE BD_CompTngtStiff( K_anlyt, K_fd, errtol )
+SUBROUTINE BD_CompTngtStiff( K_anlyt, K_fd, errtol, ErrStat, ErrMsg )
 
     ! Function arguments
-    REAL(BDKi),   INTENT(IN) :: K_anlyt(:,:)    ! analytical tangent stiffness matrix
-    REAL(BDKi),   INTENT(IN) :: K_fd(:,:)       ! finite differenced tangent stiffness matrix
-    REAL(BDKi),   INTENT(IN) :: errtol          ! allowable difference tolerance for comparison
-                                                ! any relative difference greater than this will stop the ongoing
-                                                ! simulation
+    REAL(BDKi),        INTENT(IN) :: K_anlyt(:,:) !< analytical tangent stiffness matrix
+    REAL(BDKi),        INTENT(IN) :: K_fd(:,:)    !< finite differenced tangent stiffness matrix
+    REAL(BDKi),        INTENT(IN) :: errtol       !< allowable difference tolerance for comparison
+                                                  !! any relative difference greater than this will stop the ongoing
+                                                  !! simulation
+   INTEGER(IntKi), INTENT(  OUT)  :: ErrStat      !< Error status of the operation
+   CHARACTER(*),   INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
 
     ! local variables
-    REAL(BDKi)               :: ignore_fac=1e-3 ! values smaller than this times maximum value in corresponding
-                                                ! row will be ignored during the comparison of matrices
-                                                ! In doing so we hope to avoid comparison of entries that are
-                                                ! less significant in terms of inverting the matrix
-    REAL(BDKi), allocatable  :: K_diff(:,:)     ! array containing the relative differences between
+    REAL(BDKi)               :: ignore_fac=1e-3 !< values smaller than this times maximum value in corresponding
+                                                !! row will be ignored during the comparison of matrices
+                                                !! In doing so we hope to avoid comparison of entries that are
+                                                !! less significant in terms of inverting the matrix
+    REAL(BDKi), allocatable  :: K_diff(:,:)     !< array containing the relative differences between
                                                 ! finite differenced and analytical tangent stiffness matrices
     INTEGER(IntKi)           :: max_diff_loc(2)
     INTEGER(IntKi)           :: idof
-    INTEGER(IntKi)           :: ErrStat2        ! Temporary Error status
-    CHARACTER(ErrMsgLen)     :: ErrMsg2         ! Temporary Error message
     CHARACTER(*), PARAMETER  :: RoutineName = 'BD_CompTngtStiff'
 
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
     ! allocate local array and initialize to all zeros
-    CALL AllocAry(K_diff,size(K_fd,1),size(K_fd,2),'StifK Diff',ErrStat2,ErrMsg2);
+    CALL AllocAry(K_diff,size(K_fd,1),size(K_fd,2),'StifK Diff',ErrStat,ErrMsg);
     K_diff = 0.0_BDKi
 
     ! Compute the relative difference. abs allows user to set a difference tolerance without worrying about the sign
@@ -4690,9 +4702,10 @@ SUBROUTINE BD_CompTngtStiff( K_anlyt, K_fd, errtol )
     write (*,*)
 
     ! check that the flags set are consistent before moving further
-    if ( maxval(K_diff) > errtol ) then
-        stop 'In subroutine BD_CompTngtStiff, maximum relative difference between analytical and fd tangent stiffness exceeded tngt_stf_difftol'
-    end if
+    IF ( maxval(K_diff) > errtol ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'maximum relative difference between analytical and fd tangent stiffness exceeded used defined tolerance.', ErrStat, ErrMsg, RoutineName )
+         return
+    END IF
 
 END SUBROUTINE BD_CompTngtStiff
 
