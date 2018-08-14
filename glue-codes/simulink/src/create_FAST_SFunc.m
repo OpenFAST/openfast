@@ -8,13 +8,9 @@ switch computer('arch')
             LINKFLAGS='$LINKFLAGS /LARGEADDRESSAWARE' ...
             -I../../Source -I../../Source/dependencies/OpenFOAM -outdir ../../bin COMPFLAGS='$COMPFLAGS /MT' FAST_SFunc.c
     case 'maci64'
-%         mex -v -L/Users/nabbas/openfast/install/lib -lopenfastlib ...
-%             -I/Users/nabbas/openfast/install/include ...
-%             -outdir . COMPFLAGS='$COMPFLAGS -MT' FAST_SFunc.c 
-            %%%% ---- Really not sure why this isn't working ---- %%%%
         mex -L/usr/local/lib -lopenfastlib ...    
             -I/usr/local/include -outdir . COMPFLAGS='$COMPFLAGS -MT' FAST_SFunc.c 
-% This builds the mex file in the current directory, /openfast/glue-codes/simulink/src/
+            % This builds the mex file in the current directory, ./openfast/glue-codes/simulink/src/
     otherwise
         error('Unexpected computer architecture type.')
 end
