@@ -206,7 +206,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi)          :: Vsum_low(3)
    real(ReKi)          :: p_tmp_plane(3)
    real(ReKi)          :: tmp_vec(3)
-   real(ReKi)          :: Vave_amb_low_norm, Vamb_lowpol_tmp(3), Vdist_lowpol_tmp(3)
+   real(ReKi)          :: Vave_amb_low_norm, Vamb_lowpol_tmp(3), Vdist_lowpol_tmp(3), Vamb_low_tmp(3,8)
    real(ReKi)          :: delta, deltad
    real(ReKi)          :: wsum_tmp, w
    real(ReKi)          :: tmp_x,tmp_y,tmp_z !, tm1, tm2
@@ -407,11 +407,13 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                   
                       psi_polar = (TwoPi*REAL(npsi,ReKi))/(REAL(n_psi_polar+1,ReKi))
                       p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*tmp_yhat_plane + r_polar*SIN(psi_polar)*tmp_zhat_plane
-                      Vamb_lowpol_tmp = INTERP3D(p_polar,p%Grid_Low(:,1),p%dXYZ_Low,m%Vamb_low,within,p%nX_low, p%nY_low, p%nZ_low)
+                      Vamb_lowpol_tmp = INTERP3D( p_polar, p%Grid_Low(:,1), p%dXYZ_Low, m%Vamb_low, within, p%nX_low, p%nY_low, p%nZ_low, Vout=Vamb_low_tmp )
                       if ( within ) then
                          Vsum_low = Vsum_low + Vamb_lowpol_tmp
-                         iwsum = iwsum + 1
-                         m%Vamb_lowpol(:,iwsum) = Vamb_lowpol_tmp
+                         do i = 1,8
+                            iwsum = iwsum + 1
+                            m%Vamb_lowpol(:,iwsum) = Vamb_low_tmp(:,i)
+                         end do
                       end if
                
                    end do
@@ -425,7 +427,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
                 else
       
-                   Vsum_low = Vsum_low/REAL(iwsum,ReKi)
+                   Vsum_low = Vsum_low/REAL(iwsum/8,ReKi)
                    Vave_amb_low_norm  = TwoNorm(Vsum_low)
                    if ( EqualRealNos(Vave_amb_low_norm, 0.0_ReKi ) )  then
                       call SetErrStat( ErrID_Fatal, 'The magnitude of the spatial-averaged ambient wind speed in the low-resolution domain associated with the wake plane at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
@@ -469,7 +471,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
             
                    psi_polar = (TwoPi*REAL(npsi,ReKi))/(REAL(n_psi_polar+1,ReKi))
                    p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*tmp_yhat_plane + r_polar*SIN(psi_polar)*tmp_zhat_plane
-                   Vdist_lowpol_tmp = INTERP3D(p_polar,p%Grid_Low(:,1),p%dXYZ_Low,m%Vdist_low,within,p%nX_low, p%nY_low, p%nZ_low) 
+                   Vdist_lowpol_tmp = INTERP3D( p_polar, p%Grid_Low(:,1), p%dXYZ_Low, m%Vdist_low, within, p%nX_low, p%nY_low, p%nZ_low ) 
                    if ( within ) then
                       y%V_plane(:,np,nt) = y%V_plane(:,np,nt) + w*Vdist_lowpol_tmp
                       wsum_tmp = wsum_tmp + w
@@ -951,7 +953,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
  
    allocate ( m%Vamb_low   ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 ) 
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_low.', errStat, errMsg, RoutineName )  
-   allocate ( m%Vamb_lowpol   ( 3, 0:p%n_rp_max ) , STAT=errStat2 )
+   allocate ( m%Vamb_lowpol   ( 3, 0:p%n_rp_max*8 ) , STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_lowpol.', errStat, errMsg, RoutineName )
    allocate ( m%Vdist_low  ( 3, 0:p%nX_low-1 , 0:p%nY_low-1 , 0:p%nZ_low-1 )                  , STAT=errStat2 ) 
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vdist_low.', errStat, errMsg, RoutineName ) 
@@ -1565,16 +1567,17 @@ subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
 
 end subroutine AWAE_TEST_CalcOutput
 
-FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ)
+FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ,Vout)
       !  I/O variables
          Real(ReKi), INTENT( IN    ) :: p(3)            !< Position where the 3D velocity field will be interpreted (m)
          Real(ReKi), INTENT( IN    ) :: p0(3)           !< Origin of the spatial domain (m)
          Real(ReKi), INTENT( IN    ) :: del(3)          !< XYZ-components of the spatial increment of the domain (m)
          Real(SiKi), INTENT( IN    ) :: V(3,0:nX-1,0:nY-1,0:nZ-1)        !< 3D velocity field to be interpolated
-         INTEGER(IntKi), INTENT( IN    ) :: nX, nY, nZ      !< Size of XYZ spatial dimensions   
+         INTEGER(IntKi), INTENT( IN) :: nX, nY, nZ      !< Size of XYZ spatial dimensions   
 
          Real(SiKi) :: INTERP3D(3)     !Vint(3)         !< Interpolated velocity (m/s)
          Logical,    INTENT(   OUT ) :: within          !< Logical flag indicating weather or not the input position lies within the domain (flag)
+         REAL(ReKi), OPTIONAL, INTENT(OUT) :: Vout(3,8) !< Wind velocities at the 8 points in the 3D spatial domain surrounding the input position 
 
       !  Local variables
          INTEGER(IntKi)        :: i !loop counters
@@ -1618,6 +1621,10 @@ FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ)
          INTERP3D(:) = INTERP3D(:) + N(i)*Vtmp(:,i)
       end do
    end if
+
+   !!! Output the wind velocities at the 8 points in the 3D spatial domain surrounding the input position (if necessary)
+   IF ( PRESENT( Vout ) ) Vout = REAL( Vtmp, ReKi )
+   
 END FUNCTION
 
 end module AWAE
