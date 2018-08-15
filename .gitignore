@@ -31,7 +31,7 @@ __pycache__/*
 *.pyc
 
 # Build specific files
-build/
+build*/
 install/
 vs-build/
 
