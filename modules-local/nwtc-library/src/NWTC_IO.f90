@@ -7890,13 +7890,30 @@ QueryGitVersion = GIT_VERSION_INFO
       Line = ""
       CALL ReadStr( Un, FileName, Line, "VECTOR", "VECTOR label", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
+print*, 'line is: ', Line
       
       Line = trim(Line)
       Line2 = Line
       CALL Conv2UC( Line2 )
-      IF ( INDEX(Line2, "VECTOR" ) /= 1 ) THEN ! If this line doesn't contain the word dataset, we have a DIFFERENT file header !!!HACK HACK HACK
-         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find U label', ErrStat, ErrMsg, RoutineName )
+      IF ( INDEX(Line2, "VECTOR" ) /= 1) THEN
+        Line = ""
+        CALL ReadStr( Un, FileName, Line, "U", "U label", ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        Line = trim(Line)
+        Line2 = Line
+        Call Conv2UC( Line2)
+        print*, 'line is now: ', Line
+        IF ( INDEX(Line2, "U" ) /= 1) THEN
+           CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find VECTORS or FIELD label', ErrStat, ErrMsg, RoutineName )
+        ELSE
+           sz = INDEX(Line2, "FLOAT" )
+           IF ( sz == 0 ) THEN
+               CALL SetErrStat( ErrID_Fatal, 'Invalid VECTORS datatype.  Must be set to float.', ErrStat, ErrMsg, RoutineName )
+            ELSE        
+               vecLabel = Line(9:sz-2)
+            END IF
+        END IF
+        
       ELSE
          sz = INDEX(Line2, "FLOAT" )
          IF ( sz == 0 ) THEN
@@ -7904,7 +7921,7 @@ QueryGitVersion = GIT_VERSION_INFO
          ELSE        
             vecLabel = Line(9:sz-2)
          END IF
-      END IF 
+      END IF
       
       IF ( (ErrStat >= AbortErrLev) .or. closeOnReturn ) THEN        
          close(Un)
