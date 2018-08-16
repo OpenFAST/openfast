@@ -7890,7 +7890,6 @@ QueryGitVersion = GIT_VERSION_INFO
       Line = ""
       CALL ReadStr( Un, FileName, Line, "VECTOR", "VECTOR label", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-print*, 'line is: ', Line
       
       Line = trim(Line)
       Line2 = Line
@@ -7902,7 +7901,6 @@ print*, 'line is: ', Line
         Line = trim(Line)
         Line2 = Line
         Call Conv2UC( Line2)
-        print*, 'line is now: ', Line
         IF ( INDEX(Line2, "U" ) /= 1) THEN
            CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find VECTORS or FIELD label', ErrStat, ErrMsg, RoutineName )
         ELSE
