@@ -31,7 +31,7 @@ MODULE SysSubs
    !     libmex.lib in the matlab/extern/lib/{architecture}/{compiler} folder
    !      otherwise, use preprocessor definition CONSOLE_FILE to output everything to a file named CONSOLE.TXT
    
-
+   ! nja: This was formatted for use with Intel Visual Fortran, and may need some small changes if compiling with gfortran
 
    ! It contains the following routines:
 
@@ -83,12 +83,9 @@ MODULE SysSubs
    LOGICAL, PARAMETER            :: KBInputOK   = .FALSE.                           ! A flag to tell the program that keyboard input is allowed in the environment.
 
    CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
-   ! CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Visual Fortran for Windows/Matlab' ! Description of the language/OS
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Visual Fortran for Mac' ! Description of the language/OS
-   ! CHARACTER( 1), PARAMETER      :: PathSep     = '\'                               ! The path separator.
    CHARACTER( 1), PARAMETER      :: PathSep     = '/'                               ! The path separator.
    CHARACTER( 1), PARAMETER      :: SwChar      = '-'                               ! The switch character for command-line options.
-   ! CHARACTER(11), PARAMETER      :: UnfForm     = 'BINARY'                          ! The string to specify unformatted I/O files. (used in OpenUOutFile and OpenUInpFile [see TurbSim's .bin files])
    CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                          ! The string to specify unformatted I/O files. (used in OpenUOutFile and OpenUInpFile [see TurbSim's .bin files])
 
 CONTAINS
@@ -395,8 +392,6 @@ END SUBROUTINE OpenCon
 !=======================================================================
    SUBROUTINE WrNR ( Str )
 
-#include "fintrf.h"
-
       ! This routine writes out a string to the screen without following it with a new line.
       ! Argument declarations.
 
@@ -426,7 +421,6 @@ END SUBROUTINE OpenCon
    SUBROUTINE WriteScr ( Str, Frm )
 
       ! This routine writes out a string to the screen.
-   #include <fintrf.h>
 
    IMPLICIT                        NONE
 
