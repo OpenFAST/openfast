@@ -395,6 +395,7 @@ END SUBROUTINE OpenCon
 !=======================================================================
    SUBROUTINE WrNR ( Str )
 
+#include "fintrf.h"
 
       ! This routine writes out a string to the screen without following it with a new line.
       ! Argument declarations.
@@ -425,6 +426,7 @@ END SUBROUTINE OpenCon
    SUBROUTINE WriteScr ( Str, Frm )
 
       ! This routine writes out a string to the screen.
+   #include <fintrf.h>
 
    IMPLICIT                        NONE
 

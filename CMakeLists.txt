@@ -76,7 +76,12 @@ else()
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
 endif()
+if(BUILD_OPENFAST_SIMULINK_API)
+  find_package(Matlab REQUIRED)
+endif()
 
+message("MatlabMexLibrary ${Matlab_MEX_LIBRARY}")
+message("Matlab_INCLUDE_DIRS ${Matlab_INCLUDE_DIRS}")
 ########################################################################
 # Build rules for OpenFAST Registry
 #
