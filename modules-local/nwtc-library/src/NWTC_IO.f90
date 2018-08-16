@@ -7761,7 +7761,7 @@ QueryGitVersion = GIT_VERSION_INFO
       CLOSE(Un)         
    
       RETURN
-   END SUBROUTINE WrVTK_footer
+   END SUBROUTINE WrVTK_footer                
    
 !=======================================================================
 !> This routine reads the header for a vtk, ascii, structured_points dataset file,
@@ -7781,11 +7781,11 @@ QueryGitVersion = GIT_VERSION_INFO
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
       INTEGER(IntKi)              :: ErrStat2              ! local error level/status of OpenFOutFile operation
-      CHARACTER(ErrMsgLen)        :: ErrMsg2              ! local message when error occurs   
-      CHARACTER(1024)             :: Line, Line2              ! one line of the file
+      CHARACTER(ErrMsgLen)        :: ErrMsg2               ! local message when error occurs   
+      CHARACTER(1024)             :: Line                  ! one line of the file
       CHARACTER(1024)             :: formatLbl
       CHARACTER(*), PARAMETER     :: RoutineName = 'ReadVTK_SP_info'
-      INTEGER(IntKi)              :: sz, nPts
+      INTEGER(IntKi)              :: sz, nPts, nArr, nums(2)
       LOGICAL                     :: closeOnReturn
       
       ErrStat = ErrID_None
@@ -7884,40 +7884,51 @@ QueryGitVersion = GIT_VERSION_INFO
          sz = len(Line)
          Line = Line(12:sz)
          READ(Line,*)  nPts
+         IF ( nPts /= ( dims(1)*dims(2)*dims(3) ) ) THEN ! Abort if DIMENSIONS AND POINT_DATA don't agree
+            CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: POINT_DATA does not match DIMENSIONS', ErrStat, ErrMsg, RoutineName )
+         END IF
       END IF 
       
-         ! Vector Label
+         ! VECTOR or FIELD Label
       Line = ""
-      CALL ReadStr( Un, FileName, Line, "VECTOR", "VECTOR label", ErrStat2, ErrMsg2 )
+      CALL ReadStr( Un, FileName, Line, "VECTOR or FIELD", "VECTOR or FIELD label", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
       Line = trim(Line)
-      Line2 = Line
-      CALL Conv2UC( Line2 )
-      IF ( INDEX(Line2, "VECTOR" ) /= 1) THEN
-        Line = ""
-        CALL ReadStr( Un, FileName, Line, "U", "U label", ErrStat2, ErrMsg2 )
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-        Line = trim(Line)
-        Line2 = Line
-        Call Conv2UC( Line2)
-        IF ( INDEX(Line2, "U" ) /= 1) THEN
-           CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find VECTORS or FIELD label', ErrStat, ErrMsg, RoutineName )
-        ELSE
-           sz = INDEX(Line2, "FLOAT" )
-           IF ( sz == 0 ) THEN
+      CALL Conv2UC( Line )
+      IF ( ( INDEX(Line, "VECTOR" ) /= 1 ) .OR. ( INDEX(Line, "FIELD" ) /= 1 ) ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find VECTORS or FIELD label', ErrStat, ErrMsg, RoutineName )
+      ELSE
+         IF ( INDEX(Line, "FIELD" ) == 1 ) THEN ! Must be FIELD
+            READ(Line,*) nArr
+            IF ( nArr /= 1_IntKi ) THEN
+               CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: FIELD label must have only 1 array', ErrStat, ErrMsg, RoutineName )
+            END IF
+            
+            Line = ""
+            CALL ReadStr( Un, FileName, Line, "Array", "Array definition", ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            
+            Line = trim(Line)
+            Call Conv2UC( Line )
+            sz = INDEX(Line, "FLOAT" )
+            IF ( sz == 0 ) THEN
+               CALL SetErrStat( ErrID_Fatal, 'Invalid FIELD datatype.  Must be set to float.', ErrStat, ErrMsg, RoutineName )
+            ELSE        
+               READ(Line,*) nums
+               IF ( nums(1) /= 3_IntKi ) THEN                         ! Abort if we don't have 3-element vectors
+                  CALL SetErrStat( ErrID_Fatal, 'Invalid FIELD datatype.  FIELD array must have 3 elements.', ErrStat, ErrMsg, RoutineName )
+               ELSEIF ( nums(2) /= ( dims(1)*dims(2)*dims(3) ) ) THEN ! Abort if DIMENSIONS AND FIELD data don't agree
+                  CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: FIELD array does not match DIMENSIONS', ErrStat, ErrMsg, RoutineName )
+               END IF
+            END IF
+         ELSE                                    ! Must be VECTOR
+            sz = INDEX(Line, "FLOAT" )
+            IF ( sz == 0 ) THEN
                CALL SetErrStat( ErrID_Fatal, 'Invalid VECTORS datatype.  Must be set to float.', ErrStat, ErrMsg, RoutineName )
             ELSE        
                vecLabel = Line(9:sz-2)
             END IF
-        END IF
-        
-      ELSE
-         sz = INDEX(Line2, "FLOAT" )
-         IF ( sz == 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Invalid VECTORS datatype.  Must be set to float.', ErrStat, ErrMsg, RoutineName )
-         ELSE        
-            vecLabel = Line(9:sz-2)
          END IF
       END IF
       
