@@ -17,33 +17,22 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 MODULE SysSubs
-
 
    ! This module contains routines with system-specific logic and references, including all references to the console unit, CU.
    ! It also contains standard (but not system-specific) routines it uses.
-
-   ! bjj: if compiling this to write to the Matlab command window using mexPrintf, you  must link with 
-   !     libmex.lib in the matlab/extern/lib/{architecture}/{compiler} folder
-   !      otherwise, use preprocessor definition CONSOLE_FILE to output everything to a file named CONSOLE.TXT
-   
-   ! nja: This was formatted for use with Intel Visual Fortran, and may need some small changes if compiling with gfortran
-
+   ! This system configuration requires linking with the matlab library, libmex.dll or libmex.dylib or libmex.so, from the matlab
+   ! installation directory.
+   ! SysMatlabLinux.f90 is specifically for the Intel fortran compiler (ifort) on Linux and macOS.
    ! It contains the following routines:
-
    !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
-   !     SUBROUTINE  FlushOut ( Unit )
-   !     FUNCTION    NWTC_ERF( x )
-   !     FUNCTION    NWTC_gamma( x )
-   !     SUBROUTINE  GET_CWD( DirName, Status )
    !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
-   !     FUNCTION    NWTC_Gamma( x )                                          ! Returns the gamma value of its argument.   
-   ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT:
-   !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
+   !     FUNCTION    NWTC_ERF( x )
+   !     FUNCTION    NWTC_gamma( x )                                          ! Returns the gamma value of its argument.   
+   !     SUBROUTINE  FlushOut ( Unit )
+   !     SUBROUTINE  GET_CWD( DirName, Status )
+   !     SUBROUTINE  MKDIR( new_directory_path )
+   !     SUBROUTINE  OpenCon
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
    !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
@@ -54,69 +43,47 @@ MODULE SysSubs
    !     SUBROUTINE LoadDynamicLib( DLL, ErrStat, ErrMsg )
    !     SUBROUTINE FreeDynamicLib( DLL, ErrStat, ErrMsg )
 
+   USE NWTC_Base
 
+   IMPLICIT NONE
 
-   USE                             NWTC_Base
-
-   IMPLICIT                        NONE
-
-   INTERFACE NWTC_gamma ! Returns the gamma value of its argument
-      MODULE PROCEDURE NWTC_gammaR4
-      MODULE PROCEDURE NWTC_gammaR8
-      MODULE PROCEDURE NWTC_gammaR16
-   END INTERFACE
-   
    INTERFACE NWTC_ERF ! Returns the ERF value of its argument
       MODULE PROCEDURE NWTC_ERFR4
       MODULE PROCEDURE NWTC_ERFR8
       MODULE PROCEDURE NWTC_ERFR16
    END INTERFACE
-   
 
-!=======================================================================
-
+   INTERFACE NWTC_gamma ! Returns the gamma value of its argument
+         ! note: gamma is part of the F08 standard, but may not be implemented everywhere...
+      MODULE PROCEDURE NWTC_gammaR4
+      MODULE PROCEDURE NWTC_gammaR8
+      MODULE PROCEDURE NWTC_gammaR16
+   END INTERFACE
 
    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
    INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
    INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
-
    LOGICAL, PARAMETER            :: KBInputOK   = .FALSE.                           ! A flag to tell the program that keyboard input is allowed in the environment.
-
    CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
-   CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Visual Fortran for Mac' ! Description of the language/OS
+   CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Fortran for Linux with Matlab' ! Description of the language/OS
    CHARACTER( 1), PARAMETER      :: PathSep     = '/'                               ! The path separator.
    CHARACTER( 1), PARAMETER      :: SwChar      = '-'                               ! The switch character for command-line options.
-   CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                          ! The string to specify unformatted I/O files. (used in OpenUOutFile and OpenUInpFile [see TurbSim's .bin files])
+   CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                     ! The string to specify unformatted I/O files.
 
 CONTAINS
 
 !=======================================================================
-   FUNCTION FileSize( Unit )
+FUNCTION FileSize( Unit )
 
-
-      ! This function calls the portability routine, FSTAT, to obtain the file size
-      ! in bytes corresponding to a file unit number or returns -1 on error.
-
+   ! This function calls the portability routine, FSTAT, to obtain the file size
+   ! in bytes corresponding to a file unit number or returns -1 on error.
 
    USE IFPORT
 
-
-      ! Function declaration.
-
    INTEGER(B8Ki)                             :: FileSize                      ! The size of the file in bytes to be returned.
-
-
-      ! Argument declarations:
-
    INTEGER, INTENT(IN)                       :: Unit                          ! The I/O unit number of the pre-opened file.
-
-
-      ! Local declarations:
-
    INTEGER                                   :: StatArray(12)                 ! An array returned by FSTAT that includes the file size.
    INTEGER                                   :: Status                        ! The status returned by
-
-
 
    Status = FSTAT( INT( Unit, B4Ki ), StatArray )
 
@@ -126,49 +93,125 @@ CONTAINS
       FileSize = StatArray(8)
    END IF
 
+   RETURN
+END FUNCTION FileSize ! ( Unit )
+!=======================================================================
+FUNCTION Is_NaN( DblNum )
+
+   ! This routine determines if a REAL(DbKi) variable holds a proper number.
+   ! BJJ: this routine is used in CRUNCH.
+   ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
+   ! backwards compatibility.
+
+   USE, INTRINSIC :: ieee_arithmetic
+
+   REAL(DbKi), INTENT(IN)       :: DblNum
+   LOGICAL                      :: Is_Nan
+
+   Is_NaN = IEEE_IS_NAN( DblNum )
 
    RETURN
-   END FUNCTION FileSize ! ( Unit )
+END FUNCTION Is_NaN ! ( DblNum )
 !=======================================================================
-   SUBROUTINE FlushOut ( Unit )
+FUNCTION NWTC_ERFR4( x )
 
+   ! Returns the ERF value of its argument. The result has a value equal  
+   ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
 
-      ! This subroutine flushes the buffer on the specified Unit.
-      ! It is especially useful when printing "running..." type messages.
+   REAL(SiKi), INTENT(IN)     :: x           ! input 
+   REAL(SiKi)                 :: NWTC_ERFR4  ! result
 
-USE IFPORT, ONLY: FLUSH
+   NWTC_ERFR4 = ERF( x )
 
-      ! Argument declarations:
+END FUNCTION NWTC_ERFR4
+!=======================================================================
+FUNCTION NWTC_ERFR8( x )
 
-   INTEGER, INTENT(IN)          :: Unit                                         ! The unit number of the file being flushed.
+   ! Returns the ERF value of its argument. The result has a value equal  
+   ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
 
-CALL FLUSH ( INT(Unit, B4Ki) )
+   REAL(R8Ki), INTENT(IN)     :: x             ! input 
+   REAL(R8Ki)                 :: NWTC_ERFR8    ! result
+
+   NWTC_ERFR8 = ERF( x )
+
+END FUNCTION NWTC_ERFR8
+!=======================================================================
+FUNCTION NWTC_ERFR16( x )
+
+   ! Returns the ERF value of its argument. The result has a value equal  
+   ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+   REAL(QuKi), INTENT(IN)     :: x             ! input 
+   REAL(QuKi)                 :: NWTC_ERFR16   ! result
+
+   NWTC_ERFR16 = ERF( x )
+
+END FUNCTION NWTC_ERFR16
+!=======================================================================
+FUNCTION NWTC_GammaR4( x )
+
+   ! Returns the gamma value of its argument. The result has a value equal  
+   ! to a processor-dependent approximation to the gamma function of x. 
+
+   REAL(SiKi), INTENT(IN)     :: x             ! input 
+   REAL(SiKi)                 :: NWTC_GammaR4  ! result
+   
+   NWTC_GammaR4 = gamma( x )
+
+END FUNCTION NWTC_GammaR4
+!=======================================================================
+FUNCTION NWTC_GammaR8( x )
+
+   ! Returns the gamma value of its argument. The result has a value equal  
+   ! to a processor-dependent approximation to the gamma function of x. 
+
+   REAL(R8Ki), INTENT(IN)     :: x             ! input 
+   REAL(R8Ki)                 :: NWTC_GammaR8  ! result
+   
+   NWTC_GammaR8 = gamma( x )
+
+END FUNCTION NWTC_GammaR8
+!=======================================================================
+FUNCTION NWTC_GammaR16( x )
+
+   ! Returns the gamma value of its argument. The result has a value equal  
+   ! to a processor-dependent approximation to the gamma function of x. 
+
+   REAL(QuKi), INTENT(IN)     :: x             ! input 
+   REAL(QuKi)                 :: NWTC_GammaR16 ! result
+   
+   NWTC_GammaR16 = gamma( x )
+
+END FUNCTION NWTC_GammaR16
+!=======================================================================
+SUBROUTINE FlushOut ( Unit )
+
+   ! This subroutine flushes the buffer on the specified Unit.
+   ! It is especially useful when printing "running..." type messages.
+
+   USE IFPORT
+
+   INTEGER, INTENT(IN)          :: Unit  ! The unit number of the file being flushed.
+
+   CALL FLUSH ( INT(Unit, B4Ki) )
 
    RETURN
-   END SUBROUTINE FlushOut ! ( Unit )
+END SUBROUTINE FlushOut ! ( Unit )
 !=======================================================================
-   SUBROUTINE Get_CWD ( DirName, Status )
-
-
-      ! This routine retrieves the path of the current working directory.
-
+SUBROUTINE Get_CWD ( DirName, Status )
 
    USE IFPORT, ONLY: GETCWD
 
-   IMPLICIT                        NONE
-
-
-      ! Passed variables.
+   IMPLICIT NONE
 
    CHARACTER(*), INTENT(OUT)    :: DirName                                         ! A CHARACTER string containing the path of the current working directory.
    INTEGER,      INTENT(OUT)    :: Status                                          ! Status returned by the call to a portability routine.
 
-
    Status = GETCWD ( DirName )
 
    RETURN
-   END SUBROUTINE Get_CWD
-
+END SUBROUTINE Get_CWD
 !=======================================================================
 SUBROUTINE MKDIR ( new_directory_path )
 
@@ -189,107 +232,6 @@ SUBROUTINE MKDIR ( new_directory_path )
    endif
 
 END SUBROUTINE MKDIR
-
-!=======================================================================
-   FUNCTION Is_NaN( DblNum )
-
-
-      ! This routine determines if a REAL(DbKi) variable holds a proper number.
-      ! BJJ: this routine is used in CRUNCH.
-      ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
-      ! backwards compatibility.
-
-  USE, INTRINSIC :: ieee_arithmetic
-
-      ! Argument declarations.
-   REAL(DbKi), INTENT(IN)       :: DblNum
-
-      ! Function declaration.
-   LOGICAL                      :: Is_Nan
-
-   Is_NaN = IEEE_IS_NAN( DblNum )
-
-
-   RETURN
-   END FUNCTION Is_NaN ! ( DblNum )
-!=======================================================================
-   FUNCTION NWTC_ERFR4( x )
-   
-      ! Returns the ERF value of its argument. The result has a value equal  
-      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
-
-      REAL(SiKi), INTENT(IN)     :: x           ! input 
-      REAL(SiKi)                 :: NWTC_ERFR4  ! result
-      
-      
-      NWTC_ERFR4 = ERF( x )
-   
-   END FUNCTION NWTC_ERFR4
-!=======================================================================
-   FUNCTION NWTC_ERFR8( x )
-   
-      ! Returns the ERF value of its argument. The result has a value equal  
-      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
-
-      REAL(R8Ki), INTENT(IN)     :: x             ! input 
-      REAL(R8Ki)                 :: NWTC_ERFR8    ! result
-      
-      
-      NWTC_ERFR8 = ERF( x )
-   
-   END FUNCTION NWTC_ERFR8
-!=======================================================================
-   FUNCTION NWTC_ERFR16( x )
-   
-      ! Returns the ERF value of its argument. The result has a value equal  
-      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
-
-      REAL(QuKi), INTENT(IN)     :: x             ! input 
-      REAL(QuKi)                 :: NWTC_ERFR16   ! result
-      
-      
-      NWTC_ERFR16 = ERF( x )
-   
-   END FUNCTION NWTC_ERFR16
-!=======================================================================
-   FUNCTION NWTC_GammaR4( x )
-   
-      ! Returns the gamma value of its argument. The result has a value equal  
-      ! to a processor-dependent approximation to the gamma function of x. 
-
-      REAL(SiKi), INTENT(IN)     :: x             ! input 
-      REAL(SiKi)                 :: NWTC_GammaR4  ! result
-      
-      
-      NWTC_GammaR4 = gamma( x )
-   
-   END FUNCTION NWTC_GammaR4
-!=======================================================================
-   FUNCTION NWTC_GammaR8( x )
-   
-      ! Returns the gamma value of its argument. The result has a value equal  
-      ! to a processor-dependent approximation to the gamma function of x. 
-
-      REAL(R8Ki), INTENT(IN)     :: x             ! input 
-      REAL(R8Ki)                 :: NWTC_GammaR8  ! result
-      
-      
-      NWTC_GammaR8 = gamma( x )
-   
-   END FUNCTION NWTC_GammaR8
-!=======================================================================
-   FUNCTION NWTC_GammaR16( x )
-   
-      ! Returns the gamma value of its argument. The result has a value equal  
-      ! to a processor-dependent approximation to the gamma function of x. 
-
-      REAL(QuKi), INTENT(IN)     :: x             ! input 
-      REAL(QuKi)                 :: NWTC_GammaR16  ! result
-      
-      
-      NWTC_GammaR16 = gamma( x )
-   
-   END FUNCTION NWTC_GammaR16
 !=======================================================================
 SUBROUTINE OpenCon
 
@@ -305,32 +247,26 @@ SUBROUTINE OpenCon
    RETURN
 END SUBROUTINE OpenCon
 !=======================================================================
-   SUBROUTINE OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
+SUBROUTINE OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
 
+   ! This routine opens a binary input file with data stored in Big Endian format (created on a UNIX machine.)
+   ! Data are stored in RecLen-byte records.
 
-      ! This routine opens a binary input file with data stored in Big Endian format (created on a UNIX machine.)
-      ! Data are stored in RecLen-byte records.
+   IMPLICIT NONE
 
-   IMPLICIT                        NONE
-
-      ! Argument declarations.
    INTEGER, INTENT(IN)          :: Un                                           ! Logical unit for the input file.
    CHARACTER(*), INTENT(IN)     :: InFile                                       ! Name of the input file.
    INTEGER, INTENT(IN)          :: RecLen                                       ! Size of records in the input file, in bytes.
    LOGICAL, INTENT(OUT)         :: Error                                        ! Flag to indicate the open failed.
-      ! Local declarations.
    INTEGER                      :: IOS                                          ! I/O status of OPEN.
 
-
-
    ! Open input file.  Make sure it worked.
+
    ! The non-standard CONVERT keyword allows us to read UNIX binary files, whose bytes are in reverse order (i.e., stored in BIG ENDIAN format).
    ! NOTE: using RecLen in bytes requires using the /assume:byterecl compiler option!
-
    OPEN ( Un, FILE=TRIM( InFile ), STATUS='OLD', FORM='UNFORMATTED', ACCESS='DIRECT', RECL=RecLen, IOSTAT=IOS, &
-                 ACTION='READ'  )                                              ! Use this for UNIX systems.
-                   ! ACTION='READ', CONVERT='BIG_ENDIAN' )                         ! Use this for PC systems.
-
+                  ACTION='READ'  )                                              ! Use this for UNIX systems.
+!                  ACTION='READ', CONVERT='BIG_ENDIAN' )                         ! Use this for PC systems.
 
    IF ( IOS /= 0 )  THEN
       Error = .TRUE.
@@ -338,100 +274,102 @@ END SUBROUTINE OpenCon
       Error = .FALSE.
    END IF
 
-
    RETURN
-   END SUBROUTINE OpenUnfInpBEFile
+END SUBROUTINE OpenUnfInpBEFile
 !=======================================================================
-   SUBROUTINE ProgExit ( StatCode )
+SUBROUTINE ProgExit ( StatCode )
 
-
-      ! This routine stops the program.  If the compiler supports the EXIT routine,
-      ! pass the program status to it.  Otherwise, do a STOP.
-
-
-      ! Argument declarations.
+   ! This routine stops the program.  If the compiler supports the EXIT routine,
+   ! pass the program status to it.  Otherwise, do a STOP.
 
    INTEGER, INTENT(IN)          :: StatCode                                      ! The status code to pass to the OS.
 
+   ! CALL EXIT ( StatCode )
 
-   END SUBROUTINE ProgExit ! ( StatCode )
+   ! IF ( StatCode == 0 ) THEN
+   !    STOP 0
+   ! ELSE
+   !    IF ( StatCode < 0 ) THEN
+   !       CALL WrScr( 'Invalid STOP code.' )
+   !    END IF
+   !    STOP 1
+   ! END IF
+
+END SUBROUTINE ProgExit ! ( StatCode )
+=======================================================================
+SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
+
+   ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
+   ! values for not-a-number and infinity in sindle and double 
+   ! precision) This uses standard F03 intrinsic routines,  
+   ! however Gnu has not yet implemented it, so we've placed this
+   ! routine in the system-specific code.
+
+   USE, INTRINSIC :: ieee_arithmetic  ! use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
+
+   REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
+   REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
+
+   REAL(ReKi), INTENT(inout)           :: Inf            ! IEEE value for NaN (not-a-number)
+   REAL(ReKi), INTENT(inout)           :: NaN            ! IEEE value for Inf (infinity)
+
+   
+   NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
+   Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
+
+   NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
+   Inf   = ieee_value(0.0_ReKi, ieee_positive_inf)   
+
+END SUBROUTINE Set_IEEE_Constants  
 !=======================================================================
-   SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
-   
-      ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
-      ! values for not-a-number and infinity in sindle and double 
-      ! precision) This uses standard F03 intrinsic routines,  
-      ! however Gnu has not yet implemented it, so we've placed this
-      ! routine in the system-specific code.
-   
-   
-      USE, INTRINSIC :: ieee_arithmetic  ! use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
-   
-      REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
-      REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
+SUBROUTINE UsrAlarm
 
-      REAL(ReKi), INTENT(inout)           :: Inf            ! IEEE value for NaN (not-a-number)
-      REAL(ReKi), INTENT(inout)           :: NaN            ! IEEE value for Inf (infinity)
-   
-      
-      NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
-      Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
-   
-      NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
-      Inf   = ieee_value(0.0_ReKi, ieee_positive_inf)   
-   
-   
-   END SUBROUTINE Set_IEEE_Constants  
-!=======================================================================
-   SUBROUTINE UsrAlarm
+   ! This routine generates an alarm to warn the user that something went wrong.
+   ! This routine does nothing for the MATLAB environment.
 
-      ! This routine does nothing for the MATLAB environment.
+   ! CALL WrNR ( CHAR( 7 ) )
 
    RETURN
-   END SUBROUTINE UsrAlarm
+END SUBROUTINE UsrAlarm
 !=======================================================================
-   SUBROUTINE WrNR ( Str )
+SUBROUTINE WrNR ( Str )
 
       ! This routine writes out a string to the screen without following it with a new line.
-      ! Argument declarations.
 
-   CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
-   INTEGER                      :: Stat                                         ! Number of characters printed
-   INTEGER, EXTERNAL            :: mexPrintF                                    ! Matlab function to print to the command window
-   CHARACTER(1024),SAVE         :: Str2                                         ! bjj: need static variable to print to Matlab command window
+   CHARACTER(*), INTENT(IN)     :: Str       ! The string to write to the screen.
+   INTEGER                      :: Stat      ! Number of characters printed
+   INTEGER, EXTERNAL            :: mexPrintF ! Matlab function to print to the command window
+   CHARACTER(1024), SAVE        :: Str2      ! bjj: need static variable to print to Matlab command window
 
    Str2 = ' '//Str//C_NULL_CHAR  !bjj: not sure C_NULL_CHAR is necessary
    Stat = mexPrintF( Str2 )
    
    RETURN
-   END SUBROUTINE WrNR ! ( Str )
+END SUBROUTINE WrNR ! ( Str )
 !=======================================================================
-   SUBROUTINE WrOver ( Str )
+SUBROUTINE WrOver ( Str )
 
+   ! This routine writes out a string that overwrites the previous line
 
-      ! This routine writes out a string that overwrites the previous line
-      ! Argument declarations.
+   CHARACTER(*), INTENT(IN) :: Str ! The string to write to the screen.
 
-   CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
    CALL WriteScr( Str, '(A)' )
 
    RETURN
-   END SUBROUTINE WrOver ! ( Str )
+END SUBROUTINE WrOver ! ( Str )
 !=======================================================================
-   SUBROUTINE WriteScr ( Str, Frm )
+SUBROUTINE WriteScr ( Str, Frm )
 
-      ! This routine writes out a string to the screen.
+   ! This routine writes out a string to the screen.
 
-   IMPLICIT                        NONE
+   IMPLICIT NONE
 
-      ! Argument declarations.
-   CHARACTER(*), INTENT(IN)     :: Str                                         ! The input string to write to the screen.
-   CHARACTER(*), INTENT(IN)     :: Frm                                         ! Format specifier for the output.
-      ! Local variables
-   INTEGER, EXTERNAL            :: mexPrintF                                   ! Matlab function to print to the command window
-   INTEGER                      :: Stat                                        ! Number of characters printed to the screen
-   CHARACTER( 1024 ), SAVE      :: Str2   ! A temporary string (Str written with the Frm Format specification) (bjj: this apparently needs to be a static variable so it writes to the Matlab command window)
-
+   CHARACTER(*), INTENT(IN)     :: Str       ! The input string to write to the screen.
+   CHARACTER(*), INTENT(IN)     :: Frm       ! Format specifier for the output.
+   INTEGER                      :: ErrStat   ! Error status of write operation (so code doesn't crash)
+   INTEGER, EXTERNAL            :: mexPrintF ! Matlab function to print to the command window
+   INTEGER                      :: Stat      ! Number of characters printed to the screen
+   CHARACTER( 1024 ), SAVE      :: Str2      ! A temporary string (Str written with the Frm Format specification) (bjj: this apparently needs to be a static variable so it writes to the Matlab command window)
 
    IF ( LEN_TRIM(Str)  < 1 ) THEN
       Str2=''
@@ -441,13 +379,8 @@ END SUBROUTINE OpenCon
 
    Str2 = trim(Str2)//NewLine//C_NULL_CHAR  !bjj: not sure C_NULL_CHAR is necessary
    Stat = mexPrintf( Str2 )
-   !call mexEvalString("drawnow;");  ! !bjj: may have to call this to dump string to the screen immediately.
 
-   END SUBROUTINE WriteScr ! ( Str )
-
-!=======================================================================
-
-
+END SUBROUTINE WriteScr ! ( Str )
 !=======================================================================
 SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
@@ -613,6 +546,6 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 #endif
    
       RETURN
-   END SUBROUTINE FreeDynamicLib
+END SUBROUTINE FreeDynamicLib
 !=======================================================================
 END MODULE SysSubs
