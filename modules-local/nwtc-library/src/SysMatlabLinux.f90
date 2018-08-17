@@ -341,7 +341,7 @@ SUBROUTINE WrNR ( Str )
    INTEGER, EXTERNAL            :: mexPrintF ! Matlab function to print to the command window
    CHARACTER(1024), SAVE        :: Str2      ! bjj: need static variable to print to Matlab command window
 
-   Str2 = ' '//Str//C_NULL_CHAR  !bjj: not sure C_NULL_CHAR is necessary
+   Str2 = ' '//Str
    Stat = mexPrintF( Str2 )
    
    RETURN
@@ -377,7 +377,7 @@ SUBROUTINE WriteScr ( Str, Frm )
       WRITE (Str2,Frm, IOSTAT=Stat)  ADJUSTL( Str )
    END IF
 
-   Str2 = trim(Str2)//NewLine//C_NULL_CHAR  !bjj: not sure C_NULL_CHAR is necessary
+   Str2 = trim(Str2)//NewLine
    Stat = mexPrintf( Str2 )
 
 END SUBROUTINE WriteScr ! ( Str )
