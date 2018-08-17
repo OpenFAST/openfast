@@ -42,23 +42,29 @@ set(NWTCLIBS_SOURCES
 get_filename_component(FCNAME ${CMAKE_Fortran_COMPILER} NAME)
 
 if(BUILD_OPENFAST_SIMULINK_API)
+
   if (APPLE OR UNIX)
-    set(NWTC_SYS_FILE src/SysMatlab_Unix.f90)              
-  elseif  (win32)
+    set(NWTC_SYS_FILE src/SysMatlabLinux.f90)              
+  elseif (WIN32)
     set(NWTC_SYS_FILE src/SysMatlab.f90)
   endif()
+
 elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
+
   if (APPLE OR UNIX)
     set(NWTC_SYS_FILE src/SysGnuLinux.f90)
   elseif (WIN32)
     set(NWTC_SYS_FILE src/SysGnuWin.f90)
   endif (APPLE OR UNIX)
+
 elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
+
   if (APPLE OR UNIX)
     set(NWTC_SYS_FILE src/SysIFL.f90)
   elseif (WIN32)
     set(NWTC_SYS_FILE src/SysIVF.f90)
   endif (APPLE OR UNIX)
+
 endif ()
 
 if (NWTC_SYS_FILE)
@@ -75,8 +81,6 @@ if(BUILD_OPENFAST_SIMULINK_API)
 else()
   target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
 endif()
-
-
 
 install(TARGETS nwtclibs
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
