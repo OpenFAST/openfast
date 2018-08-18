@@ -2926,6 +2926,59 @@ CONTAINS
    RETURN
    END SUBROUTINE OpenFUnkFile
 !=======================================================================
+!> This routine opens a formatted output file in append mode if it exists
+   SUBROUTINE OpenFUnkFileAppend ( Un, OutFile, ErrStat, ErrMsg )
+
+
+      ! This routine opens a formatted output file in append mode if it exists.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)                   :: Un                                          ! Logical unit for the output file.
+   CHARACTER(*), INTENT(IN)              :: OutFile                                     ! Name of the output file.
+
+   INTEGER(IntKi), INTENT(OUT), OPTIONAL :: ErrStat                                     ! Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT), OPTIONAL :: ErrMsg                                      ! Error message
+
+
+
+      ! Local declarations.
+   LOGICAL                                :: FileExists                                  ! Does the file exist?
+   INTEGER                                :: IOS                                         ! I/O status of OPEN
+   CHARACTER(1024)                        :: Msg                                         ! Temporary error message
+
+
+      ! Open output file.  Make sure it worked.
+
+   inquire(file=TRIM( OutFile ), exist=FileExists)
+
+   if (FileExists) then
+      OPEN( Un, FILE=TRIM( OutFile ), STATUS='OLD', POSITION='APPEND', FORM='FORMATTED', IOSTAT=IOS, ACTION="WRITE" )
+   else
+      OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='FORMATTED', IOSTAT=IOS, ACTION="WRITE" )
+   end if
+
+
+   IF ( IOS /= 0 )  THEN
+
+      Msg = 'Cannot open file "'//TRIM( OutFile )//'".  Another program like MS Excel may have locked it for writing.'
+
+      IF ( PRESENT(ErrStat) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = Msg
+      ELSE
+         CALL ProgAbort( ' '//Msg )
+      END IF
+
+   ELSE
+      IF ( PRESENT(ErrStat) )  ErrStat = ErrID_None
+      IF ( PRESENT(ErrMsg)  )  ErrMsg  = ""
+   END IF
+
+
+   RETURN
+   END SUBROUTINE OpenFUnkFileAppend ! ( Un, OutFile [, ErrStat] [, ErrMsg] )
 !>  This routine opens an unformatted input file of RecLen-byte data records
 !!  stored in Big Endian format.
    SUBROUTINE OpenUInBEFile( Un, InFile, RecLen, ErrStat, ErrMsg )

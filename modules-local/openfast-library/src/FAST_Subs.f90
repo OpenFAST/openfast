@@ -6476,7 +6476,9 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
    CHARACTER(1024)                         :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_RestoreFromCheckpoint_T' 
-  
+
+   LOGICAL                                 :: FileExists
+   LOGICAL                                 :: FileOpenFailed
    CHARACTER(1024)                         :: FileName            ! Name of the (input) checkpoint file
    CHARACTER(1024)                         :: DLLFileName         ! Name of the (input) checkpoint file
 
@@ -6596,7 +6598,14 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
       ! deal with sibling meshes here:
    ! (ignoring for now; they are not going to be siblings on restart)
    
-      ! deal with files that were open:
+   ! deal with files that were open:
+   IF (Turbine%p_FAST%WrTxtOutFile) THEN
+      CALL OpenFunkFileAppend ( Turbine%y_FAST%UnOu, TRIM(Turbine%p_FAST%OutFileRoot)//'.out', ErrStat2, ErrMsg2)
+      IF ( ErrStat2 >= AbortErrLev ) RETURN
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL WrFileNR ( Turbine%y_FAST%UnOu, '#Restarting here')
+      WRITE(Turbine%y_FAST%UnOu, '()')
+   END IF
    ! (ignoring for now; will have fort.x files if any were open [though I printed a warning about not outputting binary files earlier])
       
 
