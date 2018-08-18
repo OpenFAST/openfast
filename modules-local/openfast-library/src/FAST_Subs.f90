@@ -6477,8 +6477,6 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    CHARACTER(1024)                         :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_RestoreFromCheckpoint_T' 
 
-   LOGICAL                                 :: FileExists
-   LOGICAL                                 :: FileOpenFailed
    CHARACTER(1024)                         :: FileName            ! Name of the (input) checkpoint file
    CHARACTER(1024)                         :: DLLFileName         ! Name of the (input) checkpoint file
 
