@@ -2926,12 +2926,8 @@ CONTAINS
    RETURN
    END SUBROUTINE OpenFUnkFile
 !=======================================================================
-!> This routine opens a formatted output file in append mode if it exists
+!> This routine opens a formatted output file in append mode if it exists, otherwise opens a new file
    SUBROUTINE OpenFUnkFileAppend ( Un, OutFile, ErrStat, ErrMsg )
-
-
-      ! This routine opens a formatted output file in append mode if it exists.
-
 
       ! Argument declarations.
 
