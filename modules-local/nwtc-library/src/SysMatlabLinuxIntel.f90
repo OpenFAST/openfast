@@ -296,7 +296,7 @@ SUBROUTINE ProgExit ( StatCode )
    ! END IF
 
 END SUBROUTINE ProgExit ! ( StatCode )
-=======================================================================
+!=======================================================================
 SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
 
    ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
