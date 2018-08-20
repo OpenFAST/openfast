@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 !> This module stores basic constants and routines that are not system-specific, but may be used in the system-specific routines.
 MODULE NWTC_Base
 

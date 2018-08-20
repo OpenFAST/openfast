@@ -68,7 +68,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux"
   set(pfunit_lib "/lib/libpfunit.a")
 else()
   # Windows
-  set(pfunit_lib "/lib/pfunit.a")
+  set(pfunit_lib "/lib/pfunit.lib")
 endif()
 
 function(build_utest module testlist)

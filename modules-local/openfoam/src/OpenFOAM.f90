@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: $
-! (File) Revision #: $Rev: $
-! URL: $HeadURL: $
-!**********************************************************************************************************************************
 MODULE OpenFOAM
 
 ! This is a pseudo module used to couple FAST v8 with OpenFOAM; it is considered part of the FAST glue code
