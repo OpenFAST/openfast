@@ -908,7 +908,6 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    INTEGER(IntKi)             :: j
 
    REAL(BDKi)                 :: temp66(6,6)
-   REAL(BDKi)                 :: temp6(6)
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -960,21 +959,13 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    CALL ReadCom(UnIn,BldFile,'units',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL ReadAry(UnIn,BldFile,temp6,6,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
+   CALL ReadAry(UnIn,BldFile,BladeInputFileData%beta,6,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
-
-      ! Change to BD coordinates
-   BladeInputFileData%beta(1) = temp6(3)
-   BladeInputFileData%beta(2) = temp6(1)
-   BladeInputFileData%beta(3) = temp6(2)
-   BladeInputFileData%beta(4) = temp6(6)
-   BladeInputFileData%beta(5) = temp6(4)
-   BladeInputFileData%beta(6) = temp6(5)
 
 
 !  -------------- DISTRIBUTED PROPERTIES--------------------------------------------
