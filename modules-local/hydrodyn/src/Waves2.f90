@@ -25,10 +25,6 @@
 ! See the License for the specific language governing permissions and
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2014-07-09 13:08:44 -0600 (Wed, 09 Jul 2014) $
-! (File) Revision #: $Rev: 483 $
-! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_2nd_order/Source/Waves2.f90 $
-!**********************************************************************************************************************************
 MODULE Waves2
 
 

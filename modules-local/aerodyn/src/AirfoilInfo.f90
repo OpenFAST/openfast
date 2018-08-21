@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 MODULE AirfoilInfo
 
 
@@ -885,86 +881,86 @@ CONTAINS
    END SUBROUTINE ReadAFfile
       
       
-   subroutine AFI_GetAirfoilParams( AFInfo, M, Re, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, T_VL, St_sh, &
-                                    b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, filtCutOff, errMsg, errStat )     
+   subroutine AFI_GetAirfoilParams( AFInfo, M, Re, BL_p, C_nalpha_circ, errMsg, errStat )     
 
-   type(AFInfoType), intent(in   )       :: AFInfo                        ! The derived type for holding the constant parameters for this airfoil.
-   real(ReKi),       intent(in   )       :: M                             ! mach number
-   real(ReKi),       intent(in   )       :: Re                            ! Reynold's number
-   
-   real(ReKi),       intent(  out)       :: alpha0                        ! zero lift angle of attack (radians)
-   real(ReKi),       intent(  out)       :: alpha1                        ! angle of attack at f = 0.7, approximately the stall angle; for alpha >= alpha0 (radians)
-   real(ReKi),       intent(  out)       :: alpha2                        ! angle of attack at f = 0.7, approximately the stall angle; for alpha < alpha0 (radians)
-   real(ReKi),       intent(  out)       :: eta_e                         !
-   real(ReKi),       intent(  out)       :: C_nalpha                      !
+   type(AFInfoType),     intent(in   )       :: AFInfo                        ! The derived type for holding the constant parameters for this airfoil.
+   real(ReKi),           intent(in   )       :: M                             ! mach number
+   real(ReKi),           intent(in   )       :: Re                            ! Reynold's number
+   type(AFI_UA_BL_Type), intent(  out)       :: BL_p                          ! airfoil constants (UA BL parameters)
+
+   !real(ReKi),       intent(  out)       :: alpha0                        ! zero lift angle of attack (radians)
+   !real(ReKi),       intent(  out)       :: alpha1                        ! angle of attack at f = 0.7, approximately the stall angle; for alpha >= alpha0 (radians)
+   !real(ReKi),       intent(  out)       :: alpha2                        ! angle of attack at f = 0.7, approximately the stall angle; for alpha < alpha0 (radians)
+   !real(ReKi),       intent(  out)       :: eta_e                         !
+   !real(ReKi),       intent(  out)       :: C_nalpha                      !
    real(ReKi),       intent(  out)       :: C_nalpha_circ                 ! slope of the circulatory normal force coefficient vs alpha curve
-   real(ReKi),       intent(  out)       :: T_f0                          ! initial value of T_f, airfoil specific, used to compute D_f and fprimeprime
-   real(ReKi),       intent(  out)       :: T_V0                          ! initial value of T_V, airfoil specific, time parameter associated with the vortex lift decay process, used in Cn_v
-   real(ReKi),       intent(  out)       :: T_p                           ! boundary-layer, leading edge pressure gradient time parameter; used in D_p; airfoil specific
-   real(ReKi),       intent(  out)       :: T_VL                          ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
-   real(ReKi),       intent(  out)       :: St_sh                         !
-   real(ReKi),       intent(  out)       :: b1                            ! airfoil constant derived from experimental results, usually 0.14
-   real(ReKi),       intent(  out)       :: b2                            ! airfoil constant derived from experimental results, usually 0.53
-   real(ReKi),       intent(  out)       :: b5                            ! airfoil constant derived from experimental results, usually 5.0
-   real(ReKi),       intent(  out)       :: A1                            ! airfoil constant derived from experimental results, usually 0.3 
-   real(ReKi),       intent(  out)       :: A2                            ! airfoil constant derived from experimental results, usually 0.7
-   real(ReKi),       intent(  out)       :: A5                            ! airfoil constant derived from experimental results, usually 1.0
-   real(ReKi),       intent(  out)       :: S1                            ! constant in the f-curve best-fit, alpha >= alpha0 
-   real(ReKi),       intent(  out)       :: S2                            ! constant in the f-curve best-fit, alpha >= alpha0 
-   real(ReKi),       intent(  out)       :: S3                            ! constant in the f-curve best-fit, alpha <  alpha0 
-   real(ReKi),       intent(  out)       :: S4                            ! constant in the f-curve best-fit, alpha <  alpha0 
-   real(ReKi),       intent(  out)       :: Cn1                           ! critical value of Cn_prime at LE separation for alpha >= alpha0
-   real(ReKi),       intent(  out)       :: Cn2                           ! critical value of Cn_prime at LE separation for alpha < alpha0
-   real(ReKi),       intent(  out)       :: Cd0                           !
-   real(ReKi),       intent(  out)       :: Cm0                           ! 2D pitching moment coefficient at zero lift, positive if nose is up
-   real(ReKi),       intent(  out)       :: k0                            ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),       intent(  out)       :: k1                            ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),       intent(  out)       :: k2                            ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),       intent(  out)       :: k3                            ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),       intent(  out)       :: k1_hat                        !
-   real(ReKi),       intent(  out)       :: x_cp_bar                      ! airfoil parameter for calulating x_cp_v
-   real(ReKi),       intent(  out)       :: filtCutOff                    ! airfoil parameter for the low-pass cut-off frequency for pitching rate and accelerations (Hz)
+   !real(ReKi),       intent(  out)       :: T_f0                          ! initial value of T_f, airfoil specific, used to compute D_f and fprimeprime
+   !real(ReKi),       intent(  out)       :: T_V0                          ! initial value of T_V, airfoil specific, time parameter associated with the vortex lift decay process, used in Cn_v
+   !real(ReKi),       intent(  out)       :: T_p                           ! boundary-layer, leading edge pressure gradient time parameter; used in D_p; airfoil specific
+   !real(ReKi),       intent(  out)       :: T_VL                          ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
+   !real(ReKi),       intent(  out)       :: St_sh                         !
+   !real(ReKi),       intent(  out)       :: b1                            ! airfoil constant derived from experimental results, usually 0.14
+   !real(ReKi),       intent(  out)       :: b2                            ! airfoil constant derived from experimental results, usually 0.53
+   !real(ReKi),       intent(  out)       :: b5                            ! airfoil constant derived from experimental results, usually 5.0
+   !real(ReKi),       intent(  out)       :: A1                            ! airfoil constant derived from experimental results, usually 0.3 
+   !real(ReKi),       intent(  out)       :: A2                            ! airfoil constant derived from experimental results, usually 0.7
+   !real(ReKi),       intent(  out)       :: A5                            ! airfoil constant derived from experimental results, usually 1.0
+   !real(ReKi),       intent(  out)       :: S1                            ! constant in the f-curve best-fit, alpha >= alpha0 
+   !real(ReKi),       intent(  out)       :: S2                            ! constant in the f-curve best-fit, alpha >= alpha0 
+   !real(ReKi),       intent(  out)       :: S3                            ! constant in the f-curve best-fit, alpha <  alpha0 
+   !real(ReKi),       intent(  out)       :: S4                            ! constant in the f-curve best-fit, alpha <  alpha0 
+   !real(ReKi),       intent(  out)       :: Cn1                           ! critical value of Cn_prime at LE separation for alpha >= alpha0
+   !real(ReKi),       intent(  out)       :: Cn2                           ! critical value of Cn_prime at LE separation for alpha < alpha0
+   !real(ReKi),       intent(  out)       :: Cd0                           !
+   !real(ReKi),       intent(  out)       :: Cm0                           ! 2D pitching moment coefficient at zero lift, positive if nose is up
+   !real(ReKi),       intent(  out)       :: k0                            ! airfoil parameter in the x_cp_hat curve best-fit
+   !real(ReKi),       intent(  out)       :: k1                            ! airfoil parameter in the x_cp_hat curve best-fit
+   !real(ReKi),       intent(  out)       :: k2                            ! airfoil parameter in the x_cp_hat curve best-fit
+   !real(ReKi),       intent(  out)       :: k3                            ! airfoil parameter in the x_cp_hat curve best-fit
+   !real(ReKi),       intent(  out)       :: k1_hat                        !
+   !real(ReKi),       intent(  out)       :: x_cp_bar                      ! airfoil parameter for calulating x_cp_v
+   !real(ReKi),       intent(  out)       :: filtCutOff                    ! airfoil parameter for the low-pass cut-off frequency for pitching rate and accelerations (Hz)
    integer(IntKi),   intent(  out)       :: errStat                       ! Error status. 
    character(*),     intent(  out)       :: errMsg                        ! Error message.
       
       errMsg         = ''
       errStat        = ErrID_None
-        
-   
+           
+      
       ! These coefs are stored in the AFInfo data structures based on Re
-   alpha0         =  AFInfo%Table(1)%UA_BL%alpha0   * D2R   ! Convert to radians
-   alpha1         =  AFInfo%Table(1)%UA_BL%alpha1   * D2R   ! Convert to radians
-   alpha2         =  AFInfo%Table(1)%UA_BL%alpha2   * D2R   ! Convert to radians
-   eta_e          =  AFInfo%Table(1)%UA_BL%eta_e         !0.90               ! Recovery factor in the range [0.85 - 0.95]
-   C_nalpha       =  AFInfo%Table(1)%UA_BL%C_nalpha      !2*pi  
-   T_f0           =  AFInfo%Table(1)%UA_BL%T_f0          !3.0_ReKi  ! seconds
-   T_V0           =  AFInfo%Table(1)%UA_BL%T_V0          !6.0_ReKi
-   T_p            =  AFInfo%Table(1)%UA_BL%T_p           !1.7_ReKi
-   T_VL           =  AFInfo%Table(1)%UA_BL%T_VL          !11.0_ReKi
-   b1             =  AFInfo%Table(1)%UA_BL%b1            !0.14_ReKi
-   b2             =  AFInfo%Table(1)%UA_BL%b2            !0.53_ReKi
-   b5             =  AFInfo%Table(1)%UA_BL%b5            !5.0_ReKi
-   A1             =  AFInfo%Table(1)%UA_BL%A1            !0.3_ReKi
-   A2             =  AFInfo%Table(1)%UA_BL%A2            !0.70_ReKi
-   A5             =  AFInfo%Table(1)%UA_BL%A5            !1.0_ReKi
-   S1             =  AFInfo%Table(1)%UA_BL%S1            !0.0262_ReKi   !!!!!!!!!!
-   S2             =  AFInfo%Table(1)%UA_BL%S2            !0.0201_ReKi   !!!!!!!!!!
-   S3             =  AFInfo%Table(1)%UA_BL%S3            !0.0262_ReKi   !!!!!!!!!!
-   S4             =  AFInfo%Table(1)%UA_BL%S4            !0.0201_ReKi   !!!!!!!!!!
-   Cn1            =  AFInfo%Table(1)%UA_BL%Cn1           !1.264_ReKi  ! Stall values of Cn
-   Cn2            =  AFInfo%Table(1)%UA_BL%Cn2           !-0.833_ReKi
-   St_sh          =  AFInfo%Table(1)%UA_BL%St_sh         !0.19_ReKi
-   Cd0            =  AFInfo%Table(1)%UA_BL%Cd0           !0.012_ReKi
-   Cm0            =  AFInfo%Table(1)%UA_BL%Cm0           !0.0_ReKi
-   k0             =  AFInfo%Table(1)%UA_BL%k0            !0.0_ReKi
-   k1             =  AFInfo%Table(1)%UA_BL%k1            !0.0_ReKi
-   k2             =  AFInfo%Table(1)%UA_BL%k2            !0.0_ReKi
-   k3             =  AFInfo%Table(1)%UA_BL%k3            !0.0_ReKi
-   k1_hat         =  AFInfo%Table(1)%UA_BL%k1_hat        !0.0_ReKi
-   x_cp_bar       =  AFInfo%Table(1)%UA_BL%x_cp_bar      !0.2_ReKi
-   filtCutOff     =  AFInfo%Table(1)%UA_BL%filtCutOff    ! 5.0_ReKi  Hz
+   BL_p%alpha0         =  AFInfo%Table(1)%UA_BL%alpha0   * D2R   ! Convert to radians
+   BL_p%alpha1         =  AFInfo%Table(1)%UA_BL%alpha1   * D2R   ! Convert to radians
+   BL_p%alpha2         =  AFInfo%Table(1)%UA_BL%alpha2   * D2R   ! Convert to radians
+   BL_p%eta_e          =  AFInfo%Table(1)%UA_BL%eta_e         !0.90               ! Recovery factor in the range [0.85 - 0.95]
+   BL_p%C_nalpha       =  AFInfo%Table(1)%UA_BL%C_nalpha      !2*pi  
+   BL_p%T_f0           =  AFInfo%Table(1)%UA_BL%T_f0          !3.0_ReKi  ! seconds
+   BL_p%T_V0           =  AFInfo%Table(1)%UA_BL%T_V0          !6.0_ReKi
+   BL_p%T_p            =  AFInfo%Table(1)%UA_BL%T_p           !1.7_ReKi
+   BL_p%T_VL           =  AFInfo%Table(1)%UA_BL%T_VL          !11.0_ReKi
+   BL_p%b1             =  AFInfo%Table(1)%UA_BL%b1            !0.14_ReKi
+   BL_p%b2             =  AFInfo%Table(1)%UA_BL%b2            !0.53_ReKi
+   BL_p%b5             =  AFInfo%Table(1)%UA_BL%b5            !5.0_ReKi
+   BL_p%A1             =  AFInfo%Table(1)%UA_BL%A1            !0.3_ReKi
+   BL_p%A2             =  AFInfo%Table(1)%UA_BL%A2            !0.70_ReKi
+   BL_p%A5             =  AFInfo%Table(1)%UA_BL%A5            !1.0_ReKi
+   BL_p%S1             =  AFInfo%Table(1)%UA_BL%S1            !0.0262_ReKi   !!!!!!!!!!
+   BL_p%S2             =  AFInfo%Table(1)%UA_BL%S2            !0.0201_ReKi   !!!!!!!!!!
+   BL_p%S3             =  AFInfo%Table(1)%UA_BL%S3            !0.0262_ReKi   !!!!!!!!!!
+   BL_p%S4             =  AFInfo%Table(1)%UA_BL%S4            !0.0201_ReKi   !!!!!!!!!!
+   BL_p%Cn1            =  AFInfo%Table(1)%UA_BL%Cn1           !1.264_ReKi  ! Stall values of Cn
+   BL_p%Cn2            =  AFInfo%Table(1)%UA_BL%Cn2           !-0.833_ReKi
+   BL_p%St_sh          =  AFInfo%Table(1)%UA_BL%St_sh         !0.19_ReKi
+   BL_p%Cd0            =  AFInfo%Table(1)%UA_BL%Cd0           !0.012_ReKi
+   BL_p%Cm0            =  AFInfo%Table(1)%UA_BL%Cm0           !0.0_ReKi
+   BL_p%k0             =  AFInfo%Table(1)%UA_BL%k0            !0.0_ReKi
+   BL_p%k1             =  AFInfo%Table(1)%UA_BL%k1            !0.0_ReKi
+   BL_p%k2             =  AFInfo%Table(1)%UA_BL%k2            !0.0_ReKi
+   BL_p%k3             =  AFInfo%Table(1)%UA_BL%k3            !0.0_ReKi
+   BL_p%k1_hat         =  AFInfo%Table(1)%UA_BL%k1_hat        !0.0_ReKi
+   BL_p%x_cp_bar       =  AFInfo%Table(1)%UA_BL%x_cp_bar      !0.2_ReKi
+   BL_p%filtCutOff     =  AFInfo%Table(1)%UA_BL%filtCutOff    ! 5.0_ReKi  Hz
    
-   C_nalpha_circ  =  C_nalpha / sqrt(1.0_ReKi-M**2)
+   C_nalpha_circ  =  BL_p%C_nalpha / sqrt(1.0_ReKi-M**2)
      ! Cn1=1.9 Tp=1.7 Tf=3., Tv=6 Tvl=11, Cd0=0.012
    
    end subroutine AFI_GetAirfoilParams

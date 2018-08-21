@@ -9,10 +9,6 @@
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
-# File last committed: $Date: 2014-05-27 09:53:59 -0600 (Tue, 27 May 2014) $
-# (File) Revision #: $Rev: 395 $
-# URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/RegistryFiles/UnsteadyAero.txt $
-###################################################################################################################################
 
 # ...... Include files (definitions from NWTC Library) ............................................................................
 # make sure that the file name does not have any trailing white spaces!
@@ -43,8 +39,59 @@ typedef   ^                            ^                             INTEGER    
 # Define outputs from the initialization routine here:                                                                                    
 #                                                                                                                                         
 typedef   ^                            InitOutputType                ProgDesc                 Version                         -             -         -        "Version structure" -
-typedef   ^                            InitOutputType                CHARACTER(ChanLen)       WriteOutputHdr                  {:}           -         -        "The is the list of all UA-related output channel header strings (includes all sub-module channels)"    -
-typedef   ^                            ^                             CHARACTER(ChanLen)       WriteOutputUnt                  {:}           -         -        "The is the list of all UA-related output channel unit strings (includes all sub-module channels)"    -
+typedef   ^                            InitOutputType                CHARACTER(19)            WriteOutputHdr                  {:}           -         -        "The is the list of all UA-related output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             CHARACTER(19)            WriteOutputUnt                  {:}           -         -        "The is the list of all UA-related output channel unit strings (includes all sub-module channels)"    -
+
+
+# Variables local to the Kelvin Chain:                                                                                                                                                                                                                            
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_prime                         -             -         -        "" -
+#typedef   ^                            UA_KelvinChainType            ReKi                     Cn_prime_diff                    -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     C_nalpha_circ                    -             -         -        "slope of the circulatory normal force coefficient vs alpha curve" -
+#typedef   ^                            UA_KelvinChainType            AFI_UA_BL_Type           BL_p                             -             -         -        "airfoil parameters for UA" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kalpha_f                         -             -         -        "filtered  backwards finite difference of alpha (xd%Kalpha_f_minus1)" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kq_f                             -             -         -        "filtered  backwards finite difference of q" -
+typedef   ^                            UA_KelvinChainType            ReKi                     alpha_filt_cur                   -             -         -        "filtered angle of attack" -
+typedef   ^                            UA_KelvinChainType            ReKi                     alpha_e                          -             -         -        "effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4" -
+typedef   ^                            UA_KelvinChainType            ReKi                     dalpha0                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     alpha_f                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kq                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     q_cur                            -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     q_f_cur                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X1                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X2                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X3                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     X4                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kprime_alpha                     -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Kprime_q                         -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Dp                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_pot                           -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cc_pot                           -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_q_circ                  -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_q_nc                    -             -         -        "non-circulatory component of normal force coefficient response to step change in alpha and q" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cm_q_circ                        -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_alpha_nc                      -             -         -        "non-circulatory component of the normal force coefficient response to step change in alpha" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_q_circ                        -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_q_nc                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cm_q_nc                          -             -         -        "non-circulatory component of the moment coefficient response to step change in q" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime                      -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Df                               -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Df_c                             -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Dalphaf                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprime                           -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprime_c                         -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime_c                    -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime_m                    -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_v                             -             -         -        "normal force coefficient due to the presence of LE vortex" -
+typedef   ^                            UA_KelvinChainType            ReKi                     C_V                              -             -         -        "contribution to the normal force coefficient due to accumulated vorticity in the LE vortex" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Cn_FS                            -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_f                              -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_V                              -             -         -        "backwards finite difference of the non-dimensionalized distance parameter" -
+typedef   ^                            UA_KelvinChainType            ReKi                     k_alpha                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     k_q                              -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_alpha                          -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_q                              -             -         -        "" -
+
+
 #
 #
 # ..... States ....................................................................................................................
@@ -56,7 +103,7 @@ typedef   ^                            ContinuousStateType           ReKi       
 # Define discrete (non-differentiable) states here:
 #
 typedef   ^                            DiscreteStateType             ReKi                     alpha_minus1                    {:}{:}        -         -        "angle of attack, previous time step"      rad
-typedef   ^                            DiscreteStateType             ReKi                     alpha_filt_minus1                  {:}{:}        -         -        "filtered angle of attack, previous time step"      rad
+typedef   ^                            DiscreteStateType             ReKi                     alpha_filt_minus1               {:}{:}        -         -        "filtered angle of attack, previous time step"      rad
 typedef   ^                            DiscreteStateType             ReKi                     q_minus1                        {:}{:}        -         -        "non-dimensional pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     Kalpha_f_minus1                 {:}{:}        -         -        "filtered pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     Kq_f_minus1                     {:}{:}        -         -        "filtered pitching acceleration, previous time step"        -
@@ -106,6 +153,7 @@ typedef   ^                            MiscVarType                   INTEGER    
 typedef   ^                            MiscVarType                   LOGICAL                  TESF                            {:}{:}        -         -        "logical flag indicating if trailing edge separation is possible"   -
 typedef   ^                            MiscVarType                   LOGICAL                  LESF                            {:}{:}        -         -        "logical flag indicating if leading edge separation is possible"   -
 typedef   ^                            MiscVarType                   LOGICAL                  VRTX                            {:}{:}        -         -        "logical flag indicating if a vortex is being processed"   -
+typedef   ^                            MiscVarType                   ReKi                     T_Sh                            {:}{:}        -         -        "shedding frequency"   -
 typedef   ^                            MiscVarType                   LOGICAL                  BEDSEP                          {:}{:}        -         -        "logical flag indicating if this is undergoing separated flow (for compison with AD14)"   -
 
 

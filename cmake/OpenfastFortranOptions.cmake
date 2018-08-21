@@ -117,6 +117,11 @@ macro(set_fast_intel_fortran_posix)
     add_definitions(-DDOUBLE_PRECISION)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpp -r8 -double_size 128")
   endif (DOUBLE_PRECISION)
+
+  # debug flags
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all -traceback" )
+  endif()
 endmacro(set_fast_intel_fortran_posix)
 
 #
@@ -134,4 +139,9 @@ macro(set_fast_intel_fortran_windows)
   # - 5199: too many continuation lines
   # - 5268: 132 column limit
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268")
+
+  # debug flags
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /check:all /traceback" )
+  endif()
 endmacro(set_fast_intel_fortran_windows)

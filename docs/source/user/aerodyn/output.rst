@@ -12,8 +12,8 @@ Echo Files
 
 If you set the ``Echo`` flag to ``TRUE`` in the AeroDyn driver file or the
 AeroDyn primary input file, the contents of those files will be echoed
-to a file with the naming conventions, ``OutFileRoot**.ech`` for the
-driver input file and ``OutFileRoot**.AD.ech`` for the AeroDyn primary
+to a file with the naming conventions, *OutFileRoot.ech* for the
+driver input file and *OutFileRoot.AD.ech* for the AeroDyn primary
 input file. ``OutFileRoot`` is either specified in the I/O SETTINGS
 section of the driver input file when running AeroDyn standalone, or by
 the FAST program when running a coupled simulation. The echo files are
@@ -26,7 +26,7 @@ Summary File
 ------------
 
 AeroDyn generates a summary file with the naming convention,
-``OutFileRoot**.AD.sum`` if the ``SumPrint`` parameter is set to ``TRUE``.
+*OutFileRoot.AD.sum* if the ``SumPrint`` parameter is set to ``TRUE``.
 ``OutFileRoot`` is either specified in the I/O SETTINGS section of the
 driver input file when running AeroDyn standalone, or by the FAST
 program when running a coupled simulation. This file summarizes key
@@ -38,7 +38,7 @@ Results Files
 
 In standalone mode, the AeroDyn time-series results (a separate file for
 each case) are written to text-based files with the naming convention
-``OutFileRoot**.#.out``, where ``OutFileRoot`` is specified in the I/O
+*OutFileRoot.#.out*, where ``OutFileRoot`` is specified in the I/O
 SETTINGS section of the driver input file and the ‘\ *#*\ ’ character is
 an integer number corresponding to a test case line found in the
 COMBINED-CASE ANALYSIS section. If AeroDyn is coupled to FAST, then FAST

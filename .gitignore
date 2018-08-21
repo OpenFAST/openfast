@@ -31,7 +31,7 @@ __pycache__/*
 *.pyc
 
 # Build specific files
-build/
+build*/
 install/
 vs-build/
 
@@ -39,3 +39,4 @@ vs-build/
 .DS_Store
 .vscode
 .atom
+.fortls

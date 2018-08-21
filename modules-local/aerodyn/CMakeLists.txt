@@ -17,6 +17,7 @@
 generate_f90_types(src/AeroDyn_Registry.txt AeroDyn_Types.f90)
 generate_f90_types(src/AirfoilInfo_Registry.txt AirfoilInfo_Types.f90 -noextrap)
 generate_f90_types(src/BEMT_Registry.txt BEMT_Types.f90)
+generate_f90_types(src/DBEMT_Registry.txt DBEMT_Types.f90)
 generate_f90_types(src/UnsteadyAero_Registry.txt UnsteadyAero_Types.f90)
 
 generate_f90_types(src/AeroDyn_Driver_Registry.txt
@@ -27,6 +28,7 @@ set(AD_LIBS_SOURCES
   src/AeroDyn_IO.f90
   src/AirfoilInfo.f90
   src/BEMT.f90
+  src/DBEMT.f90
   src/BEMTUncoupled.f90
   src/UnsteadyAero.f90
   src/fmin_fcn.f90
@@ -36,6 +38,7 @@ set(AD_LIBS_SOURCES
   AeroDyn_Types.f90
   AirfoilInfo_Types.f90
   BEMT_Types.f90
+  DBEMT_Types.f90
   UnsteadyAero_Types.f90
   )
 

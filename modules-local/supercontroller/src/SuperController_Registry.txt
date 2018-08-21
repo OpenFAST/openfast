@@ -5,10 +5,6 @@
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
-# File last committed $Date$
-# (File) Revision #: $Rev$
-# URL: $HeadURL$
-###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include	Registry_NWTC_Library.txt
 
