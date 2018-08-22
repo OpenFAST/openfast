@@ -59,7 +59,7 @@ init_type_table()
                                                 strcpy( p->mapsto, "REAL(DbKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "r8ki" )            ;
-                                                strcpy( p->mapsto, "REAL(R8Ki)")      ;
+                                                strcpy( p->mapsto, "REAL(ReKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = DERIVED ; strcpy( p->name , "meshtype" )        ;
                                                 strcpy( p->mapsto, "MeshType")        ;
@@ -82,7 +82,7 @@ C_type( char * s )
   if (!strcmp(s, "REAL(ReKi)")) return("float");
   if (!strcmp(s, "REAL(SiKi)")) return("float");
   if (!strcmp(s, "REAL(DbKi)")) return("double");
-  if (!strcmp(s, "REAL(R8Ki)")) return("double");
+  if (!strcmp(s, "REAL(ReKi)")) return("double");
   if (!strncmp(s, "CHARACTER", 9)) return("char");
   return("unknown") ;
 }
@@ -99,7 +99,7 @@ c_types_binding( char *s )
   if (!strcmp(s, "REAL(ReKi)")) return("REAL(KIND=C_FLOAT)");
   if (!strcmp(s, "REAL(SiKi)")) return("REAL(KIND=C_FLOAT)");
   if (!strcmp(s, "REAL(DbKi)")) return("REAL(KIND=C_DOUBLE)");
-  if (!strcmp(s, "REAL(R8Ki)")) return("REAL(KIND=C_DOUBLE)");
+  if (!strcmp(s, "REAL(ReKi)")) return("REAL(KIND=C_DOUBLE)");
   if (!strncmp(s, "CHARACTER", 9)) { // give the C string a length identical to the fortran type
     char *p = s, buf[10];
     while ( *p ) { 

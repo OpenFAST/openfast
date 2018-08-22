@@ -468,8 +468,8 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
    CHARACTER(1024)                         :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_OP' 
    
-   REAL(R8Ki), ALLOCATABLE                 :: dYdz(:,:), dZdz(:,:), dZdu(:,:)
-   REAL(R8Ki), ALLOCATABLE                 :: dUdu(:,:), dUdy(:,:) ! variables for glue-code linearization
+   REAL(ReKi), ALLOCATABLE                 :: dYdz(:,:), dZdz(:,:), dZdu(:,:)
+   REAL(ReKi), ALLOCATABLE                 :: dUdu(:,:), dUdy(:,:) ! variables for glue-code linearization
    INTEGER(IntKi), ALLOCATABLE             :: ipiv(:)
    integer(intki)                          :: NumBl
    integer(intki)                          :: k
@@ -768,7 +768,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
 
       ! note that after the above solve, dZdu is now matmul(dZdz^-1, dZdu)
       !y_FAST%Lin%Modules(Module_AD)%D = y_FAST%Lin%Modules(Module_AD)%D - matmul(dYdz, dZdu )
-      call LAPACK_GEMM( 'N', 'N', -1.0_R8Ki, dYdz, dZdu, 1.0_R8Ki, y_FAST%Lin%Modules(Module_AD)%Instance(1)%D, ErrStat2, ErrMsg2 )
+      call LAPACK_GEMM( 'N', 'N', -1.0_ReKi, dYdz, dZdu, 1.0_ReKi, y_FAST%Lin%Modules(Module_AD)%Instance(1)%D, ErrStat2, ErrMsg2 )
       
       
       if (p_FAST%LinOutMod) then
@@ -1230,9 +1230,9 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
    TYPE(IceDyn_Data),        INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
 
    TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
-   REAL(R8Ki), ALLOCATABLE,  INTENT(INOUT) :: dUdu(:,:)           !< Partial derivatives of input-output equations (U(y,u)=0) with respect
+   REAL(ReKi), ALLOCATABLE,  INTENT(INOUT) :: dUdu(:,:)           !< Partial derivatives of input-output equations (U(y,u)=0) with respect
                                                                   !!   to the inputs (u)
-   REAL(R8Ki), ALLOCATABLE,  INTENT(INOUT) :: dUdy(:,:)           !< Partial derivatives of input-output equations (U(y,u)=0) with respect
+   REAL(ReKi), ALLOCATABLE,  INTENT(INOUT) :: dUdy(:,:)           !< Partial derivatives of input-output equations (U(y,u)=0) with respect
                                                                   !!   to the outputs (y)
       
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
@@ -1284,7 +1284,7 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
          if (ErrStat>=AbortErrLev) return
    end if
    
-   dUdu = 0.0_R8Ki      ! most of this matrix is zero, so we'll just initialize everything and set only the non-zero parts below
+   dUdu = 0.0_ReKi      ! most of this matrix is zero, so we'll just initialize everything and set only the non-zero parts below
    
    
       !............
@@ -1300,7 +1300,7 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
          r_start =           y_FAST%Lin%Modules(ThisModule)%Instance(k)%LinStartIndx(LIN_INPUT_COL)
          r_end   = r_start + y_FAST%Lin%Modules(ThisModule)%Instance(k)%SizeLin(     LIN_INPUT_COL) - 1
          do i = r_start,r_end
-            dUdu(i,i) = 1.0_R8Ki
+            dUdu(i,i) = 1.0_ReKi
          end do
       end do
    end do
@@ -1365,7 +1365,7 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
          if (ErrStat>=AbortErrLev) return
    end if
          
-   dUdy = 0.0_R8Ki      ! most of this matrix is zero, so we'll just initialize everything and set only the non-zero parts below
+   dUdy = 0.0_ReKi      ! most of this matrix is zero, so we'll just initialize everything and set only the non-zero parts below
    
       !............
       ! \f$ \frac{\partial U_\Lambda^{SrvD}}{\partial y^{ED}} \end{bmatrix} = \f$ (dUdy block row 2=SrvD)
@@ -1419,7 +1419,7 @@ SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, u_AD, dUdu )
    TYPE(FAST_ParameterType),       INTENT(IN   )   :: p_FAST      !< FAST parameter data
    TYPE(FAST_OutputFileType),      INTENT(IN   )   :: y_FAST      !< FAST output data (for linearization)
    TYPE(AD_InputType),             INTENT(IN)      :: u_AD        !< The input meshes (already calculated) from AeroDyn
-   REAL(R8Ki),                     INTENT(INOUT)   :: dUdu(:,:)   !< Jacobian matrix of which we are computing the dU^(IfW)/du^(AD) block
+   REAL(ReKi),                     INTENT(INOUT)   :: dUdu(:,:)   !< Jacobian matrix of which we are computing the dU^(IfW)/du^(AD) block
    
    
    INTEGER(IntKi)                          :: i, j, k             ! loop counters
@@ -1451,7 +1451,7 @@ SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, u_AD, dUdu )
                do i=1,3 !XYZ components of this node
                   i2 = y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (Node-1)*3 + i - 1
                   j2 = AD_Start_Bl + (j-1)*3 + i - 1
-                  dUdu( i2, j2 ) = -1.0_R8Ki
+                  dUdu( i2, j2 ) = -1.0_ReKi
                end do            
             END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
                      
@@ -1465,7 +1465,7 @@ SUBROUTINE Linear_IfW_InputSolve_du_AD( p_FAST, y_FAST, u_AD, dUdu )
             do i=1,3 !XYZ components of this node
                i2 = y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_INPUT_COL) + (Node-1)*3 + i - 1
                j2 = y_FAST%Lin%Modules(MODULE_AD )%Instance(1)%LinStartIndx(LIN_INPUT_COL) +    (j-1)*3 + i - 1
-               dUdu( i2, j2 ) = -1.0_R8Ki
+               dUdu( i2, j2 ) = -1.0_ReKi
             end do            
          END DO              
          
@@ -1485,7 +1485,7 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    TYPE(BeamDyn_Data),             INTENT(INOUT)  :: BD             !< BD data at t
 
    TYPE(FAST_ModuleMapType),       INTENT(INOUT)  :: MeshMapData    !< Data for mapping between modules
-   REAL(R8Ki),                     INTENT(INOUT)  :: dUdu(:,:)      !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
+   REAL(ReKi),                     INTENT(INOUT)  :: dUdu(:,:)      !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat        !< Error status
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg         !< Error message
    
@@ -1612,7 +1612,7 @@ SUBROUTINE Linear_BD_InputSolve_du( p_FAST, y_FAST, y_ED, y_AD, u_AD, BD, MeshMa
    TYPE(BeamDyn_Data),             INTENT(INOUT)  :: BD             !< BD data at t
 
    TYPE(FAST_ModuleMapType),       INTENT(INOUT)  :: MeshMapData    !< Data for mapping between modules
-   REAL(R8Ki),                     INTENT(INOUT)  :: dUdu(:,:)      !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
+   REAL(ReKi),                     INTENT(INOUT)  :: dUdu(:,:)      !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat        !< Error status
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg         !< Error message
    
@@ -1722,7 +1722,7 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMapData,
    TYPE(ED_OutputType),         INTENT(IN)      :: y_ED        !< The outputs from the structural dynamics module
    TYPE(BeamDyn_Data),          INTENT(INOUT)   :: BD          !< BD data at t
    TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData !< Data for mapping between modules
-   REAL(R8Ki),                  INTENT(INOUT)   :: dUdu(:,:)   !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
+   REAL(ReKi),                  INTENT(INOUT)   :: dUdu(:,:)   !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
    
    INTEGER(IntKi)                               :: ErrStat     !< Error status of the operation
    CHARACTER(*)                                 :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -1817,7 +1817,7 @@ SUBROUTINE Linear_SrvD_InputSolve_dy( p_FAST, y_FAST, dUdy  )
 
    TYPE(FAST_ParameterType),       INTENT(IN)     :: p_FAST         !< Glue-code simulation parameters
    TYPE(FAST_OutputFileType),      INTENT(IN)     :: y_FAST         !< Output variables for the glue code
-   REAL(R8Ki),                     INTENT(INOUT)  :: dUdy(:,:)      !< Jacobian matrix of which we are computing the dU^{SrvD}/dy^{ED} block
+   REAL(ReKi),                     INTENT(INOUT)  :: dUdy(:,:)      !< Jacobian matrix of which we are computing the dU^{SrvD}/dy^{ED} block
    
    integer(intKi)                                 :: ED_Start_Yaw   !< starting index of dUdy (column) where ED Yaw/YawRate/HSS_Spd outputs are located (just before WriteOutput)
 
@@ -1862,7 +1862,7 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    TYPE(BeamDyn_Data),             INTENT(INOUT)  :: BD               !< BD data at t
                                                                       
    TYPE(FAST_ModuleMapType),       INTENT(INOUT)  :: MeshMapData      !< Data for mapping between modules
-   REAL(R8Ki),                     INTENT(INOUT)  :: dUdy(:,:)        !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
+   REAL(ReKi),                     INTENT(INOUT)  :: dUdy(:,:)        !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat          !< Error status
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg           !< Error message
    
@@ -1990,7 +1990,7 @@ SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    TYPE(BeamDyn_Data),             INTENT(IN   )  :: BD               !< BD data at t
                                                                       
    TYPE(FAST_ModuleMapType),       INTENT(INOUT)  :: MeshMapData      !< Data for mapping between modules
-   REAL(R8Ki),                     INTENT(INOUT)  :: dUdy(:,:)        !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
+   REAL(ReKi),                     INTENT(INOUT)  :: dUdy(:,:)        !< Jacobian matrix of which we are computing the dU^(ED)/du^(AD) block
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat          !< Error status
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg           !< Error message
    
@@ -2002,7 +2002,7 @@ SUBROUTINE Linear_BD_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    INTEGER(IntKi)                                 :: ED_Out_Start     ! starting index of dUdy (column) where particular AD fields are located
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
-   REAL(R8Ki), ALLOCATABLE                        :: TempMat(:,:)     ! temporary matrix for getting linearization matrices when BD input and output meshes are not siblings
+   REAL(ReKi), ALLOCATABLE                        :: TempMat(:,:)     ! temporary matrix for getting linearization matrices when BD input and output meshes are not siblings
    CHARACTER(*), PARAMETER                        :: RoutineName = 'Linear_BD_InputSolve_dy' 
    
    
@@ -2088,7 +2088,7 @@ SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, u_AD, dUdy )
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST         !< FAST parameter data    
    TYPE(FAST_OutputFileType),      INTENT(IN   )  :: y_FAST         !< FAST output file data (for linearization)
    TYPE(AD_InputType),             INTENT(INOUT)  :: u_AD           !< The inputs to AeroDyn
-   REAL(R8Ki),                     INTENT(INOUT)  :: dUdy(:,:)      !< Jacobian matrix of which we are computing the dU^{AD}/dy^{IfW} block
+   REAL(ReKi),                     INTENT(INOUT)  :: dUdy(:,:)      !< Jacobian matrix of which we are computing the dU^{AD}/dy^{IfW} block
 
       ! Local variables:
 
@@ -2116,7 +2116,7 @@ SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, u_AD, dUdy )
       do k=1,size(u_AD%InflowOnBlade,3) ! blades
          do j=1,size(u_AD%InflowOnBlade,2) ! nodes
             do i=1,3 !velocity component
-               dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
+               dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_ReKi
             end do
             node = node + 1
             AD_Start = AD_Start + 3
@@ -2126,7 +2126,7 @@ SUBROUTINE Linear_AD_InputSolve_IfW_dy( p_FAST, y_FAST, u_AD, dUdy )
       if ( allocated(u_AD%InflowOnTower) ) then         
          do j=1,size(u_AD%InflowOnTower,2) !nodes
             do i=1,3 !velocity component
-               dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_R8Ki
+               dUdy( AD_Start + i - 1, y_FAST%Lin%Modules(MODULE_IfW)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL) + (node-1)*3 + i - 1 ) = -1.0_ReKi
             end do
             node = node + 1
             AD_Start = AD_Start + 3
@@ -2149,7 +2149,7 @@ SUBROUTINE Linear_AD_InputSolve_NoIfW_dy( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMa
    TYPE(ED_OutputType),         INTENT(IN)      :: y_ED        !< The outputs from the structural dynamics module
    TYPE(BeamDyn_Data),          INTENT(IN   )   :: BD          !< BD data at t
    TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData !< Data for mapping between modules
-   REAL(R8Ki),                  INTENT(INOUT)   :: dUdy(:,:)   !< Jacobian matrix of which we are computing the dU^{AD}/dy^{ED} block
+   REAL(ReKi),                  INTENT(INOUT)   :: dUdy(:,:)   !< Jacobian matrix of which we are computing the dU^{AD}/dy^{ED} block
    
    INTEGER(IntKi)                               :: ErrStat     !< Error status of the operation
    CHARACTER(*)                                 :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -2331,7 +2331,7 @@ SUBROUTINE Glue_FormDiag( p_FAST, y_FAST, ErrStat, ErrMsg )
    ! The equations of the matrices returned from this routine are really just a general form with the null matrices removed:      
    
    ! A
-   y_FAST%Lin%Glue%A = 0.0_R8Ki
+   y_FAST%Lin%Glue%A = 0.0_ReKi
    r_start = 1
    c_start = 1
    do i = 1,p_FAST%Lin_NumMods
@@ -2353,7 +2353,7 @@ SUBROUTINE Glue_FormDiag( p_FAST, y_FAST, ErrStat, ErrMsg )
    
     
    ! B
-   y_FAST%Lin%Glue%B = 0.0_R8Ki
+   y_FAST%Lin%Glue%B = 0.0_ReKi
    r_start = 1
    c_start = 1
    do i = 1,p_FAST%Lin_NumMods
@@ -2374,7 +2374,7 @@ SUBROUTINE Glue_FormDiag( p_FAST, y_FAST, ErrStat, ErrMsg )
    end do
    
    ! C
-   y_FAST%Lin%Glue%C = 0.0_R8Ki
+   y_FAST%Lin%Glue%C = 0.0_ReKi
    r_start = 1
    c_start = 1
    do i = 1,p_FAST%Lin_NumMods
@@ -2395,7 +2395,7 @@ SUBROUTINE Glue_FormDiag( p_FAST, y_FAST, ErrStat, ErrMsg )
    end do   
    
    ! D
-   y_FAST%Lin%Glue%D = 0.0_R8Ki
+   y_FAST%Lin%Glue%D = 0.0_ReKi
    r_start = 1
    c_start = 1
    do i = 1,p_FAST%Lin_NumMods
@@ -2425,8 +2425,8 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
-   REAL(R8Ki),               INTENT(INOUT) :: dUdu(:,:)           !< glue-code Jacobian: \f$ \frac{\partial U}{\partial u} \f$; on exit will hold G^{-1}*dUdu
-   REAL(R8Ki),               INTENT(INOUT) :: dUdy(:,:)           !< glue-code Jacobian: \f$ \frac{\partial U}{\partial y} \f$; on exit will hold G^{-1}*dUdy
+   REAL(ReKi),               INTENT(INOUT) :: dUdu(:,:)           !< glue-code Jacobian: \f$ \frac{\partial U}{\partial u} \f$; on exit will hold G^{-1}*dUdu
+   REAL(ReKi),               INTENT(INOUT) :: dUdy(:,:)           !< glue-code Jacobian: \f$ \frac{\partial U}{\partial y} \f$; on exit will hold G^{-1}*dUdy
            
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
@@ -2434,7 +2434,7 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
    
    
       ! local variables
-   REAL(R8Ki), ALLOCATABLE                 :: G(:,:), tmp(:,:) ! variables for glue-code linearization
+   REAL(ReKi), ALLOCATABLE                 :: G(:,:), tmp(:,:) ! variables for glue-code linearization
    INTEGER(IntKi), ALLOCATABLE             :: ipiv(:)
             
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
@@ -2486,7 +2486,7 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
    
    !G = dUdu + matmul( dUdy, y_FAST%Lin%Glue%D )            
    G = dUdu
-   call LAPACK_GEMM( 'N', 'N', 1.0_R8Ki, dUdy, y_FAST%Lin%Glue%D, 1.0_R8Ki, G, ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM( 'N', 'N', 1.0_ReKi, dUdy, y_FAST%Lin%Glue%D, 1.0_ReKi, G, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
    ! because G can be ill-conditioned, we are going to precondition with G_hat = S^(-1) * G * S
@@ -2529,7 +2529,7 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
       end if
       
    !tmp = G^(-1) * dUdy * diag(C)
-   call LAPACK_GEMM( 'N', 'N', 1.0_R8Ki, dUdy, y_FAST%Lin%Glue%C, 0.0_R8Ki, tmp, ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM( 'N', 'N', 1.0_ReKi, dUdy, y_FAST%Lin%Glue%C, 0.0_ReKi, tmp, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
                         
@@ -2541,7 +2541,7 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
    !! \begin{bmatrix} G \end{bmatrix}^{-1} \, \frac{\partial U}{\partial y} \, \begin{bmatrix} 0 & 0 \\ 0 & 0 \\ C^{ED} & 0 \\ 0 & C^{BD} \\ 0 & 0 \end{bmatrix}
    !! \f}
    !y_FAST%Lin%Glue%A = y_FAST%Lin%Glue%A - matmul( y_FAST%Lin%Glue%B, tmp )  
-   call LAPACK_GEMM( 'N', 'N', -1.0_R8Ki, y_FAST%Lin%Glue%B, tmp, 1.0_R8Ki, y_FAST%Lin%Glue%A, ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM( 'N', 'N', -1.0_ReKi, y_FAST%Lin%Glue%B, tmp, 1.0_ReKi, y_FAST%Lin%Glue%A, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    !  C
@@ -2551,7 +2551,7 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
    !! \begin{bmatrix} G \end{bmatrix}^{-1} \, \frac{\partial U}{\partial y} \, \begin{bmatrix} 0 & 0 \\ 0 & 0 \\ C^{ED} & 0 \\ 0 & C^{BD} \\ 0 & 0 \end{bmatrix}
    !! \f}
    !y_FAST%Lin%Glue%C = y_FAST%Lin%Glue%C - matmul( y_FAST%Lin%Glue%D, tmp ) 
-   call LAPACK_GEMM( 'N', 'N', -1.0_R8Ki, y_FAST%Lin%Glue%D, tmp, 1.0_R8Ki, y_FAST%Lin%Glue%C, ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM( 'N', 'N', -1.0_ReKi, y_FAST%Lin%Glue%D, tmp, 1.0_ReKi, y_FAST%Lin%Glue%C, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
    deallocate(tmp)
@@ -2571,7 +2571,7 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
    tmp = y_FAST%Lin%Glue%B   
          
    !y_FAST%Lin%Glue%B = matmul( y_FAST%Lin%Glue%B, dUdu ) 
-   call LAPACK_GEMM( 'N', 'N', 1.0_R8Ki, tmp, dUdu, 0.0_R8Ki, y_FAST%Lin%Glue%B, ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM( 'N', 'N', 1.0_ReKi, tmp, dUdu, 0.0_ReKi, y_FAST%Lin%Glue%B, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    deallocate(tmp)      
       
@@ -2589,7 +2589,7 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
    tmp = y_FAST%Lin%Glue%D
          
    !y_FAST%Lin%Glue%D = matmul( y_FAST%Lin%Glue%D, dUdu )
-   call LAPACK_GEMM( 'N', 'N', 1.0_R8Ki, tmp, dUdu, 0.0_R8Ki, y_FAST%Lin%Glue%D, ErrStat2, ErrMsg2 )
+   call LAPACK_GEMM( 'N', 'N', 1.0_ReKi, tmp, dUdu, 0.0_ReKi, y_FAST%Lin%Glue%D, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
    deallocate(tmp)    
    
@@ -2612,9 +2612,9 @@ SUBROUTINE Precondition(p_FAST, y_FAST, G, dUdu, dUdy)
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
-   REAL(R8Ki),               INTENT(INOUT) :: G(:,:)              !< variable for glue-code linearization (in is G; out is G_hat)
-   REAL(R8Ki),               INTENT(INOUT) :: dUdu(:,:)           !< jacobian in FAST linearization from right-hand-side of equation
-   REAL(R8Ki),               INTENT(INOUT) :: dUdy(:,:)           !< jacobian in FAST linearization from right-hand-side of equation
+   REAL(ReKi),               INTENT(INOUT) :: G(:,:)              !< variable for glue-code linearization (in is G; out is G_hat)
+   REAL(ReKi),               INTENT(INOUT) :: dUdu(:,:)           !< jacobian in FAST linearization from right-hand-side of equation
+   REAL(ReKi),               INTENT(INOUT) :: dUdy(:,:)           !< jacobian in FAST linearization from right-hand-side of equation
 
    integer :: r, c
    
@@ -2673,8 +2673,8 @@ SUBROUTINE Postcondition(p_FAST, y_FAST, dUdu, dUdy)
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
-   REAL(R8Ki),               INTENT(INOUT) :: dUdu(:,:)           !< jacobian in FAST linearization from right-hand-side of equation
-   REAL(R8Ki),               INTENT(INOUT) :: dUdy(:,:)           !< jacobian in FAST linearization from right-hand-side of equation
+   REAL(ReKi),               INTENT(INOUT) :: dUdu(:,:)           !< jacobian in FAST linearization from right-hand-side of equation
+   REAL(ReKi),               INTENT(INOUT) :: dUdy(:,:)           !< jacobian in FAST linearization from right-hand-side of equation
 
    integer :: r
    
@@ -2700,8 +2700,8 @@ SUBROUTINE Postcondition(p_FAST, y_FAST, dUdu, dUdy)
 END SUBROUTINE Postcondition
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SetBlockMatrix( matrix, submatrix, RowStart, ColStart )
-   REAL(R8Ki),     INTENT(INOUT)  :: matrix(:,:)      !< matrix that will have the negative of the submatrix block added to it
-   REAL(R8Ki),     INTENT(IN )    :: submatrix(:,:)   !< block matrix that needs to be added to matrix
+   REAL(ReKi),     INTENT(INOUT)  :: matrix(:,:)      !< matrix that will have the negative of the submatrix block added to it
+   REAL(ReKi),     INTENT(IN )    :: submatrix(:,:)   !< block matrix that needs to be added to matrix
    INTEGER(IntKi), INTENT(IN )    :: RowStart         !< first row in matrix where submatrix should start
    INTEGER(IntKi), INTENT(IN )    :: ColStart         !< first column in matrix where submatrix should start
 
@@ -2719,8 +2719,8 @@ SUBROUTINE SetBlockMatrix( matrix, submatrix, RowStart, ColStart )
 END SUBROUTINE SetBlockMatrix
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SumBlockMatrix( matrix, submatrix, RowStart, ColStart )
-   REAL(R8Ki),     INTENT(INOUT)  :: matrix(:,:)      !< matrix that will have the negative of the submatrix block added to it
-   REAL(R8Ki),     INTENT(IN )    :: submatrix(:,:)   !< block matrix that needs to be added to matrix
+   REAL(ReKi),     INTENT(INOUT)  :: matrix(:,:)      !< matrix that will have the negative of the submatrix block added to it
+   REAL(ReKi),     INTENT(IN )    :: submatrix(:,:)   !< block matrix that needs to be added to matrix
    INTEGER(IntKi), INTENT(IN )    :: RowStart         !< first row in matrix where submatrix should start
    INTEGER(IntKi), INTENT(IN )    :: ColStart         !< first column in matrix where submatrix should start
 
@@ -2763,7 +2763,7 @@ SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dU
    TYPE(MeshMapType), INTENT(IN)     :: MeshMap       !< the mesh mapping from y to u
    INTEGER(IntKi),    INTENT(IN)     :: BlockRowStart !< the index of the row defining the block of dUdy to be set
    INTEGER(IntKi),    INTENT(IN)     :: BlockColStart !< the index of the column defining the block of dUdy to be set
-   REAL(R8Ki),        INTENT(INOUT)  :: dUdy(:,:)     !< full Jacobian matrix
+   REAL(ReKi),        INTENT(INOUT)  :: dUdy(:,:)     !< full Jacobian matrix
    LOGICAL, OPTIONAL, INTENT(IN)     :: skipRotVel    !< if present and true, we skip the rotational velocity and acceleration fields and return early
    
    INTEGER(IntKi)                    :: row
@@ -2873,7 +2873,7 @@ SUBROUTINE Assemble_dUdy_Loads(y, u, MeshMap, BlockRowStart, BlockColStart, dUdy
    TYPE(MeshMapType), INTENT(IN)     :: MeshMap       !< the mesh mapping from y to u
    INTEGER(IntKi),    INTENT(IN)     :: BlockRowStart !< the index of the row defining the block of dUdy to be set
    INTEGER(IntKi),    INTENT(IN)     :: BlockColStart !< the index of the column defining the block of dUdy to be set
-   REAL(R8Ki),        INTENT(INOUT)  :: dUdy(:,:)     !< full Jacobian matrix
+   REAL(ReKi),        INTENT(INOUT)  :: dUdy(:,:)     !< full Jacobian matrix
    
    INTEGER(IntKi)                    :: row
    INTEGER(IntKi)                    :: col

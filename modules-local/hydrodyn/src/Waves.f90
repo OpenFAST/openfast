@@ -413,7 +413,7 @@ CONTAINS
 
       ELSE                       ! 0 < k*h <= 89.4; use the shallow water formulation.
 
-         COSHNumOvrCOSHDen =REAL( COSH( k*( z + h ) ),R8Ki)/COSH( k*h )
+         COSHNumOvrCOSHDen =REAL( COSH( k*( z + h ) ),ReKi)/COSH( k*h )
 
       END IF
 

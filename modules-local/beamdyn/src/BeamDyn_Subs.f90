@@ -22,7 +22,7 @@ MODULE BeamDyn_Subs
 
    IMPLICIT NONE
 
-   INTEGER, PARAMETER :: BDKi = R8Ki
+   INTEGER, PARAMETER :: BDKi = ReKi
    INTEGER, PARAMETER :: FLAG_R1R2   = 0 !<   BD_CrvCompose flag = 0: R(rr) = R    (pp) R    (qq)
    INTEGER, PARAMETER :: FLAG_R1TR2  = 1 !<   BD_CrvCompose flag = 1: R(rr) = R(T) (pp) R    (qq)
    INTEGER, PARAMETER :: FLAG_R1R2T  = 2 !<   BD_CrvCompose flag = 2: R(rr) = R    (pp) R(T) (qq)
@@ -987,7 +987,7 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1, phi, cc, ErrStat, ErrMsg)
 END SUBROUTINE BD_ComputeIniNodalCrv
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
-   real(R8Ki),             INTENT(in   )     :: R(3,3)       !< input rotation matrix (transpose of DCM; in BD coords)
+   real(ReKi),             INTENT(in   )     :: R(3,3)       !< input rotation matrix (transpose of DCM; in BD coords)
    type(BD_ParameterType), INTENT(in   )     :: p            !< Parameters
    real(BDKi),             INTENT(  OUT)     :: rr(3)        !< W-M parameters of relative rotation
    INTEGER(IntKi),         INTENT(  OUT)     :: ErrStat      !< Error status of the operation
@@ -1011,7 +1011,7 @@ SUBROUTINE ExtractRelativeRotation(R, p, rr, ErrStat, ErrMsg)
    ! note that the u%RootMotion mesh does not contain the initial twist, but p%Glb_crv does not have this twist, either.
    ! The relative rotation will be the same in this case.
    
-   R_BD = R ! possible type conversion (only if BDKi /= R8Ki)
+   R_BD = R ! possible type conversion (only if BDKi /= ReKi)
 
    CALL BD_CrvExtractCrv(R_BD,R_WM, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)

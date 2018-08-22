@@ -114,7 +114,7 @@ MODULE ModMesh_Types
 
      ! Node position and reference orientation, which are always allocated (and shared between siblings):
       REAL(ReKi), POINTER :: Position(:,:) => NULL()         !< XYZ coordinate of node (3,:)
-      REAL(R8Ki), POINTER :: RefOrientation(:,:,:) => NULL() !< Original/reference orientation [DCM] (3,3,:)
+      REAL(ReKi), POINTER :: RefOrientation(:,:,:) => NULL() !< Original/reference orientation [DCM] (3,3,:)
 
 ! Here are some built in derived data types that can represent values at the nodes
 ! the last dimension of each of these has range 1:nnodes for the mesh being represented
@@ -127,8 +127,8 @@ MODULE ModMesh_Types
 
       REAL(ReKi), ALLOCATABLE :: Force(:,:)              !< Field: Force vectors (3,NNodes)
       REAL(ReKi), ALLOCATABLE :: Moment(:,:)             !< Field: Moment vectors (3,NNodes)
-      REAL(R8Ki), ALLOCATABLE :: Orientation(:,:,:)      !< Field: Direction Cosine Matrix (DCM) (3,3,NNodes)
-      REAL(R8Ki), ALLOCATABLE :: TranslationDisp(:,:)    !< Field: Translational displacements (3,NNodes)
+      REAL(ReKi), ALLOCATABLE :: Orientation(:,:,:)      !< Field: Direction Cosine Matrix (DCM) (3,3,NNodes)
+      REAL(ReKi), ALLOCATABLE :: TranslationDisp(:,:)    !< Field: Translational displacements (3,NNodes)
       REAL(ReKi), ALLOCATABLE :: RotationVel(:,:)        !< Field: Rotational velocities (3,NNodes)
       REAL(ReKi), ALLOCATABLE :: TranslationVel(:,:)     !< Field: Translational velocities (3,NNodes)
       REAL(ReKi), ALLOCATABLE :: RotationAcc(:,:)        !< Field: Rotational accelerations (3,NNodes)

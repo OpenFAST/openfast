@@ -1412,7 +1412,7 @@ SUBROUTINE BD_ValidateInputData( InitInp, InputFileData, ErrStat, ErrMsg )
       !  According to Qi, the damping values mu1 .. mu6 should be of the same order of magnitude.  If they aren't, BeamDyn will likely fail badly.
       !  Will assume for moment that they must be within a factor of 5 of the first value given.
 !FIXME: Check a valid range sometime.
-   IF ( (maxval(abs(InputFileData%InpBl%beta)) / minval(abs(InputFileData%InpBl%beta)) > 10.0_R8Ki) .AND. InputFileData%InpBl%damp_flag == 1 ) THEN
+   IF ( (maxval(abs(InputFileData%InpBl%beta)) / minval(abs(InputFileData%InpBl%beta)) > 10.0_ReKi) .AND. InputFileData%InpBl%damp_flag == 1 ) THEN
       call SetErrStat( ErrID_Warn,'Damping values in blade file are not of similar order of magnitude. BeamDyn may not converge!', ErrStat, ErrMsg, RoutineName )
    ENDIF
 
@@ -1979,8 +1979,8 @@ SUBROUTINE Init_Jacobian( p, u, y, m, InitOut, ErrStat, ErrMsg)
    
       ! local variables:
    INTEGER(IntKi)                :: i, j, index, nu, i_meshField
-   REAL(R8Ki)                    :: perturb, perturb_b
-   REAL(R8Ki)                    :: MaxThrust, MaxTorque
+   REAL(ReKi)                    :: perturb, perturb_b
+   REAL(ReKi)                    :: MaxThrust, MaxTorque
    CHARACTER(1), PARAMETER       :: UVW(3) = (/'U','V','W'/)
    
             
@@ -2069,11 +2069,11 @@ SUBROUTINE Init_Jacobian( p, u, y, m, InitOut, ErrStat, ErrMsg)
    call allocAry( p%du, 10, 'p%du', ErrStat2, ErrMsg2) ! 10 = number of unique values in p%Jac_u_indx(:,1)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   perturb   = 0.2_R8Ki*D2R_D
-   perturb_b = 0.2_R8Ki*D2R_D * p%blade_length
+   perturb   = 0.2_ReKi*D2R_D
+   perturb_b = 0.2_ReKi*D2R_D * p%blade_length
    
-   MaxThrust = 170.0_R8Ki*p%blade_length**2
-   MaxTorque =  14.0_R8Ki*p%blade_length**3
+   MaxThrust = 170.0_ReKi*p%blade_length**2
+   MaxTorque =  14.0_ReKi*p%blade_length**3
    
    p%du( 1) = perturb_b                                        ! u%RootMotion%TranslationDisp  = 1;
    p%du( 2) = perturb                                          ! u%RootMotion%Orientation      = 2;
@@ -2082,11 +2082,11 @@ SUBROUTINE Init_Jacobian( p, u, y, m, InitOut, ErrStat, ErrMsg)
    p%du( 5) = perturb_b                                        ! u%RootMotion%TranslationAcc   = 5;
    p%du( 6) = perturb                                          ! u%RootMotion%RotationAcc      = 6;
 
-   p%du( 7) = MaxThrust / (100.0_R8Ki * 3.0_R8Ki * u%PointLoad%NNodes )  ! u%PointLoad%Force             = 7;
-   p%du( 8) = MaxTorque / (100.0_R8Ki * 3.0_R8Ki * u%PointLoad%NNodes )  ! u%PointLoad%Moment            = 8;
+   p%du( 7) = MaxThrust / (100.0_ReKi * 3.0_ReKi * u%PointLoad%NNodes )  ! u%PointLoad%Force             = 7;
+   p%du( 8) = MaxTorque / (100.0_ReKi * 3.0_ReKi * u%PointLoad%NNodes )  ! u%PointLoad%Moment            = 8;
    
-   p%du( 9) = MaxThrust / (100.0_R8Ki * 3.0_R8Ki * u%DistrLoad%NNodes )  ! u%DistrLoad%Force             = 9;
-   p%du(10) = MaxTorque / (100.0_R8Ki * 3.0_R8Ki * u%DistrLoad%NNodes )  ! u%DistrLoad%Moment            =10;
+   p%du( 9) = MaxThrust / (100.0_ReKi * 3.0_ReKi * u%DistrLoad%NNodes )  ! u%DistrLoad%Force             = 9;
+   p%du(10) = MaxTorque / (100.0_ReKi * 3.0_ReKi * u%DistrLoad%NNodes )  ! u%DistrLoad%Moment            =10;
    
       !.....................
       ! get names of linearized inputs
@@ -2273,7 +2273,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(BD_InputType)                  , INTENT(INOUT) :: u                      !< perturbed BD inputs
-   REAL( R8Ki )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
+   REAL( ReKi )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
    
 
    ! local variables
@@ -2282,8 +2282,8 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    
    INTEGER                                             :: fieldIndx
    INTEGER                                             :: node
-   REAL(R8Ki)                                          :: orientation(3,3)
-   REAL(R8Ki)                                          :: angles(3)
+   REAL(ReKi)                                          :: orientation(3,3)
+   REAL(ReKi)                                          :: angles(3)
       
    fieldIndx = p%Jac_u_indx(n,2)
    node      = p%Jac_u_indx(n,3)
@@ -2296,7 +2296,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1) !Module/Mesh/Field: u%RootMotion%TranslationDisp = 1;
       u%RootMotion%TranslationDisp( fieldIndx,node) = u%RootMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
    CASE ( 2) !Module/Mesh/Field: u%RootMotion%Orientation = 2;
-      angles = 0.0_R8Ki
+      angles = 0.0_ReKi
       angles(fieldIndx) = du * perturb_sign
       call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
       u%RootMotion%Orientation(:,:,node) = matmul(u%RootMotion%Orientation(:,:,node), orientation)
@@ -2330,8 +2330,8 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    TYPE(BD_ParameterType)            , INTENT(IN   ) :: p         !< parameters
    TYPE(BD_OutputType)               , INTENT(IN   ) :: y_p       !< BD outputs at \f$ u + \Delta_p u \f$ or \f$ z + \Delta_p z \f$ (p=plus)
    TYPE(BD_OutputType)               , INTENT(IN   ) :: y_m       !< BD outputs at \f$ u - \Delta_m u \f$ or \f$ z - \Delta_m z \f$ (m=minus)   
-   REAL(R8Ki)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
-   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial z_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
+   REAL(ReKi)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
+   REAL(ReKi)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial z_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
    
       ! local variables:
    INTEGER(IntKi)                                    :: i              ! loop over outputs
@@ -2346,7 +2346,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    end do
    
    
-   dY = dY / (2.0_R8Ki*delta)
+   dY = dY / (2.0_ReKi*delta)
    
 END SUBROUTINE Compute_dY
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2360,17 +2360,17 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
    INTEGER( IntKi )                    , INTENT(IN   ) :: dof                    !< dof for this perturbation
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(BD_ContinuousStateType)        , INTENT(INOUT) :: x                      !< perturbed BD states
-   REAL( R8Ki )                        , INTENT(  OUT) :: dx                     !< amount that specific state was perturbed
+   REAL( ReKi )                        , INTENT(  OUT) :: dx                     !< amount that specific state was perturbed
    
 
    ! local variables
    integer(intKi)                                      :: ErrStat2
    character(ErrMsgLen)                                :: ErrMsg2
    
-   REAL(R8Ki)                                          :: orientation(3,3)
-   REAL(R8Ki)                                          :: oldRotation(3,3)
-   REAL(R8Ki)                                          :: newRotation(3,3)
-   REAL(R8Ki)                                          :: angles(3)
+   REAL(ReKi)                                          :: orientation(3,3)
+   REAL(ReKi)                                          :: oldRotation(3,3)
+   REAL(ReKi)                                          :: newRotation(3,3)
+   REAL(ReKi)                                          :: angles(3)
    
    dx = p%dx(dof)
                
@@ -2378,7 +2378,7 @@ SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
       if (dof < 4) then ! translational displacement
          x%q( dof, node ) = x%q( dof, node ) + dx * perturb_sign
       else ! w-m parameters
-         angles = 0.0_R8Ki
+         angles = 0.0_ReKi
          angles(dof-3) = dx * perturb_sign
          call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
          
@@ -2403,8 +2403,8 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta, dX)
    TYPE(BD_ParameterType)            , INTENT(IN   ) :: p         !< parameters
    TYPE(BD_ContinuousStateType)      , INTENT(IN   ) :: x_p       !< BD continuous states at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
    TYPE(BD_ContinuousStateType)      , INTENT(IN   ) :: x_m       !< BD continuous states at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)   
-   REAL(R8Ki)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
-   REAL(R8Ki)                        , INTENT(INOUT) :: dX(:)     !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
+   REAL(ReKi)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
+   REAL(ReKi)                        , INTENT(INOUT) :: dX(:)     !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
    
       ! local variables:
    INTEGER(IntKi)                                    :: i              ! loop over nodes
@@ -2426,7 +2426,7 @@ SUBROUTINE Compute_dX(p, x_p, x_m, delta, dX)
       end do
    end do
 
-   dX = dX / ( 2.0_R8Ki*delta)
+   dX = dX / ( 2.0_ReKi*delta)
    
 END SUBROUTINE Compute_dX
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2437,8 +2437,8 @@ SUBROUTINE Compute_RelState_Matrix(p, u, x, RelState_x, RelState_xdot)
    TYPE(BD_ParameterType)            , INTENT(IN   ) :: p                  !< parameters
    TYPE(BD_InputType)                , INTENT(IN   ) :: u                  !< BD inputs
    TYPE(BD_ContinuousStateType)      , INTENT(IN   ) :: x                  !< BD continuous states
-   REAL(R8Ki)                        , INTENT(INOUT) :: RelState_x(:,:)    !< 
-   REAL(R8Ki)                        , INTENT(INOUT) :: RelState_xdot(:,:) !< 
+   REAL(ReKi)                        , INTENT(INOUT) :: RelState_x(:,:)    !<
+   REAL(ReKi)                        , INTENT(INOUT) :: RelState_xdot(:,:) !<
    
       ! local variables:
    INTEGER(IntKi)                                    :: i              ! loop counter
@@ -2448,12 +2448,12 @@ SUBROUTINE Compute_RelState_Matrix(p, u, x, RelState_x, RelState_xdot)
    INTEGER(IntKi)                                    :: dqdt_index     ! index into the state arrays
    INTEGER(IntKi)                                    :: node           ! node in the state arrays
    
-   REAL(R8Ki)                                        :: dp             ! temporary dot product
-   REAL(R8Ki)                                        :: cp(3)          ! temporary cross product
-   REAL(R8Ki)                                        :: RotVel(3)      ! temporary velocity
-   REAL(R8Ki)                                        :: RotAcc(3)      ! temporary acceleration
-   REAL(R8Ki)                                        :: DisplacedPosition(3)
-   REAL(R8Ki)                                        :: fx_p(3,3)
+   REAL(ReKi)                                        :: dp             ! temporary dot product
+   REAL(ReKi)                                        :: cp(3)          ! temporary cross product
+   REAL(ReKi)                                        :: RotVel(3)      ! temporary velocity
+   REAL(ReKi)                                        :: RotAcc(3)      ! temporary acceleration
+   REAL(ReKi)                                        :: DisplacedPosition(3)
+   REAL(ReKi)                                        :: fx_p(3,3)
    
    RelState_x    = 0.0_ReKi
    RelState_xdot = 0.0_ReKi
@@ -2469,16 +2469,16 @@ SUBROUTINE Compute_RelState_Matrix(p, u, x, RelState_x, RelState_xdot)
          DisplacedPosition = u%RootMotion%Position(:,1) + u%RootMotion%TranslationDisp(:,1) &
                            - p%GlbPos - MATMUL(p%GlbRot, p%uuN0(1:3,j,i) + x%q(1:3,node) )
 
-         RotVel = real(u%RootMotion%RotationVel(:,1),R8Ki)
-         RotAcc = real(u%RootMotion%RotationAcc(:,1),R8Ki)
+         RotVel = real(u%RootMotion%RotationVel(:,1),ReKi)
+         RotAcc = real(u%RootMotion%RotationAcc(:,1),ReKi)
 
          fx_p = SkewSymMat(DisplacedPosition)
          
          do dof=0,5
-            RelState_x( q_index+dof, 1+dof   ) = 1.0_R8Ki      ! root displacements to node displacements
+            RelState_x( q_index+dof, 1+dof   ) = 1.0_ReKi      ! root displacements to node displacements
          end do
          do dof=0,5
-            RelState_x( dqdt_index+dof, 7+dof   ) = 1.0_R8Ki   ! root velocities to node velocities
+            RelState_x( dqdt_index+dof, 7+dof   ) = 1.0_ReKi   ! root velocities to node velocities
          end do
          
          
@@ -2503,7 +2503,7 @@ SUBROUTINE Compute_RelState_Matrix(p, u, x, RelState_x, RelState_xdot)
          !RelState_xdot( q_index:q_index+2,       10:12 ) = fx_p                                                        ! root rotational velocity to node translational velocity
          
          do dof=0,5
-            RelState_xdot( dqdt_index+dof, 13+dof   ) = 1.0_R8Ki   ! root accelerations to node accelerations
+            RelState_xdot( dqdt_index+dof, 13+dof   ) = 1.0_ReKi   ! root accelerations to node accelerations
          end do
          
          

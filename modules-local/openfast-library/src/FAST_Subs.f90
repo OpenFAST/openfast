@@ -1344,7 +1344,7 @@ FUNCTION GetVersion(ThisProgVer)
 
       IF ( ReKi == SiKi )  THEN     ! Single precision
          GetVersion = TRIM(GetVersion)//' single'
-      ELSEIF ( ReKi == R8Ki )  THEN ! Double precision
+      ELSEIF ( ReKi == ReKi )  THEN ! Double precision
          GetVersion = TRIM(GetVersion)// ' double'
       ELSE                          ! Unknown precision
          GetVersion = TRIM(GetVersion)//' unknown'
@@ -1378,7 +1378,7 @@ subroutine GetProgramMetadata(ThisProgVer, name, version, git_commit, architectu
    
    if (ReKi == SiKi) then
      precision = 'single'
-   else if (ReKi == R8Ki) then
+   else if (ReKi == ReKi) then
      precision = 'double'
    else
      precision = 'unknown'
@@ -5663,13 +5663,13 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, u_
    CHARACTER(*)  , INTENT(OUT)               :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    
    
-   REAL(R8Ki)               :: t
+   REAL(ReKi)               :: t
       
    INTEGER(IntKi)           :: K_local
    INTEGER(B4Ki), PARAMETER :: File_ID = 101
    INTEGER(B4Ki)            :: NumBl
       
-   t = time  ! convert to 8-bytes if necessary (DbKi might not be R8Ki)
+   t = time  ! convert to 8-bytes if necessary (DbKi might not be ReKi)
    
    ! note that I'm not doing anything with the errors here, so it won't tell
    ! you there was a problem writing the data unless it was the last call.

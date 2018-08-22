@@ -65,7 +65,7 @@ gen_copy_c2f( FILE         *fp        , // *.f90 file we are writting to
                if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
                   !strcmp(r->type->mapsto, "REAL(SiKi)") ||
                   !strcmp(r->type->mapsto, "REAL(DbKi)") ||
-                  !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
+                  !strcmp(r->type->mapsto, "REAL(ReKi)") ||
                   !strcmp(r->type->mapsto, "INTEGER(IntKi)") ||
                   !strcmp(r->type->mapsto, "LOGICAL"))
                {
@@ -193,7 +193,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, con
              if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
                 !strcmp(r->type->mapsto, "REAL(SiKi)") ||
                 !strcmp(r->type->mapsto, "REAL(DbKi)") ||
-                !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
+                !strcmp(r->type->mapsto, "REAL(ReKi)") ||
                 !strcmp(r->type->mapsto, "INTEGER(IntKi)") ||
                 !strcmp(r->type->mapsto, "LOGICAL") ||
                 r->ndims == 0)
@@ -351,7 +351,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp, "      Re_BufSz   = Re_BufSz   + %s  ! %s\n", (r->ndims>0) ? tmp2 : "1", r->name);
       }
       else if ( !strcmp( r->type->mapsto, "REAL(DbKi)")   ||
-                !strcmp(r->type->mapsto, "REAL(R8Ki)")) {
+                !strcmp(r->type->mapsto, "REAL(ReKi)")) {
   fprintf(fp, "      Db_BufSz   = Db_BufSz   + %s  ! %s\n", (r->ndims>0) ? tmp2 : "1", r->name);
       }
       else if ( !strcmp( r->type->mapsto, "INTEGER(IntKi)") ||
@@ -512,7 +512,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
           fprintf(fp, "      Re_Xferred   = Re_Xferred   + %s\n", (r->ndims>0) ? tmp2 : "1");
        }
        else if (!strcmp(r->type->mapsto, "REAL(DbKi)") ||
-                !strcmp(r->type->mapsto, "REAL(R8Ki)")) {
+                !strcmp(r->type->mapsto, "REAL(ReKi)")) {
           fprintf(fp, "    %s DbKiBuf ( Db_Xferred:Db_Xferred+(%s)-1 ) = %sInData%%%s%s\n",
              tmp3, (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "");
           fprintf(fp, "      Db_Xferred   = Db_Xferred   + %s\n", (r->ndims>0) ? tmp2 : "1");
@@ -790,9 +790,9 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
            }
            fprintf(fp, "      Db_Xferred   = Db_Xferred   + %s\n", tmp2);
         }
-        else if (!strcmp(r->type->mapsto, "REAL(R8Ki)"))
+        else if (!strcmp(r->type->mapsto, "REAL(ReKi)"))
         {
-           fprintf(fp, "    %s OutData%%%s = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(%s)-1 ), mask%d, 0.0_DbKi ), R8Ki)\n",
+           fprintf(fp, "    %s OutData%%%s = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(%s)-1 ), mask%d, 0.0_DbKi ), ReKi)\n",
               tmp3, r->name, tmp2, r->ndims);
            fprintf(fp, "      Db_Xferred   = Db_Xferred   + %s\n", tmp2);
         }
@@ -843,8 +843,8 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
            fprintf(fp, "      OutData%%%s = DbKiBuf( Db_Xferred ) \n", r->name);
            fprintf(fp, "      Db_Xferred   = Db_Xferred + 1\n");
         }
-        else if (!strcmp(r->type->mapsto, "REAL(R8Ki)")) {
-           fprintf(fp, "      OutData%%%s = REAL( DbKiBuf( Db_Xferred ), R8Ki) \n", r->name);
+        else if (!strcmp(r->type->mapsto, "REAL(ReKi)")) {
+           fprintf(fp, "      OutData%%%s = REAL( DbKiBuf( Db_Xferred ), ReKi) \n", r->name);
            fprintf(fp, "      Db_Xferred   = Db_Xferred + 1\n");
         }
         else if (!strcmp(r->type->mapsto, "INTEGER(IntKi)")) {
@@ -870,7 +870,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
               if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
                  !strcmp(r->type->mapsto, "REAL(SiKi)") ||
                  !strcmp(r->type->mapsto, "REAL(DbKi)") ||
-                 !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
+                 !strcmp(r->type->mapsto, "REAL(ReKi)") ||
                  !strcmp(r->type->mapsto, "INTEGER(IntKi)") ||
                  !strcmp(r->type->mapsto, "LOGICAL"))
               {
@@ -1228,7 +1228,7 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
       }
       else if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
          !strcmp(r->type->mapsto, "REAL(SiKi)") ||
-         !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
+         !strcmp(r->type->mapsto, "REAL(ReKi)") ||
          !strcmp(r->type->mapsto, "REAL(DbKi)")) {
          if (r->ndims == 0) {
          }
@@ -1324,7 +1324,7 @@ void calc_extint_order(FILE *fp, const node_t *ModName, node_t *r, int recursele
       }
       else if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
          !strcmp(r->type->mapsto, "REAL(SiKi)") ||
-         !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
+         !strcmp(r->type->mapsto, "REAL(ReKi)") ||
          !strcmp(r->type->mapsto, "REAL(DbKi)")) {
          if (/*order > 0 &&*/ r->ndims > *max_alloc_ndims) *max_alloc_ndims = r->ndims;
       }
@@ -1882,7 +1882,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
         {
           if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
                !strcmp( r->type->mapsto, "REAL(SiKi)") ||
-               !strcmp( r->type->mapsto, "REAL(R8Ki)") ||
+               !strcmp( r->type->mapsto, "REAL(ReKi)") ||
                !strcmp( r->type->mapsto, "REAL(DbKi)"))
           {
             if ( !strcmp(make_lower_temp(r->name),"dt") ) {
@@ -1953,7 +1953,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
         {
           if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
              !strcmp(r->type->mapsto, "REAL(SiKi)") ||
-             !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
+             !strcmp(r->type->mapsto, "REAL(ReKi)") ||
              !strcmp(r->type->mapsto, "REAL(DbKi)"))
           {
   fprintf(fp,"  k%d%%%s = p%%dt * xdot%s%%%s\n",k,r->name,(k<2)?"":"_local",r->name) ;
@@ -1973,7 +1973,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
         {
           if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
              !strcmp(r->type->mapsto, "REAL(SiKi)") ||
-             !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
+             !strcmp(r->type->mapsto, "REAL(ReKi)") ||
              !strcmp(r->type->mapsto, "REAL(DbKi)"))
           {
             if ( k < 4 ) {

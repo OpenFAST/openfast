@@ -14,7 +14,7 @@ module TestMeshMapping_Mod
    TYPE(MeshMapType)       :: Map_Mod1_Mod2        ! Data for mapping meshes from mod1 to mod2
    TYPE(MeshMapType)       :: Map_Mod2_Mod1        ! Data for mapping meshes from mod1 to mod2
    
-   REAL(R8Ki)              :: Orientation(3,3), angles(3)
+   REAL(ReKi)              :: Orientation(3,3), angles(3)
    REAL(ReKi)              :: position(3)
    REAL(ReKi)              :: Angle, e, mf, mm
    

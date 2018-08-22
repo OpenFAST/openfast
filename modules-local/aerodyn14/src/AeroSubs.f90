@@ -2800,7 +2800,7 @@ SUBROUTINE TwrAeroLoads ( p, Node, NodeDCMGbl, NodeVelGbl, NodeWindVelGbl, NodeF
 
       ! Arguments:
 
-   REAL(R8Ki), INTENT(IN )                   :: NodeDCMGbl    (3,3)           ! The direction-cosine matrix used to transform from the global system to the node system.
+   REAL(ReKi), INTENT(IN )                   :: NodeDCMGbl    (3,3)           ! The direction-cosine matrix used to transform from the global system to the node system.
    REAL(ReKi), INTENT(OUT)                   :: NodeFrcGbl    (3)             ! The forces per unit length at the current tower element.
    REAL(ReKi), INTENT(IN )                   :: NodeVelGbl    (3)             ! The 3 components of the translational velocity at the node in the global system.
    REAL(ReKi), INTENT(IN )                   :: NodeWindVelGbl(3)             ! The 3 components of the wind at the node in the global system.

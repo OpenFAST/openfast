@@ -3325,7 +3325,7 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
    TYPE(Morison_NodeType)     ::  node1, node2
    REAL(ReKi)                 ::  L
    REAL(ReKi)                 ::  k(3)
-   REAL(R8Ki)                 :: orientation(3,3)
+   REAL(ReKi)                 :: orientation(3,3)
   
   ! REAL(ReKi),ALLOCATABLE     ::  F_DP(:,:)
    REAL(ReKi)                 ::  F_B(6)
