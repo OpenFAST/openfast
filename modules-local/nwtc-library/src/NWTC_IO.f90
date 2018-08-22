@@ -219,6 +219,8 @@ MODULE NWTC_IO
 
       !> \copydoc nwtc_io::wrpartialmatrix1r8
    INTERFACE WrPartialMatrix
+      MODULE PROCEDURE WrPartialMatrix1R4     ! Single dimension matrix (array) of SiKi
+      MODULE PROCEDURE WrPartialMatrix2R4     ! Two dimension matrix of SiKi
       MODULE PROCEDURE WrPartialMatrix1R8     ! Single dimension matrix (array) of R8Ki
       MODULE PROCEDURE WrPartialMatrix2R8     ! Two dimension matrix of R8Ki
    END INTERFACE   
@@ -7286,6 +7288,196 @@ QueryGitVersion = GIT_VERSION_INFO
 !> Based on nwtc_io::wrmatrix, this routine writes a matrix to an already-open text file. It allows
 !! the user to omit rows and columns of A in the the file.
 !! Use WrPartialMatrix (nwtc_io::wrpartialmatrix) instead of directly calling a specific routine in the generic interface.
+   SUBROUTINE WrPartialMatrix1R4( A, Un, ReFmt, MatName, UseCol, UseAllCols, ExtCol )
+
+      REAL(SiKi),             INTENT(IN) :: A(:)          !< matrix to write
+      INTEGER,                INTENT(IN) :: Un            !< unit where matrix will be written
+      CHARACTER(*),           INTENT(IN) :: ReFmt         !< Format for printing ReKi numbers
+      CHARACTER(*),           INTENT(IN) :: MatName       !< name of the matrix to write
+      LOGICAL,      OPTIONAL, INTENT(IN) :: UseCol(:)     !< must be size(A,2); this routine will print only the columns where UseCol is true
+      LOGICAL,      OPTIONAL, INTENT(IN) :: UseAllCols    !< a scalar that, if set to true, overrides UseCol and will print all columns
+      REAL(SiKi),   OPTIONAL, INTENT(IN) :: ExtCol(:)     !< columns to add to the end of matrix A
+
+      INTEGER                            :: ErrStat
+      INTEGER                            :: nc       ! size (rows and columns) of A
+      INTEGER                            :: j        ! indices into A
+      INTEGER                            :: jc       ! index into ThisRow
+      CHARACTER(256)                     :: Fmt
+      LOGICAL                            :: UseAllCols2
+      REAL(SiKi), ALLOCATABLE            :: ThisRow(:)
+
+
+      UseAllCols2 = .false.
+      if (.not. present(UseCol)) then
+         UseAllCols2 = .true.
+      else
+         if (present(UseAllCols)) then
+            if (UseAllCols) UseAllCols2 = .true.
+         end if
+      end if
+
+         ! how many columns will we print?
+      if (UseAllCols2) then
+         nc = SIZE(A)       ! default number of columns
+      else
+         nc = 0
+         do j = 1,size(A)
+            if (UseCol(j)) nc = nc + 1
+         end do
+      end if
+      if (present(ExtCol)) nc = nc + size(ExtCol)
+
+
+
+      WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), '1', TRIM(Num2LStr(nc))
+
+      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"
+
+      ALLOCATE(ThisRow(nc), STAT=ErrStat)
+      IF (ErrStat /= 0) THEN
+         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' allocating temporary row WrPartialMatrix1().')
+         RETURN
+      END IF
+
+
+      if (UseAllCols2) then
+         ThisRow = A
+      else
+         jc = 1
+         do j = 1,size(A)
+            if (UseCol(j)) then
+               ThisRow(jc) = A(j)
+               jc = jc + 1
+            end if
+         end do
+         if (present(ExtCol)) ThisRow(jc:) = ExtCol(:)
+      end if
+
+      WRITE( Un, Fmt, IOSTAT=ErrStat ) ThisRow
+      IF (ErrStat /= 0) THEN
+         deallocate(ThisRow)
+         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrPartialMatrix1().')
+         RETURN
+      END IF
+
+   deallocate(ThisRow)
+   RETURN
+   END SUBROUTINE WrPartialMatrix1R4
+!=======================================================================
+!> \copydoc nwtc_io::wrpartialmatrix1r8
+   SUBROUTINE WrPartialMatrix2R4( A, Un, ReFmt, MatName, UseRow, UseCol, UseAllRows, UseAllCols, ExtCol )
+
+      REAL(SiKi),             INTENT(IN) :: A(:,:)          ! matrix to write
+      INTEGER,                INTENT(IN) :: Un              ! unit where matrix will be written
+      CHARACTER(*),           INTENT(IN) :: ReFmt           ! Format for printing ReKi numbers
+      CHARACTER(*),           INTENT(IN) :: MatName         ! name of the matrix to write
+      LOGICAL,      OPTIONAL, INTENT(IN) :: UseRow(:)       !< must be size(A,1); this routine will print only the rows where UseRow is true
+      LOGICAL,      OPTIONAL, INTENT(IN) :: UseCol(:)       ! must be size(A,2); this routine will print only the columns where UseCol is true
+      LOGICAL,      OPTIONAL, INTENT(IN) :: UseAllRows      !< a scalar that, if set to true, overrides UseRow and will print all rows
+      LOGICAL,      OPTIONAL, INTENT(IN) :: UseAllCols      ! a scalar that, if set to true, overrides UseCol and will print all columns
+      REAL(SiKi),   OPTIONAL, INTENT(IN) :: ExtCol(:,:)     ! columns to add to the end of matrix A
+
+      INTEGER                            :: ErrStat
+      INTEGER                            :: nr, nc   ! size (rows and columns) of A
+      INTEGER                            :: i, j     ! indices into A
+      INTEGER                            :: jc       ! index into ThisRow
+      CHARACTER(256)                     :: Fmt
+      LOGICAL                            :: UseAllRows2
+      LOGICAL                            :: UseAllCols2
+      REAL(SiKi), ALLOCATABLE            :: ThisRow(:)
+
+
+      UseAllRows2 = .false.
+      if (.not. present(UseRow)) then
+         UseAllRows2 = .true.
+      else
+         if (present(UseAllRows)) then
+            if (UseAllRows) UseAllRows2 = .true.
+         end if
+      end if
+
+      UseAllCols2 = .false.
+      if (.not. present(UseCol)) then
+         UseAllCols2 = .true.
+      else
+         if (present(UseAllCols)) then
+            if (UseAllCols) UseAllCols2 = .true.
+         end if
+      end if
+
+         ! how many rows will we print?
+      if (UseAllRows2) then
+         nr = SIZE(A,1)       ! default number of rows
+      else
+         nr = 0
+         do i = 1,size(A,1)
+            if (UseRow(i)) nr = nr + 1
+         end do
+      end if
+
+
+         ! how many columns will we print?
+      if (UseAllCols2) then
+         nc = SIZE(A,2)       ! default number of columns
+      else
+         nc = 0
+         do j = 1,size(A,2)
+            if (UseCol(j)) nc = nc + 1
+         end do
+      end if
+
+      if (present(ExtCol)) nc = nc + size(ExtCol,2)
+
+
+      if (nr == 0 .or. nc == 0) return !don't print anything if the matrix is empty
+
+
+
+      WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), TRIM(Num2LStr(nr)), TRIM(Num2LStr(nc))
+
+      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"
+
+      ALLOCATE(ThisRow(nc), STAT=ErrStat)
+      IF (ErrStat /= 0) THEN
+         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' allocating temporary row WrPartialMatrix2().')
+         RETURN
+      END IF
+
+
+      DO i=1,size(A,1) ! loop through rows
+
+         if ( .not. UseAllRows2 ) then
+            if (.not. UseRow(i)) cycle ! skip this row
+         end if
+
+         if (UseAllCols2) then
+            ThisRow(1:size(A,2)) = A(i,:)
+            if (present(ExtCol)) ThisRow(size(A,2)+1:) = ExtCol(i,:)
+         else
+            jc = 1
+            do j = 1,size(A,2)
+               if (UseCol(j)) then
+                  ThisRow(jc) = A(i,j)
+                  jc = jc + 1
+               end if
+            end do
+            if (present(ExtCol)) ThisRow(jc:) = ExtCol(i,:)
+         end if
+
+         WRITE( Un, Fmt, IOSTAT=ErrStat ) ThisRow
+         IF (ErrStat /= 0) THEN
+            deallocate(ThisRow)
+            CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrPartialMatrix2().')
+            RETURN
+         END IF
+
+
+      END DO
+
+   deallocate(ThisRow)
+   RETURN
+   END SUBROUTINE WrPartialMatrix2R4
+
    SUBROUTINE WrPartialMatrix1R8( A, Un, ReFmt, MatName, UseCol, UseAllCols, ExtCol )
    
       REAL(R8Ki),             INTENT(IN) :: A(:)          !< matrix to write        
