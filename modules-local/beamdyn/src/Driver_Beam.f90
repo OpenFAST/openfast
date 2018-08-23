@@ -1,8 +1,8 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
-! Copyright (C) 2016-2017  Envision Energy USA, LTD       
-!   
+! Copyright (C) 2016-2017  Envision Energy USA, LTD
+!
 !    This file is part of the NWTC Subroutine Library.
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,7 +98,8 @@ PROGRAM BeamDyn_Driver_Program
    BD_InitInput%RootName = TRIM(BD_Initinput%InputFile)
    BD_InitInput%RootDisp = 0.0_R8Ki
    BD_InitInput%RootOri  = BD_InitInput%GlbRot
-   
+   BD_InitInput%DynamicSolve = DvrData%DynamicSolve      ! QuasiStatic options handled within the BD code.
+ 
    t_global = DvrData%t_initial
    n_t_final = ((DvrData%t_final - DvrData%t_initial) / dt_global )
 
@@ -121,6 +122,10 @@ PROGRAM BeamDyn_Driver_Program
                    , ErrMsg )
       CALL CheckError()
    
+      ! If the Quasi-Static solve is in use, rerun the initialization with loads at t=0 
+      ! (HACK: set in the driver only because computing Jacobians with this option [as in FAST glue code] is problematic)
+   BD_OtherState%RunQuasiStaticInit = BD_Parameter%analysis_type == BD_DYN_SSS_ANALYSIS
+      
    call Init_RotationCenterMesh(DvrData, BD_InitInput, BD_Input(1)%RootMotion, ErrStat, ErrMsg)
       CALL CheckError()
 

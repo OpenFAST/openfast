@@ -69,11 +69,11 @@ compileHDF5() {
     echo -n "   Getting source"
     [ -d modules-ext/hdf5 ] || mkdir modules-ext/hdf5
     cd modules-ext/hdf5
-    wget --no-check-certificate https://support.hdfgroup.org/ftp/HDF5/current18/src/hdf5-1.8.19.tar.bz2 &> log.wget
+    wget --no-check-certificate https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.1/src/hdf5-1.10.1.tar.bz2 &> log.wget
     passFail $?
     echo -n "   Setting up build directory"
-    tar -jxf hdf5-1.8.19.tar.bz2 &> log.untar
-    cd hdf5-1.8.19
+    tar -jxf hdf5-1.10.1.tar.bz2 &> log.untar
+    cd hdf5-1.10.1
     passFail $?
     echo -n "   Configuring"
     ./configure CC=mpicc FC=mpif90 CXX=mpicxx --enable-parallel --prefix=${openfast_dir}/install &> log.config

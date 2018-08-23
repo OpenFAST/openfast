@@ -3,4 +3,4 @@
 	url = https://github.com/openfast/r-test.git
 [submodule "unit_tests/pfunit"]
 	path = unit_tests/pfunit
-	url = https://git.code.sf.net/p/pfunit/code
+	url = https://github.com/Goddard-Fortran-Ecosystem/pFUnit.git

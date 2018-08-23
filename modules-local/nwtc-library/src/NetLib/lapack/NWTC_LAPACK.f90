@@ -6,10 +6,6 @@
 !! code to compile in double vs. single precision.   
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2016-07-16 14:54:28 -0600 (Sat, 16 Jul 2016) $
-! (File) Revision #: $Rev: 391 $
-! URL: $HeadURL: https://windsvn2.nrel.gov/NWTC_Library/branches/NetLib/NWTC_source/NWTC_LAPACK.f90 $
-!**********************************************************************************************************************************
 MODULE NWTC_LAPACK
 
    USE NWTC_Base        ! we only need the precision and error level constants
@@ -1403,7 +1399,6 @@ MODULE NWTC_LAPACK
       INTEGER                        :: LDU               ! The leading dimension of the array U.  LDU >= 1; if JOBU = 'S' or 'A', LDU >= M.
       INTEGER                        :: LDVT              ! The leading dimension of the array VT.  LDVT >= 1; if
                                                           !! JOBVT = 'A', LDVT >= N; if JOBVT = 'S', LDVT >= min(M,N).
-      CHARACTER(20)                  :: n_str
 
       LDA  = SIZE(A,1)
       LDU  = SIZE(U,1)
@@ -1508,7 +1503,6 @@ MODULE NWTC_LAPACK
       INTEGER                        :: LDU               ! The leading dimension of the array U.  LDU >= 1; if JOBU = 'S' or 'A', LDU >= M.
       INTEGER                        :: LDVT              ! The leading dimension of the array VT.  LDVT >= 1; if
                                                           !! JOBVT = 'A', LDVT >= N; if JOBVT = 'S', LDVT >= min(M,N).
-      CHARACTER(20)                  :: n_str
 
       LDA  = SIZE(A,1)
       LDU  = SIZE(U,1)

@@ -4,16 +4,16 @@ Building OpenFAST with CMake on Linux and Mac
 =============================================
 
 We describe here how to install OpenFAST (or any of its modules) using the `CMake <https://cmake.org>`_ 
-build system on Linux or Mac OS systems. Separate `CMake <https://cmake.org>`_ documentation is 
-provided for Windows Cygwin users: see :numref:`install_cmake_cygwin`. Also, some template
-build scripts are available in ``openfast/share``.
+build system on Linux or Mac OS systems. Separate CMake documentation is 
+provided for Windows users at :numref:`install_cmake_windows` and Cygwin users at :numref:`install_cmake_cygwin`.
+Also, some template build scripts are available in ``openfast/share``.
 
 Required software for building OpenFAST 
 ---------------------------------------
 
 In order to build OpenFAST using CMake, one needs the following minimum set of packages installed:
 
-- Fortran compiler (e.g., gcc version 6.1.0 or Intel)
+- Fortran compiler (GNU compiler version above 4.6.0 or Intel compiler version above 11)
 
 - C/C++ compiler
 
@@ -21,8 +21,8 @@ In order to build OpenFAST using CMake, one needs the following minimum set of p
 
 - CMake (version 2.8.12 or later)
 
-OpenFAST third-party-library (TPL) dependencies
------------------------------------------------
+OpenFAST third party library dependencies
+-----------------------------------------
 
 OpenFAST has the following dependencies:
 
@@ -35,7 +35,7 @@ OpenFAST has the following dependencies:
 CMake build instructions
 ------------------------
 
-If one has the appropriate TPLs, CMake, and git installed, obtaining and building OpenFAST can be accomplished as follows:
+If one has the appropriate third party libraries, CMake, and git installed, obtaining and building OpenFAST can be accomplished as follows:
 
 .. code-block:: bash
 
@@ -51,7 +51,7 @@ If one has the appropriate TPLs, CMake, and git installed, obtaining and buildin
     # go to the build directory
     cd build
 
-    # execute CMake with the default options, which will create a Makefile
+    # execute CMake with the default options, which will create a series of Makefiles
     cmake ../ 
 
     # execute a make command (with no target provided, equivalent to `make all`
@@ -79,6 +79,7 @@ Below is a list of current CMake options including their default settings (which
 -  ``BUILD_DOCUMENTATION`` -  Build documentation (Default: OFF)
 -  ``BUILD_FAST_CPP_API`` - Enable building OpenFAST - C++ API (Default: OFF)
 -  ``BUILD_SHARED_LIBS`` - Enable building shared libraries (Default: OFF)
+-  ``BUILD_TESTING`` - Build the testing tree (Default: OFF)
 -  ``CMAKE_BUILD_TYPE`` - Choose the build type: Debug Release (Default: Release)
 -  ``CMAKE_INSTALL_PREFIX`` - Install path prefix, prepended onto install directories.
 -  ``DOUBLE_PRECISION`` - Treat REAL as double precision (Default: ON)
@@ -86,15 +87,15 @@ Below is a list of current CMake options including their default settings (which
 -  ``ORCA_DLL_LOAD`` - Enable OrcaFlex library load (Default: OFF)
 -  ``USE_DLL_INTERFACE`` - Enable runtime loading of dynamic libraries (Default: ON)
 
-CMake options can be executed from the command line as, e.g., the CMake command above could be exectuted as
+CMake options can be configured through command line, e.g.
 
 .. code-block:: bash
 
-    # e.g., to enable Makefile for local building of sphinx-based documentation
-    cmake -DBUILD_DOCUMENTATION:BOOL=ON ..
+    # to enable Makefile for local building of sphinx-based documentation
+    cmake .. -DBUILD_DOCUMENTATION:BOOL=ON
 
-    # e.g., to compile OpenFAST in single precision
-    cmake -D:DOUBLE_PRECISIONBOOL=OFF ..
+    # to compile OpenFAST in single precision
+    cmake .. -DDOUBLE_PRECISION:BOOL=OFF
  
 
 Parallel build

@@ -40,6 +40,7 @@ typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the 
 typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_y	{:}	-	-	"Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
 typedef	^	InitOutputType	LOGICAL	RotFrame_u	{:}	-	-	"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
+typedef   ^        InitOutputType LOGICAL               IsLoad_u     {:}  -   -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
@@ -125,6 +126,7 @@ typedef	^	SrvD_InputFile	CHARACTER(1024)	TTMDfile	-	-	-	"File for tower tuned ma
 # ..... Data for using Bladed DLLs .......................................................................................................
 typedef	^	BladedDLLType	SiKi	avrSWAP	{:}	-	-	"The swap array: used to pass data to and from the DLL controller"	"see Bladed DLL documentation"
 typedef	^	BladedDLLType	ReKi	HSSBrFrac	-	-	-	"Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) - from Bladed DLL"	-
+typedef	^	BladedDLLType	ReKi	HSSBrTrqC	-	-	-	"Braking torque" N-m
 typedef	^	BladedDLLType	ReKi	YawRateCom	-	-	-	"Nacelle yaw rate demanded from Bladed DLL"	rad/s
 typedef	^	BladedDLLType	ReKi	GenTrq	-	-	-	"Electrical generator torque from Bladed DLL"	N-m
 typedef	^	BladedDLLType	IntKi	GenState	-	-	-	"Generator state from Bladed DLL"	N-m
