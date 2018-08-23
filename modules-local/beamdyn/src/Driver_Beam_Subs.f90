@@ -45,7 +45,7 @@ module BeamDyn_driver_subs
       LOGICAL                                       :: DynamicSolve 
       REAL(DbKi)                                    :: t_initial
       REAL(DbKi)                                    :: t_final
-      REAL(R8Ki)                                    :: w           ! magnitude of rotational velocity vector
+      REAL(ReKi)                                    :: w           ! magnitude of rotational velocity vector
       
    END TYPE
    
@@ -147,7 +147,7 @@ module BeamDyn_driver_subs
    CALL ReadCom(UnIn,DvrInputFile,'Section Header: Frame Parameter',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    InitInputData%GlbPos(:)   = 0.0_ReKi
-   InitInputData%GlbRot(:,:) = 0.0_R8Ki
+   InitInputData%GlbRot(:,:) = 0.0_ReKi
    CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(1),"InitInputData%GlbPos(1)", "position vector X",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(2),"InitInputData%GlbPos(2)", "position vector Y",ErrStat2,ErrMsg2,UnEc)
@@ -402,7 +402,7 @@ subroutine CreateMultiPointMeshes(DvrData,BD_InitOutput,BD_Parameter,y, u, ErrSt
    REAL(BDKi)                                 :: temp_POS(3)
    REAL(BDKi)                                 :: temp_CRV(3)
    REAL(BDKi)                                 :: temp_CRV2(3)
-   REAL(R8Ki)                                 :: DCM(3,3)          ! must be same type as mesh orientation fields
+   REAL(ReKi)                                 :: DCM(3,3)          ! must be same type as mesh orientation fields
    REAL(ReKi)                                 :: Pos(3)            ! must be same type as mesh position fields
    REAL(BDKi)                                 :: TmpDCM(3,3)
    
@@ -580,11 +580,11 @@ SUBROUTINE Init_RotationCenterMesh(DvrData, InitInputData, RootMotionMesh, ErrSt
    character(ErrMsgLen)                       :: ErrMsg2           ! temporary Error message
    character(*), parameter                    :: RoutineName = 'Init_RotationCenterMesh'
    
-   real(r8Ki)                                 :: orientation(3,3)
+   real(ReKi)                                 :: orientation(3,3)
    real(ReKi)                                 :: position(3)
-   real(R8Ki)                                 :: z_hat(3)  ! unit-magnitude rotational velocity vector
-   real(R8Ki)                                 :: Z_unit(3) ! unit vector in the Z direction
-   real(R8Ki)                                 :: vec(3)    ! temporary vector
+   real(ReKi)                                 :: z_hat(3)  ! unit-magnitude rotational velocity vector
+   real(ReKi)                                 :: Z_unit(3) ! unit vector in the Z direction
+   real(ReKi)                                 :: vec(3)    ! temporary vector
    
    ErrStat = ErrID_None
    ErrMsg = ''
@@ -594,23 +594,23 @@ SUBROUTINE Init_RotationCenterMesh(DvrData, InitInputData, RootMotionMesh, ErrSt
 
    DvrData%w = TwoNorm( InitInputData%RootVel(4:6) )
    
-   if (EqualRealNos(DvrData%w,0.0_R8Ki)) then
-      DvrData%w = 0.0_R8Ki
+   if (EqualRealNos(DvrData%w,0.0_ReKi)) then
+      DvrData%w = 0.0_ReKi
          ! the beam is not rotating, so pick an orientation
       call eye(orientation, ErrStat2, ErrMsg2)
    else
       z_hat = InitInputData%RootVel(4:6) / DvrData%w
       
-      if ( EqualRealNos( z_hat(3), 1.0_R8Ki ) ) then
+      if ( EqualRealNos( z_hat(3), 1.0_ReKi ) ) then
          call eye(orientation, ErrStat2, ErrMsg2)
-      elseif ( EqualRealNos( z_hat(3), -1.0_R8Ki ) ) then
+      elseif ( EqualRealNos( z_hat(3), -1.0_ReKi ) ) then
          orientation = 0.0_ReKi
-         orientation(1,1) = -1.0_R8Ki
-         orientation(2,2) =  1.0_R8Ki
-         orientation(3,3) = -1.0_R8Ki
+         orientation(1,1) = -1.0_ReKi
+         orientation(2,2) =  1.0_ReKi
+         orientation(3,3) = -1.0_ReKi
       else
          
-         Z_unit = (/0.0_R8Ki, 0.0_R8Ki, 1.0_R8Ki/)
+         Z_unit = (/0.0_ReKi, 0.0_ReKi, 1.0_ReKi/)
          
          vec = Z_unit - z_hat*z_hat(3) ! vec = matmul( eye(3) - outerproduct(z_hat,z_hat), (/ 0,0,1/) )
          vec = vec / TwoNorm(vec)      ! we've already checked that this is not zero
@@ -686,9 +686,9 @@ SUBROUTINE BD_InputSolve( t, u, DvrData, ErrStat, ErrMsg)
                                          
    ! local variables                     
    INTEGER(IntKi)                             :: i                ! do-loop counter
-   REAL(R8Ki)                                 :: Orientation(3,3)
-   REAL(R8Ki)                                 :: wt               ! time from start start of simulation multiplied by magnitude of rotational velocity
-   REAL(R8Ki)                                 :: swt, cwt         ! sine and cosine of w*t
+   REAL(ReKi)                                 :: Orientation(3,3)
+   REAL(ReKi)                                 :: wt               ! time from start start of simulation multiplied by magnitude of rotational velocity
+   REAL(ReKi)                                 :: swt, cwt         ! sine and cosine of w*t
    
    integer(intKi)                             :: ErrStat2         ! temporary Error status
    character(ErrMsgLen)                       :: ErrMsg2          ! temporary Error message
@@ -707,15 +707,15 @@ SUBROUTINE BD_InputSolve( t, u, DvrData, ErrStat, ErrMsg)
    cwt = cos( wt )
    Orientation(1,1) = cwt
    Orientation(2,1) =-swt
-   Orientation(3,1) =   0.0_R8Ki
+   Orientation(3,1) =   0.0_ReKi
    
    Orientation(1,2) = swt
    Orientation(2,2) = cwt
-   Orientation(3,2) = 0.0_R8Ki
+   Orientation(3,2) = 0.0_ReKi
    
-   Orientation(1,3) = 0.0_R8Ki
-   Orientation(2,3) = 0.0_R8Ki
-   Orientation(3,3) = 1.0_R8Ki
+   Orientation(1,3) = 0.0_ReKi
+   Orientation(2,3) = 0.0_ReKi
+   Orientation(3,3) = 1.0_ReKi
       
    DvrData%RotationCenter%Orientation(:,:,1) = matmul(Orientation, DvrData%RotationCenter%RefOrientation(:,:,1))
    CALL Transfer_Point_to_Point( DvrData%RotationCenter, u%RootMotion, DvrData%Map_RotationCenter_to_RootMotion, ErrStat2, ErrMsg2)  

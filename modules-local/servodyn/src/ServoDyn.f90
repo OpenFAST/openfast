@@ -1164,18 +1164,18 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
    TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions
                                                                                  !!   (Y) with respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state
                                                                                  !!   functions (X) with respect to inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state 
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state
                                                                                  !!   functions (Xd) with respect to inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state
                                                                                  !!   functions (Z) with respect to inputs (u) [intent in to avoid deallocation]
 
       ! local variables
-   REAL(R8Ki)                                                      :: AllOuts(3,1:MaxOutPts) ! All the the available output channels
-   REAL(R8Ki)                                                      :: GenTrq, ElecPwr        ! derivatives of generator torque and electrical power w.r.t. u%HSS_SPD
+   REAL(ReKi)                                                      :: AllOuts(3,1:MaxOutPts) ! All the the available output channels
+   REAL(ReKi)                                                      :: GenTrq, ElecPwr        ! derivatives of generator torque and electrical power w.r.t. u%HSS_SPD
    INTEGER(IntKi)                                                  :: I                      ! Generic loop index
    INTEGER(IntKi)                                                  :: K                      ! Blade index
    INTEGER(IntKi)                                                  :: ErrStat2               ! Error status of the operation
@@ -1218,7 +1218,7 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          call allocAry(dYdu, 6+p%NumOuts, 3, 'dYdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
-      dYdu = 0.0_R8Ki
+      dYdu = 0.0_ReKi
              
    
       !   ! Torque control:
@@ -1244,10 +1244,10 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          !.........................................................................................................................   
          ! Calculate all of the available output channels (because they repeat for the derivative) here:
          !.........................................................................................................................   
-      AllOuts = 0.0_R8Ki ! all variables not specified below are zeros (either constant or disabled):
+      AllOuts = 0.0_ReKi ! all variables not specified below are zeros (either constant or disabled):
          
-      AllOuts(:, GenTq)     = 0.001_R8Ki*dYdu(Indx_Y_GenTrq,:)
-      AllOuts(:, GenPwr)    = 0.001_R8Ki*dYdu(Indx_Y_ElecPwr,:)
+      AllOuts(:, GenTq)     = 0.001_ReKi*dYdu(Indx_Y_GenTrq,:)
+      AllOuts(:, GenPwr)    = 0.001_ReKi*dYdu(Indx_Y_ElecPwr,:)
       AllOuts(:, YawMomCom) =            dYdu(Indx_Y_YawMom,:)
       
       !...............................................................................................................................   
@@ -1295,16 +1295,16 @@ SUBROUTINE SrvD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
                                                                                  !!   (Y) with respect to the continuous
                                                                                  !!   states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
                                                                                  !!   functions (X) with respect to
                                                                                  !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
                                                                                  !!   functions (Xd) with respect to
                                                                                  !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
                                                                                  !!   functions (Z) with respect to
                                                                                  !!   the continuous states (x) [intent in to avoid deallocation]
 
@@ -1372,16 +1372,16 @@ SUBROUTINE SrvD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
                                                                                  !!  (Y) with respect to the discrete
                                                                                  !!  states (xd) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
                                                                                  !!   functions (X) with respect to the
                                                                                  !!   discrete states (xd) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddxd(:,:)!< Partial derivatives of discrete state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddxd(:,:)!< Partial derivatives of discrete state
                                                                                  !!   functions (Xd) with respect to the
                                                                                  !!   discrete states (xd) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
                                                                                  !!   functions (Z) with respect to the
                                                                                  !!   discrete states (xd) [intent in to avoid deallocation]
 
@@ -1447,16 +1447,16 @@ SUBROUTINE SrvD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrSt
    TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
                                                                                  !!  functions (Y) with respect to the
                                                                                  !!  constraint states (z) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
                                                                                  !!  state functions (X) with respect to
                                                                                  !!  the constraint states (z) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
                                                                                  !!  functions (Xd) with respect to the
                                                                                  !!  constraint states (z) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
                                                                                  !! state functions (Z) with respect to
                                                                                  !!  the constraint states (z) [intent in to avoid deallocation]
 
@@ -3787,8 +3787,8 @@ SUBROUTINE Torque_JacobianPInput( t, u, p, x, xd, z, OtherState, m, GenTrq, Elec
    TYPE(SrvD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
    TYPE(SrvD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
    TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc (optimization) variables
-   REAL(R8Ki),                     INTENT(  OUT)  :: GenTrq      !< partial derivative of generator torque output with respect to HSS_Spd input
-   REAL(R8Ki),                     INTENT(  OUT)  :: ElecPwr     !< partial derivative of electrical power output with respect to HSS_Spd input
+   REAL(ReKi),                     INTENT(  OUT)  :: GenTrq      !< partial derivative of generator torque output with respect to HSS_Spd input
+   REAL(ReKi),                     INTENT(  OUT)  :: ElecPwr     !< partial derivative of electrical power output with respect to HSS_Spd input
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -3806,8 +3806,8 @@ SUBROUTINE Torque_JacobianPInput( t, u, p, x, xd, z, OtherState, m, GenTrq, Elec
       CALL CalculateTorqueJacobian( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
       if (ErrStat >= AbortErrLev) return
    ELSE                                                                 ! Generator is off line.
-      GenTrq  = 0.0_R8Ki
-      ElecPwr = 0.0_R8Ki
+      GenTrq  = 0.0_ReKi
+      ElecPwr = 0.0_ReKi
    ENDIF
 
    
@@ -3829,30 +3829,30 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
    TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc (optimization) variables
    
-   REAL(R8Ki),                     INTENT(  OUT)  :: GenTrq_du   !< partial generator torque / partial u%HSS_Spd
-   REAL(R8Ki),                     INTENT(  OUT)  :: ElecPwr_du  !< partialelectrical power / partial u%HSS_Spd
+   REAL(ReKi),                     INTENT(  OUT)  :: GenTrq_du   !< partial generator torque / partial u%HSS_Spd
+   REAL(ReKi),                     INTENT(  OUT)  :: ElecPwr_du  !< partialelectrical power / partial u%HSS_Spd
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! Local variables:
 
-   REAL(R8Ki)                                     :: Current1_r, Current1_r_du  ! Current passing through the stator (amps) and its derivative w.r.t. u%HSS_Spd
-   REAL(R8Ki)                                     :: Current1_i, Current1_i_du  ! Current passing through the stator (amps) and its derivative w.r.t. u%HSS_Spd
-   REAL(R8Ki)                                     :: Current2_r, Current2_r_du  ! Current passing through the rotor (amps) and its derivative w.r.t. u%HSS_Spd
-   REAL(R8Ki)                                     :: Current2_i, Current2_i_du  ! Current passing through the rotor (amps) and its derivative w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: Current1_r, Current1_r_du  ! Current passing through the stator (amps) and its derivative w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: Current1_i, Current1_i_du  ! Current passing through the stator (amps) and its derivative w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: Current2_r, Current2_r_du  ! Current passing through the rotor (amps) and its derivative w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: Current2_i, Current2_i_du  ! Current passing through the rotor (amps) and its derivative w.r.t. u%HSS_Spd
                                                   
-   REAL(R8Ki)                                     :: GenTrq      ! generator torque
-   REAL(R8Ki)                                     :: PwrMech     ! Mechanical power in generator 
+   REAL(ReKi)                                     :: GenTrq      ! generator torque
+   REAL(ReKi)                                     :: PwrMech     ! Mechanical power in generator
    
-   REAL(R8Ki)                                     :: ComDenom, ComDenom_du  ! temporary variable (common denominator)
-   REAL(R8Ki)                                     :: PwrLossS_du ! Power loss in the stator (watts) and its derivative w.r.t. u%HSS_Spd 
-   REAL(R8Ki)                                     :: PwrLossR_du ! Power loss in the rotor (watts) and its derivative w.r.t. u%HSS_Spd 
-   REAL(R8Ki)                                     :: PwrMech_du  ! partial derivative of Mechanical power (watts) w.r.t. u%HSS_Spd
-   REAL(R8Ki)                                     :: Slip        ! Generator slip
-   REAL(R8Ki)                                     :: SlipRat     ! Generator slip ratio
+   REAL(ReKi)                                     :: ComDenom, ComDenom_du  ! temporary variable (common denominator)
+   REAL(ReKi)                                     :: PwrLossS_du ! Power loss in the stator (watts) and its derivative w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: PwrLossR_du ! Power loss in the rotor (watts) and its derivative w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: PwrMech_du  ! partial derivative of Mechanical power (watts) w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: Slip        ! Generator slip
+   REAL(ReKi)                                     :: SlipRat     ! Generator slip ratio
    
-   REAL(R8Ki)                                     :: A, B, dAdu, dBdu
-   REAL(R8Ki)                                     :: SlipRat_du ! temporary variables for computing derivatives
+   REAL(ReKi)                                     :: A, B, dAdu, dBdu
+   REAL(ReKi)                                     :: SlipRat_du ! temporary variables for computing derivatives
       
    !REAL(ReKi)                                     :: S2          ! SlipRat**2
    
@@ -3862,8 +3862,8 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   GenTrq_du  = 0.0_R8Ki
-   ElecPwr_du = 0.0_R8Ki
+   GenTrq_du  = 0.0_ReKi
+   ElecPwr_du = 0.0_ReKi
    
 
       ! Are we doing simple variable-speed control, or using a generator model?
@@ -3880,8 +3880,8 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
                   Slip = u%HSS_Spd - p%SIG_SySp
 
                   IF ( ABS( Slip ) > p%SIG_POSl  )  THEN
-                     GenTrq    = SIGN( real(p%SIG_POTq,R8Ki), Slip )
-                     GenTrq_du = 0.0_R8Ki
+                     GenTrq    = SIGN( real(p%SIG_POTq,ReKi), Slip )
+                     GenTrq_du = 0.0_ReKi
                   ELSE
                      GenTrq    = Slip*p%SIG_Slop
                      GenTrq_du = p%SIG_Slop
@@ -3899,13 +3899,13 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
                CASE ( ControlMode_ADVANCED )                          ! Thevenin-equivalent generator model.
                  
                   SlipRat  = ( u%HSS_Spd - p%TEC_SySp )/p%TEC_SySp
-                  SlipRat_du = 1.0_R8Ki / p%TEC_SySp
+                  SlipRat_du = 1.0_ReKi / p%TEC_SySp
                   
                   A = p%TEC_A0*(p%TEC_VLL**2)*SlipRat
                   B = p%TEC_C0 + p%TEC_C1*SlipRat + p%TEC_C2*(SlipRat**2)
 
                   dAdu = p%TEC_A0*(p%TEC_VLL**2)*SlipRat_du
-                  dBdu = p%TEC_C1*SlipRat_du + 2.0_R8Ki*p%TEC_C2*SlipRat*SlipRat_du
+                  dBdu = p%TEC_C1*SlipRat_du + 2.0_ReKi*p%TEC_C2*SlipRat*SlipRat_du
                   
                   GenTrq    =  A / B
                   GenTrq_du = dAdu / B - A/B**2 * dBdu
@@ -3917,16 +3917,16 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
                   dBdu = SlipRat_du * (p%TEC_Xe1 + p%TEC_RLR)
                   
                   ComDenom  = A**2 + B**2                  
-                  ComDenom_du = 2.0_R8Ki * A * dAdu +  2.0_R8Ki * B * dBdu
+                  ComDenom_du = 2.0_ReKi * A * dAdu +  2.0_ReKi * B * dBdu
                   
                                     
                   A = SlipRat**2*p%TEC_Re1 - SlipRat*p%TEC_RRes
-                  dAdu = 2.0_R8Ki * SlipRat * SlipRat_du * p%TEC_Re1 - SlipRat_du * p%TEC_RRes
+                  dAdu = 2.0_ReKi * SlipRat * SlipRat_du * p%TEC_Re1 - SlipRat_du * p%TEC_RRes
                   Current2_r = p%TEC_V1a*A/ComDenom
                   Current2_r_du = p%TEC_V1a*(dAdu/ComDenom - A/ComDenom**2 * ComDenom_du)
                   
                   Current2_i = -p%TEC_V1a*( p%TEC_Xe1 + p%TEC_RLR  )*SlipRat**2/ComDenom
-                  Current2_i_du = -p%TEC_V1a*( p%TEC_Xe1 + p%TEC_RLR ) * ( 2.0_R8Ki*SlipRat*SlipRat_du / ComDenom - SlipRat**2/(ComDenom**2) * ComDenom_du)
+                  Current2_i_du = -p%TEC_V1a*( p%TEC_Xe1 + p%TEC_RLR ) * ( 2.0_ReKi*SlipRat*SlipRat_du / ComDenom - SlipRat**2/(ComDenom**2) * ComDenom_du)
                                     
                   Current1_r  = Current2_r
                   Current1_i  = Current2_i - p%TEC_V1a/p%TEC_MR 
@@ -3935,10 +3935,10 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
 
                                     
                   !PwrLossS  = 3.0*( Current1_r**2 + Current1_i**2 )*p%TEC_SRes
-                  PwrLossS_du = 3.0_R8Ki*p%TEC_SRes*( 2.0_R8Ki*Current1_r*Current1_r_du + 2.0_R8Ki*Current1_i*Current1_i_du )
+                  PwrLossS_du = 3.0_ReKi*p%TEC_SRes*( 2.0_ReKi*Current1_r*Current1_r_du + 2.0_ReKi*Current1_i*Current1_i_du )
                   
                   !PwrLossR  = 3.0*( Current2_r**2 + Current2_i**2  )*p%TEC_RRes
-                  PwrLossR_du = 3.0_R8Ki*p%TEC_RRes*( 2.0_R8Ki*Current2_r*Current2_r_du + 2.0_R8Ki*Current2_i*Current2_i_du )
+                  PwrLossR_du = 3.0_ReKi*p%TEC_RRes*( 2.0_ReKi*Current2_r*Current2_r_du + 2.0_ReKi*Current2_i*Current2_i_du )
                   
                   !PwrMech   = GenTrq*u%HSS_Spd
                   PwrMech_du = GenTrq_du * u%HSS_Spd + GenTrq
@@ -3950,8 +3950,8 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
 
                      ! we should not get here (initialization should have caught this issue)
                 
-                  GenTrq_du   = 0.0_R8Ki
-                  ElecPwr_du  = 0.0_R8Ki
+                  GenTrq_du   = 0.0_ReKi
+                  ElecPwr_du  = 0.0_ReKi
 
             END SELECT
 
@@ -3971,10 +3971,10 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
 
             IF ( u%HSS_Spd >= p%VS_RtGnSp )  THEN      ! We are in region 3 - torque is constant
                GenTrq    = p%VS_RtTq
-               GenTrq_du = 0.0_R8Ki
+               GenTrq_du = 0.0_ReKi
             ELSEIF ( u%HSS_Spd < p%VS_TrGnSp )  THEN   ! We are in region 2 - torque is proportional to the square of the generator speed
                GenTrq    = p%VS_Rgn2K* (u%HSS_Spd**2)
-               GenTrq_du = 2.0_R8Ki * p%VS_Rgn2K * u%HSS_Spd
+               GenTrq_du = 2.0_ReKi * p%VS_Rgn2K * u%HSS_Spd
             ELSE                                       ! We are in region 2 1/2 - simple induction generator transition region
                GenTrq    = p%VS_Slope*( u%HSS_Spd - p%VS_SySp )
                GenTrq_du = p%VS_Slope
@@ -3991,8 +3991,8 @@ SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, 
                 
                ! we should not get here (initialization should have caught this issue)
                 
-            GenTrq_du   = 0.0_R8Ki
-            ElecPwr_du  = 0.0_R8Ki
+            GenTrq_du   = 0.0_ReKi
+            ElecPwr_du  = 0.0_ReKi
 
       END SELECT
    

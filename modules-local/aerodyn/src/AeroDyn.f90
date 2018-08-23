@@ -665,9 +665,9 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       ! Local variables
    real(reKi)                                   :: position(3)       ! node reference position
    real(reKi)                                   :: positionL(3)      ! node local position
-   real(R8Ki)                                   :: theta(3)          ! Euler angles
-   real(R8Ki)                                   :: orientation(3,3)  ! node reference orientation
-   real(R8Ki)                                   :: orientationL(3,3) ! node local orientation
+   real(ReKi)                                   :: theta(3)          ! Euler angles
+   real(ReKi)                                   :: orientation(3,3)  ! node reference orientation
+   real(ReKi)                                   :: orientationL(3,3) ! node local orientation
    
    integer(intKi)                               :: j                 ! counter for nodes
    integer(intKi)                               :: k                 ! counter for blades
@@ -736,7 +736,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
 
       
       u%TowerMotion%Orientation     = u%TowerMotion%RefOrientation
-      u%TowerMotion%TranslationDisp = 0.0_R8Ki
+      u%TowerMotion%TranslationDisp = 0.0_ReKi
       u%TowerMotion%TranslationVel  = 0.0_ReKi
       
    end if ! we compute tower loads
@@ -771,7 +771,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
 
          
       u%HubMotion%Orientation     = u%HubMotion%RefOrientation
-      u%HubMotion%TranslationDisp = 0.0_R8Ki
+      u%HubMotion%TranslationDisp = 0.0_ReKi
       u%HubMotion%RotationVel     = 0.0_ReKi   
       
    
@@ -851,7 +851,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
 
             
                ! reference orientation of the jth node in the kth blade, relative to the root in the local blade coordinate system:
-            theta(1)     =  0.0_R8Ki
+            theta(1)     =  0.0_ReKi
             theta(2)     =  InputFileData%BladeProps(k)%BlCrvAng(j)
             theta(3)     = -InputFileData%BladeProps(k)%BlTwist( j)            
             orientationL = EulerConstruct( theta )
@@ -878,7 +878,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
 
       
          u%BladeMotion(k)%Orientation     = u%BladeMotion(k)%RefOrientation
-         u%BladeMotion(k)%TranslationDisp = 0.0_R8Ki
+         u%BladeMotion(k)%TranslationDisp = 0.0_ReKi
          u%BladeMotion(k)%TranslationVel  = 0.0_ReKi
    
    end do !k=numBlades
@@ -1301,9 +1301,9 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    real(ReKi)                              :: y_hat_disk(3)
    real(ReKi)                              :: z_hat_disk(3)
    real(ReKi)                              :: tmp(3)
-   real(R8Ki)                              :: theta(3)
-   real(R8Ki)                              :: orientation(3,3)
-   real(R8Ki)                              :: orientation_nopitch(3,3)
+   real(ReKi)                              :: theta(3)
+   real(ReKi)                              :: orientation(3,3)
+   real(ReKi)                              :: orientation_nopitch(3,3)
    real(ReKi)                              :: tmp_sz, tmp_sz_y
    
    integer(intKi)                          :: j                      ! loop counter for nodes
@@ -1378,7 +1378,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
          ! construct system equivalent to u%BladeRootMotion(k)%Orientation, but without the blade-pitch angle:
       
       !orientation = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), transpose(u%HubMotion%Orientation(:,:,1)) )
-      call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
+      call LAPACK_gemm( 'n', 't', 1.0_ReKi, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_ReKi, orientation, errStat2, errMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       theta = EulerExtract( orientation ) !hub_theta_root(k)
 #ifndef DBG_OUTS
@@ -1396,7 +1396,7 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
             ! deflection), blade-pitch and twist (aerodynamic + elastic) angles:
          
          ! orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose(orientation_nopitch) )
-         call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeMotion(k)%Orientation(:,:,j), orientation_nopitch, 0.0_R8Ki, orientation, errStat2, errMsg2)
+         call LAPACK_gemm( 'n', 't', 1.0_ReKi, u%BladeMotion(k)%Orientation(:,:,j), orientation_nopitch, 0.0_ReKi, orientation, errStat2, errMsg2)
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          theta = EulerExtract( orientation ) !root(k)WithoutPitch_theta(j)_blade(k)
          
@@ -2448,13 +2448,13 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect
                                                                                !!   to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
       ! local variables
    TYPE(AD_OutputType)                                           :: y_p
@@ -2462,7 +2462,7 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(AD_ConstraintStateType)                                  :: z_p
    TYPE(AD_ConstraintStateType)                                  :: z_m
    TYPE(AD_InputType)                                            :: u_perturb
-   REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in input
+   REAL(ReKi)                                                    :: delta_p, delta_m  ! delta change in input
    INTEGER(IntKi)                                                :: i, j, k, n   
    logical                                                       :: ValidInput
    
@@ -2567,7 +2567,7 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             call AD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
             delta_m = 0
-            if (EqualRealNos(delta_p, 0.0_R8Ki)) then
+            if (EqualRealNos(delta_p, 0.0_ReKi)) then
                call SetErrStat(ErrID_Fatal,'Both sides of central difference equation change solution region. '// &
                   'dYdu cannot be calculated for column '//trim(num2lstr(i))//'.',ErrStat,ErrMsg,RoutineName) 
                return
@@ -2667,7 +2667,7 @@ SUBROUTINE AD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
             call AD_CopyInput( u, u_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
             delta_m = 0
-            if (EqualRealNos(delta_p, 0.0_R8Ki)) then
+            if (EqualRealNos(delta_p, 0.0_ReKi)) then
                call SetErrStat(ErrID_Fatal,'Both sides of central difference equation change solution region. '// &
                   'dYdu cannot be calculated for column '//trim(num2lstr(i))//'.',ErrStat,ErrMsg,RoutineName) 
                return
@@ -2738,16 +2738,16 @@ SUBROUTINE AD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
                                                                                !!   (Y) with respect to the continuous
                                                                                !!   states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
                                                                                !!   functions (X) with respect to
                                                                                !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
                                                                                !!   functions (Xd) with respect to
                                                                                !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
                                                                                !!   functions (Z) with respect to
                                                                                !!   the continuous states (x) [intent in to avoid deallocation]
 
@@ -2814,16 +2814,16 @@ SUBROUTINE AD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
                                                                                !!  (Y) with respect to the discrete
                                                                                !!  states (xd) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
                                                                                !!   functions (X) with respect to the
                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddxd(:,:)!< Partial derivatives of discrete state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddxd(:,:)!< Partial derivatives of discrete state
                                                                                !!   functions (Xd) with respect to the
                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
                                                                                !!   functions (Z) with respect to the
                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
 
@@ -2888,16 +2888,16 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    TYPE(AD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
                                                                                !!  functions (Y) with respect to the
                                                                                !!  constraint states (z) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
                                                                                !!  state functions (X) with respect to
                                                                                !!  the constraint states (z) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
                                                                                !!  functions (Xd) with respect to the
                                                                                !!  constraint states (z) [intent in to avoid deallocation]
-   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
                                                                                !! state functions (Z) with respect to
                                                                                !!  the constraint states (z) [intent in to avoid deallocation]
 
@@ -2907,7 +2907,7 @@ SUBROUTINE AD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    TYPE(AD_ConstraintStateType)                                  :: Z_p
    TYPE(AD_ConstraintStateType)                                  :: Z_m
    TYPE(AD_ConstraintStateType)                                  :: z_perturb
-   REAL(R8Ki)                                                    :: delta_p, delta_m  ! delta change in state
+   REAL(ReKi)                                                    :: delta_p, delta_m  ! delta change in state
    INTEGER(IntKi)                                                :: i, j, k, n, k2, j2   
 
    integer, parameter                                            :: indx = 1      ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
@@ -3674,7 +3674,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(AD_InputType)                  , INTENT(INOUT) :: u                      !< perturbed ED inputs
-   REAL( R8Ki )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
+   REAL( ReKi )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
    
 
    ! local variables
@@ -3683,8 +3683,8 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    
    INTEGER                                             :: fieldIndx
    INTEGER                                             :: node
-   REAL(R8Ki)                                          :: orientation(3,3)
-   REAL(R8Ki)                                          :: angles(3)
+   REAL(ReKi)                                          :: orientation(3,3)
+   REAL(ReKi)                                          :: angles(3)
       
    fieldIndx = p%Jac_u_indx(n,2) 
    node      = p%Jac_u_indx(n,3) 
@@ -3697,7 +3697,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 1) !Module/Mesh/Field: u%TowerMotion%TranslationDisp = 1;      
       u%TowerMotion%TranslationDisp( fieldIndx,node) = u%TowerMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign       
    CASE ( 2) !Module/Mesh/Field: u%TowerMotion%Orientation = 2;
-      angles = 0.0_R8Ki
+      angles = 0.0_ReKi
       angles(fieldIndx) = du * perturb_sign
       call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
       u%TowerMotion%Orientation(:,:,node) = matmul(u%TowerMotion%Orientation(:,:,node), orientation)      
@@ -3707,7 +3707,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE ( 4) !Module/Mesh/Field: u%HubMotion%TranslationDisp = 4;
       u%HubMotion%TranslationDisp(fieldIndx,node) = u%HubMotion%TranslationDisp(fieldIndx,node) + du * perturb_sign            
    CASE ( 5) !Module/Mesh/Field: u%HubMotion%Orientation = 5;
-      angles = 0.0_R8Ki
+      angles = 0.0_ReKi
       angles(fieldIndx) = du * perturb_sign
       call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
       u%HubMotion%Orientation(:,:,node) = matmul(u%HubMotion%Orientation(:,:,node), orientation)
@@ -3715,17 +3715,17 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
       u%HubMotion%RotationVel(fieldIndx,node) = u%HubMotion%RotationVel(fieldIndx,node) + du * perturb_sign
    
    CASE ( 7) !Module/Mesh/Field: u%BladeRootMotion(1)%Orientation = 7;
-      angles = 0.0_R8Ki
+      angles = 0.0_ReKi
       angles(fieldIndx) = du * perturb_sign
       call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
       u%BladeRootMotion(1)%Orientation(:,:,node) = matmul(u%BladeRootMotion(1)%Orientation(:,:,node), orientation)
    CASE ( 8) !Module/Mesh/Field: u%BladeRootMotion(2)%Orientation = 8;
-      angles = 0.0_R8Ki
+      angles = 0.0_ReKi
       angles(fieldIndx) = du * perturb_sign
       call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
       u%BladeRootMotion(2)%Orientation(:,:,node) = matmul(u%BladeRootMotion(2)%Orientation(:,:,node), orientation)
    CASE ( 9) !Module/Mesh/Field: u%BladeRootMotion(3)%Orientation = 9;
-      angles = 0.0_R8Ki
+      angles = 0.0_ReKi
       angles(fieldIndx) = du * perturb_sign
       call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
       u%BladeRootMotion(3)%Orientation(:,:,node) = matmul(u%BladeRootMotion(3)%Orientation(:,:,node), orientation)
@@ -3733,7 +3733,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE (10) !Module/Mesh/Field: u%BladeMotion(1)%TranslationDisp = 10;
       u%BladeMotion(1)%TranslationDisp(fieldIndx,node) = u%BladeMotion(1)%TranslationDisp(fieldIndx,node) + du * perturb_sign   
    CASE (11) !Module/Mesh/Field: u%BladeMotion(1)%Orientation = 11;
-      angles = 0.0_R8Ki
+      angles = 0.0_ReKi
       angles(fieldIndx) = du * perturb_sign
       call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
       u%BladeMotion(1)%Orientation(:,:,node) = matmul(u%BladeMotion(1)%Orientation(:,:,node), orientation)
@@ -3743,7 +3743,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE (13) !Module/Mesh/Field: u%BladeMotion(2)%TranslationDisp = 13;
       u%BladeMotion(2)%TranslationDisp( fieldIndx,node) = u%BladeMotion(2)%TranslationDisp( fieldIndx,node) + du * perturb_sign       
    CASE (14) !Module/Mesh/Field: u%BladeMotion(2)%Orientation = 14;
-      angles = 0.0_R8Ki
+      angles = 0.0_ReKi
       angles(fieldIndx) = du * perturb_sign
       call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
       u%BladeMotion(2)%Orientation(:,:,node) = matmul(u%BladeMotion(2)%Orientation(:,:,node), orientation)
@@ -3753,7 +3753,7 @@ SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
    CASE (16) !Module/Mesh/Field: u%BladeMotion(3)%TranslationDisp = 16;
       u%BladeMotion(3)%TranslationDisp( fieldIndx,node) = u%BladeMotion(3)%TranslationDisp( fieldIndx,node) + du * perturb_sign       
    CASE (17) !Module/Mesh/Field: u%BladeMotion(3)%Orientation     = 17;
-      angles = 0.0_R8Ki
+      angles = 0.0_ReKi
       angles(fieldIndx) = du * perturb_sign
       call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )            
       u%BladeMotion(3)%Orientation(:,:,node) = matmul(u%BladeMotion(3)%Orientation(:,:,node), orientation)
@@ -3781,9 +3781,9 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta_p, delta_m, dY)
    TYPE(AD_ParameterType)            , INTENT(IN   ) :: p         !< parameters
    TYPE(AD_OutputType)               , INTENT(IN   ) :: y_p       !< AD outputs at \f$ u + \Delta_p u \f$ or \f$ z + \Delta_p z \f$ (p=plus)
    TYPE(AD_OutputType)               , INTENT(IN   ) :: y_m       !< AD outputs at \f$ u - \Delta_m u \f$ or \f$ z - \Delta_m z \f$ (m=minus)   
-   REAL(R8Ki)                        , INTENT(IN   ) :: delta_p   !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p z \f$
-   REAL(R8Ki)                        , INTENT(IN   ) :: delta_m   !< difference in inputs or states \f$ delta_m = \Delta_m u \f$ or \f$ delta_m = \Delta_m z \f$
-   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdz: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial z_i} = \frac{y_p - y_m}{2 \, \Delta z}\f$
+   REAL(ReKi)                        , INTENT(IN   ) :: delta_p   !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p z \f$
+   REAL(ReKi)                        , INTENT(IN   ) :: delta_m   !< difference in inputs or states \f$ delta_m = \Delta_m u \f$ or \f$ delta_m = \Delta_m z \f$
+   REAL(ReKi)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdz: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial z_i} = \frac{y_p - y_m}{2 \, \Delta z}\f$
    
       ! local variables:
    INTEGER(IntKi)    :: k              ! loop over blades

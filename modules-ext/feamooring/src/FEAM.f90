@@ -2608,7 +2608,7 @@ SUBROUTINE CreateLineMesh( u, p, misc, ErrStat, ErrMsg )
     CHARACTER(*),                           INTENT(   OUT )  ::  ErrMsg               ! Error message if ErrStat /= ErrID_None
 
 
-    REAL(R8Ki), DIMENSION(3,3)       ::  R             ! Rotation matrix transfering local frame coordinates to the global frame. @todo: do you prefer 0 index?
+    REAL(ReKi), DIMENSION(3,3)       ::  R             ! Rotation matrix transfering local frame coordinates to the global frame. @todo: do you prefer 0 index?
     REAL(ReKi), DIMENSION(3,3)       ::  USkewed       ! Skew symmetrix matrix. @todo: do you prefer 0 index?
     REAL(ReKi), DIMENSION(3,3)       ::  USkewedSquare ! Square of skew symmetrix matrix
     REAL(ReKi), DIMENSION(3)         ::  uHat          ! unit vector

@@ -2222,7 +2222,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      REAL(ReKi),                  INTENT(IN   ) :: Pos(3)       !< Xi,Yi,Zi, coordinates of node
      INTEGER(IntKi),              INTENT(  OUT) :: ErrStat      !< Error code
      CHARACTER(*),                INTENT(  OUT) :: ErrMess      !< Error message
-     REAL(R8Ki), OPTIONAL,        INTENT(IN   ) :: Orient(3,3)  !< Orientation (direction cosine matrix) of node; identity by default
+     REAL(ReKi), OPTIONAL,        INTENT(IN   ) :: Orient(3,3)  !< Orientation (direction cosine matrix) of node; identity by default
      
      ErrStat = ErrID_None
      ErrMess = ""
@@ -2271,9 +2271,9 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      IF ( PRESENT(Orient) ) THEN
         Mesh%RefOrientation(:,:,Inode) = Orient
      ELSE
-        Mesh%RefOrientation(:,1,Inode) = (/ 1._R8Ki, 0._R8Ki, 0._R8Ki /)
-        Mesh%RefOrientation(:,2,Inode) = (/ 0._R8Ki, 1._R8Ki, 0._R8Ki /)
-        Mesh%RefOrientation(:,3,Inode) = (/ 0._R8Ki, 0._R8Ki, 1._R8Ki /)
+        Mesh%RefOrientation(:,1,Inode) = (/ 1._ReKi, 0._ReKi, 0._ReKi /)
+        Mesh%RefOrientation(:,2,Inode) = (/ 0._ReKi, 1._ReKi, 0._ReKi /)
+        Mesh%RefOrientation(:,3,Inode) = (/ 0._ReKi, 0._ReKi, 1._ReKi /)
      END IF
 
      RETURN
@@ -2953,7 +2953,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    
       TYPE(MeshType)                    , INTENT(IN   ) :: M_p                        !< AD outputs on given mesh at \f$ u + \Delta u \f$ (p=plus)
       TYPE(MeshType)                    , INTENT(IN   ) :: M_m                        !< AD outputs on given mesh at \f$ u - \Delta u \f$ (m=minus)   
-      REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)                      !< column of dYdu or dYdz \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ 
+      REAL(ReKi)                        , INTENT(INOUT) :: dY(:)                      !< column of dYdu or dYdz \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$
       INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into dY array; gives location of next array position to fill
    
          ! local variables:
@@ -3141,7 +3141,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    
       TYPE(MeshType)                    , INTENT(IN   ) :: M_p                        !< ED outputs on given mesh at \f$ u + \Delta u \f$ (p=plus)
       TYPE(MeshType)                    , INTENT(IN   ) :: M_m                        !< ED outputs on given mesh at \f$ u - \Delta u \f$ (m=minus)   
-      REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)                      !< column of dYdu \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ 
+      REAL(ReKi)                        , INTENT(INOUT) :: dY(:)                      !< column of dYdu \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$
       INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into dY array; gives location of next array position to fill
       LOGICAL, OPTIONAL                 , INTENT(IN   ) :: FieldMask(FIELDMASK_SIZE)  !< flags to determine if this field is part of the packing
    
@@ -3150,8 +3150,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       CHARACTER(ErrMsgLen)          :: ErrMsg2  
    
       INTEGER(IntKi)                :: i, indx_last
-      REAL(R8Ki)                    :: smallAngles(3)
-      REAL(R8Ki)                    :: orientation(3,3)
+      REAL(ReKi)                    :: smallAngles(3)
+      REAL(ReKi)                    :: orientation(3,3)
       LOGICAL                       :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
 
       if (present(FieldMask)) then
