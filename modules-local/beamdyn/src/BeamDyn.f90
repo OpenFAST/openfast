@@ -3668,8 +3668,7 @@ SUBROUTINE BD_StaticSolution( x, gravity, p, m, piter, ErrStat, ErrMsg )
            write (*,"(a)", advance='no') " Linear Iteration "
            write (*,"(I4.1)", advance='no') piter ! spacing format assumes max newton iterations = 9999
            write (*,"(a)", advance='no') "    Relative Residual Norm: "
-           write (*,"(ES12.4)", advance='no') Enorm/Eref
-           write (*,*) p%tol
+           write (*,"(ES12.4)") Enorm/Eref
           IF(Enorm/Eref .LE. p%tol) RETURN
       ENDIF
 
@@ -4767,7 +4766,7 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, p, m, ErrStat, ErrMsg)
 
       fact = MOD(piter-1,p%n_fact) .EQ. 0  ! when true, we factor the jacobian matrix
 
-    !   IF ( (p%tngt_stf_fd .OR. p%tngt_stf_comp) .AND. fact ) CALL BD_FD_GA2( x, OtherState, p, m, StifK_fd, DampG_fd, MassM_fd, ErrStat, ErrMsg )
+      IF ( (p%tngt_stf_fd .OR. p%tngt_stf_comp) .AND. fact ) CALL BD_FD_GA2( x, OtherState, p, m, StifK_fd, DampG_fd, MassM_fd, ErrStat, ErrMsg )
 
          ! Apply accelerations using F=ma ?  Is that what this routine does?
          ! Calculate Quadrature point values needed
@@ -4781,7 +4780,7 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, p, m, ErrStat, ErrMsg)
 
       IF(fact) THEN
          m%StifK  =  m%MassM + p%coef(7) *  m%DampG + p%coef(8) *  m%StifK
-         StifK_fd = MassM_fd + p%coef(7) * DampG_fd + p%coef(8) * StifK_fd
+         IF ( p%tngt_stf_fd .OR. p%tngt_stf_comp ) StifK_fd = MassM_fd + p%coef(7) * DampG_fd + p%coef(8) * StifK_fd
 
          ! compare the finite differenced stiffness matrix against the analytical tangent stiffness matrix is flag is set
          IF ( p%tngt_stf_comp ) CALL BD_CompTngtStiff( RESHAPE (m%StifK,(/p%dof_total,p%dof_total/)), &
