@@ -169,22 +169,6 @@ PROGRAM BeamDyn_Driver_Program
      
    DO n_t_global = 0, n_t_final
 
-      ! print the load/time step information for static/dynamic runs
-      IF(BD_Parameter%analysis_type .EQ. BD_STATIC_ANALYSIS) then
-         write (*,*)
-         write (*,*)
-         write (*,"(a)", advance='no') " load step "
-         write (*,"(I0)", advance='no') n_t_global
-         write (*,*)
-      ELSE
-         write (*,*)
-         write (*,"(a)", advance='no') " time step "
-         write (*,"(I0)", advance='no') n_t_global
-         write (*,"(a)", advance='no') " of "
-         write (*,"(I0)", advance='no') n_t_final
-         write (*,*)
-      ENDIF
-
       ! Shift "window" of BD_Input 
       DO j = BD_interp_order, 1, -1
          CALL BD_CopyInput (BD_Input(j),  BD_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)

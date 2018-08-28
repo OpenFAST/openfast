@@ -340,7 +340,12 @@ typedef   ^        MiscVarType    ^            PointLoadLcl {:}{:}        - - "C
 typedef   ^        MiscVarType    ^            StifK        {:}{:}{:}{:}  - - "Stiffness Matrix" -
 typedef   ^        MiscVarType    ^            MassM        {:}{:}{:}{:}  - - "Mass Matrix" -
 typedef   ^        MiscVarType    ^            DampG        {:}{:}{:}{:}  - - "Damping Matrix" -
+typedef   ^        MiscVarType    ^            StifK_fd     {:}{:}{:}{:}  - - "Finite differenced Stiffness Matrix" -
+typedef   ^        MiscVarType    ^            MassM_fd     {:}{:}{:}{:}  - - "Finite differenced Mass Matrix" -
+typedef   ^        MiscVarType    ^            DampG_fd     {:}{:}{:}{:}  - - "Finite differenced Damping Matrix" -
 typedef   ^        MiscVarType    ^            RHS          {:}{:}        - - "Right-hand-side vector" -
+typedef   ^        MiscVarType    ^            RHS_p        {:}{:}        - - "Positive fd perturbation of RHS" -
+typedef   ^        MiscVarType    ^            RHS_m        {:}{:}        - - "Negative fd perturbation of RHS" -
 typedef   ^        MiscVarType    ^            BldInternalForceFE   {:}{:}  - - "Force/Moment array for internal force calculations at FE" -
 typedef   ^        MiscVarType    ^            BldInternalForceQP   {:}{:}  - - "Force/Moment array for internal force calculations at QP" -
 typedef   ^        MiscVarType    ^            FirstNodeReactionLclForceMoment   {:}  - - "Force/Moment array for first node reaction.  Needed in InternalForce calculations." -
