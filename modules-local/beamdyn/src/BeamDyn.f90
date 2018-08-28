@@ -3550,6 +3550,10 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
        ! note that if BD_StaticSolution converges, then piter will .le. p%niter
 
+       ! bjj: note that this is not necessarially sufficient: if an error occurred in the loop inside BD_StaticSolution
+       ! and it exited early, this condition would also hold. Care must be taken inside BD_StaticSolution so that doesn't
+       ! happen if this convergence condition is used.
+
        if (piter .le. p%niter) then 
 
           ! save this successfully converged value
@@ -3647,9 +3651,16 @@ SUBROUTINE BD_StaticSolution( x, gravity, p, m, piter, ErrStat, ErrMsg )
 
          ! Solve for X in A*X=B to get the displacement of blade under static load.
       CALL LAPACK_getrf( p%dof_total-p%dof_node, p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2)
-    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         ! if there is a problem with the factorization, we should not continue with this iteration
+         ! (note: do not return early because the calling subroutine uses piter <= p%niter as its convergence criteria)
+         if (ErrStat >= AbortErrLev) cycle 
+         
       CALL LAPACK_getrs( 'N',p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, m%LP_RHS_LU, ErrStat2, ErrMsg2)
-  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         ! if there is a problem with the solve, we should not continue with this iteration
+         ! (note: do not return early because the calling subroutine uses piter <= p%niter as its convergence criteria)
+         if (ErrStat >= AbortErrLev) cycle 
 
 
          ! Reshape to BeamDyn arrays
