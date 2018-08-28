@@ -4305,9 +4305,9 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
       ! Keep track of previous node for adding force contributions to moments
       PrevNodePos = p%uuN0(1:3,p%nodes_per_elem,nelem) + x%q(1:3,nelem*LastNode+1)
 
-      DO idx_node_in_elem=LastNode,2,-1      ! Skip first node on element as it corresponds to last node of previous element or the root
+      DO idx_node_in_elem=LastNode,1,-1
 
-            ! Index to node
+            ! Index to node in FE array
          idx_node       = p%node_elem_idx(nelem,1)-1 + idx_node_in_elem    ! p%node_elem_idx(nelem,1) is the first node in the element
 
             ! Force term
@@ -4341,7 +4341,7 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
       m%BldInternalForceFE(4:6,1) =   m%elf(4:6,1)
    ENDIF
 
-         ! Rotate coords to global reference frame
+      ! Rotate coords to global reference frame
    DO i=1,SIZE(m%BldInternalForceFE,DIM=2)
       m%BldInternalForceFE(1:3,i) =  MATMUL(p%GlbRot,m%BldInternalForceFE(1:3,i))
       m%BldInternalForceFE(4:6,i) =  MATMUL(p%GlbRot,m%BldInternalForceFE(4:6,i))
@@ -4362,6 +4362,7 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
       !  retrieve the QP data, we take the FE node result with the root reaction, and perform an integration using the pseudo-
       !  inverse of the ShpDer function to retrieve the QP reaction info.  Since the starting info includes the coordinate
       !  transforms, we do not need to transform again.
+      !  Note: the FE node information above already has the rotation to the global reference frame, so we do not do that again here.
 
 
       DO idx_node=1,size(p%NdIndx)
@@ -4379,12 +4380,6 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
 
          m%BldInternalForceQP(:,idx_node) = Tmp6
 
-      ENDDO
-
-         ! Rotate coords to global reference frame
-      DO i=1,SIZE(m%BldInternalForceQP,DIM=2)
-         m%BldInternalForceQP(1:3,i) =  MATMUL(p%GlbRot,m%BldInternalForceQP(1:3,i))
-         m%BldInternalForceQP(4:6,i) =  MATMUL(p%GlbRot,m%BldInternalForceQP(4:6,i))
       ENDDO
    
    END SELECT
