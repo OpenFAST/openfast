@@ -711,7 +711,7 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, M
    TYPE(SrvD_InputType),             INTENT(INOUT)  :: u_SrvD       !< ServoDyn Inputs at t
    TYPE(ED_OutputType),              INTENT(IN)     :: y_ED         !< ElastoDyn outputs
    TYPE(InflowWind_OutputType),      INTENT(IN)     :: y_IfW        !< InflowWind outputs
-   TYPE(OpFM_OutputType),            INTENT(IN)     :: y_OpFM       !< InflowWind outputs
+   TYPE(OpFM_OutputType),            INTENT(IN)     :: y_OpFM       !< OpenFOAM outputs
    TYPE(BD_OutputType),              INTENT(IN)     :: y_BD(:)      !< BD Outputs
    TYPE(SrvD_OutputType), OPTIONAL,  INTENT(IN)     :: y_SrvD_prev  !< ServoDyn outputs from t - dt
    TYPE(FAST_ModuleMapType),         INTENT(INOUT)  :: MeshMapData  !< Data for mapping between modules
@@ -4403,19 +4403,6 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
       calcJacobian = .FALSE.
    END IF
       
-#ifdef SOLVE_OPTION_1_BEFORE_2      
-
-   ! This is OPTION 1 before OPTION 2
-      
-   ! For cases with HydroDyn and/or SubDyn, it calls ED_CalcOuts (a time-sink) 2 times per step/correction (plus the 6 calls when calculating the Jacobian).
-   ! For cases without HydroDyn or SubDyn, it calls ED_CalcOuts 1 time per step/correction.
-      
-   CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-                  
-#else
 
    !> ## This is OPTION 2 before OPTION 1:
    !!    
@@ -4515,7 +4502,6 @@ end if
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )      
    END IF
    
-#endif
                                                                                                       
    !.....................................................................
    ! Reset each mesh's RemapFlag (after calling all InputSolve routines):
@@ -4638,13 +4624,6 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
                                     , MeshMapData , ErrStat2, ErrMsg2 )         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                                                                   
-#ifdef SOLVE_OPTION_1_BEFORE_2      
-   ELSE 
-         
-      CALL ED_CalcOutput( this_time, ED%Input(1), ED%p, ED%x(this_state), ED%xd(this_state), ED%z(this_state), &
-                           ED%OtherSt(this_state), ED%Output(1), ED%m, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-#endif         
    END IF ! HD, BD, and/or SD coupled to ElastoDyn
                          
 !..................
