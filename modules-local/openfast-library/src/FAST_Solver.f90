@@ -4430,7 +4430,7 @@ if (n_t_global == 0) then
    CALL OpenFOutFile( UnMM, TRIM(p_FAST%OutFileRoot)//'.EDMassMatrix', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
       IF ( ErrStat >= AbortErrLev ) RETURN                  
-   CALL WrMatrix(ED%OtherSt%AugMat,UnMM, p_FAST%OutFmt)
+   CALL WrMatrix(ED%m%AugMat,UnMM, p_FAST%OutFmt)
    CLOSE( UnMM )      
 end if
 #endif
