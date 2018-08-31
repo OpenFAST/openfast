@@ -4043,7 +4043,11 @@ SUBROUTINE BD_QuasiStatic(u,p,x,OtherState,m,ErrStat,ErrMsg, RampLoad)
             end if
             
          OtherState%Acc = 0.0_BDKi
- 
+
+            ! Reset the inertial forces  (this is for output purposes if we have to start without the quasistatic solve) 
+         m%qp%Fi = 0.0_BDKi      ! This could be output before it gets set. 
+  
+  
             ! Now proceed only if we are allowed to and have not exceeded the 
          IF ( LoadSteps .EQ. 2**MaxLoadSteps ) THEN
                !NOTE: if we did not converge to a solution, then we will return now that we have reset the states.
@@ -4402,11 +4406,21 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
 
       ! The mathematics above ends up setting element boundaries to exactly zero.
    DO nelem = p%elem_total,2,-1
-         ! if we are at the element boundary, we keep the value from the tip of the next element in.
-         ! NOTE:  the above calculations result in exactly zero otherwise because it is counting both
-         !        the tip of inner element and first node of outer element, which will exactly cancel.
+         ! if we are at the element boundary, we keep the average value from the tip of the next element in and 
+         !        the negative of the first node of this element. 
+         ! 
+         !        WHY THIS WORKS OUT NICELY I DON'T KNOW!!!!  -ADP 
+         !              --> Maybe it is an artifact of something wrong in the above integration??? 
+         !              --> or maybe it is an artifact of how the solve is actually performed 
+         !                    -> the boundary is handled as a single node in the solve. Guessing this is the reason. 
+         ! 
+         ! NOTE:  the above calculations result in in something close zero otherwise because it is counting both 
+         !        the tip of inner element and first node of outer element, which will almost cancel.  Why they 
+         !        are not exactly the same is a mystery to me!!!!  This might be an indication that there is 
+         !        something not properly included at either the first or last nodes, which could be part of our 
+         !        underlying issues.  No idea though. 
       idx_node       = p%node_elem_idx(nelem-1,2)     ! Last node of next element inboard
-      m%BldInternalForceFE(1:3,idx_node)  = m%EFint(1:3,p%nodes_per_elem,nelem-1)
+      m%BldInternalForceFE(1:3,idx_node)  = ( m%EFint(1:3,p%nodes_per_elem,nelem-1) - m%EFint(1:3,1,nelem) ) / 2.0_BDKi
    ENDDO
 
       ! Now deal with the root node
@@ -4452,7 +4466,7 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
 
             ! Integrate over the FE point information
          Tmp6 = 0.0_BDKi
-         StartNode=p%node_elem_idx(p%elem_total,1)
+         StartNode=p%node_elem_idx(nelem,1)
          DO i=1,p%nodes_per_elem
             Tmp6 = Tmp6 + m%BldInternalForceFE(:,StartNode+i-1)* p%Shp(i,idx_qp)
          ENDDO
