@@ -157,11 +157,13 @@ PROGRAM BeamDyn_Driver_Program
       !.........................
       ! calculate outputs at t=0
       !.........................
+   CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, t_global, DvrData%t_final )
+
    CALL BD_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                            BD_ConstraintState, BD_OtherState,  BD_Output, BD_MiscVar, ErrStat, ErrMsg)
       CALL CheckError()
    
-     CALL Dvr_WriteOutputLine(t_global,DvrOut,BD_Parameter%OutFmt,BD_Output)
+   CALL Dvr_WriteOutputLine(t_global,DvrOut,BD_Parameter%OutFmt,BD_Output)
    
       !.........................
       ! time marching
@@ -200,7 +202,8 @@ PROGRAM BeamDyn_Driver_Program
         CALL CheckError()
 
      CALL Dvr_WriteOutputLine(t_global,DvrOut,BD_Parameter%OutFmt,BD_Output)
-                
+
+     if ( MOD( n_t_global + 1, 100 ) == 0 ) call SimStatus( TiLstPrn, PrevClockTime, t_global, DvrData%t_final )
    ENDDO
       
    CALL RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global )
