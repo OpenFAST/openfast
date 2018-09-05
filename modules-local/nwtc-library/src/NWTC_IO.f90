@@ -7891,12 +7891,12 @@ QueryGitVersion = GIT_VERSION_INFO
       
          ! VECTOR or FIELD Label
       Line = ""
-      CALL ReadStr( Un, FileName, Line, "VECTOR or FIELD", "VECTOR or FIELD label", ErrStat2, ErrMsg2 )
+      CALL ReadStr( Un, FileName, Line, "VECTORS or FIELD", "VECTORS or FIELD label", ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
       Line = trim(Line)
       CALL Conv2UC( Line )
-      IF ( ( INDEX(Line, "VECTOR" ) /= 1 ) .OR. ( INDEX(Line, "FIELD" ) /= 1 ) ) THEN
+      IF ( ( INDEX(Line, "VECTORS" ) /= 1 ) .AND. ( INDEX(Line, "FIELD" ) /= 1 ) ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: did not find VECTORS or FIELD label', ErrStat, ErrMsg, RoutineName )
       ELSE
          IF ( INDEX(Line, "FIELD" ) == 1 ) THEN ! Must be FIELD
@@ -7922,7 +7922,7 @@ QueryGitVersion = GIT_VERSION_INFO
                   CALL SetErrStat( ErrID_Fatal, 'Invalid vtk structured_points file: FIELD array does not match DIMENSIONS', ErrStat, ErrMsg, RoutineName )
                END IF
             END IF
-         ELSE                                    ! Must be VECTOR
+         ELSE                                    ! Must be VECTORS
             sz = INDEX(Line, "FLOAT" )
             IF ( sz == 0 ) THEN
                CALL SetErrStat( ErrID_Fatal, 'Invalid VECTORS datatype.  Must be set to float.', ErrStat, ErrMsg, RoutineName )
