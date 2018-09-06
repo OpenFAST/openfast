@@ -74,6 +74,7 @@ typedef   ^        BD_InputFile    IntKi           member_total   -  - - "Total 
 typedef   ^        BD_InputFile    IntKi           kp_total       -  - - "Total number of key point" -
 typedef   ^        BD_InputFile    IntKi           kp_member     {:} - - "Number of key points in each member" -
 typedef   ^        BD_InputFile    IntKi           order_elem     -  - - "Order of interpolation (basis) function" -
+typedef   ^        BD_InputFile    IntKi           load_retries   -  - - "Maximum Number of factored load retries"  -
 typedef   ^        BD_InputFile    IntKi           NRMax          -  - - "Max number of iterations in Newton Raphson algorithm" -
 typedef   ^        BD_InputFile    IntKi           quadrature     -  - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
 typedef   ^        BD_InputFile    IntKi           n_fact         -  - - "Factorization frequency" -
@@ -87,21 +88,25 @@ typedef   ^        BD_InputFile    Logical         QuasiStaticInit - - - "Use qu
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
 typedef   ^        BD_InputFile    R8Ki     stop_tol         - - - "Tolerance for stopping criterion" -
+typedef   ^        BD_InputFile     ^       tngt_stf_pert    - - - "Perturbation size for computing finite differenced tangent stiffness" -
+typedef   ^        BD_InputFile     ^       tngt_stf_difftol - - - "When comparing tangent stiffness matrix, stop simulation if error greater than this" -
 typedef   ^        BD_InputFile     ^       kp_coordinate   {:}{:} - - "Key point coordinates array" -
 typedef   ^        BD_InputFile     ^       pitchJ - - -     "Pitch actuator inertia" (kg-m^2)
 typedef   ^        BD_InputFile     ^       pitchK - - -     "Pitch actuator stiffness" (kg-m^2/s^2) 
 typedef   ^        BD_InputFile     ^       pitchC - - -     "Pitch actuator damping" - (kg-m^2/s)
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+typedef   ^        BD_InputFile    Logical             Echo        -  - - "Echo" -
 typedef   ^        BD_InputFile    Logical             RotStates -  .TRUE. - "Orient states in rotating frame during linearization? (flag)" -
 typedef   ^        BD_InputFile    Logical             RelStates -  .FALSE. - "Define states relative to root motion during linearization? (flag)" -
-typedef   ^        BD_InputFile    Logical             Echo      -  - - "Echo"
-typedef   ^        BD_InputFile    IntKi               NNodeOuts -  - - "Number of node outputs [0 - 9]"	-
-typedef   ^        BD_InputFile    IntKi               OutNd    {9} - - "Nodes whose values will be output"	-
-typedef   ^        BD_InputFile    IntKi               NumOuts   -  - - "Number of parameters in the output list (number of outputs requested)"	-
-typedef   ^        BD_InputFile    CHARACTER(ChanLen)  OutList	{:}	- -	"List of user-requested output channels"	-
-typedef   ^        BD_InputFile    LOGICAL             SumPrint  -  - - "Print summary data to file? (.sum)"	-
-typedef   ^        BD_InputFile    CHARACTER(20)       OutFmt    -  - - "Format specifier" -
+typedef   ^        BD_InputFile    Logical             tngt_stf_fd -  - - "Flag to compute tangent stifness matrix via finite difference" - 
+typedef   ^        BD_InputFile    Logical             tngt_stf_comp -  - - "Flag to compare finite differenced and analytical tangent stifness" -
+typedef   ^        BD_InputFile    IntKi               NNodeOuts   -  - - "Number of node outputs [0 - 9]"	-
+typedef   ^        BD_InputFile    IntKi               OutNd      {9} - - "Nodes whose values will be output"	-
+typedef   ^        BD_InputFile    IntKi               NumOuts     -  - - "Number of parameters in the output list (number of outputs requested)"	-
+typedef   ^        BD_InputFile    CHARACTER(ChanLen)  OutList    {:} - - "List of user-requested output channels"	-
+typedef   ^        BD_InputFile    LOGICAL             SumPrint    -  - - "Print summary data to file? (.sum)"	-
+typedef   ^        BD_InputFile    CHARACTER(20)       OutFmt      -  - - "Format specifier" -
 
 
 
@@ -157,12 +162,11 @@ typedef   ^        ParameterType DbKi           rhoinf           -         - -  
 #vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 #the following are BDKi = R8Ki
 typedef   ^        ParameterType R8Ki           uuN0             {:}{:}{:} - -  "Initial Postion Vector of GLL (FE) nodes (index 1=DOF; index 2=FE nodes; index 3=element)" -
-typedef   ^        ParameterType  ^             QuadPt           {:}{:}    - -  "Quadrature point postion vectors" -
 typedef   ^        ParameterType  ^             Stif0_QP         {:}{:}{:} - -  "Sectional Stiffness Properties at quadrature points (6x6xqp)" -
 typedef   ^        ParameterType  ^             Mass0_QP         {:}{:}{:} - -  "Sectional Mass Properties at quadrature points (6x6xqp)" -
 typedef   ^        ParameterType  ^             gravity          {3}       - -  "Gravitational acceleration" m/s^2
-typedef   ^        ParameterType  ^             segment_length   {:}{:}    - -  "Array stored length of each segment" -
-typedef   ^        ParameterType  ^             member_length    {:}{:}    - -  "Array stored length of each member (index 1: element #; index 2: [1=absolute length;2:=ratio of length to beam length])" -
+typedef   ^        ParameterType  ^             segment_eta      {:}       - -  "Array stored length ratio of each segment w.r.t. member it lies in" -
+typedef   ^        ParameterType  ^             member_eta       {:}       - -  "Array stored length ratio of each member  w.r.t. entire blade" -
 typedef   ^        ParameterType  ^             blade_length      -        - -  "Blade Length" -
 typedef   ^        ParameterType  ^             blade_mass        -        - -  "Blade mass" -
 typedef   ^        ParameterType  ^             blade_CG         {3}       - -  "Blade center of gravity" -
@@ -195,6 +199,7 @@ typedef   ^        ParameterType IntKi          dof_total        -         - -  
 typedef   ^        ParameterType IntKi          nqp              -         - -  "Number of quadrature points (per element)" -
 typedef   ^        ParameterType IntKi          analysis_type    -         - -  "analysis_type flag" -
 typedef   ^        ParameterType IntKi          damp_flag        -         - -  "damping flag" -
+typedef   ^        ParameterType IntKi          ld_retries       -         - -  "Maximum Number of factored load retries"  -
 typedef   ^        ParameterType IntKi          niter            -         - -  "Maximum number of iterations in Newton-Raphson algorithm"  -
 typedef   ^        ParameterType IntKi          quadrature       -         - -  "Quadrature method: 1 Gauss 2 Trapezoidal" -
 typedef   ^        ParameterType IntKi          n_fact           -         - -  "Factorization frequency" -
@@ -214,6 +219,10 @@ typedef   ^        ParameterType ReKi           torqM           {2}{2}     - -  
 typedef   ^        ParameterType qpParam        qp               -         - -  "Quadrature point info that does not change during simulation" -
 typedef   ^        ParameterType IntKi          qp_indx_offset   -         - -  "Offset for computing index of the quadrature arrays (gauss skips the first [end-point] node)" -
 typedef   ^        ParameterType IntKi          BldMotionNodeLoc -         - -  "switch to determine where the nodes on the blade motion mesh should be located 1=FE (GLL) nodes; 2=quadrature nodes; 3=blade input stations"
+typedef   ^        ParameterType Logical        tngt_stf_fd      -         - -  "Flag to compute tangent stifness matrix via finite difference" - 
+typedef   ^        ParameterType Logical        tngt_stf_comp    -         - -  "Flag to compare finite differenced and analytical tangent stifness" - 
+typedef   ^        ParameterType ReKi           tngt_stf_pert    -         - -  "Perturbation size for computing finite differenced tangent stiffness" - 
+typedef   ^        ParameterType ReKi           tngt_stf_difftol -         - -  "When comparing tangent stiffness matrix, stop simulation if error greater than this" -
 # .... arrays for optimization ........................................................................................................
 typedef   ^        ParameterType    R8Ki        QPtw_Shp_Shp_Jac       {:}{:}{:}{:}  - - "optimization variable: QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem) = p%Shp(i,idx_qp)*p%Shp(j,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
 typedef   ^        ParameterType    ^           QPtw_Shp_ShpDer        {:}{:}{:}     - - "optimization variable: QPtw_Shp_ShpDer(idx_qp,i,j) = p%Shp(i,idx_qp)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)" -
@@ -331,7 +340,12 @@ typedef   ^        MiscVarType    ^            PointLoadLcl {:}{:}        - - "C
 typedef   ^        MiscVarType    ^            StifK        {:}{:}{:}{:}  - - "Stiffness Matrix" -
 typedef   ^        MiscVarType    ^            MassM        {:}{:}{:}{:}  - - "Mass Matrix" -
 typedef   ^        MiscVarType    ^            DampG        {:}{:}{:}{:}  - - "Damping Matrix" -
+typedef   ^        MiscVarType    ^            StifK_fd     {:}{:}{:}{:}  - - "Finite differenced Stiffness Matrix" -
+typedef   ^        MiscVarType    ^            MassM_fd     {:}{:}{:}{:}  - - "Finite differenced Mass Matrix" -
+typedef   ^        MiscVarType    ^            DampG_fd     {:}{:}{:}{:}  - - "Finite differenced Damping Matrix" -
 typedef   ^        MiscVarType    ^            RHS          {:}{:}        - - "Right-hand-side vector" -
+typedef   ^        MiscVarType    ^            RHS_p        {:}{:}        - - "Positive fd perturbation of RHS" -
+typedef   ^        MiscVarType    ^            RHS_m        {:}{:}        - - "Negative fd perturbation of RHS" -
 typedef   ^        MiscVarType    ^            BldInternalForceFE   {:}{:}  - - "Force/Moment array for internal force calculations at FE" -
 typedef   ^        MiscVarType    ^            BldInternalForceQP   {:}{:}  - - "Force/Moment array for internal force calculations at QP" -
 typedef   ^        MiscVarType    ^            FirstNodeReactionLclForceMoment   {:}  - - "Force/Moment array for first node reaction.  Needed in InternalForce calculations." -
