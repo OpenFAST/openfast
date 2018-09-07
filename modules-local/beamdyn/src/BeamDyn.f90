@@ -3247,7 +3247,7 @@ SUBROUTINE BD_MemberEta(member_total, QPtW, Jac, member_eta, total_length)
    ENDDO
 
    ! ratio of member's length to the total beam length
-   member_eta = member_eta/total_length
+   member_eta = member_length/total_length
 
 END SUBROUTINE BD_MemberEta
 
