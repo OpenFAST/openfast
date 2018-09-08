@@ -3605,7 +3605,7 @@ SUBROUTINE BD_StaticSolution( x, gravity, p, m, piter, ErrStat, ErrMsg )
 
       ! compare the finite differenced stiffness matrix against the analytical tangent stiffness matrix is flag is set
       IF ( p%tngt_stf_comp ) CALL BD_CompTngtStiff( RESHAPE(m%StifK   ,(/p%dof_total,p%dof_total/)), &
-                                                    RESHAPE(m%StifK_fd,(/p%dof_total,p%dof_total/)), p%tngt_stf_difftol, &
+                                                    RESHAPE(m%StifK_fd,(/p%dof_total,p%dof_total/)), REAL(p%tngt_stf_difftol,BDKi), &
                                                     ErrStat, ErrMsg )
       IF (ErrStat >= AbortErrLev) return
 
@@ -4747,7 +4747,7 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, p, m, ErrStat, ErrMsg)
 
          ! compare the finite differenced stiffness matrix against the analytical tangent stiffness matrix is flag is set
          IF ( p%tngt_stf_comp ) CALL BD_CompTngtStiff( RESHAPE(m%StifK   ,(/p%dof_total,p%dof_total/)), &
-                                                       RESHAPE(m%StifK_fd,(/p%dof_total,p%dof_total/)), p%tngt_stf_difftol, &
+                                                       RESHAPE(m%StifK_fd,(/p%dof_total,p%dof_total/)), REAL(p%tngt_stf_difftol,BDKi), &
                                                        ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) return
 
