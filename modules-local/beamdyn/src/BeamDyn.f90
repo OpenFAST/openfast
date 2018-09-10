@@ -3559,11 +3559,6 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
        CALL WrScr( NewLine//"Maxium number of load steps reached. Exit BeamDyn")
    ENDIF
 
-   if (ErrStat >= AbortErrLev) then
-      call cleanup()
-      return
-   end if
-
    call cleanup()
    return
 
@@ -3607,8 +3602,6 @@ SUBROUTINE BD_StaticSolution( x, gravity, p, m, piter, ErrStat, ErrMsg )
 
       CALL BD_QuadraturePointData( p,x,m )         ! Calculate QP values uuu, uup, RR0, kappa, E1
       CALL BD_GenerateStaticElement(gravity, p, m) ! Calculate RHS and analytical tangent stiffness matrix
-
-!       CALL WrMatrix( RESHAPE(m%StifK_fd, (/p%dof_total,p%dof_total/)) , 6, "ES15.5E2", 'rel diff')
 
       ! compare the finite differenced stiffness matrix against the analytical tangent stiffness matrix is flag is set
       IF ( p%tngt_stf_comp ) CALL BD_CompTngtStiff( RESHAPE(m%StifK   ,(/p%dof_total,p%dof_total/)), &
