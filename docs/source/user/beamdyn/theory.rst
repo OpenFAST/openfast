@@ -324,7 +324,7 @@ References :cite:`Patera:1984,Ronquist:1987,Sprague:2003,Sprague:2004`.
    :width: 47%
    :align: center
 
-   Representative :math:`p+1` Lagrangian-interpolant shape functions in the element natural coordinates for a eigth-order LSFEs, where nodes are located at the Gauss-Lobatto-Legendre points.
+   Representative :math:`p+1` Lagrangian-interpolant shape functions in the element natural coordinates for a eighth-order LSFEs, where nodes are located at the Gauss-Lobatto-Legendre points.
 
 
 

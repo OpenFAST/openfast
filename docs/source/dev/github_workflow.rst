@@ -31,15 +31,17 @@ and never `force push <https://git-scm.com/docs/git-push#git-push---force>`__.
 
 In OpenFAST development, the typical workflow follows this procedure
 
-1. Fork OpenFAST/OpenFAST on GitHub
+1. Fork the OpenFAST/OpenFAST repository on GitHub
 
 2. Clone your new fork: ``git clone https://github.com/youruser/OpenFAST``
-  
-3. Create a feature branch for active development: ``git branch feature/a_great_feature``
-  
-4. Add new development on feature/a_great_feature: ``git push/pull``
 
-5. Update your feature branch with OpenFAST/dev: ``git pull https://github.com/OpenFAST/OpenFAST dev; git push``
+3. Add OpenFAST/OpenFAST as a remote: ``git remote add upstream https://github.com/OpenFAST/OpenFAST``
+  
+4. Create a feature branch for active development: ``git branch feature/a_great_feature`` or ``git checkout -b feature/a_great_feature``
+  
+5. Add new development on feature/a_great_feature: ``git add a_file.f90 && git commit -m "A message" && git push``
+
+5. Update your feature branch with OpenFAST/dev: ``git pull upstream dev && git push``
 
 6. Create a GitHub pull request to merge ``youruser/OpenFAST/feature/a_great_feature`` into ``OpenFAST/OpenFAST/dev``
   
@@ -63,8 +65,4 @@ New pull requests should contain
   
 - Updated unit tests, if applicable
 - Updated documentation in applicable sections ready for compilation and deployment to `readthedocs <http://openfast.readthedocs.io>`__.
-- A review request from a specific member of the NREL OpenFAST team
-
-
-
     
