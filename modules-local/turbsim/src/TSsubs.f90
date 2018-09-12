@@ -1104,8 +1104,13 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
                iPoint = p%usr%RefPtID
             END IF
        !bjj: make sure size(ssvs,1) = p%grid%NumFreq <= p%usr%nFreq = size(p%usr%S,1)
-            CALL Spec_TimeSer_Extrap ( p, p%grid%Z(iPoint), U(iPoint), SSVS )            
-            SSVS(1:p%usr%nFreq,:) = p%usr%S(:,iPointUsr,:)                         
+            ! initialize SSVS with extrapolated values if there are non-specified components or frequencies 
+            ! i.e., fill the gaps where wind component or frequencies exceed what was specified in the time-series data with some numerical model
+            ! (use zeros for known spectral values that will get overwritten later)
+            CALL Spec_TimeSer_Extrap ( p, p%grid%Z(iPoint), U(iPoint), SSVS )
+            
+            ! overwrite the frequencies and wind components that were computed from measurements in the time-series file
+            SSVS(1:p%usr%nFreq,1:p%usr%nComp) = p%usr%S(1:p%usr%nFreq,iPointUsr,1:p%usr%nComp)
                         
             S(:,iPoint,:) = SSVS*HalfDelF
          END DO
