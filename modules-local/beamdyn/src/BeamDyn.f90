@@ -2927,14 +2927,14 @@ SUBROUTINE BD_AssembleStiffK(nelem,p,ElemK,GlobalK)
 
    INTEGER(IntKi)                            :: i
    INTEGER(IntKi)                            :: j
-   INTEGER(IntKi)                            :: idx_dof2
+   INTEGER(IntKi)                            :: jdof
    INTEGER(IntKi)                            :: temp_id
 
    temp_id = p%node_elem_idx(nelem,1)-1      ! Node just before the start of this element
    DO j=1,p%nodes_per_elem
-      DO idx_dof2=1,p%dof_node
+      DO jdof=1,p%dof_node
          DO i=1,p%nodes_per_elem
-            GlobalK( :,i+temp_id,idx_dof2,j+temp_id ) = GlobalK( :,i+temp_id,idx_dof2,j+temp_id ) + ElemK( :,i,idx_dof2,j )
+            GlobalK( :,i+temp_id,jdof,j+temp_id ) = GlobalK( :,i+temp_id,jdof,j+temp_id ) + ElemK( :,i,jdof,j )
          ENDDO
       ENDDO
    ENDDO
@@ -3796,12 +3796,13 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, m )
    CALL BD_ElasticForce( nelem,p,m,.true. )     ! Calculate Fc, Fd  [and Oe, Pe, and Qe for N-R algorithm]
    CALL BD_GravityForce( nelem,p,m,gravity )    ! Calculate Fg
 
+   m%elk = 0.0_BDKi
    
    DO j=1,p%nodes_per_elem
-       DO idof=1,p%dof_node
+       DO jdof=1,p%dof_node
 
            DO i=1,p%nodes_per_elem
-               DO jdof=1,p%dof_node
+               DO idof=1,p%dof_node
 
                    DO idx_qp = 1,p%nqp
                        m%elk(idof,i,jdof,j) = m%elk(idof,i,jdof,j) &
@@ -3816,6 +3817,8 @@ SUBROUTINE BD_StaticElementMatrix(  nelem, gravity, p, m )
 
        ENDDO ! DO jdof=1,p%dof_node
    END DO ! DO j=1,p%nodes_per_elem
+
+   print *, m%elk
 
    m%qp%Ftemp(:,:,nelem) = m%qp%Fd(:,:,nelem) - m%qp%Fg(:,:,nelem) - m%DistrLoad_QP(:,:,nelem)
    call Integrate_ElementForce(nelem, p, m) ! use m%qp%Fc and m%qp%Ftemp to compute m%elf
@@ -3835,6 +3838,8 @@ SUBROUTINE Integrate_ElementForce(nelem, p, m)
    INTEGER(IntKi)              :: idx_qp
    INTEGER(IntKi)              :: i, idof
    CHARACTER(*), PARAMETER     :: RoutineName = 'Integrate_ElementForce'
+
+   m%elf = 0.0_BDKi
 
    DO i=1,p%nodes_per_elem
        DO idof=1,p%dof_node
@@ -3859,6 +3864,8 @@ SUBROUTINE Integrate_ElementMass(nelem, p, m)
    INTEGER(IntKi)              :: i, idof
    INTEGER(IntKi)              :: j, jdof
    CHARACTER(*), PARAMETER     :: RoutineName = 'Integrate_ElementMass'
+
+   m%elm = 0.0_BDKi
 
    DO j=1,p%nodes_per_elem
        DO jdof=1,p%dof_node
@@ -5039,11 +5046,12 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
    ENDIF
    
    CALL BD_GravityForce( nelem, p, m, p%gravity )
-   
-   
 
-      ! Equations 10, 11, 12 in Wang_2014
+   m%elk = 0.0_BDKi
+   m%elm = 0.0_BDKi
+   m%elg = 0.0_BDKi
 
+   ! Equations 10, 11, 12 in Wang_2014
    IF (fact) THEN
        DO j=1,p%nodes_per_elem
            DO jdof=1,p%dof_node
