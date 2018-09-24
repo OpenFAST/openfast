@@ -2802,10 +2802,10 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
 
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
    
-   DO idx_qp=1,p%nqp
       !m%qp%betaC(:,:,idx_qp,nelem) = MATMUL( diag(p%beta(i)), temp_b,m%qp%Stif(:,:,idx_qp,nelem))
-      DO j=1,6
-         DO i=1,6
+   DO j=1,6
+      DO i=1,6
+         DO idx_qp=1,p%nqp
             m%qp%betaC(idx_qp,i,j,nelem) = p%beta(i)*m%qp%Stif(idx_qp,i,j,nelem)
          END DO
       END DO
