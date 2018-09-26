@@ -60,6 +60,18 @@ MODULE HydroDyn
    PUBLIC :: HydroDyn_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    !PUBLIC :: HydroDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
       
+   PUBLIC :: HD_JacobianPInput                 ! Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
+                                               !   (Xd), and constraint - state(Z) functions all with respect to the inputs(u)
+   PUBLIC :: HD_JacobianPContState             ! Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
+                                               !   (Xd), and constraint - state(Z) functions all with respect to the continuous
+                                               !   states(x)
+   PUBLIC :: HD_JacobianPDiscState             ! Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
+                                               !   (Xd), and constraint - state(Z) functions all with respect to the discrete
+                                               !   states(xd)
+   PUBLIC :: HD_JacobianPConstrState           ! Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
+                                               !   (Xd), and constraint - state(Z) functions all with respect to the constraint
+                                               !   states(z)
+   PUBLIC :: HD_GetOP                          !< Routine to pack the operating point values (for linearization) into arrays
    
    CONTAINS
    
