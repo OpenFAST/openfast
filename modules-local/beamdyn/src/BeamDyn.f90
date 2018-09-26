@@ -1430,7 +1430,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       CALL AllocAry(m%PointLoadLcl, p%dof_node,p%nodes_per_elem,                       'PointLoadLcl',         ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Distributed load from mesh, on the quadrature points.  The ramping copy is for the quasi-static solve
-      CALL AllocAry(m%DistrLoad_QP,            p%dof_node,p%nqp,p%elem_total,                   'DistrLoad_QP',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry(m%DistrLoad_QP,            p%nqp,p%dof_node,p%elem_total,                   'DistrLoad_QP',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
          ! Array for storing the position information for the quadrature points.
@@ -5213,8 +5213,8 @@ SUBROUTINE BD_DistrLoadCopy( p, u, m, RampScaling )
    DO nelem=1,p%elem_total
       temp_id  = (nelem-1)*p%nqp + p%qp_indx_offset
       DO idx_qp=1,p%nqp
-         m%DistrLoad_QP(1:3,idx_qp,nelem) = u%DistrLoad%Force(1:3,temp_id+idx_qp) * ScalingFactor
-         m%DistrLoad_QP(4:6,idx_qp,nelem) = u%DistrLoad%Moment(1:3,temp_id+idx_qp) * ScalingFactor
+         m%DistrLoad_QP(idx_qp,1:3,nelem) = u%DistrLoad%Force(1:3,temp_id+idx_qp) * ScalingFactor
+         m%DistrLoad_QP(idx_qp,4:6,nelem) = u%DistrLoad%Moment(1:3,temp_id+idx_qp) * ScalingFactor
       ENDDO
    ENDDO
 
