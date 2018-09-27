@@ -19,7 +19,7 @@
     The test data is contained in a git submodule, r-test, which must be initialized
     prior to running. See the r-test README or OpenFAST documentation for more info.
 
-    Get usage with: `executeOpenfastRegressionCase.py -h`
+    Get usage with: `executeOpenfastLinearRegressionCase.py -h`
 """
 
 import os
@@ -42,6 +42,16 @@ def ignoreBaselineItems(directory, contents):
         if c in itemFilter:
             caught.append(c)
     return tuple(caught)
+
+def file_line_count(filename):
+    file_handle = open(filename, 'r')
+    for i, _ in enumerate(file_handle):
+        pass
+    file_handle.close()
+    return i + 1
+
+def isclose(a, b, rel_tol=1e-09, abs_tol=0.0):
+    return abs(a-b) <= max(rel_tol * max(abs(a), abs(b)), abs_tol)
 
 ##### Main program
 
@@ -119,7 +129,7 @@ if not os.path.isdir(inputsDirectory):
 
 # create the local output directory if it does not already exist
 # and initialize it with input files for all test cases
-for data in ["AOC", "AWT27", "SWRT", "UAE_VI", "WP_Baseline"]:
+for data in ["Ideal_Beam", "WP_Baseline"]:
     dataDir = os.path.join(buildDirectory, data)
     if not os.path.isdir(dataDir):
         shutil.copytree(os.path.join(moduleDirectory, data), dataDir)
@@ -151,36 +161,107 @@ if not noExec:
     returnCode = openfastDrivers.runOpenfastCase(caseInputFile, executable)
     if returnCode != 0:
         rtl.exitWithError("")
-    
-### Build the filesystem navigation variables for running the regression test
-localOutFile = os.path.join(testBuildDirectory, caseName + ".outb")
-baselineOutFile = os.path.join(targetOutputDirectory, caseName + ".outb")
-rtl.validateFileOrExit(localOutFile)
-rtl.validateFileOrExit(baselineOutFile)
 
-testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
-baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
-normalizedNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
+### Get a list of all the files in the baseline directory
+baselineOutFiles = os.listdir(targetOutputDirectory)
 
-# export all case summaries
-results = list(zip(testInfo["attribute_names"], normalizedNorm, maxNorm))
-exportCaseSummary(testBuildDirectory, caseName, results)
-
-# failing case
-if not pass_fail.passRegressionTest(normalizedNorm, tolerance):
-    if plotError:
-        from errorPlotting import initializePlotDirectory, plotOpenfastError
-        failChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
-        failRelNorm = [normalizedNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
-        failMaxNorm = [maxNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
-        initializePlotDirectory(localOutFile, failChannels, failRelNorm, failMaxNorm)
-        for channel in failChannels:
-            try:
-                plotOpenfastError(localOutFile, baselineOutFile, channel)
-            except:
-                error = sys.exc_info()[1]
-                print("Error generating plots: {}".format(error.msg))
+# these should all exist in the local outputs directory
+localFiles = os.listdir(testBuildDirectory)
+localOutFiles = [f for f in localFiles if f in baselineOutFiles]
+if len(localOutFiles) != len(baselineOutFiles):
+    print("Error in case {}: an expected local solution file does not exist.".format(caseName))
     sys.exit(1)
+
+### test for regression
+for i, f in enumerate(localOutFiles):
+    local_file = os.path.join(testBuildDirectory, f)
+    baseline_file = os.path.join(targetOutputDirectory, f)
+
+    # verify both files have the same number of lines
+    local_file_line_count = file_line_count(local_file)
+    baseline_file_line_count = file_line_count(baseline_file)
+    if local_file_line_count != baseline_file_line_count:
+        print("Error in case {}: local and baseline solutions have different line counts in".format(caseName))
+        print("\t{}".format(local_file))
+        print("\t{}".format(baseline_file))
+        sys.exit(1)
+
+    # open both files
+    local_handle = open(local_file, 'r')
+    baseline_handle = open(baseline_file, 'r')
+
+    # parse the files
+
+    # skip the first 6 lines since they are headers and may change without conseequence
+    for i in range(6):
+        baseline_handle.readline()
+        local_handle.readline()
+    
+    # the next 10 lines are simulation info; save what we need
+    for i in range(10):
+        b_line = baseline_handle.readline()
+        l_line = local_handle.readline()
+        if i == 4:
+            b_num_continuous_states = int(b_line.split()[-1])
+            l_num_continuous_states = int(l_line.split()[-1])
+        elif i == 7:
+            b_num_inputs = int(b_line.split()[-1])
+            l_num_inputs = int(l_line.split()[-1])
+        elif i == 8:
+            b_num_outputs = int(b_line.split()[-1])
+            l_num_outputs = int(l_line.split()[-1])
+    
+    # find the "Jacobian matrices:" line
+    for i in range(local_file_line_count):
+        b_line = baseline_handle.readline()
+        l_line = local_handle.readline()
+        if "Jacobian matrices:" in l_line:
+            break
+    
+    # skip 1 empty/header lines
+    for i in range(1):
+        baseline_handle.readline()
+        local_handle.readline()
+
+    # read and compare Jacobian matrices
+    for i in range(local_file_line_count):
+        b_line = baseline_handle.readline()
+        l_line = local_handle.readline()
+        if ":" in l_line:
+            continue
+        if len(l_line) < 5:
+            break
+        b_elements = b_line.split()
+        l_elements = l_line.split()
+        for j, l_element in enumerate(l_elements):
+            l_float = float(l_element)
+            b_float = float(b_elements[j])
+            if not isclose(l_float, b_float, tolerance, tolerance):
+                sys.exit(1)
+
+    # skip 2 empty/header lines
+    for i in range(2):
+        baseline_handle.readline()
+        local_handle.readline()
+
+    # read and compare Linearized state matrices
+    for i in range(local_file_line_count):
+        b_line = baseline_handle.readline()
+        l_line = local_handle.readline()
+        if ":" in l_line:
+            continue
+        if len(l_line) < 5:
+            break
+        b_elements = b_line.split()
+        l_elements = l_line.split()
+        for j, l_element in enumerate(l_elements):
+            l_float = float(l_element)
+            b_float = float(b_elements[j])
+            if not isclose(l_float, b_float, tolerance, tolerance):
+                sys.exit(1)
+
+    local_handle.close()
+    baseline_handle.close()
 
 # passing case
 sys.exit(0)
