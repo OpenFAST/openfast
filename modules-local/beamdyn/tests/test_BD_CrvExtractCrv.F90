@@ -39,7 +39,7 @@ subroutine test_BD_CrvExtractCrv()
     r = RonXAxis(angle)
     call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
     
-    @assertEqual(0.0, ErrStat, tolerance, testname)
+    @assertEqual(0.0_BDKi, ErrStat, tolerance, testname)
     @assertEqual(baseline_wmparams, test_wmparams, tolerance, testname)
     
     
@@ -53,7 +53,7 @@ subroutine test_BD_CrvExtractCrv()
     r = RonXAxis(angle)
     call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
     
-    @assertEqual(0.0, ErrStat, tolerance, testname)
+    @assertEqual(0.0_BDKi, ErrStat, tolerance, testname)
     @assertEqual(baseline_wmparams, test_wmparams, tolerance, testname)
     
     
@@ -67,7 +67,7 @@ subroutine test_BD_CrvExtractCrv()
     r = RonXAxis(angle)
     call BD_CrvExtractCrv(r, test_wmparams, ErrStat, ErrMsg)
     
-    @assertEqual(0.0, ErrStat, tolerance, testname)
+    @assertEqual(0.0_BDKi, ErrStat, tolerance, testname)
     @assertEqual(baseline_wmparams, test_wmparams, tolerance, testname)
         
 end subroutine test_BD_CrvExtractCrv
