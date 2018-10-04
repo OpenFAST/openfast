@@ -238,8 +238,6 @@ subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, m, errStat, errMsg
    real(ReKi)                                   :: Un_disk
    real(ReKi)                                   :: AxInd_disk
    integer(IntKi)                               :: indx
-   real(ReKi), parameter                        :: max_AxInd = 0.7_ReKi
-   real(ReKi), parameter                        :: min_Un = 0.0001_ReKi
    
    character(*), parameter                      :: RoutineName = 'DBEMT_UpdateStates'
       
@@ -349,8 +347,8 @@ subroutine ComputeTau1(u, p, m, tau1, errStat, errMsg)
       if ( u%Un_disk < min_Un ) then
          Un_disk = min_Un
          if (m%FirstWarn_tau1) then
-            call setErrStat( ErrID_Severe, 'Induced axial relative air-speed, Un, is less than '//trim(num2lstr(min_Un)) &
-                     // '; limiting time-varying tau1. This message will not be repeated though the ' &
+            call setErrStat( ErrID_Severe, 'Induced axial relative air speed, Un, is less than '//trim(num2lstr(min_Un)) &
+                     // ' m/s; limiting time-varying tau1. This message will not be repeated though the ' &
                      //'condition may persist.', ErrStat, ErrMsg, RoutineName ) ! don't print this error more than one time
             m%FirstWarn_tau1 = .false.
          end if
