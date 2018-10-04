@@ -3673,6 +3673,9 @@ SUBROUTINE BD_FD_Stat( x, gravity, p, m, ErrStat, ErrMsg )
     CHARACTER(ErrMsgLen)                           :: ErrMsg2  ! Temporary Error message
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_Stat'
 
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
     ! zero out the local matrices.
     m%RHS_m    = 0.0_BDKi
     m%RHS_p    = 0.0_BDKi
@@ -4816,6 +4819,9 @@ SUBROUTINE BD_FD_GA2( x, OtherState, p, m, ErrStat, ErrMsg )
     INTEGER(IntKi)                                 :: ErrStat2 ! Temporary Error status
     CHARACTER(ErrMsgLen)                           :: ErrMsg2  ! Temporary Error message
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_GA2'
+
+    ErrStat = ErrID_None
+    ErrMsg  = ""
 
     ! zero out the local matrices. Not sure where these should be initailzed
     m%RHS_m    = 0.0_BDKi
