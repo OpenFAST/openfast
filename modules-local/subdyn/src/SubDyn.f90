@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 !> SubDyn is a time-domain structural-dynamics module for multi-member fixed-bottom substructures.
 !! SubDyn relies on two main engineering schematizations: (1) a linear frame finite-element beam model (LFEB), and 
 !! (2) a dynamics system reduction via Craig-Bampton�s (C-B) method, together with a Static-Improvement method, greatly reducing 

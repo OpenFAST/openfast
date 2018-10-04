@@ -4,10 +4,6 @@
 ! This code provides a wrapper for Dierckx's FitPack routines currently used at the NWTC (mainly codes in the FAST framework).
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-08-04 09:57:20 -0600 (Tue, 04 Aug 2015) $
-! (File) Revision #: $Rev: 322 $
-! URL: $HeadURL: https://windsvn.nrel.gov/NWTC_Library/branches/NetLib/NWTC_source/NWTC_FitPack.f90 $ 
-!**********************************************************************************************************************************
 MODULE NWTC_FitPack
 
 

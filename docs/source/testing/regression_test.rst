@@ -148,7 +148,7 @@ modules used. The labeling can be seen in the test instantiation in
 
 - ``ctest --print-labels`` - Print all available test labels
 
-Labels can be called directoly with
+Labels can be called directly with
 
 - ``ctest -L [Label]``
 

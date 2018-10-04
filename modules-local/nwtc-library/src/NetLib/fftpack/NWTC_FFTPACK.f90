@@ -8,10 +8,6 @@
    !                    correct type (to avoid having wSave too small)
    ! ADP: 07/28/2014: Added in the complex FFT routines from fftpack v. 4.1
 !=======================================================================
-! File last committed: $Date: 2016-06-15 11:12:21 -0600 (Wed, 15 Jun 2016) $
-! (File) Revision #: $Rev: 387 $
-! URL: $HeadURL: https://windsvn2.nrel.gov/NWTC_Library/branches/NetLib/NWTC_source/NWTC_FFTPACK.f90 $
-!=======================================================================
 MODULE NWTC_FFTPACK
 !-----------------------------------------------------------------------
 ! DESCRIPTION OF THE INVERSE FOURIER TRANSFORM ROUTINE:

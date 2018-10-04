@@ -49,11 +49,13 @@ macro(set_fast_fortran)
   # Verify proper compiler versions are available
   # see https://github.com/OpenFAST/openfast/issues/88
   if(${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
-    if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "4.6.0")
-      message(FATAL_ERROR "A version of GNU GFortran greater than 4.6.0 is required. GFortran version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
+    if("${CMAKE_Fortran_COMPILER_VERSION}" STREQUAL "")
+        message(WARNING "A version of GNU GFortran greater than 4.6.0 is required but CMake could not detect your GFortran version.")
+    elseif("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_LESS "4.6.0")  
+        message(FATAL_ERROR "A version of GNU GFortran greater than 4.6.0 is required. GFortran version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
     endif()
   elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
-    if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "11")
+    if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_LESS "11")
       message(FATAL_ERROR "A version of Intel ifort greater than 11 is required. ifort version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
     endif()
   endif()
@@ -117,6 +119,11 @@ macro(set_fast_intel_fortran_posix)
     add_definitions(-DDOUBLE_PRECISION)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpp -r8 -double_size 128")
   endif (DOUBLE_PRECISION)
+
+  # debug flags
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -check all -traceback" )
+  endif()
 endmacro(set_fast_intel_fortran_posix)
 
 #
@@ -134,4 +141,9 @@ macro(set_fast_intel_fortran_windows)
   # - 5199: too many continuation lines
   # - 5268: 132 column limit
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268")
+
+  # debug flags
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /check:all /traceback" )
+  endif()
 endmacro(set_fast_intel_fortran_windows)

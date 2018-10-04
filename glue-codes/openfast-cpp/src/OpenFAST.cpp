@@ -571,7 +571,41 @@ void fast::OpenFAST::step() {
         //   greater than zero
         if (get_nacelleCdLoc(iTurb) > 0.) {
 
-            calc_nacelle_force (
+   if(scStatus) {
+     sc->calcOutputs(scOutputsGlob);
+     fillScOutputsLoc();
+   }
+
+   for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
+
+     //  set wind speeds at original locations 
+     //     setOutputsToFAST(cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
+	 
+     // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
+     // (note OpenFOAM could do subcycling around this step)
+
+     //writeVelocityData(velNodeDataFile, iTurb, nt_global, cDriver_Input_from_FAST[iTurb], cDriver_Output_to_FAST[iTurb]);
+
+     if ( isDebug() ) {
+
+       std::ofstream fastcpp_velocity_file;
+       fastcpp_velocity_file.open("fastcpp_velocity.csv") ;
+       fastcpp_velocity_file << "# x, y, z, Vx, Vy, Vz" << std::endl ;
+       for (int iNode=0; iNode < get_numVelPtsLoc(iTurb); iNode++) {
+	 fastcpp_velocity_file << cDriver_Input_from_FAST[iTurb].pxVel[iNode] << ", " << cDriver_Input_from_FAST[iTurb].pyVel[iNode] << ", " << cDriver_Input_from_FAST[iTurb].pzVel[iNode] << ", " << cDriver_Output_to_FAST[iTurb].u[iNode] << ", " << cDriver_Output_to_FAST[iTurb].v[iNode] << ", " << cDriver_Output_to_FAST[iTurb].w[iNode] << " " << std::endl ;           
+       }
+       fastcpp_velocity_file.close() ;
+       
+     }
+     
+     FAST_OpFM_Step(&iTurb, &ErrStat, ErrMsg);
+     checkError(ErrStat, ErrMsg);
+
+     // Compute the force from the nacelle only if the drag coefficient is
+     //   greater than zero
+     if (nacelle_cd[iTurb]>0.) {
+
+                             calc_nacelle_force (
                              
                 o_t_FAST[iTurb].u[0], 
                 o_t_FAST[iTurb].v[0], 

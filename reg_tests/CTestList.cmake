@@ -74,6 +74,15 @@ function(ofcpp_regression TESTNAME LABEL)
   regression(${TEST_SCRIPT} ${OPENFASTCPP_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(ofcpp_regression)
 
+# openfast linearized
+function(of_regression_linear TESTNAME LABEL)
+  set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeOpenfastLinearRegressionCase.py")
+  set(OPENFAST_EXECUTABLE "${CTEST_OPENFAST_EXECUTABLE}")
+  set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/glue-codes/openfast")
+  regression(${TEST_SCRIPT} ${OPENFAST_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
+endfunction(of_regression_linear)
+
 # beamdyn
 function(bd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py")
@@ -101,7 +110,6 @@ of_regression("UAE_Upwind_Rigid_WRamp_PwrCurve" "openfast;elastodyn;aerodyn15;se
 of_regression("WP_VSP_WTurb_PitchFail"          "openfast;elastodyn;aerodyn14;servodyn")
 of_regression("WP_VSP_ECD"                      "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("WP_VSP_WTurb"                    "openfast;elastodyn;aerodyn15;servodyn")
-of_regression("WP_Stationary_Linear"            "openfast;elastodyn;aerodyn15")
 of_regression("SWRT_YFree_VS_EDG01"             "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("SWRT_YFree_VS_EDC01"             "openfast;elastodyn;aerodyn15;servodyn")
 of_regression("SWRT_YFree_VS_WTurb"             "openfast;elastodyn;aerodyn14;servodyn")
@@ -117,6 +125,12 @@ of_regression("5MW_Land_BD_DLL_WTurb"                  "openfast;beamdyn;aerodyn
 
 #OpenFAST-C++ regression tests
 ofcpp_regression("5MW_Land_DLL_WTurb_cpp"              "openfast-cpp;elastodyn;aerodyn15;servodyn")
+
+# Linearized OpenFAST regression tests
+of_regression_linear("WP_Stationary_Linear"         "openfast;linear;elastodyn;aerodyn15")
+of_regression_linear("Ideal_Beam_Fixed_Free_Linear" "openfast;linear;beamdyn")
+of_regression_linear("Ideal_Beam_Free_Free_Linear"  "openfast;linear;beamdyn")
+of_regression_linear("5MW_Land_BD_Linear"           "openfast;linear;beamdyn;servodyn")
 
 # BeamDyn regression tests
 bd_regression("bd_5MW_dynamic"            "beamdyn;dynamic")

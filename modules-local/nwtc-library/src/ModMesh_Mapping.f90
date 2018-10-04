@@ -15,11 +15,6 @@
 ! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
-!
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
 !**********************************************************************************************************************************
 !> This code implements the spatial mapping algorithms described in the following papers
 !! -  Sprague, Michael A.; Jonkman, Jason M.; and Jonkman, Bonnie J., "FAST Modular Framework for Wind Turbine Simulation: New 
@@ -44,26 +39,26 @@ MODULE ModMesh_Mapping
       !> Type that describes characteristics of the mapping between two meshes
    TYPE, PUBLIC :: MapType
       INTEGER(IntKi) :: OtherMesh_Element    !< Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src
-      REAL(ReKi)     :: distance             !< magnitude of couple_arm
-      REAL(ReKi)     :: couple_arm(3)        !< Vector between a point and node 1 of an element (p_ODR - p_OSR)
-      REAL(ReKi)     :: shape_fn(2)          !< shape functions: 1-D element-level location [0,1] based on closest-line projection of point
+      REAL(R8Ki)     :: distance             !< magnitude of couple_arm
+      REAL(R8Ki)     :: couple_arm(3)        !< Vector between a point and node 1 of an element (p_ODR - p_OSR)
+      REAL(R8Ki)     :: shape_fn(2)          !< shape functions: 1-D element-level location [0,1] based on closest-line projection of point
    END TYPE MapType
 
       !> data structures (for linearization) containing jacobians of mapping between fields on different meshes
    TYPE, PUBLIC :: MeshMapLinearizationType
          ! values for motions:
-      REAL(ReKi),     ALLOCATABLE :: mi(:,:)           !< block matrix of motions that reflects identity (i.e., solely the mapping of one quantity to itself on another mesh) [-]
-      REAL(ReKi),     ALLOCATABLE :: fx_p(:,:)         !< block matrix of motions that reflects skew-symmetric (cross-product) matrix [-]
-      REAL(ReKi),     ALLOCATABLE :: tv_uD(:,:)        !< block matrix of translational velocity that is multiplied by destination translational displacement [-]
-      REAL(ReKi),     ALLOCATABLE :: tv_uS(:,:)        !< block matrix of translational velocity that is multiplied by source translational displacement [-]
-      REAL(ReKi),     ALLOCATABLE :: ta_uD(:,:)        !< block matrix of translational acceleration that is multiplied by destination translational displacement [-]
-      REAL(ReKi),     ALLOCATABLE :: ta_uS(:,:)        !< block matrix of translational acceleration that is multiplied by source translational displacement [-]
-      REAL(ReKi),     ALLOCATABLE :: ta_rv(:,:)        !< block matrix of translational acceleration that is multiplied by omega (RotationVel) [-]      
+      REAL(R8Ki),     ALLOCATABLE :: mi(:,:)           !< block matrix of motions that reflects identity (i.e., solely the mapping of one quantity to itself on another mesh) [-]
+      REAL(R8Ki),     ALLOCATABLE :: fx_p(:,:)         !< block matrix of motions that reflects skew-symmetric (cross-product) matrix [-]
+      REAL(R8Ki),     ALLOCATABLE :: tv_uD(:,:)        !< block matrix of translational velocity that is multiplied by destination translational displacement [-]
+      REAL(R8Ki),     ALLOCATABLE :: tv_uS(:,:)        !< block matrix of translational velocity that is multiplied by source translational displacement [-]
+      REAL(R8Ki),     ALLOCATABLE :: ta_uD(:,:)        !< block matrix of translational acceleration that is multiplied by destination translational displacement [-]
+      REAL(R8Ki),     ALLOCATABLE :: ta_uS(:,:)        !< block matrix of translational acceleration that is multiplied by source translational displacement [-]
+      REAL(R8Ki),     ALLOCATABLE :: ta_rv(:,:)        !< block matrix of translational acceleration that is multiplied by omega (RotationVel) [-]      
          ! values for loads:
-      REAL(ReKi),     ALLOCATABLE :: li(:,:)           !< block matrix of loads that reflects identity (i.e., solely the mapping on one quantity to itself on another mesh) [-]
-      REAL(ReKi),     ALLOCATABLE :: M_uS(:,:)         !< block matrix of moment that is multiplied by Source u (translationDisp) [-]
-      REAL(ReKi),     ALLOCATABLE :: M_uD(:,:)         !< block matrix of moment that is multiplied by Destination u (translationDisp) [-]
-      REAL(ReKi),     ALLOCATABLE :: M_f(:,:)          !< block matrix of moment that is multiplied by force [-]
+      REAL(R8Ki),     ALLOCATABLE :: li(:,:)           !< block matrix of loads that reflects identity (i.e., solely the mapping on one quantity to itself on another mesh) [-]
+      REAL(R8Ki),     ALLOCATABLE :: M_uS(:,:)         !< block matrix of moment that is multiplied by Source u (translationDisp) [-]
+      REAL(R8Ki),     ALLOCATABLE :: M_uD(:,:)         !< block matrix of moment that is multiplied by Destination u (translationDisp) [-]
+      REAL(R8Ki),     ALLOCATABLE :: M_f(:,:)          !< block matrix of moment that is multiplied by force [-]
    END TYPE
    
    
@@ -78,10 +73,10 @@ MODULE ModMesh_Mapping
       TYPE(MeshType)              :: Lumped_Points_Dest        
 #endif
       INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      !< The pivot values for the factorization of LoadLn2_A_Mat
-      REAL(ReKi),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency.)
-      REAL(ReKi),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The n-by-n (n=3xNNodes) matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping
-      REAL(ReKi),     ALLOCATABLE :: LoadLn2_F(:,:)            !< The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)
-      REAL(ReKi),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)
+      REAL(R8Ki),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency.)
+      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The n-by-n (n=3xNNodes) matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping
+      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_F(:,:)            !< The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)
+      REAL(R8Ki),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)
       
       TYPE(MeshMapLinearizationType) :: dM                     !< type that contains information for linearization matrices, partial M partial u (or y)                  
    END TYPE
@@ -605,10 +600,10 @@ SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !  Error message if ErrStat /= ErrID_None
 
 
-   real(ReKi), allocatable               :: M_A(:,:)        ! linearization matrix for augmented source mesh
-   real(ReKi), allocatable               :: M_SL_fm(:,:)    ! linearization matrix for source-mesh lumped force component of moment
-   real(ReKi), allocatable               :: M_SL_uSm(:,:)   ! linearization matrix for source-mesh lumped translational displacement component of moment
-   real(ReKi), allocatable               :: M_SL_li(:,:)    ! linearization matrix for source-mesh lumped load "identity" component 
+   real(R8Ki), allocatable               :: M_A(:,:)        ! linearization matrix for augmented source mesh
+   real(R8Ki), allocatable               :: M_SL_fm(:,:)    ! linearization matrix for source-mesh lumped force component of moment
+   real(R8Ki), allocatable               :: M_SL_uSm(:,:)   ! linearization matrix for source-mesh lumped translational displacement component of moment
+   real(R8Ki), allocatable               :: M_SL_li(:,:)    ! linearization matrix for source-mesh lumped load "identity" component 
    
    INTEGER(IntKi)                        :: ErrStat2
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
@@ -758,15 +753,15 @@ END SUBROUTINE Linearize_Line2_to_Point
 subroutine FormMatrix_FullLinearization( dM, M_A, M_SL_fm, M_SL_uSm, M_SL_li, ErrStat, ErrMsg )
 
    type(MeshMapLinearizationType), intent(inout) :: dM              !< linearization data type currently filled with values from point-to-point or point-to-line2 linearization
-   real(ReKi), allocatable,        intent(inout) :: M_A(:,:)        !< linearization matrix for augmented source mesh
-   real(ReKi), allocatable,        intent(inout) :: M_SL_fm(:,:)    !< linearization matrix for source-mesh lumped force component of moment
-   real(ReKi), allocatable,        intent(inout) :: M_SL_uSm(:,:)   !< linearization matrix for source-mesh lumped source translational displacement component of moment
-   real(ReKi), allocatable,        intent(inout) :: M_SL_li(:,:)    !< linearization matrix for source-mesh lumped load "identity" component 
+   real(R8Ki), allocatable,        intent(inout) :: M_A(:,:)        !< linearization matrix for augmented source mesh
+   real(R8Ki), allocatable,        intent(inout) :: M_SL_fm(:,:)    !< linearization matrix for source-mesh lumped force component of moment
+   real(R8Ki), allocatable,        intent(inout) :: M_SL_uSm(:,:)   !< linearization matrix for source-mesh lumped source translational displacement component of moment
+   real(R8Ki), allocatable,        intent(inout) :: M_SL_li(:,:)    !< linearization matrix for source-mesh lumped load "identity" component 
       
    INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat         !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None                                   
                                    
-   real(ReKi), allocatable                       :: M(:,:)          ! temporary transfer matrix for linearization (to make sure everything is the correct size)
+   real(R8Ki), allocatable                       :: M(:,:)          ! temporary transfer matrix for linearization (to make sure everything is the correct size)
    
    INTEGER(IntKi)                                :: ErrStat2
    CHARACTER(ErrMsgLen)                          :: ErrMsg2
@@ -1283,7 +1278,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
                   ! subtract I
                do k=1,3
-                  RotationMatrix(k,k)= RotationMatrix(k,k) - 1.0_ReKi
+                  RotationMatrix(k,k)= RotationMatrix(k,k) - 1.0_R8Ki
                end do
                
                FieldValue(:,j) = FieldValue(:,j) + MATMUL(RotationMatrix,(Dest%Position(:,i)-Src%Position(:,n)))
@@ -1320,12 +1315,12 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
             ! bjj: added this IF statement because of numerical issues when the angle of rotation is pi, 
             !      (where DCM_exp( DCM_logmap (x) ) isn't quite x
-         if ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(1), 1.0_ReKi ) ) then
+         if ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(1), 1.0_R8Ki ) ) then
             
             RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
             RotationMatrixD = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrixD )
       
-         elseif ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(2), 1.0_ReKi ) ) then
+         elseif ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(2), 1.0_R8Ki ) ) then
             
             RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
             RotationMatrixD = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrixD )
@@ -1531,7 +1526,8 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    integer(intKi)                          :: i,j, k, n, d_start, d_end, s_start, s_end
-   real(reKi)                              :: tmp, tmpVec(3), SSMat(3,3)
+   real(R8Ki)                              :: tmp, tmpVec(3), SSMat(3,3)
+   real(R8Ki)                              :: RotVel(3)
    
    character(*), parameter :: RoutineName = 'Linearize_Motions_Line2_to_Point'
    ErrStat = ErrID_None
@@ -1544,7 +1540,7 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
          IF (ErrStat >= AbortErrLev) RETURN
    end if
       
-   MeshMap%dM%mi = 0.0_ReKi      
+   MeshMap%dM%mi = 0.0_R8Ki
    do i=1, Dest%Nnodes
                   
       do j=1,NumNodes(ELEMENT_LINE2)
@@ -1586,7 +1582,7 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
             IF (ErrStat >= AbortErrLev) RETURN
       end if
                                     
-      MeshMap%dM%fx_p = 0.0_ReKi      
+      MeshMap%dM%fx_p = 0.0_R8Ki      
       do i=1, Dest%Nnodes
 
          d_start = (i-1)*3+1
@@ -1623,8 +1619,8 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   IF (ErrStat >= AbortErrLev) RETURN
             end if
          
-            MeshMap%dM%tv_uD = 0.0_ReKi      
-            MeshMap%dM%tv_uS = 0.0_ReKi      
+            MeshMap%dM%tv_uD = 0.0_R8Ki
+            MeshMap%dM%tv_uS = 0.0_R8Ki
             do i=1, Dest%Nnodes
 
                d_start = (i-1)*3+1
@@ -1672,8 +1668,8 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
          end if
          
                         
-         MeshMap%dM%ta_uD = 0.0_ReKi      
-         MeshMap%dM%ta_uS = 0.0_ReKi             
+         MeshMap%dM%ta_uD = 0.0_R8Ki
+         MeshMap%dM%ta_uS = 0.0_R8Ki
          if ( Src%FieldMask(MASKID_RotationAcc) ) then            
             do i=1, Dest%Nnodes
             
@@ -1709,8 +1705,9 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_end   = s_start+2
                               
                   TmpVec = Src%RotationVel(:,n) * MeshMap%MapMotions(i)%shape_fn(j)
-                  SSMat = OuterProduct( Src%RotationVel(:,n), TmpVec ) 
-                  tmp   =  dot_product( Src%RotationVel(:,n), TmpVec )
+                  RotVel = Src%RotationVel(:,n)
+                  SSMat = OuterProduct( RotVel, TmpVec ) 
+                  tmp   =  dot_product( RotVel, TmpVec )
                   do k=1,3
                      SSMat(k,k) = SSMat(k,k) - tmp
                   end do                        
@@ -1734,7 +1731,7 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   IF (ErrStat >= AbortErrLev) RETURN
             end if
                         
-            MeshMap%dM%ta_rv = 0.0_ReKi             
+            MeshMap%dM%ta_rv = 0.0_R8Ki             
 
             do i=1, Dest%Nnodes
             
@@ -1748,12 +1745,13 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                                     
-                  tmpVec = cross_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,j)  )
+                  RotVel = Src%RotationVel(:,n)
+                  tmpVec = cross_product( RotVel, MeshMap%DisplacedPosition(:,i,j)  )
                   
-                  SSMat = SkewSymMat( tmpVec ) + OuterProduct( MeshMap%DisplacedPosition(:,i,j), Src%RotationVel(:,n) )
+                  SSMat = SkewSymMat( tmpVec ) + OuterProduct( MeshMap%DisplacedPosition(:,i,j), RotVel )
                   MeshMap%dM%ta_rv( d_start:d_end, s_start:s_end ) =  SSMat * MeshMap%MapMotions(i)%shape_fn(j) 
                                        
-                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) ) * MeshMap%MapMotions(i)%shape_fn(j)
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), RotVel ) * MeshMap%MapMotions(i)%shape_fn(j)
                   do k=0,2
                      MeshMap%dM%ta_rv( d_start+k, s_start+k ) = MeshMap%dM%ta_rv( d_start+k, s_start+k ) - tmp 
                   end do
@@ -1820,11 +1818,15 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 
    LOGICAL         :: found
    LOGICAL         :: on_element
-   
-#ifdef DEBUG_MESHMAPPING
-   INTEGER(IntKi)  :: Un               ! unit number for debugging
    REAL(ReKi)      :: closest_elem_position
    INTEGER(IntKi)  :: closest_elem
+   REAL(ReKi)      :: closest_elem_diff
+   REAL(ReKi)      :: closest_elem_distance
+   
+#ifdef DEBUG_MESHMAPPING
+   INTEGER(IntKi)       :: Un               ! unit number for debugging
+   INTEGER(IntKi)       :: ErrStat2
+   CHARACTER(ErrMsgLen) :: ErrMsg2
 #endif
    
 
@@ -1852,11 +1854,9 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
          found = .false.
          min_dist = HUGE(min_dist)
          
-#ifdef DEBUG_MESHMAPPING
-            ! some values for debugging
-         closest_elem_position = HUGE(min_dist)
+            ! some values for finding mapping if there are some numerical issues
+         closest_elem_diff = HUGE(min_dist)
          closest_elem = 0
-#endif
 
          do jElem = 1, Mesh2%ElemTable(Mesh2_TYPE)%nelem  ! ELEMENT_LINE2 = Mesh2_TYPE
 
@@ -1895,21 +1895,25 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
                else !we're not on the element
                   on_element = .false.
                   
-#ifdef DEBUG_MESHMAPPING
-                  if ( elem_position_SiKi < 0.0_SiKi ) then
-                     if ( -elem_position_SiKi < closest_elem_position ) then
-                        closest_elem_position = -elem_position_SiKi
-                        closest_elem = jElem
-                     end if
-                  else
-                     if ( elem_position_SiKi-1.0_SiKi < closest_elem_position ) then
-                        closest_elem_position = elem_position_SiKi-1.0_SiKi
-                        closest_elem = jElem
+                  if (.not. found) then ! see if we have are very close to the end of an element (numerical roundoff?)
+                     if ( elem_position_SiKi < 0.0_SiKi ) then
+                        if ( -elem_position_SiKi < closest_elem_diff ) then
+                           closest_elem_diff = -elem_position_SiKi
+                           closest_elem = jElem
+                           closest_elem_position = 0.0_ReKi
+                           closest_elem_distance    = sqrt(denom) * closest_elem_diff ! distance from end of element, in meters
+                        end if
+                     else
+                        if ( elem_position_SiKi-1.0_SiKi < closest_elem_diff ) then
+                           closest_elem_diff = elem_position_SiKi-1.0_SiKi
+                           closest_elem = jElem
+                           closest_elem_position = 1.0_ReKi
+                           closest_elem_distance    = sqrt(denom) * closest_elem_diff ! distance from end of element, in meters
+                        end if
                      end if
                   end if
-#endif                                
                   
-               end if               
+               end if
             end if
 
             if (on_element) then
@@ -1937,7 +1941,13 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 
             ! if failed to find an element that the Point projected into, throw an error
          if (.not. found) then
-
+            if ( closest_elem_distance < 5.0e-3 ) then ! if it is within 5mm of the end of an element, we'll accept it
+               NodeMap(i)%OtherMesh_Element = closest_elem
+               NodeMap(i)%shape_fn(1)       = 1.0_ReKi - closest_elem_position
+               NodeMap(i)%shape_fn(2)       = closest_elem_position
+               CALL SetErrStat( ErrID_Info, 'Found close value for node '//trim(num2Lstr(i))//'. ('//trim(num2lstr(closest_elem_distance))//' m)', ErrStat, ErrMsg, RoutineName)
+            end if
+         
             if (NodeMap(i)%OtherMesh_Element .lt. 1 )  then
                CALL SetErrStat( ErrID_Fatal, 'Node '//trim(num2Lstr(i))//' does not project onto any line2 element.', ErrStat, ErrMsg, RoutineName)
                
@@ -1949,8 +1959,8 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
                IF (ErrStat2 >= AbortErrLev) RETURN
                
                CALL SetErrStat( ErrID_Info, 'See '//trim(DebugFileName)//' for mesh debug information.', ErrStat, ErrMsg, RoutineName)               
-               WRITE( Un, '(A,I5,A,I5,A,ES10.5,A)' ) 'Element ', closest_elem, ' is closest to node ', i, &
-                                                   '. It has a relative position of ', closest_elem_position, '.'
+               WRITE( Un, '(A,I5,A,I5,A,ES15.5,A)' ) 'Element ', closest_elem, ' is closest to node ', i, &
+                                                   '. It has a relative position of ', closest_elem_diff, '.'
 
                WRITE( Un, '(A)') '************************************************** Mesh1 ***************************************************'
                WRITE( Un, '(A)') 'Mesh1 is the destination mesh for transfer of motions/scalars; it is the source mesh for transfer of loads.'
@@ -2644,7 +2654,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
                ! subtract I
             do j=1,3
-               RotationMatrix(j,j)= RotationMatrix(j,j) - 1.0_ReKi
+               RotationMatrix(j,j)= RotationMatrix(j,j) - 1.0_R8Ki
             end do
 
 
@@ -2791,7 +2801,8 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
    CHARACTER(*), PARAMETER                 :: RoutineName = 'Linearize_Motions_Point_to_Point'
    
    integer(intKi)                          :: i,j,k, n, d_start, d_end, s_start, s_end
-   real(reKi)                              :: tmp, tmpVec(3), SSMat(3,3)
+   real(r8Ki)                              :: tmp, tmpVec(3), SSMat(3,3)
+   real(r8Ki)                              :: RotVel(3), RotAcc(3)
    
    
 
@@ -2806,12 +2817,12 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
             IF (ErrStat >= AbortErrLev) RETURN
       end if
       
-      MeshMap%dM%mi = 0.0_ReKi      
+      MeshMap%dM%mi = 0.0_R8Ki      
       do i=1, Dest%Nnodes
 
          n = MeshMap%MapMotions(i)%OtherMesh_Element
          do j=1,3
-            MeshMap%dM%mi( (i-1)*3+j, (n-1)*3+j ) = 1.0_ReKi
+            MeshMap%dM%mi( (i-1)*3+j, (n-1)*3+j ) = 1.0_R8Ki
          end do         
       end do
       
@@ -2835,7 +2846,7 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                IF (ErrStat >= AbortErrLev) RETURN
          end if
                                     
-         MeshMap%dM%fx_p = 0.0_ReKi      
+         MeshMap%dM%fx_p = 0.0_R8Ki      
          do i=1, Dest%Nnodes
 
             d_start = (i-1)*3+1
@@ -2862,8 +2873,8 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                      IF (ErrStat >= AbortErrLev) RETURN
                end if
                      
-               MeshMap%dM%tv_uD = 0.0_ReKi      
-               MeshMap%dM%tv_uS = 0.0_ReKi      
+               MeshMap%dM%tv_uD = 0.0_R8Ki      
+               MeshMap%dM%tv_uS = 0.0_R8Ki      
                do i=1, Dest%Nnodes
 
                   n = MeshMap%MapMotions(i)%OtherMesh_Element
@@ -2873,7 +2884,8 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                   
-                  SSMat = SkewSymMat( Src%RotationVel(:,n) )                  
+                  RotVel = Src%RotationVel(:,n)
+                  SSMat = SkewSymMat( RotVel )
                   MeshMap%dM%tv_uD( d_start:d_end, d_start:d_end ) = MeshMap%dM%tv_uD( d_start:d_end, d_start:d_end ) + SSMat
                   MeshMap%dM%tv_uS( d_start:d_end, s_start:s_end ) = -SSMat
                   
@@ -2904,8 +2916,8 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   IF (ErrStat >= AbortErrLev) RETURN
             end if                     
                         
-            MeshMap%dM%ta_uD = 0.0_ReKi      
-            MeshMap%dM%ta_uS = 0.0_ReKi      
+            MeshMap%dM%ta_uD = 0.0_R8Ki      
+            MeshMap%dM%ta_uS = 0.0_R8Ki      
             if ( Src%FieldMask(MASKID_RotationAcc) ) then            
                do i=1, Dest%Nnodes
             
@@ -2915,7 +2927,8 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n-1)*3+1
                   s_end   = s_start+2
                                     
-                  SSMat = SkewSymMat( Src%RotationAcc(:,n) ) 
+                  RotAcc = Src%RotationAcc(:,n)
+                  SSMat = SkewSymMat( RotAcc )
                   MeshMap%dM%ta_uD( d_start:d_end, d_start:d_end ) =  MeshMap%dM%ta_uD( d_start:d_end, d_start:d_end ) + SSMat
                   MeshMap%dM%ta_uS( d_start:d_end, s_start:s_end ) = -SSMat
                   
@@ -2932,8 +2945,9 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n-1)*3+1
                   s_end   = s_start+2
                                     
-                  SSMat = OuterProduct( Src%RotationVel(:,n), Src%RotationVel(:,n) ) 
-                  tmp   =  dot_product( Src%RotationVel(:,n), Src%RotationVel(:,n) )
+                  RotVel = Src%RotationVel(:,n)
+                  SSMat = OuterProduct( RotVel, RotVel )
+                  tmp   =  dot_product( RotVel, RotVel )
                   do k=1,3
                      SSMat(k,k) = SSMat(k,k) - tmp
                   end do                        
@@ -2954,7 +2968,7 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                      IF (ErrStat >= AbortErrLev) RETURN
                end if
                         
-               MeshMap%dM%ta_rv = 0.0_ReKi                     
+               MeshMap%dM%ta_rv = 0.0_R8Ki
                do i=1, Dest%Nnodes
             
                   n = MeshMap%MapMotions(i)%OtherMesh_Element
@@ -2963,12 +2977,13 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                                     
-                  tmpVec = cross_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1)  )
+                  RotVel = Src%RotationVel(:,n)
+                  tmpVec = cross_product( RotVel, MeshMap%DisplacedPosition(:,i,1)  )
                   
                   MeshMap%dM%ta_rv( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  ) + &
-                                                                     OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                                                                     OuterProduct( MeshMap%DisplacedPosition(:,i,1), RotVel )
                   
-                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), RotVel )
                   do j=0,2
                      MeshMap%dM%ta_rv( d_start+j, s_start+j ) = MeshMap%dM%ta_rv( d_start+j, s_start+j ) - tmp
                   end do                        
@@ -3089,7 +3104,7 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
 
       ! local variables
    integer(intKi)                                 :: i,j,n, d_start, d_end, s_start, s_end
-   real(reKi)                                     :: DisplacedPosition(3), SSmat(3,3)
+   real(r8Ki)                                     :: DisplacedPosition(3), SSmat(3,3)
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
    character(*), parameter                        :: RoutineName = 'Linearize_Loads_Point_to_Point'
@@ -3114,13 +3129,13 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
          IF (ErrStat >= AbortErrLev) RETURN
    end if
       
-   MeshMap%dM%li = 0.0_ReKi
+   MeshMap%dM%li = 0.0_R8Ki
    do i = 1, Src%NNodes
       !if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had non-point elements (or nodes not contained in an element)
          
       n = MeshMap%MapLoads(i)%OtherMesh_Element
       do j=1,3
-         MeshMap%dM%li( (n-1)*3+j, (i-1)*3+j ) = 1.0_ReKi
+         MeshMap%dM%li( (n-1)*3+j, (i-1)*3+j ) = 1.0_R8Ki
       end do
    end do
                               
@@ -3162,8 +3177,8 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
       end if
       
       
-      MeshMap%dM%M_uD = 0.0_ReKi
-      MeshMap%dM%M_uS = 0.0_ReKi
+      MeshMap%dM%M_uD = 0.0_R8Ki
+      MeshMap%dM%M_uS = 0.0_R8Ki
       
       do i = 1, Src%NNodes         
          n = MeshMap%MapLoads(i)%OtherMesh_Element
@@ -3197,7 +3212,7 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
       end if
             
       
-      MeshMap%dM%m_f = 0.0_ReKi      
+      MeshMap%dM%m_f = 0.0_R8Ki      
       
       do i = 1, Src%NNodes         
          n = MeshMap%MapLoads(i)%OtherMesh_Element
@@ -3500,10 +3515,10 @@ SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
    CHARACTER(*), PARAMETER               :: RoutineName = 'Linearize_Line2_to_Line2'   
 
-   real(ReKi), allocatable               :: M_A(:,:)        ! linearization matrix for augmented source mesh
-   real(ReKi), allocatable               :: M_SL_fm(:,:)    ! linearization matrix for source-mesh lumped force component of moment
-   real(ReKi), allocatable               :: M_SL_uSm(:,:)   ! linearization matrix for source-mesh lumped translational displacement component of moment
-   real(ReKi), allocatable               :: M_SL_li(:,:)    ! linearization matrix for source-mesh lumped load "identity" component 
+   real(R8Ki), allocatable               :: M_A(:,:)        ! linearization matrix for augmented source mesh
+   real(R8Ki), allocatable               :: M_SL_fm(:,:)    ! linearization matrix for source-mesh lumped force component of moment
+   real(R8Ki), allocatable               :: M_SL_uSm(:,:)   ! linearization matrix for source-mesh lumped translational displacement component of moment
+   real(R8Ki), allocatable               :: M_SL_li(:,:)    ! linearization matrix for source-mesh lumped load "identity" component 
         
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -3788,12 +3803,12 @@ SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, 
    TYPE(MeshType),                 INTENT(IN   )  :: DestDisp  !< The destination mesh's cooresponding position mesh
 
       ! local variables
-   REAL(ReKi)                                     :: DisplacedPosition(3), SSMat(3,3)
+   REAL(R8Ki)                                     :: DisplacedPosition(3), SSMat(3,3)
 
-   REAL(ReKi), ALLOCATABLE                        :: li_D(:,:)
-   REAL(ReKi), ALLOCATABLE                        :: muS_D(:,:)
-   REAL(ReKi), ALLOCATABLE                        :: muD_D(:,:)
-   REAL(ReKi), ALLOCATABLE                        :: mf_D(:,:)
+   REAL(R8Ki), ALLOCATABLE                        :: li_D(:,:)
+   REAL(R8Ki), ALLOCATABLE                        :: muS_D(:,:)
+   REAL(R8Ki), ALLOCATABLE                        :: muD_D(:,:)
+   REAL(R8Ki), ALLOCATABLE                        :: mf_D(:,:)
    
    integer(intKi)                                 :: i, j, jElem, k, n, d_start, d_end, s_start, s_end
 
@@ -3823,7 +3838,7 @@ SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, 
          end if         
    end if
       
-   li_D = 0.0_ReKi
+   li_D = 0.0_R8Ki
    do i = 1, Src%NNodes
          
       jElem = MeshMap%MapLoads(i)%OtherMesh_Element
@@ -3869,8 +3884,8 @@ SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, 
             end if
       end if
                  
-      muD_D = 0.0_ReKi      
-      muS_D = 0.0_ReKi         
+      muD_D = 0.0_R8Ki      
+      muS_D = 0.0_R8Ki         
       do i = 1, Src%NNodes         
          jElem = MeshMap%MapLoads(i)%OtherMesh_Element
                
@@ -3907,7 +3922,7 @@ SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, 
       end if
             
       
-      mf_D = 0.0_ReKi         
+      mf_D = 0.0_R8Ki         
       do i = 1, Src%NNodes         
          jElem = MeshMap%MapLoads(i)%OtherMesh_Element
                
@@ -4415,7 +4430,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                               
                               ! convert back to DCM:
                            RefOrientationD = DCM_exp( TmpVec )
-                           RefOrientation  = REAL(RefOrientationD, ReKi)
+                           RefOrientation  = REAL(RefOrientationD, R8Ki)
 
                         
 
@@ -4740,10 +4755,10 @@ SUBROUTINE Linearize_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat, ErrMsg, Sr
          IF (ErrStat >= AbortErrLev) RETURN       
    end if
       
-   MeshMap%dM%li = 0.0_ReKi      
+   MeshMap%dM%li = 0.0_R8Ki      
    do i=1, Src%Nnodes
       do j=1,3
-         MeshMap%dM%li( (i-1)*3+j, (i-1)*3+j ) = 1.0_ReKi
+         MeshMap%dM%li( (i-1)*3+j, (i-1)*3+j ) = 1.0_R8Ki
       end do      
    end do
       
@@ -5156,7 +5171,7 @@ SUBROUTINE Linearize_Lump_Line2_to_Point( Line2_Src, Point_Dest, dM, ErrStat, Er
 
    
    ! local variables
-   REAL(ReKi)                            :: c, TwoC
+   REAL(R8Ki)                            :: c, TwoC
   
    INTEGER(IntKi)                        :: n1, n2  ! node numbers
    INTEGER(IntKi)                        :: i, j, k, iComp  
@@ -5186,15 +5201,15 @@ SUBROUTINE Linearize_Lump_Line2_to_Point( Line2_Src, Point_Dest, dM, ErrStat, Er
          IF (ErrStat >= AbortErrLev) RETURN
    end if
       
-   dM%li = 0.0_ReKi                           
+   dM%li = 0.0_R8Ki                           
       ! loop over source mesh, integrating over each element
    do i = 1, Line2_Src%ElemTable(ELEMENT_LINE2)%nelem
 
       n1 = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
       n2 = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
          
-      c    = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%det_jac / 3.0_ReKi  != TwoNorm( p(n2)-p(n1) )/6 = det_jac/3
-      TwoC = 2.0_ReKi * c
+      c    = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%det_jac / 3.0_R8Ki  != TwoNorm( p(n2)-p(n1) )/6 = det_jac/3
+      TwoC = 2.0_R8Ki * c
 
       do iComp=1,3 !3 components of force or moment
          j = (n1-1)*3 + iComp      ! this is the index of the node/component of the lumped value
@@ -5238,8 +5253,8 @@ SUBROUTINE Linearize_Lump_Line2_to_Point( Line2_Src, Point_Dest, dM, ErrStat, Er
         
             c = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%det_jac / 3.0_ReKi  != TwoNorm( p(n2)-p(n1) )/6 = det_jac_Ovr3
                            
-            Point_Dest%Force(:,n1) = Point_Dest%Force(:,n1) + c * ( 2.*Line2_Src%Force(:,n1) +    Line2_Src%Force(:,n2) )
-            Point_Dest%Force(:,n2) = Point_Dest%Force(:,n2) + c * (    Line2_Src%Force(:,n1) + 2.*Line2_Src%Force(:,n2) )
+            Point_Dest%Force(:,n1) = Point_Dest%Force(:,n1) + c * ( 2.0_ReKi*Line2_Src%Force(:,n1) +    Line2_Src%Force(:,n2) )
+            Point_Dest%Force(:,n2) = Point_Dest%Force(:,n2) + c * (    Line2_Src%Force(:,n1) + 2.0_ReKi*Line2_Src%Force(:,n2) )
 
          end do
       end if
@@ -5746,7 +5761,7 @@ END SUBROUTINE WriteMappingTransferToFile
 ! WARNING This file is generated automatically by the FAST registry
 ! Do not edit.  Your changes to this file will be lost.
 !
-! FAST Registry (v3.02.00, 22-Jun-2016)
+! FAST Registry (v3.02.00, 23-Jul-2016)
 !*********************************************************************************************************************************
  SUBROUTINE NWTC_Library_CopyMapType( SrcMapTypeData, DstMapTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(MapType), INTENT(IN) :: SrcMapTypeData
@@ -5818,9 +5833,9 @@ END SUBROUTINE WriteMappingTransferToFile
   Db_BufSz  = 0
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! OtherMesh_Element
-      Re_BufSz   = Re_BufSz   + 1  ! distance
-      Re_BufSz   = Re_BufSz   + SIZE(InData%couple_arm)  ! couple_arm
-      Re_BufSz   = Re_BufSz   + SIZE(InData%shape_fn)  ! shape_fn
+      Db_BufSz   = Db_BufSz   + 1  ! distance
+      Db_BufSz   = Db_BufSz   + SIZE(InData%couple_arm)  ! couple_arm
+      Db_BufSz   = Db_BufSz   + SIZE(InData%shape_fn)  ! shape_fn
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -5850,12 +5865,12 @@ END SUBROUTINE WriteMappingTransferToFile
 
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%OtherMesh_Element
       Int_Xferred   = Int_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%distance
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%couple_arm))-1 ) = PACK(InData%couple_arm,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%couple_arm)
-      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%shape_fn))-1 ) = PACK(InData%shape_fn,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%shape_fn)
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%distance
+      Db_Xferred   = Db_Xferred   + 1
+      DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%couple_arm))-1 ) = PACK(InData%couple_arm,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%couple_arm)
+      DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%shape_fn))-1 ) = PACK(InData%shape_fn,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%shape_fn)
  END SUBROUTINE NWTC_Library_PackMapType
 
  SUBROUTINE NWTC_Library_UnPackMapType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -5895,8 +5910,8 @@ END SUBROUTINE WriteMappingTransferToFile
   Int_Xferred  = 1
       OutData%OtherMesh_Element = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%distance = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+      OutData%distance = REAL( DbKiBuf( Db_Xferred ), R8Ki) 
+      Db_Xferred   = Db_Xferred + 1
     i1_l = LBOUND(OutData%couple_arm,1)
     i1_u = UBOUND(OutData%couple_arm,1)
     ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
@@ -5905,8 +5920,8 @@ END SUBROUTINE WriteMappingTransferToFile
        RETURN
     END IF
     mask1 = .TRUE. 
-      OutData%couple_arm = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%couple_arm))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%couple_arm)
+      OutData%couple_arm = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%couple_arm))-1 ), mask1, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%couple_arm)
     DEALLOCATE(mask1)
     i1_l = LBOUND(OutData%shape_fn,1)
     i1_u = UBOUND(OutData%shape_fn,1)
@@ -5916,8 +5931,8 @@ END SUBROUTINE WriteMappingTransferToFile
        RETURN
     END IF
     mask1 = .TRUE. 
-      OutData%shape_fn = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%shape_fn))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%shape_fn)
+      OutData%shape_fn = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%shape_fn))-1 ), mask1, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%shape_fn)
     DEALLOCATE(mask1)
  END SUBROUTINE NWTC_Library_UnPackMapType
 
@@ -6175,57 +6190,57 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! mi allocated yes/no
   IF ( ALLOCATED(InData%mi) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! mi upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%mi)  ! mi
+      Db_BufSz   = Db_BufSz   + SIZE(InData%mi)  ! mi
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! fx_p allocated yes/no
   IF ( ALLOCATED(InData%fx_p) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! fx_p upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%fx_p)  ! fx_p
+      Db_BufSz   = Db_BufSz   + SIZE(InData%fx_p)  ! fx_p
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! tv_uD allocated yes/no
   IF ( ALLOCATED(InData%tv_uD) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! tv_uD upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%tv_uD)  ! tv_uD
+      Db_BufSz   = Db_BufSz   + SIZE(InData%tv_uD)  ! tv_uD
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! tv_uS allocated yes/no
   IF ( ALLOCATED(InData%tv_uS) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! tv_uS upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%tv_uS)  ! tv_uS
+      Db_BufSz   = Db_BufSz   + SIZE(InData%tv_uS)  ! tv_uS
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! ta_uD allocated yes/no
   IF ( ALLOCATED(InData%ta_uD) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! ta_uD upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ta_uD)  ! ta_uD
+      Db_BufSz   = Db_BufSz   + SIZE(InData%ta_uD)  ! ta_uD
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! ta_uS allocated yes/no
   IF ( ALLOCATED(InData%ta_uS) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! ta_uS upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ta_uS)  ! ta_uS
+      Db_BufSz   = Db_BufSz   + SIZE(InData%ta_uS)  ! ta_uS
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! ta_rv allocated yes/no
   IF ( ALLOCATED(InData%ta_rv) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! ta_rv upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ta_rv)  ! ta_rv
+      Db_BufSz   = Db_BufSz   + SIZE(InData%ta_rv)  ! ta_rv
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! li allocated yes/no
   IF ( ALLOCATED(InData%li) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! li upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%li)  ! li
+      Db_BufSz   = Db_BufSz   + SIZE(InData%li)  ! li
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! M_uS allocated yes/no
   IF ( ALLOCATED(InData%M_uS) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! M_uS upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%M_uS)  ! M_uS
+      Db_BufSz   = Db_BufSz   + SIZE(InData%M_uS)  ! M_uS
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! M_uD allocated yes/no
   IF ( ALLOCATED(InData%M_uD) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! M_uD upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%M_uD)  ! M_uD
+      Db_BufSz   = Db_BufSz   + SIZE(InData%M_uD)  ! M_uD
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! M_f allocated yes/no
   IF ( ALLOCATED(InData%M_f) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! M_f upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%M_f)  ! M_f
+      Db_BufSz   = Db_BufSz   + SIZE(InData%M_f)  ! M_f
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -6267,8 +6282,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%mi,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%mi)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%mi))-1 ) = PACK(InData%mi,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%mi)
+      IF (SIZE(InData%mi)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%mi))-1 ) = PACK(InData%mi,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%mi)
   END IF
   IF ( .NOT. ALLOCATED(InData%fx_p) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6283,8 +6298,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fx_p,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%fx_p)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%fx_p))-1 ) = PACK(InData%fx_p,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%fx_p)
+      IF (SIZE(InData%fx_p)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%fx_p))-1 ) = PACK(InData%fx_p,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%fx_p)
   END IF
   IF ( .NOT. ALLOCATED(InData%tv_uD) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6299,8 +6314,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv_uD,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%tv_uD)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%tv_uD))-1 ) = PACK(InData%tv_uD,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%tv_uD)
+      IF (SIZE(InData%tv_uD)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%tv_uD))-1 ) = PACK(InData%tv_uD,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%tv_uD)
   END IF
   IF ( .NOT. ALLOCATED(InData%tv_uS) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6315,8 +6330,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv_uS,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%tv_uS)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%tv_uS))-1 ) = PACK(InData%tv_uS,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%tv_uS)
+      IF (SIZE(InData%tv_uS)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%tv_uS))-1 ) = PACK(InData%tv_uS,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%tv_uS)
   END IF
   IF ( .NOT. ALLOCATED(InData%ta_uD) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6331,8 +6346,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_uD,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%ta_uD)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ta_uD))-1 ) = PACK(InData%ta_uD,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%ta_uD)
+      IF (SIZE(InData%ta_uD)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%ta_uD))-1 ) = PACK(InData%ta_uD,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%ta_uD)
   END IF
   IF ( .NOT. ALLOCATED(InData%ta_uS) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6347,8 +6362,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_uS,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%ta_uS)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ta_uS))-1 ) = PACK(InData%ta_uS,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%ta_uS)
+      IF (SIZE(InData%ta_uS)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%ta_uS))-1 ) = PACK(InData%ta_uS,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%ta_uS)
   END IF
   IF ( .NOT. ALLOCATED(InData%ta_rv) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6363,8 +6378,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_rv,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%ta_rv)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ta_rv))-1 ) = PACK(InData%ta_rv,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%ta_rv)
+      IF (SIZE(InData%ta_rv)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%ta_rv))-1 ) = PACK(InData%ta_rv,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%ta_rv)
   END IF
   IF ( .NOT. ALLOCATED(InData%li) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6379,8 +6394,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%li,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%li)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%li))-1 ) = PACK(InData%li,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%li)
+      IF (SIZE(InData%li)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%li))-1 ) = PACK(InData%li,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%li)
   END IF
   IF ( .NOT. ALLOCATED(InData%M_uS) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6395,8 +6410,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_uS,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%M_uS)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M_uS))-1 ) = PACK(InData%M_uS,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%M_uS)
+      IF (SIZE(InData%M_uS)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%M_uS))-1 ) = PACK(InData%M_uS,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%M_uS)
   END IF
   IF ( .NOT. ALLOCATED(InData%M_uD) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6411,8 +6426,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_uD,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%M_uD)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M_uD))-1 ) = PACK(InData%M_uD,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%M_uD)
+      IF (SIZE(InData%M_uD)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%M_uD))-1 ) = PACK(InData%M_uD,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%M_uD)
   END IF
   IF ( .NOT. ALLOCATED(InData%M_f) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6427,8 +6442,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_f,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%M_f)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M_f))-1 ) = PACK(InData%M_f,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%M_f)
+      IF (SIZE(InData%M_f)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%M_f))-1 ) = PACK(InData%M_f,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%M_f)
   END IF
  END SUBROUTINE NWTC_Library_PackMeshMapLinearizationType
 
@@ -6488,8 +6503,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%mi)>0) OutData%mi = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%mi))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%mi)
+      IF (SIZE(OutData%mi)>0) OutData%mi = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%mi))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%mi)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! fx_p not allocated
@@ -6514,8 +6529,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%fx_p)>0) OutData%fx_p = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%fx_p))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%fx_p)
+      IF (SIZE(OutData%fx_p)>0) OutData%fx_p = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%fx_p))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%fx_p)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tv_uD not allocated
@@ -6540,8 +6555,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%tv_uD)>0) OutData%tv_uD = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%tv_uD))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%tv_uD)
+      IF (SIZE(OutData%tv_uD)>0) OutData%tv_uD = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%tv_uD))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%tv_uD)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tv_uS not allocated
@@ -6566,8 +6581,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%tv_uS)>0) OutData%tv_uS = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%tv_uS))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%tv_uS)
+      IF (SIZE(OutData%tv_uS)>0) OutData%tv_uS = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%tv_uS))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%tv_uS)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta_uD not allocated
@@ -6592,8 +6607,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%ta_uD)>0) OutData%ta_uD = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ta_uD))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%ta_uD)
+      IF (SIZE(OutData%ta_uD)>0) OutData%ta_uD = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%ta_uD))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%ta_uD)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta_uS not allocated
@@ -6618,8 +6633,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%ta_uS)>0) OutData%ta_uS = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ta_uS))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%ta_uS)
+      IF (SIZE(OutData%ta_uS)>0) OutData%ta_uS = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%ta_uS))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%ta_uS)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta_rv not allocated
@@ -6644,8 +6659,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%ta_rv)>0) OutData%ta_rv = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ta_rv))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%ta_rv)
+      IF (SIZE(OutData%ta_rv)>0) OutData%ta_rv = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%ta_rv))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%ta_rv)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! li not allocated
@@ -6670,8 +6685,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%li)>0) OutData%li = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%li))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%li)
+      IF (SIZE(OutData%li)>0) OutData%li = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%li))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%li)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M_uS not allocated
@@ -6696,8 +6711,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%M_uS)>0) OutData%M_uS = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M_uS))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%M_uS)
+      IF (SIZE(OutData%M_uS)>0) OutData%M_uS = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%M_uS))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%M_uS)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M_uD not allocated
@@ -6722,8 +6737,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%M_uD)>0) OutData%M_uD = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M_uD))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%M_uD)
+      IF (SIZE(OutData%M_uD)>0) OutData%M_uD = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%M_uD))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%M_uD)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M_f not allocated
@@ -6748,8 +6763,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%M_f)>0) OutData%M_f = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M_f))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%M_f)
+      IF (SIZE(OutData%M_f)>0) OutData%M_f = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%M_f))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%M_f)
     DEALLOCATE(mask2)
   END IF
  END SUBROUTINE NWTC_Library_UnPackMeshMapLinearizationType
@@ -7094,22 +7109,22 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! DisplacedPosition allocated yes/no
   IF ( ALLOCATED(InData%DisplacedPosition) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! DisplacedPosition upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%DisplacedPosition)  ! DisplacedPosition
+      Db_BufSz   = Db_BufSz   + SIZE(InData%DisplacedPosition)  ! DisplacedPosition
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! LoadLn2_F allocated yes/no
   IF ( ALLOCATED(InData%LoadLn2_F) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! LoadLn2_F upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%LoadLn2_F)  ! LoadLn2_F
+      Db_BufSz   = Db_BufSz   + SIZE(InData%LoadLn2_F)  ! LoadLn2_F
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! LoadLn2_A_Mat allocated yes/no
   IF ( ALLOCATED(InData%LoadLn2_A_Mat) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! LoadLn2_A_Mat upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%LoadLn2_A_Mat)  ! LoadLn2_A_Mat
+      Db_BufSz   = Db_BufSz   + SIZE(InData%LoadLn2_A_Mat)  ! LoadLn2_A_Mat
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! LoadLn2_M allocated yes/no
   IF ( ALLOCATED(InData%LoadLn2_M) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! LoadLn2_M upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%LoadLn2_M)  ! LoadLn2_M
+      Db_BufSz   = Db_BufSz   + SIZE(InData%LoadLn2_M)  ! LoadLn2_M
   END IF
       Int_BufSz   = Int_BufSz + 3  ! dM: size of buffers for each call to pack subtype
       CALL NWTC_Library_Packmeshmaplinearizationtype( Re_Buf, Db_Buf, Int_Buf, InData%dM, ErrStat2, ErrMsg2, .TRUE. ) ! dM 
@@ -7363,8 +7378,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DisplacedPosition,3)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%DisplacedPosition)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%DisplacedPosition))-1 ) = PACK(InData%DisplacedPosition,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%DisplacedPosition)
+      IF (SIZE(InData%DisplacedPosition)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%DisplacedPosition))-1 ) = PACK(InData%DisplacedPosition,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%DisplacedPosition)
   END IF
   IF ( .NOT. ALLOCATED(InData%LoadLn2_F) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -7379,8 +7394,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LoadLn2_F,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%LoadLn2_F)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%LoadLn2_F))-1 ) = PACK(InData%LoadLn2_F,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%LoadLn2_F)
+      IF (SIZE(InData%LoadLn2_F)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%LoadLn2_F))-1 ) = PACK(InData%LoadLn2_F,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%LoadLn2_F)
   END IF
   IF ( .NOT. ALLOCATED(InData%LoadLn2_A_Mat) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -7395,8 +7410,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LoadLn2_A_Mat,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%LoadLn2_A_Mat)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%LoadLn2_A_Mat))-1 ) = PACK(InData%LoadLn2_A_Mat,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%LoadLn2_A_Mat)
+      IF (SIZE(InData%LoadLn2_A_Mat)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%LoadLn2_A_Mat))-1 ) = PACK(InData%LoadLn2_A_Mat,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%LoadLn2_A_Mat)
   END IF
   IF ( .NOT. ALLOCATED(InData%LoadLn2_M) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -7411,8 +7426,8 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LoadLn2_M,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%LoadLn2_M)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%LoadLn2_M))-1 ) = PACK(InData%LoadLn2_M,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%LoadLn2_M)
+      IF (SIZE(InData%LoadLn2_M)>0) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%LoadLn2_M))-1 ) = PACK(InData%LoadLn2_M,.TRUE.)
+      Db_Xferred   = Db_Xferred   + SIZE(InData%LoadLn2_M)
   END IF
       CALL NWTC_Library_Packmeshmaplinearizationtype( Re_Buf, Db_Buf, Int_Buf, InData%dM, ErrStat2, ErrMsg2, OnlySize ) ! dM 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -7775,8 +7790,8 @@ ENDIF
        RETURN
     END IF
     mask3 = .TRUE. 
-      IF (SIZE(OutData%DisplacedPosition)>0) OutData%DisplacedPosition = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%DisplacedPosition))-1 ), mask3, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%DisplacedPosition)
+      IF (SIZE(OutData%DisplacedPosition)>0) OutData%DisplacedPosition = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%DisplacedPosition))-1 ), mask3, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%DisplacedPosition)
     DEALLOCATE(mask3)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LoadLn2_F not allocated
@@ -7801,8 +7816,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%LoadLn2_F)>0) OutData%LoadLn2_F = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%LoadLn2_F))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%LoadLn2_F)
+      IF (SIZE(OutData%LoadLn2_F)>0) OutData%LoadLn2_F = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%LoadLn2_F))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%LoadLn2_F)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LoadLn2_A_Mat not allocated
@@ -7827,8 +7842,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%LoadLn2_A_Mat)>0) OutData%LoadLn2_A_Mat = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%LoadLn2_A_Mat))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%LoadLn2_A_Mat)
+      IF (SIZE(OutData%LoadLn2_A_Mat)>0) OutData%LoadLn2_A_Mat = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%LoadLn2_A_Mat))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%LoadLn2_A_Mat)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LoadLn2_M not allocated
@@ -7853,8 +7868,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%LoadLn2_M)>0) OutData%LoadLn2_M = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%LoadLn2_M))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%LoadLn2_M)
+      IF (SIZE(OutData%LoadLn2_M)>0) OutData%LoadLn2_M = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(SIZE(OutData%LoadLn2_M))-1 ), mask2, 0.0_DbKi ), R8Ki)
+      Db_Xferred   = Db_Xferred   + SIZE(OutData%LoadLn2_M)
     DEALLOCATE(mask2)
   END IF
       Buf_size=IntKiBuf( Int_Xferred )

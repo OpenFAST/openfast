@@ -129,6 +129,7 @@ typedef  ^               InitOutputType         CHARACTER(LinChanLen) LinNames_y
 typedef  ^               InitOutputType         CHARACTER(LinChanLen) LinNames_u      {:} - -   "Names of the inputs used in linearization" -
 typedef  ^               InitOutputType         LOGICAL               RotFrame_y      {:} - -   "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame" -
 typedef  ^               InitOutputType         LOGICAL               RotFrame_u      {:} - -   "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame" -
+typedef  ^               InitOutputType         LOGICAL               IsLoad_u        {:} - -   "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 
 
 # ..... Misc/Optimization variables.................................................................................................
