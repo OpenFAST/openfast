@@ -15,11 +15,6 @@
 ! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
-!
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
 !**********************************************************************************************************************************
 
 !..................................................................................................................................
@@ -84,7 +79,7 @@ MODULE NWTC_Num
       MODULE PROCEDURE EulerExtractR8
       MODULE PROCEDURE EulerExtractR16
    END INTERFACE
-   
+
       !> \copydoc nwtc_num::outerproductr4
    INTERFACE OuterProduct
       MODULE PROCEDURE OuterProductR4
@@ -1072,11 +1067,7 @@ CONTAINS
 !! \f}
 !! where \f$v\f$ is the skew-symmetric matrix associated with the unit-length eigenvector of \f$\Lambda\f$ associated with the eigenvalue 1.
 !! However, this equation has numerical issues near \f$\theta = \pi\f$, so for \f$\theta > 3.1\f$  we instead implement
-!! \f{equation}{
-!!\lambda_1 = \pm \theta\sqrt{ \frac{\left(1 + \Lambda_{11} - \Lambda_{22} - \Lambda_{33}\right)}{2\left(1-\cos\theta\right)}   } \\
-!!\lambda_2 = \pm \theta\sqrt{ \frac{\left(1 + \Lambda_{22} - \Lambda_{11} - \Lambda_{33}\right)}{2\left(1-\cos\theta\right)}   } \\
-!!\lambda_3 = \pm \theta\sqrt{ \frac{\left(1 + \Lambda_{33} - \Lambda_{11} - \Lambda_{22}\right)}{2\left(1-\cos\theta\right)}   }
-!! \f}
+!! a separate equation to find lambda * sign(lambda(indx_max))
 !! and use \f$\Lambda - \Lambda^T\f$ to choose the appropriate signs. 
 !!   
 !! This routine is the inverse of DCM_exp (nwtc_num::dcm_exp). \n
@@ -1094,7 +1085,8 @@ CONTAINS
    REAL(DbKi)                        :: cosTheta
    REAL(DbKi)                        :: TwoSinTheta
    REAL(DbKi)                        :: v(3)
-   INTEGER(IntKi)                    :: indx_max, i
+   REAL(DbKi)                        :: divisor
+   INTEGER(IntKi)                    :: indx_max
       
          ! initialization
       ErrStat = ErrID_None
@@ -1109,48 +1101,55 @@ CONTAINS
          thetaOut = theta
       END IF      
       
+      !> Note that \f$ DCM = \begin{bmatrix}
+      !!     1-\frac{1-\cos\theta}{\theta^2}\left( \lambda_3^2 + \lambda_2^2\right) 
+      !!   &   \frac{\sin\theta}{\theta}\lambda_3+\frac{1-\cos\theta}{\theta^2}\lambda_1\lambda_2  
+      !!   &  -\frac{\sin\theta}{\theta}\lambda_2+\frac{1-\cos\theta}{\theta^2}\lambda_1\lambda_3 \\
+      !!      -\frac{\sin\theta}{\theta}\lambda_3+\frac{1-\cos\theta}{\theta^2}\lambda_1\lambda_2
+      !!   &  1-\frac{1-\cos\theta}{\theta^2}\left( \lambda_3^2 + \lambda_1^2\right) 
+      !!   &  \frac{\sin\theta}{\theta}\lambda_1+\frac{1-\cos\theta}{\theta^2}\lambda_2\lambda_3  \\
+      !!      \frac{\sin\theta}{\theta}\lambda_2+\frac{1-\cos\theta}{\theta^2}\lambda_1\lambda_3 
+      !!   & -\frac{\sin\theta}{\theta}\lambda_1+\frac{1-\cos\theta}{\theta^2}\lambda_2\lambda_3 
+      !!   &  1-\frac{1-\cos\theta}{\theta^2}\left( \lambda_2^2 + \lambda_1^2\right)                    \\
+      !!    \end{bmatrix} \f$
+      
       
       !IF ( EqualRealNos( pi_D, theta )  ) THEN
       IF ( theta > 3.1_DbKi ) THEN  ! theta/(2*sin(theta)) blows up quickly as theta approaches pi, 
          ! so I'm putting a pretty large tolerance on pi here, and using a different equation to find the solution near pi
-                     
-         !d11 = 1 - (1-cos(theta))/theta^2 * (logMap3^2 + logMap2^2)
-         !d22 = 1 - (1-cos(theta))/theta^2 * (logMap3^2 + logMap1^2)
-         !d33 = 1 - (1-cos(theta))/theta^2 * (logMap2^2 + logMap1^2)
-                  
-         logMap(1) = theta * sqrt(abs( 0.5_DbKi * ( 1.0_DbKi + DCM(1,1) - DCM(2,2) - DCM(3,3) ) / (1.0_DbKi-cosTheta) ))
-         logMap(2) = theta * sqrt(abs( 0.5_DbKi * ( 1.0_DbKi - DCM(1,1) + DCM(2,2) - DCM(3,3) ) / (1.0_DbKi-cosTheta) ))
-         logMap(3) = theta * sqrt(abs( 0.5_DbKi * ( 1.0_DbKi - DCM(1,1) - DCM(2,2) + DCM(3,3) ) / (1.0_DbKi-cosTheta) ))
-               
-         ! we choose logMap1 positive then we get the signs for logMap2 and logMap3:
-         if ( .not. EqualRealNos( logMap(1), 0.0_DbKi ) ) then
-            !d12+d21=2*(1-cos(theta))/theta**2 * logMap(1)*logMap(2); 2*(1-cos(theta))/theta**2 * logMap(1)>0 so logMap(2) is sign(logMap(2),d12+d21)
-            !d13+d31=2*(1-cos(theta))/theta**2 * logMap(1)*logMap(3); 2*(1-cos(theta))/theta**2 * logMap(1)>0 so logMap(3) is sign(logMap(3),d13+d31)
-            
-            logMap(2) = sign( logMap(2), DCM(1,2)+DCM(2,1) )
-            logMap(3) = sign( logMap(3), DCM(1,3)+DCM(3,1) )            
+       
+         logMap(1) = 1.0_DbKi + DCM(1,1) - DCM(2,2) - DCM(3,3);
+         logMap(2) = 1.0_DbKi - DCM(1,1) + DCM(2,2) - DCM(3,3);
+         logMap(3) = 1.0_DbKi - DCM(1,1) - DCM(2,2) + DCM(3,3);
+             
+         indx_max = maxloc( abs(logMap), 1 )
+             
+         divisor = sqrt(abs( logMap(indx_max) *  2.0_DbKi*(1.0_DbKi - cosTheta)  )) / theta  ! 2*(1-cosTheta)/theta^2 * abs(lambda(indx_max))
+         if (indx_max == 1) then
+           !logMap(1) = 1.0 + DCM(1,1) - DCM(2,2) - DCM(3,3)               ! 2*(1-cosTheta)/theta^2 * lambda(1) * lambda(1)
+            logMap(2) = DCM(1,2) + DCM(2,1)                                ! 2*(1-cosTheta)/theta^2 * lambda(1) * lambda(2)
+            logMap(3) = DCM(1,3) + DCM(3,1)                                ! 2*(1-cosTheta)/theta^2 * lambda(1) * lambda(3)
+         elseif (indx_max == 2) then
+            logMap(1) = DCM(1,2) + DCM(2,1)                                ! 2*(1-cosTheta)/theta^2 * lambda(2) * lambda(1)
+           !logMap(2) = 1.0 - DCM(1,1) + DCM(2,2) - DCM(3,3)               ! 2*(1-cosTheta)/theta^2 * lambda(2) * lambda(2)
+            logMap(3) = DCM(2,3) + DCM(3,2)                                ! 2*(1-cosTheta)/theta^2 * lambda(2) * lambda(3)
          else
-            ! because logMap1 is zero, we can choose logMap2 positive:
-            
-            !d23+d32=2*(1-cos(theta))/theta**2 * logMap(2)*logMap(3); 2*(1-cos(theta))/theta**2 * logMap(2)>0 so logMap(3) is sign(logMap(3),d23+d32)
-            logMap(3) = sign( logMap(3), DCM(2,3)+DCM(3,2) )            
-            
+            logMap(1) = DCM(1,3) + DCM(3,1)                                ! 2*(1-cosTheta)/theta^2 * lambda(3) * lambda(1)
+            logMap(2) = DCM(2,3) + DCM(3,2)                                ! 2*(1-cosTheta)/theta^2 * lambda(3) * lambda(2)
+           !logMap(3) = 1.0 - DCM(1,1) - DCM(2,2) + DCM(3,3)               ! 2*(1-cosTheta)/theta^2 * lambda(3) * lambda(3)
          end if
-                    
+         logMap = logMap / divisor                                         ! lambda * sign(lambda(indx_max))
+
          ! at this point we may have the wrong sign for logMap (though if theta==pi, it doesn't matter because we can change it in the DCM_setLogMapforInterp() routines)
          ! we'll do a little checking to see if we should change the sign:
          
          IF ( EqualRealNos( pi_D, theta )  ) RETURN
          
-         v(1) = -DCM(3,2) + DCM(2,3) !-skewSym(3,2)
-         v(2) =  DCM(3,1) - DCM(1,3) ! skewSym(3,1)
-         v(3) = -DCM(2,1) + DCM(1,2) !-skewSym(2,1)
- 
-         indx_max = 1
-         do i=2,3
-            if ( abs(v(i)) > abs(v(indx_max)) ) indx_max = i
-         end do
+         v(1) = -DCM(3,2) + DCM(2,3) !-skewSym(3,2) = 2*sin(theta)/theta * lambda(1) = (small positive value with theta near pi) * lambda(1)
+         v(2) =  DCM(3,1) - DCM(1,3) ! skewSym(3,1) = 2*sin(theta)/theta * lambda(2) = (small positive value with theta near pi) * lambda(2)
+         v(3) = -DCM(2,1) + DCM(1,2) !-skewSym(2,1) = 2*sin(theta)/theta * lambda(3) = (small positive value with theta near pi) * lambda(3)
          
+         indx_max = maxloc( abs(v), 1 )  ! find component with largest magnitude
          if ( .not. EqualRealNos( sign(1.0_DbKi,v(indx_max)), sign(1.0_DbKi,logMap(indx_max)) )) logMap = -logMap
          
       ELSE
@@ -1202,7 +1201,8 @@ CONTAINS
    REAL(ReKi)                        :: theta
    REAL(ReKi)                        :: TwoSinTheta
    REAL(ReKi)                        :: v(3)
-   INTEGER(IntKi)                    :: indx_max, i
+   REAL(ReKi)                        :: divisor
+   INTEGER(IntKi)                    :: indx_max
       
          ! initialization
       ErrStat = ErrID_None
@@ -1217,30 +1217,29 @@ CONTAINS
       !IF ( EqualRealNos( pi, theta )  ) THEN
       IF ( theta > 3.1_ReKi ) THEN  ! theta/(2*sin(theta)) blows up quickly as theta approaches pi, 
          ! so I'm putting a pretty large tolerance on pi here, and using a different equation to find the solution near pi
-                     
-         !d11 = 1 - (1-cos(theta))/theta^2 * (logMap3^2 + logMap2^2)
-         !d22 = 1 - (1-cos(theta))/theta^2 * (logMap3^2 + logMap1^2)
-         !d33 = 1 - (1-cos(theta))/theta^2 * (logMap2^2 + logMap1^2)
-         
-         logMap(1) = theta * sqrt(abs( 0.5_ReKi * ( 1.0_ReKi + DCM(1,1) - DCM(2,2) - DCM(3,3) ) / (1.0_ReKi-cosTheta) ))
-         logMap(2) = theta * sqrt(abs( 0.5_ReKi * ( 1.0_ReKi - DCM(1,1) + DCM(2,2) - DCM(3,3) ) / (1.0_ReKi-cosTheta) ))
-         logMap(3) = theta * sqrt(abs( 0.5_ReKi * ( 1.0_ReKi - DCM(1,1) - DCM(2,2) + DCM(3,3) ) / (1.0_ReKi-cosTheta) ))
-               
-         ! we choose logMap1 positive then we get the signs for logMap2 and logMap3:
-         if ( .not. EqualRealNos( logMap(1), 0.0_ReKi ) ) then
-            !d12+d21=2*(1-cos(theta))/theta**2 * logMap(1)*logMap(2); 2*(1-cos(theta))/theta**2 * logMap(1)>0 so logMap(2) is sign(logMap(2),d12+d21)
-            !d13+d31=2*(1-cos(theta))/theta**2 * logMap(1)*logMap(3); 2*(1-cos(theta))/theta**2 * logMap(1)>0 so logMap(3) is sign(logMap(3),d13+d31)
-            
-            logMap(2) = sign( logMap(2), DCM(1,2)+DCM(2,1) )
-            logMap(3) = sign( logMap(3), DCM(1,3)+DCM(3,1) )            
+
+         logMap(1) = 1.0_ReKi + DCM(1,1) - DCM(2,2) - DCM(3,3);
+         logMap(2) = 1.0_ReKi - DCM(1,1) + DCM(2,2) - DCM(3,3);
+         logMap(3) = 1.0_ReKi - DCM(1,1) - DCM(2,2) + DCM(3,3);
+             
+         indx_max = maxloc( abs(logMap), 1 )
+             
+         divisor = sqrt(abs( logMap(indx_max) *  2.0_ReKi*(1.0_ReKi - cosTheta)  )) / theta  ! 2*(1-cosTheta)/theta^2 * abs(lambda(indx_max))
+         if (indx_max == 1) then
+           !logMap(1) = 1.0 + DCM(1,1) - DCM(2,2) - DCM(3,3)               ! 2*(1-cosTheta)/theta^2 * lambda(1) * lambda(1)
+            logMap(2) = DCM(1,2) + DCM(2,1)                                ! 2*(1-cosTheta)/theta^2 * lambda(1) * lambda(2)
+            logMap(3) = DCM(1,3) + DCM(3,1)                                ! 2*(1-cosTheta)/theta^2 * lambda(1) * lambda(3)
+         elseif (indx_max == 2) then
+            logMap(1) = DCM(1,2) + DCM(2,1)                                ! 2*(1-cosTheta)/theta^2 * lambda(2) * lambda(1)
+           !logMap(2) = 1.0 - DCM(1,1) + DCM(2,2) - DCM(3,3)               ! 2*(1-cosTheta)/theta^2 * lambda(2) * lambda(2)
+            logMap(3) = DCM(2,3) + DCM(3,2)                                ! 2*(1-cosTheta)/theta^2 * lambda(2) * lambda(3)
          else
-            ! because logMap1 is zero, we can choose logMap2 positive:
-            
-            !d23+d32=2*(1-cos(theta))/theta**2 * logMap(2)*logMap(3); 2*(1-cos(theta))/theta**2 * logMap(2)>0 so logMap(3) is sign(logMap(3),d23+d32)
-            logMap(3) = sign( logMap(3), DCM(2,3)+DCM(3,2) )            
-            
+            logMap(1) = DCM(1,3) + DCM(3,1)                                ! 2*(1-cosTheta)/theta^2 * lambda(3) * lambda(1)
+            logMap(2) = DCM(2,3) + DCM(3,2)                                ! 2*(1-cosTheta)/theta^2 * lambda(3) * lambda(2)
+           !logMap(3) = 1.0 - DCM(1,1) - DCM(2,2) + DCM(3,3)               ! 2*(1-cosTheta)/theta^2 * lambda(3) * lambda(3)
          end if
-                    
+         logMap = logMap / divisor                                         ! lambda * sign(lambda(indx))
+      
          ! at this point we may have the wrong sign for logMap (though if theta==pi, it doesn't matter because we can change it in the DCM_setLogMapforInterp() routines)
          ! we'll do a little checking to see if we should change the sign:
          
@@ -1250,11 +1249,7 @@ CONTAINS
          v(2) =  DCM(3,1) - DCM(1,3) ! skewSym(3,1)
          v(3) = -DCM(2,1) + DCM(1,2) !-skewSym(2,1)
  
-         indx_max = 1
-         do i=2,3
-            if ( abs(v(i)) > abs(v(indx_max)) ) indx_max = i
-         end do
-         
+         indx_max = maxloc( abs(v), 1 )  ! find component with largest magnitude
          if ( .not. EqualRealNos( sign(1.0_ReKi,v(indx_max)), sign(1.0_ReKi,logMap(indx_max)) )) logMap = -logMap
          
       ELSE
@@ -2375,13 +2370,13 @@ CONTAINS
 
       ! local variables
    REAL(DbKi)                         :: denom                 ! the denominator of the resulting matrix
-   REAL(DbKi), PARAMETER              :: LrgAngle  = 0.4       ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+   REAL(DbKi), PARAMETER              :: LrgAngle  = 0.4_DbKi  ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
 
 
 
       ! initialize output angles (just in case there is an error that prevents them from getting set)
 
-   GetSmllRotAngsD = 0.0
+   GetSmllRotAngsD = 0.0_DbKi
    ErrStat         = ErrID_None
    ErrMsg          = ""
 
@@ -2390,7 +2385,7 @@ CONTAINS
    GetSmllRotAngsD(2) = DCMat(3,1) - DCMat(1,3)
    GetSmllRotAngsD(3) = DCMat(1,2) - DCMat(2,1)
 
-   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1
+   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1.0_DbKi
 
    IF ( .NOT. EqualRealNos( denom, 0.0_DbKi ) ) THEN
       GetSmllRotAngsD = GetSmllRotAngsD / denom
@@ -2435,13 +2430,13 @@ CONTAINS
 
       ! local variables
    REAL(ReKi)                         :: denom                 ! the denominator of the resulting matrix
-   REAL(ReKi), PARAMETER              :: LrgAngle  = 0.4       ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+   REAL(ReKi), PARAMETER              :: LrgAngle  = 0.4_ReKi  ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
 
 
 
       ! initialize output angles (just in case there is an error that prevents them from getting set)
 
-   GetSmllRotAngsR = 0.0
+   GetSmllRotAngsR = 0.0_ReKi
    ErrStat         = ErrID_None
    ErrMsg          = ""
 
@@ -2450,7 +2445,7 @@ CONTAINS
    GetSmllRotAngsR(2) = DCMat(3,1) - DCMat(1,3)
    GetSmllRotAngsR(3) = DCMat(1,2) - DCMat(2,1)
 
-   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1
+   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1.0_ReKi
 
    IF ( .NOT. EqualRealNos( denom, 0.0_ReKi ) ) THEN
       GetSmllRotAngsR = GetSmllRotAngsR / denom
@@ -4869,12 +4864,12 @@ end function Rad2M180to180Deg
 
          ! Passed variables
 
-      INTEGER   ,INTENT(IN)          :: StrtTime (8)                                    !< Start time of simulation (including initialization)
-      INTEGER   ,INTENT(IN)          :: SimStrtTime (8)                                 !< Start time of simulation (after initialization)
-      REAL(ReKi),INTENT(IN)          :: UsrTime1                                        !< User CPU time for simulation initialization.
-      REAL(ReKi),INTENT(IN)          :: UsrTime2                                        !< User CPU time for simulation (without intialization)
-      REAL(DbKi),INTENT(IN)          :: ZTime                                           !< The final simulation time (not necessarially TMax)
-      REAL(ReKi),INTENT(OUT),OPTIONAL:: UsrTime_out                                     !< User CPU time for entire run - optional value returned to calling routine
+      INTEGER   ,     INTENT(IN)          :: StrtTime (8)                              !< Start time of simulation (including initialization)
+      INTEGER   ,     INTENT(IN)          :: SimStrtTime (8)                           !< Start time of simulation (after initialization)
+      REAL(ReKi),     INTENT(IN)          :: UsrTime1                                  !< User CPU time for simulation initialization.
+      REAL(ReKi),     INTENT(IN)          :: UsrTime2                                  !< User CPU time for simulation (without intialization)
+      REAL(DbKi),     INTENT(IN)          :: ZTime                                     !< The final simulation time (not necessarially TMax)
+      REAL(ReKi),     INTENT(OUT),OPTIONAL:: UsrTime_out                               !< User CPU time for entire run - optional value returned to calling routine
 
       CHARACTER(*), INTENT(IN), OPTIONAL :: DescStrIn                                 !< optional additional string to print for SimStatus
                   
@@ -5059,7 +5054,7 @@ end function Rad2M180to180Deg
       REAL(ReKi), INTENT(  OUT)    :: PrevClockTime                                   !< Previous clock time in seconds past midnight
       INTEGER,    INTENT(  OUT)    :: SimStrtTime (8)                                 !< An array containing the elements of the start time.
       REAL(ReKi), INTENT(  OUT)    :: UsrTimeSim                                      !< User CPU time for simulation (without intialization)
-      
+
       CHARACTER(*), INTENT(IN), OPTIONAL :: DescStrIn                                 !< optional additional string to print for SimStatus
       
          ! Local variables.
@@ -5073,8 +5068,8 @@ end function Rad2M180to180Deg
       else
          DescStr = ""
       end if
-      
-      
+
+
          ! How many seconds past midnight?
 
       CALL DATE_AND_TIME ( Values=SimStrtTime )
@@ -5084,7 +5079,7 @@ end function Rad2M180to180Deg
       CurrClockTime = TimeValues2Seconds( SimStrtTime )
 
 
-      CALL WrScr ( trim(DescStr)//' Timestep: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )//' seconds.')
+      CALL WrScr ( trim(DescStr)//' Time: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )//' seconds.')
 
 
       ! Let's save this time as the previous time for the next call to the routine
@@ -5132,7 +5127,7 @@ end function Rad2M180to180Deg
 
       IF ( ZTime <= PrevSimTime ) RETURN
 
-      
+
       if (present(DescStrIn)) then
          DescStr = DescStrIn
       else
@@ -5169,7 +5164,7 @@ end function Rad2M180to180Deg
 
       BlankLine = ""
       CALL WrOver( BlankLine )  ! BlankLine contains MaxWrScrLen spaces
-      CALL WrOver ( trim(DescStr)//' Timestep: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )// &
+      CALL WrOver ( trim(DescStr)//' Time: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )// &
                     ' seconds. Estimated final completion at '//ETimeStr//'.'                             )
 
          ! Let's save this time as the previous time for the next call to the routine

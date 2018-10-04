@@ -4,10 +4,6 @@
 # a NWTC_Library_Types.f90 file
 #
 #.............................................................
-# File last committed: $Date$
-# (File) Revision #: $Rev$
-# URL: $HeadURL$
-#.............................................................
 
 
 usefrom   NWTC_Library  ProgDesc            CHARACTER(99)            Name
@@ -43,25 +39,23 @@ usefrom     ^             ^                 CHARACTER(512)           Lines     {
 usefrom   NWTC_Library  Quaternion          ReKi                     q0
 usefrom     ^             ^                 ReKi                     v  {3}
 
-#BJJ: the following two types will actually be placed in the ModMesh_Mapping.f90 file instead of NWTC_Library_Types.f90
+#BJJ: the following three types will actually be placed in the ModMesh_Mapping.f90 file instead of NWTC_Library_Types.f90
 usefrom   NWTC_Library  MapType             IntKi                    OtherMesh_Element
-usefrom     ^             ^                 ReKi                     distance           -
-usefrom     ^             ^                 ReKi                     couple_arm        {3}
-usefrom     ^             ^                 ReKi                     shape_fn          {2}
+usefrom     ^             ^                 R8Ki                     distance           -
+usefrom     ^             ^                 R8Ki                     couple_arm        {3}
+usefrom     ^             ^                 R8Ki                     shape_fn          {2}
 
-
-usefrom   NWTC_Library  MeshMapLinearizationType ReKi                mi        {:}{:}
-usefrom     ^             ^                 ReKi                     fx_p      {:}{:}
-usefrom     ^             ^                 ReKi                     tv_uD     {:}{:}
-usefrom     ^             ^                 ReKi                     tv_uS     {:}{:}
-usefrom     ^             ^                 ReKi                     ta_uD     {:}{:}
-usefrom     ^             ^                 ReKi                     ta_uS     {:}{:}
-usefrom     ^             ^                 ReKi                     ta_rv     {:}{:}
-usefrom     ^             ^                 ReKi                     li        {:}{:}
-usefrom     ^             ^                 ReKi                     M_u       {:}{:}
-usefrom     ^             ^                 ReKi                     M_t       {:}{:}
-usefrom     ^             ^                 ReKi                     M_f       {:}{:}
-
+usefrom   NWTC_Library  MeshMapLinearizationType R8Ki                mi        {:}{:}
+usefrom     ^             ^                 R8Ki                     fx_p      {:}{:}
+usefrom     ^             ^                 R8Ki                     tv_uD     {:}{:}
+usefrom     ^             ^                 R8Ki                     tv_uS     {:}{:}
+usefrom     ^             ^                 R8Ki                     ta_uD     {:}{:}
+usefrom     ^             ^                 R8Ki                     ta_uS     {:}{:}
+usefrom     ^             ^                 R8Ki                     ta_rv     {:}{:}
+usefrom     ^             ^                 R8Ki                     li        {:}{:}
+usefrom     ^             ^                 R8Ki                     M_u       {:}{:}
+usefrom     ^             ^                 R8Ki                     M_t       {:}{:}
+usefrom     ^             ^                 R8Ki                     M_f       {:}{:}
 
 usefrom   NWTC_Library  MeshMapType         MapType                  MapLoads          {:}
 usefrom     ^             ^                 MapType                  MapMotions        {:}
@@ -69,10 +63,10 @@ usefrom     ^             ^                 MapType                  MapSrcToAug
 usefrom     ^             ^                 MeshType                 Augmented_Ln2_Src  -
 usefrom     ^             ^                 MeshType                 Lumped_Points_Src  -
 usefrom     ^             ^                 INTEGER                  LoadLn2_A_Mat_Piv {:}
-usefrom     ^             ^                 ReKi                     DisplacedPosition {:}{:}{:}
-usefrom     ^             ^                 ReKi                     LoadLn2_F         {:}{:}
-usefrom     ^             ^                 ReKi                     LoadLn2_A_Mat     {:}{:}
-usefrom     ^             ^                 ReKi                     LoadLn2_M         {:}{:}
+usefrom     ^             ^                 R8Ki                     DisplacedPosition {:}{:}{:}
+usefrom     ^             ^                 R8Ki                     LoadLn2_F         {:}{:}
+usefrom     ^             ^                 R8Ki                     LoadLn2_A_Mat     {:}{:}
+usefrom     ^             ^                 R8Ki                     LoadLn2_M         {:}{:}
 usefrom     ^             ^                 MeshMapLinearizationType dM
 
 

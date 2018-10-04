@@ -4,10 +4,6 @@
 # a NWTC_Library_Types.f90 file
 #
 #.............................................................
-# File last committed: $Date: 2014-10-15 12:09:15 -0600 (Wed, 15 Oct 2014) $
-# (File) Revision #: $Rev: 263 $
-# URL: $HeadURL: https://windsvn.nrel.gov/NWTC_Library/trunk/source/Registry_NWTC_Library.txt $
-#.............................................................
 
 
 typedef   NWTC_Library  ProgDesc            CHARACTER(99)            Name - - - "Name of the program or module"
@@ -26,6 +22,11 @@ typedef     ^             ^                 ReKi                     Data      {
 typedef   NWTC_Library  OutParmType         IntKi                    Indx   - - - "An index into AllOuts array where this channel is computed/stored"
 typedef     ^             ^                 CHARACTER(ChanLen)       Name   - - - "Name of the output channel"
 typedef     ^             ^                 CHARACTER(ChanLen)       Units  - - - "Units this channel is specified in"
+typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
+
+typedef   NWTC_Library  OutParmFFType       IntKi                    Indx   - - - "An index into AllOuts array where this channel is computed/stored"
+typedef     ^             ^                 CHARACTER(ChanLenFF)     Name   - - - "Name of the output channel"
+typedef     ^             ^                 CHARACTER(ChanLenFF)     Units  - - - "Units this channel is specified in"
 typedef     ^             ^                 IntKi                    SignM  - - - "Multiplier for output channel; usually -1 (minus) or 0 (invalid channel)"
 
 typedef   NWTC_Library  FileInfoType        IntKi                    NumLines
