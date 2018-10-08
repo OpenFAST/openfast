@@ -2912,7 +2912,7 @@ FUNCTION get_vtkdir_path( out_file_root )
    ! get the directory of the primary input file (i.e. the case directory); Windows can have either forward or backward slashes (compare with GetPath())
    
    last_separator_index =      index(out_file_root, '/', back=.true.)
-   last_separator_index = max( index(out_file_root, '\', back=.true.)
+   last_separator_index = max( index(out_file_root, '\', back=.true.), last_separator_index )
    
    ! Note that last_separator_index cannot be 0 because of the way out_file_root is formed in OpenFAST (it adds PathSep if it is run in the current directory).
    ! If that changes, the next line should be changed to avoid seg faults on certain compilers:
@@ -2927,7 +2927,7 @@ FUNCTION get_vtkroot_path( out_file_root )
    INTEGER(IntKi) :: path_length
 
    last_separator_index =      index(out_file_root, '/', back=.true.)
-   last_separator_index = max( index(out_file_root, '\', back=.true.)
+   last_separator_index = max( index(out_file_root, '\', back=.true.), last_separator_index )
 
    get_vtkroot_path = trim( get_vtkdir_path(out_file_root) ) // PathSep &
                       // out_file_root( last_separator_index + 1 :)
