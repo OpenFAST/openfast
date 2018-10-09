@@ -3669,9 +3669,6 @@ SUBROUTINE BD_FD_Stat( x, gravity, p, m )
     REAL(BDKi), allocatable                        :: RHS_m(:,:), RHS_p(:,:)
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_Stat'
 
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
     ! zero out the local matrices.
     m%RHS_m    = 0.0_BDKi
     m%RHS_p    = 0.0_BDKi
@@ -4811,9 +4808,6 @@ SUBROUTINE BD_FD_GA2( x, OtherState, p, m )
     INTEGER(IntKi)                                 :: i
     INTEGER(IntKi)                                 :: idx_dof
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_GA2'
-
-    ErrStat = ErrID_None
-    ErrMsg  = ""
 
     ! zero out the local matrices. Not sure where these should be initailzed
     m%RHS_m    = 0.0_BDKi
