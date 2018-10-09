@@ -3598,7 +3598,7 @@ SUBROUTINE BD_StaticSolution( x, gravity, p, m, piter, ErrStat, ErrMsg )
    DO piter=1,p%niter
 
       ! compute the finite differenced stiffness matrix
-      IF ( p%tngt_stf_fd .or. p%tngt_stf_comp ) CALL BD_FD_Stat( x, gravity, p, m, ErrStat2, ErrMsg2 )
+      IF ( p%tngt_stf_fd .or. p%tngt_stf_comp ) CALL BD_FD_Stat( x, gravity, p, m )
 
       CALL BD_QuadraturePointData( p,x,m )         ! Calculate QP values uuu, uup, RR0, kappa, E1
       CALL BD_GenerateStaticElement(gravity, p, m) ! Calculate RHS and analytical tangent stiffness matrix
@@ -3655,22 +3655,18 @@ END SUBROUTINE BD_StaticSolution
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the finite differenced tangent stiffness matrix
-SUBROUTINE BD_FD_Stat( x, gravity, p, m, ErrStat, ErrMsg )
+SUBROUTINE BD_FD_Stat( x, gravity, p, m )
 
     ! Function arguments
     TYPE(BD_ContinuousStateType),    INTENT(INOUT) :: x            !< Continuous states at t on input at t + dt on output
     REAL(BDKi),                      INTENT(IN   ) :: gravity(:)   !< not the same as p%gravity (used for ramp of loads and gravity)
     TYPE(BD_ParameterType),          INTENT(IN   ) :: p            !< Parameters
     TYPE(BD_MiscVarType),            INTENT(INOUT) :: m            !< misc/optimization variables
-    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
-    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
     ! local variables
     INTEGER(IntKi)                                 :: i
     INTEGER(IntKi)                                 :: idx_dof
-    INTEGER(IntKi)                                 :: ErrStat2 ! Temporary Error status
     REAL(BDKi), allocatable                        :: RHS_m(:,:), RHS_p(:,:)
-    CHARACTER(ErrMsgLen)                           :: ErrMsg2  ! Temporary Error message
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_Stat'
 
     ! zero out the local matrices.
@@ -4729,7 +4725,7 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, p, m, ErrStat, ErrMsg)
 
       fact = MOD(piter-1,p%n_fact) .EQ. 0  ! when true, we factor the jacobian matrix
 
-      IF ( (p%tngt_stf_fd .OR. p%tngt_stf_comp) .AND. fact ) CALL BD_FD_GA2( x, OtherState, p, m, ErrStat, ErrMsg )
+      IF ( (p%tngt_stf_fd .OR. p%tngt_stf_comp) .AND. fact ) CALL BD_FD_GA2( x, OtherState, p, m )
 
          ! Apply accelerations using F=ma ?  Is that what this routine does?
          ! Calculate Quadrature point values needed
@@ -4800,21 +4796,17 @@ END SUBROUTINE BD_DynamicSolutionGA2
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the finite differenced tangent stiffness matrix
-SUBROUTINE BD_FD_GA2( x, OtherState, p, m, ErrStat, ErrMsg )
+SUBROUTINE BD_FD_GA2( x, OtherState, p, m )
 
     ! Function arguments
     TYPE(BD_ContinuousStateType),    INTENT(INOUT) :: x            !< Continuous states at t on input at t + dt on output
     TYPE(BD_OtherStateType),         INTENT(INOUT) :: OtherState   !< Other states at t on input; at t+dt on outputs
     TYPE(BD_ParameterType),          INTENT(IN   ) :: p            !< Parameters
     TYPE(BD_MiscVarType),            INTENT(INOUT) :: m            !< misc/optimization variables
-    INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat      !< Error status of the operation
-    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg       !< Error message if ErrStat /= ErrID_None
 
     ! Local variables
     INTEGER(IntKi)                                 :: i
     INTEGER(IntKi)                                 :: idx_dof
-    INTEGER(IntKi)                                 :: ErrStat2 ! Temporary Error status
-    CHARACTER(ErrMsgLen)                           :: ErrMsg2  ! Temporary Error message
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_GA2'
 
     ! zero out the local matrices. Not sure where these should be initailzed
