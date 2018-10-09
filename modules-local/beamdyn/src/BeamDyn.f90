@@ -3247,7 +3247,7 @@ SUBROUTINE BD_MemberEta(member_total, QPtW, Jac, member_eta, total_length)
    ENDDO
 
    ! ratio of member's length to the total beam length
-   member_eta = member_eta/total_length
+   member_eta = member_length/total_length
 
 END SUBROUTINE BD_MemberEta
 
@@ -3668,6 +3668,9 @@ SUBROUTINE BD_FD_Stat( x, gravity, p, m )
     INTEGER(IntKi)                                 :: idx_dof
     REAL(BDKi), allocatable                        :: RHS_m(:,:), RHS_p(:,:)
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_Stat'
+
+    ErrStat = ErrID_None
+    ErrMsg  = ""
 
     ! zero out the local matrices.
     m%RHS_m    = 0.0_BDKi
@@ -4808,6 +4811,9 @@ SUBROUTINE BD_FD_GA2( x, OtherState, p, m )
     INTEGER(IntKi)                                 :: i
     INTEGER(IntKi)                                 :: idx_dof
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_GA2'
+
+    ErrStat = ErrID_None
+    ErrMsg  = ""
 
     ! zero out the local matrices. Not sure where these should be initailzed
     m%RHS_m    = 0.0_BDKi

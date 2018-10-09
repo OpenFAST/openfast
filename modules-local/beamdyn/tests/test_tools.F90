@@ -51,9 +51,9 @@ contains
         
         real(BDKi) :: angle, r(3,3), RonXAxis(3,3)
         
-        r(1,:) = (/  1.0,         0.0,         0.0 /)
-        r(2,:) = (/  0.0,  cos(angle), -sin(angle) /)
-        r(3,:) = (/  0.0,  sin(angle),  cos(angle) /)
+        r(1,:) = (/  1.0_BDKi,    0.0_BDKi,    0.0_BDKi /)
+        r(2,:) = (/  0.0_BDKi,  cos(angle), -sin(angle) /)
+        r(3,:) = (/  0.0_BDKi,  sin(angle),  cos(angle) /)
         RonXAxis = r
     end function  
         
