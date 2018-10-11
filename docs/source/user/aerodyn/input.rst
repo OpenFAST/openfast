@@ -35,9 +35,9 @@ AeroDyn driver input file is given in
 :numref:`ad_appendix`.
 
 Set the ``Echo`` flag in this file to TRUE if you wish to have the
-``AeroDyn_Driver`` executeable echo the contents of the driver input file (useful
+``AeroDyn_Driver`` executable echo the contents of the driver input file (useful
 for debugging errors in the driver file). The echo file has the naming
-convention of ``OutFileRoot**.ech``, where ``OutFileRoot`` is
+convention of *OutFileRoot.ech*, where ``OutFileRoot`` is
 specified in the I/O SETTINGS section of the driver input file below.
 ``AD_InputFile`` is the filename of the primary AeroDyn input file.
 This name should be in quotations and can contain an absolute path or a
@@ -64,7 +64,7 @@ improved tower clearance.
 
 The I/O SETTINGS section controls the creation of the results file. If
 ``OutFileRoot`` is specified, the results file will have the filename
-``OutFileRoot**.#.out*``, where the ‘\ *#*\ ’ character is an integer
+*OutFileRoot.#.out*, where the ‘\ *#*\ ’ character is an integer
 number corresponding to a test case line found in the COMBINED-CASE
 ANALYSIS section described below. If an empty string is provided for
 ``OutFileRoot``, then the driver file’s root name will be used
@@ -135,7 +135,7 @@ General Options
 Set the ``Echo`` flag to TRUE if you wish to have AeroDyn echo the
 contents of the AeroDyn primary, airfoil, and blade input files (useful
 for debugging errors in the input files). The echo file has the naming
-convention of ``OutRootFile**.AD.ech*. ``OutRootFile`` is either
+convention of *OutRootFile.AD.ech*. ``OutRootFile`` is either
 specified in the I/O SETTINGS section of the driver input file when
 running AeroDyn standalone, or by the OpenFAST program when running a
 coupled simulation.
@@ -148,29 +148,40 @@ much smaller than this rule of thumb. If UA is enabled while using very
 small time steps, you may need to recompile AeroDyn in double precision
 to avoid numerical problems in the UA routines. The keyword ``DEFAULT``
 for ``DTAero`` may be used to indicate that AeroDyn should employ the
-time step prescribed by the driver code (FAST or the standalone driver
+time step prescribed by the driver code (OpenFAST or the standalone driver
 program).
 
 Set ``WakeMod`` to 0 if you want to disable rotor wake/induction
-effects or 1 to include these effects using the BEM theory model. Set
-``AFAeroMod`` to 1 to include steady blade airfoil aerodynamics or 2
+effects or 1 to include these effects using the BEM theory model. When
+``WakeMod`` is set to 2, a dynamic BEM theory model (DBEMT) is used.
+``WakeMod`` cannot be set to 2 during linearization analyses.
+
+Set ``AFAeroMod`` to 1 to include steady blade airfoil aerodynamics or 2
 to enable UA; ``AFAeroMod`` must be 1 during linearization analyses
-with AeroDyn coupled to OpenFAST. Set ``TwrPotent`` to 0 to disable the
+with AeroDyn coupled to OpenFAST. 
+
+Set ``TwrPotent`` to 0 to disable the
 potential-flow influence of the tower on the fluid flow local to the
 blade, 1 to enable the standard potential-flow model, or 2 to include
-the Bak correction in the potential-flow model. Set the ``TwrShadow``
+the Bak correction in the potential-flow model. 
+
+Set the ``TwrShadow``
 flag to TRUE to include the influence of the tower on the flow local to
 the blade based on the downstream tower shadow model or FALSE to disable
 these effects. If the tower influence from potential flow and tower
-shadow are both enabled, the two influences will be superimposed. Set
-the ``TwrAero`` flag to TRUE to calculate fluid drag loads on the
-tower or FALSE to disable these effects. During linearization analyses
+shadow are both enabled, the two influences will be superimposed. 
+
+Set the ``TwrAero`` flag to TRUE to calculate fluid drag loads on the
+tower or FALSE to disable these effects. 
+
+During linearization analyses
 with AeroDyn coupled OpenFAST and BEM enabled (``WakeMod = 1``), set the
 ``FrozenWake`` flag to TRUE to employ frozen-wake assumptions during
 linearization (i.e. to fix the axial and tangential induces velocities,
-and , at their operating-point values during linearization) or FALSE to
-recalculate the induction during linearization using BEM theory. Set the
-``CavitCheck`` flag to TRUE to perform a cavitation check for MHK
+and, at their operating-point values during linearization) or FALSE to
+recalculate the induction during linearization using BEM theory. 
+
+Set the ``CavitCheck`` flag to TRUE to perform a cavitation check for MHK
 turbines or FALSE to disable this calculation. If ``CavitCheck`` is
 TRUE, ``AFAeroMod`` must be set to 1 because the cavitation check does
 not function with unsteady airfoil aerodynamics.
@@ -194,17 +205,20 @@ is the vapor pressure of the fluid; for seawater this is typically
 around 2,000 Pa. ``FluidDepth`` is the distance from the hub center to
 the free surface.
 
-Blade-Element/Momentum Theory
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Blade-Element/Momentum Theory Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The input parameters in this section are only used when ``WakeMod =
-1``.
+The input parameters in this section are not used when ``WakeMod = 0``.
 
 ``SkewMod`` determines the skewed-wake correction model. Set
 ``SkewMod`` to 1 to use the uncoupled BEM solution technique without
 an additional skewed-wake correction. Set ``SkewMod`` to 2 to include
 the Pitt/Peters correction model. **The coupled model ``SkewMod=
 3`` is not available in this version of AeroDyn.**
+
+``SkewModFactor`` is used only when  ``SkewMod = 1``. Enter a scaling factor to use
+in the Pitt/Peters correction model, or enter ``"default"`` to use the default 
+value of :math:`\frac{15 \pi}{32}`.
 
 Set ``TipLoss`` to TRUE to include the Prandtl tip-loss model or FALSE
 to disable it. Likewise, set ``HubLoss`` to TRUE to include the
@@ -231,6 +245,17 @@ number of iterations steps in the BEM solve. If the residual value of
 the BEM solve is not less than or equal to ``IndToler`` in
 ``MaxIter``, AeroDyn will exit the BEM solver and return an error
 message.
+
+Dynamic Blade-Element/Momentum Theory Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The input parameters in this section are used only when ``WakeMod = 2``.
+
+Set ``DBEMT_Mod`` to 1 for the constant-tau1 model, or set ``DBEMT_Mod`` to 2
+to use a model where tau1 varies with time.
+
+If ``DBEMT_Mod=1`` (constant-tau1 model), set ``tau1_const`` to the time 
+constant to use for DBEMT.
 
 Unsteady Airfoil Aerodynamics Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -519,7 +544,7 @@ input file):
    to 1, based on experimental results;
 
 -  ``S1`` is the constant in the best fit curve of *f* for
-   ``alpha0`` ≤ AoA ≤ ``alpha1`` for ``UAMod = 1`` (and is unused
+   ``alpha0`` :math:`\le` AoA :math:`\le` ``alpha1`` for ``UAMod = 1`` (and is unused
    otherwise); by definition, it depends on the airfoil;
 
 -  ``S2`` is the constant in the best fit curve of *f* for AoA >
@@ -527,7 +552,7 @@ input file):
    definition, it depends on the airfoil;
 
 -  ``S3`` is the constant in the best fit curve of *f* for
-   ``alpha2`` ≤ AoA ≤ ``alpha0`` for ``UAMod = 1`` (and is unused
+   ``alpha2`` :math:`\le` AoA :math:`\le` ``alpha0`` for ``UAMod = 1`` (and is unused
    otherwise); by definition, it depends on the airfoil;
 
 -  ``S4`` is the constant in the best fit curve of *f* for AoA <

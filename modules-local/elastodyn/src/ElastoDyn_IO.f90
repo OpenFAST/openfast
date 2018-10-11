@@ -85,8 +85,8 @@ MODULE ElastoDyn_Parameters
 
       ! Parameters related to coupling scheme
 
-   INTEGER(IntKi), PARAMETER        :: Method_RK4  = 1                                 
-   INTEGER(IntKi), PARAMETER        :: Method_AB4  = 2                                 
+   INTEGER(IntKi), PARAMETER        :: Method_RK4  = 1
+   INTEGER(IntKi), PARAMETER        :: Method_AB4  = 2
    INTEGER(IntKi), PARAMETER        :: Method_ABM4 = 3
 
 
@@ -1428,11 +1428,12 @@ CONTAINS
 END SUBROUTINE ED_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine validates the input file data
-SUBROUTINE ED_ValidateInput( InputFileData, BD4Blades, ErrStat, ErrMsg )
+SUBROUTINE ED_ValidateInput( InputFileData, BD4Blades, Linearize, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData       !< Data stored in the module's input file
    LOGICAL,                  INTENT(IN)       :: BD4Blades           !< Determines if we should validate the blade values (true=don't validate; use BeamDyn for blades instead)
+   LOGICAL,                  INTENT(IN)       :: Linearize           !< Flag indicating glue code wants to linearize this module
    INTEGER(IntKi),           INTENT(OUT)      :: ErrStat             !< The error status code
    CHARACTER(*),             INTENT(OUT)      :: ErrMsg              !< The error message, if an error occurred
 
@@ -1448,7 +1449,7 @@ SUBROUTINE ED_ValidateInput( InputFileData, BD4Blades, ErrStat, ErrMsg )
    ErrMsg  = ''
 
       ! validate the primary input data
-   CALL ValidatePrimaryData( InputFileData, BD4Blades, ErrStat2, ErrMsg2 )
+   CALL ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
@@ -2902,6 +2903,10 @@ SUBROUTINE ReadTowerFile( TwrFile, InputFileData, ReadAdmVals, UnEc, ErrStat, Er
    CHARACTER(*), PARAMETER      :: RoutineName = 'ReadTowerFile'
 
 
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
+
+
    CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -3617,7 +3622,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    InputFileData%RotSpeed = InputFileData%RotSpeed*RPM2RPS
 
       ! NacYaw - Initial nacelle-yaw angle (deg) (read from file in degrees and converted to radians here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%NacYaw, "RotSpeed", "Initial nacelle-yaw angle (deg)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, InputFileData%NacYaw, "NacYaw", "Initial nacelle-yaw angle (deg)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL Cleanup()
@@ -3758,10 +3763,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
       END IF
    InputFileData%Delta3 = InputFileData%Delta3*D2R
 
-   IF ( InputFileData%NumBl /= 2_IntKi )  THEN
-      InputFileData%Delta3 = 0.0_ReKi
-   END IF
-   
       ! AzimB1Up - Azimuth value to use for I/O when blade 1 points up (degrees) (read from file in degrees and converted to radians here):
    CALL ReadVar( UnIn, InputFile, InputFileData%AzimB1Up, "AzimB1Up", "Azimuth value to use for I/O when blade 1 points up (degrees)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4939,13 +4940,14 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the primary input file.
 !! note that all angles are assumed to be in radians in this routine:
-SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, ErrStat, ErrMsg )
+SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       ! Passed variables:
 
    TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                       !< All the data in the ElastoDyn input file
    LOGICAL,                  INTENT(IN)     :: BD4Blades                           !< Use BeamDyn for blades, thus ignore ElastoDyn blade info 
+   LOGICAL,                  INTENT(IN)     :: Linearize                           !< Flag indicating glue code wants to linearize this module
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Error message
 
@@ -4965,8 +4967,14 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, ErrStat, ErrMsg )
    SmallAngleLimit_Rad = SmallAngleLimit_Deg*D2R
 
       ! Make sure the number of blades is valid:
-   IF ( ( InputFileData%NumBl < 2 ) .OR. ( InputFileData%NumBl > 3 ) ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'NumBl must be either 2 or 3.',ErrStat,ErrMsg,RoutineName)
+   IF (BD4Blades) THEN
+      IF ( ( InputFileData%NumBl < 1 ) .OR. ( InputFileData%NumBl > MaxBl ) ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'NumBl must be 1, 2, or 3 for BeamDyn simulations.',ErrStat,ErrMsg,RoutineName)
+      END IF
+   ELSE
+      IF ( ( InputFileData%NumBl < 2 ) .OR. ( InputFileData%NumBl > MaxBl ) ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'NumBl must be either 2 or 3.',ErrStat,ErrMsg,RoutineName)
+      END IF
    END IF
 
       ! Make sure the specified integration method makes sense:
@@ -4977,18 +4985,18 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, ErrStat, ErrMsg )
          END IF
       END IF
    END IF
-   
-   
+
+
       ! make sure GBoxEff is 100% for now
    IF ( .NOT. EqualRealNos( InputFileData%GBoxEff, 1.0_ReKi ) .and. InputFileData%method == method_rk4 ) &
       CALL SetErrStat( ErrID_Fatal, 'GBoxEff must be 1 (i.e., 100%) when using RK4.',ErrStat,ErrMsg,RoutineName)
-      
-   
+
+
       ! Don't allow these parameters to be negative (i.e., they must be in the range (0,inf)):
    IF ( InputFileData%Gravity < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'Gravity must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%RotSpeed < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'RotSpeed must not be negative.',ErrStat,ErrMsg,RoutineName)
    
-   IF (.NOT. BD4Blades .and. InputFileData%TipRad < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TipRad must not be negative.',ErrStat,ErrMsg,RoutineName)
+   IF ( InputFileData%TipRad < 0.0_ReKi) CALL SetErrStat(ErrID_Fatal,'TipRad must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%HubRad < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'HubRad must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%DTTorSpr < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'DTTorSpr must not be negative.',ErrStat,ErrMsg,RoutineName)
    IF ( InputFileData%DTTorDmp < 0.0_ReKi) call SetErrStat(ErrID_Fatal,'DTTorDmp must not be negative.',ErrStat,ErrMsg,RoutineName)
@@ -5016,12 +5024,12 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, ErrStat, ErrMsg )
       ! Check that these integers are in appropriate ranges:
    IF ( InputFileData%TwrNodes < 1_IntKi ) CALL SetErrStat( ErrID_Fatal, 'TwrNodes must not be less than 1.',ErrStat,ErrMsg,RoutineName )
 
-   IF ( InputFileData%BldNodes < 1_IntKi ) CALL SetErrStat( ErrID_Fatal, 'BldNodes must not be less than 1.',ErrStat,ErrMsg,RoutineName )
-   
+   IF ( InputFileData%BldNodes < 1_IntKi .AND. .NOT. BD4Blades) CALL SetErrStat( ErrID_Fatal, 'BldNodes must not be less than 1.',ErrStat,ErrMsg,RoutineName )
+
       ! Check that the gearbox efficiency is valid:
    IF ( ( InputFileData%GBoxEff <= 0.0_ReKi ) .OR. ( InputFileData%GBoxEff > 1.0_ReKi ) ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'GBoxEff must be in the range (0,1] (i.e., (0,100] percent).',ErrStat,ErrMsg,RoutineName )
-   END IF
+         CALL SetErrStat( ErrID_Fatal, 'GBoxEff must be in the range (0,1] (i.e., (0,100] percent).',ErrStat,ErrMsg,RoutineName )
+      ENDIF
 
       ! warn if 2nd modes are enabled without their corresponding 1st modes
 

@@ -2,7 +2,7 @@
 UAE Phase 3 turbine (BEM)
 -----  Input Configuration  ----------------------------------------------------
 True          Echo            -  Echo input parameters to "<rootname>.ech"?
-"Test01_UAE_AeroDyn.dat"    AD_InputFile    -  Name of the primary AeroDyn input file
+"ad_primary_example.inp"    AD_InputFile    -  Name of the primary AeroDyn input file
 -----  Turbine Data  -----------------------------------------------------------
           2   NumBlades       - Number of blades (-)
       0.432   HubRad          - Hub radius (m)

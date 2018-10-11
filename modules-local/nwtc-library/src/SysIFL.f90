@@ -15,32 +15,21 @@
 ! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
-!
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
 !**********************************************************************************************************************************
 MODULE SysSubs
 
-
    ! This module contains routines with system-specific logic and references, including all references to the console unit, CU.
    ! It also contains standard (but not system-specific) routines it uses.
-
    ! SysIFL.f90 is specifically for the Intel Fortran for Linux compiler.
-
-
    ! It contains the following routines:
-
    !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
-   !     SUBROUTINE  FlushOut ( Unit )
-   !     FUNCTION    NWTC_ERF( x )
-   !     FUNCTION    NWTC_gamma( x )
-   !     SUBROUTINE  GET_CWD( DirName, Status )
    !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
-   !     FUNCTION    NWTC_Gamma( x )                                          ! Returns the gamma value of its argument.   
-   ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT:
-   !     SUBROUTINE  OpenCon                                                  ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
+   !     FUNCTION    NWTC_ERF( x )
+   !     FUNCTION    NWTC_gamma( x )                                          ! Returns the gamma value of its argument.   
+   !     SUBROUTINE  FlushOut ( Unit )
+   !     SUBROUTINE  GET_CWD( DirName, Status )
+   !     SUBROUTINE  MKDIR( new_directory_path )
+   !     SUBROUTINE  OpenCon
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
    !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
@@ -50,71 +39,48 @@ MODULE SysSubs
    !     SUBROUTINE  WriteScr ( Str, Frm )
    !     SUBROUTINE LoadDynamicLib( DLL, ErrStat, ErrMsg )
    !     SUBROUTINE FreeDynamicLib( DLL, ErrStat, ErrMsg )
-
-
-
-   USE                             NWTC_Base
-
-   IMPLICIT                        NONE
-
-   INTERFACE NWTC_gamma ! Returns the gamma value of its argument
-      MODULE PROCEDURE NWTC_gammaR4
-      MODULE PROCEDURE NWTC_gammaR8
-      MODULE PROCEDURE NWTC_gammaR16
-   END INTERFACE
    
+   USE NWTC_Base
+
+   IMPLICIT NONE
+
    INTERFACE NWTC_ERF ! Returns the ERF value of its argument
       MODULE PROCEDURE NWTC_ERFR4
       MODULE PROCEDURE NWTC_ERFR8
       MODULE PROCEDURE NWTC_ERFR16
    END INTERFACE
-   
-   
 
-!=======================================================================
-
+   INTERFACE NWTC_gamma ! Returns the gamma value of its argument
+         ! note: gamma is part of the F08 standard, but may not be implemented everywhere...
+      MODULE PROCEDURE NWTC_gammaR4
+      MODULE PROCEDURE NWTC_gammaR8
+      MODULE PROCEDURE NWTC_gammaR16
+   END INTERFACE
 
    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
    INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
    INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
-
    LOGICAL, PARAMETER            :: KBInputOK   = .TRUE.                            ! A flag to tell the program that keyboard input is allowed in the environment.
-
    CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Fortran for Linux'         ! Description of the language/OS
    CHARACTER( 1), PARAMETER      :: PathSep     = '/'                               ! The path separator.
    CHARACTER( 1), PARAMETER      :: SwChar      = '-'                               ! The switch character for command-line options.
-   CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                     ! The string to specify unformatted I/O files.
+   CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                     ! The string to specify unformatted I/O files.   
 
 CONTAINS
 
 !=======================================================================
-   FUNCTION FileSize( Unit )
+FUNCTION FileSize( Unit )
 
+   ! This function calls the portability routine, FSTAT, to obtain the file size
+   ! in bytes corresponding to a file unit number or returns -1 on error.
 
-      ! This function calls the portability routine, FSTAT, to obtain the file size
-      ! in bytes corresponding to a file unit number or returns -1 on error.
-
-
-   USE                             IFPORT
-
-
-      ! Function declaration.
+   USE IFPORT
 
    INTEGER(B8Ki)                             :: FileSize                      ! The size of the file in bytes to be returned.
-
-
-      ! Argument declarations:
-
    INTEGER, INTENT(IN)                       :: Unit                          ! The I/O unit number of the pre-opened file.
-
-
-      ! Local declarations:
-
    INTEGER                                   :: StatArray(12)                 ! An array returned by FSTAT that includes the file size.
    INTEGER                                   :: Status                        ! The status returned by
-
-
 
    Status = FSTAT( INT( Unit, B4Ki ), StatArray )
 
@@ -124,215 +90,180 @@ CONTAINS
       FileSize = StatArray(8)
    END IF
 
+   RETURN
+END FUNCTION FileSize ! ( Unit )
+!=======================================================================
+FUNCTION Is_NaN( DblNum )
+
+   ! This routine determines if a REAL(DbKi) variable holds a proper number.
+   ! BJJ: this routine is used in CRUNCH.
+   ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
+   ! backwards compatibility.
+
+   USE, INTRINSIC :: ieee_arithmetic
+
+   REAL(DbKi), INTENT(IN)       :: DblNum
+   LOGICAL                      :: Is_Nan
+
+   Is_NaN = IEEE_IS_NAN( DblNum )
 
    RETURN
-   END FUNCTION FileSize ! ( Unit )
+END FUNCTION Is_NaN ! ( DblNum )
 !=======================================================================
-   SUBROUTINE FlushOut ( Unit )
+FUNCTION NWTC_ERFR4( x )
 
+   ! Returns the ERF value of its argument. The result has a value equal  
+   ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
 
-      ! This subroutine flushes the buffer on the specified Unit.
-      ! It is especially useful when printing "running..." type messages.
+   REAL(SiKi), INTENT(IN)     :: x           ! input 
+   REAL(SiKi)                 :: NWTC_ERFR4  ! result
 
+   NWTC_ERFR4 = ERF( x )
 
-   USE                             IFPORT
+END FUNCTION NWTC_ERFR4
+!=======================================================================
+FUNCTION NWTC_ERFR8( x )
 
+   ! Returns the ERF value of its argument. The result has a value equal  
+   ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
 
-      ! Argument declarations:
+   REAL(R8Ki), INTENT(IN)     :: x             ! input 
+   REAL(R8Ki)                 :: NWTC_ERFR8    ! result
+
+   NWTC_ERFR8 = ERF( x )
+
+END FUNCTION NWTC_ERFR8
+!=======================================================================
+FUNCTION NWTC_ERFR16( x )
+
+   ! Returns the ERF value of its argument. The result has a value equal  
+   ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+   REAL(QuKi), INTENT(IN)     :: x             ! input 
+   REAL(QuKi)                 :: NWTC_ERFR16   ! result
+
+   NWTC_ERFR16 = ERF( x )
+
+END FUNCTION NWTC_ERFR16
+!=======================================================================
+FUNCTION NWTC_GammaR4( x )
+
+   ! Returns the gamma value of its argument. The result has a value equal  
+   ! to a processor-dependent approximation to the gamma function of x. 
+
+   REAL(SiKi), INTENT(IN)     :: x             ! input 
+   REAL(SiKi)                 :: NWTC_GammaR4  ! result
+   
+   NWTC_GammaR4 = gamma( x )
+
+END FUNCTION NWTC_GammaR4
+!=======================================================================
+FUNCTION NWTC_GammaR8( x )
+
+   ! Returns the gamma value of its argument. The result has a value equal  
+   ! to a processor-dependent approximation to the gamma function of x. 
+
+   REAL(R8Ki), INTENT(IN)     :: x             ! input 
+   REAL(R8Ki)                 :: NWTC_GammaR8  ! result
+   
+   NWTC_GammaR8 = gamma( x )
+
+END FUNCTION NWTC_GammaR8
+!=======================================================================
+FUNCTION NWTC_GammaR16( x )
+
+   ! Returns the gamma value of its argument. The result has a value equal  
+   ! to a processor-dependent approximation to the gamma function of x. 
+
+   REAL(QuKi), INTENT(IN)     :: x             ! input 
+   REAL(QuKi)                 :: NWTC_GammaR16  ! result
+   
+   NWTC_GammaR16 = gamma( x )
+
+END FUNCTION NWTC_GammaR16
+!=======================================================================
+SUBROUTINE FlushOut ( Unit )
+
+   ! This subroutine flushes the buffer on the specified Unit.
+   ! It is especially useful when printing "running..." type messages.
+
+   USE IFPORT
 
    INTEGER, INTENT(IN)          :: Unit                                         ! The unit number of the file being flushed.
 
-
-
    CALL FLUSH ( INT(Unit, B4Ki) )
 
-
    RETURN
-   END SUBROUTINE FlushOut ! ( Unit )
+END SUBROUTINE FlushOut ! ( Unit )
 !=======================================================================
-   SUBROUTINE Get_CWD ( DirName, Status )
+SUBROUTINE Get_CWD ( DirName, Status )
 
-
-      ! This routine retrieves the path of the current working directory.
-
-
-   USE                             IFPORT, ONLY: GETCWD
+   USE IFPORT, ONLY: GETCWD
 
    IMPLICIT                        NONE
-
-
-      ! Passed variables.
 
    CHARACTER(*), INTENT(OUT)    :: DirName                                         ! A CHARACTER string containing the path of the current working directory.
    INTEGER,      INTENT(OUT)    :: Status                                          ! Status returned by the call to a portability routine.
 
-
    Status = GETCWD ( DirName )
 
    RETURN
-   END SUBROUTINE Get_CWD
+END SUBROUTINE Get_CWD
 !=======================================================================
-   FUNCTION Is_NaN( DblNum )
+SUBROUTINE MKDIR ( new_directory_path )
 
+   ! This routine creates a given directory if it does not exist.
 
-      ! This routine determines if a REAL(DbKi) variable holds a proper number.
-      ! BJJ: this routine is used in CRUNCH.
-      ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
-      ! backwards compatibility.
+   implicit none
 
-  USE, INTRINSIC :: ieee_arithmetic
+   character(*), intent(in) :: new_directory_path
+   character(1024)          :: make_command
+   logical                  :: directory_exists
 
+   ! Check if the directory exists first
+   inquire( directory=trim(new_directory_path), exist=directory_exists )
 
-      ! Argument declarations.
+   if ( .NOT. directory_exists ) then
+      make_command = 'mkdir -p '//trim(new_directory_path)
+      call system( make_command )
+   endif
 
-   REAL(DbKi), INTENT(IN)       :: DblNum
-
-
-      ! Function declaration.
-
-   LOGICAL                      :: Is_Nan
-
-
-
-   Is_NaN = IEEE_IS_NAN( DblNum )
-
-
-   RETURN
-   END FUNCTION Is_NaN ! ( DblNum )
+END SUBROUTINE MKDIR
 !=======================================================================
-   FUNCTION NWTC_ERFR4( x )
-   
-      ! Returns the ERF value of its argument. The result has a value equal  
-      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+SUBROUTINE OpenCon
 
-      REAL(SiKi), INTENT(IN)     :: x           ! input 
-      REAL(SiKi)                 :: NWTC_ERFR4  ! result
-      
-      
-      NWTC_ERFR4 = ERF( x )
-   
-   END FUNCTION NWTC_ERFR4
-!=======================================================================
-   FUNCTION NWTC_ERFR8( x )
-   
-      ! Returns the ERF value of its argument. The result has a value equal  
-      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+   ! This routine opens the console for standard output.
 
-      REAL(R8Ki), INTENT(IN)     :: x             ! input 
-      REAL(R8Ki)                 :: NWTC_ERFR8    ! result
-      
-      
-      NWTC_ERFR8 = ERF( x )
-   
-   END FUNCTION NWTC_ERFR8
-!=======================================================================
-   FUNCTION NWTC_ERFR16( x )
-   
-      ! Returns the ERF value of its argument. The result has a value equal  
-      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
-
-      REAL(QuKi), INTENT(IN)     :: x             ! input 
-      REAL(QuKi)                 :: NWTC_ERFR16   ! result
-      
-      
-      NWTC_ERFR16 = ERF( x )
-   
-   END FUNCTION NWTC_ERFR16
-!=======================================================================
-   FUNCTION NWTC_GammaR4( x )
-   
-      ! Returns the gamma value of its argument. The result has a value equal  
-      ! to a processor-dependent approximation to the gamma function of x. 
-
-      REAL(SiKi), INTENT(IN)     :: x             ! input 
-      REAL(SiKi)                 :: NWTC_GammaR4  ! result
-      
-      
-      NWTC_GammaR4 = gamma( x )
-   
-   END FUNCTION NWTC_GammaR4
-!=======================================================================
-   FUNCTION NWTC_GammaR8( x )
-   
-      ! Returns the gamma value of its argument. The result has a value equal  
-      ! to a processor-dependent approximation to the gamma function of x. 
-
-      REAL(R8Ki), INTENT(IN)     :: x             ! input 
-      REAL(R8Ki)                 :: NWTC_GammaR8  ! result
-      
-      
-      NWTC_GammaR8 = gamma( x )
-   
-   END FUNCTION NWTC_GammaR8
-!=======================================================================
-   FUNCTION NWTC_GammaR16( x )
-   
-      ! Returns the gamma value of its argument. The result has a value equal  
-      ! to a processor-dependent approximation to the gamma function of x. 
-
-      REAL(QuKi), INTENT(IN)     :: x             ! input 
-      REAL(QuKi)                 :: NWTC_GammaR16  ! result
-      
-      
-      NWTC_GammaR16 = gamma( x )
-   
-   END FUNCTION NWTC_GammaR16
-!=======================================================================
-   SUBROUTINE OpenCon
-
-
-      ! This routine opens the console for standard output.
-
-
-   USE                             IFPORT
-
+   USE IFPORT
 
 !bjj: Because CU = 6 now, this statement is not necessary
 !   OPEN ( CU , FILE='/dev/stdout' , STATUS='UNKNOWN' , CARRIAGECONTROL='FORTRAN', RECL=ConRecL )
 
    CALL FlushOut ( CU )
 
-
    RETURN
-   END SUBROUTINE OpenCon
+END SUBROUTINE OpenCon
 !=======================================================================
-   SUBROUTINE OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
+SUBROUTINE OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
 
+   ! This routine opens a binary input file with data stored in Big Endian format (created on a UNIX machine.)
+   ! Data are stored in RecLen-byte records.
 
-      ! This routine opens a binary input file with data stored in Big Endian format (created on a UNIX machine.)
-      ! Data are stored in RecLen-byte records.
-
-   IMPLICIT                        NONE
-
-
-
-      ! Argument declarations.
+   IMPLICIT NONE
 
    INTEGER, INTENT(IN)          :: Un                                           ! Logical unit for the input file.
-
    CHARACTER(*), INTENT(IN)     :: InFile                                       ! Name of the input file.
-
    INTEGER, INTENT(IN)          :: RecLen                                       ! Size of records in the input file, in bytes.
-
    LOGICAL, INTENT(OUT)         :: Error                                        ! Flag to indicate the open failed.
-
-
-      ! Local declarations.
-
    INTEGER                      :: IOS                                          ! I/O status of OPEN.
 
-
-
-      ! Open input file.  Make sure it worked.
+   ! Open input file.  Make sure it worked.
 
    ! The non-standard CONVERT keyword allows us to read UNIX binary files, whose bytes are in reverse order (i.e., stored in BIG ENDIAN format).
-
    ! NOTE: using RecLen in bytes requires using the /assume:byterecl compiler option!
-
    OPEN ( Un, FILE=TRIM( InFile ), STATUS='OLD', FORM='UNFORMATTED', ACCESS='DIRECT', RECL=RecLen, IOSTAT=IOS, &
-                   ACTION='READ'  )                                              ! Use this for UNIX systems.
+                  ACTION='READ'  )                                              ! Use this for UNIX systems.
 !                  ACTION='READ', CONVERT='BIG_ENDIAN' )                         ! Use this for PC systems.
-
 
    IF ( IOS /= 0 )  THEN
       Error = .TRUE.
@@ -340,131 +271,94 @@ CONTAINS
       Error = .FALSE.
    END IF
 
-
    RETURN
-   END SUBROUTINE OpenUnfInpBEFile
+END SUBROUTINE OpenUnfInpBEFile
 !=======================================================================
-   SUBROUTINE ProgExit ( StatCode )
+SUBROUTINE ProgExit ( StatCode )
 
-
-      ! This routine stops the program.  If the compiler supports the EXIT routine,
-      ! pass the program status to it.  Otherwise, do a STOP.
-
-
-      ! Argument declarations.
+   ! This routine stops the program.  If the compiler supports the EXIT routine,
+   ! pass the program status to it.  Otherwise, do a STOP.
 
    INTEGER, INTENT(IN)          :: StatCode                                      ! The status code to pass to the OS.
 
-
-
    CALL EXIT ( StatCode )
 
-!   IF ( StatCode == 0 ) THEN
-!      STOP 0
-!   ELSE
-!      IF ( StatCode < 0 ) THEN
-!         CALL WrScr( 'Invalid STOP code.' )
-!      END IF
-!
-!      STOP 1
-!   END IF
+   ! IF ( StatCode == 0 ) THEN
+   !    STOP 0
+   ! ELSE
+   !    IF ( StatCode < 0 ) THEN
+   !       CALL WrScr( 'Invalid STOP code.' )
+   !    END IF
+   !    STOP 1
+   ! END IF
 
-
-   END SUBROUTINE ProgExit ! ( StatCode )
+END SUBROUTINE ProgExit ! ( StatCode )
 !=======================================================================
-   SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
-   
-      ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
-      ! values for not-a-number and infinity in sindle and double 
-      ! precision) This uses standard F03 intrinsic routines,  
-      ! however Gnu has not yet implemented it, so we've placed this
-      ! routine in the system-specific code.
-   
-   
-      USE, INTRINSIC :: ieee_arithmetic  ! use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
-   
-      REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
-      REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
+SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
 
-      REAL(ReKi), INTENT(inout)           :: Inf            ! IEEE value for NaN (not-a-number)
-      REAL(ReKi), INTENT(inout)           :: NaN            ! IEEE value for Inf (infinity)
+   ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
+   ! values for not-a-number and infinity in sindle and double 
+   ! precision) This uses standard F03 intrinsic routines,  
+   ! however Gnu has not yet implemented it, so we've placed this
+   ! routine in the system-specific code.
+
+   USE, INTRINSIC :: ieee_arithmetic  ! use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
+
+   REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
+   REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
+
+   REAL(ReKi), INTENT(inout)           :: Inf            ! IEEE value for NaN (not-a-number)
+   REAL(ReKi), INTENT(inout)           :: NaN            ! IEEE value for Inf (infinity)
+
    
-      
-      NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
-      Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
-   
-      NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
-      Inf   = ieee_value(0.0_ReKi, ieee_positive_inf)   
-   
-   
-   END SUBROUTINE Set_IEEE_Constants  
+   NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
+   Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
+
+   NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
+   Inf   = ieee_value(0.0_ReKi, ieee_positive_inf)   
+
+END SUBROUTINE Set_IEEE_Constants  
 !=======================================================================
-   SUBROUTINE UsrAlarm
+SUBROUTINE UsrAlarm
 
-
-      ! This routine generates an alarm to warn the user that something went wrong.
-
-
+   ! This routine generates an alarm to warn the user that something went wrong.
 
    CALL WrNR ( CHAR( 7 ) )
 
-
    RETURN
-   END SUBROUTINE UsrAlarm
+END SUBROUTINE UsrAlarm
 !=======================================================================
-   SUBROUTINE WrNR ( Str )
+SUBROUTINE WrNR ( Str )
 
-
-      ! This routine writes out a string to the screen without following it with a new line.
-
-
-      ! Argument declarations.
+   ! This routine writes out a string to the screen without following it with a new line.
 
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
-
-
 
    WRITE (CU,'(1X,A)',ADVANCE='NO')  Str
 
-
    RETURN
-   END SUBROUTINE WrNR ! ( Str )
+END SUBROUTINE WrNR ! ( Str )
 !=======================================================================
-   SUBROUTINE WrOver ( Str )
+SUBROUTINE WrOver ( Str )
 
-
-      ! This routine writes out a string that overwrites the previous line
-
-
-      ! Argument declarations.
+   ! This routine writes out a string that overwrites the previous line
 
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
 
-
-
    WRITE (CU,'(''+'',A)')  Str
 
-
-
    RETURN
-   END SUBROUTINE WrOver ! ( Str )
+END SUBROUTINE WrOver ! ( Str )
 !=======================================================================
-   SUBROUTINE WriteScr ( Str, Frm )
+SUBROUTINE WriteScr ( Str, Frm )
 
+   ! This routine writes out a string to the screen.
 
-      ! This routine writes out a string to the screen.
-
-
-   IMPLICIT                        NONE
-
-
-      ! Argument declarations.
+   IMPLICIT NONE
 
    CHARACTER(*), INTENT(IN)     :: Str                                         ! The input string to write to the screen.
    CHARACTER(*), INTENT(IN)     :: Frm                                         ! Format specifier for the output.
-
    INTEGER                      :: ErrStat                                     ! Error status of write operation (so code doesn't crash)
-
 
    IF ( LEN_TRIM(Str)  < 1 ) THEN
       WRITE ( CU, '()', IOSTAT=ErrStat )
@@ -472,19 +366,15 @@ CONTAINS
       WRITE ( CU, Frm, IOSTAT=ErrStat ) TRIM(Str)
    END IF
 
-   IF ( ErrStat /= 0 ) &
+   IF ( ErrStat /= 0 ) THEN
       print *, ' WriteScr produced an error. Please inform the programmer.'
+   ENDIF
 
-
-   END SUBROUTINE WriteScr ! ( Str )
+END SUBROUTINE WriteScr ! ( Str )
 !=======================================================================
-
-!==================================================================================================================================
 SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
-      ! This SUBROUTINE is used to dynamically load a DLL.
-
-      ! Passed Variables:
+   ! This SUBROUTINE is used to dynamically load a DLL.
 
    TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be loaded.
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
@@ -498,8 +388,6 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
    INTEGER(C_INT), PARAMETER :: RTLD_NOW=2             ! "If this value is specified, or the environment variable LD_BIND_NOW is set to a nonempty string, all undefined symbols in the library are resolved before dlopen() returns. If this cannot be done, an error is returned."
    INTEGER(C_INT), PARAMETER :: RTLD_GLOBAL=256        ! "The symbols defined by this library will be made available for symbol resolution of subsequently loaded libraries"
    INTEGER(C_INT), PARAMETER :: RTLD_LOCAL=0           ! "This is the converse of RTLD_GLOBAL, and the default if neither flag is specified. Symbols defined in this library are not made available to resolve references in subsequently loaded libraries."
-
-
 
    INTERFACE !linux API routines
       !bjj see http://linux.die.net/man/3/dlopen
@@ -516,12 +404,10 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
    END INTERFACE
 
-
    ErrStat = ErrID_None
    ErrMsg = ''
 
-
-      ! Load the DLL and get the file address:
+   ! Load the DLL and get the file address:
 
    DLL%FileAddrX = dlOpen( TRIM(DLL%FileName)//C_NULL_CHAR, RTLD_LAZY )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
 
@@ -533,8 +419,7 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
       RETURN
    END IF
 
-
-      ! Get the procedure address:
+   ! Get the procedure address:
 
    CALL LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
 #else
@@ -546,18 +431,14 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
    
    RETURN
 END SUBROUTINE LoadDynamicLib
-!==================================================================================================================================
+!=======================================================================
 SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
 
-      ! This SUBROUTINE is used to dynamically load a procedure from a DLL.
-
-      ! Passed Variables:
+   ! This SUBROUTINE is used to dynamically load a procedure from a DLL.
 
    TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be loaded.
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-      ! local variables
    INTEGER(IntKi)                            :: i
 
 #ifdef USE_DLL_INTERFACE           
@@ -578,13 +459,8 @@ SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
 
    END INTERFACE
 
-
    ErrStat = ErrID_None
    ErrMsg = ''
-
-   !IF( .NOT. C_ASSOCIATED(DLL%FileAddrX) ) RETURN
-
-      ! Get the procedure addresses:
 
    do i=1,NWTC_MAX_DLL_PROC
       if ( len_trim( DLL%ProcName(i) ) > 0 ) then
@@ -609,21 +485,16 @@ SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
    
    RETURN
 END SUBROUTINE LoadDynamicLibProc
-!==================================================================================================================================
+!=======================================================================
 SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 
       ! This SUBROUTINE is used to free a dynamically loaded DLL (loaded in LoadDynamicLib).
 
-      ! Passed Variables:
-
-   TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be freed.
-   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-      ! Local variable:
-   INTEGER(C_INT)                            :: Success     ! Whether or not the call to dlClose was successful
-   INTEGER(C_INT), PARAMETER                 :: TRUE  = 0
-
+      TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be freed.
+      INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      INTEGER(C_INT)                            :: Success     ! Whether or not the call to dlClose was successful
+      INTEGER(C_INT), PARAMETER                 :: TRUE  = 0
 
 #ifdef USE_DLL_INTERFACE           
 !bjj: note that this is not tested.
@@ -642,8 +513,7 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 
    END INTERFACE
 
-
-      ! Close the library:
+   ! Close the library:
 
    IF( .NOT. C_ASSOCIATED(DLL%FileAddrX) ) RETURN
    Success = dlClose( DLL%FileAddrX ) !The function dlclose() returns 0 on success, and nonzero on error.
@@ -660,14 +530,12 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
    
 #else
 
-   ErrStat = ErrID_Fatal
-   ErrMsg = ' FreeDynamicLib: Not compiled with -DUSE_DLL_INTERFACE for '//TRIM(OS_Desc)
+      ErrStat = ErrID_Fatal
+      ErrMsg = ' FreeDynamicLib: Not compiled with -DUSE_DLL_INTERFACE for '//TRIM(OS_Desc)
          
 #endif
    
-   RETURN
-END SUBROUTINE FreeDynamicLib
-!==================================================================================================================================
-
-
+      RETURN
+   END SUBROUTINE FreeDynamicLib
+!=======================================================================
 END MODULE SysSubs

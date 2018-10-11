@@ -26,13 +26,17 @@ set(FEAM_LIBS_SOURCES
 add_library(feamlib ${FEAM_LIBS_SOURCES})
 target_link_libraries(feamlib nwtclibs)
 
-add_executable(feam_driver
-  src/FEAM_Driver.f90)
-target_link_libraries(feam_driver feamlib)
-
-
-install(TARGETS feamlib feam_driver
+install(TARGETS feamlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION lib
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib)
+
+add_executable(feam_driver src/FEAM_Driver.f90)
+target_link_libraries(feam_driver feamlib)
+
+install(TARGETS feam_driver
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+  RUNTIME DESTINATION bin
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib)

@@ -17,8 +17,8 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(OpenFAST CXX C Fortran)
 
-include(${CMAKE_SOURCE_DIR}/cmake/FastCmakeUtils.cmake)
-include(${CMAKE_SOURCE_DIR}/cmake/FastFortranOptions.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/OpenfastCmakeUtils.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/OpenfastFortranOptions.cmake)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -39,7 +39,7 @@ option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" off)
-option(BUILD_FAST_CPP_API "Enable building FAST - C++ API" off)
+option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
 
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
@@ -53,8 +53,18 @@ if (FPE_TRAP_ENABLED)
 endif (FPE_TRAP_ENABLED)
 
 # Setup dependencies
-find_package(BLAS REQUIRED)
-find_package(LAPACK REQUIRED)
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
+  find_package(MKL)
+endif()
+if (MKL_FOUND)
+  include_directories(${MKL_INCLUDE_DIRS})
+  set(BLAS_LIBRARIES ${MKL_LIBRARIES})
+  set(LAPACK_LIBRARIES ${MKL_LIBRARIES})
+  set(CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES "ifport;ifcore;imf;svml;m;ipgo;intlc;c;irc_s;dl;c")
+else()
+  find_package(BLAS REQUIRED)
+  find_package(LAPACK REQUIRED)
+endif()
 
 ########################################################################
 # Test option configuration
@@ -65,14 +75,14 @@ if(BUILD_TESTING)
 endif()
 
 ########################################################################
-# Build rules for FAST Registry
+# Build rules for OpenFAST Registry
 #
-add_subdirectory(modules-local/fast-registry)
+add_subdirectory(modules-local/openfast-registry)
 
 ########################################################################
-# FAST Core modules
+# OpenFAST Core modules
 #
-set(FAST_MODULES_LOCAL
+set(OPENFAST_MODULES_LOCAL
   nwtc-library
   inflowwind
   aerodyn
@@ -87,13 +97,13 @@ set(FAST_MODULES_LOCAL
   openfoam
   supercontroller
   turbsim
-  fast-library
+  openfast-library
   )
 
 ########################################################################
-# FAST External modules
+# OpenFAST External modules
 #
-set(FAST_MODULES_EXTERNAL
+set(OPENFAST_MODULES_EXTERNAL
   feamooring
   moordyn
   icedyn
@@ -101,21 +111,21 @@ set(FAST_MODULES_EXTERNAL
   map
   )
 
-set(FAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
-set_registry_includes("modules-local" ${FAST_MODULES_LOCAL})
-set_registry_includes("modules-ext" ${FAST_MODULES_EXTERNAL})
-# Fix non-standard path addition to FAST_REGISTRY_INCLUDES in icefloe module
-set(FAST_REGISTRY_INCLUDES
-  ${FAST_REGISTRY_INCLUDES} -I ${CMAKE_SOURCE_DIR}/modules-ext/icefloe/src/interfaces/FAST/
+set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
+set_registry_includes("modules-local" ${OPENFAST_MODULES_LOCAL})
+set_registry_includes("modules-ext" ${OPENFAST_MODULES_EXTERNAL})
+# Fix non-standard path addition to OPENFAST_REGISTRY_INCLUDES in icefloe module
+set(OPENFAST_REGISTRY_INCLUDES
+  ${OPENFAST_REGISTRY_INCLUDES} -I ${CMAKE_SOURCE_DIR}/modules-ext/icefloe/src/interfaces/FAST/
   CACHE INTERNAL "Registry includes paths")
 
-foreach(IDIR IN ITEMS ${FAST_MODULES_LOCAL})
+foreach(IDIR IN ITEMS ${OPENFAST_MODULES_LOCAL})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules-local/${IDIR}")
-endforeach(IDIR IN ITEMS ${FAST_MODULES_LOCAL})
+endforeach(IDIR IN ITEMS ${OPENFAST_MODULES_LOCAL})
 
-foreach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
+foreach(IDIR IN ITEMS ${OPENFAST_MODULES_EXTERNAL})
   add_subdirectory("${CMAKE_SOURCE_DIR}/modules-ext/${IDIR}")
-endforeach(IDIR IN ITEMS ${FAST_MODULES_EXTERNAL})
+endforeach(IDIR IN ITEMS ${OPENFAST_MODULES_EXTERNAL})
 
 add_subdirectory(glue-codes)
 
@@ -134,7 +144,7 @@ include(CMakePackageConfigHelpers)
 set(INCLUDE_INSTALL_DIR include/)
 set(LIB_INSTALL_DIR lib/)
 set(FTNMOD_INSTALL_DIR include/openfast/)
-if (BUILD_FAST_CPP_API)
+if (BUILD_OPENFAST_CPP_API)
   set(OpenFAST_HAS_CXX_API TRUE)
 else()
   set(OpenFAST_HAS_CXX_API FALSE)
@@ -150,12 +160,9 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/OpenFASTConfig.cmake
 
 ########################################################################
 # Configure the default install path to openfast/install
-string(FIND ${CMAKE_Fortran_MODULE_DIRECTORY} "build/ftnmods" found)
-if(${found} GREATER 0)
-  string(REPLACE "build/ftnmods" "install" install_path ${CMAKE_Fortran_MODULE_DIRECTORY})
-  if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX ${install_path} CACHE PATH "..." FORCE)
-  endif()
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+  set(CMAKE_INSTALL_PREFIX "${CMAKE_SOURCE_DIR}/install" CACHE PATH
+    "OpenFAST install directory" FORCE)
 endif()
 
 # Option configuration

@@ -1961,7 +1961,7 @@ SUBROUTINE CalculateOutput( Time, InputData, p, x, xd, z, OtherStates, y, m, Fil
          CASE (FDext_WindNumber)
             
             CALL IfW_4Dext_CalcOutput(Time, PositionXYZprime, p%FDext, y%VelocityUVW,  m%FDext, TmpErrStat, TmpErrMsg) 
-            DiskVel = 0.0_ReKi ! this is only for AD15, which we frankly don't care about in 4Dext wind
+            DiskVel = 0.0_ReKi ! this is only for AD14, which we frankly don't care about in 4Dext wind
                         
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
