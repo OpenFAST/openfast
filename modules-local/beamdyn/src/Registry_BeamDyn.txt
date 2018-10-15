@@ -221,8 +221,8 @@ typedef   ^        ParameterType IntKi          qp_indx_offset   -         - -  
 typedef   ^        ParameterType IntKi          BldMotionNodeLoc -         - -  "switch to determine where the nodes on the blade motion mesh should be located 1=FE (GLL) nodes; 2=quadrature nodes; 3=blade input stations"
 typedef   ^        ParameterType Logical        tngt_stf_fd      -         - -  "Flag to compute tangent stifness matrix via finite difference" - 
 typedef   ^        ParameterType Logical        tngt_stf_comp    -         - -  "Flag to compare finite differenced and analytical tangent stifness" - 
-typedef   ^        ParameterType ReKi           tngt_stf_pert    -         - -  "Perturbation size for computing finite differenced tangent stiffness" - 
-typedef   ^        ParameterType ReKi           tngt_stf_difftol -         - -  "When comparing tangent stiffness matrix, stop simulation if error greater than this" -
+typedef   ^        ParameterType R8Ki           tngt_stf_pert    -         - -  "Perturbation size for computing finite differenced tangent stiffness" - 
+typedef   ^        ParameterType R8Ki           tngt_stf_difftol -         - -  "When comparing tangent stiffness matrix, stop simulation if error greater than this" -
 # .... arrays for optimization ........................................................................................................
 typedef   ^        ParameterType    R8Ki        QPtw_Shp_Shp_Jac       {:}{:}{:}{:}  - - "optimization variable: QPtw_Shp_Shp_Jac(idx_qp,i,j,nelem) = p%Shp(i,idx_qp)*p%Shp(j,idx_qp)*p%QPtWeight(idx_qp)*p%Jacobian(idx_qp,nelem)" -
 typedef   ^        ParameterType    ^           QPtw_Shp_ShpDer        {:}{:}{:}     - - "optimization variable: QPtw_Shp_ShpDer(idx_qp,i,j) = p%Shp(i,idx_qp)*p%ShpDer(j,idx_qp)*p%QPtWeight(idx_qp)" -

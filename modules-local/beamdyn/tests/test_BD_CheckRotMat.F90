@@ -36,8 +36,8 @@ subroutine test_BD_CheckRotMat()
     ! --------------------------------------------------------------------------    
     testname = "known invalid rotation matrix: halve the angle of the diagonal elements:"
     ! this should produce a fatal error (ErrStat = 4)
-    testR(:,2) = (/ testR(1,2),  cos(Pi/2), testR(3,2) /)
-    testR(:,3) = (/ testR(1,2), testR(2,2),  cos(Pi/2) /)
+    testR(:,2) = (/ testR(1,2), cos(real(Pi/2, BDKi)),            testR(3,2) /)
+    testR(:,3) = (/ testR(1,2),            testR(2,2), cos(real(Pi/2, BDKi)) /)
     call BD_CheckRotMat(testR, ErrStat, ErrMsg)    
     @assertEqual(4, ErrStat, testname)
 

@@ -58,10 +58,10 @@ matrix:
 
 script:
     # beamdyn unit tests
-    - ctest -R beamdyn_utest
+    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -R beamdyn_utest; fi
 
     # beamdyn regression tests
-    - ctest -R bd_
+    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -R bd_; fi
 
     # subset of openfast regression tests
     # do not run
