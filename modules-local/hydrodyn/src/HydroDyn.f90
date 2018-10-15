@@ -2503,17 +2503,20 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       dXdx = 0.0_R8Ki
       
       ! Analytical Jacobians from State-space models
-      do j=1,1,p%WAMIT%SS_Exctn%N   
-         do i=1,p%WAMIT%SS_Exctn%N ! Loop through all active (enabled) DOFs
-            dXdx(i, j) = p%WAMIT%SS_Exctn%A(i,j)
+      if ( p%WAMIT%SS_Exctn%N > 0 ) then
+         do j=1,1,p%WAMIT%SS_Exctn%N   
+            do i=1,p%WAMIT%SS_Exctn%N ! Loop through all active (enabled) DOFs
+               dXdx(i, j) = p%WAMIT%SS_Exctn%A(i,j)
+            end do
          end do
-      end do
-      do j=1,1,p%WAMIT%SS_Rdtn%N   
-         do i=1,p%WAMIT%SS_Rdtn%N ! Loop through all active (enabled) DOFs
-            dXdx(i+p%WAMIT%SS_Exctn%N, j+p%WAMIT%SS_Exctn%N) = p%WAMIT%SS_Rdtn%A(i,j)
+      end if
+      if ( p%WAMIT%SS_Rdtn%N > 0 ) then
+         do j=1,1,p%WAMIT%SS_Rdtn%N   
+            do i=1,p%WAMIT%SS_Rdtn%N ! Loop through all active (enabled) DOFs
+               dXdx(i+p%WAMIT%SS_Exctn%N, j+p%WAMIT%SS_Exctn%N) = p%WAMIT%SS_Rdtn%A(i,j)
+            end do
          end do
-      end do
-      
+      end if
       
    END IF
 
@@ -2777,12 +2780,15 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    ErrMsg  = ""
    indx = 1
    NN = p%WAMIT%SS_Rdtn%N + p%WAMIT%SS_Exctn%N
-   
+   if ( NN == 0 ) return
       ! allocate space for the row/column names and for perturbation sizes
    call allocAry(p%dx,               NN, 'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AllocAry(InitOut%LinNames_x, NN, 'LinNames_x', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, NN, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
    
+      ! All Hydrodyn continuous states are max order = 1
+   if ( allocated(InitOut%DerivOrder_x) ) InitOut%DerivOrder_x = 1
    
    ! set perturbation sizes: p%dx
    p%dx  = 2.0_R8Ki * D2R_D 
@@ -2890,9 +2896,9 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
                   index = index + 1
                end do !j      
             end do !i   
-            meshFieldCount = meshFieldCount + 1
+            
          end do !i_meshField                                             
-
+         meshFieldCount = 6 
       !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationDisp  =  7;
       !Module/Mesh/Field: u%Morison%LumpedMesh%Orientation      =  8;
       !Module/Mesh/Field: u%Morison%LumpedMesh%TranslationVel   =  9;
@@ -2909,8 +2915,9 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
                   index = index + 1
                end do !j      
             end do !i     
-            meshFieldCount = meshFieldCount + 1
-         end do !i_meshField                                             
+           
+         end do !i_meshField 
+          meshFieldCount = meshFieldCount + 6
    end if
    
    !Module/Mesh/Field: u%Mesh%TranslationDisp  = 13  or 1;
@@ -3025,13 +3032,13 @@ SUBROUTINE HD_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
 END SUBROUTINE HD_Init_Jacobian
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
-!! Do not change this without making sure subroutine elastodyn::HD_init_jacobian is consistant with this routine!
+!! Do not change this without making sure subroutine hydrodyn::HD_init_jacobian is consistant with this routine!
 SUBROUTINE HD_Perturb_u( p, n, perturb_sign, u, du )
 
    TYPE(HydroDyn_ParameterType)        , INTENT(IN   ) :: p                      !< parameters
    INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
-   TYPE(HydroDyn_InputType)            , INTENT(INOUT) :: u                      !< perturbed ED inputs
+   TYPE(HydroDyn_InputType)            , INTENT(INOUT) :: u                      !< perturbed HD inputs
    REAL( R8Ki )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
    
 
@@ -3244,8 +3251,10 @@ SUBROUTINE HD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             nu = nu + u%Morison%DistribMesh%NNodes * 6 & ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
                     + u%Morison%LumpedMesh%NNodes  * 6 & ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node 
                     + u%Mesh%NNodes                * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
+            nu = nu + 1   ! Extended input
          else
             nu = nu + u%Mesh%NNodes                * 6   ! p%Jac_u_indx has 3 for Orientation, but we need 9 at each node
+            nu = nu + 1   ! Extended input
          end if
          
          call AllocAry(u_op, nu,'u_op',ErrStat2,ErrMsg2) ! 
