@@ -1642,6 +1642,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             ENDDO
          ENDDO
 
+         InitOut%WaveDirArr(InitOut%NStepWave2) = 0.0_ReKi
+
             ! Perform a quick sanity check.  We should have assigned all wave frequencies a direction, so K should be
             ! K = NStepWave2 (K is incrimented afterwards).
          IF ( K /= (InitOut%NStepWave2 ) )    CALL SetErrStat(ErrID_Fatal,  &
