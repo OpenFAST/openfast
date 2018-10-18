@@ -24,8 +24,7 @@ module fminfcn
    use BEMTUnCoupled, only: UncoupledErrFn
    
    type, public :: fmin_fcnArgs 
-      real(ReKi)           :: airDens
-      real(ReKi)           :: mu
+      real(ReKi)           :: nu
       integer              :: numBlades
       real(ReKi)           :: rlocal      
       real(ReKi)           :: chord 

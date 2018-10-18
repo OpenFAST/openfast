@@ -69,12 +69,12 @@ contains
    end function VelocityIsZero
 !..................................................................................................................................   
    
-   subroutine BEMTU_Wind( axInduction, tanInduction, Vx, Vy,  chord, airDens, mu, W, Re )
+   subroutine BEMTU_Wind( axInduction, tanInduction, Vx, Vy,  chord, nu, W, Re )
 
     
     ! in
     real(ReKi), intent(in) :: axInduction, tanInduction, Vx, Vy
-    real(ReKi), intent(in) :: chord, airDens, mu
+    real(ReKi), intent(in) :: chord, nu
 
     ! out
     real(ReKi), intent(out) :: Re, W
@@ -94,7 +94,7 @@ contains
         W = sqrt((Vx*(1-axInduction))**2 + (Vy*(1+tanInduction))**2)
     !end if
 
-    Re = airDens * W * chord / mu
+    Re = W * chord / nu
     if ( EqualRealNos(Re, 0.0_ReKi) ) Re = 0.001  ! Do this to avoid a singularity when we take log(Re) in the airfoil lookup.
 
    end subroutine BEMTU_Wind
