@@ -411,10 +411,11 @@ MODULE AirfoilInfo
          ! Process the airfoil shape information if it is included.
 
       CurLine = 1
-
-   DefaultInterpOrd = 3      
-#ifdef LINEAR_INTERP
+      
+      ! Default to linear interpolation
    DefaultInterpOrd = 1      
+#ifdef SPLINE_INTERP
+   DefaultInterpOrd = 3      
 #endif
       
       CALL ParseVarWDefault ( FileInfo, CurLine, 'InterpOrd', p%InterpOrd, DefaultInterpOrd, ErrStat2, ErrMsg2, UnEc )
