@@ -42,7 +42,7 @@ subroutine sub_brent(x,a_in,b_in, toler_in,maxiter_in,fcnArgs,AFInfo,fa_in,fb_in
     real(ReKi), intent(in) :: b_in  !< upper bound of solution region
     
     type(fmin_fcnArgs), intent(inout) :: fcnArgs !< function arguments
-    TYPE (AFInfoType),  INTENT(IN   ) :: AFInfo  !< The derived type for holding the constant parameters for this airfoil.
+    TYPE (AFI_ParameterType),  INTENT(IN   ) :: AFInfo  !< The derived type for holding the constant parameters for this airfoil.
     real(ReKi), intent(in),  optional :: toler_in !< induction tolerance
     real(ReKi), intent(in),  optional :: fa_in !< starting value for f(a), if not present, will be evaluated
     real(ReKi), intent(in),  optional :: fb_in !< starting value for f(b), if not present, will be evaluated

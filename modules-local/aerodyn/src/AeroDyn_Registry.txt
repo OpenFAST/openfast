@@ -168,7 +168,7 @@ typedef	^	ParameterType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef   ^  ParameterType  ReKi    Patm     -   -   -   "Atmospheric pressure" Pa
 typedef   ^  ParameterType  ReKi    Pvap      -   -   -  "Vapour pressure" Pa
 typedef   ^  ParameterType  ReKi    FluidDepth -  -   -    "Submerged hub height" m
-typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
+typedef	^	ParameterType	AFI_ParameterType	AFI	{:}	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-

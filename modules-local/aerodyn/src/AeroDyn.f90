@@ -172,12 +172,12 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
 ! set visualization data:
       ! this check is overly restrictive, but it would be a lot of work to ensure that only the *used* airfoil 
       ! tables have the same number of coordinates.
-   if ( allocated(p%AFI%AFInfo) ) then  
+   if ( allocated(p%AFI) ) then  
       
-      if ( p%AFI%AFInfo(1)%NumCoords > 0 ) then
-         NumCoords = p%AFI%AFInfo(1)%NumCoords
-         do i=2,size(p%AFI%AFInfo)
-            if (p%AFI%AFInfo(1)%NumCoords /= NumCoords) then
+      if ( p%AFI(1)%NumCoords > 0 ) then
+         NumCoords = p%AFI(1)%NumCoords
+         do i=2,size(p%AFI)
+            if (p%AFI(1)%NumCoords /= NumCoords) then
                call SetErrStat( ErrID_Info, 'Airfoil files do not contain the same number of x-y coordinates.', ErrStat, ErrMsg, RoutineName )
                NumCoords = -1
                exit
@@ -205,8 +205,8 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
                   f = InputFileData%BladeProps(k)%BlAFID(j)
                   
                   do i=1,NumCoords-1                                                     
-                     InitOut%BladeShape(k)%AirfoilCoords(1,i,j) = InputFileData%BladeProps(k)%BlChord(j)*( p%AFI%AFInfo(f)%Y_Coord(i+1) - p%AFI%AFInfo(f)%Y_Coord(1) )
-                     InitOut%BladeShape(k)%AirfoilCoords(2,i,j) = InputFileData%BladeProps(k)%BlChord(j)*( p%AFI%AFInfo(f)%X_Coord(i+1) - p%AFI%AFInfo(f)%X_Coord(1) )
+                     InitOut%BladeShape(k)%AirfoilCoords(1,i,j) = InputFileData%BladeProps(k)%BlChord(j)*( p%AFI(f)%Y_Coord(i+1) - p%AFI(f)%Y_Coord(1) )
+                     InitOut%BladeShape(k)%AirfoilCoords(2,i,j) = InputFileData%BladeProps(k)%BlChord(j)*( p%AFI(f)%X_Coord(i+1) - p%AFI(f)%X_Coord(1) )
                   end do                  
                end do
                                  
@@ -406,10 +406,10 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    
       ! after setting InitOut variables, we really don't need the airfoil coordinates taking up
       ! space in AeroDyn
-   if ( allocated(p%AFI%AFInfo) ) then  
-      do i=1,size(p%AFI%AFInfo)
-         if (allocated(p%AFI%AFInfo(i)%X_Coord)) deallocate( p%AFI%AFInfo(i)%X_Coord) 
-         if (allocated(p%AFI%AFInfo(i)%Y_Coord)) deallocate( p%AFI%AFInfo(i)%Y_Coord) 
+   if ( allocated(p%AFI) ) then  
+      do i=1,size(p%AFI)
+         if (allocated(p%AFI(i)%X_Coord)) deallocate( p%AFI(i)%X_Coord) 
+         if (allocated(p%AFI(i)%Y_Coord)) deallocate( p%AFI(i)%Y_Coord) 
       end do
    end if
    
@@ -473,7 +473,7 @@ subroutine AD_ReInit(p, x, xd, z, OtherState, m, Interval, ErrStat, ErrMsg )
       ! and the UA filter
    end if
       
-   call BEMT_ReInit(p%BEMT,x%BEMT,xd%BEMT,z%BEMT,OtherState%BEMT,m%BEMT,p%AFI%AFInfo)
+   call BEMT_ReInit(p%BEMT,x%BEMT,xd%BEMT,z%BEMT,OtherState%BEMT,m%BEMT,p%AFI)
       
 end subroutine AD_ReInit
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -1084,7 +1084,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
          
                         
       ! Call into the BEMT update states    NOTE:  This is a non-standard framework interface!!!!!  GJH
-   call BEMT_UpdateStates(t, n, m%BEMT_u(1), m%BEMT_u(2),  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI%AFInfo, m%BEMT, errStat2, errMsg2)
+   call BEMT_UpdateStates(t, n, m%BEMT_u(1), m%BEMT_u(2),  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI, m%BEMT, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
            
@@ -1139,7 +1139,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ! Call the BEMT module CalcOutput.  Notice that the BEMT outputs are purposely attached to AeroDyn's MiscVar structure to
    ! avoid issues with the coupling code
    
-   call BEMT_CalcOutput(t, m%BEMT_u(indx), p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI%AFInfo, m%BEMT_y, m%BEMT, ErrStat2, ErrMsg2 )
+   call BEMT_CalcOutput(t, m%BEMT_u(indx), p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI, m%BEMT_y, m%BEMT, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                   
    call SetOutputsFromBEMT(p, m, y )
@@ -1243,7 +1243,7 @@ subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_re
                                 
       
    call BEMT_CalcConstrStateResidual( Time, m%BEMT_u(indx), p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, m%BEMT, &
-                                       Z_residual%BEMT, p%AFI%AFInfo, ErrStat2, ErrMsg2 )
+                                       Z_residual%BEMT, p%AFI, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
    
@@ -1689,7 +1689,7 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
 
       ! Passed variables
    type(AD_InputFile),      intent(inout)   :: InputFileData      !< All the data in the AeroDyn input file (intent(out) only because of the call to MOVE_ALLOC)
-   type(AFI_ParameterType), intent(  out)   :: p_AFI              !< parameters returned from the AFI (airfoil info) module
+   type(AFI_ParameterType), allocatable, intent(  out)   :: p_AFI(:)              !< parameters returned from the AFI (airfoil info) module
    integer(IntKi),          intent(in   )   :: UnEc               !< I/O unit for echo file. If > 0, file is open for writing.
    integer(IntKi),          intent(in   )   :: NumBl              !< number of blades (for performing check on valid airfoil data read in)
    integer(IntKi),          intent(  out)   :: ErrStat            !< Error status
@@ -1712,29 +1712,41 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   
+   allocate(p_AFI( InputFileData%NumAFfiles), STAT = ErrStat2)
+      if ( ErrStat2 /= 0 ) then
+         ErrMsg2 = 'Error allocating p_AFI'
+         ErrStat2 = ErrID_Fatal
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)  
+         return
+      end if
+      
+      
       ! Setup Airfoil InitInput data structure:
-   AFI_InitInputs%NumAFfiles = InputFileData%NumAFfiles
-   call MOVE_ALLOC( InputFileData%AFNames, AFI_InitInputs%FileNames ) ! move from AFNames to FileNames      
+    
    AFI_InitInputs%InCol_Alfa  = InputFileData%InCol_Alfa
    AFI_InitInputs%InCol_Cl    = InputFileData%InCol_Cl
    AFI_InitInputs%InCol_Cd    = InputFileData%InCol_Cd
    AFI_InitInputs%InCol_Cm    = InputFileData%InCol_Cm
    AFI_InitInputs%InCol_Cpmin = InputFileData%InCol_Cpmin
-               
-      ! Call AFI_Init to read in and process the airfoil files.
-      ! This includes creating the spline coefficients to be used for interpolation.
-
-   call AFI_Init ( AFI_InitInputs, p_AFI, ErrStat2, ErrMsg2, UnEc )
-      call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
-   
+           
+   do File = 1, InputFileData%NumAFfiles
       
-   call MOVE_ALLOC( AFI_InitInputs%FileNames, InputFileData%AFNames ) ! move from FileNames back to AFNames
+      ! Call AFI_Init to read in and process an airfoil file.
+      ! This includes creating the spline coefficients to be used for interpolation.
+      
+      AFI_InitInputs%FileName = InputFileData%AFNames(File)
+      
+      call AFI_Init ( AFI_InitInputs, p_AFI(File), ErrStat2, ErrMsg2, UnEc )
+         call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+
+      if (ErrStat >= AbortErrLev) exit ! don't return until we've called AFI_DestroyInitInput()
+      
+   end do
+   
    call AFI_DestroyInitInput( AFI_InitInputs, ErrStat2, ErrMsg2 )
-   
-   if (ErrStat >= AbortErrLev) return
-   
-   
+      call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+      if (ErrStat >= AbortErrLev) return
+      
       ! check that we read the correct airfoil parameters for UA:      
    if ( InputFileData%AFAeroMod == AFAeroMod_BL_unsteady ) then
       
@@ -1755,8 +1767,8 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
       do File = 1,InputFileData%NumAFfiles
          
          if (fileUsed(File)) then
-            do Table=1,p_AFI%AFInfo(File)%NumTabs            
-               if ( .not. p_AFI%AFInfo(File)%Table(Table)%InclUAdata ) then
+            do Table=1,p_AFI(File)%NumTabs            
+               if ( .not. p_AFI(File)%Table(Table)%InclUAdata ) then
                   call SetErrStat( ErrID_Fatal, 'Airfoil file '//trim(InputFileData%AFNames(File))//', table #'// &
                         trim(num2lstr(Table))//' does not contain parameters for UA data.', ErrStat, ErrMsg, RoutineName )
                end if
@@ -1901,7 +1913,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    end if
    
    
-   call BEMT_Init(InitInp, u, p%BEMT,  x, xd, z, OtherState, p%AFI%AFInfo, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
+   call BEMT_Init(InitInp, u, p%BEMT,  x, xd, z, OtherState, p%AFI, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
          
    if (.not. equalRealNos(Interval, p%DT) ) &

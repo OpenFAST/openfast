@@ -50,7 +50,7 @@ module fminfcn
 !real(ReKi) function fmin_fcn(x, fcnArgs, AFInfo)
 !   real(ReKi),          intent(in   )    :: x
 !   type(fmin_fcnArgs),  intent(inout)    :: fcnArgs
-!   type(AFInfoType),    intent(in)       :: AFInfo
+!   type(AFI_ParameterType),    intent(in)       :: AFInfo
 !      
 !   
 !      ! Call the UncoupledErrFn subroutine to compute the residual
