@@ -2798,12 +2798,10 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    
       ! set linearization state names:
    do k = 1, 2
-      if (k == 1) then
-         spdof = p%WAMIT%SS_Exctn%N / 6
-      else
-         spdof = p%WAMIT%SS_Rdtn%N  / 6
-      end if  
+      if (k == 2) spdof = p%WAMIT%SS_Rdtn%N  / 6
+        
       do j = 1, 6
+         if (k == 1) spdof = p%WAMIT%SS_Exctn%spdof(j)
          do i = 1,spdof
             InitOut%LinNames_x(indx) = trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
             indx = indx + 1

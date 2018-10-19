@@ -823,6 +823,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       else
          if (allocated(InitOutData_HD%LinNames_y)) call move_alloc(InitOutData_HD%LinNames_y,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_y )
          if (allocated(InitOutData_HD%LinNames_u)) call move_alloc(InitOutData_HD%LinNames_u,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_u )
+         if (allocated(InitOutData_HD%LinNames_x)) call move_alloc(InitOutData_HD%LinNames_x, y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_x )
 ! LIN-TODO: Determine if we need to create this data even though we don't have rotating frames in HD
          !if (allocated(InitOutData_HD%RotFrame_y)) call move_alloc(InitOutData_HD%RotFrame_y,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%RotFrame_y )
          !if (allocated(InitOutData_HD%RotFrame_u)) call move_alloc(InitOutData_HD%RotFrame_u,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%RotFrame_u )
