@@ -1265,7 +1265,7 @@
 			<FileConfiguration Name="Debug_Matlab|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release_Matlab|x64" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release_Matlab|Win32" ExcludedFromBuild="true"/></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\SysMatlab.f90">
+		<File RelativePath="..\..\modules-local\nwtc-library\src\SysMatlabWindows.f90">
 			<FileConfiguration Name="Debug_Double|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Debug|Win32" ExcludedFromBuild="true"/>
 			<FileConfiguration Name="Release_Double|Win32" ExcludedFromBuild="true"/>
