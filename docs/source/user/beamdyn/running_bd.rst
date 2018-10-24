@@ -33,7 +33,7 @@ main executable file, ``BeamDyn_Driver.exe``, which is used to execute
 the stand-alone BeamDyn program. The ``CertTest`` folder contains a
 collection of sample BeamDyn input files and driver input files that can
 be used as templates for the user’s own models. This document may be
-found in the ``Docs`` folder. The ``Compling`` folder contains files
+found in the ``Docs`` folder. The ``Compiling`` folder contains files
 for compiling the stand-alone ``BeamDyn_v1.00.00.exe`` file with either
 Visual Studio or gFortran. The Fortran source code is located in the
 ``Source`` folder.

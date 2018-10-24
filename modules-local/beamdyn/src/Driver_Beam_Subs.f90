@@ -41,7 +41,8 @@ module BeamDyn_driver_subs
                                                     
       TYPE(MeshType)                                :: RotationCenter
       TYPE(MeshMapType)                             :: Map_RotationCenter_to_RootMotion
-                                                    
+
+      LOGICAL                                       :: DynamicSolve 
       REAL(DbKi)                                    :: t_initial
       REAL(DbKi)                                    :: t_final
       REAL(R8Ki)                                    :: w           ! magnitude of rotational velocity vector
@@ -114,6 +115,9 @@ module BeamDyn_driver_subs
 
    !---------------------- SIMULATION CONTROL --------------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'Section Header: Simulation Control',ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%DynamicSolve,'DynamicSolve','Use Dynamic solve (false for static solve).',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL ReadVar(UnIn,DvrInputFile,DvrData%t_initial,'t_initial','Starting time of simulation',ErrStat2,ErrMsg2,UnEc)
@@ -226,7 +230,9 @@ module BeamDyn_driver_subs
    READ( Line, *, IOSTAT=IOS) DvrData%NumPointLoads
    if (IOS == 0) then !this is numeric, so we can go ahead with the multi-point loads
             
-      CALL ReadCom(UnIn,DvrInputFile,'Section Header: Multiple Point Loads',ErrStat2,ErrMsg2,UnEc)
+      CALL ReadCom(UnIn,DvrInputFile,'Multiple Point Loads Table',ErrStat2,ErrMsg2,UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL ReadCom(UnIn,DvrInputFile,'Multiple Point Loads Table Units',ErrStat2,ErrMsg2,UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(DvrData%MultiPointLoad,max(1,DvrData%NumPointLoads),7,'Point loads input array',ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -325,7 +331,7 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
    write (OutUnit,'()')
    write (OutUnit,'()')
 
-   call WrFileNR ( OutUnit, 'Time        ' )
+   call WrFileNR ( OutUnit, 'Time' )
 
    do i=1,NumOuts
       call WrFileNR ( OutUnit, tab//IntOutput%WriteOutputHdr(i) )
@@ -337,10 +343,10 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
       ! Write the units of the output parameters on one line:
       !......................................................
 
-   call WrFileNR ( OutUnit, ' (s)            ' )
+   call WrFileNR ( OutUnit, '(s)' )
 
    do i=1,NumOuts
-      call WrFileNR ( Outunit, tab//IntOutput%WriteOutputUnt(i) )
+      call WrFileNR ( Outunit, tab//trim(IntOutput%WriteOutputUnt(i)) )
    end do ! i
 
    write (OutUnit,'()')  
@@ -365,9 +371,6 @@ SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output)
    character(200)                            :: frmt                 ! A string to hold a format specifier
    character(15)                             :: tmpStr               ! temporary string to print the time output as text
 
-   integer :: numOuts
-   
-   numOuts = size(Output%WriteOutput,1)
    frmt = '"'//tab//'"'//trim(OutFmt)      ! format for array elements from individual modules
    
       ! time
@@ -607,7 +610,7 @@ SUBROUTINE Init_RotationCenterMesh(DvrData, InitInputData, RootMotionMesh, ErrSt
          orientation(3,3) = -1.0_R8Ki
       else
          
-         Z_unit = (/0, 0, 1/)
+         Z_unit = (/0.0_R8Ki, 0.0_R8Ki, 1.0_R8Ki/)
          
          vec = Z_unit - z_hat*z_hat(3) ! vec = matmul( eye(3) - outerproduct(z_hat,z_hat), (/ 0,0,1/) )
          vec = vec / TwoNorm(vec)      ! we've already checked that this is not zero

@@ -35,6 +35,7 @@ char *template_registry[] = {
 "#typedef   ^               InitOutputType LOGICAL               RotFrame_xd     {:} - -   \"Flag that tells FAST if the discrete states used in linearization are in the rotating frame\" -",
 "#typedef   ^               InitOutputType LOGICAL               RotFrame_z      {:} - -   \"Flag that tells FAST if the constraint states used in linearization are in the rotating frame\" -",
 "#typedef   ^               InitOutputType LOGICAL               RotFrame_u      {:} - -   \"Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame\" -",
+"#typedef   ^               InitOutputType LOGICAL               IsLoad_u        {:} - -   \"Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrices)\" -",
 "",
 "",
 "# ..... States ....................................................................................................................",

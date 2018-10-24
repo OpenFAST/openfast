@@ -20,8 +20,10 @@ addons:
       - liblapack-dev
 
 env:
-    - FC=/usr/local/bin/gfortran-7
-    - FC=/usr/bin/gfortran
+    - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
+    - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
+    - FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
+    - FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
 
 # mac configuration
 before_install:
@@ -40,22 +42,26 @@ before_install:
 
 install:
     - mkdir build && cd build
-    - cmake .. -DBUILD_TESTING=ON
+    - cmake .. -DBUILD_TESTING=ON -DDOUBLE_PRECISION=$DOUBLE_PRECISION
     - make -j 8 install
 
 matrix:
   exclude:
     - os: linux
-      env: FC=/usr/local/bin/gfortran-7
+      env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
+    - os: linux
+      env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
     - os: osx
-      env: FC=/usr/bin/gfortran
+      env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
+    - os: osx
+      env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
 
 script:
     # beamdyn unit tests
-    - ctest -R beamdyn_utest
+    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -R beamdyn_utest; fi
 
     # beamdyn regression tests
-    - ctest -R bd_
+    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -R bd_; fi
 
     # subset of openfast regression tests
     # do not run

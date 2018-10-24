@@ -816,7 +816,7 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    REAL(ReKi),                            INTENT(IN   )   :: SinPropDir    !< sine of InflowWind propagation direction
    TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )   :: p             !< Parameters
    TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)   :: m             !< Misc/optimization variables
-   REAL(ReKi),                            INTENT(INOUT)   :: dYdu(3,6)     !< Partial derivatives of output functions
+   REAL(R8Ki),                            INTENT(INOUT)   :: dYdu(3,6)     !< Partial derivatives of output functions
                                                                            !!   (Y) with respect to the inputs (u)
 
       ! local variables: 
@@ -826,26 +826,26 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
       
       ! Local Variables
    TYPE(IfW_UniformWind_Intrp)                           :: op                ! interpolated values of InterpParams
-   REAL(ReKi)                                            :: CosDelta          ! cosine of Delta_tmp
-   REAL(ReKi)                                            :: SinDelta          ! sine of Delta_tmp
-   REAL(ReKi)                                            :: RotatePosition(3)  !< rotated position
+   REAL(R8Ki)                                            :: CosDelta          ! cosine of Delta_tmp
+   REAL(R8Ki)                                            :: SinDelta          ! sine of Delta_tmp
+   REAL(R8Ki)                                            :: RotatePosition(3)  !< rotated position
 
-   REAL(ReKi)                                            :: dVhdx             ! temporary value to hold partial v_h partial X   
-   REAL(ReKi)                                            :: dVhdy             ! temporary value to hold partial v_h partial Y   
-   REAL(ReKi)                                            :: dVhdz             ! temporary value to hold partial v_h partial Z   
-   REAL(ReKi)                                            :: tmp_du            ! temporary value to hold calculations that are part of multiple components   
-   REAL(ReKi)                                            :: tmp_dv            ! temporary value to hold calculations that are part of multiple components   
-   REAL(ReKi)                                            :: dVhdPD            ! temporary value to hold partial v_h partial propagation direction
-   REAL(ReKi)                                            :: dVhdV             ! temporary value to hold partial v_h partial V   
-   REAL(ReKi)                                            :: Vh                ! temporary value to hold v_h    
-   REAL(ReKi)                                            :: dVhdVShr          ! temporary value to hold partial v_h partial VShr   
-   REAL(ReKi)                                            :: zr 
+   REAL(R8Ki)                                            :: dVhdx             ! temporary value to hold partial v_h partial X   
+   REAL(R8Ki)                                            :: dVhdy             ! temporary value to hold partial v_h partial Y   
+   REAL(R8Ki)                                            :: dVhdz             ! temporary value to hold partial v_h partial Z   
+   REAL(R8Ki)                                            :: tmp_du            ! temporary value to hold calculations that are part of multiple components   
+   REAL(R8Ki)                                            :: tmp_dv            ! temporary value to hold calculations that are part of multiple components   
+   REAL(R8Ki)                                            :: dVhdPD            ! temporary value to hold partial v_h partial propagation direction
+   REAL(R8Ki)                                            :: dVhdV             ! temporary value to hold partial v_h partial V   
+   REAL(R8Ki)                                            :: Vh                ! temporary value to hold v_h    
+   REAL(R8Ki)                                            :: dVhdVShr          ! temporary value to hold partial v_h partial VShr   
+   REAL(R8Ki)                                            :: zr 
    
       
 
 
    if ( Position(3) < 0.0_ReKi .or. EqualRealNos(Position(3), 0.0_ReKi)) then
-      dYdu = 0.0_ReKi
+      dYdu = 0.0_R8Ki
       RETURN
    end if      
       
@@ -855,8 +855,8 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    !-------------------------------------------------------------------------------------------------
    CALL InterpParams(t, p, m, op)
       
-   CosDelta = COS( op%Delta )
-   SinDelta = SIN( op%Delta )
+   CosDelta = COS( real(op%Delta,R8Ki) )
+   SinDelta = SIN( real(op%Delta,R8Ki) )
    
    RotatePosition(1) = Position(1)*cosPropDir - Position(2)*sinPropDir
    RotatePosition(2) = Position(1)*sinPropDir + Position(2)*cosPropDir
@@ -874,7 +874,7 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    tmp_du = op%V * op%HShr /p%RefLength * CosPropDir
    dVhdx  = tmp_du * SinDelta
    dVhdy  = tmp_du * CosDelta   
-   dVhdz  = op%V * ( op%VShr / p%RefHt * zr**(op%VShr-1.0_ReKi) + op%VLinShr/p%RefLength)
+   dVhdz  = op%V * ( op%VShr / p%RefHt * zr**(op%VShr-1.0_R8Ki) + op%VLinShr/p%RefLength)
    
    dVhdV = ( ( RotatePosition(3)/p%RefHt ) ** op%VShr &                                             ! power-law wind shear
              + ( op%HShr   * ( RotatePosition(2) * CosDelta + RotatePosition(1) * SinDelta ) &      ! horizontal linear shear
@@ -897,7 +897,7 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    dYdu(2,1) = tmp_dv*dVhdx
    
       !> \f$ \frac{\partial Vt_w}{\partial X} = 0 \f$
-   dYdu(3,1) = 0.0_ReKi
+   dYdu(3,1) = 0.0_R8Ki
       
       
       !> \f$ \frac{\partial Vt_u}{\partial Y} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
@@ -909,7 +909,7 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    dYdu(2,2) = tmp_dv*dVhdy
       
       !> \f$ \frac{\partial Vt_w}{\partial Y} = 0 \f$
-   dYdu(3,2) = 0.0_ReKi
+   dYdu(3,2) = 0.0_R8Ki
       
       
       !> \f$ \frac{\partial Vt_u}{\partial Z} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
@@ -921,7 +921,7 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
    dYdu(2,3) = tmp_dv*dVhdz
             
       !> \f$ \frac{\partial Vt_w}{\partial Z} = 0 \f$
-   dYdu(3,3) = 0.0_ReKi
+   dYdu(3,3) = 0.0_R8Ki
    
    
    
@@ -930,7 +930,7 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
       ! \f$ \frac{\partial Vt_v}{\partial V} =  \f$
    dYdu(2,4) = tmp_dv*dVhdV
       !> \f$ \frac{\partial Vt_w}{\partial V} = 0 \f$
-   dYdu(3,4) = 0.0_ReKi
+   dYdu(3,4) = 0.0_R8Ki
    
 
       ! \f$ \frac{\partial Vt_u}{\partial VShr} =  \f$
@@ -938,14 +938,14 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
       ! \f$ \frac{\partial Vt_v}{\partial VShr} =  \f$
    dYdu(2,5) = tmp_dv*dVhdVShr
       !> \f$ \frac{\partial Vt_w}{\partial VShr} = 0 \f$
-   dYdu(3,5) = 0.0_ReKi
+   dYdu(3,5) = 0.0_R8Ki
 
       ! \f$ \frac{\partial Vt_u}{\partial PropDir} =  \f$
    dYdu(1,6) = tmp_dv*Vh + tmp_du*dVhdPD
       ! \f$ \frac{\partial Vt_v}{\partial PropDir} =  \f$
    dYdu(2,6) = -tmp_du*Vh + tmp_dv*dVhdPD
       !> \f$ \frac{\partial Vt_w}{\partial PropDir} = 0 \f$
-   dYdu(3,6) = 0.0_ReKi
+   dYdu(3,6) = 0.0_R8Ki
    
    RETURN
 
