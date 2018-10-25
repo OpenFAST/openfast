@@ -46,7 +46,16 @@
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration></Configurations>
 	<Files>
 		<Filter Name="Header Files" Filter="fi;fd;h;inc">
-		<File RelativePath="..\..\modules-local\openfast-library\src\FAST_Library.h"/></Filter>
+		<File RelativePath="..\..\modules-local\openfast-library\src\FAST_Library.h">
+			<FileConfiguration Name="Debug_Matlab|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release_Matlab|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug_Matlab|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release_Matlab|Win32" ExcludedFromBuild="true"/></File>
+		<File RelativePath="..\..\glue-codes\simulink\src\FAST_SFunc.c">
+			<FileConfiguration Name="Debug_Matlab|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release_Matlab|x64" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Debug_Matlab|Win32" ExcludedFromBuild="true"/>
+			<FileConfiguration Name="Release_Matlab|Win32" ExcludedFromBuild="true"/></File></Filter>
 		<Filter Name="Resource Files" Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"/>
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<File RelativePath="..\..\modules-local\openfast-library\src\FAST_Library.f90"/></Filter></Files>
