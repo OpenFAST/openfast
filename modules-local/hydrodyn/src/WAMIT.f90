@@ -1650,7 +1650,7 @@ SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, 
       
          ! NOTE: The input below (0.0) will only work as part of a linearization Get_OP call! If this routine (WAMIT_CalcContStateDeriv) is called in another context, then the following
          ! input needs to be implemented generically.
-      CALL SS_Exc_CalcContStateDeriv( Time, 0.0_ReKi, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, m%SS_Exctn, dxdt%SS_Exctn, ErrStat, ErrMsg )      
+      CALL SS_Exc_CalcContStateDeriv( Time, 0.0_SiKi, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, m%SS_Exctn, dxdt%SS_Exctn, ErrStat, ErrMsg )      
        
 
 END SUBROUTINE WAMIT_CalcContStateDeriv

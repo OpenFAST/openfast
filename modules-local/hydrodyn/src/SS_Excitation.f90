@@ -398,7 +398,7 @@ SUBROUTINE SS_Exc_CalcContStateDeriv( Time, waveElev0, p, x, xd, z, OtherState, 
 !..................................................................................................................................
    
       REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
-      REAL(ReKi),                        INTENT(IN   )  :: waveElev0   !< Wave elevation at origin at time: Time (m)                  
+      REAL(SiKi),                        INTENT(IN   )  :: waveElev0   !< Wave elevation at origin at time: Time (m)                  
       TYPE(SS_Exc_ParameterType),        INTENT(IN   )  :: p           !< Parameters                             
       TYPE(SS_Exc_ContinuousStateType),  INTENT(IN   )  :: x           !< Continuous states at Time
       TYPE(SS_Exc_DiscreteStateType),    INTENT(IN   )  :: xd          !< Discrete states at Time
