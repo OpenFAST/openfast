@@ -348,13 +348,6 @@ SUBROUTINE UsrAlarm()
 
    CHARACTER(*), INTENT(IN)     :: Str                                          !< The string to write to the screen.
 
-      ! This routine writes out a string to the screen without following it with a new line.
-
-
-      ! Argument declarations.
-
-   CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
-
 #ifdef CONSOLE_FILE
 
    WRITE (CU,'(1X,A)',ADVANCE='NO')  Str
@@ -374,31 +367,20 @@ SUBROUTINE UsrAlarm()
 !=======================================================================
    SUBROUTINE WrOver ( Str )
 
-
       ! This routine writes out a string that overwrites the previous line
-
-
-      ! Argument declarations.
 
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
 
    CALL WriteScr( Str, '(A)' )
-
-
 
    RETURN
    END SUBROUTINE WrOver ! ( Str )
 !=======================================================================
    SUBROUTINE WriteScr ( Str, Frm )
 
-
       ! This routine writes out a string to the screen.
 
-
    IMPLICIT                        NONE
-
-
-      ! Argument declarations.
 
    CHARACTER(*), INTENT(IN)     :: Str                                         ! The input string to write to the screen.
    CHARACTER(*), INTENT(IN)     :: Frm                                         ! Format specifier for the output.
@@ -416,13 +398,9 @@ SUBROUTINE UsrAlarm()
 
 #else
 
-      ! Local variables
    INTEGER, EXTERNAL            :: mexPrintF                                   ! Matlab function to print to the command window
    INTEGER                      :: Stat                                        ! Number of characters printed to the screen
-
    CHARACTER( 1024 ), SAVE      :: Str2   ! A temporary string (Str written with the Frm Format specification) (bjj: this apparently needs to be a static variable so it writes to the Matlab command window)
-
-
 
    IF ( LEN_TRIM(Str)  < 1 ) THEN
       Str2=''
@@ -430,7 +408,6 @@ SUBROUTINE UsrAlarm()
       WRITE (Str2,Frm, IOSTAT=Stat)  ADJUSTL( Str )
    END IF
    Str2 = trim(Str2)//NewLine//C_NULL_CHAR  !bjj: not sure C_NULL_CHAR is necessary
-
    Stat = mexPrintf( Str2 )
    !call mexEvalString("drawnow;");  ! !bjj: may have to call this to dump string to the screen immediately.
 
