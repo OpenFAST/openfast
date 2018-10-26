@@ -177,7 +177,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
       if ( p%AFI%AFInfo(1)%NumCoords > 0 ) then
          NumCoords = p%AFI%AFInfo(1)%NumCoords
          do i=2,size(p%AFI%AFInfo)
-            if (p%AFI%AFInfo(1)%NumCoords /= NumCoords) then
+            if (p%AFI%AFInfo(i)%NumCoords /= NumCoords) then
                call SetErrStat( ErrID_Info, 'Airfoil files do not contain the same number of x-y coordinates.', ErrStat, ErrMsg, RoutineName )
                NumCoords = -1
                exit
