@@ -1335,7 +1335,7 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
 
             ! compute constraint state for u_op + delta u
-         call MSQS_UpdateStates( t          , &
+         call MSQS_UpdateStates( time       , &
                             interval        , & 
                             u_perturb%C_obj , &
                             p%C_obj         , &
@@ -1365,7 +1365,7 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
 
                         ! compute constraint state for u_op + delta u
-         call MSQS_UpdateStates( t       , &
+         call MSQS_UpdateStates( time       , &
                             interval        , & 
                             u_perturb%C_obj , &
                             p%C_obj         , &
