@@ -2909,8 +2909,13 @@ FUNCTION get_vtkdir_path( out_file_root )
    CHARACTER(*), INTENT(IN) :: out_file_root
    INTEGER(IntKi) :: last_separator_index
    
-   ! get the directory of the primary input file (i.e. the case directory); PathSep comes from Sys*.f90
-   last_separator_index = index(trim(out_file_root), PathSep, back=.true.)
+   ! get the directory of the primary input file (i.e. the case directory); Windows can have either forward or backward slashes (compare with GetPath())
+   
+   last_separator_index =      index(out_file_root, '/', back=.true.)
+   last_separator_index = max( index(out_file_root, '\', back=.true.), last_separator_index )
+   
+   ! Note that last_separator_index cannot be 0 because of the way out_file_root is formed in OpenFAST (it adds PathSep if it is run in the current directory).
+   ! If that changes, the next line should be changed to avoid seg faults on certain compilers:
    get_vtkdir_path = trim(out_file_root(1 : last_separator_index) // 'vtk')
 END FUNCTION
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2921,10 +2926,11 @@ FUNCTION get_vtkroot_path( out_file_root )
    INTEGER(IntKi) :: last_separator_index
    INTEGER(IntKi) :: path_length
 
-   path_length = len(trim(out_file_root))
-   last_separator_index = index(trim(out_file_root), PathSep, back=.true.)
+   last_separator_index =      index(out_file_root, '/', back=.true.)
+   last_separator_index = max( index(out_file_root, '\', back=.true.), last_separator_index )
+
    get_vtkroot_path = trim( get_vtkdir_path(out_file_root) ) // PathSep &
-                      // out_file_root( last_separator_index + 1 : path_length)
+                      // out_file_root( last_separator_index + 1 :)
 END FUNCTION
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up some of the information needed for plotting VTK surfaces. It initializes only the data needed before 
