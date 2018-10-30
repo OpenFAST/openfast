@@ -1,13 +1,17 @@
+% Before running this script, you must have compiled OpenFAST for Simulink to create a DLL (i.e., a shared library like .so, .dylib, .lib, etc.).
+% The name of the library that was generated must match the `libname` variable below, and should be located in the directory specified by `binDir`.
 
 mexname = 'FAST_SFunc';
 
 switch computer('arch')
     case 'win64'
+        % this is set up for files generated using the x64 configuration of vs-build
         binDir = '../../../build/bin';
         libname = 'OpenFAST-Simulink_x64';
         outDir = binDir;
         
     case 'win32'
+        % this is set up for files generated using the x86 configuration of vs-build
         binDir = '../../../build/bin';
         libname = 'OpenFAST-Simulink_Win32';
         outDir = binDir;
