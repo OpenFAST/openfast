@@ -2793,8 +2793,8 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    ! set perturbation sizes: p%dx
    p%dx  = 2.0_R8Ki * D2R_D 
 
-   modLabels = (/'Exctn','Rdtn'/)
-   dofLabels = (/'PtfmSg','PtfmSw','PtfmHv','PtfmR','PtfmP','PtfmY'/)
+   modLabels = (/'Exctn     ','Rdtn      '/)
+   dofLabels = (/'PtfmSg    ','PtfmSw    ','PtfmHv    ','PtfmR     ','PtfmP     ','PtfmY     '/)
    
       ! set linearization state names:
    do k = 1, 2
