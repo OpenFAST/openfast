@@ -2415,7 +2415,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    ErrStat = ErrID_None
    ErrMsg  = ''
    m%IgnoreMod = .true. ! to get true perturbations, we can't use the modulo function
-
+   delta = PI / 90.0_R8Ki
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    NN = p%WAMIT%SS_Exctn%N+p%WAMIT%SS_Rdtn%N
       
@@ -2504,14 +2504,14 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       
       ! Analytical Jacobians from State-space models
       if ( p%WAMIT%SS_Exctn%N > 0 ) then
-         do j=1,1,p%WAMIT%SS_Exctn%N   
+         do j=1,p%WAMIT%SS_Exctn%N   
             do i=1,p%WAMIT%SS_Exctn%N ! Loop through all active (enabled) DOFs
                dXdx(i, j) = p%WAMIT%SS_Exctn%A(i,j)
             end do
          end do
       end if
       if ( p%WAMIT%SS_Rdtn%N > 0 ) then
-         do j=1,1,p%WAMIT%SS_Rdtn%N   
+         do j=1,p%WAMIT%SS_Rdtn%N   
             do i=1,p%WAMIT%SS_Rdtn%N ! Loop through all active (enabled) DOFs
                dXdx(i+p%WAMIT%SS_Exctn%N, j+p%WAMIT%SS_Exctn%N) = p%WAMIT%SS_Rdtn%A(i,j)
             end do
