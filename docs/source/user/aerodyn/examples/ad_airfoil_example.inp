@@ -84,7 +84,7 @@
 ! data for table 1
 ! ------------------------------------------------------------------------------
        0.75   Re                ! Reynolds number in millions
-          0   Ctrl              ! Control setting (must be 0 for current AirfoilInfo)
+          0   UserProp          ! User property or control setting
 true          InclUAdata        ! Is unsteady aerodynamics data included in this table? If TRUE, then include 30 UA coefficients below this line
 !........................................
       -0.38   alpha0            ! 0-lift angle of attack, depends on airfoil.

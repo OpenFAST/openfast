@@ -615,10 +615,17 @@ input file):
 ``NumAlf`` is the number of distinct AoA entries and determines the
 number of rows in the subsequent table of static airfoil coefficients;
 ``NumAlf`` must be greater than or equal to one (``NumAlf = 1``
-implies constant coefficients, regardless of the AoA). AeroDyn will
-interpolate the data provided via linear interpolation or via cubic
-splines, depending on the setting of input ``InterpOrd`` above. For
-each AoA, you must set the AoA (in degrees), ``alpha``, the lift-force
+implies constant coefficients, regardless of the AoA). 
+
+AeroDyn will
+interpolate on AoA using the data provided via linear interpolation or via cubic
+splines, depending on the setting of input ``InterpOrd`` above. 
+If ``AFTabMod`` is set to ``1``, only the first airfoil table in each file
+will be used. If ``AFTabMod`` is set to ``2``, AeroDyn will find the
+airfoil table that bounds the computed Reynolds number, and linearly interpolate
+between the tables, using the logarithm of the Reynolds numbers.
+
+For each AoA, you must set the AoA (in degrees), ``alpha``, the lift-force
 coefficient, ``Coefs``\ (:,1), the drag-force coefficient,
 ``Coefs(:,2)``, and optionally the pitching-moment coefficient,
 ``Coefs(:,3)``, and minimum pressure coefficient,

@@ -27,6 +27,7 @@ module AeroDyn
    use BEMT
    use AirfoilInfo
    use NWTC_LAPACK
+   use UnsteadyAero
    
    
    implicit none
@@ -177,7 +178,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
       if ( p%AFI(1)%NumCoords > 0 ) then
          NumCoords = p%AFI(1)%NumCoords
          do i=2,size(p%AFI)
-            if (p%AFI(1)%NumCoords /= NumCoords) then
+            if (p%AFI(i)%NumCoords /= NumCoords) then
                call SetErrStat( ErrID_Info, 'Airfoil files do not contain the same number of x-y coordinates.', ErrStat, ErrMsg, RoutineName )
                NumCoords = -1
                exit
@@ -688,10 +689,14 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( u%InflowOnTower, 3_IntKi, p%NumTwrNds, 'u%InflowOnTower', ErrStat2, ErrMsg2 ) ! could be size zero
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-                
+
+   call AllocAry( u%UserProp, p%NumBlNds, p%numBlades, 'u%UserProp', ErrStat2, ErrMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      
    if (errStat >= AbortErrLev) return      
       
    u%InflowOnBlade = 0.0_ReKi
+   u%UserProp      = 0.0_ReKi
    
       ! Meshes for motion inputs (ElastoDyn and/or BeamDyn)
          !................
@@ -1436,6 +1441,8 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
       end do !j=nodes      
    end do !k=blades  
   
+   m%BEMT_u(indx)%UserProp = u%UserProp
+   
 end subroutine SetInputsForBEMT
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from BEMT (stored in m%BEMT_y) into values on the AeroDyn BladeLoad output mesh.
@@ -1540,13 +1547,6 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
       
    end if !BEMT/DBEMT checks
    
-      ! UA inputs
-   if (InputFileData%AFAeroMod == AFAeroMod_BL_unsteady ) then
-      if (InputFileData%UAMod < 2 .or. InputFileData%UAMod > 3 ) call SetErrStat( ErrID_Fatal, &
-         "In this version, UAMod must be 2 (Gonzalez's variant) or 3 (Minemma/Pierce variant).", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
-      
-      if (.not. InputFileData%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
-   end if
    
    if ( InputFileData%CavitCheck .and. InputFileData%AFAeroMod == AFAeroMod_BL_unsteady) then
       call SetErrStat( ErrID_Fatal, 'Cannot use unsteady aerodynamics module with a cavitation check', ErrStat, ErrMsg, RoutineName )
@@ -1554,15 +1554,8 @@ SUBROUTINE ValidateInputData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
         
    if (InputFileData%InCol_Cpmin == 0 .and. InputFileData%CavitCheck) call SetErrStat( ErrID_Fatal, 'InCol_Cpmin must not be 0 to do a cavitation check.', ErrStat, ErrMsg, RoutineName )
 
-                
-   
-         ! validate the AFI input data because it doesn't appear to be done in AFI
+         ! validate the number of airfoils
    if (InputFileData%NumAFfiles  < 1) call SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )   
-   if (InputFileData%InCol_Alfa  < 0) call SetErrStat( ErrID_Fatal, 'InCol_Alfa must not be a negative number.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%InCol_Cl    < 0) call SetErrStat( ErrID_Fatal, 'InCol_Cl must not be a negative number.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%InCol_Cd    < 0) call SetErrStat( ErrID_Fatal, 'InCol_Cd must not be a negative number.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%InCol_Cm    < 0) call SetErrStat( ErrID_Fatal, 'InCol_Cm must not be a negative number.', ErrStat, ErrMsg, RoutineName )
-   if (InputFileData%InCol_Cpmin < 0) call SetErrStat( ErrID_Fatal, 'InCol_Cpmin must not be a negative number.', ErrStat, ErrMsg, RoutineName )
    
       ! .............................
       ! check blade mesh data:
@@ -1688,25 +1681,24 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
 
 
       ! Passed variables
-   type(AD_InputFile),      intent(inout)   :: InputFileData      !< All the data in the AeroDyn input file (intent(out) only because of the call to MOVE_ALLOC)
-   type(AFI_ParameterType), allocatable, intent(  out)   :: p_AFI(:)              !< parameters returned from the AFI (airfoil info) module
-   integer(IntKi),          intent(in   )   :: UnEc               !< I/O unit for echo file. If > 0, file is open for writing.
-   integer(IntKi),          intent(in   )   :: NumBl              !< number of blades (for performing check on valid airfoil data read in)
-   integer(IntKi),          intent(  out)   :: ErrStat            !< Error status
-   character(*),            intent(  out)   :: ErrMsg             !< Error message
+   type(AD_InputFile),                   intent(inout) :: InputFileData      !< All the data in the AeroDyn input file (intent(out) only because of the call to MOVE_ALLOC)
+   type(AFI_ParameterType), allocatable, intent(  out) :: p_AFI(:)           !< parameters returned from the AFI (airfoil info) module
+   integer(IntKi),                       intent(in   ) :: UnEc               !< I/O unit for echo file. If > 0, file is open for writing.
+   integer(IntKi),                       intent(in   ) :: NumBl              !< number of blades (for performing check on valid airfoil data read in)
+   integer(IntKi),                       intent(  out) :: ErrStat            !< Error status
+   character(*),                         intent(  out) :: ErrMsg             !< Error message
 
       ! local variables
-   type(AFI_InitInputType)                  :: AFI_InitInputs     ! initialization data for the AFI routines
+   type(AFI_InitInputType)                             :: AFI_InitInputs     ! initialization data for the AFI routines
    
-   integer(IntKi)                           :: j                  ! loop counter for nodes
-   integer(IntKi)                           :: k                  ! loop counter for blades
-   integer(IntKi)                           :: File               ! loop counter for airfoil files
-   integer(IntKi)                           :: Table              ! loop counter for airfoil tables in a file
-   logical, allocatable                     :: fileUsed(:)
+   integer(IntKi)                                      :: j                  ! loop counter for nodes
+   integer(IntKi)                                      :: k                  ! loop counter for blades
+   integer(IntKi)                                      :: File               ! loop counter for airfoil files
+   logical, allocatable                                :: fileUsed(:)
    
-   integer(IntKi)                           :: ErrStat2
-   character(ErrMsgLen)                     :: ErrMsg2
-   character(*), parameter                  :: RoutineName = 'Init_AFIparams'
+   integer(IntKi)                                      :: ErrStat2
+   character(ErrMsgLen)                                :: ErrMsg2
+   character(*), parameter                             :: RoutineName = 'Init_AFIparams'
 
    
    ErrStat = ErrID_None
@@ -1714,47 +1706,43 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
    
    allocate(p_AFI( InputFileData%NumAFfiles), STAT = ErrStat2)
       if ( ErrStat2 /= 0 ) then
-         ErrMsg2 = 'Error allocating p_AFI'
-         ErrStat2 = ErrID_Fatal
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)  
+         call SetErrStat(ErrID_Fatal,'Error allocating p_AFI.',ErrStat,ErrMsg,RoutineName)
          return
       end if
-      
-      
+   
+   
       ! Setup Airfoil InitInput data structure:
-    
    AFI_InitInputs%InCol_Alfa  = InputFileData%InCol_Alfa
    AFI_InitInputs%InCol_Cl    = InputFileData%InCol_Cl
    AFI_InitInputs%InCol_Cd    = InputFileData%InCol_Cd
    AFI_InitInputs%InCol_Cm    = InputFileData%InCol_Cm
    AFI_InitInputs%InCol_Cpmin = InputFileData%InCol_Cpmin
-           
-   do File = 1, InputFileData%NumAFfiles
-      
-      ! Call AFI_Init to read in and process an airfoil file.
-      ! This includes creating the spline coefficients to be used for interpolation.
-      
-      AFI_InitInputs%FileName = InputFileData%AFNames(File)
-      
-      call AFI_Init ( AFI_InitInputs, p_AFI(File), ErrStat2, ErrMsg2, UnEc )
-         call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
-
-      if (ErrStat >= AbortErrLev) exit ! don't return until we've called AFI_DestroyInitInput()
-      
-   end do
+   AFI_InitInputs%AFTabMod    = InputFileData%AFTabMod !AFITable_1
    
-   call AFI_DestroyInitInput( AFI_InitInputs, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
-      if (ErrStat >= AbortErrLev) return
+      ! Call AFI_Init to read in and process the airfoil files.
+      ! This includes creating the spline coefficients to be used for interpolation.
+   
+   do File = 1, InputFileData%NumAFfiles
+
+      AFI_InitInputs%FileName = InputFileData%AFNames(File)
+
+      call AFI_Init ( AFI_InitInputs, p_AFI(File), ErrStat2, ErrMsg2, UnEc )
+         call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) exit
+   end do
+         
       
+   call AFI_DestroyInitInput( AFI_InitInputs, ErrStat2, ErrMsg2 )
+   if (ErrStat >= AbortErrLev) return
+   
+   
       ! check that we read the correct airfoil parameters for UA:      
    if ( InputFileData%AFAeroMod == AFAeroMod_BL_unsteady ) then
       
-         
          ! determine which airfoil files will be used
       call AllocAry( fileUsed, InputFileData%NumAFfiles, 'fileUsed', errStat2, errMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
-      if (errStat >= AbortErrLev) return
+         if (errStat >= AbortErrLev) return
       fileUsed = .false.
             
       do k=1,NumBl
@@ -1763,16 +1751,13 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
          end do ! j=nodes
       end do ! k=blades
       
-         ! make sure all files in use have UA input parameters:
+         ! make sure all files in use have proper UA input parameters:
       do File = 1,InputFileData%NumAFfiles
          
          if (fileUsed(File)) then
-            do Table=1,p_AFI(File)%NumTabs            
-               if ( .not. p_AFI(File)%Table(Table)%InclUAdata ) then
-                  call SetErrStat( ErrID_Fatal, 'Airfoil file '//trim(InputFileData%AFNames(File))//', table #'// &
-                        trim(num2lstr(Table))//' does not contain parameters for UA data.', ErrStat, ErrMsg, RoutineName )
-               end if
-            end do
+            call UA_ValidateAFI(p_AFI(File), InputFileData%AFNames(File), ErrStat2, ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               if (errStat >= AbortErrLev) return
          end if
          
       end do
