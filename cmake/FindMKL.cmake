@@ -22,22 +22,35 @@
 # infer the architecture build type
 # https://cmake.org/cmake/help/v3.0/variable/CMAKE_SIZEOF_VOID_P.html
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
-  set(ARCH "32")
+  set(ARCHDIR "ia32")
+  set(WINDOWS_INTERFACE "c")
 elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
-  set(ARCH "64")
+  set(ARCHDIR "intel64")
+  set(WINDOWS_INTERFACE "lp64")
 endif()
 
+set(MKLSEARCHPATHS
+  $ENV{MKLROOT}/lib/${ARCHDIR}_win
+  $ENV{MKLROOT}/lib/${ARCHDIR}
+  $ENV{MKLROOT}/lib
+)
+
+# using mkl_intel_c on windows since that is the default for intel compilers
+# https://software.intel.com/en-us/mkl-windows-developer-guide-using-the-cdecl-and-stdcall-interfaces
 find_library(MKL_IFACE_LIB
-  NAMES mkl_intel_lp${ARCH} libmkl_intel_lp${ARCH}.a mkl_intel_lp${ARCH}_dll.lib
-  PATHS $ENV{MKLROOT}/lib $ENV{MKLROOT}/lib/intel${ARCH} $ENV{INTEL}/mkl/lib/intel${ARCH} $ENV{INTEL}/mkl/lib/intel${ARCH}_win)
+  NAMES libmkl_intel_lp64.a mkl_intel_${WINDOWS_INTERFACE}_dll.lib mkl_intel_lp64
+  PATHS ${MKLSEARCHPATHS}
+  NO_DEFAULT_PATH)
 
 find_library(MKL_SEQ_LIB
-  NAMES mkl_sequential libmkl_sequential.a mkl_sequential.lib
-  PATHS $ENV{MKLROOT}/lib $ENV{MKLROOT}/lib/intel${ARCH} $ENV{INTEL}/mkl/lib/intel${ARCH} $ENV{INTEL}/mkl/lib/intel${ARCH}_win)
+  NAMES libmkl_sequential.a mkl_sequential.lib mkl_sequential
+  PATHS ${MKLSEARCHPATHS}
+  NO_DEFAULT_PATH)
 
 find_library(MKL_CORE_LIB
-  NAMES mkl_core libmkl_core.a mkl_core_dll.lib
-  PATHS $ENV{MKLROOT}/lib $ENV{MKLROOT}/lib/intel${ARCH} $ENV{INTEL}/mkl/lib/intel${ARCH} $ENV{INTEL}/mkl/lib/intel${ARCH}_win)
+  NAMES libmkl_core.a mkl_core_dll.lib mkl_core
+  PATHS ${MKLSEARCHPATHS}
+  NO_DEFAULT_PATH)
 
 if (MKL_IFACE_LIB AND MKL_SEQ_LIB AND MKL_CORE_LIB)
   set(MKL_LIBRARIES ${MKL_IFACE_LIB} ${MKL_SEQ_LIB} ${MKL_CORE_LIB})
