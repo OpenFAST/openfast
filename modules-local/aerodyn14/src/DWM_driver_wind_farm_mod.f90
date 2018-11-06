@@ -14,8 +14,8 @@ MODULE read_wind_farm_parameter_data
     REAL     ::  WFLowerBd   ! The lower bound height of the wind file (m)
     REAL     ::  Winddir     ! The ambient wind direction
     INTEGER  ::  Tinfluencer ! The max number of upstream turbines that affects a downstream turbine (-)
-    CHARACTER(20):: DWM_exe_name
-    
+    CHARACTER(1024):: DWM_exe_name
+
     REAL(8), ALLOCATABLE  ::  Xcoordinate (:)       ! wind turbine x location
     REAL(8), ALLOCATABLE  ::  Ycoordinate (:)       ! wind turbine y location
         

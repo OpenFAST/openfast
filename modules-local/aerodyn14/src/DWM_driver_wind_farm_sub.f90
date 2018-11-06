@@ -34,7 +34,6 @@ SUBROUTINE read_wind_farm_parameter(PriFile)
     CHARACTER(ErrMsgLen) :: ErrMsg
     INTEGER(4) :: IOS
 
-    !bjj: CALL GetNewUnit(UnIn)
     CALL OpenFInpFile ( UnIn, PriFile, ErrStat, ErrMsg )    
 
     READ (UnIn,'(//,A,/)',IOSTAT=IOS)  DWM_Title                      ! read the words (title)
@@ -43,8 +42,7 @@ SUBROUTINE read_wind_farm_parameter(PriFile)
     READ (UnIn,'(A)',IOSTAT=IOS)  Comment                             ! read the words (comment)
     CALL CheckIOS( IOS, PriFile, 'simulation control parameters comment', StrType )
     
-
-   ! Read in the hub height
+      ! Read in the hub height
     CALL ReadVar ( UnIn, PriFile, HubHt, 'HubHt', 'The hub height (m)', ErrStat, ErrMsg, UnEc )
     IF ( ErrStat /= 0 ) RETURN
     
@@ -93,12 +91,8 @@ SUBROUTINE read_wind_farm_parameter(PriFile)
     IF ( ErrStat /= 0 ) RETURN
     
       ! Read in the DWM_FAST.exe file rootname
-    READ (UnIn,*,IOStat=ErrStat)  DWM_exe_name
-    
-      ! Read in the number of upstream turbines that affects a downstream turbine
-    !CALL ReadIVar ( UnIn, PriFile, Tinfluencer, 'Tinfluencer', 'The max number of upstream turbines that affects a downstream turbine (-)',ErrStat )
-    !IF ( ErrStat /= 0 ) RETURN
-    
+    CALL ReadVar ( UnIn, PriFile, DWM_exe_name, 'DWM_exe_name', 'The file rootname of the DWM-FAST program', ErrStat, ErrMsg, UnEc )
+
     ALLOCATE (Xcoordinate(NumWT))
     ALLOCATE (Ycoordinate(NumWT))
     
@@ -473,34 +467,10 @@ SUBROUTINE cal_wake_sector_angle()
         END DO
     END DO
     
-    !OPEN (unit=25,file="DWM_WIND_FARM/results/turbine_influence.txt")
-    !WRITE (25,'(I5)'), TurbineInfluenceData(:,:)
-    !CLOSE(25)
-    
     OPEN(unit = 10, status='replace',file='turbine_interaction.bin',form='unformatted')    
     WRITE(10)   TurbineInfluenceData(:,:)                                                                                                                                                                                                    
     CLOSE(10)
-    
-    ! OWEZ WIND FARM TURBINE 7 AND TURBINE 8
-    !T7_wake = 0
-    !T8_wake = 0
-    !DO I = 1,Tinfluencer
-        !IF (TurbineInfluenceData(7,I) /= 0) THEN
-            !T7_wake = T7_wake+1
-        !END IF
-        !IF (TurbineInfluenceData(8,I) /= 0) THEN
-            !T8_wake = T8_wake+1
-        !END IF
-    !END DO
-    
-        
-    !OPEN (unit=25,file="DWM_WIND_FARM/results/OWEZ_T7_T8_num.txt")
-    !WRITE(25,*),'InflowAngle=',Winddir
-    !WRITE(25,*),'T7_wake=',T7_wake
-    !WRITE(25,*),'T8_wake=',T8_wake
-    !CLOSE(25)
-    !------------------------------------------------------------
-        
+
 END SUBROUTINE cal_wake_sector_angle
 
 !-------------------------------------------------------------------
@@ -894,15 +864,11 @@ SUBROUTINE rename_FAST_output(SimulationOrder_index)
         ELSE
             write(invetigated_turbine_index_character,'(i3)') WT_index
         END IF
-    
+
             ! Rename the FAST output wrt the turbine index
         filename_FastOutput = trim(Prefix)//trim(Fastprefix)//trim(Turbineprefix)//trim(invetigated_turbine_index_character)//".out"
         filename_FastElm    = trim(Prefix)//trim(FastElmprefix)//trim(Turbineprefix)//trim(invetigated_turbine_index_character)//".AD.out"
-    
-        !RESULT =rename('V80_2MW.out',filename_FastOutput)          
-        !RESULT =rename('V80_2MW.elm',filename_FastElm   )
-        
-        
+
         RESULT =rename( TRIM(OutFileRoot)//'.out',   filename_FastOutput)          !bjj: what if I'm using .outb in FAST instead of .out?
         RESULT =rename( TRIM(OutFileRoot)//'.AD.out',filename_FastElm   )          !bjj: *.elm has been renamed *.AD.out in FAST v8. Also, .AD.out files are not always generated.
     END IF
