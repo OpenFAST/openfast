@@ -23,10 +23,12 @@
 # https://cmake.org/cmake/help/v3.0/variable/CMAKE_SIZEOF_VOID_P.html
 if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
   set(ARCHDIR "ia32")
-  set(WINDOWS_INTERFACE "c")
+  set(WINDOWS_INTERFACE "_c_")
+  set(UNIX_INTERFACE "")
 elseif("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
   set(ARCHDIR "intel64")
-  set(WINDOWS_INTERFACE "lp64")
+  set(WINDOWS_INTERFACE "_lp64_")
+  set(UNIX_INTERFACE "_lp64")
 endif()
 
 set(MKLSEARCHPATHS
@@ -38,17 +40,17 @@ set(MKLSEARCHPATHS
 # using mkl_intel_c on windows since that is the default for intel compilers
 # https://software.intel.com/en-us/mkl-windows-developer-guide-using-the-cdecl-and-stdcall-interfaces
 find_library(MKL_IFACE_LIB
-  NAMES libmkl_intel_lp64.a mkl_intel_${WINDOWS_INTERFACE}_dll.lib mkl_intel_lp64
+  NAMES mkl_intel${UNIX_INTERFACE} libmkl_intel${UNIX_INTERFACE} mkl_intel${WINDOWS_INTERFACE}dll
   PATHS ${MKLSEARCHPATHS}
   NO_DEFAULT_PATH)
 
 find_library(MKL_SEQ_LIB
-  NAMES libmkl_sequential.a mkl_sequential.lib mkl_sequential
+  NAMES mkl_sequential libmkl_sequential mkl_sequential_dll
   PATHS ${MKLSEARCHPATHS}
   NO_DEFAULT_PATH)
 
 find_library(MKL_CORE_LIB
-  NAMES libmkl_core.a mkl_core_dll.lib mkl_core
+  NAMES mkl_core libmkl_core mkl_core_dll
   PATHS ${MKLSEARCHPATHS}
   NO_DEFAULT_PATH)
 
