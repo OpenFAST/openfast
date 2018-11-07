@@ -481,11 +481,11 @@ FUNCTION projected_length(ax,ay,bx,by)
 ! The distance is used to sort the turbines from ipstream to downstream
 !...................................................................
 
-    REAL  ::   ax                   ! the x coordinate of the point a (reference point)
-    REAL  ::   ay                   ! the y coordinate of the point a
-    REAL  ::   bx                   ! the x coordinate of the point b
-    REAL  ::   by                   ! the y coordinate of the point b
-    REAL  ::   projected_length
+    REAL(8) ::   ax                   ! the x coordinate of the point a (reference point)
+    REAL(8) ::   ay                   ! the y coordinate of the point a
+    REAL(8) ::   bx                   ! the x coordinate of the point b
+    REAL(8) ::   by                   ! the y coordinate of the point b
+    REAL    ::   projected_length
     
     REAL  ::   side_a               ! triangle side a length
     REAL  ::   side_b               ! triangle side b length
@@ -617,8 +617,8 @@ FUNCTION turbine_position_LorR(xwind,ywind,x0,y0,x1,y1)
 ! This function is to see if the downwind turbine is on the left side or right side of the line
 ! connecting the wind origin and the upwind turbine
 !...................................................................
-    REAL    ::   xwind                ! wind origin
-    REAL    ::   ywind
+    REAL(8) ::   xwind                ! wind origin
+    REAL(8) ::   ywind
     REAL    ::   x0                   ! investigated origin turbine
     REAL    ::   y0
     REAL    ::   x1                   ! turbine other than the investigated turbine
