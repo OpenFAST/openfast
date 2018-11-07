@@ -125,10 +125,15 @@ SUBROUTINE DWM_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMess )
 
          ! Place any last minute operations or calculations here:
       CALL DWM_phase4( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMess )   
+      print *, "after dwm_phase4"
          
       CALL write_result_file( m, p, y, u )
+
+      print *, "after write_result_file"
       
       CALL InflowWind_End(  u%IfW, p%IfW, x%IfW, xd%IfW, z%IfW, OtherState%IfW, y%IfW, m%IfW, ErrStat, ErrMess )
+      
+      print *, "after inflowWind_End"
 
          ! Close files here:
 
@@ -319,19 +324,26 @@ SUBROUTINE DWM_phase4( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMess )
          !-------
          
          CALL Get_wake_center ( OtherState, m, p, y, u, x, xd, z, m%WMC%wake_width, y%wake_position )
+         print *, 'after get wake center!'
       
       
          IF (p%RTPD%downwindturbine_number >0 ) THEN
            DO I = 1,p%RTPD%downwindturbine_number
               CALL smooth_out_wake(m, p, y%wake_u,y%wake_position,u%Upwind_result%smoothed_velocity_array(I,:),p%RTPD%downwind_turbine_projected_distance(I),&
                                    p%RTPD%downwind_align_angle(I),u%Upwind_result%vel_matrix(I,:,:))
+
+              print *, 'after smooth out wake'
               u%Upwind_result%TI_downstream (I)             = TI_downstream_total (m, p, y, p%RTPD%downwind_turbine_projected_distance(I),&
                                                               p%RTPD%downwind_align_angle(I),u%Upwind_result%vel_matrix(I,:,:))
+              print *, 'after smooth out wake 2'
               u%Upwind_result%small_scale_TI_downstream (I) = smallscale_TI (m, p, y, p%RTPD%downwind_turbine_projected_distance(I),&
                                                               p%RTPD%downwind_align_angle(I),u%Upwind_result%vel_matrix(I,:,:))
+
+              print *, 'after smooth out wake 3'
               
            END DO
          END IF
+              print *, 'end of function'
       
       
 END SUBROUTINE DWM_phase4

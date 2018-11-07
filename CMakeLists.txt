@@ -66,6 +66,7 @@ else()
   find_package(LAPACK REQUIRED)
 endif()
 
+
 ########################################################################
 # Test option configuration
 # Do this before configuring modules so that precompiler flags are included

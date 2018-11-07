@@ -24,7 +24,7 @@ PROGRAM DWM_driver_wind_farm
 
       ! FAST 8
    RESULT = system("echo "//TRIM(DWM_exe_name)//" "// TRIM(InputFile)//".fst" // " " //TRIM(Int2LStr(simulation_index)) //" "// "DWM")
-   RESULT = system(TRIM(DWM_exe_name)//" "// TRIM(InputFile)//".fst" // " " //TRIM(Int2LStr(simulation_index)) //" "// "DWM")
+   RESULT = system(TRIM(DWM_exe_name)//" "// TRIM(InputFile)//".fst" // " " //TRIM(Int2LStr(simulation_index)) //" "// "DWM")   
 
       ! calculate the wake sector angle and the turbine interaction information
    CALL cal_wake_sector_angle
