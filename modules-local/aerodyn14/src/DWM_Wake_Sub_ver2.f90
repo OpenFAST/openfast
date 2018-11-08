@@ -390,7 +390,6 @@ SUBROUTINE calculate_mean_u( m, p, u, num_element,r_t,turbine_mean_velocity,TI_n
             DO I = 1,p%RTPD%upwindturbine_number               
                TI_normalization = (TI_normalization**2 + u%Upwind_result%upwind_TI(I)**2)**0.5
             END DO
-
             !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
            TI_normalization = u%Upwind_result%upwind_TI(1)          ! only take the TI effect from the closest upstream turbine
             !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%           
@@ -1563,7 +1562,6 @@ SUBROUTINE Get_wake_center ( OS, m, p, y, u, x, xd, z, wakewidth, wake_center )
     DWM_time_step = (2*p%RotorR/m%DWDD%ppR)/Modified_U          ! resolution (126m/50) / wind speed (8m/s) => make sure there is always a wake width at every time step
                                                   ! D/(DWM_time_step*Mean_FFWS)= 50 which is the X resolution
 
-
     U_Scale_Factor =  Modified_U / (p%Uambient*U_factor)       ! modify the wake displacement error caused by the change of Mean_FFWS                                                                                        
     
     U_Scale_Factor = 1                       ! 7.15.2015
@@ -1577,26 +1575,21 @@ SUBROUTINE Get_wake_center ( OS, m, p, y, u, x, xd, z, wakewidth, wake_center )
     release_time      = simulation_time_length       
     flying_time       = m%meandering_data%moving_time       
     m%meandering_data%scale_factor      = 10       ! to decrease the calculation time
-
     ALLOCATE (wake_center (release_time,flying_time+1,3) )
                                  ! ex. @8D: (1~release_time,8*[ppR/scale_factor]+1,:)
 
-
     DO release_time = 1,simulation_time_length,1               ! wake center position at turbine plane
-
        wake_center (release_time,1,1) = 0
        wake_center (release_time,1,2) = 0
        wake_center (release_time,1,3) = REAL(p%hub_height,ReKi)
     END DO
     
     x_step = Modified_U * (DWM_time_step*m%meandering_data%scale_factor)
-
     
     IF (.NOT. ALLOCATED(u%IfW%PositionXYZ) ) THEN
        CALL AllocAry( u%IfW%PositionXYZ, 3, 1, "Position array to send to IfW_CalcOutput", ErrStat, ErrMsg )
        IF (ErrStat >= AbortErrLev)  RETURN
     END IF
-
 
     
     ! get the initial wake center position of each cross scetion  (from the velocity at the turbine plane * dt)
@@ -1604,13 +1597,11 @@ SUBROUTINE Get_wake_center ( OS, m, p, y, u, x, xd, z, wakewidth, wake_center )
        wake_center (release_time,2,1) = Modified_U * (DWM_time_step*m%meandering_data%scale_factor) +0             
 
 
-
        !temp_center_wake (:) = AD_WindVelocityWithDisturbance(  (REAL(((release_time-1)+1)*DWM_time_step*m%meandering_data%scale_factor,ReKi)), &
                                              !A_u, A_p, A_x, A_xd, A_z, A_O, A_y, ErrStat, ErrMsg, (/0.0,REAL(0,ReKi),REAL(p%TurbRefHt,ReKi)/) )
                            !AD_GetUndisturbedWind ( (REAL(((release_time-1)+1)*DWM_time_step*m%meandering_data%scale_factor,ReKi)), (/0.0,&                  
                                                 !REAL(0,ReKi),REAL(p%TurbRefHt,ReKi)/), ErrStat)                                ! get the velocity at the turbine plane
                                                 
-
        u%IfW%PositionXYZ(1,1) = (0.0_ReKi)
        u%IfW%PositionXYZ(2,1) = (0.0_ReKi)
        u%IfW%PositionXYZ(3,1) = (p%hub_height)
@@ -1627,7 +1618,6 @@ SUBROUTINE Get_wake_center ( OS, m, p, y, u, x, xd, z, wakewidth, wake_center )
                                         !rotation_lateral_offset( wake_center (release_time,2,1) )
                                         
        wake_center (release_time,2,3) = temp_center_wake (3) * (DWM_time_step*m%meandering_data%scale_factor) * U_Scale_Factor + wake_center (release_time,1,3)
-
     END DO
 
 
@@ -1637,7 +1627,6 @@ SUBROUTINE Get_wake_center ( OS, m, p, y, u, x, xd, z, wakewidth, wake_center )
    
        temp_velocity(:) = filter_velocity (OS,m,p,u,x,xd,z,y,((release_time-1)+1)*DWM_time_step*m%meandering_data%scale_factor, wake_center (release_time,flying_time+1-1,2), &
                                           wake_center (release_time,flying_time+1-1,3), wakewidth((flying_time-1)*m%meandering_data%scale_factor) )
-
 
        !!!--------- temp data------
        test_1 = temp_velocity (2) * (DWM_time_step*m%meandering_data%scale_factor) * U_Scale_Factor  + wake_center (release_time,flying_time,2)+ &
@@ -1654,7 +1643,6 @@ SUBROUTINE Get_wake_center ( OS, m, p, y, u, x, xd, z, wakewidth, wake_center )
    
    
        END DO
-    print *, '...'
     END DO
     
 

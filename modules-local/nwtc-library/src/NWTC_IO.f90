@@ -6058,55 +6058,6 @@ QueryGitVersion = GIT_VERSION_INFO
 
    RETURN
    END SUBROUTINE ReadR4Var
-
-!=======================================================================
-!> \copydoc nwtc_io::readcvar
-   SUBROUTINE ReadR_wm_Var ( UnIn, Fil, Var, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
-
-
-      ! This routine reads a single double (real) variable from the next line of the input file.
-      ! New code should call ReadVar instead of directly calling this routine.
-
-
-      ! Argument declarations:
-
-   REAL,    INTENT(OUT)         :: Var                                             ! Real variable being read.
-   INTEGER(IntKi),INTENT(OUT)         :: ErrStat                                         ! Error status; if present, program does not abort on error
-   CHARACTER(*),  INTENT(OUT)         :: ErrMsg                                          ! Error message
-
-   INTEGER,       INTENT(IN)          :: UnIn                                            ! I/O unit for input file.
-   INTEGER,       INTENT(IN), OPTIONAL:: UnEc                                            ! I/O unit for echo file. If present and > 0, write to UnEc
-
-   CHARACTER( *), INTENT(IN)          :: Fil                                             ! Name of the input file.
-   CHARACTER( *), INTENT(IN)          :: VarDescr                                        ! Text string describing the variable.
-   CHARACTER( *), INTENT(IN)          :: VarName                                         ! Text string containing the variable name.
-
-
-      ! Local declarations:
-
-   INTEGER                            :: IOS                                             ! I/O status returned from the read statement.
-   CHARACTER(30)                      :: Word                                            ! String to hold the first word on the line.
-
-
-
-   CALL ReadNum ( UnIn, Fil, Word, VarName, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev) RETURN  ! If we're about to read a T/F and treat it as a number, we have a less severe ErrStat
-
-
-   READ (Word,*,IOSTAT=IOS)  Var
-
-   CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
-
-   IF (ErrStat >= AbortErrLev) RETURN
-
-
-   IF ( PRESENT(UnEc) )  THEN
-      IF ( UnEc > 0 ) &
-         WRITE (UnEc,Ec_ReFrmt)  Var, VarName, VarDescr
-   END IF
-
-   RETURN
-   END SUBROUTINE ReadR_wm_Var
 !=======================================================================
 !> \copydoc nwtc_io::readivarwdefault
    SUBROUTINE ReadR4VarWDefault ( UnIn, Fil, Var, VarName, VarDescr, VarDefault, ErrStat, ErrMsg, UnEc )
