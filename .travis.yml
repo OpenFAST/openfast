@@ -28,7 +28,7 @@ env:
 # mac configuration
 before_install:
     # first uninstall a conflicting package
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew cask uninstall oclint; fi
+    # - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew cask uninstall oclint; fi
 
     # install required packages
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
