@@ -1,14 +1,14 @@
-.. _install_cmake_linux:
+.. _install_cmake_windows:
 
-Building OpenFAST with CMake on Linux and Mac
-=============================================
+Building OpenFAST with CMake on Windows
+=======================================
 
 We describe here how to install OpenFAST (or any of its modules) using the `CMake <https://cmake.org>`_ 
-build system on Linux or Mac OS systems. Separate CMake documentation is 
-provided for Windows users at :numref:`install_cmake_windows` and Cygwin users at :numref:`install_cmake_cygwin`.
-Also, some template build scripts are available in ``openfast/share``.
+build system on Windows systems. Separate CMake documentation is 
+provided for Cygwin users at :numref:`install_cmake_cygwin` and Linux/Mac users at :numref:`install_cmake_linux`.
+A standalone Visual Studio solution also exists at `openfast/vs-build` and documentation is at :numref:`install_vs_windows`.
 
-Required software for building OpenFAST 
+Required software for building OpenFAST
 ---------------------------------------
 
 In order to build OpenFAST using CMake, one needs the following minimum set of packages installed:
@@ -17,7 +17,7 @@ In order to build OpenFAST using CMake, one needs the following minimum set of p
 
 - C/C++ compiler
 
-- GNU Make (version 3.81 or later)
+- Visual Studio
 
 - CMake (version 2.8.12 or later)
 
@@ -39,40 +39,39 @@ If one has the appropriate third party libraries, CMake, and git installed, obta
 
 .. code-block:: bash
 
-    # obtain the source code; e.g., from the command line using git:
+    # Obtain the source code; e.g., from the command line using git:
     git clone https://github.com/OpenFAST/OpenFAST.git
 
-    # go to the OpenFAST directory
+    # Go to the OpenFAST directory
     cd OpenFAST
 
-    # create a directory called `build`
+    # Create a directory called `build`
     mkdir build 
 
-    # go to the build directory
+    # Go to the build directory
     cd build
 
-    # execute CMake with the default options, which will create a series of Makefiles
-    cmake ../ 
+    # Execute CMake with the default options and a specific Visual Studio version
+    # and build architecture. For a list of available CMake generators, run
+    # `cmake .. -G`
+    cmake .. -G "Visual Studio 14 2015 Win64"
 
-    # execute a make command (with no target provided, equivalent to `make all`
-    make 
+    # Open the generated Visual Studio solution
+    start OpenFAST.sln
 
-This will build the OpenFAST suite in the ``build`` directory, which can be deleted for a clean build.
+Visual Studio will open a solution containing all of the OpenFAST projects, and you
+can then build any module library, module driver, or glue code. Note that any time 
+CMake is rerun, the Visual Studio solution will be regenerated causing the Visual Studio
+GUI to lag momentarily while it reloads the data.
 
-There are many  ``Makefile`` targets (besides ``all``), which can be listed via ``help``:
-
-.. code-block:: bash
-
-    # list available make targets
-    make help
-
-    # make a specific target, e.g.
-    make beamdyn_driver
+**The CMake-generated Visual Studio build is currently damaged.** Some modules are compiled
+before their associated registry type files are seen by Visual Studio so an initial build
+will fail. However, a simple work around is to run the build command in Visual Studio
+multiple times until it succeeds.
 
 
-
-Current CMake options
-~~~~~~~~~~~~~~~~~~~~~
+CMake options
+~~~~~~~~~~~~~
 
 Below is a list of current CMake options including their default settings (which will effect, e.g., the targets in a resulting ``Makefile``.  
 
@@ -101,13 +100,13 @@ CMake options can be configured through command line, e.g.
 Custom CMake builds
 ~~~~~~~~~~~~~~~~~~~
 
-The CMake configuration and resulting build can be customized easily through explicitly setting CMake variables. In general,
+The CMake configuration and resulting build can be customized easily by explicitly setting CMake variables. In general,
 this is done by passing a flag in the CMake configuration command
 
 .. code-block:: bash
 
     cmake .. -D<CMAKE_FLAG>=ON
-    cmake .. -D<CMAKE_FLAG>=/usr/local/bin/this_thing
+    cmake .. -D<CMAKE_FLAG>=\home\user\Desktop\this_thing
 
 This syntax is the same as in setting a CMake option and the result is used very similarly in the CMake configuration files.
 Common customizations revolve around choosing a compiler or math library; for example
@@ -123,18 +122,3 @@ environment variable. The Fortran compiler can also be set explicitly with the `
 Here is a good resource for useful CMake variables: `GitLab useful cmake variables <https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/Useful-Variables>`_.
 The `CMake documentation <https://cmake.org/cmake/help/latest/>`_ is also helpful for searching
 through variables and determining the resulting action.
-
-
-Parallel build
-~~~~~~~~~~~~~~
-
-GNU Make has a parellel build option with the ``-jobs`` or ``-j`` flag, and the OpenFAST
-CMake configuration handles setting up the dependencies for Make so the build can be 
-parallelized. However, it is important to note that the only parallel portion
-of the build process is in compiling the modules. Due to some interdependency between
-modules, the max parallel level is around 12. The remaining portion of the build,
-mainly compiling the OpenFAST library itself, takes a considerable amount of time
-and cannot be parallelized.
-
-An example parallel build command is ``make -j 8``.
-

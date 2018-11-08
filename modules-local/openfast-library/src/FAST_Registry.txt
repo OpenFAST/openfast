@@ -37,7 +37,7 @@ usefrom	ExtPtfm_MCKF_Registry.txt
 param	FAST	-	INTEGER	Module_Unknown	-	-1	-	"Unknown"	-
 param	^	-	INTEGER	Module_None	-	0	-	"No module selected"	-
 param	^	-	INTEGER	Module_IfW	-	1	-	"InflowWind"	-
-param	^	-	INTEGER	Module_OpFM	-	2		"OpenFOAM"	-
+param	^	-	INTEGER	Module_OpFM	-	2	-	"OpenFOAM"	-
 param	^	-	INTEGER	Module_ED	-	3	-	"ElastoDyn"	-
 param	^	-	INTEGER	Module_BD	-	4	-	"BeamDyn"	-
 param	^	-	INTEGER	Module_AD14	-	5	-	"AeroDyn14"	-
@@ -139,8 +139,7 @@ typedef	^	FAST_ParameterType	LOGICAL	LinOutJac	-	-	-	"Include full Jacabians in 
 typedef	^	FAST_ParameterType	LOGICAL	LinOutMod	-	-	-	"Write module-level linearization output files in addition to output for full system? (flag) [unused if Linearize=False]"	-
 typedef	^	FAST_ParameterType	FAST_VTK_SurfaceType	VTK_surface	-	-	-	"Data for VTK surface visualization"
 typedef	^	FAST_ParameterType	SiKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used for graphics)"	m
-typedef	^	FAST_ParameterType	IntKi	SizeLin	{NumModules+1}{3}	-	-	"dimension 1 is the module (numModules+1 is glue): dimension 2 is the size of (1) the module's inputs,  (2) the module's linearized outputs, and (3) the module's continuous states"	-
-typedef	^	FAST_ParameterType	IntKi	LinStartIndx	{NumModules}{3}	-	-	"dimension 1 is the module ID: dimension 2 is the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states"	-
+
 typedef	^	FAST_ParameterType	IntKi	Lin_NumMods	-	-	-	"number of modules in the linearization"
 typedef	^	FAST_ParameterType	Integer	Lin_ModOrder	{NumModules}	-	-	"indices that determine which order the modules are in the glue-code linearization matrix"
 typedef	^	FAST_ParameterType	CHARACTER(4)	Tdesc	-	-	-	"description of turbine ID (for FAST.Farm) screen printing"	
@@ -159,17 +158,27 @@ typedef	^	FAST_LinType	ReKi	op_xd	{:}	-	-	"discrete state operating point"
 typedef	^	FAST_LinType	ReKi	op_z	{:}	-	-	"constraint state operating point"
 typedef	^	FAST_LinType	Logical	Use_u	{:}	-	-	"array same size as names_u, which indicates if this input is used in linearization output file"
 typedef	^	FAST_LinType	Logical	Use_y	{:}	-	-	"array same size as names_y, which indicates if this output is used in linearization output file"
-typedef	^	FAST_LinType	ReKi	A	{:}{:}	-	-	"A matrix"
-typedef	^	FAST_LinType	ReKi	B	{:}{:}	-	-	"B matrix"
-typedef	^	FAST_LinType	ReKi	C	{:}{:}	-	-	"C matrix"
-typedef	^	FAST_LinType	ReKi	D	{:}{:}	-	-	"D matrix"
+typedef	^	FAST_LinType	R8Ki	A	{:}{:}	-	-	"A matrix"
+typedef	^	FAST_LinType	R8Ki	B	{:}{:}	-	-	"B matrix"
+typedef	^	FAST_LinType	R8Ki	C	{:}{:}	-	-	"C matrix"
+typedef	^	FAST_LinType	R8Ki	D	{:}{:}	-	-	"D matrix"
+typedef	^	FAST_LinType	R8Ki	StateRotation	{:}{:}	-	-	"Matrix that rotates the continuous states"
+typedef	^	FAST_LinType	R8Ki	StateRel_x	{:}{:}	-	-	"Matrix that defines the continuous states relative to root motion"
+typedef	^	FAST_LinType	R8Ki	StateRel_xdot	{:}{:}	-	-	"Matrix that defines the continuous states relative to root motion"
+typedef	^	FAST_LinType	Logical	IsLoad_u	{:}	-	-	"Whether the input is a load (used for scaling for potentially ill-conditioned G matrix)"
 typedef	^	FAST_LinType	Logical	RotFrame_u	{:}	-	-	"Whether corresponding input is in rotating frame"
 typedef	^	FAST_LinType	Logical	RotFrame_y	{:}	-	-	"Whether corresponding output is in rotating frame"
 typedef	^	FAST_LinType	Logical	RotFrame_x	{:}	-	-	"Whether corresponding continuous state is in rotating frame"
 typedef	^	FAST_LinType	Logical	RotFrame_z	{:}	-	-	"Whether corresponding constraint state is in rotating frame"
+typedef	^	FAST_LinType	IntKi	SizeLin	{3}	-	-	"sizes of (1) the module's inputs,  (2) the module's linearized outputs, and (3) the module's continuous states"	-
+typedef	^	FAST_LinType	IntKi	LinStartIndx	{3}	-	-	"the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states"	-
+typedef	^	FAST_LinType	IntKi	NumOutputs	-	-	-	"number of WriteOutputs in each linearized module"	-
+
+# ..... FAST_ModLinType data .......................................................................................................
+typedef	^	FAST_ModLinType	FAST_LinType	Instance	{:}	-	-	"Linearization data for each module instance (e.g., 3 blades for BD)"
 
 # ..... FAST_LinFileType data .......................................................................................................
-typedef	FAST	FAST_LinFileType	FAST_LinType	Modules	{NumModules}	-	-	"Linearization data for each module"
+typedef	FAST	FAST_LinFileType	FAST_ModLinType	Modules	{NumModules}	-	-	"Linearization data for each module"
 typedef	^	FAST_LinFileType	FAST_LinType	Glue	-	-	-	"Linearization data for the glue code (coupled system)"
 typedef	^	FAST_LinFileType	ReKi	RotSpeed	-	-	-	"Rotor azimuth angular speed"	rad/s
 typedef	^	FAST_LinFileType	ReKi	Azimuth	-	-	-

@@ -143,6 +143,23 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules-local\aerodyn\src\DBEMT_Registry.txt">
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules-local\aerodyn\src\UnsteadyAero_Registry.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration>

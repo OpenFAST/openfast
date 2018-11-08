@@ -82,6 +82,7 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
     {
       FILE *include_fp ;
       char include_file_name[NAMELEN] ;
+      char include_file_name_tmp[NAMELEN] ;
       int checking_for_usefrom = !strncmp( p1, "usefrom", 7 ) ;
 //fprintf(stderr,"checking_for_usefrom %d |%s|\n",checking_for_usefrom,p1) ;
 
@@ -91,31 +92,38 @@ pre_parse( char * dir, FILE * infile, FILE * outfile, int usefrom_sw )
 /* look in a few places for valid include files */
         foundit = 0 ;
 
-        sprintf( include_file_name , "%s", p ) ;                         // no dir
+       // See if it might be in the current directory
+        sprintf( include_file_name , "%s", p ) ;            // first name in line from registry file, without the include or usefrom
         for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {} 
         *p2 = '\0' ; // drop tailing white space
         if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
         if (( include_fp = fopen( include_file_name , "r" )) != NULL )   { foundit = 1 ; goto gotit ; }
 
-        sprintf( include_file_name , "%s/%s", dir , p ) ;                      // dir/path
+        // See if it might be in the directory specified (or whatever dir is). Don't remove spaces from the dir name though.
+        sprintf( include_file_name , "%s", p ) ;            // first name in line from registry file, without the include or usefrom
         for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {} 
-        *p2 = '\0' ;
+        *p2 = '\0' ;     // drop tailing white space
+        sprintf( include_file_name , "%s/%s", dir, p );              // set the dir + file
         if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
         if (( include_fp = fopen( include_file_name , "r" )) != NULL )   { foundit = 1 ; goto gotit ; }
 
+        // Check in the list of include dirs
         for ( ifile = 0 ; ifile < nincldirs ; ifile++ ) {
-          sprintf( include_file_name , "%s/%s", IncludeDirs[ifile] , p ) ;     // dir specified with -I
-          for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {}
-          *p2 = '\0' ;
+          sprintf( include_file_name_tmp , "%s", p ) ;            // first name in line from registry file, without the include or usefrom
+          for ( p2 = include_file_name_tmp ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {}
+          *p2 = '\0' ;     // drop tailing white space
+          sprintf( include_file_name, "%s/%s", IncludeDirs[ifile] , include_file_name_tmp ) ;     // dir specified with -I
           if ( (q=index(include_file_name,'\n')) != NULL ) *q = '\0' ;
           if (( include_fp = fopen( include_file_name , "r" )) != NULL ) { foundit = 1 ; goto gotit ; }
         }
 
+        // Cygwin specific -- assuming spaces in dir are ok.
         for ( ifile = 0 ; ifile < nincldirs ; ifile++ ) {
           int drive_specified = 0 ;
-          sprintf( include_file_name , "%s/%s", IncludeDirs[ifile] , p ) ;     // dir munged for cigwin
-          for ( p2 = include_file_name ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {}  
+          sprintf( include_file_name_tmp , "%s", p ) ;            // first name in line from registry file, without the include or usefrom
+          for ( p2 = include_file_name_tmp ; !( *p2 == ' ' || *p2 == '\t' || *p2 == '\n' ) && *p2 != '\0' ; p2++ ) {}  
           *p2 = '\0' ;
+          sprintf( include_file_name , "%s/%s", IncludeDirs[ifile] , include_file_name_tmp ) ;     // dir munged for cigwin
           if ( include_file_name[0] == '/' ) {
             char tmp[NAMELEN], tmp2[NAMELEN], *dr ;
             strcpy( tmp2, include_file_name ) ;
