@@ -38,7 +38,7 @@ before_install:
 
 install:
     - mkdir build && cd build
-    - cmake .. -DBUILD_TESTING=ON -DDOUBLE_PRECISION=$DOUBLE_PRECISION
+    - cmake .. -DBUILD_TESTING=ON -DDOUBLE_PRECISION=$DOUBLE_PRECISION -DBUILD_SHARED_LIBS=ON
     - make -j 8 install
 
 matrix:
