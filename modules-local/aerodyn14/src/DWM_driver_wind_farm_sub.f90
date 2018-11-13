@@ -838,9 +838,8 @@ SUBROUTINE rename_FAST_output(SimulationOrder_index)
 !............................................................................
 ! This routine is called to rename the fast output
 !............................................................................
-#ifdef _WIN32
+#ifdef __INTEL_COMPILER
     USE IFPORT
-    USE DFLIB
 #endif
     USE wind_farm_geometry_data,         ONLY: turbine_sort
     USE DWM_init_data,                   ONLY: OutFileRoot
