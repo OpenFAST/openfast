@@ -41,7 +41,7 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_AllocateTurbines
 #endif
    INTEGER(C_INT),         INTENT(IN   ) :: nTurbines
-   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
+   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
    
    if (nTurbines .gt. 0) then
@@ -55,6 +55,9 @@ subroutine FAST_AllocateTurbines(nTurbines, ErrStat_c, ErrMsg_c) BIND (C, NAME='
 
    allocate(Turbine(0:NumTurbines-1)) !Allocate in C style because most of the other Turbine properties from the input file are in C style inside the C++ driver
 
+   ErrStat_c = ErrID_None
+   ErrMsg_c = ''
+   
 end subroutine FAST_AllocateTurbines
 
 subroutine FAST_Sizes(iTurb, TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
