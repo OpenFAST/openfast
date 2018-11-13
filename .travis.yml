@@ -32,6 +32,10 @@ before_install:
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade python; fi
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gcc@7; fi
 
+    # intel compiler
+    - if [[ -n "${TRAVIS_BUILD_INTEL}" ]] ; then wget -O $HOME/install-icc.sh 'https://raw.githubusercontent.com/nemequ/icc-travis/master/install-icc.sh'; fi
+    - if [[ -n "${TRAVIS_BUILD_INTEL}" ]] ; then /bin/sh $HOME/install-icc.sh --components ifort,icc,mkl; fi
+
     # common configuration
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.6.3; fi
     - pip3 install numpy
@@ -52,12 +56,12 @@ matrix:
     - os: osx
       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
 
-script:
+# script:
     # beamdyn unit tests
-    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -R beamdyn_utest; fi
+    # - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -R beamdyn_utest; fi
 
     # beamdyn regression tests
-    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -R bd_; fi
+    # - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -R bd_; fi
 
     # subset of openfast regression tests
     # do not run
