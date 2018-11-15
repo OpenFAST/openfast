@@ -826,7 +826,7 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
    type(UA_ParameterType),       intent(  out)  :: p           ! Parameters
    type(UA_DiscreteStateType),   intent(  out)  :: xd          ! Initial discrete states
    type(UA_OtherStateType),      intent(  out)  :: OtherState  ! Initial other states
-   type(UA_OutputType),          intent(inout)  :: y           ! Initial system outputs (outputs are not calculated;
+   type(UA_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                !   only the output mesh is initialized)
    type(UA_MiscVarType),         intent(  out)  :: m           ! Initial misc/optimization variables
    real(DbKi),                   intent(inout)  :: interval    ! Coupling interval in seconds: the rate that
@@ -835,7 +835,7 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
                                                                !   Input is the suggested time from the glue code;
                                                                !   Output is the actual coupling interval that will be used
                                                                !   by the glue code.
-   type(UA_InitOutputType),      intent(inout)  :: InitOut     ! Output for initialization routine
+   type(UA_InitOutputType),      intent(  out)  :: InitOut     ! Output for initialization routine
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
