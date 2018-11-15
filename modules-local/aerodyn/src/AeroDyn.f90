@@ -177,7 +177,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
       if ( p%AFI%AFInfo(1)%NumCoords > 0 ) then
          NumCoords = p%AFI%AFInfo(1)%NumCoords
          do i=2,size(p%AFI%AFInfo)
-            if (p%AFI%AFInfo(1)%NumCoords /= NumCoords) then
+            if (p%AFI%AFInfo(i)%NumCoords /= NumCoords) then
                call SetErrStat( ErrID_Info, 'Airfoil files do not contain the same number of x-y coordinates.', ErrStat, ErrMsg, RoutineName )
                NumCoords = -1
                exit
@@ -231,14 +231,14 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    end do
 
    !Tower data
-   ALLOCATE(InitOut%TwrElev(p%NumTwrNds), STAT = ErrStat2)
-   IF (ErrStat2 /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrElev.", ErrStat, ErrMsg, RoutineName)
-      RETURN
-   END IF
-   InitOut%TwrElev(:) = InputFileData%TwrElev(:)
-   
    IF ( p%NumTwrNds > 0 ) THEN
+      ALLOCATE(InitOut%TwrElev(p%NumTwrNds), STAT = ErrStat2)
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrElev.", ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+      InitOut%TwrElev(:) = InputFileData%TwrElev(:)
+
       ALLOCATE(InitOut%TwrDiam(p%NumTwrNds), STAT = ErrStat2)
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat(ErrID_Fatal,"Error allocating memory for TwrDiam.", ErrStat, ErrMsg, RoutineName)
