@@ -2005,8 +2005,8 @@ CONTAINS
    
    
       TYPE(DLL_Type),                INTENT(IN   ) :: InData             !< DLL data to pack (store in arrays of type ReKi, DbKi, and/or IntKi)
-      REAL(ReKi),       ALLOCATABLE, INTENT(INOUT) :: ReKiBuf(:)         !< buffer with real (ReKi) data from InData structure
-      REAL(DbKi),       ALLOCATABLE, INTENT(INOUT) :: DbKiBuf(:)         !< buffer with double (DbKi) data from InData structure
+      REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)         !< buffer with real (ReKi) data from InData structure
+      REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)         !< buffer with double (DbKi) data from InData structure
       INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)        !< buffer with integer (IntKi) data from InData structure
       INTEGER(IntKi),                INTENT(  OUT) :: ErrStat            !< error status
       CHARACTER(*),                  INTENT(  OUT) :: ErrMsg             !< error message
