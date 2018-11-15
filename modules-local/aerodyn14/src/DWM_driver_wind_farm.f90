@@ -3,7 +3,7 @@ PROGRAM DWM_driver_wind_farm
    USE DWM_driver_wind_farm_sub
    USE read_wind_farm_parameter_data, ONLY: NumWT, DWM_exe_name
    USE DWM_init_data, ONLY:InputFile
-#ifdef _WIN32
+#ifdef __INTEL_COMPILER
    USE IFPORT
 #endif
    
