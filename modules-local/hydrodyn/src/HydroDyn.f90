@@ -1283,7 +1283,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       !IF(ALLOCATED( InitLocal%WAMIT%WaveElevC0 ))  DEALLOCATE( InitLocal%WAMIT%WaveElevC0)
       
          ! Close the summary file
-      IF ( InitLocal%UnSum > 0 ) THEN
+      IF ( InitLocal%HDSum ) THEN
          CALL HDOut_CloseSum( InitLocal%UnSum, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) THEN
