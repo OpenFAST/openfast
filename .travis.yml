@@ -18,21 +18,15 @@ env:
     - FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
     - FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
 
-# linux configuration; container-based environments (default for linux) require the following setup block
-addons:
-  apt:
-    packages:
-      - gfortran
-      - libblas-dev
-      - liblapack-dev
-
 before_install:
     # mac configuration
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade python; fi
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gcc@7; fi
 
-    # one more linux config
+    # linux configuration
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gfortran; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install libblas-dev liblapack-dev; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.6.3; fi
 
     # intel compiler
