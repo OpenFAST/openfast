@@ -4,13 +4,8 @@ about: Create a report to help us improve
 
 ---
 
-**Feature request or bug description**
-This is a [ ] bug report [ ] feature request. (check one with "x")
-
-A clear and concise description of the feature or bug.
-
-
-**The following are for bug reports**
+**Bug description**
+A clear and concise description of the bug.
 
 **To Reproduce**
 Steps to reproduce the behavior:
