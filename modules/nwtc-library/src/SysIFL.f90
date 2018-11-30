@@ -239,7 +239,7 @@ SUBROUTINE OpenCon
 !bjj: Because CU = 6 now, this statement is not necessary
 !   OPEN ( CU , FILE='/dev/stdout' , STATUS='UNKNOWN' , CARRIAGECONTROL='FORTRAN', RECL=ConRecL )
 
-   CALL FlushOut ( CU )
+!   CALL FlushOut ( CU )
 
    RETURN
 END SUBROUTINE OpenCon
