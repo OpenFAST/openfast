@@ -20,7 +20,7 @@ MODULE SysSubs
 
    ! This module contains routines with system-specific logic and references, including all references to the console unit, CU.
    ! It also contains standard (but not system-specific) routines it uses.
-   ! SysGnu.f90 is specifically for the GNU Fortran (gfortran) compiler on Windows.
+   ! SysGnuWin.f90 is specifically for the GNU Fortran (gfortran) compiler on Windows.
    ! It contains the following routines:
    !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
    !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
@@ -28,6 +28,7 @@ MODULE SysSubs
    !     FUNCTION    NWTC_gamma( x )                                          ! Returns the gamma value of its argument.   
    !     SUBROUTINE  FlushOut ( Unit )
    !     SUBROUTINE  GET_CWD( DirName, Status )
+   !     SUBROUTINE  MKDIR( new_directory_path )
    !     SUBROUTINE  OpenCon
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
@@ -38,7 +39,7 @@ MODULE SysSubs
    !     SUBROUTINE  WriteScr ( Str, Frm )
    !     SUBROUTINE LoadDynamicLib( DLL, ErrStat, ErrMsg )
    !     SUBROUTINE FreeDynamicLib( DLL, ErrStat, ErrMsg )
-   
+
    USE NWTC_Base
 
    IMPLICIT NONE
@@ -63,12 +64,10 @@ MODULE SysSubs
    CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'GNU Fortran for Windows'         ! Description of the language/OS
    CHARACTER( 1), PARAMETER      :: PathSep     = '\'                               ! The path separator.
-   CHARACTER( 1), PARAMETER      :: SwChar      = '/'                               ! The switch character for command-line options.
+   CHARACTER( 1), PARAMETER      :: SwChar      = '-'                               ! The switch character for command-line options.
    CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                     ! The string to specify unformatted I/O files.
 
 CONTAINS
-
-
 
 !=======================================================================
 FUNCTION FileSize( Unit )
@@ -78,8 +77,8 @@ FUNCTION FileSize( Unit )
 
    INTEGER(B8Ki)                             :: FileSize                      ! The size of the file in bytes to be returned.
    INTEGER, INTENT(IN)                       :: Unit                          ! The I/O unit number of the pre-opened file.
-   INTEGER(4)                                :: StatArray(13)                 ! An array returned by FSTAT that includes the file size.
-   INTEGER(4)                                :: Status                        ! The status returned by
+   INTEGER                                   :: StatArray(13)                 ! An array returned by FSTAT that includes the file size.
+   INTEGER                                   :: Status                        ! The status returned by
 
    Status = FSTAT( INT( Unit, B4Ki ), StatArray )
 
@@ -92,7 +91,7 @@ FUNCTION FileSize( Unit )
    RETURN
 END FUNCTION FileSize ! ( Unit )
 !=======================================================================
-   FUNCTION Is_NaN( DblNum )
+FUNCTION Is_NaN( DblNum )
 
    ! This routine determines if a REAL(DbKi) variable holds a proper number.
    ! BJJ: this routine is used in CRUNCH.
@@ -221,7 +220,7 @@ SUBROUTINE MKDIR ( new_directory_path )
    inquire( file=trim(new_directory_path), exist=directory_exists )
 
    if ( .NOT. directory_exists ) then
-      make_command = 'mkdir "'//trim(new_directory_path)//'"'
+      make_command = 'mkdir -p '//trim(new_directory_path)
       call system( make_command )
    endif
 
@@ -344,12 +343,12 @@ SUBROUTINE WrNR ( Str )
 
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
 
-   WRITE (CU,'(1X,A)',ADVANCE='NO')  Str
+   WRITE (CU,'(A)',ADVANCE='NO')  Str
 
    RETURN
 END SUBROUTINE WrNR ! ( Str )
 !=======================================================================
-   SUBROUTINE WrOver ( Str )
+SUBROUTINE WrOver ( Str )
 
    ! This routine writes out a string that overwrites the previous line.
 
@@ -366,7 +365,7 @@ END SUBROUTINE WrNR ! ( Str )
       WRITE (CU,Fmt,ADVANCE='NO')  CR, Str
    ELSE
       ! bjj: note that this will almost certainly write more than MaxWrScrLen characters on a line
-      WRITE (CU,'(A)',ADVANCE='NO')  CR, Str
+      WRITE (CU,'(2A)',ADVANCE='NO')  CR, Str
    END IF
 
    RETURN
