@@ -64,7 +64,7 @@ include_directories(
 )
 
 set_source_files_properties(${pfunit_directory}/include/driver.F90 PROPERTIES GENERATED 1)
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin" OR ${CMAKE_SYSTEM_NAME} STREQUAL "Linux" OR CYGWIN)
   set(pfunit_lib "/lib/libpfunit.a")
 else()
   # Windows
