@@ -11,38 +11,37 @@ os:
     - linux
     - osx
 
-# linux configuration; container-based environments (default for linux) require the following setup block
-addons:
-  apt:
-    packages:
-      - gfortran
-      - libblas-dev
-      - liblapack-dev
-
 env:
     - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
     - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
     - FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
     - FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
+    - FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
 
-# mac configuration
 before_install:
-    # first uninstall a conflicting package
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew cask uninstall oclint; fi
-
-    # install required packages
+    # mac configuration
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade python; fi
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gcc@7; fi
-    # - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install cmake; fi  # cmake is already installed in the default mac image
+
+    # linux configuration
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gfortran; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install libblas-dev liblapack-dev; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.6.3; fi
+
+    # intel compiler
+    # this build requires setting an environment variable https://docs.travis-ci.com/user/environment-variables#defining-encrypted-variables-in-travisyml
+    # INTEL_SERIAL_NUMBER=XXXX-XXXXXXXX
+    - if [[ -n "${TRAVIS_BUILD_INTEL}" ]] ; then wget 'https://raw.githubusercontent.com/nemequ/icc-travis/master/install-icc.sh'; fi
+    - if [[ -n "${TRAVIS_BUILD_INTEL}" ]] ; then chmod 755 install-icc.sh; fi
+    - if [[ -n "${TRAVIS_BUILD_INTEL}" ]] ; then ./install-icc.sh --components ifort,icc,mkl; source ~/.bashrc; fi
 
     # common configuration
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.6.3; fi
     - pip3 install numpy
 
 install:
     - mkdir build && cd build
-    - cmake .. -DBUILD_TESTING=ON -DDOUBLE_PRECISION=$DOUBLE_PRECISION
+    - cmake .. -DBUILD_TESTING=ON -DDOUBLE_PRECISION=$DOUBLE_PRECISION -DBUILD_SHARED_LIBS=ON
     - make -j 8 install
 
 matrix:
@@ -55,13 +54,15 @@ matrix:
       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
     - os: osx
       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
+    - os: osx
+      env: FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
 
 script:
     # beamdyn unit tests
-    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -R beamdyn_utest; fi
+    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -VV -R beamdyn_utest; fi
 
     # beamdyn regression tests
-    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -R bd_; fi
+    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -VV -R bd_; fi
 
     # subset of openfast regression tests
     # do not run

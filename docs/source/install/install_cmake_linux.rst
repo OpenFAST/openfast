@@ -98,6 +98,33 @@ CMake options can be configured through command line, e.g.
     cmake .. -DDOUBLE_PRECISION:BOOL=OFF
  
 
+Custom CMake builds
+~~~~~~~~~~~~~~~~~~~
+
+The CMake configuration and resulting build can be customized easily through explicitly setting CMake variables. In general,
+this is done by passing a flag in the CMake configuration command
+
+.. code-block:: bash
+
+    cmake .. -D<CMAKE_FLAG>=ON
+    cmake .. -D<CMAKE_FLAG>=/usr/local/bin/this_thing
+
+This syntax is the same as in setting a CMake option and the result is used very similarly in the CMake configuration files.
+Common customizations revolve around choosing a compiler or math library; for example
+
+.. code-block:: bash
+
+    cmake .. -DCMAKE_Fortran_COMPILER=/usr/local/bin/gfortran-8 -DLAPACK_LIBRARIES=/System/Library/Frameworks/Accelerate.framework -DLAPACK_LIBRARIES=/System/Library/Frameworks/Accelerate.framework
+
+**NOTE** Many CMake configurations can also be set through an environment variable.
+For example, when using Intel's MKL, the math libraries can be discovered automatically by setting the ``MKLROOT``
+environment variable. The Fortran compiler can also be set explicitly with the ``FC`` environment variable.
+
+Here is a good resource for useful CMake variables: `GitLab useful cmake variables <https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/Useful-Variables>`_.
+The `CMake documentation <https://cmake.org/cmake/help/latest/>`_ is also helpful for searching
+through variables and determining the resulting action.
+
+
 Parallel build
 ~~~~~~~~~~~~~~
 
