@@ -2415,7 +2415,8 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    ErrStat = ErrID_None
    ErrMsg  = ''
    m%IgnoreMod = .true. ! to get true perturbations, we can't use the modulo function
-   delta = PI / 90.0_R8Ki
+
+   
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
    NN = p%WAMIT%SS_Exctn%N+p%WAMIT%SS_Rdtn%N
       
@@ -2452,7 +2453,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          
          
       do i=1,NN
-         
+         delta = p%dx(i)
             ! get x_op + delta x
          call HydroDyn_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
@@ -2791,13 +2792,20 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    if ( allocated(InitOut%DerivOrder_x) ) InitOut%DerivOrder_x = 1
    
    ! set perturbation sizes: p%dx
-   p%dx  = 2.0_R8Ki * D2R_D 
-
+   
+   do i = 1, p%WAMIT%SS_Exctn%N    
+      p%dx(i)  = 20000.0_R8Ki * D2R_D 
+   end do
+   
+   do i = 1, p%WAMIT%SS_Rdtn%N
+      p%dx(i+p%WAMIT%SS_Exctn%N)  = 2.0_R8Ki * D2R_D 
+   end do
+   
    modLabels = (/'Exctn     ','Rdtn      '/)
    dofLabels = (/'PtfmSg    ','PtfmSw    ','PtfmHv    ','PtfmR     ','PtfmP     ','PtfmY     '/)
    
       ! set linearization state names:
-   do k = 1, 2
+   do k = 1, 2   ! 1 = Excitation,  2 = Radiation
       if (k == 2) spdof = p%WAMIT%SS_Rdtn%N  / 6
         
       do j = 1, 6
@@ -3152,10 +3160,10 @@ SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
       
    if (n > p%WAMIT%SS_Exctn%N) then
       indx = n - p%WAMIT%SS_Exctn%N
-      x%WAMIT%SS_Rdtn%x( indx ) = x%WAMIT%SS_Rdtn%x( indx ) + p%dx(n) * perturb_sign 
+      x%WAMIT%SS_Rdtn%x( indx ) = x%WAMIT%SS_Rdtn%x( indx ) + dx * perturb_sign 
    else
       indx = n
-      x%WAMIT%SS_Exctn%x( indx ) = x%WAMIT%SS_Exctn%x( indx ) + p%dx(n) * perturb_sign 
+      x%WAMIT%SS_Exctn%x( indx ) = x%WAMIT%SS_Exctn%x( indx ) + dx * perturb_sign 
    end if
                                                 
    END SUBROUTINE HD_Perturb_x
