@@ -1762,6 +1762,11 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
                   
    end if
       
+   
+   if ( p%TurbineType /= Type_LandBased .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_ReKi) ) then
+    call SetErrStat(ErrID_Fatal, 'Height of turbine location, TurbinePos(3), must be 0 for offshore turbines.', ErrStat, ErrMsg, RoutineName)
+   end if
+
    !...............................................................................................................................
 
       ! temporary check on p_FAST%DT_out 
@@ -3043,6 +3048,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
    if (p_FAST%CompHydro == MODULE_HD) then
       RefLengths = p_FAST%VTK_Surface%GroundRad*VTK_GroundFactor/2.0_SiKi
       
+      ! note that p_FAST%TurbinePos(3) must be 0 for offshore turbines
       RefPoint(3) = p_FAST%TurbinePos(3) - InitOutData_HD%WtrDpth      
       call WrVTK_Ground ( RefPoint, RefLengths, trim(VTK_path) // '.SeabedSurface', ErrStat2, ErrMsg2 )   
       
@@ -3171,9 +3177,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
          p_FAST%VTK_Surface%WaveElevXY(:,k) = p_FAST%VTK_Surface%WaveElevXY(:,k) + p_FAST%TurbinePos(1:2)
       end do
          
-      do k=1,size(p_FAST%VTK_Surface%WaveElev,2)
-         p_FAST%VTK_Surface%WaveElev(:,k) = p_FAST%VTK_Surface%WaveElev(:,k) + p_FAST%TurbinePos(3)  ! not sure this is really accurrate if p_FAST%TurbinePos(3) is non-zero
-      end do
+      !do k=1,size(p_FAST%VTK_Surface%WaveElev,2)
+      !   p_FAST%VTK_Surface%WaveElev(:,k) = p_FAST%VTK_Surface%WaveElev(:,k) + p_FAST%TurbinePos(3)  ! not sure this is really accurate if p_FAST%TurbinePos(3) is non-zero
+      !end do
       
    end if
    
