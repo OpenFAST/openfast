@@ -2914,9 +2914,11 @@ FUNCTION get_vtkdir_path( out_file_root )
    last_separator_index =      index(out_file_root, '/', back=.true.)
    last_separator_index = max( index(out_file_root, '\', back=.true.), last_separator_index )
    
-   ! Note that last_separator_index cannot be 0 because of the way out_file_root is formed in OpenFAST (it adds PathSep if it is run in the current directory).
-   ! If that changes, the next line should be changed to avoid seg faults on certain compilers:
-   get_vtkdir_path = trim(out_file_root(1 : last_separator_index) // 'vtk')
+   if (last_separator_index==0) then
+      get_vtkdir_path = '.'//PathSep//'vtk'
+   else
+      get_vtkdir_path = trim(out_file_root(1 : last_separator_index) // 'vtk')
+   end if
 END FUNCTION
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This function builds the path for the vtk root file name based on the output file root
@@ -3164,9 +3166,14 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
       call move_alloc( InitInData_HD%WaveElevXY, p_FAST%VTK_Surface%WaveElevXY )
       call move_alloc( InitOutData_HD%WaveElevSeries, p_FAST%VTK_Surface%WaveElev )
       
-      p_FAST%VTK_Surface%WaveElevXY(1,:) = p_FAST%VTK_Surface%WaveElevXY(1,:) + p_FAST%TurbinePos(1)
-      p_FAST%VTK_Surface%WaveElevXY(2,:) = p_FAST%VTK_Surface%WaveElevXY(2,:) + p_FAST%TurbinePos(2)
-      p_FAST%VTK_Surface%WaveElev        = p_FAST%VTK_Surface%WaveElev + p_FAST%TurbinePos(3)  ! not sure this is really accurrate if p_FAST%TurbinePos(3) is non-zero
+         ! put the following lines in loops to avoid stack-size issues:
+      do k=1,size(p_FAST%VTK_Surface%WaveElevXY,2)
+         p_FAST%VTK_Surface%WaveElevXY(:,k) = p_FAST%VTK_Surface%WaveElevXY(:,k) + p_FAST%TurbinePos(1:2)
+      end do
+         
+      do k=1,size(p_FAST%VTK_Surface%WaveElev,2)
+         p_FAST%VTK_Surface%WaveElev(:,k) = p_FAST%VTK_Surface%WaveElev(:,k) + p_FAST%TurbinePos(3)  ! not sure this is really accurrate if p_FAST%TurbinePos(3) is non-zero
+      end do
       
    end if
    
