@@ -453,16 +453,15 @@ used by OpenFAST for blade surface visualization when enabled.
 
 Specify the number of Reynolds number- or aerodynamic-control
 setting-dependent tables of data for the given airfoil via the
-``NumTabs`` setting. **Currently, AeroDyn can only use the first table
-in any given airfoil file, so you should set ``NumTabs = 1`` and you
-will need to make separate airfoil data input files and run separate
-simulations if you need to analyze data for different Reynolds numbers
-or aerodynamic-control settings.** The remaining parameters in the
+``NumTabs`` setting. The remaining parameters in the
 airfoil data input files are entered separately for each table.
 
-``Re`` and ``Ctrl`` are the Reynolds number (in millions) and
-aerodynamic-control setting for the included table, **but are both
-currently unused by AeroDyn**.
+``Re`` and ``UserProp`` are the Reynolds number (in millions) and
+aerodynamic-control (or user property) setting for the included table.
+These values are used only when the ``AFTabMod`` parameter in the 
+primary AeroDyn input file is set to use 2D interpolation based on 
+``Re`` or ``UserProp``. If 1D interpolation (based only on angle of attack)
+is used, only the first table in the file will be used.
 
 Set ``InclUAdata`` to TRUE if you are including the 32 UA model
 parameters (required when ``AFAeroMod = 2`` in the AeroDyn primary
