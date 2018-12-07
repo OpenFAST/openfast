@@ -378,7 +378,7 @@ SUBROUTINE WriteScr ( Str, Frm )
    END IF
 
    Str2 = trim(Str2)//NewLine
-   Stat = mexPrintf( Str2 )
+   Stat = mexPrintF( Str2 )
 
 END SUBROUTINE WriteScr ! ( Str )
 !=======================================================================
