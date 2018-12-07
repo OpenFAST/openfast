@@ -1801,8 +1801,6 @@ CONTAINS
 
       IF ( ( Str(IC:IC) >= 'a' ).AND.( Str(IC:IC) <= 'z' ) )  THEN
          Str(IC:IC) = CHAR( ICHAR( Str(IC:IC) ) - 32 )
-      ELSE
-         Str(IC:IC) = Str(IC:IC)
       END IF
 
    END DO ! IC
