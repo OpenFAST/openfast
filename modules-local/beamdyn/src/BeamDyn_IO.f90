@@ -691,13 +691,28 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
       END IF
 
    Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "load_retries", "Tolerance for stopping criterion", ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+          InputFileData%load_retries = 20
+      ELSE ! If it's not "default", read this variable;
+         READ( Line, *, IOSTAT=IOS) InputFileData%load_retries
+            CALL CheckIOS ( IOS, InputFile, 'load_retries', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+
+   Line = ""
    CALL ReadVar( UnIn, InputFile, Line, "NRMax", "Max number of interations in Newton-Raphson algorithm", ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
-
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
           InputFileData%NRMax = 10
@@ -723,19 +738,89 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
 
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_fd','finite difference for tangent stiffness flag', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_fd = .FALSE.
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_fd
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_fd', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+   if (InputFileData%tngt_stf_fd) CALL WrScr( 'Using finite difference to compute tangent stiffness matrix'//NewLine )
    !   ! RelStates - Define states relative to root motion during linearization? (flag) [used only when linearizing]
    !CALL ReadVar(UnIn,InputFile,InputFileData%RelStates,"RelStates", "Define states relative to root motion during linearization? (flag) [used only when linearizing]",ErrStat2,ErrMsg2,UnEc)
    !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    InputFileData%RelStates = .false.  ! this doesn't seem to be needed anymore (and I think there is a problem with using it in MBC3)
 
-      ! RotStates - Orient states in the rotating frame during linearization? (flag) [used only when linearizing]
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_comp','compare tangent stiffness using finite difference flag', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_comp = .FALSE.
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_comp
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_comp', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+   if (InputFileData%tngt_stf_comp) CALL WrScr( 'WARNING: tngt_stf_comp set to true. Output will be verbose'//NewLine )
+
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_pert','perturbation size for finite differenced tangent stiffness', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_pert = 1.0D-06
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_pert
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_pert', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_difftol','tolerance for difference between analytical and fd tangent stiffness', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_difftol = 1.0D-01
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_difftol
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_difftol', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+
+   ! RotStates - Orient states in the rotating frame during linearization? (flag) [used only when linearizing]
    CALL ReadVar(UnIn,InputFile,InputFileData%RotStates,"RotStates", "Orient states in the rotating frame during linearization? (flag) [used only when linearizing]",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
+
+   ! return on error at end of section
+   if (ErrStat >= AbortErrLev) then
+       call cleanup()
+       return
+   end if
 
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)
@@ -908,7 +993,6 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    INTEGER(IntKi)             :: j
 
    REAL(BDKi)                 :: temp66(6,6)
-   REAL(BDKi)                 :: temp6(6)
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -960,21 +1044,13 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    CALL ReadCom(UnIn,BldFile,'units',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL ReadAry(UnIn,BldFile,temp6,6,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
+   CALL ReadAry(UnIn,BldFile,BladeInputFileData%beta,6,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
-
-      ! Change to BD coordinates
-   BladeInputFileData%beta(1) = temp6(3)
-   BladeInputFileData%beta(2) = temp6(1)
-   BladeInputFileData%beta(3) = temp6(2)
-   BladeInputFileData%beta(4) = temp6(6)
-   BladeInputFileData%beta(5) = temp6(4)
-   BladeInputFileData%beta(6) = temp6(5)
 
 
 !  -------------- DISTRIBUTED PROPERTIES--------------------------------------------
@@ -1814,10 +1890,10 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(A)')  'Blade center of mass (IEC coords): '
    WRITE (UnSu,'(3ES18.5)' ) p%blade_CG(:)
 
-!   WRITE (UnSu,'(A)')  'Blade mass moment of inertia: '
-!   DO i=1,3
-!       WRITE (UnSu,'(3ES18.5)' ) p%blade_IN(i,:)
-!   ENDDO
+   WRITE (UnSu,'(A)')  'Blade mass moment of inertia: '
+   DO i=1,3
+       WRITE (UnSu,'(3ES18.5)' ) p%blade_IN(i,:)
+   ENDDO
 
    WRITE (UnSu,'(A)')  'Global position vector (IEC coords):'
    WRITE (UnSu,'(3ES18.5)' ) p%GlbPos(:)
@@ -1887,17 +1963,28 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Quadrature point position vectors'
-   WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','        X        ','        Y        ','        Z        '       
-   WRITE (UnSu,'(A,1x,3(1x,A))')  '----','-----------------','-----------------','-----------------'
-   DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset) 
-      WRITE(UnSu,'(I4,3ES18.5)') i,p%QuadPt(1:3,i+p%qp_indx_offset)
+   k=1
+   DO i=1,p%elem_total
+       WRITE (UnSu,'(2x,A,I4)')  'Element number: ',i
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') ' QP ', ' Global QP ','        X        ','        Y        ','        Z        '
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') '----', '-----------','-----------------','-----------------','-----------------'
+       DO j = 1, p%nqp
+           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uu0(1:3,j,i)
+           k=k+1
+       ENDDO
+       k = k-1
    ENDDO
-
-   WRITE (UnSu,'(/,A)')  'Quadrature point initial Weiner-Milenkovic rotation vectors'
-   WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','      WM_x       ','      WM_y       ','      WM_z       '       
-   WRITE (UnSu,'(A,1x,3(1x,A))')  '----','-----------------','-----------------','-----------------'
-   DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset) 
-      WRITE(UnSu,'(I4,3ES18.5)') i,p%QuadPt(4:6,i+p%qp_indx_offset)
+   WRITE (UnSu,'(/,A)')  'Quadrature point rotation vectors'
+   k=1
+   DO i=1,p%elem_total
+       WRITE (UnSu,'(2x,A,I4)')  'Element number: ',i
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') ' QP ', ' Global QP ','      WM_x       ','      WM_y       ','      WM_z       '
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') '----', '-----------','-----------------','-----------------','-----------------'
+       DO j = 1, p%nqp
+           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uu0(4:6,j,i)
+           k=k+1
+       ENDDO
+       k = k-1
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at quadrature points (in IEC coordinates)'

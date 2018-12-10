@@ -1497,10 +1497,7 @@ CONTAINS
    CHARACTER(LEN(InputFile))            :: Arg                                          ! A command-line argument.
    
 
-
-
       ! Find out how many arguments were entered on the command line.
-
    NumArg   = COMMAND_ARGUMENT_COUNT()
    FirstArg = .TRUE.
 
@@ -1509,7 +1506,7 @@ CONTAINS
 
       ! Parse them.
 
-   IF ( NumArg .GT. 0 )  THEN
+   IF ( NumArg .GT. 0 ) THEN
 
       DO IArg=1,NumArg
 
@@ -1523,17 +1520,16 @@ CONTAINS
             END IF
          END IF
 
-         IF ( Arg(1:1) == SwChar .OR. Arg(1:1) == '-' )  THEN
+         IF ( Arg(1:1) == SwChar .OR. Arg(1:1) == '-' ) THEN
             IF (PRESENT(flag)) THEN
                CALL Conv2UC( Arg )
                Flag = Arg(2:) !this results in only the last flag
-               IF ( TRIM(Flag) == 'RESTART' )  CYCLE         ! Get next argument (which will be input [checkpoint] file name)
-
+               IF ( TRIM(Flag) == 'RESTART' ) CYCLE         ! Get next argument (which will be input [checkpoint] file name)
             END IF
                                                 
             CALL NWTC_DisplaySyntax( InputFile, ProgName )
 
-            IF ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )  THEN
+            IF ( INDEX( 'Hh?', Arg(2:2) ) > 0 ) THEN
                IF ( PRESENT(ErrStat) ) THEN
                   ErrStat = ErrID_Info !bjj? do we want to check if an input file was specified later?
                   RETURN
@@ -1805,8 +1801,6 @@ CONTAINS
 
       IF ( ( Str(IC:IC) >= 'a' ).AND.( Str(IC:IC) <= 'z' ) )  THEN
          Str(IC:IC) = CHAR( ICHAR( Str(IC:IC) ) - 32 )
-      ELSE
-         Str(IC:IC) = Str(IC:IC)
       END IF
 
    END DO ! IC
@@ -2649,13 +2643,13 @@ CONTAINS
          CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] <InputFile>' )
          CALL WrScr ( NewLine//' where:' )
          CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
-         CALL WrScr    ( '    <InputFile> is the name of the required primary input file.' )
+         CALL WrScr ( '    <InputFile> is the name of the required primary input file.' )
       ELSE
          CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] [<InputFile>]' )
          CALL WrScr ( NewLine//' where:' )
          CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
-         CALL WrScr    ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
-                        //TRIM( DefaultInputFile )//'".' )
+         CALL WrScr ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
+                     //TRIM( DefaultInputFile )//'".' )
       END IF
       CALL WrScr    ( NewLine//' Note: values enclosed in square brackets [] are optional. Do not enter the brackets.')      
       CALL WrScr    ( ' ')
@@ -2927,6 +2921,55 @@ CONTAINS
    RETURN
    END SUBROUTINE OpenFUnkFile
 !=======================================================================
+!> This routine opens a formatted output file in append mode if it exists, otherwise opens a new file
+   SUBROUTINE OpenFUnkFileAppend ( Un, OutFile, ErrStat, ErrMsg )
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)                   :: Un                                          ! Logical unit for the output file.
+   CHARACTER(*), INTENT(IN)              :: OutFile                                     ! Name of the output file.
+
+   INTEGER(IntKi), INTENT(OUT), OPTIONAL :: ErrStat                                     ! Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT), OPTIONAL :: ErrMsg                                      ! Error message
+
+
+
+      ! Local declarations.
+   LOGICAL                                :: FileExists                                  ! Does the file exist?
+   INTEGER                                :: IOS                                         ! I/O status of OPEN
+   CHARACTER(1024)                        :: Msg                                         ! Temporary error message
+
+
+      ! Open output file.  Make sure it worked.
+
+   inquire(file=TRIM( OutFile ), exist=FileExists)
+
+   if (FileExists) then
+      OPEN( Un, FILE=TRIM( OutFile ), STATUS='OLD', POSITION='APPEND', FORM='FORMATTED', IOSTAT=IOS, ACTION="WRITE" )
+   else
+      OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='FORMATTED', IOSTAT=IOS, ACTION="WRITE" )
+   end if
+
+
+   IF ( IOS /= 0 )  THEN
+
+      Msg = 'Cannot open file "'//TRIM( OutFile )//'".  Another program like MS Excel may have locked it for writing.'
+
+      IF ( PRESENT(ErrStat) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = Msg
+      ELSE
+         CALL ProgAbort( ' '//Msg )
+      END IF
+
+   ELSE
+      IF ( PRESENT(ErrStat) )  ErrStat = ErrID_None
+      IF ( PRESENT(ErrMsg)  )  ErrMsg  = ""
+   END IF
+
+
+   RETURN
+   END SUBROUTINE OpenFUnkFileAppend ! ( Un, OutFile [, ErrStat] [, ErrMsg] )
 !>  This routine opens an unformatted input file of RecLen-byte data records
 !!  stored in Big Endian format.
    SUBROUTINE OpenUInBEFile( Un, InFile, RecLen, ErrStat, ErrMsg )

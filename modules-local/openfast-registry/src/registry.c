@@ -5,6 +5,8 @@
 # include <io.h>
 # define rindex(X,Y) strrchr(X,Y)
 # define index(X,Y) strchr(X,Y)
+# include <process.h>
+# define getpid _getpid
 #else
 # include <sys/time.h>
 # include <sys/resource.h>
@@ -52,7 +54,7 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-   thisprog_ver = "FAST Registry (v3.02.00, 23-Jul-2016)";
+   thisprog_ver = "FAST Registry";
 
   fprintf(stderr,"\n") ;
   fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;

@@ -631,11 +631,15 @@ SUBROUTINE Spec_TimeSer ( p, Ht, Ucmp, LastIndex, Spec )
 
 !bjj: fix me!!! (make use of nComp and height )                             
 
+      ! initialize Spec with extrapolated values on non-specified components or frequencies
+      ! i.e., fill the gaps where wind component or frequencies exceed what was specified in the time-series data with some numerical model
+      ! (or use zeros for known spectral values that will get overwritten later)
    CALL Spec_TimeSer_Extrap ( p, Ht, Ucmp, Spec )
 
 
    InCoord(2) = Ht
    
+      ! overwrite Spec at the frequencies and wind components by interpolating from known points
    DO I=1,p%usr%nFreq !p%grid%NumFreq ! note that this assumes TMax = AnalysisTime (i.e., we have the same delta frequencies)
       
       InCoord(1) = p%grid%Freq(i)      
@@ -680,6 +684,8 @@ SUBROUTINE Spec_TimeSer_Extrap ( p, Ht, Ucmp, Spec )
             
          END SELECT          
                                  
+   ELSE
+      Spec = 0.0_ReKi ! whole matrix is zero
    END IF
 
 END SUBROUTINE Spec_TimeSer_Extrap
@@ -695,7 +701,7 @@ SUBROUTINE UserSpec_Interp2D( InCoord, p_usr, LastIndex, OutSpec )
    REAL(ReKi),                     INTENT(IN   ) :: InCoord(2)                                   !< Arranged as (Freq, Ht)
    TYPE(UserTSSpec_ParameterType), INTENT(IN   ) :: p_usr                                        !<
    INTEGER(IntKi),                 INTENT(INOUT) :: LastIndex(2)                                 !< Index for the last (Freq, Ht) used
-   REAL(ReKi),                     INTENT(  OUT) :: OutSpec(3)                                   !< The interpolated resulting PSD from each component of p%usr%S(:,:,1-3)
+   REAL(ReKi),                     INTENT(INOUT) :: OutSpec(3)                                   !< The interpolated resulting PSD from each component of p%usr%S(:,:,1-3)
 
 
       ! Local variables
