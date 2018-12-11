@@ -42,7 +42,7 @@ private
    integer(intki), parameter :: UA_Gonzalez      = 2   ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]
    integer(intki), parameter :: UA_MinemmaPierce = 3   ! UAMod = 3 [Minemma/Pierce variant (changes in Cc and Cm)]
    
-   real(ReKi),     parameter :: Gonzales_factor = 0.2_ReKi   ! this factor, proposed by Gonzales (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
+   real(ReKi),     parameter :: Gonzalez_factor = 0.2_ReKi   ! this factor, proposed by Gonzalez (for "all" models) is used to modify Cc to account for negative values seen at f=0 (see Eqn 1.40)
    
    contains
    
@@ -249,24 +249,25 @@ real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, alpha, alpha0, c_nalpha_circ
    character(*),     intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
    
    
-   real(ReKi), parameter           :: fc_limit = (1.0_ReKi + Gonzales_factor)**2    ! normally, fc is limited by 1, but we're limiting (sqrt(fc)-Gonzales_factor) to 1
+   real(ReKi), parameter           :: fc_limit = (1.0_ReKi + Gonzalez_factor)**2    ! normally, fc is limited by 1, but we're limiting (sqrt(fc)-Gonzalez_factor) to 1, so fc is limited to 1.44 instead (when Gonzalez_factor is 0.2)
    real(ReKi)                      :: Cc, Cl, Cd, Cm, Cd0, Cm0, denom
    ErrStat = ErrID_None
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
    
   
+      ! in cases where denom is zero, Get_f_c_from_Lookup = min(fc_limit, inf)
    if (EqualRealNos(real(alpha,SiKi), 0.0_SiKi)) then
       
-      Get_f_c_from_Lookup = 1.44_ReKi
+      Get_f_c_from_Lookup = fc_limit
       
    elseif (EqualRealNos(real(alpha,SiKi), real(alpha0,SiKi))) then
       
-      Get_f_c_from_Lookup = 1.44_ReKi
+      Get_f_c_from_Lookup = fc_limit
       
    else if (EqualRealNos( real(c_nalpha_circ,SiKi), 0.0_SiKi )) then
       
-      Get_f_c_from_Lookup = 1.44_ReKi
+      Get_f_c_from_Lookup = fc_limit
 
    else
          
@@ -279,10 +280,10 @@ real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, alpha, alpha0, c_nalpha_circ
       else
          denom = eta_e*c_nalpha_circ*( alpha-alpha0 )*tan(alpha)
       endif
-      Get_f_c_from_Lookup =  min(fc_limit, (  Cc / denom  + Gonzales_factor ) **2 )
+      Get_f_c_from_Lookup =  min(fc_limit, (  Cc / denom  + Gonzalez_factor ) **2 )
                   
    end if
-      ! Apply an offset of 0.2 to fix cases where f_c should be negative, but we are using **2 so can only return positive values
+      ! Apply an offset of Gonzalez_factor = 0.2 to fix cases where f_c should be negative, but we are using **2 so can only return positive values
       ! Note: because we include this offset, it must be accounted for in the final value of Cc, eqn 1.40.  This will be applied
       ! For both UA_Mod = 1,2, and 3 when using Flookup = T
    
@@ -641,7 +642,7 @@ ENDIF
    
     
    if ( p%UAMod == UA_Gonzalez ) then
-      KC%Cn_FS   = KC%Cn_alpha_q_nc + KC%Cn_q_circ + KC%Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(KC%fprimeprime) ) / 3.0_ReKi )**2     ! Eqn 1.39 [bjj: note that KC%Cn_alpha_q_circ doesn't match the equation 1.39 for the Gonzales model]
+      KC%Cn_FS   = KC%Cn_alpha_q_nc + KC%Cn_q_circ + KC%Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(KC%fprimeprime) ) / 3.0_ReKi )**2     ! Eqn 1.39 [bjj: note that KC%Cn_alpha_q_circ doesn't match the equation 1.39 for the Gonzalez model]
    else
       KC%Cn_FS   = KC%Cn_alpha_q_nc + KC%Cn_alpha_q_circ *  ( (1.0_ReKi +          sqrt(KC%fprimeprime) ) / 2.0_ReKi )**2     ! Eqn 1.38   
    end if
@@ -1485,7 +1486,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       
       if ( p%flookup ) then 
       !if ( p%UAMod == UA_Gonzalez ) then
-         Cc_FS = BL_p%eta_e*KC%Cc_pot *(sqrt(KC%fprimeprime_c) - Gonzales_factor)                                                                  ! Eqn 1.40  
+         Cc_FS = BL_p%eta_e*KC%Cc_pot *(sqrt(KC%fprimeprime_c) - Gonzalez_factor)                                                                  ! Eqn 1.40  
       else
          Cc_FS = BL_p%eta_e*KC%Cc_pot * sqrt(KC%fprimeprime_c)                                                                                     ! Eqn 1.40 without Gonzalez's modification for negative Cc
       end if
