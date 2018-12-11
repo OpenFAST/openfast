@@ -75,7 +75,7 @@ RETURN
 END FUNCTION SAT
    
 !==============================================================================   
-subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
+subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, Cm0, ErrStat, ErrMsg)
 ! Called by : UA_CalcOutput
 ! Calls  to : CubicSplineInterpM   
 !..............................................................................
@@ -85,6 +85,7 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
    real(ReKi),       intent(  out) :: Cd                    ! Coefficient of drag (-)
    real(ReKi),       intent(  out) :: Cm                    ! Pitch moment coefficient (-)
    real(ReKi),       intent(  out) :: Cd0                   ! Minimum Cd value (-)
+   real(ReKi),       intent(  out) :: Cm0                   ! Cm value for Cl=0 (-)
    integer(IntKi),   intent(  out) :: ErrStat               ! Error status of the operation
    character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
@@ -110,6 +111,7 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
    !   return
    !end if
    Cd0 =   AFInfo%Table(1)%UA_BL%Cd0
+   Cm0 =   AFInfo%Table(1)%UA_BL%Cm0
    
    Alpha = AOA
    call MPi2Pi ( Alpha ) ! change AOA into range of -pi to pi
@@ -174,7 +176,7 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha_circ, 
    character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
    !real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
-   real(ReKi)                       :: Cn, Cl, Cd, Cm, Cd0, tmpRoot, denom
+   real(ReKi)                       :: Cn, Cl, Cd, Cm, Cd0, Cm0, tmpRoot, denom
    !integer                         :: s1                    ! Number of columns in the AFInfo structure
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -193,7 +195,7 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha_circ, 
       tmpRoot = 0.0_ReKi
    else
       
-      call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
+      call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, Cm0, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev ) return
    
       Cn =  Cl*cos(alpha) + (Cd-Cd0)*sin(alpha)
@@ -248,7 +250,7 @@ real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, alpha, alpha0, c_nalpha_circ
    
    
    real(ReKi), parameter           :: fc_limit = (1.0_ReKi + Gonzales_factor)**2    ! normally, fc is limited by 1, but we're limiting (sqrt(fc)-Gonzales_factor) to 1
-   real(ReKi)                      :: Cc, Cl, Cd, Cm, Cd0, denom
+   real(ReKi)                      :: Cc, Cl, Cd, Cm, Cd0, Cm0, denom
    ErrStat = ErrID_None
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
@@ -256,19 +258,19 @@ real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, alpha, alpha0, c_nalpha_circ
   
    if (EqualRealNos(real(alpha,SiKi), 0.0_SiKi)) then
       
-      Get_f_c_from_Lookup = 0.0_ReKi
+      Get_f_c_from_Lookup = 1.44_ReKi
       
    elseif (EqualRealNos(real(alpha,SiKi), real(alpha0,SiKi))) then
       
-      Get_f_c_from_Lookup = 0.0_ReKi
+      Get_f_c_from_Lookup = 1.44_ReKi
       
    else if (EqualRealNos( real(c_nalpha_circ,SiKi), 0.0_SiKi )) then
       
-      Get_f_c_from_Lookup = 0.0_ReKi
+      Get_f_c_from_Lookup = 1.44_ReKi
 
    else
          
-      call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
+      call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, Cm0, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
       Cc =  Cl*sin(alpha) - (Cd-Cd0)*cos(alpha)
    
@@ -358,6 +360,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    real(ReKi)                 :: Cl_temp
    real(ReKi)                 :: Cd_temp
    real(ReKi)                 :: Cd0_temp
+   real(ReKi)                 :: Cm0_temp
 
    real(ReKi)                :: T_I                                           !
    real(ReKi)                :: Kalpha                                        !
@@ -510,8 +513,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
       KC%X4              = Get_ExpEqn( KC%ds*beta_M_Sqrd*BL_p%b2, 1.0_ReKi, xd%X4_minus1(i,j), BL_p%A2*(KC%q_f_cur - q_f_minus1), 0.0_ReKi ) ! Eqn 1.16a [2]
       
       KC%Cn_q_circ       = KC%C_nalpha_circ*KC%q_f_cur/2.0 - KC%X3 - KC%X4                                                    ! Eqn 1.16
-      ! TODO: Why does the Cn_q_circ appear in the following equation GJH 2/28/2017
-      KC%Cn_alpha_q_circ = KC%Cn_alpha_q_circ + KC%Cn_q_circ                                                                  ! add to Eqn 1.13
+
    else ! these aren't used (they are possibly output to UA_OUT file, though)
       KC%X3              = 0.0_ReKi
       KC%X4              = 0.0_ReKi
@@ -534,7 +536,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    end if
    
    if ( p%UAMod == UA_Gonzalez ) then
-      KC%Cc_pot = KC%Cn_alpha_q_circ * KC%alpha_e * u%alpha  !Added this equation with (u%alpha) instead of tan(alpha_e+alpha0). First, tangent gives problems in idling conditions at angles of attack of 90 degrees. Second, the angle there is a physical concept according to the original BL model, and u%alpha could be more suitable 
+      KC%Cc_pot = KC%C_nalpha_circ * KC%alpha_e * u%alpha  !Added this equation with (u%alpha) instead of tan(alpha_e+alpha0). First, tangent gives problems in idling conditions at angles of attack of 90 degrees. Second, the angle there is a physical concept according to the original BL model, and u%alpha could be more suitable 
    else   
    !!! THIS IS A PROBLEM IF KC%alpha_e+BL_p%alpha0 ARE NEAR +/-PI/2
       KC%Cc_pot = KC%Cn_alpha_q_circ * tan(KC%alpha_e+BL_p%alpha0)                                                           ! Eqn 1.21 with cn_pot_circ=KC%Cn_alpha_q_circ as from Eqn 1.20 [3]  
@@ -595,7 +597,7 @@ ENDIF
          if (ErrStat >= AbortErrLev) return
 
       if ( p%UAMod == UA_Gonzalez ) then   !Added this part of the code to obtain fm
-         call GetSteadyOutputs(AFInfo, u%alpha, Cl_temp, Cd_temp, Cm_temp, Cd0_temp, ErrStat2, ErrMsg2)
+         call GetSteadyOutputs(AFInfo, u%alpha, Cl_temp, Cd_temp, Cm_temp, Cd0_temp, Cm0_temp, ErrStat2, ErrMsg2)
            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
            if (ErrStat >= AbortErrLev) return
 
@@ -603,7 +605,7 @@ ENDIF
          if (abs(Cn_temp) < 0.01_ReKi ) then
             KC%fprime_m = 0.0_ReKi
          else
-            KC%fprime_m = (Cm_temp - Cd0_temp) / Cn_temp 
+            KC%fprime_m = (Cm_temp - Cm0_temp) / Cn_temp 
          end if
       else
          KC%fprime_m = 0.0_ReKi
@@ -634,11 +636,12 @@ ENDIF
          ! variables used for UAMod=UA_Gonzalez
       KC%fprime_m = 0.0_ReKi
       KC%Df_m     = 0.0_ReKi
+      KC%fprimeprime_m = KC%fprimeprime
    end if
    
     
    if ( p%UAMod == UA_Gonzalez ) then
-      KC%Cn_FS   = KC%Cn_alpha_q_nc + KC%Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(KC%fprimeprime) ) / 3.0_ReKi )**2     ! Eqn 1.39 [bjj: note that KC%Cn_alpha_q_circ doesn't match the equation 1.39 for the Gonzales model]
+      KC%Cn_FS   = KC%Cn_alpha_q_nc + KC%Cn_q_circ + KC%Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(KC%fprimeprime) ) / 3.0_ReKi )**2     ! Eqn 1.39 [bjj: note that KC%Cn_alpha_q_circ doesn't match the equation 1.39 for the Gonzales model]
    else
       KC%Cn_FS   = KC%Cn_alpha_q_nc + KC%Cn_alpha_q_circ *  ( (1.0_ReKi +          sqrt(KC%fprimeprime) ) / 2.0_ReKi )**2     ! Eqn 1.38   
    end if
@@ -665,7 +668,7 @@ ENDIF
    if (OtherState%FirstPass(i,j)) then
       KC%Cn_v = 0.0_ReKi
    else
-      if (xd%tau_V(i,j) > BL_p%T_VL .AND. KC%Kalpha_f * KC%dalpha0 < 0 ) then ! .AND. (.not. LESF)
+      if (xd%tau_V(i,j) > BL_p%T_VL .AND. KC%Kalpha_f * KC%dalpha0 > 0 ) then ! .AND. (.not. LESF)
          ! We no longer require that T_V will always equal T_V0/2 when this condition is satisfied as was the case in AD v13 GJH 7/20/2017
          ! If we fall into this condition, we need to require we stay here until the current vortex is shed (i.e., tauV is reset to zero)
          if ( p%UAMod == UA_Gonzalez ) then   !Added this equation from the formulation used in UAMod=UA_Gonzalez
@@ -1410,6 +1413,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
    real(ReKi)                                             :: Cm_v, alpha_prime_f
    real(ReKi)                                             :: x_cp_hat                      ! center-of-pressure distance from LE in chord fraction
    real(ReKi)                                             :: Cm_common                     ! 
+   real(ReKi)                                             :: Cm0
 
    integer(intKi)                                         :: ncols
    
@@ -1426,7 +1430,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
    
    if (OtherState%FirstPass(misc%iBladeNode, misc%iBlade) .or. EqualRealNos(u%U, 0.0_ReKi) ) then ! note: if u%U is = in UpdateStates, BEMT shuts off UA; however, it could still be called with u%U=0 here
             
-      call GetSteadyOutputs(AFInfo, u%alpha, y%Cl, y%Cd, y%Cm, BL_p%Cd0, ErrStat2, ErrMsg2)
+      call GetSteadyOutputs(AFInfo, u%alpha, y%Cl, y%Cd, y%Cm, BL_p%Cd0, Cm0, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
       
       
@@ -1582,7 +1586,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       
                ! Look up Cm using alpha_prime_f
             alpha_prime_f = KC%alpha_f - KC%Dalphaf                                                                                                ! Eqn 1.43a
-            call GetSteadyOutputs(AFInfo, alpha_prime_f, Cl_temp, Cd_temp, Cm_temp, BL_p%Cd0, ErrStat2, ErrMsg2)
+            call GetSteadyOutputs(AFInfo, alpha_prime_f, Cl_temp, Cd_temp, Cm_temp, BL_p%Cd0, Cm0, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)            
             Cm_FS = Cm_temp + Cm_common                                                                                                            ! Eqn 1.44
       
