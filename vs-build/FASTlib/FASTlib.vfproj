@@ -214,6 +214,32 @@
 			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\build\types-files\BEMT_Types.f90"/>
+		<File RelativePath="..\..\modules-local\AeroDyn\src\DBEMT_Registry.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\build\types-files\DBEMT_Types.f90"/>
 		<File RelativePath="..\..\modules-local\aerodyn\src\UnsteadyAero_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration>
@@ -245,6 +271,7 @@
 		<File RelativePath="..\..\modules-local\aerodyn\src\AirfoilInfo.f90"/>
 		<File RelativePath="..\..\modules-local\aerodyn\src\BEMT.f90"/>
 		<File RelativePath="..\..\modules-local\aerodyn\src\BEMTUncoupled.f90"/>
+		<File RelativePath="..\..\modules-local\aerodyn\src\DBEMT.f90"/>
 		<File RelativePath="..\..\modules-local\aerodyn\src\fmin_fcn.f90"/>
 		<File RelativePath="..\..\modules-local\aerodyn\src\mod_root1dim.f90"/>
 		<File RelativePath="..\..\modules-local\aerodyn\src\UnsteadyAero.f90"/></Filter>
@@ -402,7 +429,7 @@
 		<File RelativePath="..\..\modules-local\extptfm\src\ExtPtfm_MCKF.f90"/></Filter>
 		<Filter Name="FAST">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules-local\fast-library\src\FAST_Registry.txt">
+		<File RelativePath="..\..\modules-local\openfast-library\src\FAST_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\build\types-files\FAST_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -428,10 +455,10 @@
 			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat FAST" Description="Running Registry for FAST" Outputs="..\..\build\types-files\FAST_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\build\types-files\FAST_Types.f90"/></Filter>
-		<File RelativePath="..\..\modules-local\fast-library\src\FAST_Lin.f90"/>
-		<File RelativePath="..\..\modules-local\fast-library\src\FAST_Mods.f90"/>
-		<File RelativePath="..\..\modules-local\fast-library\src\FAST_Solver.f90"/>
-		<File RelativePath="..\..\modules-local\fast-library\src\FAST_Subs.f90"/></Filter>
+		<File RelativePath="..\..\modules-local\openfast-library\src\FAST_Lin.f90"/>
+		<File RelativePath="..\..\modules-local\openfast-library\src\FAST_Mods.f90"/>
+		<File RelativePath="..\..\modules-local\openfast-library\src\FAST_Solver.f90"/>
+		<File RelativePath="..\..\modules-local\openfast-library\src\FAST_Subs.f90"/></Filter>
 		<Filter Name="HydroDyn">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules-local\hydrodyn\src\Conv_Radiation.txt">

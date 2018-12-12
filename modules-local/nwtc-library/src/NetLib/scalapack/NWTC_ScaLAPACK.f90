@@ -4,10 +4,6 @@
 ! This code provides a wrapper for the ScaLAPACK routines currently used at the NWTC (mainly codes in the FAST framework).
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-05-07 13:27:33 -0600 (Thu, 07 May 2015) $
-! (File) Revision #: $Rev: 301 $
-! URL: $HeadURL: https://windsvn.nrel.gov/NWTC_Library/branches/NetLib/NWTC_source/NWTC_ScaLAPACK.f90 $
-!**********************************************************************************************************************************
 MODULE NWTC_ScaLAPACK
 
    USE NWTC_Base        ! we only need the precision and error level constants

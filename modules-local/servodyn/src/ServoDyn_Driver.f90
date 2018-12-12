@@ -54,7 +54,7 @@ PROGRAM SrvD_Driver
    INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
    CHARACTER(ErrMsgLen)                               :: ErrMsg               !< Error message if ErrStat /= ErrID_None
    
-   REAL(ReKi), allocatable                            :: dYdu(:,:)
+   REAL(R8Ki), allocatable                            :: dYdu(:,:)
    INTEGER(IntKi)                                     :: Un
    INTEGER(IntKi), parameter                          :: nMax = 80
    CHARACTER(1024)                                    :: OutFile

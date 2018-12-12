@@ -1,6 +1,6 @@
 .. _regression_test_windows:
 
-Windows With Visual Studio Regression Test
+Windows with Visual Studio regression test
 ==========================================
 
 1) Clone the openfast repo and initialize the testing database

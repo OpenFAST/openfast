@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: $
-! (File) Revision #: $Rev: $
-! URL: $HeadURL: $
-!**********************************************************************************************************************************
 MODULE OpenFOAM
 
 ! This is a pseudo module used to couple FAST v8 with OpenFOAM; it is considered part of the FAST glue code
@@ -105,6 +101,7 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD14, u_AD, initOut_AD, y_AD, 
    if ( y_AD%TowerLoad%NNodes > 0 ) then
       OpFM%p%NMappings = OpFM%p%NumBl + 1
       OpFM%p%TowerHeight = InitInp%TowerHeight
+      OpFM%p%TowerBaseHeight = InitInp%TowerBaseHeight
       OpFM%p%NnodesForce = OpFM%p%NnodesForce + InitInp%NumActForcePtsTower
    else
       OpFM%p%NMappings = OpFM%p%NumBl
@@ -1025,7 +1022,8 @@ SUBROUTINE CalcForceActuatorPositionsBlade(InitIn_OpFM, p_OpFM, structPositions,
   rStructNodes(nStructNodes) = p_OpFM%BladeLength
 
   ! Now calculate the positions of the force nodes based on interpolation
-  DO I=1,p_OpFM%NnodesForceBlade ! Calculate the position of the force nodes
+  forceNodePositions(:,1) = structPositions(:,1)
+  DO I=2,p_OpFM%NnodesForceBlade-1 ! Calculate the position of the force nodes
      jLower=1
      do while ( ( (rStructNodes(jLower) - p_OpFM%forceBldRnodes(I))*(rStructNodes(jLower+1) - p_OpFM%forceBldRnodes(I)) .gt. 0) .and. (jLower .lt. nStructNodes) )
         jLower = jLower + 1
@@ -1033,7 +1031,8 @@ SUBROUTINE CalcForceActuatorPositionsBlade(InitIn_OpFM, p_OpFM, structPositions,
      rInterp =  (p_OpFM%forceBldRnodes(I) - rStructNodes(jLower))/(rStructNodes(jLower+1)-rStructNodes(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
      forceNodePositions(:,I) = structPositions(:,jLower) + rInterp * (structPositions(:,jLower+1) - structPositions(:,jLower))
   END DO
-
+  forceNodePositions(:,p_OpFM%NnodesForceBlade) = structPositions(:,nStructNodes)
+  
   DEALLOCATE(rStructNodes)
 
   RETURN
@@ -1061,12 +1060,13 @@ SUBROUTINE CalcForceActuatorPositionsTower(InitIn_OpFM, p_OpFM, structPositions,
   ALLOCATE(hStructNodes(nStructNodes), STAT=ErrStat2)
 
   ! Store the distance of the structural model nodes from the root into an array
-  hStructNodes(1) = 0.0 ! First node
+  hStructNodes(1) =  0.0 ! First node
   hStructNodes(2:nStructNodes-1) = InitIn_OpFM%StructTwrHnodes(:)
   hStructNodes(nStructNodes) = p_OpFM%TowerHeight
 
   ! Now calculate the positions of the force nodes based on interpolation
-  DO I=1,p_OpFM%NnodesForceTower ! Calculate the position of the force nodes
+  forceNodePositions(:,1) = structPositions(:,1)
+  DO I=2,p_OpFM%NnodesForceTower-1 ! Calculate the position of the force nodes
      jLower=1
      do while ( ((hStructNodes(jLower) - p_OpFM%forceTwrHnodes(I))*(hStructNodes(jLower+1) - p_OpFM%forceTwrHnodes(I)) .gt. 0) .and. (jLower .lt. nStructNodes))
         jLower = jLower + 1
@@ -1074,7 +1074,7 @@ SUBROUTINE CalcForceActuatorPositionsTower(InitIn_OpFM, p_OpFM, structPositions,
      hInterp =  (p_OpFM%forceTwrHnodes(I) - hStructNodes(jLower))/(hStructNodes(jLower+1)-hStructNodes(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
      forceNodePositions(:,I) = structPositions(:,jLower) + hInterp * (structPositions(:,jLower+1) - structPositions(:,jLower))
   END DO
-
+  forceNodePositions(:,p_OpFM%NnodesForceTower) = structPositions(:,nStructNodes)
   DEALLOCATE(hStructNodes)
 
   RETURN
@@ -1150,7 +1150,7 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
      DO I=1,p_OpFM%NnodesForceBlade
         Node = Node + 1
         jLower=1
-        do while ( ( (InitOut_AD%BladeProps(k)%BlSpn(jLower) - p_OpFM%forceBldRnodes(I))*(InitOut_AD%BladeProps(k)%BlSpn(jLower+1) - p_OpFM%forceBldRnodes(I)) .gt. 0 ) .and. (jLower .le. nNodesBladeProps) )!Determine the closest two nodes at which the blade properties are specified
+        do while ( ( (InitOut_AD%BladeProps(k)%BlSpn(jLower) - p_OpFM%forceBldRnodes(I))*(InitOut_AD%BladeProps(k)%BlSpn(jLower+1) - p_OpFM%forceBldRnodes(I)) .gt. 0 ) .and. (jLower .lt. nNodesBladeProps) )!Determine the closest two nodes at which the blade properties are specified
            jLower = jLower + 1
         end do
         if (jLower .lt. nNodesBladeProps) then
@@ -1172,11 +1172,11 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
      DO I=1,p_OpFM%NnodesForceTower
         Node = Node + 1
         jLower=1
-        do while ( ( (InitOut_AD%TwrElev(jLower) - p_OpFM%forceTwrHnodes(I))*(InitOut_AD%TwrElev(jLower+1) - p_OpFM%forceTwrHnodes(I)) .gt. 0) .and. (jLower .le. nNodesTowerProps) ) !Determine the closest two nodes at which the blade properties are specified
+        do while ( ( (InitOut_AD%TwrElev(jLower) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight)*(InitOut_AD%TwrElev(jLower+1) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight) .gt. 0) .and. (jLower .lt. nNodesTowerProps) ) !Determine the closest two nodes at which the blade properties are specified
            jLower = jLower + 1
         end do
         if (jLower .lt. nNodesTowerProps) then
-           rInterp =  (p_OpFM%forceTwrHnodes(I) - InitOut_AD%TwrElev(jLower))/(InitOut_AD%TwrElev(jLower+1)-InitOut_AD%TwrElev(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
+           rInterp =  (p_OpFM%forceTwrHnodes(I)+p_OpFM%TowerBaseHeight - InitOut_AD%TwrElev(jLower))/(InitOut_AD%TwrElev(jLower+1)-InitOut_AD%TwrElev(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
            u_OpFM%forceNodesChord(Node) = InitOut_AD%TwrDiam(jLower) + rInterp * (InitOut_AD%TwrDiam(jLower+1) - InitOut_AD%TwrDiam(jLower))
         else
            u_OpFM%forceNodesChord(Node) = InitOut_AD%TwrDiam(nNodesTowerProps) !Work around for when the last node of the actuator mesh is slightly outside of the Aerodyn tower properties.

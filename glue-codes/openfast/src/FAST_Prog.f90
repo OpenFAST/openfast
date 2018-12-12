@@ -20,10 +20,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 PROGRAM FAST
 ! This program models 2- or 3-bladed turbines of a standard configuration.
 !
@@ -61,7 +57,7 @@ INTEGER(IntKi)                        :: Restart_step                           
       ! determine if this is a restart from checkpoint
       !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    CALL NWTC_Init() ! open console for writing
-   ProgName = 'FAST'
+   ProgName = 'OpenFAST'
    CheckpointRoot = ""
      
    CALL CheckArgs( CheckpointRoot, ErrStat, Flag=FlagArg )  ! if ErrStat /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file

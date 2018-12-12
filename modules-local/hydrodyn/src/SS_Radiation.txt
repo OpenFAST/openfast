@@ -10,10 +10,6 @@
 # column  9: Description
 # column 10: Units
 ###################################################################################################################################
-# File last committed: $Date$
-# (File) Revision #: $Rev$
-# URL: $HeadURL$
-###################################################################################################################################
 
 typedef SS_Radiation/SS_Rad   InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file" -
 typedef   ^                 	^           ReKi	    DOFs      {1}{6} - -   "Vector with enable platf. DOFs" "m/s or rad/s"
