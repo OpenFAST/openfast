@@ -642,9 +642,9 @@ ENDIF
    
     
    if ( p%UAMod == UA_Gonzalez ) then
-      KC%Cn_FS   = KC%Cn_alpha_q_nc + KC%Cn_q_circ + KC%Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(KC%fprimeprime) ) / 3.0_ReKi )**2     ! Eqn 1.39 [bjj: note that KC%Cn_alpha_q_circ doesn't match the equation 1.39 for the Gonzalez model]
+      KC%Cn_FS   = KC%Cn_alpha_q_nc + KC%Cn_q_circ + KC%Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(KC%fprimeprime) ) / 3.0_ReKi )**2     ! Eqn 1.39
    else
-      KC%Cn_FS   = KC%Cn_alpha_q_nc + KC%Cn_alpha_q_circ *  ( (1.0_ReKi +          sqrt(KC%fprimeprime) ) / 2.0_ReKi )**2     ! Eqn 1.38   
+      KC%Cn_FS   = KC%Cn_alpha_q_nc                + KC%Cn_alpha_q_circ *  ( (1.0_ReKi +          sqrt(KC%fprimeprime) ) / 2.0_ReKi )**2     ! Eqn 1.38
    end if
    
       
