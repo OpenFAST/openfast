@@ -37,6 +37,9 @@ private
    public :: UA_CalcOutput
 
    public :: UA_ReInit
+   public :: UA_ValidateAFI
+   public :: UA_TurnOff_param
+   public :: UA_TurnOff_input
 
    integer(intki), parameter :: UA_Baseline      = 1   ! UAMod = 1 [Baseline model (Original)]
    integer(intki), parameter :: UA_Gonzalez      = 2   ! UAMod = 2 [Gonzalez's variant (changes in Cn,Cc,Cm)]
@@ -74,60 +77,7 @@ ENDIF
 RETURN
 END FUNCTION SAT
    
-!==============================================================================   
-subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, Cm0, ErrStat, ErrMsg)
-! Called by : UA_CalcOutput
-! Calls  to : CubicSplineInterpM   
-!..............................................................................
-   type(AFInfoType), intent(in   ) :: AFInfo                ! Airfoil info structure 
-   real(ReKi),       intent(in   ) :: AOA                   ! Angle of attack (rad)
-   real(ReKi),       intent(  out) :: Cl                    ! Coefficient of lift (-)
-   real(ReKi),       intent(  out) :: Cd                    ! Coefficient of drag (-)
-   real(ReKi),       intent(  out) :: Cm                    ! Pitch moment coefficient (-)
-   real(ReKi),       intent(  out) :: Cd0                   ! Minimum Cd value (-)
-   real(ReKi),       intent(  out) :: Cm0                   ! Cm value for Cl=0 (-)
-   integer(IntKi),   intent(  out) :: ErrStat               ! Error status of the operation
-   character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
-   
-   real(ReKi)                      :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
-   integer                         :: s1                    ! Number of columns in the AFInfo structure
-   real(ReKi)                      :: Alpha                 ! AOA in range [-pi,pi]
 
-   
-      ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
-   
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   IntAFCoefs = 0.0_ReKi ! initialize in case we only don't have 4 columns in the airfoil data (i.e., so cm is zero if not in the file)
-   
-      
-      ! NOTE: we use Table(1) because the right now we can only interpolate with AOA and not Re or other variables.  If we had multiple tables stored
-      ! for changes in other variables (Re, Mach #, etc) then then we would need to interpolate across tables.
-      !
-   s1 = size(AFInfo%Table(1)%Coefs,2)
-   !if (s1 < 3) then
-   !   ErrMsg  = 'The Airfoil info table must contains columns for lift, drag, and pitching moment'
-   !   ErrStat = ErrID_Fatal
-   !   return
-   !end if
-   Cd0 =   AFInfo%Table(1)%UA_BL%Cd0
-   Cm0 =   AFInfo%Table(1)%UA_BL%Cm0
-   
-   Alpha = AOA
-   call MPi2Pi ( Alpha ) ! change AOA into range of -pi to pi
-   IntAFCoefs(1:s1) = CubicSplineInterpM( Alpha &
-                                             , AFInfo%Table(1)%Alpha &
-                                             , AFInfo%Table(1)%Coefs &
-                                             , AFInfo%Table(1)%SplineCoefs &
-                                             , ErrStat, ErrMsg )
-   if (ErrStat >= AbortErrLev) return
-      
-   Cl = IntAFCoefs(1)
-   Cd = IntAFCoefs(2)
-   Cm = IntAFCoefs(3)
-   
-end subroutine GetSteadyOutputs
-!==============================================================================
 
 
 
@@ -161,23 +111,24 @@ end function Get_ExpEqn
 !==============================================================================
 
 !==============================================================================
-real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
+real(ReKi) function Get_f_from_Lookup( UAMod, Re, UserProp, alpha, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
 ! Compute either fprime or fprimeprime using an analytical equation (and eventually a table lookup)
 ! Called by : ComputeKelvinChain
 ! Calls  to : NONE
 !..............................................................................
-   integer,          intent(in   ) :: UAMod
-   real(ReKi),       intent(in   ) :: Re            ! Reynolds number
-   real(ReKi),       intent(in   ) :: alpha         ! angle of attack (radians)
-   real(ReKi),       intent(in   ) :: alpha0
-   real(ReKi),       intent(in   ) :: C_nalpha_circ
-   type(AFInfoType), intent(in   ) :: AFInfo        ! The airfoil parameter data
-   integer(IntKi),   intent(  out) :: ErrStat               ! Error status of the operation
-   character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
+   integer,                 intent(in   ) :: UAMod
+   real(ReKi),              intent(in   ) :: Re                    ! Reynolds number
+   real(ReKi),              intent(in   ) :: UserProp              ! User property for interpolating AFI
+   real(ReKi),              intent(in   ) :: alpha                 ! angle of attack (radians)
+   real(ReKi),              intent(in   ) :: alpha0
+   real(ReKi),              intent(in   ) :: C_nalpha_circ
+   type(AFI_ParameterType), intent(in   ) :: AFInfo                ! The airfoil parameter data
+   integer(IntKi),          intent(  out) :: ErrStat               ! Error status of the operation
+   character(*),            intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
-   !real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
-   real(ReKi)                       :: Cn, Cl, Cd, Cm, Cd0, Cm0, tmpRoot, denom
-   !integer                         :: s1                    ! Number of columns in the AFInfo structure
+   real(ReKi)                             :: Cn, tmpRoot, denom
+   type(AFI_OutputType)                   :: AFI_Interp
+
    ErrStat = ErrID_None
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
@@ -195,10 +146,10 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha_circ, 
       tmpRoot = 0.0_ReKi
    else
       
-      call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, Cm0, ErrStat, ErrMsg)
+      call AFI_ComputeAirfoilCoefs( alpha, Re, UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg )
          if (ErrStat >= AbortErrLev ) return
    
-      Cn =  Cl*cos(alpha) + (Cd-Cd0)*sin(alpha)
+      Cn =  AFI_interp%Cl*cos(alpha) + (AFI_interp%Cd-AFI_interp%Cd0)*sin(alpha)
    
       if (EqualRealNos( real(cn,SiKi), 0.0_SiKi )) then
          tmpRoot = 0.0_ReKi
@@ -233,24 +184,26 @@ end function Get_f_from_Lookup
 
 
 !==============================================================================
-real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, alpha, alpha0, c_nalpha_circ, eta_e, AFInfo, ErrStat, ErrMsg)
+real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, UserProp, alpha, alpha0, c_nalpha_circ, eta_e, AFInfo, ErrStat, ErrMsg)
 ! Compute either fprime or fprimeprime using an analytical equation (and eventually a table lookup)
 ! Called by : ComputeKelvinChain
 ! Calls  to : NONE
 !..............................................................................
    integer,          intent(in   ) :: UAMod
    real(ReKi),       intent(in   ) :: Re            ! Reynolds number
+   real(ReKi),       intent(in   ) :: UserProp      ! User property for 2D AFI interpolation
    real(ReKi),       intent(in   ) :: alpha         ! angle of attack (radians)
    real(ReKi),       intent(in   ) :: alpha0
    real(ReKi),       intent(in   ) :: c_nalpha_circ
    real(ReKi),       intent(in   ) :: eta_e
-   type(AFInfoType), intent(in   ) :: AFInfo        ! The airfoil parameter data   
+   type(AFI_ParameterType), intent(in   ) :: AFInfo        ! The airfoil parameter data   
    integer(IntKi),   intent(  out) :: ErrStat       ! Error status of the operation
    character(*),     intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
    
    
    real(ReKi), parameter           :: fc_limit = (1.0_ReKi + Gonzalez_factor)**2    ! normally, fc is limited by 1, but we're limiting (sqrt(fc)-Gonzalez_factor) to 1, so fc is limited to 1.44 instead (when Gonzalez_factor is 0.2)
-   real(ReKi)                      :: Cc, Cl, Cd, Cm, Cd0, Cm0, denom
+   real(ReKi)                      :: Cc, denom
+   type(AFI_OutputType)            :: AFI_Interp
    ErrStat = ErrID_None
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
@@ -271,17 +224,18 @@ real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, alpha, alpha0, c_nalpha_circ
 
    else
          
-      call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, Cm0, ErrStat, ErrMsg)
+      call AFI_ComputeAirfoilCoefs( alpha, Re, UserProp,  AFInfo, AFI_interp, ErrStat, ErrMsg)
          if (ErrStat >= AbortErrLev) return
-      Cc =  Cl*sin(alpha) - (Cd-Cd0)*cos(alpha)
    
+      Cc =  AFI_interp%Cl*sin(alpha) - (AFI_interp%Cd-AFI_interp%Cd0)*cos(alpha)
+   
+
       if (UAMod == UA_Gonzalez) then
-         denom = eta_e*c_nalpha_circ*( alpha-alpha0 )*(alpha)    !NOTE: Added back (alpha) because idling cases with alpha 90ยบ show problems with tan(alpha), the code should match steady state if the formulation in the calculation of Cc is in agreement with this formulation
+         denom = eta_e*c_nalpha_circ*( alpha-alpha0 )*(alpha)    !NOTE: Added back (alpha) because idling cases with alpha 90บ show problems with tan(alpha), the code should match steady state if the formulation in the calculation of Cc is in agreement with this formulation
       else
          denom = eta_e*c_nalpha_circ*( alpha-alpha0 )*tan(alpha)
       endif
       Get_f_c_from_Lookup =  min(fc_limit, (  Cc / denom  + Gonzalez_factor ) **2 )
-                  
    end if
       ! Apply an offset of Gonzalez_factor = 0.2 to fix cases where f_c should be negative, but we are using **2 so can only return positive values
       ! Note: because we include this offset, it must be accounted for in the final value of Cc, eqn 1.40.  This will be applied
@@ -330,7 +284,7 @@ end function Get_f
 subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_p, ErrStat, ErrMsg )
 ! 
 ! Called by : DRIVER
-! Calls  to : Get_Beta_M_Sqrd, Get_Beta_M, AFI_GetAirfoilParams, Get_ds, Get_Pitchrate, Get_k_, Get_Kupper, Get_ExpEqn
+! Calls  to : Get_Beta_M_Sqrd, Get_Beta_M, AFI_ComputeUACoefs, Get_ds, Get_Pitchrate, Get_k_, Get_Kupper, Get_ExpEqn
 !             Get_Cn_nc, Get_alpha_e, Get_Cm_q_circ, Get_Cm_q_nc, Get_f, Get_Cn_FS, Get_C_V, Get_Cn_v
 !...............................................................................
 
@@ -341,7 +295,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    type(UA_DiscreteStateType),             intent(in   ) :: xd                ! Input: Discrete states at t;
    type(UA_OtherStateType),                intent(in   ) :: OtherState        ! Other states at t
    type(UA_MiscVarType),                   intent(inout) :: misc              ! Misc/optimization variables
-   type(AFInfoType),                       intent(in   ) :: AFInfo            ! The airfoil parameter data
+   type(AFI_ParameterType),                intent(in   ) :: AFInfo            ! The airfoil parameter data
    
    
    type(AFI_UA_BL_Type),                   intent(  out) :: BL_p
@@ -357,11 +311,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    real(ReKi)                :: beta_M_Sqrd                                   ! square of the Prandtl-Glauert compressibility correction factor,  (1-M**2)
                  
    real(ReKi)                 :: Cn_temp
-   real(ReKi)                 :: Cm_temp
-   real(ReKi)                 :: Cl_temp
-   real(ReKi)                 :: Cd_temp
-   real(ReKi)                 :: Cd0_temp
-   real(ReKi)                 :: Cm0_temp
+
+   type(AFI_OutputType)      :: AFI_interp                 !  Cl, Cd, Cm, Cpmin
 
    real(ReKi)                :: T_I                                           !
    real(ReKi)                :: Kalpha                                        !
@@ -396,14 +347,16 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
       
-   beta_M_Sqrd = 1 - M**2
+   beta_M_Sqrd = 1.0_ReKi - M**2
    beta_M      = sqrt(beta_M_Sqrd) 
    
    ! Lookup values using Airfoil Info module
-   call AFI_GetAirfoilParams( AFInfo, M, u%Re, BL_p, KC%C_nalpha_circ, ErrMsg2, ErrStat2 )           
-      ! AFI_GetAirfoilParams doesn't return error, so I will not check
+   call AFI_ComputeUACoefs( AFInfo, u%Re, u%UserProp, BL_p, ErrMsg2, ErrStat2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
    
-   !bjj: shouldn't this happen in AFI_GetAirfoilParams instead?
+   KC%C_nalpha_circ  =  BL_p%C_nalpha / beta_M
+      
       ! Override eta_e if we are using Flookup
    if ( p%Flookup ) then
       BL_p%eta_e = 1.0
@@ -576,7 +529,7 @@ ENDIF
    KC%alpha_f       = KC%Cn_prime / KC%C_nalpha_circ + BL_p%alpha0                                                            ! Eqn 1.34
    
    if (p%flookup) then
-      KC%fprime = Get_f_from_Lookup( p%UAMod, u%Re, KC%alpha_f, BL_p%alpha0, KC%C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2)     ! Solve Eqn 1.32a for f when alpha is replaced with alpha_f (see issue when KC%C_nalpha_circ is 0) 
+      KC%fprime = Get_f_from_Lookup( p%UAMod, u%Re, u%UserProp, KC%alpha_f, BL_p%alpha0, KC%C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2)     ! Solve Eqn 1.32a for f when alpha is replaced with alpha_f (see issue when KC%C_nalpha_circ is 0) 
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
    else   
@@ -592,21 +545,21 @@ ENDIF
    KC%fprimeprime   = KC%fprime - KC%Df                                                                                       ! Eqn 1.36a
    
    if (p%Flookup) then
-         ! Compute fprime using Eqn 1.32 and Eqn 1.33
-      KC%fprime_c   = Get_f_c_from_Lookup( p%UAMod, u%Re, KC%alpha_f, BL_p%alpha0, KC%C_nalpha_circ, BL_p%eta_e, AFInfo, ErrStat2, ErrMsg2) ! Solve Eqn 1.32b for f when alpha is replaced with alpha_f
+         ! Compute fprime using Eqn 1.30 and Eqn 1.31
+      KC%fprime_c   = Get_f_c_from_Lookup( p%UAMod, u%Re, u%UserProp, KC%alpha_f, BL_p%alpha0, KC%C_nalpha_circ, BL_p%eta_e, AFInfo, ErrStat2, ErrMsg2) ! Solve Eqn 1.32b for f when alpha is replaced with alpha_f
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
 
       if ( p%UAMod == UA_Gonzalez ) then   !Added this part of the code to obtain fm
-         call GetSteadyOutputs(AFInfo, u%alpha, Cl_temp, Cd_temp, Cm_temp, Cd0_temp, Cm0_temp, ErrStat2, ErrMsg2)
+         call AFI_ComputeAirfoilCoefs( KC%alpha_f, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2)
            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
            if (ErrStat >= AbortErrLev) return
 
-         Cn_temp = Cl_temp*cos(KC%alpha_f) + (Cd_temp-Cd0_temp)*sin(KC%alpha_f)
+         Cn_temp = AFI_interp%Cl*cos(KC%alpha_f) + (AFI_interp%Cd-AFI_interp%Cd0)*sin(KC%alpha_f)
          if (abs(Cn_temp) < 0.01_ReKi ) then
             KC%fprime_m = 0.0_ReKi
          else
-            KC%fprime_m = (Cm_temp - Cm0_temp) / Cn_temp 
+            KC%fprime_m = (AFI_interp%Cm - AFI_interp%Cm0) / Cn_temp 
          end if
       else
          KC%fprime_m = 0.0_ReKi
@@ -923,6 +876,10 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
       ! Display the module information
    call DispNVD( UA_Ver )
    
+   call UA_ValidateInput(InitInp, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   
       ! Allocate and set parameter data structure using initialization data
    call UA_SetParameters( interval, InitInp, p, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1047,8 +1004,140 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
    
 end subroutine UA_Init
 !==============================================================================     
-                              
-                              
+subroutine UA_ValidateInput(InitInp, ErrStat, ErrMsg)
+   type(UA_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
+   integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   character(*), parameter                      :: RoutineName = 'UA_ValidateInput'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   if (InitInp%UAMod < UA_Gonzalez .or. InitInp%UAMod > UA_MinemmaPierce ) call SetErrStat( ErrID_Fatal, &
+      "In this version, UAMod must be 2 (Gonzalez's variant) or 3 (Minemma/Pierce variant).", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
+      
+   if (.not. InitInp%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
+   
+   if (InitInp%a_s <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+
+end subroutine UA_ValidateInput
+!==============================================================================     
+subroutine UA_ValidateAFI(AFInfo, afName, ErrStat, ErrMsg)
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo      ! The airfoil parameter data
+   character(*),                 intent(in   )  :: afName      ! The airfoil file name
+   integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)                               :: j
+   character(*), parameter                      :: RoutineName = 'UA_ValidateAFI'
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   if (.not. allocated(AFInfo%Table)) then
+      call SetErrStat(ErrID_Fatal, 'Airfoil table not allocated in "'//trim(afName)//'".', ErrStat, ErrMsg, RoutineName )
+   else
+
+      do j=1, AFInfo%NumTabs
+         if ( .not. AFInfo%Table(j)%InclUAdata ) then
+            call SetErrStat(ErrID_Fatal, 'Airfoil file "'//trim(afName)//'", table #'//trim(num2lstr(j))// &
+                            ' does not contain parameters for UA data.', ErrStat, ErrMsg, RoutineName )
+         else
+            if ( EqualRealNos(AFInfo%Table(j)%UA_BL%St_sh, 0.0_ReKi) ) then
+               call SetErrStat(ErrID_Fatal, 'UA St_sh parameter must not be 0 in "'//trim(afName)//'".', ErrStat, ErrMsg, RoutineName )
+            end if
+         end if
+      end do
+
+      if (ErrStat >= AbortErrLev) return
+
+      ! check interpolated values:
+      
+      do j=2, AFInfo%NumTabs
+         if ( sign( 1.0_ReKi, AFInfo%Table(j)%UA_BL%St_sh) /= &
+              sign( 1.0_ReKi, AFInfo%Table(1)%UA_BL%St_sh) ) then
+            call SetErrStat(ErrID_Fatal, 'UA St_sh parameter (interpolated value) must not be 0 in "'//trim(afName)//'".', ErrStat, ErrMsg, RoutineName )
+            exit
+         end if
+      end do
+      
+   end if
+   
+
+end subroutine UA_ValidateAFI
+!==============================================================================
+!> This routine checks if the UA parameters indicate that UA should not be used. (i.e., if C_nalpha = 0)
+!! This should be called at initialization.
+subroutine UA_TurnOff_param(AFInfo, ErrStat, ErrMsg)
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo      ! The airfoil parameter data
+   integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   integer(IntKi)                               :: j
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+      ! unsteady aerodynamics will be turned off
+   do j=1, AFInfo%NumTabs
+      if ( EqualRealNos(AFInfo%Table(j)%UA_BL%C_nalpha, 0.0_ReKi) ) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'C_nalpha is 0.'
+         return
+      end if
+   end do
+
+      ! now check about interpolated values:
+   do j=2, AFInfo%NumTabs
+      if ( sign( 1.0_ReKi, AFInfo%Table(j)%UA_BL%C_nalpha) /= &
+            sign( 1.0_ReKi, AFInfo%Table(1)%UA_BL%C_nalpha) ) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'C_nalpha (interpolated value) could be 0.'
+         return
+      end if
+   end do
+      
+
+end subroutine UA_TurnOff_param
+!============================================================================== 
+!> This routine checks if the inputs to UA indicate that UA should not be used.
+!! This should be called before updating UA states (and maybe other places).
+subroutine UA_TurnOff_input(AFInfo, u_UA, ErrStat, ErrMsg)
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo      ! The airfoil parameter data
+   type(UA_InputType),           intent(in   )  :: u_UA        ! UA input
+   integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   REAL(ReKi)                                   :: AoA         ! The angle of attack
+   TYPE(AFI_UA_BL_Type)                         :: UA_BL       ! The tables of Leishman-Beddoes unsteady-aero data for given Re and control setting [-]
+
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+      ! check for zero relative velocity
+   if (EqualRealNos(u_UA%U, 0.0_ReKi) ) then
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'zero relative velocity.'
+      return
+   end if
+   
+   
+      ! check for high angle of attack (value larger than cutout specified in tables)
+   call AFI_ComputeUACoefs( AFInfo, u_UA%Re, u_UA%UserProp, UA_BL, ErrMsg, ErrStat )
+   if (ErrStat >= AbortErrLev) return
+      
+      ! put alpha in [-pi,pi] before checking its value
+   AoA = u_UA%alpha
+   call Mpi2pi(AoA) 
+   
+   if ( abs(AoA) >= UA_BL%UACutout ) then  ! Is the angle of attack larger than the UA cut-out for this airfoil?
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'high angle of attack ('//trim(num2lstr(AoA*R2D))//' deg).'
+      return
+   end if
+
+end subroutine UA_TurnOff_input
 !============================================================================== 
 subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
 ! Routine for updating discrete states and other states (note it breaks the framework)
@@ -1062,7 +1151,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
                                                                ! Output: Discrete states at Time + Interval
    type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other states  
    type(UA_MiscVarType),         intent(inout)  :: m           ! Misc/optimization variables
-   type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo      ! The airfoil parameter data
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -1345,7 +1434,7 @@ subroutine UA_UpdateStates( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrM
    type(UA_OtherStateType),       intent(inout) :: OtherState      ! Input: Other states at t;
                                                                    !   Output: Other states at t + Interval
    type(UA_MiscVarType),          intent(inout) :: m               ! Misc/optimization variables
-   type(AFInfoType),              intent(in   ) :: AFInfo          ! The airfoil parameter data
+   type(AFI_ParameterType),       intent(in   ) :: AFInfo          ! The airfoil parameter data
    integer(IntKi),                intent(  out) :: ErrStat         ! Error status of the operation
    character(*),                  intent(  out) :: ErrMsg          ! Error message if ErrStat /= ErrID_None
 
@@ -1392,7 +1481,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
    type(UA_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at Time
    type(UA_OtherStateType),      intent(in   )  :: OtherState  ! Other states at Time
-   type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
+   type(AFI_ParameterType),      intent(in   )  :: AFInfo      ! The airfoil parameter data
    type(UA_OutputType),          intent(inout)  :: y           ! Outputs computed at Time (Input only so that mesh con-
                                                                !   nectivity information does not have to be recalculated)
    type(UA_MiscVarType),         intent(inout)  :: misc        ! Misc/optimization variables
@@ -1400,26 +1489,25 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    
-   integer(IntKi)                                         :: errStat2        ! Error status of the operation (secondary error)
-   character(ErrMsgLen)                                   :: errMsg2         ! Error message if ErrStat2 /= ErrID_None
-   character(*), parameter                                :: RoutineName = 'UA_CalcOutput'
+   integer(IntKi)                               :: errStat2        ! Error status of the operation (secondary error)
+   character(ErrMsgLen)                         :: errMsg2         ! Error message if ErrStat2 /= ErrID_None
+   character(*), parameter                      :: RoutineName = 'UA_CalcOutput'
    
-   type(AFI_UA_BL_Type)                                   :: BL_p  ! airfoil values computed in Kelvin Chain
-   type(UA_KelvinChainType)                               :: KC    ! values computed in Kelvin Chain
+   type(AFI_UA_BL_Type)                         :: BL_p  ! airfoil values computed in Kelvin Chain
+   type(UA_KelvinChainType)                     :: KC    ! values computed in Kelvin Chain
    
-   real(ReKi)                                             :: Cm_FS  
-   real(ReKi)                                             :: Cc_FS
-   real(ReKi)                                             :: Cl_temp, Cd_temp, Cm_temp, Cm_alpha_nc
-   real(ReKi)                                             :: M, f, k2_hat
-   real(ReKi)                                             :: Cm_v, alpha_prime_f
-   real(ReKi)                                             :: x_cp_hat                      ! center-of-pressure distance from LE in chord fraction
-   real(ReKi)                                             :: Cm_common                     ! 
-   real(ReKi)                                             :: Cm0
+   real(ReKi)                                   :: Cm_FS  
+   real(ReKi)                                   :: Cc_FS
+   real(ReKi)                                   :: Cm_temp, Cm_alpha_nc
+   real(ReKi)                                   :: M, f, k2_hat
+   real(ReKi)                                   :: Cm_v, alpha_prime_f
+   real(ReKi)                                   :: x_cp_hat                      ! center-of-pressure distance from LE in chord fraction
+   real(ReKi)                                   :: Cm_common                     ! 
 
-   integer(intKi)                                         :: ncols
+   type(AFI_OutputType)                         :: AFI_interp
    
 #ifdef UA_OUTS
-   integer                                                :: iOffset
+   integer                                      :: iOffset
 #endif   
    
    ErrStat   = ErrID_None           ! no error has occurred
@@ -1431,12 +1519,15 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
    
    if (OtherState%FirstPass(misc%iBladeNode, misc%iBlade) .or. EqualRealNos(u%U, 0.0_ReKi) ) then ! note: if u%U is = in UpdateStates, BEMT shuts off UA; however, it could still be called with u%U=0 here
             
-      call GetSteadyOutputs(AFInfo, u%alpha, y%Cl, y%Cd, y%Cm, BL_p%Cd0, Cm0, ErrStat2, ErrMsg2)
+      call AFI_ComputeAirfoilCoefs( u%alpha, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+      y%Cl = AFI_interp%Cl
+      y%Cd = AFI_interp%Cd
+      y%Cm = AFI_interp%Cm
       
       
-      y%Cn = y%Cl*cos(u%alpha) + (y%Cd-BL_p%Cd0)*sin(u%alpha)
-      y%Cc = y%Cl*sin(u%alpha) - (y%Cd-BL_p%Cd0)*cos(u%alpha)
+      y%Cn = y%Cl*cos(u%alpha) + (y%Cd-AFI_interp%Cd0)*sin(u%alpha)
+      y%Cc = y%Cl*sin(u%alpha) - (y%Cd-AFI_interp%Cd0)*cos(u%alpha)
       
          Cm_v              = 0.0_ReKi
       KC%Cn_alpha_q_circ   = 0.0_ReKi
@@ -1509,11 +1600,11 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
          else
             if ( p%flookup ) then 
               ! if (p%UAMod == UA_Baseline) then
-              !    f      = Get_f_from_Lookup( p%UAMod, u%Re, KC%alpha_filt_cur, BL_p%alpha0, KC%C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2)
+              !    f      = Get_f_from_Lookup( p%UAMod, u%Re, u%UserProp, KC%alpha_filt_cur, BL_p%alpha0, KC%C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2)
               ! else   
                ! TODO: Need to understand the effect of the offset on this f in the following equations and fprimeprime_c.
                   !bjj: fprimeprime_c is computed with the Gonzalez offset in the Kelvin Chain, so it's not just f that could be a problem.
-                  f      = Get_f_c_from_Lookup( p%UAMod, u%Re, KC%alpha_filt_cur, BL_p%alpha0, KC%C_nalpha_circ, BL_p%eta_e, AFInfo, ErrStat2, ErrMsg2)
+                  f      = Get_f_c_from_Lookup( p%UAMod, u%Re, u%UserProp, KC%alpha_filt_cur, BL_p%alpha0, KC%C_nalpha_circ, BL_p%eta_e, AFInfo, ErrStat2, ErrMsg2)
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
               ! endif
                
@@ -1544,13 +1635,13 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       ! convert cm
       !.............................
       
-         ! Check for Cm column in AFInfo data        
-      ncols = size(AFInfo%Table(1)%Coefs,2)
-      if (ncols < 3) then ! we don't have a cm column, so make everything 0
+      alpha_prime_f = 0.0_ReKi ! initialize for output purposes
+      
+         ! Check for Cm column in AFInfo data
+      if (AFInfo%ColCm == 0) then ! we don't have a cm column, so make everything 0
          
          y%Cm          = 0.0_ReKi
          Cm_v          = 0.0_ReKi
-         alpha_prime_f = 0.0_ReKi
      
       else
             
@@ -1587,13 +1678,15 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       
                ! Look up Cm using alpha_prime_f
             alpha_prime_f = KC%alpha_f - KC%Dalphaf                                                                                                ! Eqn 1.43a
-            call GetSteadyOutputs(AFInfo, alpha_prime_f, Cl_temp, Cd_temp, Cm_temp, BL_p%Cd0, Cm0, ErrStat2, ErrMsg2)
+
+            call AFI_ComputeAirfoilCoefs( alpha_prime_f, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)            
-            Cm_FS = Cm_temp + Cm_common                                                                                                            ! Eqn 1.44
-      
+            Cm_FS = AFI_interp%Cm + Cm_common                                                                                                      ! Eqn 1.44
+            Cm_temp = AFI_interp%Cm    ! save for output to file
+
          else ! UAMod == UA_Gonzalez
             Cm_FS = BL_p%Cm0 + KC%Cn_FS*KC%fprimeprime_m + Cm_common                                                                               ! Eqn 1.45
-            alpha_prime_f = 0.0_ReKi
+
          end if   
       
          Cm_v     = -BL_p%x_cp_bar*( 1.0_ReKi - cos( pi*xd%tau_v(misc%iBladeNode, misc%iBlade)/BL_p%T_VL ) )*KC%Cn_v                               ! Eqn 1.57   

@@ -44,7 +44,6 @@ program UnsteadyAero_Driver
    
    real(DbKi)  :: dt, t
    integer     :: i, j, k, n 
-   real(DbKi)                                    :: InputTime(NumInp)    ! Variable for storing time associated with inputs, in seconds
    type(UA_InitInputType)                        :: InitInData           ! Input data for initialization
    type(UA_InitOutputType)                       :: InitOutData          ! Output data from initialization
    type(UA_DiscreteStateType)                    :: xd                   ! Discrete states
@@ -53,12 +52,12 @@ program UnsteadyAero_Driver
    type(UA_ParameterType)                        :: p                    ! Parameters
    type(UA_InputType)                            :: u(NumInp)            ! System inputs
    type(UA_OutputType)                           :: y                    ! System outputs
-   integer(IntKi)                                :: ErrStat, errStat2    ! Status of error message
-   character(1024)                               :: ErrMsg, errMsg2     ! Error message if ErrStat /= ErrID_None
+   integer(IntKi)                                :: ErrStat              ! Status of error message
+   character(1024)                               :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
    integer, parameter                            :: NumAFfiles = 1
    character(1024)                               :: afNames(NumAFfiles)
-   type(AFI_ParameterType)                       :: AFI_Params
+   type(AFI_ParameterType)                       :: AFI_Params(NumAFfiles)
    integer, allocatable                          :: AFIndx(:,:)
    character(1024)                               :: outFileName
    integer                                       :: unOutFile
@@ -67,7 +66,7 @@ program UnsteadyAero_Driver
    TYPE(UA_Dvr_InitInput)                        :: dvrInitInp           ! Initialization data for the driver program
    real(DbKi)                                    :: simTime  
    integer                                       :: nSimSteps
-   character(1024)                               :: RoutineName
+   character(*), parameter                       :: RoutineName = 'UnsteadyAero_Driver'
    real(DbKi), allocatable                       :: timeArr(:)
    real(ReKi), allocatable                       :: AOAarr(:)
    real(ReKi), allocatable                       :: Uarr(:) !RRD
@@ -80,8 +79,6 @@ program UnsteadyAero_Driver
    ErrMsg  = ''
    ErrStat = ErrID_None
    
-   RoutineName = 'UnsteadyAero_Driver'
-    
    
       ! Display the copyright notice
    CALL DispCopyrightLicense( version )   
@@ -96,7 +93,7 @@ program UnsteadyAero_Driver
       ! Parse the driver file if one was provided, if not, then set driver parameters using hardcoded values
    if ( command_argument_count() > 1 ) then
       call print_help()
-      stop
+      call checkError()
    end if
   
    
@@ -108,16 +105,14 @@ program UnsteadyAero_Driver
       ! Set up initialization data
    allocate(AFIndx(InitInData%nNodesPerBlade,InitInData%numBlades), STAT = ErrStat)
       if ( ErrStat /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error trying to allocate InitInData%AFIndx.', ErrStat, ErrMsg, 'UnsteadyAeroTest')  
-         call Cleanup()
-         stop       
+         call SetErrStat( ErrID_Fatal, 'Error trying to allocate InitInData%AFIndx.', ErrStat, ErrMsg, RoutineName)
+         call checkError()
       end if
    
    allocate(InitInData%c(InitInData%nNodesPerBlade,InitInData%numBlades), STAT = ErrStat)
       if ( ErrStat /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Error trying to allocate InitInData%c.', ErrStat, ErrMsg, 'UnsteadyAeroTest')  
-         call Cleanup()
-         stop       
+         call SetErrStat( ErrID_Fatal, 'Error trying to allocate InitInData%c.', ErrStat, ErrMsg, RoutineName)
+         call checkError()
       end if
    
       
@@ -126,12 +121,8 @@ program UnsteadyAero_Driver
    if ( command_argument_count() == 1 ) then
       
       call get_command_argument(1, dvrFilename)
-      call ReadDriverInputFile( dvrFilename, dvrInitInp, errStat2, errMsg2 )
-         call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat >= AbortErrLev) then
-            call Cleanup()
-            stop
-         end if
+      call ReadDriverInputFile( dvrFilename, dvrInitInp, errStat, errMsg )
+         call checkError()
       InitInData%a_s          = dvrInitInp%SpdSound
       InitInData%c(1,1)       = dvrInitInp%Chord
       InitInData%UAMod        = dvrInitInp%UAMod 
@@ -139,7 +130,7 @@ program UnsteadyAero_Driver
    
    else
       
-      dvrInitInp%OutRootName  = '.\TestingUA_Driver'
+      dvrInitInp%OutRootName  = './TestingUA_Driver'
       InitInData%UAMod        = 1  
       InitInData%Flookup      = .FALSE.
       InitInData%a_s          = 340.29 ! m/s  
@@ -169,12 +160,8 @@ program UnsteadyAero_Driver
    else
          ! Read time-series data file with a 1 line header and then each row contains time-step data with 4, white-space-separated columns
          ! time  Angle-fo-attack  
-      call ReadTimeSeriesData( dvrInitInp%InputsFile, nSimSteps, timeArr, AOAarr, Uarr, errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-         if ( ErrStat >= AbortErrLev ) then
-            call Cleanup()
-            stop
-         end if
+      call ReadTimeSeriesData( dvrInitInp%InputsFile, nSimSteps, timeArr, AOAarr, Uarr, errStat, errMsg )
+         call checkError()
       dt = (timeArr(nSimSteps) - timeArr(1)) / nSimSteps
    end if
       
@@ -184,20 +171,12 @@ program UnsteadyAero_Driver
    AFIndx(1,1) = 1
    
       ! Initialize the Airfoil Info Params
-   call Init_AFI( NumAFfiles, afNames, InitInData%Flookup, dvrInitInp%UseCm, AFI_Params, errStat2, errMsg2 )
-      call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-      if ( ErrStat >= AbortErrLev ) then
-         call Cleanup()
-         stop
-      end if
+   call Init_AFI( NumAFfiles, afNames, InitInData%Flookup, dvrInitInp%UseCm, AFI_Params, errStat, errMsg )
+      call checkError()
    
     ! Initialize UnsteadyAero
-   call UA_Init( InitInData, u(1), p, xd, OtherState, y, m, dt, InitOutData, errStat2, errMsg2 ) 
-      call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         stop
-      end if
+   call UA_Init( InitInData, u(1), p, xd, OtherState, y, m, dt, InitOutData, errStat, errMsg ) 
+      call checkError()
    
    if (p%NumOuts > 0) then
          ! Initialize the output file
@@ -205,12 +184,8 @@ program UnsteadyAero_Driver
       outFileName = trim(dvrInitInp%OutRootName)//'.out'
       call GetNewUnit( unOutFile )
    
-      call OpenFOutFile ( unOutFile, outFileName, errStat2, errMsg2 ) 
-         call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat >= AbortErrLev) then
-            call Cleanup()
-            stop
-         end if
+      call OpenFOutFile ( unOutFile, outFileName, errStat, errMsg ) 
+         call checkError()
       
       
          ! Write the output file header
@@ -245,15 +220,13 @@ program UnsteadyAero_Driver
    do n = 1, nSimSteps
       if ( dvrInitInp%SimMod == 1 ) then
          t            = (n-1)*dt
-         InputTime(1) = t
          u(1)%alpha =   (dvrInitInp%Amplitude * sin((n+dvrInitInp%Phase-1)*2*pi/dvrInitInp%StepsPerCycle) + dvrInitInp%Mean)*pi/180.0   ! This needs to be in radians
       
       else
          ! Load timestep data from the time-series inputs which were previous read from input file
-         InputTime(1) = timeArr(n)
-         u(1)%alpha   = AOAarr (n)*pi/180.0   ! This needs to be in radians
-         u(1)%U = Uarr(n) !RRD 
          t            = timeArr(n)
+         u(1)%alpha   = AOAarr (n)*pi/180.0   ! This needs to be in radians
+         u(1)%U       = Uarr(n)
       end if
       
          ! set the inputs for the node
@@ -267,21 +240,13 @@ program UnsteadyAero_Driver
             m%iBlade     = j
             
                ! Use existing states to compute the outputs
-            call UA_CalcOutput(u(1),  p, xd, OtherState, AFI_Params%AFInfo(AFIndx(i,j)), y, m, errStat2, errMsg2 )
-               call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-               if (ErrStat >= AbortErrLev) then
-                  call Cleanup()
-                  stop
-               end if
+            call UA_CalcOutput(u(1),  p, xd, OtherState, AFI_Params(AFIndx(i,j)), y, m, errStat, errMsg )
+               call checkError()
             
  
                ! Prepare states for next time step
-            call UA_UpdateStates(i,j,u(1), p, xd, OtherState, AFI_Params%AFInfo(AFIndx(i,j)), m, errStat2, errMsg2 )
-               call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
-               if (ErrStat >= AbortErrLev) then
-                  call Cleanup()
-                  stop
-               end if
+            call UA_UpdateStates(i,j,u(1), p, xd, OtherState, AFI_Params(AFIndx(i,j)), m, errStat, errMsg )
+               call checkError()
                
          end do
       end do
@@ -302,7 +267,7 @@ program UnsteadyAero_Driver
    
 
    call Cleanup()
-   
+   call NormStop()
    
    contains
    
@@ -312,15 +277,27 @@ program UnsteadyAero_Driver
    !     any existing echo information
    !----------------------------------------------------------------------------------------------------  
       
-      if ( ErrStat /= ErrID_None ) print *, ErrMsg
-      
       if (p%NumOuts > 0) close( unOutFile, IOSTAT = ErrStat )
       
       
    end subroutine Cleanup
 
-   
-   
+   !----------------------------------------------------------------------------------------------------  
+   subroutine checkError()
+      
+      if (ErrStat >= AbortErrLev) then
+         
+         call Cleanup()
+         call ProgAbort(ErrMsg)
+            
+      elseif ( ErrStat /= ErrID_None ) then
+         
+         call WrScr( trim(ErrMsg) )
+            
+      end if
+      
+   end subroutine checkError
+   !----------------------------------------------------------------------------------------------------  
    
    subroutine print_help()
     print '(a)', 'usage: '
