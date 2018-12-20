@@ -307,7 +307,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
        ! Print the summary file if requested:
    if (InputFileData%SumPrint) then
-      call BD_PrintSum( p, x, MiscVar, InitInp%RootName, ErrStat2, ErrMsg2 )
+      call BD_PrintSum( p, x, MiscVar, InitInp, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end if
 

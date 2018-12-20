@@ -43,6 +43,8 @@ module BeamDyn_driver_subs
       TYPE(MeshMapType)                             :: Map_RotationCenter_to_RootMotion
 
       LOGICAL                                       :: DynamicSolve 
+      LOGICAL                                       :: GlbRotBladeT0    ! Initial blade root orientation is also the GlbRot reference frame
+      REAL(DbKi)                                    :: RootRelInit(3,3) ! Initial root orientation relative to GlbRot
       REAL(DbKi)                                    :: t_initial
       REAL(DbKi)                                    :: t_final
       REAL(R8Ki)                                    :: w           ! magnitude of rotational velocity vector
@@ -148,6 +150,7 @@ module BeamDyn_driver_subs
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    InitInputData%GlbPos(:)   = 0.0_ReKi
    InitInputData%GlbRot(:,:) = 0.0_R8Ki
+   InitInputData%RootOri(:,:) = 0.0_R8Ki
    CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(1),"InitInputData%GlbPos(1)", "position vector X",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(2),"InitInputData%GlbPos(2)", "position vector Y",ErrStat2,ErrMsg2,UnEc)
@@ -160,14 +163,38 @@ module BeamDyn_driver_subs
    CALL ReadCom(UnIn,DvrInputFile,'Comments on DCM',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    DO i=1,3
-       CALL ReadAry(UnIn,DvrInputFile,InitInputData%GlbRot(i,:),3,"InitInputData%GlbPos",&
-               "Global DCM",ErrStat2,ErrMsg2,UnEc)
+       CALL ReadAry(UnIn,DvrInputFile,InitInputData%RootOri(i,:),3,"InitInputData%RootOri",&
+               "Initial root orientation",ErrStat2,ErrMsg2,UnEc)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDDO
+
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%GlbRotBladeT0,"DvrData%GlbRotBladeT0","Is the blade initial orientation also the GlbRot calculation frame",ErrStat2,ErrMSg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName
+
    if (ErrStat >= AbortErrLev) then
        call cleanup()
        return
    end if
+
+      ! Use the initial blade root orientation as the GlbRot reference orientation for all calculations?
+   if ( DvrData%GlbRotBladeT0 ) then
+
+         ! Set the GlbRot matrix
+      InitInputData%GlbRot = InitInputData%RootOri
+
+   else
+
+         ! Initialize the GlbRot matrix as the identity
+      CALL eye( InitInputData%GlbRot, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   end if
+
+   if (ErrStat >= AbortErrLev) then
+       call cleanup()
+       return
+   end if
+
    !---------------------- INITIAL VELOCITY PARAMETER --------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'Section Header: Initial Velocity Parameter',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -384,9 +411,10 @@ SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output)
 end subroutine Dvr_WriteOutputLine
   
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine CreateMultiPointMeshes(DvrData,BD_InitOutput,BD_Parameter,y, u, ErrStat,ErrMsg)
+subroutine CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Parameter,y, u, ErrStat,ErrMsg)
 
    TYPE(BD_DriverInternalType), INTENT(INOUT) :: DvrData
+   TYPE(BD_InitInputType)     , INTENT(IN   ) :: BD_InitInput
    TYPE(BD_InitOutputType)    , INTENT(IN   ) :: BD_InitOutput
    TYPE(BD_ParameterType)     , INTENT(IN   ) :: BD_Parameter
    TYPE(BD_OutputType),         INTENT(IN   ) :: y
@@ -436,9 +464,9 @@ subroutine CreateMultiPointMeshes(DvrData,BD_InitOutput,BD_Parameter,y, u, ErrSt
        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
        if (ErrStat >= AbortErrLev) return
        
-       Pos = BD_Parameter%GlbPos + MATMUL(BD_Parameter%GlbRot,temp_POS)
+       Pos = BD_Parameter%GlbPos + MATMUL(BD_Parameter%RootOri,temp_POS)
        
-       temp_CRV2 = MATMUL(BD_Parameter%GlbRot,temp_CRV)
+       temp_CRV2 = MATMUL(BD_Parameter%RootOri,temp_CRV)
        CALL BD_CrvCompose(temp_CRV,BD_Parameter%Glb_crv,temp_CRV2,FLAG_R1R2) !temp_CRV = p%Glb_crv composed with temp_CRV2
 
        CALL BD_CrvMatrixR(temp_CRV,TmpDCM) ! returns TmpDCM (the transpose of the DCM orientation matrix)
