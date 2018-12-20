@@ -169,7 +169,7 @@ module BeamDyn_driver_subs
    ENDDO
 
    CALL ReadVar(UnIn,DvrInputFile,DvrData%GlbRotBladeT0,"DvrData%GlbRotBladeT0","Is the blade initial orientation also the GlbRot calculation frame",ErrStat2,ErrMSg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    if (ErrStat >= AbortErrLev) then
        call cleanup()
@@ -181,11 +181,14 @@ module BeamDyn_driver_subs
 
          ! Set the GlbRot matrix
       InitInputData%GlbRot = InitInputData%RootOri
+      CALL eye( InitInputData%GlbRot, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    else
 
-         ! Initialize the GlbRot matrix as the identity
-      CALL eye( InitInputData%GlbRot, ErrStat2, ErrMsg2 )
+         ! Initialize the GlbRot matrix as the identity.  Relative rotation for root to GlbRot
+      DvrData%RootRelInit = InitInputData%RootOri
+       CALL eye( InitInputData%GlbRot, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    end if
@@ -464,9 +467,9 @@ subroutine CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Paramete
        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
        if (ErrStat >= AbortErrLev) return
        
-       Pos = BD_Parameter%GlbPos + MATMUL(BD_Parameter%RootOri,temp_POS)
+       Pos = BD_Parameter%GlbPos + MATMUL(BD_InitInput%RootOri,temp_POS)
        
-       temp_CRV2 = MATMUL(BD_Parameter%RootOri,temp_CRV)
+       temp_CRV2 = MATMUL(BD_InitInput%RootOri,temp_CRV)
        CALL BD_CrvCompose(temp_CRV,BD_Parameter%Glb_crv,temp_CRV2,FLAG_R1R2) !temp_CRV = p%Glb_crv composed with temp_CRV2
 
        CALL BD_CrvMatrixR(temp_CRV,TmpDCM) ! returns TmpDCM (the transpose of the DCM orientation matrix)
