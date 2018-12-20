@@ -1903,7 +1903,7 @@ SUBROUTINE BD_PrintSum( p, x, m, InitInp, ErrStat, ErrMsg )
        WRITE (UnSu,'(3ES18.5)' ) p%GlbRot(i,:)
    ENDDO
 
-   WRITE (UnSu,'(A)')  'Initial blade orientation tensor (IEC coords):'
+   WRITE (UnSu,'(A)')  'Initial blade orientation tensor (relative to global rotation tensor):'
    DO i=1,3
        WRITE (UnSu,'(3ES18.5)' ) InitInp%RootOri(i,:)
    ENDDO

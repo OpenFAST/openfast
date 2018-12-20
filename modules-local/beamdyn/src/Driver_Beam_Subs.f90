@@ -181,7 +181,7 @@ module BeamDyn_driver_subs
 
          ! Set the GlbRot matrix
       InitInputData%GlbRot = InitInputData%RootOri
-      CALL eye( InitInputData%GlbRot, ErrStat2, ErrMsg2 )
+      CALL eye( DvrData%RootRelInit, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    else
@@ -467,9 +467,9 @@ subroutine CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Paramete
        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
        if (ErrStat >= AbortErrLev) return
        
-       Pos = BD_Parameter%GlbPos + MATMUL(BD_InitInput%RootOri,temp_POS)
+       Pos = BD_Parameter%GlbPos + MATMUL(BD_Parameter%GlbRot,temp_POS)
        
-       temp_CRV2 = MATMUL(BD_InitInput%RootOri,temp_CRV)
+       temp_CRV2 = MATMUL(BD_Parameter%GlbRot,temp_CRV)
        CALL BD_CrvCompose(temp_CRV,BD_Parameter%Glb_crv,temp_CRV2,FLAG_R1R2) !temp_CRV = p%Glb_crv composed with temp_CRV2
 
        CALL BD_CrvMatrixR(temp_CRV,TmpDCM) ! returns TmpDCM (the transpose of the DCM orientation matrix)
@@ -748,7 +748,8 @@ SUBROUTINE BD_InputSolve( t, u, DvrData, ErrStat, ErrMsg)
    Orientation(2,3) = 0.0_R8Ki
    Orientation(3,3) = 1.0_R8Ki
       
-   DvrData%RotationCenter%Orientation(:,:,1) = matmul(Orientation, DvrData%RotationCenter%RefOrientation(:,:,1))
+   DvrData%RotationCenter%Orientation(:,:,1) = matmul(Orientation, matmul(DvrData%RotationCenter%RefOrientation(:,:,1),DvrData%RootRelInit))
+
    CALL Transfer_Point_to_Point( DvrData%RotationCenter, u%RootMotion, DvrData%Map_RotationCenter_to_RootMotion, ErrStat2, ErrMsg2)  
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
       
