@@ -22,7 +22,7 @@ module UnsteadyAero
 
    ! This module uses equations defined in the document "The Unsteady Aerodynamics Module for FAST 8" by Rick Damiani and Greg Hayman, 28-Feb-2017
 
-use NWTC_Library   
+   use NWTC_Library
    use UnsteadyAero_Types
    use AirfoilInfo
    
@@ -79,9 +79,6 @@ END FUNCTION SAT
    
 
 
-
-
-
 !==============================================================================
 !> Compute the deficiency function:
 !! \f$ Y_n = Y_{n-1} \exp \left(-\frac{\Delta t}{T}\right)+\left(x_n - x_{n-1}\right)\exp\left(-\frac{\Delta t}{2T}\right)\f$
@@ -111,7 +108,7 @@ end function Get_ExpEqn
 !==============================================================================
 
 !==============================================================================
-real(ReKi) function Get_f_from_Lookup( UAMod, Re, UserProp, alpha, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
+subroutine Get_f_from_Lookup( UAMod, Re, UserProp, alpha_in, alpha0_in, C_nalpha_circ, AFInfo, ErrStat, ErrMsg, f, cn_fs)
 ! Compute either fprime or fprimeprime using an analytical equation (and eventually a table lookup)
 ! Called by : ComputeKelvinChain
 ! Calls  to : NONE
@@ -119,15 +116,24 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, UserProp, alpha, alpha0, C_nal
    integer,                 intent(in   ) :: UAMod
    real(ReKi),              intent(in   ) :: Re                    ! Reynolds number
    real(ReKi),              intent(in   ) :: UserProp              ! User property for interpolating AFI
-   real(ReKi),              intent(in   ) :: alpha                 ! angle of attack (radians)
-   real(ReKi),              intent(in   ) :: alpha0
+   real(ReKi),              intent(in   ) :: alpha_in              ! angle of attack (radians)
+   real(ReKi),              intent(in   ) :: alpha0_in
    real(ReKi),              intent(in   ) :: C_nalpha_circ
    type(AFI_ParameterType), intent(in   ) :: AFInfo                ! The airfoil parameter data
    integer(IntKi),          intent(  out) :: ErrStat               ! Error status of the operation
    character(*),            intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
+   real(ReKi),optional,     intent(  out) :: f
+   real(ReKi),optional,     intent(  out) :: cn_fs
+   
+   real(ReKi)                             :: f_st
    
    real(ReKi)                             :: Cn, tmpRoot, denom
    type(AFI_OutputType)                   :: AFI_Interp
+
+
+   real(ReKi)                       :: alpha         ! angle of attack (radians)
+   real(ReKi)                       :: alpha0
+   real(ReKi)                       :: alpha_minus_alpha0
 
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -140,22 +146,34 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, UserProp, alpha, alpha0, C_nal
    
    !bjj: if cn = 0 or c_nalpha_circ = 0 or alpha=alpha0, f has infinitely many solutions to this equation
    
+      ! ensure that these angles are in appropriate ranges
+   alpha  = alpha_in
+   alpha0 = alpha0_in
+   
+   call MPi2Pi(alpha)
+   call MPi2Pi(alpha0)
+
+   alpha_minus_alpha0 = alpha - alpha0
+   call MPi2Pi(alpha_minus_alpha0)
+
+   call AFI_ComputeAirfoilCoefs( alpha, Re, UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg )
+      if (ErrStat >= AbortErrLev ) return
+   
+   Cn =  AFI_interp%Cl*cos(alpha) + (AFI_interp%Cd-AFI_interp%Cd0)*sin(alpha)
+   
+   
    if (EqualRealNos( real(c_nalpha_circ,SiKi), 0.0_SiKi )) then
       tmpRoot = 0.0_ReKi
    else if (EqualRealNos( real(alpha,SiKi), real(alpha0,SiKi) )) then
       tmpRoot = 0.0_ReKi
    else
       
-      call AFI_ComputeAirfoilCoefs( alpha, Re, UserProp, AFInfo, AFI_interp, ErrStat, ErrMsg )
-         if (ErrStat >= AbortErrLev ) return
-   
-      Cn =  AFI_interp%Cl*cos(alpha) + (AFI_interp%Cd-AFI_interp%Cd0)*sin(alpha)
    
       if (EqualRealNos( real(cn,SiKi), 0.0_SiKi )) then
          tmpRoot = 0.0_ReKi
       else 
       
-         denom = (C_nalpha_circ*(alpha-alpha0))
+         denom = (C_nalpha_circ*alpha_minus_alpha0)
       
          !    bjj: if tmpRoot=cn/(C_nalpha_circ*(alpha-alpha0)) is negative, this whole equation is bogus....
          tmpRoot  = Cn/denom
@@ -169,22 +187,33 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, UserProp, alpha, alpha0, C_nal
    end if
    
    if (UAMod == UA_Gonzalez) then
-      Get_f_from_Lookup = ((3*sqrt(tmpRoot)-1)/2.0)**2
+      f_st = ((3.0_ReKi * sqrt(tmpRoot)-1.0_ReKi)/ 2.0_ReKi )**2
    else
-      Get_f_from_Lookup = ( 2 * sqrt( tmpRoot ) - 1 ) **2 
+      f_st = ( 2.0_ReKi * sqrt( tmpRoot ) - 1.0_ReKi )**2 
    end if
    
    
-   if ( Get_f_from_Lookup > 1.0 ) then
-      Get_f_from_Lookup = 1.0_ReKi
+   if ( f_st > 1.0 ) then
+      f_st = 1.0_ReKi
    end if
    
-   
-end function Get_f_from_Lookup      
+   if (present(f)) then
+      f = f_st
+   end if
 
+   if (present(cn_fs)) then
+      if (equalRealNos(f_st,1.0_ReKi)) then
+         cn_fs = 0.0_ReKi
+      else
+         cn_fs = (Cn - C_nalpha_circ * alpha_minus_alpha0 * f_st) / (1.0_ReKi-f_st); ! modification by Envision Energy
+      end if   
+   end if
+   
+end subroutine Get_f_from_Lookup      
+!==============================================================================
 
 !==============================================================================
-real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, UserProp, alpha, alpha0, c_nalpha_circ, eta_e, AFInfo, ErrStat, ErrMsg)
+real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, UserProp, alpha_in, alpha0_in, c_nalpha_circ, eta_e, AFInfo, ErrStat, ErrMsg)
 ! Compute either fprime or fprimeprime using an analytical equation (and eventually a table lookup)
 ! Called by : ComputeKelvinChain
 ! Calls  to : NONE
@@ -192,8 +221,8 @@ real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, UserProp, alpha, alpha0, c_n
    integer,          intent(in   ) :: UAMod
    real(ReKi),       intent(in   ) :: Re            ! Reynolds number
    real(ReKi),       intent(in   ) :: UserProp      ! User property for 2D AFI interpolation
-   real(ReKi),       intent(in   ) :: alpha         ! angle of attack (radians)
-   real(ReKi),       intent(in   ) :: alpha0
+   real(ReKi),       intent(in   ) :: alpha_in      ! angle of attack (radians)
+   real(ReKi),       intent(in   ) :: alpha0_in
    real(ReKi),       intent(in   ) :: c_nalpha_circ
    real(ReKi),       intent(in   ) :: eta_e
    type(AFI_ParameterType), intent(in   ) :: AFInfo        ! The airfoil parameter data   
@@ -204,11 +233,21 @@ real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, UserProp, alpha, alpha0, c_n
    real(ReKi), parameter           :: fc_limit = (1.0_ReKi + Gonzalez_factor)**2    ! normally, fc is limited by 1, but we're limiting (sqrt(fc)-Gonzalez_factor) to 1, so fc is limited to 1.44 instead (when Gonzalez_factor is 0.2)
    real(ReKi)                      :: Cc, denom
    type(AFI_OutputType)            :: AFI_Interp
+
+   real(ReKi)                      :: alpha         ! angle of attack (radians)
+   real(ReKi)                      :: alpha0
+
    ErrStat = ErrID_None
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
    
-  
+      ! ensure that these angles are in appropriate ranges
+   alpha  = alpha_in
+   alpha0 = alpha0_in
+   
+   call MPi2Pi(alpha)
+   call MPi2Pi(alpha0)
+
       ! in cases where denom is zero, Get_f_c_from_Lookup = min(fc_limit, inf)
    if (EqualRealNos(real(alpha,SiKi), 0.0_SiKi)) then
       
@@ -231,7 +270,7 @@ real(ReKi) function Get_f_c_from_Lookup( UAMod, Re, UserProp, alpha, alpha0, c_n
    
 
       if (UAMod == UA_Gonzalez) then
-         denom = eta_e*c_nalpha_circ*( alpha-alpha0 )*(alpha)    !NOTE: Added back (alpha) because idling cases with alpha 90º show problems with tan(alpha), the code should match steady state if the formulation in the calculation of Cc is in agreement with this formulation
+         denom = eta_e*c_nalpha_circ*( alpha-alpha0 )*(alpha)    !NOTE: Added back (alpha) because idling cases with alpha 90-degrees show problems with tan(alpha), the code should match steady state if the formulation in the calculation of Cc is in agreement with this formulation
       else
          denom = eta_e*c_nalpha_circ*( alpha-alpha0 )*tan(alpha)
       endif
@@ -310,7 +349,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, KC, BL_
    real(ReKi)                :: beta_M                                        ! Prandtl-Glauert compressibility correction factor,  sqrt(1-M**2)
    real(ReKi)                :: beta_M_Sqrd                                   ! square of the Prandtl-Glauert compressibility correction factor,  (1-M**2)
                  
-   real(ReKi)                 :: Cn_temp
+   real(ReKi)                :: Cn_temp
+   real(ReKi)                :: Cn_fs_temp
 
    type(AFI_OutputType)      :: AFI_interp                 !  Cl, Cd, Cm, Cpmin
 
@@ -529,7 +569,7 @@ ENDIF
    KC%alpha_f       = KC%Cn_prime / KC%C_nalpha_circ + BL_p%alpha0                                                            ! Eqn 1.34
    
    if (p%flookup) then
-      KC%fprime = Get_f_from_Lookup( p%UAMod, u%Re, u%UserProp, KC%alpha_f, BL_p%alpha0, KC%C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2)     ! Solve Eqn 1.32a for f when alpha is replaced with alpha_f (see issue when KC%C_nalpha_circ is 0) 
+      call Get_f_from_Lookup( p%UAMod, u%Re, u%UserProp, KC%alpha_f, BL_p%alpha0, KC%C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2, f=KC%fprime)     ! Solve Eqn 1.32a for f (=KC%fprime) when alpha is replaced with alpha_f (see issue when KC%C_nalpha_circ is 0) 
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
    else   
@@ -545,7 +585,7 @@ ENDIF
    KC%fprimeprime   = KC%fprime - KC%Df                                                                                       ! Eqn 1.36a
    
    if (p%Flookup) then
-         ! Compute fprime using Eqn 1.30 and Eqn 1.31
+         ! Compute fprime using Eqn 1.32 and Eqn 1.33
       KC%fprime_c   = Get_f_c_from_Lookup( p%UAMod, u%Re, u%UserProp, KC%alpha_f, BL_p%alpha0, KC%C_nalpha_circ, BL_p%eta_e, AFInfo, ErrStat2, ErrMsg2) ! Solve Eqn 1.32b for f when alpha is replaced with alpha_f
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
@@ -555,7 +595,7 @@ ENDIF
            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
            if (ErrStat >= AbortErrLev) return
 
-         Cn_temp = AFI_interp%Cl*cos(KC%alpha_f) + (AFI_interp%Cd-AFI_interp%Cd0)*sin(KC%alpha_f)
+         Cn_temp = AFI_interp%Cl*cos(KC%alpha_f) + (AFI_interp%Cd - AFI_interp%Cd0)*sin(KC%alpha_f)
          if (abs(Cn_temp) < 0.01_ReKi ) then
             KC%fprime_m = 0.0_ReKi
          else
@@ -597,7 +637,10 @@ ENDIF
    if ( p%UAMod == UA_Gonzalez ) then
       KC%Cn_FS   = KC%Cn_alpha_q_nc + KC%Cn_q_circ + KC%Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(KC%fprimeprime) ) / 3.0_ReKi )**2     ! Eqn 1.39
    else
-      KC%Cn_FS   = KC%Cn_alpha_q_nc                + KC%Cn_alpha_q_circ *  ( (1.0_ReKi +          sqrt(KC%fprimeprime) ) / 2.0_ReKi )**2     ! Eqn 1.38
+     ! KC%Cn_FS   = KC%Cn_alpha_q_nc                + KC%Cn_alpha_q_circ *  ( (1.0_ReKi +          sqrt(KC%fprimeprime) ) / 2.0_ReKi )**2     ! Eqn 1.38
+   ! new method proposed by Pariya:
+      call Get_f_from_Lookup( p%UAMod, u%Re, u%UserProp, KC%alpha_e+BL_p%alpha0, BL_p%alpha0, KC%C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2, cn_fs=Cn_fs_temp)
+      KC%Cn_FS  = KC%Cn_alpha_q_nc + KC%C_nalpha_circ * KC%alpha_e*KC%fprimeprime  + Cn_fs_temp*(1-KC%fprimeprime)
    end if
    
       
@@ -1378,8 +1421,6 @@ endif
  
          ! If we are currently tracking a vortex, or we are in the stall region, increment tau_V
       if (p%UAMod == UA_Gonzalez) then    !Added specific logic for UAMod=UA_Gonzalez
-!BJJ: check this logic because it's not clear what UAMod=UZ_Gonzalez should be doing with this merge conflict
-      
          if ( (.NOT.LESF .AND. .NOT.VRTX) .OR. & 
               (.NOT.TESF .AND. xd%tau_V(i,j)<0.0001_ReKi) .OR.& 
               (.NOT.TESF .AND. xd%tau_V(i,j) + KC%ds > 2.*BL_p%T_VL) ) then 
@@ -1396,8 +1437,6 @@ endif
          if ( xd%tau_V(i,j) > 0.0 .or. LESF ) then
             xd%tau_V(i,j) = xd%tau_V(i,j) + KC%ds     ! Eqn 1.51
          end if
-      
-!BJJ: check this logic because it's not clear what UAMod=UZ_Gonzalez should be doing with this merge conflict
 
             ! If we a have been tracking a vortex and 1) it is now past the chord [T_VL] and 2) we have gone beyond the next shedding period [T_sh], and 
             !   3) we are continuing the flow serparation, we will shed the existing vortex so that we can create a new one at the leading edge
@@ -1498,7 +1537,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
    
    real(ReKi)                                   :: Cm_FS  
    real(ReKi)                                   :: Cc_FS
-   real(ReKi)                                   :: Cm_temp, Cm_alpha_nc
+   real(ReKi)                                   :: Cm_alpha_nc
    real(ReKi)                                   :: M, f, k2_hat
    real(ReKi)                                   :: Cm_v, alpha_prime_f
    real(ReKi)                                   :: x_cp_hat                      ! center-of-pressure distance from LE in chord fraction
@@ -1514,8 +1553,9 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
    ErrMsg    = ""
    
    Cm_alpha_nc = 0.0_ReKi
-   Cm_temp     = 0.0_ReKi
-   
+
+   AFI_interp%Cm = 0.0_ReKi ! value will be output if not computed below
+   alpha_prime_f = 0.0_ReKi ! value will be output if not computed below
    
    if (OtherState%FirstPass(misc%iBladeNode, misc%iBlade) .or. EqualRealNos(u%U, 0.0_ReKi) ) then ! note: if u%U is = in UpdateStates, BEMT shuts off UA; however, it could still be called with u%U=0 here
             
@@ -1541,7 +1581,6 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       KC%C_V               = 0.0_ReKi
       KC%Cm_q_circ         = 0.0_ReKi
       KC%Cm_q_nc           = 0.0_ReKi
-         alpha_prime_f     = 0.0_ReKi
       KC%Dalphaf           = 0.0_ReKi
       KC%T_f               = 0.0_ReKi
       KC%T_V               = 0.0_ReKi
@@ -1600,7 +1639,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
          else
             if ( p%flookup ) then 
               ! if (p%UAMod == UA_Baseline) then
-              !    f      = Get_f_from_Lookup( p%UAMod, u%Re, u%UserProp, KC%alpha_filt_cur, BL_p%alpha0, KC%C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2)
+              !    call Get_f_from_Lookup( p%UAMod, u%Re, u%UserProp, KC%alpha_filt_cur, BL_p%alpha0, KC%C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2, f=f)
               ! else   
                ! TODO: Need to understand the effect of the offset on this f in the following equations and fprimeprime_c.
                   !bjj: fprimeprime_c is computed with the Gonzalez offset in the Kelvin Chain, so it's not just f that could be a problem.
@@ -1655,11 +1694,6 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
                end if
             end if       ! Removed part of the code related to fprimeprime_m, which has been added in other part of the code        
          
-            
-            Cm_temp = 0.0_ReKi !reset this to zero, only for output purposes
-         
-         else
-            KC%fprimeprime_m = 0.0
          end if
       
          !...........
@@ -1682,14 +1716,12 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             call AFI_ComputeAirfoilCoefs( alpha_prime_f, u%Re, u%UserProp, AFInfo, AFI_interp, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)            
             Cm_FS = AFI_interp%Cm + Cm_common                                                                                                      ! Eqn 1.44
-            Cm_temp = AFI_interp%Cm    ! save for output to file
-
          else ! UAMod == UA_Gonzalez
             Cm_FS = BL_p%Cm0 + KC%Cn_FS*KC%fprimeprime_m + Cm_common                                                                               ! Eqn 1.45
 
          end if   
       
-         Cm_v     = -BL_p%x_cp_bar*( 1.0_ReKi - cos( pi*xd%tau_v(misc%iBladeNode, misc%iBlade)/BL_p%T_VL ) )*KC%Cn_v                               ! Eqn 1.57   
+         Cm_v     = -BL_p%x_cp_bar*( 1.0_ReKi - cos( pi*xd%tau_v(misc%iBladeNode, misc%iBlade)/BL_p%T_VL ) )*KC%Cn_v                               ! Eqn 1.57
          if (p%UAMod == UA_Gonzalez .and. xd%tau_v(misc%iBladeNode, misc%iBlade) <= 0.0 ) then !Added specific logic for UAMod=UA_Gonzalez
             y%Cm   = Cm_FS
          else
@@ -1741,7 +1773,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       y%WriteOutput(iOffset+23)    = Cm_v
       y%WriteOutput(iOffset+24)    = alpha_prime_f
       y%WriteOutput(iOffset+25)    = KC%Dalphaf
-      y%WriteOutput(iOffset+26)    = Cm_temp
+      y%WriteOutput(iOffset+26)    = AFI_interp%Cm
       y%WriteOutput(iOffset+27)    = KC%T_f
       y%WriteOutput(iOffset+28)    = KC%T_V
       y%WriteOutput(iOffset+29)    = KC%ds  ! Eqn 1.51 (tau_v) 
