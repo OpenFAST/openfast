@@ -150,7 +150,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       TYPE(FFT_DataType)                     :: FFT_Data                             ! the instance of the FFT module we're using
 
          ! Error handling
-      CHARACTER(1024)                        :: ErrMsg2                              ! Temporary error message for calls
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
 
 

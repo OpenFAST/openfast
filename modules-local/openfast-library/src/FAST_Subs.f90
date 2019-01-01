@@ -1520,7 +1520,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
    CHARACTER(*), PARAMETER      :: RoutineName = "FAST_Init"
    
    INTEGER(IntKi)               :: ErrStat2
-   CHARACTER(1024)              :: ErrMsg2
+   CHARACTER(ErrMsgLen)         :: ErrMsg2
    
       ! Initialize some variables
    ErrStat = ErrID_None
@@ -5783,7 +5783,7 @@ SUBROUTINE FAST_Linearize_Tary(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
       ! local variables
    INTEGER(IntKi)                          :: i_turb, NumTurbines
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_Tary' 
    
    
@@ -5816,7 +5816,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
    REAL(DbKi)                              :: t_global            ! current simulation time
    REAL(DbKi)                              :: next_lin_time       ! next simulation time where linearization analysis should be performed
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(MaxWrScrLen)                  :: BlankLine
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_T' 
 
@@ -5930,7 +5930,7 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    INTEGER(IntKi)                          :: ErrorLevel
                                           
    INTEGER(IntKi)                          :: ErrStat2            ! Error status
-   CHARACTER(1024)                         :: ErrMsg2             ! Error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! Error message
    CHARACTER(1224)                         :: SimMsg              ! optional message to print about where the error took place in the simulation
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'ExitThisProgram'       
@@ -6355,7 +6355,7 @@ SUBROUTINE FAST_CreateCheckpoint_Tary(t_initial, n_t_global, Turbine, Checkpoint
    INTEGER(IntKi)                          :: i_turb
    INTEGER                                 :: Unit
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_CreateCheckpoint_Tary' 
    
    
@@ -6406,7 +6406,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
    INTEGER(IntKi)                          :: unOut               ! unit number for output file 
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_CreateCheckpoint_T' 
   
    CHARACTER(1024)                         :: FileName            ! Name of the (output) checkpoint file
@@ -6534,7 +6534,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, Check
    INTEGER(IntKi)                          :: i_turb
    INTEGER                                 :: Unit
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_RestoreFromCheckpoint_Tary' 
    
    
@@ -6585,7 +6585,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    INTEGER(IntKi)                          :: unIn                ! unit number for input file 
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_RestoreFromCheckpoint_T' 
 
    CHARACTER(1024)                         :: FileName            ! Name of the (input) checkpoint file
