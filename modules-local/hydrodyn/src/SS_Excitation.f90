@@ -90,6 +90,8 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       
+    u%DummyInput = 0.0_ReKi
+      
     UnSS  = -1
     p%N     =  0
       
