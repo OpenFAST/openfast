@@ -3291,39 +3291,39 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    if ( (InitInp%WAMIT%ExctnMod == 2) ) then
 
       if ( InitInp%Waves%WaveMod == 6 ) then
-         call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with State-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Externally generated full wave-kinematics time series cannot be used with state-space wave excitations. Set WaveMod 0, 1, 1P#, 2, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
       end if
       
       if ( InitInp%Waves%WaveDirMod /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Directional spreading cannot be used with State-space wave excitations. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Directional spreading cannot be used with state-space wave excitations. Set WaveDirMod=0.', ErrStat, ErrMsg, RoutineName )
       end if
       
       if ( InitInp%Waves2%WvDiffQTFF ) then
-         call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics with State-space wave excitations. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Cannot use full difference-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvDiffQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
       end if
       
       if ( InitInp%Waves2%WvSumQTFF ) then
-         call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency  2nd-order wave kinematics with State-space wave excitations. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics with state-space wave excitations. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
       end if
 
       if ( InitInp%PotMod /= 1 ) then
-         call SetErrStat( ErrID_Fatal, 'Potential-flow model via WAMIT must be used with State-space wave excitations. Set PotMod= 1.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Potential-flow model via WAMIT must be used with state-space wave excitations. Set PotMod= 1.', ErrStat, ErrMsg, RoutineName )
       end if
       
       if ( InitInp%WAMIT2%MnDrift /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Mean-drift 2nd-order forces cannot be used with State-space wave excitations. Set MnDrift=0.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Mean-drift 2nd-order forces cannot be used with state-space wave excitations. Set MnDrift=0.', ErrStat, ErrMsg, RoutineName )
       end if
 
       if ( InitInp%WAMIT2%NewmanApp /= 0 ) then
-         call SetErrStat( ErrID_Fatal, "Mean- and slow-drift 2nd-order forces computed with Newman's approximation cannot be used with State-space wave excitations. Set NewmanApp=0.", ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, "Mean- and slow-drift 2nd-order forces computed with Newman's approximation cannot be used with state-space wave excitations. Set NewmanApp=0.", ErrStat, ErrMsg, RoutineName )
       end if
       
       if ( InitInp%WAMIT2%DiffQTF /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Full difference-frequency 2nd-order forces computed with full QTF cannot be used with State-space wave excitations. Set DiffQTF=0.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Full difference-frequency 2nd-order forces computed with full QTF cannot be used with state-space wave excitations. Set DiffQTF=0.', ErrStat, ErrMsg, RoutineName )
       end if
 
       if ( InitInp%WAMIT2%SumQTF /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Full summation -frequency 2nd-order forces computed with full QTF cannot  be used with State-space wave excitations. Set SumQTF=0.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Full summation-frequency 2nd-order forces computed with full QTF cannot be used with State-space wave excitations. Set SumQTF=0.', ErrStat, ErrMsg, RoutineName )
       end if
 
    end if
@@ -3346,7 +3346,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       end if
       
       if ( InitInp%Waves2%WvSumQTFF ) then
-         call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency  2nd-order wave kinematics. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Cannot use full summation-frequency 2nd-order wave kinematics for linearization. Set WvSumQTF=FALSE.', ErrStat, ErrMsg, RoutineName )
       end if
 
       if ( InitInp%PotMod > 1 ) then
@@ -3374,7 +3374,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       end if
 
       if ( InitInp%WAMIT2%SumQTF /= 0 ) then
-         call SetErrStat( ErrID_Fatal, 'Full summation -frequency 2nd-order forces computed with full QTF cannot  be used for linearization. Set SumQTF=0.', ErrStat, ErrMsg, RoutineName )
+         call SetErrStat( ErrID_Fatal, 'Full summation-frequency 2nd-order forces computed with full QTF cannot be used for linearization. Set SumQTF=0.', ErrStat, ErrMsg, RoutineName )
       end if
 
    end if
