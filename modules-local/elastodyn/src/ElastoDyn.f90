@@ -11203,7 +11203,11 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    call allocAry(p%dx,               p%NDof,            'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%LinNames_x, p%DOFs%NActvDOF*2, 'LinNames_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%RotFrame_x, p%DOFs%NActvDOF*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, p%DOFs%NActvDOF*2, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   
+      ! All Elastodyn continuous states are max order = 2
+   if ( allocated(InitOut%DerivOrder_x) ) InitOut%DerivOrder_x = 2
    
    p%dx = 0.0_R8Ki ! initialize in case we have only 1 blade
    

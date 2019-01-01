@@ -170,6 +170,7 @@ typedef	^	FAST_LinType	Logical	RotFrame_u	{:}	-	-	"Whether corresponding input i
 typedef	^	FAST_LinType	Logical	RotFrame_y	{:}	-	-	"Whether corresponding output is in rotating frame"
 typedef	^	FAST_LinType	Logical	RotFrame_x	{:}	-	-	"Whether corresponding continuous state is in rotating frame"
 typedef	^	FAST_LinType	Logical	RotFrame_z	{:}	-	-	"Whether corresponding constraint state is in rotating frame"
+typedef	^	FAST_LinType	IntKi 	DerivOrder_x	{:}	-	-	"Derivative order for continuous states"
 typedef	^	FAST_LinType	IntKi	SizeLin	{3}	-	-	"sizes of (1) the module's inputs,  (2) the module's linearized outputs, and (3) the module's continuous states"	-
 typedef	^	FAST_LinType	IntKi	LinStartIndx	{3}	-	-	"the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states"	-
 typedef	^	FAST_LinType	IntKi	NumOutputs	-	-	-	"number of WriteOutputs in each linearized module"	-
@@ -355,7 +356,7 @@ typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 typedef	FAST	MAP_Data	MAP_ContinuousStateType	x	{2}	-	-	"Continuous states"
 typedef	^	^	MAP_DiscreteStateType	xd	{2}	-	-	"Discrete states"
 typedef	^	^	MAP_ConstraintStateType	z	{2}	-	-	"Constraint states"
-typedef	^	^	MAP_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
+typedef	^	^	MAP_OtherStateType	OtherSt	 	-	-	"Other/optimization states"
 typedef	^	^	MAP_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	MAP_InputType	u	-	-	-	"System inputs"
 typedef	^	^	MAP_OutputType	y	-	-	-	"System outputs"

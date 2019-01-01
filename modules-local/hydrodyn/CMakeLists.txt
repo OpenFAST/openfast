@@ -19,6 +19,7 @@ generate_f90_types(src/Current.txt Current_Types.f90)
 generate_f90_types(src/HydroDyn.txt HydroDyn_Types.f90)
 generate_f90_types(src/Morison.txt Morison_Types.f90)
 generate_f90_types(src/SS_Radiation.txt SS_Radiation_Types.f90)
+generate_f90_types(src/SS_Excitation.txt SS_Excitation_Types.f90)
 generate_f90_types(src/WAMIT.txt WAMIT_Types.f90)
 generate_f90_types(src/WAMIT2.txt WAMIT2_Types.f90)
 generate_f90_types(src/Waves.txt Waves_Types.f90)
@@ -33,6 +34,7 @@ set(HYDRODYN_SOURCES
   src/Morison.f90
   src/Morison_Output.f90
   src/SS_Radiation.f90
+  src/SS_Excitation.f90
   src/UserWaves.f90
   src/WAMIT.f90
   src/WAMIT2.f90
@@ -49,6 +51,7 @@ set(HYDRODYN_SOURCES
   HydroDyn_Types.f90
   Morison_Types.f90
   SS_Radiation_Types.f90
+  SS_Excitation_Types.f90
   WAMIT_Types.f90
   WAMIT2_Types.f90
   Waves_Types.f90

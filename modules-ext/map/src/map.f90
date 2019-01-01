@@ -32,6 +32,8 @@ MODULE MAP
    PUBLIC :: MAP_Init
    PUBLIC :: MAP_UpdateStates
    PUBLIC :: MAP_CalcOutput
+   PUBLIC :: MAP_JacobianPInput
+   PUBLIC :: MAP_GetOP
    PUBLIC :: MAP_End
    PUBLIC :: MAP_Restart
 
@@ -653,6 +655,8 @@ IF (ErrStat >= AbortErrLev) RETURN
     ! End mesh initialization                                          !   -------+
     !==============================================================================
          
+   
+      
     ! Program version
     N = LEN(InitOut%version)
     DO i=1,N
@@ -676,11 +680,20 @@ IF (ErrStat >= AbortErrLev) RETURN
     END DO
     
     InitOut%Ver = ProgDesc('MAP++',TRIM(InitOut%version),TRIM(InitOut%compilingData))
-
-   IF ( ALLOCATED(InitOut%WriteOutputHdr) ) THEN
-      ALLOCATE( y%WriteOutput(SIZE(InitOut%WriteOutputHdr)), STAT=n)
-      IF (N/=0) CALL SetErrStat(ErrID_Fatal, 'Failed to allocate y%WriteOutput',ErrStat, ErrMsg, RoutineName)
-   END IF
+    p%numOuts = 0
+    if ( allocated(InitOut%WriteOutputHdr) ) THEN
+       p%numOuts = size(InitOut%WriteOutputHdr)
+       allocate( y%WriteOutput(p%numOuts), STAT=N)
+       if (N/=0) call SetErrStat(ErrID_Fatal, 'Failed to allocate y%WriteOutput',ErrStat, ErrMsg, RoutineName)   
+    end if
+    
+    !............................................................................................
+    ! Initialize Jacobian information:
+    !............................................................................................
+    if (InitInp%LinInitInp%Linearize) then      
+       call map_Init_Jacobian( p, u, y, InitOut, ErrStat2, ErrMsg2)
+       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    end if
   
   END SUBROUTINE MAP_Init                                                                        !   -------+
   !==========================================================================================================
@@ -1065,6 +1078,406 @@ IF (ErrStat >= AbortErrLev) RETURN
     END DO
                
   END SUBROUTINE map_set_input_file_contents 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
+!! Do not change this without making sure subroutine map::map_init_jacobian is consistant with this routine!
+SUBROUTINE map_Perturb_u( p, n, perturb_sign, u, du )
+
+   TYPE(map_ParameterType)             , INTENT(IN   ) :: p                      !< parameters
+   INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
+   INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+   TYPE(map_InputType)                 , INTENT(INOUT) :: u                      !< perturbed map inputs
+   REAL( R8Ki )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
+   
+
+   ! local variables
+   integer                                             :: fieldIndx
+   integer                                             :: node
+   integer(intKi)                                      :: ErrStat2
+   character(ErrMsgLen)                                :: ErrMsg2
+    
+   fieldIndx = p%LinParams%Jac_u_indx(n,2) 
+   node      = p%LinParams%Jac_u_indx(n,3)    
+   du        = p%LinParams%du
+   u%PtFairDisplacement%TranslationDisp (fieldIndx,node) = u%PtFairDisplacement%TranslationDisp (fieldIndx,node) +  du * perturb_sign       
+                                             
+END SUBROUTINE map_Perturb_u  
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine map::map_init_jacobian is consistant with this routine!
+SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
+   
+   TYPE(map_ParameterType)            , INTENT(IN   ) :: p         !< parameters
+   TYPE(map_OutputType)               , INTENT(IN   ) :: y_p       !< map outputs at \f$ u + \Delta u \f$ or \f$ x + \Delta x \f$ (p=plus)
+   TYPE(map_OutputType)               , INTENT(IN   ) :: y_m       !< map outputs at \f$ u - \Delta u \f$ or \f$ x - \Delta x \f$ (m=minus)   
+   REAL(R8Ki)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta x \f$
+   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial x_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
+   
+      ! local variables:
+
+   integer(IntKi)                                    :: indx_first             ! index indicating next value of dY to be filled 
+   logical                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
+   integer(IntKi)                                    :: k
+
+   indx_first = 1     
+   if ( y_p%ptFairleadLoad%Committed ) then
+      call PackLoadMesh_dY(y_p%ptFairleadLoad, y_m%ptFairleadLoad, dY, indx_first)    
+   end if
+   
+   do k=1,p%numOuts
+      dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
+   end do   
+   
+   
+   
+   dY = dY / (2.0_R8Ki*delta)
+   
+END SUBROUTINE Compute_dY
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
+!! Do not change the order of this packing without changing corresponding linearization routines !
+SUBROUTINE MAP_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
+
+   TYPE(map_ParameterType)           , INTENT(INOUT) :: p                     !< parameters
+   TYPE(map_InputType)               , INTENT(IN   ) :: u                     !< inputs
+   TYPE(map_OutputType)              , INTENT(IN   ) :: y                     !< outputs
+   TYPE(map_InitOutputType)          , INTENT(INOUT) :: InitOut               !< Output for initialization routine   
+   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
+   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
+   
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'MAP_Init_Jacobian'
+   
+      ! local variables:
+   INTEGER(IntKi)                :: i, j, k, index, index_next, index_last, nu, i_meshField, m, meshFieldCount
+   REAL(R8Ki)                    :: perturb_t, perturb
+   REAL(R8Ki)                    :: ScaleLength
+   LOGICAL                       :: FieldMask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""       
+ 
+   !......................................
+   ! init linearization outputs:
+   !......................................
+   
+      ! determine how many outputs there are in the Jacobians      
+   p%LinParams%Jac_ny = 0         
+   if ( y%ptFairleadLoad%Committed ) then
+      p%LinParams%Jac_ny = y%ptFairleadLoad%NNodes * 3    ! 3 Forces, no Moments, at each node on the fairlead loads mesh     
+   end if
+   
+   p%LinParams%Jac_ny = p%LinParams%Jac_ny + p%numOuts                         ! WriteOutput values      
+
+      !.................   
+      ! set linearization output names:
+      !.................   
+   call AllocAry(InitOut%LinInitOut%LinNames_y, p%LinParams%Jac_ny, 'LinNames_y', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+ 
+   index_next = 1
+   if ( y%ptFairleadLoad%Committed ) then
+      index_last = index_next
+      call PackLoadMesh_Names(y%ptFairleadLoad, 'FairleadLoads', InitOut%LinInitOut%LinNames_y, index_next)
+   end if
+   
+   index_last = index_next      
+   do i=1,p%numOuts
+      InitOut%LinInitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
+   end do   
+   
+     
+   !......................................
+   ! init linearization inputs:
+   !......................................
+         
+   
+      ! determine how many inputs there are in the Jacobians
+   nu = 0;
+   if ( u%PtFairDisplacement%Committed ) then
+      nu = nu + u%PtFairDisplacement%NNodes * 3   ! 3 TranslationDisp at each node       
+   end if
+
+   ! note: all other inputs are ignored
+      
+   !....................                        
+   ! fill matrix to store index to help us figure out what the ith value of the u vector really means
+   ! (see hydrodyn::map_perturb_u ... these MUST match )
+   ! column 1 indicates module's mesh and field
+   ! column 2 indicates the first index of the acceleration/load field
+   ! column 3 is the node
+   !....................
+      
+   !...............
+   ! MAP input mappings stored in p%Jac_u_indx:   
+   !...............
+   call AllocAry(p%LinParams%Jac_u_indx, nu, 3, 'p%LinParams%Jac_u_indx', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+   if (ErrStat >= AbortErrLev) return
+     
+   index = 1
+   meshFieldCount = 0
+   if ( u%PtFairDisplacement%Committed ) then
+      !Module/Mesh/Field: u%PtFairDisplacement%TranslationDisp  = 1;        
+      i_meshField = 1
+      do i=1,u%PtFairDisplacement%NNodes
+         do j=1,3
+            p%LinParams%Jac_u_indx(index,1) =  i_meshField  !Module/Mesh/Field: u%PtFairDisplacement%{TranslationDisp} = m
+            p%LinParams%Jac_u_indx(index,2) =  j !index:  j
+            p%LinParams%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1
+         end do !j      
+      end do !i   
+      meshFieldCount = meshFieldCount + 1                                     
+   end if
+   
+   !................
+   ! input perturbations, du:
+   !................
+ 
+      p%LinParams%du = 0.2_R8Ki*D2R * max(p%depth,1.0_R8Ki) ! translation input scaling  ! u%PtFairDisplacement%TranslationDisp 
+
+   !................
+   ! names of the columns, InitOut%LinNames_u:
+   !................
+   call AllocAry(InitOut%LinInitOut%LinNames_u, nu, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   call AllocAry(InitOut%LinInitOut%IsLoad_u,   nu, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      
+   InitOut%LinInitOut%IsLoad_u(:)   = .false.  ! MAP's inputs are NOT loads
+
+   index = 1
+   if ( u%PtFairDisplacement%Committed ) then
+      FieldMask = .false.
+      FieldMask(MASKID_TRANSLATIONDISP) = .true.
+      call PackMotionMesh_Names(u%PtFairDisplacement, 'PtFairDisplacement', InitOut%LinInitOut%LinNames_u, index, FieldMask=FieldMask)     
+   end if
+  
+END SUBROUTINE MAP_Init_Jacobian  
+   
+SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg, dYdu )
+   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(map_InputType),                  INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(map_ParameterType),              INTENT(INOUT)           :: p          !< Parameters
+   TYPE(map_ContinuousStateType),        INTENT(INOUT)           :: x          !< Continuous states at operating point
+   TYPE(map_DiscreteStateType),          INTENT(INOUT)           :: xd         !< Discrete states at operating point
+   TYPE(map_ConstraintStateType),        INTENT(INOUT)           :: z          !< Constraint states at operating point
+   TYPE(map_OtherStateType),             INTENT(INOUT)           :: OtherState !< Other states at operating point
+   TYPE(map_OutputType),                 INTENT(INOUT)           :: y          !< Output (change to inout if a mesh copy is required);
+                                                                               !!   Output fields are not used by this routine, but type is   
+                                                                               !!   available here so that mesh parameter information (i.e.,  
+                                                                               !!   connectivity) does not have to be recalculated for dYdu.
+   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect 
+                                                                               !!   to the inputs (u) [intent in to avoid deallocation]
+   
+   
+      ! local variables
+   INTEGER(KIND=C_INT)                             :: status_from_MAP 
+   CHARACTER(KIND=C_CHAR), DIMENSION(1024)         :: message_from_MAP 
+   REAL(KIND=C_FLOAT)                              :: time 
+   INTEGER(KIND=C_INT)                             :: interval 
+
+   TYPE(map_OutputType)                               :: y_p
+   TYPE(map_OutputType)                               :: y_m
+   TYPE(map_ConstraintStateType)                      :: z_perturb
+   TYPE(map_InputType)                                :: u_perturb
+   REAL(R8Ki)                                         :: delta        ! delta change in input or state
+   INTEGER(IntKi)                                     :: i, j, NN, offsetI, offsetJ
+   
+   INTEGER(IntKi)                                     :: ErrStat2
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2
+   CHARACTER(*), PARAMETER                            :: RoutineName = 'map_JacobianPInput'
+   
+   
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   time = t
+   interval = t / p%dt
+   
+   if ( present( dYdu ) ) then
+
+      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+
+      ! allocate dYdu if necessary
+      if (.not. allocated(dYdu)) then
+         call AllocAry(dYdu, p%LinParams%Jac_ny, size(p%LinParams%Jac_u_indx,1), 'dYdu', ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat>=AbortErrLev) then
+            call cleanup()
+            return
+         end if
+      end if
+      
+         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+      call map_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call map_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat>=AbortErrLev) then
+            call cleanup()
+            return
+         end if
+         
+      do i=1,size(p%LinParams%Jac_u_indx,1)
+         
+            ! get u_op + delta u
+         call map_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+         call map_Perturb_u( p, i, 1, u_perturb, delta )
+
+         call MAP_CopyConstrState( z, z_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+
+            ! compute constraint state for u_op + delta u
+         call MSQS_UpdateStates( time       , &
+                            interval        , & 
+                            u_perturb%C_obj , &
+                            p%C_obj         , &
+                            x%C_obj         , &
+                            xd%C_obj        , &
+                            z_perturb%C_obj , &
+                            OtherState%C_obj         , &
+                            status_from_MAP , &
+                            message_from_MAP  )
+
+          call MAP_ERROR_CHECKER(message_from_MAP,status_from_MAP,ErrMsg2,ErrStat2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+
+    
+         
+            ! compute y at u_op + delta u
+         call map_CalcOutput( t, u_perturb, p, x, xd, z_perturb, OtherState, y_p, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+         
+            
+            ! get u_op - delta u
+         call map_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+         call map_Perturb_u( p, i, -1, u_perturb, delta )
+
+         call MAP_CopyConstrState( z, z_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+
+                        ! compute constraint state for u_op + delta u
+         call MSQS_UpdateStates( time       , &
+                            interval        , & 
+                            u_perturb%C_obj , &
+                            p%C_obj         , &
+                            x%C_obj         , &
+                            xd%C_obj        , &
+                            z_perturb%C_obj , &
+                            OtherState%C_obj         , &
+                            status_from_MAP , &
+                            message_from_MAP  )
+
+          call MAP_ERROR_CHECKER(message_from_MAP,status_from_MAP,ErrMsg2,ErrStat2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+
+            ! compute y at u_op - delta u
+         call map_CalcOutput( t, u_perturb, p, x, xd, z_perturb, OtherState, y_m, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
+                    
+            ! get central difference:  note: assumes delta is equivalent for both perturb_u calls.           
+         call Compute_dY( p, y_p, y_m, delta, dYdu(:,i) )
+         
+      end do
+   end if
+   call cleanup()
+   
+contains
+   subroutine cleanup()
+      call map_DestroyOutput(       y_p, ErrStat2, ErrMsg2 )
+      call map_DestroyOutput(       y_m, ErrStat2, ErrMsg2 )
+      call map_DestroyConstrState(    z_perturb, ErrStat2, ErrMsg2 )
+      call map_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )
+
+   end subroutine cleanup
+END SUBROUTINE MAP_JacobianPInput
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to pack the data structures representing the operating points into arrays for linearization.
+SUBROUTINE MAP_GetOP( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg, u_op, y_op)
+
+   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(map_InputType),                   INTENT(INOUT)           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(map_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+   TYPE(map_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(map_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(map_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(map_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(map_OutputType),                  INTENT(IN   )           :: y          !< Output at operating point
+   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
+  
+
+
+   INTEGER(IntKi)                                    :: i, k, index, nu
+   INTEGER(IntKi)                                    :: ny
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'map_GetOP'
+   TYPE(map_ContinuousStateType)                     :: dx          !< derivative of continuous states at operating point
+   LOGICAL                                           :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
+   
+   !LIN-TODO:  Need to review and implement this routine per plan.  Do not understand how to implement at the moment, GJH.
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+    !..................................
+   IF ( PRESENT( u_op ) ) THEN
+      
+      if (.not. allocated(u_op)) then 
+         
+         nu = size(p%LinParams%Jac_u_indx,1)      
+         
+         call AllocAry(u_op, nu,'u_op',ErrStat2,ErrMsg2) ! 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat>=AbortErrLev) return
+         
+      end if
+            
+      Mask  = .false.
+      Mask(MASKID_TRANSLATIONDISP) = .true.
+     
+      index = 1
+      if ( u%PtFairDisplacement%Committed ) then
+         call PackMotionMesh(u%PtFairDisplacement, u_op, index, FieldMask=Mask)    
+      end if
+               
+   END IF
+
+   !..................................
+   if ( PRESENT( y_op ) ) then
+      
+      if (.not. allocated(y_op)) then
+         call AllocAry(y_op, p%LinParams%Jac_ny, 'y_op', ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) return
+      end if
+         
+      index = 1               
+      if ( y%ptFairleadLoad%Committed ) then
+         call PackLoadMesh(y%ptFairleadLoad, y_op, index)   
+      end if
+      
+      index = index - 1
+      do i=1,p%numOuts
+         y_op(i+index) = y%WriteOutput(i)
+      end do   
+      
+   end if   
+
+END SUBROUTINE MAP_GetOP   
+
  !==========================================================================================================
 
   ! ==========   MAP_ERROR   ======     <-------------------------------------------------------------------+

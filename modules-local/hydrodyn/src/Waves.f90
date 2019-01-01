@@ -584,7 +584,8 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
-
+      ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev0.',         ErrStat,ErrMsg,'StillWaterWaves_Init')
       ALLOCATE ( InitOut%WaveElevC0 (2, 0:InitOut%NStepWave2                ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,'StillWaterWaves_Init')
 
@@ -620,6 +621,7 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       InitOut%WaveDOmega = 0.0
       InitOut%WaveTime   = (/ 0.0_DbKi, 1.0_DbKi, 2.0_DbKi /)   ! We must have at least two different time steps in the interpolation
+      InitOut%WaveElev0 = 0.0
       InitOut%WaveElevC0 = 0.0
       InitOut%WaveElev   = 0.0
       InitOut%PWaveDynP0  = 0.0
@@ -664,7 +666,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ! Local Variables
    COMPLEX(SiKi), PARAMETER     :: ImagNmbr = (0.0,1.0)                            ! The imaginary number, SQRT(-1.0)
    COMPLEX(SiKi)                :: ImagOmega                                       ! = ImagNmbr*Omega (rad/s)
-   REAL(SiKi), ALLOCATABLE      :: WaveElev0  (:)                                  ! Instantaneous elevation of incident waves at the platform reference point (meters)
+ !  REAL(SiKi), ALLOCATABLE      :: WaveElev0  (:)                                  ! Instantaneous elevation of incident waves at the platform reference point (meters)
    !COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HxiPz0 (:,:)                            ! Partial derivative of WaveAccC0Hxi(:) with respect to zi at zi = 0 (1/s^2) 
    !COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HyiPz0 (:,:)                            ! Partial derivative of WaveAccC0Hyi(:) with respect to zi at zi = 0 (1/s^2) 
    !COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0VPz0 (:,:)                              ! Partial derivative of WaveAccC0V  (:) with respect to zi at zi = 0 (1/s^2) 
@@ -1081,7 +1083,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !ALLOCATE ( PWaveAccC0VPz0    (0:InitOut%NStepWave2 ,InitInp%NWaveKin  ), STAT=ErrStatTmp )
       !IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array PWaveAccC0VPz0.',    ErrStat,ErrMsg,'VariousWaves_Init')
 
-      ALLOCATE ( WaveElev0 (0:InitOut%NStepWave-1                          ), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveElev0 (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,'VariousWaves_Init')
 
       ALLOCATE ( InitOut%WaveElev  (0:InitOut%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
@@ -1764,7 +1766,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END IF
       
          ! We'll need the following for wave stretching once we implement it.
-      CALL    ApplyFFT_cx (  WaveElev0    (:),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
+      CALL    ApplyFFT_cx (  InitOut%WaveElev0    (0:InitOut%NStepWave-1),  tmpComplexArr    (:  ), FFT_Data, ErrStatTmp )
       CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to WaveElev0.',ErrStat,ErrMsg,'VariousWaves_Init')
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
@@ -2004,7 +2006,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%PWaveDynP0(InitOut%NStepWave,:  )  = InitOut%PWaveDynP0(0,:  )
       InitOut%PWaveVel0 (InitOut%NStepWave,:,:)  = InitOut%PWaveVel0 (0,:,:)
       InitOut%PWaveAcc0 (InitOut%NStepWave,:,:)  = InitOut%PWaveAcc0 (0,:,:)
-
+      InitOut%WaveElev0 (InitOut%NStepWave)      = InitOut%WaveElev0 (0    )
 
 
 
@@ -2030,8 +2032,8 @@ CONTAINS
          ! Zero out the temporary array.
       tmpComplexArr  = CMPLX(0.0_SiKi,0.0_SiKi)
 
-         ! Loop through the positive frequency components (including zero).  Skip the last point since that is zero by definition.
-      DO I = 0,InitOut%NStepWave2-1
+         ! Loop through the positive frequency components (including zero).
+      DO I = 0,InitOut%NStepWave2
 
          Omega             = I*       InitOut%WaveDOmega
          WaveNmbr          = WaveNumber ( Omega, InitInp%Gravity, InitInp%WtrDpth )
@@ -2084,7 +2086,7 @@ CONTAINS
       IF (ALLOCATED( WaveAccC0V ))        DEALLOCATE( WaveAccC0V,       STAT=ErrStatTmp)
       IF (ALLOCATED( WaveDynP0B ))        DEALLOCATE( WaveDynP0B,       STAT=ErrStatTmp)
       IF (ALLOCATED( WaveDynPC0 ))        DEALLOCATE( WaveDynPC0,       STAT=ErrStatTmp)
-      IF (ALLOCATED( WaveElev0 ))         DEALLOCATE( WaveElev0,        STAT=ErrStatTmp)
+     ! IF (ALLOCATED( WaveElev0 ))         DEALLOCATE( WaveElev0,        STAT=ErrStatTmp)
       IF (ALLOCATED( WaveElevC ))         DEALLOCATE( WaveElevC,        STAT=ErrStatTmp)
       IF (ALLOCATED( WaveVel0Hxi ))       DEALLOCATE( WaveVel0Hxi,      STAT=ErrStatTmp)
       IF (ALLOCATED( WaveVel0Hyi ))       DEALLOCATE( WaveVel0Hyi,      STAT=ErrStatTmp)
