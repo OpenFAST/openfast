@@ -75,8 +75,8 @@ typedef   ^                            ^                             CHARACTER(2
 # Define outputs from the initialization routine here:
 #
 typedef   ^                            InitOutputType                WAMIT_InitOutputType     WAMIT                           -          -        -         "Initialization output from the WAMIT module"    -
-typedef   ^                            ^                             WAMIT2_InitOutputType    WAMIT2                           -          -        -         "Initialization output from the WAMIT2 module"    -
-typedef   ^                            ^                             Waves2_InitOutputType    Waves2                           -          -        -         "Initialization output from the Waves2 module"    -
+typedef   ^                            ^                             WAMIT2_InitOutputType    WAMIT2                          -          -        -         "Initialization output from the WAMIT2 module"    -
+typedef   ^                            ^                             Waves2_InitOutputType    Waves2                          -          -        -         "Initialization output from the Waves2 module"    -
 typedef   ^                            ^                             Morison_InitOutputType   Morison                         -          -        -         "Initialization output from the Morison module"    -
 typedef   ^                            ^                             CHARACTER(10)            WriteOutputHdr                  {:}        -        -         "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             CHARACTER(10)            WriteOutputUnt                  {:}        -        -         "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
@@ -85,11 +85,11 @@ typedef   ^                            ^                             ProgDesc   
 typedef   ^                            ^                             ReKi                     WtrDens                         -          -        -         "Water density"    (kg/m^3)
 typedef   ^                            ^                             ReKi                     WtrDpth                         -          -        -         "Water depth"    (m)
 typedef   ^                            ^                             ReKi                     MSL2SWL                         -          -        -         "Offset between still-water level and mean sea level"    (m)
-typedef	 ^	                           ^                          	CHARACTER(LinChanLen)	 LinNames_y	                    {:}	        -	     -	      "Names of the outputs used in linearization"	-
-typedef	 ^	                           ^                          	CHARACTER(LinChanLen)	 LinNames_x	                    {:}	        -	     -	      "Names of the continuous states used in linearization"	-
-typedef	 ^	                           ^                          	CHARACTER(LinChanLen)	 LinNames_u	                    {:}	        -	     -	      "Names of the inputs used in linearization"	-
-typedef	 ^	                           InitOutputType	               INTEGER	                DerivOrder_x                   {:}	        -	     -	      "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
-typedef	 ^	                           ^                          	LOGICAL	                IsLoad_u	                    {:}	        -	     -	      "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
+typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_y                      {:}        -        -         "Names of the outputs used in linearization"	-
+typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_x                      {:}        -        -         "Names of the continuous states used in linearization"	-
+typedef   ^                            ^                             CHARACTER(LinChanLen)    LinNames_u                      {:}        -        -         "Names of the inputs used in linearization"	-
+typedef   ^                            InitOutputType                INTEGER                  DerivOrder_x                    {:}        -        -         "Integer that tells FAST/MBC3 the maximum derivative order of continuous states used in linearization"	-
+typedef   ^                            ^                             LOGICAL                  IsLoad_u                        {:}        -        -         "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 
 
 # ..... HD_ModuleMapType ....................................................................................................................

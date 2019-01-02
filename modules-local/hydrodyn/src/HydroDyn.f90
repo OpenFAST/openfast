@@ -2453,7 +2453,7 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          
          
       do i=1,NN
-         delta = p%dx(i)
+
             ! get x_op + delta x
          call HydroDyn_CopyContState( x, x_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
@@ -2562,16 +2562,16 @@ SUBROUTINE HD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(HydroDyn_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
                                                                                !!  (Y) with respect to the discrete
                                                                                !!  states (xd) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
                                                                                !!   functions (X) with respect to the
                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddxd(:,:)!< Partial derivatives of discrete state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddxd(:,:)!< Partial derivatives of discrete state
                                                                                !!   functions (Xd) with respect to the
                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
                                                                                !!   functions (Z) with respect to the
                                                                                !!   discrete states (xd) [intent in to avoid deallocation]
 
@@ -2636,13 +2636,13 @@ SUBROUTINE HD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat
    TYPE(HydroDyn_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output functions (Y) with respect 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output functions (Y) with respect 
                                                                                !!  to the constraint states (z) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous state functions (X) with respect 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous state functions (X) with respect 
                                                                                !!  to the constraint states (z) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state functions (Xd) with respect 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state functions (Xd) with respect 
                                                                                !!  to the constraint states (z) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint state functions (Z) with respect 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint state functions (Z) with respect 
                                                                                !! to the constraint states (z) [intent in to avoid deallocation]
 
 
@@ -3146,17 +3146,17 @@ END SUBROUTINE HD_Perturb_u
 !! Do not change this without making sure subroutine HD_init_jacobian is consistant with this routine!
 SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
 
-   TYPE(HydroDyn_ParameterType)              , INTENT(IN   ) :: p                      !< parameters
+   TYPE(HydroDyn_ParameterType)        , INTENT(IN   ) :: p                      !< parameters
    INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
-   TYPE(HydroDyn_ContinuousStateType)        , INTENT(INOUT) :: x                      !< perturbed ED states
+   TYPE(HydroDyn_ContinuousStateType)  , INTENT(INOUT) :: x                      !< perturbed ED states
    REAL( R8Ki )                        , INTENT(  OUT) :: dx                     !< amount that specific state was perturbed
    
 
    ! local variables
    integer(intKi)                                      :: indx
    
-   
+   dx = p%dx(n)
       
    if (n > p%WAMIT%SS_Exctn%N) then
       indx = n - p%WAMIT%SS_Exctn%N
@@ -3173,9 +3173,9 @@ SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
 !! Do not change this packing without making sure subroutine hydrodyn::HD_init_jacobian is consistant with this routine!
 SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    
-   TYPE(HydroDyn_ParameterType)            , INTENT(IN   ) :: p         !< parameters
-   TYPE(HydroDyn_OutputType)               , INTENT(IN   ) :: y_p       !< HD outputs at \f$ u + \Delta u \f$ or \f$ x + \Delta x \f$ (p=plus)
-   TYPE(HydroDyn_OutputType)               , INTENT(IN   ) :: y_m       !< HD outputs at \f$ u - \Delta u \f$ or \f$ x - \Delta x \f$ (m=minus)   
+   TYPE(HydroDyn_ParameterType)      , INTENT(IN   ) :: p         !< parameters
+   TYPE(HydroDyn_OutputType)         , INTENT(IN   ) :: y_p       !< HD outputs at \f$ u + \Delta u \f$ or \f$ x + \Delta x \f$ (p=plus)
+   TYPE(HydroDyn_OutputType)         , INTENT(IN   ) :: y_m       !< HD outputs at \f$ u - \Delta u \f$ or \f$ x - \Delta x \f$ (m=minus)   
    REAL(R8Ki)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta x \f$
    REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial x_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
    
