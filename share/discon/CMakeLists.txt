@@ -47,7 +47,7 @@ endmacro(set_ifort_posix)
 
 # Customizations for Intel Fortran Compiler on Windows systems
 macro(set_ifort_windows)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qm64 /fpp /real-size:64")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qm64 /fpp /real-size:64 /libs:static")
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
