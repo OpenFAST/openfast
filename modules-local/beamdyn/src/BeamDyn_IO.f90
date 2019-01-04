@@ -2307,6 +2307,7 @@ SUBROUTINE Init_Jacobian_x_z( p, InitOut, ErrStat, ErrMsg)
    !call allocAry(p%dx,               p%dof_node*(p%node_total-1),     'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%LinNames_x, p%Jac_nx*2, 'LinNames_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%RotFrame_x, p%Jac_nx*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, p%Jac_nx*2, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    !CALL AllocAry(InitOut%LinNames_z, p%dof_node*2, 'LinNames_z', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    !CALL AllocAry(InitOut%RotFrame_z, p%dof_node*2, 'RotFrame_z', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
@@ -2319,6 +2320,7 @@ SUBROUTINE Init_Jacobian_x_z( p, InitOut, ErrStat, ErrMsg)
    p%dx(4:6) = 0.2_ReKi*D2R                                     ! deflection states in rad and rad/s
    
    InitOut%RotFrame_x   = p%RotStates
+   InitOut%DerivOrder_x = 2
    
       !......................................
       ! set linearization output names:
