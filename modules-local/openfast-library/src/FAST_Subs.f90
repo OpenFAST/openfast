@@ -414,6 +414,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (allocated(InitOutData_BD(k)%RotFrame_x)) call move_alloc(InitOutData_BD(k)%RotFrame_x, y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%RotFrame_x )
          if (allocated(InitOutData_BD(k)%RotFrame_u)) call move_alloc(InitOutData_BD(k)%RotFrame_u, y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%RotFrame_u )
          if (allocated(InitOutData_BD(k)%IsLoad_u  )) call move_alloc(InitOutData_BD(k)%IsLoad_u  , y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%IsLoad_u   )
+         if (allocated(InitOutData_BD(k)%DerivOrder_x  )) call move_alloc(InitOutData_BD(k)%DerivOrder_x  , y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%DerivOrder_x   )
          
          if (allocated(InitOutData_BD(k)%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%NumOutputs = size(InitOutData_BD(k)%WriteOutputHdr)
          
