@@ -11,15 +11,10 @@
 #   column  10  Units
 # Keyword   ModuleName/ModName  Derived data type   Field type  Variable name      variable dimension   Initial value   for mix language, not used  Description Units
 
+
 include Registry_NWTC_Library.txt
-#include MAP_Fortran_Registry.txt
-usefrom MAP_Fortran       Lin_InitInputType   LOGICAL          linearize          -    
-usefrom         ^         Lin_InitOutputType  CHARACTER(200)   LinNames_y        {:}   
-usefrom         ^         ^                   CHARACTER(200)   LinNames_u        {:}   
-usefrom         ^         ^                   INTEGER          IsLoad_u          {:}   
-usefrom         ^         Lin_ParamType       Integer          Jac_u_indx        {:}{:}
-usefrom         ^         ^                   R8Ki             du                {:}   
-usefrom         ^         ^                   Integer          Jac_ny             -    
+usefrom MAP_Fortran_Registry.txt
+
 ## ============================== Define input types here: ============================================================================================================================================             
 typedef         MAP    InitInputType        DbKi             gravity            -        -999.9               -            "gravity constant"   "[m/s^2]"   
 typedef         ^       ^                   DbKi             sea_density        -        -999.9               -            "sea density"        "[kg/m^3]"
