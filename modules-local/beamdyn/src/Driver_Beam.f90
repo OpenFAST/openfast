@@ -97,8 +97,8 @@ PROGRAM BeamDyn_Driver_Program
       
       ! initialize the BD_InitInput values not in the driver input file
    BD_InitInput%RootName = TRIM(BD_Initinput%InputFile)
-   BD_InitInput%RootDisp = 0.0_R8Ki
-   BD_InitInput%RootOri  = BD_InitInput%GlbRot
+   BD_InitInput%RootDisp = matmul(transpose(BD_InitInput%RootOri),BD_InitInput%GlbPos) - BD_InitInput%GlbPos
+   BD_InitInput%RootVel(1:3) = matmul(BD_InitInput%RootOri, Cross_Product( BD_InitInput%RootVel(4:6), BD_InitInput%GlbPos ))  ! set translational velocities based on rotation and GlbPos.
    BD_InitInput%DynamicSolve = DvrData%DynamicSolve      ! QuasiStatic options handled within the BD code.
  
    t_global = DvrData%t_initial
@@ -126,11 +126,15 @@ PROGRAM BeamDyn_Driver_Program
       ! If the Quasi-Static solve is in use, rerun the initialization with loads at t=0 
       ! (HACK: set in the driver only because computing Jacobians with this option [as in FAST glue code] is problematic)
    BD_OtherState%RunQuasiStaticInit = BD_Parameter%analysis_type == BD_DYN_SSS_ANALYSIS
+
+
+     ! Set the Initial root orientation
+   BD_Input(1)%RootMotion%Orientation(1:3,1:3,1) = DvrData%RootRelInit
       
    call Init_RotationCenterMesh(DvrData, BD_InitInput, BD_Input(1)%RootMotion, ErrStat, ErrMsg)
       CALL CheckError()
 
-   call CreateMultiPointMeshes(DvrData,BD_InitOutput,BD_Parameter, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
+   call CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Parameter, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
    call Transfer_MultipointLoads(DvrData, BD_Output, BD_Input(1), ErrStat, ErrMsg)   
    
    CALL Dvr_InitializeOutputFile(DvrOut,BD_InitOutput,RootName,ErrStat,ErrMsg)
