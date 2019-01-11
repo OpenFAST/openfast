@@ -1,13 +1,16 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-
+about: Report a bug to help us improve
+title: 'Bug report'
+labels: "Type: Bug"
 ---
 
 **Bug description**
+
 A clear and concise description of the bug.
 
 **To Reproduce**
+
 Steps to reproduce the behavior:
 1. Compile with '...'
 2. Run '...' case with '...' settings
@@ -15,13 +18,17 @@ Steps to reproduce the behavior:
 4. See the error
 
 **Expected behavior**
+
 A clear and concise description of what you expected to happen.
 
 **Screenshots**
+
 If applicable, add screenshots to help explain your problem.
 
 **OpenFAST Version**
+
 Please provide as much detail as possible including git commit. The best information is a screenshot of the OpenFAST system description that prints when running OpenFAST:
+
 ```
 **************************************************************************************************
  OpenFAST
@@ -45,9 +52,11 @@ Please provide as much detail as possible including git commit. The best informa
 ```
 
 **System Information (please complete the following information):**
+ 
  - OS: [e.g. Ubuntu 14.04 or macOS 10.12]
  - Compiler: [e.g. GFortran 4.4]
  - Compiler settings: [e.g. CMake flags or other settings]
 
 **Additional context**
+
 Add any other context about the problem here.
