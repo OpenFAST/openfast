@@ -2777,7 +2777,7 @@ SUBROUTINE Linear_MAP_InputSolve_dy( p_FAST, y_FAST, u_MAP, y_ED, MeshMapData, d
       ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
       
       call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-      call Assemble_MAP_dUdy_Motions(y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, MAP_Start, ED_Out_Start, dUdy, .true.)
+      call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, MAP_Start, ED_Out_Start, dUdy, onlyTranslationDisp=.true.)
       
    END IF
    
@@ -3354,7 +3354,7 @@ END SUBROUTINE SumBlockMatrix
 !!      \vec{a}^S \\
 !!      \vec{\alpha}^S \\
 !! \end{matrix} \right\} \f$
-SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dUdy, skipRotVel)
+SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dUdy, skipRotVel, onlyTranslationDisp)
    TYPE(MeshType),    INTENT(IN)     :: y             !< the output (source) mesh that is transfering motions
    TYPE(MeshType),    INTENT(IN)     :: u             !< the input (destination) mesh that is receiving motions
    TYPE(MeshMapType), INTENT(IN)     :: MeshMap       !< the mesh mapping from y to u
@@ -3362,6 +3362,7 @@ SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dU
    INTEGER(IntKi),    INTENT(IN)     :: BlockColStart !< the index of the column defining the block of dUdy to be set
    REAL(R8Ki),        INTENT(INOUT)  :: dUdy(:,:)     !< full Jacobian matrix
    LOGICAL, OPTIONAL, INTENT(IN)     :: skipRotVel    !< if present and true, we skip the rotational velocity and acceleration fields and return early
+   LOGICAL, OPTIONAL, INTENT(IN)     :: onlyTranslationDisp    !< if present and true, we set only the destination translationDisp fields and return early
    
    INTEGER(IntKi)                    :: row
    INTEGER(IntKi)                    :: col
@@ -3385,7 +3386,12 @@ SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dU
       col = BlockColStart + y%NNodes*3       ! start of y%Orientation field [skip 1 field with 3 components]
       call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
 
-      
+
+      if (PRESENT(onlyTranslationDisp)) then
+         if (onlyTranslationDisp) return ! destination includes only the translational displacement field, so we'll just return
+      end if
+
+
       !*** row for orientation ***
          ! source orientation to destination orientation:
       row = BlockRowStart + u%NNodes*3       ! start of u%Orientation field [skip 1 field with 3 components]
@@ -3452,46 +3458,6 @@ SUBROUTINE Assemble_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dU
 
 
 END SUBROUTINE Assemble_dUdy_Motions
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This routine assembles the linearization matrices for transfer of motion fields between two meshes.
-!> It set the following block matrix, which is the dUdy block for transfering output (source) mesh \f$y\f$ to the
-!! input (destination) mesh \f$u\f$:\n
-!! \f$ M = - \begin{bmatrix} M_{mi}      & M_{f_{\times p}} \\
-!!                           0           & 0                \\
-!! \end{bmatrix} \f$
-!! where the matrices correspond to 
-!! \f$ \left\{ \begin{matrix}
-!!      \vec{u}^S \\
-!! \end{matrix} \right\} \f$
-SUBROUTINE Assemble_MAP_dUdy_Motions(y, u, MeshMap, BlockRowStart, BlockColStart, dUdy, skipRotVel)
-   TYPE(MeshType),    INTENT(IN)     :: y             !< the output (source) mesh that is transfering motions
-   TYPE(MeshType),    INTENT(IN)     :: u             !< the input (destination) mesh that is receiving motions
-   TYPE(MeshMapType), INTENT(IN)     :: MeshMap       !< the mesh mapping from y to u
-   INTEGER(IntKi),    INTENT(IN)     :: BlockRowStart !< the index of the row defining the block of dUdy to be set
-   INTEGER(IntKi),    INTENT(IN)     :: BlockColStart !< the index of the column defining the block of dUdy to be set
-   REAL(R8Ki),        INTENT(INOUT)  :: dUdy(:,:)     !< full Jacobian matrix
-   LOGICAL, OPTIONAL, INTENT(IN)     :: skipRotVel    !< if present and true, we skip the rotational velocity and acceleration fields and return early
-   
-   INTEGER(IntKi)                    :: row
-   INTEGER(IntKi)                    :: col
-   
-!! \f$M_{mi}\f$ is modmesh_mapping::meshmaplinearizationtype::mi (motion identity)\n
-!! \f$M_{f_{\times p}}\f$ is modmesh_mapping::meshmaplinearizationtype::fx_p \n
-
-
-      !*** row for translational displacement ***
-         ! source translational displacement to destination translational displacement:
-      row = BlockRowStart                    ! start of u%TranslationDisp field
-      col = BlockColStart                    ! start of y%TranslationDisp field
-      call SetBlockMatrix( dUdy, MeshMap%dM%mi, row, col )
-
-         ! source orientation to destination translational displacement:
-      row = BlockRowStart                    ! start of u%TranslationDisp field
-      col = BlockColStart + y%NNodes*3       ! start of y%Orientation field [skip 1 field with 3 components]
-      call SetBlockMatrix( dUdy, MeshMap%dM%fx_p, row, col )
-
-END SUBROUTINE Assemble_MAP_dUdy_Motions
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine assembles the linearization matrices for transfer of load fields between two meshes.
 !> It set the following block matrix, which is the dUdy block for transfering output (source) mesh \f$y\f$ to the
