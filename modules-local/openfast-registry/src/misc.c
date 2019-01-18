@@ -5,6 +5,8 @@
 #ifdef _WIN32
 # define rindex(X,Y) strrchr(X,Y)
 # define index(X,Y) strchr(X,Y)
+# include <process.h>
+# define getpid _getpid
 #else
 # include <strings.h>
 # include <sys/types.h>
