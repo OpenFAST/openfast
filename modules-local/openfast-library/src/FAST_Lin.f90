@@ -1676,19 +1676,11 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
          ! ED inputs on blade from AeroDyn
       IF (p_FAST%CompElast == Module_ED) THEN
          
-            ! blades:
-         AD_Start_Bl = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) &
-                     + u_AD%TowerMotion%NNodes * 9  & ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components
-                     + u_AD%HubMotion%NNodes   * 9    ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_RotationVel) with 3 components
-   
-         do k = 1,size(u_AD%BladeRootMotion)         
-            AD_Start_Bl = AD_Start_Bl + u_AD%BladeRootMotion(k)%NNodes * 3 ! 1 field (MASKID_Orientation) with 3 components
-         end do
-         ! next is u_AD%BladeMotion(k); note that it has 3 fields and we only need 1
-      
          ED_Start_mt = y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
+         
          DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
             ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(k)%NNodes*3 ! skip the forces on this blade
+            AD_Start_Bl = Indx_u_AD_Blade_Start(u_AD, y_FAST, k) 
             
             CALL Linearize_Line2_to_Point( y_AD%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1699,7 +1691,6 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
             end if
             
                ! get starting index of next blade
-            AD_Start_Bl = AD_Start_Bl + u_AD%BladeMotion(k)%Nnodes * 9  ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components                         
             ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(k)%NNodes* 3  ! skip the moments on this blade
                
          END DO
@@ -1709,15 +1700,8 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
       ! ED inputs on tower from AD:
       
       IF ( y_AD%TowerLoad%Committed ) THEN
-         ED_Start_mt = y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
-         if (allocated(u_ED%BladePtLoads)) then
-            do i=1,size(u_ED%BladePtLoads)
-               ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(i)%NNodes * 6  ! 3 forces + 3 moments at each node on each blade
-            end do      
-         end if
-         ED_Start_mt = ED_Start_mt + u_ED%PlatformPtMesh%NNodes * 6      &      ! 3 forces + 3 moments at each node
-                                   + u_ED%TowerPtLoads%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
-         
+         ED_Start_mt = Indx_u_ED_Tower_Start(u_ED, y_FAST) &
+                       + u_ED%TowerPtLoads%NNodes   * 3             ! 3 forces at each node (we're going to start at the moments)
          
          CALL Linearize_Line2_to_Point( y_AD%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2, u_AD%TowerMotion, y_ED%TowerLn2Mesh )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
@@ -1736,12 +1720,8 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    !..........
    
    IF ( p_FAST%CompElast == Module_BD ) THEN ! see routine U_ED_SD_HD_BD_Orca_Residual() in SolveOption1
-
-         ED_Start_mt = y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
-         ! u_ED%BladePtLoads(i)%NNodes = 0 here
-         ED_Start_mt = ED_Start_mt + u_ED%PlatformPtMesh%NNodes * 6      &      ! 3 forces + 3 moments at each node
-                                   + u_ED%TowerPtLoads%NNodes   * 6      &      ! 3 forces + 3 moments at each node
-                                   + u_ED%HubPtLoad%NNodes      * 3             ! 3 forces at the hub (so we start at the moments)
+         ED_Start_mt = Indx_u_ED_Hub_Start(u_ED, y_FAST) &
+                       + u_ED%HubPtLoad%NNodes      * 3             ! 3 forces at the hub (so we start at the moments)
    
          ! Transfer BD loads to ED hub input:
          ! we're mapping loads, so we also need the sibling meshes' displacements:
@@ -1769,22 +1749,12 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
             ! we're just going to assume u_ED%PlatformPtMesh is committed
                
          if ( HD%y%AllHdroOrigin%Committed  ) then ! meshes for floating
-
-            ED_Start_mt = y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
-            if (allocated(u_ED%BladePtLoads)) then
-               do i=1,size(u_ED%BladePtLoads)
-                  ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(i)%NNodes * 6  ! 3 forces + 3 moments at each node on each blade
-               end do      
-            end if
-            ED_Start_mt = ED_Start_mt + u_ED%PlatformPtMesh%NNodes * 3         ! 3 forces at each node (we're going to start at the moments)
+            ED_Start_mt = Indx_u_ED_Platform_Start(u_ED, y_FAST) &
+                          + u_ED%PlatformPtMesh%NNodes * 3         ! 3 forces at each node (we're going to start at the moments)
             
                ! Transfer HD load outputs to ED PlatformPtMesh input:
                ! we're mapping loads, so we also need the sibling meshes' displacements:
-            if ( HD%Input(1)%Morison%DistribMesh%Committed ) then
-               HD_Start = y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
-               HD_Start = HD_Start + HD%Input(1)%Morison%DistribMesh%NNodes * 18      &      ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
-                                   + HD%Input(1)%Morison%LumpedMesh%NNodes  * 18             ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node     
-            end if
+            HD_Start = Indx_u_HD_PlatformRef_Start(HD%Input(1), y_FAST)
             
             call Linearize_Point_to_Point( HD%y%AllHdroOrigin, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%Mesh, y_ED%PlatformPtMesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
                call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1803,14 +1773,8 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    ! LIN-TODO: Implement
    if ( p_FAST%CompMooring == Module_MAP ) then 
 
-      ED_Start_mt = y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%LinStartIndx(LIN_INPUT_COL)
-      if (allocated(u_ED%BladePtLoads)) then
-         do i=1,size(u_ED%BladePtLoads)
-            ED_Start_mt = ED_Start_mt + u_ED%BladePtLoads(i)%NNodes * 6  ! 3 forces + 3 moments at each node on each blade
-         end do      
-      end if
-      ED_Start_mt = ED_Start_mt + u_ED%PlatformPtMesh%NNodes * 3         ! 3 forces at each node (we're going to start at the moments)
-            
+      ED_Start_mt = Indx_u_ED_Platform_Start(u_ED, y_FAST) &
+                     + u_ED%PlatformPtMesh%NNodes * 3         ! 3 forces at each node (we're going to start at the moments)
       
          ! Transfer MAP loads to ED PlatformPtmesh input:
          ! we're mapping loads, so we also need the sibling meshes' displacements:
@@ -1830,6 +1794,7 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
    end if
       
 END SUBROUTINE Linear_ED_InputSolve_du
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine forms the dU^{BD}/du^{BD} and dU^{BD}/du^{AD} blocks (BD row) of dUdu. (i.e., how do changes in the AD and BD inputs 
