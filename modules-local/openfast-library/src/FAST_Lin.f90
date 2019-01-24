@@ -1980,16 +1980,9 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMapData,
    END IF
    
    
-      ! index for u_AD%BladeMotion(1)%translationDisp field
-   AD_Start_td = y_FAST%Lin%Modules(MODULE_AD)%Instance(1)%LinStartIndx(LIN_INPUT_COL) &
-               + u_AD%TowerMotion%NNodes * 9  & ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_TRANSLATIONVel) with 3 components
-               + u_AD%HubMotion%NNodes   * 9    ! 3 fields (MASKID_TRANSLATIONDISP,MASKID_Orientation,MASKID_RotationVel) with 3 components
-   
-   do k = 1,size(u_AD%BladeRootMotion)
-      AD_Start_td = AD_Start_td + u_AD%BladeRootMotion(k)%NNodes * 3 ! 1 field (MASKID_Orientation) with 3 components
-   end do
    
    DO k=1,size(u_AD%BladeMotion)
+      AD_Start_td = Indx_u_AD_Blade_Start(u_AD, y_FAST, k) ! index for u_AD%BladeMotion(k)%translationDisp field
 
          !AD is the destination here, so we need tv_ud
       if (allocated( MeshMapData%BDED_L_2_AD_L_B(k)%dM%tv_ud)) then
@@ -1998,9 +1991,6 @@ SUBROUTINE Linear_AD_InputSolve_du( p_FAST, y_FAST, u_AD, y_ED, BD, MeshMapData,
 
          call SetBlockMatrix( dUdu, MeshMapData%BDED_L_2_AD_L_B(k)%dM%tv_ud, AD_Start_tv, AD_Start_td )
       end if
-
-         ! index for u_AD%BladeMotion(k+1)%translationDisp field
-      AD_Start_td = AD_Start_td + u_AD%BladeMotion(k)%NNodes * 9 ! 3 fields (TranslationDisp, Orientation, TranslationVel) with 3 components
 
    END DO
       
@@ -2189,12 +2179,13 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
             HD_Out_Start = Indx_y_HD_AllHdro_Start(HD%y, y_FAST)
             ED_Start     = Indx_u_ED_Platform_Start(u_ED, y_FAST) ! start of u_ED%PlatformPtMesh%TranslationDisp field
             call Assemble_dUdy_Loads(HD%y%AllHdroOrigin, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ED_Start, HD_Out_Start, dUdy)
-         end if
          
-            ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
-         ED_Start = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
-         ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-         call SetBlockMatrix( dUdy, MeshMapData%HD_W_P_2_ED_P%dM%m_uD, ED_Start, ED_Out_Start )
+               ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
+            ED_Start = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
+            ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
+            call SetBlockMatrix( dUdy, MeshMapData%HD_W_P_2_ED_P%dM%m_uD, ED_Start, ED_Out_Start )
+! maybe this should be SumBlockMatrix with future changes to linearized modules???            
+         end if
 
             
    end if
@@ -2209,12 +2200,12 @@ SUBROUTINE Linear_ED_InputSolve_dy( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
          MAP_Out_Start = y_FAST%Lin%Modules(MODULE_MAP)%Instance(1)%LinStartIndx(LIN_OUTPUT_COL)
          ED_Start      = Indx_u_ED_Platform_Start(u_ED, y_FAST) ! start of u_ED%PlatformPtMesh%TranslationDisp field
          call Assemble_dUdy_Loads(MAPp%y%ptFairLeadLoad, u_ED%PlatformPtMesh, MeshMapData%Mooring_P_2_ED_P, ED_Start, MAP_Out_Start, dUdy)
-      end if
       
-      ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
-      ED_Start = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
-      ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-      call SumBlockMatrix( dUdy, MeshMapData%Mooring_P_2_ED_P%dM%m_uD, ED_Start, ED_Out_Start )
+         ! ED translation displacement-to-ED moment transfer (dU^{ED}/dy^{ED}):
+         ED_Start = Indx_u_ED_Platform_Start(u_ED, y_FAST) + u_ED%PlatformPtMesh%NNodes*3   ! start of u_ED%PlatformPtMesh%Moment field (skip the ED forces)
+         ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
+         call SumBlockMatrix( dUdy, MeshMapData%Mooring_P_2_ED_P%dM%m_uD, ED_Start, ED_Out_Start )
+      end if
          
    end if
    
