@@ -1063,26 +1063,26 @@
 		<File RelativePath="..\..\build\types-files\MAP_Fortran_Types.f90"/>
 		<File RelativePath="..\..\modules-ext\map\src\MAP_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="" Description="" Outputs=""/></FileConfiguration>
-			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="" Description="" Outputs=""/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Debug_Matlab|Win32">
+			<FileConfiguration Name="Debug_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release|Win32">
+			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
-			<FileConfiguration Name="Release_Double|x64">
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Matlab|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Map" Description="Running Registry for Map" Outputs="..\..\build\types-files\Map_Types.f90"/></FileConfiguration></File>

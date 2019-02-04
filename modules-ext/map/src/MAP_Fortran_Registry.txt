@@ -13,7 +13,7 @@
 
 include Registry_NWTC_Library.txt
 
-typedef       MAP_Fortran  Lin_InitInputType   LOGICAL          linearize          -         .false.             -            "Flag that tells this module if the glue code wants to linearize.  (fortran-only)" -
+typedef       MAP_Fortran/MAP_Fortran  Lin_InitInputType   LOGICAL          linearize          -         .false.             -            "Flag that tells this module if the glue code wants to linearize.  (fortran-only)" -
 typedef         ^          Lin_InitOutputType  CHARACTER(200)   LinNames_y        {:}        ""                  -            "second line of output file contents: units (fortran-only)" -
 typedef         ^          ^                   CHARACTER(200)   LinNames_u        {:}        ""                  -            "Names of the inputs used in linearization (fortran-only)" -
 typedef         ^          ^                   LOGICAL          IsLoad_u          {:}        -                   -            "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix) (fortran-only)" -
