@@ -1314,16 +1314,7 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg
          end if
       end if
       
-         ! make a copy of outputs because we will need two for the central difference computations (with orientations)
-      call map_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      call map_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         if (ErrStat>=AbortErrLev) then
-            call cleanup()
-            return
-         end if
-         
+    
       do i=1,size(p%LinParams%Jac_u_indx,1)
          
             ! get u_op + delta u
@@ -1332,8 +1323,14 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg
          call map_Perturb_u( p, i, 1, u_perturb, delta )
 
          call MAP_CopyConstrState( z, z_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later   
+            
+         DO j = 1,u_perturb%PtFairDisplacement%NNodes
+             u_perturb%X(j) = u_perturb%PtFairDisplacement%Position(1,j) + u_perturb%PtFairDisplacement%TranslationDisp(1,j)
+             u_perturb%Y(j) = u_perturb%PtFairDisplacement%Position(2,j) + u_perturb%PtFairDisplacement%TranslationDisp(2,j)
+             u_perturb%Z(j) = u_perturb%PtFairDisplacement%Position(3,j) + u_perturb%PtFairDisplacement%TranslationDisp(3,j)
+         END DO
+         
             ! compute constraint state for u_op + delta u
          call MSQS_UpdateStates( time       , &
                             interval        , & 
@@ -1352,18 +1349,30 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg
     
          
             ! compute y at u_op + delta u
-         call map_CalcOutput( t, u_perturb, p, x, xd, z_perturb, OtherState, y_p, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-         
+         call map_CalcOutput( t, u_perturb, p, x, xd, z_perturb, OtherState, y, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later  
+            
+            ! We need to do this copy inside the loop because MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
+         call map_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)    
             
             ! get u_op - delta u
          call map_CopyInput( u, u_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later
+            
+         ! Minus perturbation
          call map_Perturb_u( p, i, -1, u_perturb, delta )
 
          call MAP_CopyConstrState( z, z_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later  
+            
+         
+          DO j = 1,u_perturb%PtFairDisplacement%NNodes
+             u_perturb%X(j) = u_perturb%PtFairDisplacement%Position(1,j) + u_perturb%PtFairDisplacement%TranslationDisp(1,j)
+             u_perturb%Y(j) = u_perturb%PtFairDisplacement%Position(2,j) + u_perturb%PtFairDisplacement%TranslationDisp(2,j)
+             u_perturb%Z(j) = u_perturb%PtFairDisplacement%Position(3,j) + u_perturb%PtFairDisplacement%TranslationDisp(3,j)
+          END DO
+          
                         ! compute constraint state for u_op + delta u
          call MSQS_UpdateStates( time       , &
                             interval        , & 
@@ -1380,9 +1389,13 @@ SUBROUTINE MAP_JacobianPInput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg
             call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
 
             ! compute y at u_op - delta u
-         call map_CalcOutput( t, u_perturb, p, x, xd, z_perturb, OtherState, y_m, ErrStat2, ErrMsg2 ) 
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
-                    
+         call map_CalcOutput( t, u_perturb, p, x, xd, z_perturb, OtherState, y, ErrStat2, ErrMsg2 ) 
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later         
+            
+            ! We need to do this copy inside the loop because MAP++ (in the c-code) requires that the output data structure be y, which was used when MAP++ was initialized.
+         call map_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)       
+            
             ! get central difference:  note: assumes delta is equivalent for both perturb_u calls.           
          call Compute_dY( p, y_p, y_m, delta, dYdu(:,i) )
          
