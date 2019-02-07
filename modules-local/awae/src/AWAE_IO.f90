@@ -148,6 +148,7 @@ subroutine ReadLowResWindFile(n, p, Vamb_Low, errStat, errMsg)
    errMsg  = ""
   
    FileName = trim(p%WindFilePath)//trim(PathSep)//"Low"//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"
+   Un = 0; ! Initialization different from -1, important to prevent file closing 
    call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
       if (ErrStat >= AbortErrLev) return
    call ReadVTK_SP_vectors( FileName, Un, dims, Vamb_Low, ErrStat, ErrMsg )
@@ -183,6 +184,7 @@ subroutine ReadHighResWindFile(nt, n, p, Vamb_high, errStat, errMsg)
    errMsg  = ""
    
    FileName = trim(p%WindFilePath)//trim(PathSep)//"HighT"//trim(num2lstr(nt))//trim(PathSep)//"Amb.t"//trim(num2lstr(n))//".vtk"
+   Un = 0; ! Initialization different from -1, important to prevent file closing 
    call ReadVTK_SP_info( FileName, descr, dims, origin, gridSpacing, vecLabel, Un, ErrStat, ErrMsg ) 
       if (ErrStat >= AbortErrLev) return
    call ReadVTK_SP_vectors( FileName, Un, dims, Vamb_high, ErrStat, ErrMsg ) 
