@@ -61,7 +61,7 @@ A major restructuration occured between FAST7 and FAST8. The Matlab scripts `Con
 In FAST7 a typical wind turbine model would only consist of 4 files: a main file (`.fst`), an aerodyn14 file, and elastodyn files for the blade and tower.
 In FAST8, the files are splitted with: a main file (`.fst`) and one input file per module (plus the files included by these modules such as the elastodyn files for the blade and tower).
 
-** Changes in AeroDyn **
+**Changes in AeroDyn**
 The format of the main aerodyn file has changed significantly. The script `ConvertFAST7to8.m` should perform some these conversions.
 
 The aerodynamic polar files also need to be converted from Aerodyn14 to AeroDyn15 format. The matlab script `WritePolarAD15.m`, which converts the polars will be added in the near future in the `matlab-toolbox` repository.
@@ -69,7 +69,7 @@ The aerodynamic polar files also need to be converted from Aerodyn14 to AeroDyn1
 One major difference is in the definition of the blade radius in the Aerodyn file. In FAST7, the variable `RNodes` indicates the location of a blade station point along the blade starting from the rotor apex. In AeroDyn15 the variable `BlSpn` starts at the root of the blade and not at the rotor apex.
 
 
-** Changes in ElastoDyn Blade and Tower files**
+**Changes in ElastoDyn Blade and Tower files**
 
 * The parameters `CalcTMode` and `CalcBMode` on line 5 of the ElastoDyn tower and blade file have been removed. 
 
