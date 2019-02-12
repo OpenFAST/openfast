@@ -3156,8 +3156,9 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       CHARACTER(ErrMsgLen)          :: ErrMsg2  
    
       INTEGER(IntKi)                :: i, indx_last
+      REAL(R8Ki)                    :: lambda_m(3)
+      REAL(R8Ki)                    :: lambda_p(3)
       REAL(R8Ki)                    :: smallAngles(3)
-      REAL(R8Ki)                    :: orientation(3,3)
       LOGICAL                       :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
 
       if (present(FieldMask)) then
@@ -3177,10 +3178,10 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    
       if (Mask(MASKID_ORIENTATION)) then
          do i=1,M_p%NNodes
-            orientation = transpose(M_m%Orientation(:,:,i))
-            orientation = matmul(orientation, M_p%Orientation(:,:,i))
+            call DCM_logMap( M_m%Orientation(:,:,i), lambda_m, ErrStat2, ErrMsg2 )
+            call DCM_logMap( M_p%Orientation(:,:,i), lambda_p, ErrStat2, ErrMsg2 )
             
-            smallAngles = GetSmllRotAngs( orientation, ErrStat2, ErrMsg2 )
+            smallAngles = lambda_m - lambda_p
 
             indx_last  = indx_first + 2 
             dY(indx_first:indx_last) = smallAngles
