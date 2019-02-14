@@ -3180,8 +3180,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
          do i=1,M_p%NNodes
             call DCM_logMap( M_m%Orientation(:,:,i), lambda_m, ErrStat2, ErrMsg2 )
             call DCM_logMap( M_p%Orientation(:,:,i), lambda_p, ErrStat2, ErrMsg2 )
-            
-            smallAngles = lambda_m - lambda_p
+
+            smallAngles = lambda_p - lambda_m
 
             indx_last  = indx_first + 2 
             dY(indx_first:indx_last) = smallAngles
