@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
-! Copyright (C) 2016-2017  Envision Energy USA, LTD       
+! Copyright (C) 2016-2018  Envision Energy USA, LTD
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ MODULE BeamDyn_IO
    USE BeamDyn_Types
    USE BeamDyn_Subs
    USE NWTC_Library
-   USE NWTC_LAPACK
+   !USE NWTC_LAPACK
 
    IMPLICIT NONE
 
@@ -564,7 +564,6 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
    LOGICAL                      :: Echo                         ! Determines if an echo file should be written
    INTEGER(IntKi)               :: IOS                          ! Temporary Error status
    CHARACTER(ErrMsgLen)         :: ErrMsg2                      ! Temporary Error message
-   CHARACTER(ErrMsgLen)         :: ErrMsg_NoBldNdOuts           ! Temporary Error message
    character(*), parameter      :: RoutineName = 'BD_ReadPrimaryFile'
 
    CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
@@ -648,7 +647,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
 
    END DO
 
-   CALL ReadVar(UnIn,InputFile,InputFileData%analysis_type,"analysis_type", "Analysis type",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,InputFile,InputFileData%QuasiStaticInit,"QuasiStaticInit", "QuasiStaticInit",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL ReadVar(UnIn,InputFile,InputFileData%rhoinf,"rhoinf", "Coefficient for GA2",ErrStat2,ErrMsg2,UnEc)
@@ -692,13 +691,28 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
       END IF
 
    Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "load_retries", "Tolerance for stopping criterion", ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+          InputFileData%load_retries = 20
+      ELSE ! If it's not "default", read this variable;
+         READ( Line, *, IOSTAT=IOS) InputFileData%load_retries
+            CALL CheckIOS ( IOS, InputFile, 'load_retries', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+
+   Line = ""
    CALL ReadVar( UnIn, InputFile, Line, "NRMax", "Max number of interations in Newton-Raphson algorithm", ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
-
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
           InputFileData%NRMax = 10
@@ -724,10 +738,89 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
 
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_fd','finite difference for tangent stiffness flag', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_fd = .FALSE.
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_fd
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_fd', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+   if (InputFileData%tngt_stf_fd) CALL WrScr( 'Using finite difference to compute tangent stiffness matrix'//NewLine )
+   !   ! RelStates - Define states relative to root motion during linearization? (flag) [used only when linearizing]
+   !CALL ReadVar(UnIn,InputFile,InputFileData%RelStates,"RelStates", "Define states relative to root motion during linearization? (flag) [used only when linearizing]",ErrStat2,ErrMsg2,UnEc)
+   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   InputFileData%RelStates = .false.  ! this doesn't seem to be needed anymore (and I think there is a problem with using it in MBC3)
+
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_comp','compare tangent stiffness using finite difference flag', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_comp = .FALSE.
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_comp
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_comp', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+   if (InputFileData%tngt_stf_comp) CALL WrScr( 'WARNING: tngt_stf_comp set to true. Output will be verbose'//NewLine )
+
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_pert','perturbation size for finite differenced tangent stiffness', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_pert = 1.0D-06
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_pert
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_pert', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+
+   Line = ""
+   CALL ReadVar(UnIn, InputFile, Line, 'tngt_stf_difftol','tolerance for difference between analytical and fd tangent stiffness', ErrStat2, ErrMsg2, UnEc)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+       InputFileData%tngt_stf_difftol = 1.0D-01
+   ELSE ! If it's not "default", read this variable;
+       READ( Line, *, IOSTAT=IOS) InputFileData%tngt_stf_difftol
+       CALL CheckIOS ( IOS, InputFile, 'tngt_stf_difftol', NumType, ErrStat2, ErrMsg2 )
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+
+   ! RotStates - Orient states in the rotating frame during linearization? (flag) [used only when linearizing]
+   CALL ReadVar(UnIn,InputFile,InputFileData%RotStates,"RotStates", "Orient states in the rotating frame during linearization? (flag) [used only when linearizing]",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
+
+   ! return on error at end of section
+   if (ErrStat >= AbortErrLev) then
+       call cleanup()
+       return
+   end if
 
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)
@@ -900,7 +993,6 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    INTEGER(IntKi)             :: j
 
    REAL(BDKi)                 :: temp66(6,6)
-   REAL(BDKi)                 :: temp6(6)
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -952,21 +1044,13 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    CALL ReadCom(UnIn,BldFile,'units',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL ReadAry(UnIn,BldFile,temp6,6,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
+   CALL ReadAry(UnIn,BldFile,BladeInputFileData%beta,6,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
-
-      ! Change to BD coordinates
-   BladeInputFileData%beta(1) = temp6(3)
-   BladeInputFileData%beta(2) = temp6(1)
-   BladeInputFileData%beta(3) = temp6(2)
-   BladeInputFileData%beta(4) = temp6(6)
-   BladeInputFileData%beta(5) = temp6(4)
-   BladeInputFileData%beta(6) = temp6(5)
 
 
 !  -------------- DISTRIBUTED PROPERTIES--------------------------------------------
@@ -1325,28 +1409,31 @@ END SUBROUTINE SetOutParam
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the BeamDyn input files.
-SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
+SUBROUTINE BD_ValidateInputData( InitInp, InputFileData, ErrStat, ErrMsg )
 
       ! Passed variables:
 
-   TYPE(BD_InputFile),   INTENT(IN   ):: InputFileData                       !< All the data in the BeamDyn input file
-   INTEGER(IntKi),       INTENT(  OUT):: ErrStat                             !< Error status
-   CHARACTER(*),         INTENT(  OUT):: ErrMsg                              !< Error message
+   TYPE(BD_InitInputType),  INTENT(IN   )  :: InitInp           !< Input data for initialization routine
+   TYPE(BD_InputFile),      INTENT(IN   )  :: InputFileData     !< All the data in the BeamDyn input file
+   INTEGER(IntKi),          INTENT(  OUT)  :: ErrStat           !< Error status
+   CHARACTER(*),            INTENT(  OUT)  :: ErrMsg            !< Error message
 
 
       ! local variables
-   INTEGER(IntKi)                     :: i,j                                 ! loop counters
-   INTEGER(IntKi)                     :: nNodes                              ! number of nodes that will be on the BldMotion mesh
-   REAL(SiKi)                         :: r1, r2                              ! use single-precision real numbers for validity check
+   INTEGER(IntKi)                          :: i,j                                 ! loop counters
+   INTEGER(IntKi)                          :: nNodes                              ! number of nodes that will be on the BldMotion mesh
+   REAL(SiKi)                              :: r1, r2                              ! use single-precision real numbers for validity check
 
-   CHARACTER(*), PARAMETER            :: RoutineName = 'BD_ValidateInputData'
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'BD_ValidateInputData'
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
 
-   IF(InputFileData%analysis_type .NE. 1 .AND. InputFileData%analysis_type .NE. 2) &
-       CALL SetErrStat ( ErrID_Fatal, 'Analysis type must be 1 (static) or 2 (dynamic)', ErrStat, ErrMsg, RoutineName )
+      ! QuasiStaticInit only valid with DynamicSolve.  Warn and ignore
+   IF(InputFileData%QuasiStaticInit .AND. (.NOT. InitInp%DynamicSolve)) & 
+      CALL SetErrStat ( ErrID_Warn, 'QuasiStaticInit option only valid with dynamic solve.  Ignoring.', ErrStat, ErrMsg, RoutineName )
+
    IF(InputFileData%rhoinf .LT. 0.0_BDKi .OR. InputFileData%rhoinf .GT. 1.0_BDKi) &
        CALL SetErrStat ( ErrID_Fatal, 'Numerical damping parameter \rho_{inf} must be in the range of [0.0,1.0]', ErrStat, ErrMsg, RoutineName )
    IF(InputFileData%quadrature .NE. GAUSS_QUADRATURE .AND. InputFileData%quadrature .NE. TRAP_QUADRATURE) &
@@ -1359,15 +1446,25 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
        CALL SetErrStat ( ErrID_Fatal, 'member_total must be greater than 0', ErrStat, ErrMsg, RoutineName )
    IF(InputFileData%member_total .NE. 1 .AND. InputFileData%quadrature .EQ. TRAP_QUADRATURE) &
        CALL SetErrStat ( ErrID_Fatal, 'Trapzoidal quadrature only allows one member (element)', ErrStat, ErrMsg, RoutineName )
-   IF(InputFileData%kp_total .LT. 3 ) then
+   IF(InputFileData%kp_total .LT. 3 ) THEN
        CALL SetErrStat ( ErrID_Fatal, 'kp_total must be greater than or equal to 3', ErrStat, ErrMsg, RoutineName )
-   else IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,3), 0.0_BDKi ) ) then ! added this in the "else" in case InputFileData%kp_coordinate isn't allocated with at least 1 point
-      CALL SetErrStat(ErrID_Fatal, 'kp_zr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
-   end if
+   ELSE ! added this in the "else" in case InputFileData%kp_coordinate isn't allocated with at least 1 point
+      IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,3), 0.0_BDKi ) ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'kp_zr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
+      END IF
+         !bjj: added checks on kp_xr(1) and kp_yr(1) because BeamDyn's equations currently assume that the blade root and the first FE node 
+         !     are at the same point (i.e., u%BladeRoot is located at the first finite-element node)
+      IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,2), 0.0_BDKi ) ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'kp_yr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
+      END IF
+      IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,1), 0.0_BDKi ) ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'kp_xr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
+      END IF
+   END IF
 
    DO i=1,InputFileData%member_total
        IF(InputFileData%kp_member(i) .LT. 3) THEN
-          CALL SetErrStat(ErrID_Fatal,'There must be at least three key points in '//TRIM(Num2LStr(i))//'th member.', ErrStat, ErrMsg,RoutineName)
+          CALL SetErrStat(ErrID_Fatal,'There must be at least three key points in member number '//TRIM(Num2LStr(i))//'.', ErrStat, ErrMsg,RoutineName)
           EXIT
        ENDIF
    ENDDO
@@ -1399,11 +1496,10 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
       ! Check that the values for the damping are similar.
       !  According to Qi, the damping values mu1 .. mu6 should be of the same order of magnitude.  If they aren't, BeamDyn will likely fail badly.
       !  Will assume for moment that they must be within a factor of 5 of the first value given.
-   DO j=1,6
-      IF ( maxval( abs(InputFileData%InpBl%beta / InputFileData%InpBl%beta(J) ) ) > 5.0_R8Ki ) THEN
-         call SetErrStat( ErrID_Warn,'Damping values in blade file are not of similar order of magnitude! BeamDyn will likely not converge!', ErrStat, ErrMsg, RoutineName )
-      ENDIF
-   ENDDO
+!FIXME: Check a valid range sometime.
+   IF ( (maxval(abs(InputFileData%InpBl%beta)) / minval(abs(InputFileData%InpBl%beta)) > 10.0_R8Ki) .AND. InputFileData%InpBl%damp_flag == 1 ) THEN
+      call SetErrStat( ErrID_Warn,'Damping values in blade file are not of similar order of magnitude. BeamDyn may not converge!', ErrStat, ErrMsg, RoutineName )
+   ENDIF
 
 
    DO j=1,InputFileData%InpBl%station_total
@@ -1434,8 +1530,16 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    else
 
    ! Check to see if all OutNd(:) analysis points are existing analysis points:
-         nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total  ! = p%nodes_per_elem*p%elem_total (number of nodes on y%BldMotion mesh)
-      
+!bjj: FIXME!!!! THIS ISN'T NECESSARIALLY THE NUMBER OF NODES ON THIS MESH
+!      IF (p%BldMotionNodeLoc == BD_MESH_QP) THEN
+         if(InputFileData%quadrature .EQ. TRAP_QUADRATURE) then
+            nNodes = (InputFileData%InpBl%station_total - 1)*InputFileData%refine + 1  ! number of nodes on y%BldMotion mesh
+         else
+            nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total  ! = p%nodes_per_elem*p%elem_total (number of nodes on y%BldMotion mesh)
+         end if
+!      ELSE
+!         nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total + 1
+!      END IF
 
       do j=1,InputFileData%NNodeOuts
          if ( InputFileData%OutNd(j) < 1_IntKi .OR. InputFileData%OutNd(j) > nNodes ) then
@@ -1447,6 +1551,19 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
 
    end if
 
+   !..................
+   ! check for linearization
+   !..................
+   if (InitInp%Linearize) then
+      if (.NOT. InitInp%DynamicSolve) THEN
+         call SetErrStat( ErrID_Fatal, 'Static analysis cannot be used for BeamDyn linearization. Set DynamicSolve to TRUE.', ErrStat, ErrMsg, RoutineName )
+      end if
+      
+      if (InputFileData%UsePitchAct) then
+         call SetErrStat( ErrID_Fatal, 'Pitch actuator model cannot currently be used for linearization in BeamDyn. Set UsePitchAct=False.', ErrStat, ErrMsg, RoutineName )
+      end if
+   end if
+   
 END SUBROUTINE BD_ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> this routine fills the AllOuts array, which is used to send data to the glue code to be written to an output file.
@@ -1522,8 +1639,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    call LAPACK_DGEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,y%BldMotion%NNodes), RootRelOrient,   0.0_BDKi, temp33_2, ErrStat2, ErrMsg2 )
    call LAPACK_DGEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,y%BldMotion%NNodes), temp33_2,        0.0_BDKi, temp33,   ErrStat2, ErrMsg2 )
    call BD_CrvExtractCrv(temp33,temp_vec2, ErrStat2, ErrMsg2) ! temp_vec2 = the Wiener-Milenkovic parameters of the tip angular/rotational defelctions
-   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
    temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2) ! translate these parameters to the correct system for output
    
    AllOuts( TipRDxr ) = temp_vec(1)
@@ -1562,23 +1679,31 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    !------------------------------------
 
       ! outputs on the nodes
-   do beta=1,p%NNodeOuts
+   DO beta=1,p%NNodeOuts
 
       j=p%OutNd(beta)
       j_BldMotion = p%NdIndx(j)
 
          !------------------------------------
          ! Sectional force resultants at Node 1 expressed in l, given in N
-      !FIXME:  N#Mxl & N#Myl are known to be incorrect!  See https://wind.nrel.gov/forum/wind/viewtopic.php?f=3&t=1622
-      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForce(1:3,j_BldMotion))
+      SELECT CASE (p%BldMotionNodeLoc)
+      CASE (BD_MESH_FE)
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(1:3,j))
+      CASE (BD_MESH_QP)
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceQP(1:3,j))
+      END SELECT
       AllOuts( NFl( beta,1 ) ) = temp_vec(1)
       AllOuts( NFl( beta,2 ) ) = temp_vec(2)
       AllOuts( NFl( beta,3 ) ) = temp_vec(3)
       
          !------------------------------------
          ! Sectional moment resultants at Node 1 expressed in l, given in N-m
-      !FIXME:  N#Mxl & N#Myl are known to be incorrect!  See https://wind.nrel.gov/forum/wind/viewtopic.php?f=3&t=1622
-      temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForce(4:6,j_BldMotion))
+      SELECT CASE (p%BldMotionNodeLoc)
+      CASE (BD_MESH_FE)
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceFE(4:6,j))
+      CASE (BD_MESH_QP)
+         temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%BldInternalForceQP(4:6,j))
+      END SELECT
       AllOuts( NMl( beta,1 ) ) = temp_vec(1)
       AllOuts( NMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NMl( beta,3 ) ) = temp_vec(3)
@@ -1588,7 +1713,7 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
          ! Sectional translational deflection (relative to the undeflected position) expressed in r   
       d     = y%BldMotion%TranslationDisp(:, j_BldMotion) - m%u2%RootMotion%TranslationDisp(:,1)
       d_ref = y%BldMotion%Position(       :, j_BldMotion) - m%u2%RootMotion%Position(       :,1)
-      temp_vec2 = d + d_ref - matmul( RootRelOrient, d_ref ) ! tip displacement
+      temp_vec2 = d + d_ref - MATMUL( RootRelOrient, d_ref ) ! tip displacement
       temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2)
       
       AllOuts( NTDr( beta,1 ) ) = temp_vec(1)
@@ -1600,8 +1725,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       call LAPACK_DGEMM('N', 'T', 1.0_BDKi, y%BldMotion%RefOrientation(:,:,j_BldMotion), RootRelOrient,  0.0_BDKi, temp33_2, ErrStat2, ErrMsg2 )
       call LAPACK_DGEMM('T', 'N', 1.0_BDKi, y%BldMotion%Orientation(   :,:,j_BldMotion), temp33_2,       0.0_BDKi, temp33,   ErrStat2, ErrMsg2 )
       call BD_CrvExtractCrv(temp33,temp_vec2, ErrStat2, ErrMsg2) ! temp_vec2 = the Wiener-Milenkovic parameters of the node's angular/rotational defelctions
-      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) return
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
       temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),temp_vec2) ! translate these parameters to the correct system for output
             
       AllOuts( NRDr( beta,1 ) ) = temp_vec(1)
@@ -1636,19 +1761,22 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       AllOuts( NRAl( beta,3 ) ) = temp_vec(3)*R2D
 
 
-         !-------------------------
-         ! Applied point forces at Node 1 expressed in l, given in N
-      temp_vec = MATMUL(y%BldMotion%Orientation(1:3,1:3,j_BldMotion),m%u2%PointLoad%Force(:,j))
-      AllOuts( NPFl( beta,1 ) ) = temp_vec(1)
-      AllOuts( NPFl( beta,2 ) ) = temp_vec(2)
-      AllOuts( NPFl( beta,3 ) ) = temp_vec(3)
+      if (p%BldMotionNodeLoc == BD_MESH_FE) THEN !> FIXME: If we are on the finite element points, the input and output meshes are siblings, otherwise we need to multiply by a different orientation (if we're okay 
+                                                 !! with the nodes meaning something different) or we need to map the u2%PointLoad like we do for the m%u2%DistrLoad%Force loads.
+            !-------------------------
+            ! Applied point forces at Node 1 expressed in l, given in N
+         temp_vec = MATMUL(y%BldMotion%Orientation(1:3,1:3,j_BldMotion),m%u2%PointLoad%Force(:,j))
+         AllOuts( NPFl( beta,1 ) ) = temp_vec(1)
+         AllOuts( NPFl( beta,2 ) ) = temp_vec(2)
+         AllOuts( NPFl( beta,3 ) ) = temp_vec(3)
 
-         !-------------------------
-         ! Applied point moments at Node 1 expressed in l, given in N-m
-      temp_vec = MATMUL(y%BldMotion%Orientation(1:3,1:3,j_BldMotion),m%u2%PointLoad%Moment(:,j))
-      AllOuts( NPMl( beta,1 ) ) = temp_vec(1)
-      AllOuts( NPMl( beta,2 ) ) = temp_vec(2)
-      AllOuts( NPMl( beta,3 ) ) = temp_vec(3)
+            !-------------------------
+            ! Applied point moments at Node 1 expressed in l, given in N-m
+         temp_vec = MATMUL(y%BldMotion%Orientation(1:3,1:3,j_BldMotion),m%u2%PointLoad%Moment(:,j))
+         AllOuts( NPMl( beta,1 ) ) = temp_vec(1)
+         AllOuts( NPMl( beta,2 ) ) = temp_vec(2)
+         AllOuts( NPMl( beta,3 ) ) = temp_vec(3)
+      end if
       
 
    end do ! nodes
@@ -1656,6 +1784,33 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
       ! to avoid unnecessary mesh mapping calculations, calculate these outputs only when we've requested them
    if (p%OutInputs) then
                
+      if (p%BldMotionNodeLoc == BD_MESH_QP) THEN ! If we are on the quadrature points, the input and output meshes are siblings
+         
+         do beta=1,p%NNodeOuts
+
+            j=p%OutNd(beta)
+            j_BldMotion = p%NdIndx(j)
+
+               !-------------------------
+               ! Applied distributed forces at Node 1 expressed in l, in N/m
+            temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%u2%DistrLoad%Force( :,j_BldMotion))
+            AllOuts( NDFl( beta,1 ) ) = temp_vec(1)
+            AllOuts( NDFl( beta,2 ) ) = temp_vec(2)
+            AllOuts( NDFl( beta,3 ) ) = temp_vec(3)
+         
+               !-------------------------
+               ! Applied distributed moments at Node 1 expressed in l, in N-m/m
+            temp_vec = MATMUL(y%BldMotion%Orientation(:,:,j_BldMotion), m%u2%DistrLoad%Moment(:,j_BldMotion))
+            AllOuts( NDMl( beta,1 ) ) = temp_vec(1)
+            AllOuts( NDMl( beta,2 ) ) = temp_vec(2)
+            AllOuts( NDMl( beta,3 ) ) = temp_vec(3)
+
+         end do ! nodes
+         
+         
+      else
+         
+         
             ! transfer the output motions to the input nodes for load transfer
          CALL Transfer_Line2_to_Line2( y%BldMotion, m%y_BldMotion_at_u, m%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1686,6 +1841,8 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
 
          end do ! nodes
          
+      end if
+
 
    end if
 
@@ -1695,13 +1852,13 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
-SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
+SUBROUTINE BD_PrintSum( p, x, m, InitInp, ErrStat, ErrMsg )
 
       ! passed variables
    TYPE(BD_ParameterType),       INTENT(IN)     :: p                 !< Parameters of the structural dynamics module
    type(BD_ContinuousStateType), intent(in)     :: x                 !< Continuous states
    TYPE(BD_MiscVarType),         INTENT(INout)  :: m                 !< misc/optimization variables
-   CHARACTER(*),                 INTENT(IN)     :: RootName          !< root name of summary file to be generated (will add .sum in this routine)
+   TYPE(BD_InitInputType),       INTENT(IN   )  :: InitInp           !< Input data for initialization routine
    INTEGER(IntKi),               INTENT(OUT)    :: ErrStat           !< error status
    CHARACTER(*),                 INTENT(OUT)    :: ErrMsg            !< error message
 
@@ -1720,7 +1877,7 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    ! Open the summary file and give it a heading.
 
    CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
-   CALL OpenFOutFile ( UnSu, TRIM( RootName )//'.sum', ErrStat, ErrMsg )
+   CALL OpenFOutFile ( UnSu, TRIM( InitInp%RootName )//'.sum', ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! Heading:
@@ -1733,10 +1890,10 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(A)')  'Blade center of mass (IEC coords): '
    WRITE (UnSu,'(3ES18.5)' ) p%blade_CG(:)
 
-!   WRITE (UnSu,'(A)')  'Blade mass moment of inertia: '
-!   DO i=1,3
-!       WRITE (UnSu,'(3ES18.5)' ) p%blade_IN(i,:)
-!   ENDDO
+   WRITE (UnSu,'(A)')  'Blade mass moment of inertia: '
+   DO i=1,3
+       WRITE (UnSu,'(3ES18.5)' ) p%blade_IN(i,:)
+   ENDDO
 
    WRITE (UnSu,'(A)')  'Global position vector (IEC coords):'
    WRITE (UnSu,'(3ES18.5)' ) p%GlbPos(:)
@@ -1746,33 +1903,44 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
        WRITE (UnSu,'(3ES18.5)' ) p%GlbRot(i,:)
    ENDDO
 
+   WRITE (UnSu,'(A)')  'Initial blade orientation tensor (relative to global rotation tensor):'
+   DO i=1,3
+       WRITE (UnSu,'(3ES18.5)' ) InitInp%RootOri(i,:)
+   ENDDO
+
+   WRITE (UnSu,'(A)')  'Global rotation WM parameters (IEC coords):'
+   WRITE (UnSu,'(3ES18.5)' ) p%Glb_crv(:)
+
    WRITE (UnSu,'(A)')  'Gravity vector (m/s^2) (IEC coords):'
    WRITE (UnSu,'(3ES18.5)' ) p%gravity(:)
 
+!FIXME:analysis_type
    IF(p%analysis_type .EQ. BD_STATIC_ANALYSIS) THEN
-       WRITE (UnSu,'(A)')  'Analysis type: STATIC'
+       WRITE (UnSu,'(A,T59,A15)')  'Analysis type:','STATIC'
    ELSEIF(p%analysis_type .EQ. BD_DYNAMIC_ANALYSIS) THEN
-       WRITE (UnSu,'(A)')  'Analysis type: DYNAMIC'
+       WRITE (UnSu,'(A,T59,A15)')  'Analysis type:','DYNAMIC'
+   ELSEIF(p%analysis_type .EQ. BD_DYN_SSS_ANALYSIS) THEN
+       WRITE (UnSu,'(A,T37,A)')  'Analysis type:','DYNAMIC with quasi-steady-state start'
    ENDIF
 
-   WRITE (UnSu,'(A,1ES18.5)')  'Numerical damping parameter:',p%rhoinf
+   WRITE (UnSu,'(A,T59,1ES15.5)')  'Numerical damping parameter:',p%rhoinf
 
-   WRITE (UnSu,'(A,1ES18.5)')  'Time increment:',p%dt
+   WRITE (UnSu,'(A,T59,1ES15.5)')  'Time increment:',p%dt
 
-   WRITE (UnSu,'(A,I4)' ) 'Maximum number of iterations in Newton-Ralphson solution:', p%niter
-   WRITE (UnSu,'(A,1ES18.5)' ) 'Convergence parameter:', p%tol
-   WRITE (UnSu,'(A,I4)' ) 'Factorization frequency in Newton-Ralphson solution:', p%n_fact
+   WRITE (UnSu,'(A,T59,I15)' ) 'Maximum number of iterations in Newton-Raphson solution:', p%niter
+   WRITE (UnSu,'(A,T59,1ES15.5)' ) 'Convergence parameter:', p%tol
+   WRITE (UnSu,'(A,T59,I15)' ) 'Factorization frequency in Newton-Raphson solution:', p%n_fact
 
    IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
-       WRITE (UnSu,'(A)')  'Quadrature method: Gauss quadrature'
+       WRITE (UnSu,'(A,T59,A15)')  'Quadrature method: ', 'Gaussian'
    ELSEIF(p%quadrature .EQ. TRAP_QUADRATURE) THEN
-       WRITE (UnSu,'(A)')  'Quadrature method: Trapezoidal quadrature'
-       WRITE (UnSu,'(A,I4)' ) 'FE mesh refinement factor:', p%refine
+       WRITE (UnSu,'(A,T59,A15)')  'Quadrature method: ', 'Trapezoidal'
+       WRITE (UnSu,'(A,T59,I15)' ) 'FE mesh refinement factor:', p%refine
    ENDIF
 
-   WRITE (UnSu,'(A,I4)' ) 'Number of elements:    ', p%elem_total
+   WRITE (UnSu,'(A,T59,I15)' ) 'Number of elements:    ', p%elem_total
 
-   WRITE (UnSu,'(A,I4)' ) 'Number of nodes:       ', p%node_total
+   WRITE (UnSu,'(A,T59,I15)' ) 'Number of nodes:       ', p%node_total
 
    WRITE (UnSu,'(/,A)')  'Initial position vectors (IEC coordinate system)'
    k=1
@@ -1786,7 +1954,7 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
        ENDDO
        k = k-1
    ENDDO
-   WRITE (UnSu,'(/,A)')  'Initial rotation vectors (IEC coordinate system)'
+   WRITE (UnSu,'(/,A)')  'Initial Weiner-Milenkovic rotation vectors (IEC coordinate system)'
    k=1
    DO i=1,p%elem_total
        WRITE (UnSu,'(2x,A,I4)')  'Element number: ',i
@@ -1800,10 +1968,28 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Quadrature point position vectors'
-   WRITE (UnSu,'(A,1x,3(1x,A))')  ' QP ','        X        ','        Y        ','        Z        '       
-   WRITE (UnSu,'(A,1x,3(1x,A))')  '----','-----------------','-----------------','-----------------'
-   DO i=1,size(p%Stif0_QP,3) !(note size(p%QuadPt,2) = size(p%Stif0_QP,3) + 2*p%qp_indx_offset) 
-      WRITE(UnSu,'(I4,3ES18.5)') i,p%QuadPt(1:3,i+p%qp_indx_offset)
+   k=1
+   DO i=1,p%elem_total
+       WRITE (UnSu,'(2x,A,I4)')  'Element number: ',i
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') ' QP ', ' Global QP ','        X        ','        Y        ','        Z        '
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') '----', '-----------','-----------------','-----------------','-----------------'
+       DO j = 1, p%nqp
+           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uu0(1:3,j,i)
+           k=k+1
+       ENDDO
+       k = k-1
+   ENDDO
+   WRITE (UnSu,'(/,A)')  'Quadrature point rotation vectors'
+   k=1
+   DO i=1,p%elem_total
+       WRITE (UnSu,'(2x,A,I4)')  'Element number: ',i
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') ' QP ', ' Global QP ','      WM_x       ','      WM_y       ','      WM_z       '
+       WRITE (UnSu, '(2x,A,1x,A,1x,3(1x,A))') '----', '-----------','-----------------','-----------------','-----------------'
+       DO j = 1, p%nqp
+           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uu0(4:6,j,i)
+           k=k+1
+       ENDDO
+       k = k-1
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at quadrature points (in IEC coordinates)'
@@ -1839,7 +2025,15 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    ENDDO
 
 
+   select case (p%BldMotionNodeLoc)
+   case (BD_MESH_FE)  
       WRITE (UnSu, '(/,A)')  'Output nodes located at finite element nodes.'
+   case (BD_MESH_QP)  
+      WRITE (UnSu, '(/,A)')  'Output nodes located at quadrature points.'
+   case (BD_MESH_STATIONS)  
+      WRITE (UnSu, '(/,A)')  'Output nodes located at blade propery input station locations.'
+      !bjj: need to write where these nodes are located...
+   end select
    
 
    
@@ -1853,7 +2047,8 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
 
 
 
-   if (p%analysis_type == BD_DYNAMIC_ANALYSIS) then
+
+   if ( p%analysis_type /= BD_STATIC_ANALYSIS ) then !dynamic analysis
       ! we'll add mass and stiffness matrices in the first call to UpdateStates
       m%Un_Sum = UnSu
    else
@@ -1863,5 +2058,575 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
 
 RETURN
 END SUBROUTINE BD_PrintSum
+!----------------------------------------------------------------------------------------------------------------------------------
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
+!! Do not change the order of this packing without changing subroutine !
+SUBROUTINE Init_Jacobian( p, u, y, m, InitOut, ErrStat, ErrMsg)
+
+   TYPE(BD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
+   TYPE(BD_InputType)                , INTENT(IN   ) :: u                     !< inputs
+   TYPE(BD_OutputType)               , INTENT(IN   ) :: y                     !< outputs
+   TYPE(BD_MiscVarType)              , INTENT(INOUT) :: m                     !< misc var data
+   TYPE(BD_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
+   
+   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
+   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
+   
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_Jacobian'
+   
+      ! local variables:
+   INTEGER(IntKi)                :: i, j, index, nu, i_meshField
+   REAL(R8Ki)                    :: perturb, perturb_b
+   REAL(R8Ki)                    :: MaxThrust, MaxTorque
+   CHARACTER(1), PARAMETER       :: UVW(3) = (/'U','V','W'/)
+   
+            
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   call Init_Jacobian_y( p, y, InitOut, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   call Init_Jacobian_x_z( p, InitOut, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+
+      ! determine how many inputs there are in the Jacobians
+   nu = u%RootMotion%NNodes * 18            & ! 3 Translation Displacements + 3 orientations + 6 velocities (rotation+translation) + 6 accelerations at each node
+      + u%PointLoad%NNodes  * 6             & ! 3 forces + 3 moments at each node
+      + u%DistrLoad%NNodes  * 6               ! 3 forces + 3 moments at each node
+      
+   ! all other inputs (e.g., hub motion) ignored
+
+   !............................
+   ! fill matrix to store index to help us figure out what the ith value of the u vector really means
+   ! (see beamdyn::perturb_u ... these MUST match )
+   ! column 1 indicates module's mesh and field
+   ! column 2 indicates the first index (x-y-z component) of the field
+   ! column 3 is the node
+   !............................
+   
+   call allocAry( p%Jac_u_indx, nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+            
+   !...............
+   ! BD input mappings stored in p%Jac_u_indx:   
+   !...............            
+   index = 1
+   !Module/Mesh/Field: u%RootMotion%TranslationDisp  = 1;
+   !Module/Mesh/Field: u%RootMotion%Orientation      = 2;
+   !Module/Mesh/Field: u%RootMotion%TranslationVel   = 3;
+   !Module/Mesh/Field: u%RootMotion%RotationVel      = 4;
+   !Module/Mesh/Field: u%RootMotion%TranslationAcc   = 5;
+   !Module/Mesh/Field: u%RootMotion%RotationAcc      = 6;
+   do i_meshField = 1,6
+      do i=1,u%RootMotion%NNodes
+         do j=1,3
+            p%Jac_u_indx(index,1) =  i_meshField
+            p%Jac_u_indx(index,2) =  j !component index:  j
+            p%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1
+         end do !j
+      end do !i
+   end do
+   
+   !Module/Mesh/Field: u%PointLoad%Force   = 7;
+   !Module/Mesh/Field: u%PointLoad%Moment  = 8;
+   do i_meshField = 7,8
+      do i=1,u%PointLoad%NNodes
+         do j=1,3
+            p%Jac_u_indx(index,1) =  i_meshField
+            p%Jac_u_indx(index,2) =  j !component index:  j
+            p%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1
+         end do !j
+      end do !i
+   end do
+   
+   !Module/Mesh/Field: u%DistrLoad%Force   =  9;
+   !Module/Mesh/Field: u%DistrLoad%Moment  = 10;
+   do i_meshField = 9,10
+      do i=1,u%DistrLoad%NNodes
+         do j=1,3
+            p%Jac_u_indx(index,1) =  i_meshField
+            p%Jac_u_indx(index,2) =  j !component index:  j
+            p%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1
+         end do !j
+      end do !i
+   end do !i_meshField
+      
+   
+   
+      !......................................
+      ! default perturbations, p%du:
+      !......................................
+   call allocAry( p%du, 10, 'p%du', ErrStat2, ErrMsg2) ! 10 = number of unique values in p%Jac_u_indx(:,1)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   perturb   = 0.2_R8Ki*D2R_D
+   perturb_b = 0.2_R8Ki*D2R_D * p%blade_length
+   
+   MaxThrust = 170.0_R8Ki*p%blade_length**2
+   MaxTorque =  14.0_R8Ki*p%blade_length**3
+   
+   p%du( 1) = perturb_b                                        ! u%RootMotion%TranslationDisp  = 1;
+   p%du( 2) = perturb                                          ! u%RootMotion%Orientation      = 2;
+   p%du( 3) = perturb_b                                        ! u%RootMotion%TranslationVel   = 3;
+   p%du( 4) = perturb                                          ! u%RootMotion%RotationVel      = 4;
+   p%du( 5) = perturb_b                                        ! u%RootMotion%TranslationAcc   = 5;
+   p%du( 6) = perturb                                          ! u%RootMotion%RotationAcc      = 6;
+
+   p%du( 7) = MaxThrust / (100.0_R8Ki * 3.0_R8Ki * u%PointLoad%NNodes )  ! u%PointLoad%Force             = 7;
+   p%du( 8) = MaxTorque / (100.0_R8Ki * 3.0_R8Ki * u%PointLoad%NNodes )  ! u%PointLoad%Moment            = 8;
+   
+   p%du( 9) = MaxThrust / (100.0_R8Ki * 3.0_R8Ki * u%DistrLoad%NNodes )  ! u%DistrLoad%Force             = 9;
+   p%du(10) = MaxTorque / (100.0_R8Ki * 3.0_R8Ki * u%DistrLoad%NNodes )  ! u%DistrLoad%Moment            =10;
+   
+      !.....................
+      ! get names of linearized inputs
+      !.....................
+   call AllocAry(InitOut%LinNames_u, nu, 'LinNames_u', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%RotFrame_u, nu, 'RotFrame_u', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%IsLoad_u, nu, 'IsLoad_u', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+
+   InitOut%RotFrame_u = .false. ! every input is on a mesh, which stores values in the global (not rotating) frame
+   
+   index = 1
+   call PackMotionMesh_Names(u%RootMotion, 'RootMotion', InitOut%LinNames_u, index) ! all 6 motion fields
+   InitOut%IsLoad_u(1:index-1) = .false. ! the RootMotion inputs are not loads
+   InitOut%IsLoad_u(index:)    = .true.  ! the remaining inputs are loads
+   call PackLoadMesh_Names(  u%PointLoad,   'PointLoad', InitOut%LinNames_u, index)
+   call PackLoadMesh_Names(  u%DistrLoad,   'DistrLoad', InitOut%LinNames_u, index)
+
+
+END SUBROUTINE Init_Jacobian
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine initializes the Jacobian parameters and initialization outputs for the linearized outputs.
+SUBROUTINE Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
+
+   TYPE(BD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
+   TYPE(BD_OutputType)               , INTENT(IN   ) :: y                     !< outputs
+   TYPE(BD_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Initialization output data (for Jacobian row/column names)
+   
+   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
+   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
+   
+      ! local variables:
+   INTEGER(IntKi)                                    :: i
+   INTEGER(IntKi)                                    :: j
+   INTEGER(IntKi)                                    :: index_next
+   LOGICAL                                           :: AllOut(MaxOutPts)
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_Jacobian_y'
+
+   CHARACTER(ChanLen)                                :: ChannelName
+   LOGICAL                                           :: isRotating
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   
+      ! determine how many outputs there are in the Jacobians     
+   p%Jac_ny = y%ReactionForce%NNodes * 6     & ! 3 forces + 3 moments at each node
+            + y%BldMotion%NNodes     * 18    & ! 6 displacements (translation, rotation) + 6 velocities + 6 accelerations at each node
+            + p%NumOuts                        ! WriteOutput values 
+   
+   
+      ! get the names of the linearized outputs:
+   call AllocAry(InitOut%LinNames_y, p%Jac_ny,'LinNames_y',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(InitOut%RotFrame_y, p%Jac_ny,'RotFrame_y',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
+   
+         
+   InitOut%RotFrame_y = .false.   ! need to set all the values in the global system to .false
+   
+   index_next = 1
+   call PackLoadMesh_Names(  y%ReactionForce, 'Reaction force', InitOut%LinNames_y, index_next)
+   call PackMotionMesh_Names(y%BldMotion,     'Blade motion',   InitOut%LinNames_y, index_next)
+
+   do i=1,p%NumOuts
+      InitOut%LinNames_y(i+index_next-1) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i))
+   end do
+   
+   AllOut = .true. ! all output values except those specifically in the global system are in the rotating system
+   AllOut(TipTVXg) = .false.
+   AllOut(TipTVYg) = .false.
+   AllOut(TipTVZg) = .false.
+   AllOut(TipRVXg) = .false.
+   AllOut(TipRVYg) = .false.
+   AllOut(TipRVZg) = .false.
+      
+   do j=1,9
+      do i=1,3 !x,y,z
+         AllOut(NTVg(j,i)) = .false.
+         AllOut(NRVg(j,i)) = .false.
+      end do
+   end do
+   
+   do i=1,p%NumOuts
+      if (p%OutParam(i)%Indx == 0 ) then
+         InitOut%RotFrame_y(i+index_next-1) = .false.
+      else
+         InitOut%RotFrame_y(i+index_next-1) = AllOut( p%OutParam(i)%Indx )
+      end if
+   end do
+
+END SUBROUTINE Init_Jacobian_y
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine initializes the Jacobian parameters and initialization outputs for the linearized continuous states.
+SUBROUTINE Init_Jacobian_x_z( p, InitOut, ErrStat, ErrMsg)
+
+   TYPE(BD_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
+   TYPE(BD_InitOutputType)           , INTENT(INOUT) :: InitOut               !< Output for initialization routine   
+   
+   INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat               !< Error status of the operation
+   CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                !< Error message if ErrStat /= ErrID_None
+   
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_Jacobian_x'
+   CHARACTER(200)                                    :: Describe
+   
+      ! local variables:
+   INTEGER(IntKi)                :: i
+   INTEGER(IntKi)                :: indx
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   p%Jac_nx = p%dof_node * (p%node_total-1) ! the first node is actually a constraint state
+
+      ! allocate space for the row/column names and for perturbation sizes
+   !call allocAry(p%dx,               p%dof_node*(p%node_total-1),     'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%LinNames_x, p%Jac_nx*2, 'LinNames_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%RotFrame_x, p%Jac_nx*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   !CALL AllocAry(InitOut%LinNames_z, p%dof_node*2, 'LinNames_z', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   !CALL AllocAry(InitOut%RotFrame_z, p%dof_node*2, 'RotFrame_z', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if (ErrStat >= AbortErrLev) return
+   
+   
+      !......................................
+      ! default perturbations, p%dx:
+      !......................................
+   p%dx(1:3) = 0.2_ReKi*D2R * p%blade_length                    ! deflection states in m and m/s
+   p%dx(4:6) = 0.2_ReKi*D2R                                     ! deflection states in rad and rad/s
+   
+   InitOut%RotFrame_x   = p%RotStates
+   
+      !......................................
+      ! set linearization output names:
+      !......................................
+   indx = 1
+   DO i=2, p%node_total
+      Describe = 'finite element node '//trim(num2lstr(i))//' (number of elements = '//trim(num2lstr(p%elem_total))//'; element order = '//trim(num2lstr(p%nodes_per_elem-1))//')'
+      InitOut%LinNames_x(indx) = trim(Describe)//' translational displacement in X, m'
+      indx = indx + 1
+      InitOut%LinNames_x(indx) = trim(Describe)//' translational displacement in Y, m'
+      indx = indx + 1
+      InitOut%LinNames_x(indx) = trim(Describe)//' translational displacement in Z, m'
+      indx = indx + 1
+      InitOut%LinNames_x(indx) = trim(Describe)//' rotational displacement in X, rad'
+      indx = indx + 1
+      InitOut%LinNames_x(indx) = trim(Describe)//' rotational displacement in Y, rad'
+      indx = indx + 1
+      InitOut%LinNames_x(indx) = trim(Describe)//' rotational displacement in Z, rad'
+      indx = indx + 1
+   END DO
+   
+   do i=1,p%Jac_nx
+      InitOut%LinNames_x(i+p%Jac_nx) = 'First time derivative of '//trim(InitOut%LinNames_x(i))//'/s'
+      InitOut%RotFrame_x(i+p%Jac_nx) = InitOut%RotFrame_x(i)
+   end do
+
+
+   !InitOut%RotFrame_z    = .true.
+   !InitOut%LinNames_z(1) = 'Node 1 translational displacement in X, m'
+   !InitOut%LinNames_z(2) = 'Node 1 translational displacement in Y, m'
+   !InitOut%LinNames_z(3) = 'Node 1 translational displacement in Z, m'
+   !InitOut%LinNames_z(4) = 'Node 1 rotational displacement in X, -'
+   !InitOut%LinNames_z(5) = 'Node 1 rotational displacement in Y, -'
+   !InitOut%LinNames_z(6) = 'Node 1 rotational displacement in Z, -'
+   !
+   !do i=1,6
+   !   InitOut%LinNames_x(i+6) = 'First time derivative of '//trim(InitOut%LinNames_z(i))//'/s'
+   !end do
+   
+   
+END SUBROUTINE Init_Jacobian_x_z
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine perturbs the nth element of the u array (and mesh/field it corresponds to)
+!! Do not change this without making sure subroutine beamdyn::init_jacobian is consistant with this routine!
+SUBROUTINE Perturb_u( p, n, perturb_sign, u, du )
+
+   TYPE(BD_ParameterType)              , INTENT(IN   ) :: p                      !< parameters
+   INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
+   INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+   TYPE(BD_InputType)                  , INTENT(INOUT) :: u                      !< perturbed BD inputs
+   REAL( R8Ki )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
+   
+
+   ! local variables
+   integer(intKi)                                      :: ErrStat2
+   character(ErrMsgLen)                                :: ErrMsg2
+   
+   INTEGER                                             :: fieldIndx
+   INTEGER                                             :: node
+   REAL(R8Ki)                                          :: orientation(3,3)
+   REAL(R8Ki)                                          :: angles(3)
+      
+   fieldIndx = p%Jac_u_indx(n,2)
+   node      = p%Jac_u_indx(n,3)
+   
+   du = p%du(  p%Jac_u_indx(n,1) )
+   
+      ! determine which mesh we're trying to perturb and perturb the input:
+   SELECT CASE( p%Jac_u_indx(n,1) )
+      
+   CASE ( 1) !Module/Mesh/Field: u%RootMotion%TranslationDisp = 1;
+      u%RootMotion%TranslationDisp( fieldIndx,node) = u%RootMotion%TranslationDisp( fieldIndx,node) + du * perturb_sign
+   CASE ( 2) !Module/Mesh/Field: u%RootMotion%Orientation = 2;
+      angles = 0.0_R8Ki
+      angles(fieldIndx) = du * perturb_sign
+      call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+      u%RootMotion%Orientation(:,:,node) = matmul(u%RootMotion%Orientation(:,:,node), orientation)
+   CASE ( 3) !Module/Mesh/Field: u%RootMotion%TranslationVel = 3;
+      u%RootMotion%TranslationVel( fieldIndx,node) = u%RootMotion%TranslationVel( fieldIndx,node) + du * perturb_sign
+   CASE ( 4) !Module/Mesh/Field: u%RootMotion%RotationVel = 4;
+      u%RootMotion%RotationVel(fieldIndx,node) = u%RootMotion%RotationVel(fieldIndx,node) + du * perturb_sign
+   CASE ( 5) !Module/Mesh/Field: u%RootMotion%TranslationAcc = 5;
+      u%RootMotion%TranslationAcc( fieldIndx,node) = u%RootMotion%TranslationAcc( fieldIndx,node) + du * perturb_sign
+   CASE ( 6) !Module/Mesh/Field: u%RootMotion%RotationAcc = 6;
+      u%RootMotion%RotationAcc(fieldIndx,node) = u%RootMotion%RotationAcc(fieldIndx,node) + du * perturb_sign
+   
+   CASE ( 7) !Module/Mesh/Field: u%PointLoad%Force = 7;
+      u%PointLoad%Force(fieldIndx,node) = u%PointLoad%Force(fieldIndx,node) + du * perturb_sign 
+   CASE ( 8) !Module/Mesh/Field: u%PointLoad%Moment  = 8;
+      u%PointLoad%Moment(fieldIndx,node) = u%PointLoad%Moment(fieldIndx,node) + du * perturb_sign
+      
+   CASE ( 9) !Module/Mesh/Field: u%DistrLoad%Force   =  9;
+      u%DistrLoad%Force( fieldIndx,node) = u%DistrLoad%Force( fieldIndx,node) + du * perturb_sign
+   CASE (10) !Module/Mesh/Field: u%DistrLoad%Moment = 10;
+      u%DistrLoad%Moment(fieldIndx,node) = u%DistrLoad%Moment(fieldIndx,node) + du * perturb_sign
+      
+   END SELECT
+      
+END SUBROUTINE Perturb_u
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine beamdyn::init_jacobian is consistant with this routine!
+SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
+   
+   TYPE(BD_ParameterType)            , INTENT(IN   ) :: p         !< parameters
+   TYPE(BD_OutputType)               , INTENT(IN   ) :: y_p       !< BD outputs at \f$ u + \Delta_p u \f$ or \f$ z + \Delta_p z \f$ (p=plus)
+   TYPE(BD_OutputType)               , INTENT(IN   ) :: y_m       !< BD outputs at \f$ u - \Delta_m u \f$ or \f$ z - \Delta_m z \f$ (m=minus)   
+   REAL(R8Ki)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
+   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial z_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
+   
+      ! local variables:
+   INTEGER(IntKi)                                    :: i              ! loop over outputs
+   INTEGER(IntKi)                                    :: indx_first     ! index indicating next value of dY to be filled 
+   
+   indx_first = 1
+   call PackLoadMesh_dY(  y_p%ReactionForce, y_m%ReactionForce, dY, indx_first)
+   call PackMotionMesh_dY(y_p%BldMotion,     y_m%BldMotion,     dY, indx_first) ! all 6 motion fields
+   
+   do i=1,p%NumOuts
+      dY(i+indx_first-1) = y_p%WriteOutput(i) - y_m%WriteOutput(i)
+   end do
+   
+   
+   dY = dY / (2.0_R8Ki*delta)
+   
+END SUBROUTINE Compute_dY
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine perturbs the nth element of the x array (and mesh/field it corresponds to)
+!! Do not change this without making sure subroutine beamdyn::init_jacobian is consistant with this routine!
+SUBROUTINE Perturb_x( p, fieldIndx, node, dof, perturb_sign, x, dx )
+
+   TYPE(BD_ParameterType)              , INTENT(IN   ) :: p                      !< parameters
+   INTEGER( IntKi )                    , INTENT(IN   ) :: fieldIndx              !< field in the state type: 1=displacements; 2=velocities
+   INTEGER( IntKi )                    , INTENT(IN   ) :: node                   !< node number
+   INTEGER( IntKi )                    , INTENT(IN   ) :: dof                    !< dof for this perturbation
+   INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
+   TYPE(BD_ContinuousStateType)        , INTENT(INOUT) :: x                      !< perturbed BD states
+   REAL( R8Ki )                        , INTENT(  OUT) :: dx                     !< amount that specific state was perturbed
+   
+
+   ! local variables
+   integer(intKi)                                      :: ErrStat2
+   character(ErrMsgLen)                                :: ErrMsg2
+   
+   REAL(R8Ki)                                          :: orientation(3,3)
+   REAL(R8Ki)                                          :: oldRotation(3,3)
+   REAL(R8Ki)                                          :: newRotation(3,3)
+   REAL(R8Ki)                                          :: angles(3)
+   
+   dx = p%dx(dof)
+               
+   if (fieldIndx==1) then
+      if (dof < 4) then ! translational displacement
+         x%q( dof, node ) = x%q( dof, node ) + dx * perturb_sign
+      else ! w-m parameters
+         angles = 0.0_R8Ki
+         angles(dof-3) = dx * perturb_sign
+         call SmllRotTrans( 'linearization perturbation', angles(1), angles(2), angles(3), orientation, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+         
+         call BD_CrvMatrixR( x%q( 4:6, node ), oldRotation ) ! returns the rotation matrix (transpose of DCM) that was stored in the state as a w-m parameter
+         
+         !newRotation = transpose( matmul(transpose(oldRotation), orientation) )
+         newRotation = matmul( transpose(orientation), oldRotation)
+         call BD_CrvExtractCrv( newRotation, x%q( 4:6, node ), ErrStat2, ErrMsg2 ) ! return the w-m parameters of the new orientation
+         
+      end if
+   else
+      x%dqdt( dof, node ) = x%dqdt( dof, node ) + dx * perturb_sign
+   end if
+
+      
+END SUBROUTINE Perturb_x
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine beamdyn::init_jacobian is consistant with this routine!
+SUBROUTINE Compute_dX(p, x_p, x_m, delta, dX)
+   
+   TYPE(BD_ParameterType)            , INTENT(IN   ) :: p         !< parameters
+   TYPE(BD_ContinuousStateType)      , INTENT(IN   ) :: x_p       !< BD continuous states at \f$ u + \Delta_p u \f$ or \f$ x + \Delta_p x \f$ (p=plus)
+   TYPE(BD_ContinuousStateType)      , INTENT(IN   ) :: x_m       !< BD continuous states at \f$ u - \Delta_m u \f$ or \f$ x - \Delta_m x \f$ (m=minus)   
+   REAL(R8Ki)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta_p = \Delta_p u \f$ or \f$ delta_p = \Delta_p x \f$
+   REAL(R8Ki)                        , INTENT(INOUT) :: dX(:)     !< column of dXdu or dXdx: \f$ \frac{\partial X}{\partial u_i} = \frac{x_p - x_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial X}{\partial x_i} = \frac{x_p - x_m}{2 \, \Delta x}\f$
+   
+      ! local variables:
+   INTEGER(IntKi)                                    :: i              ! loop over nodes
+   INTEGER(IntKi)                                    :: dof            ! loop over dofs
+   INTEGER(IntKi)                                    :: index          ! index indicating next value of dX to be filled 
+   
+   index = 1
+   do i=2,p%node_total
+      do dof=1,p%dof_node
+         dX(index) = x_p%q( dof, i ) - x_m%q( dof, i )
+         index = index+1
+      end do
+   end do
+
+   do i=2,p%node_total
+      do dof=1,p%dof_node
+         dX(index) = x_p%dqdt( dof, i ) - x_m%dqdt( dof, i )
+         index = index+1
+      end do
+   end do
+
+   dX = dX / ( 2.0_R8Ki*delta)
+   
+END SUBROUTINE Compute_dX
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine uses values of two output types to compute an array of differences.
+!! Do not change this packing without making sure subroutine beamdyn::init_jacobian is consistant with this routine!
+SUBROUTINE Compute_RelState_Matrix(p, u, x, RelState_x, RelState_xdot)
+   
+   TYPE(BD_ParameterType)            , INTENT(IN   ) :: p                  !< parameters
+   TYPE(BD_InputType)                , INTENT(IN   ) :: u                  !< BD inputs
+   TYPE(BD_ContinuousStateType)      , INTENT(IN   ) :: x                  !< BD continuous states
+   REAL(R8Ki)                        , INTENT(INOUT) :: RelState_x(:,:)    !< 
+   REAL(R8Ki)                        , INTENT(INOUT) :: RelState_xdot(:,:) !< 
+   
+      ! local variables:
+   INTEGER(IntKi)                                    :: i              ! loop counter
+   INTEGER(IntKi)                                    :: j              ! loop counter
+   INTEGER(IntKi)                                    :: dof            ! loop over dofs
+   INTEGER(IntKi)                                    :: q_index        ! index into the state arrays
+   INTEGER(IntKi)                                    :: dqdt_index     ! index into the state arrays
+   INTEGER(IntKi)                                    :: node           ! node in the state arrays
+   
+   REAL(R8Ki)                                        :: dp             ! temporary dot product
+   REAL(R8Ki)                                        :: cp(3)          ! temporary cross product
+   REAL(R8Ki)                                        :: RotVel(3)      ! temporary velocity
+   REAL(R8Ki)                                        :: RotAcc(3)      ! temporary acceleration
+   REAL(R8Ki)                                        :: DisplacedPosition(3)
+   REAL(R8Ki)                                        :: fx_p(3,3)
+   
+   RelState_x    = 0.0_ReKi
+   RelState_xdot = 0.0_ReKi
+   
+   !-----------------------------------
+   do i=1,p%elem_total
+      do j=2,p%nodes_per_elem
+
+         node       = (i-1)*(p%nodes_per_elem-1) + j  ! index to state array (rows of conversion matrices)
+         q_index    = (node - 2)*p%dof_node + 1       ! index into displacement portion of x (skipping node 1)
+         dqdt_index = p%Jac_nx + q_index
+         
+         DisplacedPosition = u%RootMotion%Position(:,1) + u%RootMotion%TranslationDisp(:,1) &
+                           - p%GlbPos - MATMUL(p%GlbRot, p%uuN0(1:3,j,i) + x%q(1:3,node) )
+
+         RotVel = real(u%RootMotion%RotationVel(:,1),R8Ki)
+         RotAcc = real(u%RootMotion%RotationAcc(:,1),R8Ki)
+
+         fx_p = SkewSymMat(DisplacedPosition)
+         
+         do dof=0,5
+            RelState_x( q_index+dof, 1+dof   ) = 1.0_R8Ki      ! root displacements to node displacements
+         end do
+         do dof=0,5
+            RelState_x( dqdt_index+dof, 7+dof   ) = 1.0_R8Ki   ! root velocities to node velocities
+         end do
+         
+         
+         RelState_x( q_index:q_index+2,        4: 6 ) = fx_p                                                            ! root rotational displacement to node translational displacement
+         RelState_x( dqdt_index:dqdt_index+2, 10:12 ) = fx_p                                                            ! root rotational velocity to node translational velocity
+
+            ! root rotational displacement to node translational velocity:
+         RelState_x( dqdt_index:dqdt_index+2, 4:6   ) = OuterProduct( DisplacedPosition, RotVel )
+         dp = dot_product( DisplacedPosition, RotVel )
+         do dof=0,2
+            RelState_x( dqdt_index+dof, 4+dof   ) = RelState_x( dqdt_index+dof, 4+dof   ) - dp                          ! root rotational displacement to node translational velocity 
+         end do
+         !----------
+         
+         
+         !.............................................
+         ! The first p%Jac_nx rows of RelState_xdot are the same as the last p%Jac_nx rows of RelState_x, so I'm not going to recalculate these rows, we'll set them after the loops:
+         !do dof=0,5
+         !   RelState_xdot( q_index+dof, 7+dof   ) = 1.0_ReKi      ! root velocities to node velocities
+         !end do
+         !RelState_xdot( q_index:q_index+2, 4:6 )         = RelState_x( dqdt_index:dqdt_index+2, 4:6 )                  ! root rotational displacement to node translational velocity
+         !RelState_xdot( q_index:q_index+2,       10:12 ) = fx_p                                                        ! root rotational velocity to node translational velocity
+         
+         do dof=0,5
+            RelState_xdot( dqdt_index+dof, 13+dof   ) = 1.0_R8Ki   ! root accelerations to node accelerations
+         end do
+         
+         
+            ! root translational velocity to node translational acceleration:
+         cp = cross_product(u%RootMotion%RotationVel(:,1), DisplacedPosition)
+         RelState_xdot( dqdt_index:dqdt_index+2, 7:9   ) = OuterProduct( DisplacedPosition, RotAcc )  &
+                                                         + OuterProduct( cp, RotVel ) - dp*SkewSymMat(RotVel)
+         dp = dot_product( DisplacedPosition, RotAcc )
+         do dof=0,2
+            RelState_xdot( dqdt_index+dof, 7+dof   ) = RelState_xdot( dqdt_index+dof, 7+dof   ) - dp
+         end do
+         !-----------
+         
+         RelState_xdot( dqdt_index:dqdt_index+2, 10:12 ) = RelState_x( dqdt_index:dqdt_index+2, 4:6 ) + SkewSymMat(cp)  ! root rotational velocity to node translational acceleration
+         RelState_xdot( dqdt_index:dqdt_index+2, 16:18 ) = fx_p                                                         ! root rotational acceleration to node translational acceleration
+         
+      end do
+   end do
+   RelState_xdot(1:p%Jac_nx,:) = RelState_x(p%Jac_nx+1:,:)
+
+END SUBROUTINE Compute_RelState_Matrix
+!----------------------------------------------------------------------------------------------------------------------------------
+
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE BeamDyn_IO

@@ -15,11 +15,6 @@
 ! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
-!
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
 !**********************************************************************************************************************************
 
 !> This module contains I/O-related variables and routines with non-system-specific logic.
@@ -64,6 +59,7 @@ MODULE NWTC_IO
    CHARACTER(20)                 :: ProgName = ' '                               !< The name of the calling program. DO NOT USE THIS IN NEW PROGRAMS (Modules)
    CHARACTER(99)                 :: ProgVer  = ' '                               !< The version (including date) of the calling program. DO NOT USE THIS IN NEW PROGRAMS
    CHARACTER(1), PARAMETER       :: Tab      = CHAR( 9 )                         !< The tab character.
+   CHARACTER(*), PARAMETER       :: CommChars = '!#%'                            !< Comment characters that mark the end of useful input
 
 
       ! Parameters for writing to echo files (in this module only)
@@ -221,10 +217,10 @@ MODULE NWTC_IO
       MODULE PROCEDURE WrMatrix2R16    ! Two dimension matrix of QuKi
    END INTERFACE
 
-      !> \copydoc nwtc_io::wrpartialmatrix2
+      !> \copydoc nwtc_io::wrpartialmatrix1r8
    INTERFACE WrPartialMatrix
-      MODULE PROCEDURE WrPartialMatrix1     ! Single dimension matrix (Ary) of ReKi
-      MODULE PROCEDURE WrPartialMatrix2     ! Two dimension matrix of ReKi
+      MODULE PROCEDURE WrPartialMatrix1R8     ! Single dimension matrix (array) of R8Ki
+      MODULE PROCEDURE WrPartialMatrix2R8     ! Two dimension matrix of R8Ki
    END INTERFACE   
    
       !> \copydoc nwtc_io::wrr4aryfilenr
@@ -1501,10 +1497,7 @@ CONTAINS
    CHARACTER(LEN(InputFile))            :: Arg                                          ! A command-line argument.
    
 
-
-
       ! Find out how many arguments were entered on the command line.
-
    NumArg   = COMMAND_ARGUMENT_COUNT()
    FirstArg = .TRUE.
 
@@ -1513,7 +1506,7 @@ CONTAINS
 
       ! Parse them.
 
-   IF ( NumArg .GT. 0 )  THEN
+   IF ( NumArg .GT. 0 ) THEN
 
       DO IArg=1,NumArg
 
@@ -1527,17 +1520,16 @@ CONTAINS
             END IF
          END IF
 
-         IF ( Arg(1:1) == SwChar .OR. Arg(1:1) == '-' )  THEN
+         IF ( Arg(1:1) == SwChar .OR. Arg(1:1) == '-' ) THEN
             IF (PRESENT(flag)) THEN
                CALL Conv2UC( Arg )
                Flag = Arg(2:) !this results in only the last flag
-               IF ( TRIM(Flag) == 'RESTART' )  CYCLE         ! Get next argument (which will be input [checkpoint] file name)
-
+               IF ( TRIM(Flag) == 'RESTART' ) CYCLE         ! Get next argument (which will be input [checkpoint] file name)
             END IF
                                                 
             CALL NWTC_DisplaySyntax( InputFile, ProgName )
 
-            IF ( INDEX( 'Hh?', Arg(2:2)  ) > 0 )  THEN
+            IF ( INDEX( 'Hh?', Arg(2:2) ) > 0 ) THEN
                IF ( PRESENT(ErrStat) ) THEN
                   ErrStat = ErrID_Info !bjj? do we want to check if an input file was specified later?
                   RETURN
@@ -1809,8 +1801,6 @@ CONTAINS
 
       IF ( ( Str(IC:IC) >= 'a' ).AND.( Str(IC:IC) <= 'z' ) )  THEN
          Str(IC:IC) = CHAR( ICHAR( Str(IC:IC) ) - 32 )
-      ELSE
-         Str(IC:IC) = Str(IC:IC)
       END IF
 
    END DO ! IC
@@ -1991,6 +1981,7 @@ CONTAINS
    CALL WrScr( TRIM(GetNVD(ProgInfo)) )
    CALL WrScr('')
    CALL WrScr( 'Copyright (C) '//TRIM(year)//' National Renewable Energy Laboratory' )
+   CALL WrScr( 'Copyright (C) '//TRIM(year)//' Envision Energy USA LTD' )
    CALL WrScr('')
    CALL WrScr( 'This program is licensed under Apache License Version 2.0 and comes with ABSOLUTELY NO WARRANTY. '//&
                'See the "LICENSE" file distributed with this software for details.')   
@@ -2652,13 +2643,13 @@ CONTAINS
          CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] <InputFile>' )
          CALL WrScr ( NewLine//' where:' )
          CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
-         CALL WrScr    ( '    <InputFile> is the name of the required primary input file.' )
+         CALL WrScr ( '    <InputFile> is the name of the required primary input file.' )
       ELSE
          CALL WrScr ( NewLine//'    '//TRIM( ThisProgName )//' ['//SwChar//'h] [<InputFile>]' )
          CALL WrScr ( NewLine//' where:' )
          CALL WrScr ( NewLine//'    '//SwChar//'h generates this help message.' )
-         CALL WrScr    ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
-                        //TRIM( DefaultInputFile )//'".' )
+         CALL WrScr ( '    <InputFile> is the name of the primary input file.  If omitted, the default file is "' &
+                     //TRIM( DefaultInputFile )//'".' )
       END IF
       CALL WrScr    ( NewLine//' Note: values enclosed in square brackets [] are optional. Do not enter the brackets.')      
       CALL WrScr    ( ' ')
@@ -2930,6 +2921,55 @@ CONTAINS
    RETURN
    END SUBROUTINE OpenFUnkFile
 !=======================================================================
+!> This routine opens a formatted output file in append mode if it exists, otherwise opens a new file
+   SUBROUTINE OpenFUnkFileAppend ( Un, OutFile, ErrStat, ErrMsg )
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)                   :: Un                                          ! Logical unit for the output file.
+   CHARACTER(*), INTENT(IN)              :: OutFile                                     ! Name of the output file.
+
+   INTEGER(IntKi), INTENT(OUT), OPTIONAL :: ErrStat                                     ! Error status; if present, program does not abort on error
+   CHARACTER(*),   INTENT(OUT), OPTIONAL :: ErrMsg                                      ! Error message
+
+
+
+      ! Local declarations.
+   LOGICAL                                :: FileExists                                  ! Does the file exist?
+   INTEGER                                :: IOS                                         ! I/O status of OPEN
+   CHARACTER(1024)                        :: Msg                                         ! Temporary error message
+
+
+      ! Open output file.  Make sure it worked.
+
+   inquire(file=TRIM( OutFile ), exist=FileExists)
+
+   if (FileExists) then
+      OPEN( Un, FILE=TRIM( OutFile ), STATUS='OLD', POSITION='APPEND', FORM='FORMATTED', IOSTAT=IOS, ACTION="WRITE" )
+   else
+      OPEN( Un, FILE=TRIM( OutFile ), STATUS='UNKNOWN', FORM='FORMATTED', IOSTAT=IOS, ACTION="WRITE" )
+   end if
+
+
+   IF ( IOS /= 0 )  THEN
+
+      Msg = 'Cannot open file "'//TRIM( OutFile )//'".  Another program like MS Excel may have locked it for writing.'
+
+      IF ( PRESENT(ErrStat) ) THEN
+         ErrStat = ErrID_Fatal
+         ErrMsg  = Msg
+      ELSE
+         CALL ProgAbort( ' '//Msg )
+      END IF
+
+   ELSE
+      IF ( PRESENT(ErrStat) )  ErrStat = ErrID_None
+      IF ( PRESENT(ErrMsg)  )  ErrMsg  = ""
+   END IF
+
+
+   RETURN
+   END SUBROUTINE OpenFUnkFileAppend ! ( Un, OutFile [, ErrStat] [, ErrMsg] )
 !>  This routine opens an unformatted input file of RecLen-byte data records
 !!  stored in Big Endian format.
    SUBROUTINE OpenUInBEFile( Un, InFile, RecLen, ErrStat, ErrMsg )
@@ -4717,7 +4757,6 @@ QueryGitVersion = GIT_VERSION_INFO
    INTEGER                                   :: RangeEnd                      ! The last line in a range of lines to be included from a file.
    INTEGER                                   :: UnIn                          ! The unit number used for the input file.
                                                                               ! Should the comment characters be passed to this routine instead of being hard coded? -mlb
-   CHARACTER(3), PARAMETER                   :: CommChars = '!#%'             ! Comment characters that mark the end of useful input.
    CHARACTER(1024)                           :: IncFileName                   ! The name of a file that this one includes.
    CHARACTER(512)                            :: Line                          ! The contents of a line returned from ReadLine() with comment removed.
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
@@ -7245,17 +7284,94 @@ QueryGitVersion = GIT_VERSION_INFO
 !> Based on nwtc_io::wrmatrix, this routine writes a matrix to an already-open text file. It allows
 !! the user to omit rows and columns of A in the the file.
 !! Use WrPartialMatrix (nwtc_io::wrpartialmatrix) instead of directly calling a specific routine in the generic interface.
-   SUBROUTINE WrPartialMatrix2( A, Un, ReFmt, MatName, UseRow, UseCol, UseAllRows, UseAllCols, ExtCol )
+   SUBROUTINE WrPartialMatrix1R8( A, Un, ReFmt, MatName, UseCol, UseAllCols, ExtCol )
    
-      REAL(ReKi),             INTENT(IN) :: A(:,:)          !< matrix to write
-      INTEGER,                INTENT(IN) :: Un              !< unit where matrix will be written
-      CHARACTER(*),           INTENT(IN) :: ReFmt           !< Format for printing ReKi numbers  
-      CHARACTER(*),           INTENT(IN) :: MatName         !< name of the matrix to write
+      REAL(R8Ki),             INTENT(IN) :: A(:)          !< matrix to write        
+      INTEGER,                INTENT(IN) :: Un            !< unit where matrix will be written
+      CHARACTER(*),           INTENT(IN) :: ReFmt         !< Format for printing ReKi numbers  
+      CHARACTER(*),           INTENT(IN) :: MatName       !< name of the matrix to write
+      LOGICAL,      OPTIONAL, INTENT(IN) :: UseCol(:)     !< must be size(A,2); this routine will print only the columns where UseCol is true
+      LOGICAL,      OPTIONAL, INTENT(IN) :: UseAllCols    !< a scalar that, if set to true, overrides UseCol and will print all columns
+      REAL(R8Ki),   OPTIONAL, INTENT(IN) :: ExtCol(:)     !< columns to add to the end of matrix A               
+                                                          
+      INTEGER                            :: ErrStat
+      INTEGER                            :: nc       ! size (rows and columns) of A
+      INTEGER                            :: j        ! indices into A
+      INTEGER                            :: jc       ! index into ThisRow
+      CHARACTER(256)                     :: Fmt
+      LOGICAL                            :: UseAllCols2
+      REAL(R8Ki), ALLOCATABLE            :: ThisRow(:)
+
+           
+      UseAllCols2 = .false.
+      if (.not. present(UseCol)) then
+         UseAllCols2 = .true.
+      else
+         if (present(UseAllCols)) then
+            if (UseAllCols) UseAllCols2 = .true. 
+         end if
+      end if
+      
+         ! how many columns will we print?
+      if (UseAllCols2) then
+         nc = SIZE(A)       ! default number of columns
+      else
+         nc = 0
+         do j = 1,size(A)
+            if (UseCol(j)) nc = nc + 1
+         end do
+      end if
+      if (present(ExtCol)) nc = nc + size(ExtCol)
+      
+      
+            
+      WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), '1', TRIM(Num2LStr(nc))
+      
+      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"   
+
+      ALLOCATE(ThisRow(nc), STAT=ErrStat)
+      IF (ErrStat /= 0) THEN
+         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' allocating temporary row WrPartialMatrix1().')
+         RETURN
+      END IF
+      
+                        
+      if (UseAllCols2) then
+         ThisRow = A
+      else
+         jc = 1
+         do j = 1,size(A)
+            if (UseCol(j)) then
+               ThisRow(jc) = A(j)
+               jc = jc + 1
+            end if            
+         end do
+         if (present(ExtCol)) ThisRow(jc:) = ExtCol(:)         
+      end if         
+                              
+      WRITE( Un, Fmt, IOSTAT=ErrStat ) ThisRow
+      IF (ErrStat /= 0) THEN
+         deallocate(ThisRow)
+         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrPartialMatrix1().')
+         RETURN
+      END IF
+         
+   deallocate(ThisRow)
+   RETURN
+   END SUBROUTINE WrPartialMatrix1R8
+!=======================================================================  
+!> \copydoc nwtc_io::wrpartialmatrix1r8
+   SUBROUTINE WrPartialMatrix2R8( A, Un, ReFmt, MatName, UseRow, UseCol, UseAllRows, UseAllCols, ExtCol )
+   
+      REAL(R8Ki),             INTENT(IN) :: A(:,:)          ! matrix to write
+      INTEGER,                INTENT(IN) :: Un              ! unit where matrix will be written
+      CHARACTER(*),           INTENT(IN) :: ReFmt           ! Format for printing ReKi numbers  
+      CHARACTER(*),           INTENT(IN) :: MatName         ! name of the matrix to write
       LOGICAL,      OPTIONAL, INTENT(IN) :: UseRow(:)       !< must be size(A,1); this routine will print only the rows where UseRow is true
-      LOGICAL,      OPTIONAL, INTENT(IN) :: UseCol(:)       !< must be size(A,2); this routine will print only the columns where UseCol is true
+      LOGICAL,      OPTIONAL, INTENT(IN) :: UseCol(:)       ! must be size(A,2); this routine will print only the columns where UseCol is true
       LOGICAL,      OPTIONAL, INTENT(IN) :: UseAllRows      !< a scalar that, if set to true, overrides UseRow and will print all rows
-      LOGICAL,      OPTIONAL, INTENT(IN) :: UseAllCols      !< a scalar that, if set to true, overrides UseCol and will print all columns
-      REAL(ReKi),   OPTIONAL, INTENT(IN) :: ExtCol(:,:)     !< columns to add to the end of matrix A          
+      LOGICAL,      OPTIONAL, INTENT(IN) :: UseAllCols      ! a scalar that, if set to true, overrides UseCol and will print all columns
+      REAL(R8Ki),   OPTIONAL, INTENT(IN) :: ExtCol(:,:)     ! columns to add to the end of matrix A          
 
       INTEGER                            :: ErrStat
       INTEGER                            :: nr, nc   ! size (rows and columns) of A
@@ -7264,7 +7380,7 @@ QueryGitVersion = GIT_VERSION_INFO
       CHARACTER(256)                     :: Fmt
       LOGICAL                            :: UseAllRows2
       LOGICAL                            :: UseAllCols2
-      REAL(ReKi), ALLOCATABLE            :: ThisRow(:)
+      REAL(R8Ki), ALLOCATABLE            :: ThisRow(:)
 
       
       UseAllRows2 = .false.
@@ -7356,85 +7472,7 @@ QueryGitVersion = GIT_VERSION_INFO
       
    deallocate(ThisRow)
    RETURN
-   END SUBROUTINE WrPartialMatrix2
-!=======================================================================  
-!> \copydoc nwtc_io::wrpartialmatrix2
-   SUBROUTINE WrPartialMatrix1( A, Un, ReFmt, MatName, UseCol, UseAllCols, ExtCol )
-   
-      REAL(ReKi),             INTENT(IN) :: A(:)          
-      INTEGER,                INTENT(IN) :: Un            
-      CHARACTER(*),           INTENT(IN) :: ReFmt         
-      CHARACTER(*),           INTENT(IN) :: MatName       
-      LOGICAL,      OPTIONAL, INTENT(IN) :: UseCol(:)     
-      LOGICAL,      OPTIONAL, INTENT(IN) :: UseAllCols    
-      REAL(ReKi),   OPTIONAL, INTENT(IN) :: ExtCol(:)          
-
-      INTEGER                            :: ErrStat
-      INTEGER                            :: nc       ! size (rows and columns) of A
-      INTEGER                            :: j        ! indices into A
-      INTEGER                            :: jc       ! index into ThisRow
-      CHARACTER(256)                     :: Fmt
-      LOGICAL                            :: UseAllRows2
-      LOGICAL                            :: UseAllCols2
-      REAL(ReKi), ALLOCATABLE            :: ThisRow(:)
-
-           
-      UseAllCols2 = .false.
-      if (.not. present(UseCol)) then
-         UseAllCols2 = .true.
-      else
-         if (present(UseAllCols)) then
-            if (UseAllCols) UseAllCols2 = .true. 
-         end if
-      end if
-      
-         ! how many columns will we print?
-      if (UseAllCols2) then
-         nc = SIZE(A)       ! default number of columns
-      else
-         nc = 0
-         do j = 1,size(A)
-            if (UseCol(j)) nc = nc + 1
-         end do
-      end if
-      if (present(ExtCol)) nc = nc + size(ExtCol)
-      
-      
-            
-      WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), '1', TRIM(Num2LStr(nc))
-      
-      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"   
-
-      ALLOCATE(ThisRow(nc), STAT=ErrStat)
-      IF (ErrStat /= 0) THEN
-         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' allocating temporary row WrPartialMatrix1().')
-         RETURN
-      END IF
-      
-                        
-      if (UseAllCols2) then
-         ThisRow = A
-      else
-         jc = 1
-         do j = 1,size(A)
-            if (UseCol(j)) then
-               ThisRow(jc) = A(j)
-               jc = jc + 1
-            end if            
-         end do
-         if (present(ExtCol)) ThisRow(jc:) = ExtCol(:)         
-      end if         
-                              
-      WRITE( Un, Fmt, IOSTAT=ErrStat ) ThisRow
-      IF (ErrStat /= 0) THEN
-         deallocate(ThisRow)
-         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrPartialMatrix1().')
-         RETURN
-      END IF
-         
-   deallocate(ThisRow)
-   RETURN
-   END SUBROUTINE WrPartialMatrix1
+   END SUBROUTINE WrPartialMatrix2R8
 !=======================================================================  
 !> This routine writes out a prompt to the screen without
 !! following it with a new line, though a new line precedes it.

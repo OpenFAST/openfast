@@ -18,6 +18,7 @@ SUBROUTINE Mod_vKrm ( Ht, Ucmp, Spec )
    REAL(ReKi), INTENT(IN)    :: UCmp                 ! wind speed
    REAL(ReKi), INTENT(  OUT) :: Spec   (:,:)
  
+   Spec = 0.0_ReKi
 
 RETURN
 END SUBROUTINE Mod_vKrm

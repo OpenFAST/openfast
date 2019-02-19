@@ -28,7 +28,7 @@ libxml2_install_dir=`${SPACK_EXE} location -i libxml2 %${COMPILER}`
 CC=gcc CXX=g++ FC=gfortran cmake \
    -DCMAKE_INSTALL_PREFIX=${OPENFAST_DIR}/install/ \
    -DCMAKE_BUILD_TYPE=DEBUG \
-   -DBUILD_FAST_CPP_API=ON \
+   -DBUILD_OPENFAST_CPP_API=ON \
    -DFPE_TRAP_ENABLED:BOOL=ON \
    -DYAML_ROOT:PATH=$yaml_install_dir \
    -DHDF5_USE_STATIC_LIBRARIES=ON \

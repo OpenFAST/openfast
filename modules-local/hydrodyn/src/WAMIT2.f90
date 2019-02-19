@@ -25,10 +25,6 @@
 ! See the License for the specific language governing permissions and
 !    
 !**********************************************************************************************************************************
-! File last committed: $Date: 2014-07-09 13:08:44 -0600 (Wed, 09 Jul 2014) $
-! (File) Revision #: $Rev: 483 $
-! URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_2nd_order/Source/WAMIT.f90 $
-!**********************************************************************************************************************************
 MODULE WAMIT2
 
 
@@ -752,7 +748,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    !! The data is stored in either 3D or 4D arrays depending on the file type used.
    !! At each step in the summation of the mth term, a call is made to the 3D or 4D interpolation algorithm to find the value of
    !! \f$ F^-_k(\omega_m, \omega_n) \f$ corresponding to the \f$ Z(\omega_m) \f$ term in the complex wave amplitude, _WaveElevC_.
-   !! The limits of \f$ \omega_{lo-d} \le \omega_m \le ≤ \omega_{hi-d} \f$ are imposed during the summation with values
+   !! The limits of \f$ \omega_{lo-d} :math:`\le` \omega_m :math:`\le` \omega_{hi-d} \f$ are imposed during the summation with values
    !! outside this range set to zero.
    !!
    !! For multi-directional waves where the equal energy discretization is used, each frequency has a single wave direction

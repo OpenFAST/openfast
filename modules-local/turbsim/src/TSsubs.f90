@@ -191,6 +191,9 @@ CHARACTER(*),                INTENT(OUT)    :: ErrMsg
    
    ! Internal variables
 
+INTEGER                      :: UC              ! I/O unit for Coherence debugging file.
+LOGICAL,    PARAMETER        :: COH_OUT = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
+
 REAL(ReKi), ALLOCATABLE       :: Dist(:)        ! The distance between points
 REAL(ReKi), ALLOCATABLE       :: DistU(:)
 REAL(ReKi), ALLOCATABLE       :: DistZMExp(:)
@@ -282,11 +285,33 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
    DO J=1,p%grid%NPoints
       DO I=J,p%grid%NPoints  ! The coherence matrix is symmetric so we're going to skip the other side      
          Indx        = Indx + 1
-         UM          = 0.5*( U(I) + U(J) )
+         UM          = p%UHub ! was: 0.5*( U(I) + U(J) )
          DistU(Indx) = Dist(Indx)/UM
       END DO ! I  
    END DO ! J 
    
+   !.................
+   ! DEBUGGING
+   !.................
+IF ( COH_OUT ) THEN !debugging info...
+
+      ! Write the coherence for three frequencies, for debugging purposes
+      CALL GetNewUnit( UC, ErrStat2, ErrMsg2 );  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
+      
+      CALL OpenFOutFile( UC, TRIM(p%RootName)//'.coh', ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+      
+      WRITE( UC, '(A4,X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,p%grid%NPacked)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Distance',   Dist(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) '(r/u)', DistU(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) '(u)',  p%met%URef
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) '-(r/z_m)^CohExp', DistZMExp(:)
+ENDIF
+
    
    !--------------------------------------------------------------------------------
    ! Calculate the fourier coefficients
@@ -332,7 +357,14 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
 
             ENDDO ! I
          ENDDO ! J
-      
+   !.................
+   ! DEBUGGING
+   !.................
+         IF (COH_OUT) THEN
+   !        IF (IFreq == 1 .OR. IFreq == p%grid%NumFreq) THEN
+               WRITE( UC, '(I3,2X,F15.5,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) IVec, p%grid%Freq(IFreq), TRH(1:p%grid%NPacked)
+   !        ENDIF
+         ENDIF 
 
          ! -----------------------------------------------
          ! Now transform coherence to H matrix and then
@@ -355,6 +387,8 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
 !............................................
 CONTAINS
    SUBROUTINE Cleanup()
+
+      IF (COH_OUT .AND. UC > 0)  CLOSE( UC )
 
       IF ( ALLOCATED( Dist      ) ) DEALLOCATE( Dist      )
       IF ( ALLOCATED( DistU     ) ) DEALLOCATE( DistU     )
@@ -1104,8 +1138,13 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
                iPoint = p%usr%RefPtID
             END IF
        !bjj: make sure size(ssvs,1) = p%grid%NumFreq <= p%usr%nFreq = size(p%usr%S,1)
-            CALL Spec_TimeSer_Extrap ( p, p%grid%Z(iPoint), U(iPoint), SSVS )            
-            SSVS(1:p%usr%nFreq,:) = p%usr%S(:,iPointUsr,:)                         
+            ! initialize SSVS with extrapolated values if there are non-specified components or frequencies 
+            ! i.e., fill the gaps where wind component or frequencies exceed what was specified in the time-series data with some numerical model
+            ! (use zeros for known spectral values that will get overwritten later)
+            CALL Spec_TimeSer_Extrap ( p, p%grid%Z(iPoint), U(iPoint), SSVS )
+            
+            ! overwrite the frequencies and wind components that were computed from measurements in the time-series file
+            SSVS(1:p%usr%nFreq,1:p%usr%nComp) = p%usr%S(1:p%usr%nFreq,iPointUsr,1:p%usr%nComp)
                         
             S(:,iPoint,:) = SSVS*HalfDelF
          END DO
@@ -1775,7 +1814,8 @@ SUBROUTINE ScaleTimeSeries(p, V, ErrStat, ErrMsg)
          SpecModel_WF_14D, &
          SpecModel_USRVKM, &
          SpecModel_TIDAL,  &
-         SpecModel_RIVER   ) ! Do reynolds stress for HYDRO also.
+         SpecModel_RIVER,  &
+         SpecModel_USER  ) ! Do reynolds stress for HYDRO also.
                
    
       CALL TimeSeriesScaling_ReynoldsStress(p, V, ErrStat, ErrMsg)
@@ -1829,7 +1869,7 @@ SUBROUTINE TimeSeriesScaling_IEC(p, V)
 
       HubFactor(IVec) = p%IEC%SigmaIEC(IVec)/ActualSigma(IVec)  ! factor = Target / actual
                   
-      IF (p%IEC%ScaleIEC == 1 .OR. IVec > 1) THEN ! v and w have no coherence, thus all points have same std, so we'll save some calculations
+      IF (p%IEC%ScaleIEC == 1 .OR. p%met%SCMod(IVec) == CohMod_None) THEN ! with no coherence, all points have same std, so we'll save some calculations
                
          V(:,:,IVec) =     HubFactor(IVec) * V(:,:,IVec)
                

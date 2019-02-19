@@ -4,6 +4,7 @@
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2012-2016  National Renewable Energy Laboratory
+! Copyright (C) 2017-2018  Envision Energy USA, LTD.
 !
 !    This file is part of ElastoDyn.
 !
@@ -20,10 +21,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-11-12 13:43:42 -0700 (Thu, 12 Nov 2015) $
-! (File) Revision #: $Rev: 1172 $
-! URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/BJonkman/Source/ElastoDyn.f90 $
-!**********************************************************************************************************************************
 MODULE ElastoDyn
 
    USE ElastoDyn_IO
@@ -35,6 +32,8 @@ MODULE ElastoDyn
 
    PRIVATE
    
+   REAL(R8Ki)  :: MinPerturb = SQRT( EPSILON( 1.0_R8Ki ) ) ! minimum value for perturbation in ED jacobians
+
 
       ! ..... Public Subroutines ...................................................................................................
 
@@ -137,15 +136,16 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          ! Set other values not used for BeamDyn      
       InputFileData%OoPDefl  = 0.0_ReKi
       InputFileData%IPDefl   = 0.0_ReKi
-      InputFileData%TipMass  = 0.0_ReKi            
+      InputFileData%TipMass  = 0.0_ReKi
       InputFileData%TipRad   = 0.0_ReKi
       InputFileData%NBlGages = 0
       InputFileData%BldGagNd = 0
+      InputFileData%BldNodes = 0
        
    END IF
 
 
-   CALL ED_ValidateInput( InputFileData, p%BD4Blades, ErrStat2, ErrMsg2 )
+   CALL ED_ValidateInput( InputFileData, p%BD4Blades, InitInp%Linearize, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -231,6 +231,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%Gravity     = p%Gravity
    InitOut%BladeLength = p%TipRad - p%HubRad
    InitOut%TowerHeight = p%TwrFlexL
+   InitOut%TowerBaseHeight = p%TowerBsHt
    InitOut%PlatformPos = x%QT(1:6)
    InitOut%HubHt       = p%HubHt
    InitOut%TwrBasePos  = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
@@ -456,7 +457,7 @@ END SUBROUTINE ED_UpdateStates
 !! This SUBROUTINE is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
 !! NOTE: the descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
 !! for a complete description of each output parameter.
-!! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
+!! NOTE: no matter how many channels are selected for output, all of the outputs are calculated
 !! All of the calculated output channels are placed into the m\%AllOuts(:), while the channels selected for outputs are
 !! placed in the y\%WriteOutput(:) array.
 SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
@@ -477,45 +478,45 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
 
       ! Local variables:
+   INTEGER, PARAMETER           :: NDims = 3
 
-   REAL(ReKi)                   :: AngAccEB  (3)                                   ! Angular acceleration of the base plate                                                (body B) in the inertia frame (body E for earth).
-   REAL(ReKi)                   :: AngAccEN  (3)                                   ! Angular acceleration of the nacelle                                                   (body N) in the inertia frame (body E for earth).
-   REAL(ReKi)                   :: AngAccEH  (3)                                   ! Angular acceleration of the hub                                                   (body N) in the inertia frame (body E for earth).
-   REAL(ReKi)                   :: AngAccER  (3)                                   ! Angular acceleration of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame (body E for earth).
-   REAL(ReKi)                   :: AngAccEX  (3)                                   ! Angular acceleration of the platform                                                  (body X) in the inertia frame (body E for earth).
+   REAL(ReKi)                   :: AngAccEB  (NDims)                               ! Angular acceleration of the base plate                                                (body B) in the inertia frame (body E for earth).
+   REAL(ReKi)                   :: AngAccEN  (NDims)                               ! Angular acceleration of the nacelle                                                   (body N) in the inertia frame (body E for earth).
+   REAL(ReKi)                   :: AngAccEH  (NDims)                               ! Angular acceleration of the hub                                                   (body N) in the inertia frame (body E for earth).
+   REAL(ReKi)                   :: AngAccER  (NDims)                               ! Angular acceleration of the structure that furls with the rotor (not including rotor) (body R) in the inertia frame (body E for earth).
+   REAL(ReKi)                   :: AngAccEX  (NDims)                               ! Angular acceleration of the platform                                                  (body X) in the inertia frame (body E for earth).
 !   REAL(ReKi)                   :: ComDenom                                        ! Common denominator used in several expressions.
 !   REAL(ReKi)                   :: CThrstys                                        ! Estimate of the ys-location of the center of thrust.
 !   REAL(ReKi)                   :: CThrstzs                                        ! Estimate of the zs-location of the center of thrust.
-   REAL(R8Ki)                   :: FrcMGagB  (3)                                   ! Total force at the blade element   (body M) / blade strain gage location            (point S) due to the blade above the strain gage.
-   REAL(ReKi)                   :: FrcFGagT  (3)                                   ! Total force at the tower element   (body F) / tower strain gage location            (point T) due to the nacelle and rotor and tower above the strain gage.
-   REAL(ReKi)                   :: FrcONcRt  (3)                                   ! Total force at the yaw bearing (point O  ) due to the nacelle, generator, and rotor
-   REAL(ReKi)                   :: FrcPRot   (3)                                   ! Total force at the teeter pin  (point P  ) due to the rotor
-   REAL(ReKi)                   :: FrcT0Trb  (3)                                   ! Total force at the base of flexible portion of the tower (point T(0)) due to the entire wind turbine
-   REAL(ReKi)                   :: FZHydro   (3)                                   ! Total platform hydrodynamic force at the platform reference (point Z)
-!   REAL(ReKi)                   :: HHWndVec  (3)                                   ! Hub-height wind vector in the AeroDyn coordinate system
-   REAL(ReKi)                   :: LinAccEIMU(3)                                   ! Total linear acceleration of the nacelle IMU (point IMU) in the inertia frame (body E for earth)
-   REAL(ReKi)                   :: LinAccEO  (3)                                   ! Total linear acceleration of the base plate (point O) in the inertia frame (body E for earth)
-   REAL(ReKi)                   :: LinAccEZ  (3)                                   ! Total linear acceleration of the platform refernce (point Z) in the inertia frame (body E for earth)
-   REAL(ReKi)                   :: MomBNcRt  (3)                                   ! Total moment at the base plate      (body B) / yaw bearing                           (point O) due to the nacelle, generator, and rotor.
-   REAL(ReKi)                   :: MomFGagT  (3)                                   ! Total moment at the tower element   (body F) / tower strain gage location            (point T) due to the nacelle and rotor and tower above the strain gage.
-   REAL(ReKi)                   :: MomLPRot  (3)                                   ! Total moment at the low-speed shaft (body L) / teeter pin                            (point P) due to the rotor.
-   REAL(ReKi)                   :: MomMGagB  (3)                                   ! Total moment at the blade element   (body M) / blade strain gage location            (point S) due to the blade above the strain gage.
-   REAL(ReKi)                   :: MomNGnRt  (3)                                   ! Total moment at the nacelle         (body N) / specified point on rotor-furl axis    (point V) due to the structure that furls with the rotor, generator, and rotor.
-   REAL(ReKi)                   :: MomNTail  (3)                                   ! Total moment at the nacelle         (body N) / specified point on  tail-furl axis    (point W) due to the tail.
-   REAL(ReKi)                   :: MomX0Trb  (3)                                   ! Total moment at the tower base      (body X) / base of flexible portion of the tower (point T(0)) due to the entire wind turbine.
-   REAL(ReKi)                   :: MXHydro   (3)                                   ! Total platform hydrodynamic moment acting at the platform (body X) / platform reference (point Z).
-   REAL(R8Ki)                   :: rOPO      (3)                                   ! Position vector from the undeflected tower top (point O prime) to the deflected tower top (point O).
-   REAL(R8Ki)                   :: rOSTip    (3)                                   ! Position vector from the deflected tower top (point O) to the deflected blade tip (point S tip).
+   REAL(R8Ki)                   :: FrcMGagB  (NDims)                               ! Total force at the blade element   (body M) / blade strain gage location            (point S) due to the blade above the strain gage.
+   REAL(ReKi)                   :: FrcFGagT  (NDims)                               ! Total force at the tower element   (body F) / tower strain gage location            (point T) due to the nacelle and rotor and tower above the strain gage.
+   REAL(ReKi)                   :: FrcONcRt  (NDims)                               ! Total force at the yaw bearing (point O  ) due to the nacelle, generator, and rotor
+   REAL(ReKi)                   :: FrcPRot   (NDims)                               ! Total force at the teeter pin  (point P  ) due to the rotor
+   REAL(ReKi)                   :: FrcT0Trb  (NDims)                               ! Total force at the base of flexible portion of the tower (point T(0)) due to the entire wind turbine
+   REAL(ReKi)                   :: FZHydro   (NDims)                               ! Total platform hydrodynamic force at the platform reference (point Z)
+!   REAL(ReKi)                   :: HHWndVec  (NDims)                               ! Hub-height wind vector in the AeroDyn coordinate system
+   REAL(ReKi)                   :: LinAccEIMU(NDims)                               ! Total linear acceleration of the nacelle IMU (point IMU) in the inertia frame (body E for earth)
+   REAL(ReKi)                   :: LinAccEO  (NDims)                               ! Total linear acceleration of the base plate (point O) in the inertia frame (body E for earth)
+   REAL(ReKi)                   :: LinAccEZ  (NDims)                               ! Total linear acceleration of the platform refernce (point Z) in the inertia frame (body E for earth)
+   REAL(ReKi)                   :: MomBNcRt  (NDims)                               ! Total moment at the base plate      (body B) / yaw bearing                           (point O) due to the nacelle, generator, and rotor.
+   REAL(ReKi)                   :: MomFGagT  (NDims)                               ! Total moment at the tower element   (body F) / tower strain gage location            (point T) due to the nacelle and rotor and tower above the strain gage.
+   REAL(ReKi)                   :: MomLPRot  (NDims)                               ! Total moment at the low-speed shaft (body L) / teeter pin                            (point P) due to the rotor.
+   REAL(ReKi)                   :: MomMGagB  (NDims)                               ! Total moment at the blade element   (body M) / blade strain gage location            (point S) due to the blade above the strain gage.
+   REAL(ReKi)                   :: MomNGnRt  (NDims)                               ! Total moment at the nacelle         (body N) / specified point on rotor-furl axis    (point V) due to the structure that furls with the rotor, generator, and rotor.
+   REAL(ReKi)                   :: MomNTail  (NDims)                               ! Total moment at the nacelle         (body N) / specified point on  tail-furl axis    (point W) due to the tail.
+   REAL(ReKi)                   :: MomX0Trb  (NDims)                               ! Total moment at the tower base      (body X) / base of flexible portion of the tower (point T(0)) due to the entire wind turbine.
+   REAL(ReKi)                   :: MXHydro   (NDims)                               ! Total platform hydrodynamic moment acting at the platform (body X) / platform reference (point Z).
+   REAL(R8Ki)                   :: rOPO      (NDims)                               ! Position vector from the undeflected tower top (point O prime) to the deflected tower top (point O).
+   REAL(R8Ki)                   :: rOSTip    (NDims)                               ! Position vector from the deflected tower top (point O) to the deflected blade tip (point S tip).
    REAL(R8Ki)                   :: rOSTipxn                                        ! Component of rOSTip directed along the xn-axis.
    REAL(R8Ki)                   :: rOSTipyn                                        ! Component of rOSTip directed along the yn-axis.
    REAL(R8Ki)                   :: rOSTipzn                                        ! Component of rOSTip directed along the zn-axis.
-   REAL(R8Ki)                   :: rTPT      (3)                                   ! Position vector from the undeflected tower node (point T prime) to the deflected node (point T)
-   REAL(R8Ki)                   :: rSPS      (3)                                   ! Position vector from the undeflected blade node (point S prime) to the deflected node (point S)
-   REAL(R8Ki)                   :: rSTipPSTip(3)                                   ! Position vector from the undeflected blade tip (point S tip prime) to the deflected blade tip (point S tip).
-   REAL(R8Ki)                   :: TmpVec    (3)                                   ! A temporary vector used in various computations.
-   REAL(R8Ki)                   :: TmpVec2   (3)                                   ! A temporary vector.
+   REAL(R8Ki)                   :: rTPT      (NDims)                               ! Position vector from the undeflected tower node (point T prime) to the deflected node (point T)
+   REAL(R8Ki)                   :: rSPS      (NDims)                               ! Position vector from the undeflected blade node (point S prime) to the deflected node (point S)
+   REAL(R8Ki)                   :: rSTipPSTip(NDims)                               ! Position vector from the undeflected blade tip (point S tip prime) to the deflected blade tip (point S tip).
+   REAL(R8Ki)                   :: TmpVec    (NDims)                               ! A temporary vector used in various computations.
+   REAL(R8Ki)                   :: TmpVec2   (NDims)                               ! A temporary vector.
 
-   INTEGER, PARAMETER           :: NDims = 3
    REAL(ReKi)                   :: LinAccES (NDims,0:p%TipNode,p%NumBl)            ! Total linear acceleration of a point on a   blade (point S) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: LinAccET (NDims,0:p%TwrNodes)                   ! Total linear acceleration of a point on the tower (point T) in the inertia frame (body E for earth).
    REAL(ReKi)                   :: AngAccEF (NDims,0:p%TwrNodes)                   ! Total angular acceleration of tower element J (body F) in the inertia frame (body E for earth).
@@ -771,8 +772,9 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! Blade Pitch Motions:
 
    m%AllOuts(PtchPMzc1) = u%BlPitchCom(1)*R2D
+IF ( p%NumBl > 1 ) THEN
    m%AllOuts(PtchPMzc2) = u%BlPitchCom(2)*R2D
-   IF ( p%NumBl == 3 )  THEN ! 3-blader
+   IF ( p%NumBl > 2 )  THEN ! 3-blader
 
       m%AllOuts(PtchPMzc3) = u%BlPitchCom(3)*R2D
 
@@ -781,12 +783,12 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       ! Teeter Motions:
 
-      m%AllOuts(  TeetPya) =x%QT  (DOF_Teet)*R2D
-      m%AllOuts(  TeetVya) =x%QDT (DOF_Teet)*R2D
-      m%AllOuts(  TeetAya) =  m%QD2T(DOF_Teet)*R2D
+      m%AllOuts(  TeetPya) = x%QT  (DOF_Teet)*R2D
+      m%AllOuts(  TeetVya) = x%QDT (DOF_Teet)*R2D
+      m%AllOuts(  TeetAya) = m%QD2T(DOF_Teet)*R2D
 
    ENDIF
-
+END IF
 
       ! Shaft Motions:
 
@@ -1185,11 +1187,8 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! Internal p%DOFs outputs:
 
    m%AllOuts( Q_B1E1   ) = x%QT(   DOF_BE(1,1) )
-   m%AllOuts( Q_B2E1   ) = x%QT(   DOF_BE(2,1) )
    m%AllOuts( Q_B1F1   ) = x%QT(   DOF_BF(1,1) )
-   m%AllOuts( Q_B2F1   ) = x%QT(   DOF_BF(2,1) )
    m%AllOuts( Q_B1F2   ) = x%QT(   DOF_BF(1,2) )
-   m%AllOuts( Q_B2F2   ) = x%QT(   DOF_BF(2,2) )
    m%AllOuts( Q_DrTr   ) = x%QT(   DOF_DrTr    )
    m%AllOuts( Q_GeAz   ) = x%QT(   DOF_GeAz    )
    m%AllOuts( Q_RFrl   ) = x%QT(   DOF_RFrl    )
@@ -1207,11 +1206,8 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    m%AllOuts( Q_Y      ) = x%QT(   DOF_Y       )
 
    m%AllOuts( QD_B1E1  ) = x%QDT(  DOF_BE(1,1) )
-   m%AllOuts( QD_B2E1  ) = x%QDT(  DOF_BE(2,1) )
    m%AllOuts( QD_B1F1  ) = x%QDT(  DOF_BF(1,1) )
-   m%AllOuts( QD_B2F1  ) = x%QDT(  DOF_BF(2,1) )
    m%AllOuts( QD_B1F2  ) = x%QDT(  DOF_BF(1,2) )
-   m%AllOuts( QD_B2F2  ) = x%QDT(  DOF_BF(2,2) )
    m%AllOuts( QD_DrTr  ) = x%QDT(  DOF_DrTr    )
    m%AllOuts( QD_GeAz  ) = x%QDT(  DOF_GeAz    )
    m%AllOuts( QD_RFrl  ) = x%QDT(  DOF_RFrl    )
@@ -1250,7 +1246,16 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    m%AllOuts( QD2_P    ) = m%QD2T( DOF_P       )
    m%AllOuts( QD2_Y    ) = m%QD2T( DOF_Y       )
 
+IF ( p%NumBl > 1 ) THEN
 
+   m%AllOuts( Q_B2E1   ) = x%QT(   DOF_BE(2,1) )
+   m%AllOuts( Q_B2F1   ) = x%QT(   DOF_BF(2,1) )
+   m%AllOuts( Q_B2F2   ) = x%QT(   DOF_BF(2,2) )
+      
+   m%AllOuts( QD_B2E1  ) = x%QDT(  DOF_BE(2,1) )
+   m%AllOuts( QD_B2F1  ) = x%QDT(  DOF_BF(2,1) )
+   m%AllOuts( QD_B2F2  ) = x%QDT(  DOF_BF(2,2) )
+   
    IF ( p%NumBl > 2 ) THEN
       m%AllOuts( Q_B3E1   ) = x%QT(   DOF_BE(3,1) )
       m%AllOuts( Q_B3F1   ) = x%QT(   DOF_BF(3,1) )
@@ -1264,10 +1269,12 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%AllOuts( QD2_B3F1 ) = m%QD2T( DOF_BF(3,1) )
       m%AllOuts( QD2_B3F2 ) = m%QD2T( DOF_BF(3,2) )
    ELSE
-      m%AllOuts( Q_Teet   ) = x%QT(            DOF_Teet    )
-      m%AllOuts( QD_Teet  ) = x%QDT(           DOF_Teet    )
+      m%AllOuts( Q_Teet   ) = x%QT(   DOF_Teet    )
+      m%AllOuts( QD_Teet  ) = x%QDT(  DOF_Teet    )
       m%AllOuts( QD2_Teet ) = m%QD2T( DOF_Teet    )
    END IF
+      
+END IF
 
    !...............................................................................................................................
    ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -2070,6 +2077,8 @@ SUBROUTINE Init_DOFparameters( InputFileData, p, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
 
 
+   p%DOF_Flag = .false.
+   p%DOF_Desc = ''
    IF ( p%NumBl == 2 )  THEN ! the 3rd blade overwrites the DOF_Teet position of the array, so don't use an "ELSE" for this statement
       p%DOF_Flag(DOF_Teet) = InputFileData%TeetDOF
       p%DOF_Desc(DOF_Teet) = 'Hub teetering DOF (internal DOF index = DOF_Teet), rad'
@@ -3311,22 +3320,22 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
    p%CShftSkew = COS( REAL(InputFileData%ShftSkew,R8Ki) )
    p%SShftSkew = SIN( REAL(InputFileData%ShftSkew,R8Ki) )
 
-   p%CTFinSkew = COS( InputFileData%TFinSkew )
-   p%STFinSkew = SIN( InputFileData%TFinSkew )
-   p%CTFinTilt = COS( InputFileData%TFinTilt )
-   p%STFinTilt = SIN( InputFileData%TFinTilt )
-   p%CTFinBank = COS( InputFileData%TFinBank )
-   p%STFinBank = SIN( InputFileData%TFinBank )
+   p%CTFinSkew = COS( REAL(InputFileData%TFinSkew, R8Ki) )
+   p%STFinSkew = SIN( REAL(InputFileData%TFinSkew, R8Ki) )
+   p%CTFinTilt = COS( REAL(InputFileData%TFinTilt, R8Ki) )
+   p%STFinTilt = SIN( REAL(InputFileData%TFinTilt, R8Ki) )
+   p%CTFinBank = COS( REAL(InputFileData%TFinBank, R8Ki) )
+   p%STFinBank = SIN( REAL(InputFileData%TFinBank, R8Ki) )
 
-   p%CRFrlSkew = COS( InputFileData%RFrlSkew )
-   p%SRFrlSkew = SIN( InputFileData%RFrlSkew )
-   p%CRFrlTilt = COS( InputFileData%RFrlTilt )
-   p%SRFrlTilt = SIN( InputFileData%RFrlTilt )
+   p%CRFrlSkew = COS( REAL(InputFileData%RFrlSkew, R8Ki) )
+   p%SRFrlSkew = SIN( REAL(InputFileData%RFrlSkew, R8Ki) )
+   p%CRFrlTilt = COS( REAL(InputFileData%RFrlTilt, R8Ki) )
+   p%SRFrlTilt = SIN( REAL(InputFileData%RFrlTilt, R8Ki) )
 
-   p%CTFrlSkew = COS( InputFileData%TFrlSkew )
-   p%STFrlSkew = SIN( InputFileData%TFrlSkew )
-   p%CTFrlTilt = COS( InputFileData%TFrlTilt )
-   p%STFrlTilt = SIN( InputFileData%TFrlTilt )
+   p%CTFrlSkew = COS( REAL(InputFileData%TFrlSkew, R8Ki) )
+   p%STFrlSkew = SIN( REAL(InputFileData%TFrlSkew, R8Ki) )
+   p%CTFrlTilt = COS( REAL(InputFileData%TFrlTilt, R8Ki) )
+   p%STFrlTilt = SIN( REAL(InputFileData%TFrlTilt, R8Ki) )
 
 
       ! Common multiplications of sines and cosines:
@@ -3510,15 +3519,15 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
 
    p%CosPreC  = COS( REAL(InputFileData%Precone(1:p%NumBl),R8Ki) )
    p%SinPreC  = SIN( REAL(InputFileData%Precone(1:p%NumBl),R8Ki) )
-   
+ 
    IF ( p%NumBl == 2 ) THEN
-      p%CosDel3  = COS( InputFileData%Delta3 )
-      p%SinDel3  = SIN( InputFileData%Delta3 )
+      p%CosDel3  = COS( REAL(InputFileData%Delta3,R8Ki) )
+      p%SinDel3  = SIN( REAL(InputFileData%Delta3,R8Ki) )
    ELSE
-      p%CosDel3  = 1.0_ReKi
-      p%SinDel3  = 0.0_ReKi
+      p%CosDel3  = 1.0_R8Ki
+      p%SinDel3  = 0.0_R8Ki
    END IF
-
+   
    !...............................................................................................................................
 
       ! Calculate the average tip radius normal to the shaft (AvgNrmTpRd)
@@ -3643,7 +3652,7 @@ SUBROUTINE Init_ContStates( x, p, InputFileData, OtherState, ErrStat, ErrMsg  )
    !JASON: CHANGE THESE MOD() FUNCTIONS INTO MODULO() FUNCTIONS SO THAT YOU CAN ELIMINATE ADDING 360:
 !   x%QT (DOF_GeAz) = MOD( (InputFileData%Azimuth - p%AzimB1Up)*R2D + 270.0 + 360.0, 360.0 )*D2R   ! Internal position of blade 1
    
-   x%QT (DOF_GeAz) = InputFileData%Azimuth - p%AzimB1Up - Piby2
+   x%QT (DOF_GeAz) = REAL(InputFileData%Azimuth, R8Ki) - p%AzimB1Up - REAL(Piby2_D, R8Ki)
    CALL Zero2TwoPi( x%QT (DOF_GeAz) )
    x%QDT(DOF_GeAz) = p%RotSpeed                                               ! Rotor speed in rad/sec.
 
@@ -6184,7 +6193,7 @@ SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
 
          Lj1 = p%CThetaS(K,J)*CoordSys%j1(K,:) - p%SThetaS(K,J)*CoordSys%j2(K,:)  ! vector / direction Lj1 at node J for blade K
          Lj2 = p%SThetaS(K,J)*CoordSys%j1(K,:) + p%CThetaS(K,J)*CoordSys%j2(K,:)  ! vector / direction Lj2 at node J for blade K
-         Lj3 = CoordSys%j3(K,:)                                               ! vector / direction Lj3 at node J for blade K
+         Lj3 = CoordSys%j3(K,:)                                                   ! vector / direction Lj3 at node J for blade K
 
 
       ! Blade element-fixed coordinate system aligned with local structural axes:
@@ -8745,12 +8754,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) RETURN
 
             
-      ! create elements:
-      
-   IF ( p%TwrNodes < 2_IntKi ) THEN  ! if there are less than 2 nodes, we'll throw an error:
-      CALL CheckError(ErrID_Fatal,"Tower Line2 Mesh cannot be created with less than 2 elements.")
-      RETURN
-   ELSE ! create line2 elements from the tower nodes:
+     ! create line2 elements from the tower nodes (we've alread checked that p%TwrNodes is a positive number):
       DO J = 2,p%TwrNodes+1  !the plus 1 includes one of the end nodes
          CALL MeshConstructElement ( Mesh      = y%TowerLn2Mesh     &
                                     , Xelement = ELEMENT_LINE2      &
@@ -8764,18 +8768,16 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
       END DO
       
    ! add the other extra element, connecting the first node:
-      
-         CALL MeshConstructElement ( Mesh      = y%TowerLn2Mesh     &
-                                    , Xelement = ELEMENT_LINE2      &
-                                    , P1       = p%TwrNodes + 2     &   ! node1 number
-                                    , P2       = 1                  &   ! node2 number
-                                    , ErrStat  = ErrStat2           &
-                                    , ErrMess  = ErrMsg2            )
+      CALL MeshConstructElement ( Mesh      = y%TowerLn2Mesh     &
+                                 , Xelement = ELEMENT_LINE2      &
+                                 , P1       = p%TwrNodes + 2     &   ! node1 number
+                                 , P2       = 1                  &   ! node2 number
+                                 , ErrStat  = ErrStat2           &
+                                 , ErrMess  = ErrMsg2            )
          
-         CALL CheckError(ErrStat2,ErrMsg2)
-         IF (ErrStat >= AbortErrLev) RETURN
+      CALL CheckError(ErrStat2,ErrMsg2)
+      IF (ErrStat >= AbortErrLev) RETURN
                                           
-   END IF   
    
       ! that's our entire mesh:
    CALL MeshCommit ( y%TowerLn2Mesh, ErrStat2, ErrMsg2 )   
@@ -9086,7 +9088,7 @@ SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
       END IF
       x_tmp%qt  = 0.0_ReKi
       x_tmp%qdt = 0.0_ReKi
-      x_tmp%QT (DOF_GeAz) = - p%AzimB1Up - Piby2
+      x_tmp%QT (DOF_GeAz) = - p%AzimB1Up - REAL(Piby2_D, R8Ki)
          CALL Zero2TwoPi( x_tmp%QT (DOF_GeAz) )
 
       u%BlPitchCom = 0.0_ReKi
@@ -9497,7 +9499,7 @@ END SUBROUTINE Init_u
 !!
 !! For details, see:
 !! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
-!!   Runge-Kutta." 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
+!!   Runge-Kutta." Sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
 !!   Cambridge University Press, pp. 704-716, 1992.
 SUBROUTINE ED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
@@ -10039,8 +10041,11 @@ SUBROUTINE ED_PrintSum( p, OtherState, GenerateAdamsModel, ErrStat, ErrMsg )
    CHARACTER(*), PARAMETER      :: FmtDatT   = '(A,T35,1(:,F13.8))'                ! Format for outputting time steps.
    CHARACTER(100)               :: RotorType                                       ! Text description of rotor.
 
+   CHARACTER(30)                :: OutPFmtS                                        ! Format to print list of selected output channel names to summary file
    CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
    CHARACTER(10)                :: DOFEnabled                                      ! String to say if a DOF is enabled or disabled
+   CHARACTER(ChanLen),PARAMETER :: TitleStr(2) = (/ 'Parameter', 'Units    ' /)
+   CHARACTER(ChanLen),PARAMETER :: TitleStrLines(2) = (/ '---------------', '---------------' /)
 
    ! Open the summary file and give it a heading.
    
@@ -10186,6 +10191,7 @@ END IF
 
 
       ! Interpolated blade properties.
+IF (.NOT. p%BD4Blades) THEN
 
    DO K=1,p%NumBl
 
@@ -10225,11 +10231,15 @@ END IF
       ENDIF
 
    ENDDO ! K
+   
+END IF
 
-
-   OutPFmt = '( I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
-   WRITE (UnSu,'(//,A,/)')  'Requested Outputs:'
-   WRITE (UnSu,"(/, '  Col  Parameter  Units', /, '  ---  ---------  -----')")
+   OutPFmt  = '( I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
+   OutPFmtS = '( A4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
+   WRITE (UnSu,'(//,A,//)')  'Requested Outputs:'
+  !WRITE (UnSu,"(/, '  Col  Parameter       Units', /, '  ---  --------------  ----------')")
+   WRITE (UnSu,OutPFmtS)  "Col", TitleStr
+   WRITE (UnSu,OutPFmtS)  "---", TitleStrLines
    DO I = 0,p%NumOuts
       WRITE (UnSu,OutPFmt)  I, p%OutParam(I)%Name, p%OutParam(I)%Units
    END DO             
@@ -10457,7 +10467,7 @@ END SUBROUTINE FixHSSBrTq
 ! If the module does not implement them, set ErrStat = ErrID_Fatal in ED_Init() when InitInp%Linearize is .true.
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
+!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
 SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
 !..................................................................................................................................
 
@@ -10475,13 +10485,13 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(ED_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect 
                                                                                !!   to the inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with 
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with 
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
                                                                                !!   respect to the inputs (u) [intent in to avoid deallocation]
 
    
@@ -10491,7 +10501,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    TYPE(ED_ContinuousStateType)                      :: x_p
    TYPE(ED_ContinuousStateType)                      :: x_m
    TYPE(ED_InputType)                                :: u_perturb
-   REAL(ReKi)                                        :: delta        ! delta change in input or state
+   REAL(R8Ki)                                        :: delta        ! delta change in input or state
    INTEGER(IntKi)                                    :: i, j   
    
    INTEGER(IntKi)                                    :: ErrStat2
@@ -10680,7 +10690,7 @@ contains
 END SUBROUTINE ED_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
+!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
 SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
 !..................................................................................................................................
 
@@ -10698,13 +10708,13 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(ED_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions (Y) with respect 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions (Y) with respect 
                                                                                !!   to the continuous states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state functions (X) with respect 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state functions (X) with respect 
                                                                                !!   to the continuous states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state functions (Xd) with respect 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state functions (Xd) with respect 
                                                                                !!   to the continuous states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state functions (Z) with respect 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state functions (Z) with respect 
                                                                                !!   to the continuous states (x) [intent in to avoid deallocation]
    
       ! local variables
@@ -10713,7 +10723,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    TYPE(ED_ContinuousStateType)                      :: x_p
    TYPE(ED_ContinuousStateType)                      :: x_m
    TYPE(ED_ContinuousStateType)                      :: x_perturb
-   REAL(ReKi)                                        :: delta        ! delta change in input or state
+   REAL(R8Ki)                                        :: delta        ! delta change in input or state
    INTEGER(IntKi)                                    :: i, j   
    
    INTEGER(IntKi)                                    :: ErrStat2
@@ -10877,7 +10887,7 @@ contains
 END SUBROUTINE ED_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
+!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and dZ/dxd are returned.
 SUBROUTINE ED_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
 !..................................................................................................................................
 
@@ -10951,7 +10961,7 @@ SUBROUTINE ED_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 END SUBROUTINE ED_JacobianPDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
+!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and dZ/dz are returned.
 SUBROUTINE ED_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
 !..................................................................................................................................
 
@@ -11073,8 +11083,9 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    CALL AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
-   InitOut%RotFrame_y = .false.
+   InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
    
+   ! note that this Mask is for the y%HubPtMotion mesh ONLY. The others pack *all* of the motion fields
    Mask  = .false.
    Mask(MASKID_TRANSLATIONDISP) = .true.
    Mask(MASKID_ORIENTATION) = .true.
@@ -11086,7 +11097,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       do i=1,p%NumBl
          call PackMotionMesh_Names(y%BladeLn2Mesh(i), 'Blade '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
       end do      
-      InitOut%RotFrame_y(index_last:index_next-1) = .true.
+      !InitOut%RotFrame_y(index_last:index_next-1) = .true. ! values on the mesh are in global, not rotating frame
    end if
    call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, index_next)
    call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, index_next)
@@ -11095,7 +11106,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    do i=1,p%NumBl
       call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, index_next)
    end do   
-   InitOut%RotFrame_y(index_last:index_next-1) = .true.
+   !InitOut%RotFrame_y(index_last:index_next-1) = .true. ! values on the mesh are in global, not rotating frame
 
    call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, index_next)
    InitOut%LinNames_y(index_next) = 'Yaw, rad'; index_next = index_next+1
@@ -11103,7 +11114,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
          
    do i=1,p%NumOuts
-      InitOut%LinNames_y(i+index_next) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+      InitOut%LinNames_y(i+index_next) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)) !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do   
    
    
@@ -11194,24 +11205,29 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    CALL AllocAry(InitOut%RotFrame_x, p%DOFs%NActvDOF*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
+   p%dx = 0.0_R8Ki ! initialize in case we have only 1 blade
    
    ! set perturbation sizes: p%dx
-   p%dx(DOF_Sg  :DOF_Hv)   = 0.2_ReKi * D2R * p%TowerHt     ! platform translational displacement states
-   p%dx(DOF_R   :DOF_Y )   = 2.0_ReKi * D2R                 ! platform rotational states
-   p%dx(DOF_TFA1:DOF_TSS1) = 0.020_ReKi * D2R * p%TwrFlexL  ! tower deflection states: 1st tower
-   p%dx(DOF_TFA2:DOF_TSS2) = 0.002_ReKi * D2R * p%TwrFlexL  ! tower deflection states: 2nd tower
-   p%dx(DOF_Yaw :DOF_TFrl) = 2.0_ReKi * D2R                 ! nacelle-yaw, rotor-furl, generator azimuth, drivetrain, and tail-furl rotational states
+   p%dx(DOF_Sg  :DOF_Hv)   = 0.2_R8Ki * D2R_D * max(p%TowerHt, 1.0_ReKi)     ! platform translational displacement states
+   p%dx(DOF_R   :DOF_Y )   = 2.0_R8Ki * D2R_D                                ! platform rotational states
+   p%dx(DOF_TFA1:DOF_TSS1) = 0.020_R8Ki * D2R_D * p%TwrFlexL                 ! tower deflection states: 1st tower
+   p%dx(DOF_TFA2:DOF_TSS2) = 0.002_R8Ki * D2R_D * p%TwrFlexL                 ! tower deflection states: 2nd tower
+   p%dx(DOF_Yaw :DOF_TFrl) = 2.0_R8Ki * D2R_D                                ! nacelle-yaw, rotor-furl, generator azimuth, drivetrain, and tail-furl rotational states
 
    do i=1,p%NumBl
-      p%dx(DOF_BF(i,1))= 0.20_ReKi * D2R * p%BldFlexL ! blade-deflection states: 1st blade flap mode 
-      p%dx(DOF_BF(i,2))= 0.02_ReKi * D2R * p%BldFlexL ! blade-deflection states: 2nd blade flap mode for blades (1/10 of the other perturbations)
-      p%dx(DOF_BE(i,1))= 0.20_ReKi * D2R * p%BldFlexL ! blade-deflection states: 1st blade edge mode
+      p%dx(DOF_BF(i,1))= 0.20_R8Ki * D2R_D * p%BldFlexL ! blade-deflection states: 1st blade flap mode 
+      p%dx(DOF_BF(i,2))= 0.02_R8Ki * D2R_D * p%BldFlexL ! blade-deflection states: 2nd blade flap mode for blades (1/10 of the other perturbations)
+      p%dx(DOF_BE(i,1))= 0.20_R8Ki * D2R_D * p%BldFlexL ! blade-deflection states: 1st blade edge mode
    end do
          
    if ( p%NumBl == 2 ) then
-      p%dx(DOF_Teet)       = 2.0_ReKi * D2R              ! rotor-teeter rotational state
+      p%dx(DOF_Teet)       = 2.0_R8Ki * D2R_D              ! rotor-teeter rotational state
    end if
    
+   !Set some limits in case perturbation is very small
+   do i=1,p%NDof
+      p%dx(i) = max(p%dx(i), MinPerturb)
+   end do
       
    InitOut%RotFrame_x   = .false.
    do i=1,p%DOFs%NActvDOF
@@ -11237,7 +11253,7 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
 END SUBROUTINE ED_Init_Jacobian_x
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the array that maps rows/columns of the Jacobian to specific mesh fields.
-!! Do not change the order of this packing without changing subroutine elastodyn::create_ed_uvector !
+!! Do not change the order of this packing without changing corresponding linearization routines !
 SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
 
    TYPE(ED_ParameterType)            , INTENT(INOUT) :: p                     !< parameters
@@ -11253,7 +11269,8 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    
       ! local variables:
    INTEGER(IntKi)                :: i, j, k, index, index_last, nu, i_meshField, m
-   REAL(ReKi)                    :: MaxThrust, MaxTorque
+   REAL(R8Ki)                    :: MaxThrust, MaxTorque
+   REAL(R8Ki)                    :: ScaleLength
    
    
    
@@ -11393,61 +11410,71 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    if (ErrStat >= AbortErrLev) return
    
-   
-   MaxThrust = 490.0_ReKi * pi /  9.0_ReKi * p%TipRad**2
-   MaxTorque = 122.5_ReKi * pi / 27.0_ReKi * p%TipRad**3
+      ! p%TipRad is set to 0 for BeamDyn simulations, so we're using a copy of the value from the input file here
+   ScaleLength = max(p%TipRad, p%TowerHt, 1.0_ReKi)
+   MaxThrust = 490.0_R8Ki * pi_D /  9.0_R8Ki * ScaleLength**2
+   MaxTorque = 122.5_R8Ki * pi_D / 27.0_R8Ki * ScaleLength**3
    
    if (allocated(u%BladePtLoads)) then
       do k=1,p%NumBl
-         p%du(2*k-1) = MaxThrust / real(100*p%NumBl*u%BladePtLoads(k)%NNodes,ReKi) ! u%BladePtLoads(k)%Force  = 2*k-1
-         p%du(2*k  ) = MaxTorque / real(100*p%NumBl*u%BladePtLoads(k)%NNodes,ReKi) ! u%BladePtLoads(k)%Moment = 2*k
-      end do !k            
+         p%du(2*k-1) = MaxThrust / real(100*p%NumBl*u%BladePtLoads(k)%NNodes,R8Ki) ! u%BladePtLoads(k)%Force  = 2*k-1
+         p%du(2*k  ) = MaxTorque / real(100*p%NumBl*u%BladePtLoads(k)%NNodes,R8Ki) ! u%BladePtLoads(k)%Moment = 2*k
+      end do !k
+   else
+      p%du(1:6) = 0.0_R8Ki
    end if
    
-   p%du( 7) = MaxThrust / 100.0_ReKi                           ! u%PlatformPtMesh%Force = 7
-   p%du( 8) = MaxTorque / 100.0_ReKi                           ! u%PlatformPtMesh%Moment = 8
-   p%du( 9) = MaxThrust / real(100*u%TowerPtLoads%NNodes,reki) ! u%TowerPtLoads%Force = 9
-   p%du(10) = MaxTorque / real(100*u%TowerPtLoads%NNodes,reki) ! u%TowerPtLoads%Moment = 10
-   p%du(11) = MaxThrust / real(100*u%HubPtLoad%NNodes,reki)    ! u%HubPtLoad%Force = 11
-   p%du(12) = MaxTorque / real(100*u%HubPtLoad%NNodes,reki)    ! u%HubPtLoad%Moment = 12
-   p%du(13) = MaxThrust / real(100*u%NacelleLoads%NNodes,reki) ! u%NacelleLoads%Force = 13
-   p%du(14) = MaxTorque / real(100*u%NacelleLoads%NNodes,reki) ! u%NacelleLoads%Moment = 14   
-   p%du(15) = 2.0_ReKi * D2R                                   ! u%BlPitchCom = 15 
-   p%du(16) = MaxTorque / 100.0_ReKi                           ! u%YawMom = 16
-   p%du(17) = MaxTorque / (100.0_ReKi*p%GBRatio)               ! u%GenTrq = 17
+   p%du( 7) = MaxThrust / 100.0_R8Ki                           ! u%PlatformPtMesh%Force = 7
+   p%du( 8) = MaxTorque / 100.0_R8Ki                           ! u%PlatformPtMesh%Moment = 8
+   p%du( 9) = MaxThrust / real(100*u%TowerPtLoads%NNodes,R8Ki) ! u%TowerPtLoads%Force = 9
+   p%du(10) = MaxTorque / real(100*u%TowerPtLoads%NNodes,R8Ki) ! u%TowerPtLoads%Moment = 10
+   p%du(11) = MaxThrust / 100.0_R8Ki                           ! u%HubPtLoad%Force = 11
+   p%du(12) = MaxTorque / 100.0_R8Ki                           ! u%HubPtLoad%Moment = 12
+   p%du(13) = MaxThrust / 100.0_R8Ki                           ! u%NacelleLoads%Force = 13
+   p%du(14) = MaxTorque / 100.0_R8Ki                           ! u%NacelleLoads%Moment = 14   
+   p%du(15) = 2.0_R8Ki * D2R_D                                 ! u%BlPitchCom = 15 
+   p%du(16) = MaxTorque / 100.0_R8Ki                           ! u%YawMom = 16
+   p%du(17) = MaxTorque / (100.0_R8Ki*p%GBRatio)               ! u%GenTrq = 17
       
-   
+   !Set some limits in case perturbation is very small
+   do i=1,size(p%du)
+      p%du(i) = max(p%du(i), MinPerturb)
+   end do
+
    !................
    ! names of the columns, InitOut%LinNames_u:
    !................
    call AllocAry(InitOut%LinNames_u, nu+1, 'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    call AllocAry(InitOut%RotFrame_u, nu+1, 'RotFrame_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   call AllocAry(InitOut%IsLoad_u,   nu+1, 'IsLoad_u',   ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
       
+   InitOut%IsLoad_u   = .true.  ! most of ED's inputs are loads; we will override the non-load inputs below.
    InitOut%RotFrame_u = .false.
    index = 1
    if (allocated(u%BladePtLoads)) then
       index_last = index
       do k=1,p%NumBl
-         call PackLoadMesh_Names(u%BladePtLoads(i), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_u, index)   
+         call PackLoadMesh_Names(u%BladePtLoads(k), 'Blade '//trim(num2lstr(k)), InitOut%LinNames_u, index)   
       end do
-      InitOut%RotFrame_u(index_last:index-1) = .true.
+      !InitOut%RotFrame_u(index_last:index-1) = .true. ! values on the mesh are in global, not rotating frame
    end if
    call PackLoadMesh_Names(u%PlatformPtMesh, 'Platform', InitOut%LinNames_u, index)   
    call PackLoadMesh_Names(u%TowerPtLoads, 'Tower', InitOut%LinNames_u, index)   
    call PackLoadMesh_Names(u%HubPtLoad, 'Hub', InitOut%LinNames_u, index)   
    call PackLoadMesh_Names(u%NacelleLoads, 'Nacelle', InitOut%LinNames_u, index)   
       
-   index_last = index
    do k = 1,p%NumBl ! scalars
       InitOut%LinNames_u(index) = 'Blade '//trim(num2lstr(k))//' pitch command, rad'
+      InitOut%IsLoad_u(  index) = .false.
+      InitOut%RotFrame_u(index) = .true.
       index = index + 1
    end do
-   InitOut%RotFrame_u(index_last:index-1) = .true.
 
    InitOut%LinNames_u(index) = 'Yaw moment, Nm' ; index = index + 1
    InitOut%LinNames_u(index) = 'Generator torque, Nm' ; index = index + 1
    InitOut%LinNames_u(index) = 'Extended input: collective blade-pitch command, rad'
+   InitOut%IsLoad_u(  index) = .false.
    
 END SUBROUTINE ED_Init_Jacobian
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -11459,7 +11486,7 @@ SUBROUTINE ED_Perturb_u( p, n, perturb_sign, u, du )
    INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(ED_InputType)                  , INTENT(INOUT) :: u                      !< perturbed ED inputs
-   REAL( ReKi )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
+   REAL( R8Ki )                        , INTENT(  OUT) :: du                     !< amount that specific input was perturbed
    
 
    ! local variables
@@ -11527,7 +11554,7 @@ SUBROUTINE ED_Perturb_x( p, n, perturb_sign, x, dx )
    INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
    INTEGER( IntKi )                    , INTENT(IN   ) :: perturb_sign           !< +1 or -1 (value to multiply perturbation by; positive or negative difference)
    TYPE(ED_ContinuousStateType)        , INTENT(INOUT) :: x                      !< perturbed ED states
-   REAL( ReKi )                        , INTENT(  OUT) :: dx                     !< amount that specific input was perturbed
+   REAL( R8Ki )                        , INTENT(  OUT) :: dx                     !< amount that specific state was perturbed
    
 
    ! local variables
@@ -11555,8 +11582,8 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    TYPE(ED_ParameterType)            , INTENT(IN   ) :: p         !< parameters
    TYPE(ED_OutputType)               , INTENT(IN   ) :: y_p       !< ED outputs at \f$ u + \Delta u \f$ or \f$ x + \Delta x \f$ (p=plus)
    TYPE(ED_OutputType)               , INTENT(IN   ) :: y_m       !< ED outputs at \f$ u - \Delta u \f$ or \f$ x - \Delta x \f$ (m=minus)   
-   REAL(ReKi)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta x \f$
-   REAL(ReKi)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial x_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
+   REAL(R8Ki)                        , INTENT(IN   ) :: delta     !< difference in inputs or states \f$ delta = \Delta u \f$ or \f$ delta = \Delta x \f$
+   REAL(R8Ki)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial x_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
    
       ! local variables:
    INTEGER(IntKi)                                    :: k                      ! loop over blades
@@ -11594,91 +11621,9 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
       dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
    end do   
    
-   dY = dY / (2.0*delta)
+   dY = dY / (2.0_R8Ki*delta)
    
 END SUBROUTINE Compute_dY
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes the differences of two meshes and packs that value into appropriate locations in the dY array.
-!! Do not change this packing without making sure subroutines elastodyn::ed_init_jacobian and elastodyn::compute_dy are consistant with this routine!
-SUBROUTINE PackMotionMesh_dY(M_p, M_m, dY, indx_first, FieldMask)
-   
-   TYPE(MeshType)                    , INTENT(IN   ) :: M_p                        !< ED outputs on given mesh at \f$ u + \Delta u \f$ (p=plus)
-   TYPE(MeshType)                    , INTENT(IN   ) :: M_m                        !< ED outputs on given mesh at \f$ u - \Delta u \f$ (m=minus)   
-   REAL(ReKi)                        , INTENT(INOUT) :: dY(:)                      !< column of dYdu \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ 
-   INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into dY array; gives location of next array position to fill
-   LOGICAL, OPTIONAL                 , INTENT(IN   ) :: FieldMask(FIELDMASK_SIZE)  !< flags to determine if this field is part of the packing
-   
-      ! local variables:
-   INTEGER(IntKi)                :: ErrStat2 ! we're ignoring the errors about small angles
-   CHARACTER(ErrMsgLen)          :: ErrMsg2  
-   
-   INTEGER(IntKi)                :: i, indx_last
-   REAL(ReKi)                    :: smallAngles(3)
-   REAL(R8Ki)                    :: orientation(3,3)
-   LOGICAL                       :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
-
-   if (present(FieldMask)) then
-      Mask = FieldMask
-   else
-      Mask = .true.
-   end if
-
-   
-   if (Mask(MASKID_TRANSLATIONDISP)) then
-      do i=1,M_p%NNodes
-         indx_last  = indx_first + 2 
-         dY(indx_first:indx_last) = M_p%TranslationDisp(:,i) - M_m%TranslationDisp(:,i)
-         indx_first = indx_last + 1
-      end do
-   end if
-   
-   if (Mask(MASKID_ORIENTATION)) then
-      do i=1,M_p%NNodes
-         orientation = transpose(M_m%Orientation(:,:,i))
-         orientation = matmul(orientation, M_p%Orientation(:,:,i))
-            
-         smallAngles = GetSmllRotAngs( orientation, ErrStat2, ErrMsg2 )
-
-         indx_last  = indx_first + 2 
-         dY(indx_first:indx_last) = smallAngles
-         indx_first = indx_last + 1
-      end do
-   end if
-      
-   if (Mask(MASKID_TRANSLATIONVEL)) then
-      do i=1,M_p%NNodes
-         indx_last  = indx_first + 2 
-         dY(indx_first:indx_last) = M_p%TranslationVel(:,i) - M_m%TranslationVel(:,i)
-         indx_first = indx_last + 1
-      end do         
-   end if
-      
-   if (Mask(MASKID_ROTATIONVEL)) then
-      do i=1,M_p%NNodes
-         indx_last  = indx_first + 2 
-         dY(indx_first:indx_last) = M_p%RotationVel(:,i) - M_m%RotationVel(:,i)
-         indx_first = indx_last + 1
-      end do          
-   end if
-         
-   if (Mask(MASKID_TRANSLATIONACC)) then
-      do i=1,M_p%NNodes
-         indx_last  = indx_first + 2 
-         dY(indx_first:indx_last) = M_p%TranslationAcc(:,i) - M_m%TranslationAcc(:,i)
-         indx_first = indx_last + 1
-      end do         
-   end if
-   
-   if (Mask(MASKID_ROTATIONACC)) then
-      do i=1,M_p%NNodes
-         indx_last  = indx_first + 2 
-         dY(indx_first:indx_last) = M_p%RotationAcc(:,i) - M_m%RotationAcc(:,i)
-         indx_first = indx_last + 1
-      end do      
-   end if         
-                                             
-
-END SUBROUTINE PackMotionMesh_dY
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
 SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
@@ -11720,7 +11665,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    !..................................
    IF ( PRESENT( u_op ) ) THEN
       if (.not. allocated(u_op)) then         
-         call AllocAry(u_op, size(p%Jac_u_indx,1)+1,'u_op',ErrStat2,ErrMsg2)
+         call AllocAry(u_op, size(p%Jac_u_indx,1)+1,'u_op',ErrStat2,ErrMsg2) ! +1 for extended input here
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) return
       end if

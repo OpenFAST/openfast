@@ -303,7 +303,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
       ! Check if usable time is "ALL" (for periodic files) >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
          READ( Line, *, IOSTAT=ErrStat2) p%grid%UsableTime
    
-         IF ( ErrStat2 /= 0 ) THEN ! Line didn't contian a number
+         IF ( ErrStat2 /= 0 ) THEN ! Line didn't contain a number
             CALL Conv2UC( Line )
             IF ( TRIM(Line) == 'ALL' ) THEN
                p%grid%Periodic   = .TRUE.
@@ -572,7 +572,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    getDefaultZJetMax = getDefaultZJetMax .AND. .NOT. IsUnusedParameter ! Jet height for 
 
    ! ------------ Read in the power law exponent, PLExp ---------------------------------------------
-   IsUnusedParameter = (TRIM(p%met%WindProfileType) /= "PL" .AND. TRIM(p%met%WindProfileType) /= "IEC")  .OR. p%IEC%IEC_WindType > IEC_ETM
+   IsUnusedParameter = (TRIM(p%met%WindProfileType) /= "PL" .AND. TRIM(p%met%WindProfileType) /= "IEC")
    CALL ReadRVarDefault( UI, InFile, p%met%PLExp, "PLExp", "Power law exponent [-]", UnEc, getDefaultPLExp, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -2033,7 +2033,9 @@ SUBROUTINE WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
    WRITE (p%US,FormStr)  'Grid Base    ', p%grid%Zbottom,                                                  ' m'
    
    WRITE (p%US,'()'   )
-   WRITE (p%US,'( A)' ) 'Creating a PERIODIC output file.'
+   IF ( p%grid%Periodic ) THEN 
+      WRITE (p%US,'( A)' ) 'Creating a PERIODIC output file.'
+   END IF
  
       ! Calculate some numbers for normalizing the data.
 

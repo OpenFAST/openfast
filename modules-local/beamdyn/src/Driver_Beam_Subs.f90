@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
-! Copyright (C) 2016-2017  Envision Energy USA, LTD   
+! Copyright (C) 2016-2017  Envision Energy USA, LTD
 !
 !    This file is part of the NWTC Subroutine Library.
 !
@@ -23,23 +23,28 @@ module BeamDyn_driver_subs
    USE BeamDyn
    USE BeamDyn_Subs
 
+   IMPLICIT NONE
+   
   ! Variables for multi-point loads
    TYPE , PUBLIC :: BD_DriverInternalType
       REAL(ReKi)     , DIMENSION(1:6)               :: DistrLoad        !< Constant distributed load along beam axis, 3 forces and 3 moments [-]
       REAL(ReKi)     , DIMENSION(1:6)               :: TipLoad          !< Constant point load applied at tip, 3 forces and 3 moments [-]
       INTEGER(IntKi)                                :: NumPointLoads    !< Number of constant point loads applied along beam axis, 3 forces and 3 moments, from the driver input file [-]
-      REAL(BDKi) ,     DIMENSION(:,:), ALLOCATABLE  :: MultiPointLoad   !< Constant point loads applied along beam axis, size (NumPointLoads,7); (dimension 2: index 1=Relative position along blade span; indices 2-7 = Fx, Fy, Fz, Mx, My, Mz) [-]            
-      
+      REAL(BDKi) ,     DIMENSION(:,:), ALLOCATABLE  :: MultiPointLoad   !< Constant point loads applied along beam axis, size (NumPointLoads,7); (dimension 2: index 1=Relative position along blade span; indices 2-7 = Fx, Fy, Fz, Mx, My, Mz) [-]
+            
       TYPE(MeshType)                                :: mplMotion        ! Mesh for blade motion at multipoint loads locations
       TYPE(MeshType)                                :: mplLoads         ! Mesh for multipoint loads
       TYPE(MeshMapType)                             :: Map_BldMotion_to_mplMotion
       TYPE(MeshMapType)                             :: Map_mplLoads_to_PointLoad
       TYPE(MeshType)                                :: y_BldMotion_at_u_point ! Intermediate mesh to transfer motion from output mesh to input mesh
       TYPE(MeshMapType)                             :: Map_y_BldMotion_to_u_point
-      
+                                                    
       TYPE(MeshType)                                :: RotationCenter
       TYPE(MeshMapType)                             :: Map_RotationCenter_to_RootMotion
-      
+
+      LOGICAL                                       :: DynamicSolve 
+      LOGICAL                                       :: GlbRotBladeT0    ! Initial blade root orientation is also the GlbRot reference frame
+      REAL(DbKi)                                    :: RootRelInit(3,3) ! Initial root orientation relative to GlbRot
       REAL(DbKi)                                    :: t_initial
       REAL(DbKi)                                    :: t_final
       REAL(R8Ki)                                    :: w           ! magnitude of rotational velocity vector
@@ -79,8 +84,10 @@ module BeamDyn_driver_subs
    INTEGER(IntKi)               :: UnEc
    
    CHARACTER(1024)              :: FTitle                       ! "File Title": the 2nd line of the input file, which contains a description of its contents
+   CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
 
    INTEGER(IntKi)               :: i
+   INTEGER(IntKi)               :: IOS
 !------------------------------------------------------------------------------------
 
    ! Initialize some variables:
@@ -93,6 +100,9 @@ module BeamDyn_driver_subs
    CALL OpenFInpFile(UnIn,DvrInputFile,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
+      
+      
+   CALL GetPath( DvrInputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
       
    !-------------------------- HEADER ---------------------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'File Header: Module Version (line 1)',ErrStat2,ErrMsg2,UnEc)
@@ -107,6 +117,9 @@ module BeamDyn_driver_subs
 
    !---------------------- SIMULATION CONTROL --------------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'Section Header: Simulation Control',ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%DynamicSolve,'DynamicSolve','Use Dynamic solve (false for static solve).',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL ReadVar(UnIn,DvrInputFile,DvrData%t_initial,'t_initial','Starting time of simulation',ErrStat2,ErrMsg2,UnEc)
@@ -137,6 +150,7 @@ module BeamDyn_driver_subs
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    InitInputData%GlbPos(:)   = 0.0_ReKi
    InitInputData%GlbRot(:,:) = 0.0_R8Ki
+   InitInputData%RootOri(:,:) = 0.0_R8Ki
    CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(1),"InitInputData%GlbPos(1)", "position vector X",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(2),"InitInputData%GlbPos(2)", "position vector Y",ErrStat2,ErrMsg2,UnEc)
@@ -149,14 +163,41 @@ module BeamDyn_driver_subs
    CALL ReadCom(UnIn,DvrInputFile,'Comments on DCM',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    DO i=1,3
-       CALL ReadAry(UnIn,DvrInputFile,InitInputData%GlbRot(i,:),3,"InitInputData%GlbPos",&
-               "Global DCM",ErrStat2,ErrMsg2,UnEc)
+       CALL ReadAry(UnIn,DvrInputFile,InitInputData%RootOri(i,:),3,"InitInputData%RootOri",&
+               "Initial root orientation",ErrStat2,ErrMsg2,UnEc)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDDO
+
+   CALL ReadVar(UnIn,DvrInputFile,DvrData%GlbRotBladeT0,"DvrData%GlbRotBladeT0","Is the blade initial orientation also the GlbRot calculation frame",ErrStat2,ErrMSg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
    if (ErrStat >= AbortErrLev) then
        call cleanup()
        return
    end if
+
+      ! Use the initial blade root orientation as the GlbRot reference orientation for all calculations?
+   if ( DvrData%GlbRotBladeT0 ) then
+
+         ! Set the GlbRot matrix
+      InitInputData%GlbRot = InitInputData%RootOri
+      CALL eye( DvrData%RootRelInit, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   else
+
+         ! Initialize the GlbRot matrix as the identity.  Relative rotation for root to GlbRot
+      DvrData%RootRelInit = InitInputData%RootOri
+       CALL eye( InitInputData%GlbRot, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   end if
+
+   if (ErrStat >= AbortErrLev) then
+       call cleanup()
+       return
+   end if
+
    !---------------------- INITIAL VELOCITY PARAMETER --------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'Section Header: Initial Velocity Parameter',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -219,7 +260,9 @@ module BeamDyn_driver_subs
    READ( Line, *, IOSTAT=IOS) DvrData%NumPointLoads
    if (IOS == 0) then !this is numeric, so we can go ahead with the multi-point loads
             
-      CALL ReadCom(UnIn,DvrInputFile,'Section Header: Multiple Point Loads',ErrStat2,ErrMsg2,UnEc)
+      CALL ReadCom(UnIn,DvrInputFile,'Multiple Point Loads Table',ErrStat2,ErrMsg2,UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL ReadCom(UnIn,DvrInputFile,'Multiple Point Loads Table Units',ErrStat2,ErrMsg2,UnEc)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(DvrData%MultiPointLoad,max(1,DvrData%NumPointLoads),7,'Point loads input array',ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -266,6 +309,8 @@ module BeamDyn_driver_subs
       !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
    CALL ReadVar ( UnIn, DvrInputFile, InitInputData%InputFile, 'InputFile', 'Name of the primary input file', ErrStat2,ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( PathIsRelative( InitInputData%InputFile ) ) InitInputData%InputFile = TRIM(PriPath)//TRIM(InitInputData%InputFile)
+      
    if (ErrStat >= AbortErrLev) then
        call cleanup()
        return
@@ -316,7 +361,7 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
    write (OutUnit,'()')
    write (OutUnit,'()')
 
-   call WrFileNR ( OutUnit, 'Time        ' )
+   call WrFileNR ( OutUnit, 'Time' )
 
    do i=1,NumOuts
       call WrFileNR ( OutUnit, tab//IntOutput%WriteOutputHdr(i) )
@@ -328,10 +373,10 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
       ! Write the units of the output parameters on one line:
       !......................................................
 
-   call WrFileNR ( OutUnit, ' (s)            ' )
+   call WrFileNR ( OutUnit, '(s)' )
 
    do i=1,NumOuts
-      call WrFileNR ( Outunit, tab//IntOutput%WriteOutputUnt(i) )
+      call WrFileNR ( Outunit, tab//trim(IntOutput%WriteOutputUnt(i)) )
    end do ! i
 
    write (OutUnit,'()')  
@@ -356,9 +401,6 @@ SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output)
    character(200)                            :: frmt                 ! A string to hold a format specifier
    character(15)                             :: tmpStr               ! temporary string to print the time output as text
 
-   integer :: numOuts
-   
-   numOuts = size(Output%WriteOutput,1)
    frmt = '"'//tab//'"'//trim(OutFmt)      ! format for array elements from individual modules
    
       ! time
@@ -372,9 +414,10 @@ SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output)
 end subroutine Dvr_WriteOutputLine
   
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine CreateMultiPointMeshes(DvrData,BD_InitOutput,BD_Parameter,y, u, ErrStat,ErrMsg)
+subroutine CreateMultiPointMeshes(DvrData,BD_InitInput,BD_InitOutput,BD_Parameter,y, u, ErrStat,ErrMsg)
 
    TYPE(BD_DriverInternalType), INTENT(INOUT) :: DvrData
+   TYPE(BD_InitInputType)     , INTENT(IN   ) :: BD_InitInput
    TYPE(BD_InitOutputType)    , INTENT(IN   ) :: BD_InitOutput
    TYPE(BD_ParameterType)     , INTENT(IN   ) :: BD_Parameter
    TYPE(BD_OutputType),         INTENT(IN   ) :: y
@@ -598,7 +641,7 @@ SUBROUTINE Init_RotationCenterMesh(DvrData, InitInputData, RootMotionMesh, ErrSt
          orientation(3,3) = -1.0_R8Ki
       else
          
-         Z_unit = (/0, 0, 1/)
+         Z_unit = (/0.0_R8Ki, 0.0_R8Ki, 1.0_R8Ki/)
          
          vec = Z_unit - z_hat*z_hat(3) ! vec = matmul( eye(3) - outerproduct(z_hat,z_hat), (/ 0,0,1/) )
          vec = vec / TwoNorm(vec)      ! we've already checked that this is not zero
@@ -705,7 +748,8 @@ SUBROUTINE BD_InputSolve( t, u, DvrData, ErrStat, ErrMsg)
    Orientation(2,3) = 0.0_R8Ki
    Orientation(3,3) = 1.0_R8Ki
       
-   DvrData%RotationCenter%Orientation(:,:,1) = matmul(Orientation, DvrData%RotationCenter%RefOrientation(:,:,1))
+   DvrData%RotationCenter%Orientation(:,:,1) = matmul(Orientation, matmul(DvrData%RotationCenter%RefOrientation(:,:,1),DvrData%RootRelInit))
+
    CALL Transfer_Point_to_Point( DvrData%RotationCenter, u%RootMotion, DvrData%Map_RotationCenter_to_RootMotion, ErrStat2, ErrMsg2)  
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
       
