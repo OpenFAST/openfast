@@ -1641,6 +1641,10 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
             ENDDO
          ENDDO
+         ! Filling last value since it is not reached by the loop above
+         CALL RANDOM_NUMBER(WvSpreadThetaIdx)
+         LastInd  = MINLOC( WvSpreadThetaIdx, DIM=1 )
+         InitOut%WaveDirArr(K)   =  WvTheta( LastInd )
 
             ! Perform a quick sanity check.  We should have assigned all wave frequencies a direction, so K should be
             ! K = NStepWave2 (K is incrimented afterwards).
