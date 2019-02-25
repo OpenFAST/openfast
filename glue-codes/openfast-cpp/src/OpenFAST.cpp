@@ -288,12 +288,16 @@ void fast::OpenFAST::step() {
    nt_global = nt_global + 1;
   
   if ( (((nt_global - ntStart) % nEveryCheckPoint) == 0 )  && (nt_global != ntStart) ) {
+    // Use default FAST naming convention for checkpoint file
+    // <RootName>.<nt_global>
+    char dummyCheckPointRoot[INTERFACE_STRING_LENGTH] = " ";
+    // Ensure that we have a null character
+    dummyCheckPointRoot[1] = 0;
+
     if (nTurbinesProc > 0) backupVelocityDataFile(nt_global, velNodeDataFile);
-      
-    //sprintf(CheckpointFileRoot, "../../CertTest/Test18.%d", nt_global);
+
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-      CheckpointFileRoot[iTurb] = " "; // if blank, it will use FAST convention <RootName>.nt_global
-      FAST_CreateCheckpoint(&iTurb, CheckpointFileRoot[iTurb].data(), &ErrStat, ErrMsg);
+      FAST_CreateCheckpoint(&iTurb, dummyCheckPointRoot, &ErrStat, ErrMsg);
       checkError(ErrStat, ErrMsg);
     }
     if(scStatus) {
