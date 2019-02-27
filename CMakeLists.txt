@@ -40,7 +40,7 @@ option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
 option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" off)
 option(BUILD_FAST_CPP_API "Enable building FAST - C++ API" off)
-option(BUILD_FAST_FARM "Enable building FAST-Farm glue code" on)
+option(BUILD_FAST_FARM "Enable building FAST.Farm glue code" on)
 
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
