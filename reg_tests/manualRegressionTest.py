@@ -46,7 +46,7 @@ parser.add_argument("-case", dest="case", default="", metavar="Case-Name", type=
 args = parser.parse_args()
 openfast_executable = args.executable[0]
 sourceDirectory = ".."
-buildDirectory = os.path.join("..", "build", "reg_tests", "glue-codes", "fast")
+buildDirectory = os.path.join("..", "build", "reg_tests", "glue-codes", "openfast")
 machine = args.systemName[0]
 compiler = args.compilerId[0]
 tolerance = args.tolerance[0]
@@ -63,7 +63,7 @@ pythonCommand = sys.executable
 if case is not "":
     caselist = [case]
 else:
-    with open(os.path.join("r-test", "glue-codes", "fast", "CaseList.md")) as listfile:
+    with open(os.path.join("r-test", "glue-codes", "openfast", "CaseList.md")) as listfile:
         caselist = listfile.readlines()
 casenames = [c.rstrip("\n\r").strip() for c in caselist if "#" not in c]
 
@@ -72,7 +72,7 @@ prefix, passString, failString = "executing", "PASS", "FAIL"
 longestName = max(casenames, key=len)
 for case in casenames:
     print(strFormat(prefix).format(prefix), strFormat(longestName+" ").format(case), end="", flush=True)
-    command = "{} executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
+    command = "\"{}\" executeOpenfastRegressionCase.py {} {} {} {} {} {} {} {} {}".format(pythonCommand, case, openfast_executable, sourceDirectory, buildDirectory, tolerance, machine, compiler, plotFlag, noExecFlag)
     returnCode = subprocess.call(command, stdout=outstd, shell=True)
     resultString = passString if returnCode == 0 else failString
     results.append((case, resultString))

@@ -19,7 +19,7 @@ Portions of the test suite are linked to the OpenFAST repository through
 ``git submodule``. Specifically,
 
 - `r-test <https://github.com/openfast/r-test>`__
-- `pFUnit <http://pfunit.sourceforge.net>`__
+- `pFUnit <http://github.com/openfast/pfunit>`__
 
 Be sure to clone the repo with the ``--recursive`` flag or execute
 ``git submodule update --init --recursive`` after cloning.
@@ -30,9 +30,8 @@ for particular build environments. See the installation documentation at :numref
 for more details on configuring the CMake targets.
 
 While the unit tests must be built with CMake due to its external dependencies,
-the regression test may be executed without building with CMake. :numref:`regression_test`
-and :numref:`unit_test` have more information on regression testing and unit testing,
-respectively.
+the regression test may be executed without building with CMake. :numref:`unit_test` and :numref:`regression_test`
+have more information on unit testing and regression testing, respectively.
 
 Test specific documentation
 ---------------------------

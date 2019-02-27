@@ -24,8 +24,8 @@ radians unless otherwise specified.
 BeamDyn Driver Input File
 -------------------------
 
-The driver input file is only needed for the stand-alone version of
-BeamDyn and contains inputs that are normally set by FAST, and that are
+The driver input file is needed only for the stand-alone version of
+BeamDyn. It contains inputs that are normally set by FAST and that are
 necessary to control the simulation for uncoupled models.
 
 The driver input file begins with two lines of header information, which
@@ -37,21 +37,22 @@ A sample BeamDyn driver input file is given in :numref:`bd_input_files`.
 
 Simulation Control Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:math:`t_\mathrm{initial}` and :math:`t_\mathrm{final}` specify the starting time of the simulation and ending time of the simulation, respectively. 
-:math:`dt` specifies the time step size.
+``DynamicSolve`` is a logical variable that specifies if BeamDyn should use dynamic analysis (``DynamicSolve = true``) 
+or static analysis (``DynamicSolve = false``).
+``t_initial`` and ``t_final`` specify the starting time of the simulation and ending time of the simulation, respectively. 
+``dt`` specifies the time step size.
 
 Gravity Parameters
 ~~~~~~~~~~~~~~~~~~
 
-``Gx`` , ``Gy`` , and ``Gz`` specify the components of gravity vector along :math:`X`, :math:`Y`, and :math:`Z` directions in the global coordinate system, respectively. 
+``Gx`` , ``Gy`` , and ``Gz`` specify the components of gravity vector along :math:`X`, :math:`Y`, and :math:`Z` directions in the global coordinate system, respectively.
 In FAST, this is normally 0, 0, and -9.80665.
 
 Inertial Frame Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section defines the relation between two inertial frames, the global coordinate system and initial blade reference coordinate system.
-``GlbPos(1)``, ``GlbPos(2)``, ``GlbPos(3)`` specifies three components of the initial global position vector along :math:`X`, :math:`Y`, and :math:`Z` directions resolved in the global coordinate system, see Figure :numref:`frame`.
+``GlbPos(1)``, ``GlbPos(2)``, and ``GlbPos(3)`` specify three components of the initial global position vector along :math:`X`, :math:`Y`, and :math:`Z` directions resolved in the global coordinate system, see Figure :numref:`frame`.
 And the following :math:`3 \times 3` direction cosine matrix (``GlbDCM``) relates the rotations from the global coordinate system to the initial blade reference coordinate system.
 
 .. _frame:
@@ -61,12 +62,12 @@ And the following :math:`3 \times 3` direction cosine matrix (``GlbDCM``) relate
    :align: center
 
    Global and blade coordinate systems in BeamDyn.
-   
+
 
 Blade Floating Reference Frame Parameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This section specifies the parameters that defines the blade floating reference frame, which is a body-attached floating frame; the blade root is cantilevered at the origin of this frame. 
+This section specifies the parameters that define the blade floating reference frame, which is a body-attached floating frame; the blade root is cantilevered at the origin of this frame. 
 Based on the driver input file, the floating blade reference fame is assumed to be in a constant rigid-body rotation mode about the origin of the global coordinate system, that is,
 
 .. math::
@@ -74,27 +75,14 @@ Based on the driver input file, the floating blade reference fame is assumed to 
 
    v_{rt} = \omega_r \times r_t
 
-where :math:`v_{rt}` is the root (origin of the floating blade reference frame) translational velocity vector; :math:`\omega_r` is the constant root (origin of the floating blade reference frame) angular velocity vector; and :math:`r_t` is the global position vector introduced in the previous section at instant :math:`t`, see :numref:`frame`. 
-The floating blade reference frame coincides with the initial floating blade reference frame at the beginning :math:`t=0`.  
-``RootVel(4)``, ``RootVel(5)``, and ``RootVel(6)`` specify the three components of the constant root angular velocity vector about :math:`X`, :math:`Y`, and :math:`Z` axises in global coordinate system, respectively. 
+where :math:`v_{rt}` is the root (origin of the floating blade reference frame) translational velocity vector; :math:`\omega_r` is the constant root (origin of the floating blade reference frame) angular velocity vector; and :math:`r_t` is the global position vector introduced in the previous section at instant :math:`t`, see :numref:`frame`.
+The floating blade reference frame coincides with the initial floating blade reference frame at the beginning :math:`t=0`.
+``RootVel(4)``, ``RootVel(5)``, and ``RootVel(6)`` specify the three components of the constant root angular velocity vector about :math:`X`, :math:`Y`, and :math:`Z` axises in global coordinate system, respectively.
 ``RootVel(1)``, ``RootVel(2)``, and ``RootVel(3)``, which are the three components of the root translational velocity vector along :math:`X`, :math:`Y`, and :math:`Z` directions in global coordinate system, respectively, are calculated based on Eq. :eq:`rootvelocity`.
 
 BeamDyn can handle more complicated root motions by changing, for example, the ``BD_InputSolve`` subroutine in the ``Driver_Beam.f90``
-(requiring a recompile of stand-alone BeamDyn):
+(requiring a recompile of stand-alone BeamDyn).
 
-.. code-block:: fortran
-
-       u%RootMotion%RotationVel(:,:) = 0.0D0
-       u%RootMotion%RotationVel(1,1) = IniVelo(5)
-       u%RootMotion%RotationVel(2,1) = IniVelo(6)
-       u%RootMotion%RotationVel(3,1) = IniVelo(4)
-       u%RootMotion%TranslationVel(:,:) = 0.0D0
-       u%RootMotion%TranslationVel(:,1) = &
-       MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr)
-
-where ``IniVelo(5)``, ``IniVelo(6)``, and ``IniVelo(4)`` are the three components of the root angular velocity vector about :math:`X`, :math:`Y`, and :math:`Z` axising in the global coordinate system, respectively; ``temp_rr`` is the global position vector at instant :math:`t`. 
-The first index in the ``u%RootMotion%RotationVel(:,:)`` and the ``u%RootMotion%TranslationVel(:,:)`` arrays range from 1 to 3 for load vector components along three directions and the second index of each array are set to 1, denoting the root FE node. 
-Note that the internal BeamDyn variables (here ``IniVelo``) are based on the internal BD coordinate system described in section FIXME.
 
 The blade is initialized in the rigid-body motion mode, i.e., based on the root velocity information defined in this section and the position information defined in the previous section, the motion of other points along the blade are initialized as
 
@@ -106,22 +94,35 @@ The blade is initialized in the rigid-body motion mode, i.e., based on the root 
     \omega_0 &= \omega_r
 
 where :math:`a_{0}` is the initial translational acceleration vector along the blade; :math:`v_0` and :math:`\omega_0` the initial translational and angular velocity vectors along the blade, respectively; and :math:`P` is the position vector along the blade relative to the root.
+Note that these equations are actually implemented with a call to the NWTC Library's mesh mapping routines.
 
 Applied Load
 ~~~~~~~~~~~~
 
-This section defines the applied loads, including distributed and
-tip-concentrated loads, for the stand-alone analysis. The first six
-entries ``DistrLoad(i)``, :math:`i \in [1,6]`, specify three
+This section defines the applied loads, including distributed, point (lumped), and
+tip-concentrated loads, for the stand-alone analysis. 
+
+The first six entries ``DistrLoad(i)``, :math:`i \in [1,6]`, specify three
 components of uniformly distributed force vector and three components of
 uniformly distributed moment vector in the global coordinate systems,
-respectively. The following six entries ``TipLoad(i)``,
+respectively. 
+
+The following six entries ``TipLoad(i)``,
 :math:`i \in [1,6]`, specify three components of concentrated tip force
 vector and three components of concentrated tip moment vector in the
-global coordinate system, respectively. The distributed load defined in
-this section is assumed to be uniform along the blade and constant
-throughout the simulation; the tip load is a constant concentrated load
-applied at the tip of a blade. It is noted that all the loads defined in
+global coordinate system, respectively. 
+
+``NumPointLoads`` defines how many point loads along the blade will be applied. The table 
+following this input contains two header lines with seven columns and ``NumPointLoads`` rows. 
+The first column is the non-dimensional distance along the local blade reference axis, 
+ranging from :math:`[0.0,1.0]`. The next three columns, ``Fx``, ``Fy``, and ``Fz`` specify three
+components of point-force vector. The remaining three columns, ``Mx``, ``My``, and ``Mz`` specify three
+components of a moment vector.
+
+The distributed load defined in this section is assumed to be uniform along the blade and constant
+throughout the simulation. The tip load is a constant concentrated load applied at the tip of a blade.
+
+It is noted that all the loads defined in
 this section are dead loads, i.e., they are not rotating with the blade
 following the rigid-body rotation defined in the previous section.
 
@@ -134,54 +135,47 @@ to define the concentrated load at each FE node:
 
 .. code-block:: fortran
 
-       ! Define concentrated force vector
-       u%PointLoad%Force(:,:)  = 0.0D0
-       ! Define concentrated moment vector
-       u%PointLoad%Moment(:,:) = 0.0D0
+       u%PointLoad%Force(1:3,u%PointLoad%NNodes)  = u%PointLoad%Force(1:3,u%PointLoad%NNodes)  + DvrData%TipLoad(1:3)
+       u%PointLoad%Moment(1:3,u%PointLoad%NNodes) = u%PointLoad%Moment(1:3,u%PointLoad%NNodes) + DvrData%TipLoad(4:6)
 
 where the first index in each array ranges from 1 to 3 for load vector
 components along three global directions and the second index of each
-array ranges from 1 to ``node_total``, where the latter is the total
-number of FE nodes. For example, a time-dependent sinusoidal force
+array ranges from 1 to ``u%PointLoad%NNodes``, where the latter is the total
+number of FE nodes. Note that ``u%PointLoad%Force(1:3,:)`` and ``u%PointLoad%Moment(1:3,:)`` 
+have been populated with the point-load loads read from the BeamDyn driver input file 
+using the call to ``Transfer_Point_to_Point`` earlier in the subroutine.
+
+For example, a time-dependent sinusoidal force
 acting along the :math:`X` direction applied at the :math:`2^{nd}` FE
 node can be defined as
 
 .. code-block:: fortran
 
-       ! Define concentrated force vector
        u%PointLoad%Force(:,:) = 0.0D0
        u%PointLoad%Force(1,2)  = 1.0D+03*SIN((2.0*pi)*t/6.0 )
-       ! Define concentrated moment vector
        u%PointLoad%Moment(:,:) = 0.0D0
 
 with ``1.0D+03`` being the amplitude and ``6.0`` being the
-period.
+period. Note that this particular implementation overrides the tip-load and point-loads 
+defined in the driver input file.
 
 Similar to the concentrated load, the distributed loads can be defined
 in the same subroutine
 
 .. code-block:: fortran
 
-       IF(p%quadrature .EQ. 1) THEN
-           DO i=1,p%ngp*p%elem_total+2
-               u%DistrLoad%Force(1:3,i) = InitInput%DistrLoad(1:3)
-               u%DistrLoad%Moment(1:3,i)= InitInput%DistrLoad(4:6)
-           ENDDO
-       ELSEIF(p%quadrature .EQ. 2) THEN
-           DO i=1,p%ngp
-               u%DistrLoad%Force(1:3,i) = InitInput%DistrLoad(1:3)
-               u%DistrLoad%Moment(1:3,i)= InitInput%DistrLoad(4:6)
-           ENDDO
-       ENDIF
+       DO i=1,u%DistrLoad%NNodes
+          u%DistrLoad%Force(1:3,i) = DvrData%DistrLoad(1:3)
+          u%DistrLoad%Moment(1:3,i)= DvrData%DistrLoad(4:6)
+       ENDDO
 
-where ``p%ngp`` is the number of quadrature points, ``InitInput%DistrLoad(:)``
-is the constant uniformly distributed load BeamDyn reads from the driver
-input file, and ``p%elem_total`` is the total number of elements. The user
-can modify ``InitInput%DistrLoad(:)`` to define the loads based on need.
+where ``u%DistrLoad%NNodes`` is the number of nodes input to BeamDyn (on the quadrature points),
+and ``DvrData%DistrLoad(:)`` is the constant uniformly distributed load BeamDyn reads from the driver
+input file. The user can modify ``DvrData%DistrLoad(:)`` to define the loads based on need.
 
 We note that the distributed loads are defined at the quadrature points
-for numerical integrations. For example, if Gauss quadrature is chosen
-(i.e., ``p%quadrature .EQ. 1``), then the distributed loads are defined at
+for numerical integrations. For example, if Gauss quadrature is chosen, 
+then the distributed loads are defined at
 Gauss points plus the two end points of the beam (root and tip). For
 trapezoidal quadrature, ``p%ngp`` stores the number of trapezoidal
 quadrature points.
@@ -220,10 +214,9 @@ The user can set the ``Echo`` flag to ``TRUE`` to have BeamDyn echo the
 contents of the BeamDyn input file (useful for debugging errors in the
 input file).
 
-``Analysis_Type`` specifies the type of an analysis. In the current
-version, there are two options: 1) static analysis, and 2) dynamic
-analysis. If BeamDyn is run in coupled FAST mode, this entry can be only
-set to 2, i.e., for dynamic analysis.
+The ``QuasiStaticInit`` flag indicates if BeamDyn should perform a quasi-static
+solution at initialization to better initialize its states. In general, this should 
+be set to true for better numerical performance (it reduces startup transients).
 
 ``rhoinf`` specifies the numerical damping parameter (spectral radius
 of the amplification matrix) in the range of :math:`[0.0,1.0]` used in
@@ -265,6 +258,12 @@ time-integration in seconds. The keyword “DEFAULT” may be used to
 indicate that the module should employ the time increment prescribed by
 the driver code (FAST/stand-alone driver program).
 
+``load_retries`` specifies the maximum number of load retries allowed. This option
+currently works only for static analysis. For every load retry, the applied load is
+halved to promote convergence of the Newton-Raphson scheme in iteration of smaller
+load steps as opposed to one single large load step which may cause divergence of the
+Newton-Raphson scheme. The keyword “DEFAULT” sets ``load_retries = 20``.
+
 ``NRMax`` specifies the maximum number of iterations per time step in
 the Newton-Raphson scheme. If convergence is not reached within this
 number of iterations, BeamDyn returns an error message and terminates
@@ -276,6 +275,31 @@ criteria of a nonlinear solution that is used for the termination of the
 iteration. The keyword “DEFAULT” sets
 ``Stop_Tol = 1.0E-05``. Please refer to
 :numref:`convergence-criterion` for more details.
+
+``tngt_stf_fd`` is a boolean that sets the flag to compute the tangent stiffness
+matrix using finite differencing instead of analytical differentiation. The
+finite differencing is performed using a central scheme. The keyword “DEFAULT”
+sets ``tngt_stf_fd = FALSE``.
+
+``tngt_stf_comp`` is a boolean that sets the flag to compare the analytical tangent
+stiffness matrix against the finite differenced tangent stiffness matrix. Information is
+written to the terminal regarding the dof where the maximum difference is observed. If
+``tngt_stf_fd = FALSE`` and ``tngt_stf_comp = TRUE``, the analytical tangent stiffness
+matrix is used to solve the system of equations while the finite difference tangent stiffness
+matrix is used only to perform the comparison of the two matrices. The keyword “DEFAULT”
+sets ``tngt_stf_comp = FALSE``.
+
+``tngt_stf_pert`` sets the perturbation size for finite differencing. The “DEFAULT” value
+based on experience is set to ``1e-06``.
+
+``tngt_stf_difftol`` is the maximum allowable relative difference between the analytical
+and finite differenced tangent stiffness matrices. If for any entry in the matrices,
+the relative difference exceeds this value the simulation will terminate. The “DEFAULT” value
+is currently set to ``1e-01``.
+
+``RotStates`` is a flag that indicates if BeamDyn's continuous states should be
+oriented in the rotating frame during linearization analysis when coupled to OpenFAST. 
+If multi-blade coordinate (MBC3) analysis is performed, ``RotStates`` must be ``true``.
 
 Geometry Parameter
 ~~~~~~~~~~~~~~~~~~
@@ -314,7 +338,7 @@ the following equality:
 
 .. math::
    :label: keypoint
-           
+
    kp\_total = \sum_{i=1}^{member\_total} n_i - member\_total +1
 
 where :math:`n_i` is the number of key points in the :math:`i^{th}`
@@ -328,7 +352,7 @@ cases for member and key-point definition.
    :width: 60%
    :align: center
 
-   Member and key point definition: one member defined by four key points; 
+   Member and key point definition: one member defined by four key points;
 
 .. _geometry1-case2:
 
@@ -336,8 +360,8 @@ cases for member and key-point definition.
    :width: 60%
    :align: center
 
-   Member and key point definition: two members defined by six key points.           
-   
+   Member and key point definition: two members defined by six key points.
+
 The next section defines the key-point information, preceded by two
 header lines. Each key point is defined by three physical coordinates
 (``kp_xr``, ``kp_yr``, ``kp_zr``) in the IEC standard blade
@@ -358,7 +382,7 @@ more details on the blade geometry definition.
 
    BeamDyn Blade Geometry - Top: Side View; Middle: Front View (Looking Downwind); Bottom: Cross Section View (Looking Toward the Tip, from the Root)
 
-   
+
 Mesh Parameter
 ~~~~~~~~~~~~~~
 
@@ -410,10 +434,12 @@ unused when BeamDyn is used coupled to FAST.
 written to a file. Currently, BeamDyn can output quantities at a maximum
 of nine nodes.
 
-``OutNd`` is a list ``NNodeOuts`` long of node numbers between 1 and
-``node_total`` (total number of FE nodes), separated by any
+``OutNd`` is a list ``NNodeOuts`` long of node numbers between 1 and the number of
+nodes on the output mesh, separated by any
 combination of commas, semicolons, spaces, and/or tabs. The nodal
-positions are given in the summary file, if output.
+positions are given in the summary file, if output. 
+For Gassian quadrature, the number of nodes on the output mesh is the total number of FE nodes;
+for trapezoidal quadrature, this is the number of quadrature nodes.
 
 The ``OutList`` block contains a list of output parameters. Enter one
 or more lines containing quoted strings that in turn contain one or more
@@ -470,7 +496,7 @@ stiffness-proportional damping coefficients, whereby the
 
 .. math::
    :label: damping-force
-           
+
    \mathcal{\underline{F}}^{Damp} = \underline{\underline{\mu}}~\underline{\underline{S}}~\dot{\underline{\epsilon}}
 
 where :math:`\mathcal{\underline{F}}^{Damp}` is the damping force,
@@ -481,8 +507,8 @@ coefficient matrix defined as
 
 .. math::
    :label: damp-matrix
-           
-   \underline{\underline{\mu}} = 
+
+   \underline{\underline{\mu}} =
    \begin{bmatrix}
        \mu_{11} & 0 & 0 & 0 & 0 & 0 \\
        0 & \mu_{22} & 0 & 0 & 0 & 0 \\
@@ -513,7 +539,7 @@ matrix is given as follows:
 
 .. math::
    :label: Stiffness
-           
+
    \begin{bmatrix}
    K_{ShrFlp} & 0 & 0 & 0 & 0 & 0 \\
    0 & K_{ShrEdg} & 0 & 0 & 0 & 0 \\
@@ -558,5 +584,3 @@ We note that for beam structure, the :math:`i_{plr}` is given as
    :label: PolarMOI
 
    i_{plr} = i_{Edg} + i_{Flp}
-
-

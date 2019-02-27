@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
 MODULE SysSubs
 
 
@@ -280,6 +276,25 @@ CONTAINS
       NWTC_GammaR16 = gamma( x )
    
    END FUNCTION NWTC_GammaR16
+!=======================================================================
+!> This routine creates a given directory if it does not already exist.
+SUBROUTINE MKDIR ( new_directory_path )
+
+   implicit none
+
+   character(*), intent(in) :: new_directory_path
+   character(1024)          :: make_command
+   logical                  :: directory_exists
+
+   ! Check if the directory exists first
+   inquire( directory=trim(new_directory_path), exist=directory_exists )
+   
+   if ( .NOT. directory_exists ) then
+      make_command = 'mkdir "'//trim(new_directory_path)//'"'
+      call system( make_command )
+   endif
+
+END SUBROUTINE MKDIR
 !=======================================================================
    SUBROUTINE OpenCon
 

@@ -683,6 +683,8 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + 3, 'RotFrame_u', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         CALL AllocAry(InitOutData%IsLoad_u, InitInp%NumWindPoints*3 + 3, 'IsLoad_u', TmpErrStat, TmpErrMsg)
+            CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          CALL AllocAry(InitOutData%LinNames_y, InitInp%NumWindPoints*3+p%NumOuts, 'LinNames_y', TmpErrStat, TmpErrMsg)
             CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3+p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
@@ -707,9 +709,11 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
             InitOutData%LinNames_y(i+3*InitInp%NumWindPoints) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
          end do
 
-         ! for the blades, this may in fact be in the rotating frame, but InflowWind doesn't know about that (glue code can overwrite if necessary)
+         ! IfW inputs and outputs are in the global, not rotating frame
          InitOutData%RotFrame_u = .false. 
          InitOutData%RotFrame_y = .false. 
+
+         InitOutData%IsLoad_u = .false. ! IfW inputs for linearization are not loads
          
          !InitOutData%PropagationDir = -p%PropagationDir
          !InitOutData%RefHt = p%UniformWind%RefHt
@@ -781,13 +785,13 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, p, &
 
    REAL(DbKi),                               INTENT(IN   )  :: Time              !< Current simulation time in seconds
    TYPE(InflowWind_InputType),               INTENT(IN   )  :: InputData         !< Inputs at Time
-   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p         !< Parameters
+   TYPE(InflowWind_ParameterType),           INTENT(IN   )  :: p                 !< Parameters
    TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: ContStates        !< Continuous states at Time
    TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: DiscStates        !< Discrete states at Time
    TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: ConstrStates      !< Constraint states at Time
    TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherStates       !< Other/optimization states at Time
    TYPE(InflowWind_OutputType),              INTENT(INOUT)  :: OutputData        !< Outputs computed at Time (IN for mesh reasons and data allocation)
-   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m          !< Misc variables for optimization (not copied in glue code)
+   TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m                 !< Misc variables for optimization (not copied in glue code)
 
    INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
@@ -1076,7 +1080,7 @@ END SUBROUTINE InflowWind_CalcConstrStateResidual
 ! If the module does not implement them, set ErrStat = ErrID_Fatal in IfW_Init() when InitInp%Linearize is .true.
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
+!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and dZ/du are returned.
 SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
 !..................................................................................................................................
 
@@ -1094,13 +1098,13 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
    TYPE(InflowWind_MiscVarType),          INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                        INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                          INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) 
                                                                                 !!   with respect to inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) 
                                                                                 !!   with respect to inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) 
                                                                                 !!   with respect to inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z)  
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z)  
                                                                                 !!   with respect to inputs (u) [intent in to avoid deallocation]
  
       ! local variables: 
@@ -1108,10 +1112,10 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
    CHARACTER(ErrMsgLen)                                           :: ErrMsg2            ! temporary error message
    CHARACTER(*), PARAMETER                                        :: RoutineName = 'InflowWind_JacobianPInput'
       
-   REAL(ReKi)                                                     :: local_dYdu(3,6)
+   REAL(R8Ki)                                                     :: local_dYdu(3,6)
    integer                                                        :: i, n
    integer                                                        :: i_start, i_end  ! indices for input/output start and end
-   integer                                                        :: node, comp, SignM
+   integer                                                        :: node, comp
    
       
       ! Initialize ErrStat
@@ -1138,7 +1142,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
             ! note that we are including the propagation direction in the analytical derivative calculated
             ! inside IfW_UniformWind_JacobianPInput, so no need to transform input position vectors first
          
-         dYdu = 0.0_ReKi ! initialize all non-diagonal entries to zero (position of node effects the output of only that node) 
+         dYdu = 0.0_R8Ki ! initialize all non-diagonal entries to zero (position of node effects the output of only that node) 
          
          n = SIZE(u%PositionXYZ,2)
             ! these are the positions used in the module coupling
@@ -1152,7 +1156,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
             
             dYdu(i_start:i_end,i_start:i_end) = local_dYdu(:,1:3)
             
-            dYdu(i_start:i_end,n*3+1:) = local_dYdu(:,4:6)
+            dYdu(i_start:i_end,n*3+1:) = local_dYdu(:,4:6) ! extended inputs
             
          end do            
 
@@ -1165,7 +1169,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
             if (node > 0) then
                call IfW_UniformWind_JacobianPInput( t, p%WindViXYZ(:,node), p%RotToWind(1,1), p%RotToWind(2,1), p%UniformWind, m%UniformWind, local_dYdu )                                                                                       
             else
-               local_dYdu = 0.0_ReKi
+               local_dYdu = 0.0_R8Ki
             end if            
             
             dYdu(3*n+i, 3*n+1:) = p%OutParam(i)%SignM * local_dYdu( comp , 4:6)         
@@ -1193,7 +1197,7 @@ SUBROUTINE InflowWind_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrSt
 END SUBROUTINE InflowWind_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
+!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and dZ/dx are returned.
 SUBROUTINE InflowWind_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
 !..................................................................................................................................
 
@@ -1211,16 +1215,16 @@ SUBROUTINE InflowWind_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, E
    TYPE(InflowWind_MiscVarType),          INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                        INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                          INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
                                                                                 !!   (Y) with respect to the continuous
                                                                                 !!   states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
                                                                                 !!   functions (X) with respect to
                                                                                 !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
                                                                                 !!   functions (Xd) with respect to
                                                                                 !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
                                                                                 !!   functions (Z) with respect to
                                                                                 !!   the continuous states (x) [intent in to avoid deallocation]
 
@@ -1269,7 +1273,7 @@ SUBROUTINE InflowWind_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, E
 END SUBROUTINE InflowWind_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
+!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and dZ/dxd are returned.
 SUBROUTINE InflowWind_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
 !..................................................................................................................................
 
@@ -1287,16 +1291,16 @@ SUBROUTINE InflowWind_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, E
    TYPE(InflowWind_MiscVarType),          INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                        INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                          INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
                                                                                 !!  (Y) with respect to the discrete
                                                                                 !!  states (xd) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
                                                                                 !!   functions (X) with respect to the
                                                                                 !!   discrete states (xd) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddxd(:,:) !< Partial derivatives of discrete state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddxd(:,:) !< Partial derivatives of discrete state
                                                                                 !!   functions (Xd) with respect to the
                                                                                 !!   discrete states (xd) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
                                                                                 !!   functions (Z) with respect to the
                                                                                 !!   discrete states (xd) [intent in to avoid deallocation]
 
@@ -1343,7 +1347,7 @@ SUBROUTINE InflowWind_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, E
 END SUBROUTINE InflowWind_JacobianPDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
+!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and dZ/dz are returned.
 SUBROUTINE InflowWind_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
 !..................................................................................................................................
 
@@ -1361,16 +1365,16 @@ SUBROUTINE InflowWind_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m,
    TYPE(InflowWind_MiscVarType),          INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                        INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                          INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
                                                                                 !!  functions (Y) with respect to the
                                                                                 !!  constraint states (z) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
                                                                                 !!  state functions (X) with respect to
                                                                                 !!  the constraint states (z) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
                                                                                 !!  functions (Xd) with respect to the
                                                                                 !!  constraint states (z) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,     INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
                                                                                 !! state functions (Z) with respect to
                                                                                 !!  the constraint states (z) [intent in to avoid deallocation]
 

@@ -70,7 +70,7 @@ system and the BD coordinate system can be found in :numref:`IECBD`.
 .. _IECBD:
 
 .. table:: Transformation between blade coordinate system and BD coordinate system.
-          
+
    +---------------+------------------+------------------+------------------+
    | Blade Frame   | :math:`X_{r0}`   | :math:`Y_{r0}`   | :math:`Z_{r0}`   |
    +---------------+------------------+------------------+------------------+
@@ -106,7 +106,7 @@ can be written as :cite:`Bauchau:2010`
 
 .. math::
    	:label: GovernGEBT-1-2
-                
+
    	\dot{\underline{h}} - \underline{F}^\prime &= \underline{f} \\
    	\dot{\underline{g}} + \dot{\tilde{u}} \underline{h} - \underline{M}^\prime + (\tilde{x}_0^\prime + \tilde{u}^\prime)^T \underline{F} &= \underline{m}
 
@@ -128,7 +128,7 @@ example,
 
 .. math::
 
-   {\widetilde{n}} = 
+   {\widetilde{n}} =
    		\begin{bmatrix}
 		0 & -n_3 & n_2 \\
 		n_3 & 0 & -n_1 \\
@@ -140,7 +140,7 @@ The constitutive equations relate the velocities to the momenta and the
 
 .. math::
    	:label: ConstitutiveMass-Stiff
-                
+
    	\begin{Bmatrix}
    	\underline{h} \\
    	\underline{g}
@@ -175,7 +175,7 @@ components are defined as
 
 .. math::
    :label: axial
-           
+
    {\underline{a}} = axial({\underline{\underline{A}}})=\begin{Bmatrix}
    a_1 \\
    a_2 \\
@@ -192,7 +192,7 @@ The 1D strain measures are defined as
 
 .. math::
    :label: 1DStrain
-           
+
    \begin{Bmatrix}
       {\underline{\epsilon}} \\
       {\underline{\kappa}}
@@ -223,10 +223,10 @@ forms of displacement, velocity, and acceleration are written as
 
 .. math::
      :label: Discretized
-                
+
      \underline{q} (x_1) &= \underline{\underline{N}} ~\hat{\underline{q}}~~~~\Delta \underline{q}^T = \left[ \Delta \underline{u}^T~~\Delta \underline{c}^T \right] \\
      \underline{v}(x_1) &= \underline{\underline{N}}~\hat{\underline{v}}~~~~\Delta \underline{v}^T = \left[\Delta \underline{\dot{u}}^T~~\Delta \underline{\omega}^T \right] \\
-     \underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\Delta \underline{a}^T = \left[ \Delta \ddot{\underline{u}}^T~~\Delta \dot{\underline{\omega}}^T \right]	
+     \underline{a}(x_1) &= \underline{\underline{N}}~ \hat{\underline{a}}~~~~\Delta \underline{a}^T = \left[ \Delta \ddot{\underline{u}}^T~~\Delta \dot{\underline{\omega}}^T \right]
 
 where :math:`{\underline{\underline{N}}}` is the shape function matrix
 and :math:`(\hat{\cdot})` denotes a column matrix of nodal values.
@@ -235,7 +235,7 @@ The displacement fields in an element are approximated as
 
 .. math::
        :label: InterpolateDisp
-               
+
        {\underline{u}}(\xi) &=  h^k(\xi) {\underline{\hat{u}}}^k \\
        {\underline{u}}^\prime(\xi) &=  h^{k\prime}(\xi) {\underline{\hat{u}}}^k
 
@@ -252,7 +252,7 @@ simply be interpolated as the displacement field in the form of
        :label: InterpolateRot
 
        {\underline{c}}(\xi) &= h^k(\xi) {\underline{\hat{c}}}^k \\
-       {\underline{c}}^\prime(\xi) &= h^{k \prime}(\xi) {\underline{\hat{c}}}^k 
+       {\underline{c}}^\prime(\xi) &= h^{k \prime}(\xi) {\underline{\hat{c}}}^k
 
 where :math:`{\underline{c}}` is the rotation field in an element and
 :math:`{\underline{\hat{c}}}^k` is the nodal value at the :math:`k^{th}`
@@ -290,7 +290,7 @@ Step 2:
 
     .. math::
        :label: Tensor
-               
+
            {\underline{k}} = {\underline{\underline{H}}}~ {\underline{c}}^\prime
 
 Step 3:
@@ -324,7 +324,7 @@ References :cite:`Patera:1984,Ronquist:1987,Sprague:2003,Sprague:2004`.
    :width: 47%
    :align: center
 
-   Representative :math:`p+1` Lagrangian-interpolant shape functions in the element natural coordinates for a eigth-order LSFEs, where nodes are located at the Gauss-Lobatto-Legendre points.
+   Representative :math:`p+1` Lagrangian-interpolant shape functions in the element natural coordinates for a eighth-order LSFEs, where nodes are located at the Gauss-Lobatto-Legendre points.
 
 
 
@@ -337,7 +337,7 @@ parameters defined in the following equation:
 .. math::
    :label: WMParameter
 
-   {\underline{c}} = 4 \tan\left(\frac{\phi}{4} \right) \bar{n} 
+   {\underline{c}} = 4 \tan\left(\frac{\phi}{4} \right) \bar{n}
 
 where :math:`\phi` is the rotation angle and :math:`\bar{n}` is the
 unit vector of the rotation axis. It can be observed that the valid
@@ -347,7 +347,7 @@ rescaling operation at :math:`\pi` as:
 
 .. math::
    :label: RescaledWM
-           
+
    {\underline{r}} = \begin{cases}
    4(q_0{\underline{p}} + p_0 {\underline{q}} + \tilde{p} {\underline{q}} ) / (\Delta_1 + \Delta_2), & \text{if } \Delta_2 \geq 0 \\
    -4(q_0{\underline{p}} + p_0 {\underline{q}} + \tilde{p} {\underline{q}} ) / (\Delta_1 - \Delta_2), & \text{if } \Delta_2 < 0
@@ -370,7 +370,7 @@ The rotation tensor expressed in terms of Wiener-Milenković parameters is
 
 .. math::
       :label: eqn:RotTensorWM
-           
+
       {\underline{\underline{R}}} ({\underline{c}}) = \frac{1}{(4-c_0)^2}
       \begin{bmatrix}
       c_0^2 + c_1^2 - c_2^2 - c_3^2 & 2(c_1 c_2 - c_0 c_3) & 2(c_1 c_3 + c_0 c_2) \\
@@ -385,7 +385,7 @@ relation between rotation tensor and direction cosine matrix (DCM) is
 
 .. math::
    :label: RT2DCM
-          
+
    {\underline{\underline{R}}} = ({\underline{\underline{DCM}}})^T
 
 Interested users are referred to :cite:`Bauchau-etal:2008`
@@ -405,7 +405,7 @@ equations in Eq.  :eq:`GovernGEBT-1-2` are in the form of
 
 .. math::
    :label: LinearizedEqn
-           
+
    \hat{\underline{\underline{M}}} \Delta \hat{\underline{a}} +\hat{\underline{\underline{G}}} \Delta \hat{\underline{v}}+ \hat{\underline{\underline{K}}} \Delta \hat{\underline{q}} = \hat{\underline{F}}^{ext} - \hat{\underline{F}}
 
 where the :math:`\hat{{\underline{\underline{M}}}}`,
@@ -419,12 +419,12 @@ follows
 
 .. math::
    	:label: hatMGKFFext
-                
+
    	\hat{{\underline{\underline{M}}}}&= \int_0^l \underline{\underline{N}}^T \mathcal{\underline{\underline{M}}} ~\underline{\underline{N}} dx_1 \\
-   	\hat{{\underline{\underline{G}}}} &= \int_0^l {\underline{\underline{N}}}^T {\underline{\underline{\mathcal{G}}}}^I~{\underline{\underline{N}}} dx_1\\ 
-   	\hat{{\underline{\underline{K}}}}&=\int_0^l \left[ {\underline{\underline{N}}}^T ({\underline{\underline{\mathcal{K}}}}^I + \mathcal{{\underline{\underline{Q}}}})~ {\underline{\underline{N}}} + {\underline{\underline{N}}}^T \mathcal{{\underline{\underline{P}}}}~ {\underline{\underline{N}}}^\prime + {\underline{\underline{N}}}^{\prime T} \mathcal{{\underline{\underline{C}}}}~ {\underline{\underline{N}}}^\prime + {\underline{\underline{N}}}^{\prime T} \mathcal{{\underline{\underline{O}}}}~ {\underline{\underline{N}}} \right] d x_1 \\	
+   	\hat{{\underline{\underline{G}}}} &= \int_0^l {\underline{\underline{N}}}^T {\underline{\underline{\mathcal{G}}}}^I~{\underline{\underline{N}}} dx_1\\
+   	\hat{{\underline{\underline{K}}}}&=\int_0^l \left[ {\underline{\underline{N}}}^T ({\underline{\underline{\mathcal{K}}}}^I + \mathcal{{\underline{\underline{Q}}}})~ {\underline{\underline{N}}} + {\underline{\underline{N}}}^T \mathcal{{\underline{\underline{P}}}}~ {\underline{\underline{N}}}^\prime + {\underline{\underline{N}}}^{\prime T} \mathcal{{\underline{\underline{C}}}}~ {\underline{\underline{N}}}^\prime + {\underline{\underline{N}}}^{\prime T} \mathcal{{\underline{\underline{O}}}}~ {\underline{\underline{N}}} \right] d x_1 \\
    	\hat{{\underline{F}}} &= \int_0^l ({\underline{\underline{N}}}^T {\underline{\mathcal{F}}}^I + {\underline{\underline{N}}}^T \mathcal{{\underline{F}}}^D + {\underline{\underline{N}}}^{\prime T} \mathcal{{\underline{F}}}^C)dx_1 \\
-   	\hat{{\underline{F}}}^{ext}& = \int_0^l {\underline{\underline{N}}}^T \mathcal{{\underline{F}}}^{ext} dx_1 
+   	\hat{{\underline{F}}}^{ext}& = \int_0^l {\underline{\underline{N}}}^T \mathcal{{\underline{F}}}^{ext} dx_1
 
 where :math:`\mathcal{{\underline{F}}}^{ext}` is the applied load
 vector. The new matrix notations in Eqs. :eq:`hatMGKFFext` to are briefly introduced
@@ -434,7 +434,7 @@ Eq. :eq:`GovernGEBT-1-2` as
 
 .. math::
    	:label: FCD
-                
+
    	\mathcal{{\underline{F}}}^C &= \begin{Bmatrix}
             {\underline{F}} \\
    	{\underline{M}}
@@ -471,7 +471,6 @@ null matrix. The :math:`{\underline{\underline{\mathcal{G}}}}^I`,
       {\underline{\underline{0}}} & {\underline{\underline{C}}}_{11} \tilde{E_1} - \tilde{F} \\
       {\underline{\underline{0}}}& {\underline{\underline{C}}}_{21} \tilde{E_1} - \tilde{M}
       \end{bmatrix} \\
-      \label{mathcalP}
       \mathcal{{\underline{\underline{P}}}} &= \begin{bmatrix}
       {\underline{\underline{0}}} & {\underline{\underline{0}}} \\
       \tilde{F} +  ({\underline{\underline{C}}}_{11} \tilde{E_1})^T & ({\underline{\underline{C}}}_{21} \tilde{E_1})^T
@@ -490,7 +489,7 @@ above expressions
 
 .. math::
        :label: E1-PartC
-               
+
        {\underline{E}}_1 &= {\underline{x}}_0^\prime + {\underline{u}}^\prime \\
        {\underline{\underline{\mathcal{C}}}} &= \begin{bmatrix}
        {\underline{\underline{C}}}_{11} & {\underline{\underline{C}}}_{12} \\
@@ -518,7 +517,7 @@ two separate parts, like :math:`{\underline{\mathcal{F}}}^C` and
 
 .. math::
       :label: DampingForce-1-2
-              
+
       {\underline{\mathcal{F}}}^C_d &= \begin{Bmatrix}
       {\underline{F}}_d \\
       {\underline{M}}_d
@@ -526,7 +525,7 @@ two separate parts, like :math:`{\underline{\mathcal{F}}}^C` and
       {\underline{\mathcal{F}}}^D_d &= \begin{Bmatrix}
        {\underline{0}} \\
        (\tilde{x}^\prime_0 + \tilde{u}^\prime)^T \underline{F}_d
-       \end{Bmatrix}   
+       \end{Bmatrix}
 
 The linearization of the structural damping forces are as follows:
 
@@ -565,37 +564,37 @@ where the newly introduced matrices are defined as
 .. math::
        :label: DampingSd-Od-Gd-Pd-Qd-Xd-Yd
 
-       {\underline{\underline{\mathcal{S}}}}_d &= 
+       {\underline{\underline{\mathcal{S}}}}_d &=
        {\underline{\underline{\mu}}} {\underline{\underline{\mathcal{C}}}} \begin{bmatrix}
        \tilde{\omega}^T & {\underline{\underline{0}}} \\
        {\underline{\underline{0}}} & \tilde{\omega}^T
        \end{bmatrix} \\
-       {\underline{\underline{\mathcal{O}}}}_d &= 
+       {\underline{\underline{\mathcal{O}}}}_d &=
        \begin{bmatrix}
        {\underline{\underline{0}}} & {\underline{\underline{\mu}}} {\underline{\underline{C}}}_{11} (\dot{\tilde{u}}^\prime - \tilde{\omega} \tilde{E}_1) - \tilde{F}_d \\
        {\underline{\underline{0}}} &{\underline{\underline{\mu}}} {\underline{\underline{C}}}_{21} (\dot{\tilde{u}}^\prime - \tilde{\omega} \tilde{E}_1) - \tilde{M}_d
        \end{bmatrix} \\
-       {\underline{\underline{\mathcal{G}}}}_d &= 
+       {\underline{\underline{\mathcal{G}}}}_d &=
        \begin{bmatrix}
        {\underline{\underline{0}}} & {\underline{\underline{C}}}_{11}^T {\underline{\underline{\mu}}}^T \tilde{E}_1 \\
-       {\underline{\underline{0}}} & {\underline{\underline{C}}}_{12}^T {\underline{\underline{\mu}}}^T \tilde{E}_1 
+       {\underline{\underline{0}}} & {\underline{\underline{C}}}_{12}^T {\underline{\underline{\mu}}}^T \tilde{E}_1
        \end{bmatrix} \\
-       {\underline{\underline{\mathcal{P}}}}_d &= 
+       {\underline{\underline{\mathcal{P}}}}_d &=
        \begin{bmatrix}
        {\underline{\underline{0}}} & {\underline{\underline{0}}}  \\
-       \tilde{F}_d + \tilde{E}_1^T {\underline{\underline{\mu}}} {\underline{\underline{C}}}_{11} \tilde{\omega}^T &  \tilde{E}_1^T {\underline{\underline{\mu}}} {\underline{\underline{C}}}_{12} \tilde{\omega}^T 
+       \tilde{F}_d + \tilde{E}_1^T {\underline{\underline{\mu}}} {\underline{\underline{C}}}_{11} \tilde{\omega}^T &  \tilde{E}_1^T {\underline{\underline{\mu}}} {\underline{\underline{C}}}_{12} \tilde{\omega}^T
        \end{bmatrix} \\
-       {\underline{\underline{\mathcal{Q}}}}_d &= 
+       {\underline{\underline{\mathcal{Q}}}}_d &=
        \begin{bmatrix}
        {\underline{\underline{0}}} & {\underline{\underline{0}}}  \\
        {\underline{\underline{0}}} &  \tilde{E}_1^T {\underline{\underline{O}}}_{12}
        \end{bmatrix} \\
-       {\underline{\underline{\mathcal{X}}}}_d &= 
+       {\underline{\underline{\mathcal{X}}}}_d &=
        \begin{bmatrix}
        {\underline{\underline{0}}} & {\underline{\underline{0}}}  \\
         {\underline{\underline{0}}} &  \tilde{E}_1^T {\underline{\underline{G}}}_{12}
        \end{bmatrix} \\
-       {\underline{\underline{\mathcal{Y}}}}_d &= 
+       {\underline{\underline{\mathcal{Y}}}}_d &=
        \begin{bmatrix}
        {\underline{\underline{0}}} & {\underline{\underline{0}}}  \\
          \tilde{E}_1^T {\underline{\underline{\mu}}} {\underline{\underline{C}}}_{11} &   \tilde{E}_1^T {\underline{\underline{\mu}}} {\underline{\underline{C}}}_{12}
@@ -619,10 +618,10 @@ is calculated as
 
 .. math::
        :label: StoppingCriterion
-               
-       \| \Delta \mathbf{U}^{(i)T} \left( {^{t+\Delta t}} \mathbf{R} -  {^{t+\Delta t}} \mathbf{F}^{(i-1)}  \right) \| \leq \| \epsilon_E \left( \Delta \mathbf{U}^{(1)T} \left( {^{t+\Delta t}} \mathbf{R} - {^t}\mathbf{F} \right) \right) \|
 
-where :math:`\|\cdot\|` denotes the Euclidean norm,
+       | \Delta \mathbf{U}^{(i)T} \left( {^{t+\Delta t}} \mathbf{R} -  {^{t+\Delta t}} \mathbf{F}^{(i-1)}  \right) | \leq | \epsilon_E \left( \Delta \mathbf{U}^{(1)T} \left( {^{t+\Delta t}} \mathbf{R} - {^t}\mathbf{F} \right) \right) |
+
+where :math:`|\cdot|` denotes the absolute value,
 :math:`\Delta \mathbf{U}` is the incremental displacement vector,
 :math:`\mathbf{R}` is the vector of externally applied nodal point
 loads, :math:`\mathbf{F}` is the vector of nodal point forces
@@ -664,7 +663,7 @@ blade root, the governing equation is revised as
 
 .. math::
    :label: CompactGovernRoot
-          
+
    {\underline{\mathcal{F}}}^I - {\underline{\mathcal{F}}}^{C\prime} + {\underline{\mathcal{F}}}^D = {\underline{\mathcal{F}}}^{ext}+{\underline{\mathcal{F}}}^R
 
 where :math:`{\underline{\mathcal{F}}}^R = \left[ {\underline{F}}^R~~~{\underline{M}}^R\right]^T`
@@ -689,7 +688,7 @@ split into :math:`{\underline{\mathcal{F}}}^A` and :math:`{\underline{\mathcal{F
 
 .. math::
        :label: mathcalFA-FV
-               
+
        {\underline{\mathcal{F}}}^A &= \begin{Bmatrix}
        m \ddot{{\underline{u}}} + \dot{\tilde{\omega}}m {\underline{\eta}}\\
        m \tilde{\eta} \ddot{{\underline{u}}} + {\underline{\underline{\rho}}} \dot{{\underline{\omega}}}
@@ -697,7 +696,7 @@ split into :math:`{\underline{\mathcal{F}}}^A` and :math:`{\underline{\mathcal{F
        {\underline{\mathcal{F}}}^V &= \begin{Bmatrix}
        \tilde{\omega} \tilde{\omega} m {\underline{\eta}}\\
         \tilde{\omega} {\underline{\underline{\rho}}} {\underline{\omega}}
-       \end{Bmatrix} \\    
+       \end{Bmatrix} \\
 
 The blade loads are thus defined as
 

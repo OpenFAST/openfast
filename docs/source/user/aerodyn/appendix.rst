@@ -54,11 +54,10 @@ The local tower coordinate system is shown in :numref:`ad_tower_geom` and the lo
    y: Tangential (to Plane), n: Normal (to Chord), 
    and t: Tangential (to Chord)
 
+.. _ad-output-channel:
 
-.. only:: html
+.. figure:: figs/ad_output_channel.pdf
+   :width: 500px
+   :align: center
 
-   :download:`AeroDyn Output Channel List <figs/ad_output_channel.pdf>` 
-
-.. raw:: latex
-
-   \includepdf[pages = -, pagecommand={\thispagestyle{plain}}]{\directory ad_output_channel.pdf}
+   AeroDyn Output Channel List

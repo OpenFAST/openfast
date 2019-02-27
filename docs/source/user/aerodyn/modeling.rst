@@ -20,8 +20,8 @@ aerodynamics independent of aero-elastic coupling. The standalone
 AeroDyn driver code essentially replaces the functionality previously
 available in the separate wind turbine rotor-performance tool WT\_Perf.
 For example, the standalone AeroDyn driver code can be used to compute
-the surfaces of power coefficient (C:sub:`P`), thrust coefficient
-(C:sub:`T`), and/or torque coefficient (C:sub:`Q`) as a function of
+the surfaces of power coefficient (C\ :sub:`P`), thrust coefficient
+(C\ :sub:`T`), and/or torque coefficient (C\ :sub:`Q`) as a function of
 tip-speed ratio (TSR) and blade-pitch angle for a given rotor. Moreover,
 the standalone AeroDyn driver code is more powerful than WT\_Perf in
 that the standalone AeroDyn driver can capture time-varying dynamics as
@@ -60,9 +60,9 @@ where large gradients are expected in the aerodynamic loads e.g. near
 the blade tip. Aerodynamic imbalances are possible through the use of
 geometrical differences between each blade.
 
-When the tower potential-flow (``TwrPotent`` > 0), tower shadow
-(``TwrShadow`` = TRUE), and/or the tower aerodynamic load
-(``TwrAero`` = TRUE) models are enabled, we also recommend that
+When the tower potential-flow (``TwrPotent > 0``), tower shadow
+(``TwrShadow = TRUE``), and/or the tower aerodynamic load
+(``TwrAero = TRUE``) models are enabled, we also recommend that
 ``NumTwrNds`` be between 10 and 20 to balance accuracy with
 computational expense. Normally the local elevation of the tower node
 above ground (or above MSL for offshore wind turbines or above the
@@ -77,7 +77,7 @@ turbines or above the seabed for MHK turbines) as possible (this is a
 particular issue for full-field wind file formats).
 
 Model Options Under Operational and Parked/Idling Conditions
------------------------------------------------------------- 
+------------------------------------------------------------
 
 To model an operational rotor, we recommend to include induction
 (``WakeMod = 1``) and UA (``AFAeroMod = 2``). Normally, the Pitt and
@@ -85,7 +85,7 @@ Peters skewed-wake (``SkewMod = 2``), Prandtl tip-loss (``TipLoss
 = TRUE``), Prandtl hub-loss (``HubLoss = TRUE``), and tangential
 induction (``TanInd = TRUE``) models should all be enabled, but
 ``SkewMod = 2`` is invalid for very large yaw errors (much greater
-than 45˚). The nonlinear solve in the BEM solution is in terms of the
+than 45 degrees). The nonlinear solve in the BEM solution is in terms of the
 inflow angle, but ``IndToler`` represents the tolerance of the
 nondimensional residual equation, with no physical association possible;
 we recommend setting ``IndToler`` to ``DEFAULT``.
@@ -94,7 +94,7 @@ we recommend setting ``IndToler`` to ``DEFAULT``.
 B-L model is not yet functional. Testing has shown that the González and
 Minnema/Pierce models produce reasonable hysteresis of the normal force,
 tangential force, and pitching-moment coefficients if the UA model
-parameters are set appropriately for a given airfoil, Reynold’s number,
+parameters are set appropriately for a given airfoil, Reynolds number,
 and/or Mach number. However, the results will differ a bit from earlier
 versions of AeroDyn, (which was based on the Minnema/Pierce extensions
 to B-L) even if the default UA model parameters are used, due to
@@ -116,7 +116,7 @@ speed, in which case we recommend that ``TwrAero = TRUE``. Otherwise,
 
 We recommend to include the influence of the tower on the fluid local to
 the blade for both operational and parked/idling rotors. We recommend
-that ``TwrPotent`` > 0 for upwind rotors and that ``TwrPotent = 2``
+that ``TwrPotent > 0`` for upwind rotors and that ``TwrPotent = 2``
 or ``TwrShadow = TRUE`` for downwind rotors.
 
 Linearization
@@ -129,4 +129,3 @@ linearization of the full coupled solution. When induction is enabled
 frozen-wake assumption, by setting ``FrozenWake = TRUE``. The UA
 models are not set up to support linearization, so, UA must be disabled
 during linearization by setting ``AFAeroMod = 1``.
-
