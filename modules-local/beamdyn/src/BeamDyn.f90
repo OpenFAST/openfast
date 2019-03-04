@@ -155,13 +155,16 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
    ENDIF
 
-      ! compute physical distances to set positions of p%uuN0 (FE GLL_Nodes) and p%QuadPt (input quadrature nodes) (depends on p%QPtN and p%SP_Coef):
+      ! compute physical distances to set positions of p%uuN0 (FE GLL_Nodes) (depends on p%SP_Coef):
    call InitializeNodalLocations(InputFileData, p, GLL_nodes, ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
+
+      ! compute p%Shp, p%ShpDer, and p%Jacobian:
+   CALL BD_InitShpDerJaco( GLL_Nodes, p )
 
       ! set mass and stiffness matrices: p%Stif0_QP and p%Mass0_QP
    call InitializeMassStiffnessMatrices(InputFileData, p, ErrStat2,ErrMsg2)
@@ -171,11 +174,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
-
-      ! compute p%Shp, p%ShpDer, and p%Jacobian:
-   CALL BD_InitShpDerJaco( GLL_Nodes, p )
-
-
       ! Set the initial displacements: p%uu0, p%rrN0, p%E10
    CALL BD_QuadraturePointDataAt0(p)
       if (ErrStat >= AbortErrLev) then
@@ -183,12 +181,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
          return
       end if
 
-!FIXME: shift mass stiffness matrices here from the keypoint line to the calculated curvature line in p%uu0
-!   CALL BD_KMshift2Ref(p)
-
-
    call Initialize_FEweights(p) ! set p%FEweight; needs p%uuN0 and p%uu0
-      
       
       ! compute blade mass, CG, and IN for summary file:
    CALL BD_ComputeBladeMassNew( p, ErrStat2, ErrMsg2 )  !computes p%blade_mass,p%blade_CG,p%blade_IN
@@ -314,7 +307,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
        ! Print the summary file if requested:
    if (InputFileData%SumPrint) then
-      call BD_PrintSum( p, x, MiscVar, InitInp%RootName, ErrStat2, ErrMsg2 )
+      call BD_PrintSum( p, x, MiscVar, InitInp, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end if
 
@@ -375,6 +368,9 @@ subroutine InitializeMassStiffnessMatrices(InputFileData,p,ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   ! compute member length ratio w.r.t blade length
+   CALL BD_MemberEta( InputFileData%member_total, p%QPtWeight, p%Jacobian, p%member_eta, p%blade_length )
+
    CALL AllocAry(p%Stif0_QP,6,6,p%nqp*p%elem_total,'Stif0_QP',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%Mass0_QP,6,6,p%nqp*p%elem_total,'Mass0_QP',ErrStat2,ErrMsg2)
@@ -396,17 +392,17 @@ subroutine InitializeMassStiffnessMatrices(InputFileData,p,ErrStat, ErrMsg)
 
       temp_ratio(:,:) = 0.0_BDKi
       DO idx_qp=1,p%nqp
-         temp_ratio(idx_qp,1) = ((p%QPtN(idx_qp) + 1.0_BDKi)/2.0_BDKi)*p%member_length(1,2)  ! get QPtN ratio in [0,1] and multiply by member (element)'s relative length along the beam [0,1]
+         temp_ratio(idx_qp,1) = ((p%QPtN(idx_qp) + 1.0_BDKi)/2.0_BDKi)*p%member_eta(1)  ! get QPtN ratio in [0,1] and multiply by member (element)'s relative length along the beam [0,1]
       ENDDO
       DO i=2,p%elem_total
          ! add lengths of all previous members (elements)
          DO j=1,i-1
-               temp_ratio(:,i) = temp_ratio(:,i) + p%member_length(j,2) ! compute the relative distance along the blade at the start of the member (element)
+               temp_ratio(:,i) = temp_ratio(:,i) + p%member_eta(j) ! compute the relative distance along the blade at the start of the member (element)
          ENDDO
 
          ! then add ratio of length of quadrature point along this member (element)
          DO idx_qp=1,p%nqp
-               temp_ratio(idx_qp,i) = temp_ratio(idx_qp,i) + ((p%QPtN(idx_qp) + 1.0_BDKi)/2.0_BDKi)*p%member_length(i,2)
+               temp_ratio(idx_qp,i) = temp_ratio(idx_qp,i) + ((p%QPtN(idx_qp) + 1.0_BDKi)/2.0_BDKi)*p%member_eta(i)
          ENDDO
       ENDDO
 
@@ -492,7 +488,7 @@ CONTAINS
 
 end subroutine InitializeMassStiffnessMatrices
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes the positions and rotations stored in p%uuN0 (output GLL nodes) and p%QuadPt (input quadrature nodes).  p%QPtN must be already set.
+!> This subroutine computes the positions and rotations stored in p%uuN0 (output GLL nodes).
 subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
    type(BD_InputFile),           intent(in   )  :: InputFileData     !< data from the input file
    type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters
@@ -522,6 +518,9 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+   ! Compute segment length ratio w.r.t. member length
+   CALL BD_SegmentEta(InputFileData%member_total,InputFileData%kp_member,InputFileData%kp_coordinate,p%SP_Coef,p%segment_eta)
+
    !-------------------------------------------------
    ! p%uuN0 contains the initial (physical) positions and orientations of the (FE) GLL nodes
    !-------------------------------------------------
@@ -546,52 +545,6 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,ErrStat, ErrMsg)
       member_first_kp = member_last_kp
 
    ENDDO
-
-   !-------------------------------------------------
-   ! p%QuadPt contains the initial (physical) positions and orientations of the (input) quadrature nodes
-   !-------------------------------------------------
-
-      ! p%QuadPt: the DistrLoad mesh node location
-      ! p%QuadPt: for Gauss quadrature, this contains the coordinates of Gauss points plus two end points. Trapezoidal already contains the end points
-      CALL AllocAry(p%QuadPt,6,p%nqp*p%elem_total + 2*p%qp_indx_offset,'p%QuadPt',ErrStat2,ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         if (ErrStat >= AbortErrLev) return
-
-
-   member_first_kp = 1
-
-   DO i=1,p%elem_total
-      member_last_kp  = member_first_kp + InputFileData%kp_member(i) - 1
-
-      DO idx_qp=1,p%nqp
-         eta = (p%QPtN(idx_qp) + 1.0_BDKi)/2.0_BDKi  ! translate quadrature points in [-1,1] to eta in [0,1]
-
-         call Find_IniNode(InputFileData%kp_coordinate, p, member_first_kp, member_last_kp, eta, temp_POS, temp_CRV, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         if (ErrStat >= AbortErrLev) return
-         temp_id2 = (i-1)*p%nqp + idx_qp + p%qp_indx_offset
-         p%QuadPt(1:3,temp_id2) = temp_POS
-         p%QuadPt(4:6,temp_id2) = temp_CRV
-      ENDDO
-
-         ! set for next element:
-      member_first_kp = member_last_kp
-
-   ENDDO
-
-   IF(p%quadrature .EQ. GAUSS_QUADRATURE) THEN
-         ! set the values at the end points for the mesh mapping routine when using Gaussian (GL) quadrature.
-         ! bjj: note that this means some of the aerodynamic force will be mapped to these nodes. BeamDyn ignores these points, so
-         ! some of the aerodynamic load will be ignored.
-
-       p%QuadPt(1:3,1) = p%uuN0(1:3,1,1)
-       p%QuadPt(4:6,1) = p%uuN0(4:6,1,1)
-
-       p%QuadPt(1:3,p%nqp*p%elem_total+2) = p%uuN0(1:3,p%nodes_per_elem,p%elem_total)    ! last positions
-       p%QuadPt(4:6,p%nqp*p%elem_total+2) = p%uuN0(4:6,p%nodes_per_elem,p%elem_total)    ! last rotations
-   ENDIF
-
-   return
 
 end subroutine InitializeNodalLocations
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -800,6 +753,12 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    p%dt             = InputFileData%DTBeam         ! Time step size
    CALL BD_TiSchmComputeCoefficients(p)            ! Compute generalized-alpha time integrator coefficients requires p%rhoinf,p%dt; sets p%coef
 
+   p%tngt_stf_fd      = InputFileData%tngt_stf_fd      ! flag used to compute tangent stiffness matrix using finite differencing
+   p%tngt_stf_comp    = InputFileData%tngt_stf_comp    ! flag used to compare finite differenced and analytical tangent stiffness matrix
+   p%tngt_stf_pert    = InputFileData%tngt_stf_pert    ! perturbation size used to compute finite differenced tangent stiffness matrix
+   p%tngt_stf_difftol = InputFileData%tngt_stf_difftol ! tolerance for informing user of significant differences in analytical and fd tangent stiffness
+
+   p%ld_retries = InputFileData%load_retries       ! Maximum number of iterations in Newton-Raphson algorithm
    p%niter      = InputFileData%NRMax              ! Maximum number of iterations in Newton-Raphson algorithm
    p%tol        = InputFileData%stop_tol           ! Tolerance used in stopping criterion
    p%elem_total = InputFileData%member_total       ! Total number of elements
@@ -833,8 +792,8 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    !................................
    ! allocate some parameter arrays
    !................................
-   CALL AllocAry(p%member_length, p%elem_total,2,'member length array', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%segment_length,InputFileData%kp_total-1,  3,'segment length array',ErrStat2,ErrMsg2);    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%member_eta, p%elem_total,'member length ratio array', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%segment_eta,InputFileData%kp_total-1,'segment length ratio array',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%node_elem_idx,p%elem_total,2,'start and end node numbers of elements in p%node_total sized arrays',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
@@ -976,16 +935,6 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev) then
          return
       end if
-
-   !...............................................
-   ! set parameters for blade/member/segment lengths:
-   ! p%segment_length, p%member_length, p%blade_length:
-   !...............................................
-
-   ! Compute blade/member/segment lengths and the ratios between member/segment and blade lengths
-   CALL BD_ComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,InputFileData%kp_coordinate,p%SP_Coef,&
-                               p%segment_length,p%member_length,p%blade_length)
-
 
    !...............................................
    ! set parameters for File I/O data:
@@ -1443,6 +1392,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       CALL AllocAry(m%LP_StifK_LU,  p%dof_total-6,p%dof_total-6,                                'LP_StifK_LU', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%LP_StifK,     p%dof_total,p%dof_total,                                    'LP_StifK',    ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%LP_MassM,     p%dof_total,p%dof_total,                                    'LP_MassM',    ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry(m%LP_MassM_LU,  p%dof_total-6,p%dof_total-6,                                'LP_MassM_LU', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%LP_indx,      p%dof_total,                                                'LP_indx',     ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          !  LAPACK routine outputs converted to dimensionality used in BD.  Note the index ordering here is due to reshape functions before calls to LAPACK routines
@@ -1452,6 +1402,15 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       CALL AllocAry(m%StifK,        p%dof_node,p%node_total,p%dof_node,p%node_total,            'StifK',       ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%MassM,        p%dof_node,p%node_total,p%dof_node,p%node_total,            'MassM',       ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%DampG,        p%dof_node,p%node_total,p%dof_node,p%node_total,            'DampG',       ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      ! Arrays used in the finite differencing routines. These arrays are analogoous to the above declared analytical arrays and follow the same dimensionality
+      IF ( p%tngt_stf_fd .or. p%tngt_stf_comp ) THEN
+          CALL AllocAry(m%RHS_m,        p%dof_node,p%node_total,                                    'RHS_m',       ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          CALL AllocAry(m%RHS_p,        p%dof_node,p%node_total,                                    'RHS_p',       ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          CALL AllocAry(m%StifK_fd,     p%dof_node,p%node_total,p%dof_node,p%node_total,            'StifK_fd',    ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          CALL AllocAry(m%MassM_fd,     p%dof_node,p%node_total,p%dof_node,p%node_total,            'MassM_fd',    ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          CALL AllocAry(m%DampG_fd,     p%dof_node,p%node_total,p%dof_node,p%node_total,            'DampG_fd',    ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ENDIF
 
       CALL AllocAry(m%BldInternalForceFE, p%dof_node,p%node_total,         'Calculated Internal Force at FE',  ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%BldInternalForceQP, p%dof_node,y%BldMotion%NNodes,   'Calculated Internal Force at QP',  ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2369,7 +2328,10 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
 
    INTEGER(IntKi)                :: idx_qp         !< index counter for quadrature point
    INTEGER(IntKi)                :: temp_id2       !< Index to last node of previous element
+   INTEGER(IntKi)                :: i,j            !< generic counters
    REAL(BDKi)                    :: tempR6(6,6)
+   REAL(BDKi)                    :: tempBeta6(6,6)
+
 
    ! see Bauchau 2011 Flexible Multibody Dynamics p 692-693, section 17.7.2
 
@@ -2381,12 +2343,24 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
 
          ! Setup the temporary matrix for modifying the stiffness matrix. RR0 is changing with time.
       tempR6 = 0.0_BDKi
+      tempBeta6 = 0.0_BDKi
       tempR6(1:3,1:3) = m%qp%RR0(:,:,idx_qp,nelem)       ! upper left   -- translation
       tempR6(4:6,4:6) = m%qp%RR0(:,:,idx_qp,nelem)       ! lower right  -- rotation
-!NOTE: Bauchau has the lower right corner multiplied by H
+         !NOTE: Bauchau has the lower right corner multiplied by H
+
+         ! Move damping ratio from material frame to the calculation reference frame
+         !     This is the following:
+         !        tempBEta6=matmul(tempR6,matmul(diag(p%beta),transpose(tempR6)))
+      do j=1,6
+         do i=1,6
+               ! diagonal of p%beta * TRANSPOSE(tempR6)
+            tempBeta6(i,j) = p%beta(i)*tempR6(j,i)
+         enddo
+      enddo
+      tempBeta6 = matmul(tempR6,tempBeta6)
 
 
-         !> Modify the Mass matrix as
+         !> Modify the Mass matrix so it is in the calculation reference frame
          !! \f$ \begin{bmatrix}
          !!        \left(\underline{\underline{R}} \underline{\underline{R}}_0\right)      &  0             \\
          !!                      0  &  \left(\underline{\underline{R}} \underline{\underline{R}}_0\right)
@@ -2397,6 +2371,9 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
          !!                      0  &  \left(\underline{\underline{R}} \underline{\underline{R}}_0\right)^T
          !!     \end{bmatrix} \f$
       m%qp%Stif(:,:,idx_qp,nelem) = MATMUL(tempR6,MATMUL(p%Stif0_QP(1:6,1:6,temp_id2+idx_qp),TRANSPOSE(tempR6)))
+
+         ! Now apply the damping
+      m%qp%betaC(:,:,idx_qp,nelem) = matmul(tempBeta6,m%qp%Stif(:,:,idx_qp,nelem))
    ENDDO
 
 END SUBROUTINE BD_StifAtDeformedQP
@@ -2844,15 +2821,6 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
 
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
    
-   DO idx_qp=1,p%nqp
-      !m%qp%betaC(:,:,idx_qp,nelem) = MATMUL( diag(p%beta(i)), temp_b,m%qp%Stif(:,:,idx_qp,nelem))
-      DO j=1,6
-         DO i=1,6
-            m%qp%betaC(i,j,idx_qp,nelem) = p%beta(i)*m%qp%Stif(i,j,idx_qp,nelem)
-         END DO
-      END DO
-   END DO
-
    
    IF (.NOT. fact) then ! skip all but Fc and Fd terms
    
@@ -3083,7 +3051,6 @@ SUBROUTINE BD_GyroForce( nelem, p, m )
    TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables
 
 
-!   REAL(BDKi)                  :: Bi(6,6)
    REAL(BDKi)                  :: beta(3)
    REAL(BDKi)                  :: gama(3)
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
@@ -3185,22 +3152,18 @@ SUBROUTINE BD_diffmtc( p,GLL_nodes,Shp,ShpDer )
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine computes the segment length, member length, and total length of a beam.
-!! It also computes the ration between the segment/member and total length.
+!> This subroutine computes the segment ratio between the segment and member length.
 !! Segment: defined by two adjacent key points
-!FIXME: Is there an advantage to passing in InputFile stuff here: member_total, kp_member, kp_coordinate all come from InputFileData
-SUBROUTINE BD_ComputeMemberLength(member_total, kp_member, kp_coordinate, SP_Coef, segment_length, member_length, total_length)
-   !type(BD_InputFile),           intent(in   )  :: InputFileData     !< data from the input file
+SUBROUTINE BD_SegmentEta(member_total, kp_member, kp_coordinate, SP_Coef, segment_eta)
+
    INTEGER(IntKi),INTENT(IN   ):: member_total        !< number of total members that make up the beam, InputFileData%member_total from BD input file
    INTEGER(IntKi),INTENT(IN   ):: kp_member(:)        !< Number of key points of each member, InputFileData%kp_member from BD input file
+   REAL(BDKi),    INTENT(IN   ):: kp_coordinate(:,:)  !< Keypoints coordinates, from BD input file InputFileData%kp_coordinate(member key points,1:4);
+                                                      !! The last index refers to [1=x;2=y;3=z;4=-twist] compared to what was entered in the input file
    REAL(BDKi),    INTENT(IN   ):: SP_Coef(:,:,:)      !< cubic spline coefficients; index 1 = [1, kp_member-1];
                                                       !! index 2 = [1,4] (index of cubic-spline coefficient 1=constant;2=linear;3=quadratic;4=cubic terms);
                                                       !! index 3 = [1,4] (each column of kp_coord)
-   REAL(BDKi),    INTENT(IN   ):: kp_coordinate(:,:)  !< Keypoints coordinates, from BD input file InputFileData%kp_coordinate(member key points,1:4);
-                                                      !! The last index refers to [1=x;2=y;3=z;4=-twist] compared to what was entered in the input file
-   REAL(BDKi),    INTENT(  OUT):: segment_length(:,:) !< length of each segment of a beam's member (index 2: [1=absolute length;2=?;3=ratio of length to member length)
-   REAL(BDKi),    INTENT(  OUT):: member_length(:,:)  !< length of each member of a beam (index 2: [1=absolute length;2:=ratio of length to beam length)
-   REAL(BDKi),    INTENT(  OUT):: total_length        !< total length of the beam
+   REAL(BDKi),    INTENT(  OUT):: segment_eta(:)      !< ratio of segment length to element length of a beam's member - computed based on Spline basis
 
    REAL(BDKi)                  :: eta0
    REAL(BDKi)                  :: eta1
@@ -3208,7 +3171,9 @@ SUBROUTINE BD_ComputeMemberLength(member_total, kp_member, kp_coordinate, SP_Coe
    REAL(BDKi)                  :: temp_pos1(3)
    REAL(BDKi)                  :: sample_step
    REAL(BDKi)                  :: dist_to_member_start
-   INTEGER(IntKi), parameter   :: sample_total = 3 !1001
+   REAL(BDKi)                  :: segment_length(size(kp_coordinate,1)-1) ! segment length using spline basis
+   REAL(BDKi)                  :: member_length(member_total) ! member length using spline basis or FE quadrature
+   INTEGER(IntKi), parameter   :: sample_total = 3
 
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: j
@@ -3219,8 +3184,7 @@ SUBROUTINE BD_ComputeMemberLength(member_total, kp_member, kp_coordinate, SP_Coe
    INTEGER(IntKi)              :: id1
 
 
-   ! compute the actual lengths *(:,1) values
-   member_length  = 0.0_BDKi
+   member_length  = 0.0_BDKi ! initialize to zero
    segment_length = 0.0_BDKi ! initialize to zero
 
    temp_id = 0
@@ -3244,16 +3208,11 @@ SUBROUTINE BD_ComputeMemberLength(member_total, kp_member, kp_coordinate, SP_Coe
                    temp_pos1(k) = SP_Coef(temp_id,1,k) + SP_Coef(temp_id,2,k)*eta1 + SP_Coef(temp_id,3,k)*eta1**2 + SP_Coef(temp_id,4,k)*eta1**3
                ENDDO
                temp_pos1 = temp_pos1 - temp_pos0 ! array of length 3
-               segment_length(temp_id,1) = segment_length(temp_id,1) + TwoNorm(temp_pos1)
+               segment_length(temp_id) = segment_length(temp_id) + TwoNorm(temp_pos1)
            ENDDO
-           member_length(i,1) = member_length(i,1) + segment_length(temp_id,1)
+           member_length(i) = member_length(i) + segment_length(temp_id)
        ENDDO
-       total_length = total_length + member_length(i,1)
    ENDDO
-
-   !...........................
-   ! compute ratios of lengths
-   !...........................
 
    ! ratio of segment's length compared to member length
    temp_id = 0
@@ -3261,32 +3220,46 @@ SUBROUTINE BD_ComputeMemberLength(member_total, kp_member, kp_coordinate, SP_Coe
        dist_to_member_start = 0.0_BDKi
        DO j=1,kp_member(i)-1
            temp_id = temp_id + 1
-           dist_to_member_start = dist_to_member_start + segment_length(temp_id,1)
-           segment_length(temp_id,3) = dist_to_member_start/member_length(i,1)
+           dist_to_member_start = dist_to_member_start + segment_length(temp_id)
+           segment_eta(temp_id) = dist_to_member_start/member_length(i)
        ENDDO
    ENDDO
 
-   ! bjj: not sure why we're doing this, but...
-   ! adp: is segment_length ever used other than for some initial checks? Don't think I understand why this is calculated this way.
-   temp_id = 0
+END SUBROUTINE BD_SegmentEta
+
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the member length ratio w.r.t. length of a beam.
+!! It also computes the total length.
+!! Member: FE element
+SUBROUTINE BD_MemberEta(member_total, QPtW, Jac, member_eta, total_length)
+
+   INTEGER(IntKi),INTENT(IN   ):: member_total        !< number of total members that make up the beam, InputFileData%member_total from BD input file
+   REAL(BDKi),    INTENT(IN   ):: QPtW(:)             !< quadrature point weights
+   REAL(BDKi),    INTENT(IN   ):: Jac(:,:)            !< Jacobian value at each quadrature point
+   REAL(BDKi),    INTENT(  OUT):: member_eta(:)       !< ratio of member length to beam length - computed based on FE quadrature
+   REAL(BDKi),    INTENT(  OUT):: total_length        !< total length of the beam - computed based on FE quadrature
+
+   REAL(BDKi)                  :: member_length(member_total) ! member length using FE quadrature
+
+   INTEGER(IntKi)              :: i
+   INTEGER(IntKi)              :: j
+
+   total_length  = 0.0_BDKi ! initialize to zero
+   member_length = 0.0_BDKi ! initialize to zero
+   member_eta    = 0.0_BDKi ! initialize to zero
+
+   ! total beam length
    DO i=1,member_total
-      temp_id = temp_id + 1
-      segment_length(temp_id,2) = 0.0_BDKi
-
-      DO j=2,kp_member(i)-1
-         temp_id = temp_id + 1
-         segment_length(temp_id,2) = segment_length(temp_id-1,3)
-      ENDDO
+       DO j=1,size(Jac,1) ! loop over number of quadrature points
+           member_length(i) = member_length(i) + QPtW(j)*Jac(j,i)
+       ENDDO
+       total_length = total_length + member_length(i)
    ENDDO
-
 
    ! ratio of member's length to the total beam length
-   DO i=1,member_total
-       member_length(i,2) = member_length(i,1)/total_length
-   ENDDO
+   member_eta = member_length/total_length
 
-
-END SUBROUTINE BD_ComputeMemberLength
+END SUBROUTINE BD_MemberEta
 
 
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -3540,13 +3513,17 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
    ! x_works = x  ! save initial guess (done above)
 
-   !DO j=1,p%niter  ! original -- no need to this iteration number to the NR iteration number
-   DO j=1,20  ! hard coded value for these static cases
+   DO j=1,p%ld_retries
 
-         CALL BD_DistrLoadCopy( p, u_interp, m, load_test ) ! move the input loads from u_interp into misc vars
-         gravity_temp(:) = p%gravity(:)*load_test
+       CALL BD_DistrLoadCopy( p, u_interp, m, load_test ) ! move the input loads from u_interp into misc vars
+       gravity_temp(:) = p%gravity(:)*load_test
 
-         CALL BD_StaticSolution(x, gravity_temp, p, m, piter, ErrStat2, ErrMsg2)
+       CALL BD_StaticSolution(x, gravity_temp, p, m, piter, ErrStat2, ErrMsg2)
+       call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)  ! concerned about error reporting
+       if (ErrStat >= AbortErrLev) then
+           call cleanup()
+           return
+       end if
 
        ! note that if BD_StaticSolution converges, then piter will .le. p%niter
 
@@ -3587,8 +3564,9 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
    call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
 
    IF( .not. solved) then
-      call SetErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of load steps.", &
-                       ErrStat,ErrMsg, RoutineName)
+       call SetErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of load steps.", &
+                            ErrStat,ErrMsg, RoutineName)
+       CALL WrScr( NewLine//"Maxium number of load steps reached. Exit BeamDyn")
    ENDIF
 
    call cleanup()
@@ -3617,6 +3595,7 @@ SUBROUTINE BD_StaticSolution( x, gravity, p, m, piter, ErrStat, ErrMsg )
    ! local variables
    REAL(BDKi)                                      :: Eref
    REAL(BDKi)                                      :: Enorm
+
    INTEGER(IntKi)                                  :: j
    INTEGER(IntKi)                                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                            :: ErrMsg2                      ! Temporary Error message
@@ -3627,55 +3606,119 @@ SUBROUTINE BD_StaticSolution( x, gravity, p, m, piter, ErrStat, ErrMsg )
 
    Eref  = 0.0_BDKi
    DO piter=1,p%niter
-         ! Calculate Quadrature point values needed 
-      CALL BD_QuadraturePointData( p,x,m )      ! Calculate QP values uuu, uup, RR0, kappa, E1
-      CALL BD_GenerateStaticElement(gravity, p, m)
+
+      ! compute the finite differenced stiffness matrix
+      IF ( p%tngt_stf_fd .or. p%tngt_stf_comp ) CALL BD_FD_Stat( x, gravity, p, m )
+
+      CALL BD_QuadraturePointData( p,x,m )         ! Calculate QP values uuu, uup, RR0, kappa, E1
+      CALL BD_GenerateStaticElement(gravity, p, m) ! Calculate RHS and analytical tangent stiffness matrix
+
+      ! compare the finite differenced stiffness matrix against the analytical tangent stiffness matrix is flag is set
+      IF ( p%tngt_stf_comp ) CALL BD_CompTngtStiff( RESHAPE(m%StifK   ,(/p%dof_total,p%dof_total/)), &
+                                                    RESHAPE(m%StifK_fd,(/p%dof_total,p%dof_total/)), p%tngt_stf_difftol, &
+                                                    ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev) return
+
 
          !  Point loads are on the GLL points.
       DO j=1,p%node_total
-         m%RHS(1:3,j) = m%RHS(1:3,j) + m%PointLoadLcl(1:3,j)
-         m%RHS(4:6,j) = m%RHS(4:6,j) + m%PointLoadLcl(4:6,j)
+         m%RHS(1:6,j) = m%RHS(1:6,j) + m%PointLoadLcl(1:6,j)
       ENDDO
 
+          ! Reshape for the use with the LAPACK solver
+       m%LP_RHS      = RESHAPE(m%RHS, (/p%dof_total/))
+       m%LP_RHS_LU   = m%LP_RHS(7:p%dof_total)
 
-         ! Reshape for the use with the LAPACK solver
-      m%LP_RHS       =  RESHAPE(m%RHS, (/p%dof_total/))
-      m%LP_RHS_LU    = m%LP_RHS(7:p%dof_total)
-      m%LP_StifK     =  RESHAPE(m%StifK, (/p%dof_total,p%dof_total/))
-      m%LP_StifK_LU  =  m%LP_StifK(7:p%dof_total,7:p%dof_total)
-
+       ! Set tangnet stiffness matrix based on flag for finite differencing
+       IF ( p%tngt_stf_fd ) THEN
+           m%LP_StifK = RESHAPE(m%StifK_fd, (/p%dof_total,p%dof_total/));
+       ELSE
+           m%LP_StifK = RESHAPE(   m%StifK, (/p%dof_total,p%dof_total/));
+       ENDIF
+       m%LP_StifK_LU = m%LP_StifK(7:p%dof_total,7:p%dof_total)
 
          ! Solve for X in A*X=B to get the displacement of blade under static load.
       CALL LAPACK_getrf( p%dof_total-p%dof_node, p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2)
-    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL LAPACK_getrs( 'N',p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, m%LP_RHS_LU, ErrStat2, ErrMsg2)
-  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! Reshape to BeamDyn arrays
       m%Solution(:,1)   = 0.0_BDKi    ! first node is not set below
       m%Solution(:,2:p%node_total) = RESHAPE( m%LP_RHS_LU, (/ p%dof_node, (p%node_total - 1) /) )
 
-
       CALL BD_StaticUpdateConfiguration(p,m,x)
 
-        ! Check if solution has converged.
-      IF (piter .EQ. 1) THEN
-         Eref = SQRT(abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total))))*p%tol
-           IF(Eref .LE. p%tol) RETURN
+      Enorm = abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total))) ! compute the energy of the current system (note - not a norm!)
+
+      ! Check if solution has converged.
+      IF(piter .EQ. 1) THEN
+          Eref = Enorm
+          IF(Eref .LE. p%tol) RETURN
       ELSE
-         Enorm = SQRT(abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total))))
-           IF(Enorm .LE. Eref) RETURN
-         ENDIF
+          IF(Enorm/Eref .LE. p%tol) RETURN
+      ENDIF
 
    ENDDO
 
-   CALL setErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of iterations", ErrStat, ErrMsg, RoutineName)
-
-   RETURN
-
 END SUBROUTINE BD_StaticSolution
 
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the finite differenced tangent stiffness matrix
+SUBROUTINE BD_FD_Stat( x, gravity, p, m )
+
+    ! Function arguments
+    TYPE(BD_ContinuousStateType),    INTENT(INOUT) :: x            !< Continuous states at t on input at t + dt on output
+    REAL(BDKi),                      INTENT(IN   ) :: gravity(:)   !< not the same as p%gravity (used for ramp of loads and gravity)
+    TYPE(BD_ParameterType),          INTENT(IN   ) :: p            !< Parameters
+    TYPE(BD_MiscVarType),            INTENT(INOUT) :: m            !< misc/optimization variables
+
+    ! local variables
+    INTEGER(IntKi)                                 :: i
+    INTEGER(IntKi)                                 :: idx_dof
+    REAL(BDKi), allocatable                        :: RHS_m(:,:), RHS_p(:,:)
+    CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_Stat'
+
+    ! zero out the local matrices.
+    m%RHS_m    = 0.0_BDKi
+    m%RHS_p    = 0.0_BDKi
+    m%StifK_fd = 0.0_BDKi
+
+    ! perform a central finite difference to obtain
+    DO i=1,p%nodes_per_elem
+        DO idx_dof=1,p%dof_node
+
+            ! Perturb in the negative direction
+            x%q(idx_dof,i) = x%q(idx_dof,i) - p%tngt_stf_pert
+
+            ! Evaluate governing equations for current solution vector
+            CALL BD_QuadraturePointData(p,x,m)
+            CALL BD_GenerateStaticElement(gravity,p,m)
+
+            ! Account for externally applied point loads
+            m%RHS_m(1:6,:) = m%RHS(1:6,:) + m%PointLoadLcl(1:6,:)
+
+            ! Perturb in the positive direction
+            x%q(idx_dof,i) = x%q(idx_dof,i) + 2*p%tngt_stf_pert
+
+            ! Evaluate governing equations for current solution vector
+            CALL BD_QuadraturePointData(p,x,m)
+            CALL BD_GenerateStaticElement(gravity,p,m)
+
+            ! Account for externally applied point loads
+            m%RHS_p(1:6,:) = m%RHS(1:6,:) + m%PointLoadLcl(1:6,:)
+
+            ! The negative sign is because we are finite differencing
+            ! f_ext - f_int instead of just f_int
+            m%StifK_fd(:,:,idx_dof,i) = -(m%RHS_p - m%RHS_m)/(2*p%tngt_stf_pert)
+
+            ! Reset the solution vector entry to unperturbed state
+            x%q(idx_dof,i) = x%q(idx_dof,i) - p%tngt_stf_pert
+
+        ENDDO
+    ENDDO
+
+END SUBROUTINE BD_FD_Stat
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine updates the static configuration
@@ -4533,7 +4576,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
 
       ! find x, acc, and xcc at t+dt
-   CALL BD_DynamicSolutionGA2( x, OtherState, u_interp, p, m, ErrStat2, ErrMsg2)
+   CALL BD_DynamicSolutionGA2( x, OtherState, p, m, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    call cleanup()
@@ -4665,11 +4708,10 @@ END SUBROUTINE BD_BoundaryGA2
 !! Given states (u,v) and accelerations (acc,xcc) at the initial of a time step (t_i),
 !! it returns the values of states and accelerations at the end of a time step (t_f)
 !FIXME: note similarities to BD_StaticSolution.  May be able to combine
-SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
+SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, p, m, ErrStat, ErrMsg)
 
    TYPE(BD_ContinuousStateType),       INTENT(INOUT)  :: x           !< Continuous states: input are the predicted values at t+dt; output are calculated values at t + dt
    TYPE(BD_OtherStateType),            INTENT(INOUT)  :: OtherState  !< Other states: input are the predicted accelerations at t+dt; output are calculated values at t + dt
-   TYPE(BD_InputType),                 INTENT(IN   )  :: u           !< inputs in the local coordinate system (not FAST's global system)
    TYPE(BD_ParameterType),             INTENT(IN   )  :: p           !< Parameters
    TYPE(BD_MiscVarType),               INTENT(INOUT)  :: m           !< misc/optimization variables
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
@@ -4681,18 +4723,19 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
    
    REAL(DbKi)                                         :: Eref
    REAL(DbKi)                                         :: Enorm
-   INTEGER(IntKi)                                     :: i
+   INTEGER(IntKi)                                     :: piter
    INTEGER(IntKi)                                     :: j
    LOGICAL                                            :: fact
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-
    Eref  =  0.0_BDKi
-   DO i=1,p%niter
+   DO piter=1,p%niter
 
-      fact = MOD(i-1,p%n_fact) .EQ. 0  ! when true, we factor the jacobian matrix 
+      fact = MOD(piter-1,p%n_fact) .EQ. 0  ! when true, we factor the jacobian matrix
+
+      IF ( (p%tngt_stf_fd .OR. p%tngt_stf_comp) .AND. fact ) CALL BD_FD_GA2( x, OtherState, p, m )
 
          ! Apply accelerations using F=ma ?  Is that what this routine does?
          ! Calculate Quadrature point values needed
@@ -4701,27 +4744,33 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
 
          ! Apply additional forces / loads at GLL points (such as aerodynamic loads)?
       DO j=1,p%node_total
-         m%RHS(1:3,j) = m%RHS(1:3,j) + m%PointLoadLcl(1:3,j)
-         m%RHS(4:6,j) = m%RHS(4:6,j) + m%PointLoadLcl(4:6,j)
+         m%RHS(1:6,j) = m%RHS(1:6,j) + m%PointLoadLcl(1:6,j)
       ENDDO
 
-
       IF(fact) THEN
+         m%StifK  =  m%MassM + p%coef(7) *  m%DampG + p%coef(8) *  m%StifK
+         IF ( p%tngt_stf_fd .OR. p%tngt_stf_comp ) m%StifK_fd = m%MassM_fd + p%coef(7) * m%DampG_fd + p%coef(8) * m%StifK_fd
 
-         m%StifK = m%MassM + p%coef(7) * m%DampG + p%coef(8) * m%StifK
+         ! compare the finite differenced stiffness matrix against the analytical tangent stiffness matrix is flag is set
+         IF ( p%tngt_stf_comp ) CALL BD_CompTngtStiff( RESHAPE(m%StifK   ,(/p%dof_total,p%dof_total/)), &
+                                                       RESHAPE(m%StifK_fd,(/p%dof_total,p%dof_total/)), p%tngt_stf_difftol, &
+                                                       ErrStat, ErrMsg )
+         IF (ErrStat >= AbortErrLev) return
 
-
-            ! Reshape 4d array into 2d for the use with the LAPACK solver
-         m%LP_StifK     =  RESHAPE(m%StifK, (/p%dof_total,p%dof_total/)) 
+         ! Reshape 4d array into 2d for the use with the LAPACK solver
+         IF ( p%tngt_stf_fd ) THEN
+             m%LP_StifK = RESHAPE(m%StifK_fd, (/p%dof_total,p%dof_total/));
+         ELSE
+             m%LP_StifK = RESHAPE(   m%StifK, (/p%dof_total,p%dof_total/));
+         ENDIF
+         ! extract the unconstrained stifness matrix
          m%LP_StifK_LU  =  m%LP_StifK(7:p%dof_total,7:p%dof_total)
 
-
-            ! note m%LP_indx is allocated larger than necessary (to allow us to use it in multiple places)
+         ! note m%LP_indx is allocated larger than necessary (to allow us to use it in multiple places)
          CALL LAPACK_getrf( p%dof_total-6, p%dof_total-6, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2)
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            if (ErrStat >= AbortErrLev) return
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) return
       ENDIF
-
 
          ! Reshape 2d array into 1d for the use with the LAPACK solver
       m%LP_RHS       =  RESHAPE(m%RHS(:,:), (/p%dof_total/))
@@ -4734,17 +4783,19 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
       m%Solution(:,1)   = 0.0_BDKi    ! first node is not set below. By definition, there is no displacement of the first node.
       m%Solution(:,2:p%node_total) = RESHAPE( m%LP_RHS_LU, (/ p%dof_node, (p%node_total - 1) /) )
 
-       CALL BD_UpdateDynamicGA2(p,m,x,OtherState)
+      CALL BD_UpdateDynamicGA2(p,m,x,OtherState)
 
-         ! Check for convergence
-       Enorm = SQRT(abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total))))
+      ! Compute energy of the current system (note - not a norm!)
+      m%LP_RHS = RESHAPE(x%q(:,:), (/p%dof_total/))
+      Enorm    = abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total)))
 
-       IF(i==1) THEN
-           Eref = Enorm*p%tol
-           IF(Enorm .LE. 1.0_DbKi) RETURN       !FIXME: Do we want a hardcoded limit like this?
-       ELSE
-           IF(Enorm .LE. Eref) RETURN
-       ENDIF
+      ! Check if solution has converged.
+      IF(piter .EQ. 1) THEN
+         Eref = Enorm
+         IF(Eref .LE. p%tol) RETURN
+      ELSE
+         IF(Enorm/Eref .LE. p%tol) RETURN
+      ENDIF
 
    ENDDO
 
@@ -4753,6 +4804,139 @@ SUBROUTINE BD_DynamicSolutionGA2( x, OtherState, u, p, m, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_DynamicSolutionGA2
 
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the finite differenced tangent stiffness matrix
+SUBROUTINE BD_FD_GA2( x, OtherState, p, m )
+
+    ! Function arguments
+    TYPE(BD_ContinuousStateType),    INTENT(INOUT) :: x            !< Continuous states at t on input at t + dt on output
+    TYPE(BD_OtherStateType),         INTENT(INOUT) :: OtherState   !< Other states at t on input; at t+dt on outputs
+    TYPE(BD_ParameterType),          INTENT(IN   ) :: p            !< Parameters
+    TYPE(BD_MiscVarType),            INTENT(INOUT) :: m            !< misc/optimization variables
+
+    ! Local variables
+    INTEGER(IntKi)                                 :: i
+    INTEGER(IntKi)                                 :: idx_dof
+    CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_GA2'
+
+    ! zero out the local matrices. Not sure where these should be initailzed
+    m%RHS_m    = 0.0_BDKi
+    m%RHS_p    = 0.0_BDKi
+    m%StifK_fd = 0.0_BDKi
+    m%DampG_fd = 0.0_BDKi
+    m%MassM_fd = 0.0_BDKi
+
+    ! Perform finite differencing for velocity dofs
+    DO i=1,p%nodes_per_elem
+        DO idx_dof=1,p%dof_node
+
+            ! Perturb in the negative direction
+            x%q(idx_dof,i) = x%q(idx_dof,i) - p%tngt_stf_pert
+
+            ! Calculate weak for for current solution vector
+            CALL BD_QuadraturePointData( p,x,m )
+            CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            m%RHS_m(1:6,:) = m%RHS(1:6,:) + m%PointLoadLcl(1:6,:)
+
+            ! Perturb in the positive direction
+            x%q(idx_dof,i) = x%q(idx_dof,i) + 2*p%tngt_stf_pert
+
+            ! Calculate weak for for current solution vector
+            CALL BD_QuadraturePointData( p,x,m )
+            CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            m%RHS_p(1:6,:) = m%RHS(1:6,:) + m%PointLoadLcl(1:6,:)
+
+            ! The negative sign is because we are finite differencing
+            ! f_ext - f_int instead of f_int
+            m%StifK_fd(:,:,idx_dof,i) = -(m%RHS_p - m%RHS_m)/(2*p%tngt_stf_pert)
+
+            ! Reset the solution vector entry to unperturbed state
+            x%q(idx_dof,i) = x%q(idx_dof,i) - p%tngt_stf_pert
+
+        ENDDO
+    ENDDO
+
+    ! zero out the local matrices.
+    m%RHS_m = 0.0_BDKi
+    m%RHS_p = 0.0_BDKi
+
+    ! Perform finite differencing for velocity dofs
+    DO i=1,p%nodes_per_elem
+        DO idx_dof=1,p%dof_node
+
+            ! Perturb in the negative direction
+            x%dqdt(idx_dof,i) = x%dqdt(idx_dof,i) - p%tngt_stf_pert
+
+            ! Calculate weak for for current solution vector
+            CALL BD_QuadraturePointData( p,x,m )
+            CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            m%RHS_m(1:6,:) = m%RHS(1:6,:) + m%PointLoadLcl(1:6,:)
+
+            ! Perturb in the positive direction
+            x%dqdt(idx_dof,i) = x%dqdt(idx_dof,i) + 2*p%tngt_stf_pert
+
+            ! Calculate weak for for current solution vector
+            CALL BD_QuadraturePointData( p,x,m )
+            CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            m%RHS_p(1:6,:) = m%RHS(1:6,:) + m%PointLoadLcl(1:6,:)
+
+            ! The negative sign is because we are finite differencing
+            ! f_ext - f_int instead of f_int
+            m%DampG_fd(:,:,idx_dof,i) = -(m%RHS_p - m%RHS_m)/(2*p%tngt_stf_pert)
+
+            ! Reset the solution vector entry to unperturbed state
+            x%dqdt(idx_dof,i) = x%dqdt(idx_dof,i) - p%tngt_stf_pert
+
+        ENDDO
+    ENDDO
+
+    ! zero out the local matrices.
+    m%RHS_m = 0.0_BDKi
+    m%RHS_p = 0.0_BDKi
+
+    ! Perform finite differencing for acceleration dofss
+    DO i=1,p%nodes_per_elem
+        DO idx_dof=1,p%dof_node
+
+            ! Perturb in the negative direction
+            OtherState%acc(idx_dof,i) = OtherState%acc(idx_dof,i) - p%tngt_stf_pert
+
+            ! Calculate weak for for current solution vector
+            CALL BD_QuadraturePointData( p,x,m )
+            CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            m%RHS_m(1:6,:) = m%RHS(1:6,:) + m%PointLoadLcl(1:6,:)
+
+            ! Perturb in the positive direction
+            OtherState%acc(idx_dof,i) = OtherState%acc(idx_dof,i) + 2*p%tngt_stf_pert
+
+            ! Calculate weak for for current solution vector
+            CALL BD_QuadraturePointData( p,x,m )
+            CALL BD_GenerateDynamicElementGA2( x, OtherState, p, m, .TRUE. )
+
+            ! Account for externally applied point loads
+            m%RHS_p(1:6,:) = m%RHS(1:6,:) + m%PointLoadLcl(1:6,:)
+
+            ! The negative sign is because we are finite differencing
+            ! f_ext - f_int instead of f_int
+            m%MassM_fd(:,:,idx_dof,i) = -(m%RHS_p - m%RHS_m)/(2*p%tngt_stf_pert)
+
+            ! Reset the solution vector entry to unperturbed state
+            OtherState%acc(idx_dof,i) = OtherState%acc(idx_dof,i) - p%tngt_stf_pert
+
+        ENDDO
+    ENDDO
+
+END SUBROUTINE BD_FD_GA2
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine updates the 1) displacements/rotations(uf)
@@ -4978,6 +5162,57 @@ SUBROUTINE BD_ElementMatrixGA2(  fact, nelem, p, m )
 
 END SUBROUTINE BD_ElementMatrixGA2
 
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine compares the tangent stiffness matrix against the finite differenced tangent stiffness matrix
+SUBROUTINE BD_CompTngtStiff( K_anlyt, K_fd, errtol, ErrStat, ErrMsg )
+
+    ! Function arguments
+    REAL(BDKi),        INTENT(IN) :: K_anlyt(:,:) !< analytical tangent stiffness matrix
+    REAL(BDKi),        INTENT(IN) :: K_fd(:,:)    !< finite differenced tangent stiffness matrix
+    REAL(BDKi),        INTENT(IN) :: errtol       !< allowable difference tolerance for comparison
+                                                  !! any relative difference greater than this will stop the ongoing
+                                                  !! simulation
+   INTEGER(IntKi), INTENT(  OUT)  :: ErrStat      !< Error status of the operation
+   CHARACTER(*),   INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
+
+    ! local variables
+    REAL(BDKi)               :: ignore_fac=1e-3 !< values smaller than this times maximum value in corresponding
+                                                !! row will be ignored during the comparison of matrices
+                                                !! In doing so we hope to avoid comparison of entries that are
+                                                !! less significant in terms of inverting the matrix
+    REAL(BDKi), allocatable  :: K_diff(:,:)     !< array containing the relative differences between
+                                                ! finite differenced and analytical tangent stiffness matrices
+    INTEGER(IntKi)           :: max_diff_loc(2)
+    INTEGER(IntKi)           :: idof
+    CHARACTER(*), PARAMETER  :: RoutineName = 'BD_CompTngtStiff'
+
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    ! allocate local array and initialize to all zeros
+    CALL AllocAry(K_diff,size(K_fd,1),size(K_fd,2),'StifK Diff',ErrStat,ErrMsg);
+    K_diff = 0.0_BDKi
+
+    ! Compute the relative difference. abs allows user to set a difference tolerance without worrying about the sign
+    K_diff = abs( (K_anlyt-K_fd) / K_fd )
+
+    ! ignore differences for entries that are smaller than ignore_fac*max(element in row)
+    DO idof=1,size(K_fd,1)
+        WHERE( K_fd(idof,:) < ignore_fac*maxval(K_fd(idof,:)) ) K_diff(idof,:) = 0.0
+    END DO
+    max_diff_loc = maxloc( K_diff )
+
+    CALL WrScr( NewLine // NewLine // 'Maximum difference between analytical and fd tangent stiffness occurred for entry (' // &
+               TRIM(Num2LStr(max_diff_loc(1))) //','// TRIM(Num2LStr(max_diff_loc(2))) // ') ' // NewLine // &
+               'Max relative difference is ' // TRIM(Num2LStr(maxval(K_diff))) // NewLine )
+
+    ! check that the flags set are consistent before moving further
+    IF ( maxval(K_diff) > errtol ) THEN
+         CALL SetErrStat(ErrID_Fatal, 'maximum relative difference between analytical and fd tangent stiffness exceeded used defined tolerance.', ErrStat, ErrMsg, RoutineName )
+         return
+    END IF
+
+END SUBROUTINE BD_CompTngtStiff
 
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine tranforms the following quantities in Input data structure from global frame to local (blade) frame:
@@ -5489,7 +5724,7 @@ SUBROUTINE BD_ComputeBladeMassNew( p, ErrStat, ErrMsg )
        return
    end if
    NQPpos(:,:)  = 0.0_BDKi
-   EMass0_GL(:,:,:)  = 0.0_BDKi        !FIXME: there is a miscvar by this name.  Should we be using that here?
+   EMass0_GL(:,:,:)  = 0.0_BDKi
    elem_mass= 0.0_BDKi
    elem_CG(:)= 0.0_BDKi
    elem_IN(:,:)= 0.0_BDKi
@@ -5499,8 +5734,7 @@ SUBROUTINE BD_ComputeBladeMassNew( p, ErrStat, ErrMsg )
        temp_id = (nelem-1)*p%nqp
        DO j=1,p%nqp
            EMass0_GL(1:6,1:6,j) = p%Mass0_QP(1:6,1:6,temp_id+j)
-!FIXME: does this need to be calculated against p%uu0, if the Mass0_QP is referenced against it?????????
-           NQPpos(1:3,j)        = p%QuadPt(1:3,temp_id+j+p%qp_indx_offset)
+           NQPpos(1:3,j)        = p%uu0(1:3,j,nelem)
        ENDDO
 
        CALL BD_ComputeElementMass(nelem,p,NQPpos,EMass0_GL,elem_mass,elem_CG,elem_IN)

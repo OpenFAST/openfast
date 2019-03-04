@@ -1762,6 +1762,11 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
                   
    end if
       
+   
+   if ( p%TurbineType /= Type_LandBased .and. .not. EqualRealNos(p%TurbinePos(3), 0.0_SiKi) ) then
+    call SetErrStat(ErrID_Fatal, 'Height of turbine location, TurbinePos(3), must be 0 for offshore turbines.', ErrStat, ErrMsg, RoutineName)
+   end if
+
    !...............................................................................................................................
 
       ! temporary check on p_FAST%DT_out 
@@ -2909,9 +2914,16 @@ FUNCTION get_vtkdir_path( out_file_root )
    CHARACTER(*), INTENT(IN) :: out_file_root
    INTEGER(IntKi) :: last_separator_index
    
-   ! get the directory of the primary input file (i.e. the case directory); PathSep comes from Sys*.f90
-   last_separator_index = index(trim(out_file_root), PathSep, back=.true.)
-   get_vtkdir_path = trim(out_file_root(1 : last_separator_index) // 'vtk')
+   ! get the directory of the primary input file (i.e. the case directory); Windows can have either forward or backward slashes (compare with GetPath())
+   
+   last_separator_index =      index(out_file_root, '/', back=.true.)
+   last_separator_index = max( index(out_file_root, '\', back=.true.), last_separator_index )
+   
+   if (last_separator_index==0) then
+      get_vtkdir_path = '.'//PathSep//'vtk'
+   else
+      get_vtkdir_path = trim(out_file_root(1 : last_separator_index) // 'vtk')
+   end if
 END FUNCTION
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This function builds the path for the vtk root file name based on the output file root
@@ -2921,10 +2933,11 @@ FUNCTION get_vtkroot_path( out_file_root )
    INTEGER(IntKi) :: last_separator_index
    INTEGER(IntKi) :: path_length
 
-   path_length = len(trim(out_file_root))
-   last_separator_index = index(trim(out_file_root), PathSep, back=.true.)
+   last_separator_index =      index(out_file_root, '/', back=.true.)
+   last_separator_index = max( index(out_file_root, '\', back=.true.), last_separator_index )
+
    get_vtkroot_path = trim( get_vtkdir_path(out_file_root) ) // PathSep &
-                      // out_file_root( last_separator_index + 1 : path_length)
+                      // out_file_root( last_separator_index + 1 :)
 END FUNCTION
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up some of the information needed for plotting VTK surfaces. It initializes only the data needed before 
@@ -3035,6 +3048,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
    if (p_FAST%CompHydro == MODULE_HD) then
       RefLengths = p_FAST%VTK_Surface%GroundRad*VTK_GroundFactor/2.0_SiKi
       
+      ! note that p_FAST%TurbinePos(3) must be 0 for offshore turbines
       RefPoint(3) = p_FAST%TurbinePos(3) - InitOutData_HD%WtrDpth      
       call WrVTK_Ground ( RefPoint, RefLengths, trim(VTK_path) // '.SeabedSurface', ErrStat2, ErrMsg2 )   
       
@@ -3158,9 +3172,14 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
       call move_alloc( InitInData_HD%WaveElevXY, p_FAST%VTK_Surface%WaveElevXY )
       call move_alloc( InitOutData_HD%WaveElevSeries, p_FAST%VTK_Surface%WaveElev )
       
-      p_FAST%VTK_Surface%WaveElevXY(1,:) = p_FAST%VTK_Surface%WaveElevXY(1,:) + p_FAST%TurbinePos(1)
-      p_FAST%VTK_Surface%WaveElevXY(2,:) = p_FAST%VTK_Surface%WaveElevXY(2,:) + p_FAST%TurbinePos(2)
-      p_FAST%VTK_Surface%WaveElev        = p_FAST%VTK_Surface%WaveElev + p_FAST%TurbinePos(3)  ! not sure this is really accurrate if p_FAST%TurbinePos(3) is non-zero
+         ! put the following lines in loops to avoid stack-size issues:
+      do k=1,size(p_FAST%VTK_Surface%WaveElevXY,2)
+         p_FAST%VTK_Surface%WaveElevXY(:,k) = p_FAST%VTK_Surface%WaveElevXY(:,k) + p_FAST%TurbinePos(1:2)
+      end do
+         
+      !do k=1,size(p_FAST%VTK_Surface%WaveElev,2)
+      !   p_FAST%VTK_Surface%WaveElev(:,k) = p_FAST%VTK_Surface%WaveElev(:,k) + p_FAST%TurbinePos(3)  ! not sure this is really accurate if p_FAST%TurbinePos(3) is non-zero
+      !end do
       
    end if
    

@@ -35,7 +35,7 @@ AeroDyn driver input file is given in
 :numref:`ad_appendix`.
 
 Set the ``Echo`` flag in this file to TRUE if you wish to have the
-``AeroDyn_Driver`` executeable echo the contents of the driver input file (useful
+``AeroDyn_Driver`` executable echo the contents of the driver input file (useful
 for debugging errors in the driver file). The echo file has the naming
 convention of *OutFileRoot.ech*, where ``OutFileRoot`` is
 specified in the I/O SETTINGS section of the driver input file below.

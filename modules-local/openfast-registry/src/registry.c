@@ -5,6 +5,8 @@
 # include <io.h>
 # define rindex(X,Y) strrchr(X,Y)
 # define index(X,Y) strchr(X,Y)
+# include <process.h>
+# define getpid _getpid
 #else
 # include <sys/time.h>
 # include <sys/resource.h>

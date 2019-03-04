@@ -1135,7 +1135,7 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table)
       Nrows = SIZE(p%F_TBL,1)
       ALLOCATE(TmpRAry(Nrows),STAT=ErrStat2)
       IF (ErrStat2 /= 0) then
-         CALL WrScr('Error allocating temp array. TMD stiffness results may be inaccurrate.')
+         CALL WrScr('Error allocating temp array. TMD stiffness results may be inaccurate.')
          RETURN
       END IF
       
