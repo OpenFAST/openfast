@@ -75,7 +75,7 @@ Windows with Visual Studio regression test
 
     a) Create a subdirectory called ``reg_tests`` in your ``openfast\build`` folder.
 
-    b) Copy the contents of ``openfast/reg_tests/r-test`` to ``openfast/build/reg_tests``.
+    b) Copy the contents of ``openfast\reg_tests\r-test`` to ``openfast\build\reg_tests``.
 
 
 5) Execute the OpenFAST regression Tests
