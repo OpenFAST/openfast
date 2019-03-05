@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <algorithm>
 
 int fast::OpenFAST::AbortErrLev = ErrID_Fatal; // abort error level; compare with NWTC Library
 
@@ -39,6 +40,8 @@ inline bool fast::OpenFAST::checkFileExists(const std::string& name) {
 }
 
 void fast::OpenFAST::init() {
+  // Temporary buffer to pass filenames to OpenFAST fortran subroutines
+  char currentFileName[INTERFACE_STRING_LENGTH];
 
   allocateMemory();
 
@@ -49,7 +52,14 @@ void fast::OpenFAST::init() {
 
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
        /* note that this will set nt_global inside the FAST library */
-       FAST_OpFM_Restart(&iTurb, CheckpointFileRoot[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &ntStart, &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &cDriverSC_Input_from_FAST[iTurb], &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
+       std::copy(CheckpointFileRoot[iTurb].data(),
+                 CheckpointFileRoot[iTurb].data() + (CheckpointFileRoot[iTurb].size() + 1),
+                 currentFileName);
+       FAST_OpFM_Restart(
+           &iTurb, currentFileName, &AbortErrLev, &dtFAST, &numBlades[iTurb],
+           &numVelPtsBlade[iTurb], &ntStart, &cDriver_Input_from_FAST[iTurb],
+           &cDriver_Output_to_FAST[iTurb], &cDriverSC_Input_from_FAST[iTurb],
+           &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
        nt_global = ntStart;
 
@@ -72,9 +82,19 @@ void fast::OpenFAST::init() {
       // this calls the Init() routines of each module
 
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-       FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &numScOutputs, &numScInputs, &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &cDriverSC_Input_from_FAST[iTurb], &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
+       std::copy(FASTInputFileName[iTurb].data(),
+                 FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
+                 currentFileName);
+       FAST_OpFM_Init(&iTurb, &tMax, currentFileName, &TurbID[iTurb],
+                      &numScOutputs, &numScInputs, &numForcePtsBlade[iTurb],
+                      &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(),
+                      &AbortErrLev, &dtFAST, &numBlades[iTurb],
+                      &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb],
+                      &cDriver_Output_to_FAST[iTurb],
+                      &cDriverSC_Input_from_FAST[iTurb],
+                      &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
-       
+
        timeZero = true;
 
        numVelPtsTwr[iTurb] = cDriver_Output_to_FAST[iTurb].u_Len - numBlades[iTurb]*numVelPtsBlade[iTurb] - 1;
@@ -102,9 +122,19 @@ void fast::OpenFAST::init() {
     case fast::restartDriverInitFAST:
 
      for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-       FAST_OpFM_Init(&iTurb, &tMax, FASTInputFileName[iTurb].data(), &TurbID[iTurb], &numScOutputs, &numScInputs, &numForcePtsBlade[iTurb], &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(), &AbortErrLev, &dtFAST, &numBlades[iTurb], &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb], &cDriver_Output_to_FAST[iTurb], &cDriverSC_Input_from_FAST[iTurb], &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
+       std::copy(FASTInputFileName[iTurb].data(),
+                 FASTInputFileName[iTurb].data() + (FASTInputFileName[iTurb].size() + 1),
+                 currentFileName);
+       FAST_OpFM_Init(&iTurb, &tMax, currentFileName, &TurbID[iTurb],
+                      &numScOutputs, &numScInputs, &numForcePtsBlade[iTurb],
+                      &numForcePtsTwr[iTurb], TurbineBasePos[iTurb].data(),
+                      &AbortErrLev, &dtFAST, &numBlades[iTurb],
+                      &numVelPtsBlade[iTurb], &cDriver_Input_from_FAST[iTurb],
+                      &cDriver_Output_to_FAST[iTurb],
+                      &cDriverSC_Input_from_FAST[iTurb],
+                      &cDriverSC_Output_to_FAST[iTurb], &ErrStat, ErrMsg);
        checkError(ErrStat, ErrMsg);
-       
+
        timeZero = true;
 
        numVelPtsTwr[iTurb] = cDriver_Output_to_FAST[iTurb].u_Len - numBlades[iTurb]*numVelPtsBlade[iTurb] - 1;
@@ -258,12 +288,16 @@ void fast::OpenFAST::step() {
    nt_global = nt_global + 1;
   
   if ( (((nt_global - ntStart) % nEveryCheckPoint) == 0 )  && (nt_global != ntStart) ) {
+    // Use default FAST naming convention for checkpoint file
+    // <RootName>.<nt_global>
+    char dummyCheckPointRoot[INTERFACE_STRING_LENGTH] = " ";
+    // Ensure that we have a null character
+    dummyCheckPointRoot[1] = 0;
+
     if (nTurbinesProc > 0) backupVelocityDataFile(nt_global, velNodeDataFile);
-      
-    //sprintf(CheckpointFileRoot, "../../CertTest/Test18.%d", nt_global);
+
     for (int iTurb=0; iTurb < nTurbinesProc; iTurb++) {
-      CheckpointFileRoot[iTurb] = " "; // if blank, it will use FAST convention <RootName>.nt_global
-      FAST_CreateCheckpoint(&iTurb, CheckpointFileRoot[iTurb].data(), &ErrStat, ErrMsg);
+      FAST_CreateCheckpoint(&iTurb, dummyCheckPointRoot, &ErrStat, ErrMsg);
       checkError(ErrStat, ErrMsg);
     }
     if(scStatus) {
