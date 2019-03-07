@@ -3,15 +3,13 @@
 API changes between versions
 ============================
 
-This page lists the main chages in the OpenFAST API between versions of OpenFAST.
-These API changes only manifest in input file changes.
-For completeness, some of the changes in the previous versions of the FAST program are also included.
+This page lists the main chages in the OpenFAST API (input files) between different versions.
+For completeness, some changes in the previous versions of the FAST software are also included.
 
 Migration from OpenFAST v2.0.0 to OpenFAST v2.1.0
 -------------------------------------------------
 
 No changes required.
-
 
 Migration from OpenFAST v1.0.0 to OpenFAST v2.0.0
 -------------------------------------------------
@@ -30,7 +28,7 @@ Migration from OpenFAST v1.0.0 to OpenFAST v2.0.0
 Migration from FAST v8.16 to OpenFAST v1.0.0
 --------------------------------------------
 
-The transition from FAST v8 to OpenFAST is described here :ref:`fast_to_openfast`. 
+The transition from FAST v8 to OpenFAST is described in detail at :ref:`fast_to_openfast`. 
 
 ========= ==== ===============  ====================================================================================================
  Added in OpenFAST v1.0.0
@@ -56,7 +54,6 @@ The format of the main aerodyn file has changed significantly. The script `Conve
 The aerodynamic polar files also need to be converted from Aerodyn14 to AeroDyn15 format. The matlab script `WritePolarAD15.m`, which converts the polars will be added in the near future in the `matlab-toolbox` repository.
 
 One major difference is in the definition of the blade radius in the Aerodyn file. In FAST7, the variable `RNodes` indicates the location of a blade station point along the blade starting from the rotor apex. In AeroDyn15 the variable `BlSpn` starts at the root of the blade and not at the rotor apex.
-
 
 **Changes in ElastoDyn Blade and Tower files**
 
