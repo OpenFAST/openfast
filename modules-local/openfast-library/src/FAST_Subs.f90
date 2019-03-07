@@ -5008,7 +5008,11 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
 
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
-   Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   if (y_FAST%NOutSteps==0) then
+      Twidth = 1
+   else
+       Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   endif
    
    NumBl = 0
    if (allocated(ED%Output)) then
@@ -5237,7 +5241,11 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW,
 
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
-   Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   if (y_FAST%NOutSteps==0) then
+      Twidth = 1
+   else
+      Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   endif
    
    
    NumBl = 0
@@ -5346,7 +5354,11 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, A
 
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK_...()
-   Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   if (y_FAST%NOutSteps==0) then
+      Twidth = 1
+   else
+      Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   endif
    
    
    NumBl = 0
@@ -5471,7 +5483,11 @@ SUBROUTINE WrVTK_WaveElev(t_global, p_FAST, y_FAST, HD)
 
    ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
    ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK_...()
-   Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   if (y_FAST%NOutSteps==0) then
+      Twidth = 1
+   else
+      Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   endif
 
    VTK_path = get_vtkroot_path( p_FAST%OutFileRoot )
 
