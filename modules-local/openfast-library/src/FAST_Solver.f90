@@ -2443,13 +2443,19 @@ END IF
       ! HD motion inputs: (from SD and ED)
       IF (p_FAST%CompHydro == Module_HD ) THEN
       
-            ! Make copies of the accelerations we just solved for (so we don't overwrite them)         
-         MeshMapData%u_HD_M_LumpedMesh%RotationAcc     = u_HD%Morison%LumpedMesh%RotationAcc
-         MeshMapData%u_HD_M_LumpedMesh%TranslationAcc  = u_HD%Morison%LumpedMesh%TranslationAcc
-         MeshMapData%u_HD_M_DistribMesh%RotationAcc    = u_HD%Morison%DistribMesh%RotationAcc
-         MeshMapData%u_HD_M_DistribMesh%TranslationAcc = u_HD%Morison%DistribMesh%TranslationAcc
-         MeshMapData%u_HD_Mesh%RotationAcc             = u_HD%Mesh%RotationAcc   
-         MeshMapData%u_HD_Mesh%TranslationAcc          = u_HD%Mesh%TranslationAcc
+         ! Make copies of the accelerations we just solved for (so we don't overwrite them)         
+         IF (MeshMapData%u_HD_M_LumpedMesh%Committed) THEN
+             MeshMapData%u_HD_M_LumpedMesh%RotationAcc     = u_HD%Morison%LumpedMesh%RotationAcc
+             MeshMapData%u_HD_M_LumpedMesh%TranslationAcc  = u_HD%Morison%LumpedMesh%TranslationAcc
+         ENDIF
+         IF (MeshMapData%u_HD_M_DistribMesh%Committed) THEN
+             MeshMapData%u_HD_M_DistribMesh%RotationAcc    = u_HD%Morison%DistribMesh%RotationAcc
+             MeshMapData%u_HD_M_DistribMesh%TranslationAcc = u_HD%Morison%DistribMesh%TranslationAcc
+         ENDIF
+         IF (MeshMapData%u_HD_Mesh%Committed) THEN
+             MeshMapData%u_HD_Mesh%RotationAcc             = u_HD%Mesh%RotationAcc   
+             MeshMapData%u_HD_Mesh%TranslationAcc          = u_HD%Mesh%TranslationAcc
+         ENDIF
 
             ! transfer the output data to inputs
             
@@ -2472,13 +2478,19 @@ END IF
          END IF
 
          
-            ! put the acceleration data (calucluted in this routine) back         
-         u_HD%Morison%LumpedMesh%RotationAcc     = MeshMapData%u_HD_M_LumpedMesh%RotationAcc
-         u_HD%Morison%LumpedMesh%TranslationAcc  = MeshMapData%u_HD_M_LumpedMesh%TranslationAcc  
-         u_HD%Morison%DistribMesh%RotationAcc    = MeshMapData%u_HD_M_DistribMesh%RotationAcc    
-         u_HD%Morison%DistribMesh%TranslationAcc = MeshMapData%u_HD_M_DistribMesh%TranslationAcc 
-         u_HD%Mesh%RotationAcc                   = MeshMapData%u_HD_Mesh%RotationAcc    
-         u_HD%Mesh%TranslationAcc                = MeshMapData%u_HD_Mesh%TranslationAcc 
+         ! put the acceleration data (calucluted in this routine) back         
+         IF (MeshMapData%u_HD_M_LumpedMesh%Committed) THEN
+             u_HD%Morison%LumpedMesh%RotationAcc     = MeshMapData%u_HD_M_LumpedMesh%RotationAcc
+             u_HD%Morison%LumpedMesh%TranslationAcc  = MeshMapData%u_HD_M_LumpedMesh%TranslationAcc  
+         ENDIF
+         IF (MeshMapData%u_HD_M_DistribMesh%Committed) THEN
+             u_HD%Morison%DistribMesh%RotationAcc    = MeshMapData%u_HD_M_DistribMesh%RotationAcc    
+             u_HD%Morison%DistribMesh%TranslationAcc = MeshMapData%u_HD_M_DistribMesh%TranslationAcc 
+         ENDIF
+         IF (MeshMapData%u_HD_Mesh%Committed) THEN
+             u_HD%Mesh%RotationAcc                   = MeshMapData%u_HD_Mesh%RotationAcc    
+             u_HD%Mesh%TranslationAcc                = MeshMapData%u_HD_Mesh%TranslationAcc 
+         ENDIF
          
          !......
                           
@@ -2771,12 +2783,16 @@ CONTAINS
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
          ! These are the motions for the lumped point loads associated viscous drag on the WAMIT body and/or filled/flooded lumped forces of the WAMIT body
-         CALL Transfer_Point_to_Point( y_ED2%PlatformPtMesh, MeshMapData%u_HD_M_LumpedMesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (MeshMapData%u_HD_M_LumpedMesh%Committed) then
+             CALL Transfer_Point_to_Point( y_ED2%PlatformPtMesh, MeshMapData%u_HD_M_LumpedMesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
+                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         endif
                   
          ! These are the motions for the line2 (distributed) loads associated viscous drag on the WAMIT body and/or filled/flooded distributed forces of the WAMIT body
-         CALL Transfer_Point_to_Line2( y_ED2%PlatformPtMesh, MeshMapData%u_HD_M_DistribMesh, MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (MeshMapData%u_HD_M_DistribMesh%Committed) then
+             CALL Transfer_Point_to_Line2( y_ED2%PlatformPtMesh, MeshMapData%u_HD_M_DistribMesh, MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 )
+                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         endif
             
       !..................
       ! Get ED loads input (from HD only)
@@ -4057,7 +4073,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_M_P' )                  
          END IF
             
-            ! ElastoDyn point mesh to HydroDyn Morison line mesh (ED sets inputs, but gets outputs from  HD%y%AllHdroOriginin floating case)
+            ! ElastoDyn point mesh to HydroDyn Morison line mesh (ED sets inputs, but gets outputs from  HD%y%AllHdroOrigin in floating case)
          IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN
             CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh,  HD%Input(1)%Morison%DistribMesh, MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_M_L' )                  
