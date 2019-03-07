@@ -1,18 +1,21 @@
 .. _api_change:
 
-API changes between versions (e.g input files)
-=============================================
+API changes between versions
+============================
 
-This page listed the main chages in API (for instance the input files) between different versions of OpenFAST. For completeness, some of the changes in the previous versions of the FAST program are also included.
+This page lists the main chages in the OpenFAST API between versions of OpenFAST.
+These API changes only manifest in input file changes.
+For completeness, some of the changes in the previous versions of the FAST program are also included.
 
+Migration from OpenFAST v2.0.0 to OpenFAST v2.1.0
+-------------------------------------------------
 
-Migration from OpenFAST2.0 to OpenFAST2.1
------------------------------------------
 No changes of input files required.
 
 
-Migration from OpenFAST1.0 to OpenFAST2.0
------------------------------------------
+Migration from OpenFAST v1.0.0 to OpenFAST v2.0.0
+-------------------------------------------------
+
 The only difference in input files between the version 1.0 and 2.0 of OpenFAST lays in the AeroDyn input file, the version of AeroDyn being 15.04 and 15.05 respectively.
 
 The AeroDyn file for OpenFast 2.0 requires the following additions:
@@ -33,8 +36,8 @@ The AeroDyn file for OpenFast 2.0 requires the following additions:
 
 
 
-Migration from FAST8 to OpenFAST
---------------------------------
+Migration from FAST v8.16 to OpenFAST v1.0.0
+--------------------------------------------
 
 The transition from FAST v8 to OpenFAST is described here :ref:`fast_to_openfast`. 
 
@@ -57,8 +60,8 @@ The AeroDyn file for OpenFast 1.0 requires the following additions:
        9999.9   FluidDepth         - Water depth above mid-hub height (m) [used only when CavitCheck=True]
 
 
-Migration from FAST7 to FAST8
--------------------------------
+Migration from FAST v7 to FAST v8
+---------------------------------
 
 A major restructuration occured between FAST7 and FAST8. The Matlab scripts `ConvertFAST7to8.m` in the folder `ConvertFASTversions` of the `matlab-toolbox` repository (https://github.com/OpenFAST/matlab-toolbox) performs part of the conversion.
 In FAST7 a typical wind turbine model would only consist of 4 files: a main file (`.fst`), an aerodyn14 file, and elastodyn files for the blade and tower.
@@ -94,6 +97,3 @@ In FAST8 the properties (lines 14-end) are:
       (-)           (-)          (deg)          (kg/m)         (Nm^2)         (Nm^2)
 
 The `PitchAxis` column has no effect on the aerodynamic calculations done by AeroDyn15 so far.
-
-
-
