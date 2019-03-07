@@ -16,43 +16,32 @@ No changes required.
 Migration from OpenFAST v1.0.0 to OpenFAST v2.0.0
 -------------------------------------------------
 
-========= ==== ===============  =====================================================================================================================================================================
-Added in v2.0.0
------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+========= ==== ===============  ===================================================================================================================================================================
+ Added in v2.0.0
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
  Module   Line  Flag Name        Example Value
-========= ==== ===============  =====================================================================================================================================================================
+========= ==== ===============  ===================================================================================================================================================================
  AeroDyn   22   SkewMod          "default"     SkewModFactor      - Constant used in Pitt/Peters skewed wake model {or "default" is 15/32*pi} (-) [used only when SkewMod=2; unused when WakeMod=0]
  AeroDyn   30   DBEMT section    ======  Dynamic Blade-Element/Momentum Theory Options  ============================================== [used only when WakeMod=2]
  AeroDyn   31   DBEMT_Mod        2   DBEMT_Mod          - Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1} (-) [used only when WakeMod=2]
- AeroDyn   32   tau1_const       4   tau1_const         - Time constant for DBEMT (s) [used only when WakeMod=2 and DBEMT_Mod=1] 
-========= ==== ===============  =====================================================================================================================================================================
-
-Removed in v2.0.0
-None
+ AeroDyn   32   tau1_const       4   tau1_const         - Time constant for DBEMT (s) [used only when WakeMod=2 and DBEMT_Mod=1]
+========= ==== ===============  ===================================================================================================================================================================
 
 Migration from FAST v8.16 to OpenFAST v1.0.0
 --------------------------------------------
 
 The transition from FAST v8 to OpenFAST is described here :ref:`fast_to_openfast`. 
 
-The only difference in input files between FAST v8 and OpenFAST1.0 lays in the AeroDyn input file, the version of AeroDyn being 15.03 and 15.04 respectively.
-
-The AeroDyn file for OpenFast 1.0 requires the following additions:
-
-* the parameter `CavityCheck` is inserted on line 12, after the line for the parameter `FrozenWake`:
-
-::
-
-    False         CavitCheck         - Perform cavitation check? (flag)
-
-* three lines for the `Patm`, `Pvap` and `FluidDepth` are inserted on line 17-19, after the line for the parameter `SpdSound`:
-
-::
-
-       9999.9   Patm               - Atmospheric pressure (Pa) [used only when CavitCheck=True]
-       9999.9   Pvap               - Vapour pressure of fluid (Pa) [used only when CavitCheck=True]            
-       9999.9   FluidDepth         - Water depth above mid-hub height (m) [used only when CavitCheck=True]
-
+========= ==== ===============  ====================================================================================================
+ Added in OpenFAST v1.0.0
+------------------------------------------------------------------------------------------------------------------------------------
+ Module   Line  Flag Name        Example Value
+========= ==== ===============  ====================================================================================================
+ AeroDyn   12   CavityCheck      False         CavitCheck         - Perform cavitation check? (flag)
+ AeroDyn   17   Patm             9999.9   Patm               - Atmospheric pressure (Pa) [used only when CavitCheck=True]
+ AeroDyn   18   Pvap             9999.9   Pvap               - Vapour pressure of fluid (Pa) [used only when CavitCheck=True]       
+ AeroDyn   19   FluidDepth       9999.9   FluidDepth         - Water depth above mid-hub height (m) [used only when CavitCheck=True]
+========= ==== ===============  ====================================================================================================
 
 Migration from FAST v7 to FAST v8
 ---------------------------------
