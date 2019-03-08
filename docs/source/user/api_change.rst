@@ -10,13 +10,13 @@ The changes are tabulated according to the module input file, line number, and f
 The line number corresponds to the resulting line number after all changes are implemented.
 Thus, be sure to implement each in order so that subsequent line numbers are correct.
 
-Migration from OpenFAST v2.0.0 to OpenFAST v2.1.0
--------------------------------------------------
+OpenFAST v2.0.0 to OpenFAST v2.1.0
+----------------------------------
 
 No changes required.
 
-Migration from OpenFAST v1.0.0 to OpenFAST v2.0.0
--------------------------------------------------
+OpenFAST v1.0.0 to OpenFAST v2.0.0
+----------------------------------
 
 ========= ==== =============== =====================================================================================================================================================================
  Removed in OpenFAST v2.0.0
@@ -45,8 +45,8 @@ Migration from OpenFAST v1.0.0 to OpenFAST v2.0.0
  BeamDyn   18   RotStates          True          RotStates       - Orient states in the rotating frame during linearization? (flag) [used only when linearizing] 
 ========= ==== ================== =====================================================================================================================================================================
 
-Migration from FAST v8.16 to OpenFAST v1.0.0
---------------------------------------------
+FAST v8.16 to OpenFAST v1.0.0
+-----------------------------
 
 The transition from FAST v8 to OpenFAST is described in detail at :ref:`fast_to_openfast`. 
 
@@ -61,8 +61,8 @@ The transition from FAST v8 to OpenFAST is described in detail at :ref:`fast_to_
  AeroDyn   19   FluidDepth      9999.9   FluidDepth         - Water depth above mid-hub height (m) [used only when CavitCheck=True]
 ========= ==== =============== ====================================================================================================
 
-Migration from FAST v7 to FAST v8
----------------------------------
+FAST v7 to FAST v8
+------------------
 
 A major restructuration occured between FAST7 and FAST8. The Matlab scripts `ConvertFAST7to8.m` in the folder `ConvertFASTversions` of the `matlab-toolbox` repository (https://github.com/OpenFAST/matlab-toolbox) performs part of the conversion.
 In FAST7 a typical wind turbine model would only consist of 4 files: a main file (`.fst`), an aerodyn14 file, and elastodyn files for the blade and tower.
