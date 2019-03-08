@@ -132,13 +132,13 @@ Sample output is shown below:
 
 Grab a cup of coffee as this takes a while on Cygwin. Once the
 compilation is completed, the ``OpenFAST`` executable is present in
-``OpenFAST/build/glue-codes/fast/openfast.exe``
+``OpenFAST/build/glue-codes/openfast/openfast.exe``
 
 7. Test the executable
 
 ::
 
-    $ glue-codes/fast/openfast.exe -h
+    $ glue-codes/openfast/openfast.exe -h
 
 
     **************************************************************************************************
