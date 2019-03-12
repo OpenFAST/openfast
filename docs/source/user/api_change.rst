@@ -3,7 +3,7 @@
 API changes between versions
 ============================
 
-This page lists the main chages in the OpenFAST API (input files) between different versions.
+This page lists the main changes in the OpenFAST API (input files) between different versions.
 For completeness, some changes in the previous versions of the FAST software are also included.
 
 The changes are tabulated according to the module input file, line number, and flag name.
@@ -71,7 +71,7 @@ In FAST8, the files are splitted with: a main file (`.fst`) and one input file p
 **Changes in AeroDyn**
 The format of the main aerodyn file has changed significantly. The script `ConvertFAST7to8.m` should perform some these conversions.
 
-The aerodynamic polar files also need to be converted from Aerodyn14 to AeroDyn15 format. The matlab script `WritePolarAD15.m`, which converts the polars will be added in the near future in the `matlab-toolbox` repository.
+The aerodynamic polar files also need to be converted from Aerodyn14 to AeroDyn15 format. The matlab script `WritePolarAD15.m`  from the `matlab-toolbox` can be used to convert polar data to AeroDyn15 format.
 
 One major difference is in the definition of the blade radius in the Aerodyn file. In FAST7, the variable `RNodes` indicates the location of a blade station point along the blade starting from the rotor apex. In AeroDyn15 the variable `BlSpn` starts at the root of the blade and not at the rotor apex.
 
