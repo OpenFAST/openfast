@@ -11,6 +11,7 @@ We are in the process of transitioning legacy FAST v8 documentation, which can b
 .. toctree::
    :maxdepth: 1
 
+   api_change.rst
    aerodyn/index.rst
    beamdyn/index.rst
    fast_to_openfast.rst
