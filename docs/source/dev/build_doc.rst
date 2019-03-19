@@ -23,8 +23,8 @@ These packages are optional:
 Doxygen and Graphviz can be installed directly from their website or with a
 package manager like ``brew``, ``yum``, or ``apt``.
 
-Pure python
-~~~~~~~~~~~
+Pure python build
+-----------------
 If CMake and Make are not available on your system, the documentation can
 be generated directly with `sphinx`.
 **Note: This method does not generate the API documentation through Doxygen.**
@@ -44,7 +44,7 @@ If this completes successfully, a html file will be created at
 ``build/docs/html/index.html`` which can be opened with any web browser.
 
 Building with CMake and Make
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 In the OpenFAST directory, create a ``build`` directory and move into it.
 Then, run CMake with this flag: ``-DBUILD_DOCUMENTATION=ON``.  If all
 of the required tools are found successfully, CMake will configure with the
@@ -72,12 +72,12 @@ update the html files through another ``make docs`` in ``openfast/build``:
     make docs
 
 Building only the html
-++++++++++++++++++++++
+~~~~~~~~~~~~~~~~~~~~~~
 Generating the only html is much faster than compiling all components of the
 documentation. This can be done with ``make sphinx-html``.
 
 Building the PDF
-++++++++++++++++
+~~~~~~~~~~~~~~~~
 If LaTeX is installed, a pdf version of the documentation can be built with
 ``make sphinx-pdf``, and the output is available at
 ``OpenFAT/build/docs/latex/Openfast.pdf``.
