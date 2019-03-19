@@ -35,22 +35,6 @@ universities, NREL relies on these GitHub tools to coordinate efforts:
 For other questions regarding OpenFAST, please contact
 `Mike Sprague <mailto:michael.a.sprague@nrel.gov>`_.
 
-Documentation
--------------
-OpenFAST documentation is hosted on
-`readthedocs <http://openfast.readthedocs.io/>`_. It is automatically generated
-from both the ``master`` and ``dev`` branches whenever new commits are added.
-The documentation can also be generated locally as described in
-:doc:`build docs <build_doc>` while in development.
-
-A PDF of the documentation can be retrieved from
-`readthedocs <http://openfast.readthedocs.io/>`_ by clicking the arrow on the
-lower left corner of the page next to ``v:master`` or ``v:dev``.
-
-While OpenFAST developer documentation is being enhanced here,
-developers are encouraged to consult the legacy FAST v8
-`Programmer's Handbook <https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf>`_.
-
 .. toctree::
    :maxdepth: 1
 
