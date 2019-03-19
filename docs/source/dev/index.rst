@@ -41,4 +41,5 @@ For other questions regarding OpenFAST, please contact
    dev_phil.rst
    github_workflow.rst
    build_doc.rst
+   debugging.rst
    doxy_doc.rst
