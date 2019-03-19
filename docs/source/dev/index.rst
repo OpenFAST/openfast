@@ -22,18 +22,15 @@ workflow for individual and coordinated development. Finally, be sure to review
 the :doc:`GitHub workflow <github_workflow>` to avoid any merge or code
 conflicts.
 
-Please use `GitHub Issues <https://github.com/openfast/openfast/issues>`_ to:
-
-- ask usage or development questions
-- report bugs
-- suggest code enhancements
-
-The `GitHub Pull Requests <https://github.com/openfast/openfast/pulls>`_ page
-is the place for engaging with the OpenFAST team to have your new code
-merged into the main repository.
-
 With development happening in parallel between NREL, industry partners, and
-universities, NREL relies on these GitHub tools to coordinate efforts.
+universities, NREL relies on these GitHub tools to coordinate efforts:
+
+- `GitHub Issues <https://github.com/openfast/openfast/issues>`_ is the place
+  to ask usage or development questions, report bugs, and
+  suggest code enhancements
+- `GitHub Pull Requests <https://github.com/openfast/openfast/pulls>`_
+  is the place for engaging with the OpenFAST team to have your new code
+  merged into the main repository.
 
 For other questions regarding OpenFAST, please contact
 `Mike Sprague <mailto:michael.a.sprague@nrel.gov>`_.
