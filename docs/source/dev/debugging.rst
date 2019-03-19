@@ -62,6 +62,29 @@ the launch configuration and add a block similar to this:
 
 macOS configuration
 ~~~~~~~~~~~~~~~~~~~
+GDB on macOS needs some configuration before the system allows it to take
+over a process. It is recommended that gdb be installed with homebrew
+
+.. code-block:: bash
+
+    brew info gdb
+    brew install gdb
+
+After that completes, be sure to follow the caveats to finish the installation.
+For gdb 8.2.1, it looks like this:
+
+.. code-block:: bash
+
+    ==> Caveats
+    gdb requires special privileges to access Mach ports.
+    You will need to codesign the binary. For instructions, see:
+
+    https://sourceware.org/gdb/wiki/BuildingOnDarwin
+
+    On 10.12 (Sierra) or later with SIP, you need to run this:
+
+    echo "set startup-with-shell off" >> ~/.gdbinit
+
 For Native Debug on macOS, you have to sort of hack the extension to allow
 breakpoints in fortran files by adding this line to your settings.json:
 
