@@ -14,7 +14,7 @@ Installing prerequisites
     -  Choose the default install location
     -  Choose the default package download location
     -  Choose ``Direct connection``
-    -  Choose ``http://www.gtlib.gatech.edu`` as the download site
+    -  Choose a download site
     -  See next step for ``select packages``. Alternately, you can skip this
        step and run ``setup-x86_64.exe`` anytime later to select and install
        required software.
