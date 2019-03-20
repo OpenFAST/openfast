@@ -307,7 +307,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, I
 
        ! Print the summary file if requested:
    if (InputFileData%SumPrint) then
-      call BD_PrintSum( p, x, MiscVar, InitInp%RootName, ErrStat2, ErrMsg2 )
+      call BD_PrintSum( p, x, MiscVar, InitInp, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end if
 
@@ -1392,6 +1392,7 @@ subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
       CALL AllocAry(m%LP_StifK_LU,  p%dof_total-6,p%dof_total-6,                                'LP_StifK_LU', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%LP_StifK,     p%dof_total,p%dof_total,                                    'LP_StifK',    ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%LP_MassM,     p%dof_total,p%dof_total,                                    'LP_MassM',    ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL AllocAry(m%LP_MassM_LU,  p%dof_total-6,p%dof_total-6,                                'LP_MassM_LU', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry(m%LP_indx,      p%dof_total,                                                'LP_indx',     ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          !  LAPACK routine outputs converted to dimensionality used in BD.  Note the index ordering here is due to reshape functions before calls to LAPACK routines
@@ -2327,7 +2328,10 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
 
    INTEGER(IntKi)                :: idx_qp         !< index counter for quadrature point
    INTEGER(IntKi)                :: temp_id2       !< Index to last node of previous element
+   INTEGER(IntKi)                :: i,j            !< generic counters
    REAL(BDKi)                    :: tempR6(6,6)
+   REAL(BDKi)                    :: tempBeta6(6,6)
+
 
    ! see Bauchau 2011 Flexible Multibody Dynamics p 692-693, section 17.7.2
 
@@ -2339,12 +2343,24 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
 
          ! Setup the temporary matrix for modifying the stiffness matrix. RR0 is changing with time.
       tempR6 = 0.0_BDKi
+      tempBeta6 = 0.0_BDKi
       tempR6(1:3,1:3) = m%qp%RR0(:,:,idx_qp,nelem)       ! upper left   -- translation
       tempR6(4:6,4:6) = m%qp%RR0(:,:,idx_qp,nelem)       ! lower right  -- rotation
-!NOTE: Bauchau has the lower right corner multiplied by H
+         !NOTE: Bauchau has the lower right corner multiplied by H
+
+         ! Move damping ratio from material frame to the calculation reference frame
+         !     This is the following:
+         !        tempBEta6=matmul(tempR6,matmul(diag(p%beta),transpose(tempR6)))
+      do j=1,6
+         do i=1,6
+               ! diagonal of p%beta * TRANSPOSE(tempR6)
+            tempBeta6(i,j) = p%beta(i)*tempR6(j,i)
+         enddo
+      enddo
+      tempBeta6 = matmul(tempR6,tempBeta6)
 
 
-         !> Modify the Mass matrix as
+         !> Modify the Mass matrix so it is in the calculation reference frame
          !! \f$ \begin{bmatrix}
          !!        \left(\underline{\underline{R}} \underline{\underline{R}}_0\right)      &  0             \\
          !!                      0  &  \left(\underline{\underline{R}} \underline{\underline{R}}_0\right)
@@ -2355,6 +2371,9 @@ SUBROUTINE BD_StifAtDeformedQP( nelem, p, m )
          !!                      0  &  \left(\underline{\underline{R}} \underline{\underline{R}}_0\right)^T
          !!     \end{bmatrix} \f$
       m%qp%Stif(:,:,idx_qp,nelem) = MATMUL(tempR6,MATMUL(p%Stif0_QP(1:6,1:6,temp_id2+idx_qp),TRANSPOSE(tempR6)))
+
+         ! Now apply the damping
+      m%qp%betaC(:,:,idx_qp,nelem) = matmul(tempBeta6,m%qp%Stif(:,:,idx_qp,nelem))
    ENDDO
 
 END SUBROUTINE BD_StifAtDeformedQP
@@ -2802,15 +2821,6 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
 
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
    
-   DO idx_qp=1,p%nqp
-      !m%qp%betaC(:,:,idx_qp,nelem) = MATMUL( diag(p%beta(i)), temp_b,m%qp%Stif(:,:,idx_qp,nelem))
-      DO j=1,6
-         DO i=1,6
-            m%qp%betaC(i,j,idx_qp,nelem) = p%beta(i)*m%qp%Stif(i,j,idx_qp,nelem)
-         END DO
-      END DO
-   END DO
-
    
    IF (.NOT. fact) then ! skip all but Fc and Fd terms
    

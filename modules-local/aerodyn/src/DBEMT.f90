@@ -238,8 +238,6 @@ subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, m, errStat, errMsg
    real(ReKi)                                   :: Un_disk
    real(ReKi)                                   :: AxInd_disk
    integer(IntKi)                               :: indx
-   real(ReKi), parameter                        :: max_AxInd = 0.7_ReKi
-   real(ReKi), parameter                        :: min_Un = 0.0001_ReKi
    
    character(*), parameter                      :: RoutineName = 'DBEMT_UpdateStates'
       
@@ -312,10 +310,10 @@ subroutine ComputeTau1(u, p, m, tau1, errStat, errMsg)
    real(ReKi)                                   :: temp
 
    real(ReKi)                                   :: AxInd_disk
-   real(ReKi), parameter                        :: max_AxInd = 0.7_ReKi
+   real(ReKi), parameter                        :: max_AxInd = 0.5_ReKi
 
    real(ReKi)                                   :: Un_disk
-   real(ReKi), parameter                        :: min_Un = 0.0001_ReKi
+   real(ReKi), parameter                        :: min_Un = 0.1_ReKi
    
    character(*), parameter                      :: RoutineName = 'ComputeTau1'
 
@@ -337,8 +335,9 @@ subroutine ComputeTau1(u, p, m, tau1, errStat, errMsg)
       if ( u%AxInd_disk > max_AxInd ) then
          AxInd_disk = max_AxInd
          if (m%FirstWarn_tau1) then
-            call setErrStat( ErrID_Severe, 'Rotor-averaged axial induction factor is greater than 0.7; limiting time-varying tau1.' &
-                              //' This message will not be repeated though the condition may persist.', ErrStat, ErrMsg, RoutineName ) ! don't print this error more than one time
+            call setErrStat( ErrID_Severe, 'Rotor-averaged axial induction factor is greater than '//trim(num2lstr(max_AxInd)) &
+                    //'; limiting time-varying tau1. This message will not be repeated though the condition may persist.', &
+                    ErrStat, ErrMsg, RoutineName ) ! don't print this error more than one time
             m%FirstWarn_tau1 = .false.
          end if
       else
@@ -348,8 +347,9 @@ subroutine ComputeTau1(u, p, m, tau1, errStat, errMsg)
       if ( u%Un_disk < min_Un ) then
          Un_disk = min_Un
          if (m%FirstWarn_tau1) then
-            call setErrStat( ErrID_Severe, 'Induced axial relative air-speed, Un, is not positive; limiting time-varying tau1.' &
-                             //' This message will not be repeated though the condition may persist.', ErrStat, ErrMsg, RoutineName ) ! don't print this error more than one time
+            call setErrStat( ErrID_Severe, 'Induced axial relative air speed, Un, is less than '//trim(num2lstr(min_Un)) &
+                     // ' m/s; limiting time-varying tau1. This message will not be repeated though the ' &
+                     //'condition may persist.', ErrStat, ErrMsg, RoutineName ) ! don't print this error more than one time
             m%FirstWarn_tau1 = .false.
          end if
       else
@@ -358,7 +358,8 @@ subroutine ComputeTau1(u, p, m, tau1, errStat, errMsg)
       
       temp   = (1.0-1.3*AxInd_disk)*Un_disk
       
-      tau1   = 1.1*u%R_disk/temp                                                                      ! Eqn. 1.2 (note that we've eliminated possibility of temp being 0)
+      tau1   = 1.1*u%R_disk/temp          ! Eqn. 1.2 (note that we've eliminated possibility of temp being 0)
+      tau1   = min(tau1, 100.0_ReKi)      ! put a limit on this time constant so it isn't unrealistically long (particularly at initialization)
       
    end if
 

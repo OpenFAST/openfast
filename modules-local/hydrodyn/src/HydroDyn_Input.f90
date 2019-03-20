@@ -2630,7 +2630,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%Waves%WaveMultiDir = .TRUE.
    ELSEIF ( (InitInp%Waves%WaveMod < 2 .OR. InitInp%Waves%WaveMod >4) .AND. InitInp%Waves%WaveDirMod == 1 ) THEN
       CALL SetErrStat( ErrID_Warn,'WaveDirMod unused unless WaveMod == 2, 3, or 4.  Ignoring WaveDirMod.',ErrStat,ErrMsg,RoutineName)
-      InitInp%Waves%WaveMod   = 0
    ENDIF
 
 

@@ -946,7 +946,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
                NodeTxt = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
                
-               call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u1%rlocal(i,j), p%chord(i,j), u1%theta(i,j),  &
+               call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%kinVisc, AFInfo(p%AFIndx(i,j)), u1%rlocal(i,j), p%chord(i,j), u1%theta(i,j),  &
                            u1%Vx(i,j), u1%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                            p%maxIndIterations, p%aTol, OtherState%ValidPhi(i,j), m%FirstWarn_Phi, errStat2, errMsg2)
                      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
@@ -1093,7 +1093,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             
                ! Need to compute local velocity including both axial and tangential induction
                ! COMPUTE: u_UA%U, u_UA%Re
-            call BEMTU_Wind( m%axInduction(i,j), m%tanInduction(i,j), u1%Vx(i,j), u1%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, u_UA%U, u_UA%Re)
+            call BEMTU_Wind( m%axInduction(i,j), m%tanInduction(i,j), u1%Vx(i,j), u1%Vy(i,j), p%chord(i,j), p%kinVisc, u_UA%U, u_UA%Re)
 
             ! check if UA inputs are valid, or if we should turn it off:
             call Mpi2pi(u_UA%alpha) ! put alpha in [-pi,pi] before checking its value
@@ -1128,7 +1128,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
                ! Solve this without any skewed wake correction and without UA
             ! call BEMT_UnCoupledSolve2(i, j, u, p, z, Rtip, AFInfo, phiOut, axIndOut, tanIndOut, errStat, errMsg)
                ! COMPUTE:  z%phi(i,j)     
-            call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u2%rlocal(i,j), p%chord(i,j), u2%theta(i,j),  &
+            call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%kinVisc, AFInfo(p%AFIndx(i,j)), u2%rlocal(i,j), p%chord(i,j), u2%theta(i,j),  &
                         u2%Vx(i,j), u2%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                         p%maxIndIterations, p%aTol, OtherState%ValidPhi(i,j), m%FirstWarn_Phi, errStat2, errMsg2)  
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
@@ -1207,7 +1207,7 @@ subroutine calculate_Inductions_from_BEMT(i,j,p,phi,u,OtherState,AFInfo,axInduct
    if (OtherState%ValidPhi(i,j)) then
       
       AoA = phi - u%theta(i,j)
-      call BEMTU_Wind( 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
+      call BEMTU_Wind( 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%kinVisc, Vrel, Re )
                
       ! Need to get the induction factors for these conditions without skewed wake correction and without UA
       ! COMPUTE: axInduction, tanInduction  
@@ -1348,7 +1348,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                NodeTxt = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
                
                y%phi(i,j) = z%phi(i,j)
-               call BEMT_UnCoupledSolve(y%phi(i,j), p%numBlades, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), p%chord(i,j), u%theta(i,j),  &
+               call BEMT_UnCoupledSolve(y%phi(i,j), p%numBlades, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), p%chord(i,j), u%theta(i,j),  &
                            u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                            p%maxIndIterations, p%aTol, IsValidSolution, m%FirstWarn_Phi, errStat2, errMsg2)
                      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
@@ -1463,7 +1463,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
          y%AOA(i,j) = y%phi(i,j) - u%theta(i,j)
             
             ! Compute Re, Vrel based on current values of axInduction, tanInduction
-         call BEMTU_Wind( y%axInduction(i,j), y%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, y%Vrel(I,J), y%Re(i,j) )
+         call BEMTU_Wind( y%axInduction(i,j), y%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%kinVisc, y%Vrel(I,J), y%Re(i,j) )
   
             ! Now depending on the option for UA get the airfoil coefs, Cl, Cd, Cm for unsteady or steady implementation
          if (OtherState%UA_Flag(i,j) .and. ( .not. EqualRealNos(y%Vrel(I,J),0.0_ReKi) ) ) then
@@ -1638,7 +1638,7 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_
                tanInduction = 0.0_ReKi
             
                   ! Need to call BEMTU_Wind to obtain Re, even though we aren't using it in this version.
-               call BEMTU_Wind( axInduction, tanInduction, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
+               call BEMTU_Wind( axInduction, tanInduction, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%kinVisc, Vrel, Re )
             
                   ! Solve for the constraint states here:
                Z_residual%phi(i,j) = UncoupledErrFn(z%phi(i,j), u%theta(i,j), Re, p%numBlades, u%rlocal(i,j), p%chord(i,j),  AFInfo(p%AFindx(i,j)), &
@@ -2015,7 +2015,7 @@ integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, chord, theta,
    
 end function TestRegion
       
-subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, chord, theta,  &
+subroutine BEMT_UnCoupledSolve( phi, numBlades, nu, AFInfo, rlocal, chord, theta,  &
                            Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
                            maxIndIterations, aTol, ValidPhi, FirstWarn, ErrStat, ErrMsg)
 
@@ -2023,8 +2023,7 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    !use fminMod
    real(ReKi),             intent(inout) :: phi
    integer,                intent(in   ) :: numBlades
-   real(ReKi),             intent(in   ) :: airDens
-   real(ReKi),             intent(in   ) :: mu
+   real(ReKi),             intent(in   ) :: nu
    TYPE(AFInfoType),       INTENT(IN   ) :: AFInfo
    real(ReKi),             intent(in   ) :: rlocal                   
    real(ReKi),             intent(in   ) :: chord          
@@ -2081,7 +2080,7 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    
       ! Need to call BEMTU_Wind to obtain Re, even though we aren't using it in this version.
       ! inductions are set to zero!
-   call BEMTU_Wind( 0.0_ReKi, 0.0_ReKi, Vx, Vy, chord, airDens, mu, Vrel, Re )
+   call BEMTU_Wind( 0.0_ReKi, 0.0_ReKi, Vx, Vy, chord, nu, Vrel, Re )
    
    
    !# ------ BEM solution method see (Ning, doi:10.1002/we.1636) ------
@@ -2113,8 +2112,7 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, airDens, mu, AFInfo, rlocal, cho
    
       ! Set up the fcn argument settings for Brent's method
 
-   fcnArgs%airDens         = airDens
-   fcnArgs%mu              = mu
+   fcnArgs%nu              = nu
    fcnArgs%numBlades       = numBlades
    fcnArgs%rlocal          = rlocal
    fcnArgs%chord           = chord

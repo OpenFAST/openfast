@@ -1852,13 +1852,13 @@ SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
-SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
+SUBROUTINE BD_PrintSum( p, x, m, InitInp, ErrStat, ErrMsg )
 
       ! passed variables
    TYPE(BD_ParameterType),       INTENT(IN)     :: p                 !< Parameters of the structural dynamics module
    type(BD_ContinuousStateType), intent(in)     :: x                 !< Continuous states
    TYPE(BD_MiscVarType),         INTENT(INout)  :: m                 !< misc/optimization variables
-   CHARACTER(*),                 INTENT(IN)     :: RootName          !< root name of summary file to be generated (will add .sum in this routine)
+   TYPE(BD_InitInputType),       INTENT(IN   )  :: InitInp           !< Input data for initialization routine
    INTEGER(IntKi),               INTENT(OUT)    :: ErrStat           !< error status
    CHARACTER(*),                 INTENT(OUT)    :: ErrMsg            !< error message
 
@@ -1877,7 +1877,7 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    ! Open the summary file and give it a heading.
 
    CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
-   CALL OpenFOutFile ( UnSu, TRIM( RootName )//'.sum', ErrStat, ErrMsg )
+   CALL OpenFOutFile ( UnSu, TRIM( InitInp%RootName )//'.sum', ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! Heading:
@@ -1901,6 +1901,11 @@ SUBROUTINE BD_PrintSum( p, x, m, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(A)')  'Global rotation tensor (IEC coords):'
    DO i=1,3
        WRITE (UnSu,'(3ES18.5)' ) p%GlbRot(i,:)
+   ENDDO
+
+   WRITE (UnSu,'(A)')  'Initial blade orientation tensor (relative to global rotation tensor):'
+   DO i=1,3
+       WRITE (UnSu,'(3ES18.5)' ) InitInp%RootOri(i,:)
    ENDDO
 
    WRITE (UnSu,'(A)')  'Global rotation WM parameters (IEC coords):'

@@ -14,6 +14,49 @@
 # limitations under the License.
 #
 
+# Helper macros for setting appropriate compiler flags
+
+# Customizations for GNU Fortran compiler
+macro(set_gfortran)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -m64 -ffree-line-length-none -fdefault-real-8 -C")
+
+  # debug flags
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all -pedantic -fbacktrace" )
+  endif()
+endmacro(set_gfortran)
+
+# Customizations for Intel Fortran Compiler
+macro(set_ifort)
+  if(WIN32)
+    set_ifort_windows()
+  else()
+    set_ifort_posix()
+  endif()
+endmacro(set_ifort)
+
+# Customizations for Intel Fortran Compiler on posix systems
+macro(set_ifort_posix)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -m64 -fpp -real-size 64")
+
+  # debug flags
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -g -check all -traceback" )
+  endif()
+endmacro(set_ifort_posix)
+
+# Customizations for Intel Fortran Compiler on Windows systems
+macro(set_ifort_windows)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qm64 /fpp /real-size:64 /libs:static")
+
+  # debug flags
+  if(CMAKE_BUILD_TYPE MATCHES Debug)
+    set(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} /Z7 /check:all /traceback" )
+  endif()
+endmacro(set_ifort_windows)
+
+
+# CMake config
 cmake_minimum_required(VERSION 2.8.12)
 project(DISCON)
 enable_language(Fortran)
@@ -23,24 +66,23 @@ file(TO_CMAKE_PATH ${SOURCE_PATH} SOURCE_PATH)
 
 # set the build type option
 if (NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING
-    "Choose the build type: Debug Release" FORCE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the build type: Debug Release" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
-# add the build flags
+# set the build flags
 if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
-  set(CMAKE_Fortran_FLAGS "-m64 -fbacktrace -ffree-line-length-none -fdefault-real-8 -C -DDOUBLE_PRECISION")
+  set_gfortran()
 elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
-  set(CMAKE_Fortran_FLAGS "-m64 -g -traceback -132 -r8 -DDOUBLE_PRECISION")
+  set_ifort()
 endif()
 set(CMAKE_SHARE_LINKER_FLAGS "-shared")
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if(APPLE OR UNIX)
   set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DIMPLICIT_DLLEXPORT")
 endif()
 
 # supress the mac runtime path warnings
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+if(APPLE)
   set(CMAKE_MACOSX_RPATH 1)
 endif()
 
@@ -52,7 +94,7 @@ if (${CMAKE_CURRENT_LIST_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
   set(INSTALL_DEST "${CMAKE_SOURCE_DIR}/..")
 # otherwise
 else()
-  set(INSTALL_DEST "${CMAKE_BINARY_DIR}/reg_tests/glue-codes/fast/5MW_Baseline/ServoData")
+  set(INSTALL_DEST "${CMAKE_BINARY_DIR}/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData")
 endif()
 
 install(TARGETS DISCON DESTINATION ${INSTALL_DEST})

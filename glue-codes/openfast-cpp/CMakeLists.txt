@@ -42,6 +42,7 @@ target_link_libraries(openfastcpplib
   ${HDF5_HL_LIBRARIES}
   ${ZLIB_LIBRARIES}
   ${LIBXML2_LIBRARIES}
+  ${MPI_LIBRARIES}
   ${CMAKE_DL_LIBS})
 
 add_executable(openfastcpp

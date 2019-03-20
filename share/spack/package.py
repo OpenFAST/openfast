@@ -81,7 +81,7 @@ class Openfast(CMakePackage):
                 'ON' if '+double-precision' in spec else 'OFF'),
             '-DUSE_DLL_INTERFACE:BOOL=%s' % (
                 'ON' if '+dll-interface' in spec else 'OFF'),
-            '-DBUILD_FAST_CPP_API:BOOL=%s' % (
+            '-DBUILD_OPENFAST_CPP_API:BOOL=%s' % (
                 'ON' if '+cxx' in spec else 'OFF'),
         ])
 

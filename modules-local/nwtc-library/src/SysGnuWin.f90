@@ -221,7 +221,7 @@ SUBROUTINE MKDIR ( new_directory_path )
    inquire( file=trim(new_directory_path), exist=directory_exists )
 
    if ( .NOT. directory_exists ) then
-      make_command = 'mkdir -p '//trim(new_directory_path)
+      make_command = 'mkdir "'//trim(new_directory_path)//'"'
       call system( make_command )
    endif
 

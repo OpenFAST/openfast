@@ -1,0 +1,6 @@
+# add (semi-useful) version info to git archive
+CreateGitVersion.bat ident export-subst
+
+# Declare files that will always have CRLF line endings on checkout.
+*.bat text eol=crlf
+
