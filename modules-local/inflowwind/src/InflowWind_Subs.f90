@@ -1384,9 +1384,11 @@ SUBROUTINE InflowWind_SetParameters( InitInp, InputFileData, p, m, ErrStat, ErrM
    end if
    
       ! Allocate array for AllOuts
-   CALL AllocAry( m%AllOuts, MaxOutPts, 'AllOuts', TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-   IF ( ErrStat>= AbortErrLev ) RETURN
+   ALLOCATE( m%AllOuts(0:MaxOutPts), Stat=TmpErrStat )
+   IF (TmpErrStat/=0) THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for m%AllOuts.",ErrStat,ErrMsg,RoutineName)
+      RETURN
+   END IF
    m%AllOuts = 0.0_ReKi
    
 
