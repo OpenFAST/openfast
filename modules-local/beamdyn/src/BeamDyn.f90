@@ -586,7 +586,7 @@ subroutine Initialize_FEweights(p,GLL_nodes,ErrStat,ErrMsg)
    ErrMsg  = ""
 
 
-      ! Set number of points for the integrations. Not sure what a good number is
+      ! Set number of points for the integrations. Number chosen based on convergence tests
    IntPoints=100001
 
 
@@ -624,7 +624,7 @@ subroutine Initialize_FEweights(p,GLL_nodes,ErrStat,ErrMsg)
       EtaVals  =  2.0_BDKi*EtaVals - 1.0_BDKi
 
          ! Get the high resolution Shp functions.  We won't use the ShpDer results at all
-      call BD_diffmtc(p,GLL_nodes,EtaVals,IntPoints,Shp,ShpDer)
+      call BD_diffmtc(p%nodes_per_elem,GLL_nodes,EtaVals,IntPoints,Shp,ShpDer)
       
          ! Integrate region outboard shape function contributions to this FE node!
       do i=1,p%nodes_per_elem
@@ -667,7 +667,7 @@ SUBROUTINE BD_InitShpDerJaco( GLL_Nodes, p )
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_InitShpDerJaco'
 
 
-   CALL BD_diffmtc(p,GLL_nodes,p%QPtN,p%nqp,p%Shp,p%ShpDer)
+   CALL BD_diffmtc(p%nodes_per_elem,GLL_nodes,p%QPtN,p%nqp,p%Shp,p%ShpDer)
 
    DO nelem = 1,p%elem_total
       DO idx_qp = 1, p%nqp
@@ -3135,11 +3135,11 @@ END SUBROUTINE BD_GyroForce
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> calculate Lagrangian interpolant tensor at ns points where basis
 !! functions are assumed to be associated with (np+1) GLL points on [-1,1]
-SUBROUTINE BD_diffmtc( p,GLL_nodes,QPtN,nqp,Shp,ShpDer )
+SUBROUTINE BD_diffmtc( nodes_per_elem,GLL_nodes,QPtN,nqp,Shp,ShpDer )
 
    ! See Bauchau equations 17.1 - 17.5
    
-   TYPE(BD_ParameterType), INTENT(IN   )  :: p              !< Parameters
+   INTEGER(IntKi),         INTENT(IN   )  :: nodes_per_elem !< Nodes per elemenent
    REAL(BDKi),             INTENT(IN   )  :: GLL_nodes(:)   !< GLL_nodes(p%nodes_per_elem): location of the (p%nodes_per_elem) p%GLL points
    REAL(BDKi),             INTENT(IN   )  :: QPtN(:)        !< Locations of quadrature points ([-1 1])
    INTEGER(IntKi),         INTENT(IN   )  :: nqp            !< number of quadrature points to consider. Should be size of 2nd index of Shp & ShpDer
@@ -3161,23 +3161,23 @@ SUBROUTINE BD_diffmtc( p,GLL_nodes,QPtN,nqp,Shp,ShpDer )
    
 
    do j = 1,nqp
-      do l = 1,p%nodes_per_elem
+      do l = 1,nodes_per_elem
 
-       if ((abs(QPtN(j)-1.).LE.eps).AND.(l.EQ.p%nodes_per_elem)) then           !adp: FIXME: do we want to compare to eps, or EqualRealNos???
-         ShpDer(l,j) = REAL((p%nodes_per_elem)*(p%nodes_per_elem-1), BDKi)/4.0_BDKi
+       if ((abs(QPtN(j)-1.).LE.eps).AND.(l.EQ.nodes_per_elem)) then           !adp: FIXME: do we want to compare to eps, or EqualRealNos???
+         ShpDer(l,j) = REAL((nodes_per_elem)*(nodes_per_elem-1), BDKi)/4.0_BDKi
        elseif ((abs(QPtN(j)+1.).LE.eps).AND.(l.EQ.1)) then
-         ShpDer(l,j) = -REAL((p%nodes_per_elem)*(p%nodes_per_elem-1), BDKi)/4.0_BDKi
+         ShpDer(l,j) = -REAL((nodes_per_elem)*(nodes_per_elem-1), BDKi)/4.0_BDKi
        elseif (abs(QPtN(j)-GLL_nodes(l)).LE.eps) then
          ShpDer(l,j) = 0.0_BDKi
        else
          ShpDer(l,j) = 0.0_BDKi
          den = 1.0_BDKi
-         do i = 1,p%nodes_per_elem
+         do i = 1,nodes_per_elem
            if (i.NE.l) then
              den = den*(GLL_nodes(l)-GLL_nodes(i))
            endif
            dnum = 1.0_BDKi
-           do k = 1,p%nodes_per_elem
+           do k = 1,nodes_per_elem
              if ((k.NE.l).AND.(k.NE.i).AND.(i.NE.l)) then
                dnum = dnum*(QPtN(j)-GLL_nodes(k))
              elseif (i.EQ.l) then
@@ -3192,14 +3192,14 @@ SUBROUTINE BD_diffmtc( p,GLL_nodes,QPtN,nqp,Shp,ShpDer )
    enddo
 
    do j = 1,nqp
-      do l = 1,p%nodes_per_elem
+      do l = 1,nodes_per_elem
 
        if(abs(QPtN(j)-GLL_nodes(l)).LE.eps) then
          Shp(l,j) = 1.0_BDKi
        else
          dnum = 1.0_BDKi
          den  = 1.0_BDKi
-         do k = 1,p%nodes_per_elem
+         do k = 1,nodes_per_elem
            if (k.NE.l) then
              den  = den *(GLL_nodes(l) - GLL_nodes(k))
              dnum = dnum*(QPtN(j) - GLL_nodes(k))
@@ -3708,14 +3708,12 @@ SUBROUTINE BD_StaticSolution( x, gravity, p, m, piter, ErrStat, ErrMsg )
       CALL LAPACK_getrf( p%dof_total-p%dof_node, p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, ErrStat2, ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          ! if there is a problem with the factorization, we should not continue with this iteration
-         ! (note: do not return early because the calling subroutine uses piter <= p%niter as its convergence criteria)
-         if (ErrStat >= AbortErrLev) cycle 
+         if (ErrStat >= AbortErrLev) RETURN
          
       CALL LAPACK_getrs( 'N',p%dof_total-p%dof_node, m%LP_StifK_LU, m%LP_indx, m%LP_RHS_LU, ErrStat2, ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          ! if there is a problem with the solve, we should not continue with this iteration
-         ! (note: do not return early because the calling subroutine uses piter <= p%niter as its convergence criteria)
-         if (ErrStat >= AbortErrLev) cycle 
+         if (ErrStat >= AbortErrLev) RETURN
 
          ! Reshape to BeamDyn arrays
       m%Solution(:,1)   = 0.0_BDKi    ! first node is not set below
@@ -4380,12 +4378,6 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
    m%BldInternalForceFE(:,:) = 0.0_BDKi
    m%BldInternalForceQP(:,:) = 0.0_BDKi
 
-
-      ! Note from ADP:  I expect the FE nodes to be correct with this approach.  The QP calculations further down are going to be inexact
-      !                 due to the integration weighting I am using (FEweights).  This needs further review.
-      !                 I don't like this method, but haven't found a better method yet.  I think a better approach may be to use the
-      !                inverse H' matrix and inverse shape functions, but I have not tried deriving that yet.
-
       ! Integrate quadrature points to get the FE nodes elastic force per length.
    m%EFint(:,:,:) = 0.0_BDKi
 
@@ -4431,15 +4423,14 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
          idx_node       = p%node_elem_idx(nelem,1)-1 + idx_node_in_elem    ! p%node_elem_idx(nelem,1) is the first node in the element
 
             ! Force term
+            ! NOTE: the idx_node+1 includes all force contributions up to the previous node tip inwards
          m%BldInternalForceFE(1:3,idx_node)  = p%FEweight(idx_node_in_elem,nelem) * m%EFint(1:3,idx_node_in_elem,nelem) &
                                              + m%BldInternalForceFE(1:3,idx_node+1) &
                                              + (1.0_BDKi - p%FEweight(idx_node_in_elem+1,nelem)) * m%EFint(1:3,idx_node_in_elem+1,nelem)     ! Remaining integral of prior nodes shape functions
 
             ! Moment term including forces from next node out projected to this node
             ! NOTE: this appears like double counting, but the issue is that the Fd and Fc terms are both included in EFint.
-            !        These terms partially cancel each other.  Fd includes part of the force term as well.  The exact math
-            !        is a bit fuzzy to me.  It appears to work though.  If only Fc is used, then the result is off a very
-            !        small amount that is unknown to me.
+            !        These terms partially cancel each other.  Fd includes part of the force term as well.
          Tmp3 = PrevNodePos - (p%uuN0(1:3,idx_node_in_elem,nelem) + x%q(1:3,idx_node))
          m%BldInternalForceFE(4:6,idx_node)  = m%EFint(4:6,idx_node_in_elem,nelem) &
                                              + m%BldInternalForceFE(4:6,idx_node+1) &
@@ -4459,16 +4450,8 @@ SUBROUTINE BD_InternalForceMoment( x, p, m )
          ! if we are at the element boundary, we keep the average value from the tip of the next element in and 
          !        the negative of the first node of this element. 
          ! 
-         !        WHY THIS WORKS OUT NICELY I DON'T KNOW!!!!  -ADP 
-         !              --> Maybe it is an artifact of something wrong in the above integration??? 
-         !              --> or maybe it is an artifact of how the solve is actually performed 
-         !                    -> the boundary is handled as a single node in the solve. Guessing this is the reason. 
-         ! 
-         ! NOTE:  the above calculations result in in something close zero otherwise because it is counting both 
-         !        the tip of inner element and first node of outer element, which will almost cancel.  Why they 
-         !        are not exactly the same is a mystery to me!!!!  This might be an indication that there is 
-         !        something not properly included at either the first or last nodes, which could be part of our 
-         !        underlying issues.  No idea though. 
+         ! NOTE:  the above calculations result in something close to zero otherwise because it is counting both
+         !        the tip of inner element and first node of outer element, which will almost cancel.
       idx_node       = p%node_elem_idx(nelem-1,2)     ! Last node of next element inboard
       m%BldInternalForceFE(1:3,idx_node)  = ( m%EFint(1:3,p%nodes_per_elem,nelem-1) - m%EFint(1:3,1,nelem) ) / 2.0_BDKi
    ENDDO
