@@ -1437,8 +1437,12 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       m%y_mapped%RemapFlag  = .TRUE.
  
       CALL MeshMapCreate( y%Mesh,                m%y_mapped, m%HD_MeshMap%HD_P_2_WRP_P, ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL MeshMapCreate( y%Morison%LumpedMesh,  m%y_mapped, m%HD_MeshMap%M_P_2_WRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL MeshMapCreate( y%Morison%DistribMesh, m%y_mapped, m%HD_MeshMap%M_L_2_WRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF ( y%Morison%LumpedMesh%Committed ) THEN 
+         CALL MeshMapCreate( y%Morison%LumpedMesh,  m%y_mapped, m%HD_MeshMap%M_P_2_WRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ENDIF
+      IF ( y%Morison%DistribMesh%Committed ) THEN 
+         CALL MeshMapCreate( y%Morison%DistribMesh, m%y_mapped, m%HD_MeshMap%M_L_2_WRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ENDIF
       
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()

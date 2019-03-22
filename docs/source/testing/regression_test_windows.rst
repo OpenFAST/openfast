@@ -68,16 +68,23 @@ Windows with Visual Studio regression test
 
        iii) Close your Visual Studio and then Repeat Steps (a) through (c)
 
-    d) You should now see the file ``openfast_x64.exe`` in your ``openfast\build\bin`` folder
+    d) You should now see the file ``openfast_x64_Double.exe`` in your ``openfast\build\bin`` folder.
 
 
-4) Execute the OpenFAST regression Tests
+4) Prepare regression tests
+
+    a) Create a subdirectory called ``reg_tests`` in your ``openfast\build`` folder.
+
+    b) Copy the contents of ``openfast\reg_tests\r-test`` to ``openfast\build\reg_tests``.
+
+
+5) Execute the OpenFAST regression Tests
 
     a) Open a command prompt which is configured for Python [ like Anaconda3 ]
  
     b) Change your working directory to ``openfast\reg_tests``
 
-    c) Type: ``python manualRegressionTest.py ..\build\bin\openfast_x64.exe Windows Intel 1e-5``
+    c) Type: ``python manualRegressionTest.py ..\build\bin\openfast_x64_Double.exe Windows Intel 1e-5`` 
          You should see this: ``executing AWT_YFix_WSt``
 
     d) The tests will continue to execute one-by-one until you finally see something like this:
