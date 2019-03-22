@@ -1,0 +1,3 @@
+
+#pragma once
+#define GIT_VERSION_INFO "@GIT_HEAD_SHA1@"

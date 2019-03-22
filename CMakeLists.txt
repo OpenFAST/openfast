@@ -24,9 +24,6 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # Get the git info into the executable
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
-include(GetGitRevisionDescription)
-git_describe(GIT_DESCRIBE)
-add_definitions(-DGIT_VERSION_INFO="${GIT_DESCRIBE}")
 
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)

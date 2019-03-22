@@ -14,6 +14,12 @@
 # limitations under the License.
 #
 
+# available in openfast/cmake/
+set(PRE_CONFIGURE_FILE "src/git.h.in")
+set(POST_CONFIGURE_FILE "src/git.h")
+include(git_watcher)
+add_definitions("-DGIT_INCLUDE_FILE=\"${POST_CONFIGURE_FILE}\"")
+
 set(NWTCLIBS_SOURCES
   src/ModMesh.f90
   src/ModMesh_Mapping.f90
@@ -62,7 +68,8 @@ else (NWTC_SYS_FILE)
   message(FATAL_ERROR "Cannot determine system file used with NWTC_Library")
 endif (NWTC_SYS_FILE)
 
-add_library(nwtclibs ${NWTCLIBS_SOURCES})
+add_library(nwtclibs ${POST_CONFIGURE_FILE} ${NWTCLIBS_SOURCES})
+add_dependencies(nwtclibs check_git_repository)
 target_link_libraries(nwtclibs ${LAPACK_LIBRARIES} ${CMAKE_DL_LIBS})
 
 install(TARGETS nwtclibs
