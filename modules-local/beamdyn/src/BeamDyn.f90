@@ -3731,13 +3731,10 @@ SUBROUTINE BD_StaticSolution( x, gravity, p, m, piter, ErrStat, ErrMsg )
           Eref = Enorm
           IF(Eref .LE. p%tol) RETURN
       ELSE
-         Enorm = SQRT(abs(DOT_PRODUCT(m%LP_RHS_LU, m%LP_RHS(7:p%dof_total))))
-           IF(Enorm .LE. Eref) RETURN
+          IF(Enorm/Eref .LE. p%tol) RETURN
       ENDIF
 
    ENDDO
-   
-   CALL setErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of iterations", ErrStat, ErrMsg, RoutineName)
 
 END SUBROUTINE BD_StaticSolution
 
