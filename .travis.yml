@@ -16,7 +16,7 @@ env:
     - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
     - FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
     - FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
-    - FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
+    # - FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
 
 before_install:
     # mac configuration
@@ -55,8 +55,8 @@ matrix:
       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
     - os: osx
       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
-    - os: osx
-      env: FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
+    # - os: osx
+    #   env: FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
 
 script:
     # beamdyn unit tests
