@@ -175,6 +175,7 @@ MODULE NWTC_IO
       !> \copydoc nwtc_io::readcary
    INTERFACE ReadAry
       MODULE PROCEDURE ReadCAry
+      MODULE PROCEDURE ReadCAryFromStr
       MODULE PROCEDURE ReadIAry
       MODULE PROCEDURE ReadLAry
       MODULE PROCEDURE ReadR4Ary  ! read array of 4-byte reals
@@ -4644,6 +4645,49 @@ QueryGitVersion = GIT_VERSION_INFO
 
    RETURN
    END SUBROUTINE ReadCAry
+!======================================================================
+!> This routine reads a AryLen values separated by whitespace (or other Fortran record delimiters such as commas) 
+!!  into an array (either on same line or multiple lines) from an input string
+!! Use ReadAry (nwtc_io::readary) instead of directly calling a specific routine in the generic interface.   
+   SUBROUTINE ReadCAryFromStr ( Str, Ary, AryLen, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+
+   ! Argument declarations:
+   CHARACTER(*), INTENT(IN)     :: Str                                             !< String to read from
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the array.
+   INTEGER, INTENT(IN), OPTIONAL:: UnEc                                            !< I/O unit for echo file. If present and > 0, write to UnEc
+   INTEGER, INTENT(OUT)         :: ErrStat                                         !< Error status
+   CHARACTER(*), INTENT(OUT)    :: ErrMsg                                          !< Error message describing ErrStat
+   CHARACTER(*), INTENT(OUT)    :: Ary(AryLen)                                     !< Array being read.
+   CHARACTER(*), INTENT(IN)     :: AryDescr                                        !< Text string describing the variable.
+   CHARACTER(*), INTENT(IN)     :: AryName                                         !< Text string containing the variable name.
+   ! Local declarations:
+   INTEGER                      :: Ind                                             ! Index into the string array.  Assumed to be one digit.
+   INTEGER                      :: IOS                                             ! I/O status returned from the read statement.
+
+   ! Init of output
+   do Ind=1,AryLen
+       Ary(Ind)=''
+   end do
+   ! Reading fields from string
+   READ (Str,*,IOSTAT=IOS)  ( Ary(Ind), Ind=1,AryLen )
+
+   ! Dedicated "CheckIOS"
+   IF ( IOS < 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'End of line reached while trying to read ',AryLen,' fields from string.'
+      ErrStat = ErrID_Fatal
+   ELSE IF ( IOS > 0 )  THEN
+      write(ErrMsg,'(A,I0,A)') 'Unexpected error while trying to read ',AryLen,' fields from string.'
+   ELSE
+       ErrMsg=''
+       ErrStat = ErrID_None
+   END IF
+   IF (ErrStat >= AbortErrLev) RETURN
+   IF ( PRESENT(UnEc) )  THEN
+      IF ( UnEc > 0 ) &
+         WRITE (UnEc,Ec_StrAryFrmt)  TRIM( AryName ), AryDescr, ( TRIM( Ary(Ind) ), Ind=1,MIN(AryLen,NWTC_MaxAryLen) )
+   END IF
+   RETURN
+   END SUBROUTINE ReadCAryFromStr
 !=======================================================================
 !> This routine reads a AryLen values into a real array from the next AryLen lines of the input file (one value per line).
 !! Use ReadAryLines (nwtc_io::readarylines) instead of directly calling a specific routine in the generic interface.   

@@ -756,9 +756,6 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       RETURN
    END IF
 
-   Frmt = '('//TRIM(Int2LStr(InitInp%NWaveKin))//'(:,A,A11))'
-   
-   
    ! Read the first file and set the initial values of the 
    
    CALL GetNewUnit( UnWv )
@@ -782,9 +779,11 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END IF
    
    DO i = 0,InitOut%NStepWave-1
-      CALL ReadCAry ( UnWv, FileName, WaveDataStr(i,:), InitInp%NWaveKin, 'junk', 'junk', ErrStatTmp, ErrMsgTmp )
-      !Read(UnWv,Frmt)   ( Delim,  WaveDataStr(i,j)  , j=1,InitInp%NWaveKin ) 
-         
+      ! Extract fields from current line
+      IF (.not. ExtractFields(UnWv, WaveDataStr(i,:), InitInp%NWaveKin)) THEN
+          call Cleanup()
+          RETURN
+      END IF
       DO j = 1, InitInp%NWaveKin
             
          isNumeric = is_numeric(WaveDataStr(i,j), WaveData(i,j))
@@ -826,14 +825,12 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          END IF
      
       DO i = 0,InitOut%NStepWave-1
-         
-         !Read(UnWv,Frmt)   ( Delim,  WaveDataStr(i,j)  , j=1,InitInp%NWaveKin ) 
-         CALL ReadCAry ( UnWv, FileName, WaveDataStr(i,:), InitInp%NWaveKin, 'junk', 'junk', ErrStatTmp, ErrMsgTmp )
-         !CALL ReadAry ( UnF, FileName, WaveDataStr(i,:), InitInp%NWaveKin, 'WaveData', &
-         !                     'Wave kinematics data for one time step', ErrStatTmp, ErrMsgTmp )
+         ! Extract fields from current line
+         IF (.not. ExtractFields(UnWv, WaveDataStr(i,:), InitInp%NWaveKin)) THEN
+             call Cleanup()
+             RETURN
+         END IF
          DO j = 1, InitInp%NWaveKin
-            !CALL ReadVar ( UnF, FileName, WaveData(i,j), 'WaveData', &
-            !                  'Wave kinematics data for one time step', ErrStatTmp, ErrMsgTmp )
             isNumeric = is_numeric(WaveDataStr(i,j), WaveData(i,j))
             IF ( ( isNumeric .AND. (InitOut%nodeInWater(i,j) == 0) ) .OR. ( .NOT. isNumeric .AND. ( InitOut%nodeInWater(i,j) == 1 ) ) ) THEN  
                   ErrStatTmp = ErrID_Fatal
@@ -849,12 +846,6 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             ELSE              
                InitOut%nodeInWater(i,j) = 1
             END IF
-            
-               !CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
-               !IF (ErrStat >= AbortErrLev) THEN
-               !   CALL CleanUp()
-               !   RETURN
-               !END IF
          END DO
       
       END DO
@@ -921,6 +912,40 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    
    
 CONTAINS
+
+   !> Sub function to extract n fields on the current line of the file unit FU
+   FUNCTION ExtractFields(FU, s, n) result(OK)
+      ! Arguments
+      INTEGER, INTENT(IN)       :: FU       !< Unit name
+      CHARACTER(*), INTENT(OUT) :: s(n)     !< Fields
+      INTEGER, INTENT(IN)       :: n        !< Number of fields
+      LOGICAL                   :: OK
+      ! Local var
+      CHARACTER(2048)           :: TextLine          !< One line of text read from the file
+      OK=.TRUE.
+
+      ! Read line
+      READ(FU, FMT='(A)', IOSTAT=ErrStat) TextLine
+      IF (ErrStat/=0) THEN
+         ErrStat = ErrID_Fatal
+         WRITE(ErrMsg,'(A,I0,A,I0,A)') 'Failed to read line ',I+2,' (out of ',InitOut%NStepWave+1,' expected lines) in file '//TRIM(FileName)//&
+             & '. Check that the number of lines (without header) is equal to WaveTMax/WaveDT. '
+         OK=.FALSE.
+         RETURN
+      END IF
+
+      ! Extract fields (ReadCAryFromStr is in NWTC_IO)
+      CALL ReadCAryFromStr ( TextLine, s, n, 'line', 'junk', ErrStat, ErrMsgTmp )
+      IF (ErrStat/=0) THEN
+         ErrStat = ErrID_Fatal
+         write(ErrMsg,'(A,I0,A,I0,A)') 'Failed to extract fields from line ',I+2,' in file '//TRIM(FileName)//'. '//&
+             & trim(ErrMsgTmp)//' Check that the number of columns is correct and matches the number of internal HydroDyn nodes.'//&
+             &' (Typically twice the number of joints).'
+         OK=.FALSE.
+         RETURN
+      END IF
+   END FUNCTION ExtractFields
+
    SUBROUTINE CleanUp( )
 
       IF (ALLOCATED( WaveDataStr ))         DEALLOCATE( WaveDataStr,        STAT=ErrStatTmp)
