@@ -277,8 +277,7 @@ OPTIMIZE_OUTPUT_VHDL   = NO
 # Doxygen selects the parser to use depending on the extension of the files it
 # parses. With this tag you can assign which parser to use for a given
 # extension. Doxygen has a built-in mapping, but you can override or extend it
-# using this tag. The format is ext=language, where ext is a file extension, and
-# language is one of the parsers supported by doxygen: IDL, Java, Javascript,
+# language is one of the parsers supported byen:IDL, Java, Javascript,
 # C#, C, C++, D, PHP, Objective-C, Python, Fortran (fixed format Fortran:
 # FortranFixed, free formatted Fortran: FortranFree, unknown formatted Fortran:
 # Fortran. In the later case the parser tries to guess whether the code is fixed
@@ -791,9 +790,7 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = @CMAKE_SOURCE_DIR@/glue-codes/ \
-                         @CMAKE_SOURCE_DIR@/modules-local/ \
-                         @CMAKE_SOURCE_DIR@/modules-ext/
-
+                         @CMAKE_SOURCE_DIR@/modules/ \
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding. Doxygen uses
@@ -849,8 +846,8 @@ EXCLUDE_PATTERNS       =  @CMAKE_SOURCE_DIR@/.git/* \
                           @CMAKE_SOURCE_DIR@/build/* \
                           @CMAKE_SOURCE_DIR@/cmake/* \
                           @CMAKE_SOURCE_DIR@/docs/* \
-                          @CMAKE_SOURCE_DIR@/modules-local/orcaflex-interface/src/OrcaFlexInterface.f90 \
-                          @CMAKE_SOURCE_DIR@/modules-local/servodyn/src/BladedInterface.f90
+                          @CMAKE_SOURCE_DIR@/modules/orcaflex-interface/src/OrcaFlexInterface.f90 \
+                          @CMAKE_SOURCE_DIR@/modules/servodyn/src/BladedInterface.f90
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
@@ -946,9 +943,7 @@ FILTER_SOURCE_FILES    = NO
 
 # The FILTER_SOURCE_PATTERNS tag can be used to specify source filters per file
 # pattern. A pattern will override the setting for FILTER_PATTERN (if any) and
-# it is also possible to disable source filtering for a specific pattern using
-# *.ext= (so without naming a filter).
-# This tag requires that the tag FILTER_SOURCE_FILES is set to YES.
+# it is also possible to disable source filtering for a specific pattern usihistag requires that the tag FILTER_SOURCE_FILES is set to YES.
 
 FILTER_SOURCE_PATTERNS =
 

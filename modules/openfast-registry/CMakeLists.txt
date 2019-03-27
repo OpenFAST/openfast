@@ -30,6 +30,6 @@ set(REGISTRY_SOURCES
 add_executable(openfast_registry ${REGISTRY_SOURCES})
 
 set_target_properties(openfast_registry PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/modules-local/openfast-registry
-  RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/modules-local/openfast-registry
+  RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/modules/openfast-registry
+  RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/modules/openfast-registry
 )
