@@ -2320,8 +2320,8 @@ SUBROUTINE Init_Jacobian_x_z( p, InitOut, ErrStat, ErrMsg)
       !......................................
       ! default perturbations, p%dx:
       !......................................
-   p%dx(1:3) = 0.2_ReKi*D2R * p%blade_length                    ! deflection states in m and m/s
-   p%dx(4:6) = 0.2_ReKi*D2R                                     ! deflection states in rad and rad/s
+   p%dx(1:3) = 0.2_BDKi*D2R_D * p%blade_length                    ! deflection states in m and m/s
+   p%dx(4:6) = 0.2_BDKi*D2R_D                                     ! deflection states in rad and rad/s
    
    InitOut%RotFrame_x   = p%RotStates
    

@@ -63,7 +63,7 @@ subroutine test_BD_diffmtc()
     call AllocAry(gll_nodes, n, "GLL points array", ErrStat, ErrMsg)
     gll_nodes = (/ -1.0, 1.0 /)
     
-    call BD_diffmtc(parametertype, gll_nodes, test_shape, test_shapederivative)
+    call BD_diffmtc(parametertype%nodes_per_elem, gll_nodes, parametertype%QPtN, parametertype%nqp, test_shape, test_shapederivative)
     
     call AllocAry(baseline_shape, parametertype%nqp, parametertype%nodes_per_elem, "baseline_shape", ErrStat, ErrMsg)
     call AllocAry(baseline_shapederivative, parametertype%nqp, parametertype%nodes_per_elem, "baseline_shapederivative", ErrStat, ErrMsg)
