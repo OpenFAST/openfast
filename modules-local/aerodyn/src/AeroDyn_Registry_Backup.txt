@@ -14,7 +14,6 @@ include	Registry_NWTC_Library.txt
 usefrom	AirfoilInfo_Registry.txt
 usefrom	BEMT_Registry.txt
 usefrom	UnsteadyAero_Registry.txt
-usefrom AeroAcoustics_Registry.txt
 
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
@@ -69,8 +68,6 @@ typedef	^	AD_InputFile	LOGICAL	TwrShadow	-	-	-	"Calculate tower influence on win
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	AD_InputFile	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
-typedef	^	AD_InputFile	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
-typedef	^	AD_InputFile	CHARACTER(1024)	AA_InputFile	-	-	-	"AeroAcoustics input file name"	"quoted strings"
 typedef	^	AD_InputFile	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	AD_InputFile	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	AD_InputFile	ReKi	Patm 	-	-	-	"Atmospheric pressure" Pa
@@ -115,28 +112,20 @@ typedef	^	AD_InputFile	IntKi	DBEMT_Mod	-	-	-	"Type of dynamic BEMT (DBEMT) model
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 typedef	^	ContinuousStateType	BEMT_ContinuousStateType	BEMT	-	-	-	"Continuous states from the BEMT module"	-
-typedef	^	ContinuousStateType	AA_ContinuousStateType	AA	-	-	-	"Continuous states from the AA module"	-
 
 # Define discrete (nondifferentiable) states here:
 typedef	^	DiscreteStateType	BEMT_DiscreteStateType	BEMT	-	-	-	"Discrete states from the BEMT module"	-
-typedef	^	DiscreteStateType	AA_DiscreteStateType	AA	-	-	-	"Discrete states from the AA module"	-
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	BEMT_ConstraintStateType	BEMT	-	-	-	"Constraint states from the BEMT module"	-
-typedef	^	ConstraintStateType	AA_ConstraintStateType	AA	-	-	-	"Constraint states from the AA module"	-
 
 # Define "other" states here:
 typedef	^	OtherStateType	BEMT_OtherStateType	BEMT	-	-	-	"OtherStates from the BEMT module"	-
-typedef	^	OtherStateType	AA_OtherStateType	AA	-	-	-	"OtherStates from the AA module"	-
 
 # Define misc/optimization variables (any data that are not considered actual states) here:
 typedef	^	MiscVarType	BEMT_MiscVarType	BEMT	-	-	-	"MiscVars from the BEMT module"	-
 typedef	^	MiscVarType	BEMT_OutputType	BEMT_y	-	-	-	"Outputs from the BEMT module"	-
 typedef	^	MiscVarType	BEMT_InputType	BEMT_u	2	-	-	"Inputs to the BEMT module"	-
-typedef	^	MiscVarType	AA_MiscVarType	AA	-	-	-	"MiscVars from the AA module"	-
-typedef	^	MiscVarType	AA_OutputType	AA_y	-	-	-	"Outputs from the AA module"	-
-typedef	^	MiscVarType	AA_InputType	AA_u	-	-	-	"Inputs to the AA module"	-
-
 typedef	^	MiscVarType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
 typedef	^	MiscVarType	ReKi	WithoutSweepPitchTwist	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
 typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-
@@ -167,7 +156,6 @@ typedef	^	ParameterType	LOGICAL	TwrShadow	-	-	-	"Calculate tower influence on wi
 typedef	^	ParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	ParameterType	Logical	FrozenWake	-	-	-	"Flag that tells this module it should assume a frozen wake during linearization."	-
 typedef	^	ParameterType	Logical	CavitCheck	-	-	-	"Flag that tells us if we want to check for cavitation" -
-typedef	^	ParameterType	Logical	CompAA   -  -  -  "Compute AeroAcoustic noise" flag
 typedef	^	ParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	ParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
 typedef	^	ParameterType	IntKi	NumTwrNds	-	-	-	"Number of nodes on the tower"	-
@@ -182,7 +170,6 @@ typedef   ^  ParameterType  ReKi    Pvap      -   -   -  "Vapour pressure" Pa
 typedef   ^  ParameterType  ReKi    FluidDepth -  -   -    "Submerged hub height" m
 typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
-typedef	^	ParameterType	AA_ParameterType	AA	-	-	-	"Parameters for AA module"
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-

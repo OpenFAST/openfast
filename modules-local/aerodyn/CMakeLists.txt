@@ -43,7 +43,7 @@ set(AD_LIBS_SOURCES
   )
 
 add_library(aerodynlib ${AD_LIBS_SOURCES})
-target_link_libraries(aerodynlib nwtclibs)
+target_link_libraries(aerodynlib nwtclibs AeroAcoustics)
 
 set(AD_DRIVER_SOURCES
   src/AeroDyn_Driver.f90
@@ -53,7 +53,7 @@ set(AD_DRIVER_SOURCES
   AeroDyn_Driver_Types.f90)
 
 add_executable(aerodyn_driver ${AD_DRIVER_SOURCES})
-target_link_libraries(aerodyn_driver aerodynlib nwtclibs ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_driver aerodynlib nwtclibs AeroAcoustics ${CMAKE_DL_LIBS})
 
 install(TARGETS aerodyn_driver aerodynlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

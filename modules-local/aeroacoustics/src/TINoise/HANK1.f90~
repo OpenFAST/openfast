@@ -1,0 +1,160 @@
+!-----subroutine---------------------------------------------g.guidati--
+! 
+COMPLEX(DbKi)  function HANK1   (x)
+! 
+!-----------------------------------------------------------------------
+!               
+!     franco guidati    IAG
+!                       Uni Stuttgart
+!
+! 
+!     scope             calculate the first derivative of the 
+!                       hankel function
+!
+!     input             square of the argument k*r
+!
+!     output            H1/r 
+! 
+!.......................................................................
+!               declarations
+!.......................................................................
+      USE TIPrecision                                                  
+                                                                       
+IMPLICIT                        NONE                                   
+                                                                       
+   ! Local variables. 
+REAL(DbKi)                   :: J1, Y1 , x,x2,x4, dsi, dco
+REAL(DbKi),EXTERNAL          :: BESSJ1,BESSY1
+      
+!.......................................................................
+!              
+!.......................................................................
+
+
+      if(x.ge.64.0d0) then
+        x2 = sqrt(x)
+        x4 = sqrt(x2)
+        dsi = sin(x2-2.356194490192345)
+        dco = cos(x2-2.356194490192345)
+      endif
+      J1 = BESSJ1(x,x2,x4,dsi,dco)
+      Y1 = BESSY1(x,x2,x4,J1,dsi,dco)
+
+
+
+      HANK1 = J1 + (0.0d0,1.0d0) * Y1
+
+
+
+!.......................................................................
+!               end of function
+!.......................................................................
+     return
+!***********************************************************************
+      end function
+
+
+
+REAL(DbKi) FUNCTION bessj1(x,x2,x4,dsi,dco)
+      USE TIPrecision                                                  
+                                                                       
+IMPLICIT                        NONE                                   
+                                                                       
+   ! Local variables.                                                  
+             
+REAL(DbKi)                   :: x,x2,x4,dsi,dco
+REAL(DbKi)                   :: ax,xx,z,pp,y
+REAL(DbKi),SAVE              :: p1 = 1.0d0
+REAL(DbKi),SAVE              :: p2 = .183105d-2
+REAL(DbKi),SAVE              :: p3 = -.3516396496d-4
+REAL(DbKi),SAVE              :: p4 = .2457520174d-5
+REAL(DbKi),SAVE              :: p5 = -.240337019d-6
+REAL(DbKi),SAVE              :: q1 = .04687499995d0  
+REAL(DbKi),SAVE              :: q2 = -.2002690873d-3 
+REAL(DbKi),SAVE              :: q3 = .8449199096d-5  
+REAL(DbKi),SAVE              :: q4 = -.88228987d-6 
+REAL(DbKi),SAVE              :: q5 = .105787412d-6 
+REAL(DbKi),SAVE              :: r1 = 72362614232.d0  
+REAL(DbKi),SAVE              :: r2 = -7895059235.d0  
+REAL(DbKi),SAVE              :: r3 = 242396853.1d0  
+REAL(DbKi),SAVE              :: r4 = -2972611.439d0  
+REAL(DbKi),SAVE              :: r5 = 15704.48260d0 
+REAL(DbKi),SAVE              :: r6 = -30.16036606d0  
+REAL(DbKi),SAVE              :: s1 = 144725228442.d0  
+REAL(DbKi),SAVE              :: s2 = 2300535178.d0  
+REAL(DbKi),SAVE              :: s3 = 18583304.74d0  
+REAL(DbKi),SAVE              :: s4 = 99447.43394d0  
+REAL(DbKi),SAVE              :: s5 = 376.9991397d0  
+REAL(DbKi),SAVE              :: s6 = 1.d0  
+
+      if(abs(x).lt.64.)then
+        y=x
+        bessj1=(r1+y*(r2+y*(r3+y*(r4+y*(r5+y*r6)))))/(s1+y*(s2+y*(s3+y*(s4+y*(s5+y*s6)))))
+      else
+        ax=abs(x2)
+        z=8./ax
+        y=z**2
+!        xx=ax-2.356194491
+        bessj1=0.7978845608028654/x4*(dco*(p1+y*(p2+y*(p3+y*(p4+y*p5)))) &
+               -z*dsi*(q1+y*(q2+y*(q3+y*(q4+y*q5)))))*sign(1.0d0,x2)/x2
+      endif
+      return
+      END FUNCTION
+
+
+
+
+REAL(DbKi) FUNCTION bessy1(x,x2,x4,J1,dsi,dco)
+      USE TIPrecision                                                  
+                                                                       
+IMPLICIT                        NONE                                   
+                                                                       
+   ! Local variables.                                                  
+             
+REAL(DbKi)                   :: x,x2,x4,J1,dsi,dco
+REAL(DbKi)                   :: ax,xx,z,pp,y
+REAL(DbKi),SAVE              :: p1 = 1.0d0
+REAL(DbKi),SAVE              :: p2 = .183105d-2
+REAL(DbKi),SAVE              :: p3 = -.3516396496d-4
+REAL(DbKi),SAVE              :: p4 = .2457520174d-5
+REAL(DbKi),SAVE              :: p5 = -.240337019d-6
+REAL(DbKi),SAVE              :: q1 = .04687499995d0  
+REAL(DbKi),SAVE              :: q2 = -.2002690873d-3 
+REAL(DbKi),SAVE              :: q3 = .8449199096d-5  
+REAL(DbKi),SAVE              :: q4 = -.88228987d-6 
+REAL(DbKi),SAVE              :: q5 = .105787412d-6 
+REAL(DbKi),SAVE              :: r1 = -.4900604943d13 
+REAL(DbKi),SAVE              :: r2 = .1275274390d13 
+REAL(DbKi),SAVE              :: r3 = -.5153438139d11
+REAL(DbKi),SAVE              :: r4 = .7349264551d9  
+REAL(DbKi),SAVE              :: r5 = -.4237922726d7
+REAL(DbKi),SAVE              :: r6 = .8511937935d4 
+REAL(DbKi),SAVE              :: s1 = .2499580570d14  
+REAL(DbKi),SAVE              :: s2 = .4244419664d12
+REAL(DbKi),SAVE              :: s3 = .3733650367d10
+REAL(DbKi),SAVE              :: s4 = .2245904002d8
+REAL(DbKi),SAVE              :: s5 = .1020426050d6
+REAL(DbKi),SAVE              :: s6 = .3549632885d3
+REAL(DbKi),SAVE              :: s7 = 1.d0  
+
+      
+!U    USES bessj1
+
+      if(x.lt.64.)then
+        y=x
+        bessy1=(r1+y*(r2+y*(r3+y*(r4+y*(r5+y*r6)))))/(s1+y*(s2+y*(s3+  &
+                y*(s4+y*(s5+y*(s6+y*s7))))))+.636619772*(J1*0.5*log(y)-1./y)
+      else
+        z=8./x2
+        y=z**2.0
+!        xx=x2-2.356194491
+        bessy1=0.7978845608028654/x4*(dsi*(p1+y*(p2+y*(p3+y*(p4+y*  &
+               p5))))+z*dco*(q1+y*(q2+y*(q3+y*(q4+y*q5)))))/x2
+      endif
+      return
+      END FUNCTION
+
+
+
+
+

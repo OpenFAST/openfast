@@ -1,0 +1,119 @@
+!-----subroutine---------------------------------------------g.guidati--
+! 
+subroutine DETSTR 
+! 
+!-----------------------------------------------------------------------
+!               
+!     franco guidati    IAG
+!                       Uni Stuttgart
+!
+! 
+!     scope             determine streamlines
+! 
+!.......................................................................
+!               declarations
+!.......................................................................
+      USE TINoiseGeneric
+      USE TINoiseGeo
+      USE TINoiseInput
+      USE TINoiseDDD
+      USE TIPrecision                                                 
+                                                                      
+IMPLICIT                        NONE                                  
+                                                                      
+                                                                      
+   ! Local variables.                                                 
+                                                                      
+INTEGER(4)                   :: k,khi,klo,i,j, ii, istr, ipath                           
+                                                                      
+REAL(DbKi)                   :: tang,s,cl,ppp,yp1,ypn,dy1ds,dy2ds,usq,cp
+REAL(DbKi)                   :: tang_old,xstau1,xstau2, xsta2, d1y1, d1y2
+REAL(DbKi)                   :: str1(mstr),str2(mstr),ps(mstr)    
+      
+!.......................................................................
+!              
+!.......................................................................
+      
+      yp1 = 1.0d33
+      ypn = 1.0d33
+
+
+
+  
+      s1 = 0.0d0
+      s2 = swork(n+1)
+!      write(22,*) 'ZONE'
+!      do i=1,na+1
+!        write(22,*) yc1at(i),yc2at(i),0.0
+!      end do
+
+!.......................................................................
+!     determine stagnation point
+!.......................................................................
+
+!      write(22,*) 'ZONE'
+      do j=1,10000
+        s = dble(n) * (0.25 + 0.5 * dble(j)/10000.)
+        call SPL_EX  (swork,n+1,s,khi,klo)
+        CALL SPL_EX1 (swork, pots, d2pots, n+1, s, ppp, tang, khi, klo)
+        if(tang*tang_old.lt.0.0d0) then
+          goto 1000
+        endif
+        tang_old = tang
+      enddo
+
+1000  call SPL_EX  (swork,n+1,s,khi,klo)
+      call SPL_EX1 (swork,yc1,d2yc1,n+1,s,xstau1,d1y1,khi,klo)
+      call SPL_EX1 (swork,yc2,d2yc2,n+1,s,xstau2,d1y2,khi,klo)
+
+      str1(1) = xstau1 + d1y2 * 0.005 / sqrt(d1y1**2+d1y2**2)
+      str2(1) = xstau2 - d1y1 * 0.005 / sqrt(d1y1**2+d1y2**2)
+      call STREAM(-0.0025d0,str1,str2,ps)
+      do istr=1,nstr-1
+        ii = istr
+        if((str1(istr)-xsta1)*(str1(istr+1)-xsta1).lt.0.0) then
+          goto 1010
+        endif
+
+!        write(22,*) str1(istr),str2(istr),0.0
+      enddo
+1010  xsta2 = str2(ii) + (str2(ii+1)-str2(ii))*(xsta1-str1(ii))/(str1(ii+1)-str1(ii))
+     
+      
+!.......................................................................
+!     determine streamlines
+!.......................................................................
+
+
+      do istr=1,nstr
+        tim(istr) = deltat * dble(istr)
+      enddo
+
+      do ipath=1,npath
+!        write(22,*) 'ZONE'
+!	write(*,*) ipath,npath
+        pstr1(1,ipath) = xsta1
+        pstr2(1,ipath) = xsta2 + (dble(ipath-1)-dble(npath-1) * 0.5d0)* dpath
+        call STREAM(deltat,pstr1(1,ipath),pstr2(1,ipath),poti(1,ipath))
+        
+	do istr=1,nstr
+!          write(22,*) real(pstr1(istr,ipath)),real(pstr2(istr,ipath)), real(dble(istr)*deltat)
+	  pstr1(istr,ipath) = pstr1(istr,ipath) 
+	end do
+!        call flush(22)
+
+        call SPL_PP (tim,pstr1 (1,ipath),nstr,yp1,ypn,d2pstr1 (1,ipath))
+        call SPL_PP (tim,pstr2 (1,ipath),nstr,yp1,ypn,d2pstr2 (1,ipath))
+	call SPL_PP (tim,poti  (1,ipath),nstr,yp1,ypn,d2poti  (1,ipath))
+        
+      enddo
+!      stop
+!      close(22)      
+
+!.......................................................................
+!               end of subroutine
+!.......................................................................
+      return
+!***********************************************************************
+      end 
+

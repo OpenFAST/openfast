@@ -1,0 +1,36 @@
+MODULE TNOConstants
+
+USE Precision
+
+REAL (ReKi),PARAMETER :: Cnuk = 5.5
+REAL (ReKi),PARAMETER :: kappa = 0.41
+REAL (ReKi),PARAMETER :: Cmu = 0.09
+REAL (ReKi),PARAMETER :: pi = 3.1415
+
+INTEGER (4),PARAMETER :: limit = 5000
+
+INTEGER (4)             :: i_omega
+REAL (ReKi),ALLOCATABLE :: omega(:)
+
+END MODULE TNOConstants
+
+!===========================================================
+
+
+!===========================================================
+
+MODULE Wavenumber
+
+USE Precision
+
+REAL (ReKi)           :: k
+REAL (ReKi)           :: k1
+REAL (ReKi)           :: k3
+
+END MODULE Wavenumber
+
+!===========================================================
+
+
+!===========================================================
+
