@@ -1924,7 +1924,7 @@ SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, u_AD, u, p, x, xd, z, Ot
    call AA_Init(InitInp, u, p%AA,  x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
    call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
          
-   if (.not. equalRealNos(Interval, p%DT) )
+   if (.not. equalRealNos(Interval, p%DT) ) then
       call SetErrStat( ErrID_Fatal, "DTAero was changed in Init_AAmodule(); this is not allowed.", ErrStat2, ErrMsg2, RoutineName)
    endif
 
