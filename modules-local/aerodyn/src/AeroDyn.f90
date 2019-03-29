@@ -1472,22 +1472,14 @@ end subroutine SetInputsForBEMT
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets m%AA_u.
 subroutine SetInputsForAA(p, u, m, errStat, errMsg)
-
-   type(AD_ParameterType),  intent(in   )  :: p                               !< AD parameters
-   type(AD_InputType),      intent(in   )  :: u                               !< AD Inputs at Time
-   type(AD_MiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
-   integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
-   character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
-      
+   type(AD_ParameterType),  intent(in   ) :: p        !< AD parameters
+   type(AD_InputType),      intent(in   ) :: u        !< AD Inputs at Time
+   type(AD_MiscVarType),    intent(inout) :: m        !< Misc/optimization variables
+   integer(IntKi),          intent(  out) :: ErrStat  !< Error status of the operation
+   character(*),            intent(  out) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! local variables
-   
-   
-   integer(intKi)                          :: i                      ! loop counter for nodes
-   integer(intKi)                          :: j                      ! loop counter for blades
-   integer(intKi)                          :: ErrStat2
-   character(ErrMsgLen)                    :: ErrMsg2
-   character(*), parameter                 :: RoutineName = 'SetInputsForAA'
-   
+   integer(intKi)                         :: i        ! loop counter for nodes
+   integer(intKi)                         :: j        ! loop counter for blades
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1495,31 +1487,26 @@ subroutine SetInputsForAA(p, u, m, errStat, errMsg)
    do j=1,p%NumBlades
       do i = 1,p%NumBlNds
          ! Get local orientation matrix to transform from blade element coordinates to global coordinates
-      !m%AA_u%RotLtoG(:,:,i,j) = m%WithoutSweepPitchTwist(:,:,i,j) 
-      
-      m%AA_u%RotLtoG(:,:,i,j) = u%BladeMotion(j)%Orientation(:,:,i)
+         !m%AA_u%RotLtoG(:,:,i,j) = m%WithoutSweepPitchTwist(:,:,i,j) 
+         m%AA_u%RotLtoG(:,:,i,j) = u%BladeMotion(j)%Orientation(:,:,i)
 
          ! Get blade element aerodynamic center in global coordinates
-      m%AA_u%AeroCent_G(:,i,j) = u%BladeMotion(j)%Position(:,i) + u%BladeMotion(j)%TranslationDisp(:,i)
+         m%AA_u%AeroCent_G(:,i,j) = u%BladeMotion(j)%Position(:,i) + u%BladeMotion(j)%TranslationDisp(:,i)
+
          ! Set the blade element relative velocity (including induction)
-      m%AA_u%Vrel(i,j) = m%BEMT_y%Vrel(i,j)
+         m%AA_u%Vrel(i,j) = m%BEMT_y%Vrel(i,j)
    
          ! Set the blade element angle of attack
-      m%AA_u%AoANoise(i,j) = m%BEMT_y%AOA(i,j)
+         m%AA_u%AoANoise(i,j) = m%BEMT_y%AOA(i,j)
 
          ! Set the blade element undisturbed flow
-      m%AA_u%Inflow(1,i,j) = u%InflowonBlade(1,i,j)
-      m%AA_u%Inflow(2,i,j) = u%InflowonBlade(2,i,j)
-      m%AA_u%Inflow(3,i,j) = u%InflowonBlade(3,i,j)
+         m%AA_u%Inflow(1,i,j) = u%InflowonBlade(1,i,j)
+         m%AA_u%Inflow(2,i,j) = u%InflowonBlade(2,i,j)
+         m%AA_u%Inflow(3,i,j) = u%InflowonBlade(3,i,j)
       end do
    end do
-   
-   
-  
 end subroutine SetInputsForAA
 !----------------------------------------------------------------------------------------------------------------------------------
-
-
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from BEMT (stored in m%BEMT_y) into values on the AeroDyn BladeLoad output mesh.
@@ -1859,46 +1846,39 @@ END SUBROUTINE Init_AFIparams
 !> This routine initializes the Airfoil Noise module from within AeroDyn.
 SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
-   type(AD_InitInputType),         intent(in   ) :: DrvInitInp    !< AeroDyn-level initialization inputs
-   type(AD_InputFile),             intent(in   ) :: AD_InputFileData  !< All the data in the AeroDyn input file
-   type(AD_InputType),             intent(in   ) :: u_AD           !< AD inputs - used for input mesh node positions
+   type(AD_InitInputType),       intent(in   ) :: DrvInitInp    !< AeroDyn-level initialization inputs
+   type(AD_InputFile),           intent(in   ) :: AD_InputFileData  !< All the data in the AeroDyn input file
+   type(AD_InputType),           intent(in   ) :: u_AD           !< AD inputs - used for input mesh node positions
    type(AA_InputType),           intent(  out) :: u              !< An initial guess for the input; input mesh must be defined
-   type(AD_ParameterType),         intent(inout) :: p              !< Parameters ! intent out b/c we set the AA parameters here
+   type(AD_ParameterType),       intent(inout) :: p              !< Parameters ! intent out b/c we set the AA parameters here
    type(AA_ContinuousStateType), intent(  out) :: x              !< Initial continuous states
    type(AA_DiscreteStateType),   intent(  out) :: xd             !< Initial discrete states
    type(AA_ConstraintStateType), intent(  out) :: z              !< Initial guess of the constraint states
    type(AA_OtherStateType),      intent(  out) :: OtherState     !< Initial other states
    type(AA_OutputType),          intent(  out) :: y              !< Initial system outputs (outputs are not calculated;
-                                                                   !!   only the output mesh is initialized)
+                                                                 !!   only the output mesh is initialized)
    type(AA_MiscVarType),         intent(  out) :: m              !< Initial misc/optimization variables
-   integer(IntKi),                 intent(  out) :: errStat        !< Error status of the operation
-   character(*),                   intent(  out) :: errMsg         !< Error message if ErrStat /= ErrID_None
-
-
-      ! Local variables
-   real(DbKi)                                    :: Interval       ! Coupling interval in seconds: the rate that
-                                                                   !   (1) BEMT_UpdateStates() is called in loose coupling &
-                                                                   !   (2) BEMT_UpdateDiscState() is called in tight coupling.
-                                                                   !   Input is the suggested time from the glue code;
-                                                                   !   Output is the actual coupling interval that will be used
-                                                                   !   by the glue code.
+   integer(IntKi),               intent(  out) :: errStat        !< Error status of the operation
+   character(*),                 intent(  out) :: errMsg         !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   real(DbKi)                                  :: Interval       ! Coupling interval in seconds: the rate that
+                                                                 !   (1) BEMT_UpdateStates() is called in loose coupling &
+                                                                 !   (2) BEMT_UpdateDiscState() is called in tight coupling.
+                                                                 !   Input is the suggested time from the glue code;
+                                                                 !   Output is the actual coupling interval that will be used
+                                                                 !   by the glue code.
    type(AA_InitInputType)                      :: InitInp        ! Input data for initialization routine
    type(AA_InitOutputType)                     :: InitOut        ! Output for initialization routine
-   integer(intKi)                                :: i              ! airfoil file index                            
-   integer(intKi)                                :: j              ! node index
-   integer(intKi)                                :: k              ! blade index
-   integer(IntKi)                                :: ErrStat2
-   character(ErrMsgLen)                          :: ErrMsg2
-   character(*), parameter                       :: RoutineName = 'Init_AAmodule'
-
-   ! note here that each blade is required to have the same number of nodes
-   
+   integer(intKi)                              :: i              ! airfoil file index                            
+   integer(intKi)                              :: j              ! node index
+   integer(intKi)                              :: k              ! blade index
+   integer(IntKi)                              :: ErrStat2
+   character(ErrMsgLen)                        :: ErrMsg2
+   character(*), parameter                     :: RoutineName = 'Init_AAmodule'
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   
-   
-      ! set initialization data here:   
+   ! Transfer from parameters and input file to init input
    Interval                 = p%DT   
    InitInp%NumBlades        = p%NumBlades
    InitInp%NumBlNds         = p%NumBlNds
@@ -1908,38 +1888,30 @@ SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, u_AD, u, p, x, xd, z, Ot
    InitInp%RootName         = DrvInitInp%RootName
    InitInp%SpdSound         = AD_InputFileData%SpdSound
    InitInp%HubHeight	    = DrvInitInp%HubPosition(3)
+
+   ! --- Transfer of airfoil info
    ALLOCATE ( InitInp%AFInfo( size(p%AFI%AFInfo) ), STAT=ErrStat2 )
-      IF ( ErrStat2 /= 0 )  THEN
-         CALL SetErrStat ( ErrID_Fatal, 'Error allocating memory for the InitInp%AFInfo array.', ErrStat2, ErrMsg2, RoutineName )
-         RETURN
-      ENDIF
-   
+   IF ( ErrStat2 /= 0 )  THEN
+      CALL SetErrStat ( ErrID_Fatal, 'Error allocating memory for the InitInp%AFInfo array.', ErrStat2, ErrMsg2, RoutineName )
+      RETURN
+   ENDIF
    do i=1,size(p%AFI%AFInfo)
       call AFI_Copyafinfotype( p%AFI%AFInfo(i), InitInp%AFInfo(i), MESH_NEWCOPY, errStat2, errMsg2 )
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    end do
   
+   ! --- Allocate and set AirfoilID, chord and Span for each blades
+   ! note here that each blade is required to have the same number of nodes
    call AllocAry( InitInp%BlAFID, p%NumBlNds, p%NumBlades,'InitInp%BlAFID', errStat2, ErrMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   
-   
-   !=======================================
-   
-   !InitInp%RootName         = TRIM(DrvInitInp%RootName)//'.AA'
-   
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( InitInp%BlChord, p%NumBlNds, p%NumBlades, 'BlChord', errStat2, ErrMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   
-
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    call AllocAry( InitInp%BlSpn,   p%NumBlNds, p%NumBlades, 'BlSpn', errStat2, ErrMsg2 )
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   
-   
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) then
       call cleanup()
       return
    end if
-   
    do k = 1, p%NumBlades
       do j=1, AD_InputFileData%BladeProps(k)%NumBlNds
          InitInp%BlChord(j,k)  = AD_InputFileData%BladeProps(k)%BlChord(  j)
@@ -1948,39 +1920,18 @@ SUBROUTINE Init_AAmodule( DrvInitInp, AD_InputFileData, u_AD, u, p, x, xd, z, Ot
       end do
    end do
    
+   ! --- AeroAcoustics initialization call
    call AA_Init(InitInp, u, p%AA,  x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+   call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
          
-   if (.not. equalRealNos(Interval, p%DT) ) &
+   if (.not. equalRealNos(Interval, p%DT) )
       call SetErrStat( ErrID_Fatal, "DTAero was changed in Init_AAmodule(); this is not allowed.", ErrStat2, ErrMsg2, RoutineName)
+   endif
+
    call Cleanup()
-   return
-      
-   !call NN_Init(InitInData, NN%u(1), NN%p, NN%x, NN%xd, NN%z, NN%OtherState, NN%y, NN%m, dt, InitOutData, ErrStat2, ErrMsg2 )
-   !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-   !if (ErrStat >= AbortErrLev) then
-   !   call Cleanup()
-   !   return
-   !end if
-   
-   ! we know exact values, so we're going to initialize inputs this way (instead of using the input guesses from AD_Init)
-   !NN%InputTime = -999
-   !DO j = 1-numInp, 0
-   !   call Set_NN_Inputs(iCase,j,DvrData,NN,errStat2,errMsg2)   
-   !      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   !END DO              
-   !
-   !   
-   !   ! move NN initOut data to NN Driver
-   !call move_alloc( InitOutData%WriteOutputHdr, DvrData%OutFileData%WriteOutputHdr )
-   !call move_alloc( InitOutData%WriteOutputUnt, DvrData%OutFileData%WriteOutputUnt )   
-   !  
-   !DvrData%OutFileData%NN_ver = InitOutData%ver
-   !
-   
-   
    
 contains   
+
    subroutine Cleanup()
       call AA_DestroyInitInput ( InitInp, ErrStat2, ErrMsg2 )   
       call AA_DestroyInitOutput( InitOut, ErrStat2, ErrMsg2 )   

@@ -27,24 +27,16 @@ module AeroAcoustics
    use AeroAcoustics_IO
    use NWTC_LAPACK
    USE NWTC_FFTPACK
-   
-   
    implicit none
 
    private
-         
-
    ! ..... Public Subroutines ...................................................................................................
-
    public :: AA_Init                           ! Initialization routine
    public :: AA_End                            ! Ending routine (includes clean up)
-
    public :: AA_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
                                                !   continuous states, and updating discrete states
    public :: AA_CalcOutput                     ! Routine for computing outputs
-
 !!   public :: AA_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
-   
 
    contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -54,14 +46,12 @@ module AeroAcoustics
 !! The initial states and initial guess for the input are defined.
 subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
-
    type(AA_InitInputType),       intent(in   ) :: InitInp       !< Input data for initialization routine
    type(AA_InputType),           intent(  out) :: u             !< An initial guess for the input; input mesh must be defined
    type(AA_ParameterType),       intent(  out) :: p             !< Parameters
    type(AA_ContinuousStateType), intent(  out) :: x             !< Initial continuous states
    type(AA_DiscreteStateType),   intent(  out) :: xd            !< Initial discrete states
    type(AA_ConstraintStateType), intent(  out) :: z             !< Initial guess of the constraint states
-
    type(AA_OtherStateType),      intent(  out) :: OtherState    !< Initial other states
    type(AA_OutputType),          intent(  out) :: y             !< Initial system outputs (outputs are not calculated;
                                                                 !!   only the output mesh is initialized)
@@ -75,59 +65,44 @@ subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    type(AA_InitOutputType),      intent(  out) :: InitOut       !< Output for initialization routine
    integer(IntKi),               intent(  out) :: errStat       !< Error status of the operation
    character(*),                 intent(  out) :: errMsg        !< Error message if ErrStat /= ErrID_None
-   
-
-      ! Local variables
+   ! Local variables
    integer(IntKi)                              :: i             ! loop counter
-   
    integer(IntKi)                              :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                        :: errMsg2       ! temporary error message 
-      
    type(AA_InputFile)                          :: InputFileData ! Data stored in the module's input file
    integer(IntKi)                              :: UnEcho        ! Unit number for the echo file
-   
    character(*), parameter                     :: RoutineName = 'AA_Init'
    
-   
-      ! Initialize variables for this routine
-
+   ! Initialize variables for this routine
    errStat = ErrID_None
    errMsg  = ""
    UnEcho  = -1
-
-      ! Initialize the NWTC Subroutine Library
-
+   ! Initialize the NWTC Subroutine Library
    call NWTC_Init( EchoLibVer=.FALSE. )
-
-      ! Display the module information
-
+   ! Display the module information
    call DispNVD( AA_Ver )
-   
 
-   p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we know how many blade files to read
    !bjj: note that we haven't validated p%NumBlades before using it below!
+   p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we know how many blade files to read
    p%RootName  = TRIM(InitInp%RootName)//'.NN'
    
-      ! Read the primary AeroAcoustics input file in AeroAcoustics_IO
+   ! Read the primary AeroAcoustics input file in AeroAcoustics_IO
    call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, p%NumBlades, UnEcho, ErrStat2, ErrMsg2 )   
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
       end if
-         
       
-      ! Validate the inputs
+   ! Validate the inputs
    call ValidateInputData( InputFileData, p%NumBlades, ErrStat2, ErrMsg2 )
-
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
       end if
     
-      ! Validate Initialization Input data ( not found in the AeroAcoustics input file )
-
+   ! Validate Initialization Input data ( not found in the AeroAcoustics input file )
    if (InitInp%AirDens <= 0.0)  call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%KinVisc <= 0.0)  call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InitInp%SpdSound <= 0.0) call SetErrStat ( ErrID_Fatal, 'The speed of sound (SpdSound) must be greater than zero.', ErrStat, ErrMsg, RoutineName )  
@@ -135,63 +110,45 @@ subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
          call Cleanup()
          return
       end if
-      
-      !............................................................................................
-      ! Define parameters
-      !............................................................................................
-     ! set the rest of the parameters
+
+   ! Define parameters
    call SetParameters( InitInp, InputFileData, p, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
       end if
-   
-      !............................................................................................
-      ! Define and initialize inputs here 
-      !............................................................................................
-  call Init_u( u, p, InputFileData, InitInp, errStat2, errMsg2 ) 
+
+   ! Define and initialize inputs 
+   call Init_u( u, p, InputFileData, InitInp, errStat2, errMsg2 ) 
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
       end if
-     
-      !............................................................................................
-      ! Define outputs here
-      !............................................................................................
+
+   ! Define outputs here
    call Init_y(y, u, p, errStat2, errMsg2) ! do this after input meshes have been initialized
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-   
-   
-      !............................................................................................
-      ! Initialize states and misc vars
-      !............................................................................................
+
+   ! Initialize states and misc vars
    call Init_MiscVars(m, p, u, y, errStat2, errMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      
    call Init_States(xd, p,  errStat2, errMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
 
-
-      !............................................................................................
-      ! Define initialization output here
-      !............................................................................................
-
+   ! Define initialization output here
    call AA_SetInitOut(p, InputFileData, InitOut, errStat2, errMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-
    call AA_InitializeOutputFile(p, InputFileData,InitOut,errStat2, errMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-            
    call Cleanup() 
       
 contains
-   subroutine Cleanup()
 
+   subroutine Cleanup()
       CALL AA_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
       IF ( UnEcho > 0 ) CLOSE( UnEcho )
-      
    end subroutine Cleanup
 
 end subroutine AA_Init
@@ -200,17 +157,11 @@ end subroutine AA_Init
 !> This routine validates the inputs from the AeroDyn input files.
 SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
 !..................................................................................................................................
-      
-      ! Passed variables:
-
    type(AA_InputFile),       intent(in)     :: InputFileData                       !< All the data in the AeroDyn input file
    integer(IntKi),           intent(in)     :: NumBl                               !< Number of blades
    integer(IntKi),           intent(out)    :: ErrStat                             !< Error status
    character(*),             intent(out)    :: ErrMsg                              !< Error message
-
-
-   
-      ! local variables
+   ! local variables
    integer(IntKi)                           :: k                                   ! Blade number
    integer(IntKi)                           :: j                                   ! node number
    character(*), parameter                  :: RoutineName = 'ValidateInputData'
@@ -218,16 +169,14 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   
    if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, ErrMsg, RoutineName )
    if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )
 
    if (InputFileData%IBLUNT /= IBLUNT_None .and. InputFileData%IBLUNT /= IBLUNT_BPM) then
-	print*, 'Your value IBLUNT in AeroAcousticsInput.dat is ', InputFileData%IBLUNT
+	  print*, 'Your value IBLUNT in AeroAcousticsInput.dat is ', InputFileData%IBLUNT
       call SetErrStat ( ErrID_Fatal, &
       'IBLUNT must '//trim(num2lstr(IBLUNT_None))//' (none) or '//trim(num2lstr(IBLUNT_BPM))//' (Bluntness noise calculated).', ErrStat, ErrMsg, RoutineName ) 
    endif
-
 
    if (InputFileData%ILAM /= ILAM_None .and. InputFileData%ilam /= ILAM_BPM) then
       call SetErrStat ( ErrID_Fatal, 'ILAM must be '//trim(num2lstr(ILAM_None))//' No calculation '//&
@@ -235,13 +184,13 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    end if
 
    if (InputFileData%ITIP /= ITIP_None .and. InputFileData%ITIP /= ITIP_ON) then
-	print*, 'Your value ITIP in AeroAcousticsInput.dat is ', InputFileData%ITIP
+      print*, 'Your value ITIP in AeroAcousticsInput.dat is ', InputFileData%ITIP
       call SetErrStat ( ErrID_Fatal, 'ITIP must be '//trim(num2lstr(ITIP_None))//' (Off) or '//&
                         trim(num2lstr(ITIP_On))//' (ITIP On).', ErrStat, ErrMsg, RoutineName ) 
    end if   
 
    if (InputFileData%ITRIP /= ITRIP_None .and. InputFileData%ITRIP /= ITRIP_Heavy .and. InputFileData%ITRIP /= ITRIP_Light) then
-	print*, 'Your value ITRIP in AeroAcousticsInput.dat is ', InputFileData%ITRIP
+	  print*, 'Your value ITRIP in AeroAcousticsInput.dat is ', InputFileData%ITRIP
       call SetErrStat ( ErrID_Fatal,'ITRIP must be '//trim(num2lstr(ITRIP_None))//' (none) or '//trim(num2lstr(ITRIP_Heavy))//&
 	' (heavily tripped BL Calculation) or '//trim(num2lstr(ITRIP_Light))//' (lightly tripped BL)' ,ErrStat, ErrMsg, RoutineName ) 
    end if 
