@@ -2023,6 +2023,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
 !   CALL ReadVar( UnIn, InputFile, InputFileData%AddedMass, "AddedMass", "Include added mass effects? (flag)", ErrStat2, ErrMsg2, UnEc)
      ! CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+      ! CompAA - Compute AeroAcoustics? (flag):
+   CALL ReadVar( UnIn, InputFile, InputFileData%CompAA, "CompAA", "Compute AeroAcoustics? (flag)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    
+      ! AA_Inputfile
+   CALL ReadVar ( UnIn, InputFile, InputFileData%AA_InputFile, "AA_Inputfile", "AeroAcoustics Input filename", ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF ( PathIsRelative( InputFileData%AA_InputFile ) ) InputFileData%AA_InputFile = TRIM(PriPath)//TRIM(InputFileData%AA_InputFile)
       
       ! Return on error at end of section
    IF ( ErrStat >= AbortErrLev ) THEN
