@@ -14,20 +14,14 @@
 # limitations under the License.
 #
 
-set(MODULE_SOURCES
-  src/BlankModVKM.f90
-  src/CohStructures.f90
-  src/Profiles.f90
-  src/RandNum.f90
-  src/Root_Searching.f90
-  src/TS_FileIO.f90
-  src/TSsubs.f90
-  src/TurbSim.f90
-  src/TurbSim_Types.f90
-  src/VelocitySpectra.f90
-  )
+include(GetGitRevisionDescription)
+git_describe(GIT_DESCRIBE)
+add_definitions(-DGIT_VERSION_INFO="${GIT_DESCRIBE}")
 
-add_executable(turbsim ${MODULE_SOURCES})
-target_link_libraries(turbsim nwtclibs versioninfolib)
+add_library(versioninfolib src/VersionInfo.f90)
 
-install(TARGETS turbsim RUNTIME DESTINATION bin)
+install(TARGETS versioninfolib
+  EXPORT "${CMAKE_PROJECT_NAME}Libraries"
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)

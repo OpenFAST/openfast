@@ -22,7 +22,8 @@ module AeroDyn_Driver_Subs
    
    use AeroDyn_Driver_Types   
    use AeroDyn
-    
+   use VersionInfo
+
    implicit none   
    
    TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'AeroDyn_driver', '', '' )  ! The version number of this program.

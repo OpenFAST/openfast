@@ -39,7 +39,7 @@ set(BD_DRIVER_SOURCES
   src/Driver_Beam_Subs.f90)
 
 add_executable(beamdyn_driver ${BD_DRIVER_SOURCES})
-target_link_libraries(beamdyn_driver beamdynlib nwtclibs ${CMAKE_DL_LIBS})
+target_link_libraries(beamdyn_driver beamdynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
 install(TARGETS beamdyn_driver
   RUNTIME DESTINATION bin

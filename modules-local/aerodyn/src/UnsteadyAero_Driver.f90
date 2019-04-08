@@ -32,7 +32,8 @@ program UnsteadyAero_Driver
    use UnsteadyAero_Types
    use UnsteadyAero
    use UA_Dvr_Subs
-   
+   USE VersionInfo
+
    implicit none
 
    
