@@ -57,7 +57,15 @@ set(AD_DRIVER_SOURCES
 add_executable(aerodyn_driver ${AD_DRIVER_SOURCES})
 target_link_libraries(aerodyn_driver aerodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS aerodyn_driver aerodynlib
+# UnsteadyAero driver
+set(UA_DRIVER_SOURCES
+  src/UnsteadyAero_Driver.f90
+  src/UA_Dvr_Subs.f90
+)
+add_executable(unsteadyaero_driver ${UA_DRIVER_SOURCES})
+target_link_libraries(unsteadyaero_driver aerodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
+
+install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
