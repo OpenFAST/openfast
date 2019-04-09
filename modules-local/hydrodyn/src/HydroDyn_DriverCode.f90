@@ -27,6 +27,7 @@ PROGRAM HydroDynDriver
    USE HydroDyn_Types
    USE HydroDyn_Output
    USE ModMesh_Types
+   USE VersionInfo
    
    IMPLICIT NONE
    

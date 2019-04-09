@@ -4457,56 +4457,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE ProgWarn 
-   
-!=======================================================================
-!> This routine outputs the git hash associate with the current codebase.
-   FUNCTION QueryGitVersion()
-   
-      ! Passed variables.
-   
-   !INTEGER(IntKi),     INTENT(OUT)     :: ErrStat                              ! Error status 
-   !CHARACTER(*),       INTENT(OUT)     :: ErrMsg                               ! Error message 
-      
-      ! Function declaration.
 
-   CHARACTER(200)                      :: QueryGitVersion                      ! This function.
-      
-      ! Local variables.
-
-   INTEGER(IntKi)                      :: UnIn                                 ! Unit number for reading file                                        
-   INTEGER(IntKi)                      :: ErrStat2                             ! Temporary Error status 
-   CHARACTER(ErrMsgLen)                :: ErrMsg2                              ! Temporary Error message 
-   
-   !ErrStat = ErrID_None 
-   !ErrMsg  = '' 
-   
-   QueryGitVersion = 'unversioned' 
-   
-   ! VS build method for obtaining the git version info.
-   ! This requires setting:
-   !  1) GIT_INCLUDE_FILE = '$(ProjectDir)\..\gitVersionInfo.h' preprocessor option on this file or the project containing this file.
-   !  2) Creating a prebuild event on the project file producing the resulting binary (i.e., FAST.exe) with the following command: ..\CreateGitVersion.bat
-   !  3) The bat file, CreateGitVersion.bat, located in the vs-build folder of the openfast repository, which contains the git command used to obtain the git info
-   !         @ECHO off
-   !         SET IncludeFile=..\gitVersionInfo.h
-   !         
-   !         <NUL SET /p IncludeTxt=#define GIT_VERSION_INFO '> %IncludeFile%
-   !         FOR /f %%a IN ('git describe --abbrev^=7 --always --tags --dirty') DO <NUL SET /p IncludeTxt=%%a>> %IncludeFile%
-   !         ECHO '>> %IncludeFile%
-   !         EXIT /B 0
-   !     This creates the gitVersionInfo.h file in the vs-build folder
-   
-#ifdef GIT_INCLUDE_FILE
-#include GIT_INCLUDE_FILE
-#endif
-
-#ifdef GIT_VERSION_INFO
-QueryGitVersion = GIT_VERSION_INFO
-#endif
-
-   RETURN
-   END FUNCTION QueryGitVersion
-   
 !=======================================================================
 !> \copydoc nwtc_io::int2lstr
    FUNCTION R2LStr4 ( Num )

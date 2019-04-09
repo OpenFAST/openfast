@@ -25,6 +25,7 @@ PROGRAM TestSubDyn
    USE SubDyn
    USE SubDyn_Types
    USE SubDyn_Output
+   USE VersionInfo
 
    IMPLICIT NONE
 
