@@ -321,5 +321,6 @@
 				<Tool Name="VFFortranCompilerTool" DisableSpecificDiagnostics="5268" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules-local\aerodyn\src\UA_Dvr_subs.f90"/>
 		<File RelativePath="..\..\modules-local\aerodyn\src\UnsteadyAero.f90"/>
-		<File RelativePath="..\..\modules-local\aerodyn\src\UnsteadyAero_Driver.f90"/></Filter></Filter></Files>
+		<File RelativePath="..\..\modules-local\aerodyn\src\UnsteadyAero_Driver.f90"/></Filter>
+		<File RelativePath="..\..\modules-local\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

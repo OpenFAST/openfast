@@ -306,5 +306,6 @@
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\build\types-files\UnsteadyAero_Types.f90"/></Filter>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\UnsteadyAero.f90"/></Filter></Filter></Files>
+		<File RelativePath="..\..\modules-local\AeroDyn\src\UnsteadyAero.f90"/></Filter>
+		<File RelativePath="..\..\modules-local\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
