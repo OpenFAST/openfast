@@ -75,5 +75,6 @@
 		<File RelativePath="..\..\modules-local\turbsim\src\TSsubs.f90"/>
 		<File RelativePath="..\..\modules-local\turbsim\src\TurbSim.f90"/>
 		<File RelativePath="..\..\modules-local\turbsim\src\TurbSim_Types.f90"/>
-		<File RelativePath="..\..\modules-local\turbsim\src\VelocitySpectra.f90"/></Filter></Filter></Files>
+		<File RelativePath="..\..\modules-local\turbsim\src\VelocitySpectra.f90"/></Filter>
+		<File RelativePath="..\..\modules-local\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

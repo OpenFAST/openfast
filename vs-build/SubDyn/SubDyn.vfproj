@@ -178,5 +178,6 @@
 		<File RelativePath="..\..\modules-local\subdyn\src\SD_FEM.f90"/>
 		<File RelativePath="..\..\modules-local\subdyn\src\SubDyn.f90"/>
 		<File RelativePath="..\..\modules-local\subdyn\src\SubDyn_Driver.f90"/>
-		<File RelativePath="..\..\modules-local\subdyn\src\SubDyn_Output.f90"/></Filter></Filter></Files>
+		<File RelativePath="..\..\modules-local\subdyn\src\SubDyn_Output.f90"/></Filter>
+		<File RelativePath="..\..\modules-local\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
