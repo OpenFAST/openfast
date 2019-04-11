@@ -93,11 +93,11 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! local variables
-   INTEGER(IntKi)                                    :: NumOuts     ! number of outputs; would probably be in the parameter type
-   INTEGER(IntKi)                                    :: ErrStat2    ! local error status
-   CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! local error message
+   INTEGER(IntKi)                                    :: I           ! Loop counter
+   INTEGER(IntKi)                                    :: NumOuts     ! Number of outputs; would probably be in the parameter type
+   INTEGER(IntKi)                                    :: ErrStat2    ! Local error status
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! Local error message
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ExtPtfm_Init'
-
    ! Initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -109,15 +109,19 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NumOuts = 0   
    p%nTot = -1   
    p%nCB = -1   
-   call ReadPrimaryFile( InitInp%InputFile, p, ErrStat2, ErrMsg2 )
-   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-   if (errStat >= AbortErrLev) return
+   call ReadPrimaryFile( InitInp%InputFile, p, ErrStat2, ErrMsg2 ); if (Failed()) return
    write(*,*)'Total number of DOF :',p%nTot
    write(*,*)'Number of CB modes  :',p%nCB
    write(*,*)'Number of time steps:',p%nPtfmFt
-   
-   ! Define initial system states here:
-   x%DummyContState           = 0.0_ReKi
+
+   ! Set the constant state matrices A,B,C,D
+   call SetStateMatrices(p, ErrStat2, ErrMsg2)
+  
+   ! Allocate and init Continuous states
+   call AllocAry( x%x2, p%nCB,'CB states',  ErrStat2,ErrMsg2); if (Failed()) return
+   do I=1,6;     x%x1(I)=0; end do
+   do I=1,p%nCB; x%x2(I)=0; end do
+   ! Other states
    xd%DummyDiscState          = 0.0_ReKi
    z%DummyConstrState         = 0.0_ReKi
    OtherState%DummyOtherState = 0.0_ReKi
@@ -126,14 +130,12 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    m%Indx = 1
    
    ! Define initial guess (set up mesh first) for the system inputs here:
-   call Init_meshes(u, y, ErrStat, ErrMsg)
-   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+   call Init_meshes(u, y, ErrStat2, ErrMsg2); if (Failed()) return
 
    ! Define system output initializations (set up mesh) here:
-   call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! set return error status based on local (concatenate errors)
-   call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   if (ErrStat >= AbortErrLev) return  !if there are local variables that need to be deallocated, do so before early return
+   call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   ErrStat2,ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return
+   call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return
 
    InitOut%Ver = ExtPtfm_Ver
       
@@ -145,6 +147,11 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u 
       ! Allocate and set these variables: InitOut%RotFrame_y, InitOut%RotFrame_x, InitOut%RotFrame_xd, InitOut%RotFrame_z, InitOut%RotFrame_u 
    end if
+CONTAINS
+    logical function Failed()
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        Failed =  ErrStat >= AbortErrLev
+    end function Failed
 END SUBROUTINE ExtPtfm_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -202,21 +209,18 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status                              
    CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
    ! Local variables:
-   REAL(ReKi)                    :: TmpAry(7)                                 ! temporary array for reading row from file
-   INTEGER(IntKi)                :: I                                         ! loop counter
-   INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
-   INTEGER(IntKi)                :: iLine                                     ! Current position in file
-   INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
-   LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
-   CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
-   CHARACTER(1024)               :: FTitle                                    ! "File Title": the 1st line of the input file, which contains a description of its contents
-   CHARACTER(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
-   CHARACTER(200)                :: Line2                                     ! Temporary storage of a line from the input file (to compare with "default")
-   CHARACTER(*), PARAMETER       :: RoutineName = 'ReadPrimaryFile'
+   REAL(ReKi), dimension(:),allocatable :: TmpAry                                 ! temporary array for reading row from file
+   INTEGER(IntKi)                       :: I                                         ! loop counter
+   INTEGER(IntKi)                       :: UnIn                                      ! Unit number for reading file
+   INTEGER(IntKi)                       :: iLine                                     ! Current position in file
+   INTEGER(IntKi)                       :: ErrStat2                                  ! Temporary Error status
+   CHARACTER(ErrMsgLen)                 :: ErrMsg2                                   ! Temporary Error message
+   CHARACTER(200)                       :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+   CHARACTER(200)                       :: Line2                                     ! Temporary storage of a line from the input file (to compare with "default")
+   CHARACTER(*), PARAMETER              :: RoutineName = 'ReadPrimaryFile'
    ! Initialize some variables:
    ErrStat = ErrID_None
    ErrMsg  = ""
-   Echo = .FALSE.   
    !CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
    
    ! Get an available unit number for the file.
@@ -233,14 +237,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    iLine=iLine+1
    call CONV2UC(Line)
    call CONV2UC(Line2)
+   call cleanup()
    !-------------------------- Detecting file format
    if (index(Line2,'#MASS')==1) then
        write(*,*) 'File detected as Guyan ASCII file format: '//trim(InputFile)
-       call cleanup()
        call ReadGuyanASCII()
    else if (index(Line2,'FLEX 5 FORMAT')>=1) then
        write(*,*) 'File detected as FLEX ASCII file format: '//trim(InputFile)
-       call cleanup()
        call ReadFlexASCII()
    endif
 
@@ -261,11 +264,6 @@ CONTAINS
     !> 
     subroutine cleanup()
         close( UnIn )
-        if (allocated(p%PtfmAM))   deallocate(p%PtfmAM)
-        if (allocated(p%Stff))     deallocate(p%Stff)
-        if (allocated(p%Damp))     deallocate(p%Damp)
-        if (allocated(p%PtfmFt))   deallocate(p%PtfmFt)
-        if (allocated(p%PtfmFt_t)) deallocate(p%PtfmFt_t)
     end subroutine cleanup
     
     !> Checks that all inputs were correctly read
@@ -350,12 +348,13 @@ CONTAINS
                   p%PtfmFt_t = 0.0_ReKi
                   p%nPtfmFt  = 1
                else
+                  allocate(TmpAry(1:p%nTot+1))
                   do i=1,p%nPtfmFt
                      iLine=iLine+1
                      call ReadAry( UnIn, InputFile, TmpAry, p%nTot+1, 'PtfmFt - Line: '//Num2LStr(iLine)//' Value: '//trim(Num2LStr(i))//'/'//Num2LStr(p%nPtfmFt), 'PtfmFt time-history', ErrStat2, ErrMsg2)
                      if (ErrStat2 /= 0) exit
                      p%PtfmFt_t(i) = TmpAry(1)
-                     p%PtfmFt(i,:) = TmpAry(2:7)
+                     p%PtfmFt(i,:) = TmpAry(2:p%nTot+1)
                   end do
                end if
 
@@ -380,9 +379,8 @@ CONTAINS
        CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 ); if ( ErrStat2 /= 0 ) return
 
        !-------------------------- HEADER ---------------------------------------------
-       CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: External Platform MCKF Matrices (line 1)', ErrStat2, ErrMsg2)
+       CALL ReadStr( UnIn, InputFile, Line, 'Header line', 'File Header: External Platform MCKF Matrices (line 1)', ErrStat2, ErrMsg2)
        if ( ErrStat2 /= 0 ) return
-       
        !---------------------- MASS MATRIX --------------------------------------
        CALL ReadCom( UnIn, InputFile, 'Section Header: Mass Matrix', ErrStat2, ErrMsg2)
        if ( ErrStat2 /= 0 ) return
@@ -398,12 +396,12 @@ CONTAINS
        if ( ErrStat2 /= 0 ) return
        CALL ReadRealMatrix(UnIn, InputFile, p%Stff, 'Stiffness Matrix', p%nTot, p%nTot, ErrStat2, ErrMsg2, iLine)
        if ( ErrStat2 /= 0 ) return
-       
        !---------------------- LOAD time-history --------------------------------------
        p%nPtfmFt = 0
        CALL ReadCom( UnIn, InputFile, 'Section Header: Loads time-history', ErrStat2, ErrMsg2)
        CALL ReadCom( UnIn, InputFile, 'Loads time-history table channel names', ErrStat2, ErrMsg2)
        CALL ReadCom( UnIn, InputFile, 'Loads time-history table channel units', ErrStat2, ErrMsg2)
+       allocate(TmpAry(1:p%nTot+1))
        if (ErrStat2 < AbortErrLev) then
           ! let's figure out how many rows of data are in the time-history table:
           read( UnIn, *, IOSTAT=ErrStat2 ) TmpAry
@@ -412,8 +410,8 @@ CONTAINS
              read( UnIn, *, IOSTAT=ErrStat2 ) TmpAry
           end do
        end if
-       call allocAry( p%PtfmFt,   max(1,p%nPtfmFt), 6, 'p%PtfmFt',   ErrStat2, ErrMsg2); if ( ErrStat2 /= 0 ) return
-       call allocAry( p%PtfmFt_t, max(1,p%nPtfmFt),    'p%PtfmFt_t', ErrStat2, ErrMsg2); if ( ErrStat2 /= 0 ) return
+       call allocAry( p%PtfmFt,   max(1,p%nPtfmFt), p%nTot, 'p%PtfmFt',   ErrStat2, ErrMsg2); if ( ErrStat2 /= 0 ) return
+       call allocAry( p%PtfmFt_t, max(1,p%nPtfmFt),         'p%PtfmFt_t', ErrStat2, ErrMsg2); if ( ErrStat2 /= 0 ) return
        if (p%nPtfmFt == 0) then
           p%PtfmFt = 0.0_ReKi
           p%PtfmFt_t = 0.0_ReKi
@@ -424,34 +422,168 @@ CONTAINS
              read(UnIn,*,IOSTAT=ErrStat2) line
           end do
           do i=1,p%nPtfmFt
-             call ReadAry( UnIn, InputFile, TmpAry, 7, 'PtfmFt', 'PtfmFt time-history', ErrStat2, ErrMsg2)
+             call ReadAry( UnIn, InputFile, TmpAry, p%nTot+1, 'PtfmFt', 'PtfmFt time-history', ErrStat2, ErrMsg2)
              if ( ErrStat2 /= 0 ) return
              p%PtfmFt_t(i) = TmpAry(1)
-             p%PtfmFt(i,:) = TmpAry(2:7)
+             p%PtfmFt(i,:) = TmpAry(2:p%nTot+1)
           end do
        end if
        !---------------------- END OF FILE -----------------------------------------
        close( UnIn )
    END SUBROUTINE ReadGuyanASCII
 END SUBROUTINE ReadPrimaryFile      
+
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
+!..................................................................................................................................
+   TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p                                   !< All the parameter matrices stored in this input file
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status                              
+   CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
+   ! Local variables:
+   REAL(ReKi)                              :: TmpAry(7)                                 ! temporary array for reading row from file
+   INTEGER(IntKi)                          :: I,J                                       ! loop counter
+   INTEGER(IntKi)                          :: UnIn                                      ! Unit number for reading file
+   INTEGER(IntKi)                          :: nX                                        ! Number of states
+   INTEGER(IntKi)                          :: nU                                        ! Number of inputs
+   INTEGER(IntKi)                          :: nY                                        ! Number of ouputs
+   INTEGER(IntKi)                          :: n1                                        ! Number of interface DOF
+   INTEGER(IntKi)                          :: n2                                        ! Number of CB DOF
+   INTEGER(IntKi)                          :: ErrStat2                                  ! Temporary Error status
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2                                   ! Temporary Error message
+   CHARACTER(200)                          :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+   CHARACTER(200)                          :: Line2                                     ! Temporary storage of a line from the input file (to compare with "default")
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'SetStateMatrices'
+   real(ReKi), dimension(:,:), allocatable :: I22
+   ! Init 
+   ErrStat = ErrID_None
+   ErrMSg = ""
+   nX = 2*p%nCB
+   nU = 3*6
+   nY = 6
+   n1 = 6
+   n2 = p%nCB
+   if (allocated(p%AMat)) deallocate(p%AMat)
+   if (allocated(p%BMat)) deallocate(p%BMat)
+   if (allocated(p%CMat)) deallocate(p%CMat)
+   if (allocated(p%DMat)) deallocate(p%DMat)
+   if (allocated(p%M11))  deallocate(p%M11)
+   if (allocated(p%M12))  deallocate(p%M12)
+   if (allocated(p%M22))  deallocate(p%M22)
+   if (allocated(p%M21))  deallocate(p%M21)
+   if (allocated(p%C11))  deallocate(p%C11)
+   if (allocated(p%C12))  deallocate(p%C12)
+   if (allocated(p%C22))  deallocate(p%C22)
+   if (allocated(p%C21))  deallocate(p%C21)
+   if (allocated(p%K11))  deallocate(p%C11)
+   if (allocated(p%K22))  deallocate(p%C22)
+   ! Allocation
+   call allocAry(p%AMat, nX, nX, 'p%AMat', ErrStat2, ErrMsg2); if ( Failed()) return ; p%AMat(1:nX,1:nX) =0
+   call allocAry(p%BMat, nX, nU, 'p%BMat', ErrStat2, ErrMsg2); if ( Failed()) return ; p%BMat(1:nX,1:nU) =0
+   call allocAry(p%FX  , nX,     'p%FX'  , ErrStat2, ErrMsg2); if ( Failed()) return ; p%Fx  (1:nX)      =0
+   call allocAry(p%CMat, nY, nX, 'p%CMat', ErrStat2, ErrMsg2); if ( Failed()) return ; p%CMat(1:nY,1:nX) =0
+   call allocAry(p%DMat, nY, nU, 'p%DMat', ErrStat2, ErrMsg2); if ( Failed()) return ; p%DMat(1:nY,1:nU) =0
+   call allocAry(p%FY  , nY,     'p%FY'  , ErrStat2, ErrMsg2); if ( Failed()) return ; p%FY  (1:nY)      =0
+   call allocAry(p%M11 , n1, n1, 'p%M11' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%M11 (1:n1,1:n1) =0
+   call allocAry(p%K11 , n1, n1, 'p%K11' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%K11 (1:n1,1:n1) =0
+   call allocAry(p%C11 , n1, n1, 'p%C11' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%C11 (1:n1,1:n1) =0
+   call allocAry(p%M22 , n2, n2, 'p%M22' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%M22 (1:n2,1:n2) =0
+   call allocAry(p%K22 , n2, n2, 'p%K22' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%K22 (1:n2,1:n2) =0
+   call allocAry(p%C22 , n2, n2, 'p%C22' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%C22 (1:n2,1:n2) =0
+   call allocAry(p%M12 , n1, n2, 'p%M12' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%M12 (1:n1,1:n2) =0
+   call allocAry(p%C12 , n1, n2, 'p%C12' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%C12 (1:n1,1:n2) =0
+   call allocAry(p%M21 , n2, n1, 'p%M21' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%M21 (1:n2,1:n1) =0
+   call allocAry(p%C21 , n2, n1, 'p%C21' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%C21 (1:n2,1:n1) =0
+   call allocAry(  I22 , n2, n2, '  I22' , ErrStat2, ErrMsg2); if ( Failed()) return ;   I22 (1:n2,1:n2) =0
+   do I=1,n2 ; I22(I,I)=1; enddo ! Identity matrix
+   ! Submatrices
+   p%M11(1:n1,1:n1) = p%PtfmAM(1:n1      ,1:n1      )
+   p%C11(1:n1,1:n1) = p%Damp  (1:n1      ,1:n1      )
+   p%K11(1:n1,1:n1) = p%Stff  (1:n1      ,1:n1      )
+
+   p%M12(1:n1,1:n2) = p%PtfmAM(1:n1      ,n1+1:n1+n2)
+   p%C12(1:n1,1:n2) = p%Damp  (1:n1      ,n1+1:n1+n2)
+   p%M21(1:n2,1:n1) = p%PtfmAM(n1+1:n1+n2,1:n1      )
+   p%C21(1:n2,1:n1) = p%Damp  (n1+1:n1+n2,1:n1      )
+
+   p%M22(1:n2,1:n2) = p%PtfmAM(n1+1:n1+n2,n1+1:n1+n2)
+   p%C22(1:n2,1:n2) = p%Damp  (n1+1:n1+n2,n1+1:n1+n2)
+   p%K22(1:n2,1:n2) = p%Stff  (n1+1:n1+n2,n1+1:n1+n2)
+   ! A matrix
+   p%AMat(1:n2   ,n2+1:nX) = I22   (1:n2,1:n2)
+   p%AMat(n2+1:nX,1:n2   ) = -p%K22(1:n2,1:n2)
+   p%AMat(n2+1:nX,n2+1:nX) = -p%C22(1:n2,1:n2)
+   ! B matrix
+   p%BMat(n2+1:nX,7 :12  ) = -p%C21(1:n2,1:6)
+   p%BMat(n2+1:nX,13:18  ) = -p%M21(1:n2,1:6)
+   ! C matrix
+   p%CMat(1:nY,1:n2   ) = matmul(p%M12,p%K22)
+   p%CMat(1:nY,n2+1:nX) = matmul(p%M12,p%C22)
+   ! D matrix
+   p%DMat(1:nY,1:6   ) = -p%K11
+   p%DMat(1:nY,7:12  ) = -p%C11 + matmul(p%M12,p%C21)
+   p%DMat(1:nY,13:18 ) = -p%M11 + matmul(p%M12,p%M21)
+
+!    call disp2r8(6, 'M',p%PtfmAM)
+!    call disp2r8(6, 'K',p%Stff)
+!    call disp2r8(6, 'C',p%Damp)
+!    call disp2r8(6, 'F',p%PtfmFt)
+!    call disp2r8(6, 'M11',p%M11)
+!    call disp2r8(6, 'M12',p%M12)
+!    call disp2r8(6, 'M21',p%M21)
+!    call disp2r8(6, 'M22',p%M22)
+!    call disp2r8(6, 'K11',p%K11)
+!    call disp2r8(6, 'K22',p%K22)
+!    call disp2r8(6, 'C11',p%C11)
+!    call disp2r8(6, 'C12',p%C12)
+!    call disp2r8(6, 'C21',p%C21)
+!    call disp2r8(6, 'C22',p%C22)
+!    call disp2r8(6, 'A',p%AMat)
+!    call disp2r8(6, 'B',p%BMat)
+!    call disp2r8(6, 'C',p%CMat)
+!    call disp2r8(6, 'D',p%DMat)
+CONTAINS
+    logical function Failed()
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        Failed =  ErrStat >= AbortErrLev
+    end function Failed
+
+    subroutine disp2r8(u,varname,a)
+        integer,intent(in) ::u
+        character(len=*),intent(in)::varname
+        real(ReKi),intent(in),dimension(:,:) ::a
+        integer :: n, m,i
+        character(len=20) :: fmt
+        character(len=*),parameter :: RFMT='EN13.3E2'
+        n=size(a,1)
+        m=size(a,2)
+        if (n>0 .and. m>0) then
+            write(u,"(A,A)") varname,"=["
+            write(fmt,*) m
+            do i=1,n-1
+                write(u,"("//adjustl(fmt)//RFMT//")") a(i,:)
+            enddo
+            i=n
+            write(u,"("//trim(fmt)//RFMT//",A)") a(i,:), "  ];"
+        else
+            write(u,'(A,A)') varname,'=[];'
+        endif
+    end subroutine
+
+END SUBROUTINE SetStateMatrices
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Init_meshes(u, y, ErrStat, ErrMsg)
-
    TYPE(ExtPtfm_InputType),           INTENT(INOUT)  :: u           !< System inputs
    TYPE(ExtPtfm_OutputType),          INTENT(INOUT)  :: y           !< System outputs
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-      ! local variables
+   ! local variables
    INTEGER(IntKi)                                    :: ErrStat2    ! local error status
    CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! local error message
    CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_meshes'
-
    
    ErrStat = ErrID_None
    ErrMSg = ""
-   
-      ! Create the input and output meshes associated with platform loads
+   ! Create the input and output meshes associated with platform loads
    CALL MeshCreate(  BlankMesh         = u%PtfmMesh       , &
                      IOS               = COMPONENT_INPUT  , &
                      Nnodes            = 1                , &
@@ -467,30 +599,28 @@ SUBROUTINE Init_meshes(u, y, ErrStat, ErrMsg)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) return
       
-      ! Create the node on the mesh
+   ! Create the node on the mesh
    CALL MeshPositionNode (u%PtfmMesh, 1, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      ! Create the mesh element
+   ! Create the mesh element
    CALL MeshConstructElement (  u%PtfmMesh, ELEMENT_POINT, ErrStat2, ErrMsg2, 1 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    CALL MeshCommit ( u%PtfmMesh, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if ( ErrStat >= AbortErrLev ) return
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   if ( ErrStat >= AbortErrLev ) return
 
-      
-      ! the output mesh is a sibling of the input:
+   ! the output mesh is a sibling of the input:
    CALL MeshCopy( SrcMesh=u%PtfmMesh, DestMesh=y%PtfmMesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
                   ErrStat=ErrStat2, ErrMess=ErrMsg2, Force=.TRUE., Moment=.TRUE. )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 END SUBROUTINE Init_meshes
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE ExtPtfm_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
-
    TYPE(ExtPtfm_InputType),           INTENT(INOUT)  :: u           !< System inputs
    TYPE(ExtPtfm_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
    TYPE(ExtPtfm_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
@@ -501,53 +631,28 @@ SUBROUTINE ExtPtfm_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    TYPE(ExtPtfm_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-      ! local variables
+   ! local variables
    INTEGER(IntKi)                                    :: ErrStat2    ! local error status
    CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! local error message
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ExtPtfm_End'
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-
-      ! Place any last minute operations or calculations here:
-
-
-      ! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
-
-
-      ! Destroy the input data:
-
-   call ExtPtfm_DestroyInput( u, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-
-      ! Destroy the parameter data:
-
-   call ExtPtfm_DestroyParam( p, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      ! Destroy the state data:
-
+   ! Place any last minute operations or calculations here:
+   ! Close files here (but because of checkpoint-restart capability, it is not recommended to have files open during the simulation):
+   ! Destroy the input data:
+   call ExtPtfm_DestroyInput( u, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   ! Destroy the parameter data:
+   call ExtPtfm_DestroyParam( p, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   ! Destroy the state data:
    call ExtPtfm_DestroyContState(   x,          ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call ExtPtfm_DestroyDiscState(   xd,         ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call ExtPtfm_DestroyConstrState( z,          ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call ExtPtfm_DestroyOtherState(  OtherState, ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-
-      ! Destroy the output data:
-
+   ! Destroy the output data:
    call ExtPtfm_DestroyOutput( y, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-
-      ! Destroy the misc data:
-
+   ! Destroy the misc data:
    call ExtPtfm_DestroyMisc( m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-
 END SUBROUTINE ExtPtfm_End
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
@@ -591,7 +696,6 @@ END SUBROUTINE ExtPtfm_UpdateStates
 !> This is a routine for computing outputs, used in both loose and tight coupling.
 SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
-
    REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
    TYPE(ExtPtfm_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(ExtPtfm_ParameterType),       INTENT(IN   )  :: p           !< Parameters
@@ -604,22 +708,16 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
                                                                      !!   nectivity information does not have to be recalculated)
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
-      ! Local variables
+   ! Local variables
    INTEGER(IntKi)                                  :: I,J               !< Generic counters
    INTEGER(IntKi)                                  :: ErrStat2          !< Temporary Error status of the operation
    CHARACTER(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message if ErrStat /= ErrID_None
    CHARACTER(*),     PARAMETER                     :: RoutineName='ExtPtfm_CalcOutput'
-   
-   
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-
    
-      ! translate inputs on mesh to arrays for computations:
+   ! translate inputs on mesh to arrays for computations:
    m%q(1:3) = u%PtfmMesh%TranslationDisp(:,1)
    m%q(4:6) = GetSmllRotAngs ( u%PtfmMesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -641,22 +739,17 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       ENDDO
    ENDDO      
    
-      ! Now calculate the loads from the added mass matrix
+   ! Now calculate the loads from the added mass matrix
    m%F_PtfmAM     =  -matmul(p%PtfmAM, m%qdotdot)
 
-
-      ! Update the Mesh with sum of these loads
+   ! Update the Mesh with sum of these loads
    DO I=1,3
       y%PtfmMesh%Force(I,1)  =  m%F_PtfmAM(I)   +  m%PtfmFt(I)
       y%PtfmMesh%Moment(I,1) =  m%F_PtfmAM(I+3) +  m%PtfmFt(I+3)
    ENDDO
-  
-   
 
    !y%WriteOutput(1) = y%PtfmMesh%Force(1,1)
    !y%WriteOutput(2) = y%PtfmMesh%Moment(1,1)
-   !
-
 END SUBROUTINE ExtPtfm_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 
@@ -665,7 +758,6 @@ END SUBROUTINE ExtPtfm_CalcOutput
 !> This is a tight coupling routine for computing derivatives of continuous states.
 SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
 !..................................................................................................................................
-
    REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
    TYPE(ExtPtfm_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(ExtPtfm_ParameterType),       INTENT(IN   )  :: p           !< Parameters
@@ -677,54 +769,37 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    TYPE(ExtPtfm_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at t
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-
       ! Compute the first time derivatives of the continuous states here:
-
-   dxdt%DummyContState = 0.0_ReKi
-
+   !dxdt%DummyContState = 0.0_ReKi
 END SUBROUTINE ExtPtfm_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a tight coupling routine for updating discrete states.
 SUBROUTINE ExtPtfm_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
-
    REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
    INTEGER(IntKi),                    INTENT(IN   )  :: n           !< Current step of the simulation: t = n*Interval
    TYPE(ExtPtfm_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(ExtPtfm_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(ExtPtfm_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
-   TYPE(ExtPtfm_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input: Discrete states at t;
-                                                                     !!   Output: Discrete states at t + Interval
+   TYPE(ExtPtfm_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input: Discrete states at t, Output: Discrete states at t + Interval
    TYPE(ExtPtfm_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
    TYPE(ExtPtfm_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
    TYPE(ExtPtfm_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-
-      ! Update discrete states here:
-
+   ! Update discrete states here:
    xd%DummyDiscState = 0.0_Reki
-
 END SUBROUTINE ExtPtfm_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a tight coupling routine for solving for the residual of the constraint state functions.
 SUBROUTINE ExtPtfm_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_residual, ErrStat, ErrMsg )
 !..................................................................................................................................
-
    REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
    TYPE(ExtPtfm_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(ExtPtfm_ParameterType),       INTENT(IN   )  :: p           !< Parameters
@@ -737,21 +812,14 @@ SUBROUTINE ExtPtfm_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_
                                                                     !!     the input values described above
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-
-      ! Solve for the residual of the constraint state functions here:
-
+   ! Solve for the residual of the constraint state functions here:
    Z_residual%DummyConstrState = 0.0_ReKi
 
 END SUBROUTINE ExtPtfm_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
-
 
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! ###### The following four routines are Jacobian routines for linearization capabilities #######
@@ -783,124 +851,76 @@ SUBROUTINE ExtPtfm_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with 
                                                                                     !!   respect to the inputs (u) [intent in to avoid deallocation]
    REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
-                                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
-
-
    IF ( PRESENT( dYdu ) ) THEN
-
       ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
-
       ! allocate and set dYdu
-
    END IF
-
    IF ( PRESENT( dXdu ) ) THEN
-
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
-
       ! allocate and set dXdu
-
    END IF
-
    IF ( PRESENT( dXddu ) ) THEN
-
       ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the inputs (u) here:
-
       ! allocate and set dXddu
-
    END IF
-
    IF ( PRESENT( dZdu ) ) THEN
-
       ! Calculate the partial derivative of the constraint state functions (Z) with respect to the inputs (u) here:
-
       ! allocate and set dZdu
-
    END IF
-
-
 END SUBROUTINE ExtPtfm_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
 SUBROUTINE ExtPtfm_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
 !..................................................................................................................................
-
-   REAL(DbKi),                                INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(ExtPtfm_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(ExtPtfm_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(ExtPtfm_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(ExtPtfm_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(ExtPtfm_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(ExtPtfm_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(ExtPtfm_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required); 
-                                                                                    !!   Output fields are not used by this routine, but type is   
-                                                                                    !!   available here so that mesh parameter information (i.e.,  
-                                                                                    !!   connectivity) does not have to be recalculated for dYdx.
-   TYPE(ExtPtfm_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
-                                                                                    !!   (Y) with respect to the continuous
-                                                                                    !!   states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
-                                                                                    !!   functions (X) with respect to
+   REAL(DbKi),                         INTENT(IN   ) :: t          !< Time in seconds at operating point
+   TYPE(ExtPtfm_InputType),            INTENT(IN   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(ExtPtfm_ParameterType),        INTENT(IN   ) :: p          !< Parameters
+   TYPE(ExtPtfm_ContinuousStateType),  INTENT(IN   ) :: x          !< Continuous states at operating point
+   TYPE(ExtPtfm_DiscreteStateType),    INTENT(IN   ) :: xd         !< Discrete states at operating point
+   TYPE(ExtPtfm_ConstraintStateType),  INTENT(IN   ) :: z          !< Constraint states at operating point
+   TYPE(ExtPtfm_OtherStateType),       INTENT(IN   ) :: OtherState !< Other states at operating point
+   TYPE(ExtPtfm_OutputType),           INTENT(IN   ) :: y          !< Output (change to inout if a mesh copy is required); 
+                                                                   !!   Output fields are not used by this routine, but type is   
+                                                                   !!   available here so that mesh parameter information (i.e.,  
+                                                                   !!   connectivity) does not have to be recalculated for dYdx.
+   TYPE(ExtPtfm_MiscVarType),          INTENT(INOUT) :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dYdx(:,:)  !< Partial derivatives of output functions
+                                                                   !!   (Y) with respect to the continuous
+                                                                   !!   states (x) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXdx(:,:)  !< Partial derivatives of continuous state
+                                                                   !!   functions (X) with respect to
+                                                                   !!   the continuous states (x) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXddx(:,:) !< Partial derivatives of discrete state
+                                                                   !!   functions (Xd) with respect to
+                                                                   !!   the continuous states (x) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdx(:,:)  !< Partial derivatives of constraint state
+                                                                             !!   functions (Z) with respect to
                                                                                     !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
-                                                                                    !!   functions (Xd) with respect to
-                                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
-                                                                                    !!   functions (Z) with respect to
-                                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
-
-
-
    IF ( PRESENT( dYdx ) ) THEN
-
       ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
-
       ! allocate and set dYdx
-
    END IF
-
    IF ( PRESENT( dXdx ) ) THEN
-
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
-
       ! allocate and set dXdx
-
    END IF
-
    IF ( PRESENT( dXddx ) ) THEN
-
       ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the continuous states (x) here:
-
       ! allocate and set dXddx
-
    END IF
-
    IF ( PRESENT( dZdx ) ) THEN
-
-
       ! Calculate the partial derivative of the constraint state functions (Z) with respect to the continuous states (x) here:
-
       ! allocate and set dZdx
-
    END IF
-
-
 END SUBROUTINE ExtPtfm_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
@@ -934,54 +954,32 @@ SUBROUTINE ExtPtfm_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrS
    REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
                                                                                     !!   functions (Z) with respect to the
                                                                                     !!   discrete states (xd) [intent in to avoid deallocation]
-
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
-
-
    IF ( PRESENT( dYdxd ) ) THEN
-
       ! Calculate the partial derivative of the output functions (Y) with respect to the discrete states (xd) here:
-
       ! allocate and set dYdxd
-
    END IF
-
    IF ( PRESENT( dXdxd ) ) THEN
-
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the discrete states (xd) here:
-
       ! allocate and set dXdxd
-
    END IF
 
    IF ( PRESENT( dXddxd ) ) THEN
-
       ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the discrete states (xd) here:
-
       ! allocate and set dXddxd
-
    END IF
-
    IF ( PRESENT( dZdxd ) ) THEN
-
       ! Calculate the partial derivative of the constraint state functions (Z) with respect to the discrete states (xd) here:
-
       ! allocate and set dZdxd
-
    END IF
-
-
 END SUBROUTINE ExtPtfm_JacobianPDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
 SUBROUTINE ExtPtfm_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
 !..................................................................................................................................
-
    REAL(DbKi),                                INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(ExtPtfm_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(ExtPtfm_ParameterType),               INTENT(IN   )           :: p          !< Parameters
@@ -1008,43 +1006,28 @@ SUBROUTINE ExtPtfm_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, Er
    REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
                                                                                     !! state functions (Z) with respect to
                                                                                     !!  the constraint states (z) [intent in to avoid deallocation]
-
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
 
    IF ( PRESENT( dYdz ) ) THEN
-
-         ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
-
+      ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
       ! allocate and set dYdz
-
    END IF
 
    IF ( PRESENT( dXdz ) ) THEN
-
-         ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
-
+      ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
       ! allocate and set dXdz
-
    END IF
 
    IF ( PRESENT( dXddz ) ) THEN
-
-         ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
-
+      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
       ! allocate and set dXddz
-
    END IF
 
    IF ( PRESENT( dZdz ) ) THEN
-
-         ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
-
+      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
       ! allocate and set dZdz
-
    END IF
 
 
@@ -1052,7 +1035,6 @@ END SUBROUTINE ExtPtfm_JacobianPConstrState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
 SUBROUTINE ExtPtfm_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
-
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(ExtPtfm_InputType),              INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(ExtPtfm_ParameterType),          INTENT(IN   )           :: p          !< Parameters
@@ -1070,34 +1052,26 @@ SUBROUTINE ExtPtfm_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
-
-
-      ! Initialize ErrStat
-
+   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
 
    IF ( PRESENT( u_op ) ) THEN
-
    END IF
 
    IF ( PRESENT( y_op ) ) THEN
    END IF
 
    IF ( PRESENT( x_op ) ) THEN
-
    END IF
 
    IF ( PRESENT( dx_op ) ) THEN
-
    END IF
 
    IF ( PRESENT( xd_op ) ) THEN
-
    END IF
    
    IF ( PRESENT( z_op ) ) THEN
-
    END IF
 
 END SUBROUTINE ExtPtfm_GetOP

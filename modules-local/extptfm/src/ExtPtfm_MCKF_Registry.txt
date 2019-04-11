@@ -29,7 +29,8 @@ typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputUnt  {
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef    ^              ContinuousStateType ReKi     DummyContState - - -  "Remove this variable if you have continuous states" -
+typedef    ^              ContinuousStateType ReKi     x1         {6} - -  "Interface node states" -
+typedef    ^              ContinuousStateType ReKi     x2         {:} - -  "Internal CraigBampton states" -
 
 # Define discrete (nondifferentiable) states here:
 typedef   ^               DiscreteStateType   ReKi     DummyDiscState - - -  "Remove this variable if you have discrete states" -
@@ -60,6 +61,22 @@ typedef  ^               ParameterType         ReKi     Damp   {:}{:} - - "Dampi
 typedef  ^               ParameterType         ReKi     Stff   {:}{:} - - "Stiffness matrix" -
 typedef  ^               ParameterType         ReKi     PtfmFt {:}{:} - - "at each prescribed time step, the 3 components of the portion of the platform force (in N) acting at the platform reference and the 3 components of the portion of the platform moment (in N-m) acting at the platform reference associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"
 typedef  ^               ParameterType         ReKi     PtfmFt_t {:}  - - "the time associated with each row of PtfmFt" "s"
+typedef  ^               ParameterType         ReKi     AMat {:}{:}   - - "State matrix A" ""
+typedef  ^               ParameterType         ReKi     BMat {:}{:}   - - "State matrix B" ""
+typedef  ^               ParameterType         ReKi     CMat {:}{:}   - - "State matrix C" ""
+typedef  ^               ParameterType         ReKi     DMat {:}{:}   - - "State matrix D" ""
+typedef  ^               ParameterType         ReKi     FX {:}        - - "State  constant Fx" ""
+typedef  ^               ParameterType         ReKi     FY {:}        - - "Output constant Fy" ""
+typedef  ^               ParameterType         ReKi     M11 {:}{:}    - - "Matrix M11" ""
+typedef  ^               ParameterType         ReKi     M12 {:}{:}    - - "Matrix M12" ""
+typedef  ^               ParameterType         ReKi     M22 {:}{:}    - - "Matrix M22" ""
+typedef  ^               ParameterType         ReKi     M21 {:}{:}    - - "Matrix M21" ""
+typedef  ^               ParameterType         ReKi     K11 {:}{:}    - - "Matrix K11" ""
+typedef  ^               ParameterType         ReKi     K22 {:}{:}    - - "Matrix K22" ""
+typedef  ^               ParameterType         ReKi     C11 {:}{:}    - - "Matrix C11" ""
+typedef  ^               ParameterType         ReKi     C12 {:}{:}    - - "Matrix C12" ""
+typedef  ^               ParameterType         ReKi     C22 {:}{:}    - - "Matrix C22" ""
+typedef  ^               ParameterType         ReKi     C21 {:}{:}    - - "Matrix C21" ""
 typedef  ^               ParameterType         IntKi    nPtfmFt     - - - "Number of values in PtfmFt_t" -
 typedef  ^               ParameterType         IntKi    nCB         - - - "Number of CraigBampton modes" -
 typedef  ^               ParameterType         IntKi    nTot        - - - "Total number of debrees of freedom (CB + interface)" -
