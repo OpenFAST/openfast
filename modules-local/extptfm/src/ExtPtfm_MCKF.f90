@@ -68,6 +68,30 @@ MODULE ExtPtfm_MCKF
 CONTAINS
    
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!> Helper functions for the module
+subroutine disp2r8(u,varname,a)
+    integer,intent(in) ::u
+    character(len=*),intent(in)::varname
+    real(ReKi),intent(in),dimension(:,:) ::a
+    integer :: n, m,i
+    character(len=20) :: fmt
+    character(len=*),parameter :: RFMT='EN13.3E2'
+    n=size(a,1)
+    m=size(a,2)
+    if (n>0 .and. m>0) then
+        write(u,"(A,A)") varname,"=["
+        write(fmt,*) m
+        do i=1,n-1
+            write(u,"("//adjustl(fmt)//RFMT//")") a(i,:)
+        enddo
+        i=n
+        write(u,"("//trim(fmt)//RFMT//",A)") a(i,:), "  ];"
+    else
+        write(u,'(A,A)') varname,'=[];'
+    endif
+end subroutine
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
@@ -109,7 +133,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NumOuts = 0   
    p%nTot = -1   
    p%nCB = -1   
-   call ReadPrimaryFile( InitInp%InputFile, p, ErrStat2, ErrMsg2 ); if (Failed()) return
+   call ReadPrimaryFile( InitInp%InputFile, p, ErrStat2, ErrMsg2 ); if(Failed()) return
    write(*,*)'Total number of DOF :',p%nTot
    write(*,*)'Number of CB modes  :',p%nCB
    write(*,*)'Number of time steps:',p%nPtfmFt
@@ -118,24 +142,27 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    call SetStateMatrices(p, ErrStat2, ErrMsg2)
   
    ! Allocate and init Continuous states
-   call AllocAry( x%x2, p%nCB,'CB states',  ErrStat2,ErrMsg2); if (Failed()) return
-   do I=1,6;     x%x1(I)=0; end do
-   do I=1,p%nCB; x%x2(I)=0; end do
+   call AllocAry( x%x2    , p%nCB,'CB DOF positions' , ErrStat2,ErrMsg2); if(Failed()) return
+   call AllocAry( x%x2dot , p%nCB,'CB DOF velocities', ErrStat2,ErrMsg2); if(Failed()) return
+   do I=1,p%nCB; x%x2   (I)=0; end do
+   do I=1,p%nCB; x%x2dot(I)=0; end do
    ! Other states
    xd%DummyDiscState          = 0.0_ReKi
    z%DummyConstrState         = 0.0_ReKi
    OtherState%DummyOtherState = 0.0_ReKi
 
-   ! initialize optimization variables:
-   m%Indx = 1
+   ! Initialize Misc Variables:
+   m%Indx = 1 ! used to optimize interpolation of loads in time
+   call AllocAry( m%PtfmFt, p%nTot,'Loads at t', ErrStat2,ErrMsg2); if(Failed()) return
+   do I=1,p%nTot; m%PtfmFt(I)=0; end do
    
    ! Define initial guess (set up mesh first) for the system inputs here:
-   call Init_meshes(u, y, ErrStat2, ErrMsg2); if (Failed()) return
+   call Init_meshes(u, y, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Define system output initializations (set up mesh) here:
-   call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   ErrStat2,ErrMsg2); if (Failed()) return
-   call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if (Failed()) return
-   call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if (Failed()) return
+   call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   ErrStat2,ErrMsg2); if(Failed()) return
+   call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); if(Failed()) return
+   call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); if(Failed()) return
 
    InitOut%Ver = ExtPtfm_Ver
       
@@ -224,16 +251,16 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    !CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
    
    ! Get an available unit number for the file.
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 );               if (Failed()) return
+   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 );               if(Failed()) return
    ! Open the Primary input file.
-   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 ); if(Failed()) return
    iLine=1
    !-------------------------- Read the first two lines
    CALL ReadStr( UnIn, InputFile, Line, 'Line'//Num2LStr(iLine), 'External Platform MCKF file', ErrStat2, ErrMsg2)
-   if (Failed()) return
+   if(Failed()) return
    iLine=iLine+1
    CALL ReadStr( UnIn, InputFile, Line2, 'Line'//Num2LStr(iLine), 'External Platform MCKF file', ErrStat2, ErrMsg2)
-   if (Failed()) return
+   if(Failed()) return
    iLine=iLine+1
    call CONV2UC(Line)
    call CONV2UC(Line2)
@@ -249,7 +276,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
 
    ! Checking that everyting was correctly read and set
    call CheckAllInputsRead()
-   if (Failed()) return
+   if(Failed()) return
    
    return
 
@@ -258,12 +285,13 @@ CONTAINS
     logical function Failed()
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         Failed =  ErrStat >= AbortErrLev
-        if (Failed) call cleanup()
+        if(Failed) call cleanup()
     end function Failed
     
     !> 
     subroutine cleanup()
         close( UnIn )
+        if (allocated(TmpAry)) deallocate(TmpAry)
     end subroutine cleanup
     
     !> Checks that all inputs were correctly read
@@ -477,34 +505,32 @@ SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
    if (allocated(p%K11))  deallocate(p%C11)
    if (allocated(p%K22))  deallocate(p%C22)
    ! Allocation
-   call allocAry(p%AMat, nX, nX, 'p%AMat', ErrStat2, ErrMsg2); if ( Failed()) return ; p%AMat(1:nX,1:nX) =0
-   call allocAry(p%BMat, nX, nU, 'p%BMat', ErrStat2, ErrMsg2); if ( Failed()) return ; p%BMat(1:nX,1:nU) =0
-   call allocAry(p%FX  , nX,     'p%FX'  , ErrStat2, ErrMsg2); if ( Failed()) return ; p%Fx  (1:nX)      =0
-   call allocAry(p%CMat, nY, nX, 'p%CMat', ErrStat2, ErrMsg2); if ( Failed()) return ; p%CMat(1:nY,1:nX) =0
-   call allocAry(p%DMat, nY, nU, 'p%DMat', ErrStat2, ErrMsg2); if ( Failed()) return ; p%DMat(1:nY,1:nU) =0
-   call allocAry(p%FY  , nY,     'p%FY'  , ErrStat2, ErrMsg2); if ( Failed()) return ; p%FY  (1:nY)      =0
-   call allocAry(p%M11 , n1, n1, 'p%M11' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%M11 (1:n1,1:n1) =0
-   call allocAry(p%K11 , n1, n1, 'p%K11' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%K11 (1:n1,1:n1) =0
-   call allocAry(p%C11 , n1, n1, 'p%C11' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%C11 (1:n1,1:n1) =0
-   call allocAry(p%M22 , n2, n2, 'p%M22' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%M22 (1:n2,1:n2) =0
-   call allocAry(p%K22 , n2, n2, 'p%K22' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%K22 (1:n2,1:n2) =0
-   call allocAry(p%C22 , n2, n2, 'p%C22' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%C22 (1:n2,1:n2) =0
-   call allocAry(p%M12 , n1, n2, 'p%M12' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%M12 (1:n1,1:n2) =0
-   call allocAry(p%C12 , n1, n2, 'p%C12' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%C12 (1:n1,1:n2) =0
-   call allocAry(p%M21 , n2, n1, 'p%M21' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%M21 (1:n2,1:n1) =0
-   call allocAry(p%C21 , n2, n1, 'p%C21' , ErrStat2, ErrMsg2); if ( Failed()) return ; p%C21 (1:n2,1:n1) =0
-   call allocAry(  I22 , n2, n2, '  I22' , ErrStat2, ErrMsg2); if ( Failed()) return ;   I22 (1:n2,1:n2) =0
+   call allocAry(p%AMat, nX, nX, 'p%AMat', ErrStat2, ErrMsg2); if(Failed()) return ; p%AMat(1:nX,1:nX) =0
+   call allocAry(p%BMat, nX, nU, 'p%BMat', ErrStat2, ErrMsg2); if(Failed()) return ; p%BMat(1:nX,1:nU) =0
+   call allocAry(p%FX  , nX,     'p%FX'  , ErrStat2, ErrMsg2); if(Failed()) return ; p%Fx  (1:nX)      =0
+   call allocAry(p%CMat, nY, nX, 'p%CMat', ErrStat2, ErrMsg2); if(Failed()) return ; p%CMat(1:nY,1:nX) =0
+   call allocAry(p%DMat, nY, nU, 'p%DMat', ErrStat2, ErrMsg2); if(Failed()) return ; p%DMat(1:nY,1:nU) =0
+   call allocAry(p%FY  , nY,     'p%FY'  , ErrStat2, ErrMsg2); if(Failed()) return ; p%FY  (1:nY)      =0
+   call allocAry(p%M11 , n1, n1, 'p%M11' , ErrStat2, ErrMsg2); if(Failed()) return ; p%M11 (1:n1,1:n1) =0
+   call allocAry(p%K11 , n1, n1, 'p%K11' , ErrStat2, ErrMsg2); if(Failed()) return ; p%K11 (1:n1,1:n1) =0
+   call allocAry(p%C11 , n1, n1, 'p%C11' , ErrStat2, ErrMsg2); if(Failed()) return ; p%C11 (1:n1,1:n1) =0
+   call allocAry(p%M22 , n2, n2, 'p%M22' , ErrStat2, ErrMsg2); if(Failed()) return ; p%M22 (1:n2,1:n2) =0
+   call allocAry(p%K22 , n2, n2, 'p%K22' , ErrStat2, ErrMsg2); if(Failed()) return ; p%K22 (1:n2,1:n2) =0
+   call allocAry(p%C22 , n2, n2, 'p%C22' , ErrStat2, ErrMsg2); if(Failed()) return ; p%C22 (1:n2,1:n2) =0
+   call allocAry(p%M12 , n1, n2, 'p%M12' , ErrStat2, ErrMsg2); if(Failed()) return ; p%M12 (1:n1,1:n2) =0
+   call allocAry(p%C12 , n1, n2, 'p%C12' , ErrStat2, ErrMsg2); if(Failed()) return ; p%C12 (1:n1,1:n2) =0
+   call allocAry(p%M21 , n2, n1, 'p%M21' , ErrStat2, ErrMsg2); if(Failed()) return ; p%M21 (1:n2,1:n1) =0
+   call allocAry(p%C21 , n2, n1, 'p%C21' , ErrStat2, ErrMsg2); if(Failed()) return ; p%C21 (1:n2,1:n1) =0
+   call allocAry(  I22 , n2, n2, '  I22' , ErrStat2, ErrMsg2); if(Failed()) return ;   I22 (1:n2,1:n2) =0
    do I=1,n2 ; I22(I,I)=1; enddo ! Identity matrix
    ! Submatrices
    p%M11(1:n1,1:n1) = p%PtfmAM(1:n1      ,1:n1      )
    p%C11(1:n1,1:n1) = p%Damp  (1:n1      ,1:n1      )
    p%K11(1:n1,1:n1) = p%Stff  (1:n1      ,1:n1      )
-
    p%M12(1:n1,1:n2) = p%PtfmAM(1:n1      ,n1+1:n1+n2)
    p%C12(1:n1,1:n2) = p%Damp  (1:n1      ,n1+1:n1+n2)
    p%M21(1:n2,1:n1) = p%PtfmAM(n1+1:n1+n2,1:n1      )
    p%C21(1:n2,1:n1) = p%Damp  (n1+1:n1+n2,1:n1      )
-
    p%M22(1:n2,1:n2) = p%PtfmAM(n1+1:n1+n2,n1+1:n1+n2)
    p%C22(1:n2,1:n2) = p%Damp  (n1+1:n1+n2,n1+1:n1+n2)
    p%K22(1:n2,1:n2) = p%Stff  (n1+1:n1+n2,n1+1:n1+n2)
@@ -522,7 +548,6 @@ SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
    p%DMat(1:nY,1:6   ) = -p%K11
    p%DMat(1:nY,7:12  ) = -p%C11 + matmul(p%M12,p%C21)
    p%DMat(1:nY,13:18 ) = -p%M11 + matmul(p%M12,p%M21)
-
 !    call disp2r8(6, 'M',p%PtfmAM)
 !    call disp2r8(6, 'K',p%Stff)
 !    call disp2r8(6, 'C',p%Damp)
@@ -546,28 +571,6 @@ CONTAINS
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         Failed =  ErrStat >= AbortErrLev
     end function Failed
-
-    subroutine disp2r8(u,varname,a)
-        integer,intent(in) ::u
-        character(len=*),intent(in)::varname
-        real(ReKi),intent(in),dimension(:,:) ::a
-        integer :: n, m,i
-        character(len=20) :: fmt
-        character(len=*),parameter :: RFMT='EN13.3E2'
-        n=size(a,1)
-        m=size(a,2)
-        if (n>0 .and. m>0) then
-            write(u,"(A,A)") varname,"=["
-            write(fmt,*) m
-            do i=1,n-1
-                write(u,"("//adjustl(fmt)//RFMT//")") a(i,:)
-            enddo
-            i=n
-            write(u,"("//trim(fmt)//RFMT//",A)") a(i,:), "  ];"
-        else
-            write(u,'(A,A)') varname,'=[];'
-        endif
-    end subroutine
 
 END SUBROUTINE SetStateMatrices
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -659,7 +662,6 @@ END SUBROUTINE ExtPtfm_End
 !! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
 SUBROUTINE ExtPtfm_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
-
    REAL(DbKi),                         INTENT(IN   ) :: t               !< Current simulation time in seconds
    INTEGER(IntKi),                     INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
    TYPE(ExtPtfm_InputType),            INTENT(INOUT) :: Inputs(:)       !< Inputs at InputTimes (output from this routine only
@@ -677,20 +679,13 @@ SUBROUTINE ExtPtfm_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
    TYPE(ExtPtfm_MiscVarType),          INTENT(INOUT) :: m               !<  Misc variables for optimization (not copied in glue code)
    INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat         !< Error status of the operation
    CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
-
-      ! Local variables
+   ! Local variables
    !INTEGER(IntKi)                                    :: ErrStat2        ! local error status
    !CHARACTER(ErrMsgLen)                              :: ErrMsg2         ! local error message
    !CHARACTER(*), PARAMETER                           :: RoutineName = 'ExtPtfm_UpdateStates'
-
-
-      ! Initialize variables
-
+   ! Initialize variables
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
-
-
-
 END SUBROUTINE ExtPtfm_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a routine for computing outputs, used in both loose and tight coupling.
@@ -713,6 +708,7 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    INTEGER(IntKi)                                  :: ErrStat2          !< Temporary Error status of the operation
    CHARACTER(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message if ErrStat /= ErrID_None
    CHARACTER(*),     PARAMETER                     :: RoutineName='ExtPtfm_CalcOutput'
+   real(ReKi), dimension(6)                        :: Fc                !< Output coupling force
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -728,24 +724,27 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%qdotdot(1:3) = u%PtfmMesh%TranslationAcc(:,1)
    m%qdotdot(4:6) = u%PtfmMesh%RotationAcc(:,1)
 
-      ! compute the platform force (without added mass):
+   ! Compute the platform force `fr1` (without added mass):
    ! get interpolated (in time) loads, m%PtfmFt
    call InterpStpMat( REAL(t,ReKi), p%PtfmFt_t, p%PtfmFt, m%Indx, p%nPtfmFt, m%PtfmFt ) ! interpolate this based on the time history read in
-   
-   ! add the loads from damping and stiffness
+   ! Add the loads from added mass matrix, damping and stiffness
+   ! Fc = fr1 - M11 \ddot{x1} - C11 \dot{x1} - K x1
+   Fc(1:6) = m%PtfmFt(1:6) ! Fc  = fr1
    DO J = 1,6
       DO I = 1,6
-         m%PtfmFt(I) = m%PtfmFt(I) - p%Damp(I,J) * m%qdot(J) - p%Stff(I,J) * m%q(J)
+         Fc(I) = Fc(I) - p%PtfmAM(I,J)*m%qdotdot(J) - p%Damp(I,J) * m%qdot(J) - p%Stff(I,J) * m%q(J)
       ENDDO
    ENDDO      
-   
-   ! Now calculate the loads from the added mass matrix
-   m%F_PtfmAM     =  -matmul(p%PtfmAM, m%qdotdot)
+   ! 
+   if (p%nCB>0) then
+       print*,'TODO'
+       ! 
+   endif
 
    ! Update the Mesh with sum of these loads
    DO I=1,3
-      y%PtfmMesh%Force(I,1)  =  m%F_PtfmAM(I)   +  m%PtfmFt(I)
-      y%PtfmMesh%Moment(I,1) =  m%F_PtfmAM(I+3) +  m%PtfmFt(I+3)
+      y%PtfmMesh%Force(I,1)  =  Fc(I)
+      y%PtfmMesh%Moment(I,1) =  Fc(I+3)
    ENDDO
 
    !y%WriteOutput(1) = y%PtfmMesh%Force(1,1)
