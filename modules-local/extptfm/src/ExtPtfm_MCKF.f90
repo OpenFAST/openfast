@@ -566,6 +566,7 @@ SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
 !    call disp2r8(6, 'B',p%BMat)
 !    call disp2r8(6, 'C',p%CMat)
 !    call disp2r8(6, 'D',p%DMat)
+
 CONTAINS
     logical function Failed()
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -709,6 +710,7 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    CHARACTER(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message if ErrStat /= ErrID_None
    CHARACTER(*),     PARAMETER                     :: RoutineName='ExtPtfm_CalcOutput'
    real(ReKi), dimension(6)                        :: Fc                !< Output coupling force
+   real(ReKi), dimension(:), allocatable           :: F2                !< Temporary force from CB modes
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -737,16 +739,18 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    ENDDO      
    ! 
    if (p%nCB>0) then
-       print*,'TODO'
-       ! 
+       allocate(F2(1:p%nCB))
+       ! fr2 - M21 \ddot{x1} - C21 \dot{x1} - C22 \dot{x2} - K22 x2
+       F2 = m%PtfmFt(6+1:6+p%nCB) - matmul(p%M21,m%qdotdot) - matmul(p%C21, m%qdot) - matmul(p%C22, x%x2dot) - matmul(p%K22, x%x2)
+       Fc = Fc - matmul(p%C12, x%x2dot) - matmul(p%M12, F2) 
+       deallocate(F2)
    endif
 
    ! Update the Mesh with sum of these loads
    DO I=1,3
-      y%PtfmMesh%Force(I,1)  =  Fc(I)
-      y%PtfmMesh%Moment(I,1) =  Fc(I+3)
+      y%PtfmMesh%Force(I,1)  = Fc(I)
+      y%PtfmMesh%Moment(I,1) = Fc(I+3)
    ENDDO
-
    !y%WriteOutput(1) = y%PtfmMesh%Force(1,1)
    !y%WriteOutput(2) = y%PtfmMesh%Moment(1,1)
 END SUBROUTINE ExtPtfm_CalcOutput
