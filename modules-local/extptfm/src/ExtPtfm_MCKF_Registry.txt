@@ -61,6 +61,8 @@ typedef  ^               ParameterType         ReKi     Stff   {6}{6} - - "Stiff
 typedef  ^               ParameterType         ReKi     PtfmFt {:}{:} - - "at each prescribed time step, the 3 components of the portion of the platform force (in N) acting at the platform reference and the 3 components of the portion of the platform moment (in N-m) acting at the platform reference associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"
 typedef  ^               ParameterType         ReKi     PtfmFt_t {:}  - - "the time associated with each row of PtfmFt" "s"
 typedef  ^               ParameterType         IntKi    nPtfmFt     - - - "Number of values in PtfmFt_t" -
+typedef  ^               ParameterType         IntKi    nCB         - - - "Number of CraigBampton modes" -
+typedef  ^               ParameterType         IntKi    nTot        - - - "Total number of debrees of freedom (CB + interface)" -
 typedef  ^               ParameterType         IntKi    NumOuts     - - - "Number of values in WriteOutput" -
 
 # ..... Inputs ....................................................................................................................
