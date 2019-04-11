@@ -55,9 +55,9 @@ typedef    ^              MiscVarType          IntKi    Indx       - - - "Index 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^               ParameterType         ReKi     PtfmAM {6}{6} - - "Added mass matrix" "kg, kg-m, kg-m^2"
-typedef  ^               ParameterType         ReKi     Damp   {6}{6} - - "Damping matrix" -
-typedef  ^               ParameterType         ReKi     Stff   {6}{6} - - "Stiffness matrix" -
+typedef  ^               ParameterType         ReKi     PtfmAM {:}{:} - - "Added mass matrix" "kg, kg-m, kg-m^2"
+typedef  ^               ParameterType         ReKi     Damp   {:}{:} - - "Damping matrix" -
+typedef  ^               ParameterType         ReKi     Stff   {:}{:} - - "Stiffness matrix" -
 typedef  ^               ParameterType         ReKi     PtfmFt {:}{:} - - "at each prescribed time step, the 3 components of the portion of the platform force (in N) acting at the platform reference and the 3 components of the portion of the platform moment (in N-m) acting at the platform reference associated with everything but the added-mass effects; positive forces are in the direction of motion." "N, N-m"
 typedef  ^               ParameterType         ReKi     PtfmFt_t {:}  - - "the time associated with each row of PtfmFt" "s"
 typedef  ^               ParameterType         IntKi    nPtfmFt     - - - "Number of values in PtfmFt_t" -

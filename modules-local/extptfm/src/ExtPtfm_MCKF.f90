@@ -73,7 +73,6 @@ CONTAINS
 !! The initial states and initial guess for the input are defined.
 SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
-
    TYPE(ExtPtfm_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    TYPE(ExtPtfm_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
    TYPE(ExtPtfm_ParameterType),       INTENT(  OUT)  :: p           !< Parameters
@@ -93,94 +92,120 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    TYPE(ExtPtfm_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-      ! local variables
-
+   ! local variables
    INTEGER(IntKi)                                    :: NumOuts     ! number of outputs; would probably be in the parameter type
    INTEGER(IntKi)                                    :: ErrStat2    ! local error status
    CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! local error message
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ExtPtfm_Init'
 
-      ! Initialize variables
+   ! Initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-
-      ! Initialize the NWTC Subroutine Library
+   ! Initialize the NWTC Subroutine Library
    call NWTC_Init( )
-
-      ! Display the module information
+   ! Display the module information
    call DispNVD( ExtPtfm_Ver )
-
    ! set parameters
    p%NumOuts = 0   
    p%nTot = -1   
    p%nCB = -1   
    call ReadPrimaryFile( InitInp%InputFile, p, ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
-      if (errStat >= AbortErrLev) return
-   write(*,*)'Total number of DOF:',p%nTot
-   write(*,*)'Number of CB modes :',p%nCB
+   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+   if (errStat >= AbortErrLev) return
+   write(*,*)'Total number of DOF :',p%nTot
+   write(*,*)'Number of CB modes  :',p%nCB
+   write(*,*)'Number of time steps:',p%nPtfmFt
    
-      ! Define initial system states here:
+   ! Define initial system states here:
    x%DummyContState           = 0.0_ReKi
    xd%DummyDiscState          = 0.0_ReKi
    z%DummyConstrState         = 0.0_ReKi
    OtherState%DummyOtherState = 0.0_ReKi
 
-      ! initialize optimization variables:
+   ! initialize optimization variables:
    m%Indx = 1
    
-      ! Define initial guess (set up mesh first) for the system inputs here:
+   ! Define initial guess (set up mesh first) for the system inputs here:
    call Init_meshes(u, y, ErrStat, ErrMsg)
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
 
-      ! Define system output initializations (set up mesh) here:
+   ! Define system output initializations (set up mesh) here:
    call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',  ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! set return error status based on local (concatenate errors)
    call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat >= AbortErrLev) return        ! if there are local variables that need to be deallocated, do so before early return
+   if (ErrStat >= AbortErrLev) return  !if there are local variables that need to be deallocated, do so before early return
 
    InitOut%Ver = ExtPtfm_Ver
       
    if (InitInp%Linearize) then
-      
       ! If the module does not implement the four Jacobian routines at the end of this template, or the module cannot
       ! linearize with the features that are enabled, stop the simulation if InitInp%Linearize is true.
-      
       CALL SetErrStat( ErrID_Fatal, 'ExtPtfm_MCKF cannot perform linearization analysis.', ErrStat, ErrMsg, RoutineName)
-      
       ! Otherwise, if the module does allow linearization, return the appropriate Jacobian row/column names and rotating-frame flags here:   
       ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u 
       ! Allocate and set these variables: InitOut%RotFrame_y, InitOut%RotFrame_x, InitOut%RotFrame_xd, InitOut%RotFrame_z, InitOut%RotFrame_u 
-      
    end if
-   
-   write(*,*) 'Done'
-!    STOP
-   
-      
-      
 END SUBROUTINE ExtPtfm_Init
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Helper functions to read primary file
+real(ReKi) function ReadFloatFromStr(s, VarName, iStat, Msg ) result(myfloat)
+   character(len=*), intent(in)    :: s
+   character(len=*), intent(in)    :: VarName
+   character(len=*), intent(inout) :: Msg
+   integer, intent(out)            :: iStat
+   read(s,*, iostat=iStat ) myfloat 
+   if (iStat /= 0) then
+      iStat=ErrID_Fatal
+      Msg = trim(Msg)//'Error extracting float while reading '//VarName
+   endif
+end function ReadFloatFromStr
+integer function ReadIntFromStr(s, VarName, iStat, Msg ) result(myint)
+   character(len=*), intent(in)    :: s
+   character(len=*), intent(in)    :: VarName
+   character(len=*), intent(inout) :: Msg
+   integer, intent(out)            :: iStat
+   read(s,*, iostat=iStat ) myint 
+   if (iStat /= 0) then
+      iStat=ErrID_Fatal
+      Msg = trim(Msg)//'Error extracting integer while reading '//VarName
+   endif
+end function ReadIntFromStr
+subroutine ReadRealMatrix(fid, FileName, Mat, VarName, nLines,nRows, iStat, Msg, iLine )
+   integer, intent(in)                     :: fid
+   real(ReKi), dimension(:,:), allocatable :: Mat
+   character(len=*), intent(in)            :: FileName
+   character(len=*), intent(in)            :: VarName
+   integer, intent(in)                     :: nLines
+   integer, intent(in)                     :: nRows
+   integer, intent(out)                    :: iStat
+   integer, intent(inout)                  :: iLine
+   character(len=*), intent(inout)         :: Msg
+   ! local variables
+   integer :: i
+   call allocAry( Mat, nLines, nRows, 'p%Stff',  iStat, Msg); 
+   if (iStat /= 0) return
+   !Read Stiffness
+   DO I =1,nLines
+      iLine=iLine+1
+      ! TODO use ReadCAryFromStr when available in the NWTCIO, it performs more checks
+      CALL ReadAry( fid, FileName, Mat(I,:), nRows, trim(VarName)//' Line '//Num2LStr(iLine), VarName, iStat, Msg)
+      if (iStat /= 0) return
+   ENDDO
+end subroutine
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
 !..................................................................................................................................
-
-   IMPLICIT                        NONE
-
-      ! Passed variables
+   ! Passed variables
    CHARACTER(*),                INTENT(IN)    :: InputFile                           !< Name of the file containing the primary input data
    TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p                                   !< All the parameter matrices stored in this input file
    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status                              
    CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
-
-   
-      ! Local variables:
+   ! Local variables:
    REAL(ReKi)                    :: TmpAry(7)                                 ! temporary array for reading row from file
    INTEGER(IntKi)                :: I                                         ! loop counter
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
    INTEGER(IntKi)                :: iLine                                     ! Current position in file
-   
    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
    CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
@@ -188,31 +213,23 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    CHARACTER(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
    CHARACTER(200)                :: Line2                                     ! Temporary storage of a line from the input file (to compare with "default")
    CHARACTER(*), PARAMETER       :: RoutineName = 'ReadPrimaryFile'
-   
    ! Initialize some variables:
    ErrStat = ErrID_None
    ErrMsg  = ""
-      
    Echo = .FALSE.   
    !CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
    
    ! Get an available unit number for the file.
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
+   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 );               if (Failed()) return
    ! Open the Primary input file.
-   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   IF ( ErrStat >= AbortErrLev ) RETURN
-   
+   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 ); if (Failed()) return
    iLine=1
-   !-------------------------- First two lines
+   !-------------------------- Read the first two lines
    CALL ReadStr( UnIn, InputFile, Line, 'Line'//Num2LStr(iLine), 'External Platform MCKF file', ErrStat2, ErrMsg2)
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return
    iLine=iLine+1
    CALL ReadStr( UnIn, InputFile, Line2, 'Line'//Num2LStr(iLine), 'External Platform MCKF file', ErrStat2, ErrMsg2)
-   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (Failed()) return
    iLine=iLine+1
    call CONV2UC(Line)
    call CONV2UC(Line2)
@@ -227,103 +244,115 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
        call ReadFlexASCII()
    endif
 
-   RETURN
-
+   ! Checking that everyting was correctly read and set
+   call CheckAllInputsRead()
+   if (Failed()) return
+   
+   return
 
 CONTAINS
+    !> 
+    logical function Failed()
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call cleanup()
+    end function Failed
+    
+    !> 
+    subroutine cleanup()
+        close( UnIn )
+        if (allocated(p%PtfmAM))   deallocate(p%PtfmAM)
+        if (allocated(p%Stff))     deallocate(p%Stff)
+        if (allocated(p%Damp))     deallocate(p%Damp)
+        if (allocated(p%PtfmFt))   deallocate(p%PtfmFt)
+        if (allocated(p%PtfmFt_t)) deallocate(p%PtfmFt_t)
+    end subroutine cleanup
+    
+    !> Checks that all inputs were correctly read
+    subroutine CheckAllInputsRead()
+        if (ErrStat2/=0) return
+        if (p%nTot<0)                   then ; ErrStat2=ErrID_Fatal; ErrMsg2='ExtPtfm_MCKF, the total number of DOF was not set'; endif
+        if (.not.allocated(p%PtfmAM))   then ; ErrStat2=ErrID_Fatal; ErrMsg2='ExtPtfm_MCKF, the mass matrix was not allocated.' ; endif
+        if (.not.allocated(p%Stff))     then ; ErrStat2=ErrID_Fatal; ErrMsg2='ExtPtfm_MCKF, the stiffness matrix was not allocated.' ; endif
+        if (.not.allocated(p%Damp))     then ; ErrStat2=ErrID_Fatal; ErrMsg2='ExtPtfm_MCKF, the damping matrix was not allocated.' ; endif
+        if (.not.allocated(p%PtfmFt))   then ; ErrStat2=ErrID_Fatal; ErrMsg2='ExtPtfm_MCKF, the loads were not allocated.';endif
+        if (.not.allocated(p%PtfmFt_t)) then ; ErrStat2=ErrID_Fatal; ErrMsg2='ExtPtfm_MCKF, the time vector was not allocated.'; endif
+    end subroutine CheckAllInputsRead
+
+   !> Reads a FLEX ASCII file for Guyan or CraigBampton reductions
    SUBROUTINE ReadFlexASCII()
        logical :: AllSet 
        REAL(ReKi) :: dt !< time step
        REAL(ReKi) :: T  !< total simulation time
 
        AllSet = .FALSE.
-       p%nCB=-1
-       p%nTot=-1
-
-       ! Get an available unit number for the file.
-       CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       IF ( ErrStat >= AbortErrLev ) RETURN
-       ! Open the Primary input file.
-       CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
-       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       IF ( ErrStat >= AbortErrLev ) RETURN
-
-       ! Reading file line by line
-       ErrStat2=0
-       iLine=0
-       ErrMsg  = ""
-       ErrMsg2 = ""
        T=-1
        dt=-1
+       ! Get an available unit number for the file.
+       CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 );               if ( ErrStat2 /= 0 ) return
+       ! Open the Primary input file.
+       CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 ); if ( ErrStat2 /= 0 ) return
+
+       ! --- Reading file line by line
+       ErrStat2=0
+       iLine=0
        do while (ErrStat2==0)
            iLine=iLine+1
            read(UnIn,'(A)', iostat=ErrStat2) Line
            if (ErrStat2/=0) then
-               ErrMsg2='Error while reading file '//trim(InputFile)// ' line '//Num2LStr(iLine)
+               if (ErrStat2 < 0) then
+                   ErrStat2=0 ! End of file is fine
+               else
+                   ErrMsg2='Error while reading file '//trim(InputFile)// ' line '//Num2LStr(iLine)
+               endif
                exit
            endif
-           !CALL ReadStr( UnIn, InputFile, Line, 'Line '//Num2LStr(iLine), 'External Platform MCKF file', ErrStat2, ErrMsg2)
-           !
+           ! Line content is analyzed as case incensitive 
            call Conv2UC(Line)
            if (index(Line,'!DIMENSION')==1) then
-               p%nTot = ReadIntFromStr(Line(12:), 'time increment, line '//Num2LStr(iLine), ErrStat2, ErrMsg2 )
+               p%nTot = ReadIntFromStr(Line(12:), '`dimension`, line '//Num2LStr(iLine), ErrStat2, ErrMsg2); if (ErrStat2 /= 0) exit
                p%nCB=p%nTot-6
-               if (ErrStat2 /= 0) exit
+
            else if (index(Line,'!TIME INCREMENT IN SIMULATION:')==1) then
-               dt =  ReadFloatFromStr(Line(31:), 'time increment, line '//Num2LStr(iLine), ErrStat2, ErrMsg2 )
-               if (ErrStat2 /= 0) exit
+               dt =  ReadFloatFromStr(Line(31:), '`time increment`, line '//Num2LStr(iLine), ErrStat2, ErrMsg2); if (ErrStat2 /= 0) exit
+
            else if (index(Line,'!TOTAL SIMULATION TIME IN FILE:')==1) then
-               T =  ReadFloatFromStr(Line(32:), 'total simulation time, line '//Num2LStr(iLine), ErrStat2, ErrMsg2 )
-               if (ErrStat2 /= 0) exit
+               T =  ReadFloatFromStr(Line(32:), '`total simulation time`, line '//Num2LStr(iLine), ErrStat2, ErrMsg2 ); if (ErrStat2 /= 0) exit
+
            else if (index(Line,'!MASS MATRIX')==1) then
                iLine=iLine+1
-               CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat2, ErrMsg2)
-                if (ErrStat2 /= 0) exit
-               !Read Mass
-               DO I =1,6
-                  iLine=iLine+1
-                  CALL ReadAry( UnIn, InputFile, p%PtfmAM(I,:), 6, 'PtfmAM - Line '//Num2LStr(iLine), 'Mass Matrix Terms', ErrStat2, ErrMsg2)
-                  if (ErrStat2 /= 0) exit
-               ENDDO
+               CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat2, ErrMsg2); if (ErrStat2 /= 0) exit
+               if (p%nTot<0) exit
+               call ReadRealMatrix(UnIn, InputFile, p%PtfmAM, 'Mass Matrix', p%nTot, p%nTot, ErrStat2, ErrMsg2, iLine)
+
            else if (index(Line,'!STIFFNESS MATRIX')==1) then
                iLine=iLine+1
-               CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat2, ErrMsg2)
-               if (ErrStat2 /= 0) exit
-               !Read Stiffness
-               DO I =1,6
-                  iLine=iLine+1
-                  CALL ReadAry( UnIn, InputFile, p%Stff(I,:), 6, 'Stff - Line '//Num2LStr(iLine), 'Stiffness Matrix Terms', ErrStat2, ErrMsg2)
-                  if (ErrStat2 /= 0) exit
-               ENDDO
+               CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat2, ErrMsg2);  if (ErrStat2 /= 0) exit
+               if (p%nTot<0) exit
+               call ReadRealMatrix(UnIn, InputFile, p%Stff, 'Stiffness Matrix', p%nTot, p%nTot, ErrStat2, ErrMsg2, iLine)
 
            else if (index(Line,'!DAMPING MATRIX')==1) then
                iLine=iLine+1
-               CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat2, ErrMsg2)
-               if (ErrStat2 /= 0) exit
-               !Read Damping
-               DO I =1,6
-                  iLine=iLine+1
-                  CALL ReadAry( UnIn, InputFile, p%Damp(I,:), 6, 'Damp - Line '//Num2LStr(iLine), 'Damping Matrix Terms', ErrStat2, ErrMsg2)
-                   if (ErrStat2 /= 0) exit
-               ENDDO
+               CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat2, ErrMsg2); if (ErrStat2 /= 0) exit
+               if (p%nTot<0) exit
+               call ReadRealMatrix(UnIn, InputFile, p%Damp, 'Damping Matrix', p%nTot, p%nTot, ErrStat2, ErrMsg2, iLine)
 
            else if (index(Line,'!LOADING AND WAVE ELEVATION')==1) then
                iLine=iLine+1
                CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat2, ErrMsg2)
                if (ErrStat2 /= 0) exit
                p%nPtfmFt = nint(T/dt)+1
-               call allocAry( p%PtfmFt,   max(1,p%nPtfmFt), 6, 'p%PtfmFt',   ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               call allocAry( p%PtfmFt_t, max(1,p%nPtfmFt),    'p%PtfmFt_t', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               if (ErrStat2 /= 0) exit
+               if (p%nTot<0) exit
+               call allocAry( p%PtfmFt,   max(1,p%nPtfmFt), p%nTot, 'p%PtfmFt',   ErrStat2, ErrMsg2); if (ErrStat2 /= 0) exit
+               call allocAry( p%PtfmFt_t, max(1,p%nPtfmFt),         'p%PtfmFt_t', ErrStat2, ErrMsg2); if (ErrStat2 /= 0) exit
                if (p%nPtfmFt == 0) then
-                  p%PtfmFt = 0.0_ReKi
+                  p%PtfmFt   = 0.0_ReKi
                   p%PtfmFt_t = 0.0_ReKi
-                  p%nPtfmFt = 1
+                  p%nPtfmFt  = 1
                else
                   do i=1,p%nPtfmFt
                      iLine=iLine+1
-                     call ReadAry( UnIn, InputFile, TmpAry, 7, 'PtfmFt - Line: '//Num2LStr(iLine)//' Value: '//trim(Num2LStr(i))//'/'//Num2LStr(p%nPtfmFt), 'PtfmFt time-history', ErrStat2, ErrMsg2)
+                     call ReadAry( UnIn, InputFile, TmpAry, p%nTot+1, 'PtfmFt - Line: '//Num2LStr(iLine)//' Value: '//trim(Num2LStr(i))//'/'//Num2LStr(p%nPtfmFt), 'PtfmFt time-history', ErrStat2, ErrMsg2)
                      if (ErrStat2 /= 0) exit
                      p%PtfmFt_t(i) = TmpAry(1)
                      p%PtfmFt(i,:) = TmpAry(2:7)
@@ -337,103 +366,38 @@ CONTAINS
 !                write(*,*) 'Ignored line: '//trim(Line)
            endif
        enddo
-       if (ErrStat2 < 0) ErrStat2=0 ! End of file is fine
-
-       ! Checking that everyting was correctly set
-       if ((p%nCB<0) .or. (p%nTot<0) .or. (T<0) .or. (dt<0)) then
-           ErrStat2=ErrID_Fatal
-           ErrMsg2='Not all variables set while reading ExtPtfm. Check file format'
-       endif
-
-       write(*,*) '>>> T ',T
-       write(*,*) '>>> DIM',p%nTot
-       write(*,*) '>>> DT',dt
-       write(*,*) '>>> nT',p%nPtfmFt
-
-       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       if ( ErrStat >= AbortErrLev ) then
-          write(*,*)'>>>> CAUGHT ERROR'
-          call cleanup()
-          return
-       end if
-
+       close( UnIn )
    END SUBROUTINE ReadFlexASCII
 
-
-   real(ReKi) function ReadFloatFromStr(s, VarName, iStat, Msg ) result(myfloat)
-       character(len=*), intent(in)    :: s
-       character(len=*), intent(in)    :: VarName
-       character(len=*), intent(inout) :: Msg
-       integer, intent(out)            :: iStat
-       read(s,*, iostat=iStat ) myfloat 
-       if (iStat /= 0) then
-          Msg = trim(Msg)//'Error extracting float while reading '//VarName
-       endif
-   end function ReadFloatFromStr
-
-   integer function ReadIntFromStr(s, VarName, iStat, Msg ) result(myint)
-       character(len=*), intent(in)    :: s
-       character(len=*), intent(in)    :: VarName
-       character(len=*), intent(inout) :: Msg
-       integer, intent(out)            :: iStat
-       read(s,*, iostat=iStat ) myint 
-       if (iStat /= 0) then
-          Msg = trim(Msg)//'Error extracting integer while reading '//VarName
-       endif
-   end function ReadIntFromStr
-
-
-
+   !> Reads a Guyan ASCII file 
    SUBROUTINE ReadGuyanASCII()
+       ! Guyan reduction has 6 DOF, 0 CB DOFs
+       p%nCB  = 0
+       p%nTot = 6
        ! Get an available unit number for the file.
-       CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       IF ( ErrStat >= AbortErrLev ) RETURN
+       CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 );               if ( ErrStat2 /= 0 ) return
        ! Open the Primary input file.
-       CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
-       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       IF ( ErrStat >= AbortErrLev ) RETURN
+       CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 ); if ( ErrStat2 /= 0 ) return
 
        !-------------------------- HEADER ---------------------------------------------
        CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: External Platform MCKF Matrices (line 1)', ErrStat2, ErrMsg2)
-       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       if ( ErrStat2 /= 0 ) return
        
        !---------------------- MASS MATRIX --------------------------------------
        CALL ReadCom( UnIn, InputFile, 'Section Header: Mass Matrix', ErrStat2, ErrMsg2)
-       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       !Read Mass
-       DO I =1,6
-          CALL ReadAry( UnIn, InputFile, p%PtfmAM(I,:), 6, 'PtfmAM', 'Mass Matrix Terms', ErrStat2, ErrMsg2)
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ENDDO
-       if ( ErrStat >= AbortErrLev ) then
-          call cleanup()
-          return
-       end if
+       if ( ErrStat2 /= 0 ) return
+       CALL ReadRealMatrix(UnIn, InputFile, p%PtfmAM, 'Mass Matrix', p%nTot, p%nTot, ErrStat2, ErrMsg2, iLine)
+       if ( ErrStat2 /= 0 ) return
        !---------------------- DAMPING MATRIX --------------------------------------
        CALL ReadCom( UnIn, InputFile, 'Section Header: Damping Matrix', ErrStat2, ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       !Read Damping
-       DO I =1,6
-          CALL ReadAry( UnIn, InputFile, p%Damp(I,:), 6, 'Damp', 'Damping Matrix Terms', ErrStat2, ErrMsg2)
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ENDDO
-       if ( ErrStat >= AbortErrLev ) then
-          call cleanup()
-          return
-       end if
+       if ( ErrStat2 /= 0 ) return
+       CALL ReadRealMatrix(UnIn, InputFile, p%Damp, 'Damping Matrix', p%nTot, p%nTot, ErrStat2, ErrMsg2, iLine)
+       if ( ErrStat2 /= 0 ) return
        !---------------------- STIFFNESS MATRIX --------------------------------------
        CALL ReadCom( UnIn, InputFile, 'Section Header: Stiffness Matrix', ErrStat2, ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       !Read Stiffness
-       DO I =1,6
-          CALL ReadAry( UnIn, InputFile, p%Stff(I,:), 6, 'Stff', 'Stiffness Matrix Terms', ErrStat2, ErrMsg2)
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ENDDO
-       if ( ErrStat >= AbortErrLev ) then
-          call cleanup()
-          return
-       end if
+       if ( ErrStat2 /= 0 ) return
+       CALL ReadRealMatrix(UnIn, InputFile, p%Stff, 'Stiffness Matrix', p%nTot, p%nTot, ErrStat2, ErrMsg2, iLine)
+       if ( ErrStat2 /= 0 ) return
        
        !---------------------- LOAD time-history --------------------------------------
        p%nPtfmFt = 0
@@ -442,19 +406,14 @@ CONTAINS
        CALL ReadCom( UnIn, InputFile, 'Loads time-history table channel units', ErrStat2, ErrMsg2)
        if (ErrStat2 < AbortErrLev) then
           ! let's figure out how many rows of data are in the time-history table:
-             read( UnIn, *, IOSTAT=ErrStat2 ) TmpAry
+          read( UnIn, *, IOSTAT=ErrStat2 ) TmpAry
           do while (ErrStat2==0)
              p%nPtfmFt = p%nPtfmFt + 1
              read( UnIn, *, IOSTAT=ErrStat2 ) TmpAry
           end do
        end if
-       call allocAry( p%PtfmFt,   max(1,p%nPtfmFt), 6, 'p%PtfmFt',   ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       call allocAry( p%PtfmFt_t, max(1,p%nPtfmFt),    'p%PtfmFt_t', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       if (ErrStat >= AbortErrLev) then
-          call cleanup()
-          return
-       end if
-          
+       call allocAry( p%PtfmFt,   max(1,p%nPtfmFt), 6, 'p%PtfmFt',   ErrStat2, ErrMsg2); if ( ErrStat2 /= 0 ) return
+       call allocAry( p%PtfmFt_t, max(1,p%nPtfmFt),    'p%PtfmFt_t', ErrStat2, ErrMsg2); if ( ErrStat2 /= 0 ) return
        if (p%nPtfmFt == 0) then
           p%PtfmFt = 0.0_ReKi
           p%PtfmFt_t = 0.0_ReKi
@@ -466,21 +425,14 @@ CONTAINS
           end do
           do i=1,p%nPtfmFt
              call ReadAry( UnIn, InputFile, TmpAry, 7, 'PtfmFt', 'PtfmFt time-history', ErrStat2, ErrMsg2)
+             if ( ErrStat2 /= 0 ) return
              p%PtfmFt_t(i) = TmpAry(1)
              p%PtfmFt(i,:) = TmpAry(2:7)
           end do
        end if
        !---------------------- END OF FILE -----------------------------------------
-       ! Setting parameters
-       p%nCB  = 0
-       p%nTot = 6
+       close( UnIn )
    END SUBROUTINE ReadGuyanASCII
-
-   !...............................................................................................................................
-   SUBROUTINE cleanup()
-         CLOSE( UnIn )
-   END SUBROUTINE cleanup
-   !...............................................................................................................................
 END SUBROUTINE ReadPrimaryFile      
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Init_meshes(u, y, ErrStat, ErrMsg)
