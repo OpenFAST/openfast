@@ -49,6 +49,7 @@ typedef   ^                     ^               IntKi                    n      
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
 typedef    ^              MiscVarType          ReKi     xFlat    {:} - - "Flattened vector of states"
+typedef    ^              MiscVarType          ReKi     uFlat   {18} - - "Flattened vector of inputs"
 typedef    ^              MiscVarType          ReKi     PtfmFt   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
 typedef    ^              MiscVarType          IntKi    Indx       - - - "Index into PtfmFt_t" -
 
@@ -82,7 +83,7 @@ typedef  ^               ParameterType         IntKi    nPtfmFt     - - - "Numbe
 typedef  ^               ParameterType         IntKi    nCB         - - - "Number of CraigBampton modes" -
 typedef  ^               ParameterType         IntKi    nTot        - - - "Total number of debrees of freedom (CB + interface)" -
 typedef  ^               ParameterType         IntKi    NumOuts     - - - "Number of values in WriteOutput" -
-typedef  ^               ParameterType         IntKi    IntMethod   - - - "Integration Method (1=RK4, 2=AB4, 3=ABM4, 4=AM2)" -
+typedef  ^               ParameterType         IntKi    IntMethod   - - - "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
 
 # ..... Inputs ....................................................................................................................
 typedef  ^               InputType             MeshType PtfmMesh             -  -  -  "Displacements at the platform reference point" -
