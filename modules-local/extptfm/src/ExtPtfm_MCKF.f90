@@ -180,12 +180,13 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    InitOut%Ver = ExtPtfm_Ver
       
    if (InitInp%Linearize) then
-      ! If the module does not implement the four Jacobian routines at the end of this template, or the module cannot
-      ! linearize with the features that are enabled, stop the simulation if InitInp%Linearize is true.
-      CALL SetErrStat( ErrID_Fatal, 'ExtPtfm_MCKF cannot perform linearization analysis.', ErrStat, ErrMsg, 'ExtPtfm_Init')
+      CALL SetErrStat( ErrID_Fatal, 'ExtPtfm_MCKF linearization analysis TODO.', ErrStat, ErrMsg, 'ExtPtfm_Init')
       ! Otherwise, if the module does allow linearization, return the appropriate Jacobian row/column names and rotating-frame flags here:   
       ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u 
       ! Allocate and set these variables: InitOut%RotFrame_y, InitOut%RotFrame_x, InitOut%RotFrame_xd, InitOut%RotFrame_z, InitOut%RotFrame_u 
+      !CALL AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y', ErrStat, ErrMsg); if(Failed() return
+      !CALL AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y', ErrStat, ErrMsg); if(Failed() return
+      !InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
    end if
 CONTAINS
     logical function Failed()
@@ -1056,46 +1057,54 @@ END SUBROUTINE ExtPtfm_CalcConstrStateResidual
 SUBROUTINE ExtPtfm_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
 !..................................................................................................................................
 
-   REAL(DbKi),                                INTENT(IN   )           :: t          !< Time in seconds at operating point
-   TYPE(ExtPtfm_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
-   TYPE(ExtPtfm_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(ExtPtfm_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
-   TYPE(ExtPtfm_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
-   TYPE(ExtPtfm_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
-   TYPE(ExtPtfm_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
-   TYPE(ExtPtfm_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required); 
-                                                                                    !!   Output fields are not used by this routine, but type is   
-                                                                                    !!   available here so that mesh parameter information (i.e.,  
-                                                                                    !!   connectivity) does not have to be recalculated for dYdu.
-   TYPE(ExtPtfm_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
-   CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect 
-                                                                                    !!   to the inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with 
-                                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with 
-                                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
+   REAL(DbKi),                         INTENT(IN   ) :: t          !< Time in seconds at operating point
+   TYPE(ExtPtfm_InputType),            INTENT(IN   ) :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(ExtPtfm_ParameterType),        INTENT(IN   ) :: p          !< Parameters
+   TYPE(ExtPtfm_ContinuousStateType),  INTENT(IN   ) :: x          !< Continuous states at operating point
+   TYPE(ExtPtfm_DiscreteStateType),    INTENT(IN   ) :: xd         !< Discrete states at operating point
+   TYPE(ExtPtfm_ConstraintStateType),  INTENT(IN   ) :: z          !< Constraint states at operating point
+   TYPE(ExtPtfm_OtherStateType),       INTENT(IN   ) :: OtherState !< Other states at operating point
+   TYPE(ExtPtfm_OutputType),           INTENT(IN   ) :: y          !< Output (change to inout if a mesh copy is required); 
+                                                                   !!   Output fields are not used by this routine, but type is   
+                                                                   !!   available here so that mesh parameter information (i.e.,  
+                                                                   !!   connectivity) does not have to be recalculated for dYdu.
+   TYPE(ExtPtfm_MiscVarType),          INTENT(INOUT) :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect 
+                                                                   !!   to the inputs (u) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with 
+                                                                   !!   respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with 
+                                                                   !!   respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
+                                                                   !!   respect to the inputs (u) [intent in to avoid deallocation]
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
    IF ( PRESENT( dYdu ) ) THEN
-      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
       ! allocate and set dYdu
+      if (.not. allocated(dYdu)) then
+          call AllocAry(dYdu, 6, 18, 'dYdu', ErrStat, ErrMsg); if(Failed()) return
+      end if
+      dYdu(1:6,1:18) = p%DMat(1:6,1:18)
    END IF
    IF ( PRESENT( dXdu ) ) THEN
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
       ! allocate and set dXdu
+      if (.not. allocated(dXdu)) then
+          call AllocAry(dXdu, 2*p%nCB, 18, 'dXdu', ErrStat, ErrMsg); if(Failed()) return
+      end if
+      dXdu(1:2*p%nCB,1:18) = p%DMat(1:2*p%nCB,1:18)
    END IF
    IF ( PRESENT( dXddu ) ) THEN
-      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the inputs (u) here:
-      ! allocate and set dXddu
    END IF
    IF ( PRESENT( dZdu ) ) THEN
-      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the inputs (u) here:
-      ! allocate and set dZdu
    END IF
+CONTAINS
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_JacobianPInput')
+        Failed =  ErrStat >= AbortErrLev
+    end function Failed
 END SUBROUTINE ExtPtfm_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
@@ -1126,27 +1135,34 @@ SUBROUTINE ExtPtfm_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrS
                                                                    !!   functions (Xd) with respect to
                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
    REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdx(:,:)  !< Partial derivatives of constraint state
-                                                                             !!   functions (Z) with respect to
-                                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
+                                                                   !!   functions (Z) with respect to
+                                                                   !!   the continuous states (x) [intent in to avoid deallocation]
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
    IF ( PRESENT( dYdx ) ) THEN
-      ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
       ! allocate and set dYdx
+      if (.not. allocated(dYdx)) then
+          call AllocAry(dYdx, 6, 2*p%nCB, 'dYdx', ErrStat, ErrMsg); if(Failed()) return
+      end if
+      dYdx(1:6,1:2*p%nCB) = p%CMat(1:6, 1:2*p%nCB)
    END IF
    IF ( PRESENT( dXdx ) ) THEN
-      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
       ! allocate and set dXdx
+      if (.not. allocated(dXdx)) then
+          call AllocAry(dXdx, 2*p%nCB, 2*p%nCB, 'dXdx', ErrStat, ErrMsg); if(Failed()) return
+      end if
+      dXdx(1:2*p%nCB,1:2*p%nCB) = p%AMat(1:2*p%nCB,1:2*p%nCB)
    END IF
    IF ( PRESENT( dXddx ) ) THEN
-      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the continuous states (x) here:
-      ! allocate and set dXddx
    END IF
    IF ( PRESENT( dZdx ) ) THEN
-      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the continuous states (x) here:
-      ! allocate and set dZdx
    END IF
+CONTAINS
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_JacobianPInput')
+        Failed =  ErrStat >= AbortErrLev
+    end function Failed
 END SUBROUTINE ExtPtfm_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
@@ -1230,33 +1246,25 @@ SUBROUTINE ExtPtfm_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, Er
                                                                                     !!  functions (Xd) with respect to the
                                                                                     !!  constraint states (z) [intent in to avoid deallocation]
    REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
-                                                                                    !! state functions (Z) with respect to
-                                                                                    !!  the constraint states (z) [intent in to avoid deallocation]
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
-
    IF ( PRESENT( dYdz ) ) THEN
       ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
       ! allocate and set dYdz
    END IF
-
    IF ( PRESENT( dXdz ) ) THEN
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
       ! allocate and set dXdz
    END IF
-
    IF ( PRESENT( dXddz ) ) THEN
       ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
       ! allocate and set dXddz
    END IF
-
    IF ( PRESENT( dZdz ) ) THEN
       ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
       ! allocate and set dZdz
    END IF
-
-
 END SUBROUTINE ExtPtfm_JacobianPConstrState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
