@@ -21,6 +21,7 @@
 PROGRAM BeamDyn_Driver_Program
 
    USE BeamDyn_driver_subs  ! all other modules inherited through this one
+   USE VersionInfo
 
    IMPLICIT NONE
 

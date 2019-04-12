@@ -23,6 +23,7 @@ MODULE FAST_Subs
 
    USE FAST_Solver
    USE FAST_Linear
+   USE VersionInfo
 
    IMPLICIT NONE
 
@@ -5006,9 +5007,13 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_AllMeshes'
 
-   ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
-   ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
-   Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   ! Calculate the number of digits for the maximum number of output steps to be written.
+   ! This will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
+   if ( (p_FAST%n_VTKTime>0) .and. (p_FAST%n_TMax_m1+1>0) ) then
+      Twidth = CEILING( log10( real(p_FAST%n_TMax_m1+1, ReKi) / p_FAST%n_VTKTime ) ) + 1
+   else
+      Twidth = 1
+   endif
    
    NumBl = 0
    if (allocated(ED%Output)) then
@@ -5235,9 +5240,13 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW,
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_BasicMeshes'
 
-   ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
-   ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
-   Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   ! Calculate the number of digits for the maximum number of output steps to be written.
+   ! This will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
+   if ( (p_FAST%n_VTKTime>0) .and. (p_FAST%n_TMax_m1+1>0) ) then
+      Twidth = CEILING( log10( real(p_FAST%n_TMax_m1+1, ReKi) / p_FAST%n_VTKTime ) ) + 1
+   else
+      Twidth = 1
+   endif
    
    
    NumBl = 0
@@ -5344,9 +5353,13 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, A
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WrVTK_Surfaces'
 
-   ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
-   ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK_...()
-   Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   ! Calculate the number of digits for the maximum number of output steps to be written.
+   ! This will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
+   if ( (p_FAST%n_VTKTime>0) .and. (p_FAST%n_TMax_m1+1>0) ) then
+      Twidth = CEILING( log10( real(p_FAST%n_TMax_m1+1, ReKi) / p_FAST%n_VTKTime ) ) + 1
+   else
+      Twidth = 1
+   endif
    
    
    NumBl = 0
@@ -5468,10 +5481,13 @@ SUBROUTINE WrVTK_WaveElev(t_global, p_FAST, y_FAST, HD)
    !.................................................................
    ! write the data that potentially changes each time step:
    !.................................................................
-
-   ! calculate the number of digits in 'y_FAST%NOutSteps' (Maximum number of output steps to be written)
-   ! this will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK_...()
-   Twidth = int(log10(real(y_FAST%NOutSteps))) + 1
+   ! Calculate the number of digits for the maximum number of output steps to be written.
+   ! This will be used to pad the write-out step in the VTK filename with zeros in calls to MeshWrVTK()
+   if ( (p_FAST%n_VTKTime>0) .and. (p_FAST%n_TMax_m1+1>0) ) then
+      Twidth = CEILING( log10( real(p_FAST%n_TMax_m1+1, ReKi) / p_FAST%n_VTKTime ) ) + 1
+   else
+      Twidth = 1
+   endif
 
    VTK_path = get_vtkroot_path( p_FAST%OutFileRoot )
 

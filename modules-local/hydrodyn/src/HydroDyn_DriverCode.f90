@@ -27,6 +27,7 @@ PROGRAM HydroDynDriver
    USE HydroDyn_Types
    USE HydroDyn_Output
    USE ModMesh_Types
+   USE VersionInfo
    
    IMPLICIT NONE
    
@@ -127,6 +128,9 @@ PROGRAM HydroDynDriver
    CHARACTER(200)                   :: git_commit    ! String containing the current git commit hash
 
    TYPE(ProgDesc), PARAMETER        :: version   = ProgDesc( 'HydroDyn Driver', '', '' )  ! The version number of this program.
+
+   ! Variables Init
+   Time = -99999
    
    !...............................................................................................................................
    ! Routines called in initialization

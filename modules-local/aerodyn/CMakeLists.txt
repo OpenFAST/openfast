@@ -23,6 +23,7 @@ generate_f90_types(src/UnsteadyAero_Registry.txt UnsteadyAero_Types.f90)
 generate_f90_types(src/AeroDyn_Driver_Registry.txt
   AeroDyn_Driver_Types.f90 -noextrap)
 
+# AeroDyn lib
 set(AD_LIBS_SOURCES
   src/AeroDyn.f90
   src/AeroDyn_IO.f90
@@ -45,6 +46,7 @@ set(AD_LIBS_SOURCES
 add_library(aerodynlib ${AD_LIBS_SOURCES})
 target_link_libraries(aerodynlib nwtclibs)
 
+# AeroDyn driver
 set(AD_DRIVER_SOURCES
   src/AeroDyn_Driver.f90
   src/AeroDyn_Driver_Subs.f90
@@ -53,7 +55,7 @@ set(AD_DRIVER_SOURCES
   AeroDyn_Driver_Types.f90)
 
 add_executable(aerodyn_driver ${AD_DRIVER_SOURCES})
-target_link_libraries(aerodyn_driver aerodynlib nwtclibs ${CMAKE_DL_LIBS})
+target_link_libraries(aerodyn_driver aerodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
 install(TARGETS aerodyn_driver aerodynlib
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"

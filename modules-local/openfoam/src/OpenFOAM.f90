@@ -1024,9 +1024,10 @@ SUBROUTINE CalcForceActuatorPositionsBlade(InitIn_OpFM, p_OpFM, structPositions,
   ! Now calculate the positions of the force nodes based on interpolation
   forceNodePositions(:,1) = structPositions(:,1)
   DO I=2,p_OpFM%NnodesForceBlade-1 ! Calculate the position of the force nodes
-     jLower=1
-     do while ( ( (rStructNodes(jLower) - p_OpFM%forceBldRnodes(I))*(rStructNodes(jLower+1) - p_OpFM%forceBldRnodes(I)) .gt. 0) .and. (jLower .lt. nStructNodes) )
-        jLower = jLower + 1
+     do jLower = 1, (nStructNodes - 1)
+        if ((rStructNodes(jLower) - p_OpFM%forceBldRnodes(I))*(rStructNodes(jLower+1) - p_OpFM%forceBldRnodes(I)) .le. 0) then
+           exit
+        endif
      end do
      rInterp =  (p_OpFM%forceBldRnodes(I) - rStructNodes(jLower))/(rStructNodes(jLower+1)-rStructNodes(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
      forceNodePositions(:,I) = structPositions(:,jLower) + rInterp * (structPositions(:,jLower+1) - structPositions(:,jLower))
@@ -1067,10 +1068,11 @@ SUBROUTINE CalcForceActuatorPositionsTower(InitIn_OpFM, p_OpFM, structPositions,
   ! Now calculate the positions of the force nodes based on interpolation
   forceNodePositions(:,1) = structPositions(:,1)
   DO I=2,p_OpFM%NnodesForceTower-1 ! Calculate the position of the force nodes
-     jLower=1
-     do while ( ((hStructNodes(jLower) - p_OpFM%forceTwrHnodes(I))*(hStructNodes(jLower+1) - p_OpFM%forceTwrHnodes(I)) .gt. 0) .and. (jLower .lt. nStructNodes))
-        jLower = jLower + 1
-     end do
+     do jLower = 1, (nStructNodes - 1)
+        if ((hStructNodes(jLower) - p_OpFM%forceTwrHnodes(I))*(hStructNodes(jLower+1) - p_OpFM%forceTwrHnodes(I)) .le. 0) then
+           exit
+        endif
+     enddo
      hInterp =  (p_OpFM%forceTwrHnodes(I) - hStructNodes(jLower))/(hStructNodes(jLower+1)-hStructNodes(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
      forceNodePositions(:,I) = structPositions(:,jLower) + hInterp * (structPositions(:,jLower+1) - structPositions(:,jLower))
   END DO
@@ -1138,7 +1140,7 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
   INTEGER(IntKi)                         :: ErrStat2    ! temporary Error status of the operation
   CHARACTER(ErrMsgLen)                   :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
   REAL(ReKi)                             :: rInterp     ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
-  
+
   ! Set the chord for the hub node to be zero. Ideally, I'd like this to be the hub radius. Will figure this out later.
   Node = 1
   u_OpFM%forceNodesChord(Node) = 0.0_ReKi
@@ -1149,10 +1151,11 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
      nNodesBladeProps = SIZE(InitOut_AD%BladeProps(k)%BlChord)
      DO I=1,p_OpFM%NnodesForceBlade
         Node = Node + 1
-        jLower=1
-        do while ( ( (InitOut_AD%BladeProps(k)%BlSpn(jLower) - p_OpFM%forceBldRnodes(I))*(InitOut_AD%BladeProps(k)%BlSpn(jLower+1) - p_OpFM%forceBldRnodes(I)) .gt. 0 ) .and. (jLower .lt. nNodesBladeProps) )!Determine the closest two nodes at which the blade properties are specified
-           jLower = jLower + 1
-        end do
+        do jLower = 1, (nNodesBladeProps - 1)
+           if ( (InitOut_AD%BladeProps(k)%BlSpn(jLower) - p_OpFM%forceBldRnodes(I))*(InitOut_AD%BladeProps(k)%BlSpn(jLower+1) - p_OpFM%forceBldRnodes(I)) .le. 0 ) then
+              exit
+           endif
+        enddo
         if (jLower .lt. nNodesBladeProps) then
            rInterp =  (p_OpFM%forceBldRnodes(I) - InitOut_AD%BladeProps(k)%BlSpn(jLower))/(InitOut_AD%BladeProps(k)%BlSpn(jLower+1)-InitOut_AD%BladeProps(k)%BlSpn(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
            u_OpFM%forceNodesChord(Node) = InitOut_AD%BladeProps(k)%BlChord(jLower) + rInterp * (InitOut_AD%BladeProps(k)%BlChord(jLower+1) - InitOut_AD%BladeProps(k)%BlChord(jLower))
@@ -1171,10 +1174,11 @@ SUBROUTINE OpFM_InterpolateForceNodesChord(InitOut_AD, p_OpFM, u_OpFM, ErrStat, 
      ! Calculate the chord at the force nodes based on interpolation
      DO I=1,p_OpFM%NnodesForceTower
         Node = Node + 1
-        jLower=1
-        do while ( ( (InitOut_AD%TwrElev(jLower) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight)*(InitOut_AD%TwrElev(jLower+1) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight) .gt. 0) .and. (jLower .lt. nNodesTowerProps) ) !Determine the closest two nodes at which the blade properties are specified
-           jLower = jLower + 1
-        end do
+        do jLower = 1, (nNodesTowerProps - 1)
+           if ( (InitOut_AD%TwrElev(jLower) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight)*(InitOut_AD%TwrElev(jLower+1) - p_OpFM%forceTwrHnodes(I)-p_OpFM%TowerBaseHeight) .le. 0) then
+              exit
+           endif
+        enddo
         if (jLower .lt. nNodesTowerProps) then
            rInterp =  (p_OpFM%forceTwrHnodes(I)+p_OpFM%TowerBaseHeight - InitOut_AD%TwrElev(jLower))/(InitOut_AD%TwrElev(jLower+1)-InitOut_AD%TwrElev(jLower)) ! The location of this force node in (0,1) co-ordinates between the jLower and jLower+1 nodes
            u_OpFM%forceNodesChord(Node) = InitOut_AD%TwrDiam(jLower) + rInterp * (InitOut_AD%TwrDiam(jLower+1) - InitOut_AD%TwrDiam(jLower))

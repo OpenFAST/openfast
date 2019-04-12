@@ -22,12 +22,6 @@ include(${CMAKE_SOURCE_DIR}/cmake/OpenfastFortranOptions.cmake)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-# Get the git info into the executable
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
-include(GetGitRevisionDescription)
-git_describe(GIT_DESCRIBE)
-add_definitions(-DGIT_VERSION_INFO="${GIT_DESCRIBE}")
-
 # CMake Configuration variables
 if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release" CACHE STRING
@@ -98,6 +92,7 @@ set(OPENFAST_MODULES_LOCAL
   supercontroller
   turbsim
   openfast-library
+  version
   )
 
 ########################################################################

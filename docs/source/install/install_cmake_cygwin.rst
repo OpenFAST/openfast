@@ -14,7 +14,7 @@ Installing prerequisites
     -  Choose the default install location
     -  Choose the default package download location
     -  Choose ``Direct connection``
-    -  Choose ``http://www.gtlib.gatech.edu`` as the download site
+    -  Choose a download site
     -  See next step for ``select packages``. Alternately, you can skip this
        step and run ``setup-x86_64.exe`` anytime later to select and install
        required software.
@@ -132,13 +132,13 @@ Sample output is shown below:
 
 Grab a cup of coffee as this takes a while on Cygwin. Once the
 compilation is completed, the ``OpenFAST`` executable is present in
-``OpenFAST/build/glue-codes/fast/openfast.exe``
+``OpenFAST/build/glue-codes/openfast/openfast.exe``
 
 7. Test the executable
 
 ::
 
-    $ glue-codes/fast/openfast.exe -h
+    $ glue-codes/openfast/openfast.exe -h
 
 
     **************************************************************************************************

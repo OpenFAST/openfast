@@ -59,7 +59,7 @@ add_library(hydrodynlib ${HYDRODYN_SOURCES})
 target_link_libraries(hydrodynlib nwtclibs)
 
 add_executable(hydrodyn_driver src/HydroDyn_DriverCode.f90)
-target_link_libraries(hydrodyn_driver hydrodynlib nwtclibs)
+target_link_libraries(hydrodyn_driver hydrodynlib nwtclibs versioninfolib)
 
 #add_executable(ss_radiation
 #  src/SS_Radiation_DriverCode.f90)

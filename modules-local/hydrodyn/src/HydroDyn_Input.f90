@@ -974,7 +974,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
         ! SumQTF     -- Full        Sum-Frequency forces computed with full QTFs from WAMIT file: {0: No        Sum-frequency forces, [10, 11, or 12]: WAMIT file to use}
 
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT2%SumQTF, 'DiffQTF', 'Full Sum-Frequency forces computed with full QTFs from WAMIT file: {0: No Sum-frequency forces, [10, 11, or 12]: WAMIT file to use}', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT2%SumQTF, 'SumQTF', 'Full Sum-Frequency forces computed with full QTFs from WAMIT file: {0: No Sum-frequency forces, [10, 11, or 12]: WAMIT file to use}', ErrStat2, ErrMsg2, UnEchoLocal )
 
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
@@ -2604,7 +2604,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%Waves%WaveMultiDir = .TRUE.
    ELSEIF ( (InitInp%Waves%WaveMod < 2 .OR. InitInp%Waves%WaveMod >4) .AND. InitInp%Waves%WaveDirMod == 1 ) THEN
       CALL SetErrStat( ErrID_Warn,'WaveDirMod unused unless WaveMod == 2, 3, or 4.  Ignoring WaveDirMod.',ErrStat,ErrMsg,RoutineName)
-      InitInp%Waves%WaveMod   = 0
    ENDIF
 
 
