@@ -155,6 +155,8 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    m%Indx = 1 ! used to optimize interpolation of loads in time
    call AllocAry( m%PtfmFt, p%nTot,'Loads at t', ErrStat2,ErrMsg2); if(Failed()) return
    do I=1,p%nTot; m%PtfmFt(I)=0; end do
+   call AllocAry( m%xFlat, 2*p%nCB,'xFlat', ErrStat2,ErrMsg2); if(Failed()) return
+   do I=1,2*p%nCB; m%xFlat(I)=0; end do
    
    ! Define initial guess (set up mesh first) for the system inputs here:
    call Init_meshes(u, y, ErrStat2, ErrMsg2); if(Failed()) return
@@ -705,48 +707,38 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER(IntKi)                                  :: I,J               !< Generic counters
+   INTEGER(IntKi)                                  :: I                 !< Generic counters
    INTEGER(IntKi)                                  :: ErrStat2          !< Temporary Error status of the operation
    CHARACTER(ErrMsgLen)                            :: ErrMsg2           !< Temporary Error message if ErrStat /= ErrID_None
-   CHARACTER(*),     PARAMETER                     :: RoutineName='ExtPtfm_CalcOutput'
    real(ReKi), dimension(6)                        :: Fc                !< Output coupling force
-   real(ReKi), dimension(:), allocatable           :: F2                !< Temporary force from CB modes
+   real(ReKi), dimension(18)                       :: uu                !< Flat array of inputs
+   CHARACTER(*),     PARAMETER                     :: RoutineName='ExtPtfm_CalcOutput'
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   ! translate inputs on mesh to arrays for computations:
-   m%q(1:3) = u%PtfmMesh%TranslationDisp(:,1)
-   m%q(4:6) = GetSmllRotAngs ( u%PtfmMesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-   m%qdot(1:3) = u%PtfmMesh%TranslationVel(:,1)
-   m%qdot(4:6) = u%PtfmMesh%RotationVel(:,1)   
+   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%PtfmFt
+   call InterpStpMat(REAL(t,ReKi), p%PtfmFt_t, p%PtfmFt, m%Indx, p%nPtfmFt, m%PtfmFt)
 
-   m%qdotdot(1:3) = u%PtfmMesh%TranslationAcc(:,1)
-   m%qdotdot(4:6) = u%PtfmMesh%RotationAcc(:,1)
-
-   ! Compute the platform force `fr1` (without added mass):
-   ! get interpolated (in time) loads, m%PtfmFt
-   call InterpStpMat( REAL(t,ReKi), p%PtfmFt_t, p%PtfmFt, m%Indx, p%nPtfmFt, m%PtfmFt ) ! interpolate this based on the time history read in
-   ! Add the loads from added mass matrix, damping and stiffness
-   ! Fc = fr1 - M11 \ddot{x1} - C11 \dot{x1} - K x1
-   Fc(1:6) = m%PtfmFt(1:6) ! Fc  = fr1
-   DO J = 1,6
-      DO I = 1,6
-         Fc(I) = Fc(I) - p%PtfmAM(I,J)*m%qdotdot(J) - p%Damp(I,J) * m%qdot(J) - p%Stff(I,J) * m%q(J)
-      ENDDO
-   ENDDO      
-   ! 
+   ! --- Flatening vectors and using linear state formulation y=Cx+Du+Fy
+   ! u flat (x1, \dot{x1}, \ddot{x1})
+   uu(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
+   uu(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   uu(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
+   uu(10:12) = u%PtfmMesh%RotationVel   (:,1)
+   uu(13:15) = u%PtfmMesh%TranslationAcc(:,1)
+   uu(16:18) = u%PtfmMesh%RotationAcc   (:,1)
    if (p%nCB>0) then
-       allocate(F2(1:p%nCB))
-       ! fr2 - M21 \ddot{x1} - C21 \dot{x1} - C22 \dot{x2} - K22 x2
-       F2 = m%PtfmFt(6+1:6+p%nCB) - matmul(p%M21,m%qdotdot) - matmul(p%C21, m%qdot) - matmul(p%C22, x%x2dot) - matmul(p%K22, x%x2)
-       Fc = Fc - matmul(p%C12, x%x2dot) - matmul(p%M12, F2) 
-       deallocate(F2)
+       ! x flat
+       m%xFlat(1:p%nCB)         = x%x2(1:p%nCB)
+       m%xFlat(p%nCB+1:2*p%nCB) = x%x2dot(1:p%nCB)
+       ! y = Cx + Du + Fy  - TODO consider using lapack for efficiency
+       Fc = matmul(p%CMat, m%xFlat) + matmul(p%DMat, uu) + m%PtfmFt(1:6) - matmul(p%M12, m%PtfmFt(6+1:6+p%nCB))
+   else
+       Fc =                           matmul(p%DMat, uu) + m%PtfmFt(1:6) 
    endif
 
-   ! Update the Mesh with sum of these loads
+   ! Update the output mesh
    DO I=1,3
       y%PtfmMesh%Force(I,1)  = Fc(I)
       y%PtfmMesh%Moment(I,1) = Fc(I+3)
