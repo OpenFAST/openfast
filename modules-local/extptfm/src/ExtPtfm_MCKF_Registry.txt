@@ -19,6 +19,7 @@ include Registry_NWTC_Library.txt
 #   e.g., the name of the input file, the file root name, etc.
 typedef ExtPtfm_MCKF/ExtPtfm InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file; remove if there is no file" -
 typedef   ^                ^             LOGICAL         Linearize  - .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
+typedef   ^                ^             DbKi            DT          - - -     "Time step from Glue Code" "s"
 # note that I didn't add the RootName here. That would probably be a nice thing to have at some point....
 
 # Define outputs from the initialization routine here:
@@ -29,8 +30,8 @@ typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputUnt  {
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef    ^              ContinuousStateType ReKi     x2         {:} - -  "Internal CraigBampton positions" -
-typedef    ^              ContinuousStateType ReKi     x2dot      {:} - -  "Internal CraigBampton velocities" -
+typedef    ^              ContinuousStateType ReKi     qm         {:} - -  "Internal CraigBampton positions" -
+typedef    ^              ContinuousStateType ReKi     qmdot      {:} - -  "Internal CraigBampton velocities" -
 
 # Define discrete (nondifferentiable) states here:
 typedef   ^               DiscreteStateType   ReKi     DummyDiscState - - -  "Remove this variable if you have discrete states" -
@@ -39,7 +40,9 @@ typedef   ^               DiscreteStateType   ReKi     DummyDiscState - - -  "Re
 typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "Remove this variable if you have constraint states" -
 
 # Define any other states, including integer or logical states here:
-typedef   ^               OtherStateType      IntKi    DummyOtherState - - - "Remove this variable if you have other states" -
+typedef   ^               OtherStateType    ExtPtfm_ContinuousStateType  xdot  {:} -  -  "Previous state derivs for m-step time integrator"
+typedef   ^                     ^               IntKi                    n      -  -  -  "Tracks time step for which OtherState was updated last"
+#typedef   ^               OtherStateType      IntKi    DummyOtherState - - - "Remove this variable if you have other states" -
 
 
 # ..... Misc/Optimization variables.................................................................................................
@@ -74,10 +77,12 @@ typedef  ^               ParameterType         ReKi     C11 {:}{:}    - - "Matri
 typedef  ^               ParameterType         ReKi     C12 {:}{:}    - - "Matrix C12" ""
 typedef  ^               ParameterType         ReKi     C22 {:}{:}    - - "Matrix C22" ""
 typedef  ^               ParameterType         ReKi     C21 {:}{:}    - - "Matrix C21" ""
+typedef  ^               ParameterType         DbKi     EP_DeltaT   - - - "Time step (for integration of continuous states)" "seconds"
 typedef  ^               ParameterType         IntKi    nPtfmFt     - - - "Number of values in PtfmFt_t" -
 typedef  ^               ParameterType         IntKi    nCB         - - - "Number of CraigBampton modes" -
 typedef  ^               ParameterType         IntKi    nTot        - - - "Total number of debrees of freedom (CB + interface)" -
 typedef  ^               ParameterType         IntKi    NumOuts     - - - "Number of values in WriteOutput" -
+typedef  ^               ParameterType         IntKi    IntMethod   - - - "Integration Method (1=RK4, 2=AB4, 3=ABM4, 4=AM2)" -
 
 # ..... Inputs ....................................................................................................................
 typedef  ^               InputType             MeshType PtfmMesh             -  -  -  "Displacements at the platform reference point" -

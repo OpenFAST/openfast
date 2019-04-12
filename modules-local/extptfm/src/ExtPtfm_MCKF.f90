@@ -133,6 +133,9 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    p%NumOuts = 0   
    p%nTot = -1   
    p%nCB = -1   
+   p%IntMethod = 1 ! TODO, default, get it from glue code
+   p%EP_DeltaT = 0.001
+   print*,'>> DT Glue code',InitInp%DT
    call ReadPrimaryFile( InitInp%InputFile, p, ErrStat2, ErrMsg2 ); if(Failed()) return
    write(*,*)'Total number of DOF :',p%nTot
    write(*,*)'Number of CB modes  :',p%nCB
@@ -141,15 +144,23 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    ! Set the constant state matrices A,B,C,D
    call SetStateMatrices(p, ErrStat2, ErrMsg2)
   
-   ! Allocate and init Continuous states
-   call AllocAry( x%x2    , p%nCB,'CB DOF positions' , ErrStat2,ErrMsg2); if(Failed()) return
-   call AllocAry( x%x2dot , p%nCB,'CB DOF velocities', ErrStat2,ErrMsg2); if(Failed()) return
-   do I=1,p%nCB; x%x2   (I)=0; end do
-   do I=1,p%nCB; x%x2dot(I)=0; end do
+   ! Allocate and init continuous states
+   call AllocAry( x%qm    , p%nCB,'CB DOF positions' , ErrStat2,ErrMsg2); if(Failed()) return
+   call AllocAry( x%qmdot , p%nCB,'CB DOF velocities', ErrStat2,ErrMsg2); if(Failed()) return
+   do I=1,p%nCB; x%qm   (I)=0; end do
+   do I=1,p%nCB; x%qmdot(I)=0; end do
    ! Other states
    xd%DummyDiscState          = 0.0_ReKi
    z%DummyConstrState         = 0.0_ReKi
-   OtherState%DummyOtherState = 0.0_ReKi
+   ! allocate OtherState%xdot if using multi-step method; initialize n
+   if ( ( p%IntMethod .eq. 2) .OR. ( p%IntMethod .eq. 3)) THEN
+       allocate( OtherState%xdot(4), STAT=ErrStat2 )
+       if(Failed()) then
+           ErrMsg2='Error allocating OtherState%xdot'
+           return
+       endif
+   endif
+
 
    ! Initialize Misc Variables:
    m%Indx = 1 ! used to optimize interpolation of loads in time
@@ -660,6 +671,328 @@ SUBROUTINE ExtPtfm_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ! Destroy the misc data:
    call ExtPtfm_DestroyMisc( m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 END SUBROUTINE ExtPtfm_End
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
+!! equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+SUBROUTINE ExtPtfm_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+!..................................................................................................................................
+   REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+   INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
+   TYPE(ExtPtfm_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t
+   REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   !< times of input
+   TYPE(ExtPtfm_ParameterType),         INTENT(IN   )  :: p           !< Parameters
+   TYPE(ExtPtfm_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+   TYPE(ExtPtfm_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
+   TYPE(ExtPtfm_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+   TYPE(ExtPtfm_OtherStateType),        INTENT(INOUT)  :: OtherState  !< Other states at t on input at t + dt on output
+   TYPE(ExtPtfm_MiscVarType),           INTENT(INOUT)  :: m           !< Misc/optimization variables
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   ! local variables
+!    TYPE(ExtPtfm_ContinuousStateType) :: xdot       ! Continuous state derivs at t
+!    TYPE(ExtPtfm_InputType)           :: u_interp
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
+   
+   ! need xdot at t
+   !CALL ExtPtfm_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg  )  ! we need to allocate input arrays/meshes before calling ExtrapInterp...
+   !CALL ExtPtfm_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
+   !CALL ExtPtfm_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg ) ! initializes xdot
+   !CALL ExtPtfm_DestroyInput( u_interp, ErrStat, ErrMsg)   ! we don't need this local copy anymore
+   !if (n .le. 2) then
+   !   OtherState%n = n
+   !   !OtherState%xdot ( 3 - n ) = xdot
+   !   CALL ExtPtfm_CopyContState( xdot, OtherState%xdot ( 3 - n ), MESH_UPDATECOPY, ErrStat, ErrMsg )
+   !   CALL ExtPtfm_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   !else
+   !   if (OtherState%n .lt. n) then
+   !      OtherState%n = n
+   !      CALL ExtPtfm_CopyContState( OtherState%xdot ( 3 ), OtherState%xdot ( 4 ), MESH_UPDATECOPY, ErrStat, ErrMsg )
+   !      CALL ExtPtfm_CopyContState( OtherState%xdot ( 2 ), OtherState%xdot ( 3 ), MESH_UPDATECOPY, ErrStat, ErrMsg )
+   !      CALL ExtPtfm_CopyContState( OtherState%xdot ( 1 ), OtherState%xdot ( 2 ), MESH_UPDATECOPY, ErrStat, ErrMsg )
+   !      !OtherState%xdot(4)    = OtherState%xdot(3)
+   !      !OtherState%xdot(3)    = OtherState%xdot(2)
+   !      !OtherState%xdot(2)    = OtherState%xdot(1)
+   !   elseif (OtherState%n .gt. n) then
+   !      ErrStat = ErrID_Fatal
+   !      ErrMsg = ' Backing up in time is not supported with a multistep method '
+   !      RETURN
+   !   endif
+   !   CALL ExtPtfm_CopyContState( xdot, OtherState%xdot ( 1 ), MESH_UPDATECOPY, ErrStat, ErrMsg )
+   !   !OtherState%xdot ( 1 )     = xdot  ! make sure this is most up to date
+   !   x%qm    = x%qm    + (p%EP_DeltaT / 24.) * ( 55.*OtherState%xdot(1)%qm - 59.*OtherState%xdot(2)%qm    + 37.*OtherState%xdot(3)%qm  &
+   !                                 - 9. * OtherState%xdot(4)%qm )
+   !   x%qmdot = x%qmdot + (p%EP_DeltaT / 24.) * ( 55.*OtherState%xdot(1)%qmdot - 59.*OtherState%xdot(2)%qmdot  &
+   !                                    + 37.*OtherState%xdot(3)%qmdot  - 9.*OtherState%xdot(4)%qmdot )
+   !endif
+   !CALL ExtPtfm_DestroyContState(xdot, ErrStat, ErrMsg)
+   !CALL ExtPtfm_DestroyInput(u_interp, ErrStat, ErrMsg)
+   
+END SUBROUTINE ExtPtfm_AB4
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
+!! differential equations:
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!   Adams-Bashforth Predictor:
+!!      x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!   Adams-Moulton Corrector:
+!!      x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
+!!  See, e.g.,
+!!      http://en.wikipedia.org/wiki/Linear_multistep_method
+!!      K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+SUBROUTINE ExtPtfm_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+!..................................................................................................................................
+   REAL(DbKi),                          INTENT(IN   ) :: t           !< Current simulation time in seconds
+   INTEGER(IntKi),                      INTENT(IN   ) :: n           !< time step number
+   TYPE(ExtPtfm_InputType),             INTENT(INOUT) :: u(:)        !< Inputs at t
+   REAL(DbKi),                          INTENT(IN   ) :: utimes(:)   !< times of input
+   TYPE(ExtPtfm_ParameterType),         INTENT(IN   ) :: p           !< Parameters
+   TYPE(ExtPtfm_ContinuousStateType),   INTENT(INOUT) :: x           !< Continuous states at t on input at t + dt on output
+   TYPE(ExtPtfm_DiscreteStateType),     INTENT(IN   ) :: xd          !< Discrete states at t
+   TYPE(ExtPtfm_ConstraintStateType),   INTENT(IN   ) :: z           !< Constraint states at t (possibly a guess)
+   TYPE(ExtPtfm_OtherStateType),        INTENT(INOUT) :: OtherState  !< Other states at t on input at t + dt on output
+   TYPE(ExtPtfm_MiscVarType),           INTENT(INOUT) :: m           !< Misc/optimization variables
+   INTEGER(IntKi),                      INTENT(  OUT) :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                        INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   ! local variables
+   TYPE(ExtPtfm_InputType)            :: u_interp        ! Continuous states at t
+   TYPE(ExtPtfm_ContinuousStateType)  :: x_pred          ! Continuous states at t
+   TYPE(ExtPtfm_ContinuousStateType)  :: xdot_pred       ! Continuous states at t
+   
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
+   
+   CALL ExtPtfm_CopyContState(x, x_pred, MESH_NEWCOPY, ErrStat, ErrMsg) !initialize x_pred      
+   CALL ExtPtfm_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, m, ErrStat, ErrMsg )
+   if (n .gt. 2) then
+      CALL ExtPtfm_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg) ! make copy so that arrays/meshes get initialized/allocated for ExtrapInterp
+      CALL ExtPtfm_Input_ExtrapInterp(u, utimes, u_interp, t + p%EP_DeltaT, ErrStat, ErrMsg)
+      CALL ExtPtfm_CalcContStateDeriv(t + p%EP_DeltaT, u_interp, p, x_pred, xd, z, OtherState, m, xdot_pred, ErrStat, ErrMsg ) ! initializes xdot_pred
+      CALL ExtPtfm_DestroyInput( u_interp, ErrStat, ErrMsg) ! local copy no longer needed
+   
+      x%qm    = x%qm    + (p%EP_DeltaT / 24.) * ( 9. * xdot_pred%qm +  19. * OtherState%xdot(1)%qm - 5. * OtherState%xdot(2)%qm &
+                                       + 1. * OtherState%xdot(3)%qm )
+   
+      x%qmdot = x%qmdot + (p%EP_DeltaT / 24.) * ( 9. * xdot_pred%qmdot + 19. * OtherState%xdot(1)%qmdot - 5. * OtherState%xdot(2)%qmdot &
+                                       + 1. * OtherState%xdot(3)%qmdot )
+      CALL ExtPtfm_DestroyContState( xdot_pred, ErrStat, ErrMsg) ! local copy no longer needed
+   else
+      x%qm    = x_pred%qm
+      x%qmdot = x_pred%qmdot
+   endif
+   CALL ExtPtfm_DestroyContState( x_pred, ErrStat, ErrMsg) ! local copy no longer needed
+END SUBROUTINE ExtPtfm_ABM4
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!   Define constants k1, k2, k3, and k4 as 
+!!        k1 = dt * f(t        , x_t        )
+!!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
+!!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
+!!        k4 = dt * f(t + dt   , x_t + k3   ).
+!!   Then the continuous states at t = t + dt are
+!!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
+!!
+!! For details, see:
+!! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
+!!   Runge-Kutta." sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
+!!   Cambridge University Press, pp. 704-716, 1992.
+SUBROUTINE ExtPtfm_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+!..................................................................................................................................
+   REAL(DbKi),                     INTENT(IN   )      :: t           !< Current simulation time in seconds
+   INTEGER(IntKi),                 INTENT(IN   )      :: n           !< time step number
+   TYPE(ExtPtfm_InputType),             INTENT(INOUT) :: u(:)        !< Inputs at t
+   REAL(DbKi),                     INTENT(IN   )      :: utimes(:)   !< times of input
+   TYPE(ExtPtfm_ParameterType),         INTENT(IN   ) :: p           !< Parameters
+   TYPE(ExtPtfm_ContinuousStateType),   INTENT(INOUT) :: x           !< Continuous states at t on input at t + dt on output
+   TYPE(ExtPtfm_DiscreteStateType),     INTENT(IN   ) :: xd          !< Discrete states at t
+   TYPE(ExtPtfm_ConstraintStateType),   INTENT(IN   ) :: z           !< Constraint states at t (possibly a guess)
+   TYPE(ExtPtfm_OtherStateType),        INTENT(INOUT) :: OtherState  !< Other states at t on input at t + dt on output
+   TYPE(ExtPtfm_MiscVarType),           INTENT(INOUT) :: m           !< Misc/optimization variables
+   INTEGER(IntKi),                 INTENT(  OUT)      :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)      :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   ! local variables
+   TYPE(ExtPtfm_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
+   TYPE(ExtPtfm_ContinuousStateType)                 :: k1          ! RK4 constant; see above
+   TYPE(ExtPtfm_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
+   TYPE(ExtPtfm_ContinuousStateType)                 :: k3          ! RK4 constant; see above 
+   TYPE(ExtPtfm_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
+   TYPE(ExtPtfm_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
+   TYPE(ExtPtfm_InputType)                           :: u_interp    ! interpolated value of inputs 
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
+   
+   ! Initialize interim vars
+   !bjj: the state type contains allocatable arrays, so we must first allocate space:
+   CALL ExtPtfm_CopyContState( x, k1,       MESH_NEWCOPY, ErrStat, ErrMsg )
+   CALL ExtPtfm_CopyContState( x, k2,       MESH_NEWCOPY, ErrStat, ErrMsg )
+   CALL ExtPtfm_CopyContState( x, k3,       MESH_NEWCOPY, ErrStat, ErrMsg )
+   CALL ExtPtfm_CopyContState( x, k4,       MESH_NEWCOPY, ErrStat, ErrMsg )
+   CALL ExtPtfm_CopyContState( x, x_tmp,    MESH_NEWCOPY, ErrStat, ErrMsg )
+   
+   ! interpolate u to find u_interp = u(t)
+   CALL ExtPtfm_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg  )  ! we need to allocate input arrays/meshes before calling ExtrapInterp...     
+   CALL ExtPtfm_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
+   
+   ! find xdot at t
+   CALL ExtPtfm_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg ) !initializes xdot
+   
+   k1%qm    = p%EP_DeltaT * xdot%qm
+   k1%qmdot = p%EP_DeltaT * xdot%qmdot
+   x_tmp%qm    = x%qm    + 0.5 * k1%qm
+   x_tmp%qmdot = x%qmdot + 0.5 * k1%qmdot
+   
+   ! interpolate u to find u_interp = u(t + dt/2)
+   CALL ExtPtfm_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%EP_DeltaT, ErrStat, ErrMsg)
+   
+   ! find xdot at t + dt/2
+   CALL ExtPtfm_CalcContStateDeriv( t + 0.5*p%EP_DeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
+   
+   k2%qm    = p%EP_DeltaT * xdot%qm
+   k2%qmdot = p%EP_DeltaT * xdot%qmdot
+   x_tmp%qm    = x%qm    + 0.5 * k2%qm
+   x_tmp%qmdot = x%qmdot + 0.5 * k2%qmdot
+   
+   ! find xdot at t + dt/2
+   CALL ExtPtfm_CalcContStateDeriv( t + 0.5*p%EP_DeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
+   
+   k3%qm    = p%EP_DeltaT * xdot%qm
+   k3%qmdot = p%EP_DeltaT * xdot%qmdot
+   x_tmp%qm    = x%qm    + k3%qm
+   x_tmp%qmdot = x%qmdot + k3%qmdot
+   
+   ! interpolate u to find u_interp = u(t + dt)
+   CALL ExtPtfm_Input_ExtrapInterp(u, utimes, u_interp, t + p%EP_DeltaT, ErrStat, ErrMsg)
+   
+   ! find xdot at t + dt
+   CALL ExtPtfm_CalcContStateDeriv( t + p%EP_DeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
+   
+   k4%qm    = p%EP_DeltaT * xdot%qm
+   k4%qmdot = p%EP_DeltaT * xdot%qmdot
+   x%qm    = x%qm    +  ( k1%qm    + 2. * k2%qm    + 2. * k3%qm    + k4%qm    ) / 6.      
+   x%qmdot = x%qmdot +  ( k1%qmdot + 2. * k2%qmdot + 2. * k3%qmdot + k4%qmdot ) / 6.      
+   CALL ExitThisRoutine()
+CONTAINS      
+   !...............................................................................................................................
+   SUBROUTINE ExitThisRoutine()
+      ! This subroutine destroys all the local variables
+      INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CALL ExtPtfm_DestroyContState( xdot,     ErrStat3, ErrMsg3 )
+      CALL ExtPtfm_DestroyContState( k1,       ErrStat3, ErrMsg3 )
+      CALL ExtPtfm_DestroyContState( k2,       ErrStat3, ErrMsg3 )
+      CALL ExtPtfm_DestroyContState( k3,       ErrStat3, ErrMsg3 )
+      CALL ExtPtfm_DestroyContState( k4,       ErrStat3, ErrMsg3 )
+      CALL ExtPtfm_DestroyContState( x_tmp,    ErrStat3, ErrMsg3 )
+      CALL ExtPtfm_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
+   END SUBROUTINE ExitThisRoutine            
+      
+END SUBROUTINE ExtPtfm_RK4
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine implements the 2nd-order Adams-Moulton Implicit Method (AM2,Trapezoidal rule) for numerically integrating ordinary differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!   Define constants k1, k2, k3, and k4 as 
+!!        k1 =  f(t       , x_t         )
+!!        k2 =  f(t + dt  , x_t+dt      )
+!!   Then the continuous states at t = t + dt are
+!!        x_(t+dt) =x_n+1 = x_t + deltat/2*(k1 + k2) + O(dt^3)
+!!   Now this can be re-written as: 0=Z(x_n+1) = x_n - x_n+1 +dt/2 *(f_n + f_n+1) = 0
+!!         f_n= A*x_n + B*u_n + Fx  from Eq. 1.12 of the manual
+!!         So to solve this linear system, I can just use x(k)=x(k-1) -J^-1 * Z(x(k-1))  (this is a simple root solver of the linear equation)
+!!         with J=dZ/dx_n+1 = -I +dt/2*A 
+!!
+!!   Thus x_n+1 = x_n - J^-1 *dt/2 * (2*A*x_n + B *(u_n + u_n+1) +2*Fx)
+!!  or    J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)
+SUBROUTINE ExtPtfm_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+!..................................................................................................................................
+   REAL(DbKi),                     INTENT(IN   )      :: t              !< Current simulation time in seconds
+   INTEGER(IntKi),                 INTENT(IN   )      :: n              !< time step number
+   TYPE(ExtPtfm_InputType),             INTENT(INOUT) :: u(:)           !< Inputs at t
+   REAL(DbKi),                     INTENT(IN   )      :: utimes(:)      !< times of input
+   TYPE(ExtPtfm_ParameterType),         INTENT(IN   ) :: p              !< Parameters
+   TYPE(ExtPtfm_ContinuousStateType),   INTENT(INOUT) :: x              !< Continuous states at t on input at t + dt on output
+   TYPE(ExtPtfm_DiscreteStateType),     INTENT(IN   ) :: xd             !< Discrete states at t
+   TYPE(ExtPtfm_ConstraintStateType),   INTENT(IN   ) :: z              !< Constraint states at t (possibly a guess)
+   TYPE(ExtPtfm_OtherStateType),        INTENT(INOUT) :: OtherState     !< Other states at t on input at t + dt on output
+   TYPE(ExtPtfm_MiscVarType),           INTENT(INOUT) :: m              !< Misc/optimization variables
+   INTEGER(IntKi),                 INTENT(  OUT)      :: ErrStat        !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)      :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   ! local variables
+   TYPE(ExtPtfm_InputType)                              :: u_interp       ! interpolated value of inputs 
+!    REAL(ReKi)                                      :: junk2(2*p%qml) !temporary states (qm and qmdot only)
+!    
+!    REAL(ReKi)                                      :: udotdot_TP2(6) ! temporary copy of udotdot_TP
+!    REAL(ReKi)                                      :: UFL2(p%DOFL)   ! temporary copy of UFL
+   INTEGER(IntKi)                                  :: ErrStat2
+   CHARACTER(ErrMsgLen)                            :: ErrMsg2
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
+
+!       ! Initialize interim vars
+!       CALL ExtPtfm_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2,ErrMsg2);CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'ExtPtfm_AM2')
+! 
+! 
+!       !Start by getting u_n and u_n+1 
+!       ! interpolate u to find u_interp = u(t) = u_n     
+!       CALL ExtPtfm_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'ExtPtfm_AM2')
+!       m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
+!       CALL ConstructUFL( u_interp, p, m%UFL )     
+! 
+!       ! extrapolate u to find u_interp = u(t + dt)=u_n+1
+!       CALL ExtPtfm_Input_ExtrapInterp(u, utimes, u_interp, t+p%EP_DeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'ExtPtfm_AM2')
+!       udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
+!       CALL ConstructUFL( u_interp, p, UFL2 )     
+! 
+!       ! calculate (u_n + u_n+1)/2
+!       udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
+!       UFL2        = 0.5_ReKi * ( UFL2        + m%UFL        )
+! 
+!       ! set junk2 = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)   
+!       junk2(      1:  p%qml)=p%EP_DeltaT * x%qmdot                                                                                                   !upper portion of array
+!       !junk2(1+p%qml:2*p%qml)=p%EP_DeltaT * (p%NOmegaM2*x%qm + p%N2OmegaMJDamp*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(p%PhiM_T,UFL2) + p%FX)  !lower portion of array
+!       junk2(1+p%qml:2*p%qml)=p%EP_DeltaT * (p%NOmegaM2*x%qm + p%N2OmegaMJDamp*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(UFL2,p%PhiM  ) + p%FX)  !lower portion of array
+!       ! note: matmul(UFL2,p%PhiM  ) = matmul(p%PhiM_T,UFL2) because UFL2 is 1-D
+! 
+!       !....................................................
+!       ! Solve for junk2: (equivalent to junk2= matmul(p%AM2InvJac,junk2)
+!       ! J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)
+!       !....................................................   
+!       CALL LAPACK_getrs( TRANS='N',N=SIZE(p%AM2Jac,1),A=p%AM2Jac,IPIV=p%AM2JacPiv, B=junk2, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+!       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'ExtPtfm_AM2')
+!       !IF ( ErrStat >= AbortErrLev ) RETURN
+!       !....................................................
+! 
+!       ! after the LAPACK solve, junk2 = ( x_n - x_n+1 ); so now we can solve for x_n+1:
+!       x%qm    = x%qm    - junk2(      1:  p%qml)
+!       x%qmdot = x%qmdot - junk2(p%qml+1:2*p%qml)
+!       ! clean up temporary variable(s)
+!       CALL ExtPtfm_DestroyInput(  u_interp, ErrStat, ErrMsg )
+END SUBROUTINE ExtPtfm_AM2
+
+
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
 !! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
@@ -689,6 +1022,16 @@ SUBROUTINE ExtPtfm_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
    ! Initialize variables
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
+   if ( p%nCB == 0) return ! no modes = no states
+   if (p%IntMethod .eq. 1) then 
+      call ExtPtfm_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   elseif (p%IntMethod .eq. 2) then
+      call ExtPtfm_AB4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   elseif (p%IntMethod .eq. 3) then
+      call ExtPtfm_ABM4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   else  
+      call ExtPtfm_AM2( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   end IF
 END SUBROUTINE ExtPtfm_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a routine for computing outputs, used in both loose and tight coupling.
@@ -730,8 +1073,8 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    uu(16:18) = u%PtfmMesh%RotationAcc   (:,1)
    if (p%nCB>0) then
        ! x flat
-       m%xFlat(1:p%nCB)         = x%x2(1:p%nCB)
-       m%xFlat(p%nCB+1:2*p%nCB) = x%x2dot(1:p%nCB)
+       m%xFlat(1:p%nCB)         = x%qm(1:p%nCB)
+       m%xFlat(p%nCB+1:2*p%nCB) = x%qmdot(1:p%nCB)
        ! y = Cx + Du + Fy  - TODO consider using lapack for efficiency
        Fc = matmul(p%CMat, m%xFlat) + matmul(p%DMat, uu) + m%PtfmFt(1:6) - matmul(p%M12, m%PtfmFt(6+1:6+p%nCB))
    else
@@ -764,11 +1107,23 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    TYPE(ExtPtfm_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at t
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   INTEGER(IntKi)                                    :: I
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
-      ! Compute the first time derivatives of the continuous states here:
-   !dxdt%DummyContState = 0.0_ReKi
+
+   ! Allocation of output dxdt (since intent(out))
+   call AllocAry(dxdt%qm,    p%nCB, 'dxdt%qm',    ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ExtPtfm_CalcContStateDeriv' )
+   call AllocAry(dxdt%qmdot, p%nCB, 'dxdt%qmdot', ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, '_CalcContStateDeriv' )
+   if ( ErrStat >= AbortErrLev ) return
+   if ( p%nCB == 0 ) return
+   do I=1,p%nCB; dxdt%qm   (I)=0; enddo
+   do I=1,p%nCB; dxdt%qmdot(I)=0; enddo
+   !dxdt%qmdot = p%NOmegaM2*x%qm + p%N2OmegaMJDamp*x%qmdot - matmul(p%MMB,m%udotdot_TP)  + matmul(m%UFL, p%PhiM ) + p%FX 
+
 END SUBROUTINE ExtPtfm_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a tight coupling routine for updating discrete states.
