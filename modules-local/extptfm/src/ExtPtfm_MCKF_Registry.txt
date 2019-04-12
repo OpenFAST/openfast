@@ -23,9 +23,16 @@ typedef   ^                ^             DbKi            DT          - - -     "
 # note that I didn't add the RootName here. That would probably be a nice thing to have at some point....
 
 # Define outputs from the initialization routine here:
-typedef   ^               InitOutputType ProgDesc              Ver              -  - -   "This module's name, version, and date"	-
-typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
-typedef   ^               InitOutputType CHARACTER(ChanLen)    WriteOutputUnt  {:} - -   "Units of the output-to-file channels" -
+typedef   ^               InitOutputType ProgDesc              Ver              -  - - "This module's name, version, and date" -
+typedef   ^                   ^          CHARACTER(ChanLen)    WriteOutputHdr  {:} - - "Names of the output-to-file channels" -
+typedef   ^                   ^          CHARACTER(ChanLen)    WriteOutputUnt  {:} - - "Units of the output-to-file channels" -
+typedef   ^                   ^          CHARACTER(LinChanLen) LinNames_y      {:} - - "Names of the outputs used in linearization" -
+typedef   ^                   ^          CHARACTER(LinChanLen) LinNames_x      {:} - - "Names of the continuous states used in linearization" -
+typedef   ^                   ^          CHARACTER(LinChanLen) LinNames_u      {:} - - "Names of the inputs used in linearization" -
+typedef   ^                   ^          LOGICAL               RotFrame_y      {:} - - "Flag that tells FAST/MBC3 if the outputs used in linearization are in the rotating frame"	-
+typedef   ^                   ^          LOGICAL               RotFrame_x      {:} - - "Flag that tells FAST/MBC3 if the continuous states used in linearization are in the rotating frame"	-
+typedef   ^                   ^          LOGICAL               RotFrame_u      {:} - - "Flag that tells FAST/MBC3 if the inputs used in linearization are in the rotating frame"	-
+typedef   ^                   ^          LOGICAL               IsLoad_u        {:} - - "Flag that tells FAST if the inputs used in linearization are loads (for preconditioning matrix)" -
 
 
 # ..... States ....................................................................................................................

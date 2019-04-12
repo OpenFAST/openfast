@@ -184,9 +184,23 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       ! Otherwise, if the module does allow linearization, return the appropriate Jacobian row/column names and rotating-frame flags here:   
       ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u 
       ! Allocate and set these variables: InitOut%RotFrame_y, InitOut%RotFrame_x, InitOut%RotFrame_xd, InitOut%RotFrame_z, InitOut%RotFrame_u 
-      !CALL AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y', ErrStat, ErrMsg); if(Failed() return
-      !CALL AllocAry(InitOut%RotFrame_y, p%Jac_ny, 'RotFrame_y', ErrStat, ErrMsg); if(Failed() return
-      !InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
+      CALL AllocAry(InitOut%LinNames_y, 6      , 'LinNames_y', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%RotFrame_y, 6      , 'RotFrame_y', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%LinNames_x, 2*p%nCB, 'LinNames_x', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%RotFrame_x, 2*p%nCB, 'RotFrame_x', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%LinNames_u, 18     , 'LinNames_u', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%RotFrame_u, 18     , 'RotFrame_u', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%IsLoad_u  , 18     , 'IsLoad_u'  , ErrStat, ErrMsg); if(Failed()) return
+      do I=1,6;     InitOut%LinNames_y(I) = 'ExtPtm_Y'//trim(Num2LStr(I)); enddo
+      do I=1,18;    InitOut%LinNames_u(I) = 'ExtPtm_U'//trim(Num2LStr(I)); enddo
+      do I=1,p%nCB; 
+          InitOut%LinNames_x(I)       = 'ExtPtm_X'//trim(Num2LStr(I));
+          InitOut%LinNames_x(I+p%nCB) = 'ExtPtm_XP'//trim(Num2LStr(I));
+      enddo
+      InitOut%RotFrame_x = .false. ! note that meshes are in the global, not rotating frame
+      InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
+      InitOut%RotFrame_u = .false. ! note that meshes are in the global, not rotating frame
+      InitOut%IsLoad_u = .false. ! the inputs are not loads but kinematics
    end if
 CONTAINS
     logical function Failed()
