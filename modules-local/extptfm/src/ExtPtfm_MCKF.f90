@@ -59,6 +59,22 @@ MODULE ExtPtfm_MCKF
                                                     !    states (z)
    PUBLIC :: ExtPtfm_GetOP                          !  Routine to get the operating-point values for linearization (from data structures to arrays)
 
+
+
+! ---------------------------------------------------------------------------------------------------
+! Variables for output channels
+   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 1
+   INTEGER(IntKi), PARAMETER      :: ID_Time     = 0
+   INTEGER(IntKi), PARAMETER      :: ID_PtfFx    = 1
+   INTEGER(IntKi), PARAMETER      :: ID_PtfFy    = 2
+   INTEGER(IntKi), PARAMETER      :: ID_PtfFz    = 3
+   INTEGER(IntKi), PARAMETER      :: ID_PtfMx    = 4
+   INTEGER(IntKi), PARAMETER      :: ID_PtfMy    = 5
+   INTEGER(IntKi), PARAMETER      :: ID_PtfMz    = 6
+   INTEGER(IntKi), PARAMETER      :: ID_WaveElev = 7
+   INTEGER(IntKi), PARAMETER      :: ID_QStart   = 8
+! ---------------------------------------------------------------------------------------------------
+
 CONTAINS
    
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -124,21 +140,23 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    ! local variables
    INTEGER(IntKi)                                    :: I           ! Loop counter
    INTEGER(IntKi)                                    :: NumOuts     ! Number of outputs; would probably be in the parameter type
+   CHARACTER(ChanLen), dimension(:), allocatable     :: OutList(:)   !< The list out user-requested outputs
    ! Initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ""
+
    ! Initialize the NWTC Subroutine Library
    call NWTC_Init( )
    ! Display the module information
    call DispNVD( ExtPtfm_Ver )
    ! set parameters
-   p%NumOuts = 0   
-   p%nTot = -1   
-   p%nCB = -1   
-   p%IntMethod = 1 ! TODO, default, get it from glue code
+   p%NumOuts   = 0
+   p%nTot      = -1
+   p%nCB       = -1
+   p%IntMethod = 1     ! TODO, default, get it from glue code
    p%EP_DeltaT = 0.001
    print*,'>> DT Glue code',InitInp%DT
-   call ReadPrimaryFile( InitInp%InputFile, p, ErrStat, ErrMsg); if(Failed()) return
+   call ReadPrimaryFile(InitInp%InputFile, p, ErrStat, ErrMsg); if(Failed()) return
    write(*,*)'Total number of DOF :',p%nTot
    write(*,*)'Number of CB modes  :',p%nCB
    write(*,*)'Number of time steps:',p%nPtfmFt
@@ -172,18 +190,36 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    ! Define initial guess (set up mesh first) for the system inputs here:
    call Init_meshes(u, y, ErrStat, ErrMsg); if(Failed()) return
 
-   ! Define system output initializations (set up mesh) here:
+   ! --- Outputs
+   CALL AllocAry( m%AllOuts, ID_QStart+3*p%nCB-1, "ExtPtfm AllOut", ErrStat,ErrMsg ); if(Failed()) return
+   m%AllOuts(1:ID_QStart+3*p%nCB-1) = 0.0
+   ! TODO OutList from InputFile
+   allocate(OutList(6))
+   OutList( 1) = 'PtfmFx'
+   OutList( 2) = 'PtfmFy'
+   OutList( 3) = 'PtfmFz'
+   OutList( 4) = 'PtfmMx'
+   OutList( 5) = 'PtfmMy'
+   OutList( 6) = 'PtfmMz'
+!    OutList( 7) = 'CBQ_001'
+!    OutList( 8) = 'CBQ_002'
+!    OutList( 9) = 'CBQD_001'
+!    OutList(10) = 'CBF_001'
+!    OutList(11) = 'WavElev'
+!    OutList(12) = 'CBF_004'
+   ! Setting p%OutParam from OutList
+   call SetOutParam(OutList, p, ErrStat, ErrMsg); if(Failed()) return
+
    call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat,ErrMsg); if(Failed()) return
-
+   InitOut%WriteOutputHdr(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Name
+   InitOut%WriteOutputUnt(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Units     
    InitOut%Ver = ExtPtfm_Ver
       
    if (InitInp%Linearize) then
       CALL SetErrStat( ErrID_Fatal, 'ExtPtfm_MCKF linearization analysis TODO.', ErrStat, ErrMsg, 'ExtPtfm_Init')
-      ! Otherwise, if the module does allow linearization, return the appropriate Jacobian row/column names and rotating-frame flags here:   
-      ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u 
-      ! Allocate and set these variables: InitOut%RotFrame_y, InitOut%RotFrame_x, InitOut%RotFrame_xd, InitOut%RotFrame_z, InitOut%RotFrame_u 
+      !Appropriate Jacobian row/column names and rotating-frame flags here:   
       CALL AllocAry(InitOut%LinNames_y, 6      , 'LinNames_y', ErrStat, ErrMsg); if(Failed()) return
       CALL AllocAry(InitOut%RotFrame_y, 6      , 'RotFrame_y', ErrStat, ErrMsg); if(Failed()) return
       CALL AllocAry(InitOut%LinNames_x, 2*p%nCB, 'LinNames_x', ErrStat, ErrMsg); if(Failed()) return
@@ -191,16 +227,32 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       CALL AllocAry(InitOut%LinNames_u, 18     , 'LinNames_u', ErrStat, ErrMsg); if(Failed()) return
       CALL AllocAry(InitOut%RotFrame_u, 18     , 'RotFrame_u', ErrStat, ErrMsg); if(Failed()) return
       CALL AllocAry(InitOut%IsLoad_u  , 18     , 'IsLoad_u'  , ErrStat, ErrMsg); if(Failed()) return
-      do I=1,6;     InitOut%LinNames_y(I) = 'ExtPtm_Y'//trim(Num2LStr(I)); enddo
-      do I=1,18;    InitOut%LinNames_u(I) = 'ExtPtm_U'//trim(Num2LStr(I)); enddo
-      do I=1,p%nCB; 
-          InitOut%LinNames_x(I)       = 'ExtPtm_X'//trim(Num2LStr(I));
-          InitOut%LinNames_x(I+p%nCB) = 'ExtPtm_XP'//trim(Num2LStr(I));
-      enddo
+      !do I=1,6;     InitOut%LinNames_y(I) = 'ExtPtm_Y'//trim(Num2LStr(I)); enddo
+      !do I=1,18;    InitOut%LinNames_u(I) = 'ExtPtm_U'//trim(Num2LStr(I)); enddo
+      !do I=1,p%nCB; 
+      !    InitOut%LinNames_x(I)       = 'ExtPtm_X'//trim(Num2LStr(I));
+      !    InitOut%LinNames_x(I+p%nCB) = 'ExtPtm_XP'//trim(Num2LStr(I));
+      !enddo
       InitOut%RotFrame_x = .false. ! note that meshes are in the global, not rotating frame
       InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
       InitOut%RotFrame_u = .false. ! note that meshes are in the global, not rotating frame
-      InitOut%IsLoad_u = .false. ! the inputs are not loads but kinematics
+      InitOut%IsLoad_u   = .false. ! the inputs are not loads but kinematics
+!          CALL AllocAry(InitOutData%LinNames_u, InitInp%NumWindPoints*3 + 3, 'LinNames_u', TmpErrStat, TmpErrMsg)
+!          CALL AllocAry(InitOutData%RotFrame_u, InitInp%NumWindPoints*3 + 3, 'RotFrame_u', TmpErrStat, TmpErrMsg)
+!          CALL AllocAry(InitOutData%IsLoad_u  , InitInp%NumWindPoints*3 + 3, 'IsLoad_u', TmpErrStat, TmpErrMsg)
+!          CALL AllocAry(InitOutData%RotFrame_y, InitInp%NumWindPoints*3 +p%NumOuts, 'RotFrame_y', TmpErrStat, TmpErrMsg)
+!          do i=1,InitInp%NumWindPoints
+!             do j=1,3
+!                InitOutData%LinNames_y((i-1)*3+j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s'
+!                InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
+!             end do            
+!          end do
+!          InitOutData%LinNames_u(InitInp%NumWindPoints*3 + 1) = 'Extended input: horizontal wind speed (steady/uniform wind), m/s'
+!          InitOutData%LinNames_u(InitInp%NumWindPoints*3 + 2) = 'Extended input: vertical power-law shear exponent, -'
+!          InitOutData%LinNames_u(InitInp%NumWindPoints*3 + 3) = 'Extended input: propagation direction, rad'         
+!          do i=1,p%NumOuts
+!             InitOutData%LinNames_y(i+3*InitInp%NumWindPoints) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+!          end do
    end if
 CONTAINS
     logical function Failed()
@@ -208,6 +260,144 @@ CONTAINS
         Failed =  ErrStat >= AbortErrLev
     end function Failed
 END SUBROUTINE ExtPtfm_Init
+
+SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
+! This routine checks to see if any requested output channel names (stored in the OutList(:)) are invalid. It returns a 
+! warning if any of the channels are not available outputs from the module.
+!  It assigns the settings for OutParam(:) (i.e, the index, name, and units of the output channels, WriteOutput(:)).
+!  the sign is set to 0 if the channel is invalid.
+! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
+!..................................................................................................................................
+   CHARACTER(ChanLen),           INTENT(IN)     :: OutList(:)         !< The list out user-requested outputs
+   TYPE(ExtPtfm_ParameterType),  INTENT(INOUT)  :: p                  !< The module parameters
+   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat            !< The error status code
+   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg             !< The error message, if an error occurred
+   ! Local variables
+   INTEGER                      :: ErrStat2                                        ! temporary (local) error status
+   INTEGER                      :: I                                               ! Generic loop-counting index
+   INTEGER                      :: INDX                                            ! Index for valid arrays
+   CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
+   CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
+
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(7) =  (/ & ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "PTFMFX   ","PTFMFY   ","PTFMFZ   ","PTFMMX   ","PTFMMY   ","PTFMMZ   ","WAVELEV  "/) 
+   CHARACTER(OutStrLenM1), PARAMETER :: ParamUnitsAry(7) =  (/ &                     ! This lists the units corresponding to the allowed parameters
+                               "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     ","(m)      "/)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(7) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                              ID_PtfFx, ID_PtfFy, ID_PtfFz, ID_PtfMx, ID_PtfMy, ID_PtfMz, ID_WaveElev /)
+   
+   p%NumOuts = size(OutList,1)
+   allocate(p%OutParam(0:p%NumOuts) , stat=ErrStat )
+   if ( ErrStat /= 0_IntKi )  THEN
+      CALL SetErrStat(ErrID_Fatal,"Error allocating memory for the InflowWind OutParam array.", ErrStat, ErrMsg, RoutineName)
+      return
+   endif
+
+   ! Set index, name, and units for the time output channel:
+   p%OutParam(0)%Indx  = 0
+   p%OutParam(0)%Name  = "Time"    ! OutParam(0) is the time channel by default.
+   p%OutParam(0)%Units = "(s)"
+   p%OutParam(0)%SignM = 1
+
+  ! Set index, name, and units for all of the output channels.
+   do I = 1,p%NumOuts
+      p%OutParam(I)%Name  = OutList(I)
+      OutListTmp          = OutList(I)
+      p%OutParam(I)%Indx   = 0
+      p%OutParam(I)%Units  = "(NA)"
+      CALL Conv2UC( OutListTmp )  ! Convert OutListTmp to upper case
+      ! Reverse the sign of the channel if the prefix is "-", "_" or "M"
+      if  ( index( "-_M", OutListTmp(1:1) ) > 0 ) then
+         p%OutParam(I)%SignM = -1 
+         OutListTmp          = OutListTmp(2:)
+      else
+         p%OutParam(I)%SignM = 1
+      end if
+      ! Find the index of the channel in the AllOut list
+      Indx = IndexCharAry( OutListTmp(1:OutStrLenM1), ValidParamAry )
+      if (Indx>0) then
+          p%OutParam(I)%Indx  = ParamIndxAry(Indx)
+          p%OutParam(I)%Units = ParamUnitsAry(Indx)
+      else if (index(OutListTmp,'CBQ_') > 0 ) then
+          call setDOFChannel(5,ID_QStart+0*p%nCB-1)
+      else if (index(OutListTmp,'CBQD_') > 0 ) then
+          call setDOFChannel(6,ID_QStart+1*p%nCB-1)
+      else if (index(OutListTmp,'CBF_') > 0 ) then
+          call setDOFChannel(5,ID_QStart+2*p%nCB-1)
+      else
+          call setInvalidChannel() ! INVALID
+      endif
+      write(*,*) p%OutParam(I)%Name, p%OutParam(I)%Indx, p%OutParam(I)%Units
+   end do
+   return
+contains
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_SetOutParam')
+        Failed =  ErrStat >= AbortErrLev
+    end function Failed
+    subroutine setDOFChannel(nCharBefore,nOffset)
+        !> Sets channel when the channel name has the form "YYYY_XXX" where XXX is a DOF number
+        integer, intent(in) :: nCharBefore !< Number of characters to ignore in OutListTmp
+        integer, intent(in) :: nOffset     !< Index offset to add to iDOF
+        integer             :: idof ! index of CB DOF extracted from 
+        iDOF = ReadIntFromStr(OutListTmp(nCharBefore:), 'Output channel '//trim(OutList(I)), ErrStat, ErrMsg); if(Failed()) return
+        if ((iDOF> p%nCB) .or. (iDOF<1)) then
+            call setInvalidChannel() ! INVALID
+        else
+            p%OutParam(I)%Indx  = nOffset+iDOF
+            p%OutParam(I)%Units = '(NA)'
+        endif
+    end subroutine
+    subroutine setInvalidChannel()
+        ! If a selected output channel is not available by this module set ErrStat = ErrID_Warn.
+        p%OutParam(I)%Units = "INVALID"
+        p%OutParam(I)%Indx = 0
+        call SetErrStat(ErrID_Warn, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,'ExtPtfm_SetOutParam')
+        write(*,*)TRIM(p%OutParam(I)%Name)//" is not an available output channel."
+    end subroutine
+END SUBROUTINE SetOutParam
+!----------------------------------------------------------------------------------------------------------------------------------
+!..................................................................................................................................
+!> This routine checks to see if any requested output channel names are to be output in linearization analysis.
+!! note that we output all WriteOutput values and assume that none of them depend on inputs (so I don't need this mapping any more)
+SUBROUTINE SetOutParamLin( p, ErrStat, ErrMsg )
+   ! Passed variables
+   TYPE(ExtPtfm_ParameterType),  INTENT(INOUT)  :: p                  !< The module parameters
+   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat            !< The error status code
+   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg             !< The error message, if an error occurred
+   ! Local variables
+   INTEGER                   :: ErrStat2                                        ! temporary (local) error status
+   INTEGER                   :: I                                               ! Generic loop-counting index
+   INTEGER                   :: J                                               ! Generic loop-counting index
+   CHARACTER(ErrMsgLen)      :: ErrMsg2
+   CHARACTER(*), PARAMETER   :: RoutineName = "SetOutParamLin"
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+!    call AllocAry(p%OutParamLinIndx, 2, p%NumOuts, 'OutParamLinIndx', ErrStat2, ErrMsg2)
+!    call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!    if (ErrStat >= AbortErrLev) return
+   !do i = 1,p%NumOuts
+   !   if (p%OutParam(i)%SignM /= 0 ) then
+   !      do j=1,size(WindVelX)
+   !         if ( p%OutParam(i)%Indx == WindVelX(j) ) then
+   !            p%OutParamLinIndx(1,i) = j
+   !            p%OutParamLinIndx(2,i) = 1
+   !            exit !exit j loop; move to next parameter
+   !         elseif ( p%OutParam(i)%Indx == WindVelY(j) ) then
+   !            p%OutParamLinIndx(1,i) = j
+   !            p%OutParamLinIndx(2,i) = 2
+   !            exit !exit j loop; move to next parameter
+   !         elseif ( p%OutParam(i)%Indx == WindVelZ(j) ) then
+   !            p%OutParamLinIndx(1,i) = j
+   !            p%OutParamLinIndx(2,i) = 3
+   !            exit !exit j loop; move to next parameter
+   !         end if
+   !      end do
+   !      
+   !   end if      
+   !end do
+END SUBROUTINE SetOutParamLin
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Helper functions to read primary file
@@ -961,12 +1151,32 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    endif
 
    ! Update the output mesh
-   DO I=1,3
+   do i=1,3
       y%PtfmMesh%Force(I,1)  = Fc(I)
       y%PtfmMesh%Moment(I,1) = Fc(I+3)
-   ENDDO
-   !y%WriteOutput(1) = y%PtfmMesh%Force(1,1)
-   !y%WriteOutput(2) = y%PtfmMesh%Moment(1,1)
+   enddo
+
+   ! --- All Outputs
+   m%AllOuts(ID_PtfFx) = y%PtfmMesh%Force (1,1)
+   m%AllOuts(ID_PtfFy) = y%PtfmMesh%Force (2,1)
+   m%AllOuts(ID_PtfFz) = y%PtfmMesh%Force (3,1)
+   m%AllOuts(ID_PtfMx) = y%PtfmMesh%Moment(1,1)
+   m%AllOuts(ID_PtfMy) = y%PtfmMesh%Moment(2,1)
+   m%AllOuts(ID_PtfMz) = y%PtfmMesh%Moment(3,1)
+   !y%WriteOutput(ID_WaveElev) = .. ! TODO
+   do i=1,p%nCB
+      m%AllOuts(ID_QStart + 0*p%nCB -1 + I) = x%qm   (I)    ! CBQ  - DOF Positions
+      m%AllOuts(ID_QStart + 1*p%nCB -1 + I) = x%qmdot(I)    ! CBQD - DOF Velocities
+      m%AllOuts(ID_QStart + 2*p%nCB -1 + I) = m%PtfmFt(6+I) ! CBF  - DOF Forces
+   enddo
+   ! --- Selected output channels only
+   do I = 1,p%NumOuts
+      if (p%OutParam(I)%Indx>0) then
+          y%WriteOutput(I) = p%OutParam(I)%SignM * m%AllOuts( p%OutParam(I)%Indx )
+      else
+          y%WriteOutput(I) = -999.99e-99
+      endif
+   enddo    
 END SUBROUTINE ExtPtfm_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 
