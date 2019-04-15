@@ -1526,6 +1526,7 @@ CONTAINS
                CALL Conv2UC( Arg )
                Flag = Arg(2:) !this results in only the last flag
                IF ( TRIM(Flag) == 'RESTART' ) CYCLE         ! Get next argument (which will be input [checkpoint] file name)
+               IF ( TRIM(Flag) == 'VTKLIN' )  CYCLE         ! Get next argument (which will be input [checkpoint] file name) 
             END IF
                                                 
             CALL NWTC_DisplaySyntax( InputFile, ProgName )
