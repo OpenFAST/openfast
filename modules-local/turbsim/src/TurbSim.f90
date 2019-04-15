@@ -57,7 +57,7 @@ USE TSsubs
 USE TS_FileIO
 USE TS_Profiles
 use TS_CohStructures
-
+use VersionInfo
 
 IMPLICIT                   NONE
 

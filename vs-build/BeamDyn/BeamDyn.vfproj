@@ -289,5 +289,6 @@
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter></Filter></Files>
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules-local\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>
