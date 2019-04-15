@@ -18,9 +18,25 @@ include Registry_NWTC_Library.txt
 # Define inputs that the initialization routine may need here:
 #   e.g., the name of the input file, the file root name, etc.
 typedef ExtPtfm_MCKF/ExtPtfm InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file; remove if there is no file" -
-typedef   ^                ^             LOGICAL         Linearize  - .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
-typedef   ^                ^             DbKi            DT          - - -     "Time step from Glue Code" "s"
-# note that I didn't add the RootName here. That would probably be a nice thing to have at some point....
+typedef   ^                ^             LOGICAL           Linearize  - .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
+typedef   ^                ^             CHARACTER(1024)   RootName    - - -     "RootName for writing output files"
+
+# ..... Input file data ...........................................................................................................
+# This is data defined in the Input File for this module (or could otherwise be passed in)
+# ..... Primary Input file data ...........................................................................................................
+typedef ExtPtfm_MCKF/ExtPtfm   ExtPtfm_InputFile  DbKi               DT         -  - -  "Requested integration time for ElastoDyn"   seconds
+typedef        ^                     ^            IntKi              IntMethod  - - -   "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
+typedef        ^                     ^            IntKi              FileFormat - - -   "File format switch" -
+typedef        ^                     ^            CHARACTER(1024)    RedFile    -  - -  "File containing reduction inputs"   -
+typedef        ^                     ^            CHARACTER(1024)    RedFileCst -  - -  "File containing constant reduction inputs"   -
+typedef        ^                     ^            LOGICAL            SumPrint   -  - -  "Print summary data to <RootName>.sum"   -
+typedef        ^                     ^            IntKi              OutFile    -  - -  "Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both)"   -
+typedef        ^                     ^            LOGICAL            TabDelim   -  - -  "Flag to cause tab-delimited text output (delimited by space otherwise)"   -
+typedef        ^                     ^            CHARACTER(20)      OutFmt     -  - -  "Format used for module's text tabular output (except time); resulting field should be 10 characters"   -
+typedef        ^                     ^            DbKi               Tstart     -  - -  "Time to start module's tabular output"   seconds
+typedef        ^                     ^            IntKi              NumOuts    -  - -  "Number of parameters in the output list (number of outputs requested)"   -
+typedef        ^                     ^            CHARACTER(ChanLen) OutList   {:} - -  "List of user-requested output channels"   -
+
 
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType ProgDesc              Ver              -  - - "This module's name, version, and date" -

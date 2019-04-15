@@ -63,6 +63,8 @@ MODULE ExtPtfm_MCKF
 
 ! ---------------------------------------------------------------------------------------------------
 ! Variables for output channels
+   INTEGER(IntKi), PARAMETER      :: MaxOutChs   = 9 + 3*200 ! Maximum number of output channels
+                                                             ! Harcoded to outputs of 200 CB modes
    INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 1
    INTEGER(IntKi), PARAMETER      :: ID_Time     = 0
    INTEGER(IntKi), PARAMETER      :: ID_PtfFx    = 1
@@ -81,12 +83,16 @@ CONTAINS
 !> Helper functions for the module
 
 !> This routine sets the error status and error message for a routine, it's a simplified version of SetErrStat from NWTC_Library
-subroutine SetErrStatSimple(ErrStat, ErrMess, RoutineName)
-  INTEGER(IntKi), INTENT(INOUT)  :: ErrStat      ! Error status of the operation
-  CHARACTER(*),   INTENT(INOUT)  :: ErrMess      ! Error message if ErrStat /= ErrID_None
-  CHARACTER(*),   INTENT(IN   )  :: RoutineName  ! Name of the routine error occurred in
+subroutine SetErrStatSimple(ErrStat, ErrMess, RoutineName, LineNumber)
+  INTEGER(IntKi), INTENT(INOUT)        :: ErrStat      ! Error status of the operation
+  CHARACTER(*),   INTENT(INOUT)        :: ErrMess      ! Error message if ErrStat /= ErrID_None
+  CHARACTER(*),   INTENT(IN   )        :: RoutineName  ! Name of the routine error occurred in
+  INTEGER(IntKi), INTENT(IN), OPTIONAL :: LineNumber   ! Line of input file 
   if (ErrStat /= ErrID_None) then
      ErrMess = TRIM(RoutineName)//':'//TRIM(ErrMess)
+     if (present(LineNumber)) then
+         ErrMess = TRIM(ErrMess)//' Line: '//TRIM(Num2LStr(LineNumber))//'.'
+     endif
   end if
 end subroutine SetErrStatSimple
 
@@ -116,7 +122,7 @@ end subroutine
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
    TYPE(ExtPtfm_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    TYPE(ExtPtfm_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
@@ -128,7 +134,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    TYPE(ExtPtfm_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated;
                                                                     !!   only the output mesh is initialized)
    TYPE(ExtPtfm_MiscVarType),         INTENT(  OUT)  :: m           !< Misc variables for optimization (not copied in glue code)
-   REAL(DbKi),                        INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that
+   REAL(DbKi),                        INTENT(INOUT)  :: dt_gluecode !< Coupling interval in seconds: the rate that
                                                                     !!   (1) ExtPtfm_UpdateStates() is called in loose coupling &
                                                                     !!   (2) ExtPtfm_UpdateDiscState() is called in tight coupling.
                                                                     !!   Input is the suggested time from the glue code;
@@ -140,7 +146,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    ! local variables
    INTEGER(IntKi)                                    :: I           ! Loop counter
    INTEGER(IntKi)                                    :: NumOuts     ! Number of outputs; would probably be in the parameter type
-   CHARACTER(ChanLen), dimension(:), allocatable     :: OutList(:)   !< The list out user-requested outputs
+   TYPE(ExtPtfm_InputFile)                           :: InputFileData ! Data stored in the module's input file
    ! Initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -149,14 +155,23 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    call NWTC_Init( )
    ! Display the module information
    call DispNVD( ExtPtfm_Ver )
-   ! set parameters
+   ! Initialize parameters
    p%NumOuts   = 0
    p%nTot      = -1
    p%nCB       = -1
-   p%IntMethod = 1     ! TODO, default, get it from glue code
-   p%EP_DeltaT = 0.001
-   print*,'>> DT Glue code',InitInp%DT
-   call ReadPrimaryFile(InitInp%InputFile, p, ErrStat, ErrMsg); if(Failed()) return
+
+   call ReadPrimaryFile(InitInp%InputFile, p, InitInp%RootName, InputFileData, ErrStat, ErrMsg); if(Failed()) return
+
+   ! --- Setting Params from Input file data
+   p%IntMethod = InputFileData%IntMethod
+   if (InputFileData%DT<0) then
+       p%EP_DeltaT = dt_gluecode
+   else
+       p%EP_DeltaT = InputFileData%DT
+   endif
+   ! Setting p%OutParam from OutList
+   call SetOutParam(InputFileData%OutList, InputFileData%NumOuts, p, ErrStat, ErrMsg); if(Failed()) return
+
    write(*,*)'Total number of DOF :',p%nTot
    write(*,*)'Number of CB modes  :',p%nCB
    write(*,*)'Number of time steps:',p%nPtfmFt
@@ -193,23 +208,6 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
    ! --- Outputs
    CALL AllocAry( m%AllOuts, ID_QStart+3*p%nCB-1, "ExtPtfm AllOut", ErrStat,ErrMsg ); if(Failed()) return
    m%AllOuts(1:ID_QStart+3*p%nCB-1) = 0.0
-   ! TODO OutList from InputFile
-   allocate(OutList(6))
-   OutList( 1) = 'PtfmFx'
-   OutList( 2) = 'PtfmFy'
-   OutList( 3) = 'PtfmFz'
-   OutList( 4) = 'PtfmMx'
-   OutList( 5) = 'PtfmMy'
-   OutList( 6) = 'PtfmMz'
-!    OutList( 7) = 'CBQ_001'
-!    OutList( 8) = 'CBQ_002'
-!    OutList( 9) = 'CBQD_001'
-!    OutList(10) = 'CBF_001'
-!    OutList(11) = 'WavElev'
-!    OutList(12) = 'CBF_004'
-   ! Setting p%OutParam from OutList
-   call SetOutParam(OutList, p, ErrStat, ErrMsg); if(Failed()) return
-
    call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat,ErrMsg); if(Failed()) return
@@ -261,7 +259,7 @@ CONTAINS
     end function Failed
 END SUBROUTINE ExtPtfm_Init
 
-SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
+SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
 ! This routine checks to see if any requested output channel names (stored in the OutList(:)) are invalid. It returns a 
 ! warning if any of the channels are not available outputs from the module.
 !  It assigns the settings for OutParam(:) (i.e, the index, name, and units of the output channels, WriteOutput(:)).
@@ -269,6 +267,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 ! It sets assumes the value p%NumOuts has been set before this routine has been called, and it sets the values of p%OutParam here.
 !..................................................................................................................................
    CHARACTER(ChanLen),           INTENT(IN)     :: OutList(:)         !< The list out user-requested outputs
+   INTEGER(IntKi),               INTENT(IN)     :: NumOuts_in         !< Effective number of output channels
    TYPE(ExtPtfm_ParameterType),  INTENT(INOUT)  :: p                  !< The module parameters
    INTEGER(IntKi),               INTENT(OUT)    :: ErrStat            !< The error status code
    CHARACTER(*),                 INTENT(OUT)    :: ErrMsg             !< The error message, if an error occurred
@@ -280,13 +279,13 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
 
    CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(7) =  (/ & ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "PTFMFX   ","PTFMFY   ","PTFMFZ   ","PTFMMX   ","PTFMMY   ","PTFMMZ   ","WAVELEV  "/) 
+                               "INTRFFX  ","INTRFFY  ","INTRFFZ  ","INTRFMX  ","INTRFMY  ","INTRFMZ  ","WAVELEV  "/) 
    CHARACTER(OutStrLenM1), PARAMETER :: ParamUnitsAry(7) =  (/ &                     ! This lists the units corresponding to the allowed parameters
                                "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     ","(m)      "/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(7) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                               ID_PtfFx, ID_PtfFy, ID_PtfFz, ID_PtfMx, ID_PtfMy, ID_PtfMz, ID_WaveElev /)
    
-   p%NumOuts = size(OutList,1)
+   p%NumOuts = NumOuts_in
    allocate(p%OutParam(0:p%NumOuts) , stat=ErrStat )
    if ( ErrStat /= 0_IntKi )  THEN
       CALL SetErrStat(ErrID_Fatal,"Error allocating memory for the InflowWind OutParam array.", ErrStat, ErrMsg, RoutineName)
@@ -319,15 +318,16 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
           p%OutParam(I)%Indx  = ParamIndxAry(Indx)
           p%OutParam(I)%Units = ParamUnitsAry(Indx)
       else if (index(OutListTmp,'CBQ_') > 0 ) then
-          call setDOFChannel(5,ID_QStart+0*p%nCB-1)
+          call setDOFChannel(5,ID_QStart+0*p%nCB-1); if(Failed()) return
+
       else if (index(OutListTmp,'CBQD_') > 0 ) then
-          call setDOFChannel(6,ID_QStart+1*p%nCB-1)
+          call setDOFChannel(6,ID_QStart+1*p%nCB-1); if(Failed()) return
       else if (index(OutListTmp,'CBF_') > 0 ) then
-          call setDOFChannel(5,ID_QStart+2*p%nCB-1)
+          call setDOFChannel(5,ID_QStart+2*p%nCB-1); if(Failed()) return
       else
           call setInvalidChannel() ! INVALID
       endif
-      write(*,*) p%OutParam(I)%Name, p%OutParam(I)%Indx, p%OutParam(I)%Units
+      !write(*,*) p%OutParam(I)%Name, p%OutParam(I)%Indx, p%OutParam(I)%Units
    end do
    return
 contains
@@ -340,7 +340,8 @@ contains
         integer, intent(in) :: nCharBefore !< Number of characters to ignore in OutListTmp
         integer, intent(in) :: nOffset     !< Index offset to add to iDOF
         integer             :: idof ! index of CB DOF extracted from 
-        iDOF = ReadIntFromStr(OutListTmp(nCharBefore:), 'Output channel '//trim(OutList(I)), ErrStat, ErrMsg); if(Failed()) return
+        iDOF = ReadIntFromStr(OutListTmp(nCharBefore:), 'Output channel '//trim(OutList(I)), ErrStat, ErrMsg);
+        if(ErrStat/=0) return
         if ((iDOF> p%nCB) .or. (iDOF<1)) then
             call setInvalidChannel() ! INVALID
         else
@@ -397,8 +398,6 @@ SUBROUTINE SetOutParamLin( p, ErrStat, ErrMsg )
    !   end if      
    !end do
 END SUBROUTINE SetOutParamLin
-
-
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Helper functions to read primary file
 real(ReKi) function ReadFloatFromStr(s, VarName, iStat, Msg ) result(myfloat)
@@ -446,7 +445,150 @@ subroutine ReadRealMatrix(fid, FileName, Mat, VarName, nLines,nRows, iStat, Msg,
    ENDDO
 end subroutine
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
+!> Checks that all inputs were correctly read
+subroutine CheckAllInputsRead(p,ErrStat,ErrMsg)
+   TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p              !< All the parameter matrices stored in this input file
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat        !< Error status                              
+   CHARACTER(*),                INTENT(OUT)   :: ErrMsg         !< Error message
+    if (ErrStat/=0) return
+    if (p%nTot<0)                   then ; ErrStat=ErrID_Fatal; ErrMsg='The total number of DOF was not set'; endif
+    if (.not.allocated(p%PtfmAM))   then ; ErrStat=ErrID_Fatal; ErrMsg='The mass matrix was not allocated.' ; endif
+    if (.not.allocated(p%Stff))     then ; ErrStat=ErrID_Fatal; ErrMsg='The stiffness matrix was not allocated.' ; endif
+    if (.not.allocated(p%Damp))     then ; ErrStat=ErrID_Fatal; ErrMsg='The damping matrix was not allocated.' ; endif
+    if (.not.allocated(p%PtfmFt))   then ; ErrStat=ErrID_Fatal; ErrMsg='The loads were not allocated.';endif
+    if (.not.allocated(p%PtfmFt_t)) then ; ErrStat=ErrID_Fatal; ErrMsg='The time vector was not allocated.'; endif
+end subroutine CheckAllInputsRead
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, ErrMsg)
+!..................................................................................................................................
+   ! Passed variables
+   CHARACTER(*),                INTENT(IN)    :: InputFile      !< Name of the file containing the primary input data
+   TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p              !< All the parameter matrices stored in this input file
+   CHARACTER(*),                INTENT(IN)    :: OutFileRoot    !< The rootname of all the output files written by this routine.
+   TYPE(ExtPtfm_InputFile),     INTENT(OUT)   :: InputFileData ! Data stored in the module's input file
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat        !< Error status                              
+   CHARACTER(*),                INTENT(OUT)   :: ErrMsg         !< Error message
+   ! Local variables:
+   INTEGER(IntKi)                       :: I                    ! loop counter
+   INTEGER(IntKi)                       :: UnIn                 ! Unit number for reading file
+   INTEGER(IntKi)                       :: UnEc                 ! Unit number for echo
+   INTEGER(IntKi)                       :: iLine                ! Current position in file
+   CHARACTER(200)                       :: Line                 ! Temporary storage of a line from the input file (to compare with "default")
+   CHARACTER(1024)                      :: PriPath              ! Path name of the primary file
+   LOGICAL                              :: Echo
+   ! --- Initialization
+   Echo = .FALSE.
+   UnEc = -1                             ! Echo file not opened, yet
+   CALL GetPath(InputFile, PriPath)     ! Input files will be relative to the path where the primary input file is located.
+   CALL AllocAry(InputFileData%OutList, MaxOutChs, "ExtPtfm Input File's Outlist", ErrStat, ErrMsg); if(Failed()) return
+   
+   ! Get an available unit number for the file.
+   CALL GetNewUnit(UnIn, ErrStat, ErrMsg);              if(Failed()) return
+   ! Open the Primary input file.
+   CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if(Failed()) return
+   
+   ! Read the lines up/including to the "Echo" simulation control variable
+   ! If echo is FALSE, don't write these lines to the echo file.
+   ! If Echo is TRUE, rewind and write on the second try.
+   I    = 1 ! the number of times we've read the file (used for the Echo variable)
+   DO
+       iLine=1
+       !-------------------------- HEADER ---------------------------------------------
+       CALL ReadCom(UnIn, InputFile, 'File Header', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return; 
+       CALL ReadStr(UnIn, InputFile, Line, 'Header', 'File Header: File Description', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return 
+       !---------------------- SIMULATION CONTROL --------------------------------------
+       CALL ReadCom(UnIn, InputFile, 'Section Header: Simulation Control', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+       ! Echo - Echo input to "<RootName>.ech".
+       CALL ReadVar(UnIn, InputFile, Echo, 'Echo','Echo switch', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+       IF (.NOT. Echo .OR. I > 1) EXIT !exit this loop
+       ! Otherwise, open the echo file, then rewind the input file and echo everything we've read
+       I = I + 1         ! make sure we do this only once (increment counter that says how many times we've read this file)
+       CALL OpenEcho(UnEc, TRIM(OutFileRoot)//'.ech', ErrStat, ErrMsg, ExtPtfm_Ver ); if(Failed()) return;
+       IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(ExtPtfm_Ver%Name)//' primary input file "'//TRIM( InputFile )//'":'
+       REWIND( UnIn, IOSTAT=ErrStat )
+       IF (ErrStat /= 0_IntKi ) THEN
+           CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(InputFile)//'".',ErrStat,ErrMsg,'ExtPtfm_ReadPrimaryFile' );
+           IF (ErrStat >= AbortErrLev) RETURN
+       END IF
+   END DO
+
+   IF (NWTC_VerboseLevel == NWTC_Verbose) THEN
+      CALL WrScr(' Heading of the '//TRIM(ExtPtfm_Ver%Name)//' input file: ')
+      CALL WrScr('   '//TRIM( Line ))
+   END IF
+
+   ! DT - Requested integration time for ElastoDyn (seconds):
+   InputFileData%DT=-1
+   CALL ReadVar( UnIn, InputFile, Line, "DT", "Integration time for ExtPtfm (s)", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   CALL Conv2UC( Line )
+   IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DT
+      READ(Line, *, IOSTAT=ErrStat) InputFileData%DT
+      IF ( ErrStat /= 0 ) THEN
+         CALL CheckIOS(ErrStat, InputFile, "DT", NumType, ErrStat, ErrMsg); if(Failed()) return
+      END IF
+   END IF
+   ! Method - Integration method for loose coupling
+   CALL ReadVar( UnIn, InputFile, InputFileData%IntMethod, "IntMethod", "Integration method for ExtPtfm {1: RK4, 2: AB4, or 3: ABM4}", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+
+   !---------------------- REDUCTION INPUTS ---------------------------------------------------
+   CALL ReadCom(UnIn, InputFile, 'Section Header: ReductionInputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   ! File Format switch
+   CALL ReadVar(UnIn, InputFile, InputFileData%FileFormat, "FileFormat", "File format switch", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   ! Reduction Filename
+   CALL ReadVar(UnIn, InputFile, InputFileData%RedFile   , 'Red_FileName', 'Path containing Guyan/Craig-Bampton inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   IF ( PathIsRelative(InputFileData%RedFile) ) InputFileData%RedFile = TRIM(PriPath)//TRIM(InputFileData%RedFile)
+   CALL ReadVar(UnIn, InputFile, InputFileData%RedFileCst, 'RedCst_FileName', 'Path containing Guyan/Craig-Bampton constant inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   IF ( PathIsRelative(InputFileData%RedFileCst) ) InputFileData%RedFileCst = TRIM(PriPath)//TRIM(InputFileData%RedFileCst)
+   !---------------------- OUTPUT --------------------------------------------------
+   CALL ReadCom(UnIn, InputFile, 'Section Header: Output', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   ! SumPrint - Print summary data to <RootName>.sum (flag):
+   CALL ReadVar(UnIn, InputFile, InputFileData%SumPrint, "SumPrint", "Print summary data to <RootName>.sum (flag)", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   ! OutFile - Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both) (-):
+   CALL ReadVar(UnIn, InputFile, InputFileData%OutFile , "OutFile", "Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both) (-)", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   ! TabDelim - Flag to cause tab-delimited text output (delimited by space otherwise) (flag):
+   CALL ReadVar(UnIn, InputFile, InputFileData%TabDelim, "TabDelim", "Flag to cause tab-delimited text output (delimited by space otherwise) (flag)", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   ! OutFmt - Format used for module's text tabular output (except time); resulting field should be 10 characters (-):
+   CALL ReadVar(UnIn, InputFile, InputFileData%OutFmt  , "OutFmt", "Format used for module's text tabular output (except time); resulting field should be 10 characters (-)", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   ! Tstart - Time to start module's tabular output (seconds):
+   CALL ReadVar(UnIn, InputFile, InputFileData%Tstart  , "Tstart", "Time to start module's tabular output (seconds)", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   !---------------------- OUTLIST  --------------------------------------------
+   CALL ReadCom(UnIn, InputFile, 'Section Header: OutList', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   ! OutList - List of user-requested output channels (-):
+   CALL ReadOutputList(UnIn, InputFile, InputFileData%OutList, InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   !---------------------- END OF FILE -----------------------------------------
+   call cleanup()
+
+   ! --- Reading Reduced file
+   if ((InputFileData%FileFormat==1) .or. (InputFileData%FileFormat==0))then
+       call ReadReducedFile(InputFileData%RedFile, p, ErrStat, ErrMsg); if(Failed()) return;
+   else
+       call SetErrStat(ErrID_Fatal, 'FileFormat not implemented: '//trim(Num2LStr(InputFileData%FileFormat)), ErrStat, ErrMsg, 'ExtPtfm_ReadPrimaryFile')
+       return
+   endif
+   ! Checking that everyting was correctly read and set
+   call CheckAllInputsRead(p, ErrStat, ErrMsg);  if(Failed()) return
+
+   return
+
+CONTAINS
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_ReadPrimaryFile')
+        Failed =  ErrStat >= AbortErrLev
+        if(Failed) call cleanup()
+    end function Failed
+    logical function LineFailed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_ReadPrimaryFile',iLine)
+        LineFailed =  ErrStat >= AbortErrLev
+        if(LineFailed) call cleanup()
+        iLine=iLine+1  ! Increase line number
+    end function LineFailed
+   subroutine cleanup()
+      close(UnIn)
+      close(UnEc)
+   end subroutine cleanup
+END SUBROUTINE ReadPrimaryFile
+!..................................................................................................................................
+SUBROUTINE ReadReducedFile( InputFile, p, ErrStat, ErrMsg )
 !..................................................................................................................................
    ! Passed variables
    CHARACTER(*),                INTENT(IN)    :: InputFile                           !< Name of the file containing the primary input data
@@ -487,16 +629,12 @@ SUBROUTINE ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
        call ReadFlexASCII()
    endif
 
-   ! Checking that everyting was correctly read and set
-   call CheckAllInputsRead()
-   if(Failed()) return
-   
    return
 
 CONTAINS
     !> 
     logical function Failed()
-        CALL SetErrStatSimple( ErrStat, ErrMsg, 'ExtPtfm_ReadPrimaryFile' )
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_ReadReducedFile')
         Failed =  ErrStat >= AbortErrLev
         if(Failed) call cleanup()
     end function Failed
@@ -507,16 +645,6 @@ CONTAINS
         if (allocated(TmpAry)) deallocate(TmpAry)
     end subroutine cleanup
     
-    !> Checks that all inputs were correctly read
-    subroutine CheckAllInputsRead()
-        if (ErrStat/=0) return
-        if (p%nTot<0)                   then ; ErrStat=ErrID_Fatal; ErrMsg='The total number of DOF was not set'; endif
-        if (.not.allocated(p%PtfmAM))   then ; ErrStat=ErrID_Fatal; ErrMsg='The mass matrix was not allocated.' ; endif
-        if (.not.allocated(p%Stff))     then ; ErrStat=ErrID_Fatal; ErrMsg='The stiffness matrix was not allocated.' ; endif
-        if (.not.allocated(p%Damp))     then ; ErrStat=ErrID_Fatal; ErrMsg='The damping matrix was not allocated.' ; endif
-        if (.not.allocated(p%PtfmFt))   then ; ErrStat=ErrID_Fatal; ErrMsg='The loads were not allocated.';endif
-        if (.not.allocated(p%PtfmFt_t)) then ; ErrStat=ErrID_Fatal; ErrMsg='The time vector was not allocated.'; endif
-    end subroutine CheckAllInputsRead
 
    !> Reads a FLEX ASCII file for Guyan or CraigBampton reductions
    SUBROUTINE ReadFlexASCII()
@@ -526,9 +654,9 @@ CONTAINS
        T=-1
        dt=-1
        ! Get an available unit number for the file.
-       CALL GetNewUnit( UnIn, ErrStat, ErrMsg );               if ( ErrStat /= 0 ) return
+       CALL GetNewUnit( UnIn, ErrStat, ErrMsg );            if ( ErrStat /= 0 ) return
        ! Open the Primary input file.
-       CALL OpenFInpFile ( UnIn, InputFile, ErrStat, ErrMsg ); if ( ErrStat /= 0 ) return
+       CALL OpenFInpFile(UnIn, InputFile, ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
 
        ! --- Reading file line by line
        ErrStat=0
@@ -670,7 +798,7 @@ CONTAINS
        !---------------------- END OF FILE -----------------------------------------
        close( UnIn )
    END SUBROUTINE ReadGuyanASCII
-END SUBROUTINE ReadPrimaryFile      
+END SUBROUTINE ReadReducedFile
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
