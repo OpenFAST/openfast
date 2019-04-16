@@ -6,7 +6,7 @@ OpenFAST Documentation
 
 .. only:: html
 
-   :Version: |version|
+   :Version: |release|
    :Date: |today|
 
 OpenFAST is an open-source wind turbine simulation tool that was established in
