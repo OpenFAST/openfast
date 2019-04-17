@@ -115,7 +115,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
     INTEGER(IntKi)                         :: ErrStat2        ! The error status code
     CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
     CHARACTER(1024)                        :: AABlFile(MaxBl) ! File that contains the blade information (specified in the primary input file)
-    LOGICAL                       	  :: NotReadYet        ! 
+    LOGICAL                       	  :: readinornot        ! The error status code
     CHARACTER(*), PARAMETER                :: RoutineName = 'ReadInputFiles'
     ! initialize values:
     ErrStat = ErrID_None
@@ -125,63 +125,77 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
 
     ! get the primary/platform input-file data
     ! sets UnEcho, AABlFile
+
     CALL ReadPrimaryFile( InputFileName, InputFileData, AABlFile,  OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
-    if(Failed()) return
+    CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+    IF ( ErrStat >= AbortErrLev ) THEN
+        CALL Cleanup()
+        RETURN
+    END IF
 
     ! get the blade input-file data
+
     ALLOCATE( InputFileData%BladeProps( NumBlades ), STAT = ErrStat2 )
     IF (ErrStat2 /= 0) THEN
         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
+        CALL Cleanup()
         RETURN
     END IF
 
     do i = 1,NumBlades
+        ! TODO: Make AABlFile an array (DONE)
         CALL ReadBladeInputs ( AABlFile(i), InputFileData%BladeProps(i), UnEcho, ErrStat2, ErrMsg2 )
         CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
-        if(Failed()) return
+        IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+        END IF
     end do
 
-    NotReadYet=.true.
-    ! TODO TODO, the call the readxfoiltables seems wrong since the inputfiledata is reallocated all the time
+    readinornot=.true.
     IF(   (InputFileData%XfoilCall.eq.1) .and. (InputFileData%ITURB.eq.2)  ) THEN
         CALL ReadXfoilTables( InputFileName,InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
-        if(Failed()) return
-        NotReadYet=.false.
+        readinornot=.false.
     ENDIF 	
 
-    IF(   (InputFileData%XfoilCall.eq.1) .and. (InputFileData%X_BLMethod.eq.2) .and. (NotReadYet)  ) THEN
+    IF(   (InputFileData%XfoilCall.eq.1) .and. (InputFileData%X_BLMethod.eq.2) .and. (readinornot)  ) THEN
         CALL ReadXfoilTables( InputFileName,InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
-        if(Failed()) return
     ENDIF 
 
     IF(   (InputFileData%TICalcMeth.eq.1) ) THEN	
-        CALL REadTICalcTables(InputFileName,InputFileData,  ErrStat2, ErrMsg2); if(Failed()) return
+        CALL REadTICalcTables(InputFileName,InputFileData,  ErrStat2, ErrMsg2 )
     ENDIF 	
 
+    CALL Cleanup ( )
+
 CONTAINS
-    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
-        Failed =  ErrStat >= AbortErrLev
-    end function Failed
+   !...............................................................................................................................
+   SUBROUTINE Cleanup()
+   END SUBROUTINE Cleanup
 
 END SUBROUTINE ReadInputFiles
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine reads in the primary Noise input file and places the values it reads in the InputFileData structure.
-!   It opens and prints to an echo file if requested.
 SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, UnEc, ErrStat, ErrMsg )
+    ! This routine reads in the primary Noise input file and places the values it reads in the InputFileData structure.
+    !   It opens and prints to an echo file if requested.
+    !..................................................................................................................................
+    ! Passed variables
     integer(IntKi),     intent(out)     :: UnEc                                ! I/O unit for echo file. If > 0, file is open for writing.
     integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
     character(*),       intent(out)     :: AABlFile(MaxBl)                     ! name of the files containing blade inputs
+
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
     character(*),       intent(out)     :: ErrMsg                              ! Error message
     character(*),       intent(in)      :: OutFileRoot                         ! The rootname of the echo file, possibly opened in this routine
+
     type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
+
     ! Local variables:
     real(ReKi)                    :: TmpAry(3)                                 ! array to help read tower properties table
     integer(IntKi)                :: I                                         ! loop counter
     integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
     integer(IntKi)                :: loop1                                     ! loop counter
-    character(1024)               :: ObserverFile                              ! name of the files containing obesever location
+    character(1024)                  :: ObserverFile                              ! name of the files containing obesever location
     integer(IntKi)                :: ErrStat2, IOS,cou                             ! Temporary Error status
     logical                       :: Echo                                      ! Determines if an echo file should be written
     character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
@@ -189,6 +203,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
     character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
     character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
     character(*), parameter       :: RoutineName = 'ReadPrimaryFile'
+
+
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
@@ -197,9 +213,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
     Echo = .FALSE.   
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
+    ! Get an available unit number for the file.
+    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
     ! Open the Primary input file.
-    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 ); call check
-    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 ); call check
+    CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
     IF ( ErrStat >= AbortErrLev ) THEN
         CALL Cleanup()
         RETURN
@@ -211,21 +231,27 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
     I = 1 !set the number of times we've read the file
     DO 
         !----------- HEADER -------------------------------------------------------------
-        CALL ReadCom( UnIn, InputFile, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc ); call check
-        CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc ); call check
+        CALL ReadCom( UnIn, InputFile, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+        CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
         END IF
 
         !----------- GENERAL OPTIONS ----------------------------------------------------
-        CALL ReadCom( UnIn, InputFile, 'Section Header: General Options', ErrStat2, ErrMsg2, UnEc ); call check
+        CALL ReadCom( UnIn, InputFile, 'Section Header: General Options', ErrStat2, ErrMsg2, UnEc )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         ! Echo - Echo input to "<RootName>.AD.ech".
-        CALL ReadVar( UnIn, InputFile, Echo, 'Echo',   'Echo flag', ErrStat2, ErrMsg2, UnEc); call check
+        CALL ReadVar( UnIn, InputFile, Echo, 'Echo',   'Echo flag', ErrStat2, ErrMsg2, UnEc )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         IF (.NOT. Echo .OR. I > 1) EXIT !exit this loop
         ! Otherwise, open the echo file, then rewind the input file and echo everything we've read
         I = I + 1         ! make sure we do this only once (increment counter that says how many times we've read this file)
-        CALL OpenEcho ( UnEc, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2, AA_Ver ); call check
+        CALL OpenEcho ( UnEc, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2, AA_Ver )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
@@ -246,33 +272,71 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
 
     ! DTAero - Time interval for aerodynamic calculations {or default} (s):
     Line = ""
-    CALL ReadVar( UnIn, InputFile, Line, "DTAero", "Time interval for aerodynamic calculations {or default} (s)", ErrStat2, ErrMsg2, UnEc); call check
+    CALL ReadVar( UnIn, InputFile, Line, "DTAero", "Time interval for aerodynamic calculations {or default} (s)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
     CALL Conv2UC( Line )
     IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTAero
         READ( Line, *, IOSTAT=IOS) InputFileData%DTAero
-        CALL CheckIOS ( IOS, InputFile, 'DTAero', NumType, ErrStat2, ErrMsg2 ); call check
+        CALL CheckIOS ( IOS, InputFile, 'DTAero', NumType, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
     END IF   
-    CALL ReadVar( UnIn, InputFile, InputFileData%Comp_AA_After, "Comp_AA_After", "Comp_AA_After", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%saveeach     , "saveeach", "saveeach", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%IBLUNT       , "IBLUNT", "FLAG TO COMPUTE BLUNTNESS NOISE {} (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%ILAM         , "ILAM", "FLAG TO COMPUTE LBL NOISE {} (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%ITIP         , "ITIP", "FLAG TO COMPUTE TIP NOISE {} (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%ITRIP        , "ITRIP", "FLAG TO TRIP BOUNDARY LAYER {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc); call check
+    CALL ReadVar( UnIn, InputFile, InputFileData%Comp_AA_After, "Comp_AA_After", "Comp_AA_After", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    CALL ReadVar( UnIn, InputFile, InputFileData%saveeach, "saveeach", "saveeach", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    ! IBLUNT - FLAG TO COMPUTE BLUNTNESS NOISE
+    CALL ReadVar( UnIn, InputFile, InputFileData%IBLUNT, "IBLUNT", "FLAG TO COMPUTE BLUNTNESS NOISE {} (-)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    ! ILAM - FLAG TO COMPUTE LBL NOISE 
+    CALL ReadVar( UnIn, InputFile, InputFileData%ILAM, "ILAM", "FLAG TO COMPUTE LBL NOISE {} (-)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    ! ITIP - FLAG TO COMPUTE TIP NOISE 
+    CALL ReadVar( UnIn, InputFile, InputFileData%ITIP, "ITIP", "FLAG TO COMPUTE TIP NOISE {} (-)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    ! ITRIP - FLAG TO TRIP BOUNDARY LAYER 
+    CALL ReadVar( UnIn, InputFile, InputFileData%ITRIP, "ITRIP", "FLAG TO TRIP BOUNDARY LAYER {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
     ! ITURB - FLAG TO COMPUTE TBLTE NOISE 
-    CALL ReadVar( UnIn, InputFile, InputFileData%ITURB      , "ITURB", "FLAG TO COMPUTE TBLTE NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%IInflow    , "IInflow", "FLAG TO COMPUTE Turbulent Inflow NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%X_BLMethod , "X_BLMethod", "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Xfoil", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%XfoilCall  , "XfoilCall", "Integer describing Xfoil calls,  = 1 Interpolate from pretabulated = 2 Call Xfoil for each node etc", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%TICalcMeth , "TICalcMeth", "Integer describing TICalcMeth,  = 1 Interpolate from pretabulated = 2 calculate on the fly", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%ROUND, "ROUND", "LOGICAL INDICATING ROUNDED TIP", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%ALPRAT, "ALPRAT", "TIP LIFT CURVE SLOPE and (Default = 1.0)", ErrStat2, ErrMsg2, UnEc); call check  
+    CALL ReadVar( UnIn, InputFile, InputFileData%ITURB, "ITURB", "FLAG TO COMPUTE TBLTE NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    ! 
+    CALL ReadVar( UnIn, InputFile, InputFileData%IInflow, "IInflow", "FLAG TO COMPUTE Turbulent Inflow NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    ! 
+    CALL ReadVar( UnIn, InputFile, InputFileData%X_BLMethod, "X_BLMethod", "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Xfoil", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    ! 
+    CALL ReadVar( UnIn, InputFile, InputFileData%XfoilCall, "XfoilCall", "Integer describing Xfoil calls,  = 1 Interpolate from pretabulated = 2 Call Xfoil for each node etc", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    CALL ReadVar( UnIn, InputFile, InputFileData%TICalcMeth, "TICalcMeth", "Integer describing TICalcMeth,  = 1 Interpolate from pretabulated = 2 calculate on the fly", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    ! ROUND - LOGICAL INDICATING ROUNDED TIP
+    CALL ReadVar( UnIn, InputFile, InputFileData%ROUND, "ROUND", "LOGICAL INDICATING ROUNDED TIP", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    ! ALPRAT - TIP LIFT CURVE SLOPE and (Default = 1.0)  
+    CALL ReadVar( UnIn, InputFile, InputFileData%ALPRAT, "ALPRAT", "TIP LIFT CURVE SLOPE and (Default = 1.0)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+
     ! AA_Bl_Prcntge - The calculations will be carried out for the nodes that are within the user input percntage value. 
     ! i.e. AA_Bl_Prcntge=60 means;Starting from tip 60% percent of the blade will be contributing to the overall noise levels.
-    CALL ReadVar( UnIn, InputFile, InputFileData%AA_Bl_Prcntge, "AA_Bl_Prcntge", "-", ErrStat2, ErrMsg2, UnEc); call check  
+    CALL ReadVar( UnIn, InputFile, InputFileData%AA_Bl_Prcntge, "AA_Bl_Prcntge", "-", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+
     ! surface roughness
-    CALL ReadVar( UnIn, InputFile, InputFileData%z0_AA, "z0_AA", "-", ErrStat2, ErrMsg2, UnEc); call check  
-    CALL ReadVar( UnIn, InputFile, InputFileData%aweightflag, "aweightflag", "Integer describing a weighting", ErrStat2, ErrMsg2, UnEc); call check
+    CALL ReadVar( UnIn, InputFile, InputFileData%z0_AA, "z0_AA", "-", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+
+    CALL ReadVar( UnIn, InputFile, InputFileData%aweightflag, "aweightflag", "Integer describing a weighting", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
     ! Return on error at end of section
     IF ( ErrStat >= AbortErrLev ) THEN
@@ -281,29 +345,56 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
     END IF
 
     !----------- OBSERVER INPUT  ------------------------------
-    CALL ReadCom( UnIn, InputFile, 'Section Header: Observer Input ', ErrStat2, ErrMsg2, UnEc ); call check
-    ! NrObsLoc  - Nr of Observers (-):
-    CALL ReadVar( UnIn, InputFile, InputFileData%NrObsLoc, "NrObsLoc", "Nr of Observers (-)", ErrStat2, ErrMsg2, UnEc); call check
+    CALL ReadCom( UnIn, InputFile, 'Section Header: Observer Input ', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-    ! Observer location in tower-base coordinate  (m):
-    CALL AllocAry( InputFileData%ObsX,InputFileData%NrObsLoc, 'ObsX', ErrStat2, ErrMsg2); call check
-    CALL AllocAry( InputFileData%ObsY,InputFileData%NrObsLoc, 'ObsY', ErrStat2, ErrMsg2); call check
-    CALL AllocAry( InputFileData%ObsZ,InputFileData%NrObsLoc, 'ObsZ', ErrStat2, ErrMsg2); call check
+    ! NrObsLoc  - Nr of Observers (-):
+    CALL ReadVar( UnIn, InputFile, InputFileData%NrObsLoc, "NrObsLoc", "Nr of Observers (-)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    ! Observer location in tower-base coordinate X horizontal  (m):
+    CALL AllocAry( InputFileData%ObsX,InputFileData%NrObsLoc, 'ObsX', ErrStat2, ErrMsg2)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    !	READ( UnIn, *, IOStat=IOS ) InputFileData%ObsX
+    !    CALL CheckIOS( IOS, 'InputFileData%ObsX', 'InputFileData%ObsX', NumType, ErrStat2, ErrMsg2 )
+    !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    ! Observer location in tower-base coordinate Y horizontal  (m):
+    CALL AllocAry( InputFileData%ObsY,InputFileData%NrObsLoc, 'ObsY', ErrStat2, ErrMsg2)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    !	READ( UnIn, *, IOStat=IOS ) InputFileData%ObsY
+    !    CALL CheckIOS( IOS, 'InputFileData%ObsY', 'InputFileData%ObsY', NumType, ErrStat2, ErrMsg2 )
+    !         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    ! Observer location in tower-base coordinate Z horizontal  (m):
+    CALL AllocAry( InputFileData%ObsZ,InputFileData%NrObsLoc, 'ObsZ', ErrStat2, ErrMsg2)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+    !	READ( UnIn, *, IOStat=IOS ) InputFileData%ObsZ
+    !    CALL CheckIOS( IOS, 'InputFileData%ObsZ', 'InputFileData%ObsZ', NumType, ErrStat2, ErrMsg2 )
+    !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
     !----- read from observer file
-    CALL ReadVar ( UnIn, InputFile, ObserverFile, ObserverFile, 'Name of file  observer locations', ErrStat2, ErrMsg2, UnEc ); call check
+    CALL ReadVar ( UnIn, InputFile, ObserverFile, ObserverFile, 'Name of file  observer locations', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
     IF ( PathIsRelative( ObserverFile ) ) ObserverFile = TRIM(PriPath)//TRIM(ObserverFile)
 
-    CALL GetNewUnit( UnIn2, ErrStat2, ErrMsg2 ); call check
+    CALL GetNewUnit( UnIn2, ErrStat2, ErrMsg2 )
+    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-    CALL OpenFInpFile ( UnIn2, ObserverFile, ErrStat2, ErrMsg2 ); call check
+    CALL OpenFInpFile ( UnIn2, ObserverFile, ErrStat2, ErrMsg2 )
+    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
     IF ( ErrStat >= AbortErrLev ) RETURN
 
-    CALL ReadCom( UnIn2, InputFile, ' Header', ErrStat2, ErrMsg2, UnEc ); call check
+    CALL ReadCom( UnIn2, InputFile, ' Header', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
     DO cou=1,InputFileData%NrObsLoc
         READ( UnIn2, *, IOStat=IOS )  InputFileData%ObsX(cou), InputFileData%ObsY(cou), InputFileData%ObsZ(cou)
-        CALL CheckIOS( IOS, ObserverFile, 'Obeserver Locations '//TRIM(Num2LStr(cou)), NumType, ErrStat2, ErrMsg2 ); call check
+        CALL CheckIOS( IOS, ObserverFile, 'Obeserver Locations '//TRIM(Num2LStr(cou)), NumType, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         ! Return on error if we couldn't read this line
         IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
@@ -314,11 +405,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
     !----- end read from observer file
 
     !----------- ROTOR/BLADE PROPERTIES  --------------------------------------------
-    CALL ReadCom( UnIn, InputFile, 'Section Header: Rotor/Blade Properties', ErrStat2, ErrMsg2, UnEc ); call check
+    CALL ReadCom( UnIn, InputFile, 'Section Header: Rotor/Blade Properties', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
     ! AABlFile - Names of files containing distributed aerodynamic properties for each blade (see AA_BladeInputFile type):
     DO I = 1,MaxBl            
-        CALL ReadVar ( UnIn, InputFile, AABlFile(I), 'AABlFile('//TRIM(Num2Lstr(I))//')', 'Name of file containing distributed aerodynamic properties for blade '//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc ); call check
+        CALL ReadVar ( UnIn, InputFile, AABlFile(I), 'AABlFile('//TRIM(Num2Lstr(I))//')', 'Name of file containing distributed aerodynamic properties for blade '//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         IF ( PathIsRelative( AABlFile(I) ) ) AABlFile(I) = TRIM(PriPath)//TRIM(AABlFile(I))
     END DO      
 
@@ -329,20 +422,26 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
     END IF
 
     !----------- OUTPUTS  -----------------------------------------------------------
-    CALL ReadCom( UnIn, InputFile, 'Section Header: Outputs', ErrStat2, ErrMsg2, UnEc); call check
+    CALL ReadCom( UnIn, InputFile, 'Section Header: Outputs', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
     ! NrObsLoc  - Nr of Observers (-):
-    CALL ReadVar( UnIn, InputFile, InputFileData%NrOutFile, "InputFileData%NrOutFile", "Nr of Output Files (-)", ErrStat2, ErrMsg2, UnEc); call check
+    CALL ReadVar( UnIn, InputFile, InputFileData%NrOutFile, "InputFileData%NrOutFile", "Nr of Output Files (-)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-    CALL AllocAry( InputFileData%AAOutFile,InputFileData%NrOutFile, 'InputFileData%AAOutFile', ErrStat2, ErrMsg2); call check
+    CALL AllocAry( InputFileData%AAOutFile,InputFileData%NrOutFile, 'InputFileData%AAOutFile', ErrStat2, ErrMsg2)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-    CALL ReadVar ( UnIn, InputFile, InputFileData%AAOutFile(1), 'InputFileData%AAOutFile', 'Name of output file ', ErrStat2, ErrMsg2, UnEc ); call check
+    CALL ReadVar ( UnIn, InputFile, InputFileData%AAOutFile(1), 'InputFileData%AAOutFile', 'Name of output file ', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
     DO I=InputFileData%NrOutFile,1,-1
         ! one file name is given by the user and the XXFile1.out XXFile2.out XXFile3.out is generated
         IF ( PathIsRelative( InputFileData%AAOutFile(I) ) ) InputFileData%AAOutFile(I) = TRIM(PriPath)//TRIM(InputFileData%AAOutFile(1))//TRIM(Num2Lstr(I))//".out"
     ENDDO
-    CALL ReadVar ( UnIn, InputFile, InputFileData%LargeBinOutput, 'InputFileData%LargeBinOutput', 'Name of output file ', ErrStat2, ErrMsg2, UnEc ); call check
+
+    CALL ReadVar ( UnIn, InputFile, InputFileData%LargeBinOutput, 'InputFileData%LargeBinOutput', 'Name of output file ', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
     ! Return on error at end of section
     IF ( ErrStat >= AbortErrLev ) THEN
@@ -353,10 +452,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
     CALL Cleanup( )
 
 CONTAINS
-   SUBROUTINE Check()
-       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   END SUBROUTINE Check
-       
    !...............................................................................................................................
    SUBROUTINE Cleanup()
        IF (UnIn > 0) CLOSE ( UnIn )
@@ -364,8 +459,10 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE ReadPrimaryFile      
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine reads a blade input file.
 SUBROUTINE ReadBladeInputs ( AABlFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
+    ! This routine reads a blade input file.
+    !..................................................................................................................................
+    ! Passed variables:
     TYPE(AA_BladePropsType),  INTENT(INOUT)  :: BladeKInputFileData                 ! Data for Blade K stored in the module's input file
     CHARACTER(*),             INTENT(IN)     :: AABlFile                            ! Name of the blade input file data
     INTEGER(IntKi),           INTENT(IN)     :: UnEc                                ! I/O unit for echo file. If present and > 0, write to UnEc
@@ -381,25 +478,53 @@ SUBROUTINE ReadBladeInputs ( AABlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
     ErrMsg  = ""
     UnIn = -1
     ! Allocate space for these variables
-    CALL GetNewUnit   (UnIn, ErrStat2, ErrMsg2 ); if(Failed()) return
-    CALL OpenFInpFile (UnIn, AABlFile, ErrStat2, ErrMsg2 ); if(Failed()) return
+    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
+    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+    CALL OpenFInpFile ( UnIn, AABlFile, ErrStat2, ErrMsg2 )
+    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+    IF ( ErrStat >= AbortErrLev ) RETURN
     !  -------------- HEADER -------------------------------------------------------
     ! Skip the header.
-    CALL ReadCom ( UnIn, AABlFile, 'unused blade file header line 1', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-    CALL ReadCom ( UnIn, AABlFile, 'unused blade file header line 2', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+    CALL ReadCom ( UnIn, AABlFile, 'unused blade file header line 1', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+    CALL ReadCom ( UnIn, AABlFile, 'unused blade file header line 2', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
     !  -------------- Blade properties table ------------------------------------------                                    
-    CALL ReadCom ( UnIn, AABlFile, 'Section header: Blade Properties', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+    CALL ReadCom ( UnIn, AABlFile, 'Section header: Blade Properties', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
     ! NumBlNds - Number of blade nodes used in the analysis (-):
-    CALL ReadVar( UnIn, AABlFile, BladeKInputFileData%NumBlNds, "NumBlNds", "Number of blade nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-    CALL ReadCom ( UnIn, AABlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-    CALL ReadCom ( UnIn, AABlFile, 'Table header: units', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+    CALL ReadVar( UnIn, AABlFile, BladeKInputFileData%NumBlNds, "NumBlNds", "Number of blade nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    IF ( ErrStat >= AbortErrLev ) RETURN
+    CALL ReadCom ( UnIn, AABlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+    CALL ReadCom ( UnIn, AABlFile, 'Table header: units', ErrStat2, ErrMsg2, UnEc )
+    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+    IF ( ErrStat>= AbortErrLev ) THEN 
+        CALL Cleanup()
+        RETURN
+    END IF
     ! allocate space for blade inputs:
-    CALL AllocAry(BladeKInputFileData%TEAngle   ,BladeKInputFileData%NumBlNds,'TEAngle'   ,ErrStat2,ErrMsg2); if(Failed()) return
-    CALL AllocAry(BladeKInputFileData%TEThick   ,BladeKInputFileData%NumBlNds,'TEThick'   ,ErrStat2,ErrMsg2); if(Failed()) return
-    CALL AllocAry(BladeKInputFileData%StallStart,BladeKInputFileData%NumBlNds,'StallStart',ErrStat2,ErrMsg2); if(Failed()) return
+    CALL AllocAry( BladeKInputFileData%TEAngle, BladeKInputFileData%NumBlNds, 'TEAngle', ErrStat2, ErrMsg2)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    CALL AllocAry( BladeKInputFileData%TEThick,   BladeKInputFileData%NumBlNds, 'TEThick',   ErrStat2, ErrMsg2)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    CALL AllocAry( BladeKInputFileData%StallStart,   BladeKInputFileData%NumBlNds, 'StallStart',   ErrStat2, ErrMsg2)
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+    ! Return on error if we didn't allocate space for the next inputs
+    IF ( ErrStat >= AbortErrLev ) THEN
+        CALL Cleanup()
+        RETURN
+    END IF
     DO I=1,BladeKInputFileData%NumBlNds
         READ( UnIn, *, IOStat=IOS )  BladeKInputFileData%TEAngle(I), BladeKInputFileData%TEThick(I) , BladeKInputFileData%StallStart(I)
-        CALL CheckIOS( IOS, AABlFile, 'Blade properties row '//TRIM(Num2LStr(I)), NumType, ErrStat2, ErrMsg2); if(Failed()) return
+        CALL CheckIOS( IOS, AABlFile, 'Blade properties row '//TRIM(Num2LStr(I)), NumType, ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        ! Return on error if we couldn't read this line
+        IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+        END IF
         IF (UnEc > 0) THEN
             WRITE( UnEc, "(6(F9.4,1x),I9)", IOStat=IOS)  BladeKInputFileData%TEAngle(I), BladeKInputFileData%TEThick(I), BladeKInputFileData%StallStart(I)
         END IF         
@@ -407,11 +532,7 @@ SUBROUTINE ReadBladeInputs ( AABlFile, BladeKInputFileData, UnEc, ErrStat, ErrMs
     !  -------------- END OF FILE --------------------------------------------
     CALL Cleanup()
 CONTAINS
-    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
-        Failed =  ErrStat >= AbortErrLev
-        if(Failed) call cleanup()
-    end function Failed
+   !...............................................................................................................................
    SUBROUTINE Cleanup()
       IF (UnIn > 0) CLOSE(UnIn)
    END SUBROUTINE Cleanup
@@ -456,24 +577,17 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, BldNodes, ErrStat, ErrMsg )
         CALL GetNewUnit(UnIn, ErrStat2, ErrMsg2); if(Failed()) return
         CALL OpenFInpFile(UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
 
-        CALL ReadCom(UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-        CALL ReadVar(UnIn, FileName, sizere, 'sizere',   'Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-        ! Allocations done only once!
-        IF (I .eq. 1) THEN
-            CALL AllocAry( InputFileData%ReListXfoil,sizere, 'InputFileData%ReListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
-        endif
+        CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc); 
+        CALL ReadVar( UnIn, FileName, sizere, 'sizere',   'Echo flag', ErrStat2, ErrMsg2, UnEc);if(Failed()) return
+        CALL AllocAry( InputFileData%ReListXfoil,sizere, 'InputFileData%ReListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
 
         DO cou=1,sizere
             CALL ReadVar( UnIn, FileName, InputFileData%ReListXfoil(cou), 'InputFileData%ReListXfoil','Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
         ENDDO
-        CALL ReadCom(UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-        CALL ReadVar(UnIn, FileName, sizeaoa, 'sizeaoa',   'Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
 
-        ! Allocations done only once!
-        IF (I .eq. 1) THEN
-            CALL AllocAry( InputFileData%AoAListXfoil,sizeaoa, 'InputFileData%AoAListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
-        endif
-
+        CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc);if(Failed()) return
+        CALL ReadVar( UnIn, FileName, sizeaoa, 'sizeaoa',   'Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+        CALL AllocAry( InputFileData%AoAListXfoil,sizeaoa, 'InputFileData%AoAListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
         DO cou=1,sizeaoa
             CALL ReadVar( UnIn, FileName, InputFileData%AoAListXfoil(cou), 'InputFileData%AoAListXfoil','Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
         ENDDO
@@ -486,15 +600,15 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, BldNodes, ErrStat, ErrMsg )
             CALL AllocAry(InputFileData%Suct_Cf,sizeaoa,sizere, BldNodes,'InputFileData%Suct_Cf', ErrStat2, ErrMsg2);if(Failed()) return
             CALL AllocAry(InputFileData%Pres_EdgeVelRat,sizeaoa,sizere, BldNodes,'InputFileData%Pres_EdgeVelRat', ErrStat2, ErrMsg2); if(Failed()) return
             CALL AllocAry(InputFileData%Suct_EdgeVelRat,sizeaoa,sizere, BldNodes,'InputFileData%Suct_EdgeVelRat', ErrStat2, ErrMsg2);if(Failed()) return
-            CALL AllocAry( temp1,8,sizeaoa*sizere, 'InputFileData%Suct_Cf', ErrStat2, ErrMsg2); if(Failed()) return
+            CALL AllocAry(temp1,8,sizeaoa*sizere, 'InputFileData%Suct_Cf', ErrStat2, ErrMsg2)
         ENDIF
 
         DO cou1=1,6
-            CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+            CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
         ENDDO
 
         DO cou1=1,size(temp1,1)
-            read(UnIn,*)  temp1(cou1,:) ! TODO error handling
+            read(UnIn,*)  temp1(cou1,:)
         ENDDO
 
         loop1=0
