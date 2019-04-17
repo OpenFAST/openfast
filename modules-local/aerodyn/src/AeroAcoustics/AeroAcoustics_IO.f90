@@ -115,7 +115,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
     INTEGER(IntKi)                         :: ErrStat2        ! The error status code
     CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
     CHARACTER(1024)                        :: AABlFile(MaxBl) ! File that contains the blade information (specified in the primary input file)
-    LOGICAL                       	  :: readinornot        ! The error status code
+    LOGICAL                       	  :: NotReadYet        ! 
     CHARACTER(*), PARAMETER                :: RoutineName = 'ReadInputFiles'
     ! initialize values:
     ErrStat = ErrID_None
@@ -152,18 +152,30 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
         END IF
     end do
 
-    readinornot=.true.
+    NotReadYet=.true.
+    ! TODO TODO, the call the readxfoiltables seems wrong since the inputfiledata is reallocated all the time
     IF(   (InputFileData%XfoilCall.eq.1) .and. (InputFileData%ITURB.eq.2)  ) THEN
         CALL ReadXfoilTables( InputFileName,InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
-        readinornot=.false.
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+        END IF
+        NotReadYet=.false.
     ENDIF 	
 
-    IF(   (InputFileData%XfoilCall.eq.1) .and. (InputFileData%X_BLMethod.eq.2) .and. (readinornot)  ) THEN
+    IF(   (InputFileData%XfoilCall.eq.1) .and. (InputFileData%X_BLMethod.eq.2) .and. (NotReadYet)  ) THEN
         CALL ReadXfoilTables( InputFileName,InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
+        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+        END IF
     ENDIF 
 
     IF(   (InputFileData%TICalcMeth.eq.1) ) THEN	
         CALL REadTICalcTables(InputFileName,InputFileData,  ErrStat2, ErrMsg2 )
+        print*,trim(ErrMsg2)
     ENDIF 	
 
     CALL Cleanup ( )
@@ -545,7 +557,6 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, BldNodes, ErrStat, ErrMsg )
     integer(IntKi),     intent(in)      :: BldNodes                             ! Error status
     type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
-
     ! Local variables:
     integer(IntKi)                :: I                                         ! loop counter
     integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
@@ -577,29 +588,30 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, BldNodes, ErrStat, ErrMsg )
 
         CALL GetNewUnit(UnIn, ErrStat2, ErrMsg2); if(Failed()) return
         CALL OpenFInpFile(UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
+        !print*,'File:',trim(FileName)
 
-      IF ( ErrStat2 >= AbortErrLev ) THEN
-         print*, 'File Not Found ', FileName
-         print*, 'Aborting due to missing file AeroAcoustics require if TNO is on and Xfoil need tabulated data '
- 	 call abort
-         RETURN
-      END IF
+        CALL ReadCom(UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+        CALL ReadVar(UnIn, FileName, sizere, 'sizere',   'Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+        ! Allocations done only once!
+        IF (I .eq. 1) THEN
+            CALL AllocAry( InputFileData%ReListXfoil,sizere, 'InputFileData%ReListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
+        endif
 
-
-      CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
-      CALL ReadVar( UnIn, FileName, sizere, 'sizere',   'Echo flag', ErrStat2, ErrMsg2, UnEc )
-      CALL AllocAry( InputFileData%ReListXfoil,sizere, 'InputFileData%ReListXfoil', ErrStat2, ErrMsg2)
-      DO cou=1,sizere
+        DO cou=1,sizere
             CALL ReadVar( UnIn, FileName, InputFileData%ReListXfoil(cou), 'InputFileData%ReListXfoil','Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-      ENDDO
-     CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
-      CALL ReadVar( UnIn, FileName, sizeaoa, 'sizeaoa',   'Echo flag', ErrStat2, ErrMsg2, UnEc )
-      CALL AllocAry( InputFileData%AoAListXfoil,sizeaoa, 'InputFileData%AoAListXfoil', ErrStat2, ErrMsg2)
+        ENDDO
+        CALL ReadCom(UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
+        CALL ReadVar(UnIn, FileName, sizeaoa, 'sizeaoa',   'Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
 
-      DO cou=1,sizeaoa
+        ! Allocations done only once!
+        IF (I .eq. 1) THEN
+            CALL AllocAry( InputFileData%AoAListXfoil,sizeaoa, 'InputFileData%AoAListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
+        endif
+
+        DO cou=1,sizeaoa
             CALL ReadVar( UnIn, FileName, InputFileData%AoAListXfoil(cou), 'InputFileData%AoAListXfoil','Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
-      ENDDO
-     IF (I .eq. 1) THEN
+        ENDDO
+        IF (I .eq. 1) THEN
             CALL AllocAry(InputFileData%Pres_DispThick,sizeaoa,sizere, BldNodes,'InputFileData%Pres_DispThick', ErrStat2, ErrMsg2);if(Failed()) return
             CALL AllocAry(InputFileData%Suct_DispThick,sizeaoa,sizere, BldNodes,'InputFileData%Suct_DispThick', ErrStat2, ErrMsg2);if(Failed()) return
             CALL AllocAry(InputFileData%Pres_BLThick,sizeaoa,sizere, BldNodes,'InputFileData%Pres_BLThick', ErrStat2, ErrMsg2);if(Failed()) return
@@ -608,32 +620,32 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, BldNodes, ErrStat, ErrMsg )
             CALL AllocAry(InputFileData%Suct_Cf,sizeaoa,sizere, BldNodes,'InputFileData%Suct_Cf', ErrStat2, ErrMsg2);if(Failed()) return
             CALL AllocAry(InputFileData%Pres_EdgeVelRat,sizeaoa,sizere, BldNodes,'InputFileData%Pres_EdgeVelRat', ErrStat2, ErrMsg2); if(Failed()) return
             CALL AllocAry(InputFileData%Suct_EdgeVelRat,sizeaoa,sizere, BldNodes,'InputFileData%Suct_EdgeVelRat', ErrStat2, ErrMsg2);if(Failed()) return
-         CALL AllocAry( temp1,8,sizeaoa*sizere, 'InputFileData%Suct_Cf', ErrStat2, ErrMsg2)
-     ENDIF
+            CALL AllocAry( temp1,8,sizeaoa*sizere, 'InputFileData%Suct_Cf', ErrStat2, ErrMsg2); if(Failed()) return
+        ENDIF
 
-     DO cou1=1,6
-	    CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
-     ENDDO
+        DO cou1=1,6
+            CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+        ENDDO
 
-     DO cou1=1,size(temp1,1)
-         read(UnIn,*)  temp1(cou1,:)
-     ENDDO
+        DO cou1=1,size(temp1,1)
+            read(UnIn,*)  temp1(cou1,:)
+        ENDDO
 
-	loop1=0
-      DO cou1=1,sizeaoa
-	      DO cou=1,sizere
-		loop1=loop1+1
-		InputFileData%Pres_BLThick(cou1,cou,I)    = temp1(1,loop1)
-		InputFileData%Pres_DispThick(cou1,cou,I)  = temp1(2,loop1)
-		InputFileData%Pres_Cf(cou1,cou,I)         = temp1(3,loop1)
-		InputFileData%Pres_EdgeVelRat(cou1,cou,I) = temp1(4,loop1)
-		InputFileData%Suct_BLThick(cou1,cou,I)    = temp1(5,loop1)
-		InputFileData%Suct_DispThick(cou1,cou,I)  = temp1(6,loop1)
-		InputFileData%Suct_Cf(cou1,cou,I)         = temp1(7,loop1)
-		InputFileData%Suct_EdgeVelRat(cou1,cou,I) = temp1(8,loop1)
-              ENDDO
-      ENDDO	
-     !---------------------- END OF FILE -----------------------------------------
+        loop1=0
+        DO cou1=1,sizeaoa
+            DO cou=1,sizere
+                loop1=loop1+1
+                InputFileData%Pres_BLThick(cou1,cou,I)    = temp1(1,loop1)
+                InputFileData%Pres_DispThick(cou1,cou,I)  = temp1(2,loop1)
+                InputFileData%Pres_Cf(cou1,cou,I)         = temp1(3,loop1)
+                InputFileData%Pres_EdgeVelRat(cou1,cou,I) = temp1(4,loop1)
+                InputFileData%Suct_BLThick(cou1,cou,I)    = temp1(5,loop1)
+                InputFileData%Suct_DispThick(cou1,cou,I)  = temp1(6,loop1)
+                InputFileData%Suct_Cf(cou1,cou,I)         = temp1(7,loop1)
+                InputFileData%Suct_EdgeVelRat(cou1,cou,I) = temp1(8,loop1)
+            ENDDO
+        ENDDO	
+        !---------------------- END OF FILE -----------------------------------------
     ENDDO 
     CALL Cleanup( )
 CONTAINS
