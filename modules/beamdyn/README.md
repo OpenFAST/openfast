@@ -1,22 +1,36 @@
 # BeamDyn Module
+This legacy version of this module and additional documentation are available
+the [NWTC Software Portal](https://nwtc.nrel.gov/BeamDyn/).
 
 ## Overview
+BeamDyn is a time-domain structural-dynamics module for slender structures.
+The module has been coupled into the FAST aero-hydro-servo-elastic wind turbine
+multi-physics engineering tool where it used to model blade structural
+dynamics. BeamDyn is designed to analyze beams that are made of composite
+materials, initially curved and twisted, and subject to large displacement and
+rotation deformations. BeamDyn can also be used for static analysis of beams.
 
-BeamDyn is a time-domain structural-dynamics module for slender structures. The module has been coupled into the FAST aero-hydro-servo-elastic wind turbine multi-physics engineering tool where it used to model blade structural dynamics. BeamDyn is designed to analyze beams that are made of composite materials, initially curved and twisted, and subject to large displacement and rotation deformations. BeamDyn can also be used for static analysis of beams.
+BeamDyn is based on the geometrically exact beam theory (GEBT) and is
+implemented using Legendre spectral finite elements (LSFEs). GEBT supports full
+geometric nonlinearity and large deflection, with bending, torsion, shear, and
+extensional degree-of-freedom (DOFs); anisotropic composite material couplings
+(using full 6x6 mass and stiffness matrices, including bend-twist coupling);
+and a reference axis that permits blades that are not straight (supporting
+built-in curve, sweep, and sectional offsets).
 
-BeamDyn is based on the geometrically exact beam theory (GEBT) and is implemented using Legendre spectral finite elements (LSFEs). GEBT supports full geometric nonlinearity and large deflection, with bending, torsion, shear, and extensional degree-of-freedom (DOFs); anisotropic composite material couplings (using full 6x6 mass and stiffness matrices, including bend-twist coupling); and a reference axis that permits blades that are not straight (supporting built-in curve, sweep, and sectional offsets).
-
-BeamDyn was originally developed by Qi Wang, Mike Sprague, and Jason Jonkman under an NREL Laboratory Directed Research and Development (LDRD) Project:  High-fidelity computational modeling of wind-turbine structural dynamics (2011-2013; PI: M.A. Sprague).  Further development was funded by the DOE Wind Energy Technology Office. NREL gratefully acknowledges the development contributions from the following organizations:
+BeamDyn was originally developed by Qi Wang, Mike Sprague, and Jason Jonkman
+under an NREL Laboratory Directed Research and Development (LDRD)
+Project: High-fidelity computational modeling of wind-turbine structural
+dynamics (2011-2013; PI: M.A. Sprague).
+Further development was funded by the DOE Wind Energy Technology Office. NREL
+gratefully acknowledges the development contributions from the following organizations:
 * [Envision Energy USA, Ltd](http://www.envision-energy.com)
 
+## Manual
+BeamDyn documentation is available on the OpenFAST
+[ReadTheDocs](https://openfast.readthedocs.io/en/master/source/user/beamdyn/index.html) site.
 
-## BeamDyn Manual
-
-We are in the process of creating BeamDyn documentation on <http://openfast.readthedocs.io>.
-
-The original BeamDyn manual may be found [here](https://wind.nrel.gov/nwtc/docs/BeamDyn_Manual.pdf).
-
-## Some Relevant Publications
+## Relevant Publications
 
 * Wang, Q., M.A. Sprague, J. Jonkman, N. Johnson, and B. Jonkman, 2017, BeamDyn: An efficient high-fidelity wind turbine blade solver in the FAST modular framework.
 *Wind Energy*, [DOI:10.1002/we.2101](http://onlinelibrary.wiley.com/doi/10.1002/we.2101/full).
@@ -40,4 +54,3 @@ Proceedings of the *AIAA Science and Technology Forum and Exposition,
 Legendre spectral finite elements for wind turbine blade dynamics.
 Proceedings of the *AIAA Science and Technology Forum and
 Exposition, 32nd ASME Wind Energy Symposium*,  National Harbor, MD, January 13--17, 2014. Also published as [NREL/CP-2C00-60759](http://www.nrel.gov/docs/fy14osti/60759.pdf).
-
