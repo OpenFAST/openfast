@@ -1,4 +1,6 @@
 # TurbSim Module
+This legacy version of this module and additional documentation are available
+at the [NWTC Software Portal](https://nwtc.nrel.gov/TurbSim/).
 
 ## Overview
 TurbSim is a stochastic, full-field, turbulent-wind simulator primarialy for
@@ -12,12 +14,3 @@ Spectra of velocity components and spatial coherence are defined in the
 frequency domain, and an inverse Fourier transform produces time series. The
 underlying theory behind this method of simulating time series assumes a
 stationary process.
-
-## Manual
-TurbSim documentation is available on the
-[NWTC Software Portal](https://nwtc.nrel.gov/TurbSim/).
-
-## Contact
-Researchers at NREL's National Wind Technology Center are generally
-responsible for the maintainance of this module. Inquiries should be directed
-to [Jason Jonkman](mailto:Jason.Jonkman@nrel.gov).

@@ -1,4 +1,6 @@
 # OpenFAST Registry Module
+This legacy version of this module and additional documentation are available
+at the [NWTC Legacy Repository](https://github.com/old-NWTC/FAST_Registry).
 
 ## Overview
 The OpenFAST Registry is a utility for generating code for module data types in
@@ -60,8 +62,3 @@ Summary of options:
 ## Manual
 For more information and syntax, please refer to the
 [NWTC Programmer's Handbook](https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf).
-
-## Contact
-Researchers at NREL's National Wind Technology Center are generally
-responsible for the maintainance of this module. Inquiries should be directed
-to [Rafael Mudafort](mailto:rafael.mudafort@nrel.gov).

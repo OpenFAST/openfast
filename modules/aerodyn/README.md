@@ -1,4 +1,6 @@
 # AeroDyn Module
+This legacy version of this module and additional documentation are available
+the [NWTC Software Portal](https://nwtc.nrel.gov/AeroDyn/).
 
 ## Overview
 AeroDyn is a time-domain wind and MHK turbine aerodynamics module that can be
@@ -10,8 +12,3 @@ OpenFAST.
 ## Manual
 AeroDyn documentation is available on the OpenFAST
 [ReadTheDocs](https://openfast.readthedocs.io/en/master/source/user/aerodyn/index.html) site.
-
-## Contact
-Researchers at NREL's National Wind Technology Center are generally
-responsible for the maintainance of this module. Inquiries should be directed
-to [Jason Jonkman](mailto:Jason.Jonkman@nrel.gov).

@@ -1,4 +1,6 @@
 # NWTC Library Module
+This legacy version of this module and additional documentation are available
+at the [NWTC Software Portal](https://nwtc.nrel.gov/NWTC_Library/).
 
 ## Overview
 Over the years, the researchers at the NWTC have written many general-purpose
@@ -18,12 +20,3 @@ have several compiler-specific files available to choose from, including
 
 If you want to port our programs to a different compiler, you should only have
 to modify one of the Sys*.f90 files to get it to compile.
-
-## Manual
-NWTC Library documentation is available on the
-[NWTC Software Portal](https://nwtc.nrel.gov/NWTC_Library/).
-
-## Contact
-Researchers at NREL's National Wind Technology Center are generally
-responsible for the maintainance of this module. Inquiries should be directed
-to [Rafael Mudafort](mailto:rafael.mudafort@nrel.gov).

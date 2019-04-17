@@ -18,8 +18,3 @@ For example, ``OpenFAST-v1.0.0-123-gabcd1234-dirty`` describes OpenFAST as:
   build [the ``-g`` is for ``git``]
 - abcd1234 is the first 8 characters of the current commit hash
 - dirty denotes that local changes have been made but not committed
-
-## Contact
-Researchers at NREL's National Wind Technology Center are generally
-responsible for the maintainance of this module. Inquiries should be directed
-to [Rafael Mudafort](mailto:rafael.mudafort@nrel.gov).
