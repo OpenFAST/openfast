@@ -230,7 +230,6 @@ typedef     ^                   ParameterType        ReKi                Cfall2 
 typedef     ^                   ParameterType        ReKi                EdgeVelRat1                {:}{:}{:}  -     -     "Xfoil Output Edge Velocity Ratio Suction"    - 
 typedef     ^                   ParameterType        ReKi                EdgeVelRat2                {:}{:}{:}  -     -     "Xfoil Output Edge Velocity Ratio Pressure Side"     -
 typedef     ^                   ParameterType        ReKi                AFThickGuida             {:}{:}  -     -     "1 and 10 percent thickness t/c used for Simplified Guidati"     
-typedef     ^                   ParameterType        ReKi                FullBladeShape        {:}{:}{:}{:}   -     -     ""     
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 
