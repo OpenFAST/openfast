@@ -537,58 +537,46 @@ CONTAINS
       IF (UnIn > 0) CLOSE(UnIn)
    END SUBROUTINE Cleanup
 END SUBROUTINE ReadBladeInputs      
+
 SUBROUTINE ReadXfoilTables( InputFile,InputFileData, BldNodes, ErrStat, ErrMsg )
-! This routine reads in the primary Noise input file and places the values it reads in the InputFileData structure.
-!   It opens and prints to an echo file if requested.
-!..................................................................................................................................
+    ! Passed variables
+    integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
+    character(*),       intent(out)     :: ErrMsg                              ! Error message
+    integer(IntKi),     intent(in)      :: BldNodes                             ! Error status
+    type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
+    character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
 
+    ! Local variables:
+    integer(IntKi)                :: I                                         ! loop counter
+    integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
+    integer(IntKi)                :: loop1                                     ! loop counter
+    character(1024)               :: FileName                              ! name of the files containing obesever location
+    integer(IntKi)                :: ErrStat2, IOS,cou                             ! Temporary Error status
+    logical                       :: Echo                                      ! Determines if an echo file should be written
+    character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
+    character(1024)               :: PriPath                                   ! Path name of the primary file
+    character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
+    character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+    character(*), parameter       :: RoutineName = 'readxfoiltable'
+    integer(IntKi)                :: sizeRe                                     ! 
+    integer(IntKi)                :: sizeaoa                                    !    
+    integer(IntKi)                :: cou1,UnEc                                  ! loop counter  
+    real(DbKi),dimension(:,:),ALLOCATABLE      :: temp1
+    ! Initialize some variables:
+    ErrStat = ErrID_None
+    ErrMsg  = ""
 
-   implicit none
+    CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
-      ! Passed variables
-   integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
-   character(*),       intent(out)     :: ErrMsg                              ! Error message
-   integer(IntKi),     intent(in)      :: BldNodes                             ! Error status
-   type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
-   character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
+    DO I=1,BldNodes
+        IF (InputFileData%ITRIP.eq.0) THEN
+            FileName = TRIM(PriPath)//'AirfoilsModified/BL/AF'//TRIM(Num2LStr(I))//'.txt'
+        ELSE
+            FileName = TRIM(PriPath)//'AirfoilsModified/BL_TRIPPED/AF'//TRIM(Num2LStr(I))//'.txt'
+        ENDIF
 
-      ! Local variables:
-   integer(IntKi)                :: I                                         ! loop counter
-   integer(IntKi)                :: UnIn,UnIn2                                ! Unit number for reading file
-   integer(IntKi)                :: loop1                                     ! loop counter
-   character(1024)               :: FileName                              ! name of the files containing obesever location
-   integer(IntKi)                :: ErrStat2, IOS,cou                             ! Temporary Error status
-   logical                       :: Echo                                      ! Determines if an echo file should be written
-   character(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
-   character(1024)               :: PriPath                                   ! Path name of the primary file
-   character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-   character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
-   character(*), parameter       :: RoutineName = 'readxfoiltable'
-   integer(IntKi)                :: sizeRe                                     ! 
-   integer(IntKi)                :: sizeaoa                                    !    
-   integer(IntKi)                :: cou1,UnEc                                  ! loop counter  
-   real(DbKi),dimension(:,:),ALLOCATABLE      :: temp1
-      ! Initialize some variables:
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   
-
-   CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
-
-	DO I=1,BldNodes
-    IF (InputFileData%ITRIP.eq.0) THEN
-	FileName = TRIM(PriPath)//'AirfoilsModified/BL/AF'//TRIM(Num2LStr(I))//'.txt'
-    ELSE
-	FileName = TRIM(PriPath)//'AirfoilsModified/BL_TRIPPED/AF'//TRIM(Num2LStr(I))//'.txt'
-    ENDIF
-
-
- 
-   CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL OpenFInpFile ( UnIn, FileName, ErrStat2, ErrMsg2 )
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        CALL GetNewUnit(UnIn, ErrStat2, ErrMsg2); if(Failed()) return
+        CALL OpenFInpFile(UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
 
       IF ( ErrStat2 >= AbortErrLev ) THEN
          print*, 'File Not Found ', FileName
@@ -599,65 +587,36 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, BldNodes, ErrStat, ErrMsg )
 
 
       CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-   
       CALL ReadVar( UnIn, FileName, sizere, 'sizere',   'Echo flag', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
       CALL AllocAry( InputFileData%ReListXfoil,sizere, 'InputFileData%ReListXfoil', ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
       DO cou=1,sizere
-      CALL ReadVar( UnIn, FileName, InputFileData%ReListXfoil(cou), 'InputFileData%ReListXfoil','Echo flag', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )		
+            CALL ReadVar( UnIn, FileName, InputFileData%ReListXfoil(cou), 'InputFileData%ReListXfoil','Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
       ENDDO
-
      CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-   
       CALL ReadVar( UnIn, FileName, sizeaoa, 'sizeaoa',   'Echo flag', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AllocAry( InputFileData%AoAListXfoil,sizeaoa, 'InputFileData%AoAListXfoil', ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       DO cou=1,sizeaoa
-      CALL ReadVar( UnIn, FileName, InputFileData%AoAListXfoil(cou), 'InputFileData%AoAListXfoil','Echo flag', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )		
+            CALL ReadVar( UnIn, FileName, InputFileData%AoAListXfoil(cou), 'InputFileData%AoAListXfoil','Echo flag', ErrStat2, ErrMsg2, UnEc); if(Failed()) return
       ENDDO
-
-
      IF (I .eq. 1) THEN
-         CALL AllocAry( InputFileData%Pres_DispThick,sizeaoa,sizere, BldNodes,'InputFileData%Pres_DispThick', ErrStat2, ErrMsg2)
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL AllocAry( InputFileData%Suct_DispThick,sizeaoa,sizere, BldNodes,'InputFileData%Suct_DispThick', ErrStat2, ErrMsg2)
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL AllocAry( InputFileData%Pres_BLThick,sizeaoa,sizere, BldNodes,'InputFileData%Pres_BLThick', ErrStat2, ErrMsg2)
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL AllocAry( InputFileData%Suct_BLThick,sizeaoa,sizere, BldNodes,'InputFileData%Suct_BLThick', ErrStat2, ErrMsg2)
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL AllocAry( InputFileData%Pres_Cf,sizeaoa,sizere, BldNodes,'InputFileData%Pres_Cf', ErrStat2, ErrMsg2)
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL AllocAry( InputFileData%Suct_Cf,sizeaoa,sizere, BldNodes,'InputFileData%Suct_Cf', ErrStat2, ErrMsg2)
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL AllocAry( InputFileData%Pres_EdgeVelRat,sizeaoa,sizere, BldNodes,'InputFileData%Pres_EdgeVelRat', ErrStat2, ErrMsg2)
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         CALL AllocAry( InputFileData%Suct_EdgeVelRat,sizeaoa,sizere, BldNodes,'InputFileData%Suct_EdgeVelRat', ErrStat2, ErrMsg2)
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-
+            CALL AllocAry(InputFileData%Pres_DispThick,sizeaoa,sizere, BldNodes,'InputFileData%Pres_DispThick', ErrStat2, ErrMsg2);if(Failed()) return
+            CALL AllocAry(InputFileData%Suct_DispThick,sizeaoa,sizere, BldNodes,'InputFileData%Suct_DispThick', ErrStat2, ErrMsg2);if(Failed()) return
+            CALL AllocAry(InputFileData%Pres_BLThick,sizeaoa,sizere, BldNodes,'InputFileData%Pres_BLThick', ErrStat2, ErrMsg2);if(Failed()) return
+            CALL AllocAry(InputFileData%Suct_BLThick,sizeaoa,sizere, BldNodes,'InputFileData%Suct_BLThick', ErrStat2, ErrMsg2);if(Failed()) return
+            CALL AllocAry(InputFileData%Pres_Cf,sizeaoa,sizere, BldNodes,'InputFileData%Pres_Cf', ErrStat2, ErrMsg2);if(Failed()) return
+            CALL AllocAry(InputFileData%Suct_Cf,sizeaoa,sizere, BldNodes,'InputFileData%Suct_Cf', ErrStat2, ErrMsg2);if(Failed()) return
+            CALL AllocAry(InputFileData%Pres_EdgeVelRat,sizeaoa,sizere, BldNodes,'InputFileData%Pres_EdgeVelRat', ErrStat2, ErrMsg2); if(Failed()) return
+            CALL AllocAry(InputFileData%Suct_EdgeVelRat,sizeaoa,sizere, BldNodes,'InputFileData%Suct_EdgeVelRat', ErrStat2, ErrMsg2);if(Failed()) return
          CALL AllocAry( temp1,8,sizeaoa*sizere, 'InputFileData%Suct_Cf', ErrStat2, ErrMsg2)
-        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
      ENDIF
 
      DO cou1=1,6
 	    CALL ReadCom( UnIn, FileName, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
      ENDDO
 
-
      DO cou1=1,size(temp1,1)
-   	read(UnIn,*)  temp1(cou1,:)
+         read(UnIn,*)  temp1(cou1,:)
      ENDDO
 
 	loop1=0
@@ -672,29 +631,21 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, BldNodes, ErrStat, ErrMsg )
 		InputFileData%Suct_DispThick(cou1,cou,I)  = temp1(6,loop1)
 		InputFileData%Suct_Cf(cou1,cou,I)         = temp1(7,loop1)
 		InputFileData%Suct_EdgeVelRat(cou1,cou,I) = temp1(8,loop1)
-
               ENDDO
       ENDDO	
-
      !---------------------- END OF FILE -----------------------------------------
     ENDDO 
-   CALL Cleanup( )
-   RETURN
-
-
+    CALL Cleanup( )
 CONTAINS
-   !...............................................................................................................................
-   SUBROUTINE Cleanup()
-   ! This subroutine cleans up any local variables and closes input files
-   !...............................................................................................................................
-
-   IF (UnIn > 0) CLOSE ( UnIn )
-
-   END SUBROUTINE Cleanup
-   !...............................................................................................................................
+    logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        Failed =  ErrStat >= AbortErrLev
+        if(Failed) call cleanup()
+    end function Failed
+    SUBROUTINE Cleanup()
+        IF (UnIn > 0) CLOSE ( UnIn )
+    END SUBROUTINE Cleanup
 END SUBROUTINE ReadXfoilTables
-!----------------------------------------------------------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE REadTICalcTables( InputFile,InputFileData,  ErrStat, ErrMsg )
     ! Passed variables
