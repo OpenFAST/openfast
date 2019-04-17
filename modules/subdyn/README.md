@@ -11,7 +11,7 @@ lattice-type substructures common for offshore wind installations in shallow
 and transitional water depths. SubDyn can also be used to model lattice
 support structures for land-based wind turbines.
 
-SubDyn follows the requirements of the OpenFAST modularization framework and
+SubDyn follows the requirements of the FAST modularization framework and
 couples to OpenFAST. It can also be driven as a standalone code to compute
 the mode shapes, natural frequencies, and time-domain responses of
 substructures, uncoupled from OpenFAST and in the absence of external loading

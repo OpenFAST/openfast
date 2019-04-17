@@ -15,7 +15,7 @@ maintainability of the code.
 The FAST Registry is borrowed from a mechanism that was originally developed at
 NCAR for the [Weather Research and Forecast (WRF) model software]
 (http://www.mmm.ucar.edu/wrf/WG2/software_2.0/registry_schaffer.pdf). It has
-been modified for the OpenFAST Modularization Framework to
+been modified for the FAST Modularization Framework to
 create *ModuleName*_Types.f90 files along with any necessary C source code or
 header files associated with the *ModuleName*_Types.f90 files.
 
