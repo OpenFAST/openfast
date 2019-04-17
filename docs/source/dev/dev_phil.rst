@@ -37,9 +37,6 @@ incremented as follows:
 - MINOR version when adding functionality in a backwards-compatible manner, and
 - PATCH version when making backwards-compatible bug fixes.
 
-Additional labels for pre-release and build metadata are available as
-extensions to the MAJOR.MINOR.PATCH format.
-
 For example, ``OpenFAST-v1.0.0-123-gabcd1234-dirty`` describes OpenFAST as:
 
 - v1.0.0 is the MAJOR.MINOR.PATCH numbering system and corresponds to a tagged
