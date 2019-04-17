@@ -1,5 +1,5 @@
 # AeroDyn 14 Module
-This legacy version of this module and additional documentation are available
+The legacy version of this module and additional documentation are available
 at the [NWTC Software Portal](https://nwtc.nrel.gov/AeroDyn14/).
 
 **DEPRECATED**

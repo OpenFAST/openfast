@@ -1,5 +1,5 @@
 # OpenFAST Registry Module
-This legacy version of this module and additional documentation are available
+The legacy version of this module and additional documentation are available
 at the [NWTC Legacy Repository](https://github.com/old-NWTC/FAST_Registry).
 
 ## Overview

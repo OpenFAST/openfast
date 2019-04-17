@@ -1,5 +1,5 @@
 # HydroDyn Module
-This legacy version of this module and additional documentation are available
+The legacy version of this module and additional documentation are available
 the [NWTC Software Portal](https://nwtc.nrel.gov/HydroDyn/).
 
 ## Overview

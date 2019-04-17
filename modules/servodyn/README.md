@@ -1,5 +1,5 @@
 # ServoDyn Module
-This legacy version of TMD and additional documentation are available
+The legacy version of TMD and additional documentation are available
 at the [NWTC Software Portal](https://nwtc.nrel.gov/TMD/).
 
 ## Overview
