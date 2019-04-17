@@ -1,15 +1,23 @@
-# TurbSim
-A stochastic, full-field, turbulence simulator, primarialy for use with [InflowWind](https://nwtc.nrel.gov/InflowWind "InflowWind")-based simulation tools 
+# TurbSim Module
 
-**Authors**: Neil Kelley and [Bonnie Jonkman](mailto:bonnie.jonkman@nrel.gov), NREL
+## Overview
+TurbSim is a stochastic, full-field, turbulent-wind simulator primarialy for
+use with [InflowWind](https://nwtc.nrel.gov/InflowWind "InflowWind")-based
+simulation tools. It uses a statistical model (as opposed to a physics-based
+model) to numerically simulate time series of three-component wind-speed
+vectors at points in a two-dimensional vertical rectangular grid that is fixed
+in space. 
 
-TurbSim is a stochastic, full-field, turbulent-wind simulator. It uses a statistical model (as opposed to a physics-based model) to 
-numerically simulate time series of three-component wind-speed vectors at points in a two-dimensional vertical rectangular 
-grid that is fixed in space. 
+Spectra of velocity components and spatial coherence are defined in the
+frequency domain, and an inverse Fourier transform produces time series. The
+underlying theory behind this method of simulating time series assumes a
+stationary process.
 
-Spectra of velocity components and spatial coherence are defined in the frequency domain, and 
-an inverse Fourier transform produces time series. The underlying theory behind this method of 
-simulating time series assumes a stationary process.
+## Manual
+TurbSim documentation is available on the
+[NWTC Software Portal](https://nwtc.nrel.gov/TurbSim/).
 
-For more information, please refer to documentation on the [TurbSim web site](https://nwtc.nrel.gov/TurbSim).
-
+## Contact
+Researchers at NREL's National Wind Technology Center are generally
+responsible for the maintainance of this module. Inquiries should be directed
+to [Jason Jonkman](mailto:Jason.Jonkman@nrel.gov).
