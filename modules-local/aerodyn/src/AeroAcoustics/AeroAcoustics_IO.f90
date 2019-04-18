@@ -115,7 +115,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
     INTEGER(IntKi)                         :: ErrStat2        ! The error status code
     CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
     CHARACTER(1024)                        :: AABlFile(MaxBl) ! File that contains the blade information (specified in the primary input file)
-    LOGICAL                       	  :: NotReadYet        ! 
+    LOGICAL                                :: NotReadYet        ! 
     CHARACTER(*), PARAMETER                :: RoutineName = 'ReadInputFiles'
     ! initialize values:
     ErrStat = ErrID_None
@@ -132,7 +132,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
     ALLOCATE( InputFileData%BladeProps( NumBlades ), STAT = ErrStat2 )
     IF (ErrStat2 /= 0) THEN
         CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
-        RETURN
+        return
     END IF
 
     do i = 1,NumBlades
@@ -142,7 +142,6 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
     end do
 
     NotReadYet=.true.
-    ! TODO TODO, the call the readxfoiltables seems wrong since the inputfiledata is reallocated all the time
     IF(   (InputFileData%XfoilCall.eq.1) .and. (InputFileData%ITURB.eq.2)  ) THEN
         CALL ReadXfoilTables( InputFileName,InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
         if(Failed()) return
@@ -609,7 +608,315 @@ SUBROUTINE AA_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
     ! Open the summary file and give it a heading.
     RETURN
 END SUBROUTINE AA_PrintSum
+!..................................................................................................................................
+!> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
+!! FAST or AeroAcoustics_Driver)   
+subroutine AA_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
+    type(AA_InitOutputType),       intent(  out)  :: InitOut          ! output data
+    type(AA_InputFile),            intent(in   )  :: InputFileData    ! input file data (for setting airfoil shape outputs)
+    type(AA_ParameterType),        intent(in   )  :: p                ! Parameters
+    integer(IntKi),                intent(  out)  :: errStat          ! Error status of the operation
+    character(*),                  intent(  out)  :: errMsg           ! Error message if ErrStat /= ErrID_None
+    ! Local variables
+    integer(intKi)                               :: ErrStat2          ! temporary Error status
+    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+    character(*), parameter                      :: RoutineName = 'AA_SetInitOut'
+    integer(IntKi)                               :: i, j, k,m,oi
+    integer(IntKi)                               :: NumCoords
+    character(500)                               :: chanPrefix
+    ! Initialize variables for this routine
+    errStat = ErrID_None
+    errMsg  = ""
+    InitOut%AirDens = p%AirDens
+    ! FIRST  FILE HEADER,UNIT
+    call AllocAry(InitOut%WriteOutputHdr, p%numOuts, 'WriteOutputHdr', errStat2, errMsg2); if(Failed()) return
+    call AllocAry(InitOut%WriteOutputUnt, p%numOuts, 'WriteOutputUnt', errStat2, errMsg2); if(Failed()) return
+    do j=1,p%NrObsLoc
+        InitOut%WriteOutputHdr(j)="_Obs"//trim(num2lstr(j))
+        InitOut%WriteOutputUnt(j) = "SPL"
+    enddo
+    i=p%NrObsLoc
+    do j=1,p%NrObsLoc
+        do m=1,p%NumBlades
+            do k=1,p%NumBlNds
+                i=i+1
+                InitOut%WriteOutputHdr(i) = "Bla"//trim(num2lstr(m))//"_Node"//trim(num2lstr(k))//"_Obs"//trim(num2lstr(j))
+                InitOut%WriteOutputHdr(i)=trim(InitOut%WriteOutputHdr(i))
+                InitOut%WriteOutputUnt(i) = "SPL"
+            enddo
+        enddo
+    enddo
+    ! SECOND FILE HEADER,UNIT   
+    call AllocAry(InitOut%WriteOutputHdrforPE, p%numOutsforPE, 'WriteOutputHdrforPE', errStat2, errMsg2); if(Failed()) return
+    call AllocAry(InitOut%WriteOutputUntforPE, p%numOutsforPE, 'WriteOutputUntforPE', errStat2, errMsg2); if(Failed()) return
+    i=0
+    do k=1,size(p%FreqList)
+        do j=1,p%NrObsLoc
+            do m=1,p%NumBlades
+                i=i+1
+                InitOut%WriteOutputHdrforPE(i) = "F"//trim(num2lstr(p%FreqList(k)))//"Obs"//trim(num2lstr(j))//"Bl"//trim(num2lstr(m))
+                InitOut%WriteOutputUntforPE(i) = "SPowLev"
+                do oi=1,3
+                    i=i+1
+                    InitOut%WriteOutputHdrforPE(i) = "F"//trim(num2lstr(p%FreqList(k)))//"Obs"//trim(num2lstr(j))//"Bl"//trim(num2lstr(m))
+                    InitOut%WriteOutputUntforPE(i) = "Coord"//trim(num2lstr(oi))
+                enddo
+            enddo		        
+        end do
+    enddo
+    ! THIRD FILE HEADER,UNIT
+    call AllocAry(InitOut%WriteOutputHdrSep, p%NumOutsForSep, 'WriteOutputHdrSep', errStat2, errMsg2); if(Failed()) return
+    call AllocAry(InitOut%WriteOutputUntSep, p%NumOutsForSep, 'WriteOutputUntSep', errStat2, errMsg2); if(Failed()) return
+    i=0
+    do j=1,p%NrObsLoc
+        do m=1,p%NumBlades
+            do k=1,p%NumBlNds
+                do oi=1,7
+                    i=i+1
+                    InitOut%WriteOutputHdrSep(i) = "Bla"//trim(num2lstr(m))//"_Node"//trim(num2lstr(k))//"_Obs"//trim(num2lstr(j))//"_Type"//trim(num2lstr(oi))
+                    InitOut%WriteOutputHdrSep(i)=trim(InitOut%WriteOutputHdrSep(i))
+                    InitOut%WriteOutputUntSep(i) = "SPL"
+                enddo
+            enddo
+        enddo
+    enddo
+    ! FOURTH FILE HEADER,UNIT
+    call AllocAry(InitOut%WriteOutputHdrSepFreq,size(p%FreqList)*p%NrObsLoc*7, 'InitOut%WriteOutputHdrSepFreq', errStat2, errMsg2); if(Failed()) return
+    call AllocAry(InitOut%WriteOutputUntSepFreq,size(p%FreqList)*p%NrObsLoc*7, 'InitOut%WriteOutputUntSepFreq', errStat2, errMsg2); if(Failed()) return
+    i=0
+    do k=1,size(p%FreqList)
+        do j=1,p%NrObsLoc
+            do oi=1,7
+                i=i+1
+                InitOut%WriteOutputHdrSepFreq(i) = "F"//trim(num2lstr(p%FreqList(k)))//"Obs"//trim(num2lstr(j))//"_Type"//trim(num2lstr(oi))
+                InitOut%WriteOutputUntSepFreq(i) = "SPL"
+            end do
+        end do
+    enddo
+    InitOut%Ver = AA_Ver
+    InitOut%delim = "	"
 
+contains
+    logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
+        Failed =  ErrStat >= AbortErrLev
+    end function Failed
+end subroutine AA_SetInitOut
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
+    type(AA_InputFile),       intent(in   ) :: InputFileData    !< All the data in the AeroDyn input file
+    type(AA_ParameterType) ,  intent(inout) :: p                !<
+    type(AA_InitOutputType),  intent(in  )  :: InitOut          !< output data
+    integer(IntKi)         ,  intent(inout) :: errStat          !< Status of error message
+    character(*)           ,  intent(inout) :: errMsg           !< Error message if ErrStat /= ErrID_None
+    ! locals
+    integer(IntKi) :: i
+    integer(IntKi) :: numOuts
+    character(200) :: frmt                                      ! A string to hold a format specifier
+    character(15)  :: tmpStr                                    ! temporary string to print the time output as text
+    ! FIRST FILE
+    IF  (InputFileData%NrOutFile .gt.0) THEN
+        call GetNewUnit( p%unOutFile, ErrStat, ErrMsg )
+        if ( ErrStat >= AbortErrLev ) then
+            p%unOutFile = -1
+            return
+        end if
+
+        call OpenFOutFile ( p%unOutFile, trim(InputFileData%AAOutFile(1)), ErrStat, ErrMsg )
+        if ( ErrStat >= AbortErrLev ) return
+
+        write (p%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
+        write (p%unOutFile,'(1X,A)') trim(GetNVD(InitOut%ver)) 
+        numOuts = size(InitOut%WriteOutputHdr)
+        write( p%unOutFile, '(A,I5)' )'Number of blades         :', p%numBlades
+        write( p%unOutFile, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
+        write( p%unOutFile, '(A,I5)' )'Number of observers      :', p%NrObsLoc
+        !......................................................
+        ! Write the names of the output parameters on one line:
+        !......................................................
+        call WrFileNR ( p%unOutFile, '     Time           ' )
+        do i=1,NumOuts
+            call WrFileNR ( p%unOutFile, InitOut%delim//InitOut%WriteOutputHdr(i) )
+        end do ! i
+        write (p%unOutFile,'()')
+        !......................................................
+        ! Write the units of the output parameters on one line:
+        !......................................................
+        call WrFileNR ( p%unOutFile, '      (s)           ' )
+        do i=1,NumOuts
+            call WrFileNR ( p%unOutFile, InitOut%delim//InitOut%WriteOutputUnt(i) )
+        end do ! i
+        write (p%unOutFile,'()')  
+    ENDIF
+    ! SECOND FILE
+    IF  (InputFileData%NrOutFile .gt. 1) THEN
+        call GetNewUnit( p%unOutFile2, ErrStat, ErrMsg )
+        if ( ErrStat >= AbortErrLev ) then
+            p%unOutFile = -1
+            return
+        end if
+        call OpenFOutFile ( p%unOutFile2, trim(InputFileData%AAOutFile(2)), ErrStat, ErrMsg )
+        if ( ErrStat >= AbortErrLev ) return
+        write (p%unOutFile2,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
+        write (p%unOutFile2,'(1X,A)') trim(GetNVD(InitOut%Ver))
+        write( p%unOutFile2, '(A,I5)' )'Number of blades         :', p%numBlades
+        write( p%unOutFile2, '(A,I5)' )'Number of frequencies    :', size(p%FreqList)
+        write( p%unOutFile2, '(A,I5)' )'Number of observers      :', p%NrObsLoc
+        numOuts = size(InitOut%WriteOutputHdrforPE)
+        !......................................................
+        ! Write the names of the output parameters on one line:
+        !......................................................
+        call WrFileNR ( p%unOutFile2, '     Time           ' )
+        do i=1,NumOuts
+            call WrFileNR ( p%unOutFile2, InitOut%delim//InitOut%WriteOutputHdrforPE(i) )
+        end do ! i
+        write (p%unOutFile2,'()')
+        !......................................................
+        ! Write the units of the output parameters on one line:
+        !......................................................
+        call WrFileNR ( p%unOutFile2, '      (s)           ' )
+        do i=1,NumOuts
+            call WrFileNR ( p%unOutFile2, InitOut%delim//InitOut%WriteOutputUntforPE(i) )
+        end do ! i
+        write (p%unOutFile2,'()')    
+        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
+        call WrNumAryFileNR ( p%unOutFile2, p%FreqList,  frmt, errStat, errMsg )
+        if ( errStat >= AbortErrLev ) return
+        write (p%unOutFile2,'()')    
+    ENDIF
+    ! THIRD FILE
+    IF  (InputFileData%NrOutFile .gt. 2) THEN
+        call GetNewUnit( p%unOutFile3, ErrStat, ErrMsg )
+        if ( ErrStat >= AbortErrLev ) then
+            p%unOutFile = -1
+            return
+        end if
+        call OpenFOutFile ( p%unOutFile3, trim(InputFileData%AAOutFile(3)), ErrStat, ErrMsg )
+        if ( ErrStat >= AbortErrLev ) return
+        write (p%unOutFile3,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
+        write (p%unOutFile3,'(1X,A)') trim(GetNVD(InitOut%Ver))
+        write( p%unOutFile3, '(A,I5)' )'Number of blades         :', p%numBlades
+        write( p%unOutFile3, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
+        write( p%unOutFile3, '(A,I5)' )'Number of observers      :', p%NrObsLoc
+        numOuts = size(InitOut%WriteOutputHdrSep)
+        !......................................................
+        ! Write the names of the output parameters on one line:
+        !......................................................
+        call WrFileNR ( p%unOutFile3,  "1-LBL 2-TBLPres 3-TBLSuc 4-Sep  5-BLUNT 6-TIP 7-Inflow")
+        write (p%unOutFile3,'()')
+        call WrFileNR ( p%unOutFile3, '     Time           ' )
+        do i=1,NumOuts
+            call WrFileNR ( p%unOutFile3, InitOut%delim//InitOut%WriteOutputHdrSep(i) )
+        end do ! i
+        write (p%unOutFile3,'()')
+        !......................................................
+        ! Write the units of the output parameters on one line:
+        !......................................................
+        call WrFileNR ( p%unOutFile3, '      (s)           ' )
+
+        do i=1,NumOuts
+            call WrFileNR ( p%unOutFile3, InitOut%delim//InitOut%WriteOutputUntSep(i) )
+        end do ! i
+        write (p%unOutFile3,'()')      
+    ENDIF
+    ! FOURTH FILE
+    IF  (InputFileData%NrOutFile .gt. 3) THEN
+        call GetNewUnit( p%unOutFile4, ErrStat, ErrMsg )
+        if ( ErrStat >= AbortErrLev ) then
+            p%unOutFile = -1
+            return
+        end if
+        call OpenFOutFile ( p%unOutFile4, trim(InputFileData%AAOutFile(4)), ErrStat, ErrMsg )
+        if ( ErrStat >= AbortErrLev ) return
+        write (p%unOutFile4,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
+        write (p%unOutFile4,'(1X,A)') trim(GetNVD(InitOut%Ver))
+        write( p%unOutFile4, '(A,I5)' )'Number of blades         :', p%numBlades
+        write( p%unOutFile4, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
+        write( p%unOutFile4, '(A,I5)' )'Number of observers      :', p%NrObsLoc
+        numOuts = size(InitOut%WriteOutputHdrSepFreq)
+        !......................................................
+        ! Write the names of the output parameters on one line:
+        !......................................................
+        call WrFileNR ( p%unOutFile4,  "1-LBL 2-TBLPres 3-TBLSuc 4-Sep  5-BLUNT 6-TIP 7-Inflow")
+        write (p%unOutFile4,'()')
+        call WrFileNR ( p%unOutFile4, '     Time           ' )
+        do i=1,NumOuts
+            call WrFileNR ( p%unOutFile4, InitOut%delim//InitOut%WriteOutputHdrSepFreq(i) )
+        end do ! i
+        write (p%unOutFile4,'()')
+        !......................................................
+        ! Write the units of the output parameters on one line:
+        !......................................................
+        call WrFileNR ( p%unOutFile4, '      (s)           ' )
+        do i=1,NumOuts
+            call WrFileNR ( p%unOutFile4, InitOut%delim//InitOut%WriteOutputUntSepFreq(i) )
+        end do ! i
+        write (p%unOutFile4,'()')      
+    ENDIF
+end subroutine AA_InitializeOutputFile
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine AA_WriteOutputLine(y, t, p, errStat, errMsg)
+    real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
+    type(AA_OutputType)    ,  intent(in   )   :: y
+    type(AA_ParameterType) ,  intent(in   )   :: p    
+    integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
+    character(*)           ,  intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
+    ! Local variables.
+    character(200)                   :: frmt                                      ! A string to hold a format specifier
+    character(15)                    :: tmpStr                                    ! temporary string to print the time output as text
+    integer :: numOuts
+    errStat = ErrID_None
+    errMsg  = ''
+    ! FIRST FILE    
+    IF  (p%NrOutFile .gt. 0) THEN 
+        numOuts = size(y%WriteOutput)
+        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
+        ! time
+        write( tmpStr, '(F15.4)' ) t
+        call WrFileNR( p%unOutFile, tmpStr )
+        call WrNumAryFileNR ( p%unOutFile, y%WriteOutput,  frmt, errStat, errMsg )
+        if ( errStat >= AbortErrLev ) return
+        ! write a new line (advance to the next line)
+        write (p%unOutFile,'()')
+    ENDIF
+
+    !! SECOND FILE
+    IF  (p%NrOutFile .gt. 1) THEN 
+        numOuts = size(y%WriteOutputforPE)
+        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
+        ! time
+        write( tmpStr, '(F15.4)' ) t
+        call WrFileNR( p%unOutFile2, tmpStr )
+        call WrNumAryFileNR ( p%unOutFile2, y%WriteOutputforPE,  frmt, errStat, errMsg )
+        if ( errStat >= AbortErrLev ) return
+        ! write a new line (advance to the next line)
+        write (p%unOutFile2,'()')
+    ENDIF
+    ! THIRD FILE
+    IF  (p%NrOutFile .gt. 2) THEN 
+        numOuts = size(y%WriteOutputSep)
+        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
+        ! time
+        write( tmpStr, '(F15.4)' ) t
+        call WrFileNR( p%unOutFile3, tmpStr )
+        call WrNumAryFileNR ( p%unOutFile3, y%WriteOutputSep,  frmt, errStat, errMsg )
+        if ( errStat >= AbortErrLev ) return
+        ! write a new line (advance to the next line)
+        write (p%unOutFile3,'()')
+    ENDIF
+    ! Fourth FILE
+    IF  (p%NrOutFile .gt. 3) THEN 
+        numOuts = size(y%WriteOutputSepFreq)
+        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
+        ! time
+        write( tmpStr, '(F15.4)' ) t
+        call WrFileNR( p%unOutFile4, tmpStr )
+        call WrNumAryFileNR ( p%unOutFile4, y%WriteOutputSepFreq,  frmt, errStat, errMsg )
+        if ( errStat >= AbortErrLev ) return
+        ! write a new line (advance to the next line)
+        write (p%unOutFile4,'()')
+    ENDIF
+end subroutine AA_WriteOutputLine     
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Calc_WriteOutput( p, u, m, y, ErrStat, ErrMsg )
    TYPE(AA_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters

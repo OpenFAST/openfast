@@ -144,7 +144,6 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )
 
    if (InputFileData%IBLUNT /= IBLUNT_None .and. InputFileData%IBLUNT /= IBLUNT_BPM) then
-       print*, 'Your value IBLUNT in AeroAcousticsInput.dat is ', InputFileData%IBLUNT
        call SetErrStat ( ErrID_Fatal, &
            'IBLUNT must '//trim(num2lstr(IBLUNT_None))//' (none) or '//trim(num2lstr(IBLUNT_BPM))//' (Bluntness noise calculated).', ErrStat, ErrMsg, RoutineName ) 
    endif
@@ -155,50 +154,42 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    end if
 
    if (InputFileData%ITIP /= ITIP_None .and. InputFileData%ITIP /= ITIP_ON) then
-       print*, 'Your value ITIP in AeroAcousticsInput.dat is ', InputFileData%ITIP
        call SetErrStat ( ErrID_Fatal, 'ITIP must be '//trim(num2lstr(ITIP_None))//' (Off) or '//&
            trim(num2lstr(ITIP_On))//' (ITIP On).', ErrStat, ErrMsg, RoutineName ) 
    end if   
 
    if (InputFileData%ITRIP /= ITRIP_None .and. InputFileData%ITRIP /= ITRIP_Heavy .and. InputFileData%ITRIP /= ITRIP_Light) then
-       print*, 'Your value ITRIP in AeroAcousticsInput.dat is ', InputFileData%ITRIP
        call SetErrStat ( ErrID_Fatal,'ITRIP must be '//trim(num2lstr(ITRIP_None))//' (none) or '//trim(num2lstr(ITRIP_Heavy))//&
            ' (heavily tripped BL Calculation) or '//trim(num2lstr(ITRIP_Light))//' (lightly tripped BL)' ,ErrStat, ErrMsg, RoutineName ) 
    end if 
 
    if (InputFileData%ITURB /= ITURB_None .and. InputFileData%ITURB /= ITURB_BPM .and. InputFileData%ITURB /= ITURB_TNO) then
-       print*, 'Your value ITURB in AeroAcousticsInput.dat is ', InputFileData%ITURB
        call SetErrStat ( ErrID_Fatal, 'ITURB must be 0 (off) or 1 (BPM) or 2 (TNO) .', ErrStat, ErrMsg, RoutineName ) 
    end if    
 
    if (InputFileData%IInflow /= IInflow_None .and. InputFileData%IInflow /= IInflow_BPM &
        .and. InputFileData%IInflow /= IInflow_FullGuidati .and. InputFileData%IInflow /= IInflow_SimpleGuidati ) then
-       print*, 'Your value IInflow in AeroAcousticsInput.dat is ', InputFileData%IInflow
        call SetErrStat ( ErrID_Fatal, 'IInflow must be 0 (off) or 1 (only Amiet)  or 2 (Full Guidati)'//&
            'or 3 (Simple Guidati).', ErrStat, ErrMsg, RoutineName ) 
    end if 
 
    if (InputFileData%TICalcMeth /= TICalc_Every .and. InputFileData%TICalcMeth /= TICalc_Interp ) then
-       print*, 'Your value TICalcMeth in AeroAcousticsInput.dat is ', InputFileData%TICalcMeth
        call SetErrStat ( ErrID_Fatal, 'TICalcMeth must be '//trim(num2lstr(TICalc_Every))//' TICalc automatic  or '//&
            trim(num2lstr(TICalc_Interp))//' (TICalcMeth interp).', ErrStat, ErrMsg, RoutineName ) 
    end if
 
    if (InputFileData%X_BLMethod /= X_BLMethod_BPM .and. InputFileData%X_BLMethod /= X_BLMethod_Xfoil) then
-       print*, 'Your value X_BLMethod in AeroAcousticsInput.dat is ', InputFileData%X_BLMethod
        call SetErrStat ( ErrID_Fatal, 'X_BLMethod must be '//trim(num2lstr(X_BLMethod_BPM))//' X_BLMethod_ with BPM or '//&
            trim(num2lstr(X_BLMethod_Xfoil))//' (X_BLMethod with Xfoil).', ErrStat, ErrMsg, RoutineName ) 
    end if
 
 
    if (InputFileData%XfoilCall /= XfoilCall_Interp .and. InputFileData%XfoilCall /= XfoilCall_Every ) then
-       print*, 'Your value XfoilCall in AeroAcousticsInput.dat is ', InputFileData%XfoilCall
        call SetErrStat ( ErrID_Fatal, 'XfoilCall must be '//trim(num2lstr(XfoilCall_Interp))//' for interpolation from pretabulated data or '//&
            trim(num2lstr(XfoilCall_Every))//' for each step Xfoil call.', ErrStat, ErrMsg, RoutineName ) 
    end if
 
    if (InputFileData%aweightflag /= AweightFlagOff .and. InputFileData%aweightflag /= AweightFlagOn ) then
-       print*, 'Your value aweightflag in AeroAcousticsInput.dat is ', InputFileData%aweightflag
        call SetErrStat ( ErrID_Fatal, 'aweightflag must be '//trim(num2lstr(AweightFlagOn))//' for A-weighting on  or '//&
            trim(num2lstr(AweightFlagOff))//' for A-weighting off.', ErrStat, ErrMsg, RoutineName ) 
    end if
@@ -262,7 +253,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%ROUND            = InputFileData%ROUND
     p%alprat           = InputFileData%ALPRAT
     p%NrOutFile        = InputFileData%NrOutFile
-    p%delim	      = "	"
+    p%delim	           = "	"
     p%outFmt           = "ES15.6E3" 
     p%LargeBinOutput   = InputFileData%LargeBinOutput
     p%NumBlNds         = InitInp%NumBlNds
@@ -710,7 +701,7 @@ subroutine Init_states(xd, p, errStat, errMsg)
             xd%VrelStore (1:size(xd%VrelStore,1),k,ji)       = 0.0_ReKi  !
         ENDDO
     ENDDO
-    call AllocAry(xd%RegVxStor,p%total_sampleTI,size(p%rotorregionlimitsrad)-1,size(p%rotorregionlimitsalph)-1,'xd%Vxst',ErrStat2,ErrMsg2) ! plus one  just in case
+    call AllocAry(xd%RegVxStor,p%total_sampleTI,size(p%rotorregionlimitsrad)-1,size(p%rotorregionlimitsalph)-1,'xd%Vxst',ErrStat2,ErrMsg2)
     if(Failed()) return
     call AllocAry(xd%allregcounter ,size(p%rotorregionlimitsrad)-1,size(p%rotorregionlimitsalph)-1,'xd%allregcounter',ErrStat2,ErrMsg2 )
     if(Failed()) return
@@ -753,78 +744,15 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
 
    ErrStat = ErrID_None
    ErrMsg  = ""
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   ! cumulative mean and standard deviation, states are updated as Vrel changes at each time step
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   !   xd%MeanVrel = (u%Vrel + xd%MeanVrel*n) / (n+1)
-   !   xd%VrelSq   = u%Vrel**2 + xd%VrelSq
-   !   TEMPSTD     = sqrt(  (xd%VrelSq/(n+1)) - (xd%MeanVrel**2)   )
-   !   xd%TIVrel   = (TEMPSTD / xd%MeanVrel ) ! check inflow noise input for multiplication with 100 or not
-
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   ! cumulative mean and standard deviation, states are updated as Vx Vy Vz changes at each time step
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   ! Cumulative mean and standard deviation, states are updated as Vx Vy Vz changes at each time step
    TEMPSTD       =  sqrt( u%Inflow(1,:,:)**2+u%Inflow(2,:,:)**2+u%Inflow(3,:,:)**2 )
    xd%MeanVxVyVz = (TEMPSTD + xd%MeanVxVyVz*n) / (n+1)  
    !   xd%VxSq       = TEMPSTD**2 + xd%VxSq
    !   TEMPSTD     = sqrt(  (xd%VxSq/(n+1)) - (xd%MeanVxVyVz**2)   )
    !   xd%TIVx  = (TEMPSTD / xd%MeanVxVyVz ) ! check inflow noise input for multiplication with 100 or not
 
-   m%speccou=	m%speccou+1
-   !print*, 'time step',n,'m%speccou', m%speccou
-   !	xd%VrelStore(m%speccou,:,:)   = u%Vrel	
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   ! cumulative mean and standard deviation, states are updated as Vx Vy Vz changes at each time step and there are regions divided vertically
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   !	  do i=1,p%NumBlades
-   !	    do j=1,p%NumBlNds
-   !		do k=1,size(p%rotorregionlimitsVert)  		   		
-   !		   IF (m%LE_Location(3,j,i)-p%rotorregionlimitsVert(k).lt.0) THEN ! it means location is in the k-1 region
-   !			GOTO 4758
-   !		   ENDIF		   
-   !		enddo
-   !		4758 	do rco=1,size(p%rotorregionlimitsHorz)  		   		
-   !		   IF ( (m%LE_Location(2,j,i)+maxval(p%BlSpn(:,1))-p%rotorregionlimitsHorz(rco)+2).lt.0) THEN ! it means location is in the k-1 region
-   !			GOTO 9815
-   !		   ENDIF		   
-   !		enddo
-   !		9815 xd%allregcounter(k-1,rco-1)=CEILING(xd%allregcounter(k-1,rco-1)+1.0_Reki)    ! increase the sample amount in that specific 5 meter height vertical region
-   !           !print*, rco,k
-   !		tempsingle         = sqrt( u%Inflow(1,j,i)**2+u%Inflow(2,j,i)**2+u%Inflow(3,j,i)**2 )  ! 
-   !		xd%MeanVxVyVzRegion(k-1,rco-1)= (tempsingle + xd%MeanVxVyVzRegion(k-1,rco-1)*xd%allregcounter(k-1,rco-1)) / (xd%allregcounter(k-1,rco-1)+1) !
-   !!!!!!!!!! with storage region dependent moving average and TI
-   !		IF  (INT(xd%allregcounter(k-1,rco-1)) .le. size(xd%RegVxStor,1)) THEN
-   !		xd%RegVxStor(INT(xd%allregcounter(k-1,rco-1)),k-1,rco-1)=tempsingle
-   !!		tempmean=SUM(xd%RegVxStor(1:INT(xd%allregcounter(k-1,rco-1)),k-1,rco-1))
-   !!		tempmean=tempmean/INT(xd%allregcounter(k-1,rco-1))
-   !!!		print*, k,rco,xd%allregcounter(k-1,rco-1),size(xd%RegVxStor,1)
-   !!		xd%RegionTIDelete(k-1,rco-1)=SQRT((SUM((xd%RegVxStor(1:INT(xd%allregcounter(k-1,rco-1)),k-1,rco-1)-tempmean)**2)) / INT(xd%allregcounter(k-1,rco-1)))
-   !!		xd%RegionTIDelete(k-1,rco-1)=xd%RegionTIDelete(k-1,rco-1)/tempmean
-   !		xd%TIVx(j,i)       =  0
-   !		xd%RegionTIDelete(k-1,rco-1)=0
-   !		ELSE
-   !		xd%RegVxStor(mod(INT(xd%allregcounter(k-1,rco-1))-size(xd%RegVxStor,1),size(xd%RegVxStor,1)),k-1,rco-1)=tempsingle
-   !		tempmean=SUM(xd%RegVxStor(:,k-1,rco-1))
-   !		tempmean=tempmean/size(xd%RegVxStor,1)
-   !		xd%RegionTIDelete(k-1,rco-1)=SQRT((SUM((xd%RegVxStor(:,k-1,rco-1)-tempmean)**2)) /  size(xd%RegVxStor,1) )
-   !		xd%RegionTIDelete(k-1,rco-1)=xd%RegionTIDelete(k-1,rco-1)/tempmean
-   !		xd%TIVx(j,i)       =  xd%RegionTIDelete(k-1,rco-1)
-   !		ENDIF
-   !
-   !!!!!!!!!! with storage region dependent moving average and TI
-   !
-   !	        xd%VxSqRegion(k-1,rco-1) = tempsingle**2 + xd%VxSqRegion(k-1,rco-1)
-   !	        tempsingle = sqrt(ABS((xd%VxSqRegion(k-1,rco-1)/(xd%allregcounter(k-1,rco-1)+1)) - (xd%MeanVxVyVzRegion(k-1,rco-1)**2)))
-   !!		xd%TIVx(j,i)       =  tempsingle / xd%MeanVxVyVzRegion(k-1,rco-1)
-   !!		xd%RegionTIDelete(k-1,rco-1)=tempsingle / xd%MeanVxVyVzRegion(k-1,rco-1)
-   !
-   !	    enddo
-   !	  enddo
-
+   m%speccou= m%speccou+1
    IF(   (p%TICalcMeth.eq.2) ) THEN
-       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-       ! cumulative mean and standard deviation, states are updated as Vx Vy Vz changes at each time step and there are regions divided vertically
-       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
        do i=1,p%NumBlades
            do j=1,p%NumBlNds
                abs_le_x=m%LE_Location(3,j,i)-p%hubheight
@@ -853,8 +781,7 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
                enddo
                9815 xd%allregcounter(k-1,rco-1)=CEILING(xd%allregcounter(k-1,rco-1)+1.0_Reki)    ! increase the sample amount in that specific 5 meter height vertical region
                tempsingle         = sqrt( u%Inflow(1,j,i)**2+u%Inflow(2,j,i)**2+u%Inflow(3,j,i)**2 )  ! 
-               !		tempsingle         = u%Vrel(j,i)  ! 
-               !!!!!!!!! with storage region dependent moving average and TI
+               ! with storage region dependent moving average and TI
                IF  (INT(xd%allregcounter(k-1,rco-1)) .lt. (size(xd%RegVxStor,1)+1)) THEN
                    xd%RegVxStor(INT(xd%allregcounter(k-1,rco-1)),k-1,rco-1)=tempsingle
                    xd%TIVx(j,i)       =  0
@@ -864,10 +791,8 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
                    tempmean=SUM(xd%RegVxStor(:,k-1,rco-1))
                    tempmean=tempmean/size(xd%RegVxStor,1)
                    xd%RegionTIDelete(k-1,rco-1)=SQRT((SUM((xd%RegVxStor(:,k-1,rco-1)-tempmean)**2)) /  size(xd%RegVxStor,1) )
-                   !		xd%TIVx(j,i)       =  xd%RegionTIDelete(k-1,rco-1)/tempmean
                    xd%TIVx(j,i)       =  xd%RegionTIDelete(k-1,rco-1) ! only the fluctuation 
                ENDIF
-               !!!!!!!!! with storage region dependent moving average and TI
            enddo
        enddo
        IF (n .eq. 0) THEN
@@ -903,315 +828,6 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
        enddo
    endif
 end subroutine AA_UpdateStates
-!..................................................................................................................................
-!> This subroutine sets the initialization output data structure, which contains data to be returned to the calling program (e.g.,
-!! FAST or AeroAcoustics_Driver)   
-subroutine AA_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
-    type(AA_InitOutputType),       intent(  out)  :: InitOut          ! output data
-    type(AA_InputFile),            intent(in   )  :: InputFileData    ! input file data (for setting airfoil shape outputs)
-    type(AA_ParameterType),        intent(in   )  :: p                ! Parameters
-    integer(IntKi),                intent(  out)  :: errStat          ! Error status of the operation
-    character(*),                  intent(  out)  :: errMsg           ! Error message if ErrStat /= ErrID_None
-    ! Local variables
-    integer(intKi)                               :: ErrStat2          ! temporary Error status
-    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
-    character(*), parameter                      :: RoutineName = 'AA_SetInitOut'
-    integer(IntKi)                               :: i, j, k,m,oi
-    integer(IntKi)                               :: NumCoords
-    character(500)                               :: chanPrefix
-    ! Initialize variables for this routine
-    errStat = ErrID_None
-    errMsg  = ""
-    InitOut%AirDens = p%AirDens
-    ! FIRST  FILE HEADER,UNIT
-    call AllocAry(InitOut%WriteOutputHdr, p%numOuts, 'WriteOutputHdr', errStat2, errMsg2); if(Failed()) return
-    call AllocAry(InitOut%WriteOutputUnt, p%numOuts, 'WriteOutputUnt', errStat2, errMsg2); if(Failed()) return
-    do j=1,p%NrObsLoc
-        InitOut%WriteOutputHdr(j)="_Obs"//trim(num2lstr(j))
-        InitOut%WriteOutputUnt(j) = "SPL"
-    enddo
-    i=p%NrObsLoc
-    do j=1,p%NrObsLoc
-        do m=1,p%NumBlades
-            do k=1,p%NumBlNds
-                i=i+1
-                InitOut%WriteOutputHdr(i) = "Bla"//trim(num2lstr(m))//"_Node"//trim(num2lstr(k))//"_Obs"//trim(num2lstr(j))
-                InitOut%WriteOutputHdr(i)=trim(InitOut%WriteOutputHdr(i))
-                InitOut%WriteOutputUnt(i) = "SPL"
-            enddo
-        enddo
-    enddo
-    ! SECOND FILE HEADER,UNIT   
-    call AllocAry(InitOut%WriteOutputHdrforPE, p%numOutsforPE, 'WriteOutputHdrforPE', errStat2, errMsg2); if(Failed()) return
-    call AllocAry(InitOut%WriteOutputUntforPE, p%numOutsforPE, 'WriteOutputUntforPE', errStat2, errMsg2); if(Failed()) return
-    i=0
-    do k=1,size(p%FreqList)
-        do j=1,p%NrObsLoc
-            do m=1,p%NumBlades
-                i=i+1
-                InitOut%WriteOutputHdrforPE(i) = "F"//trim(num2lstr(p%FreqList(k)))//"Obs"//trim(num2lstr(j))//"Bl"//trim(num2lstr(m))
-                InitOut%WriteOutputUntforPE(i) = "SPowLev"
-                do oi=1,3
-                    i=i+1
-                    InitOut%WriteOutputHdrforPE(i) = "F"//trim(num2lstr(p%FreqList(k)))//"Obs"//trim(num2lstr(j))//"Bl"//trim(num2lstr(m))
-                    InitOut%WriteOutputUntforPE(i) = "Coord"//trim(num2lstr(oi))
-                enddo
-            enddo		        
-        end do
-    enddo
-    ! THIRD FILE HEADER,UNIT
-    call AllocAry(InitOut%WriteOutputHdrSep, p%NumOutsForSep, 'WriteOutputHdrSep', errStat2, errMsg2); if(Failed()) return
-    call AllocAry(InitOut%WriteOutputUntSep, p%NumOutsForSep, 'WriteOutputUntSep', errStat2, errMsg2); if(Failed()) return
-    i=0
-    do j=1,p%NrObsLoc
-        do m=1,p%NumBlades
-            do k=1,p%NumBlNds
-                do oi=1,7
-                    i=i+1
-                    InitOut%WriteOutputHdrSep(i) = "Bla"//trim(num2lstr(m))//"_Node"//trim(num2lstr(k))//"_Obs"//trim(num2lstr(j))//"_Type"//trim(num2lstr(oi))
-                    InitOut%WriteOutputHdrSep(i)=trim(InitOut%WriteOutputHdrSep(i))
-                    InitOut%WriteOutputUntSep(i) = "SPL"
-                enddo
-            enddo
-        enddo
-    enddo
-    ! FOURTH FILE HEADER,UNIT
-    call AllocAry(InitOut%WriteOutputHdrSepFreq,size(p%FreqList)*p%NrObsLoc*7, 'InitOut%WriteOutputHdrSepFreq', errStat2, errMsg2); if(Failed()) return
-    call AllocAry(InitOut%WriteOutputUntSepFreq,size(p%FreqList)*p%NrObsLoc*7, 'InitOut%WriteOutputUntSepFreq', errStat2, errMsg2); if(Failed()) return
-    i=0
-    do k=1,size(p%FreqList)
-        do j=1,p%NrObsLoc
-            do oi=1,7
-                i=i+1
-                InitOut%WriteOutputHdrSepFreq(i) = "F"//trim(num2lstr(p%FreqList(k)))//"Obs"//trim(num2lstr(j))//"_Type"//trim(num2lstr(oi))
-                InitOut%WriteOutputUntSepFreq(i) = "SPL"
-            end do
-        end do
-    enddo
-    InitOut%Ver = AA_Ver
-    InitOut%delim = "	"
-
-contains
-    logical function Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
-        Failed =  ErrStat >= AbortErrLev
-    end function Failed
-end subroutine AA_SetInitOut
-!----------------------------------------------------------------------------------------------------------------------------------
-subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
-    type(AA_InputFile),       intent(in   ) :: InputFileData    !< All the data in the AeroDyn input file
-    type(AA_ParameterType) ,  intent(inout) :: p                !<
-    type(AA_InitOutputType),  intent(in  )  :: InitOut          !< output data
-    integer(IntKi)         ,  intent(inout) :: errStat          !< Status of error message
-    character(*)           ,  intent(inout) :: errMsg           !< Error message if ErrStat /= ErrID_None
-    ! locals
-    integer(IntKi) :: i
-    integer(IntKi) :: numOuts
-    character(200) :: frmt                                      ! A string to hold a format specifier
-    character(15)  :: tmpStr                                    ! temporary string to print the time output as text
-    ! FIRST FILE
-    IF  (InputFileData%NrOutFile .gt.0) THEN
-        call GetNewUnit( p%unOutFile, ErrStat, ErrMsg )
-        if ( ErrStat >= AbortErrLev ) then
-            p%unOutFile = -1
-            return
-        end if
-
-        call OpenFOutFile ( p%unOutFile, trim(InputFileData%AAOutFile(1)), ErrStat, ErrMsg )
-        if ( ErrStat >= AbortErrLev ) return
-
-        write (p%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
-        write (p%unOutFile,'(1X,A)') trim(GetNVD(InitOut%ver)) 
-        numOuts = size(InitOut%WriteOutputHdr)
-        write( p%unOutFile, '(A,I5)' )'Number of blades         :', p%numBlades
-        write( p%unOutFile, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
-        write( p%unOutFile, '(A,I5)' )'Number of observers      :', p%NrObsLoc
-        !......................................................
-        ! Write the names of the output parameters on one line:
-        !......................................................
-        call WrFileNR ( p%unOutFile, '     Time           ' )
-        do i=1,NumOuts
-            call WrFileNR ( p%unOutFile, InitOut%delim//InitOut%WriteOutputHdr(i) )
-        end do ! i
-        write (p%unOutFile,'()')
-        !......................................................
-        ! Write the units of the output parameters on one line:
-        !......................................................
-        call WrFileNR ( p%unOutFile, '      (s)           ' )
-        do i=1,NumOuts
-            call WrFileNR ( p%unOutFile, InitOut%delim//InitOut%WriteOutputUnt(i) )
-        end do ! i
-        write (p%unOutFile,'()')  
-    ENDIF
-    ! SECOND FILE
-    IF  (InputFileData%NrOutFile .gt. 1) THEN
-        call GetNewUnit( p%unOutFile2, ErrStat, ErrMsg )
-        if ( ErrStat >= AbortErrLev ) then
-            p%unOutFile = -1
-            return
-        end if
-        call OpenFOutFile ( p%unOutFile2, trim(InputFileData%AAOutFile(2)), ErrStat, ErrMsg )
-        if ( ErrStat >= AbortErrLev ) return
-        write (p%unOutFile2,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
-        write (p%unOutFile2,'(1X,A)') trim(GetNVD(InitOut%Ver))
-        write( p%unOutFile2, '(A,I5)' )'Number of blades         :', p%numBlades
-        write( p%unOutFile2, '(A,I5)' )'Number of frequencies    :', size(p%FreqList)
-        write( p%unOutFile2, '(A,I5)' )'Number of observers      :', p%NrObsLoc
-        numOuts = size(InitOut%WriteOutputHdrforPE)
-        !......................................................
-        ! Write the names of the output parameters on one line:
-        !......................................................
-        call WrFileNR ( p%unOutFile2, '     Time           ' )
-        do i=1,NumOuts
-            call WrFileNR ( p%unOutFile2, InitOut%delim//InitOut%WriteOutputHdrforPE(i) )
-        end do ! i
-        write (p%unOutFile2,'()')
-        !......................................................
-        ! Write the units of the output parameters on one line:
-        !......................................................
-        call WrFileNR ( p%unOutFile2, '      (s)           ' )
-        do i=1,NumOuts
-            call WrFileNR ( p%unOutFile2, InitOut%delim//InitOut%WriteOutputUntforPE(i) )
-        end do ! i
-        write (p%unOutFile2,'()')    
-        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
-        call WrNumAryFileNR ( p%unOutFile2, p%FreqList,  frmt, errStat, errMsg )
-        if ( errStat >= AbortErrLev ) return
-        write (p%unOutFile2,'()')    
-    ENDIF
-    ! THIRD FILE
-    IF  (InputFileData%NrOutFile .gt. 2) THEN
-        call GetNewUnit( p%unOutFile3, ErrStat, ErrMsg )
-        if ( ErrStat >= AbortErrLev ) then
-            p%unOutFile = -1
-            return
-        end if
-        call OpenFOutFile ( p%unOutFile3, trim(InputFileData%AAOutFile(3)), ErrStat, ErrMsg )
-        if ( ErrStat >= AbortErrLev ) return
-        write (p%unOutFile3,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
-        write (p%unOutFile3,'(1X,A)') trim(GetNVD(InitOut%Ver))
-        write( p%unOutFile3, '(A,I5)' )'Number of blades         :', p%numBlades
-        write( p%unOutFile3, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
-        write( p%unOutFile3, '(A,I5)' )'Number of observers      :', p%NrObsLoc
-        numOuts = size(InitOut%WriteOutputHdrSep)
-        !......................................................
-        ! Write the names of the output parameters on one line:
-        !......................................................
-        call WrFileNR ( p%unOutFile3,  "1-LBL 2-TBLPres 3-TBLSuc 4-Sep  5-BLUNT 6-TIP 7-Inflow")
-        write (p%unOutFile3,'()')
-        call WrFileNR ( p%unOutFile3, '     Time           ' )
-        do i=1,NumOuts
-            call WrFileNR ( p%unOutFile3, InitOut%delim//InitOut%WriteOutputHdrSep(i) )
-        end do ! i
-        write (p%unOutFile3,'()')
-        !......................................................
-        ! Write the units of the output parameters on one line:
-        !......................................................
-        call WrFileNR ( p%unOutFile3, '      (s)           ' )
-
-        do i=1,NumOuts
-            call WrFileNR ( p%unOutFile3, InitOut%delim//InitOut%WriteOutputUntSep(i) )
-        end do ! i
-        write (p%unOutFile3,'()')      
-    ENDIF
-    ! FOURTH FILE
-    IF  (InputFileData%NrOutFile .gt. 3) THEN
-        call GetNewUnit( p%unOutFile4, ErrStat, ErrMsg )
-        if ( ErrStat >= AbortErrLev ) then
-            p%unOutFile = -1
-            return
-        end if
-        call OpenFOutFile ( p%unOutFile4, trim(InputFileData%AAOutFile(4)), ErrStat, ErrMsg )
-        if ( ErrStat >= AbortErrLev ) return
-        write (p%unOutFile4,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
-        write (p%unOutFile4,'(1X,A)') trim(GetNVD(InitOut%Ver))
-        write( p%unOutFile4, '(A,I5)' )'Number of blades         :', p%numBlades
-        write( p%unOutFile4, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
-        write( p%unOutFile4, '(A,I5)' )'Number of observers      :', p%NrObsLoc
-        numOuts = size(InitOut%WriteOutputHdrSepFreq)
-        !......................................................
-        ! Write the names of the output parameters on one line:
-        !......................................................
-        call WrFileNR ( p%unOutFile4,  "1-LBL 2-TBLPres 3-TBLSuc 4-Sep  5-BLUNT 6-TIP 7-Inflow")
-        write (p%unOutFile4,'()')
-        call WrFileNR ( p%unOutFile4, '     Time           ' )
-        do i=1,NumOuts
-            call WrFileNR ( p%unOutFile4, InitOut%delim//InitOut%WriteOutputHdrSepFreq(i) )
-        end do ! i
-        write (p%unOutFile4,'()')
-        !......................................................
-        ! Write the units of the output parameters on one line:
-        !......................................................
-        call WrFileNR ( p%unOutFile4, '      (s)           ' )
-        do i=1,NumOuts
-            call WrFileNR ( p%unOutFile4, InitOut%delim//InitOut%WriteOutputUntSepFreq(i) )
-        end do ! i
-        write (p%unOutFile4,'()')      
-    ENDIF
-end subroutine AA_InitializeOutputFile
-!----------------------------------------------------------------------------------------------------------------------------------
-subroutine AA_WriteOutputLine(y, t, p, errStat, errMsg)
-    real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
-    type(AA_OutputType)    ,  intent(in   )   :: y
-    type(AA_ParameterType) ,  intent(in   )   :: p    
-    integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
-    character(*)           ,  intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
-    ! Local variables.
-    character(200)                   :: frmt                                      ! A string to hold a format specifier
-    character(15)                    :: tmpStr                                    ! temporary string to print the time output as text
-    integer :: numOuts
-    errStat = ErrID_None
-    errMsg  = ''
-    ! FIRST FILE    
-    IF  (p%NrOutFile .gt. 0) THEN 
-        numOuts = size(y%WriteOutput)
-        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
-        ! time
-        write( tmpStr, '(F15.4)' ) t
-        call WrFileNR( p%unOutFile, tmpStr )
-        call WrNumAryFileNR ( p%unOutFile, y%WriteOutput,  frmt, errStat, errMsg )
-        if ( errStat >= AbortErrLev ) return
-        ! write a new line (advance to the next line)
-        write (p%unOutFile,'()')
-    ENDIF
-
-    !! SECOND FILE
-    IF  (p%NrOutFile .gt. 1) THEN 
-        numOuts = size(y%WriteOutputforPE)
-        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
-        ! time
-        write( tmpStr, '(F15.4)' ) t
-        call WrFileNR( p%unOutFile2, tmpStr )
-        call WrNumAryFileNR ( p%unOutFile2, y%WriteOutputforPE,  frmt, errStat, errMsg )
-        if ( errStat >= AbortErrLev ) return
-        ! write a new line (advance to the next line)
-        write (p%unOutFile2,'()')
-    ENDIF
-    ! THIRD FILE
-    IF  (p%NrOutFile .gt. 2) THEN 
-        numOuts = size(y%WriteOutputSep)
-        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
-        ! time
-        write( tmpStr, '(F15.4)' ) t
-        call WrFileNR( p%unOutFile3, tmpStr )
-        call WrNumAryFileNR ( p%unOutFile3, y%WriteOutputSep,  frmt, errStat, errMsg )
-        if ( errStat >= AbortErrLev ) return
-        ! write a new line (advance to the next line)
-        write (p%unOutFile3,'()')
-    ENDIF
-    ! Fourth FILE
-    IF  (p%NrOutFile .gt. 3) THEN 
-        numOuts = size(y%WriteOutputSepFreq)
-        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
-        ! time
-        write( tmpStr, '(F15.4)' ) t
-        call WrFileNR( p%unOutFile4, tmpStr )
-        call WrNumAryFileNR ( p%unOutFile4, y%WriteOutputSepFreq,  frmt, errStat, errMsg )
-        if ( errStat >= AbortErrLev ) return
-        ! write a new line (advance to the next line)
-        write (p%unOutFile4,'()')
-    ENDIF
-end subroutine AA_WriteOutputLine     
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 subroutine AA_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
@@ -2916,8 +2532,6 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     inf    = 2       !-infinity to +infinity
     epsabs = 1e-10     !absolute accuracy
     epsrel = 1e-10     !relative accuracy
-    !     n_freq = NumBands
-    !     freq = Third_Octave
     band_ratio = 2.**(1./3.)
     ! Reynolds number and mach number
     Mach = SNGL(U  / p%SpdSound)
