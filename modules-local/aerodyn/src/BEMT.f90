@@ -930,8 +930,6 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
    integer(IntKi)                                    :: errStat2    ! temporary Error status of the operation
    character(*), parameter                           :: RoutineName = 'BEMT_UpdateStates'
    
-   character(20)                                     :: NodeTxt
-      
    ErrStat = ErrID_None
    ErrMsg = ""
          
@@ -944,13 +942,14 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
          
          do j = 1,p%numBlades ! Loop through all blades
             do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
-               NodeTxt = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
                
                call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%kinVisc, AFInfo(p%AFIndx(i,j)), u1%rlocal(i,j), p%chord(i,j), u1%theta(i,j),  &
                            u1%Vx(i,j), u1%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                            p%maxIndIterations, p%aTol, OtherState%ValidPhi(i,j), m%FirstWarn_Phi, errStat2, errMsg2)
-                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-                     if (errStat >= AbortErrLev) return 
+                  if (ErrStat2 /= ErrID_None) then
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                     if (errStat >= AbortErrLev) return
+                  end if
             end do
          end do
       else
@@ -995,10 +994,12 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
          ! over the blade elements.
          do j = 1,p%numBlades
             do i = 1,p%numBladeNodes
-               NodeTxt = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
 
                call calculate_Inductions_from_BEMT(i, j, p, z%phi(i,j), u1, OtherState, AFInfo, m%axInduction(i,j), m%tanInduction(i,j), ErrStat2,ErrMsg2)
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
+                  if (ErrStat2 /= ErrID_None) then
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                     if (errStat >= AbortErrLev) return
+                  end if
 
             end do
          end do
@@ -1029,8 +1030,6 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
  
       do i = 1,p%numBladeNodes 
 
-         NodeTxt = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
-         
          !.............................
          ! Update UA states:
          !.............................
@@ -1054,8 +1053,10 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
                   if (p%DBEMT_Mod == DBEMT_none ) then
                      
                      call calculate_Inductions_from_BEMT(i,j,p,z%phi(i,j),u1,OtherState,AFInfo,m%axInduction(i,j), m%tanInduction(i,j), ErrStat2,ErrMsg2)
-                        call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-                        if (errStat >= AbortErrLev) return
+                        if (ErrStat2 /= ErrID_None) then
+                           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                           if (errStat >= AbortErrLev) return
+                        end if
                      
                   else ! use DBEMT
                   
@@ -1107,8 +1108,10 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             else
                   ! COMPUTE: xd%UA, OtherState%UA
                call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%UA, errStat2, errMsg2 )
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-                  if (errStat >= AbortErrLev) return 
+                  if (ErrStat2 /= ErrID_None) then
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                     if (errStat >= AbortErrLev) return
+                  end if
             end if
          end if      ! if (OtherState%UA_Flag(i,j)) then
                
@@ -1131,8 +1134,10 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%kinVisc, AFInfo(p%AFIndx(i,j)), u2%rlocal(i,j), p%chord(i,j), u2%theta(i,j),  &
                         u2%Vx(i,j), u2%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                         p%maxIndIterations, p%aTol, OtherState%ValidPhi(i,j), m%FirstWarn_Phi, errStat2, errMsg2)  
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-                  if (errStat >= AbortErrLev) return 
+               if (ErrStat2 /= ErrID_None) then
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                  if (errStat >= AbortErrLev) return
+               end if
                   
             if ( p%DBEMT_Mod /= DBEMT_none ) then
                ! Generate DBEMT inputs
@@ -1145,8 +1150,10 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
                   if (errStat >= AbortErrLev) return
                   
                call DBEMT_UpdateStates(i, j, t, DBEMT_u, p%DBEMT, x%DBEMT, OtherState%DBEMT, m%DBEMT, errStat2, errMsg2)
-                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
+                  if (ErrStat2 /= ErrID_None) then
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
                      if (errStat >= AbortErrLev) return
+                  end if
             end if
             
          else
@@ -1165,8 +1172,10 @@ contains
       type(BEMT_InputType),                intent(in   ) :: u    ! BEMT Input at t or t + dt
 
       call calculate_Inductions_from_BEMT(i, j, p, z%phi(i,j), u, OtherState, AFInfo, m%axInduction(i,j), m%tanInduction(i,j), ErrStat2,ErrMsg2)
-         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-      
+         if (ErrStat2 /= ErrID_None) then
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+            if (errStat >= AbortErrLev) return
+         end if
       
       
       DBEMT_u(Indx)%vind_s(1)  =  -u%Vx(i,j)*m%axInduction(i,j)
@@ -1315,8 +1324,6 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
    integer(IntKi)                                 :: errStat2    ! temporary Error status of the operation
    character(*), parameter                        :: RoutineName = 'BEMT_CalcOutput'
    
-   character(20)                                  :: NodeTxt
-   
    
 #ifdef UA_OUTS
    integer(IntKi)                 :: k
@@ -1345,14 +1352,15 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
          
          do j = 1,p%numBlades ! Loop through all blades
             do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
-               NodeTxt = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
                
                y%phi(i,j) = z%phi(i,j)
                call BEMT_UnCoupledSolve(y%phi(i,j), p%numBlades, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), p%chord(i,j), u%theta(i,j),  &
                            u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                            p%maxIndIterations, p%aTol, IsValidSolution, m%FirstWarn_Phi, errStat2, errMsg2)
-                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-                     if (errStat >= AbortErrLev) return 
+                  if (ErrStat2 /= ErrID_None) then
+                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                     if (errStat >= AbortErrLev) return
+                  end if
             end do
          end do
          
@@ -1362,11 +1370,12 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
          if (p%DBEMT_Mod /= DBEMT_none) then
             do j = 1,p%numBlades ! Loop through all blades
                do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
-                  NodeTxt = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
 
                   call calculate_Inductions_from_BEMT(i, j, p, y%phi(i,j), u, OtherState, AFInfo, y%axInduction(i,j), y%tanInduction(i,j), ErrStat2, ErrMsg2)
-                     call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-                     if (errStat >= AbortErrLev) return 
+                     if (ErrStat2 /= ErrID_None) then
+                        call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                        if (errStat >= AbortErrLev) return
+                     end if
 
                end do
             end do
@@ -1404,8 +1413,6 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
             
       do i = 1,p%numBladeNodes ! Loop through the blade nodes / elements
          
-         NodeTxt = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
-         
             ! Set the active blade element for UnsteadyAero
          m%UA%iBladeNode = i
          m%UA%iBlade     = j
@@ -1429,8 +1436,10 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
                   if (p%DBEMT_Mod == DBEMT_none) then
 
                      call calculate_Inductions_from_BEMT(i, j, p, y%phi(i,j), u, OtherState, AFInfo, y%axInduction(i,j), y%tanInduction(i,j), ErrStat2,ErrMsg2)
-                        call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-                        if (errStat >= AbortErrLev) return
+                        if (ErrStat2 /= ErrID_None) then
+                           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                           if (errStat >= AbortErrLev) return
+                        end if
 
                   else ! if (p%DBEMT_Mod /= DBEMT_none) then
                      
@@ -1469,14 +1478,18 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
          if (OtherState%UA_Flag(i,j) .and. ( .not. EqualRealNos(y%Vrel(I,J),0.0_ReKi) ) ) then
             call Compute_UA_AirfoilCoefs( y%AOA(i,j), y%Vrel(I,J), y%Re(i,j),  AFInfo(p%AFindx(i,j)), p%UA, xd%UA, OtherState%UA, m%y_UA, m%UA, &
                                          y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), errStat2, errMsg2 ) 
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-               if (errStat >= AbortErrLev) return
+               if (ErrStat2 /= ErrID_None) then
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                  if (errStat >= AbortErrLev) return
+               end if
          else
                ! TODO: When we start using Re, should we use the uninduced Re since we used uninduced Re to solve for the inductions!? Probably this won't change, instead create a Re loop up above.
             call ComputeSteadyAirfoilCoefs( y%AOA(i,j), y%Re(i,j),  AFInfo(p%AFindx(i,j)), &
                                          y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), y%Cpmin(i,j),  errStat2, errMsg2 )
-               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
-               if (errStat >= AbortErrLev) return
+               if (ErrStat2 /= ErrID_None) then
+                  call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeText(i,j)))
+                  if (errStat >= AbortErrLev) return
+               end if
          end if
 
          
@@ -2191,6 +2204,14 @@ subroutine BEMT_UnCoupledSolve( phi, numBlades, nu, AFInfo, rlocal, chord, theta
 end subroutine BEMT_UnCoupledSolve
 
 
+
+function NodeText(i,j)
+   integer(IntKi), intent(in) :: i ! node number
+   integer(IntKi), intent(in) :: j ! blade number
+   character(25)              :: NodeText
+   
+   NodeText = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
+end function NodeText
 
 end module BEMT
     
