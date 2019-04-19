@@ -51,7 +51,7 @@ ExternalProject_Add(pfunit
 include_directories(${PROJECT_BINARY_DIR}/pfunit/mod)
 
 set(pfunit_directory ${PFUNIT_INSTALL})
-set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules-local)
+set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules)
 set(build_testdirectory ${PROJECT_BINARY_DIR}/tests)
 
 file(MAKE_DIRECTORY ${build_testdirectory})
