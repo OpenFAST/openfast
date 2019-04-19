@@ -53,7 +53,7 @@
 #  include <stdbool.h>
 #  define map_snprintf snprintf
 #  define map_strcat(a,b,c) strncat(a,c,b)
-#  if defined(_MINGW)
+#  if defined(__MINGW32__)
 #    define MAP_EXTERNCALL __declspec( dllexport )
 #  else
 #    define MAP_EXTERNCALL 
