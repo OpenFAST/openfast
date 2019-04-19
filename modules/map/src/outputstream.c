@@ -934,7 +934,7 @@ MAP_ERROR_CODE write_expanded_input_file_to_summary_file(FILE* file, Initializat
 };
 
 
-#if !defined(_MSC_VER)
+#if !defined(_MSC_VER) && !defined(__MINGW32__)
 MAP_ERROR_CODE fopen_s(FILE** f, const char* name, const char* mode)
 {
   assert(f);

@@ -230,10 +230,10 @@ SUBROUTINE OpenCon
 
    ! This routine opens the console for standard output.
 
-!bjj: removed for use with CygWin; Because CU = 6 now, this statement is not necessary
+!bjj: Because CU = 6 now, this statement is not necessary
 !   OPEN ( CU , FILE='/dev/stdout' , STATUS='OLD' )
 
-   CALL FlushOut ( CU )
+!   CALL FlushOut ( CU )
 
    RETURN
 END SUBROUTINE OpenCon
@@ -379,8 +379,7 @@ SUBROUTINE WriteScr ( Str, Frm )
 
    CHARACTER(*), INTENT(IN)     :: Str                                         ! The input string to write to the screen.
    CHARACTER(*), INTENT(IN)     :: Frm                                         ! Format specifier for the output.
-   INTEGER                      :: ErrStat                                     ! Error stat
-   ! This SUBROUTINE is used to dynamically load a DLL.us of write operation (so code doesn't crash)
+   INTEGER                      :: ErrStat                                     ! Error status of write operation (so code doesn't crash)
 
    IF ( LEN_TRIM(Str)  < 1 ) THEN
       WRITE ( CU, '()', IOSTAT=ErrStat )
@@ -396,6 +395,7 @@ END SUBROUTINE WriteScr ! ( Str )
 !=======================================================================
 SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
+   ! This SUBROUTINE is used to dynamically load a DLL.
 
    TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be loaded.
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation

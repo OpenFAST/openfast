@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAP_DLL_EXPORTS -DCMINPACK_NO_DLL  -DNDEBUG -D_WINDOWS -D_USRDLL")
+if(WIN32 OR CYGWIN OR MINGW)
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DMAP_DLL_EXPORTS -DCMINPACK_NO_DLL -DNDEBUG -D_WINDOWS -D_USRDLL")
 endif()
 
 generate_f90_types(src/MAP_Registry.txt MAP_Types.f90 -ccode)

@@ -297,7 +297,7 @@ MODULE NWTC_LAPACK
       END IF
       
       
-      CALL dgemm (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, M)
+      CALL DGEMM (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, M)
 
 
    RETURN
@@ -387,7 +387,7 @@ MODULE NWTC_LAPACK
       END IF
          
       
-      CALL sgemm (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, M)
+      CALL SGEMM (TRANSA, TRANSB, M, N, K, ALPHA, A, LDA, B, LDB, BETA, C, M)
 
 
    RETURN
