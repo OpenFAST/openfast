@@ -42,9 +42,9 @@ set(NWTCLIBS_SOURCES
 get_filename_component(FCNAME ${CMAKE_Fortran_COMPILER} NAME)
 
 if (${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
-  if (CYGWIN OR WIN32)
+  if (WIN32)
     set(NWTC_SYS_FILE src/SysGnuWin.f90)
-  elseif (APPLE OR UNIX)
+  elseif (APPLE OR UNIX OR CYGWIN)
     set(NWTC_SYS_FILE src/SysGnuLinux.f90)
   endif ()
 elseif (${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
