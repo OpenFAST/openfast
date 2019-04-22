@@ -77,8 +77,8 @@ FUNCTION FileSize( Unit )
 
    INTEGER(B8Ki)                             :: FileSize                      ! The size of the file in bytes to be returned.
    INTEGER, INTENT(IN)                       :: Unit                          ! The I/O unit number of the pre-opened file.
-   INTEGER                                   :: StatArray(13)                 ! An array returned by FSTAT that includes the file size.
-   INTEGER                                   :: Status                        ! The status returned by
+   INTEGER(4)                                :: StatArray(13)                 ! An array returned by FSTAT that includes the file size.
+   INTEGER(4)                                :: Status                        ! The status returned by
 
    Status = FSTAT( INT( Unit, B4Ki ), StatArray )
 
