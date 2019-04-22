@@ -64,7 +64,7 @@ MODULE SysSubs
    CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         ! The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'GNU Fortran for Windows'         ! Description of the language/OS
    CHARACTER( 1), PARAMETER      :: PathSep     = '\'                               ! The path separator.
-   CHARACTER( 1), PARAMETER      :: SwChar      = '-'                               ! The switch character for command-line options.
+   CHARACTER( 1), PARAMETER      :: SwChar      = '/'                               ! The switch character for command-line options.
    CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                     ! The string to specify unformatted I/O files.
 
 CONTAINS
@@ -77,8 +77,8 @@ FUNCTION FileSize( Unit )
 
    INTEGER(B8Ki)                             :: FileSize                      ! The size of the file in bytes to be returned.
    INTEGER, INTENT(IN)                       :: Unit                          ! The I/O unit number of the pre-opened file.
-   INTEGER                                   :: StatArray(13)                 ! An array returned by FSTAT that includes the file size.
-   INTEGER                                   :: Status                        ! The status returned by
+   INTEGER(4)                                :: StatArray(13)                 ! An array returned by FSTAT that includes the file size.
+   INTEGER(4)                                :: Status                        ! The status returned by
 
    Status = FSTAT( INT( Unit, B4Ki ), StatArray )
 
@@ -220,7 +220,7 @@ SUBROUTINE MKDIR ( new_directory_path )
    inquire( file=trim(new_directory_path), exist=directory_exists )
 
    if ( .NOT. directory_exists ) then
-      make_command = 'mkdir -p '//trim(new_directory_path)
+      make_command = 'mkdir "'//trim(new_directory_path)//'"'
       call system( make_command )
    endif
 
@@ -343,7 +343,7 @@ SUBROUTINE WrNR ( Str )
 
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
 
-   WRITE (CU,'(A)',ADVANCE='NO')  Str
+   WRITE (CU,'(1X,A)',ADVANCE='NO')  Str
 
    RETURN
 END SUBROUTINE WrNR ! ( Str )
@@ -365,7 +365,7 @@ SUBROUTINE WrOver ( Str )
       WRITE (CU,Fmt,ADVANCE='NO')  CR, Str
    ELSE
       ! bjj: note that this will almost certainly write more than MaxWrScrLen characters on a line
-      WRITE (CU,'(2A)',ADVANCE='NO')  CR, Str
+      WRITE (CU,'(A)',ADVANCE='NO')  CR, Str
    END IF
 
    RETURN
