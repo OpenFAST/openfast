@@ -208,7 +208,6 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
           p%OutParam(I)%Units = ParamUnitsAry(Indx)
       else if (index(OutListTmp,'CBQ_') > 0 ) then
           call setDOFChannel(5,ID_QStart+0*p%nCB-1); if(Failed()) return
-
       else if (index(OutListTmp,'CBQD_') > 0 ) then
           call setDOFChannel(6,ID_QStart+1*p%nCB-1); if(Failed()) return
       else if (index(OutListTmp,'CBF_') > 0 ) then
@@ -235,7 +234,7 @@ contains
             call setInvalidChannel() ! INVALID
         else
             p%OutParam(I)%Indx  = nOffset+iDOF
-            p%OutParam(I)%Units = '(NA)'
+            p%OutParam(I)%Units = '(-)'
         endif
     end subroutine
     subroutine setInvalidChannel()
