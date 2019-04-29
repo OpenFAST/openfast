@@ -29,6 +29,10 @@ MODULE ExtPtfm_MCKF_Parameters
 
    CHARACTER(len=4), DIMENSION(3), PARAMETER :: StrIntMethod = (/'RK4 ','AB4 ','ABM4'/)
 
+   ! Variables for output channels
+   INTEGER(IntKi), PARAMETER :: FILEFORMAT_GUYANASCII = 0
+   INTEGER(IntKi), PARAMETER :: FILEFORMAT_FLEXASCII  = 1
+
 
    ! Variables for output channels
    INTEGER(IntKi), PARAMETER :: MaxOutChs   = 9 + 3*200 ! Maximum number of output channels
@@ -173,6 +177,8 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
                                "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     ","(m)      "/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(7) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                               ID_PtfFx, ID_PtfFy, ID_PtfFz, ID_PtfMx, ID_PtfMy, ID_PtfMz, ID_WaveElev /)
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    
    p%NumOuts = NumOuts_in
    allocate(p%OutParam(0:p%NumOuts) , stat=ErrStat )
@@ -289,9 +295,11 @@ END SUBROUTINE SetOutParamLin
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Checks that all inputs were correctly read
 subroutine CheckAllInputsRead(p,ErrStat,ErrMsg)
-   TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p              !< All the parameter matrices stored in this input file
-   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat        !< Error status                              
-   CHARACTER(*),                INTENT(OUT)   :: ErrMsg         !< Error message
+    TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p              !< All the parameter matrices stored in this input file
+    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat        !< Error status                              
+    CHARACTER(*),                INTENT(OUT)   :: ErrMsg         !< Error message
+    ErrStat = ErrID_None
+    ErrMsg  = ""
     if (ErrStat/=0) return
     if (p%nTot<0)                   then ; ErrStat=ErrID_Fatal; ErrMsg='The total number of DOF was not set'; endif
     if (.not.allocated(p%PtfmAM))   then ; ErrStat=ErrID_Fatal; ErrMsg='The mass matrix was not allocated.' ; endif
@@ -319,6 +327,8 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    CHARACTER(1024)                      :: PriPath              ! Path name of the primary file
    LOGICAL                              :: Echo
    ! --- Initialization
+   ErrStat = ErrID_None
+   ErrMsg  = ""
    Echo = .FALSE.
    UnEc = -1                             ! Echo file not opened, yet
    CALL GetPath(InputFile, PriPath)     ! Input files will be relative to the path where the primary input file is located.
@@ -401,12 +411,7 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    call cleanup()
 
    ! --- Reading Reduced file
-   if ((InputFileData%FileFormat==1) .or. (InputFileData%FileFormat==0))then
-       call ReadReducedFile(InputFileData%RedFile, p, ErrStat, ErrMsg); if(Failed()) return;
-   else
-       call SetErrStat(ErrID_Fatal, 'FileFormat not implemented: '//trim(Num2LStr(InputFileData%FileFormat)), ErrStat, ErrMsg, 'ExtPtfm_ReadPrimaryFile')
-       return
-   endif
+   call ReadReducedFile(InputFileData%RedFile, p, InputFileData%FileFormat, ErrStat, ErrMsg); if(Failed()) return;
    ! Checking that everyting was correctly read and set
    call CheckAllInputsRead(p, ErrStat, ErrMsg);  if(Failed()) return
 
@@ -430,11 +435,12 @@ CONTAINS
    end subroutine cleanup
 END SUBROUTINE ReadPrimaryFile
 !..................................................................................................................................
-SUBROUTINE ReadReducedFile( InputFile, p, ErrStat, ErrMsg )
+SUBROUTINE ReadReducedFile( InputFile, p, FileFormat, ErrStat, ErrMsg )
 !..................................................................................................................................
    ! Passed variables
    CHARACTER(*),                INTENT(IN)    :: InputFile                           !< Name of the file containing the primary input data
    TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p                                   !< All the parameter matrices stored in this input file
+   INTEGER(IntKi),              INTENT(IN)    :: FileFormat                          !< File format for reduction inputs
    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status                              
    CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
    ! Local variables:
@@ -443,35 +449,40 @@ SUBROUTINE ReadReducedFile( InputFile, p, ErrStat, ErrMsg )
    INTEGER(IntKi)                       :: UnIn                                      ! Unit number for reading file
    INTEGER(IntKi)                       :: iLine                                     ! Current position in file
    CHARACTER(200)                       :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
-   CHARACTER(200)                       :: Line2                                     ! Temporary storage of a line from the input file (to compare with "default")
-   ! Initialize some variables:
-   !CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
-   
-   ! Get an available unit number for the file.
-   CALL GetNewUnit( UnIn, ErrStat, ErrMsg );               if(Failed()) return
-   ! Open the Primary input file.
-   CALL OpenFInpFile ( UnIn, InputFile, ErrStat, ErrMsg ); if(Failed()) return
-   iLine=1
-   !-------------------------- Read the first two lines
-   CALL ReadStr( UnIn, InputFile, Line, 'Line'//Num2LStr(iLine), 'External Platform MCKF file', ErrStat, ErrMsg)
-   if(Failed()) return
-   iLine=iLine+1
-   CALL ReadStr( UnIn, InputFile, Line2, 'Line'//Num2LStr(iLine), 'External Platform MCKF file', ErrStat, ErrMsg)
-   if(Failed()) return
-   iLine=iLine+1
-   call CONV2UC(Line)
-   call CONV2UC(Line2)
-   call cleanup()
-   !-------------------------- Detecting file format
-   if (index(Line2,'#MASS')==1) then
-       write(*,*) 'File detected as Guyan ASCII file format: '//trim(InputFile)
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   if     (FileFormat==FILEFORMAT_GUYANASCII) then
        call ReadGuyanASCII()
-   else if (index(Line2,'FLEX 5 FORMAT')>=1) then
-       write(*,*) 'File detected as FLEX ASCII file format: '//trim(InputFile)
+   elseif (FileFormat==FILEFORMAT_FLEXASCII) then
        call ReadFlexASCII()
+   else
+       call SetErrStat(ErrID_Fatal, 'FileFormat not implemented: '//trim(Num2LStr(FileFormat)), ErrStat, ErrMsg, 'ExtPtfm_ReadReducedFile')
+       return
    endif
-
-   return
+   ! --- The code below can detect between FlexASCII and GuyanASCII format by looking at the two first lines
+   ! Get an available unit number for the file.
+   !CALL GetNewUnit( UnIn, ErrStat, ErrMsg );               if(Failed()) return
+   !! Open the Primary input file.
+   !CALL OpenFInpFile ( UnIn, InputFile, ErrStat, ErrMsg ); if(Failed()) return
+   !iLine=1
+   !!-------------------------- Read the first two lines
+   !CALL ReadStr( UnIn, InputFile, Line, 'Line'//Num2LStr(iLine), 'External Platform MCKF file', ErrStat, ErrMsg)
+   !if(Failed()) return
+   !iLine=iLine+1
+   !CALL ReadStr( UnIn, InputFile, Line2, 'Line'//Num2LStr(iLine), 'External Platform MCKF file', ErrStat, ErrMsg)
+   !if(Failed()) return
+   !iLine=iLine+1
+   !call CONV2UC(Line)
+   !call CONV2UC(Line2)
+   !call cleanup()
+   !!-------------------------- Detecting file format
+   !if (index(Line2,'#MASS')==1) then
+   !    write(*,*) 'File detected as Guyan ASCII file format: '//trim(InputFile)
+   !    call ReadGuyanASCII()
+   !else if (index(Line2,'FLEX 5 FORMAT')>=1) then
+   !    write(*,*) 'File detected as FLEX ASCII file format: '//trim(InputFile)
+   !    call ReadFlexASCII()
+   !endif
 
 CONTAINS
     !> 
@@ -480,13 +491,11 @@ CONTAINS
         Failed =  ErrStat >= AbortErrLev
         if(Failed) call cleanup()
     end function Failed
-    
     !> 
     subroutine cleanup()
         close( UnIn )
         if (allocated(TmpAry)) deallocate(TmpAry)
     end subroutine cleanup
-    
 
    !> Reads a FLEX ASCII file for Guyan or CraigBampton reductions
    SUBROUTINE ReadFlexASCII()
@@ -568,10 +577,10 @@ CONTAINS
                end if
 
            elseif (index(Line,'!')==1) then
-               write(*,*) 'Ignored comment: '//trim(Line)
+               !write(*,*) 'Ignored comment: '//trim(Line)
            else
-                ! Ignore unsupported lines
-!                write(*,*) 'Ignored line: '//trim(Line)
+               ! Ignore unsupported lines
+               !write(*,*) 'Ignored line: '//trim(Line)
            endif
        enddo
        close( UnIn )
@@ -661,9 +670,10 @@ SUBROUTINE ExtPtfm_PrintSum(p, OtherState, RootName, ErrStat, ErrMsg)
    CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
    CHARACTER(ChanLen),PARAMETER :: TitleStr(2) = (/ 'Parameter', 'Units    ' /)
    CHARACTER(ChanLen),PARAMETER :: TitleStrLines(2) = (/ '---------------', '---------------' /)
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    ! Open the summary file and give it a heading.
-   
    CALL GetNewUnit(UnSu, ErrStat, ErrMsg);
    CALL OpenFOutFile(UnSu, TRIM( RootName )//'.sum', ErrStat, ErrMsg)
    IF ( ErrStat /= ErrID_None ) RETURN
@@ -727,9 +737,5 @@ CONTAINS
         if (UnSu>0) close(UnSu)
     end subroutine cleanup
 END SUBROUTINE ExtPtfm_PrintSum
-   
-
-
-
 
 END MODULE ExtPtfm_MCKF_IO
