@@ -425,8 +425,8 @@ CONTAINS
         iLine=iLine+1  ! Increase line number
     end function LineFailed
    subroutine cleanup()
-      close(UnIn)
-      close(UnEc)
+        if (UnIn>0) close(UnIn)
+        if (UnEc>0) close(UnEc)
    end subroutine cleanup
 END SUBROUTINE ReadPrimaryFile
 !..................................................................................................................................
@@ -724,7 +724,7 @@ CONTAINS
     end function Failed
     !> 
     subroutine cleanup()
-        close(UnSu)
+        if (UnSu>0) close(UnSu)
     end subroutine cleanup
 END SUBROUTINE ExtPtfm_PrintSum
    
