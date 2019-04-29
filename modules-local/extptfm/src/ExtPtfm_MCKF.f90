@@ -107,7 +107,6 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! local variables
    INTEGER(IntKi)                                    :: I           ! Loop counter
-   INTEGER(IntKi)                                    :: NumOuts     ! Number of outputs; would probably be in the parameter type
    TYPE(ExtPtfm_InputFile)                           :: InputFileData ! Data stored in the module's input file
    ! Initialize variables
    ErrStat = ErrID_None
@@ -229,16 +228,12 @@ SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status                              
    CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
    ! Local variables:
-   REAL(ReKi)                              :: TmpAry(7)                                 ! temporary array for reading row from file
-   INTEGER(IntKi)                          :: I,J                                       ! loop counter
-   INTEGER(IntKi)                          :: UnIn                                      ! Unit number for reading file
+   INTEGER(IntKi)                          :: I                                         ! loop counter
    INTEGER(IntKi)                          :: nX                                        ! Number of states
    INTEGER(IntKi)                          :: nU                                        ! Number of inputs
    INTEGER(IntKi)                          :: nY                                        ! Number of ouputs
    INTEGER(IntKi)                          :: n1                                        ! Number of interface DOF
    INTEGER(IntKi)                          :: n2                                        ! Number of CB DOF
-   CHARACTER(200)                          :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
-   CHARACTER(200)                          :: Line2                                     ! Temporary storage of a line from the input file (to compare with "default")
    real(ReKi), dimension(:,:), allocatable :: I22
    ! Init 
    nX = 2*p%nCB

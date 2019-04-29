@@ -255,11 +255,11 @@ SUBROUTINE SetOutParamLin( p, ErrStat, ErrMsg )
    INTEGER(IntKi),               INTENT(OUT)    :: ErrStat            !< The error status code
    CHARACTER(*),                 INTENT(OUT)    :: ErrMsg             !< The error message, if an error occurred
    ! Local variables
-   INTEGER                   :: ErrStat2                                        ! temporary (local) error status
-   INTEGER                   :: I                                               ! Generic loop-counting index
-   INTEGER                   :: J                                               ! Generic loop-counting index
-   CHARACTER(ErrMsgLen)      :: ErrMsg2
-   CHARACTER(*), PARAMETER   :: RoutineName = "SetOutParamLin"
+   !INTEGER                   :: ErrStat2                                        ! temporary (local) error status
+   !INTEGER                   :: I                                               ! Generic loop-counting index
+   !INTEGER                   :: J                                               ! Generic loop-counting index
+   !CHARACTER(ErrMsgLen)      :: ErrMsg2
+   !CHARACTER(*), PARAMETER   :: RoutineName = "SetOutParamLin"
    ErrStat = ErrID_None
    ErrMsg  = ""
 !    call AllocAry(p%OutParamLinIndx, 2, p%NumOuts, 'OutParamLinIndx', ErrStat2, ErrMsg2)
