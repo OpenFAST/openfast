@@ -871,7 +871,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ELSE IF ( p_FAST%CompSub == Module_ExtPtfm ) THEN
 
       InitInData_ExtPtfm%InputFile = p_FAST%SubFile
-!      InitInData_ExtPtfm%RootName  = trim(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_ExtPtfm))
+      InitInData_ExtPtfm%RootName  = trim(p_FAST%OutFileRoot)//'.'//TRIM(y_FAST%Module_Abrev(Module_ExtPtfm))
       InitInData_ExtPtfm%Linearize = p_FAST%Linearize
       
       
