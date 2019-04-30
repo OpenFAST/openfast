@@ -305,53 +305,53 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\modules-ext\map\src\bstring\bstraux.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\bstring\bstrlib.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\dpmpar.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\enorm.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\enorm_u.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\lmder.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\lmpar.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\qrfac.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\cminpack\qrsolv.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\freedata.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\jacobian.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\lineroutines.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\lmroutines.cc" />
-    <ClCompile Include="..\..\modules-ext\map\src\mapapi.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\maperror.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\mapinit.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\numeric.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\outputstream.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\residual.c" />
-    <ClCompile Include="..\..\modules-ext\map\src\simclist\simclist.c" />
+    <ClCompile Include="..\..\modules\map\src\bstring\bstraux.c" />
+    <ClCompile Include="..\..\modules\map\src\bstring\bstrlib.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\dpmpar.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\enorm.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\enorm_u.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\lmder.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\lmpar.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\qrfac.c" />
+    <ClCompile Include="..\..\modules\map\src\cminpack\qrsolv.c" />
+    <ClCompile Include="..\..\modules\map\src\freedata.c" />
+    <ClCompile Include="..\..\modules\map\src\jacobian.c" />
+    <ClCompile Include="..\..\modules\map\src\lineroutines.c" />
+    <ClCompile Include="..\..\modules\map\src\lmroutines.cc" />
+    <ClCompile Include="..\..\modules\map\src\mapapi.c" />
+    <ClCompile Include="..\..\modules\map\src\maperror.c" />
+    <ClCompile Include="..\..\modules\map\src\mapinit.c" />
+    <ClCompile Include="..\..\modules\map\src\numeric.c" />
+    <ClCompile Include="..\..\modules\map\src\outputstream.c" />
+    <ClCompile Include="..\..\modules\map\src\residual.c" />
+    <ClCompile Include="..\..\modules\map\src\simclist\simclist.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\modules-ext\map\src\bstring\bstraux.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\bstring\bstrlib.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\cminpack\cminpack.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\cminpack\cminpackP.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\cminpack\minpack.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\freedata.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\jacobian.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\lapack\lapacke.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\lapack\lapacke_mangling.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\lineroutines.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\lmroutines.hpp" />
-    <ClInclude Include="..\..\modules-ext\map\src\map.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\mapapi.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\maperror.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\mapinit.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\mapsys.h" />
+    <ClInclude Include="..\..\modules\map\src\bstring\bstraux.h" />
+    <ClInclude Include="..\..\modules\map\src\bstring\bstrlib.h" />
+    <ClInclude Include="..\..\modules\map\src\cminpack\cminpack.h" />
+    <ClInclude Include="..\..\modules\map\src\cminpack\cminpackP.h" />
+    <ClInclude Include="..\..\modules\map\src\cminpack\minpack.h" />
+    <ClInclude Include="..\..\modules\map\src\freedata.h" />
+    <ClInclude Include="..\..\modules\map\src\jacobian.h" />
+    <ClInclude Include="..\..\modules\map\src\lapack\lapacke.h" />
+    <ClInclude Include="..\..\modules\map\src\lapack\lapacke_mangling.h" />
+    <ClInclude Include="..\..\modules\map\src\lineroutines.h" />
+    <ClInclude Include="..\..\modules\map\src\lmroutines.hpp" />
+    <ClInclude Include="..\..\modules\map\src\map.h" />
+    <ClInclude Include="..\..\modules\map\src\mapapi.h" />
+    <ClInclude Include="..\..\modules\map\src\maperror.h" />
+    <ClInclude Include="..\..\modules\map\src\mapinit.h" />
+    <ClInclude Include="..\..\modules\map\src\mapsys.h" />
     <ClInclude Include=".\WinSock2.h" />
     <ClInclude Include="..\..\build\types-files\MAP_Types.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\numeric.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\outputstream.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\residual.h" />
-    <ClInclude Include="..\..\modules-ext\map\src\simclist\simclist.h" />
+    <ClInclude Include="..\..\modules\map\src\numeric.h" />
+    <ClInclude Include="..\..\modules\map\src\outputstream.h" />
+    <ClInclude Include="..\..\modules\map\src\residual.h" />
+    <ClInclude Include="..\..\modules\map\src\simclist\simclist.h" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\..\modules-ext\map\src\MAP_Registry.txt">
+    <CustomBuild Include="..\..\modules\map\src\MAP_Registry.txt">
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CALL ..\RunRegistry.bat MAP</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">CALL ..\RunRegistry.bat MAP</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\build\types-files\MAP_Types.h</Outputs>

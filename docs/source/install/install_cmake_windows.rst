@@ -1,7 +1,7 @@
 .. _install_cmake_windows:
 
-Building OpenFAST with CMake on Windows
-=======================================
+Building OpenFAST on Windows with CMake and Visual Studio
+=========================================================
 
 We describe here how to install OpenFAST (or any of its modules) using the `CMake <https://cmake.org>`_ 
 build system on Windows systems. Separate CMake documentation is 
