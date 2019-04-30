@@ -35,6 +35,8 @@ MODULE ExtPtfm_MCKF
 
    PRIVATE
 
+   INTEGER(IntKi), parameter :: N_INPUTS = 18
+   INTEGER(IntKi), parameter :: N_OUTPUTS = 6
 
    ! ..... Public Subroutines ...................................................................................................
    PUBLIC :: ExtPtfm_Init                           !  Initialization routine
@@ -108,6 +110,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    ! local variables
    INTEGER(IntKi)                                    :: I           ! Loop counter
    TYPE(ExtPtfm_InputFile)                           :: InputFileData ! Data stored in the module's input file
+
    ! Initialize variables
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -156,7 +159,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    do I=1,p%nTot; m%PtfmFt(I)=0; end do
    call AllocAry( m%xFlat, 2*p%nCB,'xFlat', ErrStat,ErrMsg); if(Failed()) return
    do I=1,2*p%nCB; m%xFlat(I)=0; end do
-   do I=1,18; m%uFlat(I)=0; end do
+   do I=1,N_INPUTS; m%uFlat(I)=0; end do
    
    ! Define initial guess (set up mesh first) for the system inputs here:
    call Init_meshes(u, y, ErrStat, ErrMsg); if(Failed()) return
@@ -167,6 +170,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat,ErrMsg); if(Failed()) return
+   y%WriteOutput(1:p%NumOuts) = 0.0
    InitOut%WriteOutputHdr(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Name
    InitOut%WriteOutputUnt(1:p%NumOuts) = p%OutParam(1:p%NumOuts)%Units     
    InitOut%Ver = ExtPtfm_Ver
@@ -174,15 +178,15 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    if (InitInp%Linearize) then
       CALL SetErrStat( ErrID_Fatal, 'ExtPtfm_MCKF linearization analysis TODO.', ErrStat, ErrMsg, 'ExtPtfm_Init')
       !Appropriate Jacobian row/column names and rotating-frame flags here:   
-      CALL AllocAry(InitOut%LinNames_y, 6      , 'LinNames_y', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_y, 6      , 'RotFrame_y', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%LinNames_x, 2*p%nCB, 'LinNames_x', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_x, 2*p%nCB, 'RotFrame_x', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%LinNames_u, 18     , 'LinNames_u', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_u, 18     , 'RotFrame_u', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%IsLoad_u  , 18     , 'IsLoad_u'  , ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%LinNames_y, 6       , 'LinNames_y', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%RotFrame_y, 6       , 'RotFrame_y', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%LinNames_x, 2*p%nCB , 'LinNames_x', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%RotFrame_x, 2*p%nCB , 'RotFrame_x', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%LinNames_u, N_INPUTS, 'LinNames_u', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%RotFrame_u, N_INPUTS, 'RotFrame_u', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%IsLoad_u  , N_INPUTS, 'IsLoad_u'  , ErrStat, ErrMsg); if(Failed()) return
       !do I=1,6;     InitOut%LinNames_y(I) = 'ExtPtm_Y'//trim(Num2LStr(I)); enddo
-      !do I=1,18;    InitOut%LinNames_u(I) = 'ExtPtm_U'//trim(Num2LStr(I)); enddo
+      !do I=1,N_INPUTS;    InitOut%LinNames_u(I) = 'ExtPtm_U'//trim(Num2LStr(I)); enddo
       !do I=1,p%nCB; 
       !    InitOut%LinNames_x(I)       = 'ExtPtm_X'//trim(Num2LStr(I));
       !    InitOut%LinNames_x(I+p%nCB) = 'ExtPtm_XP'//trim(Num2LStr(I));
@@ -1019,28 +1023,57 @@ SUBROUTINE ExtPtfm_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+   INTEGER(IntKi)  :: I
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   IF ( PRESENT( u_op ) ) THEN
-   END IF
+   if ( present( u_op ) ) then
+       if (.not. allocated(u_op)) then
+           call AllocAry(u_op, N_INPUTS, 'u_op', ErrStat, ErrMsg); if(Failed())return
+       endif
+       u_op(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
+       u_op(4:6)   = GetSmllRotAngs(u%PtfmMesh%Orientation(:,:,1), ErrStat, ErrMsg); if(Failed())return
+       u_op(7:9  ) = u%PtfmMesh%TranslationVel(:,1)
+       u_op(10:12) = u%PtfmMesh%RotationVel   (:,1)
+       u_op(13:15) = u%PtfmMesh%TranslationAcc(:,1)
+       u_op(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+   end if
 
-   IF ( PRESENT( y_op ) ) THEN
-   END IF
+   if ( present( y_op ) ) then
+       if (.not. allocated(y_op)) then
+           call AllocAry(y_op, N_OUTPUTS+p%NumOuts, 'y_op', ErrStat, ErrMsg); if(Failed())return
+       endif
+       ! Update the output mesh
+       y_op(1:3)=y%PtfmMesh%Force(1:3,1)
+       y_op(4:6)=y%PtfmMesh%Moment(1:3,1)
+       do i=1,p%NumOuts         
+           y_op(i+N_OUTPUTS) = y%WriteOutput(i)
+       end do      
+   end if
 
-   IF ( PRESENT( x_op ) ) THEN
-   END IF
+   if ( present( x_op ) ) then
+       if (.not. allocated(x_op)) then
+           call AllocAry(x_op, 2*p%nCB, 'x_op', ErrStat, ErrMsg); if (Failed())return
+       endif
+       x_op(1:p%nCB)         = x%qm(1:p%nCB)
+       x_op(p%nCB+1:2*p%nCB) = x%qmdot(1:p%nCB)
+   end if
 
-   IF ( PRESENT( dx_op ) ) THEN
-   END IF
+   if ( present( dx_op ) ) then
+   end if
 
-   IF ( PRESENT( xd_op ) ) THEN
-   END IF
+   if ( present( xd_op ) ) then
+   end if
    
-   IF ( PRESENT( z_op ) ) THEN
-   END IF
+   if ( present( z_op ) ) then
+   end if
 
+contains
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_GetOP')
+        Failed =  ErrStat >= AbortErrLev
+    end function Failed
 END SUBROUTINE ExtPtfm_GetOP
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
