@@ -883,6 +883,20 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(MODULE_ExtPtfm) = .TRUE.
       CALL SetModuleSubstepTime(MODULE_ExtPtfm, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      allocate( y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(ExtPtfm).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(InitOutData_ExtPtfm%LinNames_y)) call move_alloc(InitOutData_ExtPtfm%LinNames_y,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_y)
+         if (allocated(InitOutData_ExtPtfm%LinNames_x)) call move_alloc(InitOutData_ExtPtfm%LinNames_x,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_x)
+         if (allocated(InitOutData_ExtPtfm%LinNames_u)) call move_alloc(InitOutData_ExtPtfm%LinNames_u,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%Names_u)
+         if (allocated(InitOutData_ExtPtfm%RotFrame_y)) call move_alloc(InitOutData_ExtPtfm%RotFrame_y,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_y)
+         if (allocated(InitOutData_ExtPtfm%RotFrame_x)) call move_alloc(InitOutData_ExtPtfm%RotFrame_x,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_x)
+         if (allocated(InitOutData_ExtPtfm%RotFrame_u)) call move_alloc(InitOutData_ExtPtfm%RotFrame_u,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%RotFrame_u)
+         if (allocated(InitOutData_ExtPtfm%IsLoad_u  )) call move_alloc(InitOutData_ExtPtfm%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%IsLoad_u  )
+         if (allocated(InitOutData_ExtPtfm%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_ExtPtfm)%Instance(1)%NumOutputs = size(InitOutData_ExtPtfm%WriteOutputHdr)
+      end if
                
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
@@ -1600,7 +1614,8 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
       END IF
    ELSEIF ( p%CompMooring == Module_Orca ) THEN
       p%TurbineType = Type_Offshore_Floating
-   !bjj: what about ExtPtfm_MCKF ???
+   ELSEIF ( p%CompSub == Module_ExtPtfm ) THEN
+      p%TurbineType = Type_Offshore_Fixed
    ELSE      
       p%TurbineType = Type_LandBased
    END IF   
@@ -1757,7 +1772,7 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
       if (p%CompInflow == MODULE_OpFM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the OpenFOAM coupling.',ErrStat, ErrMsg, RoutineName)
       if (p%CompAero == MODULE_AD14) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the AeroDyn v14 module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompHydro == MODULE_HD) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the HydroDyn module.',ErrStat, ErrMsg, RoutineName)
-      if (p%CompSub /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the substructure modules.',ErrStat, ErrMsg, RoutineName)
+      if (p%CompSub   == MODULE_SD) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the SubDyn module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompMooring /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the mooring modules.',ErrStat, ErrMsg, RoutineName)
       if (p%CompIce /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the ice loading modules.',ErrStat, ErrMsg, RoutineName)
                   
@@ -5828,7 +5843,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
 
          CALL FAST_Linearize_OP(t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
                   Turbine%ED, Turbine%BD, Turbine%SrvD, Turbine%AD14, Turbine%AD, Turbine%IfW, Turbine%OpFM, &
-                  Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
+                  Turbine%HD, Turbine%SD, Turbine%ExtPtfm, Turbine%MAP, Turbine%FEAM, Turbine%MD, Turbine%Orca, &
                   Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat2, ErrMsg2 )  
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             IF (ErrStat >= AbortErrLev) RETURN

@@ -26,13 +26,16 @@ MODULE ExtPtfm_MCKF_Parameters
    USE NWTC_Library
 
    TYPE(ProgDesc), PARAMETER :: ExtPtfm_Ver = ProgDesc( 'ExtPtfm_MCKF', '', '' ) !< module date/version information
+   !
+   INTEGER(IntKi), parameter :: N_INPUTS = 18
+   INTEGER(IntKi), parameter :: N_OUTPUTS = 6
+
 
    CHARACTER(len=4), DIMENSION(3), PARAMETER :: StrIntMethod = (/'RK4 ','AB4 ','ABM4'/)
 
    ! Variables for output channels
    INTEGER(IntKi), PARAMETER :: FILEFORMAT_GUYANASCII = 0
    INTEGER(IntKi), PARAMETER :: FILEFORMAT_FLEXASCII  = 1
-
 
    ! Variables for output channels
    INTEGER(IntKi), PARAMETER :: MaxOutChs   = 9 + 3*200 ! Maximum number of output channels
@@ -61,7 +64,6 @@ MODULE ExtPtfm_MCKF_IO
 
    public :: ReadPrimaryFile
    public :: SetOutParam 
-   public :: SetOutParamLin
    public :: ExtPtfm_PrintSum
    
 CONTAINS
@@ -251,47 +253,6 @@ contains
         write(*,*)TRIM(p%OutParam(I)%Name)//" is not an available output channel."
     end subroutine
 END SUBROUTINE SetOutParam
-!----------------------------------------------------------------------------------------------------------------------------------
-!..................................................................................................................................
-!> This routine checks to see if any requested output channel names are to be output in linearization analysis.
-!! note that we output all WriteOutput values and assume that none of them depend on inputs (so I don't need this mapping any more)
-SUBROUTINE SetOutParamLin( p, ErrStat, ErrMsg )
-   ! Passed variables
-   TYPE(ExtPtfm_ParameterType),  INTENT(INOUT)  :: p                  !< The module parameters
-   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat            !< The error status code
-   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg             !< The error message, if an error occurred
-   ! Local variables
-   !INTEGER                   :: ErrStat2                                        ! temporary (local) error status
-   !INTEGER                   :: I                                               ! Generic loop-counting index
-   !INTEGER                   :: J                                               ! Generic loop-counting index
-   !CHARACTER(ErrMsgLen)      :: ErrMsg2
-   !CHARACTER(*), PARAMETER   :: RoutineName = "SetOutParamLin"
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-!    call AllocAry(p%OutParamLinIndx, 2, p%NumOuts, 'OutParamLinIndx', ErrStat2, ErrMsg2)
-!    call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!    if (ErrStat >= AbortErrLev) return
-   !do i = 1,p%NumOuts
-   !   if (p%OutParam(i)%SignM /= 0 ) then
-   !      do j=1,size(WindVelX)
-   !         if ( p%OutParam(i)%Indx == WindVelX(j) ) then
-   !            p%OutParamLinIndx(1,i) = j
-   !            p%OutParamLinIndx(2,i) = 1
-   !            exit !exit j loop; move to next parameter
-   !         elseif ( p%OutParam(i)%Indx == WindVelY(j) ) then
-   !            p%OutParamLinIndx(1,i) = j
-   !            p%OutParamLinIndx(2,i) = 2
-   !            exit !exit j loop; move to next parameter
-   !         elseif ( p%OutParam(i)%Indx == WindVelZ(j) ) then
-   !            p%OutParamLinIndx(1,i) = j
-   !            p%OutParamLinIndx(2,i) = 3
-   !            exit !exit j loop; move to next parameter
-   !         end if
-   !      end do
-   !      
-   !   end if      
-   !end do
-END SUBROUTINE SetOutParamLin
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Checks that all inputs were correctly read
 subroutine CheckAllInputsRead(p,ErrStat,ErrMsg)
