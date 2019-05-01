@@ -109,7 +109,7 @@ subroutine disp1r8(u,varname,a)
     integer,intent(in) ::u
     character(len=*),intent(in)::varname
     real(ReKi),intent(in),dimension(:) ::a
-    integer :: n, m,i
+    integer :: n
     character(len=20) :: fmt
     character(len=*),parameter :: RFMT='EN13.3E2'
     n=size(a,1)
@@ -182,7 +182,6 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
    INTEGER(IntKi),               INTENT(OUT)    :: ErrStat            !< The error status code
    CHARACTER(*),                 INTENT(OUT)    :: ErrMsg             !< The error message, if an error occurred
    ! Local variables
-   INTEGER                      :: ErrStat2                                        ! temporary (local) error status
    INTEGER                      :: I                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
    CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
@@ -651,12 +650,11 @@ CONTAINS
 END SUBROUTINE ReadReducedFile
 
 !> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
-SUBROUTINE ExtPtfm_PrintSum(x, p, m, OtherState, RootName, ErrStat, ErrMsg)
+SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    ! passed variables
    TYPE(ExtPtfm_ContinuousStateType), INTENT(IN)  :: x           !< Initial continuous states
    TYPE(ExtPtfm_ParameterType),    INTENT(IN   )  :: p           !< Parameters of the structural dynamics module
    TYPE(ExtPtfm_MiscVarType),      INTENT(IN   )  :: m           !< Misc variables for optimization (not copied in glue code)
-   TYPE(ExtPtfm_OtherStateType),   INTENT(IN   )  :: OtherState  !< Other states of the structural dynamics module 
    CHARACTER(*),                   INTENT(IN   )  :: RootName    !< Root Name to write the summary file
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None

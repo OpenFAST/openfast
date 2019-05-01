@@ -250,7 +250,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
 
    ! --- Summary file 
    if (InputFileData%SumPrint) then
-       call ExtPtfm_PrintSum(x, p, m, OtherState, InitInp%RootName, ErrStat, ErrMsg); if(Failed()) return
+       call ExtPtfm_PrintSum(x, p, m, InitInp%RootName, ErrStat, ErrMsg); if(Failed()) return
    endif
 
 CONTAINS
@@ -859,6 +859,7 @@ END SUBROUTINE ExtPtfm_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
+
 SUBROUTINE ExtPtfm_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu)
 !..................................................................................................................................
    REAL(DbKi),                         INTENT(IN   ) :: t          !< Time in seconds at operating point
