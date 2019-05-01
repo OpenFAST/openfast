@@ -800,20 +800,23 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
    !.....................
    ! ExtPtfm
    !.....................
-   if ( p_FAST%CompSub  == Module_ExtPtfm ) then 
+   if ( p_FAST%CompSub == Module_ExtPtfm ) then 
       ! get the jacobians
-      call ExtPtfm_JacobianPInput( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), ExtPtfm%z(STATE_CURR), ExtPtfm%OtherSt(STATE_CURR), &
-                                 ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%B )
+      call ExtPtfm_JacobianPInput( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), &
+              ExtPtfm%z(STATE_CURR), ExtPtfm%OtherSt(STATE_CURR),  ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2, &
+              dYdu=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%D, dXdu=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%B )
       if(Failed()) return;
 
-      call ExtPtfm_JacobianPContState( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), ExtPtfm%z(STATE_CURR), ExtPtfm%OtherSt(STATE_CURR), &
-                                     ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2, dYdx=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%A )
+      call ExtPtfm_JacobianPContState( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), &
+          ExtPtfm%z(STATE_CURR), ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2,&
+          dYdx=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%C, dXdx=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%A )
       if(Failed()) return;
 
       ! get the operating point
-      call ExtPtfm_GetOP( t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), ExtPtfm%z(STATE_CURR), ExtPtfm%OtherSt(STATE_CURR), &
-                 ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_u, y_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_y, &
-                x_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_x, dx_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_dx)
+      call ExtPtfm_GetOP(t_global, ExtPtfm%Input(1), ExtPtfm%p, ExtPtfm%x(STATE_CURR), ExtPtfm%xd(STATE_CURR), ExtPtfm%z(STATE_CURR),&
+          ExtPtfm%OtherSt(STATE_CURR), ExtPtfm%y, ExtPtfm%m, ErrStat2, ErrMsg2, u_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_u,&
+          y_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_y, &
+          x_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_x, dx_op=y_FAST%Lin%Modules(Module_ExtPtfm)%Instance(1)%op_dx)
       if(Failed()) return;
 
       ! write the module matrices:
@@ -1396,7 +1399,7 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
    end if ! we're using the InflowWind module
 
    IF (p_FAST%CompSub == Module_ExtPtfm) THEN
-       write(*,*)'>>> FAST_LIN: Linear_ExtPtm_InputSolve_du, TODO'
+       write(*,*)'>>> FAST_LIN: Linear_ExtPtfm_InputSolve_du, TODO'
    ENDIF
    
    !.....................................
@@ -1472,7 +1475,7 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
       
    
    IF (p_FAST%CompSub == Module_ExtPtfm) THEN
-       write(*,*)'>>> FAST_LIN: Linear_ExtPtm_InputSolve_dy, TODO'
+       write(*,*)'>>> FAST_LIN: Linear_ExtPtfm_InputSolve_dy, TODO'
    ENDIF
    
 END SUBROUTINE Glue_Jacobians
