@@ -915,7 +915,7 @@ SUBROUTINE ExtPtfm_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat,
           call AllocAry(dXdu, 2*p%nCB, N_INPUTS, 'dXdu', ErrStat, ErrMsg); if(Failed()) return
           do i=1,size(dXdu,1); do j=1,size(dXdu,2); dXdu(i,j)=0.0_ReKi; enddo;enddo
       end if
-      dXdu(1:2*p%nCB,1:N_INPUTS) = p%DMat(1:2*p%nCB,1:N_INPUTS)
+      dXdu(1:2*p%nCB,1:N_INPUTS) = p%BMat(1:2*p%nCB,1:N_INPUTS)
    end if
    if (present(dXddu)) then
    end if
