@@ -29,6 +29,10 @@ typedef        ^                     ^            IntKi              IntMethod  
 typedef        ^                     ^            IntKi              FileFormat - - -   "File format switch" -
 typedef        ^                     ^            CHARACTER(1024)    RedFile    -  - -  "File containing reduction inputs"   -
 typedef        ^                     ^            CHARACTER(1024)    RedFileCst -  - -  "File containing constant reduction inputs"   -
+typedef        ^                     ^            LOGICAL            EquilStart -  - -  "Flag to determine the equilibrium positions of the CB modes at initialization (first call)"   -
+typedef        ^                     ^            IntKi              ActiveDOFList {:} - -  "List of active CB DOF"   -
+typedef        ^                     ^            ReKi               InitPosList {:}   - -  "Initial positions of the CB DOFs"   -
+typedef        ^                     ^            ReKi               InitVelList {:}   - -  "Initial velocities of the CB DOFs"   -
 typedef        ^                     ^            LOGICAL            SumPrint   -  - -  "Print summary data to <RootName>.sum"   -
 typedef        ^                     ^            IntKi              OutFile    -  - -  "Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both)"   -
 typedef        ^                     ^            LOGICAL            TabDelim   -  - -  "Flag to cause tab-delimited text output (delimited by space otherwise)"   -
@@ -75,6 +79,7 @@ typedef    ^              MiscVarType          ReKi     xFlat    {:} - - "Flatte
 typedef    ^              MiscVarType          ReKi     uFlat   {18} - - "Flattened vector of inputs"
 typedef    ^              MiscVarType          ReKi     PtfmFt   {:} - - "The 6 interface loads and Craig-Bampton loads at t (force and moment acting at the platform reference (no added-mass effects); positive forces are in the direction of motion)." "N, N-m"
 typedef    ^              MiscVarType          IntKi    Indx       - - - "Index into PtfmFt_t" -
+typedef    ^              MiscVarType          LOGICAL  EquilStart  - - - "Flag to determine the equilibrium position of the CB DOF at initialization (first call)" -
 typedef    ^                  ^                ReKi     AllOuts  {:} - - "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
 
 
@@ -108,6 +113,7 @@ typedef  ^                    ^          IntKi    nCB         - - - "Number of C
 typedef  ^                    ^          IntKi    nTot        - - - "Total number of debrees of freedom (CB + interface)" -
 typedef  ^                    ^          IntKi    NumOuts     - - - "Number of values in WriteOutput" -
 typedef  ^                    ^          IntKi    IntMethod   - - - "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
+typedef  ^                    ^          IntKi    ActiveDOFList {:} - -  "List of active CB DOF"   -
 typedef  ^                    ^          OutParmType   OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
 typedef  ^                    ^          IntKi         OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for linearization analysis" -
 

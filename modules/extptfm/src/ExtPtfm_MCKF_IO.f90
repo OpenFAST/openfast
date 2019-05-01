@@ -105,6 +105,21 @@ subroutine disp2r8(u,varname,a)
         write(u,'(A,A)') varname,'=[];'
     endif
 end subroutine
+subroutine disp1r8(u,varname,a)
+    integer,intent(in) ::u
+    character(len=*),intent(in)::varname
+    real(ReKi),intent(in),dimension(:) ::a
+    integer :: n, m,i
+    character(len=20) :: fmt
+    character(len=*),parameter :: RFMT='EN13.3E2'
+    n=size(a,1)
+    if (n>0) then
+        write(fmt,*) n
+        write(u,"(A,"//adjustl(fmt)//RFMT//",A)") varname//" =[ ", a(:), " ];"
+    else
+        write(u,'(A,A)') varname,'=[];'
+    endif
+end subroutine
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Helper functions to read primary file
@@ -281,6 +296,7 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    CHARACTER(*),                INTENT(OUT)   :: ErrMsg         !< Error message
    ! Local variables:
    INTEGER(IntKi)                       :: I                    ! loop counter
+   INTEGER(IntKi)                       :: N                    ! Number of list elements
    INTEGER(IntKi)                       :: UnIn                 ! Unit number for reading file
    INTEGER(IntKi)                       :: UnEc                 ! Unit number for echo
    INTEGER(IntKi)                       :: iLine                ! Current position in file
@@ -352,6 +368,28 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    IF ( PathIsRelative(InputFileData%RedFile) ) InputFileData%RedFile = TRIM(PriPath)//TRIM(InputFileData%RedFile)
    CALL ReadVar(UnIn, InputFile, InputFileData%RedFileCst, 'RedCst_FileName', 'Path containing Guyan/Craig-Bampton constant inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    IF ( PathIsRelative(InputFileData%RedFileCst) ) InputFileData%RedFileCst = TRIM(PriPath)//TRIM(InputFileData%RedFileCst)
+   CALL ReadVar(UnIn, InputFile, N , 'NActiveDOFList','Number of active CB mode listed in ActiveDOFList, -1 for all modes', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   if (N<=0) then
+       CALL ReadCom(UnIn, InputFile, 'ActiveDOFList', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   else
+       CALL AllocAry(InputFileData%ActiveDOFList, N, 'ActiveDOFList',  ErrStat, ErrMsg ); if (Failed()) return
+       CALL ReadAry(UnIn, InputFile, InputFileData%ActiveDOFList, N, 'ActiveDOFList', 'List of active CB modes', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   endif
+   ! TODO TODO TODO CALL ReadVar(UnIn, InputFile, InputFileData%EquilStart, 'EquilStart','Find the equilibrium initial positions for the CB modes', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, N , 'NInitPosList','Number of initial positions listed in InitPosList', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   if (N<=0) then
+       CALL ReadCom(UnIn, InputFile, 'InitPosList', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   else
+       CALL AllocAry(InputFileData%InitPosList, N, 'InitPosList',  ErrStat, ErrMsg ); if (Failed()) return
+       CALL ReadAry(UnIn, InputFile, InputFileData%InitPosList, N, 'InitPosList', 'List of active CB modes', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   endif
+   CALL ReadVar(UnIn, InputFile, N , 'NInitVelList','Number of initial positions listed in InitVelList', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   if (N<=0) then
+       CALL ReadCom(UnIn, InputFile, 'InitVelList', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   else
+       CALL AllocAry(InputFileData%InitVelList, N, 'InitVelList',  ErrStat, ErrMsg ); if (Failed()) return
+       CALL ReadAry(UnIn, InputFile, InputFileData%InitVelList, N, 'InitVelList', 'List of active CB modes', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   endif
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: Output', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    ! SumPrint - Print summary data to <RootName>.sum (flag):
@@ -613,9 +651,11 @@ CONTAINS
 END SUBROUTINE ReadReducedFile
 
 !> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
-SUBROUTINE ExtPtfm_PrintSum(p, OtherState, RootName, ErrStat, ErrMsg)
+SUBROUTINE ExtPtfm_PrintSum(x, p, m, OtherState, RootName, ErrStat, ErrMsg)
    ! passed variables
+   TYPE(ExtPtfm_ContinuousStateType), INTENT(IN)  :: x           !< Initial continuous states
    TYPE(ExtPtfm_ParameterType),    INTENT(IN   )  :: p           !< Parameters of the structural dynamics module
+   TYPE(ExtPtfm_MiscVarType),      INTENT(IN   )  :: m           !< Misc variables for optimization (not copied in glue code)
    TYPE(ExtPtfm_OtherStateType),   INTENT(IN   )  :: OtherState  !< Other states of the structural dynamics module 
    CHARACTER(*),                   INTENT(IN   )  :: RootName    !< Root Name to write the summary file
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
@@ -633,6 +673,7 @@ SUBROUTINE ExtPtfm_PrintSum(p, OtherState, RootName, ErrStat, ErrMsg)
    CHARACTER(ChanLen),PARAMETER :: TitleStrLines(2) = (/ '---------------', '---------------' /)
    ErrStat = ErrID_None
    ErrMsg  = ""
+   ! TODO TODO TODO YAML FORMAT
 
    ! Open the summary file and give it a heading.
    CALL GetNewUnit(UnSu, ErrStat, ErrMsg);
@@ -653,6 +694,14 @@ SUBROUTINE ExtPtfm_PrintSum(p, OtherState, RootName, ErrStat, ErrMsg)
    write(UnSu,'(A,I0)')   'Total number of DOF    : ',p%nTot
    write(UnSu,'(A,I0)')   'Number of CB modes     : ',p%nCB
 ! 
+   if (m%EquilStart) then
+       write(UnSu,'(A)')'!Initial conditions (before equilibrium)'
+   else
+       write(UnSu,'(A)')'!Initial conditions (no equilibrium will be computed)'
+   endif
+   call disp1r8(UnSu, 'qm'   ,x%qm)
+   call disp1r8(UnSu, 'qmdot',x%qmdot)
+
    write(UnSu,'(A)')'!State matrices'
    call disp2r8(UnSu, 'A',p%AMat)
    call disp2r8(UnSu, 'B',p%BMat)

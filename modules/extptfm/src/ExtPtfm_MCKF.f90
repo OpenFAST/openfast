@@ -126,6 +126,17 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    call ReadPrimaryFile(InitInp%InputFile, p, InitInp%RootName, InputFileData, ErrStat, ErrMsg); if(Failed()) return
 
    ! --- Setting Params from Input file data
+   if (allocated(InputFileData%ActiveDOFList)) then
+       allocate(p%ActiveDOFList(1:size(InputFileData%ActiveDOFList)))
+       print*,'>>>>>TODO ActiveDOFList not implemented'
+       print*,'>>> ActiveDOFList',InputFileData%ActiveDOFList
+       ! TODO
+       do I=1,size(InputFileData%ActiveDOFList)
+           p%ActiveDOFList(I) = InputFileData%ActiveDOFList(I);
+       enddo
+       p%nCB=size(InputFileData%ActiveDOFList)
+       STOP
+   endif
    p%IntMethod = InputFileData%IntMethod
    if (InputFileData%DT<0) then
        p%EP_DeltaT = dt_gluecode
@@ -137,11 +148,32 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    ! Set the constant state matrices A,B,C,D
    call SetStateMatrices(p, ErrStat, ErrMsg)
   
-   ! Allocate and init continuous states
+   ! --- Allocate and init continuous states
    call AllocAry( x%qm    , p%nCB,'CB DOF positions' , ErrStat,ErrMsg); if(Failed()) return
    call AllocAry( x%qmdot , p%nCB,'CB DOF velocities', ErrStat,ErrMsg); if(Failed()) return
-   do I=1,p%nCB; x%qm   (I)=0; end do
-   do I=1,p%nCB; x%qmdot(I)=0; end do
+   if (allocated(InputFileData%InitPosList)) then
+       if (size(InputFileData%InitPosList)/=p%nCB) then
+           CALL SetErrStat(ErrID_Fatal, 'The number of elements of `InitPosList` ('//trim(Num2LStr(size(InputFileData%InitPosList)))//') does not match the number of CB modes: '//trim(Num2LStr(p%nCB)), ErrStat, ErrMsg, 'ExtPtfm_Init'); 
+           return
+       endif
+       do I=1,p%nCB;
+           x%qm(I)=InputFileData%InitPosList(I);
+       end do
+   else
+       do I=1,p%nCB; x%qm   (I)=0; end do
+   endif
+   if (allocated(InputFileData%InitVelList)) then
+       if (size(InputFileData%InitVelList)/=p%nCB) then
+           CALL SetErrStat(ErrID_Fatal, 'The number of elements of `InitVelList` ('//trim(Num2LStr(size(InputFileData%InitVelList)))//') does not match the number of CB modes: '//trim(Num2LStr(p%nCB)), ErrStat, ErrMsg, 'ExtPtfm_Init'); 
+           return
+       endif
+       do I=1,p%nCB;
+           x%qmdot(I)=InputFileData%InitVelList(I);
+       enddo
+   else
+       do I=1,p%nCB; x%qmdot(I)=0; end do
+   endif
+
    ! Other states
    xd%DummyDiscState          = 0.0_ReKi
    z%DummyConstrState         = 0.0_ReKi
@@ -153,6 +185,9 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    endif
 
    ! Initialize Misc Variables:
+   !m%EquilStart = InputFileData%EquilStart
+   m%EquilStart = .False.
+
    m%Indx = 1 ! used to optimize interpolation of loads in time
    call AllocAry( m%PtfmFt, p%nTot,'Loads at t', ErrStat,ErrMsg); if(Failed()) return
    do I=1,p%nTot; m%PtfmFt(I)=0; end do
@@ -215,7 +250,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
 
    ! --- Summary file 
    if (InputFileData%SumPrint) then
-       call ExtPtfm_PrintSum(p, OtherState, InitInp%RootName, ErrStat, ErrMsg); if(Failed()) return
+       call ExtPtfm_PrintSum(x, p, m, OtherState, InitInp%RootName, ErrStat, ErrMsg); if(Failed()) return
    endif
 
 CONTAINS
@@ -629,6 +664,10 @@ SUBROUTINE ExtPtfm_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
    ! Initialize variables
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
+   if (m%EquilStart) then
+       write(*,*)'>>>UPDATE STATE, EquilStart',t
+       STOP
+   endif
    if ( p%nCB == 0) return ! no modes = no states
    if (p%IntMethod .eq. 1) then 
       call ExtPtfm_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
@@ -727,6 +766,10 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
    INTEGER(IntKi)                                    :: I
+   if (m%EquilStart) then
+       write(*,*)'>>>CONT STATE DERIV',t
+       STOP
+   endif
    ! Allocation of output dxdt (since intent(out))
    call AllocAry(dxdt%qm,    p%nCB, 'dxdt%qm',    ErrStat, ErrMsg); if(Failed()) return
    call AllocAry(dxdt%qmdot, p%nCB, 'dxdt%qmdot', ErrStat, ErrMsg); if(Failed()) return
@@ -1084,6 +1127,10 @@ SUBROUTINE ExtPtfm_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   if (m%EquilStart) then
+       write(*,*)'>>>GETOP, EquilStart',t
+       STOP
+   endif
    if ( present( u_op ) ) then
        if (.not. allocated(u_op)) then
            call AllocAry(u_op, N_INPUTS, 'u_op', ErrStat, ErrMsg); if(Failed())return
