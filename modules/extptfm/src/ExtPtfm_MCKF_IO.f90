@@ -567,7 +567,21 @@ CONTAINS
                   allocate(TmpAry(1:p%nTot+1))
                   do i=1,p%nPtfmFt
                      iLine=iLine+1
-                     call ReadAry( UnIn, InputFile, TmpAry, p%nTot+1, 'PtfmFt - Line: '//Num2LStr(iLine)//' Value: '//trim(Num2LStr(i))//'/'//Num2LStr(p%nPtfmFt), 'PtfmFt time-history', ErrStat, ErrMsg)
+                     TmpAry(1:p%nTot+1)=-999999E-99
+                     !call ReadAry( UnIn, InputFile, TmpAry, p%nTot+1, 'PtfmFt - Line: '//Num2LStr(iLine)//' Value: '//trim(Num2LStr(i))//'/'//Num2LStr(p%nPtfmFt), 'PtfmFt time-history', ErrStat, ErrMsg)
+                     read(UnIn, fmt='(A)', iostat=ErrStat) Line
+                     if (ErrStat/=0) then
+                        ErrStat = ErrID_Fatal
+                        ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(p%nPtfmFt))//' expected lines) in file: '//trim(InputFile)
+                        exit
+                     end if
+                     ! Extract fields (ReadR8AryFromStr is in NWTC_IO)
+                     CALL ReadAry(Line, TmpAry, p%nTot+1, 'PtfmFt', 'PtfmFt', ErrStat, ErrMsg)
+                     if (ErrStat/=0) then
+                        ErrStat = ErrID_Fatal
+                        ErrMsg='Failed to extract fields from line '//trim(Num2LStr(iLine))//'. '//trim(ErrMsg)//'. Check that the number of columns is correct in file: '//trim(InputFile)
+                        exit
+                     end if
                      if (ErrStat /= 0) exit
                      p%PtfmFt_t(i) = TmpAry(1)
                      p%PtfmFt(i,:) = TmpAry(2:p%nTot+1)
@@ -638,7 +652,20 @@ CONTAINS
              read(UnIn,*,IOSTAT=ErrStat) line
           end do
           do i=1,p%nPtfmFt
-             call ReadAry( UnIn, InputFile, TmpAry, p%nTot+1, 'PtfmFt', 'PtfmFt time-history', ErrStat, ErrMsg)
+             !call ReadAry( UnIn, InputFile, TmpAry, p%nTot+1, 'PtfmFt', 'PtfmFt time-history', ErrStat, ErrMsg)
+             read(UnIn, fmt='(A)', iostat=ErrStat) Line
+             if (ErrStat/=0) then
+                ErrStat = ErrID_Fatal
+                ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(p%nPtfmFt))//' expected lines) in file: '//trim(InputFile)
+                exit
+             end if
+             ! Extract fields (ReadR8AryFromStr is in NWTC_IO)
+             CALL ReadAry(Line, TmpAry, p%nTot+1, 'PtfmFt', 'PtfmFt', ErrStat, ErrMsg)
+             if (ErrStat/=0) then
+                ErrStat = ErrID_Fatal
+                ErrMsg='Failed to extract fields from line '//trim(Num2LStr(iLine))//'. '//trim(ErrMsg)//'. Check that the number of columns is correct in file: '//trim(InputFile)
+                exit
+             end if
              if ( ErrStat /= 0 ) return
              p%PtfmFt_t(i) = TmpAry(1)
              p%PtfmFt(i,:) = TmpAry(2:p%nTot+1)
