@@ -742,7 +742,7 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
       if (p%OutParam(I)%Indx>0) then
           y%WriteOutput(I) = p%OutParam(I)%SignM * m%AllOuts( p%OutParam(I)%Indx )
       else
-          y%WriteOutput(I) = -999.99e-99
+          y%WriteOutput(I) = -9.9999e20
       endif
    enddo    
 END SUBROUTINE ExtPtfm_CalcOutput
@@ -876,13 +876,13 @@ SUBROUTINE ExtPtfm_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat,
    TYPE(ExtPtfm_MiscVarType),          INTENT(INOUT) :: m          !< Misc/optimization variables
    INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    !< Error status of the operation
    CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dYdu(:,:)  !< Partial derivatives of output functions (Y) with respect 
                                                                    !!   to the inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXdu(:,:)  !< Partial derivatives of continuous state functions (X) with 
                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXddu(:,:) !< Partial derivatives of discrete state functions (Xd) with 
                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdu(:,:)  !< Partial derivatives of constraint state functions (Z) with 
                                                                    !!   respect to the inputs (u) [intent in to avoid deallocation]
    INTEGER(IntKi) :: i,j  ! Loop index
    INTEGER(IntKi) :: idx  ! Index of output channel in AllOuts
@@ -946,16 +946,16 @@ SUBROUTINE ExtPtfm_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrS
    TYPE(ExtPtfm_MiscVarType),          INTENT(INOUT) :: m          !< Misc/optimization variables
    INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    !< Error status of the operation
    CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dYdx(:,:)  !< Partial derivatives of output functions
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dYdx(:,:)  !< Partial derivatives of output functions
                                                                    !!   (Y) with respect to the continuous
                                                                    !!   states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXdx(:,:)  !< Partial derivatives of continuous state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXdx(:,:)  !< Partial derivatives of continuous state
                                                                    !!   functions (X) with respect to
                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXddx(:,:) !< Partial derivatives of discrete state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dXddx(:,:) !< Partial derivatives of discrete state
                                                                    !!   functions (Xd) with respect to
                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdx(:,:)  !< Partial derivatives of constraint state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,  INTENT(INOUT) :: dZdx(:,:)  !< Partial derivatives of constraint state
                                                                    !!   functions (Z) with respect to
                                                                    !!   the continuous states (x) [intent in to avoid deallocation]
    INTEGER(IntKi) :: i,j    ! Loop index
@@ -1037,29 +1037,28 @@ SUBROUTINE ExtPtfm_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrS
    TYPE(ExtPtfm_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
                                                                                     !!  (Y) with respect to the discrete
                                                                                     !!  states (xd) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
                                                                                     !!   functions (X) with respect to the
                                                                                     !!   discrete states (xd) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddxd(:,:)!< Partial derivatives of discrete state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddxd(:,:)!< Partial derivatives of discrete state
                                                                                     !!   functions (Xd) with respect to the
                                                                                     !!   discrete states (xd) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
                                                                                     !!   functions (Z) with respect to the
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
-   IF ( PRESENT( dYdxd ) ) THEN
-   END IF
-   IF ( PRESENT( dXdxd ) ) THEN
-   END IF
-
-   IF ( PRESENT( dXddxd ) ) THEN
-   END IF
-   IF ( PRESENT( dZdxd ) ) THEN
-   END IF
+   if (present(dYdxd)) then
+   end if
+   if (present(dXdxd)) then
+   end if
+   if (present(dXddxd)) then
+   end if
+   if (present(dZdxd)) then
+   end if
 END SUBROUTINE ExtPtfm_JacobianPDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
@@ -1080,27 +1079,27 @@ SUBROUTINE ExtPtfm_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, Er
    TYPE(ExtPtfm_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
    INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
                                                                                     !!  functions (Y) with respect to the
                                                                                     !!  constraint states (z) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
                                                                                     !!  state functions (X) with respect to
                                                                                     !!  the constraint states (z) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
                                                                                     !!  functions (Xd) with respect to the
                                                                                     !!  constraint states (z) [intent in to avoid deallocation]
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
+   REAL(R8Ki), ALLOCATABLE, OPTIONAL,         INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ''
-   IF ( PRESENT( dYdz ) ) THEN
-   END IF
-   IF ( PRESENT( dXdz ) ) THEN
-   END IF
-   IF ( PRESENT( dXddz ) ) THEN
-   END IF
-   IF ( PRESENT( dZdz ) ) THEN
-   END IF
+   if (present(dYdz)) then
+   end if
+   if (present(dXdz)) then
+   end if
+   if (present(dXddz)) then
+   end if
+   if (present(dZdz)) then
+   end if
 END SUBROUTINE ExtPtfm_JacobianPConstrState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
