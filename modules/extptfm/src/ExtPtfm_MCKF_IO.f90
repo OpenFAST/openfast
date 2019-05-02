@@ -446,7 +446,7 @@ SUBROUTINE ReadReducedFile( InputFile, p, FileFormat, ErrStat, ErrMsg )
    INTEGER(IntKi)                       :: I                                         ! loop counter
    INTEGER(IntKi)                       :: UnIn                                      ! Unit number for reading file
    INTEGER(IntKi)                       :: iLine                                     ! Current position in file
-   CHARACTER(200)                       :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+   CHARACTER(4096)                      :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
    ErrStat = ErrID_None
    ErrMsg  = ""
    if     (FileFormat==FILEFORMAT_GUYANASCII) then
