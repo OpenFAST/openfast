@@ -10,7 +10,7 @@ Approach
 --------
 The general mechanisms identified for performance improvements in OpenFAST are:
 
-- Intel tech stack (``ifort`` compiler with optimizations, MKL math library)
+- Intel compiler suite and math kernel library
 - Algorithmic improvements
 - Memory access optimization enabling more efficient cache usage
 - Data type alignment allowing for SIMD vectorization
@@ -105,8 +105,8 @@ Specifically, some keys outcomes from the first year are:
   benefits
 
 
-Speedup - Intel Tech Stack
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+Speedup - Intel Compiler and MKL
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 By employing the standard Intel developer tools tech stack, a performance
 improvement over GNU tools was demonstrated:
 
