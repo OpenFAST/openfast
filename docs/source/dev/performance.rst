@@ -132,6 +132,16 @@ Intel 17 MKL - 8 threads 597 s (3.8x)          ---
 ======== =============== ===================== ======================================
 
 
+Ongoing Work
+------------
+The next phase of the OpenFAST performance improvements are focused in two key
+areas:
+
+1. Implementing the outcomes from previous work throughout OpenFAST modules and
+   glue codes
+2. Preparing OpenFAST for efficient execution on Intel's next generation
+   platforms
+
 .. Year 2 stuff:
 
 .. Furthermore, NREL is optimizing OpenFAST for the future through profiling on
