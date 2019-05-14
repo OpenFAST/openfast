@@ -6,12 +6,15 @@ computationally expensive use cases. This work is supported by Intel through
 its designation of NREL as a Parallel Computing Center (IPCC). Further,
 Envision Energy has continuously contributed code and expertise in this area.
 
-The general methods targeted for performance improvements in OpenFAST are:
+Approach
+--------
+The general mechanisms identified for performance improvements in OpenFAST are:
 
-- Intel tech stack (compiler, math library)
-- algorithmic improvements
-- memory access optimization
-- multhithreading
+- Intel tech stack (``ifort`` compiler with optimizations, MKL math library)
+- Algorithmic improvements
+- Memory access optimization enabling more efficient cache usage
+- Data type alignment allowing for SIMD vectorization
+- Multhithreading with OpenMP
 
 Test cases
 ----------
