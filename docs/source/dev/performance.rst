@@ -1,18 +1,18 @@
-Performance Profiling and Optimization
+Performance-Profiling and Optimization
 ======================================
-The OpenFAST team has been engaged in performance profiling and optimization
+The OpenFAST team has been engaged in performance-profiling and optimization
 work in an effort to improve the time-to-solution performance for the most
-computationally expensive use cases. This work is supported by Intel through
-its designation of NREL as a Parallel Computing Center (IPCC). Further,
-Envision Energy has continuously contributed code and expertise in this area.
+computationally expensive use cases. This work is supported by Intel® through
+its designation of NREL as an
+`Intel® Parallel Computing Center (IPCC) <https://software.intel.com/en-us/ipcc>`_.
 
 Approach
 --------
 The general mechanisms identified for performance improvements in OpenFAST are:
 
-- Intel compiler suite and math kernel library
+- Intel® compiler suite and Intel® Math Kernel Library (Intel® MKL)
 - Algorithmic improvements
-- Memory access optimization enabling more efficient cache usage
+- Memory-access optimization enabling more efficient cache usage
 - Data type alignment allowing for SIMD vectorization
 - Multhithreading with OpenMP
 
@@ -34,17 +34,18 @@ The physics modules used in this case are:
 - AeroDyn 15
 - ServoDyn
 
-This is a land based NREL 5MW turbine simulation using BeamDyn as the
+This is a land based NREL 5-MW turbine simulation using BeamDyn as the
 structural module. It simulates 20 seconds with a timestep size of 0.001
 seconds and executes in `3m 55s <https://my.cdash.org/testDetails.php?test=40171217&build=1649048>`__
-on NREL's peregrine supercomputer.
+on NREL's `Peregrine <https://www.nrel.gov/hpc/peregrine-system.html>`__
+supercomputer.
 
 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Download files `here <https://github.com/OpenFAST/r-test/tree/dev/glue-codes/openfast/5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth>`__.
 
-This is an offshore, fixed-bottom NREL 5MW turbine simulation with the majority
-of the computational expense occuring in the HydroDyn wave dynamics
+This is an offshore, fixed-bottom NREL 5-MW turbine simulation with the
+majority of the computational expense occuring in the HydroDyn wave-dynamics
 calculation.
 
 The physics modules used in this case are:
@@ -58,11 +59,12 @@ The physics modules used in this case are:
 
 It simulates 60 seconds with a timestep size of 0.01 seconds and executes in
 `20m 27s <https://my.cdash.org/testDetails.php?test=40171219&build=1649048>`__
-on NREL's peregrine supercomputer.
+on NREL's `Peregrine <https://www.nrel.gov/hpc/peregrine-system.html>`__
+supercomputer.
 
 Profiling
 ---------
-The OpenFAST test cases were profiled with Intel VTune Amplifier to
+The OpenFAST test cases were profiled with Intel® VTune™ Amplifier to
 identify performance hotspots. This tools provides a clear picture of
 bottlenecks in a simulation.
 
@@ -74,26 +76,26 @@ In the offshore case, the LAPACK usage was found the be the bottleneck.
 
 BeamDyn
 ~~~~~~~
-While BeamDyn yields a high fidelity blade calculation, it is a computationally
-expensive module. Initial profiling highlighted the `bd_elementmatrixga2`
-subroutine, in particular, as a hotspot. However, initial attempts to improve
-performance in BeamDyn highlighted needs for alogirthmic improvements
-and refinements to the module's data structures.
+While BeamDyn provides a high-fidelity blade-response calculation, it is a
+computationally expensive module. Initial profiling highlighted the
+`bd_elementmatrixga2` subroutine, in particular, as a hotspot. However, initial
+attempts to improve performance in BeamDyn highlighted needs for alogirthmic
+improvements and refinements to the module's data structures.
 
 Results
 -------
-Though work in ongoing, OpenFAST time-to-solution performance has improved
+Though work is ongoing, OpenFAST time-to-solution performance has improved
 and the performance potential is better understood.
 
-Specifically, some keys outcomes from the first year are:
+Some keys outcomes from the first year of the IPCC project are as follows:
 
-- Use of Intel compiler and MKL library provides dramatic speedup over GCC
+- Use of Intel® compiler and MKL library provides dramatic speedup over GCC
   and LAPACK
 
-  - Additional significant gains through MKL threading for offshore
-    configuration
+  - Additional significant gains are possible through MKL threading for
+    offshore simulations
 
-- Offshore-wind-turbine simulation configuration is poorly load balanced
+- Offshore-wind-turbine simulations are poorly load balanced
   across modules
 
   - Land-based-turbine configuration better balanced
@@ -105,19 +107,19 @@ Specifically, some keys outcomes from the first year are:
   benefits
 
 
-Speedup - Intel Compiler and MKL
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-By employing the standard Intel developer tools tech stack, a performance
+Speedup - Intel® Compiler and MKL
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+By employing the standard Intel® developer tools tech stack, a performance
 improvement over GNU tools was demonstrated:
 
-======== ================ ===================== ======================================
-Compiler Math Library     5MW_Land_BD_DLL_WTurb 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
-======== ================ ===================== ======================================
-GNU      LAPACK           2265 s (1.0x)         673 s (1.0x)
-Intel 17 LAPACK           1650 s (1.4x)         251 s (2.7x)
-Intel 17 MKL              1235 s (1.8x)         ---
-Intel 17 MKL Multitheaded 722 s (3.1x)          ---
-======== ================ ===================== ======================================
+========= ================ ===================== ======================================
+Compiler  Math Library     5MW_Land_BD_DLL_WTurb 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
+========= ================ ===================== ======================================
+GNU       LAPACK           2265 s (1.0x)         673 s (1.0x)
+Intel® 17 LAPACK           1650 s (1.4x)         251 s (2.7x)
+Intel® 17 MKL              1235 s (1.8x)         ---
+Intel® 17 MKL Multitheaded 722 s (3.1x)          ---
+========= ================ ===================== ======================================
 
 
 Speedup - OpenMP at FAST_Solver
@@ -127,12 +129,12 @@ A performance improvement was domenstrated by adding OpenMP directives to the
 parallelizing mesh mapping and calculation routines resulted in the following
 speedup:
 
-======== =============== ===================== ======================================
-Compiler Math Library    5MW_Land_BD_DLL_WTurb 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
-======== =============== ===================== ======================================
-Intel 17 MKL - 1 thread  1073 s (2.1x)         100 s (6.7x)
-Intel 17 MKL - 8 threads 597 s (3.8x)          ---
-======== =============== ===================== ======================================
+========= =============== ===================== ======================================
+Compiler  Math Library    5MW_Land_BD_DLL_WTurb 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
+========= =============== ===================== ======================================
+Intel® 17 MKL - 1 thread  1073 s (2.1x)         100 s (6.7x)
+Intel® 17 MKL - 8 threads 597 s (3.8x)          ---
+========= =============== ===================== ======================================
 
 
 Ongoing Work
@@ -142,10 +144,14 @@ areas:
 
 1. Implementing the outcomes from previous work throughout OpenFAST modules and
    glue codes
-2. Preparing OpenFAST for efficient execution on Intel's next generation
+2. Preparing OpenFAST for efficient execution on Intel®'s next generation
    platforms
 
 .. Year 2 stuff:
+
+.. Further, `Envision Energy USA, Ltd <http://www.envision-group.com/en/energy.html>`_
+.. has continuously contributed code and expertise in this area.
+
 
 .. Furthermore, NREL is optimizing OpenFAST for the future through profiling on
 .. Intel next generation platform (NGP) simulators.
@@ -156,7 +162,7 @@ areas:
 
 .. This is a standalone BeamDyn case of the NREL 5MW wind turbine. It simulates 30
 .. seconds with a timestep size of 0.002 seconds and executes in 24s on NREL's
-.. peregrine supercomputer.
+.. Peregrine supercomputer.
 
 .. BeamDyn dynamic solve
 
