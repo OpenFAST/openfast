@@ -6,6 +6,14 @@ computationally expensive use cases. This work is supported by Intel® through
 its designation of NREL as an
 `Intel® Parallel Computing Center (IPCC) <https://software.intel.com/en-us/ipcc>`_.
 
+After initial profiling and hotspot analysis, specific subroutines in the
+physics modules of OpenFAST were targeted for optimization. Among other
+takeaways, it was learned that the memory alignment of the derived data
+types could yield a significant increase in performance. Ultimately, tuning
+the Intel® tools to perform best on NREL's hardware and adding high level
+multithreading yielded a maximum 3.8x time-to-solution improvement for one
+of the benchmark cases.
+
 Approach
 --------
 The general mechanisms identified for performance improvements in OpenFAST are:
