@@ -1746,7 +1746,7 @@ SUBROUTINE CheckLinearizationInput(p, u, z, m, OtherState, ErrStat, ErrMsg)
       do k = 1,p%numBlades            
          do j = 1,p%numBladeNodes
             if (.not. OtherState%ValidPhi(j,k)) then
-               call SetErrSTat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(k))//&
+               call SetErrSTat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(j))//&
                       ": Current operating point does not contain a valid value of phi.",ErrStat,ErrMsg,RoutineName)
                return
             end if
@@ -1762,7 +1762,7 @@ SUBROUTINE CheckLinearizationInput(p, u, z, m, OtherState, ErrStat, ErrMsg)
             do j = 1,p%numBladeNodes
             
                if ( VelocityIsZero( u%Vy(j,k)+m%TnInd_op(j,k)) .and. VelocityIsZero( u%Vx(j,k)+m%AxInd_op(j,k) ) ) then
-                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(k))//&
+                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(j))//&
                       ": residual is undefined because u%Vy + TnInd_op = u%Vx + AxInd_op = 0.",ErrStat,ErrMsg,RoutineName)
                   return
                end if
@@ -1776,15 +1776,15 @@ SUBROUTINE CheckLinearizationInput(p, u, z, m, OtherState, ErrStat, ErrMsg)
             do j = 1,p%numBladeNodes
             
                if ( EqualRealNos(z%phi(j,k), 0.0_ReKi) ) then
-                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(k))//&
+                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(j))//&
                        ": residual is discontinuous or undefined because z%phi = 0.",ErrStat,ErrMsg,RoutineName)
                   return
                else if ( VelocityIsZero(u%Vy(j,k)) ) then
-                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(k))//&
+                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(j))//&
                        ": residual is discontinuous or undefined because u%Vy = 0.",ErrStat,ErrMsg,RoutineName)
                   return
                else if ( VelocityIsZero(u%Vx(j,k)) ) then
-                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(k))//&
+                  call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(j))//&
                        ": residual is discontinuous or undefined because u%Vx = 0.",ErrStat,ErrMsg,RoutineName)
                   return
                end if
@@ -1802,7 +1802,7 @@ SUBROUTINE CheckLinearizationInput(p, u, z, m, OtherState, ErrStat, ErrMsg)
          do j = 1,p%numBladeNodes
             
             if ( EqualRealNos( u%Vy(j,k), 0.0_ReKi ) .and. EqualRealNos( u%Vx(j,k), 0.0_ReKi ) ) then
-               call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(k))//&
+               call SetErrStat(ErrID_Fatal,"Blade"//trim(num2lstr(k))//', node '//trim(num2lstr(j))//&
                     ": residual is undefined because u%Vy = u%Vx = 0.",ErrStat,ErrMsg,RoutineName)
                return
             end if
