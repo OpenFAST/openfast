@@ -24,6 +24,13 @@ The general mechanisms identified for performance improvements in OpenFAST are:
 - Data type alignment allowing for SIMD vectorization
 - Multhithreading with OpenMP
 
+To establish a path forward with any of these options, OpenFAST was first
+profiled with Intel® VTune™ Amplifier which provides a clear breakdown of
+time spent in the simulation. Then, the optimization report generated from the
+Intel® Fortran compiler was analyzed to determine area which were not
+autovectorized. Finally, Intel® Advisor was used to highlight areas of the code
+which the compiler identified as potentially improved with multithreading.
+
 Test cases
 ----------
 Two OpenFAST test cases have been chosen to provide meaningful and
