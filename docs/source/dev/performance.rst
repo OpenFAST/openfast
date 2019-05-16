@@ -80,14 +80,21 @@ supercomputer.
 Profiling
 ---------
 The OpenFAST test cases were profiled with Intel® VTune™ Amplifier to
-identify performance hotspots. This tools provides a clear picture of
-bottlenecks in a simulation.
+identify performance hotspots. Being that the two test cases excercise
+difference portions of the OpenFAST software, different hotspots were
+identified. In all cases and environment settings, the majority of the
+CPU time was spent in `fast_solution` loop which is a high-level subroutine
+that coordinates the solution calculation from each physics module.
 
 LAPACK
 ~~~~~~
-In the offshore case, the LAPACK usage was found the be the bottleneck.
+In the offshore case, the LAPACK usage was identifed as a performance load.
+Within the `fast_solution` loop, the calls to the LAPACK function `dgetrs`
+consume 3.3% of the total CPU time.
 
-<SHOW VTUNE SCREENSHOT>
+.. figure:: images/offshore_lapack.png
+   :width: 100%
+   :align: center
 
 BeamDyn
 ~~~~~~~
