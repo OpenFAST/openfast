@@ -22,7 +22,7 @@ The general mechanisms identified for performance improvements in OpenFAST are:
 - Algorithmic improvements
 - Memory-access optimization enabling more efficient cache usage
 - Data type alignment allowing for SIMD vectorization
-- Multhithreading with OpenMP
+- Multithreading with OpenMP
 
 To establish a path forward with any of these options, OpenFAST was first
 profiled with Intel® VTune™ Amplifier which provides a clear breakdown of
@@ -50,7 +50,7 @@ The physics modules used in this case are:
 - ServoDyn
 
 This is a land based NREL 5-MW turbine simulation using BeamDyn as the
-structural module. It simulates 20 seconds with a timestep size of 0.001
+structural module. It simulates 20 seconds with a time step size of 0.001
 seconds and executes in `3m 55s <https://my.cdash.org/testDetails.php?test=40171217&build=1649048>`__
 on NREL's `Peregrine <https://www.nrel.gov/hpc/peregrine-system.html>`__
 supercomputer.
@@ -60,7 +60,7 @@ supercomputer.
 Download files `here <https://github.com/OpenFAST/r-test/tree/dev/glue-codes/openfast/5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth>`__.
 
 This is an offshore, fixed-bottom NREL 5-MW turbine simulation with the
-majority of the computational expense occuring in the HydroDyn wave-dynamics
+majority of the computational expense occurring in the HydroDyn wave-dynamics
 calculation.
 
 The physics modules used in this case are:
@@ -72,7 +72,7 @@ The physics modules used in this case are:
 - HydroDyn
 - SubDyn
 
-It simulates 60 seconds with a timestep size of 0.01 seconds and executes in
+It simulates 60 seconds with a time step size of 0.01 seconds and executes in
 `20m 27s <https://my.cdash.org/testDetails.php?test=40171219&build=1649048>`__
 on NREL's `Peregrine <https://www.nrel.gov/hpc/peregrine-system.html>`__
 supercomputer.
@@ -80,7 +80,7 @@ supercomputer.
 Profiling
 ---------
 The OpenFAST test cases were profiled with Intel® VTune™ Amplifier to
-identify performance hotspots. Being that the two test cases excercise
+identify performance hotspots. Being that the two test cases exercise
 difference portions of the OpenFAST software, different hotspots were
 identified. In all cases and environment settings, the majority of the
 CPU time was spent in `fast_solution` loop which is a high-level subroutine
@@ -88,7 +88,7 @@ that coordinates the solution calculation from each physics module.
 
 LAPACK
 ~~~~~~
-In the offshore case, the LAPACK usage was identifed as a performance load.
+In the offshore case, the LAPACK usage was identified as a performance load.
 Within the `fast_solution` loop, the calls to the LAPACK function `dgetrs`
 consume 3.3% of the total CPU time.
 
@@ -101,7 +101,7 @@ BeamDyn
 While BeamDyn provides a high-fidelity blade-response calculation, it is a
 computationally expensive module. Initial profiling highlighted the
 `bd_elementmatrixga2` subroutine, in particular, as a hotspot. However, initial
-attempts to improve performance in BeamDyn highlighted needs for alogirthmic
+attempts to improve performance in BeamDyn highlighted needs for algorithmic
 improvements and refinements to the module's data structures.
 
 Results
@@ -134,14 +134,14 @@ Speedup - Intel® Compiler and MKL
 By employing the standard Intel® developer tools tech stack, a performance
 improvement over GNU tools was demonstrated:
 
-========= ================ ===================== ======================================
-Compiler  Math Library     5MW_Land_BD_DLL_WTurb 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
-========= ================ ===================== ======================================
-GNU       LAPACK           2265 s (1.0x)         673 s (1.0x)
-Intel® 17 LAPACK           1650 s (1.4x)         251 s (2.7x)
-Intel® 17 MKL              1235 s (1.8x)         ---
-Intel® 17 MKL Multitheaded 722 s (3.1x)          ---
-========= ================ ===================== ======================================
+========= ================= ===================== ======================================
+Compiler  Math Library      5MW_Land_BD_DLL_WTurb 5MW_OC4Jckt_DLL_WTurb_WavesIrr_MGrowth
+========= ================= ===================== ======================================
+GNU       LAPACK            2265 s (1.0x)         673 s (1.0x)
+Intel® 17 LAPACK            1650 s (1.4x)         251 s (2.7x)
+Intel® 17 MKL               1235 s (1.8x)         ---
+Intel® 17 MKL Multithreaded 722 s (3.1x)          ---
+========= ================= ===================== ======================================
 
 
 Speedup - OpenMP at FAST_Solver
@@ -183,7 +183,7 @@ areas:
 .. Download files `here <https://github.com/OpenFAST/r-test/tree/dev/modules/beamdyn/bd_5MW_dynamic>`__.
 
 .. This is a standalone BeamDyn case of the NREL 5MW wind turbine. It simulates 30
-.. seconds with a timestep size of 0.002 seconds and executes in 24s on NREL's
+.. seconds with a time step size of 0.002 seconds and executes in 24s on NREL's
 .. Peregrine supercomputer.
 
 .. BeamDyn dynamic solve
