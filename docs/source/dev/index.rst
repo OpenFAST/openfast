@@ -36,10 +36,11 @@ For other questions regarding OpenFAST, please contact
 `Mike Sprague <mailto:michael.a.sprague@nrel.gov>`_.
 
 .. toctree::
-   :maxdepth: 1
+    :maxdepth: 1
 
-   dev_phil.rst
-   github_workflow.rst
-   build_doc.rst
-   debugging.rst
-   doxy_doc.rst
+    dev_phil.rst
+    github_workflow.rst
+    build_doc.rst
+    debugging.rst
+    doxy_doc.rst
+    performance.rst
