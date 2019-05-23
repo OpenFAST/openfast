@@ -1,7 +1,7 @@
 .. _install_cmake_windows:
 
-Building OpenFAST with CMake on Windows
-=======================================
+Building OpenFAST on Windows with CMake and Visual Studio
+=========================================================
 
 We describe here how to install OpenFAST (or any of its modules) using the `CMake <https://cmake.org>`_ 
 build system on Windows systems. Separate CMake documentation is 
@@ -76,7 +76,7 @@ CMake options
 Below is a list of current CMake options including their default settings (which will effect, e.g., the targets in a resulting ``Makefile``.  
 
 -  ``BUILD_DOCUMENTATION`` -  Build documentation (Default: OFF)
--  ``BUILD_FAST_CPP_API`` - Enable building OpenFAST - C++ API (Default: OFF)
+-  ``BUILD_OPENFAST_CPP_API`` - Enable building OpenFAST - C++ API (Default: OFF)
 -  ``BUILD_SHARED_LIBS`` - Enable building shared libraries (Default: OFF)
 -  ``BUILD_TESTING`` - Build the testing tree (Default: OFF)
 -  ``CMAKE_BUILD_TYPE`` - Choose the build type: Debug Release (Default: Release)
