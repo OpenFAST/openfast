@@ -305,7 +305,7 @@ CONTAINS
       CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
 
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
 
       !............................................................................................................................
       ! Set error status/message;
@@ -5286,7 +5286,7 @@ SUBROUTINE InitBlDefl ( p, InputFileData, InitQF1, InitQF2, InitQE1, ErrStat, Er
    REAL(ReKi),              INTENT(OUT) :: InitQF2(p%NumBl)                        !< Initial flap deflection for mode 2 (output).
 
    INTEGER(IntKi),          INTENT(OUT) :: ErrStat                                 !< Error status
-   CHARACTER(1024),         INTENT(OUT) :: ErrMsg                                  !< Error message when ErrStat =/ ErrID_None
+   CHARACTER(ErrMsgLen),    INTENT(OUT) :: ErrMsg                                  !< Error message when ErrStat =/ ErrID_None
 
 
       ! Local variables:
@@ -8564,7 +8564,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
    INTEGER(IntKi)                               :: NodeNum     ! node number
    INTEGER(IntKi)                               :: J, K        ! loop counters
    INTEGER(IntKi)                               :: ErrStat2    ! The error identifier (ErrStat)
-   CHARACTER(1024)                              :: ErrMsg2     ! The error message (ErrMsg)
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2     ! The error message (ErrMsg)
    
    
       ! initialize variables:
@@ -9635,7 +9635,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL ED_DestroyContState( xdot,     ErrStat3, ErrMsg3 )
@@ -9813,7 +9813,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL ED_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
@@ -9976,7 +9976,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL ED_DestroyContState( xdot_pred,  ErrStat3, ErrMsg3 )

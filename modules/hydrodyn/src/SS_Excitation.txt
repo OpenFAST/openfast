@@ -21,8 +21,8 @@ typedef   ^                    ^                   INTEGER         NStepWave   -
 typedef   ^                 	 ^                   SiKi	          WaveElev0  {:} - -   "Wave elevation time history at origin" m
 typedef   ^                 	 ^                   SiKi	          WaveTime   {:} - -   "Times where wave elevation is known" s
 
-typedef   ^                    InitOutputType      CHARACTER(10)   WriteOutputHdr  {7} - -  "Header of the output" -
-typedef   ^                    InitOutputType      CHARACTER(10)   WriteOutputUnt  {7} - -  "Units of the output" -
+typedef   ^                    InitOutputType      CHARACTER(ChanLen)   WriteOutputHdr  {7} - -  "Header of the output" -
+typedef   ^                    InitOutputType      CHARACTER(ChanLen)   WriteOutputUnt  {7} - -  "Units of the output" -
                                
 typedef   ^                    ContinuousStateType ReKi            x             {:} - -  "Continuous States" -
 

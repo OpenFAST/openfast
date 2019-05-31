@@ -314,7 +314,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                                        
                                                   
       INTEGER(IntKi)                         :: ErrStat2                            ! local error status
-      CHARACTER(1024)                        :: ErrMsg2                             ! local error message
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2                             ! local error message
       CHARACTER(*), PARAMETER                :: RoutineName = 'HydroDyn_Init'
    
 

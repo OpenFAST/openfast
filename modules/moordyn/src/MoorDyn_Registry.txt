@@ -26,7 +26,7 @@ typedef   ^           ^                ReKi               DTIC           -    - 
 typedef   ^           ^                ReKi               TMaxIC         -    120   -   "maximum time to allow for getting converged ICs"              "[s]"
 typedef   ^           ^                ReKi               CdScaleIC      -    1     -   "factor to scale drag coefficients by during dynamic relaxation"              "[]"
 typedef   ^           ^                ReKi               threshIC       -    0.01  -   "convergence tolerance for ICs  (0.01 means 1%)"              "[]"
-typedef   ^           ^                CHARACTER(10)      OutList        {:}   ""   -   "string containing list of output channels requested in input file"
+typedef   ^           ^                CHARACTER(ChanLen)      OutList        {:}   ""   -   "string containing list of output channels requested in input file"
 
 
 # ====================================== Internal data types ========================================================================

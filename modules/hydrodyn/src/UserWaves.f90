@@ -64,7 +64,7 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
    INTEGER(IntKi)                                  :: NumHeaderLines       !< Number of header lines in the file.
    INTEGER(IntKi)                                  :: WaveElevUnit         !< Unit number for the ElevFileName
    INTEGER(IntKi)                                  :: ErrStatTmp           !< Temporarary error status for procesing
-   CHARACTER(1024)                                 :: ErrMsgTmp            !< Temporary error message for processing
+   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp            !< Temporary error message for processing
    CHARACTER(*), PARAMETER                         :: RoutineName = 'WaveElev_ReadFile'
 
 
@@ -526,7 +526,7 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ! Temporary error handling variables
    INTEGER(IntKi)                                  :: ErrStatTmp           !< Temporarary error status for procesing
-   CHARACTER(1024)                                 :: ErrMsgTmp            !< Temporary error message for processing
+   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp            !< Temporary error message for processing
    CHARACTER(*),  PARAMETER                        :: RoutineName =  'UserWaveElevations_Init'
 
       ! Data verification: WaveDT in the HD file and in the .Elev file may be slightly different.  We will allow 
@@ -690,7 +690,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
   
       ! Temporary error handling variables
    INTEGER(IntKi)                :: ErrStatTmp                    ! Temporarary error status for procesing
-   CHARACTER(1024)               :: ErrMsgTmp                     ! Temporary error message for processing
+   CHARACTER(ErrMsgLen)          :: ErrMsgTmp                     ! Temporary error message for processing
    LOGICAL                       :: isNumeric
    CHARACTER(*), PARAMETER       :: RoutineName = 'UserWaves_Init'
    CHARACTER(5)                               :: extension(7)     
