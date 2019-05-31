@@ -11699,7 +11699,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
          if (.not. EqualRealNos( u%BlPitchCom(1), u%BlPitchCom(k) ) ) then
             call SetErrStat(ErrID_Info,"Operating point of collective pitch extended input is invalid because "// &
                      "the commanded blade pitch angles are not the same for each blade.", ErrStat, ErrMsg, RoutineName)
-            return
+            exit
          end if      
       end do      
       
