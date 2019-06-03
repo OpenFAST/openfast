@@ -564,11 +564,9 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     ! Initialization output data      
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-   
-      ! Local Variables
-   INTEGER                      :: J                                               ! Generic index
-   INTEGER(IntKi)                :: ErrStatTmp                    ! Temporary error status
+   ! Local Variables
+   INTEGER                      :: I, J                          ! Generic index
+   INTEGER(IntKi)               :: ErrStatTmp                    ! Temporary error status
    
       ! Initialize ErrStat
          
@@ -632,6 +630,24 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%WaveAcc    = 0.0
       InitOut%WaveDirArr = 0.0
       
+      ! For creating animations of the sea surface, the WaveElevXY array is passed in with a series of x,y coordinates
+      ! (index 1).  The second index corresponds to the number of points passed in.  A two dimensional time series
+      ! is created with the first index corresponding to the timestep, and second index corresponding to the second
+      ! index of the WaveElevXY array.
+      IF ( ALLOCATED(InitInp%WaveElevXY)) THEN
+         ALLOCATE ( InitOut%WaveElevSeries (0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)) , STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) THEN
+            CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevSeries.',ErrStat,ErrMsg,'VariousWaves_Init')
+            RETURN
+         END IF
+          ! Calculate the wave elevation at all points requested in the array WaveElevXY
+         DO I = 0,InitOut%NStepWave
+             DO J = 1,SIZE(InitInp%WaveElevXY, DIM=2)
+                 InitOut%WaveElevSeries(I,J) = 0.0_ReKi
+             ENDDO
+         ENDDO
+      ENDIF
+
       
       ! Add the current velocities to the wave velocities:
 
@@ -1173,18 +1189,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END IF
 
 
-         ! For creating animations of the sea surface, the WaveElevXY array is passed in with a series of x,y coordinates
-         ! (index 1).  The second index corresponds to the number of points passed in.  A two dimensional time series
-         ! is created with the first index corresponding to the timestep, and second index corresponding to the second
-         ! index of the WaveElevXY array.
-      IF ( ALLOCATED(InitInp%WaveElevXY)) THEN
-         ALLOCATE ( InitOut%WaveElevSeries (0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)) , STAT=ErrStatTmp )
-         IF (ErrStatTmp /= 0) THEN
-            CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevSeries.',ErrStat,ErrMsg,'VariousWaves_Init')
-            CALL CleanUp()
-            RETURN
-         END IF
-      ENDIF
 
       ! We now need to establish the nodeInWater flag values for all the simulation node for all timesteps, this is an extension which is needed to
       ! support user input wave data.  TODO:  THIS ASSUMES NO WAVE STRETCHING!!!!!!!! GJH 18 Mar 2015
@@ -1788,8 +1792,18 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END DO                   ! J - All points where the incident wave elevations can be output
 
 
-         ! Calculate the wave elevation at all points requested in the array WaveElevXY
-      IF ( ALLOCATED(InitInp%WaveElevXY) ) THEN
+      ! For creating animations of the sea surface, the WaveElevXY array is passed in with a series of x,y coordinates
+      ! (index 1).  The second index corresponds to the number of points passed in.  A two dimensional time series
+      ! is created with the first index corresponding to the timestep, and second index corresponding to the second
+      ! index of the WaveElevXY array.
+      IF ( ALLOCATED(InitInp%WaveElevXY)) THEN
+         ALLOCATE ( InitOut%WaveElevSeries (0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)) , STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) THEN
+            CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevSeries.',ErrStat,ErrMsg,'VariousWaves_Init')
+            CALL CleanUp()
+            RETURN
+         END IF
+          ! Calculate the wave elevation at all points requested in the array WaveElevXY
          DO J = 1,SIZE(InitInp%WaveElevXY, DIM=2)
                ! This subroutine call applies the FFT at the correct location.
             CALL WaveElevTimeSeriesAtXY( InitInp%WaveElevXY(1,J),  InitInp%WaveElevXY(2,J),   InitOut%WaveElevSeries(0:InitOut%NStepWave,J), ErrStatTmp, ErrMsgTmp )
