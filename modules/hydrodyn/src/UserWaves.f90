@@ -940,8 +940,8 @@ CONTAINS
    FUNCTION ExtractFields(FU, s, n) result(OK)
       ! Arguments
       INTEGER, INTENT(IN)       :: FU       !< Unit name
-      CHARACTER(*), INTENT(OUT) :: s(n)     !< Fields
       INTEGER, INTENT(IN)       :: n        !< Number of fields
+      CHARACTER(*), INTENT(OUT) :: s(n)     !< Fields
       LOGICAL                   :: OK
       ! Local var
       CHARACTER(2048)           :: TextLine          !< One line of text read from the file
