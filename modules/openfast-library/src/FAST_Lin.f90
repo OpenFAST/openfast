@@ -480,6 +480,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
    
    ErrStat = ErrID_None
    ErrMsg = ""
+   Un = -1
 
    
    LinRootName = TRIM(p_FAST%OutFileRoot)//'.'//trim(num2lstr(m_FAST%NextLinTimeIndx))
@@ -842,10 +843,13 @@ contains
       if (allocated(dYdz)) deallocate(dYdz)
       if (allocated(dZdz)) deallocate(dZdz)
       if (allocated(dZdu)) deallocate(dZdu)
-      if (allocated(ipiv)) deallocate(ipiv)     
+      if (allocated(ipiv)) deallocate(ipiv)
       
       if (allocated(dUdu)) deallocate(dUdu)
       if (allocated(dUdy)) deallocate(dUdy)
+      
+      if (Un > 0) close(Un)
+
    end subroutine cleanup
 END SUBROUTINE FAST_Linearize_OP   
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -997,7 +1001,7 @@ END SUBROUTINE WrLinFile_txt_Head
 !> Routine that writes the A,B,C,D matrices from linearization to a text file. 
 SUBROUTINE WrLinFile_txt_End(Un, p_FAST, LinData)
 
-   INTEGER(IntKi),           INTENT(IN   ) :: Un                  !< unit number
+   INTEGER(IntKi),           INTENT(INOUT) :: Un                  !< unit number
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< parameters
    TYPE(FAST_LinType),       INTENT(IN   ) :: LinData             !< Linearization data for individual module or glue (coupled system)
    
@@ -1022,7 +1026,8 @@ SUBROUTINE WrLinFile_txt_End(Un, p_FAST, LinData)
    if (allocated(LinData%StateRel_x))    call WrPartialMatrix( LinData%StateRel_x,    Un, p_FAST%OutFmt, 'State_Rel_x' )
    if (allocated(LinData%StateRel_xdot)) call WrPartialMatrix( LinData%StateRel_xdot, Un, p_FAST%OutFmt, 'State_Rel_xdot' )
 
-   close(un)
+   close(Un)
+   Un = -1
    
 END SUBROUTINE WrLinFile_txt_End   
 !----------------------------------------------------------------------------------------------------------------------------------
