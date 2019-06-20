@@ -71,12 +71,12 @@ endif()
 ########################################################################
 # Build rules for OpenFAST Registry
 #
-add_subdirectory(modules-local/openfast-registry)
+add_subdirectory(modules/openfast-registry)
 
 ########################################################################
-# OpenFAST Core modules
+# OpenFAST modules
 #
-set(OPENFAST_MODULES_LOCAL
+set(OPENFAST_MODULES
   nwtc-library
   inflowwind
   aerodyn
@@ -93,12 +93,6 @@ set(OPENFAST_MODULES_LOCAL
   turbsim
   openfast-library
   version
-  )
-
-########################################################################
-# OpenFAST External modules
-#
-set(OPENFAST_MODULES_EXTERNAL
   feamooring
   moordyn
   icedyn
@@ -107,20 +101,15 @@ set(OPENFAST_MODULES_EXTERNAL
   )
 
 set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
-set_registry_includes("modules-local" ${OPENFAST_MODULES_LOCAL})
-set_registry_includes("modules-ext" ${OPENFAST_MODULES_EXTERNAL})
+set_registry_includes("modules" ${OPENFAST_MODULES})
 # Fix non-standard path addition to OPENFAST_REGISTRY_INCLUDES in icefloe module
 set(OPENFAST_REGISTRY_INCLUDES
-  ${OPENFAST_REGISTRY_INCLUDES} -I ${CMAKE_SOURCE_DIR}/modules-ext/icefloe/src/interfaces/FAST/
+  ${OPENFAST_REGISTRY_INCLUDES} -I ${CMAKE_SOURCE_DIR}/modules/icefloe/src/interfaces/FAST/
   CACHE INTERNAL "Registry includes paths")
 
-foreach(IDIR IN ITEMS ${OPENFAST_MODULES_LOCAL})
-  add_subdirectory("${CMAKE_SOURCE_DIR}/modules-local/${IDIR}")
-endforeach(IDIR IN ITEMS ${OPENFAST_MODULES_LOCAL})
-
-foreach(IDIR IN ITEMS ${OPENFAST_MODULES_EXTERNAL})
-  add_subdirectory("${CMAKE_SOURCE_DIR}/modules-ext/${IDIR}")
-endforeach(IDIR IN ITEMS ${OPENFAST_MODULES_EXTERNAL})
+foreach(IDIR IN ITEMS ${OPENFAST_MODULES})
+  add_subdirectory("${CMAKE_SOURCE_DIR}/modules/${IDIR}")
+endforeach(IDIR IN ITEMS ${OPENFAST_MODULES})
 
 add_subdirectory(glue-codes)
 
