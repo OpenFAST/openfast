@@ -121,7 +121,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: found, CreateNewProp
    INTEGER(IntKi)                :: ErrStat2
-   CHARACTER(1024)               :: ErrMsg2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
    
    
    ErrStat = ErrID_None
@@ -552,7 +552,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    
    
    INTEGER(IntKi)           :: ErrStat2
-   CHARACTER(1024)          :: ErrMsg2
+   CHARACTER(ErrMsgLen)     :: ErrMsg2
 
    
       ! for current application

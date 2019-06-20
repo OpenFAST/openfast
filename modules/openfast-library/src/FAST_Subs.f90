@@ -303,6 +303,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       if (allocated(InitOutData_ED%LinNames_u)) call move_alloc(InitOutData_ED%LinNames_u,y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%Names_u)
       if (allocated(InitOutData_ED%RotFrame_y)) call move_alloc(InitOutData_ED%RotFrame_y,y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%RotFrame_y)
       if (allocated(InitOutData_ED%RotFrame_x)) call move_alloc(InitOutData_ED%RotFrame_x,y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%RotFrame_x)
+      if (allocated(InitOutData_ED%DerivOrder_x)) call move_alloc(InitOutData_ED%DerivOrder_x,y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%DerivOrder_x)
       if (allocated(InitOutData_ED%RotFrame_u)) call move_alloc(InitOutData_ED%RotFrame_u,y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%RotFrame_u)
       if (allocated(InitOutData_ED%IsLoad_u  )) call move_alloc(InitOutData_ED%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_ED)%Instance(1)%IsLoad_u  )
          
@@ -414,6 +415,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (allocated(InitOutData_BD(k)%RotFrame_x)) call move_alloc(InitOutData_BD(k)%RotFrame_x, y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%RotFrame_x )
          if (allocated(InitOutData_BD(k)%RotFrame_u)) call move_alloc(InitOutData_BD(k)%RotFrame_u, y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%RotFrame_u )
          if (allocated(InitOutData_BD(k)%IsLoad_u  )) call move_alloc(InitOutData_BD(k)%IsLoad_u  , y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%IsLoad_u   )
+         if (allocated(InitOutData_BD(k)%DerivOrder_x  )) call move_alloc(InitOutData_BD(k)%DerivOrder_x  , y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%DerivOrder_x   )
          
          if (allocated(InitOutData_BD(k)%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_BD)%Instance(k)%NumOutputs = size(InitOutData_BD(k)%WriteOutputHdr)
          
@@ -803,7 +805,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_HD%OutRootName   = p_FAST%OutFileRoot
       InitInData_HD%TMax          = p_FAST%TMax
       InitInData_HD%hasIce        = p_FAST%CompIce /= Module_None
-            
+      InitInData_HD%Linearize     = p_FAST%Linearize      
       
          ! if wave field needs an offset, modify these values (added at request of SOWFA developers):
       InitInData_HD%PtfmLocationX = p_FAST%TurbinePos(1) 
@@ -816,7 +818,23 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_HD) = .TRUE.
       CALL SetModuleSubstepTime(Module_HD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            
+         
+      allocate( y_FAST%Lin%Modules(MODULE_HD)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(HD).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(InitOutData_HD%LinNames_y)) call move_alloc(InitOutData_HD%LinNames_y,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_y )
+         if (allocated(InitOutData_HD%LinNames_u)) call move_alloc(InitOutData_HD%LinNames_u,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_u )
+         if (allocated(InitOutData_HD%LinNames_x)) call move_alloc(InitOutData_HD%LinNames_x, y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%Names_x )
+! LIN-TODO: Determine if we need to create this data even though we don't have rotating frames in HD
+         !if (allocated(InitOutData_HD%RotFrame_y)) call move_alloc(InitOutData_HD%RotFrame_y,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%RotFrame_y )
+         !if (allocated(InitOutData_HD%RotFrame_u)) call move_alloc(InitOutData_HD%RotFrame_u,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%RotFrame_u )
+         if (allocated(InitOutData_HD%DerivOrder_x)) call move_alloc(InitOutData_HD%DerivOrder_x,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%DerivOrder_x)
+         if (allocated(InitOutData_HD%IsLoad_u  )) call move_alloc(InitOutData_HD%IsLoad_u  ,y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%IsLoad_u   )
+
+         if (allocated(InitOutData_HD%WriteOutputHdr)) y_FAST%Lin%Modules(MODULE_HD)%Instance(1)%NumOutputs = size(InitOutData_HD%WriteOutputHdr)
+      end if
+     
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -938,7 +956,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_MAP%summary_file_name =  TRIM(p_FAST%OutFileRoot)//'.MAP.sum'        ! Output file name 
       InitInData_MAP%depth             = -InitOutData_HD%WtrDpth    ! This need to be set according to the water depth in HydroDyn
             
-
+      InitInData_MAP%LinInitInp%Linearize = p_FAST%Linearize   
       
       CALL MAP_Init( InitInData_MAP, MAPp%Input(1), MAPp%p,  MAPp%x(STATE_CURR), MAPp%xd(STATE_CURR), MAPp%z(STATE_CURR), MAPp%OtherSt, &
                       MAPp%y, p_FAST%dt_module( MODULE_MAP ), InitOutData_MAP, ErrStat2, ErrMsg2 )
@@ -947,7 +965,21 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       p_FAST%ModuleInitialized(Module_MAP) = .TRUE.
       CALL SetModuleSubstepTime(Module_MAP, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-                  
+         
+      allocate( y_FAST%Lin%Modules(Module_MAP)%Instance(1), stat=ErrStat2)
+      if (ErrStat2 /= 0 ) then
+         call SetErrStat(ErrID_Fatal, "Error allocating Lin%Modules(MAP).", ErrStat, ErrMsg, RoutineName )
+      else
+         if (allocated(InitOutData_MAP%LinInitOut%LinNames_y)) call move_alloc(InitOutData_MAP%LinInitOut%LinNames_y,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%Names_y )
+         if (allocated(InitOutData_MAP%LinInitOut%LinNames_u)) call move_alloc(InitOutData_MAP%LinInitOut%LinNames_u,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%Names_u )
+! LIN-TODO: Determine if we need to create this data even though we don't have rotating frames in MAP
+         !if (allocated(InitOutData_MAP%LinInitOut%RotFrame_y)) call move_alloc(InitOutData_MAP%LinInitOut%RotFrame_y,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%RotFrame_y )
+         !if (allocated(InitOutData_MAP%LinInitOut%RotFrame_u)) call move_alloc(InitOutData_MAP%LinInitOut%RotFrame_u,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%RotFrame_u )
+         if (allocated(InitOutData_MAP%LinInitOut%IsLoad_u  )) call move_alloc(InitOutData_MAP%LinInitOut%IsLoad_u  ,y_FAST%Lin%Modules(Module_MAP)%Instance(1)%IsLoad_u   )
+
+         if (allocated(InitOutData_MAP%WriteOutputHdr)) y_FAST%Lin%Modules(Module_MAP)%Instance(1)%NumOutputs = size(InitOutData_MAP%WriteOutputHdr)
+      end if
+      
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1491,7 +1523,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
    CHARACTER(*), PARAMETER      :: RoutineName = "FAST_Init"
    
    INTEGER(IntKi)               :: ErrStat2
-   CHARACTER(1024)              :: ErrMsg2
+   CHARACTER(ErrMsgLen)         :: ErrMsg2
    
       ! Initialize some variables
    ErrStat = ErrID_None
@@ -1773,9 +1805,8 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
       ! now, make sure we haven't asked for any modules that we can't yet linearize:
       if (p%CompInflow == MODULE_OpFM) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the OpenFOAM coupling.',ErrStat, ErrMsg, RoutineName)
       if (p%CompAero == MODULE_AD14) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the AeroDyn v14 module.',ErrStat, ErrMsg, RoutineName)
-      if (p%CompHydro == MODULE_HD) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for the HydroDyn module.',ErrStat, ErrMsg, RoutineName)
       if (p%CompSub /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the substructure modules.',ErrStat, ErrMsg, RoutineName)
-      if (p%CompMooring /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the mooring modules.',ErrStat, ErrMsg, RoutineName)
+      !if (p%CompMooring /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the mooring modules.',ErrStat, ErrMsg, RoutineName)
       if (p%CompIce /= MODULE_None) call SetErrStat(ErrID_Fatal,'Linearization is not implemented for any of the ice loading modules.',ErrStat, ErrMsg, RoutineName)
                   
    end if
@@ -5787,7 +5818,7 @@ SUBROUTINE FAST_Linearize_Tary(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
       ! local variables
    INTEGER(IntKi)                          :: i_turb, NumTurbines
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_Tary' 
    
    
@@ -5820,7 +5851,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
    REAL(DbKi)                              :: t_global            ! current simulation time
    REAL(DbKi)                              :: next_lin_time       ! next simulation time where linearization analysis should be performed
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(MaxWrScrLen)                  :: BlankLine
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_T' 
 
@@ -5934,7 +5965,7 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    INTEGER(IntKi)                          :: ErrorLevel
                                           
    INTEGER(IntKi)                          :: ErrStat2            ! Error status
-   CHARACTER(1024)                         :: ErrMsg2             ! Error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! Error message
    CHARACTER(1224)                         :: SimMsg              ! optional message to print about where the error took place in the simulation
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'ExitThisProgram'       
@@ -6359,7 +6390,7 @@ SUBROUTINE FAST_CreateCheckpoint_Tary(t_initial, n_t_global, Turbine, Checkpoint
    INTEGER(IntKi)                          :: i_turb
    INTEGER                                 :: Unit
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_CreateCheckpoint_Tary' 
    
    
@@ -6410,7 +6441,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
    INTEGER(IntKi)                          :: unOut               ! unit number for output file 
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_CreateCheckpoint_T' 
   
    CHARACTER(1024)                         :: FileName            ! Name of the (output) checkpoint file
@@ -6538,7 +6569,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, Check
    INTEGER(IntKi)                          :: i_turb
    INTEGER                                 :: Unit
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_RestoreFromCheckpoint_Tary' 
    
    
@@ -6589,7 +6620,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    INTEGER(IntKi)                          :: unIn                ! unit number for input file 
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_RestoreFromCheckpoint_T' 
 
    CHARACTER(1024)                         :: FileName            ! Name of the (input) checkpoint file

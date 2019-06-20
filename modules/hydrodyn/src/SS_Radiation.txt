@@ -14,8 +14,8 @@
 typedef SS_Radiation/SS_Rad   InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file" -
 typedef   ^                 	^           ReKi	    DOFs      {1}{6} - -   "Vector with enable platf. DOFs" "m/s or rad/s"
 
-typedef   ^              InitOutputType CHARACTER(10)    WriteOutputHdr  {7} - -  "Header of the output" -
-typedef   ^              InitOutputType CHARACTER(10)    WriteOutputUnt  {7} - -  "Units of the output" -
+typedef   ^              InitOutputType CHARACTER(ChanLen)    WriteOutputHdr  {7} - -  "Header of the output" -
+typedef   ^              InitOutputType CHARACTER(ChanLen)    WriteOutputUnt  {7} - -  "Units of the output" -
 
 typedef   ^              ContinuousStateType R8Ki     x             {:} - -  "Continuous States" -
 

@@ -275,6 +275,7 @@ typedef	^	FAST_LinType	Logical	RotFrame_u	{:}	-	-	"Whether corresponding input i
 typedef	^	FAST_LinType	Logical	RotFrame_y	{:}	-	-	"Whether corresponding output is in rotating frame"
 typedef	^	FAST_LinType	Logical	RotFrame_x	{:}	-	-	"Whether corresponding continuous state is in rotating frame"
 typedef	^	FAST_LinType	Logical	RotFrame_z	{:}	-	-	"Whether corresponding constraint state is in rotating frame"
+typedef	^	FAST_LinType	IntKi 	DerivOrder_x	{:}	-	-	"Derivative order for continuous states"
 typedef	^	FAST_LinType	IntKi	SizeLin	{3}	-	-	"sizes of (1) the module's inputs,  (2) the module's linearized outputs, and (3) the module's continuous states"	-
 typedef	^	FAST_LinType	IntKi	LinStartIndx	{3}	-	-	"the starting index in combined matrices of (1) the module's inputs, (2) the module's linearized outputs, and (3) the module's continuous states"	-
 typedef	^	FAST_LinType	IntKi	NumOutputs	-	-	-	"number of WriteOutputs in each linearized module"	-

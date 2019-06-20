@@ -289,7 +289,7 @@ CONTAINS
       CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
 
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
 
       !............................................................................................................................
       ! Set error status/message;
@@ -403,7 +403,7 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrSt
       REAL(ReKi)                                        :: Pnxt          ! Pitch of the next ice tooth (m)
       
       INTEGER(IntKi)                                    :: ErrStat2
-      CHARACTER(1024)                                   :: ErrMsg2
+      CHARACTER(ErrMsgLen)                              :: ErrMsg2
       
        ! Initialize ErrStat
 
@@ -1128,7 +1128,7 @@ SUBROUTINE IceD_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
       ! Local variables
 
    INTEGER                                          :: UnIn                 ! Unit number for the input file
-   CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file
+   CHARACTER(ErrMsgLen)                             :: FileName             ! Name of HydroDyn input file
    
    INTEGER                                          :: UnEc                 ! Unit number for the echo file
    LOGICAL, PARAMETER                               :: Echo = .FALSE.       ! echo file for debugging
