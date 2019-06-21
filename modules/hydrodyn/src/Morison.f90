@@ -4558,7 +4558,8 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          qdotdot2(1)    =       elementWaterState *u%DistribMesh%TranslationAcc(1,J)
          qdotdot2(2)    =       elementWaterState *u%DistribMesh%TranslationAcc(2,J)
          qdotdot2(3)    =       elementWaterState *u%DistribMesh%TranslationAcc(3,J)
-         m%D_F_AM_M(:,J)  = -matmul( p%D_AM_M (:,:,J) , qdotdot2 )  !bjj: these lines take up a lot of time. are the matrices sparse?
+            ! calculated the added mass forces (moments are zero)
+         m%D_F_AM_M(1:3,J)  = -matmul( p%D_AM_M (:,:,J) , qdotdot2 )  !bjj: these lines take up a lot of time. are the matrices sparse?
 
          DO I=1,6
             IF (I < 4 ) THEN
