@@ -389,6 +389,11 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry( y%BlPitchCom, p%NumBl, 'BlPitchCom', ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
+      
+   CALL AllocAry( y%BlFlapCom, p%NumBl, 'BlFlapCom', ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
+      y%BlFlapCom = 0.0
 
       ! tip brakes - this may be added back, later, so we'll keep these here for now
    CALL AllocAry( y%TBDrCon, p%NumBl, 'TBDrCon', ErrStat2, ErrMsg2 )
@@ -935,16 +940,23 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       ELSE
          m%dll_data%PrevBlPitch(1:p%NumBl) = m%dll_data%BlPitchCom ! used for linear ramp of delayed signal
          m%LastTimeCalled = t
+         
          CALL BladedInterface_CalcOutput( t, u, p, m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
+      
+       y%BlFlapCom(1:p%NumBl) = m%dll_data%BlFlapCom ! bem: set servoDyn output for flap deflection angle
       
       IF (ALLOCATED(y%SuperController)) THEN
          y%SuperController = m%dll_data%SCoutput
       END IF
       
+     
+   
+ !  ELSE
+         !y%BlFlapCom(1:p%NumBl) = 0.0 !bem: in case a non bladed control file is used, set flap deflection to zero, just in case
    END IF      
-      
+    
    !...............................................................................................................................   
    ! Compute the outputs
    !...............................................................................................................................   
