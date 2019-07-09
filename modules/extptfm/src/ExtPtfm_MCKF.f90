@@ -333,7 +333,7 @@ SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
    p%BMat(n2+1:nX,13:18  ) = -p%M21(1:n2,1:6)
    ! C matrix
    p%CMat(1:nY,1:n2   ) = matmul(p%M12,p%K22)
-   p%CMat(1:nY,n2+1:nX) = matmul(p%M12,p%C22)
+   p%CMat(1:nY,n2+1:nX) = matmul(p%M12,p%C22) - p%C12
    ! D matrix
    p%DMat(1:nY,1:6   ) = -p%K11
    p%DMat(1:nY,7:12  ) = -p%C11 + matmul(p%M12,p%C21)
