@@ -714,6 +714,9 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
 !> * Record 108: Yaw brake torque demand; ignored in ServoDyn
 
 !> * Records 120-129: User-defined variables 1-10; ignored in ServoDyn
+   dll_data%BlFlapCom(1)       = dll_data%avrSWAP(120)
+   dll_data%BlFlapCom(2)       = dll_data%avrSWAP(121)
+   dll_data%BlFlapCom(3)       = dll_data%avrSWAP(122)
 !> * Records 130-142: Reserved
 
 !> * L1: variables for logging output; not yet implemented in ServoDyn
