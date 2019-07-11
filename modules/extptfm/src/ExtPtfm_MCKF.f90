@@ -226,8 +226,8 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
       enddo
       ! LinNames_x
       do I=1,p%nCB; 
-          InitOut%LinNames_x(I)       = 'Mode '//trim(Num2LStr(p%ActiveDOFList(I)))//' displacement, -'; ! TODO  TODO IDOF
-          InitOut%LinNames_x(I+p%nCB) = 'Mode '//trim(Num2LStr(p%ActiveDOFList(I)))//' velocity, -';
+          InitOut%LinNames_x(I)       = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' displacement, -'; ! TODO  TODO IDOF
+          InitOut%LinNames_x(I+p%nCB) = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' velocity, -';
       enddo
       ! 
       InitOut%RotFrame_x = .false. ! note that meshes are in the global, not rotating frame
@@ -729,9 +729,9 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%AllOuts(ID_InpMz) = m%F_at_t(6)
    !y%WriteOutput(ID_WaveElev) = .. ! TODO
    do i=1,p%nCB
-      m%AllOuts(ID_QStart + 0*p%nCBFull -1 + p%ActiveDOFList(I)) = x%qm   (I)    ! CBQ  - DOF Positions
-      m%AllOuts(ID_QStart + 1*p%nCBFull -1 + p%ActiveDOFList(I)) = x%qmdot(I)    ! CBQD - DOF Velocities
-      m%AllOuts(ID_QStart + 2*p%nCBFull -1 + p%ActiveDOFList(I)) = m%F_at_t(6+I) ! CBF  - DOF Forces
+      m%AllOuts(ID_QStart + 0*p%nCBFull -1 + p%ActiveCBDOF(I)) = x%qm   (I)    ! CBQ  - DOF Positions
+      m%AllOuts(ID_QStart + 1*p%nCBFull -1 + p%ActiveCBDOF(I)) = x%qmdot(I)    ! CBQD - DOF Velocities
+      m%AllOuts(ID_QStart + 2*p%nCBFull -1 + p%ActiveCBDOF(I)) = m%F_at_t(6+I) ! CBF  - DOF Forces
    enddo
    ! --- Selected output channels only
    do I = 1,p%NumOuts

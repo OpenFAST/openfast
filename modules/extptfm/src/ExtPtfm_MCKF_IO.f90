@@ -285,7 +285,7 @@ contains
         integer             :: idof ! index of CB DOF extracted from 
         iDOF = ReadIntFromStr(OutListTmp(nCharBefore:), 'Output channel '//trim(OutList(I)), ErrStat, ErrMsg);
         if(ErrStat/=0) return
-        if ( any( p%ActiveDOFList== iDOF ) ) then
+        if ( any( p%ActiveCBDOF== iDOF ) ) then
             p%OutParam(I)%Indx  = nOffset+iDOF
             p%OutParam(I)%Units = '(-)'
         else
@@ -319,9 +319,9 @@ subroutine CheckInputs(Inp, p, ErrStat, ErrMsg)
     if (.not.allocated(p%Damp))   then ; ErrStat=ErrID_Fatal; ErrMsg='The damping matrix was not allocated.' ; return; endif
     if (.not.allocated(p%Forces)) then ; ErrStat=ErrID_Fatal; ErrMsg='The loads were not allocated.';return; endif
     if (.not.allocated(p%times))  then ; ErrStat=ErrID_Fatal; ErrMsg='The time vector was not allocated.'; return; endif
-    if (allocated(Inp%ActiveDOFList)) then 
-        if (maxval(Inp%ActiveDOFList)>size(p%Mass,1)-6) then
-            ErrStat=ErrID_Fatal; ErrMsg='The maximum index of `ActiveDOFList` (active CB DOF) should be less than the total number of CB DOF.'; return;
+    if (allocated(Inp%ActiveCBDOF)) then 
+        if (maxval(Inp%ActiveCBDOF)>size(p%Mass,1)-6) then
+            ErrStat=ErrID_Fatal; ErrMsg='The maximum index of `ActiveCBDOF` (active CB DOF) should be less than the total number of CB DOF.'; return;
         endif
     endif
 end subroutine CheckInputs
@@ -409,16 +409,16 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    IF ( PathIsRelative(InputFileData%RedFile) ) InputFileData%RedFile = TRIM(PriPath)//TRIM(InputFileData%RedFile)
    CALL ReadVar(UnIn, InputFile, InputFileData%RedFileCst, 'RedCst_FileName', 'Path containing Guyan/Craig-Bampton constant inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    IF ( PathIsRelative(InputFileData%RedFileCst) ) InputFileData%RedFileCst = TRIM(PriPath)//TRIM(InputFileData%RedFileCst)
-   CALL ReadVar(UnIn, InputFile, N , 'NActiveDOFList','Number of active CB mode listed in ActiveDOFList, -1 for all modes', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, N , 'NActiveCBDOF','Number of active CB mode listed in ActiveCBDOF, -1 for all modes', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
    if (N<0) then
-       CALL ReadCom(UnIn, InputFile, 'ActiveDOFList', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+       CALL ReadCom(UnIn, InputFile, 'ActiveCBDOF', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    elseif (N==0) then
        ! Allocating ActiveDOF of size 0 => Guyan modes only
-       CALL AllocAry(InputFileData%ActiveDOFList, N, 'ActiveDOFList',  ErrStat, ErrMsg ); if (Failed()) return
-       CALL ReadCom(UnIn, InputFile, 'ActiveDOFList', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+       CALL AllocAry(InputFileData%ActiveCBDOF, N, 'ActiveCBDOF',  ErrStat, ErrMsg ); if (Failed()) return
+       CALL ReadCom(UnIn, InputFile, 'ActiveCBDOF', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    else
-       CALL AllocAry(InputFileData%ActiveDOFList, N, 'ActiveDOFList',  ErrStat, ErrMsg ); if (Failed()) return
-       CALL ReadAry(UnIn, InputFile, InputFileData%ActiveDOFList, N, 'ActiveDOFList', 'List of active CB modes', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+       CALL AllocAry(InputFileData%ActiveCBDOF, N, 'ActiveCBDOF',  ErrStat, ErrMsg ); if (Failed()) return
+       CALL ReadAry(UnIn, InputFile, InputFileData%ActiveCBDOF, N, 'ActiveCBDOF', 'List of active CB modes', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    endif
    ! TODO TODO TODO CALL ReadVar(UnIn, InputFile, InputFileData%EquilStart, 'EquilStart','Find the equilibrium initial positions for the CB modes', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
    CALL ReadVar(UnIn, InputFile, N , 'NInitPosList','Number of initial positions listed in InitPosList', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
@@ -426,14 +426,14 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
        CALL ReadCom(UnIn, InputFile, 'InitPosList', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    else
        CALL AllocAry(InputFileData%InitPosList, N, 'InitPosList',  ErrStat, ErrMsg ); if (Failed()) return
-       CALL ReadAry(UnIn, InputFile, InputFileData%InitPosList, N, 'InitPosList', 'List of active CB modes', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+       CALL ReadAry(UnIn, InputFile, InputFileData%InitPosList, N, 'InitPosList', 'Initial positions', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    endif
-   CALL ReadVar(UnIn, InputFile, N , 'NInitVelList','Number of initial positions listed in InitVelList', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
+   CALL ReadVar(UnIn, InputFile, N , 'NInitVelList','Number of initial velocties listed in InitVelList', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
    if (N<=0) then
        CALL ReadCom(UnIn, InputFile, 'InitVelList', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    else
        CALL AllocAry(InputFileData%InitVelList, N, 'InitVelList',  ErrStat, ErrMsg ); if (Failed()) return
-       CALL ReadAry(UnIn, InputFile, InputFileData%InitVelList, N, 'InitVelList', 'List of active CB modes', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+       CALL ReadAry(UnIn, InputFile, InputFileData%InitVelList, N, 'InitVelList', 'Initial velocities', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    endif
    !---------------------- OUTPUT --------------------------------------------------
    CALL ReadCom(UnIn, InputFile, 'Section Header: Output', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
@@ -462,17 +462,17 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
  
    ! --- Reducing the number of DOF if needed
    p%nCBFull=p%nCB
-   if (allocated(InputFileData%ActiveDOFList)) then
-       call allocAry(p%ActiveDOFList, size(InputFileData%ActiveDOFList), 'ActiveDOFList',  ErrStat, ErrMsg); if(Failed()) return
-       do I=1,size(InputFileData%ActiveDOFList)
-           p%ActiveDOFList(I) = InputFileData%ActiveDOFList(I);
+   if (allocated(InputFileData%ActiveCBDOF)) then
+       call allocAry(p%ActiveCBDOF, size(InputFileData%ActiveCBDOF), 'ActiveCBDOF',  ErrStat, ErrMsg); if(Failed()) return
+       do I=1,size(InputFileData%ActiveCBDOF)
+           p%ActiveCBDOF(I) = InputFileData%ActiveCBDOF(I);
        enddo
        call ReduceNumberOfDOF(p, ErrStat, ErrMsg);
-       print*,'>>> ActiveDOFList',InputFileData%ActiveDOFList
+       print*,'>>> ActiveCBDOF',InputFileData%ActiveCBDOF
    else
-       call allocAry(p%ActiveDOFList, p%nCBFull, 'ActiveDOFList',  ErrStat, ErrMsg); if(Failed()) return
+       call allocAry(p%ActiveCBDOF, p%nCBFull, 'ActiveCBDOF',  ErrStat, ErrMsg); if(Failed()) return
        do I=1,p%nCBFull
-           p%ActiveDOFList(I) = I
+           p%ActiveCBDOF(I) = I
        enddo
    endif
    print*,'>>> nCB (active/full):',p%nCB,p%nCBFull
@@ -504,16 +504,16 @@ SUBROUTINE ReduceNumberOfDOF(p, ErrStat, ErrMsg)
    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status                              
    CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
    integer(IntKi) :: nActive
-   integer(IntKi), dimension(:), allocatable :: FullActiveDOFList
+   integer(IntKi), dimension(:), allocatable :: FullActiveCBDOF
    integer(IntKi) :: I
 
    ! Preprending 1-6 to ActiveDOF
-   call allocAry(FullActiveDOFList, size(p%ActiveDOFList)+6, 'FullActiveDOFList',  ErrStat, ErrMsg); if(Failed()) return
-   FullActiveDOFList(1:6)=(/1,2,3,4,5,6/)
-   do I=1,size(p%ActiveDOFList);
-       FullActiveDOFList(I+6)=p%ActiveDOFList(I)+6;
+   call allocAry(FullActiveCBDOF, size(p%ActiveCBDOF)+6, 'FullActiveCBDOF',  ErrStat, ErrMsg); if(Failed()) return
+   FullActiveCBDOF(1:6)=(/1,2,3,4,5,6/)
+   do I=1,size(p%ActiveCBDOF);
+       FullActiveCBDOF(I+6)=p%ActiveCBDOF(I)+6;
    enddo
-   nActive=size(FullActiveDOFList)
+   nActive=size(FullActiveCBDOF)
 
    ! Reducing matrices and load matrix
    call SquareMatRed(p%Mass)
@@ -522,7 +522,7 @@ SUBROUTINE ReduceNumberOfDOF(p, ErrStat, ErrMsg)
    call TimeMatRed(p%Forces)
 
    ! Trigger
-   p%nCB = size(p%ActiveDOFList)
+   p%nCB = size(p%ActiveCBDOF)
    p%nTot= p%nCB+6
 CONTAINS
     !> Takes M and returns M(I,I) where I is a list of indexes to keep
@@ -538,7 +538,7 @@ CONTAINS
         call allocAry(M, nActive, nActive, 'M',  ErrStat, ErrMsg); if(Failed()) return
         do I=1,nActive
             do J=1,nActive
-                M(I,J) = tmp(FullActiveDOFList(I), FullActiveDOFList(J))
+                M(I,J) = tmp(FullActiveCBDOF(I), FullActiveCBDOF(J))
             enddo
         enddo
         deallocate(tmp)
@@ -556,7 +556,7 @@ CONTAINS
         call allocAry(M, size(tmp,1), nActive, 'MTime',  ErrStat, ErrMsg); if(Failed()) return
         do I=1,size(tmp,1)
             do J=1,nActive
-                M(I,J) = tmp(I, FullActiveDOFList(J))
+                M(I,J) = tmp(I, FullActiveCBDOF(J))
             enddo
         enddo
         deallocate(tmp)
@@ -855,7 +855,7 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    write(UnSu,'(A)')      '!Degrees of freedom'
    write(UnSu,'(A,I0)')   'Total number of DOF (active) : ',p%nTot
    write(UnSu,'(A,I0)')   'Number of CB modes (active)  : ',p%nCB
-   call disp1i(UnSu, 'ActiveDOFList',p%ActiveDOFList)
+   call disp1i(UnSu, 'ActiveCBDOF',p%ActiveCBDOF)
 ! 
    if (m%EquilStart) then
        write(UnSu,'(A)')'!Initial conditions (before equilibrium)'

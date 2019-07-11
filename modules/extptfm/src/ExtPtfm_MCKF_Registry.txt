@@ -30,7 +30,7 @@ typedef        ^                     ^            IntKi              FileFormat 
 typedef        ^                     ^            CHARACTER(1024)    RedFile    -  - -  "File containing reduction inputs"   -
 typedef        ^                     ^            CHARACTER(1024)    RedFileCst -  - -  "File containing constant reduction inputs"   -
 typedef        ^                     ^            LOGICAL            EquilStart -  - -  "Flag to determine the equilibrium positions of the CB modes at initialization (first call)"   -
-typedef        ^                     ^            IntKi              ActiveDOFList {:} - -  "List of active CB DOF"   -
+typedef        ^                     ^            IntKi              ActiveCBDOF {:} - -  "List of active CB DOF"   -
 typedef        ^                     ^            ReKi               InitPosList {:}   - -  "Initial positions of the CB DOFs"   -
 typedef        ^                     ^            ReKi               InitVelList {:}   - -  "Initial velocities of the CB DOFs"   -
 typedef        ^                     ^            LOGICAL            SumPrint   -  - -  "Print summary data to <RootName>.sum"   -
@@ -114,7 +114,7 @@ typedef  ^                    ^          IntKi    nCBFull     - - - "Totla numbe
 typedef  ^                    ^          IntKi    nTot        - - - "Total number of debrees of freedom (CB + interface)" -
 typedef  ^                    ^          IntKi    NumOuts     - - - "Number of values in WriteOutput" -
 typedef  ^                    ^          IntKi    IntMethod   - - - "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -
-typedef  ^                    ^          IntKi    ActiveDOFList {:} - -  "List of active CB DOF"   -
+typedef  ^                    ^          IntKi    ActiveCBDOF {:} - -  "List of active CB DOF"   -
 typedef  ^                    ^          OutParmType   OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
 typedef  ^                    ^          IntKi         OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for linearization analysis" -
 
