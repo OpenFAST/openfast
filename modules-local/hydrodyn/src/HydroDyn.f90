@@ -1295,17 +1295,15 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       IF(ALLOCATED( Waves_InitOut%WaveElevC0 ))  DEALLOCATE( Waves_InitOut%WaveElevC0 )
       !IF(ALLOCATED( InitLocal%WAMIT%WaveElevC0 ))  DEALLOCATE( InitLocal%WAMIT%WaveElevC0)
       
-         
-      
          ! Close the summary file
-         
-      CALL HDOut_CloseSum( InitLocal%UnSum, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL CleanUp()
-            RETURN
-         END IF
-    
+      IF ( InitLocal%HDSum ) THEN
+         CALL HDOut_CloseSum( InitLocal%UnSum, ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL CleanUp()
+               RETURN
+            END IF
+      END IF
       
       ! Define system output initializations (set up mesh) here:
       
@@ -1452,8 +1450,12 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       m%y_mapped%RemapFlag  = .TRUE.
  
       CALL MeshMapCreate( y%Mesh,                m%y_mapped, m%HD_MeshMap%HD_P_2_WRP_P, ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL MeshMapCreate( y%Morison%LumpedMesh,  m%y_mapped, m%HD_MeshMap%M_P_2_WRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL MeshMapCreate( y%Morison%DistribMesh, m%y_mapped, m%HD_MeshMap%M_L_2_WRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF ( y%Morison%LumpedMesh%Committed ) THEN 
+         CALL MeshMapCreate( y%Morison%LumpedMesh,  m%y_mapped, m%HD_MeshMap%M_P_2_WRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ENDIF
+      IF ( y%Morison%DistribMesh%Committed ) THEN 
+         CALL MeshMapCreate( y%Morison%DistribMesh, m%y_mapped, m%HD_MeshMap%M_L_2_WRP_P,  ErrStat2, ErrMsg2  );CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      ENDIF
       
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
@@ -2806,10 +2808,16 @@ SUBROUTINE HD_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    
       ! set linearization state names:
    do k = 1, 2   ! 1 = Excitation,  2 = Radiation
-      if (k == 2) spdof = p%WAMIT%SS_Rdtn%N  / 6
+      
         
       do j = 1, 6
-         if (k == 1) spdof = p%WAMIT%SS_Exctn%spdof(j)
+         
+         if (k == 1) then
+            spdof = p%WAMIT%SS_Exctn%spdof(j)
+         else 
+            spdof = p%WAMIT%SS_Rdtn%spdof(j)
+         end if
+         
          do i = 1,spdof
             InitOut%LinNames_x(indx) = trim(modLabels(k))//trim(dofLabels(j))//trim(num2lstr(i))
             indx = indx + 1
