@@ -72,7 +72,7 @@ subroutine SetErrStatSimple(ErrStat, ErrMess, RoutineName, LineNumber)
   CHARACTER(*),   INTENT(IN   )        :: RoutineName  ! Name of the routine error occurred in
   INTEGER(IntKi), INTENT(IN), OPTIONAL :: LineNumber   ! Line of input file 
   if (ErrStat /= ErrID_None) then
-     ErrMess = TRIM(RoutineName)//':'//TRIM(ErrMess)
+     write(ErrMess,'(A)') TRIM(RoutineName)//':'//TRIM(ErrMess)
      if (present(LineNumber)) then
          ErrMess = TRIM(ErrMess)//' Line: '//TRIM(Num2LStr(LineNumber))//'.'
      endif
@@ -189,8 +189,8 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    m%EquilStart = .False.
 
    m%Indx = 1 ! used to optimize interpolation of loads in time
-   call AllocAry( m%PtfmFt, p%nTot,'Loads at t', ErrStat,ErrMsg); if(Failed()) return
-   do I=1,p%nTot; m%PtfmFt(I)=0; end do
+   call AllocAry( m%F_at_t, p%nTot,'Loads at t', ErrStat,ErrMsg); if(Failed()) return
+   do I=1,p%nTot; m%F_at_t(I)=0; end do
    call AllocAry( m%xFlat, 2*p%nCB,'xFlat', ErrStat,ErrMsg); if(Failed()) return
    do I=1,2*p%nCB; m%xFlat(I)=0; end do
    do I=1,N_INPUTS; m%uFlat(I)=0; end do
@@ -314,16 +314,16 @@ SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
    call allocAry(  I22 , n2, n2, '  I22' , ErrStat, ErrMsg); if(Failed()) return ;   I22 (1:n2,1:n2) =0
    do I=1,n2 ; I22(I,I)=1; enddo ! Identity matrix
    ! Submatrices
-   p%M11(1:n1,1:n1) = p%PtfmAM(1:n1      ,1:n1      )
-   p%C11(1:n1,1:n1) = p%Damp  (1:n1      ,1:n1      )
-   p%K11(1:n1,1:n1) = p%Stff  (1:n1      ,1:n1      )
-   p%M12(1:n1,1:n2) = p%PtfmAM(1:n1      ,n1+1:n1+n2)
-   p%C12(1:n1,1:n2) = p%Damp  (1:n1      ,n1+1:n1+n2)
-   p%M21(1:n2,1:n1) = p%PtfmAM(n1+1:n1+n2,1:n1      )
-   p%C21(1:n2,1:n1) = p%Damp  (n1+1:n1+n2,1:n1      )
-   p%M22(1:n2,1:n2) = p%PtfmAM(n1+1:n1+n2,n1+1:n1+n2)
-   p%C22(1:n2,1:n2) = p%Damp  (n1+1:n1+n2,n1+1:n1+n2)
-   p%K22(1:n2,1:n2) = p%Stff  (n1+1:n1+n2,n1+1:n1+n2)
+   p%M11(1:n1,1:n1) = p%Mass(1:n1      ,1:n1      )
+   p%C11(1:n1,1:n1) = p%Damp(1:n1      ,1:n1      )
+   p%K11(1:n1,1:n1) = p%Stff(1:n1      ,1:n1      )
+   p%M12(1:n1,1:n2) = p%Mass(1:n1      ,n1+1:n1+n2)
+   p%C12(1:n1,1:n2) = p%Damp(1:n1      ,n1+1:n1+n2)
+   p%M21(1:n2,1:n1) = p%Mass(n1+1:n1+n2,1:n1      )
+   p%C21(1:n2,1:n1) = p%Damp(n1+1:n1+n2,1:n1      )
+   p%M22(1:n2,1:n2) = p%Mass(n1+1:n1+n2,n1+1:n1+n2)
+   p%C22(1:n2,1:n2) = p%Damp(n1+1:n1+n2,n1+1:n1+n2)
+   p%K22(1:n2,1:n2) = p%Stff(n1+1:n1+n2,n1+1:n1+n2)
    ! A matrix
    p%AMat(1:n2   ,n2+1:nX) = I22   (1:n2,1:n2)
    p%AMat(n2+1:nX,1:n2   ) = -p%K22(1:n2,1:n2)
@@ -697,8 +697,8 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    ! Local variables
    INTEGER(IntKi)                                  :: I                 !< Generic counters
    real(ReKi), dimension(6)                        :: Fc                !< Output coupling force
-   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%PtfmFt
-   call InterpStpMat(REAL(t,ReKi), p%PtfmFt_t, p%PtfmFt, m%Indx, p%nPtfmFt, m%PtfmFt)
+   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%Forces
+   call InterpStpMat(REAL(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
 
    ! --- Flatening vectors and using linear state formulation y=Cx+Du+Fy
    ! u flat (x1, \dot{x1}, \ddot{x1})
@@ -710,12 +710,12 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
    if (p%nCB>0) then
        ! x flat
-       m%xFlat(1:p%nCB)         = x%qm(1:p%nCB)
+       m%xFlat(      1:p%nCB  ) = x%qm   (1:p%nCB)
        m%xFlat(p%nCB+1:2*p%nCB) = x%qmdot(1:p%nCB)
        ! y = Cx + Du + Fy  - TODO consider using lapack for efficiency
-       Fc = matmul(p%CMat, m%xFlat) + matmul(p%DMat, m%uFlat) + m%PtfmFt(1:6) - matmul(p%M12, m%PtfmFt(6+1:6+p%nCB))
+       Fc = matmul(p%CMat, m%xFlat) + matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) - matmul(p%M12, m%F_at_t(6+1:6+p%nCB))
    else
-       Fc =                           matmul(p%DMat, m%uFlat) + m%PtfmFt(1:6) 
+       Fc =                           matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) 
    endif
 
    ! Update the output mesh
@@ -731,11 +731,17 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%AllOuts(ID_PtfMx) = y%PtfmMesh%Moment(1,1)
    m%AllOuts(ID_PtfMy) = y%PtfmMesh%Moment(2,1)
    m%AllOuts(ID_PtfMz) = y%PtfmMesh%Moment(3,1)
+   m%AllOuts(ID_InpFx) = m%F_at_t(1)
+   m%AllOuts(ID_InpFy) = m%F_at_t(2)
+   m%AllOuts(ID_InpFz) = m%F_at_t(3)
+   m%AllOuts(ID_InpMx) = m%F_at_t(4)
+   m%AllOuts(ID_InpMy) = m%F_at_t(5)
+   m%AllOuts(ID_InpMz) = m%F_at_t(6)
    !y%WriteOutput(ID_WaveElev) = .. ! TODO
    do i=1,p%nCB
       m%AllOuts(ID_QStart + 0*p%nCB -1 + I) = x%qm   (I)    ! CBQ  - DOF Positions
       m%AllOuts(ID_QStart + 1*p%nCB -1 + I) = x%qmdot(I)    ! CBQD - DOF Velocities
-      m%AllOuts(ID_QStart + 2*p%nCB -1 + I) = m%PtfmFt(6+I) ! CBF  - DOF Forces
+      m%AllOuts(ID_QStart + 2*p%nCB -1 + I) = m%F_at_t(6+I) ! CBF  - DOF Forces
    enddo
    ! --- Selected output channels only
    do I = 1,p%NumOuts
@@ -777,8 +783,8 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    do I=1,p%nCB; dxdt%qm   (I)=0; enddo
    do I=1,p%nCB; dxdt%qmdot(I)=0; enddo
 
-   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%PtfmFt
-   call InterpStpMat(REAL(t,ReKi), p%PtfmFt_t, p%PtfmFt, m%Indx, p%nPtfmFt, m%PtfmFt)
+   ! Compute the loads `fr1 fr2` at t (fr1 without added mass) by time interpolation of the inputs loads p%F
+   call InterpStpMat(REAL(t,ReKi), p%times, p%Forces, m%Indx, p%nTimeSteps, m%F_at_t)
 
    ! u flat (x1, \dot{x1}, \ddot{x1})
    m%uFlat(1:3)   = u%PtfmMesh%TranslationDisp(:,1)
@@ -790,7 +796,7 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    !write(*,*)'x%qm',x%qm
    !write(*,*)'x%qmdot',x%qmdot
    !write(*,*)'m%uFlat',m%uFlat
-   !write(*,*)'m%PtfmFt',m%PtfmFt(6+1:6+p%nCB)
+   !write(*,*)'m%F_at_t',m%F_at_t(6+1:6+p%nCB)
    !write(*,*)'K22',p%K22
    !write(*,*)'C22',p%C22
    !write(*,*)'M21',p%M21
@@ -800,7 +806,7 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    dxdt%qm= x%qmdot
    ! \ddot{x2} = -K22 x2 - C22 \dot{x2}  - C21 \dot{x1} - M21 \ddot{x1} + fr2
    dxdt%qmdot = - matmul(p%K22,x%qm) - matmul(p%C22,x%qmdot) &
-                - matmul(p%C21,m%uFlat(7:12)) - matmul(p%M21, m%uFlat(13:18)) + m%PtfmFt(6+1:6+p%nCB)
+                - matmul(p%C21,m%uFlat(7:12)) - matmul(p%M21, m%uFlat(13:18)) + m%F_at_t(6+1:6+p%nCB)
 CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_CalcContStateDeriv')

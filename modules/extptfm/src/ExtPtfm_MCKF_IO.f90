@@ -49,7 +49,13 @@ MODULE ExtPtfm_MCKF_Parameters
    INTEGER(IntKi), PARAMETER :: ID_PtfMy    = 5
    INTEGER(IntKi), PARAMETER :: ID_PtfMz    = 6
    INTEGER(IntKi), PARAMETER :: ID_WaveElev = 7
-   INTEGER(IntKi), PARAMETER :: ID_QStart   = 8
+   INTEGER(IntKi), PARAMETER :: ID_InpFx    = 8
+   INTEGER(IntKi), PARAMETER :: ID_InpFy    = 9
+   INTEGER(IntKi), PARAMETER :: ID_InpFz    = 10
+   INTEGER(IntKi), PARAMETER :: ID_InpMx    = 11
+   INTEGER(IntKi), PARAMETER :: ID_InpMy    = 12
+   INTEGER(IntKi), PARAMETER :: ID_InpMz    = 13
+   INTEGER(IntKi), PARAMETER :: ID_QStart   = 14
 END MODULE ExtPtfm_MCKF_Parameters
 
 !**********************************************************************************************************************************
@@ -77,7 +83,7 @@ subroutine SetErrStatSimple(ErrStat, ErrMess, RoutineName, LineNumber)
   CHARACTER(*),   INTENT(IN   )        :: RoutineName  ! Name of the routine error occurred in
   INTEGER(IntKi), INTENT(IN), OPTIONAL :: LineNumber   ! Line of input file 
   if (ErrStat /= ErrID_None) then
-     ErrMess = TRIM(RoutineName)//':'//TRIM(ErrMess)
+     write(ErrMess,'(A)') TRIM(RoutineName)//':'//TRIM(ErrMess)
      if (present(LineNumber)) then
          ErrMess = TRIM(ErrMess)//' Line: '//TRIM(Num2LStr(LineNumber))//'.'
      endif
@@ -187,12 +193,17 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
    CHARACTER(ChanLen)           :: OutListTmp                                      ! A string to temporarily hold OutList(I)
    CHARACTER(*), PARAMETER      :: RoutineName = "SetOutParam"
 
-   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(7) =  (/ & ! This lists the names of the allowed parameters, which must be sorted alphabetically
-                               "INTRFFX  ","INTRFFY  ","INTRFFZ  ","INTRFMX  ","INTRFMY  ","INTRFMZ  ","WAVELEV  "/) 
-   CHARACTER(OutStrLenM1), PARAMETER :: ParamUnitsAry(7) =  (/ &                     ! This lists the units corresponding to the allowed parameters
+   CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(13) =  (/ & ! This lists the names of the allowed parameters, which must be sorted alphabetically
+                               "INPF_FX  ","INPF_FY  ","INPF_FZ  ","INPF_MX  ","INPF_MY  ","INPF_MZ  ",&
+                               "INTRFFX  ","INTRFFY  ","INTRFFZ  ","INTRFMX  ","INTRFMY  ","INTRFMZ  ",&
+                               "WAVELEV  "/) 
+   CHARACTER(OutStrLenM1), PARAMETER :: ParamUnitsAry(13) =  (/ &                     ! This lists the units corresponding to the allowed parameters
+                               "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     ",&
                                "(N)      ","(N)      ","(N)      ","(Nm)     ","(Nm)     ","(Nm)     ","(m)      "/)
-   INTEGER(IntKi), PARAMETER :: ParamIndxAry(7) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
-                              ID_PtfFx, ID_PtfFy, ID_PtfFz, ID_PtfMx, ID_PtfMy, ID_PtfMz, ID_WaveElev /)
+   INTEGER(IntKi), PARAMETER :: ParamIndxAry(13) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
+                              ID_InpFx, ID_InpFy, ID_InpFz, ID_InpMx, ID_InpMy, ID_InpMz,&
+                              ID_PtfFx, ID_PtfFy, ID_PtfFz, ID_PtfMx, ID_PtfMy, ID_PtfMz,&
+                              ID_WaveElev  /)
    ErrStat = ErrID_None
    ErrMsg  = ""
    
@@ -276,12 +287,12 @@ subroutine CheckAllInputsRead(p,ErrStat,ErrMsg)
     ErrStat = ErrID_None
     ErrMsg  = ""
     if (ErrStat/=0) return
-    if (p%nTot<0)                   then ; ErrStat=ErrID_Fatal; ErrMsg='The total number of DOF was not set'; endif
-    if (.not.allocated(p%PtfmAM))   then ; ErrStat=ErrID_Fatal; ErrMsg='The mass matrix was not allocated.' ; endif
-    if (.not.allocated(p%Stff))     then ; ErrStat=ErrID_Fatal; ErrMsg='The stiffness matrix was not allocated.' ; endif
-    if (.not.allocated(p%Damp))     then ; ErrStat=ErrID_Fatal; ErrMsg='The damping matrix was not allocated.' ; endif
-    if (.not.allocated(p%PtfmFt))   then ; ErrStat=ErrID_Fatal; ErrMsg='The loads were not allocated.';endif
-    if (.not.allocated(p%PtfmFt_t)) then ; ErrStat=ErrID_Fatal; ErrMsg='The time vector was not allocated.'; endif
+    if (p%nTot<0)                 then ; ErrStat=ErrID_Fatal; ErrMsg='The total number of DOF was not set'; endif
+    if (.not.allocated(p%Mass))   then ; ErrStat=ErrID_Fatal; ErrMsg='The mass matrix was not allocated.' ; endif
+    if (.not.allocated(p%Stff))   then ; ErrStat=ErrID_Fatal; ErrMsg='The stiffness matrix was not allocated.' ; endif
+    if (.not.allocated(p%Damp))   then ; ErrStat=ErrID_Fatal; ErrMsg='The damping matrix was not allocated.' ; endif
+    if (.not.allocated(p%Forces)) then ; ErrStat=ErrID_Fatal; ErrMsg='The loads were not allocated.';endif
+    if (.not.allocated(p%times))  then ; ErrStat=ErrID_Fatal; ErrMsg='The time vector was not allocated.'; endif
 end subroutine CheckAllInputsRead
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, ErrMsg)
@@ -537,7 +548,7 @@ CONTAINS
                iLine=iLine+1
                CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat, ErrMsg); if (ErrStat /= 0) exit
                if (p%nTot<0) exit
-               call ReadRealMatrix(UnIn, InputFile, p%PtfmAM, 'Mass Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
+               call ReadRealMatrix(UnIn, InputFile, p%Mass, 'Mass Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
 
            else if (index(Line,'!STIFFNESS MATRIX')==1) then
                iLine=iLine+1
@@ -555,36 +566,35 @@ CONTAINS
                iLine=iLine+1
                CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat, ErrMsg)
                if (ErrStat /= 0) exit
-               p%nPtfmFt = nint(T/dt)+1
+               p%nTimeSteps = nint(T/dt)+1
                if (p%nTot<0) exit
-               call allocAry( p%PtfmFt,   max(1,p%nPtfmFt), p%nTot, 'p%PtfmFt',   ErrStat, ErrMsg); if (ErrStat /= 0) exit
-               call allocAry( p%PtfmFt_t, max(1,p%nPtfmFt),         'p%PtfmFt_t', ErrStat, ErrMsg); if (ErrStat /= 0) exit
-               if (p%nPtfmFt == 0) then
-                  p%PtfmFt   = 0.0_ReKi
-                  p%PtfmFt_t = 0.0_ReKi
-                  p%nPtfmFt  = 1
+               call allocAry( p%Forces, max(1,p%nTimeSteps), p%nTot, 'p%Forces'   , ErrStat, ErrMsg); if (ErrStat /= 0) exit
+               call allocAry( p%times , max(1,p%nTimeSteps),         'p%times', ErrStat, ErrMsg); if (ErrStat /= 0) exit
+               if (p%nTimeSteps == 0) then
+                  p%Forces= 0.0_ReKi
+                  p%times = 0.0_ReKi
+                  p%nTimeSteps  = 1
                else
                   allocate(TmpAry(1:p%nTot+1))
-                  do i=1,p%nPtfmFt
+                  do i=1,p%nTimeSteps
                      iLine=iLine+1
                      TmpAry(1:p%nTot+1)=-999999E-99
-                     !call ReadAry( UnIn, InputFile, TmpAry, p%nTot+1, 'PtfmFt - Line: '//Num2LStr(iLine)//' Value: '//trim(Num2LStr(i))//'/'//Num2LStr(p%nPtfmFt), 'PtfmFt time-history', ErrStat, ErrMsg)
                      read(UnIn, fmt='(A)', iostat=ErrStat) Line
                      if (ErrStat/=0) then
                         ErrStat = ErrID_Fatal
-                        ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(p%nPtfmFt))//' expected lines) in file: '//trim(InputFile)
+                        ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(p%nTimeSteps))//' expected lines) in file: '//trim(InputFile)
                         exit
                      end if
                      ! Extract fields (ReadR8AryFromStr is in NWTC_IO)
-                     CALL ReadAry(Line, TmpAry, p%nTot+1, 'PtfmFt', 'PtfmFt', ErrStat, ErrMsg)
+                     CALL ReadAry(Line, TmpAry, p%nTot+1, 'Forces', 'Forces', ErrStat, ErrMsg)
                      if (ErrStat/=0) then
                         ErrStat = ErrID_Fatal
                         ErrMsg='Failed to extract fields from line '//trim(Num2LStr(iLine))//'. '//trim(ErrMsg)//'. Check that the number of columns is correct in file: '//trim(InputFile)
                         exit
                      end if
                      if (ErrStat /= 0) exit
-                     p%PtfmFt_t(i) = TmpAry(1)
-                     p%PtfmFt(i,:) = TmpAry(2:p%nTot+1)
+                     p%times(i)    = TmpAry(1)
+                     p%Forces(i,:) = TmpAry(2:p%nTot+1)
                   end do
                end if
 
@@ -614,7 +624,7 @@ CONTAINS
        !---------------------- MASS MATRIX --------------------------------------
        CALL ReadCom( UnIn, InputFile, 'Section Header: Mass Matrix', ErrStat, ErrMsg)
        if ( ErrStat /= 0 ) return
-       CALL ReadRealMatrix(UnIn, InputFile, p%PtfmAM, 'Mass Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
+       CALL ReadRealMatrix(UnIn, InputFile, p%Mass, 'Mass Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
        if ( ErrStat /= 0 ) return
        !---------------------- DAMPING MATRIX --------------------------------------
        CALL ReadCom( UnIn, InputFile, 'Section Header: Damping Matrix', ErrStat, ErrMsg)
@@ -627,7 +637,7 @@ CONTAINS
        CALL ReadRealMatrix(UnIn, InputFile, p%Stff, 'Stiffness Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
        if ( ErrStat /= 0 ) return
        !---------------------- LOAD time-history --------------------------------------
-       p%nPtfmFt = 0
+       p%nTimeSteps = 0
        CALL ReadCom( UnIn, InputFile, 'Section Header: Loads time-history', ErrStat, ErrMsg)
        CALL ReadCom( UnIn, InputFile, 'Loads time-history table channel names', ErrStat, ErrMsg)
        CALL ReadCom( UnIn, InputFile, 'Loads time-history table channel units', ErrStat, ErrMsg)
@@ -636,39 +646,38 @@ CONTAINS
           ! let's figure out how many rows of data are in the time-history table:
           read( UnIn, *, IOSTAT=ErrStat ) TmpAry
           do while (ErrStat==0)
-             p%nPtfmFt = p%nPtfmFt + 1
+             p%nTimeSteps = p%nTimeSteps + 1
              read( UnIn, *, IOSTAT=ErrStat ) TmpAry
           end do
        end if
-       call allocAry( p%PtfmFt,   max(1,p%nPtfmFt), p%nTot, 'p%PtfmFt',   ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
-       call allocAry( p%PtfmFt_t, max(1,p%nPtfmFt),         'p%PtfmFt_t', ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
-       if (p%nPtfmFt == 0) then
-          p%PtfmFt = 0.0_ReKi
-          p%PtfmFt_t = 0.0_ReKi
-          p%nPtfmFt = 1
+       call allocAry( p%Forces, max(1,p%nTimeSteps), p%nTot, 'p%Forces', ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
+       call allocAry( p%times , max(1,p%nTimeSteps),         'p%times' , ErrStat, ErrMsg); if ( ErrStat /= 0 ) return
+       if (p%nTimeSteps == 0) then
+          p%Forces    = 0.0_ReKi
+          p%times = 0.0_ReKi
+          p%nTimeSteps = 1
        else
           rewind(UnIn)
           do i=1,25 ! skip the first 25 rows of the file until we get to the data for the time-history table
              read(UnIn,*,IOSTAT=ErrStat) line
           end do
-          do i=1,p%nPtfmFt
-             !call ReadAry( UnIn, InputFile, TmpAry, p%nTot+1, 'PtfmFt', 'PtfmFt time-history', ErrStat, ErrMsg)
+          do i=1,p%nTimeSteps
              read(UnIn, fmt='(A)', iostat=ErrStat) Line
              if (ErrStat/=0) then
                 ErrStat = ErrID_Fatal
-                ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(p%nPtfmFt))//' expected lines) in file: '//trim(InputFile)
+                ErrMSg='Failed to read line '//trim(Num2LStr(iLine))//' (out of '//trim(Num2LStr(p%nTimeSteps))//' expected lines) in file: '//trim(InputFile)
                 exit
              end if
              ! Extract fields (ReadR8AryFromStr is in NWTC_IO)
-             CALL ReadAry(Line, TmpAry, p%nTot+1, 'PtfmFt', 'PtfmFt', ErrStat, ErrMsg)
+             CALL ReadAry(Line, TmpAry, p%nTot+1, 'Forces', 'Forces', ErrStat, ErrMsg)
              if (ErrStat/=0) then
                 ErrStat = ErrID_Fatal
                 ErrMsg='Failed to extract fields from line '//trim(Num2LStr(iLine))//'. '//trim(ErrMsg)//'. Check that the number of columns is correct in file: '//trim(InputFile)
                 exit
              end if
              if ( ErrStat /= 0 ) return
-             p%PtfmFt_t(i) = TmpAry(1)
-             p%PtfmFt(i,:) = TmpAry(2:p%nTot+1)
+             p%times(i)     = TmpAry(1)
+             p%Forces(i,:)  = TmpAry(2:p%nTot+1)
           end do
        end if
        !---------------------- END OF FILE -----------------------------------------
@@ -712,9 +721,9 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    write(UnSu,'(A,A)')    'Time integration method: ',StrIntMethod(p%IntMethod)
    write(UnSu,'(A,F13.8)')'Integration time step  : ',p%EP_DeltaT
    write(UnSu,'(A)')      '!Reduction input file'
-   write(UnSu,'(A,I0)')   'Number of time steps   : ',p%nPtfmFt
-   write(UnSu,'(A,F13.8)')'Start time             : ',p%PtfmFt_t(1)
-   write(UnSu,'(A,F13.8)')'End time               : ',p%PtfmFt_t(p%nPtfmFt)
+   write(UnSu,'(A,I0)')   'Number of time steps   : ',p%nTimeSteps
+   write(UnSu,'(A,F13.8)')'Start time             : ',p%times(1)
+   write(UnSu,'(A,F13.8)')'End time               : ',p%times(p%nTimeSteps)
    write(UnSu,'(A)')      '!Derived parameters'
    write(UnSu,'(A,I0)')   'Total number of DOF    : ',p%nTot
    write(UnSu,'(A,I0)')   'Number of CB modes     : ',p%nCB
@@ -733,20 +742,21 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    call disp2r8(UnSu, 'C',p%CMat)
    call disp2r8(UnSu, 'D',p%DMat)
    write(UnSu,'(A)')'!Input matrices'
-   call disp2r8(UnSu, 'M',p%PtfmAM)
+   call disp2r8(UnSu, 'M',p%Mass)
    call disp2r8(UnSu, 'K',p%Stff)
    call disp2r8(UnSu, 'C',p%Damp)
-!    call disp2r8(UnSu, 'F',p%PtfmFt)
-!    call disp2r8(UnSu, 'M11',p%M11)
-!    call disp2r8(UnSu, 'M12',p%M12)
-!    call disp2r8(UnSu, 'M21',p%M21)
-!    call disp2r8(UnSu, 'M22',p%M22)
-!    call disp2r8(UnSu, 'K11',p%K11)
-!    call disp2r8(UnSu, 'K22',p%K22)
-!    call disp2r8(UnSu, 'C11',p%C11)
-!    call disp2r8(UnSu, 'C12',p%C12)
-!    call disp2r8(UnSu, 'C21',p%C21)
-!    call disp2r8(UnSu, 'C22',p%C22)
+!    call disp2r8(UnSu, 'F',p%Forces)
+   write(UnSu,'(A)')'!Input sub-matrices'
+   call disp2r8(UnSu, 'M11',p%M11)
+   call disp2r8(UnSu, 'M12',p%M12)
+   call disp2r8(UnSu, 'M21',p%M21)
+   call disp2r8(UnSu, 'M22',p%M22)
+   call disp2r8(UnSu, 'K11',p%K11)
+   call disp2r8(UnSu, 'K22',p%K22)
+   call disp2r8(UnSu, 'C11',p%C11)
+   call disp2r8(UnSu, 'C12',p%C12)
+   call disp2r8(UnSu, 'C21',p%C21)
+   call disp2r8(UnSu, 'C22',p%C22)
 
 
    OutPFmt  = '( I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
