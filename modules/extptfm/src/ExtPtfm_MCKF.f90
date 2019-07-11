@@ -126,17 +126,6 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    call ReadPrimaryFile(InitInp%InputFile, p, InitInp%RootName, InputFileData, ErrStat, ErrMsg); if(Failed()) return
 
    ! --- Setting Params from Input file data
-   if (allocated(InputFileData%ActiveDOFList)) then
-       allocate(p%ActiveDOFList(1:size(InputFileData%ActiveDOFList)))
-       print*,'>>>>>TODO ActiveDOFList not implemented'
-       print*,'>>> ActiveDOFList',InputFileData%ActiveDOFList
-       ! TODO
-       do I=1,size(InputFileData%ActiveDOFList)
-           p%ActiveDOFList(I) = InputFileData%ActiveDOFList(I);
-       enddo
-       p%nCB=size(InputFileData%ActiveDOFList)
-       STOP
-   endif
    p%IntMethod = InputFileData%IntMethod
    if (InputFileData%DT<0) then
        p%EP_DeltaT = dt_gluecode
@@ -199,8 +188,8 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    call Init_meshes(u, y, ErrStat, ErrMsg); if(Failed()) return
 
    ! --- Outputs
-   CALL AllocAry( m%AllOuts, ID_QStart+3*p%nCB-1, "ExtPtfm AllOut", ErrStat,ErrMsg ); if(Failed()) return
-   m%AllOuts(1:ID_QStart+3*p%nCB-1) = 0.0
+   CALL AllocAry( m%AllOuts, ID_QStart+3*p%nCBFull-1, "ExtPtfm AllOut", ErrStat,ErrMsg ); if(Failed()) return
+   m%AllOuts(1:ID_QStart+3*p%nCBFull-1) = 0.0
    call AllocAry( y%WriteOutput,        p%NumOuts,'WriteOutput',   ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputHdr,p%NumOuts,'WriteOutputHdr',ErrStat,ErrMsg); if(Failed()) return
    call AllocAry(InitOut%WriteOutputUnt,p%NumOuts,'WriteOutputUnt',ErrStat,ErrMsg); if(Failed()) return
@@ -237,8 +226,8 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
       enddo
       ! LinNames_x
       do I=1,p%nCB; 
-          InitOut%LinNames_x(I)       = 'Mode '//trim(Num2LStr(I))//' displacement, -'; ! TODO  TODO IDOF
-          InitOut%LinNames_x(I+p%nCB) = 'Mode '//trim(Num2LStr(I))//' velocity, -';
+          InitOut%LinNames_x(I)       = 'Mode '//trim(Num2LStr(p%ActiveDOFList(I)))//' displacement, -'; ! TODO  TODO IDOF
+          InitOut%LinNames_x(I+p%nCB) = 'Mode '//trim(Num2LStr(p%ActiveDOFList(I)))//' velocity, -';
       enddo
       ! 
       InitOut%RotFrame_x = .false. ! note that meshes are in the global, not rotating frame
@@ -259,6 +248,7 @@ CONTAINS
         Failed =  ErrStat >= AbortErrLev
     end function Failed
 END SUBROUTINE ExtPtfm_Init
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SetStateMatrices( p, ErrStat, ErrMsg)
@@ -739,9 +729,9 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%AllOuts(ID_InpMz) = m%F_at_t(6)
    !y%WriteOutput(ID_WaveElev) = .. ! TODO
    do i=1,p%nCB
-      m%AllOuts(ID_QStart + 0*p%nCB -1 + I) = x%qm   (I)    ! CBQ  - DOF Positions
-      m%AllOuts(ID_QStart + 1*p%nCB -1 + I) = x%qmdot(I)    ! CBQD - DOF Velocities
-      m%AllOuts(ID_QStart + 2*p%nCB -1 + I) = m%F_at_t(6+I) ! CBF  - DOF Forces
+      m%AllOuts(ID_QStart + 0*p%nCBFull -1 + p%ActiveDOFList(I)) = x%qm   (I)    ! CBQ  - DOF Positions
+      m%AllOuts(ID_QStart + 1*p%nCBFull -1 + p%ActiveDOFList(I)) = x%qmdot(I)    ! CBQD - DOF Velocities
+      m%AllOuts(ID_QStart + 2*p%nCBFull -1 + p%ActiveDOFList(I)) = m%F_at_t(6+I) ! CBF  - DOF Forces
    enddo
    ! --- Selected output channels only
    do I = 1,p%NumOuts

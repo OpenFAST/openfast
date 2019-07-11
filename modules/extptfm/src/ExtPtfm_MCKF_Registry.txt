@@ -109,7 +109,8 @@ typedef  ^                    ^          ReKi     C22 {:}{:}    - - "Matrix C22"
 typedef  ^                    ^          ReKi     C21 {:}{:}    - - "Matrix C21" ""
 typedef  ^                    ^          DbKi     EP_DeltaT   - - - "Time step (for integration of continuous states)" "seconds"
 typedef  ^                    ^          IntKi    nTimeSteps  - - - "Number of values of Forces and times" -
-typedef  ^                    ^          IntKi    nCB         - - - "Number of CraigBampton modes" -
+typedef  ^                    ^          IntKi    nCB         - - - "Number of CraigBampton modes active" -
+typedef  ^                    ^          IntKi    nCBFull     - - - "Totla number of CraigBampton modes given as input" -
 typedef  ^                    ^          IntKi    nTot        - - - "Total number of debrees of freedom (CB + interface)" -
 typedef  ^                    ^          IntKi    NumOuts     - - - "Number of values in WriteOutput" -
 typedef  ^                    ^          IntKi    IntMethod   - - - "Integration Method (1=RK4, 2=AB4, 3=ABM4)" -

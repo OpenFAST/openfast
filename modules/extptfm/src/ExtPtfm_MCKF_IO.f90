@@ -83,6 +83,7 @@ subroutine SetErrStatSimple(ErrStat, ErrMess, RoutineName, LineNumber)
   CHARACTER(*),   INTENT(IN   )        :: RoutineName  ! Name of the routine error occurred in
   INTEGER(IntKi), INTENT(IN), OPTIONAL :: LineNumber   ! Line of input file 
   if (ErrStat /= ErrID_None) then
+      print*,'ErrMess',ErrMess
      write(ErrMess,'(A)') TRIM(RoutineName)//':'//TRIM(ErrMess)
      if (present(LineNumber)) then
          ErrMess = TRIM(ErrMess)//' Line: '//TRIM(Num2LStr(LineNumber))//'.'
@@ -118,6 +119,21 @@ subroutine disp1r8(u,varname,a)
     integer :: n
     character(len=20) :: fmt
     character(len=*),parameter :: RFMT='EN13.3E2'
+    n=size(a,1)
+    if (n>0) then
+        write(fmt,*) n
+        write(u,"(A,"//adjustl(fmt)//RFMT//",A)") varname//" =[ ", a(:), " ];"
+    else
+        write(u,'(A,A)') varname,'=[];'
+    endif
+end subroutine
+subroutine disp1i(u,varname,a)
+    integer,intent(in) ::u
+    character(len=*),intent(in)::varname
+    integer(IntKi),intent(in),dimension(:) ::a
+    integer :: n
+    character(len=20) :: fmt
+    character(len=*),parameter :: RFMT='I5'
     n=size(a,1)
     if (n>0) then
         write(fmt,*) n
@@ -204,8 +220,10 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
                               ID_InpFx, ID_InpFy, ID_InpFz, ID_InpMx, ID_InpMy, ID_InpMz,&
                               ID_PtfFx, ID_PtfFy, ID_PtfFz, ID_PtfMx, ID_PtfMy, ID_PtfMz,&
                               ID_WaveElev  /)
+   character(ErrMsgLen)                         :: WarnMsg  !Warning Message
    ErrStat = ErrID_None
    ErrMsg  = ""
+   WarnMsg  = ""
    
    p%NumOuts = NumOuts_in
    allocate(p%OutParam(0:p%NumOuts) , stat=ErrStat )
@@ -240,16 +258,20 @@ SUBROUTINE SetOutParam(OutList, NumOuts_in, p, ErrStat, ErrMsg )
           p%OutParam(I)%Indx  = ParamIndxAry(Indx)
           p%OutParam(I)%Units = ParamUnitsAry(Indx)
       else if (index(OutListTmp,'CBQ_') > 0 ) then
-          call setDOFChannel(5,ID_QStart+0*p%nCB-1); if(Failed()) return
+          call setDOFChannel(5,ID_QStart+0*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
       else if (index(OutListTmp,'CBQD_') > 0 ) then
-          call setDOFChannel(6,ID_QStart+1*p%nCB-1); if(Failed()) return
+          call setDOFChannel(6,ID_QStart+1*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
       else if (index(OutListTmp,'CBF_') > 0 ) then
-          call setDOFChannel(5,ID_QStart+2*p%nCB-1); if(Failed()) return
+          call setDOFChannel(5,ID_QStart+2*p%nCBFull-1); if(Failed()) return ! NOTE: using full CB
       else
           call setInvalidChannel() ! INVALID
       endif
       !write(*,*) p%OutParam(I)%Name, p%OutParam(I)%Indx, p%OutParam(I)%Units
    end do
+   if (len(WarnMsg)>0) then
+       call SetErrStat(ErrID_Warn, WarnMsg,ErrStat,ErrMsg,'ExtPtfm_SetOutParam')
+       write(*,'(A)')trim(WarnMsg)
+   endif
    return
 contains
     logical function Failed()
@@ -263,37 +285,46 @@ contains
         integer             :: idof ! index of CB DOF extracted from 
         iDOF = ReadIntFromStr(OutListTmp(nCharBefore:), 'Output channel '//trim(OutList(I)), ErrStat, ErrMsg);
         if(ErrStat/=0) return
-        if ((iDOF> p%nCB) .or. (iDOF<1)) then
-            call setInvalidChannel() ! INVALID
-        else
+        if ( any( p%ActiveDOFList== iDOF ) ) then
             p%OutParam(I)%Indx  = nOffset+iDOF
             p%OutParam(I)%Units = '(-)'
+        else
+!         if ((iDOF> p%nCB) .or. (iDOF<1)) then
+            call setInvalidChannel() ! INVALID
+!         else
         endif
     end subroutine
     subroutine setInvalidChannel()
         ! If a selected output channel is not available by this module set ErrStat = ErrID_Warn.
         p%OutParam(I)%Units = "INVALID"
         p%OutParam(I)%Indx = 0
-        call SetErrStat(ErrID_Warn, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,'ExtPtfm_SetOutParam')
-        write(*,*)TRIM(p%OutParam(I)%Name)//" is not an available output channel."
+        WarnMsg=trim(WarnMsg)//TRIM(p%OutParam(I)%Name)//" is not an available output channel."//CHAR(10)
+!         call SetErrStat(ErrID_Warn, TRIM(p%OutParam(I)%Name)//" is not an available output channel.",ErrStat,ErrMsg,'ExtPtfm_SetOutParam')
+!         write(*,*)TRIM(p%OutParam(I)%Name)//" is not an available output channel."
     end subroutine
 END SUBROUTINE SetOutParam
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Checks that all inputs were correctly read
-subroutine CheckAllInputsRead(p,ErrStat,ErrMsg)
-    TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p              !< All the parameter matrices stored in this input file
-    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat        !< Error status                              
-    CHARACTER(*),                INTENT(OUT)   :: ErrMsg         !< Error message
+subroutine CheckInputs(Inp, p, ErrStat, ErrMsg)
+    TYPE(ExtPtfm_InputFile),     INTENT(INOUT) :: Inp        !< Data stored in the module's input file
+    TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p          !< All the parameter matrices stored in this input file
+    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat    !< Error status                              
+    CHARACTER(*),                INTENT(OUT)   :: ErrMsg     !< Error message
     ErrStat = ErrID_None
     ErrMsg  = ""
     if (ErrStat/=0) return
-    if (p%nTot<0)                 then ; ErrStat=ErrID_Fatal; ErrMsg='The total number of DOF was not set'; endif
-    if (.not.allocated(p%Mass))   then ; ErrStat=ErrID_Fatal; ErrMsg='The mass matrix was not allocated.' ; endif
-    if (.not.allocated(p%Stff))   then ; ErrStat=ErrID_Fatal; ErrMsg='The stiffness matrix was not allocated.' ; endif
-    if (.not.allocated(p%Damp))   then ; ErrStat=ErrID_Fatal; ErrMsg='The damping matrix was not allocated.' ; endif
-    if (.not.allocated(p%Forces)) then ; ErrStat=ErrID_Fatal; ErrMsg='The loads were not allocated.';endif
-    if (.not.allocated(p%times))  then ; ErrStat=ErrID_Fatal; ErrMsg='The time vector was not allocated.'; endif
-end subroutine CheckAllInputsRead
+    if (p%nTot<0)                 then ; ErrStat=ErrID_Fatal; ErrMsg='The total number of DOF was not set'; return; endif
+    if (.not.allocated(p%Mass))   then ; ErrStat=ErrID_Fatal; ErrMsg='The mass matrix was not allocated.' ; return; endif
+    if (.not.allocated(p%Stff))   then ; ErrStat=ErrID_Fatal; ErrMsg='The stiffness matrix was not allocated.' ; return; endif
+    if (.not.allocated(p%Damp))   then ; ErrStat=ErrID_Fatal; ErrMsg='The damping matrix was not allocated.' ; return; endif
+    if (.not.allocated(p%Forces)) then ; ErrStat=ErrID_Fatal; ErrMsg='The loads were not allocated.';return; endif
+    if (.not.allocated(p%times))  then ; ErrStat=ErrID_Fatal; ErrMsg='The time vector was not allocated.'; return; endif
+    if (allocated(Inp%ActiveDOFList)) then 
+        if (maxval(Inp%ActiveDOFList)>size(p%Mass,1)-6) then
+            ErrStat=ErrID_Fatal; ErrMsg='The maximum index of `ActiveDOFList` (active CB DOF) should be less than the total number of CB DOF.'; return;
+        endif
+    endif
+end subroutine CheckInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, ErrMsg)
 !..................................................................................................................................
@@ -379,7 +410,11 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    CALL ReadVar(UnIn, InputFile, InputFileData%RedFileCst, 'RedCst_FileName', 'Path containing Guyan/Craig-Bampton constant inputs', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    IF ( PathIsRelative(InputFileData%RedFileCst) ) InputFileData%RedFileCst = TRIM(PriPath)//TRIM(InputFileData%RedFileCst)
    CALL ReadVar(UnIn, InputFile, N , 'NActiveDOFList','Number of active CB mode listed in ActiveDOFList, -1 for all modes', ErrStat, ErrMsg, UnEc ); if(LineFailed()) return
-   if (N<=0) then
+   if (N<0) then
+       CALL ReadCom(UnIn, InputFile, 'ActiveDOFList', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
+   elseif (N==0) then
+       ! Allocating ActiveDOF of size 0 => Guyan modes only
+       CALL AllocAry(InputFileData%ActiveDOFList, N, 'ActiveDOFList',  ErrStat, ErrMsg ); if (Failed()) return
        CALL ReadCom(UnIn, InputFile, 'ActiveDOFList', ErrStat, ErrMsg, UnEc); if(LineFailed()) return
    else
        CALL AllocAry(InputFileData%ActiveDOFList, N, 'ActiveDOFList',  ErrStat, ErrMsg ); if (Failed()) return
@@ -422,7 +457,26 @@ SUBROUTINE ReadPrimaryFile(InputFile, p, OutFileRoot, InputFileData, ErrStat, Er
    ! --- Reading Reduced file
    call ReadReducedFile(InputFileData%RedFile, p, InputFileData%FileFormat, ErrStat, ErrMsg); if(Failed()) return;
    ! Checking that everyting was correctly read and set
-   call CheckAllInputsRead(p, ErrStat, ErrMsg);  if(Failed()) return
+   call CheckInputs(InputFileData, p, ErrStat, ErrMsg);  if(Failed()) return
+
+ 
+   ! --- Reducing the number of DOF if needed
+   p%nCBFull=p%nCB
+   if (allocated(InputFileData%ActiveDOFList)) then
+       call allocAry(p%ActiveDOFList, size(InputFileData%ActiveDOFList), 'ActiveDOFList',  ErrStat, ErrMsg); if(Failed()) return
+       do I=1,size(InputFileData%ActiveDOFList)
+           p%ActiveDOFList(I) = InputFileData%ActiveDOFList(I);
+       enddo
+       call ReduceNumberOfDOF(p, ErrStat, ErrMsg);
+       print*,'>>> ActiveDOFList',InputFileData%ActiveDOFList
+   else
+       call allocAry(p%ActiveDOFList, p%nCBFull, 'ActiveDOFList',  ErrStat, ErrMsg); if(Failed()) return
+       do I=1,p%nCBFull
+           p%ActiveDOFList(I) = I
+       enddo
+   endif
+   print*,'>>> nCB (active/full):',p%nCB,p%nCBFull
+
 
    return
 
@@ -443,6 +497,77 @@ CONTAINS
         if (UnEc>0) close(UnEc)
    end subroutine cleanup
 END SUBROUTINE ReadPrimaryFile
+
+!> Reduce the number of degrees of freedom given as input
+SUBROUTINE ReduceNumberOfDOF(p, ErrStat, ErrMsg)
+   TYPE(ExtPtfm_ParameterType), INTENT(INOUT) :: p                                   !< All the parameter matrices stored in this input file
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                             !< Error status                              
+   CHARACTER(*),                INTENT(OUT)   :: ErrMsg                              !< Error message
+   integer(IntKi) :: nActive
+   integer(IntKi), dimension(:), allocatable :: FullActiveDOFList
+   integer(IntKi) :: I
+
+   ! Preprending 1-6 to ActiveDOF
+   call allocAry(FullActiveDOFList, size(p%ActiveDOFList)+6, 'FullActiveDOFList',  ErrStat, ErrMsg); if(Failed()) return
+   FullActiveDOFList(1:6)=(/1,2,3,4,5,6/)
+   do I=1,size(p%ActiveDOFList);
+       FullActiveDOFList(I+6)=p%ActiveDOFList(I)+6;
+   enddo
+   nActive=size(FullActiveDOFList)
+
+   ! Reducing matrices and load matrix
+   call SquareMatRed(p%Mass)
+   call SquareMatRed(p%Stff)
+   call SquareMatRed(p%Damp)
+   call TimeMatRed(p%Forces)
+
+   ! Trigger
+   p%nCB = size(p%ActiveDOFList)
+   p%nTot= p%nCB+6
+CONTAINS
+    !> Takes M and returns M(I,I) where I is a list of indexes to keep
+    subroutine SquareMatRed(M)
+        real(Reki), dimension(:,:), allocatable :: M
+        real(Reki), dimension(:,:), allocatable :: tmp
+        integer(IntKi) :: I,J
+        ! Storing M to a tmp array
+        call allocAry( tmp, size(M,1), size(M,2), 'Mtmp',  ErrStat, ErrMsg); if(Failed()) return
+        tmp=M
+        ! Reallocating M and storing only the desired DOF
+        deallocate(M)
+        call allocAry(M, nActive, nActive, 'M',  ErrStat, ErrMsg); if(Failed()) return
+        do I=1,nActive
+            do J=1,nActive
+                M(I,J) = tmp(FullActiveDOFList(I), FullActiveDOFList(J))
+            enddo
+        enddo
+        deallocate(tmp)
+    end subroutine 
+    !> Takes M and returns M(:,I) where I is a list of indexes to keep
+    subroutine TimeMatRed(M)
+        real(Reki), dimension(:,:), allocatable :: M
+        real(Reki), dimension(:,:), allocatable :: tmp
+        integer(IntKi) :: I,J
+        ! Storing M to a tmp array
+        call allocAry( tmp, size(M,1), size(M,2), 'MTimeTmp',  ErrStat, ErrMsg); if(Failed()) return
+        tmp=M
+        ! Reallocating M and storing only the desired DOF
+        deallocate(M)
+        call allocAry(M, size(tmp,1), nActive, 'MTime',  ErrStat, ErrMsg); if(Failed()) return
+        do I=1,size(tmp,1)
+            do J=1,nActive
+                M(I,J) = tmp(I, FullActiveDOFList(J))
+            enddo
+        enddo
+        deallocate(tmp)
+    end subroutine 
+    logical function Failed()
+        CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_ReduceNumberOfDOF')
+        Failed =  ErrStat >= AbortErrLev
+    end function Failed
+END SUBROUTINE ReduceNumberOfDOF
+
+
 !..................................................................................................................................
 SUBROUTINE ReadReducedFile( InputFile, p, FileFormat, ErrStat, ErrMsg )
 !..................................................................................................................................
@@ -708,6 +833,7 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! TODO TODO TODO YAML FORMAT
+   ! TODO TODO TODO ONLY Open Summary if no optional unit given 
 
    ! Open the summary file and give it a heading.
    CALL GetNewUnit(UnSu, ErrStat, ErrMsg);
@@ -718,15 +844,18 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
                          ' on '//CurDate()//' at '//CurTime()//'.'
 
    write(UnSu,'(A)')      '!Module input file'
-   write(UnSu,'(A,A)')    'Time integration method: ',StrIntMethod(p%IntMethod)
-   write(UnSu,'(A,F13.8)')'Integration time step  : ',p%EP_DeltaT
+   write(UnSu,'(A,A)')    'Time integration method      : ',StrIntMethod(p%IntMethod)
+   write(UnSu,'(A,F13.8)')'Integration time step        : ',p%EP_DeltaT
    write(UnSu,'(A)')      '!Reduction input file'
-   write(UnSu,'(A,I0)')   'Number of time steps   : ',p%nTimeSteps
-   write(UnSu,'(A,F13.8)')'Start time             : ',p%times(1)
-   write(UnSu,'(A,F13.8)')'End time               : ',p%times(p%nTimeSteps)
-   write(UnSu,'(A)')      '!Derived parameters'
-   write(UnSu,'(A,I0)')   'Total number of DOF    : ',p%nTot
-   write(UnSu,'(A,I0)')   'Number of CB modes     : ',p%nCB
+   write(UnSu,'(A,I0)')   'Number of time steps         : ',p%nTimeSteps
+   write(UnSu,'(A,F13.8)')'Start time                   : ',p%times(1)
+   write(UnSu,'(A,F13.8)')'End time                     : ',p%times(p%nTimeSteps)
+   write(UnSu,'(A,I0)')   'Total number of DOF (input)  : ',p%nCBFull+6
+   write(UnSu,'(A,I0)')   'Number of CB modes (input)   : ',p%nCBFull
+   write(UnSu,'(A)')      '!Degrees of freedom'
+   write(UnSu,'(A,I0)')   'Total number of DOF (active) : ',p%nTot
+   write(UnSu,'(A,I0)')   'Number of CB modes (active)  : ',p%nCB
+   call disp1i(UnSu, 'ActiveDOFList',p%ActiveDOFList)
 ! 
    if (m%EquilStart) then
        write(UnSu,'(A)')'!Initial conditions (before equilibrium)'
@@ -757,7 +886,6 @@ SUBROUTINE ExtPtfm_PrintSum(x, p, m, RootName, ErrStat, ErrMsg)
    call disp2r8(UnSu, 'C12',p%C12)
    call disp2r8(UnSu, 'C21',p%C21)
    call disp2r8(UnSu, 'C22',p%C22)
-
 
    OutPFmt  = '( I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
    OutPFmtS = '( A4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
