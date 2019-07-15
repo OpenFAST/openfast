@@ -687,7 +687,7 @@ CONTAINS
                if (p%nTot<0) exit
                call ReadRealMatrix(UnIn, InputFile, p%Damp, 'Damping Matrix', p%nTot, p%nTot, ErrStat, ErrMsg, iLine)
 
-           else if (index(Line,'!LOADING AND WAVE ELEVATION')==1) then
+           else if (index(Line,'!LOADING')==1) then
                iLine=iLine+1
                CALL ReadCom( UnIn, InputFile, 'Comment - Line '//Num2LStr(iLine), ErrStat, ErrMsg)
                if (ErrStat /= 0) exit

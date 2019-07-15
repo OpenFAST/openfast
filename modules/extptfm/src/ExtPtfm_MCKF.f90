@@ -185,7 +185,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    do I=1,N_INPUTS; m%uFlat(I)=0; end do
    
    ! Define initial guess (set up mesh first) for the system inputs here:
-   call Init_meshes(u, y, ErrStat, ErrMsg); if(Failed()) return
+   call Init_meshes(u, y, InitInp, ErrStat, ErrMsg); if(Failed()) return
 
    ! --- Outputs
    CALL AllocAry( m%AllOuts, ID_QStart+3*p%nCBFull-1, "ExtPtfm AllOut", ErrStat,ErrMsg ); if(Failed()) return
@@ -199,14 +199,17 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
    InitOut%Ver = ExtPtfm_Ver
       
    if (InitInp%Linearize) then
+      ! TODO TODO TODO
+      CALL SetErrStat( ErrID_Fatal, 'ExtPtfm_MCKF linearization analysis is currently not supported by the glue code.', ErrStat, ErrMsg, 'ExtPtfm_Init');
+      if(Failed())return
       !Appropriate Jacobian row/column names and rotating-frame flags here:   
-      CALL AllocAry(InitOut%LinNames_y, 6+p%NumOuts       , 'LinNames_y', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_y, 6+p%NumOuts       , 'RotFrame_y', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%LinNames_x, 2*p%nCB , 'LinNames_x', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_x, 2*p%nCB , 'RotFrame_x', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%LinNames_u, N_INPUTS, 'LinNames_u', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%RotFrame_u, N_INPUTS, 'RotFrame_u', ErrStat, ErrMsg); if(Failed()) return
-      CALL AllocAry(InitOut%IsLoad_u  , N_INPUTS, 'IsLoad_u'  , ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%LinNames_y, 6+p%NumOuts , 'LinNames_y', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%RotFrame_y, 6+p%NumOuts , 'RotFrame_y', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%LinNames_x, 2*p%nCB     , 'LinNames_x', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%RotFrame_x, 2*p%nCB     , 'RotFrame_x', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%LinNames_u, N_INPUTS    , 'LinNames_u', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%RotFrame_u, N_INPUTS    , 'RotFrame_u', ErrStat, ErrMsg); if(Failed()) return
+      CALL AllocAry(InitOut%IsLoad_u  , N_INPUTS    , 'IsLoad_u'  , ErrStat, ErrMsg); if(Failed()) return
       ! LinNames_y
       do I=1,3; 
           InitOut%LinNames_y(I)   = 'Interface node '//XYZ(I)//' force, N' 
@@ -234,7 +237,6 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
       InitOut%RotFrame_y = .false. ! note that meshes are in the global, not rotating frame
       InitOut%RotFrame_u = .false. ! note that meshes are in the global, not rotating frame
       InitOut%IsLoad_u   = .false. ! the inputs are not loads but kinematics
-       !CALL SetErrStat( ErrID_Fatal, 'ExtPtfm_MCKF linearization analysis TODO.', ErrStat, ErrMsg, 'ExtPtfm_Init'); if(Failed())return
    end if
 
    ! --- Summary file 
@@ -335,9 +337,10 @@ CONTAINS
     end function Failed
 END SUBROUTINE SetStateMatrices
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Init_meshes(u, y, ErrStat, ErrMsg)
+SUBROUTINE Init_meshes(u, y, InitInp, ErrStat, ErrMsg)
    TYPE(ExtPtfm_InputType),           INTENT(INOUT)  :: u           !< System inputs
    TYPE(ExtPtfm_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+   TYPE(ExtPtfm_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Create the input and output meshes associated with platform loads
@@ -354,8 +357,8 @@ SUBROUTINE Init_meshes(u, y, ErrStat, ErrMsg)
                      RotationAcc       = .TRUE.)
    if(Failed()) return
       
-   ! Create the node on the mesh
-   CALL MeshPositionNode (u%PtfmMesh, 1, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/), ErrStat, ErrMsg ); if(Failed()) return
+   ! Create the node on the mesh, the node is located at the PlatformRefzt, to match ElastoDyn
+   CALL MeshPositionNode (u%PtfmMesh, 1, (/0.0_ReKi, 0.0_ReKi, InitInp%PtfmRefzt/), ErrStat, ErrMsg ); if(Failed()) return
    ! Create the mesh element
    CALL MeshConstructElement (  u%PtfmMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1 ); if(Failed()) return
    CALL MeshCommit ( u%PtfmMesh, ErrStat, ErrMsg ); if(Failed()) return
