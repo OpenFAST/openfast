@@ -60,6 +60,50 @@ MODULE ExtPtfm_MCKF
                                                     !    states (z)
    PUBLIC :: ExtPtfm_GetOP                          !  Routine to get the operating-point values for linearization (from data structures to arrays)
 
+
+
+   INTERFACE LAPACK_COPY    
+       SUBROUTINE DCOPY(N,DX,INCX,DY,INCY)
+           USE Precision, only: R8Ki
+           INTEGER    :: INCX,INCY,N
+           real(R8Ki) :: DX(*),DY(*)
+       ENDSUBROUTINE
+       SUBROUTINE SCOPY(N,X,INCX,Y,INCY)
+           USE Precision, only: SiKi
+           INTEGER    :: INCX,INCY,N
+           real(SiKi) :: X(*),Y(*)
+       ENDSUBROUTINE
+   END INTERFACE
+   INTERFACE LAPACK_GEMV    
+       SUBROUTINE DGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
+           USE Precision, only: R8Ki
+           real(R8Ki) :: ALPHA,BETA
+           integer    :: INCX,INCY,LDA,M,N
+           character  :: TRANS
+           real(R8Ki) :: A(LDA,*),X(*),Y(*)
+       ENDSUBROUTINE
+       SUBROUTINE SGEMV(TRANS,M,N,ALPHA,A,LDA,X,INCX,BETA,Y,INCY)
+           USE Precision, only: SiKi
+           real(SiKi) :: ALPHA,BETA
+           integer    :: INCX,INCY,LDA,M,N
+           character  :: TRANS
+           real(SiKi) :: A(LDA,*),X(*),Y(*)
+       ENDSUBROUTINE
+   END INTERFACE LAPACK_GEMV    
+   INTERFACE LAPACK_AXPY    
+      SUBROUTINE DAXPY(N,DA,DX,INCX,DY,INCY)
+           USE Precision, only: R8Ki
+           real(R8Ki) :: DA
+           integer    :: INCX,INCY,N
+           real(R8Ki) :: DX(*),DY(*)
+       ENDSUBROUTINE
+      SUBROUTINE SAXPY(N,A,X,INCX,Y,INCY)
+           USE Precision, only: SiKi
+           real(SiKi) :: A
+           integer    :: INCX,INCY,N
+           real(SiKi) :: X(*),Y(*)
+       ENDSUBROUTINE
+   END INTERFACE
 CONTAINS
    
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -229,7 +273,7 @@ SUBROUTINE ExtPtfm_Init( InitInp, u, p, x, xd, z, OtherState, y, m, dt_gluecode,
       enddo
       ! LinNames_x
       do I=1,p%nCB; 
-          InitOut%LinNames_x(I)       = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' displacement, -'; ! TODO  TODO IDOF
+          InitOut%LinNames_x(I)       = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' displacement, -';
           InitOut%LinNames_x(I+p%nCB) = 'Mode '//trim(Num2LStr(p%ActiveCBDOF(I)))//' velocity, -';
       enddo
       ! 
@@ -487,7 +531,7 @@ SUBROUTINE ExtPtfm_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, E
    TYPE(ExtPtfm_InputType),             INTENT(INOUT) :: u(:)        !< Inputs at t
    REAL(DbKi),                          INTENT(IN   ) :: utimes(:)   !< times of input
    TYPE(ExtPtfm_ParameterType),         INTENT(IN   ) :: p           !< Parameters
-   TYPE(ExtPtfm_ContinuousStateType),   INTENT(INOUT) :: x           !< Continuous states at t on input at t + dt on output
+   TYPE(ExtPtfm_ContinuousStateType),   INTENT(INOUT) :: x           !< Continuous states at t on input at t + dt on output ! TODO TODO TODO IN
    TYPE(ExtPtfm_DiscreteStateType),     INTENT(IN   ) :: xd          !< Discrete states at t
    TYPE(ExtPtfm_ConstraintStateType),   INTENT(IN   ) :: z           !< Constraint states at t (possibly a guess)
    TYPE(ExtPtfm_OtherStateType),        INTENT(INOUT) :: OtherState  !< Other states at t on input at t + dt on output
@@ -701,12 +745,23 @@ SUBROUTINE ExtPtfm_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Err
    m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
    m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
    m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
+
+   !--- Computing output:  y = Cx + Du + Fy  
+   ! 
    if (p%nCB>0) then
        ! x flat
        m%xFlat(      1:p%nCB  ) = x%qm   (1:p%nCB)
        m%xFlat(p%nCB+1:2*p%nCB) = x%qmdot(1:p%nCB)
-       ! y = Cx + Du + Fy  - TODO consider using lapack for efficiency
-       Fc = matmul(p%CMat, m%xFlat) + matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) - matmul(p%M12, m%F_at_t(6+1:6+p%nCB))
+
+       ! >>> MATMUL implementation
+       !Fc = matmul(p%CMat, m%xFlat) + matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) - matmul(p%M12, m%F_at_t(6+1:6+p%nCB))
+
+       ! >>> LAPACK implementation
+       Fc(1:6) = m%F_at_t(1:6) ! Fc = F1r + ...
+       !           GEMV(TRS, M  , N      , alpha    , A     , LDA, X                    ,INCX, Beta  ,  Y, IncY)
+       CALL LAPACK_GEMV('n', 6  , 2*p%nCB,  1.0_ReKi, p%CMat, 6  , m%xFlat              , 1, 1.0_ReKi, Fc, 1   ) ! = C*x + (F1r)
+       CALL LAPACK_GEMV('n', 6  ,   18   ,  1.0_ReKi, p%DMat, 6  , m%uFlat              , 1, 1.0_ReKi, Fc, 1   ) ! + D*u
+       CALL LAPACK_GEMV('n', 6  , p%nCB  , -1.0_ReKi, p%M12 , 6  , m%F_at_t(6+1:6+p%nCB), 1, 1.0_ReKi, Fc, 1   ) ! - M12*F2r
    else
        Fc =                           matmul(p%DMat, m%uFlat) + m%F_at_t(1:6) 
    endif
@@ -786,20 +841,24 @@ SUBROUTINE ExtPtfm_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, E
    m%uFlat(10:12) = u%PtfmMesh%RotationVel   (:,1)
    m%uFlat(13:15) = u%PtfmMesh%TranslationAcc(:,1)
    m%uFlat(16:18) = u%PtfmMesh%RotationAcc   (:,1)
-   !write(*,*)'x%qm',x%qm
-   !write(*,*)'x%qmdot',x%qmdot
-   !write(*,*)'m%uFlat',m%uFlat
-   !write(*,*)'m%F_at_t',m%F_at_t(6+1:6+p%nCB)
-   !write(*,*)'K22',p%K22
-   !write(*,*)'C22',p%C22
-   !write(*,*)'M21',p%M21
-   !write(*,*)'C21',p%C21
 
-
-   dxdt%qm= x%qmdot
+   ! --- Computation of qm and qmdot
+   ! >>> Latex formulae:
    ! \ddot{x2} = -K22 x2 - C22 \dot{x2}  - C21 \dot{x1} - M21 \ddot{x1} + fr2
-   dxdt%qmdot = - matmul(p%K22,x%qm) - matmul(p%C22,x%qmdot) &
-                - matmul(p%C21,m%uFlat(7:12)) - matmul(p%M21, m%uFlat(13:18)) + m%F_at_t(6+1:6+p%nCB)
+   ! >>> MATMUL IMPLEMENTATION 
+   !dxdt%qm= x%qmdot
+   !dxdt%qmdot = - matmul(p%K22,x%qm) - matmul(p%C22,x%qmdot) &
+   !             - matmul(p%C21,m%uFlat(7:12)) - matmul(p%M21, m%uFlat(13:18)) + m%F_at_t(6+1:6+p%nCB)
+   ! >>> BLAS IMPLEMENTATION 
+   !           COPY( N   , X                    , INCX, Y      , INCY)
+   CALL LAPACK_COPY(p%nCB, x%qmdot              , 1  , dxdt%qm    , 1  ) ! qmdot=qmdot
+   CALL LAPACK_COPY(p%nCB, m%F_at_t(6+1:6+p%nCB), 1  , dxdt%qmdot , 1  )                                          ! qmddot = fr2
+   !           GEMV(TRS, M    , N     , alpha    , A    , LDA  , X              ,INCX, Beta   ,  Y        , IncY)
+   CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%K22, p%nCB, x%qm          , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - K22 x2
+   CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%C21, p%nCB, m%uFlat(7:12) , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C21 \dot{x1}
+   CALL LAPACK_GEMV('n', p%nCB, p%nCB , -1.0_ReKi, p%C22, p%nCB, x%qmdot       , 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - C22 \dot{x2}
+   CALL LAPACK_GEMV('n', p%nCB, 6     , -1.0_ReKi, p%M21, p%nCB, m%uFlat(13:18), 1  , 1.0_ReKi, dxdt%qmdot, 1   ) !        - M21 \ddot{x1}
+
 CONTAINS
     logical function Failed()
         CALL SetErrStatSimple(ErrStat, ErrMsg, 'ExtPtfm_CalcContStateDeriv')
