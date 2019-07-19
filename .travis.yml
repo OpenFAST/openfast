@@ -7,36 +7,19 @@
 
 language: c
 
-# os:
-#     - linux
-#     - osx
-
-# env:
-#     - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
-#     - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
-#     - FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
-#     - FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
-
-# linux dependency install
+# macos dependency install
 addons:
-  apt:
-    packages:
-      - gfortran
-      - libblas-dev
-      - liblapack-dev
-      - python3-pip
+  homebrew:
+    packages: gcc@7
+    update: true
 
 before_install:
     # mac configuration
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; fi
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade python; fi
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gcc@7; fi
 
     # linux configuration
-    # - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update; fi
-    # - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gfortran; fi
-    # - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install libblas-dev liblapack-dev; fi
-    # - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.6.3; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update && sudo apt-get install gfortran libblas-dev liblapack-dev; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.7.1; fi
 
     # common configuration
     - pip3 install numpy
@@ -50,29 +33,16 @@ matrix:
   include:
     - os: linux
       dist: bionic
-      env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
+      env: FC=/usr/bin/gfortran-7; DOUBLE_PRECISION=ON
     - os: linux
       dist: bionic
-      env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
+      env: FC=/usr/bin/gfortran-7; DOUBLE_PRECISION=OFF
     - os: osx
       osx_image: xcode9.2
       env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
     - os: osx
       osx_image: xcode9.2
       env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
-      
-# matrix:
-#   exclude:
-#     - os: linux
-#       env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
-#     - os: linux
-#       env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
-#     - os: osx
-#       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
-#     - os: osx
-#       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
-#     # - os: osx
-#     #   env: FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
 
 script:
     # beamdyn unit tests
