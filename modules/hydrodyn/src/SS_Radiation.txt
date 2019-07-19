@@ -45,6 +45,7 @@ typedef   ^               ^            ReKi     A      {:}{:} - - "A matrix" -
 typedef   ^               ^            ReKi     B      {:}{:} - - "B matrix" -
 typedef   ^               ^            ReKi     C      {:}{:} - - "C matrix" -
 typedef   ^               ^            INTEGER  N       -     - - "Number of states" -
+typedef   ^               ^            INTEGER  spdof  {6}    - - "States per dof" -
 
 # ..... Inputs .............................
 # Define inputs that are contained on the mesh here:
