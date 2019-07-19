@@ -7,16 +7,24 @@
 
 language: c
 
-os:
-    - linux
-    - osx
+# os:
+#     - linux
+#     - osx
 
-env:
-    - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
-    - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
-    - FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
-    - FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
-    # - FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
+# env:
+#     - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
+#     - FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
+#     - FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
+#     - FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
+
+# linux dependency install
+addons:
+  apt:
+    packages:
+      - gfortran
+      - libblas-dev
+      - liblapack-dev
+      - python3-pip
 
 before_install:
     # mac configuration
@@ -25,17 +33,10 @@ before_install:
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew install gcc@7; fi
 
     # linux configuration
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gfortran; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install libblas-dev liblapack-dev; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.6.3; fi
-
-    # intel compiler
-    # this build requires setting an environment variable https://docs.travis-ci.com/user/environment-variables#defining-encrypted-variables-in-travisyml
-    # INTEL_SERIAL_NUMBER=XXXX-XXXXXXXX
-    - if [[ -n "${TRAVIS_BUILD_INTEL}" ]] ; then wget 'https://raw.githubusercontent.com/nemequ/icc-travis/master/install-icc.sh'; fi
-    - if [[ -n "${TRAVIS_BUILD_INTEL}" ]] ; then chmod 755 install-icc.sh; fi
-    - if [[ -n "${TRAVIS_BUILD_INTEL}" ]] ; then ./install-icc.sh --components ifort,icc,mkl; source ~/.bashrc; fi
+    # - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update; fi
+    # - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gfortran; fi
+    # - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install libblas-dev liblapack-dev; fi
+    # - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.6.3; fi
 
     # common configuration
     - pip3 install numpy
@@ -46,17 +47,32 @@ install:
     - make -j8 install
 
 matrix:
-  exclude:
+  include:
     - os: linux
-      env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
-    - os: linux
-      env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
-    - os: osx
+      dist: bionic
       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
-    - os: osx
+    - os: linux
+      dist: bionic
       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
-    # - os: osx
-    #   env: FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
+    - os: osx
+      osx_image: xcode9.2
+      env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
+    - os: osx
+      osx_image: xcode9.2
+      env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
+      
+# matrix:
+#   exclude:
+#     - os: linux
+#       env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
+#     - os: linux
+#       env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
+#     - os: osx
+#       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=ON
+#     - os: osx
+#       env: FC=/usr/bin/gfortran; DOUBLE_PRECISION=OFF
+#     # - os: osx
+#     #   env: FC=ifort; DOUBLE_PRECISION=ON; TRAVIS_BUILD_INTEL=YES
 
 script:
     # beamdyn unit tests
