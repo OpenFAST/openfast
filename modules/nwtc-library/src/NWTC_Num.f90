@@ -55,6 +55,10 @@ MODULE NWTC_Num
    REAL(ReKi)                                :: TwoByPi                       !< 2/Pi
    REAL(ReKi)                                :: TwoPi                         !< 2*Pi
 
+   REAL(SiKi)                                :: Pi_R4                         !< Ratio of a circle's circumference to its diameter in 4-byte precision
+   REAL(R8Ki)                                :: Pi_R8                         !< Ratio of a circle's circumference to its diameter in 8-byte precision
+   REAL(QuKi)                                :: Pi_R16                        !< Ratio of a circle's circumference to its diameter in 16-byte precision
+   
 !=======================================================================
 
       ! Create interfaces for generic routines that use specific routines.
@@ -109,10 +113,11 @@ MODULE NWTC_Num
       MODULE PROCEDURE GetSmllRotAngsR
    END INTERFACE
   
-      !> \copydoc nwtc_num::zero2twopir
+      !> \copydoc nwtc_num::zero2twopir4
    INTERFACE Zero2TwoPi
-      MODULE PROCEDURE Zero2TwoPiD
-      MODULE PROCEDURE Zero2TwoPiR
+      MODULE PROCEDURE Zero2TwoPiR4
+      MODULE PROCEDURE Zero2TwoPiR8
+      MODULE PROCEDURE Zero2TwoPiR16
    END INTERFACE
    
       !> \copydoc nwtc_num::twonormr4
@@ -194,57 +199,123 @@ MODULE NWTC_Num
       MODULE PROCEDURE SkewSymMatR16
    END INTERFACE
    
+      !> \copydoc nwtc_num::angle_extrapinterp2_r4
+   INTERFACE Angles_ExtrapInterp
+      MODULE PROCEDURE Angles_ExtrapInterp1_R4
+      MODULE PROCEDURE Angles_ExtrapInterp1_R8
+      MODULE PROCEDURE Angles_ExtrapInterp1_R16
+      MODULE PROCEDURE Angles_ExtrapInterp2_R4
+      MODULE PROCEDURE Angles_ExtrapInterp2_R8
+      MODULE PROCEDURE Angles_ExtrapInterp2_R16
+   END INTERFACE
 
+      !> \copydoc nwtc_num::addorsub2pi_r4
+   INTERFACE AddOrSub2Pi
+      MODULE PROCEDURE AddOrSub2Pi_R4
+      MODULE PROCEDURE AddOrSub2Pi_R8
+      MODULE PROCEDURE AddOrSub2Pi_R16
+   END INTERFACE
 CONTAINS
 
 !=======================================================================
-!> This routine is used to convert NewAngle to an angle within 2*Pi of
-!!   OldAngle by adding or subtracting 2*Pi accordingly; it then sets
-!!   OldAngle equal to NewAngle.  This routine is useful for converting
+!> This routine is used to convert NewAngle to an angle within Pi of
+!!   OldAngle by adding or subtracting 2*Pi accordingly.  
+!!   This routine is useful for converting
 !!   angles returned from a call to the ATAN2() FUNCTION into angles that may
 !!   exceed the -Pi to Pi limit of ATAN2().  For example, if the nacelle yaw
 !!   angle was 179deg in the previous time step and the yaw angle increased
 !!   by 2deg in the new time step, we want the new yaw angle returned from a
 !!   call to the ATAN2() FUNCTION to be 181deg instead of -179deg.  This
 !!   routine assumes that the angle change between calls is not more than
-!!   2*Pi in absolute value.  OldAngle should be saved in the calling
-!!   routine.
-   SUBROUTINE AddOrSub2Pi ( OldAngle, NewAngle )
+!!   Pi in absolute value.
+!! Use AddOrSub2Pi (nwtc_num::addorsub2pi) instead of directly calling a specific routine in the generic interface.
+   SUBROUTINE AddOrSub2Pi_R4 ( OldAngle, NewAngle )
+        ! Argument declarations:
 
-      ! Argument declarations:
-
-   REAL(ReKi), INTENT(INOUT)    :: OldAngle                                     !< Angle from which NewAngle will be converted to within 2*Pi of, rad.
-   REAL(ReKi), INTENT(INOUT)    :: NewAngle                                     !< Angle to be converted to within 2*Pi of OldAngle, rad.
+   REAL(SiKi), INTENT(IN   )    :: OldAngle                                     !< Angle from which NewAngle will be converted to within Pi of, rad.
+   REAL(SiKi), INTENT(INOUT)    :: NewAngle                                     !< Angle to be converted to within 2*Pi of OldAngle, rad.
 
 
       ! Local declarations:
 
-   REAL(ReKi)                   :: DelAngle                                     ! The difference between OldAngle and NewAngle, rad.
+   REAL(SiKi)                   :: DelAngle                                     ! The difference between OldAngle and NewAngle, rad.
 
 
 
-      ! Add or subtract 2*Pi in order to convert NewAngle two within 2*Pi of
-      !   OldAngle:
+      ! Add or subtract 2*Pi in order to convert NewAngle two within Pi of OldAngle:
 
    
    DelAngle = OldAngle - NewAngle
 
-   DO WHILE ( ABS( DelAngle ) >= TwoPi )
+   DO WHILE ( ABS( DelAngle ) >= Pi_R4 )
 
-      NewAngle = NewAngle + SIGN( TwoPi, DelAngle )
+      NewAngle = NewAngle + Pi_R4 * SIGN( 2.0_SiKi, DelAngle )
       DelAngle = OldAngle - NewAngle
 
    END DO
 
+   RETURN
+   END SUBROUTINE AddOrSub2Pi_R4
+!=======================================================================
+!> \copydoc nwtc_num::addorsub2pi_r4
+   SUBROUTINE AddOrSub2Pi_R8 ( OldAngle, NewAngle )
 
-      ! Set OldAngle to equal NewAngle:
+      ! Argument declarations:
 
-   OldAngle = NewAngle
+   REAL(R8Ki), INTENT(IN   )    :: OldAngle                                     ! Angle from which NewAngle will be converted to within Pi of, rad.
+   REAL(R8Ki), INTENT(INOUT)    :: NewAngle                                     ! Angle to be converted to within Pi of OldAngle, rad.
 
 
+      ! Local declarations:
+
+   REAL(R8Ki)                   :: DelAngle                                     ! The difference between OldAngle and NewAngle, rad.
+
+
+
+      ! Add or subtract 2*Pi in order to convert NewAngle two within Pi of OldAngle:
+
+   
+   DelAngle = OldAngle - NewAngle
+
+   DO WHILE ( ABS( DelAngle ) >= Pi_R8 )
+
+      NewAngle = NewAngle + Pi_R8 * SIGN( 2.0_R8Ki, DelAngle )
+      DelAngle = OldAngle - NewAngle
+
+   END DO
 
    RETURN
-   END SUBROUTINE AddOrSub2Pi
+   END SUBROUTINE AddOrSub2Pi_R8
+!=======================================================================
+!> \copydoc nwtc_num::addorsub2pi_r4
+   SUBROUTINE AddOrSub2Pi_R16 ( OldAngle, NewAngle )
+
+      ! Argument declarations:
+
+   REAL(QuKi), INTENT(IN   )    :: OldAngle                                     ! Angle from which NewAngle will be converted to within 2*Pi of, rad.
+   REAL(QuKi), INTENT(INOUT)    :: NewAngle                                     ! Angle to be converted to within 2*Pi of OldAngle, rad.
+
+
+      ! Local declarations:
+
+   REAL(QuKi)                   :: DelAngle                                     ! The difference between OldAngle and NewAngle, rad.
+
+
+
+      ! Add or subtract 2*Pi in order to convert NewAngle two within Pi of OldAngle:
+
+   
+   DelAngle = OldAngle - NewAngle
+
+   DO WHILE ( ABS( DelAngle ) >= Pi_R16 )
+
+      NewAngle = NewAngle + Pi_R16 * SIGN( 2.0_QuKi, DelAngle )
+      DelAngle = OldAngle - NewAngle
+
+   END DO
+
+   RETURN
+   END SUBROUTINE AddOrSub2Pi_R16
 !=======================================================================
 !> This routine sorts a list of real numbers. It uses the bubble sort algorithm,
 !! which is only suitable for short lists.
@@ -4066,7 +4137,7 @@ end function Rad2M180to180Deg
 !! a change in log map parameters.
    SUBROUTINE PerturbOrientationMatrix( Orientation, Perturbation, AngleDim )
       REAL(R8Ki), INTENT(INOUT)  :: Orientation(3,3)
-      REAL(R8Ki), INTENT(IN)     :: Perturbation
+      REAL(R8Ki), INTENT(IN)     :: Perturbation ! angle (radians) of the perturbation
       INTEGER,    INTENT(IN)     :: AngleDim
    
            ! Local variables
@@ -4975,8 +5046,8 @@ end function Rad2M180to180Deg
       ! return the number of seconds between StartClockTime and EndClockTime
    
          REAL                         :: GetClockTime          ! Elapsed clock time for the simulation phase of the run.
-         INTEGER   , INTENT(IN)       :: StartClockTime (8)                                 ! Start time of simulation (after initialization)
-         INTEGER   , INTENT(IN)       :: EndClockTime (8)                                 ! Start time of simulation (after initialization)
+         INTEGER   , INTENT(IN)       :: StartClockTime (8)    ! Start time of simulation (after initialization)
+         INTEGER   , INTENT(IN)       :: EndClockTime (8)      ! Start time of simulation (after initialization)
    
       !bjj: This calculation will be wrong at certain times (e.g. if it's near midnight on the last day of the month), but to my knowledge, no one has complained...
          GetClockTime =       0.001*( EndClockTime(8) - StartClockTime(8) ) &  ! Is the milliseconds of the second (range 0 to 999) - local time
@@ -5054,6 +5125,9 @@ end function Rad2M180to180Deg
       TwoPi   =  2.0_ReKi*Pi
       Inv2Pi  =  0.5_ReKi/Pi        ! 1.0/TwoPi
 
+      Pi_R4   = ACOS( -1.0_SiKi )
+      Pi_R8   = ACOS( -1.0_R8Ki )
+      Pi_R16  = ACOS( -1.0_QuKi )
 
          ! IEEE constants:
       CALL Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )
@@ -5193,7 +5267,7 @@ end function Rad2M180to180Deg
       PrevSimTime   = ZTime
 
       RETURN
-   END SUBROUTINE SimStatus   
+   END SUBROUTINE SimStatus
 !=======================================================================
 !>  This routine computes the 3x3 transformation matrix, \f$TransMat\f$,
 !!   to a coordinate system \f$x\f$ (with orthogonal axes \f$x_1, x_2, x_3\f$)
@@ -5620,7 +5694,12 @@ end function Rad2M180to180Deg
    END SUBROUTINE SortUnion ! ( Ary1, N1, Ary2, N2, Ary, N )
 !=======================================================================
 !> This routine calculates the standard deviation of a population contained in Ary.
-   FUNCTION StdDevFn ( Ary, AryLen, Mean )
+!!
+!! This can be calculated as either\n
+!! \f$ \sqrt{ \frac{\sum_{i=1}^N \left(x_i -\bar{x}\right)^2 }{N-1} } \f$   \n
+!! or \n
+!! \f$ \sqrt{ \frac{\sum_{i=1}^N \left(x_i -\bar{x}\right)^2 }{N} } \f$ if `UseN` is true \n
+   FUNCTION StdDevFn ( Ary, AryLen, Mean, UseN )
 
       ! Function declaration.
 
@@ -5633,6 +5712,7 @@ end function Rad2M180to180Deg
 
    REAL(ReKi), INTENT(IN)       :: Ary  (AryLen)                                !< Input array.
    REAL(ReKi), INTENT(IN)       :: Mean                                         !< The previously calculated mean of the array.
+   LOGICAL, OPTIONAL, INTENT(IN) :: UseN                                        !< Use `N` insted of `N-1` in denomenator
 
 
       ! Local declarations.
@@ -5640,8 +5720,17 @@ end function Rad2M180to180Deg
    REAL(DbKi)                   :: Sum                                          ! A temporary sum.
 
    INTEGER                      :: I                                            ! The index into the array.
+   INTEGER                      :: Denom                                        ! Denominator
 
-
+   IF(PRESENT(UseN)) THEN
+      IF (UseN) THEN
+         Denom = AryLen
+      ELSE
+         Denom = AryLen-1
+      ENDIF
+   ELSE
+      Denom = AryLen-1
+   ENDIF
 
    Sum = 0.0_DbKi
 
@@ -5649,7 +5738,7 @@ end function Rad2M180to180Deg
       Sum = Sum + ( Ary(I) - Mean )**2
    END DO ! I
 
-   StdDevFn = SQRT( Sum/( AryLen - 1 ) )
+   StdDevFn = SQRT( Sum/( Denom ) )
 
 
    RETURN
@@ -5733,6 +5822,7 @@ end function Rad2M180to180Deg
    
    RETURN
    END FUNCTION SkewSymMatR16
+
 !=======================================================================
 !> This routine takes an array of time values such as that returned from
 !!     CALL DATE_AND_TIME ( Values=TimeAry )
@@ -5858,30 +5948,30 @@ end function Rad2M180to180Deg
 !> This routine is used to convert Angle to an equivalent value
 !!  in the range \f$[0, 2\pi)\f$. \n
 !! Use Zero2TwoPi (nwtc_num::zero2twopi) instead of directly calling a specific routine in the generic interface.    
-   SUBROUTINE Zero2TwoPiR ( Angle )
+   SUBROUTINE Zero2TwoPiR4 ( Angle )
       
       ! Argument declarations:
 
-   REAL(ReKi), INTENT(INOUT)    :: Angle     !< angle that is input and converted to equivalent in range \f$[0, 2\pi)\f$
+   REAL(SiKi), INTENT(INOUT)    :: Angle     !< angle that is input and converted to equivalent in range \f$[0, 2\pi)\f$
 
 
       ! Get the angle between 0 and 2Pi.
 
-   Angle = MODULO( Angle, TwoPi )   
+   Angle = MODULO( Angle, 2.0_SiKi * Pi_R4 )
 
 
       ! Check numerical case where Angle == 2Pi.
 
-   IF ( Angle == TwoPi )  THEN
+   IF ( Angle == 2.0_SiKi * Pi_R4 )  THEN
       Angle = 0.0_ReKi
    END IF
 
 
    RETURN
-   END SUBROUTINE Zero2TwoPiR   
+   END SUBROUTINE Zero2TwoPiR4   
 !=======================================================================  
-!> \copydoc nwtc_num::zero2twopir
-   SUBROUTINE Zero2TwoPiD ( Angle )
+!> \copydoc nwtc_num::zero2twopir4
+   SUBROUTINE Zero2TwoPiR8 ( Angle )
 
       ! This routine is used to convert Angle to an equivalent value
       !  in the range [0, 2*pi).
@@ -5889,23 +5979,364 @@ end function Rad2M180to180Deg
 
       ! Argument declarations:
 
-   REAL(DbKi), INTENT(INOUT)    :: Angle
+   REAL(R8Ki), INTENT(INOUT)    :: Angle
 
 
 
       ! Get the angle between 0 and 2Pi.
 
-   Angle = MODULO( Angle, TwoPi_D )   
+   Angle = MODULO( Angle, 2.0_R8Ki * Pi_R8 )   
 
 
       ! Check numerical case where Angle == 2Pi.
 
-   IF ( Angle == TwoPi_D )  THEN
+   IF ( Angle == 2.0_R8Ki * Pi_R8 )  THEN
       Angle = 0.0_DbKi
    END IF
 
 
    RETURN
-   END SUBROUTINE Zero2TwoPiD   
+   END SUBROUTINE Zero2TwoPiR8   
+!=======================================================================  
+!> \copydoc nwtc_num::zero2twopir4
+   SUBROUTINE Zero2TwoPiR16 ( Angle )
+
+      ! This routine is used to convert Angle to an equivalent value
+      !  in the range [0, 2*pi).
+      
+
+      ! Argument declarations:
+
+   REAL(QuKi), INTENT(INOUT)    :: Angle
+
+
+
+      ! Get the angle between 0 and 2Pi.
+
+   Angle = MODULO( Angle, 2.0_QuKi * Pi_R16 )   
+
+
+      ! Check numerical case where Angle == 2Pi.
+
+   IF ( Angle == 2.0_QuKi * Pi_R16 )  THEN
+      Angle = 0.0_DbKi
+   END IF
+
+
+   RETURN
+   END SUBROUTINE Zero2TwoPiR16
+!=======================================================================
+   !< This routine extrapolates or interpolates between angles
+   SUBROUTINE Angles_ExtrapInterp1_R4(Angle1, Angle2, tin, Angle_out, tin_out )
+       REAL(SiKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
+       REAL(SiKi),          INTENT(IN   )  :: Angle2 !< Angle at t2
+       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(SiKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
+       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+                                                                     
+         ! local variables                                              
+       INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
+       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+                                                                     
+       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+       REAL(SiKi)                          :: Angle2_mod
+    
+          ! we'll subtract a constant from the times to resolve some
+          ! numerical issues when t gets large (and to simplify the equations)
+       t = tin - tin(1)
+       t_out = tin_out - tin(1)
+
+      !    ! some error checking:
+      !
+      ! if ( size(t) .ne. order+1) then
+      !    ErrStat = ErrID_Fatal
+      !    ErrMsg = 'Angles_ExtrapInterp1: size(t) must equal 2.'
+      !    RETURN
+      ! end if
+      !
+      !IF ( EqualRealNos( t(1), t(2) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp1: t(1) must not equal t(2) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+
+      Angle2_mod = Angle2
+      call AddOrSub2Pi( Angle1, Angle2_mod )
+      
+      Angle_out = Angle1 + (Angle2_mod - Angle1) * t_out / t(2)
+      call Zero2TwoPi(Angle_out)
+
+   END SUBROUTINE Angles_ExtrapInterp1_R4
+!=======================================================================  
+   !< This routine extrapolates or interpolates between angles
+   SUBROUTINE Angles_ExtrapInterp1_R8(Angle1, Angle2, tin, Angle_out, tin_out)
+       REAL(R8Ki),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
+       REAL(R8Ki),          INTENT(IN   )  :: Angle2 !< Angle at t2
+       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(R8Ki),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
+       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+         
+         ! local variables                                              
+       INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
+       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+                                                                     
+       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+       REAL(R8Ki)                          :: Angle2_mod
+    
+          ! we'll subtract a constant from the times to resolve some
+          ! numerical issues when t gets large (and to simplify the equations)
+       t = tin - tin(1)
+       t_out = tin_out - tin(1)
+
+      !    ! some error checking:
+      !
+      ! if ( size(t) .ne. order+1) then
+      !    ErrStat = ErrID_Fatal
+      !    ErrMsg = 'Angles_ExtrapInterp1: size(t) must equal 2.'
+      !    RETURN
+      ! end if
+      !
+      !IF ( EqualRealNos( t(1), t(2) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp1: t(1) must not equal t(2) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+
+      Angle2_mod = Angle2
+      call AddOrSub2Pi( Angle1, Angle2_mod )
+      
+      Angle_out = Angle1 + (Angle2_mod - Angle1) * t_out / t(2)
+      call Zero2TwoPi(Angle_out)
+
+   END SUBROUTINE Angles_ExtrapInterp1_R8
+!=======================================================================  
+   !< This routine extrapolates or interpolates between angles
+   SUBROUTINE Angles_ExtrapInterp1_R16(Angle1, Angle2, tin, Angle_out, tin_out)
+       REAL(QuKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2
+       REAL(QuKi),          INTENT(IN   )  :: Angle2 !< Angle at t2
+       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(QuKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
+       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+
+       ! local variables                                              
+       INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
+       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+                                                                     
+       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+       REAL(QuKi)                          :: Angle2_mod
+    
+          ! we'll subtract a constant from the times to resolve some
+          ! numerical issues when t gets large (and to simplify the equations)
+       t = tin - tin(1)
+       t_out = tin_out - tin(1)
+
+      !    ! some error checking:
+      !
+      ! if ( size(t) .ne. order+1) then
+      !    ErrStat = ErrID_Fatal
+      !    ErrMsg = 'Angles_ExtrapInterp1: size(t) must equal 2.'
+      !    RETURN
+      ! end if
+      !
+      !IF ( EqualRealNos( t(1), t(2) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp1: t(1) must not equal t(2) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+
+      Angle2_mod = Angle2
+      call AddOrSub2Pi( Angle1, Angle2_mod )
+      
+      Angle_out = Angle1 + (Angle2_mod - Angle1) * t_out / t(2)
+      call Zero2TwoPi(Angle_out)
+
+   END SUBROUTINE Angles_ExtrapInterp1_R16
+!=======================================================================  
+   !< This routine extrapolates or interpolates between angles
+   SUBROUTINE Angles_ExtrapInterp2_R4(Angle1, Angle2, Angle3, tin, Angle_out, tin_out )
+       REAL(SiKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2 > t3
+       REAL(SiKi),          INTENT(IN   )  :: Angle2 !< Angle at t2 > t3
+       REAL(SiKi),          INTENT(IN   )  :: Angle3 !< Angle at t3
+       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(SiKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
+       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+                                                                     
+         ! local variables                                              
+       INTEGER(IntKi), parameter           :: order = 2                 ! order of polynomial fit (max 2)
+       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+                                                                     
+       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+       REAL(SiKi)                          :: Angle2_mod
+       REAL(SiKi)                          :: Angle3_mod
+    
+          ! we'll subtract a constant from the times to resolve some
+          ! numerical issues when t gets large (and to simplify the equations)
+       t = tin - tin(1)
+       t_out = tin_out - tin(1)
+
+      !    ! some error checking:
+      !
+      !if ( size(t) .ne. order+1) then
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg = 'Angles_ExtrapInterp2: size(t) must equal 3.'
+      !   RETURN
+      !end if
+      !
+      !IF ( EqualRealNos( t(1), t(2) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp2: t(1) must not equal t(2) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+      !IF ( EqualRealNos( t(2), t(3) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp2: t(2) must not equal t(3) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+      !IF ( EqualRealNos( t(1), t(3) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp2: t(1) must not equal t(3) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+
+      Angle2_mod = Angle2
+      Angle3_mod = Angle3
+      call AddOrSub2Pi( Angle1, Angle2_mod )
+      call AddOrSub2Pi( Angle2_mod, Angle3_mod )
+      
+      scaleFactor = t_out / ( t(2) * t(3) * (t(2) - t(3)) )
+
+      Angle_out =   Angle1 &
+                     + ( t(3)**2 * (Angle1 - Angle2_mod) + t(2)**2*(-Angle1 + Angle3_mod) ) * scaleFactor &
+                     + ( (t(2)-t(3))*Angle1 + t(3)*Angle2_mod - t(2)*Angle3_mod ) *scaleFactor * t_out
+                     
+      call Zero2TwoPi(Angle_out)
+      
+   END SUBROUTINE Angles_ExtrapInterp2_R4
+!=======================================================================  
+   !< This routine extrapolates or interpolates between angles
+   SUBROUTINE Angles_ExtrapInterp2_R8(Angle1, Angle2, Angle3, tin, Angle_out, tin_out)
+       REAL(R8Ki),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2 > t3
+       REAL(R8Ki),          INTENT(IN   )  :: Angle2 !< Angle at t2 > t3
+       REAL(R8Ki),          INTENT(IN   )  :: Angle3 !< Angle at t3
+       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(R8Ki),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
+       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+                                                                     
+         ! local variables                                              
+       INTEGER(IntKi), parameter           :: order = 2                 ! order of polynomial fit (max 2)
+       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+                                                                     
+       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+       REAL(R8Ki)                          :: Angle2_mod
+       REAL(R8Ki)                          :: Angle3_mod
+    
+          ! we'll subtract a constant from the times to resolve some
+          ! numerical issues when t gets large (and to simplify the equations)
+       t = tin - tin(1)
+       t_out = tin_out - tin(1)
+
+          ! some error checking:
+
+      !if ( size(t) .ne. order+1) then
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg = 'Angles_ExtrapInterp2: size(t) must equal 3.'
+      !   RETURN
+      !end if
+      !
+      !IF ( EqualRealNos( t(1), t(2) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp2: t(1) must not equal t(2) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+      !IF ( EqualRealNos( t(2), t(3) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp2: t(2) must not equal t(3) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+      !IF ( EqualRealNos( t(1), t(3) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp2: t(1) must not equal t(3) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+
+      Angle2_mod = Angle2
+      Angle3_mod = Angle3
+      call AddOrSub2Pi( Angle1, Angle2_mod )
+      call AddOrSub2Pi( Angle2_mod, Angle3_mod )
+      
+      scaleFactor = t_out / ( t(2) * t(3) * (t(2) - t(3)) )
+
+      Angle_out =   Angle1 &
+                     + ( t(3)**2 * (Angle1 - Angle2_mod) + t(2)**2*(-Angle1 + Angle3_mod) ) * scaleFactor &
+                     + ( (t(2)-t(3))*Angle1 + t(3)*Angle2_mod - t(2)*Angle3_mod ) *scaleFactor * t_out
+      call Zero2TwoPi(Angle_out)
+      
+   END SUBROUTINE Angles_ExtrapInterp2_R8
+!=======================================================================  
+   !< This routine extrapolates or interpolates between angles
+   SUBROUTINE Angles_ExtrapInterp2_R16(Angle1, Angle2, Angle3, tin, Angle_out, tin_out )
+       REAL(QuKi),          INTENT(IN   )  :: Angle1 !< Angle at t1 > t2 > t3
+       REAL(QuKi),          INTENT(IN   )  :: Angle2 !< Angle at t2 > t3
+       REAL(QuKi),          INTENT(IN   )  :: Angle3 !< Angle at t3
+       REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+       REAL(QuKi),          INTENT(INOUT)  :: Angle_out                 !< Input at tin_out
+       REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+                                                                     
+         ! local variables                                              
+       INTEGER(IntKi), parameter           :: order = 2                 ! order of polynomial fit (max 2)
+       REAL(DbKi)                          :: t(SIZE(tin))              ! Times associated with the inputs
+       REAL(DbKi)                          :: t_out                     ! Time to which to be extrap/interpd
+                                                                     
+       REAL(DbKi)                          :: scaleFactor               ! temporary for extrapolation/interpolation
+       REAL(QuKi)                          :: Angle2_mod
+       REAL(QuKi)                          :: Angle3_mod
+    
+          ! we'll subtract a constant from the times to resolve some
+          ! numerical issues when t gets large (and to simplify the equations)
+       t = tin - tin(1)
+       t_out = tin_out - tin(1)
+
+          ! some error checking:
+
+      !if ( size(t) .ne. order+1) then
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg = 'Angles_ExtrapInterp2: size(t) must equal 3.'
+      !   RETURN
+      !end if
+      !
+      !IF ( EqualRealNos( t(1), t(2) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp2: t(1) must not equal t(2) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+      !IF ( EqualRealNos( t(2), t(3) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp2: t(2) must not equal t(3) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+      !IF ( EqualRealNos( t(1), t(3) ) ) THEN
+      !   ErrStat = ErrID_Fatal
+      !   ErrMsg  = 'Angles_ExtrapInterp2: t(1) must not equal t(3) to avoid a division-by-zero error.'
+      !   RETURN
+      !END IF
+
+      Angle2_mod = Angle2
+      Angle3_mod = Angle3
+      call AddOrSub2Pi( Angle1, Angle2_mod )
+      call AddOrSub2Pi( Angle2_mod, Angle3_mod )
+      
+      scaleFactor = t_out / ( t(2) * t(3) * (t(2) - t(3)) )
+
+      Angle_out =   Angle1 &
+                     + ( t(3)**2 * (Angle1 - Angle2_mod) + t(2)**2*(-Angle1 + Angle3_mod) ) * scaleFactor &
+                     + ( (t(2)-t(3))*Angle1 + t(3)*Angle2_mod - t(2)*Angle3_mod ) *scaleFactor * t_out
+      call Zero2TwoPi(Angle_out)
+      
+   END SUBROUTINE Angles_ExtrapInterp2_R16
 !=======================================================================  
 END MODULE NWTC_Num
