@@ -1619,7 +1619,8 @@ SUBROUTINE SetOutParamLin( p, ErrStat, ErrMsg )
    call AllocAry(p%OutParamLinIndx, 2, p%NumOuts, 'OutParamLinIndx', ErrStat2, ErrMsg2)
    call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    if (ErrStat >= AbortErrLev) return
-      
+   
+   p%OutParamLinIndx = 0
    do i = 1,p%NumOuts
       if (p%OutParam(i)%SignM /= 0 ) then
          
