@@ -2158,7 +2158,7 @@ CONTAINS
       CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
 
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
 
       !............................................................................................................................
       ! Set error status/message;
@@ -2229,7 +2229,6 @@ SUBROUTINE HD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-   m%IgnoreMod = .true. ! to compute perturbations, we need to ignore the modulo function
    
    ! LIN_TODO: We need to deal with the case where either RdtnMod=0, and/or ExtcnMod=0 and hence %SS_Rdtn data or %SS_Exctn data is not valid
    NN = p%WAMIT%SS_Rdtn%N + p%WAMIT%SS_Exctn%N
@@ -2365,7 +2364,6 @@ contains
       call HydroDyn_DestroyContState(    x_p, ErrStat2, ErrMsg2 )
       call HydroDyn_DestroyContState(    x_m, ErrStat2, ErrMsg2 )
       call HydroDyn_DestroyInput(  u_perturb, ErrStat2, ErrMsg2 )
-      m%IgnoreMod = .false.
    end subroutine cleanup
    
 END SUBROUTINE HD_JacobianPInput
@@ -2416,7 +2414,6 @@ SUBROUTINE HD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
    ErrStat = ErrID_None
    ErrMsg  = ''
-   m%IgnoreMod = .true. ! to get true perturbations, we can't use the modulo function
 
    
    ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
@@ -2540,7 +2537,6 @@ contains
       call HydroDyn_DestroyContState(      x_p, ErrStat2, ErrMsg2 )
       call HydroDyn_DestroyContState(      x_m, ErrStat2, ErrMsg2 )
       call HydroDyn_DestroyContState(x_perturb, ErrStat2, ErrMsg2 )
-      m%IgnoreMod = .false.
    end subroutine cleanup
 
 END SUBROUTINE HD_JacobianPContState
@@ -3158,7 +3154,7 @@ SUBROUTINE HD_Perturb_x( p, n, perturb_sign, x, dx )
       x%WAMIT%SS_Exctn%x( indx ) = x%WAMIT%SS_Exctn%x( indx ) + dx * perturb_sign 
    end if
                                                 
-   END SUBROUTINE HD_Perturb_x
+END SUBROUTINE HD_Perturb_x
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine uses values of two output types to compute an array of differences.
