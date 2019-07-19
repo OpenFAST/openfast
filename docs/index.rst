@@ -46,6 +46,7 @@ Here are some important links:
    source/install/index.rst
    source/testing/index.rst
    source/user/index.rst
+   source/working.rst
    source/dev/index.rst
    source/license.rst
    source/help.rst
