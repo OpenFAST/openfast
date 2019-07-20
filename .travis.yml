@@ -10,7 +10,10 @@ language: c
 # macos dependency install
 addons:
   homebrew:
-    packages: gcc@7
+    packages:
+    - gcc@7
+    - yaml-cpp
+    - hdf5
     update: true
 
 before_install:
@@ -19,6 +22,7 @@ before_install:
 
     # linux configuration
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update && sudo apt-get install gfortran libblas-dev liblapack-dev; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install libopenmpi-dev libyaml-cpp-dev libhdf5-dev libxml2-dev; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.7.1; fi
 
     # common configuration
