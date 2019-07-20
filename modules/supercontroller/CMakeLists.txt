@@ -14,10 +14,9 @@
 # limitations under the License.
 #
 
-generate_f90_types(src/SuperController_Registry.txt SuperController_Types.f90 -ccode)
+# generate_f90_types(src/SuperController_Registry.txt SuperController_Types.f90 -ccode)
 
-add_library(sctypeslib
-  SuperController_Types.f90)
+add_library(sctypeslib src/SuperController_Types.f90)
 target_link_libraries(sctypeslib nwtclibs)
 
 add_library(scfastlib

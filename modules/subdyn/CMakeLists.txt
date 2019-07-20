@@ -14,16 +14,15 @@
 # limitations under the License.
 #
 
-generate_f90_types(src/SubDyn_Registry.txt SubDyn_Types.f90)
+# generate_f90_types(src/SubDyn_Registry.txt SubDyn_Types.f90)
 
 set(SUBDYN_SOURCES
   src/SubDyn.f90
   src/SD_FEM.f90
   src/SubDyn_Output.f90
   src/qsort_c_module.f90
-
-  SubDyn_Types.f90
-  )
+  src/SubDyn_Types.f90
+)
 
 add_library(subdynlib ${SUBDYN_SOURCES})
 target_link_libraries(subdynlib nwtclibs)

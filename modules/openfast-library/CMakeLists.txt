@@ -18,10 +18,9 @@ if(APPLE OR UNIX)
   add_definitions(-DIMPLICIT_DLLEXPORT)
 endif()
 
-generate_f90_types(src/FAST_Registry.txt FAST_Types.f90 -noextrap)
+# generate_f90_types(src/FAST_Registry.txt FAST_Types.f90 -noextrap)
 
-add_library(openfast_prelib
-  FAST_Types.f90)
+add_library(openfast_prelib src/FAST_Types.f90)
 target_link_libraries(openfast_prelib
   nwtclibs
   ifwlib
@@ -41,7 +40,7 @@ target_link_libraries(openfast_prelib
   icedynlib
   icefloelib
   maplib
-  )
+)
 
 add_library(openfast_postlib
   src/FAST_Lin.f90
