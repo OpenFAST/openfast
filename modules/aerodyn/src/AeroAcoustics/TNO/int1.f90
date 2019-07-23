@@ -2,7 +2,7 @@ FUNCTION int1(x2)
 
 USE Atmosphere
 USE BLParams
-USE Precision
+use ISO_FORTRAN_ENV
 USE TNOConstants
 USE Wavenumber
 USE AirfoilParams
