@@ -34,7 +34,10 @@ COMPLEX (DbKi)               ::  ya(n), y2a(n), y, dydx
 
 
       h = xa(khi) - xa(klo)
-      if (h.eq.0.) pause 'bad xa input in splint'
+      if (h.eq.0.) then
+          write(*,*)'ERROR:TINoise:SPL_E0A: bad xa input in splint'
+          STOP 1
+      endif
       a = (xa(khi) - x) / h
       b = (x - xa(klo)) / h
       y = a * ya(klo) + b * ya(khi) + ((a**3.0d0 - a) * y2a(klo) &

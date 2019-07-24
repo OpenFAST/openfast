@@ -30,7 +30,10 @@ EXTERNAL          :: derivs
           h=.1*h
         endif
         xnew=x+h
-        if(xnew.eq.x)pause 'stepsize underflow in rkqs'
+        if(xnew.eq.x) then
+           write(*,*)'ERROR:xfoil:rkqs: stepsize underflow in rkqs'
+           STOP 1
+         endif
         goto 1
       else
         if(errmax.gt.ERRCON)then

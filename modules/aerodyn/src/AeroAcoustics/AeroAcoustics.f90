@@ -1257,6 +1257,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                         CALL FullGuidati(AlphaNoise,UNoise,p%BlChord(J,I),elementspan,m%rLEtoObserve(K,J,I), &
                             m%ChordAngleLE(K,J,I),m%SpanAngleLE(K,J,I),xd%MeanVrel(J,I),xd%TIVrel(J,I), &
                             p,p%BlAFID(J,I),m%SPLTIGui,errStat2,errMsg2 )
+                        write(*,*)'FullGuidati: EBRA:  SplTi appears unset. TODO'
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                         m%SPLti=m%SPLti+m%SPLTIGui+10 ! +10 is fudge factor to match NLR data
                     ELSEIF ( p%IInflow .EQ. 3 )   THEN      
@@ -2403,6 +2404,7 @@ SUBROUTINE FullGuidati(ALPSTAR,U,Chords,d,RObs,THETA,PHI,MeanVNoise,TINoise,p,wh
     integer(intKi)                                                 :: loop1       ! temporary 
     ErrStat = ErrID_None
     ErrMsgn  = "" 
+    SPLti=0.0_R8Ki ! EBRA: NOTE, this does not seem to be set TODO TODO TODO TODO FIGURE THIS OUT
 
     rho     = p%AirDens
     co      = p%SpdSound
@@ -2725,6 +2727,8 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
   character(*), parameter :: RoutineName = 'BL_Param_Interp'
   REAL(ReKi)              :: redif1,redif2,aoadif1,aoadif2,xx1,xx2,RC
   INTEGER(intKi)          :: loop1,loop2
+  ErrStat = ErrID_None
+  ErrMsg  = ""
 
   !!!! this if is not used but if necessary two sets of tables can be populated for tripped and untripped cases
   RC = U  * C/p%KinVisc       ! REYNOLDS NUMBER BASED ON  CHORD

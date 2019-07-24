@@ -606,6 +606,8 @@ SUBROUTINE AA_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
     CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
     CHARACTER(100)               :: Msg                                             ! temporary string for writing appropriate text to summary file
     ! Open the summary file and give it a heading.
+    ErrStat = ErrID_None
+    ErrMsg  = ""
     RETURN
 END SUBROUTINE AA_PrintSum
 !..................................................................................................................................

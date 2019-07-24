@@ -62,10 +62,12 @@ EXTERNAL         :: derivs,rkqs
           return
         endif
         if(abs(hnext).lt.hmin) then
-           pause 'stepsize smaller than minimum in odeint'
+           write(*,*)'ERROR:xfoil:odeint: stepsize smaller than minimum in odeint'
+           STOP 1
 	     endif
         h=hnext
 16    continue
-      pause 'too many steps in odeint'
+      write(*,*)'ERROR:xfoil:odeint: too many steps in odeint'
+      STOP 1
       return
       END
