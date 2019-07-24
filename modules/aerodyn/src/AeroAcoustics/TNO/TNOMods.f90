@@ -1,6 +1,6 @@
 MODULE TNOConstants
 
-USE Precision
+use ISO_FORTRAN_ENV
 
 REAL (kind=4),PARAMETER :: Cnuk = 5.5
 REAL (kind=4),PARAMETER :: kappa = 0.41
@@ -19,7 +19,7 @@ END MODULE TNOConstants
 
 MODULE Atmosphere
 
-USE Precision
+use ISO_FORTRAN_ENV
 
 !atmosphere constants
 REAL (kind=4) nu
@@ -33,7 +33,7 @@ END MODULE Atmosphere
 
 MODULE Wavenumber
 
-USE Precision
+use ISO_FORTRAN_ENV
 
 REAL (kind=4)           :: k
 REAL (kind=4)           :: k1
@@ -45,7 +45,7 @@ END MODULE Wavenumber
 
 MODULE BLParams
 
-USE Precision
+use ISO_FORTRAN_ENV
 REAL (kind=4)           :: d99(2)
 REAL (kind=4)           :: Cf(2)
 REAL (kind=4)           :: d_star(2)
@@ -55,7 +55,7 @@ END MODULE BLParams
 
 MODULE AirfoilParams
 
-USE Precision
+use ISO_FORTRAN_ENV
 
 CHARACTER*128         :: airfoil
 REAL (kind=4)           :: aofa,a_chord,Mach,Re
@@ -70,7 +70,7 @@ END MODULE AirfoilParams
 
 MODULE Third_Octave_Bands
 
-USE Precision
+use ISO_FORTRAN_ENV
 
 INTEGER (4),PARAMETER :: NumBands = 34
 REAL (kind=4),PARAMETER :: Third_Octave(NumBands) = (/10.,12.5,16.,20.,25.,31.5,40.,50.,63.,80.,	&

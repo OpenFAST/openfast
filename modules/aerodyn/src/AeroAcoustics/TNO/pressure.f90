@@ -3,7 +3,7 @@ FUNCTION Pressure(k1_in)
     USE Atmosphere
     USE AirfoilParams
     USE BLParams
-    USE Precision
+    use ISO_FORTRAN_ENV
     USE TNOConstants
     USE Wavenumber
 
