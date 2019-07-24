@@ -542,6 +542,8 @@ C
 
 
       SUBROUTINE VPAR_Noise(xtrup,xtrlo)
+      use XfoilPrecision, only: ReKi
+      real(ReKi), intent(in) :: xtrup, xtrlo
 C---------------------------------------------
 C     Viscous parameter change menu routine.
 C---------------------------------------------
