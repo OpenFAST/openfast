@@ -1035,7 +1035,6 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
     REAL(ReKi)                    :: AlphaNoise                                 ! 
     REAL(ReKi)                    :: UNoise                                     ! 
     REAL(ReKi)                    :: elementspan                                ! 
-    REAL(ReKi)                    :: addpow                                ! 
     REAL(ReKi),DIMENSION(p%NumBlNds)   			    ::	tempdel
     REAL(ReKi),DIMENSION(p%NrObsLoc,p%NumBlNds,p%numBlades)    ::	OASPLTBLAll
     REAL(ReKi),DIMENSION(p%NrObsLoc,p%NumBlNds,p%numBlades,size(p%FreqList))    ::	ForMaxLoc
@@ -1397,14 +1396,12 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
         DO I = 1,p%numBlades
             DO K = 1,p%NrObsLoc
                 DO III=1,size(p%FreqList)
-                    addpow=10*log10(4*pi*m%rTEtoObserve(K,J,I)*m%rTEtoObserve(K,J,I))
                     IF (y%SumSpecNoise(III,K,I) .EQ. 0.)	    y%SumSpecNoise(III,K,I)=1
                     IF (p%AweightFlag.eq.1) THEN
                         y%SumSpecNoise(III,K,I)    = 10.*LOG10(y%SumSpecNoise(III,K,I))+p%Aweight(III)
                     ELSE
                         y%SumSpecNoise(III,K,I)    = 10.*LOG10(y%SumSpecNoise(III,K,I))
                     ENDIF
-                    !        y%SumSpecNoise(III,K,I)    = 10.*LOG10(y%SumSpecNoise(III,K,I))+addpow !this is the equation used for sound power level !SPLw(f)=SPL(f)+10*log10(4*pi*dis**2);
                 ENDDO
             ENDDO
         ENDDO
