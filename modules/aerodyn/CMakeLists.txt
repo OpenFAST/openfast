@@ -77,6 +77,34 @@ set(FULLGUIDATI_SOURCES
 )
 add_library(FullGuidati ${FULLGUIDATI_SOURCES})
 
+# Xfoil
+set(Xfoil_SOURCES
+    src/AeroAcoustics/Xfoil/dplot_noise.f 
+    src/AeroAcoustics/Xfoil/get_airfoil_coords.f 
+    src/AeroAcoustics/Xfoil/naca.f  
+    src/AeroAcoustics/Xfoil/plutil_noise.f  
+    src/AeroAcoustics/Xfoil/profil.f  
+    src/AeroAcoustics/Xfoil/sort.f  
+    src/AeroAcoustics/Xfoil/spline.f 
+    src/AeroAcoustics/Xfoil/userio.f 
+    src/AeroAcoustics/Xfoil/xbl.f 
+    src/AeroAcoustics/Xfoil/xblsys.f
+    src/AeroAcoustics/Xfoil/xfoil_noise.f 
+    src/AeroAcoustics/Xfoil/xgdes_noise.f  
+    src/AeroAcoustics/Xfoil/xgeom_noise.f 
+    src/AeroAcoustics/Xfoil/xoper_noise.f  
+    src/AeroAcoustics/Xfoil/xpanel.f
+    src/AeroAcoustics/Xfoil/xsolve.f
+    src/AeroAcoustics/Xfoil/xtcam_noise.f
+    src/AeroAcoustics/Xfoil/xutils.f 
+    src/AeroAcoustics/Xfoil/xfoil_noise_mods.f90 
+    src/AeroAcoustics/Xfoil/XFOIL.INC 
+    src/AeroAcoustics/Xfoil/XBL.INC 
+    src/AeroAcoustics/Xfoil/CIRCLE.INC 
+    src/AeroAcoustics/Xfoil/PINDEX.INC)
+add_library(Xfoil ${Xfoil_SOURCES})
+
+
 # AeroAcoustics
 set(AEROACOUSTIC_SOURCES
   src/AeroAcoustics/AeroAcoustics.f90
@@ -87,7 +115,7 @@ set(AEROACOUSTIC_SOURCES
   AirfoilInfo_Types.f90
 )
 add_library(AeroAcoustics ${AEROACOUSTIC_SOURCES})
-target_link_libraries(AeroAcoustics nwtclibs FullGuidati TNO)
+target_link_libraries(AeroAcoustics nwtclibs FullGuidati TNO Xfoil)
 
 # AeroDyn lib
 set(AD_LIBS_SOURCES
@@ -133,7 +161,7 @@ set(UA_DRIVER_SOURCES
 add_executable(unsteadyaero_driver ${UA_DRIVER_SOURCES})
 target_link_libraries(unsteadyaero_driver aerodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib AeroAcoustics FullGuidati TNO
+install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib AeroAcoustics FullGuidati TNO Xfoil
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

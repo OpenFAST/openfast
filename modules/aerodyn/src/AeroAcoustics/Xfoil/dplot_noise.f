@@ -20,7 +20,7 @@ C***********************************************************************
 
       SUBROUTINE DPLOT_Noise(NPR1,XPR,YPR)
       
-      USE XfoilBLParams
+      USE XfoilBLParams, only: Cf, d99, d_star
       INCLUDE 'XFOIL.INC'  
 
 C-----------------------------------------------------------
