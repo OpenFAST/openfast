@@ -235,7 +235,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     !!Assign input fiel data to parameters
     p%DT               = InputFileData%DTAero         ! seconds
     p%AA_Bl_Prcntge    = InputFileData%AA_Bl_Prcntge  ! %
-    p%fsample          = 1/p%DT    	! Hz
+    p%fsample          = 1/p%DT     ! Hz
     p%total_sample     = 2**( ceiling(log(1*p%fsample)/log(2.0d0)))! 1 stands for the 1 seconds. Every 1 second Vrel spectra will be calculated for the dissipation calculation (change if more needed & recompile )
     p%total_sampleTI   = 5/p%DT  ! 10 seconds for TI sampling
     p%Comp_AA_After    = InputFileData%Comp_AA_After
@@ -2373,25 +2373,25 @@ END SUBROUTINE DirectL
 !===============================  Full Guidati Model Inflow Turbulence Noise -  Addition ==========================================!
 !==================================================================================================================================!
 SUBROUTINE FullGuidati(ALPSTAR,U,Chords,d,RObs,THETA,PHI,MeanVNoise,TINoise,p,whichairfoil,SPLti,errStat,errMsgn)
-    USE Atmosphere
-    USE TINoiseGeneric
-    USE TINoiseGeo
-    USE TINoiseInput
-    USE TICoords
-    USE AirfoilParams
-    USE TI_Guidati
-    REAL(R8Ki),                               INTENT(IN   ) :: ALPSTAR        !< AOA                    (deg)
-    REAL(R8Ki),                               INTENT(IN   ) :: Chords         !< Chord Length
-    REAL(R8Ki),                               INTENT(IN   ) :: U              !<
-    REAL(R8Ki),                               INTENT(IN   ) :: d              !< element span
-    REAL(R8Ki),                               INTENT(IN   ) :: RObs           !< distance to observer
-    REAL(R8Ki),                               INTENT(IN   ) :: THETA          !<
-    REAL(R8Ki),                               INTENT(IN   ) :: PHI            !< Spanwise directivity angle
-    REAL(R8Ki),                               INTENT(IN   ) :: MeanVNoise     !<
-    REAL(R8Ki),                               INTENT(IN   ) :: TINoise        !<
+    USE Atmosphere, only: nu, rho, co
+    USE TINoiseGeneric, only: mach_ti, csound, pi2
+    USE TINoiseGeo, only: alfa
+    USE TINoiseInput, only: npath, nfreq, freq_in, chord, dpath, alpha_in
+    USE TICoords,      only: n_in, x_ti, y_ti
+    USE AirfoilParams, only: aofa, a_chord
+    !USE TI_Guidati
+    REAL(ReKi),                               INTENT(IN   ) :: ALPSTAR        !< AOA                    (deg)
+    REAL(Reki),                               INTENT(IN   ) :: Chords         !< Chord Length
+    REAL(ReKi),                               INTENT(IN   ) :: U              !<
+    REAL(ReKi),                               INTENT(IN   ) :: d              !< element span
+    REAL(ReKi),                               INTENT(IN   ) :: RObs           !< distance to observer
+    REAL(ReKi),                               INTENT(IN   ) :: THETA          !<
+    REAL(ReKi),                               INTENT(IN   ) :: PHI            !< Spanwise directivity angle
+    REAL(ReKi),                               INTENT(IN   ) :: MeanVNoise     !<
+    REAL(ReKi),                               INTENT(IN   ) :: TINoise        !<
     integer(intKi),                           INTENT(IN   ) :: whichairfoil   !< whichairfoil
     TYPE(AA_ParameterType),                   INTENT(IN   ) :: p              !< Parameters
-    REAL(R8Ki),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLti          !<
+    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLti          !<
     INTEGER(IntKi),                           INTENT(  OUT) :: errStat        !< Error status of the operation
     character(*),                             INTENT(  OUT) :: errMsgn        !< Error message if ErrStat /= ErrID_None
     ! local variables
@@ -2402,14 +2402,14 @@ SUBROUTINE FullGuidati(ALPSTAR,U,Chords,d,RObs,THETA,PHI,MeanVNoise,TINoise,p,wh
     ErrStat = ErrID_None
     ErrMsgn  = "" 
     SPLti=0.0_R8Ki ! EBRA: NOTE, this does not seem to be set TODO TODO TODO TODO FIGURE THIS OUT
-
+    ! NOTE: Type conversions might occur
     rho     = p%AirDens
     co      = p%SpdSound
     nu      = p%KinVisc
     aofa    = ALPSTAR
     a_chord = Chords
-    npath = 40         !   Number of Streamlines                (Guidati full model)
-    dpath = 0.005 	   !   Distance between streamlines         (Guidati full model)
+    npath   = 40         ! Number of Streamlines                (Guidati full model)
+    dpath   = 0.005      ! Distance between streamlines         (Guidati full model)
     mach_ti = U / co
     CALL INICON
     ! Instead of calling readin routine the necessary variables are assigned within this subroutine
@@ -2467,21 +2467,21 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     USE Wavenumber
     USE BLParams
     USE AirfoilParams
-    REAL(R8Ki),                               INTENT(IN   ) :: ALPSTAR    !< AOA                    (deg)
-    REAL(R8Ki),                               INTENT(IN   ) :: C          !< Chord Length                   (m)
-    REAL(R8Ki),                               INTENT(IN   ) :: U          !< Unoise                 (m/s)
-    REAL(R8Ki),                               INTENT(IN   ) :: THETA      !< DIRECTIVITY ANGLE                  (deg)
-    REAL(R8Ki),                               INTENT(IN   ) :: PHI        !< DIRECTIVITY ANGLE                  (deg)
-    REAL(R8Ki),                               INTENT(IN   ) :: D          !< SPAN                   (m)
-    REAL(R8Ki),                               INTENT(IN   ) :: R          !< SOURCE TO OBSERVER DISTANCE        (m)
-    REAL(R8Ki),DIMENSION(2),                  INTENT(IN   ) :: Cfall      !< Skin friction coefficient (-)
-    REAL(R8Ki),DIMENSION(2),                  INTENT(IN   ) :: d99all     !< 
-    REAL(R8Ki),DIMENSION(2),                  INTENT(IN   ) :: EdgeVelAll !< 
+    REAL(ReKi),                               INTENT(IN   ) :: ALPSTAR    !< AOA                    (deg)
+    REAL(ReKi),                               INTENT(IN   ) :: C          !< Chord Length                   (m)
+    REAL(ReKi),                               INTENT(IN   ) :: U          !< Unoise                 (m/s)
+    REAL(ReKi),                               INTENT(IN   ) :: THETA      !< DIRECTIVITY ANGLE                  (deg)
+    REAL(ReKi),                               INTENT(IN   ) :: PHI        !< DIRECTIVITY ANGLE                  (deg)
+    REAL(ReKi),                               INTENT(IN   ) :: D          !< SPAN                   (m)
+    REAL(ReKi),                               INTENT(IN   ) :: R          !< SOURCE TO OBSERVER DISTANCE        (m)
+    REAL(ReKi),DIMENSION(2),                  INTENT(IN   ) :: Cfall      !< Skin friction coefficient (-)
+    REAL(ReKi),DIMENSION(2),                  INTENT(IN   ) :: d99all     !< 
+    REAL(ReKi),DIMENSION(2),                  INTENT(IN   ) :: EdgeVelAll !< 
     TYPE(AA_ParameterType),                   INTENT(IN   ) :: p          !< Noise Module Parameters
-    REAL(R8Ki),DIMENSION(size(p%FreqList)),   INTENT(IN   ) :: SPLALPH    !< SOUND PRESSURE LEVEL DUE TO ANGLE OF ATTACK CONTRIBUTION (db)
-    REAL(R8Ki),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLP       !< SOUND PRESSURE LEVEL DUE TO PRESSURE SIDE OF AIRFOIL (db)
-    REAL(R8Ki),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLS       !< SOUND PRESSURE LEVEL DUE TO SUCTION SIDE OF AIRFOIL  (db)
-    REAL(R8Ki),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLTBL     !< TOTAL SOUND PRESSURE LEVEL DUE TO TBLTE MECHANISM    (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(IN   ) :: SPLALPH    !< SOUND PRESSURE LEVEL DUE TO ANGLE OF ATTACK CONTRIBUTION (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLP       !< SOUND PRESSURE LEVEL DUE TO PRESSURE SIDE OF AIRFOIL (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLS       !< SOUND PRESSURE LEVEL DUE TO SUCTION SIDE OF AIRFOIL  (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLTBL     !< TOTAL SOUND PRESSURE LEVEL DUE TO TBLTE MECHANISM    (db)
     INTEGER(IntKi),                           INTENT(  OUT) :: errStat    !< Error status of the operation
     character(*),                             INTENT(  OUT) :: errMsgn    !< Error message if ErrStat /= ErrID_None
     ! Local variables
@@ -2591,9 +2591,9 @@ SUBROUTINE XFOIL_BL_SINGLE(p,m,whichairfoil,ChordChord,Unoise,AlphaNoise, ErrSta
     TYPE(AA_ParameterType),      INTENT(IN   ) :: p            !< Parameters
     TYPE(AA_MiscVarType),        INTENT(INOUT) :: m            !< Initial misc/optimization variables
     integer(intKi),            INTENT(IN   )   :: whichairfoil !< whichairfoil
-    REAL(kind=8),              INTENT(IN   )   :: Unoise       !< Unoise
-    REAL(kind=8),              INTENT(IN   )   :: ChordChord   !< Chord Length
-    REAL(kind=8),              INTENT(IN   )   :: AlphaNoise   !< deg
+    REAL(ReKi),              INTENT(IN   )   :: Unoise       !< Unoise
+    REAL(ReKi),              INTENT(IN   )   :: ChordChord   !< Chord Length
+    REAL(ReKi),              INTENT(IN   )   :: AlphaNoise   !< deg
     INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat      !< Error status of the operation
     CHARACTER(*),               INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
     INTEGER(intKi)          :: ErrStat2           ! temporary Error status
@@ -2659,7 +2659,7 @@ SUBROUTINE RUN_XFOIL_BL(p,ErrStat,ErrMsg)
     INTEGER(intKi)                                                 :: ErrStat2           ! temporary Error status
     CHARACTER(ErrMsgLen)                                           :: ErrMsg2            ! temporary Error message
     character(*), parameter                                        :: RoutineName = ' RUN_XFOIL_BL'
-    INTEGER*4          :: loop1,loop2,loop3,itrip
+    INTEGER(IntKi)    :: loop1,loop2,loop3,itrip
     real(ReKi)        :: U
     ErrStat = ErrID_None
     ErrMsg  = "" 
