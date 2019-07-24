@@ -28,7 +28,7 @@ before_install:
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gfortran; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install libblas-dev liblapack-dev; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.6.3; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.7.1; fi
 
     # intel compiler
     # this build requires setting an environment variable https://docs.travis-ci.com/user/environment-variables#defining-encrypted-variables-in-travisyml
