@@ -49,7 +49,7 @@ before_install:
 
 install:
     - mkdir build && cd build
-    - cmake .. -DBUILD_TESTING=ON $CMAKE_FLAGS
+    - cmake .. -DCMAKE_BUILD_TYPE=RELWITHDEBINFO -DBUILD_TESTING=ON $CMAKE_FLAGS
     - make -j8 install
 
 script:
