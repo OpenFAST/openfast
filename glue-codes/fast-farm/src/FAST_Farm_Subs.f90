@@ -290,6 +290,19 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
          allocate(farm%SC%uInputs(1)%toSC    (farm%SC%p%NumCtrl2SC*farm%SC%p%nTurbines), STAT=errStat)  
       end if
       
+   else
+      farm%SC%p%nInpGlobal = 0
+      farm%SC%p%NumParamGlobal = 0
+      farm%SC%p%NumParamTurbine = 0
+      farm%SC%p%NumSC2CtrlGlob = 0
+      farm%SC%p%NumSC2Ctrl = 0
+      farm%SC%p%NumCtrl2SC = 0
+      farm%SC%p%NumStatesGlobal = 0
+      farm%SC%p%NumStatesTurbine = 0
+      SC_InitOut%nInpGlobal = 0 
+      SC_InitOut%NumSC2CtrlGlob = 0
+      SC_InitOut%NumSC2Ctrl = 0
+      SC_InitOut%NumCtrl2SC = 0
    end if
    
       !-------------------

@@ -350,10 +350,19 @@ abstract interface
          
          ! Now that the library is loaded, call SC_Init() to obtain the user-specified inputs/output/states
 
+      p%nInpGlobal = 0
+      p%NumParamGlobal = 0
+      p%NumParamTurbine = 0
+      p%NumSC2CtrlGlob = 0
+      p%NumSC2Ctrl = 0
+      p%NumCtrl2SC = 0
+      p%NumStatesGlobal = 0
+      p%NumStatesTurbine = 0
+      
 #ifdef STATIC_DLL_LOAD
 
          ! if we're statically loading the library (i.e., OpenFOAM), we can just call SC_INIT(); 
-      call SC_DLL_INIT( p%nTurbines, p%nInpGlobal, p%NumCtrl2SC, p%NumParamGlobal, p%NumParamTurbine, p%NumStatesGlobal, p%NumStatesTurbine, p%NumSC2CtrlGlob, p%NumSC2Ctrl, errStat, errMsg )
+      call SC_DLL_INIT( p%nTurbines, p%nInpGlobal, p%NumCtrl2SC, p%NumParamGlobal, p%NumParamTurbine, p%NumStatesGlobal, p%NumStatesTurbine, p%NumSC2CtrlGlob, p%NumSC2Ctrl, errStat, errMsg )      
       ! TODO: Check errors    
 #else
 
@@ -364,7 +373,15 @@ abstract interface
       ! TODO: Check errors
       
 #endif
-      
+
+      print *, 'nInpGlobal = ', p%nInpGlobal
+      print *, 'NumParamGlobal = ', p%NumParamGlobal
+      print *, 'p%NumParamTurbine = ', p%NumParamTurbine 
+      print *, 'p%NumSC2CtrlGlob = ', p%NumSC2CtrlGlob
+      print *, 'p%NumSC2Ctrl = ', p%NumSC2Ctrl
+      print *, 'p%NumCtrl2SC = ', p%NumCtrl2SC
+      print *, 'p%NumStatesGlobal = ', p%NumStatesGlobal
+      print *, 'p%NumStatesTurbine = ', p%NumStatesTurbine
 
       ! NOTE: For now we have not implemented the global super controller inputs in any of the openfast glue codes,
       !       so the number must be set to zero    
@@ -378,20 +395,16 @@ abstract interface
       if (errStat > AbortErrLev ) return
       
           ! allocate output arrays  
-      if ( p%NumSC2CtrlGlob > 0 ) allocate(y%fromSCglob(p%NumSC2CtrlGlob))   
+      allocate(y%fromSCglob(p%NumSC2CtrlGlob))   
            
-      if ( p%NumSC2Ctrl     > 0 ) allocate(y%fromSC    (p%NumSC2Ctrl*p%nTurbines    ))    
+      allocate(y%fromSC    (p%NumSC2Ctrl*p%nTurbines    ))    
       
          ! Copy the Parameter and Output data created by the SuperController library into the FAST-framework parameters data structure
       if ( (p%NumParamGlobal > 0) .or. (p%NumParamTurbine > 0) .or. (p%NumSC2CtrlGlob > 0) .or. (p%NumSC2Ctrl > 0) ) then 
-         if ( p%NumParamGlobal > 0 ) then              
-            allocate(p%ParamGlobal(p%NumParamGlobal))                 
-         end if
+         allocate(p%ParamGlobal(p%NumParamGlobal))
+         nParams = p%NumParamTurbine*p%nTurbines
+         allocate(p%ParamTurbine(nParams))
       
-         if ( p%NumParamTurbine > 0 ) then
-            nParams = p%NumParamTurbine*p%nTurbines
-            allocate(p%ParamTurbine(nParams))      
-         end if
 #ifdef STATIC_DLL_LOAD
 
             ! if we're statically loading the library (i.e., OpenFOAM), we can just call SC_INIT(); 
@@ -407,8 +420,17 @@ abstract interface
       
 #endif
 
-      end if
+      end if          !IDEALLY THROW AN ERROR AND QUIT HERE IF THIS CRITERIA IS NOT MET
       
+
+      print *, 'nInpGlobal = ', p%nInpGlobal
+      print *, 'NumParamGlobal = ', p%NumParamGlobal
+      print *, 'p%NumParamTurbine = ', p%NumParamTurbine 
+      print *, 'p%NumSC2CtrlGlob = ', p%NumSC2CtrlGlob
+      print *, 'p%NumSC2Ctrl = ', p%NumSC2Ctrl
+      print *, 'p%NumCtrl2SC = ', p%NumCtrl2SC
+      print *, 'p%NumStatesGlobal = ', p%NumStatesGlobal
+      print *, 'p%NumStatesTurbine = ', p%NumStatesTurbine
       
       ! TODO Fix allocations for error handling
       
@@ -418,16 +440,25 @@ abstract interface
       if ( p%NumStatesTurbine > 0 ) allocate(xd%Turbine(p%NumStatesTurbine*p%nTurbines) )  
             ! CALL AllocAry( xd%Turbine,   p%nStatesTurbine, 'xd%Turbine', errStat2, errMsg2 )
             !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )
-         
-      xd%Global      = 0.0_ReKi  
-      xd%Turbine     = 0.0_ReKi 
-       p%DT          = interval
+
+      if ( p%NumStatesGlobal > 0 ) xd%Global      = 0.0_ReKi  
+      if ( p%NumStatesTurbine > 0 ) xd%Turbine     = 0.0_ReKi 
+      p%DT          = interval
        
      
       
          ! allocate input arrays    
-      if ( p%nInpGlobal     > 0 ) allocate(u%toSCglob(p%nInpGlobal))        
-      if ( p%NumCtrl2SC     > 0 ) allocate(u%toSC    (p%NumCtrl2SC*p%nTurbines))        
+      allocate(u%toSCglob(p%nInpGlobal))        
+      allocate(u%toSC    (p%NumCtrl2SC*p%nTurbines))        
+
+      print *, 'nInpGlobal = ', p%nInpGlobal
+      print *, 'NumParamGlobal = ', p%NumParamGlobal
+      print *, 'p%NumParamTurbine = ', p%NumParamTurbine 
+      print *, 'p%NumSC2CtrlGlob = ', p%NumSC2CtrlGlob
+      print *, 'p%NumSC2Ctrl = ', p%NumSC2Ctrl
+      print *, 'p%NumCtrl2SC = ', p%NumCtrl2SC
+      print *, 'p%NumStatesGlobal = ', p%NumStatesGlobal
+      print *, 'p%NumStatesTurbine = ', p%NumStatesTurbine
       
          ! Set the initialization output data for the glue code so that it knows
          ! how many inputs/outputs there are

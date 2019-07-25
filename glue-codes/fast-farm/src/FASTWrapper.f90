@@ -547,8 +547,10 @@ SUBROUTINE FWrap_CalcOutput(p, u, y, m, ErrStat, ErrMsg)
    call move_alloc(m%Turbine%IfW%m%FDext%V, u%Vdist_High)
    
    
-      ! Turbine-dependent commands to the super controller:
-   y%toSC = m%Turbine%SC_DX%u%toSC
+   ! Turbine-dependent commands to the super controller:
+   if (m%Turbine%p_FAST%UseSC) then
+      y%toSC = m%Turbine%SC_DX%u%toSC
+   end if
    
    
    ! ....... outputs from AeroDyn v15 ............
