@@ -132,6 +132,36 @@
 		<Filter Name="Aero">
 		<Filter Name="AeroDyn">
 		<Filter Name="RegistryFiles">
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics_Registry.txt">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Double|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|x64">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Debug_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration>
+			<FileConfiguration Name="Release_Matlab|Win32">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AA" Description="Running Registry for AeroAcoustics" Outputs="..\..\build\types-files\AeroAcoustics_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\build\types-files\AeroAcoustics_Types.f90">
+			<FileConfiguration Name="Debug_Double|Win32">
+				<Tool Name="VFFortranCompilerTool" BuildDependencies="false"/></FileConfiguration>
+			<FileConfiguration Name="Debug|Win32">
+				<Tool Name="VFFortranCompilerTool" BuildDependencies="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\aerodyn\src\AeroDyn_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\build\types-files\AeroDyn_Types.f90"/></FileConfiguration>
@@ -335,7 +365,79 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn14" Description="Running Registry for AeroDyn14" Outputs="..\..\build\types-files\AeroDyn14_Types.f90"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\aerodyn14\src\AeroDyn14.f90"/>
 		<File RelativePath="..\..\modules\aerodyn14\src\AeroSubs.f90"/>
-		<File RelativePath="..\..\modules\aerodyn14\src\GenSubs.f90"/></Filter></Filter>
+		<File RelativePath="..\..\modules\aerodyn14\src\GenSubs.f90"/></Filter>
+		<Filter Name="AeroAcoustics">
+		<Filter Name="TNO">
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TNO\int1.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TNO\int2.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TNO\pressure.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TNO\qk61.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TNO\qk61.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TNO\r1mach.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TNO\TNOMods.f90"/></Filter>
+		<Filter Name="Xfoil">
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\dplot_noise.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\get_airfoil_coords.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\naca.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\plutil_noise.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\profil.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\sort.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\spline.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\userio.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xbl.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xblsys.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xfoil_noise.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xfoil_noise_mods.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xgdes_noise.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xgeom_noise.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xoper_noise.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xpanel.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xsolve.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xtcam_noise.f"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\Xfoil\xutils.f"/></Filter>
+		<Filter Name="TINoise">
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\CDA0.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\CDI0.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\DEFGEO.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\DETCP.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\DETFIELD.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\DETSPL.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\DETSTR.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\DRM_ACU.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\DRM_AER.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\FLAT.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\FUNCS_LM.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\HANK0.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\HANK1.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\INICON.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\odeint.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\PRESOUR.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\READIN.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\RHSINT.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\rkck.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\rkqs.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SETMAT.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SETMATA.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SETRHS.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SETRHSA.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SOLSEQ.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SOLSEQA.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SPL_E0A.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SPL_E1A.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SPL_EX.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SPL_EX1.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SPL_EX2.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SPL_EX3.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SPL_P.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SPL_PA.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SPL_PP.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\SPL_PPA.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\STREAM.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\TI_Noise.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\TINoiseMods.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\TINoise\WAKE.f90"/></Filter>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\AeroAcoustics.f90"/>
+		<File RelativePath="..\..\modules\aerodyn\src\AeroAcoustics\AeroAcoustics_IO.f90"/></Filter></Filter>
 		<Filter Name="BeamDyn">
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\build\types-files\BeamDyn_Types.f90"/>

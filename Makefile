@@ -21,7 +21,8 @@ else
 	RMDIR=rm -rf
 endif
 BUILD_DIR=build$(suffix)
-TEST_DIR=../noise-test/
+TEST_DIR=../openfast-noise-test/
+CMAKE=cmake
 
 
 
@@ -34,7 +35,7 @@ $(BUILD_DIR):
 
 compile: $(BUILD_DIR)
 	@echo "------------------------------------------------------------"
-	cd $(BUILD_DIR) && cmake $(CMAKE_ARGS) .. && $(MAKE)
+	cd $(BUILD_DIR) && $(CMAKE) $(CMAKE_ARGS) .. && $(MAKE)
 
 clean:
 	cd $(BUILD_DIR) && $(MAKE) clean

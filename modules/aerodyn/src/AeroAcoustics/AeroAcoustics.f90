@@ -124,95 +124,7 @@ contains
       CALL AA_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
       IF ( UnEcho > 0 ) CLOSE( UnEcho )
    end subroutine Cleanup
-
 end subroutine AA_Init
-!----------------------------------------------------------------------------------------------------------------------------------   
-!> This routine validates the inputs from the AeroDyn input files.
-SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
-   type(AA_InputFile),       intent(in)     :: InputFileData                       !< All the data in the AeroDyn input file
-   integer(IntKi),           intent(in)     :: NumBl                               !< Number of blades
-   integer(IntKi),           intent(out)    :: ErrStat                             !< Error status
-   character(*),             intent(out)    :: ErrMsg                              !< Error message
-   ! local variables
-   integer(IntKi)                           :: k                                   ! Blade number
-   integer(IntKi)                           :: j                                   ! node number
-   character(*), parameter                  :: RoutineName = 'ValidateInputData'
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, ErrMsg, RoutineName )
-   if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-
-   if (InputFileData%IBLUNT /= IBLUNT_None .and. InputFileData%IBLUNT /= IBLUNT_BPM) then
-       call SetErrStat ( ErrID_Fatal, &
-           'IBLUNT must '//trim(num2lstr(IBLUNT_None))//' (none) or '//trim(num2lstr(IBLUNT_BPM))//' (Bluntness noise calculated).', ErrStat, ErrMsg, RoutineName ) 
-   endif
-
-   if (InputFileData%ILAM /= ILAM_None .and. InputFileData%ilam /= ILAM_BPM) then
-       call SetErrStat ( ErrID_Fatal, 'ILAM must be '//trim(num2lstr(ILAM_None))//' No calculation '//&
-           trim(num2lstr(ILAM_BPM))//' (ILAM Calculated).', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-   if (InputFileData%ITIP /= ITIP_None .and. InputFileData%ITIP /= ITIP_ON) then
-       call SetErrStat ( ErrID_Fatal, 'ITIP must be '//trim(num2lstr(ITIP_None))//' (Off) or '//&
-           trim(num2lstr(ITIP_On))//' (ITIP On).', ErrStat, ErrMsg, RoutineName ) 
-   end if   
-
-   if (InputFileData%ITRIP /= ITRIP_None .and. InputFileData%ITRIP /= ITRIP_Heavy .and. InputFileData%ITRIP /= ITRIP_Light) then
-       call SetErrStat ( ErrID_Fatal,'ITRIP must be '//trim(num2lstr(ITRIP_None))//' (none) or '//trim(num2lstr(ITRIP_Heavy))//&
-           ' (heavily tripped BL Calculation) or '//trim(num2lstr(ITRIP_Light))//' (lightly tripped BL)' ,ErrStat, ErrMsg, RoutineName ) 
-   end if 
-
-   if (InputFileData%ITURB /= ITURB_None .and. InputFileData%ITURB /= ITURB_BPM .and. InputFileData%ITURB /= ITURB_TNO) then
-       call SetErrStat ( ErrID_Fatal, 'ITURB must be 0 (off) or 1 (BPM) or 2 (TNO) .', ErrStat, ErrMsg, RoutineName ) 
-   end if    
-
-   if (InputFileData%IInflow /= IInflow_None .and. InputFileData%IInflow /= IInflow_BPM &
-       .and. InputFileData%IInflow /= IInflow_FullGuidati .and. InputFileData%IInflow /= IInflow_SimpleGuidati ) then
-       call SetErrStat ( ErrID_Fatal, 'IInflow must be 0 (off) or 1 (only Amiet)  or 2 (Full Guidati)'//&
-           'or 3 (Simple Guidati).', ErrStat, ErrMsg, RoutineName ) 
-   end if 
-
-   if (InputFileData%TICalcMeth /= TICalc_Every .and. InputFileData%TICalcMeth /= TICalc_Interp ) then
-       call SetErrStat ( ErrID_Fatal, 'TICalcMeth must be '//trim(num2lstr(TICalc_Every))//' TICalc automatic  or '//&
-           trim(num2lstr(TICalc_Interp))//' (TICalcMeth interp).', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-   if (InputFileData%X_BLMethod /= X_BLMethod_BPM .and. InputFileData%X_BLMethod /= X_BLMethod_Xfoil) then
-       call SetErrStat ( ErrID_Fatal, 'X_BLMethod must be '//trim(num2lstr(X_BLMethod_BPM))//' X_BLMethod_ with BPM or '//&
-           trim(num2lstr(X_BLMethod_Xfoil))//' (X_BLMethod with Xfoil).', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-
-   if (InputFileData%XfoilCall /= XfoilCall_Interp .and. InputFileData%XfoilCall /= XfoilCall_Every ) then
-       call SetErrStat ( ErrID_Fatal, 'XfoilCall must be '//trim(num2lstr(XfoilCall_Interp))//' for interpolation from pretabulated data or '//&
-           trim(num2lstr(XfoilCall_Every))//' for each step Xfoil call.', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-   if (InputFileData%aweightflag /= AweightFlagOff .and. InputFileData%aweightflag /= AweightFlagOn ) then
-       call SetErrStat ( ErrID_Fatal, 'aweightflag must be '//trim(num2lstr(AweightFlagOn))//' for A-weighting on  or '//&
-           trim(num2lstr(AweightFlagOff))//' for A-weighting off.', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-   if (InputFileData%NrObsLoc <= 0.0) call SetErrStat ( ErrID_Fatal, 'Number of Observer Locations should be greater than zero', ErrStat, ErrMsg, RoutineName )
-
-   if (InputFileData%NrOutFile /= 0 .and.  InputFileData%NrOutFile /= 1 .and. InputFileData%NrOutFile /= 2 .and. InputFileData%NrOutFile /= 3 &
-       .and. InputFileData%NrOutFile /= 4) then
-       call SetErrStat ( ErrID_Fatal, ' NrOutFile must be 0 or 1 or 2 or 3 or 4', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-   if (InputFileData%LargeBinOutput /= 0 .and.  InputFileData%LargeBinOutput /= 1 ) then
-       call SetErrStat ( ErrID_Fatal, ' LargeBinOutput must be 0 or 1', ErrStat, ErrMsg, RoutineName ) 
-   end if      
-
-   if (InputFileData%Comp_AA_After .eq.0 ) then
-       call SetErrStat ( ErrID_Fatal, ' Comp_AA_After variable in aeroacustics input must be more than 0', ErrStat, ErrMsg, RoutineName ) 
-   end if      
-
-   if (InputFileData%saveeach .eq. 0 ) then
-       call SetErrStat ( ErrID_Fatal, ' saveeach variable in aeroacustics input must be more than 0', ErrStat, ErrMsg, RoutineName ) 
-   end if  
-END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets AeroAcoustics parameters for use during the simulation; these variables are not changed after AA_Init.
 subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
@@ -235,7 +147,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     !!Assign input fiel data to parameters
     p%DT               = InputFileData%DTAero         ! seconds
     p%AA_Bl_Prcntge    = InputFileData%AA_Bl_Prcntge  ! %
-    p%fsample          = 1/p%DT    	! Hz
+    p%fsample          = 1/p%DT     ! Hz
     p%total_sample     = 2**( ceiling(log(1*p%fsample)/log(2.0d0)))! 1 stands for the 1 seconds. Every 1 second Vrel spectra will be calculated for the dissipation calculation (change if more needed & recompile )
     p%total_sampleTI   = 5/p%DT  ! 10 seconds for TI sampling
     p%Comp_AA_After    = InputFileData%Comp_AA_After
@@ -253,7 +165,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%ROUND            = InputFileData%ROUND
     p%alprat           = InputFileData%ALPRAT
     p%NrOutFile        = InputFileData%NrOutFile
-    p%delim	           = "	"
+    p%delim            = "	"
     p%outFmt           = "ES15.6E3" 
     p%LargeBinOutput   = InputFileData%LargeBinOutput
     p%NumBlNds         = InitInp%NumBlNds
@@ -264,7 +176,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%z0_AA            = InputFileData%z0_AA
     p%dy_turb_in       = InputFileData%dy_turb_in
     p%dz_turb_in       = InputFileData%dz_turb_in
-    p%NrObsLoc 	      = InputFileData%NrObsLoc
+    p%NrObsLoc         = InputFileData%NrObsLoc
 
     call AllocAry(p%TI_Grid_In,size(InputFileData%TI_Grid_In,1), size(InputFileData%TI_Grid_In,2),  'p%TI_Grid_In', errStat2, errMsg2); if(Failed()) return
     p%TI_Grid_In=InputFileData%TI_Grid_In
@@ -312,8 +224,8 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 
     ! set 1/3 octave band frequency as parameter and A weighting.
     CALL AllocAry( p%FreqList, 34, 'FreqList', ErrStat2, ErrMsg2); if(Failed()) return
-    p%FreqList = (/10.,12.5,16.,20.,25.,31.5,40.,50.,63.,80.,	&
-        100.,125.,160.,200.,250.,315.,400.,500.,630.,800.,	& 
+    p%FreqList = (/10.,12.5,16.,20.,25.,31.5,40.,50.,63.,80., &
+        100.,125.,160.,200.,250.,315.,400.,500.,630.,800., & 
         1000.,1250.,1600.,2000.,2500.,3150.,4000.,5000.,6300.,8000., &
         10000.,12500.,16000.,20000./) 
     CALL AllocAry(p%Aweight, size(p%Freqlist), 'Aweight', ErrStat2, ErrMsg2); if(Failed()) return
@@ -394,26 +306,14 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
         ENDDO
     ENDDO
 
-    ! If Xfoil data needs to be tabulated this means p%XfoilCall=1
-    IF( (p%X_BLMethod.eq.2) .and. (p%XfoilCall.eq.1) )THEN
-        ! call AllocAry( p%UListXfoil, 20, 'p%UListXfoil', errStat2, errMsg2 )
-        !  DO i=1,size(p%UListXfoil)
-        !   p%UListXfoil(i)=1.0d0+i*5.0d0
-        ! ENDDO
-        ! corresponding Rey Nrs=0.1e6,0.4e6,0.8e6,1.2e6,2.0e6,2.5e6,3.0e6',3.5e6,4.0e6,5.0e6,6.0e6,7.0e6,8.0e6,10.e6,15.e6,20.e6
-        ! call AllocAry( p%ReListXfoil, size(p%UListXfoil), 'p%ReListXfoil', errStat2, errMsg2 )
-        ! call AllocAry( p%AOAListXfoil, 35, 'p%AOAListXfoil', errStat2, errMsg2 )
-        !	DO i=1,size(p%AOAListXfoil)
-        !		p%AOAListXfoil(i) = -3.0d0+i*0.50d0
-        !		p%AOAListXfoil(i) = 3.0d0
-        !	ENDDO
-        !	!p%AOAListXfoil = (/-3.0d0,-2.0d0,-1.0d0,0.0d0,1.0d0,2.0d0,3.0d0,4.0d0,5.0d0,6.0d0,8.0d0,10.0d0,12.0d0,14.0d0,16.0d0/)
-        !	p%AOAListXfoil = 3.0d0
+    if( (p%X_BLMethod.eq.2) .and. ((p%XfoilCall.eq.XfoilCall_None).or.(p%XfoilCall.eq.XfoilCall_Tabulate)) ) then
+
+        ! Copying inputdata list of AOA and Reynolds to parameters
         call AllocAry( p%AOAListXfoil, size(InputFileData%AoAListXfoil), 'p%AOAListXfoil', errStat2, errMsg2); if(Failed()) return
-        call AllocAry( p%ReListXfoil, size(InputFileData%ReListXfoil)  , 'p%ReListXfoil' , errStat2, errMsg2); if(Failed()) return
+        call AllocAry( p%ReListXfoil,  size(InputFileData%ReListXfoil) , 'p%ReListXfoil' , errStat2, errMsg2); if(Failed()) return
         p%AOAListXfoil=InputFileData%AoAListXfoil
         p%ReListXfoil=InputFileData%ReListXfoil
-        !! Allocate the suction and pressure side boundary layer parameters for Xfoil output - will be used as tabulated data
+        ! Allocate the suction and pressure side boundary layer parameters for Xfoil output - will be used as tabulated data
         call AllocAry(p%dstarall1  ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%dstarall1'  , errStat2, errMsg2); if(Failed()) return
         call AllocAry(p%dstarall2  ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%dstarall2'  , errStat2, errMsg2); if(Failed()) return
         call AllocAry(p%d99all1    ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%d99all1'    , errStat2, errMsg2); if(Failed()) return
@@ -422,17 +322,37 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
         call AllocAry(p%Cfall2     ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%Cfall2'     , errStat2, errMsg2); if(Failed()) return
         call AllocAry(p%EdgeVelRat1,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%EdgeVelRat1', errStat2, errMsg2); if(Failed()) return
         call AllocAry(p%EdgeVelRat2,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%EdgeVelRat2', errStat2, errMsg2); if(Failed()) return
-        ! Pre tabulate the the boundary layer data and set them as parameter.
-        !  	CALL RUN_XFOIL_BL(p)		
-        p%dstarall1   = InputFileData%Suct_DispThick
-        p%dstarall2   = InputFileData%Pres_DispThick
-        p%d99all1     = InputFileData%Suct_BLThick
-        p%d99all2     = InputFileData%Pres_BLThick
-        p%Cfall1      = InputFileData%Suct_Cf
-        p%Cfall2      = InputFileData%Pres_Cf
-        p%EdgeVelRat1 = InputFileData%Suct_EdgeVelRat
-        p%EdgeVelRat2 = InputFileData%Pres_EdgeVelRat
-    ENDIF ! If Xfoil data needs to be tabulated 
+        p%dstarall1   =0.0_ReKi ! TODO, there is no guaranteee that xfoil returns something sensible if it didn't converge
+        p%dstarall2   =0.0_ReKi
+        p%d99all1     =0.0_ReKi
+        p%d99all2     =0.0_ReKi
+        p%Cfall1      =0.0_ReKi
+        p%Cfall2      =0.0_ReKi
+        p%EdgeVelRat1 =0.0_ReKi
+        p%EdgeVelRat2 =0.0_ReKi
+
+
+        if (p%XfoilCall.eq.XfoilCall_None) then
+            ! --- Xfoil data were read from files  (XfoilCall=0), so we just copy what was read from the files
+            p%dstarall1   = InputFileData%Suct_DispThick
+            p%dstarall2   = InputFileData%Pres_DispThick
+            p%d99all1     = InputFileData%Suct_BLThick
+            p%d99all2     = InputFileData%Pres_BLThick
+            p%Cfall1      = InputFileData%Suct_Cf
+            p%Cfall2      = InputFileData%Pres_Cf
+            p%EdgeVelRat1 = InputFileData%Suct_EdgeVelRat
+            p%EdgeVelRat2 = InputFileData%Pres_EdgeVelRat
+        elseif (p%XfoilCall.eq.XfoilCall_Tabulate) then
+            ! --- Boudarly layer data is tabulaterd by calling Xfoil (XfoilCall=1)
+            CALL RUN_XFOIL_BL(p, ErrStat2, ErrMsg2)
+            if(Failed()) return
+        endif 
+        ! Rewritting xfoil tables if requested
+        if(InputFileData%XfoilTabOut) then
+            call WriteXfoilTables(p, ErrStat2, ErrMsg2 )
+        endif
+        if(Failed()) return
+    endif ! if xfoil data is tabulated
 
     ! If simplified guidati is on, calculate the airfoil thickness from input airfoil coordinates
     IF (p%IInflow .EQ. 3) THEN
@@ -440,7 +360,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
         call AllocAry(p%AFThickGuida,2,size(p%AFInfo),  'p%AFThickGuida', errStat2, errMsg2); if(Failed()) return
         p%AFThickGuida=0.0_Reki
 
-        DO k=1,size(p%AFInfo) ! for each airfoil	 interpolation 
+        DO k=1,size(p%AFInfo) ! for each airfoil interpolation 
             tri=.true.;tr=.true.;
             do i=2,size(p%AFInfo(k)%X_Coord)
                 if ( (p%AFInfo(k)%X_Coord(i)+p%AFInfo(k)%Y_Coord(i)) .eq. 0) then
@@ -465,7 +385,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
                 endif 
             enddo
 
-            174	tri=.true.;tr=.true.;
+            174 tri=.true.;tr=.true.;
             do j=i,size(p%AFInfo(k)%X_Coord)
                 if ( p%AFInfo(k)%X_Coord(j) .eq. 0.1) then
                     val1=abs(p%AFInfo(k)%Y_Coord(j)) + abs(val1)
@@ -496,7 +416,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     call AllocAry(p%rotorregionlimitsVert,ceiling(((p%toptip)-(p%bottip))/jumpreg),  'p%rotorregionlimitsVert', errStat2, errMsg2); if(Failed()) return
     do i=0,size(p%rotorregionlimitsVert)-1
         p%rotorregionlimitsVert(i+1)=(p%bottip)+jumpreg*i
-    enddo	
+    enddo
     !! for turbulence intensity calculations on the fly every 5 meter the whole rotor area is divided horizontally to store flow fields in each region
     jumpreg=7
     lefttip           = 2*maxval(p%BlSpn(:,1))+5 !
@@ -505,14 +425,14 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     do i=0,size(p%rotorregionlimitsHorz)-1
         p%rotorregionlimitsHorz(i+1)=rightip+jumpreg*i
     enddo
-    jumpreg=60	! 10 ! must be divisable to 360
+    jumpreg=60 ! 10 ! must be divisable to 360
     call AllocAry(p%rotorregionlimitsalph,INT((360/jumpreg)+1),  'p%rotorregionlimitsalph', errStat2, errMsg2); if(Failed()) return
     do i=0,size(p%rotorregionlimitsalph)-1
         p%rotorregionlimitsalph(i+1)=jumpreg*i
     enddo
     jumpreg=5
     call AllocAry( p%rotorregionlimitsrad, (CEILING( maxval(p%BlSpn(:,1))/jumpreg )+2),  'p%rotorregionlimitsrad', errStat2, errMsg2); if(Failed()) return
-    do i=1,size(p%rotorregionlimitsrad)-1	
+    do i=1,size(p%rotorregionlimitsrad)-1
         p%rotorregionlimitsrad(i+1)=jumpreg*i
     enddo
     p%rotorregionlimitsrad(1)=0.0_reki
@@ -713,7 +633,7 @@ subroutine Init_states(xd, p, errStat, errMsg)
             xd%allregcounter(k,ji)      = 2.0_Reki  ! 
             xd%VxSqRegion(k,ji)         = 0.0_ReKi  ! 
             xd%RegionTIDelete(k,ji)     = 0.0_ReKi  ! 
-            xd%RegVxStor(1:size(xd%RegVxStor,1),k,ji)=0.0_reki		
+            xd%RegVxStor(1:size(xd%RegVxStor,1),k,ji)=0.0_reki
         enddo
     enddo
 contains
@@ -739,8 +659,8 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
    REAL(ReKi),DIMENSION(p%NumBlNds,p%numBlades) :: TEMPSTD  ! temporary standard deviation variable
    REAL(ReKi)                                   :: tempsingle,tempmean,angletemp,abs_le_x  ! temporary standard deviation variable
    integer(intKi)                               :: i,j,k,rco, y0_a,y1_a,z0_a,z1_a
-   logical 					:: exist
-   REAL(ReKi)					:: yi_a,zi_a,yd_a,zd_a,c00_a,c10_a
+   logical    :: exist
+   REAL(ReKi) :: yi_a,zi_a,yd_a,zd_a,c00_a,c10_a
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -759,25 +679,25 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
                IF ((abs_le_x.lt.0).and.(m%LE_Location(2,j,i).lt.0)) THEN
                    angletemp=180+ATAN(  ABS( m%LE_Location(2,j,i)/abs_le_x )  ) * R2D_D 
                ELSEIF ((abs_le_x.lt.0).and.(m%LE_Location(2,j,i).gt.0)) THEN
-                   angletemp=180-ATAN(  ABS( m%LE_Location(2,j,i)/abs_le_x )  ) * R2D_D 	
+                   angletemp=180-ATAN(  ABS( m%LE_Location(2,j,i)/abs_le_x )  ) * R2D_D
                ELSEIF ((abs_le_x.gt.0).and.(m%LE_Location(2,j,i).lt.0)) THEN
                    angletemp=360-ATAN(  ABS( m%LE_Location(2,j,i)/abs_le_x )  ) * R2D_D 
                ELSEIF ((abs_le_x.gt.0).and.(m%LE_Location(2,j,i).gt.0)) THEN
                    angletemp=ATAN(   m%LE_Location(2,j,i)/abs_le_x  ) * R2D_D
-               ELSE		
+               ELSE
                    print*, 'problem in angletemp Aeroacoustics module'
                ENDIF
                !abs_le_x=ABS(abs_le_x)
-               do k=1,size(p%rotorregionlimitsrad)  		   		
+               do k=1,size(p%rotorregionlimitsrad)
                    IF (p%BlSpn(j,i)-p%rotorregionlimitsrad(k).lt.0) THEN ! it means location is in the k-1 region
                        !print*, abs_le_x,p%rotorregionlimitsrad(k),k-1
                        GOTO 4758
-                   ENDIF		   
+                   ENDIF
                enddo
-               4758  do rco=1,size(p%rotorregionlimitsalph)  			
+               4758  do rco=1,size(p%rotorregionlimitsalph)
                    IF (angletemp-p%rotorregionlimitsalph(rco).lt.0) THEN ! it means location is in the k-1 region
                        GOTO 9815
-                   ENDIF		   
+                   ENDIF
                enddo
                9815 xd%allregcounter(k-1,rco-1)=CEILING(xd%allregcounter(k-1,rco-1)+1.0_Reki)    ! increase the sample amount in that specific 5 meter height vertical region
                tempsingle         = sqrt( u%Inflow(1,j,i)**2+u%Inflow(2,j,i)**2+u%Inflow(3,j,i)**2 )  ! 
@@ -798,14 +718,14 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
        IF (n .eq. 0) THEN
            open (123401,file='RegionTIDelete.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
            write(123401) Size(xd%RegionTIDelete,1)
-           write(123401) Size(xd%RegionTIDelete,2)		
+           write(123401) Size(xd%RegionTIDelete,2)
            write(123401) xd%RegionTIDelete
        ELSE
            open (123401, file="RegionTIDelete.bin", access='stream',status="old", form='unformatted',position="append")
-           write(123401) xd%RegionTIDelete		
+           write(123401) xd%RegionTIDelete
        ENDIF
-       close(123401)	
-   ELSE	! interpolate from the user given ti values
+       close(123401)
+   ELSE! interpolate from the user given ti values
        do i=1,p%NumBlades
            do j=1,p%NumBlNds
                zi_a=ABS(m%LE_Location(3,j,i)  -  (FLOOR(p%HubHeight-maxval(p%BlSpn(:,1))))  )   /p%dz_turb_in
@@ -819,7 +739,7 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
                c00_a=(1.0_ReKi-yd_a)*p%TI_Grid_In(z0_a+1,y0_a+1)+yd_a*p%TI_Grid_In(z0_a+1,y1_a+1)
                c10_a=(1.0_ReKi-yd_a)*p%TI_Grid_In(z1_a+1,y0_a+1)+yd_a*p%TI_Grid_In(z1_a+1,y1_a+1)
                ! 2 points
-               xd%TIVx(j,i)=(1.0_ReKi-zd_a)*c00_a+zd_a*c10_a	
+               xd%TIVx(j,i)=(1.0_ReKi-zd_a)*c00_a+zd_a*c10_a
                if (i.eq.p%NumBlades) then 
                    if (j.eq.p%NumBlNds) then 
                    endif
@@ -1028,37 +948,36 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
     REAL(ReKi)                    :: AlphaNoise                                 ! 
     REAL(ReKi)                    :: UNoise                                     ! 
     REAL(ReKi)                    :: elementspan                                ! 
-    REAL(ReKi)                    :: addpow                                ! 
-    REAL(ReKi),DIMENSION(p%NumBlNds)   			    ::	tempdel
-    REAL(ReKi),DIMENSION(p%NrObsLoc,p%NumBlNds,p%numBlades)    ::	OASPLTBLAll
-    REAL(ReKi),DIMENSION(p%NrObsLoc,p%NumBlNds,p%numBlades,size(p%FreqList))    ::	ForMaxLoc
+    REAL(ReKi),DIMENSION(p%NumBlNds)       ::tempdel
+    REAL(ReKi),DIMENSION(p%NrObsLoc,p%NumBlNds,p%numBlades)    ::OASPLTBLAll
+    REAL(ReKi),DIMENSION(p%NrObsLoc,p%NumBlNds,p%numBlades,size(p%FreqList))    ::ForMaxLoc
     REAL(ReKi),DIMENSION(size(y%OASPL_Mech,1),size(p%FreqList),p%NrObsLoc,p%NumBlNds,p%numBlades)    :: ForMaxLoc3
-    REAL(ReKi),DIMENSION(size(p%FreqList),p%NrObsLoc,p%numBlades)               ::	SPL_Out
-    REAL(ReKi),DIMENSION(p%NumBlNds,p%numBlades)    ::	temp_dispthick
-    REAL(ReKi),DIMENSION(p%NumBlNds,p%numBlades)    ::	temp_dispthickchord
+    REAL(ReKi),DIMENSION(size(p%FreqList),p%NrObsLoc,p%numBlades)               ::SPL_Out
+    REAL(ReKi),DIMENSION(p%NumBlNds,p%numBlades)    ::temp_dispthick
+    REAL(ReKi),DIMENSION(p%NumBlNds,p%numBlades)    ::temp_dispthickchord
 
-    real(ReKi)                                                 ::  Ptotal	
-    real(ReKi)                                                 ::	PtotalLBL    
-    real(ReKi)                                                 ::	PtotalTBLP   
-    real(ReKi)                                                 ::	PtotalTBLS   
-    real(ReKi)                                                 ::	PtotalSep    
-    real(ReKi)                                                 ::	PtotalTBLAll 
-    real(ReKi)                                                 ::	PtotalBlunt  
-    real(ReKi)                                                 ::	PtotalTip    
-    real(ReKi)                                                 ::	PtotalInflow 	
-    real(ReKi)                                                 ::	PLBL
-    real(ReKi)                                                 ::	PTBLP
-    real(ReKi)                                                 ::	PTBLS
-    real(ReKi)                                                 ::	PTBLALH
-    real(ReKi)                                                 ::	PTip
-    real(ReKi)                                                 ::	PTI
-    real(ReKi)                                                 ::	PBLNT,adforma
-    REAL(ReKi),DIMENSION(2)                                    ::	Cf ,d99, d_star
-    TYPE(FFT_DataType)                                    ::  FFT_Data             !< the instance of the FFT module we're using
-    REAL(kind=4),DIMENSION(p%total_sample)                     ::	spect_signal
-    REAL(kind=4),DIMENSION(p%total_sample/2)                   ::	spectra
-    real(ReKi),ALLOCATABLE 				    ::  fft_freq(:)  
-    integer(intKi)                  	                    :: ErrStat2
+    real(ReKi)                                                 ::  Ptotal
+    real(ReKi)                                                 :: PtotalLBL    
+    real(ReKi)                                                 :: PtotalTBLP   
+    real(ReKi)                                                 :: PtotalTBLS   
+    real(ReKi)                                                 :: PtotalSep    
+    real(ReKi)                                                 :: PtotalTBLAll 
+    real(ReKi)                                                 :: PtotalBlunt  
+    real(ReKi)                                                 :: PtotalTip    
+    real(ReKi)                                                 :: PtotalInflow 
+    real(ReKi)                                                 :: PLBL
+    real(ReKi)                                                 :: PTBLP
+    real(ReKi)                                                 :: PTBLS
+    real(ReKi)                                                 :: PTBLALH
+    real(ReKi)                                                 :: PTip
+    real(ReKi)                                                 :: PTI
+    real(ReKi)                                                 :: PBLNT,adforma
+    REAL(ReKi),DIMENSION(2)                                    :: Cf ,d99, d_star
+    TYPE(FFT_DataType)                                         :: FFT_Data             !< the instance of the FFT module we're using
+    REAL(kind=4),DIMENSION(p%total_sample)                     :: spect_signal
+    REAL(kind=4),DIMENSION(p%total_sample/2)                   :: spectra
+    real(ReKi),ALLOCATABLE     ::  fft_freq(:)  
+    integer(intKi)                                      :: ErrStat2
     character(ErrMsgLen)                                       :: ErrMsg2
     character(*), parameter                                    :: RoutineName = 'CalcAeroAcousticsOutput'
     logical :: exist
@@ -1075,7 +994,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
     ENDDO;ENDDO;ENDDO
 
     DO K = 1,p%NrObsLoc;     
-        y%DirectiviOutput(K)  = 0.0_Reki	
+        y%DirectiviOutput(K)  = 0.0_Reki
         DO I=1,p%NumBlades;DO III=1,size(p%FreqList);
             y%SumSpecNoise(III,K,I) = 0.0_Reki
             ForMaxLoc(K,1:p%NumBlNds,I,III)=0.0_Reki
@@ -1094,16 +1013,16 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
     ENDDO
 
     !------------------- initialize FFT  -------------------------!
-    !!!	IF (m%speccou .eq. p%total_sample)THEN
-    !!!	CALL InitFFT ( p%total_sample, FFT_Data, ErrStat=ErrStat2 )
-    !!!	 CALL SetErrStat(ErrStat2, 'Error in InitFFT', ErrStat, ErrMsg, 'CalcAeroAcousticsOutput' )
-    !!!	CALL AllocAry( fft_freq,  size(spect_signal)/2-1, 'fft_freq', ErrStat2, ErrMsg2 ) 
+    !!!IF (m%speccou .eq. p%total_sample)THEN
+    !!!CALL InitFFT ( p%total_sample, FFT_Data, ErrStat=ErrStat2 )
+    !!! CALL SetErrStat(ErrStat2, 'Error in InitFFT', ErrStat, ErrMsg, 'CalcAeroAcousticsOutput' )
+    !!!CALL AllocAry( fft_freq,  size(spect_signal)/2-1, 'fft_freq', ErrStat2, ErrMsg2 ) 
     !!!         CALL SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-    !!!	do liop=1,size(fft_freq)
-    !!!	    fft_freq(liop)=p%fsample*liop ! fRequncy x axis
-    !!!	    fft_freq(liop)=fft_freq(liop)/size(spect_signal)
-    !!!	enddo
-    !!!	ENDIF
+    !!!do liop=1,size(fft_freq)
+    !!!    fft_freq(liop)=p%fsample*liop ! fRequncy x axis
+    !!!    fft_freq(liop)=fft_freq(liop)/size(spect_signal)
+    !!!enddo
+    !!!ENDIF
 
 
     inquire(file="alpha.txt", exist=exist)
@@ -1159,28 +1078,26 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
             !------------------------------!!------------------------------!!------------------------------!!------------------------------!
             !------------------------------!!------------------------------!!------------------------------!!------------------------------!
             !--------Calculate Spectrum for dissipation calculation-------------------------!
-            !		IF (m%speccou .eq. p%total_sample)THEN
-            !			spect_signal=xd%VrelStore(  1:p%total_sample,J,I  )
-            !		        CALL ApplyFFT_f( spect_signal, FFT_Data, ErrStat2 )
-            !			 IF (ErrStat2 /= ErrID_None ) THEN
-            !			 CALL SetErrStat(ErrStat2, 'Error in ApplyFFT .', ErrStat, ErrMsg, 'CalcAeroAcousticsOutput' )
-            !			 ENDIF
-            !			cou=1
-            !			DO liop=2,size(spect_signal)-1,2
-            !			cou=cou+1
-            !			spectra(cou) = spect_signal(liop)*spect_signal(liop) + spect_signal(1+liop)*spect_signal(1+liop)
-            !			ENDDO
-            !			spectra(1)=spect_signal(1)*spect_signal(1)
-            !			spectra=spectra/(size(spectra)*2)
-            !          		m%speccou=0
-            !		ENDIF
+            !IF (m%speccou .eq. p%total_sample)THEN
+            !spect_signal=xd%VrelStore(  1:p%total_sample,J,I  )
+            !        CALL ApplyFFT_f( spect_signal, FFT_Data, ErrStat2 )
+            ! IF (ErrStat2 /= ErrID_None ) THEN
+            ! CALL SetErrStat(ErrStat2, 'Error in ApplyFFT .', ErrStat, ErrMsg, 'CalcAeroAcousticsOutput' )
+            ! ENDIF
+            !cou=1
+            !O liop=2,size(spect_signal)-1,2
+            !cou=cou+1
+            !spectra(cou) = spect_signal(liop)*spect_signal(liop) + spect_signal(1+liop)*spect_signal(1+liop)
+            !ENDDO
+            !spectra(1)=spect_signal(1)*spect_signal(1)
+            !spectra=spectra/(size(spectra)*2)
+            !          m%speccou=0
+            !ENDIF
 
-            ! TODO: Handle degenerate case where Vrel = 0.0 (DONE)
             Unoise =  u%Vrel(J,I) 
             IF (EqualRealNos(Unoise,0.0_ReKi)) then
-                Unoise = 0.1
+                Unoise = 0.1 ! TODO TODO a value consistent with the test above should be used
             ENDIF
-            ! TODO: Handle degenerate case where BlSpn = 0.0  (DONE) ! solved by variable 'elementspan' and loop over 2
             IF (J .EQ. p%NumBlNds) THEN
                 elementspan =   (p%BlSpn(J,I)-p%BlSpn(J-1,I))/2 
             ELSE
@@ -1190,18 +1107,17 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
             !--------Xfoil Boundary Layer Either Every Step Calculate or Interpolate from pretabulated-------------------------!
             IF (p%X_BLMethod .EQ. 2) THEN
-                IF  (p%XfoilCall .eq. 1) THEN
+                IF  ((p%XfoilCall==XfoilCall_None) .or. (p%XfoilCall==XfoilCall_Tabulate)) THEN
                     call BL_Param_Interp(p,m,Unoise,AlphaNoise,p%BlChord(J,I),p%BlAFID(J,I), errStat2, errMsg2)
-                    temp_dispthick(J,I)=	m%d99Var(1)		   
-                    m%d99Var   = m%d99Var*p%BlChord(J,I)
-                    m%dstarVar = m%dstarVar*p%BlChord(J,I)
+                    temp_dispthick(J,I) = m%d99Var(1)
+                    m%d99Var            = m%d99Var*p%BlChord(J,I)
+                    m%dstarVar          = m%dstarVar*p%BlChord(J,I)
                     temp_dispthickchord(J,I)=m%d99Var(1)
-                    !call BL_Param_Interp(p,m,Unoise,AlphaNoise,0.22860d0,p%BlAFID(J,I), errStat2, errMsg2)	       
-                    ! m%d99Var = m%d99Var*0.22860d0
-                    ! m%dstarVar = m%dstarVar*0.22860d0
-                ELSEIF  (p%XfoilCall .eq. 2) THEN
-                    !CALL XFOIL_BL_SINGLE(p,m,p%BlAFID(J,I),p%BlChord(J,I),UNoise,AlphaNoise)
-                    !CALL XFOIL_BL_SINGLE(p,m,p%BlAFID(J,I),0.22860d0,63.920d0,3.0d0)
+                ELSEIF  (p%XfoilCall .eq. XfoilCall_Every) THEN
+                    CALL XFOIL_BL_SINGLE(p,m,p%BlAFID(J,I),p%BlChord(J,I),UNoise,AlphaNoise, ErrStat2, ErrMsg2)
+                ELSE
+                   call SetErrStat( ErrID_Fatal, 'XfoilCall not handled correctly. Contact developper', ErrStat, ErrMsg, RoutineName ) 
+                   return
                 ENDIF
             ENDIF
 
@@ -1214,8 +1130,6 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                     CALL LBLVS(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
                         elementspan,m%rTEtoObserve(K,J,I), &
                         p,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLLBL,errStat2,errMsg2)
-                    !  		 CALL LBLVS(3.0d0,0.22860d0,63.920d0,90.0d0,90.0d0,0.5090d0,1.220d0, &
-                    ! 	           p,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLLBL,errStat2,errMsg2)
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                 ENDIF
                 !--------Turbulent Boundary Layer Trailing Edge Noise----------------------------!
@@ -1223,8 +1137,6 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                     CALL TBLTE(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
                         elementspan,m%rTEtoObserve(K,J,I), p, j,i,k,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),p%StallStart(J,I), &
                         m%SPLP,m%SPLS,m%SPLALPH,m%SPLTBL,errStat2,errMsg2 )
-                    ! 	          CALL TBLTE(3.0d0,0.22860d0,63.920d0,90.0d0,90.0d0,0.5090d0,1.220d0, &
-                    !		 p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),p%StallStart(J,I),m%SPLP,m%SPLS,m%SPLALPH,m%SPLTBL,errStat2,errMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                     IF (p%ITURB .EQ. 2)  THEN
                         m%SPLP=0.0_ReKi;m%SPLS=0.0_ReKi;m%SPLTBL=0.0_ReKi;
@@ -1232,10 +1144,6 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                         CALL TBLTE_TNO(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
                             elementspan,m%rTEtoObserve(K,J,I),m%CfVar,m%d99var,m%EdgeVelVar ,p, &
                             m%SPLP,m%SPLS,m%SPLALPH,m%SPLTBL,errStat2 ,errMsg2)
-                        !Nafnoise check
-                        !	m%CfVar(1) = 0.0003785760d0;m%CfVar(2) = 0.001984380d0;	m%d99var(1)= 0.01105860d0; m%d99var(2)= 0.007465830d0;m%EdgeVelVar(1)=1.000d0;m%EdgeVelVar(2)=m%EdgeVelVar(1);
-                        !				CALL TBLTE_TNO(3.0_Reki,0.22860_Reki,63.9200_Reki,90.00_Reki,90.0_Reki,0.5090_Reki,1.220_Reki, &
-                        !			m%CfVar,m%d99var,m%EdgeVelVar, p, m%SPLP,m%SPLS,m%SPLALPH,m%SPLTBL,errStat2 ,errMsg2)
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                     ENDIF
                 ENDIF
@@ -1244,8 +1152,6 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                     CALL BLUNT(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
                         elementspan,m%rTEtoObserve(K,J,I),p%TEThick(J,I),p%TEAngle(J,I), &
                         p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,errStat2,errMsg2 )
-                    !	          CALL BLUNT(3.0d0,0.22860d0,63.920d0,90.0d0,90.0d0,0.5090d0,1.220d0, &
-                    !		  p%TEThick(J,I),p%TEAngle(J,I),p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,errStat2,errMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                 ENDIF
                 !--------Tip Noise--------------------------------------------------------------!
@@ -1255,27 +1161,23 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                 ENDIF
                 !--------Inflow Turbulence Noise ------------------------------------------------!
-                ! important checks to be done inflow tubulence inputs	
+                ! important checks to be done inflow tubulence inputs
                 IF (p%IInflow.gt.0) then
                     ! Amiet's Inflow Noise Model is Calculated as long as InflowNoise is On
                     CALL InflowNoise(AlphaNoise,p%BlChord(J,I),Unoise,m%ChordAngleLE(K,J,I),m%SpanAngleLE(K,J,I),&
                         elementspan,m%rLEtoObserve(K,J,I),xd%MeanVxVyVz(J,I),xd%TIVx(J,I),m%LE_Location(3,J,I),0.050,xd%TIVx(J,I),p,m%SPLti,errStat2,errMsg2 )
-                    !       	  CALL InflowNoise(3.0d0,0.22860d0,63.920d0,90.0d0,90.0d0,0.5090d0,1.220d0, &
-                    !		  xd%MeanVrel(J,I),0.050d0,0.050d0,p,m%SPLti,errStat2,errMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-                    ! If Guidati model (simplified or full version) is also on then the 'SPL correction' to Amiet's model will be added		 
+                    ! If Guidati model (simplified or full version) is also on then the 'SPL correction' to Amiet's model will be added 
                     IF ( p%IInflow .EQ. 2 )   THEN                                     
-                        !       	  	  CALL FullGuidati(3.0d0,63.920d0,0.22860d0,0.5090d0,1.220d0,90.0d0,90.0d0,xd%MeanVrel(J,I),xd%TIVrel(J,I), &
-                        !			    p,p%BlAFID(J,I),m%SPLTIGui,errStat2 )
                         CALL FullGuidati(AlphaNoise,UNoise,p%BlChord(J,I),elementspan,m%rLEtoObserve(K,J,I), &
                             m%ChordAngleLE(K,J,I),m%SpanAngleLE(K,J,I),xd%MeanVrel(J,I),xd%TIVrel(J,I), &
                             p,p%BlAFID(J,I),m%SPLTIGui,errStat2,errMsg2 )
+                        write(*,*)'FullGuidati: EBRA:  SplTi appears unset. TODO'
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                         m%SPLti=m%SPLti+m%SPLTIGui+10 ! +10 is fudge factor to match NLR data
                     ELSEIF ( p%IInflow .EQ. 3 )   THEN      
                         CALL Simple_Guidati(UNoise,p%BlChord(J,I),p%AFThickGuida(2,p%BlAFID(J,I)), &
                             p%AFThickGuida(1,p%BlAFID(J,I)),p,m%SPLTIGui,errStat2,errMsg2 )
-                        !	       	  CALL Simple_Guidati(UNoise,0.22860d0,0.120d0,0.020d0,p,m%SPLTIGui,errStat2,errMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                         m%SPLti=m%SPLti+m%SPLTIGui+10 ! +10 is fudge factor to match NLR data
 
@@ -1349,9 +1251,9 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                     y%SumSpecNoise(III,K,I)      = Ptotal + y%SumSpecNoise(III,K,I)
                     y%DirectiviOutput(K)         = Ptotal + y%DirectiviOutput(K) 
 
-                    !	   IF (y%SumSpecNoise(III,K,I) .EQ. 0.)	    y%SumSpecNoise(III,K,I)=1
+                    !   IF (y%SumSpecNoise(III,K,I) .EQ. 0.)    y%SumSpecNoise(III,K,I)=1
 
-                    IF (y%DirectiviOutput(K)  .EQ. 0.)	    y%DirectiviOutput(K) =1    ! 
+                    IF (y%DirectiviOutput(K)  .EQ. 0.)    y%DirectiviOutput(K) =1    ! 
                     IF (y%SumSpecNoiseSep(1,K,III)  .EQ. 0.) y%SumSpecNoiseSep(1,K,III) =1    ! LBL
                     IF (y%SumSpecNoiseSep(2,K,III)  .EQ. 0.) y%SumSpecNoiseSep(2,K,III) =1    ! TBLP
                     IF (y%SumSpecNoiseSep(3,K,III)  .EQ. 0.) y%SumSpecNoiseSep(3,K,III) =1    ! TBLS
@@ -1363,14 +1265,14 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                     ForMaxLoc(K,J,I,III)  = 10.*LOG10(y%SumSpecNoise(III,K,I))
 
 
-                    IF (p%AweightFlag.eq.1) THEN
-                        IF (m%SPLLBL(III)  .NE. 0.) ForMaxLoc3(1,III,K,J,I) = m%SPLLBL(III)+p%Aweight(III)   ! LBL
-                        IF (m%SPLP(III)    .NE. 0.) ForMaxLoc3(2,III,K,J,I) = m%SPLP(III)+p%Aweight(III)     ! TBLP
-                        IF (m%SPLS(III)    .NE. 0.) ForMaxLoc3(3,III,K,J,I) = m%SPLS(III)+p%Aweight(III)     ! TBLS
-                        IF (m%SPLALPH(III) .NE. 0.) ForMaxLoc3(4,III,K,J,I) = m%SPLALPH(III)+p%Aweight(III)  ! Sep   
-                        IF (m%SPLBLUNT(III).NE. 0.) ForMaxLoc3(5,III,K,J,I) = m%SPLBLUNT(III)+p%Aweight(III) ! Blunt
-                        IF (m%SPLTIP(III)  .NE. 0.) ForMaxLoc3(6,III,K,J,I) = m%SPLTIP(III)+p%Aweight(III)   ! Tip
-                        IF (m%SPLti(III)   .NE. 0.) ForMaxLoc3(7,III,K,J,I) = m%SPLti(III) +p%Aweight(III)   ! Inflow
+                    IF (p%AweightFlag) THEN
+                        IF (m%SPLLBL(III)  .NE. 0.) ForMaxLoc3(1,III,K,J,I) = m%SPLLBL(III)   + p%Aweight(III) ! LBL
+                        IF (m%SPLP(III)    .NE. 0.) ForMaxLoc3(2,III,K,J,I) = m%SPLP(III)     + p%Aweight(III) ! TBLP
+                        IF (m%SPLS(III)    .NE. 0.) ForMaxLoc3(3,III,K,J,I) = m%SPLS(III)     + p%Aweight(III) ! TBLS
+                        IF (m%SPLALPH(III) .NE. 0.) ForMaxLoc3(4,III,K,J,I) = m%SPLALPH(III)  + p%Aweight(III) ! Sep
+                        IF (m%SPLBLUNT(III).NE. 0.) ForMaxLoc3(5,III,K,J,I) = m%SPLBLUNT(III) + p%Aweight(III) ! Blunt
+                        IF (m%SPLTIP(III)  .NE. 0.) ForMaxLoc3(6,III,K,J,I) = m%SPLTIP(III)   + p%Aweight(III) ! Tip
+                        IF (m%SPLti(III)   .NE. 0.) ForMaxLoc3(7,III,K,J,I) = m%SPLti(III)    + p%Aweight(III) ! Inflow
                     ELSE
                         ForMaxLoc3(1,III,K,J,I) = m%SPLLBL(III)  ! LBL
                         ForMaxLoc3(2,III,K,J,I) = m%SPLP(III)     ! TBLP
@@ -1410,14 +1312,12 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
         DO I = 1,p%numBlades
             DO K = 1,p%NrObsLoc
                 DO III=1,size(p%FreqList)
-                    addpow=10*log10(4*pi*m%rTEtoObserve(K,J,I)*m%rTEtoObserve(K,J,I))
-                    IF (y%SumSpecNoise(III,K,I) .EQ. 0.)	    y%SumSpecNoise(III,K,I)=1
-                    IF (p%AweightFlag.eq.1) THEN
+                    IF (y%SumSpecNoise(III,K,I) .EQ. 0.)    y%SumSpecNoise(III,K,I)=1
+                    IF (p%AweightFlag) THEN
                         y%SumSpecNoise(III,K,I)    = 10.*LOG10(y%SumSpecNoise(III,K,I))+p%Aweight(III)
                     ELSE
                         y%SumSpecNoise(III,K,I)    = 10.*LOG10(y%SumSpecNoise(III,K,I))
                     ENDIF
-                    !        y%SumSpecNoise(III,K,I)    = 10.*LOG10(y%SumSpecNoise(III,K,I))+addpow !this is the equation used for sound power level !SPLw(f)=SPL(f)+10*log10(4*pi*dis**2);
                 ENDDO
             ENDDO
         ENDDO
@@ -1447,7 +1347,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
         ENDDO
     ENDDO
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    IF (p%LargeBinOutput.eq.1) THEN
+    IF (p%LargeBinOutput) THEN
         IF (m%filesopen.eq.0) THEN
             open (12340,file='ForMaxLoc3.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
             write(12340) Size(ForMaxLoc3,1)
@@ -1596,27 +1496,27 @@ SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,
 END SUBROUTINE LBLVS
 !==================================================================================================================================!
 SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar2,StallVal,SPLP,SPLS,SPLALPH,SPLTBL,errStat,errMsg)
-    REAL(ReKi),           	                  INTENT(IN   )  :: ALPSTAR        ! AOA					(deg)
-    REAL(ReKi),           	                  INTENT(IN   )  :: C              ! Chord Length           (m)
-    REAL(ReKi),           	                  INTENT(IN   )  :: U              ! Unoise					(m/s)
-    REAL(ReKi),           	                  INTENT(IN   )  :: THETA          ! DIRECTIVITY ANGLE      (deg)
-    REAL(ReKi),           	                  INTENT(IN   )  :: PHI            ! DIRECTIVITY ANGLE      (deg) 
-    REAL(ReKi),           	                  INTENT(IN   )  :: L              ! SPAN					(m)
-    REAL(ReKi),           	                  INTENT(IN   )  :: R              ! SOURCE TO OBSERVER DISTANCE (m)
-    REAL(ReKi),           	                  INTENT(IN   )  :: d99Var2        !  
-    REAL(ReKi),           	                  INTENT(IN   )  :: dstarVar1              !  
-    REAL(ReKi),           	                  INTENT(IN   )  :: dstarVar2              !  
-    REAL(ReKi),           	                  INTENT(IN   )  :: StallVal              !  
-    INTEGER(IntKi),                   		  INTENT(  IN)  :: jj        ! Error status of the operation
-    INTEGER(IntKi),                   		  INTENT(  IN)  :: ii        ! Error status of the operation
+    REAL(ReKi),                             INTENT(IN   )  :: ALPSTAR        ! AOA(deg)
+    REAL(ReKi),                             INTENT(IN   )  :: C              ! Chord Length           (m)
+    REAL(ReKi),                             INTENT(IN   )  :: U              ! Unoise(m/s)
+    REAL(ReKi),                             INTENT(IN   )  :: THETA          ! DIRECTIVITY ANGLE      (deg)
+    REAL(ReKi),                             INTENT(IN   )  :: PHI            ! DIRECTIVITY ANGLE      (deg) 
+    REAL(ReKi),                             INTENT(IN   )  :: L              ! SPAN(m)
+    REAL(ReKi),                             INTENT(IN   )  :: R              ! SOURCE TO OBSERVER DISTANCE (m)
+    REAL(ReKi),                             INTENT(IN   )  :: d99Var2        !  
+    REAL(ReKi),                             INTENT(IN   )  :: dstarVar1              !  
+    REAL(ReKi),                             INTENT(IN   )  :: dstarVar2              !  
+    REAL(ReKi),                             INTENT(IN   )  :: StallVal              !  
+    INTEGER(IntKi),                     INTENT(  IN)  :: jj        ! Error status of the operation
+    INTEGER(IntKi),                     INTENT(  IN)  :: ii        ! Error status of the operation
 
-    INTEGER(IntKi),                   		  INTENT(  IN)  :: kk        ! Error status of the operation
+    INTEGER(IntKi),                     INTENT(  IN)  :: kk        ! Error status of the operation
     TYPE(AA_ParameterType),                         INTENT(IN   )  :: p              ! Noise Module Parameters
-    REAL(ReKi),DIMENSION(size(p%FreqList)),	  INTENT(  OUT)  :: SPLP           ! SOUND PRESSURE LEVEL DUE TO PRESSURE SIDE OF AIRFOIL (db)
-    REAL(ReKi),DIMENSION(size(p%FreqList)),	  INTENT(  OUT)  :: SPLS           ! SOUND PRESSURE LEVEL DUE TO SUCTION SIDE OF AIRFOIL  (db)
-    REAL(ReKi),DIMENSION(size(p%FreqList)),	  INTENT(  OUT)  :: SPLTBL         ! TOTAL SOUND PRESSURE LEVEL DUE TO TBLTE MECHANISM    (db)
-    REAL(ReKi),DIMENSION(size(p%FreqList)),	  INTENT(  OUT)  :: SPLALPH        ! SOUND PRESSURE LEVEL DUE TO ANGLE OF ATTACK CONTRIBUTION (db)
-    INTEGER(IntKi),                   		  INTENT(  OUT)  :: errStat        ! Error status of the operation
+    REAL(ReKi),DIMENSION(size(p%FreqList)),  INTENT(  OUT)  :: SPLP           ! SOUND PRESSURE LEVEL DUE TO PRESSURE SIDE OF AIRFOIL (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),  INTENT(  OUT)  :: SPLS           ! SOUND PRESSURE LEVEL DUE TO SUCTION SIDE OF AIRFOIL  (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),  INTENT(  OUT)  :: SPLTBL         ! TOTAL SOUND PRESSURE LEVEL DUE TO TBLTE MECHANISM    (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),  INTENT(  OUT)  :: SPLALPH        ! SOUND PRESSURE LEVEL DUE TO ANGLE OF ATTACK CONTRIBUTION (db)
+    INTEGER(IntKi),                     INTENT(  OUT)  :: errStat        ! Error status of the operation
     character(*),                                   INTENT(  OUT)  :: errMsg         ! Error message if ErrStat /= ErrID_None
     integer(intKi)                                                 :: ErrStat2       ! temporary Error status
     character(ErrMsgLen)                                           :: ErrMsg2        ! temporary Error message
@@ -1659,9 +1559,9 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
     real(ReKi)   :: BETA       ! USED IN 'B' COMPUTATION               ---
     real(ReKi)   :: GAMMA0     ! USED IN 'B' COMPUTATION                ---
     real(ReKi)   :: BETA0      ! USED IN 'B' COMPUTATION               ---
-    real(ReKi)   :: K1         ! AMPLITUDE FUNCTION						 (DB)
-    real(ReKi)   :: K2         ! AMPLITUDE FUNCTION						 (DB)
-    real(ReKi)   :: P1         ! PRESSURE SIDE PRESSURE 					 (NT/M2)
+    real(ReKi)   :: K1         ! AMPLITUDE FUNCTION (DB)
+    real(ReKi)   :: K2         ! AMPLITUDE FUNCTION (DB)
+    real(ReKi)   :: P1         ! PRESSURE SIDE PRESSURE (NT/M2)
     real(ReKi)   :: P2         ! SUCTION SIDE PRESSURE                      (NT/M2)
     real(ReKi)   :: P4         ! PRESSURE FROM ANGLE OF ATTACK CONTRIBUTION (NT/M2)
     real(ReKi)   :: M          ! MACH NUMBER
@@ -1671,7 +1571,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
     real(ReKi)   :: DBARH      ! HIGH FREQUENCY DIRECTIVITY             ---
     real(ReKi)   :: DBARL      ! LOW FREQUENCY DIRECTIVITY              ---
 
-    integer(intKi)				      :: I          ! I A generic index for DO loops.
+    integer(intKi)      :: I          ! I A generic index for DO loops.
 
     LOGICAL     :: SWITCH  !!LOGICAL FOR COMPUTATION OF ANGLE OF ATTACK CONTRIBUTION   
 
@@ -1691,7 +1591,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
     ENDIF
     ! Compute directivity function
     CALL DIRECTL(M,THETA,PHI,DBARL,errStat2,errMsg2)
-    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 	  
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
     CALL DIRECTH(M,THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     !      IF (DBARH <= 0) THEN
@@ -1828,7 +1728,7 @@ SUBROUTINE TIPNOIS(ALPHTIP,ALPRAT2,C,U ,THETA,PHI, R,p,SPLTIP, errStat, errMsg)
     REAL(ReKi)        :: UM       ! MAXIMUM VELOCITY                  METERS/SEC
     REAL(ReKi)        :: L        ! CHARACTERISTIC LENGTH FOR TIP      METERS
     REAL(ReKi)        :: TERM     ! SCALING TERM                        ---
-    integer(intKi)    :: I        !I A generic index for DO loops.	
+    integer(intKi)    :: I        !I A generic index for DO loops.
     ErrStat = ErrID_None
     ErrMsg  = ""
     IF (alphtip.eq.0.) THEN
@@ -1908,23 +1808,23 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
   REAL(ReKi)                   :: tinooisess                                ! nafnoise 
   REAL(ReKi)                   :: L_Gammas                                  ! nafnoise 
 
-  INTEGER(intKi)    	       :: I        !I A generic index for DO loops.	
+  INTEGER(intKi)           :: I        !I A generic index for DO loops.
    ErrStat = ErrID_None
    ErrMsg  = ""
    !!!--- NAF NOISE IDENTICAL
-   	Mach = U/p%SpdSound
+   Mach = U/p%SpdSound
 ! This part is recently added for height and surface roughness dependent estimation of turbulence intensity and turbulence scales
-	!%Lturb=300*(Z/300)^(0.46+0.074*log(p%z0_aa));      	        !% Gives larger  length scale
-	Lturb=25.d0*LE_Location**(0.35)*p%z0_aa**(-0.063)               !% Gives smaller length scale
-	L_Gammas=0.24+0.096*log10(p%z0_aa)+0.016*(log10(p%z0_aa))**2;   !% Can be computed or just give it a value.
-!	tinooisess=L_Gammas*log(30.d0/p%z0_aa)/log(LE_Location/p%z0_aa) !% F.E. 16% is 0.16 which is the correct input for SPLhIgh, no need to divide 100
+!%Lturb=300*(Z/300)^(0.46+0.074*log(p%z0_aa));              !% Gives larger  length scale
+Lturb=25.d0*LE_Location**(0.35)*p%z0_aa**(-0.063)               !% Gives smaller length scale
+L_Gammas=0.24+0.096*log10(p%z0_aa)+0.016*(log10(p%z0_aa))**2;   !% Can be computed or just give it a value.
+!tinooisess=L_Gammas*log(30.d0/p%z0_aa)/log(LE_Location/p%z0_aa) !% F.E. 16% is 0.16 which is the correct input for SPLhIgh, no need to divide 100
         tinooisess=TINoise
-!	Lturb=50
-!	tinooisess=0.1
-	!Ums = (tinooisess*U)**2
-	!Ums = (tinooisess*8)**2
+!Lturb=50
+!tinooisess=0.1
+!Ums = (tinooisess*U)**2
+!Ums = (tinooisess*8)**2
     CALL DIRECTL(Mach,THETA,PHI,DBARL,errStat2,errMsg2) !yes, assume that noise is low-freq in nature because turbulence length scale is large
-    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 	  
+    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
     CALL DIRECTH(Mach,THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
     IF (DBARH <= 0) THEN
@@ -1949,59 +1849,59 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !         SPLhigh = 10.*LOG10(p%AirDens*p%AirDens*p%SpdSound**4*LTurb*(d/2.)/ &
 !                  (RObs*RObs)*(Mach**5)*tinooisess*tinooisess*(Khat**3)* &
 !                  (1+Khat**2)**(-7./3.)*Directivity) + 78.4
-!!	   SPLhigh = 10.*LOG10(LTurb*(d/2.)/ &
+!!   SPLhigh = 10.*LOG10(LTurb*(d/2.)/ &
 !!                  (RObs*RObs)*(Mach**5)*tinooisess*tinooisess*(WaveNumber**3) &
 !!                  *(1+WaveNumber**2)**(-7./3.)*Directivity) + 181.3
 !         SPLhigh = SPLhigh + 10.*LOG10(1+ 9.0*ALPSTAR*ALPSTAR)
 !         Sears = 1/(2.*PI*Kbar/Beta2+1/(1+2.4*Kbar/Beta2))
-!!	   Sears = 1/(2.*PI*WaveNumber/Beta2+1/(1+2.4*WaveNumber/Beta2))
+!!   Sears = 1/(2.*PI*WaveNumber/Beta2+1/(1+2.4*WaveNumber/Beta2))
 !         LFC = 10*Sears*Mach*Kbar*Kbar/Beta2
-!!	   LFC = 10*Sears*Mach*WaveNumber*WaveNumber/Beta2
+!!   LFC = 10*Sears*Mach*WaveNumber*WaveNumber/Beta2
 !!         IF (mu<(PI/4.0)) THEN
-!!	      SPLti(I) = SPLhigh + 10.*ALOG10(LFC)
-!!	   ELSE
-!!	      SPLti(I) = SPLhigh
-!!	   ENDIF
-!	   SPLti(I) = SPLhigh + 10.*LOG10(LFC/(1+LFC))
+!!      SPLti(I) = SPLhigh + 10.*ALOG10(LFC)
+!!   ELSE
+!!      SPLti(I) = SPLhigh
+!!   ENDIF
+!   SPLti(I) = SPLhigh + 10.*LOG10(LFC/(1+LFC))
 !      ENDDO
 !!Wei Jun Zhu et al - !Modeling of Aerodynamically Generated Noise From Wind Turbines 2005 paper
-  	   Beta2 = 1.d0-Mach**2; !  corresponding line:  Bsq = 1.d0 - Ma**2;
+     Beta2 = 1.d0-Mach**2; !  corresponding line:  Bsq = 1.d0 - Ma**2;
        DO I=1,size(p%FreqList)
-  	   WaveNumber = PI*p%FreqList(I)*p%SpdSound/U !corresponding line: K = pi*Freq(i)*c/Vrel;
-  	   Sears = (2.d0*PI*WaveNumber/Beta2 + (1.d0+2.4d0*WaveNumber/Beta2)**(-1))**(-1);
-	   ! corresponding line: Ssq = (2.d0*pi*K/Bsq + (1.d0+2.4d0*K/Bsq)**(-1))**(-1);
-   	   LFC = 10.d0 * Sears*Mach*WaveNumber**2*Beta2**(-1);
- 	   ! corresponding line:  LFC = 10.d0 * Ssq*Ma*K**2*Bsq**(-1);
-	   SPLti(I)=(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*Lturb*d)/(2*RObs*RObs)
-!	   SPLti(I)=SPLti(I)*(Mach**3)*(MeanVnoise**2)*(tinooisess**2)
-	   SPLti(I)=SPLti(I)*(Mach**3)*(tinooisess**2)
-!	   SPLti(I)=SPLti(I)*(Mach**3)*ufluct**2
-	   SPLti(I)=(SPLti(I)*(WaveNumber**3)) / ((1+WaveNumber**2)**(7/3))
-	   SPLti(I)=SPLti(I)*DBARH
-	   SPLti(I)=10*log10(SPLti(I))+58.4	
- 	   SPLti(I) = SPLti(I) + 10.*LOG10(LFC/(1+LFC))
-!	 SPLti(I)=10.d0*log10(DBARH*p%AirDens**2*p%SpdSound**2*Lturb*d/2.0*Mach**3*tinooisess**2* &
-!		WaveNumber**3*(1.d0+WaveNumber**2)**(-7.d0/3.d0)/RObs**2)+58.4d0 + 10.d0*log10(LFC/(1+LFC))
- ! corresponding line:    	SPLti(i)=10.d0*log10(Di_hi_fr*Density**2*co**2*Tbscale*L/2.0*Ma
+     WaveNumber = PI*p%FreqList(I)*p%SpdSound/U !corresponding line: K = pi*Freq(i)*c/Vrel;
+     Sears = (2.d0*PI*WaveNumber/Beta2 + (1.d0+2.4d0*WaveNumber/Beta2)**(-1))**(-1);
+   ! corresponding line: Ssq = (2.d0*pi*K/Bsq + (1.d0+2.4d0*K/Bsq)**(-1))**(-1);
+      LFC = 10.d0 * Sears*Mach*WaveNumber**2*Beta2**(-1);
+    ! corresponding line:  LFC = 10.d0 * Ssq*Ma*K**2*Bsq**(-1);
+   SPLti(I)=(p%AirDens*p%AirDens*p%SpdSound*p%SpdSound*Lturb*d)/(2*RObs*RObs)
+!   SPLti(I)=SPLti(I)*(Mach**3)*(MeanVnoise**2)*(tinooisess**2)
+   SPLti(I)=SPLti(I)*(Mach**3)*(tinooisess**2)
+!   SPLti(I)=SPLti(I)*(Mach**3)*ufluct**2
+   SPLti(I)=(SPLti(I)*(WaveNumber**3)) / ((1+WaveNumber**2)**(7/3))
+   SPLti(I)=SPLti(I)*DBARH
+   SPLti(I)=10*log10(SPLti(I))+58.4
+    SPLti(I) = SPLti(I) + 10.*LOG10(LFC/(1+LFC))
+! SPLti(I)=10.d0*log10(DBARH*p%AirDens**2*p%SpdSound**2*Lturb*d/2.0*Mach**3*tinooisess**2* &
+!WaveNumber**3*(1.d0+WaveNumber**2)**(-7.d0/3.d0)/RObs**2)+58.4d0 + 10.d0*log10(LFC/(1+LFC))
+ ! corresponding line:    SPLti(i)=10.d0*log10(Di_hi_fr*Density**2*co**2*Tbscale*L/2.0*Ma
 !     & **3*Tbinten**2*K**3*(1.d0+K**2)**(-7.d0/3.d0)/Distance**2)+58.4d0
 !     &    + 10.d0*log10(LFC/(1+LFC));  
              !% ver2.!
-!	    Kh = 8.d0*pi*p%FreqList(i)*Lturb/(3.d0*U);
+!    Kh = 8.d0*pi*p%FreqList(i)*Lturb/(3.d0*U);
 !          SPLti(i) = 10*log10(DBARH*Lturb*0.5*d*Mach**5*tinooisess**2*Kh**3*(1+Kh**2)**(-7/3)/RObs**2) +&
 !              10*log10(10**18.13) + 10*log10(DBARH*LFC/(1+LFC));   
-	ENDDO
+ENDDO
 !!Buck&Oerlamans&Palo - !Experimental validation of a wind turbine turbulent inflow noise prediction code 2016 paper
-	!DO I=1,size(p%FreqList)
+!DO I=1,size(p%FreqList)
         ! IF (p%FreqList(I) <= Frequency_cutoff) THEN
         !    Directivity = DBARL
         ! ELSE
         !    Directivity = DBARH 
         ! ENDIF
- 	! WaveNumber = 2.0*PI*p%FreqList(I)/U   ! (K)
+ ! WaveNumber = 2.0*PI*p%FreqList(I)/U   ! (K)
         ! Kbar    = WaveNumber*Chord/2.0
         ! Khat    = WaveNumber/Ke
         ! SPLhigh = (  (p%AirDens**2) * (p%SpdSound**2) *d ) / (2*RObs*RObs)
-	! SPLhigh = SPLhigh * (Mach**3) * (dissip**(2/3)) * (WaveNumber**(-5/3)) * Directivity
+! SPLhigh = SPLhigh * (Mach**3) * (dissip**(2/3)) * (WaveNumber**(-5/3)) * Directivity
         ! SPLhigh = 10.*LOG10(SPLhigh) + 77.6
         ! Sears   = 1/(2.*PI*Kbar/Beta2+1/(1+2.4*Kbar/Beta2))
         ! LFC = 10*Sears*(1+9.0*ALPSTAR*ALPSTAR)*Mach*Kbar*Kbar/Beta2
@@ -2011,15 +1911,15 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 ! double commented lines are from FAST v4.0 aeroacoustics module. But Nafnoise version is used see above
 !!   Mach = U/p%SpdSound
 !!
-!!	IF (TINoise > 0) THEN
-!!	    Ums = (TINoise*MeanVNoise/100.)**2 ! mean square turbulence level
-!!	ELSE
-!!	    SPLti = 0.
-!!	    RETURN
-!!	ENDIF
+!!IF (TINoise > 0) THEN
+!!    Ums = (TINoise*MeanVNoise/100.)**2 ! mean square turbulence level
+!!ELSE
+!!    SPLti = 0.
+!!    RETURN
+!!ENDIF
 !!
-!!	 LTurb=60
-!!	 LTurb=0.06
+!! LTurb=60
+!! LTurb=0.06
 !!!  temporarily commented 
 !!!  IF (FASTHH < 30.0) THEN
 !!!      LTurb = 3.5*0.7*FASTHH ! Prediction sensitive to this parameter!
@@ -2032,11 +1932,11 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 !!! Calculate directivity...?
 !!!!!     ----------------------------
 !!      CALL DIRECTL(Mach,THETA,PHI,DBARL,errStat2,errMsg2) !yes, assume that noise is low-freq in nature because turbulence length scale is large
-!!	    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 	  
+!!    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
 !!      CALL DIRECTH(Mach,THETA,PHI,DBARH,errStat2,errMsg2)
-!!	    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+!!    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
 !!      IF (DBARH <= 0) THEN
-!!	    SPLti = 0.
+!!    SPLti = 0.
 !!          RETURN
 !!      ENDIF
 !!
@@ -2065,22 +1965,22 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 END SUBROUTINE InflowNoise
 !====================================================================================================
 SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,SPLBLUNT,errStat,errMsg)
-  REAL(ReKi),           	                  INTENT(IN   )  :: ALPSTAR        ! AOA
-  REAL(ReKi),           	                  INTENT(IN   )  :: C              ! Chord Length
-  REAL(ReKi),           	                  INTENT(IN   )  :: U              ! Unoise
-  REAL(ReKi),           	                  INTENT(IN   )  :: THETA          ! DIRECTIVITY ANGLE                     ---
-  REAL(ReKi),           	                  INTENT(IN   )  :: PHI            ! DIRECTIVITY ANGLE                     ---
-  REAL(ReKi),           	                  INTENT(IN   )  :: L              ! SPAN                                  METERS
-  REAL(ReKi),           	                  INTENT(IN   )  :: R              ! SOURCE TO OBSERVER DISTANCE           METERS 
-  REAL(ReKi),           	                  INTENT(IN   )  :: H              ! TRAILING EDGE BLUNTNESS              METERS
-  REAL(ReKi),           	                  INTENT(IN   )  :: PSI            ! TRAILING EDGE ANGLE                  DEGREES 
-  REAL(ReKi),           	                  INTENT(IN   )  :: d99Var2        !  
-  REAL(ReKi),           	                  INTENT(IN   )  :: dstarVar1              !  
-  REAL(ReKi),           	                  INTENT(IN   )  :: dstarVar2              !  
-  TYPE(AA_ParameterType),                     INTENT(IN   )  :: p              ! Parameters
-  REAL(ReKi),DIMENSION(size(p%FreqList)),	  INTENT(  OUT)  :: SPLBLUNT       !
-  INTEGER(IntKi),                   		  INTENT(  OUT)  :: errStat        ! Error status of the operation
-  character(*),                               INTENT(  OUT)  :: errMsg         ! Error message if ErrStat /= ErrID_None
+  REAL(ReKi),                             INTENT(IN   )  :: ALPSTAR        ! AOA
+  REAL(ReKi),                             INTENT(IN   )  :: C              ! Chord Length
+  REAL(ReKi),                             INTENT(IN   )  :: U              ! Unoise
+  REAL(ReKi),                             INTENT(IN   )  :: THETA          ! DIRECTIVITY ANGLE                     ---
+  REAL(ReKi),                             INTENT(IN   )  :: PHI            ! DIRECTIVITY ANGLE                     ---
+  REAL(ReKi),                             INTENT(IN   )  :: L              ! SPAN                                  METERS
+  REAL(ReKi),                             INTENT(IN   )  :: R              ! SOURCE TO OBSERVER DISTANCE           METERS 
+  REAL(ReKi),                             INTENT(IN   )  :: H              ! TRAILING EDGE BLUNTNESS              METERS
+  REAL(ReKi),                             INTENT(IN   )  :: PSI            ! TRAILING EDGE ANGLE                  DEGREES 
+  REAL(ReKi),                             INTENT(IN   )  :: d99Var2        !  
+  REAL(ReKi),                             INTENT(IN   )  :: dstarVar1              !  
+  REAL(ReKi),                             INTENT(IN   )  :: dstarVar2              !  
+  TYPE(AA_ParameterType),                 INTENT(IN   )  :: p              ! Parameters
+  REAL(ReKi),DIMENSION(size(p%FreqList)), INTENT(  OUT)  :: SPLBLUNT       !
+  INTEGER(IntKi),                         INTENT(  OUT)  :: errStat        ! Error status of the operation
+  character(*),                           INTENT(  OUT)  :: errMsg         ! Error message if ErrStat /= ErrID_None
    ! Local variables
   integer(intKi)                         :: ErrStat2           ! temporary Error status
   character(ErrMsgLen)                   :: ErrMsg2            ! temporary Error message
@@ -2169,7 +2069,7 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
         !       SPLBLUNT(I) = G4 + G5(I) + SCALE 
         ! OLD VERSION END
         ! NEW VERSION START
-        G5Sum = 10**(G5(I)/10)+G5Sum			     ! to be subtracted
+        G5Sum = 10**(G5(I)/10)+G5Sum     ! to be subtracted
         SPLBLUNT(I) = G4 + G5(I) + SCALE - 10*log10(1/G5Sum) ! equation mentioned there is plus but it is stated subtract, thus ''- 10*log10(1/G5Sum)'' 
         ! NEW VERSION END
     end do
@@ -2214,8 +2114,8 @@ END SUBROUTINE G5Comp
 !====================================================================================================
 !> This subroutine defines the curve fit corresponding to the a-curve for the minimum allowed reynolds number.
 SUBROUTINE AMIN(A,AMINA)
-    REAL(ReKi),           	                  INTENT(IN   )  :: A              ! 
-    REAL(ReKi),           	                  INTENT(OUT  )  :: AMINA              ! 
+    REAL(ReKi),                             INTENT(IN   )  :: A              ! 
+    REAL(ReKi),                             INTENT(OUT  )  :: AMINA              ! 
     REAL(ReKi) :: X1
     X1 = ABS(A)
     IF (X1 .LE. .204) AMINA=SQRT(67.552-886.788*X1**2.)-8.219
@@ -2225,8 +2125,8 @@ END SUBROUTINE AMIN
 !====================================================================================================
 !> This subroutine defines the curve fit corresponding to the a-curve for the maximum allowed reynolds number.
 SUBROUTINE AMAX(A,AMAXA)
-    REAL(ReKi),           	                  INTENT(IN   )  :: A              ! 
-    REAL(ReKi),           	                  INTENT(OUT  )  :: AMAXA              !
+    REAL(ReKi),                             INTENT(IN   )  :: A              ! 
+    REAL(ReKi),                             INTENT(OUT  )  :: AMAXA              !
     REAL(ReKi) :: X1
     X1 = ABS(A)
     IF (X1 .LE. .13)AMAXA=SQRT(67.552-886.788*X1**2.)-8.219
@@ -2236,8 +2136,8 @@ END SUBROUTINE AMAX
 !====================================================================================================
 !> This subroutine defines the curve fit corresponding to the b-curve for the minimum allowed reynolds number.
 SUBROUTINE BMIN(B,BMINB)
-    REAL(ReKi),           	                  INTENT(IN   )  :: B              ! 
-    REAL(ReKi),           	                  INTENT(OUT  )  :: BMINB              !
+    REAL(ReKi),                             INTENT(IN   )  :: B              ! 
+    REAL(ReKi),                             INTENT(OUT  )  :: BMINB              !
     REAL(ReKi) :: X1
     X1 = ABS(B)
     IF (X1 .LE. .13)BMINB=SQRT(16.888-886.788*X1**2.)-4.109
@@ -2389,25 +2289,25 @@ END SUBROUTINE DirectL
 !===============================  Full Guidati Model Inflow Turbulence Noise -  Addition ==========================================!
 !==================================================================================================================================!
 SUBROUTINE FullGuidati(ALPSTAR,U,Chords,d,RObs,THETA,PHI,MeanVNoise,TINoise,p,whichairfoil,SPLti,errStat,errMsgn)
-    USE Atmosphere
-    USE TINoiseGeneric
-    USE TINoiseGeo
-    USE TINoiseInput
-    USE TICoords
-    USE AirfoilParams
-    USE TI_Guidati
-    REAL(R8Ki),                               INTENT(IN   ) :: ALPSTAR        !< AOA                    (deg)
-    REAL(R8Ki),                               INTENT(IN   ) :: Chords         !< Chord Length
-    REAL(R8Ki),                               INTENT(IN   ) :: U              !<
-    REAL(R8Ki),                               INTENT(IN   ) :: d              !< element span
-    REAL(R8Ki),                               INTENT(IN   ) :: RObs           !< distance to observer
-    REAL(R8Ki),                               INTENT(IN   ) :: THETA          !<
-    REAL(R8Ki),                               INTENT(IN   ) :: PHI            !< Spanwise directivity angle
-    REAL(R8Ki),                               INTENT(IN   ) :: MeanVNoise     !<
-    REAL(R8Ki),                               INTENT(IN   ) :: TINoise        !<
+    USE Atmosphere, only: nu, rho, co
+    USE TINoiseGeneric, only: mach_ti, csound, pi2
+    USE TINoiseGeo, only: alfa
+    USE TINoiseInput, only: npath, nfreq, freq_in, chord, dpath, alpha_in
+    USE TICoords,      only: n_in, x_ti, y_ti
+    USE AirfoilParams, only: aofa, a_chord
+    !USE TI_Guidati
+    REAL(ReKi),                               INTENT(IN   ) :: ALPSTAR        !< AOA                    (deg)
+    REAL(Reki),                               INTENT(IN   ) :: Chords         !< Chord Length
+    REAL(ReKi),                               INTENT(IN   ) :: U              !<
+    REAL(ReKi),                               INTENT(IN   ) :: d              !< element span
+    REAL(ReKi),                               INTENT(IN   ) :: RObs           !< distance to observer
+    REAL(ReKi),                               INTENT(IN   ) :: THETA          !<
+    REAL(ReKi),                               INTENT(IN   ) :: PHI            !< Spanwise directivity angle
+    REAL(ReKi),                               INTENT(IN   ) :: MeanVNoise     !<
+    REAL(ReKi),                               INTENT(IN   ) :: TINoise        !<
     integer(intKi),                           INTENT(IN   ) :: whichairfoil   !< whichairfoil
     TYPE(AA_ParameterType),                   INTENT(IN   ) :: p              !< Parameters
-    REAL(R8Ki),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLti          !<
+    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLti          !<
     INTEGER(IntKi),                           INTENT(  OUT) :: errStat        !< Error status of the operation
     character(*),                             INTENT(  OUT) :: errMsgn        !< Error message if ErrStat /= ErrID_None
     ! local variables
@@ -2417,14 +2317,15 @@ SUBROUTINE FullGuidati(ALPSTAR,U,Chords,d,RObs,THETA,PHI,MeanVNoise,TINoise,p,wh
     integer(intKi)                                                 :: loop1       ! temporary 
     ErrStat = ErrID_None
     ErrMsgn  = "" 
-
+    SPLti=0.0_R8Ki ! EBRA: NOTE, this does not seem to be set TODO TODO TODO TODO FIGURE THIS OUT
+    ! NOTE: Type conversions might occur
     rho     = p%AirDens
     co      = p%SpdSound
     nu      = p%KinVisc
     aofa    = ALPSTAR
     a_chord = Chords
-    npath = 40         !   Number of Streamlines                (Guidati full model)
-    dpath = 0.005 	   !   Distance between streamlines         (Guidati full model)
+    npath   = 40         ! Number of Streamlines                (Guidati full model)
+    dpath   = 0.005      ! Distance between streamlines         (Guidati full model)
     mach_ti = U / co
     CALL INICON
     ! Instead of calling readin routine the necessary variables are assigned within this subroutine
@@ -2443,20 +2344,20 @@ SUBROUTINE FullGuidati(ALPSTAR,U,Chords,d,RObs,THETA,PHI,MeanVNoise,TINoise,p,wh
     CALL DEFGEO
     CALL DRM_AER
     CALL DRM_ACU
-END SUBROUTINE FullGuidati	
+END SUBROUTINE FullGuidati
 !==================================================================================================================================!
 !===============================  Simplified Guidati Inflow Turbulence Noise Addition =============================================!
 !==================================================================================================================================!
 ! Uses simple correction for turbulent inflow noise from Moriarty et. al 2005
 SUBROUTINE Simple_Guidati(U,Chord,thick_10p,thick_1p,p,SPLti,errStat,errMsg)
-    REAL(ReKi),           	                  INTENT(IN   )  :: U              ! Vrel
-    REAL(ReKi),           	                  INTENT(IN   )  :: Chord          ! Chord Length
-    REAL(ReKi),           	                  INTENT(IN   )  :: thick_10p      ! 
-    REAL(ReKi),           	                  INTENT(IN   )  :: thick_1p       ! 
-    TYPE(AA_ParameterType),                   INTENT(IN   )  :: p              ! Parameters
-    REAL(ReKi),DIMENSION(size(p%FreqList)),	  INTENT(  OUT)  :: SPLti          !
-    INTEGER(IntKi),                   		  INTENT(  OUT)  :: errStat        ! Error status of the operation
-    character(*),                             INTENT(  OUT)  :: errMsg         ! Error message if ErrStat /= ErrID_None
+    REAL(ReKi),                             INTENT(IN   )  :: U              ! Vrel
+    REAL(ReKi),                             INTENT(IN   )  :: Chord          ! Chord Length
+    REAL(ReKi),                             INTENT(IN   )  :: thick_10p      ! 
+    REAL(ReKi),                             INTENT(IN   )  :: thick_1p       ! 
+    TYPE(AA_ParameterType),                 INTENT(IN   )  :: p              ! Parameters
+    REAL(ReKi),DIMENSION(size(p%FreqList)), INTENT(  OUT)  :: SPLti          !
+    INTEGER(IntKi),                         INTENT(  OUT)  :: errStat        ! Error status of the operation
+    character(*),                           INTENT(  OUT)  :: errMsg         ! Error message if ErrStat /= ErrID_None
     ! local variables
     integer(intKi)          :: ErrStat2       ! temporary Error status
     character(ErrMsgLen)    :: ErrMsg2        ! temporary Error message
@@ -2471,8 +2372,8 @@ SUBROUTINE Simple_Guidati(U,Chord,thick_10p,thick_1p,p,SPLti,errStat,errMsg)
     slope = 1.123*TI_Param + 5.317*TI_Param*TI_Param
     do loop1 =1,size(p%FreqList)
         SPLti(loop1) = -slope*(2*PI*p%FreqList(loop1)*chord/U + 5.0d0)
-    enddo	
-END SUBROUTINE Simple_Guidati	
+    enddo
+END SUBROUTINE Simple_Guidati
 !==================================================================================================================================!
 !================================ Turbulent Boundary Layer Trailing Edge Noise ====================================================!
 !=================================================== TNO START ====================================================================!
@@ -2482,21 +2383,21 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     USE Wavenumber
     USE BLParams
     USE AirfoilParams
-    REAL(R8Ki),                               INTENT(IN   ) :: ALPSTAR    !< AOA                    (deg)
-    REAL(R8Ki),                               INTENT(IN   ) :: C          !< Chord Length                   (m)
-    REAL(R8Ki),                               INTENT(IN   ) :: U          !< Unoise                 (m/s)
-    REAL(R8Ki),                               INTENT(IN   ) :: THETA      !< DIRECTIVITY ANGLE                  (deg)
-    REAL(R8Ki),                               INTENT(IN   ) :: PHI        !< DIRECTIVITY ANGLE                  (deg)
-    REAL(R8Ki),                               INTENT(IN   ) :: D          !< SPAN                   (m)
-    REAL(R8Ki),                               INTENT(IN   ) :: R          !< SOURCE TO OBSERVER DISTANCE        (m)
-    REAL(R8Ki),DIMENSION(2),                  INTENT(IN   ) :: Cfall      !< Skin friction coefficient (-)
-    REAL(R8Ki),DIMENSION(2),                  INTENT(IN   ) :: d99all     !< 
-    REAL(R8Ki),DIMENSION(2),                  INTENT(IN   ) :: EdgeVelAll !< 
+    REAL(ReKi),                               INTENT(IN   ) :: ALPSTAR    !< AOA                    (deg)
+    REAL(ReKi),                               INTENT(IN   ) :: C          !< Chord Length                   (m)
+    REAL(ReKi),                               INTENT(IN   ) :: U          !< Unoise                 (m/s)
+    REAL(ReKi),                               INTENT(IN   ) :: THETA      !< DIRECTIVITY ANGLE                  (deg)
+    REAL(ReKi),                               INTENT(IN   ) :: PHI        !< DIRECTIVITY ANGLE                  (deg)
+    REAL(ReKi),                               INTENT(IN   ) :: D          !< SPAN                   (m)
+    REAL(ReKi),                               INTENT(IN   ) :: R          !< SOURCE TO OBSERVER DISTANCE        (m)
+    REAL(ReKi),DIMENSION(2),                  INTENT(IN   ) :: Cfall      !< Skin friction coefficient (-)
+    REAL(ReKi),DIMENSION(2),                  INTENT(IN   ) :: d99all     !< 
+    REAL(ReKi),DIMENSION(2),                  INTENT(IN   ) :: EdgeVelAll !< 
     TYPE(AA_ParameterType),                   INTENT(IN   ) :: p          !< Noise Module Parameters
-    REAL(R8Ki),DIMENSION(size(p%FreqList)),   INTENT(IN   ) :: SPLALPH    !< SOUND PRESSURE LEVEL DUE TO ANGLE OF ATTACK CONTRIBUTION (db)
-    REAL(R8Ki),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLP       !< SOUND PRESSURE LEVEL DUE TO PRESSURE SIDE OF AIRFOIL (db)
-    REAL(R8Ki),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLS       !< SOUND PRESSURE LEVEL DUE TO SUCTION SIDE OF AIRFOIL  (db)
-    REAL(R8Ki),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLTBL     !< TOTAL SOUND PRESSURE LEVEL DUE TO TBLTE MECHANISM    (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(IN   ) :: SPLALPH    !< SOUND PRESSURE LEVEL DUE TO ANGLE OF ATTACK CONTRIBUTION (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLP       !< SOUND PRESSURE LEVEL DUE TO PRESSURE SIDE OF AIRFOIL (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLS       !< SOUND PRESSURE LEVEL DUE TO SUCTION SIDE OF AIRFOIL  (db)
+    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLTBL     !< TOTAL SOUND PRESSURE LEVEL DUE TO TBLTE MECHANISM    (db)
     INTEGER(IntKi),                           INTENT(  OUT) :: errStat    !< Error status of the operation
     character(*),                             INTENT(  OUT) :: errMsgn    !< Error message if ErrStat /= ErrID_None
     ! Local variables
@@ -2534,49 +2435,42 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     epsrel = 1e-10     !relative accuracy
     band_ratio = 2.**(1./3.)
     ! Reynolds number and mach number
-    Mach = SNGL(U  / p%SpdSound)
-    co   = SNGL(p%SpdSound)
+    Mach = real(U  / p%SpdSound)
+    co   = real(p%SpdSound     )
     ! Directivity function
     CALL DIRECTH(REAL(Mach),THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsgn, RoutineName ) 
-
-    Cf  =SNGL(Cfall)
-    d99 =SNGL(d99all)
-    edgevel =SNGL(ABS(EdgeVelAll))
-    !	rho = 1.225000e0;	nu= 1.4529e-5
-    rho = SNGL(p%AirDens);	nu  = SNGL(p%KinVisc)
+    ! Type conversions
+    Cf      = real(Cfall    )
+    d99     = real(d99all   )
+    edgevel = real(ABS(EdgeVelAll))
+    rho     = real(p%AirDens)
+    nu      = real(p%KinVisc)
 
     do i_omega = 1,n_freq
         omega = 2.*pi*freq(i_omega)
-
         !integration limits
         a = 0.0e0
         b = 10*omega/(Mach*co)
-
         ! Convert to third octave
         band_width = freq(i_omega)*(sqrt(band_ratio)-1./sqrt(band_ratio))
-
         ISSUCTION = .TRUE.
-
         IF (Cf(1) .LT. 0.) THEN
             write(*,*) 'Suction Cf is less than zero, Cf = ',Cf(1)
             write(*,*) 'Using BPM'
         ELSE
             CALL qk61(int2,a,b,answer,abserr,resabs,resasc)
             Spectrum = D/(4.*pi*R**2.)*answer
-
             SPL_suction = 10*log10(Spectrum*DBARH/2.e-5/2.e-5)
             SPLS(i_omega) = SPL_suction + 10*log10(band_width)
         ENDIF
 
         ISSUCTION = .FALSE.
-
         IF (Cf(2) .LT. 0.) THEN
             write(*,*) 'Pressure Cf is less than zero, Cf = ',Cf(1)
             write(*,*) 'Using BPM'
         ELSE
             CALL qk61(int2,a,b,answer,abserr,resabs,resasc)
-
             Spectrum = D/(4.*pi*R**2.)*answer
             SPL_press = 10*log10(Spectrum*DBARH/2.e-5/2.e-5)
             SPLP(i_omega) = SPL_press + 10*log10(band_width)
@@ -2591,163 +2485,143 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
         P4  = 10.**(SPLALPH(i_omega) / 10.)
         SPLTBL(i_omega) = 10. * LOG10(P1 + P2 + P4)
     enddo
-    !	DO  i_omega=1,size(p%FreqList)
-    !		print*, p%FreqList(i_omega),SPLP(i_omega),SPLS(i_omega),SPLALPH(i_omega)
-    !	ENDDO
 END SUBROUTINE TBLTE_TNO
 
 !==================================================================================================================================!
 !================================================= XFOIL BL SINGLE RUN ============================================================!
-!SUBROUTINE XFOIL_BL_SINGLE(p,m,whichairfoil,ChordChord,Unoise,AlphaNoise)
-!      USE XfoilAirfoilParams
-!      USE XfoilBLParams
-!  TYPE(AA_ParameterType),                INTENT(IN   )  :: p              ! Parameters
-!  TYPE(AA_MiscVarType),                  INTENT(INOUT)  :: m              !< Initial misc/optimization variables
-!  integer(intKi),           	      	 INTENT(IN   )  :: whichairfoil   ! whichairfoil
-!  REAL(kind=8),           	     	 INTENT(IN   )  :: Unoise         ! Unoise 
-!  REAL(kind=8),           	         INTENT(IN   )  :: ChordChord     ! Chord Length
-!  REAL(kind=8),           	      	 INTENT(IN   )  :: AlphaNoise     ! deg
-!!   INTEGER(IntKi),              		  INTENT(  OUT)  :: ErrStat                !< Error status of the operation
-!!   CHARACTER(*),               		  INTENT(  OUT)  :: ErrMsg                 !< Error message if ErrStat /= ErrID_None
-!  INTEGER(intKi)                                                 :: ErrStat2           ! temporary Error status
-!  CHARACTER(ErrMsgLen)                                           :: ErrMsg2            ! temporary Error message
-!  character(*), parameter                                        :: RoutineName = 'XFOIL_BL_SINGLE'
-!  INTEGER*4 		   :: itrip,wr_loop
-!  REAL(ReKi)		   :: co,U,rho,nu
-!
-!  !ErrStat = ErrID_None
-!  !ErrMsg  = "" 
-!	a_chord=ChordChord
-!	U=Unoise
-!	aofa=AlphaNoise
-!	
-!	co      = p%SpdSound !337.75590d0
-!	nu      = p%KinVisc !1.4529e-5
-!	rho 	= p%AirDens !1.225000
-!	
-!	ITRIP   = 0
-!	
-!	airfoil='NotUsed.dat'	! not used just in case
-!	ISNACA=.FALSE.
-!
-!	NB_AFMODULE=size(p%AFInfo(whichairfoil)%X_Coord)-1
-!	IF(allocated(XB_AFMODULE)) DEALLOCATE(XB_AFMODULE)
-!	ALLOCATE(XB_AFMODULE(NB_AFMODULE))
-!	!	   call AllocAry( XB_AFMODULE,  NB_AFMODULE, 'XB_AFMODULE', ErrStat2, ErrMsg2 )
-!		!call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-!	XB_AFMODULE=p%AFInfo(whichairfoil)%X_Coord(2:NB_AFMODULE+1)
-!	IF(allocated(yB_AFMODULE)) DEALLOCATE(YB_AFMODULE)
-!	ALLOCATE(YB_AFMODULE(NB_AFMODULE))
-!		!   call AllocAry( YB_AFMODULE,  NB_AFMODULE, 'YB_AFMODULE', ErrStat2, ErrMsg2 )
-!			!call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-!		YB_AFMODULE=p%AFInfo(whichairfoil)%Y_Coord(2:NB_AFMODULE+1)
-!	IF( p%ITRIP .GT. 0) THEN 
-!  	   ISTRIPPED = .TRUE.
-!	xtrup=0.02	
-!	xtrlo=0.1
-!
-!	ELSE
-!           ISTRIPPED = .FALSE.
-!	ENDIF
-!	CALL get_airfoil_coords
-!	
-!	
-!	Mach=U/p%SpdSound
-!	Re = U*a_chord/p%KinVisc
-!
-!	CALL xfoil_noise
-!	d99 = d99*a_chord
-!	d_star = d_star*a_chord
-!	
-!	m%dstarVar(1) = d_star(1)
-!	m%dstarVar(2) = d_star(2)
-!
-!	m%d99Var(1)   = d99(1)
-!	m%d99Var(2)   = d99(2)
-!
-!	m%CfVar(1)    = Cf(1)
-!	m%CfVar(2)    = Cf(2)   
-!
-!END SUBROUTINE XFOIL_BL_SINGLE
-!			
-!
+SUBROUTINE XFOIL_BL_SINGLE(p,m,whichairfoil,ChordChord,Unoise,AlphaNoise, ErrStat, ErrMsg)
+    !EBRA: Compute BL parameters for a single airfoil, at a single angle of attack and speed
+    USE XfoilAirfoilParams, only: XB_AFMODULE, YB_AFMODULE, ISTRIPPED, ISNACA, NB_AFMODULE
+    USE XfoilAirfoilParams, only: a_chord, aofa, airfoil, Mach, Re, xtrup, xtrlo
+    USE XfoilBLParams,      only: Cf, d99, d_star
+    TYPE(AA_ParameterType),      INTENT(IN   ) :: p            !< Parameters
+    TYPE(AA_MiscVarType),        INTENT(INOUT) :: m            !< Initial misc/optimization variables
+    integer(intKi),            INTENT(IN   )   :: whichairfoil !< whichairfoil
+    REAL(ReKi),              INTENT(IN   )   :: Unoise       !< Unoise
+    REAL(ReKi),              INTENT(IN   )   :: ChordChord   !< Chord Length
+    REAL(ReKi),              INTENT(IN   )   :: AlphaNoise   !< deg
+    INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat      !< Error status of the operation
+    CHARACTER(*),               INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
+    INTEGER(intKi)          :: ErrStat2           ! temporary Error status
+    CHARACTER(ErrMsgLen)    :: ErrMsg2            ! temporary Error message
+    character(*), parameter :: RoutineName = 'XFOIL_BL_SINGLE'
+
+    write(*,*) '>>>XFOIL_BL_SINGLE'
+    ErrStat = ErrID_None
+    ErrMsg  = "" 
+
+    ! --- Setting Xfoil parameters needed for computation
+    a_chord = ChordChord
+    aofa    = AlphaNoise
+    Mach    = Unoise/p%SpdSound
+    Re      = Unoise*a_chord/p%KinVisc
+    airfoil = 'NotUsed.dat'
+    ISNACA  = .FALSE.
+    if( p%ITRIP .GT. 0) then 
+        ISTRIPPED = .TRUE.
+        xtrup     = 0.02
+        xtrlo     = 0.1
+    else
+        ISTRIPPED = .FALSE.
+        xtrup     = 0.00 ! added by ebra
+        xtrlo     = 0.00
+    endif
+
+    ! --- Allocating airfoil coordinates
+    NB_AFMODULE=size(p%AFInfo(whichairfoil)%X_Coord)-1
+    if (allocated(XB_AFMODULE)) deallocate(XB_AFMODULE)
+    if (allocated(YB_AFMODULE)) deallocate(YB_AFMODULE)
+    call AllocAry( XB_AFMODULE,  NB_AFMODULE, 'XB_AFMODULE', ErrStat2, ErrMsg2 )
+    call SetErrStat( ErrStat2, errMsg2, errStat, errMsg, RoutineName )
+    call AllocAry( YB_AFMODULE,  NB_AFMODULE, 'YB_AFMODULE', ErrStat2, ErrMsg2 )
+    call SetErrStat( ErrStat2, errMsg2, errStat, errMsg, RoutineName )
+
+    XB_AFMODULE=p%AFInfo(whichairfoil)%X_Coord(2:NB_AFMODULE+1)
+    YB_AFMODULE=p%AFInfo(whichairfoil)%Y_Coord(2:NB_AFMODULE+1)
+
+    CALL get_airfoil_coords()
+
+    !--- Compute d99, Cf and d_star and store it
+    CALL xfoil_noise() ! From Xfoil/xfoil_noise
+    d99 = d99*a_chord
+    d_star = d_star*a_chord
+    m%dstarVar(1) = d_star(1)
+    m%dstarVar(2) = d_star(2)
+    m%d99Var(1)   = d99(1)
+    m%d99Var(2)   = d99(2)
+    m%CfVar(1)    = Cf(1)
+    m%CfVar(2)    = Cf(2)   
+
+END SUBROUTINE XFOIL_BL_SINGLE
 !!==================================================================================================================================!
 !!================================================= XFOIL BL PRETABULATE ===========================================================!
 !!==================================================================================================================================!
-! SUBROUTINE RUN_XFOIL_BL(p)
-!      USE XfoilAirfoilParams
-!      USE XfoilBLParams
-!  TYPE(AA_ParameterType),                         INTENT(INOUT)  :: p                ! Parameters
-!!   INTEGER(IntKi),              		  INTENT(  OUT)  :: ErrStat                !< Error status of the operation
-!!   CHARACTER(*),               			  INTENT(  OUT)  :: ErrMsg                 !< Error message if ErrStat /= ErrID_None
-!
-!  INTEGER(intKi)                                                 :: ErrStat2           ! temporary Error status
-!  CHARACTER(ErrMsgLen)                                           :: ErrMsg2            ! temporary Error message
-!  character(*), parameter                                        :: RoutineName = ' RUN_XFOIL_BL'
-!  INTEGER*4 		   :: nr_airfoil,loop1,loop2,loop3,itrip,wr_loop
-!  REAL(kind=4)		   :: co,U,rho,nu
-!  !ErrStat = ErrID_None
-!  !ErrMsg  = "" 
-!
-!	co      = p%SpdSound !337.75590d0
-!	nu      = p%KinVisc !1.4529e-5
-!	rho 	= p%AirDens !1.225000
-!	ITRIP   = 1
-!	a_chord	= 1
-!!	U_all   = 63.9200 
-!!	aoa_all = 3
-!	a_chord= 0.2286
-!
-!     DO loop1=1,size(p%AFInfo)
-!
-!	airfoil='NotUsed.dat'	! not used just in case
-!	xtrup=0.02	
-!	xtrlo=0.1
-!	ISNACA=.FALSE.
-!
-!	NB_AFMODULE=size(p%AFInfo(loop1)%X_Coord)-1
-!	IF(allocated(XB_AFMODULE)) DEALLOCATE(XB_AFMODULE)
-!	ALLOCATE(XB_AFMODULE(NB_AFMODULE))
-!!	   call AllocAry( XB_AFMODULE,  NB_AFMODULE, 'XB_AFMODULE', ErrStat2, ErrMsg2 )
-!	     !call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-!	XB_AFMODULE=p%AFInfo(loop1)%X_Coord(2:NB_AFMODULE+1) ! starts from 2 first value is aerod center
-!	IF(allocated(yB_AFMODULE)) DEALLOCATE(YB_AFMODULE)
-!	ALLOCATE(YB_AFMODULE(NB_AFMODULE))
-!	!   call AllocAry( YB_AFMODULE,  NB_AFMODULE, 'YB_AFMODULE', ErrStat2, ErrMsg2 )
-!	    !call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
-!	YB_AFMODULE=p%AFInfo(loop1)%Y_Coord(2:NB_AFMODULE+1) ! starts from 2 first value is aerod center
-!         IF( p%ITRIP .GT. 0) THEN 
-!            ISTRIPPED = .TRUE.	
-!         ELSE
-!            ISTRIPPED = .FALSE.
-!	 ENDIF
-!
-!
-!       CALL get_airfoil_coords
-!
-!	  	DO loop2=1,size(p%UListXfoil)
-!			DO loop3=1,size(p%AOAListXfoil)
-!			  U    = p%UListXfoil(loop2)
-!		  	  aofa = p%AOAListXfoil(loop3)
-!			  Mach=U/p%SpdSound
-!		          Re = U*a_chord/p%KinVisc
-!			  p%ReListXfoil(loop2)=Re
-!		          CALL xfoil_noise
-!		         ! d99 = d99*a_chord
-!		         ! d_star = d_star*a_chord
-!			 ! print*,'d_star,d99,cf',d_star,d99,cf
-!
-!	    		!write (10,*) d_star,d99,cf
-!			  p%dstarall1(loop3,loop2,loop1)=d_star(1)
-!			  p%dstarall2(loop3,loop2,loop1)=d_star(2)
-!		 	  p%d99all1(loop3,loop2,loop1)  =d99(1)
-!			  p%d99all2(loop3,loop2,loop1)  =d99(2)
-!			  p%Cfall1(loop3,loop2,loop1)   =Cf(1)
-!			  p%Cfall2(loop3,loop2,loop1)   =Cf(2)
-!			ENDDO
-!		ENDDO		
-!     ENDDO
-! END SUBROUTINE RUN_XFOIL_BL
+SUBROUTINE RUN_XFOIL_BL(p,ErrStat,ErrMsg)
+    ! EBRA: Computes boundarly layer parametesr D99, Cf and d_star for all airfoils and all speed and angle of attacks requested
+    USE XfoilAirfoilParams, only: XB_AFMODULE, YB_AFMODULE, ISTRIPPED, ISNACA, NB_AFMODULE
+    USE XfoilAirfoilParams, only: a_chord, aofa, airfoil, Mach, Re, xtrup, xtrlo
+    USE XfoilBLParams, only: d99, Cf, d_star
+    type(AA_ParameterType), INTENT(INOUT) :: p         !< Parameters
+    integer(IntKi),        INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+    character(*),          INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+    integer(intKi)          :: ErrStat2           ! temporary Error status
+    character(ErrMsgLen)    :: ErrMsg2            ! temporary Error message
+    character(*), parameter :: RoutineName = ' RUN_XFOIL_BL'
+    integer(IntKi)          :: iAF,iRe,iAlpha,itrip
+    ErrStat = ErrID_None
+    ErrMsg  = "" 
+    print*,'>>>RUN_XFOIL_BL'
+
+    do iAF=1,size(p%AFInfo) ! Loop on airfoils
+        ! --- Setting Xfoil parameters needed for computation
+        airfoil = 'NotUsed.dat'
+        Mach    = 0.1    ! TODO
+        a_chord = 1      ! TODO
+        xtrup   = 0.02
+        xtrlo   = 0.1
+        ISNACA  = .FALSE.
+        if( p%ITRIP .GT. 0) then 
+            ISTRIPPED = .TRUE.
+        else
+            ISTRIPPED = .FALSE.
+        endif
+
+        ! --- Allocate airfoil coordinates
+        NB_AFMODULE=size(p%AFInfo(iAF)%X_Coord)-1
+        if (allocated(XB_AFMODULE)) deallocate(XB_AFMODULE)
+        if (allocated(YB_AFMODULE)) deallocate(YB_AFMODULE)
+        call AllocAry( XB_AFMODULE,  NB_AFMODULE, 'XB_AFMODULE', ErrStat2, ErrMsg2 )
+        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        call AllocAry( YB_AFMODULE,  NB_AFMODULE, 'YB_AFMODULE', ErrStat2, ErrMsg2 )
+        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+        XB_AFMODULE=p%AFInfo(iAF)%X_Coord(2:NB_AFMODULE+1) ! starts from 2 first value is aerod center
+        YB_AFMODULE=p%AFInfo(iAF)%Y_Coord(2:NB_AFMODULE+1) ! starts from 2 first value is aerod center
+
+        CALL get_airfoil_coords()
+        ! --- Loop on velocities and angle of attack to compute BL params
+        do iRe=1,size(p%ReListXfoil)
+            do iAlpha=1,size(p%AOAListXfoil)
+                ! --- Setting Xfoil parameters needed for computation
+                !d_star=0
+                d99=0
+                !Cf=0
+                aofa = p%AOAListXfoil(iAlpha)
+                Re   = p%ReListXfoil(iRe)
+                print'(A,I0,A,F15.0,A,F9.2)','Calling Xfoil for airfoil ',iAF, ' Re=',Re, ' Alpha=',aofa
+                !--- Compute d99, Cf and d_star and store it
+                CALL xfoil_noise() ! From Xfoil/xfoil_noise
+                p%dstarall1(iAlpha,iRe,iAF)= d_star(1)
+                p%dstarall2(iAlpha,iRe,iAF)= d_star(2)
+                p%d99all1  (iAlpha,iRe,iAF)= d99   (1)
+                p%d99all2  (iAlpha,iRe,iAF)= d99   (2)
+                p%Cfall1   (iAlpha,iRe,iAF)= Cf    (1)
+                p%Cfall2   (iAlpha,iRe,iAF)= Cf    (2)
+                !print'(A,6F12.4)','d*,d99,Cf',d_star,d99,Cf
+            enddo
+        enddo
+
+    enddo
+END SUBROUTINE RUN_XFOIL_BL
 !====================================================================================================
 SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
   TYPE(AA_ParameterType),                INTENT(IN   ) :: p              !< Parameters
@@ -2761,6 +2635,8 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
   character(*), parameter :: RoutineName = 'BL_Param_Interp'
   REAL(ReKi)              :: redif1,redif2,aoadif1,aoadif2,xx1,xx2,RC
   INTEGER(intKi)          :: loop1,loop2
+  ErrStat = ErrID_None
+  ErrMsg  = ""
 
   !!!! this if is not used but if necessary two sets of tables can be populated for tripped and untripped cases
   RC = U  * C/p%KinVisc       ! REYNOLDS NUMBER BASED ON  CHORD
@@ -2812,7 +2688,7 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
               if (loop2 .eq. (size(p%AOAListXfoil)-1) ) then
 
                   if (AlphaNoise .gt. p%AOAListXfoil(size(p%AOAListXfoil))) then
-                      print*, 'Warning AeroAcoustics Module - Angle of attack (AoA) range is not in the user input of Xfoil table'					
+                      print*, 'Warning AeroAcoustics Module - Angle of attack (AoA) range is not in the user input of Xfoil table'
                       print*, 'Airfoil AoA ',AlphaNoise,' Using the closest AoA ',p%AOAListXfoil(loop2+1)
                       m%dStarVar  (1) = ( p%dstarall1  (loop2+1,loop1+1,whichairfoil)*redif2 + p%dstarall1  (loop2+1,loop1,whichairfoil)*redif1 )/(redif1+redif2)
                       m%dStarVar  (2) = ( p%dstarall2  (loop2+1,loop1+1,whichairfoil)*redif2 + p%dstarall2  (loop2+1,loop1,whichairfoil)*redif1 )/(redif1+redif2)
@@ -2823,7 +2699,7 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
                       m%EdgeVelVar(1) = ( p%EdgeVelRat1(loop2+1,loop1+1,whichairfoil)*redif2 + p%EdgeVelRat1(loop2+1,loop1,whichairfoil)*redif1 )/(redif1+redif2)
                       m%EdgeVelVar(2) = ( p%EdgeVelRat2(loop2+1,loop1+1,whichairfoil)*redif2 + p%EdgeVelRat2(loop2+1,loop1,whichairfoil)*redif1 )/(redif1+redif2)
                   elseif (AlphaNoise .lt. p%AOAListXfoil(1)) then
-                      print*, 'Warning AeroAcoustics Module - Angle of attack (AoA) range is not in the user input of Xfoil table'					
+                      print*, 'Warning AeroAcoustics Module - Angle of attack (AoA) range is not in the user input of Xfoil table'
                       print*, 'Airfoil AoA ',AlphaNoise,' Using the closest AoA ',p%AOAListXfoil(1)
                       m%dStarVar(1)   = ( p%dstarall1  (1,loop1+1,whichairfoil)*redif2 + p%dstarall1  (1,loop1,whichairfoil)*redif1 ) / (redif1+redif2)
                       m%dStarVar(2)   = ( p%dstarall2  (1,loop1+1,whichairfoil)*redif2 + p%dstarall2  (1,loop1,whichairfoil)*redif1 ) / (redif1+redif2)
@@ -2835,10 +2711,37 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
                       m%EdgeVelVar(2) = ( p%EdgeVelRat2(1,loop1+1,whichairfoil)*redif2 + p%EdgeVelRat2(1,loop1,whichairfoil)*redif1 ) / (redif1+redif2)
                   endif
               endif
-          enddo	
-      endif		    
-  enddo	 
+          enddo
+      endif    
+  enddo 
 END SUBROUTINE BL_Param_Interp
 
+
+SUBROUTINE Aero_Tests()
+    !--------Laminar Boundary Layer Vortex Shedding Noise----------------------------!
+    !CALL LBLVS(AlphaNoise,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
+    !    elementspan,m%rTEtoObserve(K,J,I), &
+    !    p,m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLLBL,ErrStat2,errMsg2)
+    !--------Turbulent Boundary Layer Trailing Edge Noise----------------------------!
+    !CALL TBLTE(3.0d0,0.22860d0,63.920d0,90.0d0,90.0d0,0.5090d0,1.220d0, &
+    !    p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),p%StallStart(J,I),m%SPLP,m%SPLS,m%SPLALPH,m%SPLTBL,ErrStat2,errMsg2 )
+    !m%SPLP=0.0_ReKi;m%SPLS=0.0_ReKi;m%SPLTBL=0.0_ReKi;
+    !m%EdgeVelVar(1)=1.000d0;m%EdgeVelVar(2)=m%EdgeVelVar(1);
+    !m%CfVar(1) = 0.0003785760d0;m%CfVar(2) = 0.001984380d0;m%d99var(1)= 0.01105860d0; m%d99var(2)= 0.007465830d0;m%EdgeVelVar(1)=1.000d0;m%EdgeVelVar(2)=m%EdgeVelVar(1);
+    !CALL TBLTE_TNO(3.0_Reki,0.22860_Reki,63.9200_Reki,90.00_Reki,90.0_Reki,0.5090_Reki,1.220_Reki, &
+    !    m%CfVar,m%d99var,m%EdgeVelVar, p, m%SPLP,m%SPLS,m%SPLALPH,m%SPLTBL,ErrStat2 ,errMsg2)
+    !--------Blunt Trailing Edge Noise----------------------------------------------!
+    !CALL BLUNT(3.0d0,0.22860d0,63.920d0,90.0d0,90.0d0,0.5090d0,1.220d0,&
+    !    p%TEThick(J,I),p%TEAngle(J,I),p, m%d99Var(2),m%dstarVar(1),m%dstarVar(2),m%SPLBLUNT,ErrStat2,errMsg2 )
+    !--------Tip Noise--------------------------------------------------------------!
+    !CALL TIPNOIS(AlphaNoise,p%ALpRAT,p%BlChord(J,I),UNoise,m%ChordAngleTE(K,J,I),m%SpanAngleTE(K,J,I), &
+    !    m%rTEtoObserve(K,J,I), p, m%SPLTIP,ErrStat2,errMsg2)
+    !--------Inflow Turbulence Noise ------------------------------------------------!
+    !CALL InflowNoise(3.0d0,0.22860d0,63.920d0,90.0d0,90.0d0,0.5090d0,1.220d0, &
+    !    xd%MeanVrel(J,I),0.050d0,0.050d0,p,m%SPLti,ErrStat2,errMsg2 )
+    !CALL FullGuidati(3.0d0,63.920d0,0.22860d0,0.5090d0,1.220d0,90.0d0,90.0d0,xd%MeanVrel(J,I),xd%TIVrel(J,I), &
+    !    p,p%BlAFID(J,I),m%SPLTIGui,ErrStat2 )
+    !CALL Simple_Guidati(UNoise,0.22860d0,0.120d0,0.020d0,p,m%SPLTIGui,ErrStat2,errMsg2 )
+END SUBROUTINE 
 END MODULE AeroAcoustics
 

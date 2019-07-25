@@ -19,6 +19,13 @@ C    Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 C***********************************************************************
 C
       SUBROUTINE XFOIL_Noise
+C     NOTE FROM EBRA:
+C     Noise parameters are retrieved as follows
+C        - OPER is called
+C           -  DPLOT_Noise is called
+C               The parameters d99, Cf and d_star are computed 
+C               and stored in the module XfoilBLParams
+C     
 
       USE XfoilAirfoilParams
       INCLUDE 'XFOIL.INC'
@@ -1293,8 +1300,7 @@ C---- check for doubled point (sharp corner) at LE
       DO I = 1, NB-1
         IF(SBLE.EQ.SB(I) .AND. SBLE.EQ.SB(I+1)) THEN
          IBLE = I
-         WRITE(*,*)
-         WRITE(*,*) 'Sharp leading edge'
+         WRITE(*,*) 'Sharp leading edge detected on airfoil'
          GO TO 21
         ENDIF
       ENDDO

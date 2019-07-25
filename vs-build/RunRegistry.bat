@@ -135,6 +135,10 @@ SET CURR_LOC=%AD_Loc%
 %REGISTRY% "%CURR_LOC%\UnsteadyAero_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
 GOTO checkError
 
+:AA
+SET CURR_LOC=%AD_Loc%
+%REGISTRY% "%CURR_LOC%\AeroAcoustics_Registry.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -O "%Output_Loc%"
+
 :AeroDyn14
 SET CURR_LOC=%AD14_Loc%
 %REGISTRY% "%CURR_LOC%\Registry-AD14.txt" -I "%NWTC_Lib_Loc%" -I "%CURR_LOC%" -I "%IfW_Loc%" -O "%Output_Loc%"

@@ -67,8 +67,10 @@ typedef     ^                   AA_InputFile         IntKi               IInflow
 typedef     ^                   AA_InputFile         IntKi               X_BLMethod       -     -     -     "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Xfoil"     -
 typedef     ^                   AA_InputFile         IntKi               TICalcMeth       -     -     -     "TICalcMeth"     -
 typedef     ^                   AA_InputFile         IntKi               XfoilCall        -     -     -     "Integer describing Xfoil calls,  = 1 Interpolate from pretabulated = 2 Call Xfoil for each node etc"     -
-typedef     ^                   AA_InputFile         IntKi               aweightflag        -     -     -     "Integer a weighting call"     -
-typedef     ^                   AA_InputFile         LOGICAL             ROUND            -     -     -     "LOGICAL INDICATING ROUNDED TIP"     -
+typedef     ^                   AA_InputFile         IntKi               NReListBL        -     -     -    "Number of values of ReListXfoil"     -
+typedef     ^                   AA_InputFile         ReKi                AlphaLinsp      {3}    -     -     "Linspace (min,max,n) of angle of attacks in degrees used when calling Xfoil to tabulate the boundary layer properties [used only if BLMod=2 and XfoilCall=1]" - deg
+typedef     ^                   AA_InputFile         Logical             aweightflag      -     -     -    "Integer a weighting call"     -
+typedef     ^                   AA_InputFile         Logical             ROUND            -     -     -     "LOGICAL INDICATING ROUNDED TIP"     -
 typedef     ^                   AA_InputFile         ReKi                ALPRAT           -     -     -     "TIP LIFT CURVE SLOPE"     -
 typedef     ^                   AA_InputFile         IntKi               AA_Bl_Prcntge    -     -     -     "see the AeroAcoustics input file for description  "     -
 typedef     ^                   AA_InputFile         IntKi               NrObsLoc         -     -     -     "Number of observer locations "     -
@@ -78,9 +80,10 @@ typedef     ^                   AA_InputFile         ReKi                ObsZ   
 typedef     ^                   AA_InputFile         AA_BladePropsType   BladeProps      {:}    -     -     "blade property information from blade input files"     -
 typedef     ^                   AA_InputFile         IntKi               NrOutFile        -     -     -     "Nr of output files"     -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     AAoutfile       {:}    -     -     "AAoutfile for writing output files"     -
-typedef     ^                   AA_InputFile         IntKi               LargeBinOutput        -     -     -     "flag for output bin file "     -
+typedef     ^                   AA_InputFile         Logical             LargeBinOutput   -     -     -     "Flag for output bin file "     -
+typedef     ^                   AA_InputFile         Logical             XfoilTabOut      -     -     -     "Flag to output the tabulated data from xfoil for different AoA and Re, for all profiles "     -
 typedef     ^                   AA_InputFile         IntKi               Comp_AA_After        -     -     -     " "     -
-typedef     ^                   AA_InputFile         ReKi               saveeach        -     -     -     " "     -
+typedef     ^                   AA_InputFile         ReKi                SaveEach        -     -     -     " "     -
 typedef     ^                   AA_InputFile         ReKi                z0_AA           -     -     -     "Surface roughness"     -
 typedef     ^                   AA_InputFile         ReKi                ReListXfoil            {:}    -     -     ""          
 typedef     ^                   AA_InputFile         ReKi                AoAListXfoil           {:}    -     -     ""         deg
@@ -122,7 +125,6 @@ typedef     ^                   OtherStateType       SiKi                DummyOt
 #
 # Define misc/optimization variables (any data that are not considered actual states) here:
 ##typedef   ^                   MiscVarType          ReKi                DisturbedInflow        {:}{:}{:}     -     -     "InflowOnBlade values modified by tower influence"     m/s
-typedef     ^                   MiscVarType          ReKi                WithoutSweepPitchTwist {:}{:}{:}{:}  -     -     "Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"     -
 typedef     ^                   MiscVarType          ReKi                AllOuts                {:}           -     -     "An array holding the value of all of the calculated (not only selected) output channels"     -
 typedef     ^                   MiscVarType          ReKi                ChordAngleTE           {:}{:}{:}     -     -     "C"     -
 typedef     ^                   MiscVarType          ReKi                SpanAngleTE            {:}{:}{:}     -     -     "C"     -
@@ -143,7 +145,7 @@ typedef     ^                   MiscVarType          ReKi                SPLTIGu
 typedef     ^                   MiscVarType          ReKi                SPLBLUNT               {:}           -     -     "C"     -
 typedef     ^                   MiscVarType          ReKi                CfVar                  {:}  -     -     "Xfoil Output Skin friction coef Pressure Side"     -
 typedef     ^                   MiscVarType          ReKi                d99Var                 {:}  -     -     "Xfoil Output "     -
-typedef     ^                   MiscVarType          ReKi                dstarVar               {:}  -     -     "Xfoil Output "     -
+typedef     ^                   MiscVarType          ReKi                dStarVar               {:}  -     -     "Xfoil Output "     -
 typedef     ^                   MiscVarType          ReKi                EdgeVelVar                 {:}  -     -     "Xfoil Output "     -
 typedef     ^                   MiscVarType          IntKi               speccou                -    -     -     "Secptrum counter every XX seconds new spectrum"     -
 typedef     ^                   MiscVarType          IntKi               filesopen                -    -     -     "check if file is open"     -
@@ -152,16 +154,16 @@ typedef     ^                   MiscVarType          IntKi               filesop
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef     ^                   ParameterType        ReKI               saveeach                  -      -     -     "FLAG TO COMPUTE BLUNTNESS NOISE "     -
 typedef     ^                   ParameterType        DbKi                DT                      -      -     -     "Time step for continuous state integration & discrete state update"     seconds
-typedef     ^                   ParameterType        IntKi               IBLUNT                  -      -     -     "FLAG TO COMPUTE BLUNTNESS NOISE "     -
-typedef     ^                   ParameterType        IntKi               ILAM                    -      -     -     "FLAG TO COMPUTE LBL NOISE "     -
-typedef     ^                   ParameterType        IntKi               ITIP                    -      -     -     "FLAG TO COMPUTE TIP NOISE "     -
-typedef     ^                   ParameterType        IntKi               ITRIP                   -      -     -     "FLAG TO TRIP BOUNDARY LAYER"     -
-typedef     ^                   ParameterType        IntKi               ITURB                   -      -     -     "FLAG TO COMPUTE TBLTE NOISE"     -
-typedef     ^                   ParameterType        IntKi               IInflow                 -      -     -     "FLAG TO COMPUTE Turbulent Inflow NOISE"     -
+typedef     ^                   ParameterType        IntKi               IBLUNT                  -      -     -     "Bluntness noise model"     -
+typedef     ^                   ParameterType        IntKi               ILAM                    -      -     -     "LBL noise model "     -
+typedef     ^                   ParameterType        IntKi               ITIP                    -      -     -     "Tip noise model"     -
+typedef     ^                   ParameterType        IntKi               ITRIP                   -      -     -     "Trip boundary layer"     -
+typedef     ^                   ParameterType        IntKi               ITURB                   -      -     -     "Tblte noise model"     -
+typedef     ^                   ParameterType        IntKi               IInflow                 -      -     -     "Turbulent inflow noise model"     -
 typedef     ^                   ParameterType        IntKi               X_BLMethod              -      -     -     "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Xfoil"     -
 typedef     ^                   ParameterType        IntKi               TICalcMeth              -      -     -     ""     -
 typedef     ^                   ParameterType        IntKi               XfoilCall               -      -     -     "Integer describing Xfoil calls,  = 1 Interpolate from pretabulated = 2 Call Xfoil for each node etc"     -
-typedef     ^                   ParameterType        LOGICAL             ROUND                   -      -     -     "LOGICAL INDICATING ROUNDED TIP"     -
+typedef     ^                   ParameterType        Logical             ROUND                   -      -     -     "Logical indicating rounded tip"     -
 typedef     ^                   ParameterType        ReKi                ALPRAT                  -      -     -     "TIP LIFT CURVE SLOPE"     -
 typedef     ^                   ParameterType        IntKi               NumBlades               -      -     -     "Number of blades on the turbine"     -
 typedef     ^                   ParameterType        IntKi               NumBlNds                -      -     -     "Number of nodes on each blade"     -
@@ -176,14 +178,14 @@ typedef     ^                   ParameterType        ReKi                rotorre
 typedef     ^                   ParameterType        ReKi                rotorregionlimitsalph      {:}     -     -     ""     
 typedef     ^                   ParameterType        ReKi                rotorregionlimitsrad      {:}     -     -     ""     
 typedef     ^                   ParameterType        IntKi               NrObsLoc                -      -     -     "Number of observer locations "     -
-typedef     ^                   ParameterType        IntKi               aweightflag             -      -     -     " "     -
-typedef     ^                   ParameterType        IntKi               LargeBinOutput             -      -     -     " "     -
+typedef     ^                   ParameterType        Logical             aweightflag             -      -     -     " "     -
+typedef     ^                   ParameterType        Logical             LargeBinOutput             -      -     -     " "     -
 typedef     ^                   ParameterType        IntKi               Comp_AA_After             -      -     -     " "     -
 typedef     ^                   ParameterType        ReKi                ObsX                   {:}     -     -     "Observer location in tower-base coordinate X horizontal"     m
 typedef     ^                   ParameterType        ReKi                ObsY                   {:}     -     -     "Observer location in tower-base coordinate Y lateral"          m
 typedef     ^                   ParameterType        ReKi                ObsZ                   {:}     -     -     "Observer location in tower-base coordinate Z vertical"          m
 typedef     ^                   ParameterType        ReKi                FreqList               {:}     -     -     "List of Acoustic Frequencies to Calculate"     Hz
-typedef     ^                   ParameterType        ReKi              Aweight               {:}     -     -     "List of Acoustic Frequencies a weighting"     dB
+typedef     ^                   ParameterType        ReKi                Aweight               {:}     -     -     "List of Acoustic Frequencies a weighting"     dB
 typedef     ^                   ParameterType        ReKi                Fsample                 -     -      -     "Sampling Frequency 1/delta(t) - 1/(simulation time step)"     Hz
 typedef     ^                   ParameterType        IntKi               total_sample            -      -     -     "Total FFT Sample amount for dissipation calculation"     -
 typedef     ^                   ParameterType        IntKi               total_sampleTI            -      -     -     "Total FFT Sample amount for dissipation calculation"     -
@@ -218,15 +220,14 @@ typedef     ^                   ParameterType        ReKi                AFLECo 
 typedef     ^                   ParameterType        ReKi                AFTECo                 {:}{:}{:}  -     - 
 typedef     ^                   ParameterType        ReKi                BlSpn                  {:}{:}  -     -     "Span at blade node"     m
 typedef     ^                   ParameterType        ReKi                BlChord                {:}{:}  -     -     "Chord at blade node"     m
-typedef     ^                   ParameterType        ReKi                UListXfoil             {:}  -     -     "For Xfoil BL the list of Wind Speed"     m/s
 typedef     ^                   ParameterType        ReKi                ReListXfoil            {:}  -     -     "For Xfoil BL the list of Reynolds"     -
 typedef     ^                   ParameterType        ReKi                AOAListXfoil           {:}  -     -     "For Xfoil BL the list of Angle Of Attack "     deg
-typedef     ^                   ParameterType        ReKi                dstarall1             {:}{:}{:}  -     -     "Xfoil Output Disp Thickness Suction Side"     m
-typedef     ^                   ParameterType        ReKi                dstarall2             {:}{:}{:}  -     -     "Xfoil Output Disp Thickness Pressure Side"     m
-typedef     ^                   ParameterType        ReKi                d99all1               {:}{:}{:}  -     -     "Xfoil Output B.L. Thickness Suction Side"     m
-typedef     ^                   ParameterType        ReKi                d99all2               {:}{:}{:}  -     -     "Xfoil Output B.L. Thickness Pressure Side"     m
-typedef     ^                   ParameterType        ReKi                Cfall1                {:}{:}{:}  -     -     "Xfoil Output Skin friction coef Suction Side"    - 
-typedef     ^                   ParameterType        ReKi                Cfall2                {:}{:}{:}  -     -     "Xfoil Output Skin friction coef Pressure Side"     -
+typedef     ^                   ParameterType        ReKi                dStarAll1             {:}{:}{:}  -     -     "Xfoil Output Disp Thickness Suction Side"     m
+typedef     ^                   ParameterType        ReKi                dStarAll2             {:}{:}{:}  -     -     "Xfoil Output Disp Thickness Pressure Side"     m
+typedef     ^                   ParameterType        ReKi                d99All1               {:}{:}{:}  -     -     "Xfoil Output B.L. Thickness Suction Side"     m
+typedef     ^                   ParameterType        ReKi                d99All2               {:}{:}{:}  -     -     "Xfoil Output B.L. Thickness Pressure Side"     m
+typedef     ^                   ParameterType        ReKi                CfAll1                {:}{:}{:}  -     -     "Xfoil Output Skin friction coef Suction Side"    - 
+typedef     ^                   ParameterType        ReKi                CfAll2                {:}{:}{:}  -     -     "Xfoil Output Skin friction coef Pressure Side"     -
 typedef     ^                   ParameterType        ReKi                EdgeVelRat1                {:}{:}{:}  -     -     "Xfoil Output Edge Velocity Ratio Suction"    - 
 typedef     ^                   ParameterType        ReKi                EdgeVelRat2                {:}{:}{:}  -     -     "Xfoil Output Edge Velocity Ratio Pressure Side"     -
 typedef     ^                   ParameterType        ReKi                AFThickGuida             {:}{:}  -     -     "1 and 10 percent thickness t/c used for Simplified Guidati"     

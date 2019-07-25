@@ -42,8 +42,9 @@ REAL(DbKi)                   :: y2a(n)
 
       h = xa(khi)-xa(klo)
       if (h.eq.0.) then
-         pause 'bad xa input in splint'
-         endif
+          write(*,*)'ERROR:TINoise:SPL_E0A: bad xa input in splint'
+          STOP 1
+      endif
       a = (xa(khi)-x)/h
       b = (x-xa(klo))/h
       y = a*ya(klo)+b*ya(khi)+((a*a*a-a)*y2a(klo)+(b*b*b-b)*y2a(khi))*(h*h)/6.0d0
