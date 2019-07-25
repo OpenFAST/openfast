@@ -11,19 +11,19 @@ matrix:
   include:
     - os: linux
       dist: bionic
-      env: FC=/usr/bin/gfortran-7; CMAKE_FLAGS="-DDOUBLE_PRECISION=ON -DBUILD_SHARED_LIBS=ON"
+      env: FC=/usr/bin/gfortran-7; DOUBLE_PRECISION=ON
     - os: linux
       dist: bionic
-      env: FC=/usr/bin/gfortran-7; CMAKE_FLAGS="-DDOUBLE_PRECISION=OFF -DBUILD_SHARED_LIBS=ON"
+      env: FC=/usr/bin/gfortran-7; DOUBLE_PRECISION=OFF
     - os: linux
       dist: bionic
-      env: FC=/usr/bin/gfortran-7; CPP_API=ON; CMAKE_FLAGS="-DDOUBLE_PRECISION=OFF -DBUILD_SHARED_LIBS=ON -DBUILD_OPENFAST_CPP_API=$CPP_API"
+      env: FC=/usr/bin/gfortran-7; DOUBLE_PRECISION=ON; CPP_API=ON; CMAKE_FLAGS="-DBUILD_OPENFAST_CPP_API=$CPP_API"
     - os: osx
       osx_image: xcode9.2
-      env: FC=/usr/local/bin/gfortran-7; CMAKE_FLAGS="-DDOUBLE_PRECISION=ON -DBUILD_SHARED_LIBS=ON"
+      env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
     - os: osx
       osx_image: xcode9.2
-      env: FC=/usr/local/bin/gfortran-7; CMAKE_FLAGS="-DDOUBLE_PRECISION=OFF -DBUILD_SHARED_LIBS=ON"
+      env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
 
 # macos dependency install
 addons:
@@ -49,9 +49,9 @@ before_install:
 
 install:
     - mkdir build && cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DBUILD_TESTING=ON $CMAKE_FLAGS
+    - cmake .. -DCMAKE_BUILD_TYPE=DEBUG -DBUILD_TESTING=ON -DBUILD_SHARED_LIBS=ON -DDOUBLE_PRECISION=$DOUBLE_PRECISION $CMAKE_FLAGS
     - cat CMakeCache.txt
-    - make -j8 install
+    - make -j4 install
 
 script:
     # beamdyn unit tests
