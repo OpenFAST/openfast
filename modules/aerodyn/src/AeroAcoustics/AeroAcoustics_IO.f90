@@ -76,13 +76,14 @@ MODULE AeroAcoustics_IO
    integer(intKi), parameter        :: X_BLMethod_BPM  = 1  ! 
    integer(intKi), parameter        :: X_BLMethod_Xfoil  = 2  ! 
 
-   integer(intKi), parameter        :: XfoilCall_Interp  = 1  ! interpolate from pretabulated 
-   integer(intKi), parameter        :: XfoilCall_Every   = 2  ! call xfoil for each each time step
+   integer(intKi), parameter        :: XfoilCall_None     = 0  ! interpolate from pretabulated 
+   integer(intKi), parameter        :: XfoilCall_Tabulate = 1  ! call xfoil for each each time step
+   integer(intKi), parameter        :: XfoilCall_Every    = 2  ! call xfoil for each each time step
 
    integer(intKi), parameter        :: TICalc_Interp  = 1  ! interpolate from pretabulated 
    integer(intKi), parameter        :: TICalc_Every   = 2  ! calculate ti automatically 
 
-   integer(intKi), parameter        :: ITURB_None           = 0 	 ! TBLTE noise is not calculated 
+   integer(intKi), parameter        :: ITURB_None           = 0  ! TBLTE noise is not calculated 
    integer(intKi), parameter        :: ITURB_BPM            = 1  ! TBLTE noise is calculated with BPM
    integer(intKi), parameter        :: ITURB_TNO            = 2  ! TBLTE noise is calculated with TNO
 
@@ -90,9 +91,6 @@ MODULE AeroAcoustics_IO
    integer(intKi), parameter        :: IInflow_BPM                  = 1  ! IInflow noise is calculated with BPM
    integer(intKi), parameter        :: IInflow_FullGuidati         = 2  ! IInflow noise is calculated with FullGuidati   
    integer(intKi), parameter        :: IInflow_SimpleGuidati    = 3  ! IInflow noise is calculated with SimpleGuidati
- 
-   integer(intKi), parameter        :: AweightFlagOn    = 1  ! 
-   integer(intKi), parameter        :: AweightFlagOff    = 0
 
    INTEGER(IntKi), PARAMETER      :: MaxOutPts = 1103
 contains
@@ -115,7 +113,6 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
     INTEGER(IntKi)                         :: ErrStat2        ! The error status code
     CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
     CHARACTER(1024)                        :: AABlFile(MaxBl) ! File that contains the blade information (specified in the primary input file)
-    LOGICAL                                :: NotReadYet        ! 
     CHARACTER(*), PARAMETER                :: RoutineName = 'ReadInputFiles'
     ! initialize values:
     ErrStat = ErrID_None
@@ -123,8 +120,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
     UnEcho  = -1
     InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
 
-    ! get the primary/platform input-file data
-    ! sets UnEcho, AABlFile
+    ! Reads the module input-file data
     CALL ReadPrimaryFile( InputFileName, InputFileData, AABlFile,  OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
     if(Failed()) return
 
@@ -141,21 +137,24 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
         if(Failed()) return
     end do
 
-    NotReadYet=.true.
-    IF(   (InputFileData%XfoilCall.eq.1) .and. (InputFileData%ITURB.eq.2)  ) THEN
-        CALL ReadXfoilTables( InputFileName,InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
-        if(Failed()) return
-        NotReadYet=.false.
-    ENDIF 	
+    if (InputFileData%XfoilCall.eq.XfoilCall_None) then 
+        if ((InputFileData%ITURB.eq.2) .or. (InputFileData%X_BLMethod.eq.2)) then
+            ! We need to read the xfoil tables
+            CALL ReadXfoilTables( InputFileName,InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
+        endif
+    elseif (InputFileData%XfoilCall.eq.XfoilCall_Tabulate) then 
+        ! We need to generate the tables with Xfoil
+        print*,'TODO Running Xfoil to generate tabulated data'
+        STOP
+         !CALL AllocAry( InputFileData%AoAListXfoil,sizeaoa, 'InputFileData%AoAListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
+    else
+        ! We'll call Xfoil all the time
+    endif
 
-    IF(   (InputFileData%XfoilCall.eq.1) .and. (InputFileData%X_BLMethod.eq.2) .and. (NotReadYet)  ) THEN
-        CALL ReadXfoilTables( InputFileName,InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
-        if(Failed()) return
-    ENDIF 
 
-    IF(   (InputFileData%TICalcMeth.eq.1) ) THEN	
+    IF(   (InputFileData%TICalcMeth.eq.1) ) THEN
         CALL REadTICalcTables(InputFileName,InputFileData,  ErrStat2, ErrMsg2); if(Failed()) return
-    ENDIF 	
+    ENDIF
 
 CONTAINS
     logical function Failed()
@@ -188,6 +187,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
     character(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
     character(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
     character(*), parameter       :: RoutineName = 'ReadPrimaryFile'
+    integer(IntKi)                :: n                                         ! dummy integer
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
@@ -251,27 +251,30 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
         READ( Line, *, IOSTAT=IOS) InputFileData%DTAero
         CALL CheckIOS ( IOS, InputFile, 'DTAero', NumType, ErrStat2, ErrMsg2 ); call check
     END IF   
-    CALL ReadVar( UnIn, InputFile, InputFileData%Comp_AA_After, "Comp_AA_After", "Comp_AA_After", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%saveeach     , "saveeach", "saveeach", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%IBLUNT       , "IBLUNT", "FLAG TO COMPUTE BLUNTNESS NOISE {} (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%ILAM         , "ILAM", "FLAG TO COMPUTE LBL NOISE {} (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%ITIP         , "ITIP", "FLAG TO COMPUTE TIP NOISE {} (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%ITRIP        , "ITRIP", "FLAG TO TRIP BOUNDARY LAYER {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc); call check
-
-    ! ITURB - FLAG TO COMPUTE TBLTE NOISE 
-    CALL ReadVar( UnIn, InputFile, InputFileData%ITURB      , "ITURB", "FLAG TO COMPUTE TBLTE NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%IInflow    , "IInflow", "FLAG TO COMPUTE Turbulent Inflow NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%X_BLMethod , "X_BLMethod", "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Xfoil", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%XfoilCall  , "XfoilCall", "Integer describing Xfoil calls,  = 1 Interpolate from pretabulated = 2 Call Xfoil for each node etc", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%TICalcMeth , "TICalcMeth", "Integer describing TICalcMeth,  = 1 Interpolate from pretabulated = 2 calculate on the fly", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%ROUND, "ROUND", "LOGICAL INDICATING ROUNDED TIP", ErrStat2, ErrMsg2, UnEc); call check
-    CALL ReadVar( UnIn, InputFile, InputFileData%ALPRAT, "ALPRAT", "TIP LIFT CURVE SLOPE and (Default = 1.0)", ErrStat2, ErrMsg2, UnEc); call check  
-    ! AA_Bl_Prcntge - The calculations will be carried out for the nodes that are within the user input percntage value. 
-    ! i.e. AA_Bl_Prcntge=60 means;Starting from tip 60% percent of the blade will be contributing to the overall noise levels.
-    CALL ReadVar( UnIn, InputFile, InputFileData%AA_Bl_Prcntge, "AA_Bl_Prcntge", "-", ErrStat2, ErrMsg2, UnEc); call check  
-    ! surface roughness
-    CALL ReadVar( UnIn, InputFile, InputFileData%z0_AA, "z0_AA", "-", ErrStat2, ErrMsg2, UnEc); call check  
-    CALL ReadVar( UnIn, InputFile, InputFileData%aweightflag, "aweightflag", "Integer describing a weighting", ErrStat2, ErrMsg2, UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%Comp_AA_After,"AAStart"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%saveeach     ,"SaveEach"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%IBLUNT       ,"BluntMod"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%ILAM         ,"LamMod"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%ITIP         ,"TipMod"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%ITRIP        ,"TripMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%ITURB        ,"TurbMod"      ,"" ,ErrStat2,ErrMsg2,UnEc); call check ! ITURB - TBLTE NOISE
+    CALL ReadVar(UnIn,InputFile,InputFileData%IInflow      ,"InflowMod"    ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%X_BLMethod   ,"BLMod"        ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%XfoilCall    ,"XfoilCall"    ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile, n                         ,"NReListBL"    ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    if (N<=0) then
+         CALL ReadCom(UnIn,InputFile,'ReListBL', ErrStat2, ErrMsg2,UnEc); call check
+    else
+         CALL AllocAry(InputFileData%ReListBL, N, 'ReListBL',  ErrStat2, ErrMsg2); call check
+         CALL ReadAry(UnIn,InputFile,InputFileData%ReListBL, N, 'ReListBL', "", ErrStat2,ErrMsg2,UnEc); call check
+    endif
+    CALL ReadAry(UnIn,InputFile,InputFileData%AlphaLinsp, 3,"AlphaLinsp"   ,"", ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%TICalcMeth   ,"TICalcMeth"   ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%ROUND        ,"RoundTip"     ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%ALPRAT       ,"ALPRAT"       ,"" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%AA_Bl_Prcntge,"BldPrcnt"     ,"-",ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%z0_AA        ,"SurfRoughness","" ,ErrStat2,ErrMsg2,UnEc); call check
+    CALL ReadVar(UnIn,InputFile,InputFileData%aweightflag  ,"AWeighting"   ,"" ,ErrStat2,ErrMsg2,UnEc); call check
 
     ! Return on error at end of section
     IF ( ErrStat >= AbortErrLev ) THEN
@@ -307,7 +310,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
         IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
-        END IF		
+        END IF
     ENDDO
     CLOSE ( UnIn2 )
     !----- end read from observer file
@@ -329,14 +332,9 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
 
     !----------- OUTPUTS  -----------------------------------------------------------
     CALL ReadCom( UnIn, InputFile, 'Section Header: Outputs', ErrStat2, ErrMsg2, UnEc); call check
-
-    ! NrObsLoc  - Nr of Observers (-):
     CALL ReadVar( UnIn, InputFile, InputFileData%NrOutFile, "InputFileData%NrOutFile", "Nr of Output Files (-)", ErrStat2, ErrMsg2, UnEc); call check
-
     CALL AllocAry( InputFileData%AAOutFile,InputFileData%NrOutFile, 'InputFileData%AAOutFile', ErrStat2, ErrMsg2); call check
-
     CALL ReadVar ( UnIn, InputFile, InputFileData%AAOutFile(1), 'InputFileData%AAOutFile', 'Name of output file ', ErrStat2, ErrMsg2, UnEc ); call check
-
     DO I=InputFileData%NrOutFile,1,-1
         ! one file name is given by the user and the XXFile1.out XXFile2.out XXFile3.out is generated
         IF ( PathIsRelative( InputFileData%AAOutFile(I) ) ) InputFileData%AAOutFile(I) = TRIM(PriPath)//TRIM(InputFileData%AAOutFile(1))//TRIM(Num2Lstr(I))//".out"
@@ -451,6 +449,7 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, BldNodes, ErrStat, ErrMsg )
         ELSE
             FileName = TRIM(PriPath)//'AirfoilsModified/BL_TRIPPED/AF'//TRIM(Num2LStr(I))//'.txt'
         ENDIF
+        print*,'AeroAcoustics_IO: reading Xfoil table:'//trim(Filename)
 
         CALL GetNewUnit(UnIn, ErrStat2, ErrMsg2); if(Failed()) return
         CALL OpenFInpFile(UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
@@ -509,7 +508,7 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, BldNodes, ErrStat, ErrMsg )
                 InputFileData%Suct_Cf(cou1,cou,I)         = temp1(7,loop1)
                 InputFileData%Suct_EdgeVelRat(cou1,cou,I) = temp1(8,loop1)
             ENDDO
-        ENDDO	
+        ENDDO
         !---------------------- END OF FILE -----------------------------------------
     ENDDO 
     CALL Cleanup( )
@@ -570,7 +569,7 @@ SUBROUTINE REadTICalcTables( InputFile,InputFileData,  ErrStat, ErrMsg )
     if(Failed()) return
     DO cou1=1,size(InputFileData%TI_Grid_In,1)
         read(UnIn,*)  InputFileData%TI_Grid_In(cou1,:)
-    ENDDO		 
+    ENDDO
     !---------------------- END OF FILE -----------------------------------------
     CALL Cleanup( )
 
@@ -663,7 +662,7 @@ subroutine AA_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
                     InitOut%WriteOutputHdrforPE(i) = "F"//trim(num2lstr(p%FreqList(k)))//"Obs"//trim(num2lstr(j))//"Bl"//trim(num2lstr(m))
                     InitOut%WriteOutputUntforPE(i) = "Coord"//trim(num2lstr(oi))
                 enddo
-            enddo		        
+            enddo
         end do
     enddo
     ! THIRD FILE HEADER,UNIT
@@ -949,7 +948,7 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, ErrStat, ErrMsg )
                    !  InitOut%WriteOutputHdr(i) = "Bl "//trim(num2lstr(m))//" Nd "//trim(num2lstr(k))//" Obs "//trim(num2lstr(j))
                    !  InitOut%WriteOutputUnt(i) = "SPL"
                enddo
-           enddo	
+           enddo
        enddo
    endif
    ! FOR THE SECOND OUTPUT FILE
@@ -979,7 +978,7 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, ErrStat, ErrMsg )
                        y%WriteOutputSep(counter) = y%OASPL_Mech(oi,k,j,i)                        
                    enddo
                enddo
-           enddo	
+           enddo
        enddo
    ENDIF
    ! FOR THE FOURTH OUTPUT FILE

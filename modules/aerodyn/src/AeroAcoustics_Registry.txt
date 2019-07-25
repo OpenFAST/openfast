@@ -67,7 +67,9 @@ typedef     ^                   AA_InputFile         IntKi               IInflow
 typedef     ^                   AA_InputFile         IntKi               X_BLMethod       -     -     -     "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Xfoil"     -
 typedef     ^                   AA_InputFile         IntKi               TICalcMeth       -     -     -     "TICalcMeth"     -
 typedef     ^                   AA_InputFile         IntKi               XfoilCall        -     -     -     "Integer describing Xfoil calls,  = 1 Interpolate from pretabulated = 2 Call Xfoil for each node etc"     -
-typedef     ^                   AA_InputFile         IntKi               aweightflag        -     -     -     "Integer a weighting call"     -
+typedef     ^                   AA_InputFile         ReKi                ReListBL        {:}    -     -     "Reynolds numbers, in million, used when calling Xfoil to tabulate the boundary"     -
+typedef     ^                   AA_InputFile         ReKi                AlphaLinsp      {3}    -     -     "Linspace (min,max,n) of angle of attacks in degrees used when calling Xfoil to tabulate the boundary layer properties [used only if BLMod=2 and XfoilCall=1]" - deg
+typedef     ^                   AA_InputFile         LOGICAL             aweightflag      -     -     -    "Integer a weighting call"     -
 typedef     ^                   AA_InputFile         LOGICAL             ROUND            -     -     -     "LOGICAL INDICATING ROUNDED TIP"     -
 typedef     ^                   AA_InputFile         ReKi                ALPRAT           -     -     -     "TIP LIFT CURVE SLOPE"     -
 typedef     ^                   AA_InputFile         IntKi               AA_Bl_Prcntge    -     -     -     "see the AeroAcoustics input file for description  "     -
@@ -176,14 +178,14 @@ typedef     ^                   ParameterType        ReKi                rotorre
 typedef     ^                   ParameterType        ReKi                rotorregionlimitsalph      {:}     -     -     ""     
 typedef     ^                   ParameterType        ReKi                rotorregionlimitsrad      {:}     -     -     ""     
 typedef     ^                   ParameterType        IntKi               NrObsLoc                -      -     -     "Number of observer locations "     -
-typedef     ^                   ParameterType        IntKi               aweightflag             -      -     -     " "     -
+typedef     ^                   ParameterType        LOGICAL             aweightflag             -      -     -     " "     -
 typedef     ^                   ParameterType        IntKi               LargeBinOutput             -      -     -     " "     -
 typedef     ^                   ParameterType        IntKi               Comp_AA_After             -      -     -     " "     -
 typedef     ^                   ParameterType        ReKi                ObsX                   {:}     -     -     "Observer location in tower-base coordinate X horizontal"     m
 typedef     ^                   ParameterType        ReKi                ObsY                   {:}     -     -     "Observer location in tower-base coordinate Y lateral"          m
 typedef     ^                   ParameterType        ReKi                ObsZ                   {:}     -     -     "Observer location in tower-base coordinate Z vertical"          m
 typedef     ^                   ParameterType        ReKi                FreqList               {:}     -     -     "List of Acoustic Frequencies to Calculate"     Hz
-typedef     ^                   ParameterType        ReKi              Aweight               {:}     -     -     "List of Acoustic Frequencies a weighting"     dB
+typedef     ^                   ParameterType        ReKi                Aweight               {:}     -     -     "List of Acoustic Frequencies a weighting"     dB
 typedef     ^                   ParameterType        ReKi                Fsample                 -     -      -     "Sampling Frequency 1/delta(t) - 1/(simulation time step)"     Hz
 typedef     ^                   ParameterType        IntKi               total_sample            -      -     -     "Total FFT Sample amount for dissipation calculation"     -
 typedef     ^                   ParameterType        IntKi               total_sampleTI            -      -     -     "Total FFT Sample amount for dissipation calculation"     -
