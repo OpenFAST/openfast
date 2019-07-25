@@ -562,35 +562,35 @@ SUBROUTINE WriteXfoilTables(p, ErrStat, ErrMsg )
         write(UnOut,'(A)')  '   - Line 4: PressureSide EdgeVelRat   - Line 8: SuctionSide EdgeVelRat'
         write(UnOut,'(A)') 'The values on a line are set with a loop on AoA (slowest index) followed with one on the Re (fastest index)'
         do iAoA=1,size(p%dStarAll1,1); do iRe=1,size(p%dStarAll1,2)
-            write(UnOut,'(F9.6)', advance='no') p%d99All2(iAoA,iRe,iAF) ! Line 1 Pres_BLThick
+            write(UnOut,'(F10.6)', advance='no') p%d99All2(iAoA,iRe,iAF) ! Line 1 Pres_BLThick
         enddo; enddo
         write(UnOut,'(A)')''
         do iAoA=1,size(p%dStarAll1,1); do iRe=1,size(p%dStarAll1,2)
-            write(UnOut,'(F9.6)', advance='no') p%dStarAll2(iAoA,iRe,iAF) ! Line 2 Pres_DispThick
+            write(UnOut,'(F10.6)', advance='no') p%dStarAll2(iAoA,iRe,iAF) ! Line 2 Pres_DispThick
         enddo; enddo
         write(UnOut,'(A)')''
         do iAoA=1,size(p%dStarAll1,1); do iRe=1,size(p%dStarAll1,2)
-            write(UnOut,'(F9.6)', advance='no') p%CfAll2(iAoA,iRe,iAF)  ! Line 3 Pres_CF
+            write(UnOut,'(F10.6)', advance='no') p%CfAll2(iAoA,iRe,iAF)  ! Line 3 Pres_CF
         enddo; enddo
         write(UnOut,'(A)')''
         do iAoA=1,size(p%dStarAll1,1); do iRe=1,size(p%dStarAll1,2)
-            write(UnOut,'(F9.6)', advance='no') p%EdgeVelRat2(iAoA,iRe,iAF) ! Line 4, Pres_EdgeVelRat
+            write(UnOut,'(F10.6)', advance='no') p%EdgeVelRat2(iAoA,iRe,iAF) ! Line 4, Pres_EdgeVelRat
         enddo; enddo
         write(UnOut,'(A)')''
         do iAoA=1,size(p%dStarAll1,1); do iRe=1,size(p%dStarAll1,2)
-            write(UnOut,'(F9.6)', advance='no') p%d99All1(iAoA,iRe,iAF) ! Line 5, Suct_BLThick
+            write(UnOut,'(F10.6)', advance='no') p%d99All1(iAoA,iRe,iAF) ! Line 5, Suct_BLThick
         enddo; enddo
         write(UnOut,'(A)')''
         do iAoA=1,size(p%dStarAll1,1); do iRe=1,size(p%dStarAll1,2)
-            write(UnOut,'(F9.6)', advance='no') p%dStarAll1(iAoA,iRe,iAF)! Line 6, Suct_DispThick
+            write(UnOut,'(F10.6)', advance='no') p%dStarAll1(iAoA,iRe,iAF)! Line 6, Suct_DispThick
         enddo; enddo
         write(UnOut,'(A)')''
         do iAoA=1,size(p%dStarAll1,1); do iRe=1,size(p%dStarAll1,2)
-            write(UnOut,'(F9.6)', advance='no') p%CfAll1(iAoA,iRe,iAF)! Line 7, Suct_Cf
+            write(UnOut,'(F10.6)', advance='no') p%CfAll1(iAoA,iRe,iAF)! Line 7, Suct_Cf
         enddo; enddo
         write(UnOut,'(A)')''
         do iAoA=1,size(p%dStarAll1,1); do iRe=1,size(p%dStarAll1,2)
-            write(UnOut,'(F9.6)', advance='no') p%EdgeVelRat1(iAoA,iRe,iAF)! Line 8, Suct_EdgeVelRat
+            write(UnOut,'(F10.6)', advance='no') p%EdgeVelRat1(iAoA,iRe,iAF)! Line 8, Suct_EdgeVelRat
         enddo; enddo
     enddo ! Loop on number of airfoils
 

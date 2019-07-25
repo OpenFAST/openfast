@@ -322,6 +322,15 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
         call AllocAry(p%Cfall2     ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%Cfall2'     , errStat2, errMsg2); if(Failed()) return
         call AllocAry(p%EdgeVelRat1,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%EdgeVelRat1', errStat2, errMsg2); if(Failed()) return
         call AllocAry(p%EdgeVelRat2,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%EdgeVelRat2', errStat2, errMsg2); if(Failed()) return
+        p%dstarall1   =0.0_ReKi ! TODO, there is no guaranteee that xfoil returns something sensible if it didn't converge
+        p%dstarall2   =0.0_ReKi
+        p%d99all1     =0.0_ReKi
+        p%d99all2     =0.0_ReKi
+        p%Cfall1      =0.0_ReKi
+        p%Cfall2      =0.0_ReKi
+        p%EdgeVelRat1 =0.0_ReKi
+        p%EdgeVelRat2 =0.0_ReKi
+
 
         if (p%XfoilCall.eq.XfoilCall_None) then
             ! --- Xfoil data were read from files  (XfoilCall=0), so we just copy what was read from the files
@@ -1098,14 +1107,17 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
             !--------Xfoil Boundary Layer Either Every Step Calculate or Interpolate from pretabulated-------------------------!
             IF (p%X_BLMethod .EQ. 2) THEN
-                IF  (p%XfoilCall .eq. XfoilCall_None) THEN
+                IF  ((p%XfoilCall==XfoilCall_None) .or. (p%XfoilCall==XfoilCall_Tabulate)) THEN
                     call BL_Param_Interp(p,m,Unoise,AlphaNoise,p%BlChord(J,I),p%BlAFID(J,I), errStat2, errMsg2)
-                    temp_dispthick(J,I)=m%d99Var(1)   
-                    m%d99Var   = m%d99Var*p%BlChord(J,I)
-                    m%dstarVar = m%dstarVar*p%BlChord(J,I)
+                    temp_dispthick(J,I) = m%d99Var(1)
+                    m%d99Var            = m%d99Var*p%BlChord(J,I)
+                    m%dstarVar          = m%dstarVar*p%BlChord(J,I)
                     temp_dispthickchord(J,I)=m%d99Var(1)
                 ELSEIF  (p%XfoilCall .eq. XfoilCall_Every) THEN
                     CALL XFOIL_BL_SINGLE(p,m,p%BlAFID(J,I),p%BlChord(J,I),UNoise,AlphaNoise, ErrStat2, ErrMsg2)
+                ELSE
+                   call SetErrStat( ErrID_Fatal, 'XfoilCall not handled correctly. Contact developper', ErrStat, ErrMsg, RoutineName ) 
+                   return
                 ENDIF
             ENDIF
 
@@ -2517,6 +2529,8 @@ SUBROUTINE XFOIL_BL_SINGLE(p,m,whichairfoil,ChordChord,Unoise,AlphaNoise, ErrSta
 
     ! --- Allocating airfoil coordinates
     NB_AFMODULE=size(p%AFInfo(whichairfoil)%X_Coord)-1
+    if (allocated(XB_AFMODULE)) deallocate(XB_AFMODULE)
+    if (allocated(YB_AFMODULE)) deallocate(YB_AFMODULE)
     call AllocAry( XB_AFMODULE,  NB_AFMODULE, 'XB_AFMODULE', ErrStat2, ErrMsg2 )
     call SetErrStat( ErrStat2, errMsg2, errStat, errMsg, RoutineName )
     call AllocAry( YB_AFMODULE,  NB_AFMODULE, 'YB_AFMODULE', ErrStat2, ErrMsg2 )
@@ -2561,7 +2575,7 @@ SUBROUTINE RUN_XFOIL_BL(p,ErrStat,ErrMsg)
     do iAF=1,size(p%AFInfo) ! Loop on airfoils
         ! --- Setting Xfoil parameters needed for computation
         airfoil = 'NotUsed.dat'
-        Mach    = 0.0    ! TODO
+        Mach    = 0.1    ! TODO
         a_chord = 1      ! TODO
         xtrup   = 0.02
         xtrlo   = 0.1
@@ -2574,6 +2588,8 @@ SUBROUTINE RUN_XFOIL_BL(p,ErrStat,ErrMsg)
 
         ! --- Allocate airfoil coordinates
         NB_AFMODULE=size(p%AFInfo(iAF)%X_Coord)-1
+        if (allocated(XB_AFMODULE)) deallocate(XB_AFMODULE)
+        if (allocated(YB_AFMODULE)) deallocate(YB_AFMODULE)
         call AllocAry( XB_AFMODULE,  NB_AFMODULE, 'XB_AFMODULE', ErrStat2, ErrMsg2 )
         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         call AllocAry( YB_AFMODULE,  NB_AFMODULE, 'YB_AFMODULE', ErrStat2, ErrMsg2 )
@@ -2586,6 +2602,9 @@ SUBROUTINE RUN_XFOIL_BL(p,ErrStat,ErrMsg)
         do iRe=1,size(p%ReListXfoil)
             do iAlpha=1,size(p%AOAListXfoil)
                 ! --- Setting Xfoil parameters needed for computation
+                !d_star=0
+                d99=0
+                !Cf=0
                 aofa = p%AOAListXfoil(iAlpha)
                 Re   = p%ReListXfoil(iRe)
                 print'(A,I0,A,F15.0,A,F9.2)','Calling Xfoil for airfoil ',iAF, ' Re=',Re, ' Alpha=',aofa
@@ -2597,6 +2616,7 @@ SUBROUTINE RUN_XFOIL_BL(p,ErrStat,ErrMsg)
                 p%d99all2  (iAlpha,iRe,iAF)= d99   (2)
                 p%Cfall1   (iAlpha,iRe,iAF)= Cf    (1)
                 p%Cfall2   (iAlpha,iRe,iAF)= Cf    (2)
+                !print'(A,6F12.4)','d*,d99,Cf',d_star,d99,Cf
             enddo
         enddo
 
