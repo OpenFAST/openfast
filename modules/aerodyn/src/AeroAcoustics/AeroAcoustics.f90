@@ -124,90 +124,7 @@ contains
       CALL AA_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
       IF ( UnEcho > 0 ) CLOSE( UnEcho )
    end subroutine Cleanup
-
 end subroutine AA_Init
-!----------------------------------------------------------------------------------------------------------------------------------   
-!> This routine validates the inputs from the AeroDyn input files.
-SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
-   type(AA_InputFile),       intent(in)     :: InputFileData                       !< All the data in the AeroDyn input file
-   integer(IntKi),           intent(in)     :: NumBl                               !< Number of blades
-   integer(IntKi),           intent(out)    :: ErrStat                             !< Error status
-   character(*),             intent(out)    :: ErrMsg                              !< Error message
-   ! local variables
-   integer(IntKi)                           :: k                                   ! Blade number
-   integer(IntKi)                           :: j                                   ! node number
-   character(*), parameter                  :: RoutineName = 'ValidateInputData'
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-
-   if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, ErrMsg, RoutineName )
-   if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-
-   if (InputFileData%IBLUNT /= IBLUNT_None .and. InputFileData%IBLUNT /= IBLUNT_BPM) then
-       call SetErrStat ( ErrID_Fatal, &
-           'IBLUNT must '//trim(num2lstr(IBLUNT_None))//' (none) or '//trim(num2lstr(IBLUNT_BPM))//' (Bluntness noise calculated).', ErrStat, ErrMsg, RoutineName ) 
-   endif
-
-   if (InputFileData%ILAM /= ILAM_None .and. InputFileData%ilam /= ILAM_BPM) then
-       call SetErrStat ( ErrID_Fatal, 'ILAM must be '//trim(num2lstr(ILAM_None))//' No calculation '//&
-           trim(num2lstr(ILAM_BPM))//' (ILAM Calculated).', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-   if (InputFileData%ITIP /= ITIP_None .and. InputFileData%ITIP /= ITIP_ON) then
-       call SetErrStat ( ErrID_Fatal, 'ITIP must be '//trim(num2lstr(ITIP_None))//' (Off) or '//&
-           trim(num2lstr(ITIP_On))//' (ITIP On).', ErrStat, ErrMsg, RoutineName ) 
-   end if   
-
-   if (InputFileData%ITRIP /= ITRIP_None .and. InputFileData%ITRIP /= ITRIP_Heavy .and. InputFileData%ITRIP /= ITRIP_Light) then
-       call SetErrStat ( ErrID_Fatal,'ITRIP must be '//trim(num2lstr(ITRIP_None))//' (none) or '//trim(num2lstr(ITRIP_Heavy))//&
-           ' (heavily tripped BL Calculation) or '//trim(num2lstr(ITRIP_Light))//' (lightly tripped BL)' ,ErrStat, ErrMsg, RoutineName ) 
-   end if 
-
-   if (InputFileData%ITURB /= ITURB_None .and. InputFileData%ITURB /= ITURB_BPM .and. InputFileData%ITURB /= ITURB_TNO) then
-       call SetErrStat ( ErrID_Fatal, 'ITURB must be 0 (off) or 1 (BPM) or 2 (TNO) .', ErrStat, ErrMsg, RoutineName ) 
-   end if    
-
-   if (InputFileData%IInflow /= IInflow_None .and. InputFileData%IInflow /= IInflow_BPM &
-       .and. InputFileData%IInflow /= IInflow_FullGuidati .and. InputFileData%IInflow /= IInflow_SimpleGuidati ) then
-       call SetErrStat ( ErrID_Fatal, 'IInflow must be 0 (off) or 1 (only Amiet)  or 2 (Full Guidati)'//&
-           'or 3 (Simple Guidati).', ErrStat, ErrMsg, RoutineName ) 
-   end if 
-
-   if (InputFileData%TICalcMeth /= TICalc_Every .and. InputFileData%TICalcMeth /= TICalc_Interp ) then
-       call SetErrStat ( ErrID_Fatal, 'TICalcMeth must be '//trim(num2lstr(TICalc_Every))//' TICalc automatic  or '//&
-           trim(num2lstr(TICalc_Interp))//' (TICalcMeth interp).', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-   if (InputFileData%X_BLMethod /= X_BLMethod_BPM .and. InputFileData%X_BLMethod /= X_BLMethod_Xfoil) then
-       call SetErrStat ( ErrID_Fatal, 'X_BLMethod must be '//trim(num2lstr(X_BLMethod_BPM))//' X_BLMethod_ with BPM or '//&
-           trim(num2lstr(X_BLMethod_Xfoil))//' (X_BLMethod with Xfoil).', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-
-   if (InputFileData%XfoilCall /= XfoilCall_None .and. InputFileData%XfoilCall /= XfoilCall_Every ) then
-       call SetErrStat ( ErrID_Fatal, 'XfoilCall must be '//trim(num2lstr(XfoilCall_None))//' for interpolation from pretabulated data or '//&
-           trim(num2lstr(XfoilCall_Every))//' for each step Xfoil call.', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-   if (InputFileData%NrObsLoc <= 0.0) call SetErrStat ( ErrID_Fatal, 'Number of Observer Locations should be greater than zero', ErrStat, ErrMsg, RoutineName )
-
-   if (InputFileData%NrOutFile /= 0 .and.  InputFileData%NrOutFile /= 1 .and. InputFileData%NrOutFile /= 2 .and. InputFileData%NrOutFile /= 3 &
-       .and. InputFileData%NrOutFile /= 4) then
-       call SetErrStat ( ErrID_Fatal, ' NrOutFile must be 0 or 1 or 2 or 3 or 4', ErrStat, ErrMsg, RoutineName ) 
-   end if
-
-   if (InputFileData%LargeBinOutput /= 0 .and.  InputFileData%LargeBinOutput /= 1 ) then
-       call SetErrStat ( ErrID_Fatal, ' LargeBinOutput must be 0 or 1', ErrStat, ErrMsg, RoutineName ) 
-   end if      
-
-   if (InputFileData%Comp_AA_After .eq.0 ) then
-       call SetErrStat ( ErrID_Fatal, ' Comp_AA_After variable in aeroacustics input must be more than 0', ErrStat, ErrMsg, RoutineName ) 
-   end if      
-
-   if (InputFileData%saveeach .eq. 0 ) then
-       call SetErrStat ( ErrID_Fatal, ' saveeach variable in aeroacustics input must be more than 0', ErrStat, ErrMsg, RoutineName ) 
-   end if  
-END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine sets AeroAcoustics parameters for use during the simulation; these variables are not changed after AA_Init.
 subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
@@ -389,22 +306,25 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
         ENDDO
     ENDDO
 
-    if( (p%X_BLMethod.eq.2) .and. ((p%XfoilCall.eq.XfoilCall_None).or.(p%XfoilCall.eq.XfoilCall_None)) ) then
+    if( (p%X_BLMethod.eq.2) .and. ((p%XfoilCall.eq.XfoilCall_None).or.(p%XfoilCall.eq.XfoilCall_Tabulate)) ) then
+
+        ! Copying inputdata list of AOA and Reynolds to parameters
+        call AllocAry( p%AOAListXfoil, size(InputFileData%AoAListXfoil), 'p%AOAListXfoil', errStat2, errMsg2); if(Failed()) return
+        call AllocAry( p%ReListXfoil,  size(InputFileData%ReListXfoil) , 'p%ReListXfoil' , errStat2, errMsg2); if(Failed()) return
+        p%AOAListXfoil=InputFileData%AoAListXfoil
+        p%ReListXfoil=InputFileData%ReListXfoil
+        ! Allocate the suction and pressure side boundary layer parameters for Xfoil output - will be used as tabulated data
+        call AllocAry(p%dstarall1  ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%dstarall1'  , errStat2, errMsg2); if(Failed()) return
+        call AllocAry(p%dstarall2  ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%dstarall2'  , errStat2, errMsg2); if(Failed()) return
+        call AllocAry(p%d99all1    ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%d99all1'    , errStat2, errMsg2); if(Failed()) return
+        call AllocAry(p%d99all2    ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%d99all2'    , errStat2, errMsg2); if(Failed()) return
+        call AllocAry(p%Cfall1     ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%Cfall1'     , errStat2, errMsg2); if(Failed()) return
+        call AllocAry(p%Cfall2     ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%Cfall2'     , errStat2, errMsg2); if(Failed()) return
+        call AllocAry(p%EdgeVelRat1,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%EdgeVelRat1', errStat2, errMsg2); if(Failed()) return
+        call AllocAry(p%EdgeVelRat2,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%EdgeVelRat2', errStat2, errMsg2); if(Failed()) return
+
         if (p%XfoilCall.eq.XfoilCall_None) then
-            ! --- Xfoil data are read from files  (XfoilCall=0)
-            call AllocAry( p%AOAListXfoil, size(InputFileData%AoAListXfoil), 'p%AOAListXfoil', errStat2, errMsg2); if(Failed()) return
-            call AllocAry( p%ReListXfoil,  size(InputFileData%ReListXfoil) , 'p%ReListXfoil' , errStat2, errMsg2); if(Failed()) return
-            p%AOAListXfoil=InputFileData%AoAListXfoil
-            p%ReListXfoil=InputFileData%ReListXfoil
-            !! Allocate the suction and pressure side boundary layer parameters for Xfoil output - will be used as tabulated data
-            call AllocAry(p%dstarall1  ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%dstarall1'  , errStat2, errMsg2); if(Failed()) return
-            call AllocAry(p%dstarall2  ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%dstarall2'  , errStat2, errMsg2); if(Failed()) return
-            call AllocAry(p%d99all1    ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%d99all1'    , errStat2, errMsg2); if(Failed()) return
-            call AllocAry(p%d99all2    ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%d99all2'    , errStat2, errMsg2); if(Failed()) return
-            call AllocAry(p%Cfall1     ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%Cfall1'     , errStat2, errMsg2); if(Failed()) return
-            call AllocAry(p%Cfall2     ,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%Cfall2'     , errStat2, errMsg2); if(Failed()) return
-            call AllocAry(p%EdgeVelRat1,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%EdgeVelRat1', errStat2, errMsg2); if(Failed()) return
-            call AllocAry(p%EdgeVelRat2,size(p%AOAListXfoil), size(p%ReListXfoil),size(p%AFInfo),'p%EdgeVelRat2', errStat2, errMsg2); if(Failed()) return
+            ! --- Xfoil data were read from files  (XfoilCall=0), so we just copy what was read from the files
             p%dstarall1   = InputFileData%Suct_DispThick
             p%dstarall2   = InputFileData%Pres_DispThick
             p%d99all1     = InputFileData%Suct_BLThick
@@ -414,30 +334,15 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
             p%EdgeVelRat1 = InputFileData%Suct_EdgeVelRat
             p%EdgeVelRat2 = InputFileData%Pres_EdgeVelRat
         elseif (p%XfoilCall.eq.XfoilCall_Tabulate) then
-            ! --- Xfoil data needs to be tabulated by calling Xfoil (XfoilCall=1)
-            ! EBRA:  TODO TODO TODO NEED TO INTRODUCE LOGIC OR PARAM
-            !  - All the params my be computed by XFOIL using RUN_XFOIL_BL
-            !  - OR, use the data from the modified polars
-            !
-            print*,'TODO Running Xfoil to generate tabulated data'
-            STOP
-            ! --- OPTION A
-            ! call AllocAry( p%UListXfoil, 20, 'p%UListXfoil', errStat2, errMsg2 )
-            !  DO i=1,size(p%UListXfoil)
-            !   p%UListXfoil(i)=1.0d0+i*5.0d0
-            ! ENDDO
-            ! corresponding Rey Nrs=0.1e6,0.4e6,0.8e6,1.2e6,2.0e6,2.5e6,3.0e6',3.5e6,4.0e6,5.0e6,6.0e6,7.0e6,8.0e6,10.e6,15.e6,20.e6
-            ! call AllocAry( p%ReListXfoil, size(p%UListXfoil), 'p%ReListXfoil', errStat2, errMsg2 )
-            ! call AllocAry( p%AOAListXfoil, 35, 'p%AOAListXfoil', errStat2, errMsg2 )
-            !DO i=1,size(p%AOAListXfoil)
-            !p%AOAListXfoil(i) = -3.0d0+i*0.50d0
-            !p%AOAListXfoil(i) = 3.0d0
-            !ENDDO
-            !!p%AOAListXfoil = (/-3.0d0,-2.0d0,-1.0d0,0.0d0,1.0d0,2.0d0,3.0d0,4.0d0,5.0d0,6.0d0,8.0d0,10.0d0,12.0d0,14.0d0,16.0d0/)
-            !p%AOAListXfoil = 3.0d0
-            ! Pre tabulate the the boundary layer data and set them as parameter.
-            !CALL RUN_XFOIL_BL(p, ErrStat2, ErrMsg2)
+            ! --- Boudarly layer data is tabulaterd by calling Xfoil (XfoilCall=1)
+            CALL RUN_XFOIL_BL(p, ErrStat2, ErrMsg2)
+            if(Failed()) return
         endif 
+        ! Rewritting xfoil tables if requested
+        if(InputFileData%XfoilTabOut) then
+            call WriteXfoilTables(p, ErrStat2, ErrMsg2 )
+        endif
+        if(Failed()) return
     endif ! if xfoil data is tabulated
 
     ! If simplified guidati is on, calculate the airfoil thickness from input airfoil coordinates
@@ -1430,7 +1335,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
         ENDDO
     ENDDO
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    IF (p%LargeBinOutput.eq.1) THEN
+    IF (p%LargeBinOutput) THEN
         IF (m%filesopen.eq.0) THEN
             open (12340,file='ForMaxLoc3.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
             write(12340) Size(ForMaxLoc3,1)
@@ -2642,63 +2547,60 @@ SUBROUTINE RUN_XFOIL_BL(p,ErrStat,ErrMsg)
     USE XfoilAirfoilParams, only: XB_AFMODULE, YB_AFMODULE, ISTRIPPED, ISNACA, NB_AFMODULE
     USE XfoilAirfoilParams, only: a_chord, aofa, airfoil, Mach, Re, xtrup, xtrlo
     USE XfoilBLParams, only: d99, Cf, d_star
-    TYPE(AA_ParameterType), INTENT(INOUT) :: p         !< Parameters
-    INTEGER(IntKi),        INTENT(  OUT)  :: ErrStat   !< Error status of the operation
-    CHARACTER(*),          INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
-    INTEGER(intKi)                                                 :: ErrStat2           ! temporary Error status
-    CHARACTER(ErrMsgLen)                                           :: ErrMsg2            ! temporary Error message
-    character(*), parameter                                        :: RoutineName = ' RUN_XFOIL_BL'
-    INTEGER(IntKi)    :: loop1,loop2,loop3,itrip
-    real(ReKi)        :: U
+    type(AA_ParameterType), INTENT(INOUT) :: p         !< Parameters
+    integer(IntKi),        INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+    character(*),          INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+    integer(intKi)          :: ErrStat2           ! temporary Error status
+    character(ErrMsgLen)    :: ErrMsg2            ! temporary Error message
+    character(*), parameter :: RoutineName = ' RUN_XFOIL_BL'
+    integer(IntKi)          :: iAF,iRe,iAlpha,itrip
     ErrStat = ErrID_None
     ErrMsg  = "" 
     print*,'>>>RUN_XFOIL_BL'
 
-    DO loop1=1,size(p%AFInfo) ! Loop on airfoils
-
+    do iAF=1,size(p%AFInfo) ! Loop on airfoils
         ! --- Setting Xfoil parameters needed for computation
         airfoil = 'NotUsed.dat'
-        a_chord = 1
+        Mach    = 0.0    ! TODO
+        a_chord = 1      ! TODO
         xtrup   = 0.02
         xtrlo   = 0.1
         ISNACA  = .FALSE.
-        IF( p%ITRIP .GT. 0) THEN 
+        if( p%ITRIP .GT. 0) then 
             ISTRIPPED = .TRUE.
-        ELSE
+        else
             ISTRIPPED = .FALSE.
-        ENDIF
+        endif
 
         ! --- Allocate airfoil coordinates
-        NB_AFMODULE=size(p%AFInfo(loop1)%X_Coord)-1
+        NB_AFMODULE=size(p%AFInfo(iAF)%X_Coord)-1
         call AllocAry( XB_AFMODULE,  NB_AFMODULE, 'XB_AFMODULE', ErrStat2, ErrMsg2 )
         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         call AllocAry( YB_AFMODULE,  NB_AFMODULE, 'YB_AFMODULE', ErrStat2, ErrMsg2 )
         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-        XB_AFMODULE=p%AFInfo(loop1)%X_Coord(2:NB_AFMODULE+1) ! starts from 2 first value is aerod center
-        YB_AFMODULE=p%AFInfo(loop1)%Y_Coord(2:NB_AFMODULE+1) ! starts from 2 first value is aerod center
+        XB_AFMODULE=p%AFInfo(iAF)%X_Coord(2:NB_AFMODULE+1) ! starts from 2 first value is aerod center
+        YB_AFMODULE=p%AFInfo(iAF)%Y_Coord(2:NB_AFMODULE+1) ! starts from 2 first value is aerod center
 
         CALL get_airfoil_coords()
-
         ! --- Loop on velocities and angle of attack to compute BL params
-        DO loop2=1,size(p%UListXfoil)
-            DO loop3=1,size(p%AOAListXfoil)
+        do iRe=1,size(p%ReListXfoil)
+            do iAlpha=1,size(p%AOAListXfoil)
                 ! --- Setting Xfoil parameters needed for computation
-                U    = p%UListXfoil(loop2)
-                aofa = p%AOAListXfoil(loop3)
-                Mach = U/p%SpdSound
-                Re   = U*a_chord/p%KinVisc
-                p%ReListXfoil(loop2)=Re
+                aofa = p%AOAListXfoil(iAlpha)
+                Re   = p%ReListXfoil(iRe)
+                print'(A,I0,A,F15.0,A,F9.2)','Calling Xfoil for airfoil ',iAF, ' Re=',Re, ' Alpha=',aofa
                 !--- Compute d99, Cf and d_star and store it
                 CALL xfoil_noise() ! From Xfoil/xfoil_noise
-                p%dstarall1(loop3,loop2,loop1) = d_star(1)
-                p%dstarall2(loop3,loop2,loop1) = d_star(2)
-                p%d99all1(loop3,loop2,loop1)   = d99(1)
-                p%d99all2(loop3,loop2,loop1)   = d99(2)
-                p%Cfall1(loop3,loop2,loop1)    = Cf(1)
-                p%Cfall2(loop3,loop2,loop1)    = Cf(2)
-            ENDDO
-        ENDDO
-    ENDDO
+                p%dstarall1(iAlpha,iRe,iAF)= d_star(1)
+                p%dstarall2(iAlpha,iRe,iAF)= d_star(2)
+                p%d99all1  (iAlpha,iRe,iAF)= d99   (1)
+                p%d99all2  (iAlpha,iRe,iAF)= d99   (2)
+                p%Cfall1   (iAlpha,iRe,iAF)= Cf    (1)
+                p%Cfall2   (iAlpha,iRe,iAF)= Cf    (2)
+            enddo
+        enddo
+
+    enddo
 END SUBROUTINE RUN_XFOIL_BL
 !====================================================================================================
 SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
