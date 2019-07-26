@@ -58,7 +58,7 @@ script:
     - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -VV -R beamdyn_utest; fi
 
     # beamdyn regression tests
-    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -VV -R bd_; fi
+    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -j4 -VV -R bd_; fi
 
     # subset of openfast regression tests
     # do not run
