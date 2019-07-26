@@ -4153,32 +4153,61 @@ END SUBROUTINE OutSummary
 !------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------
 
+!> This function calculates the length of a member 
 FUNCTION MemberLength(MemberID,Init,ErrStat,ErrMsg)
-!Function to calculate Member Length
-    TYPE(SD_InitType), INTENT(IN)                :: Init        ! Input data for initialization routine, this structure contains many variables needed for summary file
-    INTEGER(IntKi),    INTENT(IN)   :: MemberID  !Member ID #
-    REAL(ReKi)     :: MemberLength  !Member Length
-    INTEGER(IntKi),            INTENT(   OUT)  :: ErrStat     ! Error status of the operation
-    CHARACTER(*),              INTENT(   OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-    !LOCALS
-    REAL(Reki)                    :: xyz1(3),xyz2(3)  !coordinates of joints in GLOBAL REF SYS
-    INTEGER(IntKi)                ::i !counter
-!This function calculates the length of a member !This assumes members
+    TYPE(SD_InitType), INTENT(IN)             :: Init         !< Input data for initialization routine, this structure contains many variables needed for summary file
+    INTEGER(IntKi),    INTENT(IN)             :: MemberID     !< Member ID #
+    REAL(ReKi)                                :: MemberLength !< Member Length
+    INTEGER(IntKi),            INTENT(   OUT) :: ErrStat      !< Error status of the operation
+    CHARACTER(*),              INTENT(   OUT) :: ErrMsg       !< Error message if ErrStat /= ErrID_None
+    !Locals
+    REAL(Reki)                    :: xyz1(3),xyz2(3)  ! Coordinates of joints in GLOBAL REF SYS
+    INTEGER(IntKi)                :: i                ! Counter
+    INTEGER(IntKi)                :: Joint1,Joint2    ! JointID
+    CHARACTER(*), PARAMETER       :: RoutineName = 'MemberLength'
+    ErrStat = ErrID_None
+    ErrMsg  = ''
+    MemberLength=0.0
+    
     !Find the MemberID in the list
-   ErrStat = ErrID_Fatal
-   ErrMsg  = 'Error calculating length of Member in Function MemberLength'
-   MemberLength=0.0
-   
-   DO i=1,SIZE(Init%Members, DIM=1)  !tried where here and could not make it scalara
-      IF (Init%Members(i,1) .EQ. MemberID) THEN
-         xyz1= Init%Joints(Init%Members(i,2),2:4)
-         xyz2= Init%Joints(Init%Members(i,3),2:4)
-         MemberLength=SQRT( SUM((xyz2-xyz1)**2.) )
-         ErrStat = ErrID_None
-         ErrMsg  = ''
-         EXIT
-      ENDIF
+    DO i=1,SIZE(Init%Members, DIM=1)
+        IF (Init%Members(i,1) .EQ. MemberID) THEN
+           ! Find joints ID for this member
+           Joint1 = FindNode(i,1); if (Joint1<0) return
+           Joint2 = FindNode(i,2); if (Joint2<0) return
+           xyz1= Init%Joints(Joint1,2:4)
+           xyz2= Init%Joints(Joint2,2:4)
+           MemberLength=SQRT( SUM((xyz2-xyz1)**2.) )
+           if ( EqualRealNos(MemberLength, 0.0_ReKi) ) then 
+               call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' has zero length!', ErrStat,ErrMsg,RoutineName);
+               return
+           endif
+           return
+       ENDIF
    ENDDO       
+   call SetErrStat(ErrID_Fatal,' Member with ID '//trim(Num2LStr(MemberID))//' not found in member list!', ErrStat,ErrMsg,RoutineName);
+
+contains
+    !> Find JointID for node `iNode` (1 or 2) or member `iMember`
+    integer(IntKi) function FindNode(iMember,iNode) result(j)
+        integer(IntKi), intent(in) :: iMember !< Member index in Init%Members list
+        integer(IntKi), intent(in) :: iNode   !< Node index, 1 or 2 for the member iMember
+        logical  :: found
+        found = .false.      
+        j=1
+        do while ( .not. found .and. j <= Init%NJoints )
+            if (Init%Members(iMember, iNode+1) == nint(Init%Joints(j,1))) then ! Columns 2/3 for iNode 1/2
+                found = .true.
+                exit
+            endif
+            j = j + 1
+        enddo 
+        if (.not.found) then
+            j=-1
+            call SetErrStat(ErrID_Fatal,' Member '//trim(Num2LStr(iMember))//' has JointID'//trim(Num2LStr(iNode))//' = '//& 
+                trim(Num2LStr(Init%Members(iMember,iNode+1)))//' which is not in the node list !', ErrStat,ErrMsg,RoutineName)
+        endif
+    end function
 
 END FUNCTION MemberLength
 !------------------------------------------------------------------------------------------------------
