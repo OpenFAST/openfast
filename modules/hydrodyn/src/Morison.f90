@@ -3777,7 +3777,7 @@ SUBROUTINE Morison_ProcessMorisonGeometry( InitInp, ErrStat, ErrMsg )
   
       ! Local variables
          
-   INTEGER                                      :: I    !, J, j1, j2, tempINT                ! generic integer for counting
+   INTEGER                                      :: I , J! j1, j2, tempINT                ! generic integer for counting
 !   TYPE(Morison_JointType)                      :: joint1, joint2                                   
 !   Real(ReKi)                                   :: z1
 !   Real(ReKi)                                   :: z2
@@ -3902,7 +3902,22 @@ SUBROUTINE Morison_ProcessMorisonGeometry( InitInp, ErrStat, ErrMsg )
             prop2Indx = temp
             InitInp%Elements(I)%InpMbrDist1         = 1.0
             InitInp%Elements(I)%InpMbrDist2         = 0.0
-            
+            ! --- Swap member coeffs if needed. 
+            ! Fine in this loop since there is a unique CoefMember per Member (otherwise we could swap them several times).
+            J = InitInp%InpMembers(I)%MmbrCoefIDIndx ! Index in CoefMembers table
+            IF (J>0) THEN 
+                ! NOTE: SWAP defined at the end of the current subroutine
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCd1    , InitInp%CoefMembers(J)%MemberCd2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCa1    , InitInp%CoefMembers(J)%MemberCa2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCp1    , InitInp%CoefMembers(J)%MemberCp2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberAxCa1  , InitInp%CoefMembers(J)%MemberAxCa2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberAxCp1  , InitInp%CoefMembers(J)%MemberAxCp2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCdMG1  , InitInp%CoefMembers(J)%MemberCdMG2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCaMG1  , InitInp%CoefMembers(J)%MemberCaMG2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCpMG1  , InitInp%CoefMembers(J)%MemberCpMG2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberAxCaMG1, InitInp%CoefMembers(J)%MemberAxCaMG2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberAxCpMG1, InitInp%CoefMembers(J)%MemberAxCpMG2)
+            END IF 
          END IF
          
          propSet = InitInp%MPropSets(prop1Indx)
@@ -4027,7 +4042,14 @@ SUBROUTINE Morison_ProcessMorisonGeometry( InitInp, ErrStat, ErrMsg )
     !  p%NMorisonElements = 0
       
    END IF
-   
+   CONTAINS
+        SUBROUTINE SWAP(x1,x2)
+           Real(Reki),intent(inout) :: x1,x2
+           Real(Reki) :: tmp
+           tmp = x1
+           x1  = x2
+           x2  = tmp
+        END SUBROUTINE SWAP
 END SUBROUTINE Morison_ProcessMorisonGeometry
 
 !----------------------------------------------------------------------------------------------------------------------------------
