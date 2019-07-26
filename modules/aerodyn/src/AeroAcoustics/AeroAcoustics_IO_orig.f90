@@ -421,8 +421,6 @@ CONTAINS
    END SUBROUTINE Cleanup
 END SUBROUTINE ReadBladeInputs      
 
-! ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 SUBROUTINE ReadXfoilTables( InputFile,InputFileData, nAirfoils, ErrStat, ErrMsg )
     ! Passed variables
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
@@ -778,23 +776,36 @@ subroutine AA_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
     call AllocAry(InitOut%WriteOutputHdr, p%numOuts, 'WriteOutputHdr', errStat2, errMsg2); if(Failed()) return
     call AllocAry(InitOut%WriteOutputUnt, p%numOuts, 'WriteOutputUnt', errStat2, errMsg2); if(Failed()) return
     do j=1,p%NrObsLoc
-        InitOut%WriteOutputHdr(j)="Obs"//trim(num2lstr(j))
-        InitOut%WriteOutputUnt(j) = "OASPL"
+        InitOut%WriteOutputHdr(j)="_Obs"//trim(num2lstr(j))
+        InitOut%WriteOutputUnt(j) = "SPL"
     enddo
-
+    i=p%NrObsLoc
+    do j=1,p%NrObsLoc
+        do m=1,p%NumBlades
+            do k=1,p%NumBlNds
+                i=i+1
+                InitOut%WriteOutputHdr(i) = "Bla"//trim(num2lstr(m))//"_Node"//trim(num2lstr(k))//"_Obs"//trim(num2lstr(j))
+                InitOut%WriteOutputHdr(i)=trim(InitOut%WriteOutputHdr(i))
+                InitOut%WriteOutputUnt(i) = "SPL"
+            enddo
+        enddo
+    enddo
     ! SECOND FILE HEADER,UNIT   
     call AllocAry(InitOut%WriteOutputHdrforPE, p%numOutsforPE, 'WriteOutputHdrforPE', errStat2, errMsg2); if(Failed()) return
     call AllocAry(InitOut%WriteOutputUntforPE, p%numOutsforPE, 'WriteOutputUntforPE', errStat2, errMsg2); if(Failed()) return
     i=0
-    do j=1,p%NrObsLoc
-        do k=1,size(p%FreqList)
-			i=i+1
-			InitOut%WriteOutputHdrforPE(i) = "Obs"//trim(num2lstr(j))//"_Freq"//trim(num2lstr(p%FreqList(k)))
-			if(p%aweightflag .eqv. .TRUE.) then
-				InitOut%WriteOutputUntforPE(i) = "SPL_A"
-			else
-				InitOut%WriteOutputUntforPE(i) = "SPL"
-			endif
+    do k=1,size(p%FreqList)
+        do j=1,p%NrObsLoc
+            do m=1,p%NumBlades
+                i=i+1
+                InitOut%WriteOutputHdrforPE(i) = "F"//trim(num2lstr(p%FreqList(k)))//"Obs"//trim(num2lstr(j))//"Bl"//trim(num2lstr(m))
+                InitOut%WriteOutputUntforPE(i) = "SPowLev"
+                do oi=1,3
+                    i=i+1
+                    InitOut%WriteOutputHdrforPE(i) = "F"//trim(num2lstr(p%FreqList(k)))//"Obs"//trim(num2lstr(j))//"Bl"//trim(num2lstr(m))
+                    InitOut%WriteOutputUntforPE(i) = "Coord"//trim(num2lstr(oi))
+                enddo
+            enddo
         end do
     enddo
     ! THIRD FILE HEADER,UNIT
@@ -802,20 +813,18 @@ subroutine AA_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
     call AllocAry(InitOut%WriteOutputUntSep, p%NumOutsForSep, 'WriteOutputUntSep', errStat2, errMsg2); if(Failed()) return
     i=0
     do j=1,p%NrObsLoc
-		do k=1,size(p%FreqList)
-			do oi=1,7
-				i=i+1
-				InitOut%WriteOutputHdrSep(i) = "Obs"//trim(num2lstr(j))//"_Freq"//trim(num2lstr(p%FreqList(k)))//"_Type"//trim(num2lstr(oi))
-				InitOut%WriteOutputHdrSep(i)=trim(InitOut%WriteOutputHdrSep(i))
-				if(p%aweightflag .eqv. .TRUE.) then
-					InitOut%WriteOutputUntSep(i) = "SPL_A"
-				else
-					InitOut%WriteOutputUntSep(i) = "SPL"
-				endif
-			enddo
-		enddo
+        do m=1,p%NumBlades
+            do k=1,p%NumBlNds
+                do oi=1,7
+                    i=i+1
+                    InitOut%WriteOutputHdrSep(i) = "Bla"//trim(num2lstr(m))//"_Node"//trim(num2lstr(k))//"_Obs"//trim(num2lstr(j))//"_Type"//trim(num2lstr(oi))
+                    InitOut%WriteOutputHdrSep(i)=trim(InitOut%WriteOutputHdrSep(i))
+                    InitOut%WriteOutputUntSep(i) = "SPL"
+                enddo
+            enddo
+        enddo
     enddo
-    ! FOURTH FILE HEADER,UNIT - NOT WORKING (MP)
+    ! FOURTH FILE HEADER,UNIT
     call AllocAry(InitOut%WriteOutputHdrSepFreq,size(p%FreqList)*p%NrObsLoc*7, 'InitOut%WriteOutputHdrSepFreq', errStat2, errMsg2); if(Failed()) return
     call AllocAry(InitOut%WriteOutputUntSepFreq,size(p%FreqList)*p%NrObsLoc*7, 'InitOut%WriteOutputUntSepFreq', errStat2, errMsg2); if(Failed()) return
     i=0
@@ -863,6 +872,8 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
         write (p%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
         write (p%unOutFile,'(1X,A)') trim(GetNVD(InitOut%ver)) 
         numOuts = size(InitOut%WriteOutputHdr)
+        write( p%unOutFile, '(A,I5)' )'Number of blades         :', p%numBlades
+        write( p%unOutFile, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
         write( p%unOutFile, '(A,I5)' )'Number of observers      :', p%NrObsLoc
         !......................................................
         ! Write the names of the output parameters on one line:
@@ -892,8 +903,9 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
         if ( ErrStat >= AbortErrLev ) return
         write (p%unOutFile2,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
         write (p%unOutFile2,'(1X,A)') trim(GetNVD(InitOut%Ver))
+        write( p%unOutFile2, '(A,I5)' )'Number of blades         :', p%numBlades
+        write( p%unOutFile2, '(A,I5)' )'Number of frequencies    :', size(p%FreqList)
         write( p%unOutFile2, '(A,I5)' )'Number of observers      :', p%NrObsLoc
-		write( p%unOutFile2, '(A,I5)' )'Number of frequencies    :', size(p%FreqList)
         numOuts = size(InitOut%WriteOutputHdrforPE)
         !......................................................
         ! Write the names of the output parameters on one line:
@@ -911,10 +923,10 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
             call WrFileNR ( p%unOutFile2, InitOut%delim//InitOut%WriteOutputUntforPE(i) )
         end do ! i
         write (p%unOutFile2,'()')    
-        !frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
-        !call WrNumAryFileNR ( p%unOutFile2, p%FreqList,  frmt, errStat, errMsg )
-        !if ( errStat >= AbortErrLev ) return
-        !write (p%unOutFile2,'()')    
+        frmt = '"'//p%delim//'"'//trim(p%outFmt)      ! format for array elements from individual modules
+        call WrNumAryFileNR ( p%unOutFile2, p%FreqList,  frmt, errStat, errMsg )
+        if ( errStat >= AbortErrLev ) return
+        write (p%unOutFile2,'()')    
     ENDIF
     ! THIRD FILE
     IF  (InputFileData%NrOutFile .gt. 2) THEN
@@ -927,11 +939,9 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
         if ( ErrStat >= AbortErrLev ) return
         write (p%unOutFile3,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
         write (p%unOutFile3,'(1X,A)') trim(GetNVD(InitOut%Ver))
-        !write( p%unOutFile3, '(A,I5)' )'Number of blades         :', p%numBlades
-        !write( p%unOutFile3, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
+        write( p%unOutFile3, '(A,I5)' )'Number of blades         :', p%numBlades
+        write( p%unOutFile3, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
         write( p%unOutFile3, '(A,I5)' )'Number of observers      :', p%NrObsLoc
-		write( p%unOutFile2, '(A,I5)' )'Number of frequencies    :', size(p%FreqList)
-
         numOuts = size(InitOut%WriteOutputHdrSep)
         !......................................................
         ! Write the names of the output parameters on one line:
@@ -1063,40 +1073,57 @@ SUBROUTINE Calc_WriteOutput( p, u, m, y, ErrStat, ErrMsg )
    CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
    INTEGER(intKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
-   INTEGER(IntKi)                            :: j,k,counter,i,oi,III
+   INTEGER(IntKi)                            :: j,k,counter,i,oi
    ! start routine:
    ErrStat = ErrID_None
    ErrMsg  = ""
-
    ! FOR THE FIRST OUTPUT FILE
    IF  (p%NrOutFile .gt. 0) THEN 
+       ! This loop order has to be kept even though not the most efficient unless OASPL size and loop is changed in subtoutine CalcOutput  in AeroAcousitcs.f90 
        y%WriteOutput(1:p%NrObsLoc)=y%DirectiviOutput
+
+       counter=p%NrObsLoc
+       do k=1,p%NrObsLoc
+           do i=1,p%NumBlades
+               do j=1,p%NumBlNds
+                   counter=counter+1
+                   y%WriteOutput(counter) = y%OASPL(k,j,i)                        
+                   !  InitOut%WriteOutputHdr(i) = "Bl "//trim(num2lstr(m))//" Nd "//trim(num2lstr(k))//" Obs "//trim(num2lstr(j))
+                   !  InitOut%WriteOutputUnt(i) = "SPL"
+               enddo
+           enddo
+       enddo
    endif
-   
    ! FOR THE SECOND OUTPUT FILE
    IF  (p%NrOutFile .gt. 1) THEN 
-		counter=0
-		DO K = 1,p%NrObsLoc
-			DO III = 1,size(p%FreqList)
-				counter=counter+1
-				y%WriteOutputforPE(counter) = y%PtotalFreq(K,III)
-			END DO ! 
-        END DO ! 
+       counter=0
+       DO J = 1, size(p%FreqList)
+           DO K = 1,p%NrObsLoc
+               DO I = 1,p%NumBlades
+                   counter=counter+1
+                   y%WriteOutputforPE(counter) = y%SumSpecNoise(J,K,I)                        
+                   DO oi = 1,3
+                       counter=counter+1
+                       y%WriteOutputforPE(counter) = y%OutLECoords(oi,J,K,I)  
+                   ENDDO                      
+               END DO ! 
+           END DO ! 
+       ENDDO
    ENDIF
-   
    ! FOR THE THIRD OUTPUT FILE
    IF  (p%NrOutFile .gt. 2) THEN 
        counter=0
-       do K = 1,p%NrObsLoc
-		   do III = 1,size(p%FreqList)
-			   do oi=1,size(y%OASPL_Mech,1)
-				   counter=counter+1
-				   y%WriteOutputSep(counter) = y%SumSpecNoiseSep(oi,K,III)
-			   enddo
-		   enddo
+       do k=1,p%NrObsLoc
+           do i=1,p%NumBlades
+               do j=1,p%NumBlNds
+                   do oi=1,size(y%OASPL_Mech,1)
+                       counter=counter+1
+                       y%WriteOutputSep(counter) = y%OASPL_Mech(oi,k,j,i)                        
+                   enddo
+               enddo
+           enddo
        enddo
    ENDIF
-   
    ! FOR THE FOURTH OUTPUT FILE
    IF  (p%NrOutFile .gt. 3) THEN 
        counter=0
