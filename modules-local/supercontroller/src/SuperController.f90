@@ -434,10 +434,10 @@ abstract interface
       
       ! TODO Fix allocations for error handling
       
-      if ( p%NumStatesGlobal > 0 ) allocate(xd%Global(p%NumStatesGlobal))
+      allocate(xd%Global(p%NumStatesGlobal))
             !CALL AllocAry( xd%Global,   p%nStatesGlobal, 'xd%Global', errStat2, errMsg2 )
             !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )
-      if ( p%NumStatesTurbine > 0 ) allocate(xd%Turbine(p%NumStatesTurbine*p%nTurbines) )  
+      allocate(xd%Turbine(p%NumStatesTurbine*p%nTurbines) )  
             ! CALL AllocAry( xd%Turbine,   p%nStatesTurbine, 'xd%Turbine', errStat2, errMsg2 )
             !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, routineName )
 
@@ -523,7 +523,7 @@ abstract interface
 
       real(DbKi),                         intent(in   ) :: t          !< Current simulation time in seconds
       integer(IntKi),                     intent(in   ) :: n          !< Current simulation time step n = 0,1,...
-      type(SC_InputType),                 intent(inout) :: u(:)       !< Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
+      type(SC_InputType),                 intent(inout) :: u          !< Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
       real(DbKi),                         intent(in   ) :: utimes(:)  !< Times associated with u(:), in seconds
       type(SC_ParameterType),             intent(in   ) :: p          !< Parameters
       type(SC_ContinuousStateType),       intent(inout) :: x          !< Input: Continuous states at t;
@@ -554,14 +554,14 @@ abstract interface
       ! I'll leave some options for whether the supercontroller is being used
 
    !CALL DISCON( dll_data%avrSWAP, filt_fromSCglob, filt_fromSC, dll_data%toSC, aviFAIL, accINFILE, avcOUTNAME, avcMSG )
-   call SC_DLL_UpdateStates ( REAL(t,ReKi), p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u(1)%toSCglob, p%NumCtrl2SC, u(1)%toSC, &
+   call SC_DLL_UpdateStates ( REAL(t,ReKi), p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u%toSCglob, p%NumCtrl2SC, u%toSC, &
                         p%NumStatesGlobal, xd%Global, p%NumStatesTurbine, xd%Turbine, errStat, errMsg )
 
 #else
 
          ! Call the DLL (first associate the address from the procedure in the DLL with the subroutine):
       call C_F_PROCPOINTER( p%DLL_Trgt%ProcAddr(3), DLL_SC_Subroutine) 
-      call DLL_SC_Subroutine ( REAL(t,ReKi), p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u(1)%toSCglob, p%NumCtrl2SC, u(1)%toSC, &
+      call DLL_SC_Subroutine ( REAL(t,ReKi), p%nTurbines, p%NumParamGlobal, p%ParamGlobal, p%NumParamTurbine, p%ParamTurbine, p%nInpGlobal, u%toSCglob, p%NumCtrl2SC, u%toSC, &
                         p%NumStatesGlobal, xd%Global, p%NumStatesTurbine, xd%Turbine, errStat, errMsg ) 
                 
 #endif

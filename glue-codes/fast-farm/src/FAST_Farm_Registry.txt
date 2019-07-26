@@ -117,7 +117,7 @@ typedef    ^    ^                 SC_DiscreteStateType      xd            -   - 
 typedef    ^    ^                 SC_ConstraintStateType    z             -   -         -   "Constraint states"
 typedef    ^    ^                 SC_OtherStateType         OtherState    -   -         -   "Other states"
 typedef    ^    ^                 SC_ParameterType          p             -   -         -   "Parameters"
-typedef    ^    ^                 SC_InputType              uInputs      {1}  -         -   "System inputs"
+typedef    ^    ^                 SC_InputType              uInputs       -   -         -   "System inputs"
 typedef    ^    ^                 DbKi                      utimes       {1}  -         -   "Current time" s
 typedef    ^    ^                 SC_OutputType             y             -   -         -   "System outputs"
 typedef    ^    ^                 SC_MiscVarType            m             -   -         -   "Misc/optimization variables"
