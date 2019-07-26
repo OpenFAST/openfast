@@ -18,7 +18,7 @@ find_path(YAML_INCLUDES
   PATH_SUFFIXES include)
 
 find_library(YAML_LIBRARIES
-  NAMES libyaml-cpp.a yaml-cpp
+  NAMES yaml-cpp libyaml-cpp.a
   HINTS ${YAML_ROOT} ${CMAKE_INSTALL_PREFIX}
   PATH_SUFFIXES lib)
 
