@@ -10,6 +10,7 @@ ifeq ($(OS),Windows_NT)
 	COPY=copy /y 
 	SLASH=\\
 else
+    COPY=cp
     OS=$(shell uname -s)
 	suffix=
     ifeq ($(OS),Linux)
