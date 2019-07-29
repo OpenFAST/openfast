@@ -927,10 +927,8 @@ subroutine AA_InitializeOutputFile(p, InputFileData,InitOut,errStat, errMsg)
         if ( ErrStat >= AbortErrLev ) return
         write (p%unOutFile3,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using AA '
         write (p%unOutFile3,'(1X,A)') trim(GetNVD(InitOut%Ver))
-        !write( p%unOutFile3, '(A,I5)' )'Number of blades         :', p%numBlades
-        !write( p%unOutFile3, '(A,I5)' )'Number of nodes per blade:', p%NumBlNds
         write( p%unOutFile3, '(A,I5)' )'Number of observers      :', p%NrObsLoc
-		write( p%unOutFile2, '(A,I5)' )'Number of frequencies    :', size(p%FreqList)
+		write( p%unOutFile3, '(A,I5)' )'Number of frequencies    :', size(p%FreqList)
 
         numOuts = size(InitOut%WriteOutputHdrSep)
         !......................................................
