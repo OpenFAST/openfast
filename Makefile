@@ -47,7 +47,7 @@ copy:
 	$(COPY) $(BUILD_DIR)$(SLASH)glue-codes$(SLASH)openfast$(SLASH)openfast$(EXEEXT) $(TEST_DIR)
 
 test:
-	cd $(TEST_DIR) && $(MAKE)
+	cd $(TEST_DIR) && make
 	
 
 debug:
