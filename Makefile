@@ -5,8 +5,10 @@ ifeq ($(OS),Windows_NT)
 	CMAKE_ARGS=-G"NMake Makefiles"
 	MAKE=nmake
 	RMDIR=rmdir /S /Q
-	LIBEXT='.dll'
-	EXEEXT='.exe'
+	LIBEXT=.dll
+	EXEEXT=.exe
+	COPY=copy /y 
+	SLASH=\\
 else
     OS=$(shell uname -s)
 	suffix=
@@ -19,9 +21,10 @@ else
 		LIBEXT='.dylib'
     endif
 	RMDIR=rm -rf
+	SLASH="/"
 endif
 BUILD_DIR=build$(suffix)
-TEST_DIR=../openfast-noise-test/
+TEST_DIR=..$(SLASH)openfast-noise-test$(SLASH)
 CMAKE=cmake
 
 
@@ -41,7 +44,7 @@ clean:
 	cd $(BUILD_DIR) && $(MAKE) clean
 
 copy:
-	cp $(BUILD_DIR)/glue-codes/openfast/openfast$(EXEEXT) $(TEST_DIR)
+	$(COPY) $(BUILD_DIR)$(SLASH)glue-codes$(SLASH)openfast$(SLASH)openfast$(EXEEXT) $(TEST_DIR)
 
 test:
 	cd $(TEST_DIR) && $(MAKE)
