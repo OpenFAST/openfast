@@ -51,7 +51,7 @@ ExternalProject_Add(pfunit
 include_directories(${PROJECT_BINARY_DIR}/pfunit/mod)
 
 set(pfunit_directory ${PFUNIT_INSTALL})
-set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules-local)
+set(source_modulesdirectory ${PROJECT_SOURCE_DIR}/../modules)
 set(build_testdirectory ${PROJECT_BINARY_DIR}/tests)
 
 file(MAKE_DIRECTORY ${build_testdirectory})
@@ -64,10 +64,9 @@ include_directories(
 )
 
 set_source_files_properties(${pfunit_directory}/include/driver.F90 PROPERTIES GENERATED 1)
-if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin" OR ${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if(APPLE OR UNIX OR CYGWIN OR MINGW)
   set(pfunit_lib "/lib/libpfunit.a")
-else()
-  # Windows
+else() # Windows
   set(pfunit_lib "/lib/pfunit.lib")
 endif()
 
