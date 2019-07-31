@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-# generate_f90_types(src/ElastoDyn_Registry.txt ElastoDyn_Types.f90)
+if (GENERATE_TYPES)
+  generate_f90_types(src/ElastoDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ElastoDyn_Types.f90)
+endif()
 
 set(ED_SOURCES
   src/ElastoDyn.f90

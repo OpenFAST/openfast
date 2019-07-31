@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-# generate_f90_types(src/interfaces/FAST/IceFloe_FASTRegistry.inp IceFloe_Types.f90)
+if (GENERATE_TYPES)
+  generate_f90_types(src/interfaces/FAST/IceFloe_FASTRegistry.inp ${CMAKE_CURRENT_LIST_DIR}/src/icefloe/IceFloe_Types.f90)
+endif()
 
 set(ICEFLOE_LIBS_SOURCES
   src/icefloe/IceFlexBase.F90

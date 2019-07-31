@@ -14,14 +14,16 @@
 # limitations under the License.
 #
 
-# generate_f90_types(src/InflowWind.txt InflowWind_Types.f90)
-# generate_f90_types(src/Lidar.txt Lidar_Types.f90)
-# generate_f90_types(src/IfW_BladedFFWind.txt IfW_BladedFFWind_Types.f90 -noextrap)
-# generate_f90_types(src/IfW_4Dext.txt IfW_4Dext_Types.f90 -noextrap)
-# generate_f90_types(src/IfW_HAWCWind.txt IfW_HAWCWind_Types.f90 -noextrap)
-# generate_f90_types(src/IfW_TSFFWind.txt IfW_TSFFWind_Types.f90 -noextrap)
-# generate_f90_types(src/IfW_UniformWind.txt IfW_UniformWind_Types.f90 -noextrap)
-# generate_f90_types(src/IfW_UserWind.txt IfW_UserWind_Types.f90 -noextrap)
+if (GENERATE_TYPES)
+  generate_f90_types(src/InflowWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/InflowWind_Types.f90)
+  generate_f90_types(src/Lidar.txt ${CMAKE_CURRENT_LIST_DIR}/src/Lidar_Types.f90)
+  generate_f90_types(src/IfW_BladedFFWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_BladedFFWind_Types.f90 -noextrap)
+  generate_f90_types(src/IfW_4Dext.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_4Dext_Types.f90 -noextrap)
+  generate_f90_types(src/IfW_HAWCWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_HAWCWind_Types.f90 -noextrap)
+  generate_f90_types(src/IfW_TSFFWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_TSFFWind_Types.f90 -noextrap)
+  generate_f90_types(src/IfW_UniformWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_UniformWind_Types.f90 -noextrap)
+  generate_f90_types(src/IfW_UserWind.txt ${CMAKE_CURRENT_LIST_DIR}/src/IfW_UserWind_Types.f90 -noextrap)
+endif()
 
 set(IFW_SOURCES
   src/IfW_BladedFFWind.f90

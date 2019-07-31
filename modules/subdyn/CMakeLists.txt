@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-# generate_f90_types(src/SubDyn_Registry.txt SubDyn_Types.f90)
+if (GENERATE_TYPES)
+  generate_f90_types(src/SubDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SubDyn_Types.f90)
+endif()
 
 set(SUBDYN_SOURCES
   src/SubDyn.f90

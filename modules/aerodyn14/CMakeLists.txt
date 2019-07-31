@@ -14,8 +14,10 @@
 # limitations under the License.
 #
 
-# generate_f90_types(src/Registry-AD14.txt AeroDyn14_Types.f90)
-# generate_f90_types(src/Registry-DWM.txt DWM_Types.f90)
+if (GENERATE_TYPES)
+  generate_f90_types(src/Registry-AD14.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn14_Types.f90)
+  generate_f90_types(src/Registry-DWM.txt ${CMAKE_CURRENT_LIST_DIR}/src/DWM_Types.f90)
+endif()
 
 set(AD14_LIBS_SOURCES
   src/AeroDyn14.f90

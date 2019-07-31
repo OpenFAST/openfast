@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-# generate_f90_types(src/FEAM_Registry.txt FEAMooring_Types.f90)
+if (GENERATE_TYPES)
+  generate_f90_types(src/FEAM_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FEAMooring_Types.f90)
+endif()
 
 set(FEAM_LIBS_SOURCES
   src/FEAM.f90

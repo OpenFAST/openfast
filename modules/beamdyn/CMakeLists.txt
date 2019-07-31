@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-# generate_f90_types(src/Registry_BeamDyn.txt BeamDyn_Types.f90)
+if (GENERATE_TYPES)
+  generate_f90_types(src/Registry_BeamDyn.txt ${CMAKE_CURRENT_LIST_DIR}/src/BeamDyn_Types.f90)
+endif()
 
 set(BD_SOURCES
   src/BeamDyn.f90

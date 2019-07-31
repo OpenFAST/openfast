@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-# generate_f90_types(src/OpenFOAM_Registry.txt OpenFOAM_Types.f90 -ccode)
+if (GENERATE_TYPES)
+  generate_f90_types(src/OpenFOAM_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/OpenFOAM_Types.f90 -ccode)
+endif()
 
 add_library(openfoamtypeslib src/OpenFOAM_Types.f90)
 target_link_libraries(openfoamtypeslib nwtclibs)

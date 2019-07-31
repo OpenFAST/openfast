@@ -18,7 +18,9 @@ if(APPLE OR UNIX)
   add_definitions(-DIMPLICIT_DLLEXPORT)
 endif()
 
-# generate_f90_types(src/FAST_Registry.txt FAST_Types.f90 -noextrap)
+if (GENERATE_TYPES)
+  generate_f90_types(src/FAST_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/FAST_Types.f90 -noextrap)
+endif()
 
 add_library(openfast_prelib src/FAST_Types.f90)
 target_link_libraries(openfast_prelib

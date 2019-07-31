@@ -14,13 +14,14 @@
 # limitations under the License.
 #
 
-# generate_f90_types(src/AeroDyn_Registry.txt AeroDyn_Types.f90)
-# generate_f90_types(src/AirfoilInfo_Registry.txt AirfoilInfo_Types.f90 -noextrap)
-# generate_f90_types(src/BEMT_Registry.txt BEMT_Types.f90)
-# generate_f90_types(src/DBEMT_Registry.txt DBEMT_Types.f90)
-# generate_f90_types(src/UnsteadyAero_Registry.txt UnsteadyAero_Types.f90)
-
-# generate_f90_types(src/AeroDyn_Driver_Registry.txt AeroDyn_Driver_Types.f90 -noextrap)
+if (GENERATE_TYPES)
+  generate_f90_types(src/AeroDyn_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Types.f90)
+  generate_f90_types(src/AirfoilInfo_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AirfoilInfo_Types.f90 -noextrap)
+  generate_f90_types(src/BEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/BEMT_Types.f90)
+  generate_f90_types(src/DBEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/DBEMT_Types.f90)
+  generate_f90_types(src/UnsteadyAero_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/UnsteadyAero_Types.f90)
+  generate_f90_types(src/AeroDyn_Driver_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Driver_Types.f90 -noextrap)
+endif()
 
 # AeroDyn lib
 set(AD_LIBS_SOURCES

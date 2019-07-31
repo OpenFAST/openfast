@@ -19,7 +19,9 @@ if(WIN32 OR CYGWIN OR MINGW)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DMAP_DLL_EXPORTS -DCMINPACK_NO_DLL -DNDEBUG -D_WINDOWS -D_USRDLL")
 endif()
 
-# generate_f90_types(src/MAP_Registry.txt MAP_Types.f90 -ccode)
+if (GENERATE_TYPES)
+  generate_f90_types(src/MAP_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/MAP_Types.f90 -ccode)
+endif()
 
 file(GLOB MAP_CLIB_SOURCES src/*.c src/*.cc src/*/*.c src/*/*.cc)
 file(GLOB MAP_C_HEADERS src/*.h src/*/*.h)

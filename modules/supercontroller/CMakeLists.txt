@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-# generate_f90_types(src/SuperController_Registry.txt SuperController_Types.f90 -ccode)
+if (GENERATE_TYPES)
+  generate_f90_types(src/SuperController_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/SuperController_Types.f90 -ccode)
+endif()
 
 add_library(sctypeslib src/SuperController_Types.f90)
 target_link_libraries(sctypeslib nwtclibs)
@@ -30,5 +32,5 @@ install(TARGETS sctypeslib scfastlib
   ARCHIVE DESTINATION lib)
 
 install(FILES
-  ${CMAKE_CURRENT_BINARY_DIR}/SuperController_Types.h
+  src/SuperController_Types.h
   DESTINATION include)
