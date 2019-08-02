@@ -168,6 +168,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%delim            = "	"
     p%outFmt           = "ES15.6E3" 
     p%LargeBinOutput   = InputFileData%LargeBinOutput
+	p%TxtFileOutput	   = InputFileData%TxtFileOutput
     p%NumBlNds         = InitInp%NumBlNds
     p%AirDens          = InitInp%AirDens          
     p%KinVisc          = InitInp%KinVisc
@@ -719,16 +720,18 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
                ENDIF
            enddo
        enddo
-       IF (n .eq. 0) THEN
-           open (123401,file='RegionTIDelete.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
-           write(123401) Size(xd%RegionTIDelete,1)
-           write(123401) Size(xd%RegionTIDelete,2)
-           write(123401) xd%RegionTIDelete
-       ELSE
-           open (123401, file="RegionTIDelete.bin", access='stream',status="old", form='unformatted',position="append")
-           write(123401) xd%RegionTIDelete
-       ENDIF
-       close(123401)
+       IF (p%TxtFileOutput .eqv. .TRUE.) THEN
+		   IF (n .eq. 0) THEN
+			   open (123401,file='RegionTIDelete.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
+			   write(123401) Size(xd%RegionTIDelete,1)
+			   write(123401) Size(xd%RegionTIDelete,2)
+			   write(123401) xd%RegionTIDelete
+		   ELSE
+			   open (123401, file="RegionTIDelete.bin", access='stream',status="old", form='unformatted',position="append")
+			   write(123401) xd%RegionTIDelete
+		   ENDIF
+		   close(123401)
+	   ENDIF
    ELSE! interpolate from the user given ti values
        do i=1,p%NumBlades
            do j=1,p%NumBlNds
@@ -877,23 +880,25 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
             m%LE_Location(3,J,I) = RLEObservereal(3)  ! the height of leading edge
             IF (nt.gt.p%Comp_AA_after) THEN
                 IF ( (mod(nt,p%saveeach).eq.0)  ) THEN
-                    inquire(file="RTEObserve.txt", exist=exist)
-                    if (exist) then
-                        open(1254, file="RTEObserve.txt", status="old", position="append", action="write")
-                    else
-                        open(1254, file="RTEObserve.txt", status="new", action="write")
-                    end if
-                    write(1254, *) RTEObservereal
-                    close(1254)
+                    IF (p%TxtFileOutput .eqv. .TRUE.) THEN
+						inquire(file="RTEObserve.txt", exist=exist)
+						if (exist) then
+							open(1254, file="RTEObserve.txt", status="old", position="append", action="write")
+						else
+							open(1254, file="RTEObserve.txt", status="new", action="write")
+						end if
+						write(1254, *) RTEObservereal
+						close(1254)
 
-                    inquire(file="RLEObserve.txt", exist=exist)
-                    if (exist) then
-                        open(1254, file="RLEObserve.txt", status="old", position="append", action="write")
-                    else
-                        open(1254, file="RLEObserve.txt", status="new", action="write")
-                    end if
-                    write(1254, *) RLEObservereal
-                    close(1254)
+						inquire(file="RLEObserve.txt", exist=exist)
+						if (exist) then
+							open(1254, file="RLEObserve.txt", status="old", position="append", action="write")
+						else
+							open(1254, file="RLEObserve.txt", status="new", action="write")
+						end if
+						write(1254, *) RLEObservereal
+						close(1254)
+					ENDIF
 
                     DO K = 1,p%NrObsLoc
                         ! Calculate position vector from leading and trailing edge to observer in retarded trailing edge coordinate system
@@ -1035,51 +1040,52 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
     !!!ENDIF
 
 
-    inquire(file="alpha.txt", exist=exist)
-    if (exist) then
-        open(1254, file="alpha.txt", status="old", position="append", action="write")
-    else
-        open(1254, file="alpha.txt", status="new", action="write")
-    end if
-    write(1254, *) u%AoANoise* R2D_D 
-    close(1254)
+    IF (p%TxtFileOutput .eqv. .TRUE.) THEN
+		inquire(file="alpha.txt", exist=exist)
+		if (exist) then
+			open(1254, file="alpha.txt", status="old", position="append", action="write")
+		else
+			open(1254, file="alpha.txt", status="new", action="write")
+		end if
+		write(1254, *) u%AoANoise* R2D_D 
+		close(1254)
 
-    inquire(file="TIVrel.txt", exist=exist)
-    if (exist) then
-        open(1254, file="TIVrel.txt", status="old", position="append", action="write")
-    else
-        open(1254, file="TIVrel.txt", status="new", action="write")
-    end if
-    write(1254, *) xd%TIVrel
-    close(1254)
+		inquire(file="TIVrel.txt", exist=exist)
+		if (exist) then
+			open(1254, file="TIVrel.txt", status="old", position="append", action="write")
+		else
+			open(1254, file="TIVrel.txt", status="new", action="write")
+		end if
+		write(1254, *) xd%TIVrel
+		close(1254)
 
-    inquire(file="TIVx.txt", exist=exist)
-    if (exist) then
-        open(1254, file="TIVx.txt", status="old", position="append", action="write")
-    else
-        open(1254, file="TIVx.txt", status="new", action="write")
-    end if
-    write(1254, *) xd%TIVx
-    close(1254)
+		inquire(file="TIVx.txt", exist=exist)
+		if (exist) then
+			open(1254, file="TIVx.txt", status="old", position="append", action="write")
+		else
+			open(1254, file="TIVx.txt", status="new", action="write")
+		end if
+		write(1254, *) xd%TIVx
+		close(1254)
 
-    inquire(file="Inflow1.txt", exist=exist)
-    if (exist) then
-        open(1254, file="Inflow1.txt", status="old", position="append", action="write")
-    else
-        open(1254, file="Inflow1.txt", status="new", action="write")
-    end if
-    write(1254, *) u%Inflow(1,:,:)
-    close(1254)
+		inquire(file="Inflow1.txt", exist=exist)
+		if (exist) then
+			open(1254, file="Inflow1.txt", status="old", position="append", action="write")
+		else
+			open(1254, file="Inflow1.txt", status="new", action="write")
+		end if
+		write(1254, *) u%Inflow(1,:,:)
+		close(1254)
 
-    inquire(file="Vrel.txt", exist=exist)
-    if (exist) then
-        open(1254, file="Vrel.txt", status="old", position="append", action="write")
-    else
-        open(1254, file="Vrel.txt", status="new", action="write")
-    end if
-    write(1254, *) u%Vrel
-    close(1254)
-
+		inquire(file="Vrel.txt", exist=exist)
+		if (exist) then
+			open(1254, file="Vrel.txt", status="old", position="append", action="write")
+		else
+			open(1254, file="Vrel.txt", status="new", action="write")
+		end if
+		write(1254, *) u%Vrel
+		close(1254)
+	ENDIF
 
 
     DO I = 1,p%numBlades
@@ -1339,47 +1345,49 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
         close(12340)
     ENDIF
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    IF (m%filesopen.eq.0) THEN
-        open (54218,file='SourceLoc.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
-        write(54218) Size(y%OutLECoords,1)
-        write(54218) Size(y%OutLECoords,2)
-        write(54218) Size(y%OutLECoords,3)
-        write(54218) Size(y%OutLECoords,4)
-        write(54218) y%OutLECoords
+    IF (p%TxtFileOutput .eqv. .TRUE.) THEN
+		IF (m%filesopen.eq.0) THEN
+			open (54218,file='SourceLoc.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
+			write(54218) Size(y%OutLECoords,1)
+			write(54218) Size(y%OutLECoords,2)
+			write(54218) Size(y%OutLECoords,3)
+			write(54218) Size(y%OutLECoords,4)
+			write(54218) y%OutLECoords
 
-        open (25684,file='SPL_Out.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
-        write(25684) Size(SPL_Out,1)
-        write(25684) Size(SPL_Out,2)
-        write(25684) Size(SPL_Out,3)
-        write(25684) SPL_Out
-        m%filesopen=1
-    ELSE
-        open (54218, file="SourceLoc.bin", access='stream',status="old", form='unformatted',position="append")
-        write(54218) y%OutLECoords
+			open (25684,file='SPL_Out.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
+			write(25684) Size(SPL_Out,1)
+			write(25684) Size(SPL_Out,2)
+			write(25684) Size(SPL_Out,3)
+			write(25684) SPL_Out
+			m%filesopen=1
+		ELSE
+			open (54218, file="SourceLoc.bin", access='stream',status="old", form='unformatted',position="append")
+			write(54218) y%OutLECoords
 
-        open (25684, file="SPL_Out.bin", access='stream',status="old", form='unformatted',position="append")
-        write(25684) SPL_Out
-    ENDIF
-    close(54218)
-    close(25684)
+			open (25684, file="SPL_Out.bin", access='stream',status="old", form='unformatted',position="append")
+			write(25684) SPL_Out
+		ENDIF
+		close(54218)
+		close(25684)
 
-    inquire(file="tempdispthick.txt", exist=exist)
-    if (exist) then
-        open(1254, file="tempdispthick.txt", status="old", position="append", action="write")
-    else
-        open(1254, file="tempdispthick.txt", status="new", action="write")
-    end if
-    write(1254, *) temp_dispthick
-    close(1254)
+		inquire(file="tempdispthick.txt", exist=exist)
+		if (exist) then
+			open(1254, file="tempdispthick.txt", status="old", position="append", action="write")
+		else
+			open(1254, file="tempdispthick.txt", status="new", action="write")
+		end if
+		write(1254, *) temp_dispthick
+		close(1254)
 
-    inquire(file="tempdispthickchord.txt", exist=exist)
-    if (exist) then
-        open(1254, file="tempdispthickchord.txt", status="old", position="append", action="write")
-    else
-        open(1254, file="tempdispthickchord.txt", status="new", action="write")
-    end if
-    write(1254, *) temp_dispthickchord
-    close(1254)
+		inquire(file="tempdispthickchord.txt", exist=exist)
+		if (exist) then
+			open(1254, file="tempdispthickchord.txt", status="old", position="append", action="write")
+		else
+			open(1254, file="tempdispthickchord.txt", status="new", action="write")
+		end if
+		write(1254, *) temp_dispthickchord
+		close(1254)
+	ENDIF
 END SUBROUTINE CalcAeroAcousticsOutput
 !==================================================================================================================================!
 SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,errStat,errMsg)
@@ -2241,6 +2249,7 @@ SUBROUTINE DIRECTH(M,THETA,PHI,DBAR, errStat, errMsg)
 END SUBROUTINE DirectH
 !====================================================================================================
 !> This subroutine computes the high frequency directivity function for the input observer location
+! Paper: 
 SUBROUTINE DIRECTL(M,THETA,PHI,DBAR, errStat, errMsg)
     REAL(ReKi),           INTENT(IN   ) :: THETA      !<
     REAL(ReKi),           INTENT(IN   ) :: PHI        !<
@@ -2327,6 +2336,7 @@ END SUBROUTINE FullGuidati
 !===============================  Simplified Guidati Inflow Turbulence Noise Addition =============================================!
 !==================================================================================================================================!
 ! Uses simple correction for turbulent inflow noise from Moriarty et. al 2005
+! Paper: Prediction of Turbulent Inflow and Trailing-Edge Noise for Wind Turbines, by Moriarty, Guidati, and Migliore
 SUBROUTINE Simple_Guidati(U,Chord,thick_10p,thick_1p,p,SPLti,errStat,errMsg)
     REAL(ReKi),                             INTENT(IN   )  :: U              ! Vrel
     REAL(ReKi),                             INTENT(IN   )  :: Chord          ! Chord Length
@@ -2346,10 +2356,10 @@ SUBROUTINE Simple_Guidati(U,Chord,thick_10p,thick_1p,p,SPLti,errStat,errMsg)
     ErrStat = ErrID_None
     ErrMsg  = "" 
 
-    TI_Param = thick_1p + thick_10p												! Eq 2 from Prediction of Turbulent Inflow and Trailing-Edge Noise for Wind Turbines paper
-    slope = 1.123*TI_Param + 5.317*TI_Param*TI_Param							! Eq 3 from Prediction of Turbulent Inflow and Trailing-Edge Noise for Wind Turbines paper
+    TI_Param = thick_1p + thick_10p												! Eq 2 
+    slope = 1.123*TI_Param + 5.317*TI_Param*TI_Param							! Eq 3 
     do loop1 =1,size(p%FreqList)
-        SPLti(loop1) = -slope*(2*PI*p%FreqList(loop1)*chord/U + 5.0d0)			! Eq 4 from Prediction of Turbulent Inflow and Trailing-Edge Noise for Wind Turbines paper
+        SPLti(loop1) = -slope*(2*PI*p%FreqList(loop1)*chord/U + 5.0d0)			! Eq 4 
     enddo	! Outputs Delta_SPL, the difference in SPL between the airfoil and a flat plate.
 END SUBROUTINE Simple_Guidati
 !==================================================================================================================================!

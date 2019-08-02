@@ -346,8 +346,9 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
         IF ( PathIsRelative( InputFileData%AAOutFile(I) ) ) InputFileData%AAOutFile(I) = TRIM(PriPath)//TRIM(InputFileData%AAOutFile(1))//TRIM(Num2Lstr(I))//".out"
     ENDDO
     CALL ReadVar(UnIn,InputFile,InputFileData%LargeBinOutput,'LargeBinOutput','LargeBinOutput',ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%XfoilTabOut   ,'XfoilTabOut'   ,'XfoilTabOut'   ,ErrStat2,ErrMsg2,UnEc); call check
-
+    CALL ReadVar(UnIn,InputFile,InputFileData%TxtFileOutput, 'TxtFileOutput', 'TxtFileOutput', ErrStat2,ErrMsg2,UnEc); call check
+	CALL ReadVar(UnIn,InputFile,InputFileData%XfoilTabOut   ,'XfoilTabOut'   ,'XfoilTabOut'   ,ErrStat2,ErrMsg2,UnEc); call check
+	
     ! Return on error at end of section
     IF ( ErrStat >= AbortErrLev ) THEN
         CALL Cleanup()
