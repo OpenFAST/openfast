@@ -81,6 +81,7 @@ typedef     ^                   AA_InputFile         AA_BladePropsType   BladePr
 typedef     ^                   AA_InputFile         IntKi               NrOutFile        -     -     -     "Nr of output files"     -
 typedef     ^                   AA_InputFile         CHARACTER(1024)     AAoutfile       {:}    -     -     "AAoutfile for writing output files"     -
 typedef     ^                   AA_InputFile         Logical             LargeBinOutput   -     -     -     "Flag for output bin file "     -
+typedef		^					AA_InputFile		 Logical			 TxtFileOutput	  -     -     -		"Flag for output txt files"
 typedef     ^                   AA_InputFile         Logical             XfoilTabOut      -     -     -     "Flag to output the tabulated data from xfoil for different AoA and Re, for all profiles "     -
 typedef     ^                   AA_InputFile         IntKi               Comp_AA_After        -     -     -     " "     -
 typedef     ^                   AA_InputFile         ReKi                SaveEach        -     -     -     " "     -
@@ -180,6 +181,7 @@ typedef     ^                   ParameterType        ReKi                rotorre
 typedef     ^                   ParameterType        IntKi               NrObsLoc                -      -     -     "Number of observer locations "     -
 typedef     ^                   ParameterType        Logical             aweightflag             -      -     -     " "     -
 typedef     ^                   ParameterType        Logical             LargeBinOutput             -      -     -     " "     -
+typedef		^					ParameterType		 Logical			 TxtFileOutput			-		-		-	" "		-
 typedef     ^                   ParameterType        IntKi               Comp_AA_After             -      -     -     " "     -
 typedef     ^                   ParameterType        ReKi                ObsX                   {:}     -     -     "Observer location in tower-base coordinate X horizontal"     m
 typedef     ^                   ParameterType        ReKi                ObsY                   {:}     -     -     "Observer location in tower-base coordinate Y lateral"          m
