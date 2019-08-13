@@ -424,6 +424,32 @@ END SUBROUTINE ReadBladeInputs
 
 ! ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+subroutine ReadRealMatrix(fid, FileName, Mat, VarName, nLines,nRows, iStat, Msg, iLine )
+    integer, intent(in)                     :: fid
+    real(DbKi), dimension(:,:), allocatable :: Mat
+    character(len=*), intent(in)            :: FileName
+    character(len=*), intent(in)            :: VarName
+    integer, intent(in)                     :: nLines
+    integer, intent(in)                     :: nRows
+    integer, intent(out)                    :: iStat
+    integer, intent(inout)                  :: iLine
+    character(len=*), intent(inout)         :: Msg
+    ! local variables
+    integer :: i
+    if (allocated(Mat)) deallocate(Mat)
+    call allocAry( Mat, nLines, nRows, VarName,  iStat, Msg); 
+    if (iStat /= 0) return
+    !Read Stiffness
+    DO I =1,nLines
+       iLine=iLine+1
+       ! TODO use ReadCAryFromStr when available in the NWTCIO, it performs more checks
+       CALL ReadAry( fid, FileName, Mat(I,:), nRows, trim(VarName)//' Line '//Num2LStr(iLine), VarName, iStat, Msg) ! From NWTC_Library
+       if (iStat /= 0) return
+    ENDDO
+end subroutine
+
+
+
 SUBROUTINE ReadXfoilTables( InputFile,InputFileData, nAirfoils, ErrStat, ErrMsg )
     ! Passed variables
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
@@ -444,79 +470,70 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, nAirfoils, ErrStat, ErrMsg 
     integer(IntKi)                :: nRe, nAoA  !  Number of Reynolds number and angle of attack listed
     integer(IntKi)                :: iAF , iRe, iAoA, iDummy, iBuffer ! loop counters
     real(DbKi),dimension(:,:),ALLOCATABLE :: Buffer
+    integer                 :: iLine
     ! Initialize some variables:
     ErrStat = ErrID_None
     ErrMsg  = ""
-
+      
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
     do iAF=1,nAirfoils 
         if (InputFileData%ITRIP.eq.0) then
-            FileName = TRIM(PriPath)//'AirfoilsModified/BL/AF'//TRIM(Num2LStr(iAF))//'.txt'
+            FileName = TRIM(PriPath)//'AirfoilsModified/AF'//TRIM(Num2LStr(iAF))//'BL_TripMod0.txt'
         ELSE
-            FileName = TRIM(PriPath)//'AirfoilsModified/BL_TRIPPED/AF'//TRIM(Num2LStr(iAF))//'.txt'
+            FileName = TRIM(PriPath)//'AirfoilsModified/AF'//TRIM(Num2LStr(iAF))//'BL_TripMod1.txt'
         ENDIF
         print*,'AeroAcoustics_IO: reading Xfoil table:'//trim(Filename)
 
         CALL GetNewUnit(UnIn, ErrStat2, ErrMsg2); if(Failed()) return
         CALL OpenFInpFile(UnIn, FileName, ErrStat2, ErrMsg2); if(Failed()) return
 
-        CALL ReadCom(UnIn, FileName, 'Reynolds number List', ErrStat2, ErrMsg2); if(Failed()) return
-        CALL ReadVar(UnIn, FileName, nRe, 'nRe',   'nRe', ErrStat2, ErrMsg2); if(Failed()) return
-        ! Allocations done only once!
-        if (iAF .eq. 1) then
-            if(allocated(InputFileData%ReListXfoil)) deallocate(InputFileData%ReListXfoil)
-            CALL AllocAry( InputFileData%ReListXfoil,nRe, 'InputFileData%ReListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
-        endif
-        do iRe=1,nRe
-            CALL ReadVar( UnIn, FileName, InputFileData%ReListXfoil(iRe), 'InputFileData%ReListXfoil','ReListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
-        enddo
-        CALL ReadCom(UnIn, FileName, '', ErrStat2, ErrMsg2); if(Failed()) return
-        CALL ReadVar(UnIn, FileName, nAoA, 'nAoA',   'nAoA', ErrStat2, ErrMsg2); if(Failed()) return
-
-        ! Allocations done only once!
-        if (iAF.eq. 1) then
-            CALL AllocAry( InputFileData%AoAListXfoil,nAoA, 'InputFileData%AoAListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
+        CALL ReadCom(UnIn, FileName, "! Boundary layer", ErrStat2, ErrMsg2); if(Failed()) return
+        CALL ReadCom(UnIn, FileName, "! Legend: aoa", ErrStat2, ErrMsg2); if(Failed()) return
+                
+        CALL ReadVar(UnIn, FileName, nRe,  "ReListBL",   "", ErrStat2, ErrMsg2); if(Failed()) return
+        CALL ReadVar(UnIn, FileName, nAoA, "aoaListBL",  "", ErrStat2, ErrMsg2); if(Failed()) return
+        
+        if (iAF==1) then 
             CALL AllocAry(InputFileData%Pres_DispThick ,nAoA,nRe,nAirfoils,'InputFileData%Pres_DispThick' ,ErrStat2,ErrMsg2); if (Failed())return
             CALL AllocAry(InputFileData%Suct_DispThick ,nAoA,nRe,nAirfoils,'InputFileData%Suct_DispThick' ,ErrStat2,ErrMsg2); if (Failed())return
             CALL AllocAry(InputFileData%Pres_BLThick   ,nAoA,nRe,nAirfoils,'InputFileData%Pres_BLThick'   ,ErrStat2,ErrMsg2); if (Failed())return
             CALL AllocAry(InputFileData%Suct_BLThick   ,nAoA,nRe,nAirfoils,'InputFileData%Suct_BLThick'   ,ErrStat2,ErrMsg2); if (Failed())return
             CALL AllocAry(InputFileData%Pres_Cf        ,nAoA,nRe,nAirfoils,'InputFileData%Pres_Cf'        ,ErrStat2,ErrMsg2); if (Failed())return
             CALL AllocAry(InputFileData%Suct_Cf        ,nAoA,nRe,nAirfoils,'InputFileData%Suct_Cf'        ,ErrStat2,ErrMsg2); if (Failed())return
-            CALL AllocAry(InputFileData%Pres_EdgeVelRat,nAoA,nRe,nAirfoils,'InputFileData%Pres_EdgeVelRat',ErrStat2,ErrMsg2); if(Failed())return
+            CALL AllocAry(InputFileData%Pres_EdgeVelRat,nAoA,nRe,nAirfoils,'InputFileData%Pres_EdgeVelRat',ErrStat2,ErrMsg2); if (Failed())return
             CALL AllocAry(InputFileData%Suct_EdgeVelRat,nAoA,nRe,nAirfoils,'InputFileData%Suct_EdgeVelRat',ErrStat2,ErrMsg2); if (Failed())return
-            CALL AllocAry(Buffer,8,nAoA*nRe, 'Buffer', ErrStat2, ErrMsg2); if(Failed()) return
-        endif
+            CALL AllocAry(Buffer,nAoA,9, 'Buffer', ErrStat2, ErrMsg2); if(Failed()) return
+         endif
+        iLine=8
+        do iRe=1,nRe
+            CALL ReadVar(UnIn, FileName, InputFileData%ReListXfoil(iRe), 'InputFileData%ReListXfoil','ReListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
+            CALL ReadCom(UnIn, FileName, "aoa 	 	 Ue_Vinf_SS 	 Ue_Vinf_PS 	  Dstar_SS 	 	  Dstar_PS 	 	  Theta_SS 	 	  Theta_PS 	 	    Cf_SS 	 	    Cf_PS", ErrStat2, ErrMsg2); if(Failed()) return
+            CALL ReadCom(UnIn, FileName, "(deg) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-)", ErrStat2, ErrMsg2); if(Failed()) return
+            
+            call ReadRealMatrix(UnIn, FileName, Buffer, 'BL Matrix', nAoA, 9, ErrStat2, ErrMsg2, iLine)
 
-        ! Reading AoA
-        do iAoA=1,nAoA
-            CALL ReadVar( UnIn, FileName, InputFileData%AoAListXfoil(iAoA), 'InputFileData%AoAListXfoil','AoAListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
-        enddo
-        ! 6 dummy lines
-        do iDummy=1,6
-            CALL ReadCom( UnIn, FileName, '', ErrStat2, ErrMsg2); if(Failed()) return
-        enddo
-        ! Reading all values in an array
-        do iBuffer=1,size(Buffer,1)
-            read(UnIn,*) Buffer(iBuffer,:) ! TOdo error handling
-        enddo
-
-        iBuffer=0
-        do iAoA=1,nAoA
-            do iRe=1,nRe
-                iBuffer=iBuffer+1
-                InputFileData%Pres_BLThick   (iAoA,iRe,iAF)= Buffer(1,iBuffer) ! d99All2
-                InputFileData%Pres_DispThick (iAoA,iRe,iAF)= Buffer(2,iBuffer) ! dStarAll2
-                InputFileData%Pres_Cf        (iAoA,iRe,iAF)= Buffer(3,iBuffer) ! CfAll2
-                InputFileData%Pres_EdgeVelRat(iAoA,iRe,iAF)= Buffer(4,iBuffer) ! EdgeVelRat2
-                InputFileData%Suct_BLThick   (iAoA,iRe,iAF)= Buffer(5,iBuffer) ! d99All1
-                InputFileData%Suct_DispThick (iAoA,iRe,iAF)= Buffer(6,iBuffer) ! dStarAll1
-                InputFileData%Suct_Cf        (iAoA,iRe,iAF)= Buffer(7,iBuffer) ! CfAll1
-                InputFileData%Suct_EdgeVelRat(iAoA,iRe,iAF)= Buffer(8,iBuffer) ! EdgeVelRat1
+            if(Failed()) return
+            do iAoA=1,nAoA
+                InputFileData%Suct_EdgeVelRat(iAoA,iRe,iAF)= Buffer(iAoA, 2) ! EdgeVelRat1 Suction
+                InputFileData%Pres_EdgeVelRat(iAoA,iRe,iAF)= Buffer(iAoA, 3) ! EdgeVelRat2 Pressure
+                InputFileData%Suct_DispThick (iAoA,iRe,iAF)= Buffer(iAoA, 4) ! dStarAll1 Suction
+                InputFileData%Pres_DispThick (iAoA,iRe,iAF)= Buffer(iAoA, 5) ! dStarAll2 Pressure
+                InputFileData%Suct_BLThick   (iAoA,iRe,iAF)= Buffer(iAoA, 6) ! d99All1 Suction
+                InputFileData%Pres_BLThick   (iAoA,iRe,iAF)= Buffer(iAoA, 7) ! d99All2 Pressure
+                InputFileData%Suct_Cf        (iAoA,iRe,iAF)= Buffer(iAoA, 8) ! CfAll1 Suction
+                InputFileData%Pres_Cf        (iAoA,iRe,iAF)= Buffer(iAoA, 9) ! CfAll2 Pressure
             enddo
         enddo
-        !---------------------- END OF FILE -----------------------------------------
-    enddo  ! Loop on airfoils
+        
+        if (iAF == 1) then
+            CALL AllocAry(InputFileData%AoAListXfoil,nAoA, 'InputFileData%AoAListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
+                do iAoA=1,nAoA
+                    InputFileData%AoAListXfoil(iAoA)= Buffer(iAoA, 1) ! AoA
+                enddo
+        endif
+                
+    enddo
     CALL Cleanup( )
 CONTAINS
     logical function Failed()
