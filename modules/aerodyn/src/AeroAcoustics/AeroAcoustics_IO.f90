@@ -503,11 +503,19 @@ SUBROUTINE ReadXfoilTables( InputFile,InputFileData, nAirfoils, ErrStat, ErrMsg 
             CALL AllocAry(InputFileData%Suct_Cf        ,nAoA,nRe,nAirfoils,'InputFileData%Suct_Cf'        ,ErrStat2,ErrMsg2); if (Failed())return
             CALL AllocAry(InputFileData%Pres_EdgeVelRat,nAoA,nRe,nAirfoils,'InputFileData%Pres_EdgeVelRat',ErrStat2,ErrMsg2); if (Failed())return
             CALL AllocAry(InputFileData%Suct_EdgeVelRat,nAoA,nRe,nAirfoils,'InputFileData%Suct_EdgeVelRat',ErrStat2,ErrMsg2); if (Failed())return
+            
+            ! CALL AllocAry(InputFileData%ReListXfoil,nRe,'InputFileData%ReListXfoil',ErrStat2,ErrMsg2); if (Failed())return
+            
+            
             CALL AllocAry(Buffer,nAoA,9, 'Buffer', ErrStat2, ErrMsg2); if(Failed()) return
          endif
         iLine=8
+        ! print*, InputFileData%ReListXfoil
+        ! print*, nRe
+        ! stop
         do iRe=1,nRe
             CALL ReadVar(UnIn, FileName, InputFileData%ReListXfoil(iRe), 'InputFileData%ReListXfoil','ReListXfoil', ErrStat2, ErrMsg2); if(Failed()) return
+            InputFileData%ReListXfoil(iRe) = InputFileData%ReListXfoil(iRe)  * 1.e+006
             CALL ReadCom(UnIn, FileName, "aoa 	 	 Ue_Vinf_SS 	 Ue_Vinf_PS 	  Dstar_SS 	 	  Dstar_PS 	 	  Theta_SS 	 	  Theta_PS 	 	    Cf_SS 	 	    Cf_PS", ErrStat2, ErrMsg2); if(Failed()) return
             CALL ReadCom(UnIn, FileName, "(deg) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-) 	 	 	 (-)", ErrStat2, ErrMsg2); if(Failed()) return
             
