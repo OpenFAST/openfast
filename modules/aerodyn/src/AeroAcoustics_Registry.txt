@@ -64,11 +64,9 @@ typedef     ^                   AA_InputFile         IntKi               ITIP   
 typedef     ^                   AA_InputFile         IntKi               ITRIP            -     -     -     "FLAG TO TRIP BOUNDARY LAYER {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"     -
 typedef     ^                   AA_InputFile         IntKi               ITURB            -     -     -     "FLAG TO COMPUTE TBLTE NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"     -
 typedef     ^                   AA_InputFile         IntKi               IInflow          -     -     -     "FLAG TO COMPUTE Turbulent Inflow NOISE {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"     -
-typedef     ^                   AA_InputFile         IntKi               X_BLMethod       -     -     -     "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Xfoil"     -
+typedef     ^                   AA_InputFile         IntKi               X_BLMethod       -     -     -     "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Pretabulated"     -
 typedef     ^                   AA_InputFile         IntKi               TICalcMeth       -     -     -     "TICalcMeth"     -
-typedef     ^                   AA_InputFile         IntKi               XfoilCall        -     -     -     "Integer describing Xfoil calls,  = 1 Interpolate from pretabulated = 2 Call Xfoil for each node etc"     -
-typedef     ^                   AA_InputFile         IntKi               NReListBL        -     -     -    "Number of values of ReListXfoil"     -
-typedef     ^                   AA_InputFile         ReKi                AlphaLinsp      {3}    -     -     "Linspace (min,max,n) of angle of attacks in degrees used when calling Xfoil to tabulate the boundary layer properties [used only if BLMod=2 and XfoilCall=1]" - deg
+typedef     ^                   AA_InputFile         IntKi               NReListBL        -     -     -    "Number of values of ReListBL"     -
 typedef     ^                   AA_InputFile         Logical             aweightflag      -     -     -    "Integer a weighting call"     -
 typedef     ^                   AA_InputFile         Logical             ROUND            -     -     -     "LOGICAL INDICATING ROUNDED TIP"     -
 typedef     ^                   AA_InputFile         ReKi                ALPRAT           -     -     -     "TIP LIFT CURVE SLOPE"     -
@@ -82,12 +80,11 @@ typedef     ^                   AA_InputFile         IntKi               NrOutFi
 typedef     ^                   AA_InputFile         CHARACTER(1024)     AAoutfile       {:}    -     -     "AAoutfile for writing output files"     -
 typedef     ^                   AA_InputFile         Logical             LargeBinOutput   -     -     -     "Flag for output bin file "     -
 typedef		^					AA_InputFile		 Logical			 TxtFileOutput	  -     -     -		"Flag for output txt files"
-typedef     ^                   AA_InputFile         Logical             XfoilTabOut      -     -     -     "Flag to output the tabulated data from xfoil for different AoA and Re, for all profiles "     -
 typedef     ^                   AA_InputFile         IntKi               Comp_AA_After        -     -     -     " "     -
 typedef     ^                   AA_InputFile         ReKi                SaveEach        -     -     -     " "     -
 typedef     ^                   AA_InputFile         ReKi                z0_AA           -     -     -     "Surface roughness"     -
-typedef     ^                   AA_InputFile         ReKi                ReListXfoil            {:}    -     -     ""          
-typedef     ^                   AA_InputFile         ReKi                AoAListXfoil           {:}    -     -     ""         deg
+typedef     ^                   AA_InputFile         ReKi                ReListBL            {:}    -     -     ""          
+typedef     ^                   AA_InputFile         ReKi                AoAListBL           {:}    -     -     ""         deg
 typedef     ^                   AA_InputFile         ReKi                Pres_DispThick         {:}{:}{:}    -     -     ""         
 typedef     ^                   AA_InputFile         ReKi                Suct_DispThick         {:}{:}{:}    -     -     ""         
 typedef     ^                   AA_InputFile         ReKi                Pres_BLThick         {:}{:}{:}    -     -     ""         
@@ -144,10 +141,10 @@ typedef     ^                   MiscVarType          ReKi                SPLTIP 
 typedef     ^                   MiscVarType          ReKi                SPLTI                  {:}           -     -     "C"     -
 typedef     ^                   MiscVarType          ReKi                SPLTIGui               {:}           -     -     "C"     -
 typedef     ^                   MiscVarType          ReKi                SPLBLUNT               {:}           -     -     "C"     -
-typedef     ^                   MiscVarType          ReKi                CfVar                  {:}  -     -     "Xfoil Output Skin friction coef Pressure Side"     -
-typedef     ^                   MiscVarType          ReKi                d99Var                 {:}  -     -     "Xfoil Output "     -
-typedef     ^                   MiscVarType          ReKi                dStarVar               {:}  -     -     "Xfoil Output "     -
-typedef     ^                   MiscVarType          ReKi                EdgeVelVar                 {:}  -     -     "Xfoil Output "     -
+typedef     ^                   MiscVarType          ReKi                CfVar                  {:}  -     -     "Output Skin friction coef Pressure Side"     -
+typedef     ^                   MiscVarType          ReKi                d99Var                 {:}  -     -     "BL Output "     -
+typedef     ^                   MiscVarType          ReKi                dStarVar               {:}  -     -     "BL Output "     -
+typedef     ^                   MiscVarType          ReKi                EdgeVelVar                 {:}  -     -     "BL Output "     -
 typedef     ^                   MiscVarType          IntKi               speccou                -    -     -     "Secptrum counter every XX seconds new spectrum"     -
 typedef     ^                   MiscVarType          IntKi               filesopen                -    -     -     "check if file is open"     -
 # ..... Parameters ................................................................................................................
@@ -161,9 +158,8 @@ typedef     ^                   ParameterType        IntKi               ITIP   
 typedef     ^                   ParameterType        IntKi               ITRIP                   -      -     -     "Trip boundary layer"     -
 typedef     ^                   ParameterType        IntKi               ITURB                   -      -     -     "Tblte noise model"     -
 typedef     ^                   ParameterType        IntKi               IInflow                 -      -     -     "Turbulent inflow noise model"     -
-typedef     ^                   ParameterType        IntKi               X_BLMethod              -      -     -     "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Xfoil"     -
+typedef     ^                   ParameterType        IntKi               X_BLMethod              -      -     -     "Integer describing calculation method for boundary layer properties,  = 1 BPM = 2 Pretabulated"     -
 typedef     ^                   ParameterType        IntKi               TICalcMeth              -      -     -     ""     -
-typedef     ^                   ParameterType        IntKi               XfoilCall               -      -     -     "Integer describing Xfoil calls,  = 1 Interpolate from pretabulated = 2 Call Xfoil for each node etc"     -
 typedef     ^                   ParameterType        Logical             ROUND                   -      -     -     "Logical indicating rounded tip"     -
 typedef     ^                   ParameterType        ReKi                ALPRAT                  -      -     -     "TIP LIFT CURVE SLOPE"     -
 typedef     ^                   ParameterType        IntKi               NumBlades               -      -     -     "Number of blades on the turbine"     -
@@ -222,16 +218,16 @@ typedef     ^                   ParameterType        ReKi                AFLECo 
 typedef     ^                   ParameterType        ReKi                AFTECo                 {:}{:}{:}  -     - 
 typedef     ^                   ParameterType        ReKi                BlSpn                  {:}{:}  -     -     "Span at blade node"     m
 typedef     ^                   ParameterType        ReKi                BlChord                {:}{:}  -     -     "Chord at blade node"     m
-typedef     ^                   ParameterType        ReKi                ReListXfoil            {:}  -     -     "For Xfoil BL the list of Reynolds"     -
-typedef     ^                   ParameterType        ReKi                AOAListXfoil           {:}  -     -     "For Xfoil BL the list of Angle Of Attack "     deg
-typedef     ^                   ParameterType        ReKi                dStarAll1             {:}{:}{:}  -     -     "Xfoil Output Disp Thickness Suction Side"     m
-typedef     ^                   ParameterType        ReKi                dStarAll2             {:}{:}{:}  -     -     "Xfoil Output Disp Thickness Pressure Side"     m
-typedef     ^                   ParameterType        ReKi                d99All1               {:}{:}{:}  -     -     "Xfoil Output B.L. Thickness Suction Side"     m
-typedef     ^                   ParameterType        ReKi                d99All2               {:}{:}{:}  -     -     "Xfoil Output B.L. Thickness Pressure Side"     m
-typedef     ^                   ParameterType        ReKi                CfAll1                {:}{:}{:}  -     -     "Xfoil Output Skin friction coef Suction Side"    - 
-typedef     ^                   ParameterType        ReKi                CfAll2                {:}{:}{:}  -     -     "Xfoil Output Skin friction coef Pressure Side"     -
-typedef     ^                   ParameterType        ReKi                EdgeVelRat1                {:}{:}{:}  -     -     "Xfoil Output Edge Velocity Ratio Suction"    - 
-typedef     ^                   ParameterType        ReKi                EdgeVelRat2                {:}{:}{:}  -     -     "Xfoil Output Edge Velocity Ratio Pressure Side"     -
+typedef     ^                   ParameterType        ReKi                ReListBL            {:}  -     -     "BL list of Reynolds"     -
+typedef     ^                   ParameterType        ReKi                AOAListBL           {:}  -     -     "BL list of Angle Of Attack "     deg
+typedef     ^                   ParameterType        ReKi                dStarAll1             {:}{:}{:}  -     -     "Output Disp Thickness Suction Side"     m
+typedef     ^                   ParameterType        ReKi                dStarAll2             {:}{:}{:}  -     -     "Output Disp Thickness Pressure Side"     m
+typedef     ^                   ParameterType        ReKi                d99All1               {:}{:}{:}  -     -     "Output B.L. Thickness Suction Side"     m
+typedef     ^                   ParameterType        ReKi                d99All2               {:}{:}{:}  -     -     "Output B.L. Thickness Pressure Side"     m
+typedef     ^                   ParameterType        ReKi                CfAll1                {:}{:}{:}  -     -     "Output Skin friction coef Suction Side"    - 
+typedef     ^                   ParameterType        ReKi                CfAll2                {:}{:}{:}  -     -     "Output Skin friction coef Pressure Side"     -
+typedef     ^                   ParameterType        ReKi                EdgeVelRat1                {:}{:}{:}  -     -     "Output Edge Velocity Ratio Suction"    - 
+typedef     ^                   ParameterType        ReKi                EdgeVelRat2                {:}{:}{:}  -     -     "Output Edge Velocity Ratio Pressure Side"     -
 typedef     ^                   ParameterType        ReKi                AFThickGuida             {:}{:}  -     -     "1 and 10 percent thickness t/c used for Simplified Guidati"     
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
