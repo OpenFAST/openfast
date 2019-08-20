@@ -166,8 +166,6 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     p%NrOutFile        = InputFileData%NrOutFile
     p%delim            = "	"
     p%outFmt           = "ES15.6E3" 
-    p%LargeBinOutput   = InputFileData%LargeBinOutput
-	p%TxtFileOutput	   = InputFileData%TxtFileOutput
     p%NumBlNds         = InitInp%NumBlNds
     p%AirDens          = InitInp%AirDens          
     p%KinVisc          = InitInp%KinVisc
@@ -710,18 +708,7 @@ subroutine AA_UpdateStates( t, n, m, u, p,  xd,  errStat, errMsg )
                ENDIF
            enddo
        enddo
-       IF (p%TxtFileOutput .eqv. .TRUE.) THEN
-		   IF (n .eq. 0) THEN
-			   open (123401,file='RegionTIDelete.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
-			   write(123401) Size(xd%RegionTIDelete,1)
-			   write(123401) Size(xd%RegionTIDelete,2)
-			   write(123401) xd%RegionTIDelete
-		   ELSE
-			   open (123401, file="RegionTIDelete.bin", access='stream',status="old", form='unformatted',position="append")
-			   write(123401) xd%RegionTIDelete
-		   ENDIF
-		   close(123401)
-	   ENDIF
+       
    ELSE! interpolate from the user given ti values
        do i=1,p%NumBlades
            do j=1,p%NumBlNds
@@ -870,25 +857,6 @@ SUBROUTINE CalcObserve(p,m,u,xd,nt,errStat,errMsg)
             m%LE_Location(3,J,I) = RLEObservereal(3)  ! the height of leading edge
             IF (nt.gt.p%Comp_AA_after) THEN
                 IF ( (mod(nt,p%saveeach).eq.0)  ) THEN
-                    IF (p%TxtFileOutput .eqv. .TRUE.) THEN
-						inquire(file="RTEObserve.txt", exist=exist)
-						if (exist) then
-							open(1254, file="RTEObserve.txt", status="old", position="append", action="write")
-						else
-							open(1254, file="RTEObserve.txt", status="new", action="write")
-						end if
-						write(1254, *) RTEObservereal
-						close(1254)
-
-						inquire(file="RLEObserve.txt", exist=exist)
-						if (exist) then
-							open(1254, file="RLEObserve.txt", status="old", position="append", action="write")
-						else
-							open(1254, file="RLEObserve.txt", status="new", action="write")
-						end if
-						write(1254, *) RLEObservereal
-						close(1254)
-					ENDIF
 
                     DO K = 1,p%NrObsLoc
                         ! Calculate position vector from leading and trailing edge to observer in retarded trailing edge coordinate system
@@ -1029,53 +997,6 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
     !!!enddo
     !!!ENDIF
 
-
-    IF (p%TxtFileOutput .eqv. .TRUE.) THEN
-		inquire(file="alpha.txt", exist=exist)
-		if (exist) then
-			open(1254, file="alpha.txt", status="old", position="append", action="write")
-		else
-			open(1254, file="alpha.txt", status="new", action="write")
-		end if
-		write(1254, *) u%AoANoise* R2D_D 
-		close(1254)
-
-		inquire(file="TIVrel.txt", exist=exist)
-		if (exist) then
-			open(1254, file="TIVrel.txt", status="old", position="append", action="write")
-		else
-			open(1254, file="TIVrel.txt", status="new", action="write")
-		end if
-		write(1254, *) xd%TIVrel
-		close(1254)
-
-		inquire(file="TIVx.txt", exist=exist)
-		if (exist) then
-			open(1254, file="TIVx.txt", status="old", position="append", action="write")
-		else
-			open(1254, file="TIVx.txt", status="new", action="write")
-		end if
-		write(1254, *) xd%TIVx
-		close(1254)
-
-		inquire(file="Inflow1.txt", exist=exist)
-		if (exist) then
-			open(1254, file="Inflow1.txt", status="old", position="append", action="write")
-		else
-			open(1254, file="Inflow1.txt", status="new", action="write")
-		end if
-		write(1254, *) u%Inflow(1,:,:)
-		close(1254)
-
-		inquire(file="Vrel.txt", exist=exist)
-		if (exist) then
-			open(1254, file="Vrel.txt", status="old", position="append", action="write")
-		else
-			open(1254, file="Vrel.txt", status="new", action="write")
-		end if
-		write(1254, *) u%Vrel
-		close(1254)
-	ENDIF
 
 
     DO I = 1,p%numBlades
@@ -1311,66 +1232,6 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
         y%SumSpecNoiseSep = 10.*LOG10(y%SumSpecNoiseSep)		! P to SPL Conversion
     ENDIF
 	
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    IF (p%LargeBinOutput .eqv. .TRUE.) THEN
-        IF (m%filesopen.eq.0) THEN
-            open (12340,file='ForMaxLoc3.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
-            write(12340) Size(ForMaxLoc3,1)
-            write(12340) Size(ForMaxLoc3,2)
-            write(12340) Size(ForMaxLoc3,3)
-            write(12340) Size(ForMaxLoc3,4)
-            write(12340) Size(ForMaxLoc3,5)
-            write(12340) ForMaxLoc3
-        ELSE
-            open (12340, file="ForMaxLoc3.bin", access='stream',status="old", form='unformatted',position="append")
-            write(12340) ForMaxLoc3
-        ENDIF
-        close(12340)
-    ENDIF
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    IF (p%TxtFileOutput .eqv. .TRUE.) THEN
-		IF (m%filesopen.eq.0) THEN
-			open (54218,file='SourceLoc.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
-			write(54218) Size(y%OutLECoords,1)
-			write(54218) Size(y%OutLECoords,2)
-			write(54218) Size(y%OutLECoords,3)
-			write(54218) Size(y%OutLECoords,4)
-			write(54218) y%OutLECoords
-
-			open (25684,file='SPL_Out.bin',access='stream',form='unformatted',status='REPLACE') !open a binary file
-			write(25684) Size(SPL_Out,1)
-			write(25684) Size(SPL_Out,2)
-			write(25684) Size(SPL_Out,3)
-			write(25684) SPL_Out
-			m%filesopen=1
-		ELSE
-			open (54218, file="SourceLoc.bin", access='stream',status="old", form='unformatted',position="append")
-			write(54218) y%OutLECoords
-
-			open (25684, file="SPL_Out.bin", access='stream',status="old", form='unformatted',position="append")
-			write(25684) SPL_Out
-		ENDIF
-		close(54218)
-		close(25684)
-
-		inquire(file="tempdispthick.txt", exist=exist)
-		if (exist) then
-			open(1254, file="tempdispthick.txt", status="old", position="append", action="write")
-		else
-			open(1254, file="tempdispthick.txt", status="new", action="write")
-		end if
-		write(1254, *) temp_dispthick
-		close(1254)
-
-		inquire(file="tempdispthickchord.txt", exist=exist)
-		if (exist) then
-			open(1254, file="tempdispthickchord.txt", status="old", position="append", action="write")
-		else
-			open(1254, file="tempdispthickchord.txt", status="new", action="write")
-		end if
-		write(1254, *) temp_dispthickchord
-		close(1254)
-	ENDIF
 END SUBROUTINE CalcAeroAcousticsOutput
 !==================================================================================================================================!
 SUBROUTINE LBLVS(ALPSTAR,C,U,THETA,PHI,L,R,p,d99Var2,dstarVar1,dstarVar2,SPLLAM,errStat,errMsg)
@@ -2526,6 +2387,7 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
 
                   if (AlphaNoise .gt. p%AOAListBL(size(p%AOAListBL))) then
                       print*, 'Warning AeroAcoustics Module - Angle of attack (AoA) range is not in the range provided by the user'
+                      print*, 'Station ',whichairfoil
                       print*, 'Airfoil AoA ',AlphaNoise,' Using the closest AoA ',p%AOAListBL(loop2+1)
                       m%dStarVar  (1) = ( p%dstarall1  (loop2+1,loop1+1,whichairfoil)*redif2 + p%dstarall1  (loop2+1,loop1,whichairfoil)*redif1 )/(redif1+redif2)
                       m%dStarVar  (2) = ( p%dstarall2  (loop2+1,loop1+1,whichairfoil)*redif2 + p%dstarall2  (loop2+1,loop1,whichairfoil)*redif1 )/(redif1+redif2)
@@ -2537,6 +2399,7 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
                       m%EdgeVelVar(2) = ( p%EdgeVelRat2(loop2+1,loop1+1,whichairfoil)*redif2 + p%EdgeVelRat2(loop2+1,loop1,whichairfoil)*redif1 )/(redif1+redif2)
                   elseif (AlphaNoise .lt. p%AOAListBL(1)) then
                       print*, 'Warning AeroAcoustics Module - Angle of attack (AoA) range is not in the range provided by the user'
+                      print*, 'Station ',whichairfoil
                       print*, 'Airfoil AoA ',AlphaNoise,' Using the closest AoA ',p%AOAListBL(1)
                       m%dStarVar(1)   = ( p%dstarall1  (1,loop1+1,whichairfoil)*redif2 + p%dstarall1  (1,loop1,whichairfoil)*redif1 ) / (redif1+redif2)
                       m%dStarVar(2)   = ( p%dstarall2  (1,loop1+1,whichairfoil)*redif2 + p%dstarall2  (1,loop1,whichairfoil)*redif1 ) / (redif1+redif2)

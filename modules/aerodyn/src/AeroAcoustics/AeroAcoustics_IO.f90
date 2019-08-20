@@ -317,8 +317,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, AABlFile,  OutFileRoot, Un
         ! one file name is given by the user and the XXFile1.out XXFile2.out XXFile3.out is generated
         IF ( PathIsRelative( InputFileData%AAOutFile(I) ) ) InputFileData%AAOutFile(I) = TRIM(PriPath)//TRIM(InputFileData%AAOutFile(1))//TRIM(Num2Lstr(I))//".out"
     ENDDO
-    CALL ReadVar(UnIn,InputFile,InputFileData%LargeBinOutput,'LargeBinOutput','LargeBinOutput',ErrStat2,ErrMsg2,UnEc); call check
-    CALL ReadVar(UnIn,InputFile,InputFileData%TxtFileOutput, 'TxtFileOutput', 'TxtFileOutput', ErrStat2,ErrMsg2,UnEc); call check
 	
     ! Return on error at end of section
     IF ( ErrStat >= AbortErrLev ) THEN
