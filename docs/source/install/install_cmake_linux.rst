@@ -32,6 +32,8 @@ OpenFAST has the following dependencies:
 
 - **Optional:** For the testing framework, Python 3+
 
+.. _cmake-build-instructions:
+
 CMake build instructions
 ------------------------
 

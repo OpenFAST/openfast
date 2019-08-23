@@ -5,7 +5,7 @@
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
 		<Configuration Name="Debug|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -15,7 +15,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -25,7 +25,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -35,7 +35,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -45,7 +45,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug_Double|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h';DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -55,7 +55,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug_Double|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h';DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/fpe-all:0" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUncalled="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" StackFrameCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -65,7 +65,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release_Double|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_Double">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h';DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="9999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -75,7 +75,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release_Double|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_Double">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h';DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;;DOUBLE_PRECISION" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -90,7 +90,7 @@
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<Filter Name="AeroDyn">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules-local\AeroDyn\src\AeroDyn_Registry.txt">
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn" Description="Running Registry for AeroDyn" Outputs="..\..\build\types-files\AeroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -116,11 +116,11 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\AeroDyn.f90"/>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\AeroDyn_IO.f90"/></Filter>
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn.f90"/>
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_IO.f90"/></Filter>
 		<Filter Name="AeroDyn_Driver">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules-local\AeroDyn\src\AeroDyn_Driver_Registry.txt">
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AeroDyn_Driver" Description="Running Registry for AeroDyn Driver" Outputs="..\..\build\types-files\AeroDyn_Driver_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -146,11 +146,11 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\AeroDyn_Driver.f90"/>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\AeroDyn_Driver_Subs.f90"/></Filter>
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver.f90"/>
+		<File RelativePath="..\..\modules\AeroDyn\src\AeroDyn_Driver_Subs.f90"/></Filter>
 		<Filter Name="AirFoil_Info">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules-local\AeroDyn\src\AirfoilInfo_Registry.txt">
+		<File RelativePath="..\..\modules\AeroDyn\src\AirfoilInfo_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\build\types-files\AirfoilInfo_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -176,10 +176,10 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\AirfoilInfo.f90"/></Filter>
+		<File RelativePath="..\..\modules\AeroDyn\src\AirfoilInfo.f90"/></Filter>
 		<Filter Name="BEMT">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules-local\AeroDyn\src\BEMT_Registry.txt">
+		<File RelativePath="..\..\modules\AeroDyn\src\BEMT_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BEMT" Description="Running Registry for BEMT" Outputs="..\..\build\types-files\BEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -205,13 +205,13 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\BEMT.f90"/>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\BEMTUncoupled.f90"/>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\fmin_fcn.f90"/>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\mod_root1dim.f90"/></Filter>
+		<File RelativePath="..\..\modules\AeroDyn\src\BEMT.f90"/>
+		<File RelativePath="..\..\modules\AeroDyn\src\BEMTUncoupled.f90"/>
+		<File RelativePath="..\..\modules\AeroDyn\src\fmin_fcn.f90"/>
+		<File RelativePath="..\..\modules\AeroDyn\src\mod_root1dim.f90"/></Filter>
 		<Filter Name="DBEMT">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules-local\AeroDyn\src\DBEMT_Registry.txt">
+		<File RelativePath="..\..\modules\AeroDyn\src\DBEMT_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat DBEMT" Description="Running Registry for DBEMT" Outputs="..\..\build\types-files\DBEMT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -237,11 +237,11 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\DBEMT.f90"/></Filter>
+		<File RelativePath="..\..\modules\AeroDyn\src\DBEMT.f90"/></Filter>
 		<Filter Name="NWTC_Library">
 		<Filter Name="NetLib">
 		<Filter Name="FitPack">
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\Dierckx_FitPack\dierckx_fitpack.f">
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\Dierckx_FitPack\dierckx_fitpack.f">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" RealKIND="realKIND4" DoublePrecisionKIND="doublePrecisionKIND8"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -258,7 +258,7 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" RealKIND="realKIND4" DoublePrecisionKIND="doublePrecisionKIND8"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" RealKIND="realKIND4" DoublePrecisionKIND="doublePrecisionKIND8"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\Dierckx_FitPack\NWTC_FitPack.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\Dierckx_FitPack\NWTC_FitPack.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -267,14 +267,14 @@
 				<Tool Name="VFFortranCompilerTool" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFFortranCompilerTool" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\ModMesh.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\ModMesh_Mapping.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\ModMesh_Types.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Base.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_IO.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Library.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Library_Types.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
@@ -283,12 +283,12 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Num.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\SingPrec.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\SysIVF.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90"/></Filter>
 		<Filter Name="UnsteadyAero">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules-local\AeroDyn\src\UnsteadyAero_Registry.txt">
+		<File RelativePath="..\..\modules\AeroDyn\src\UnsteadyAero_Registry.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
@@ -306,5 +306,6 @@
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat UA" Description="Running Registry for UnsteadyAero" Outputs="..\..\build\types-files\UnsteadyAero_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\build\types-files\UnsteadyAero_Types.f90"/></Filter>
-		<File RelativePath="..\..\modules-local\AeroDyn\src\UnsteadyAero.f90"/></Filter></Filter></Files>
+		<File RelativePath="..\..\modules\AeroDyn\src\UnsteadyAero.f90"/></Filter>
+		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

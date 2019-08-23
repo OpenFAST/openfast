@@ -29,9 +29,9 @@ include_directories(${HDF5_INCLUDES})
 include_directories(${HDF5_INCLUDE_DIR})
 include_directories(${ZLIB_INCLUDES})
 include_directories(${LIBXML2_INCLUDE_DIR})
-include_directories(${CMAKE_SOURCE_DIR}/modules-local/openfast-library/src/)
-include_directories(${CMAKE_BINARY_DIR}/modules-local/openfoam/)
-include_directories(${CMAKE_BINARY_DIR}/modules-local/supercontroller/)
+include_directories(${CMAKE_SOURCE_DIR}/modules/openfast-library/src/)
+include_directories(${CMAKE_BINARY_DIR}/modules/openfoam/)
+include_directories(${CMAKE_BINARY_DIR}/modules/supercontroller/)
 include_directories(${MPI_INCLUDE_PATH})
 
 add_library(openfastcpplib
@@ -43,6 +43,7 @@ target_link_libraries(openfastcpplib
   ${HDF5_HL_LIBRARIES}
   ${ZLIB_LIBRARIES}
   ${LIBXML2_LIBRARIES}
+  ${MPI_LIBRARIES}
   ${CMAKE_DL_LIBS})
 
 add_executable(openfastcpp

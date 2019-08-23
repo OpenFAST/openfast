@@ -79,7 +79,7 @@ function(bd_regression TESTNAME LABEL)
   set(TEST_SCRIPT "${CMAKE_CURRENT_LIST_DIR}/executeBeamdynRegressionCase.py")
   set(BEAMDYN_EXECUTABLE "${CTEST_BEAMDYN_EXECUTABLE}")
   set(SOURCE_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/..")
-  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules-local/beamdyn")
+  set(BUILD_DIRECTORY "${CTEST_BINARY_DIR}/modules/beamdyn")
   regression(${TEST_SCRIPT} ${BEAMDYN_EXECUTABLE} ${SOURCE_DIRECTORY} ${BUILD_DIRECTORY} ${TESTNAME} "${LABEL}")
 endfunction(bd_regression)
 
