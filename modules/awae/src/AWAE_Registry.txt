@@ -148,6 +148,7 @@ typedef   ^ ^              IntKi            Mod_AmbWind        -  - -   "Ambient
 typedef   ^ ParameterType  IntKi            nX_low             -  - -   "Number of low-resolution spatial nodes in X direction" -
 typedef   ^ ParameterType  IntKi            nY_low             -  - -   "Number of low-resolution spatial nodes in Y direction" -
 typedef   ^ ParameterType  IntKi            nZ_low             -  - -   "Number of low-resolution spatial nodes in Z direction" -
+typedef   ^ ParameterType  IntKi            NumGrid_low        -  - -   "Total number of low-resolution spatial nodes" -
 typedef   ^ ParameterType  IntKi            n_rp_max          -  - -   "Maximum possible number of points in the polar grid for the wake plane at each rotor" -
 typedef   ^ ParameterTYpe  ReKi             dpol             -  - -   "Spatial resolution of the polar grid for each wake plane of each turbine" m
 typedef   ^ ParameterType  ReKi             dXYZ_low        {3} - -   "XYZ-components of the spatial increment of the low-resolution domain" m

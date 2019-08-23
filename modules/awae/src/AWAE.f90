@@ -134,23 +134,13 @@ subroutine ComputeLocals(n, u, p, y, m, errStat, errMsg)
          end if
 
          dp      = u%p_plane(:,np+1,nt) - u%p_plane(:,np,nt)
-         m%r_e(np,nt) = dot_product( u%xhat_plane(:,np  ,nt), dp )
-         m%r_s(np,nt) = dot_product( u%xhat_plane(:,np+1,nt), dp )
+         m%r_e(np,nt) = abs( dot_product( u%xhat_plane(:,np  ,nt), dp ) )
+         m%r_s(np,nt) = abs( dot_product( u%xhat_plane(:,np+1,nt), dp ) )
 
          if (   sinTerm > ( max( m%r_e(np,nt), m%r_s(np,nt) ) / ( 100.0_ReKi*rmax ) ) ) then
             m%parallelFlag(np,nt) = .false.
             m%r_e(np,nt) = m%r_e(np,nt) / sinTerm
             m%r_s(np,nt) = m%r_s(np,nt) / sinTerm
-            if ( u%D_wake(np,nt) > 0.0_ReKi ) then
-               if ( m%r_e(np,nt) < rmax ) then
-                  call SetErrStat( ErrID_Fatal, 'Radius to the wake center in the ending wake plane from the line where the starting and ending wake planes intersect for a given wake volume (volume='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') is smaller than rmax: '//trim(num2lstr(rmax))//'.', errStat, errMsg, 'ComputeLocals' )
-                  return
-               end if
-               if ( m%r_s(np,nt) < rmax ) then
-                  call SetErrStat( ErrID_Fatal, 'Radius to the wake center in the starting wake plane from the line where the starting and ending wake planes intersect for a given wake volume (volume='//trim(num2lstr(np))//',turbine='//trim(num2lstr(nt))//') is smaller than rmax: '//trim(num2lstr(rmax))//'.', errStat, errMsg, 'ComputeLocals' )
-                  return
-               end if
-            end if
             m%rhat_s(:,np,nt) = (u%xhat_plane(:,np,nt)*cosTerm - u%xhat_plane(:,np+1,nt)        ) / sinTerm
             m%rhat_e(:,np,nt) = (u%xhat_plane(:,np,nt)         - u%xhat_plane(:,np+1,nt)*cosTerm) / sinTerm
             m%pvec_cs(:,np,nt) = u%p_plane(:,np  ,nt) - m%r_s(np,nt)*m%rhat_s(:,np,nt)
@@ -216,7 +206,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    real(ReKi), ALLOCATABLE :: tmp_rhat_plane(:,:), tmp_xhat_plane(:,:)
    real(ReKi), ALLOCATABLE :: tmp_Vx_wake(:), tmp_Vr_wake(:)
    integer(IntKi)      :: ILo
-   integer(IntKi)      :: maxPln, tmpPln
+   integer(IntKi)      :: maxPln, tmpPln, maxN_wake
    integer(IntKi)      :: i,np1,errStat2
    character(*), parameter   :: RoutineName = 'LowResGridCalcOutput'
    logical             :: within
@@ -233,15 +223,15 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 !   tm1 =  omp_get_wtime() 
 !#endif 
 
-
+   maxN_wake = p%NumTurbines*( p%NumPlanes-1 )
    ! Temporary variables needed by OpenMP 
-   allocate ( tmp_xhat_plane ( 3, 1:p%NumTurbines ), STAT=errStat2 )
+   allocate ( tmp_xhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_xhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( tmp_rhat_plane ( 3, 1:p%NumTurbines ), STAT=errStat2 )
+   allocate ( tmp_rhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_rhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( tmp_Vx_wake    ( 1:p%NumTurbines ), STAT=errStat2 )
+   allocate ( tmp_Vx_wake    ( 1:maxN_wake ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vx_wake.', errStat, errMsg, RoutineName )
-   allocate ( tmp_Vr_wake    ( 1:p%NumTurbines ), STAT=errStat2 )
+   allocate ( tmp_Vr_wake    ( 1:maxN_wake ), STAT=errStat2 )
        if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for tmp_Vr_wake.', errStat, errMsg, RoutineName )
    if (ErrStat >= AbortErrLev) return
 
@@ -254,7 +244,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    !   do ny_low=0, p%yZ_low-1
    !      do nx_low=0, p%nX_low-1
    !         nXYZ_low=0
-   do i = 0 , p%nX_low*p%nY_low*p%nZ_low - 1
+   do i = 0 , p%NumGrid_low - 1
 
             nx_low = mod(     i                        ,p%nX_low)
             ny_low = mod(int( i / (p%nX_low         ) ),p%nY_low)
@@ -294,9 +284,14 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
                      ! test if the point is within the endcaps of the wake volume
 
-                  if ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) then
+                  if ( ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) .or. &
+                       ( ( x_start_plane <= 0.0_ReKi ) .and. ( x_end_plane > 0.0_ReKi ) )        ) then
 
-                     delta = x_start_plane / ( x_start_plane - x_end_plane )
+                     if ( EqualRealNos( x_start_plane, x_end_plane ) ) then
+                        delta = 0.5_ReKi
+                     else
+                        delta = x_start_plane / ( x_start_plane - x_end_plane )
+                     end if
                      deltad = (1.0_ReKi - delta)
                      if ( m%parallelFlag(np,nt) ) then
                         p_tmp_plane = delta*u%p_plane(:,np1,nt) + deltad*u%p_plane(:,np,nt)
@@ -332,7 +327,6 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         tmp_xhat_plane(:,n_wake) = tmp_xhat_plane(:,n_wake) / TwoNorm(tmp_xhat_plane(:,n_wake))
                         xhatBar_plane = xhatBar_plane + abs(tmp_Vx_wake(n_wake))*tmp_xhat_plane(:,n_wake)
                      end if  ! if the point is within radial finite-difference grid
-                   exit
                 end if
             end do  ! do np = 0, p%NumPlanes-2
         end do      ! do nt = 1,p%NumTurbines
@@ -364,8 +358,18 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
    !$OMP END PARALLEL DO
 
    do nt = 1,p%NumTurbines
-      do np = 0,tmpPln
 
+      ! Warn our kind users if wake planes leave the low-resolution domain:
+         if ( minval( u%p_plane(1,0:tmpPln,nt) ) < p%Grid_Low(1,            1) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the lowest-most X boundary of the low-resolution domain.', errStat, errMsg, RoutineName)
+         if ( maxval( u%p_plane(1,0:tmpPln,nt) ) > p%Grid_Low(1,p%NumGrid_low) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the upper-most X boundary of the low-resolution domain.' , errStat, errMsg, RoutineName)
+         if ( minval( u%p_plane(2,0:tmpPln,nt) ) < p%Grid_Low(2,            1) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the lowest-most Y boundary of the low-resolution domain.', errStat, errMsg, RoutineName)
+         if ( maxval( u%p_plane(2,0:tmpPln,nt) ) > p%Grid_Low(2,p%NumGrid_low) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the upper-most Y boundary of the low-resolution domain.' , errStat, errMsg, RoutineName)
+         if ( minval( u%p_plane(3,0:tmpPln,nt) ) < p%Grid_Low(3,            1) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the lowest-most Z boundary of the low-resolution domain.', errStat, errMsg, RoutineName)
+         if ( maxval( u%p_plane(3,0:tmpPln,nt) ) > p%Grid_Low(3,p%NumGrid_low) ) call SetErrStat(ErrID_Warn, 'The center of a wake plane for turbine #'//trim(num2lstr(nt))//' has passed the upper-most Z boundary of the low-resolution domain.' , errStat, errMsg, RoutineName)
+
+         
+         do np = 0,tmpPln 
+      
       !!Defining yhat and zhat
          xxplane = (/u%xhat_plane(1,np,nt), 0.0_ReKi, 0.0_ReKi/)
          xyplane = (/0.0_ReKi, u%xhat_plane(1,np,nt), 0.0_ReKi/)
@@ -407,7 +411,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
                       psi_polar = (TwoPi*REAL(npsi,ReKi))/(REAL(n_psi_polar+1,ReKi))
                       p_polar = u%p_plane(:,np,nt) + r_polar*COS(psi_polar)*tmp_yhat_plane + r_polar*SIN(psi_polar)*tmp_zhat_plane
-                      Vamb_lowpol_tmp = INTERP3D( p_polar, p%Grid_Low(:,1), p%dXYZ_Low, m%Vamb_low, within, p%nX_low, p%nY_low, p%nZ_low, Vout=Vamb_low_tmp )
+                      Vamb_lowpol_tmp = INTERP3D( p_polar, p%Grid_Low(:,1), p%dXYZ_Low, m%Vamb_low, within, p%nX_low, p%nY_low, p%nZ_low, Vbox=Vamb_low_tmp )
                       if ( within ) then
                          Vsum_low = Vsum_low + Vamb_lowpol_tmp
                          do i = 1,8
@@ -422,15 +426,15 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
                 if ( iwsum == 0 ) then
 
-                   call SetErrStat( ErrID_Fatal, 'The wake plane for turbine '//trim(num2lstr(nt))//' has left the low-resolution domain (i.e., there are no points in the polar grid that lie within the low-resolution domain).', errStat, errMsg, RoutineName )
+                   call SetErrStat( ErrID_Fatal, 'The rotor plane for turbine '//trim(num2lstr(nt))//' has left the low-resolution domain (i.e., there are no points in the polar grid that lie within the low-resolution domain).', errStat, errMsg, RoutineName )
                    return
 
                 else
 
-                   Vsum_low = Vsum_low/REAL(iwsum/8,ReKi)
+                   Vsum_low = Vsum_low/REAL(iwsum/8,ReKi)   ! iwsum is always a multiple of 8
                    Vave_amb_low_norm  = TwoNorm(Vsum_low)
                    if ( EqualRealNos(Vave_amb_low_norm, 0.0_ReKi ) )  then
-                      call SetErrStat( ErrID_Fatal, 'The magnitude of the spatial-averaged ambient wind speed in the low-resolution domain associated with the wake plane at the rotor disk for turbine '//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
+                      call SetErrStat( ErrID_Fatal, 'The magnitude of the spatial-averaged ambient wind speed in the low-resolution domain associated with the wake plane at the rotor disk for turbine #'//trim(num2lstr(nt))//' is zero.', errStat, errMsg, RoutineName )
                       return
                    else
                       y%Vx_wind_disk(nt) = dot_product( u%xhat_plane(:,np,nt),Vsum_low )
@@ -481,12 +485,7 @@ subroutine LowResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
              end do!nr
 
-             if ( EqualRealNos(wsum_tmp, 0.0_ReKi) ) then
-                call SetErrStat( ErrID_Fatal, 'Wake plane '//trim(num2lstr(np))//' for turbine number '//trim(num2lstr(nt))//' has left the low-resolution domain (i.e., there are no points in the polar grid that lie within the low-resolution domain)', errStat, errMsg, RoutineName )
-                return
-             else
-                y%V_plane(:,np,nt) = y%V_plane(:,np,nt)/wsum_tmp
-             end if !!wsum_tmp
+             if ( wsum_tmp > 0.0_ReKi ) y%V_plane(:,np,nt) = y%V_plane(:,np,nt)/wsum_tmp
 
          end if
 
@@ -587,9 +586,14 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
                         x_end_plane = dot_product(u%xhat_plane(:,np+1,nt2), (p%Grid_high(:,nXYZ_high,nt) - u%p_plane(:,np+1,nt2)) )
 
                            ! test if the point is within the endcaps of the wake volume
-                        if ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) then
+                        if ( ( ( x_start_plane >= 0.0_ReKi ) .and. ( x_end_plane < 0.0_ReKi ) ) .or. &
+                             ( ( x_start_plane <= 0.0_ReKi ) .and. ( x_end_plane > 0.0_ReKi ) )        ) then
 
-                           delta = x_start_plane / ( x_start_plane - x_end_plane )
+                           if ( EqualRealNos( x_start_plane, x_end_plane ) ) then
+                              delta = 0.5_ReKi
+                           else
+                              delta = x_start_plane / ( x_start_plane - x_end_plane )
+                           end if
                            deltad = (1.0_ReKi - delta)
                            if ( m%parallelFlag(np,nt2) ) then
                               p_tmp_plane = delta*u%p_plane(:,np+1,nt2) + deltad*u%p_plane(:,np,nt2)
@@ -625,7 +629,6 @@ subroutine HighResGridCalcOutput(n, u, p, y, m, errStat, errMsg)
 
                            end if  ! if the point is within radial finite-difference grid
 
-                           exit
                         end if  ! if the point is within the endcaps of the wake volume
                      end do     ! np = 0, p%NumPlanes-2
                   end if    ! nt /= nt2
@@ -690,6 +693,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
 
       ! Local variables
    integer(IntKi)                                :: i,j             ! loop counter
+   integer(IntKi)                                :: maxN_wake
    real(ReKi)                                    :: gridLoc       ! Location of requested output slice in grid coordinates [0,sz-1]
    integer(IntKi)                                :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                          :: errMsg2       ! temporary error message
@@ -806,7 +810,7 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       IfW_InitInp%RootName          = TRIM(p%OutFileRoot)//'.IfW'
       IfW_InitInp%UseInputFile      = .TRUE.
       IfW_InitInp%InputFileName     = InitInp%InputFileData%InflowFile
-      IfW_InitInp%NumWindPoints     = p%nX_low*p%nY_low*p%nZ_low
+      IfW_InitInp%NumWindPoints     = p%NumGrid_low
       IfW_InitInp%lidar%Tmax        = 0.0_ReKi
       IfW_InitInp%lidar%HubPosition = 0.0_ReKi
       IfW_InitInp%lidar%SensorType  = SensorType_None
@@ -964,13 +968,14 @@ subroutine AWAE_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
          allocate ( m%Vamb_high(i)%data(3,0:p%nX_high-1,0:p%nY_high-1,0:p%nZ_high-1,0:p%n_high_low), STAT=ErrStat2 )
             if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vamb_high%data.', errStat, errMsg, RoutineName )
    end do
-   allocate ( m%xhat_plane ( 3, 1:p%NumTurbines ), STAT=errStat2 )
+   maxN_wake = p%NumTurbines*( p%NumPlanes-1 )
+   allocate ( m%xhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%xhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( m%rhat_plane ( 3, 1:p%NumTurbines ), STAT=errStat2 )
+   allocate ( m%rhat_plane ( 3, 1:maxN_wake ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%rhat_plane.', errStat, errMsg, RoutineName )
-   allocate ( m%Vx_wake    ( 1:p%NumTurbines ), STAT=errStat2 )
+   allocate ( m%Vx_wake    ( 1:maxN_wake ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vx_wake.', errStat, errMsg, RoutineName )
-   allocate ( m%Vr_wake    ( 1:p%NumTurbines ), STAT=errStat2 )
+   allocate ( m%Vr_wake    ( 1:maxN_wake ), STAT=errStat2 )
       if (errStat2 /= 0) call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for m%Vr_wake.', errStat, errMsg, RoutineName )
 
    allocate ( m%parallelFlag( 0:p%NumPlanes-2,1:p%NumTurbines ), STAT=errStat2 )
@@ -1567,7 +1572,7 @@ subroutine AWAE_TEST_CalcOutput(errStat, errMsg)
 
 end subroutine AWAE_TEST_CalcOutput
 
-FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ,Vout)
+FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ,Vbox)
       !  I/O variables
          Real(ReKi), INTENT( IN    ) :: p(3)            !< Position where the 3D velocity field will be interpreted (m)
          Real(ReKi), INTENT( IN    ) :: p0(3)           !< Origin of the spatial domain (m)
@@ -1577,7 +1582,7 @@ FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ,Vout)
 
          Real(SiKi) :: INTERP3D(3)     !Vint(3)         !< Interpolated velocity (m/s)
          Logical,    INTENT(   OUT ) :: within          !< Logical flag indicating weather or not the input position lies within the domain (flag)
-         REAL(ReKi), OPTIONAL, INTENT(OUT) :: Vout(3,8) !< Wind velocities at the 8 points in the 3D spatial domain surrounding the input position
+         REAL(ReKi), OPTIONAL, INTENT(OUT) :: Vbox(3,8) !< Wind velocities at the 8 points in the 3D spatial domain surrounding the input position
 
       !  Local variables
          INTEGER(IntKi)        :: i
@@ -1632,10 +1637,14 @@ FUNCTION INTERP3D(p,p0,del,V,within,nX,nY,nZ,Vout)
 
       end do
 
+   else
+
+      vtmp = 0.0_SiKi
+
    end if
 
-   !!! Output the wind velocities at the 8 points in the 3D spatial domain surrounding the input position (if necessary)
-   IF ( PRESENT( Vout ) ) Vout = REAL( Vtmp, ReKi )
+   ! Output the wind velocities at the 8 points in the 3D spatial domain surrounding the input position (if necessary)
+   IF ( PRESENT( Vbox ) ) Vbox = REAL( Vtmp, ReKi )
 
 END FUNCTION
 

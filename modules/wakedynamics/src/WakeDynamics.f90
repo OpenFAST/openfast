@@ -621,7 +621,7 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    integer(intKi)                               :: errStat2          ! temporary Error status
    character(ErrMsgLen)                         :: errMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'WD_UpdateStates'
-   real(ReKi)                                   :: dx, norm2_xhat_plane  
+   real(ReKi)                                   :: dx, absdx, norm2_xhat_plane  
    real(ReKi)                                   :: dy_HWkDfl(3), EddyTermA, EddyTermB, lstar, Vx_wake_min
    integer(intKi)                               :: i,j, maxPln
    
@@ -696,12 +696,8 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
          ! This is equivalent to
       
       dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT
-      
-      if ( EqualRealNos(dx, 0.0_ReKi) .or. dx < 0.0_ReKi) then
-         ! TEST: E2
-         call SetErrStat(ErrID_FATAL, 'Downwind advection speed of a wake plane is not positive, i.e., dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*DT<= 0', errStat, errMsg, RoutineName)   
-         return
-      end if
+      absdx = abs(dx)
+      if ( EqualRealNos( dx, 0.0_ReKi ) ) absdx = 1.0_ReKi  ! This is to avoid division by zero problems in the formation of m%b and m%d below, which are not used when dx=0; the value of unity is arbitrary
       
       Vx_wake_min = huge(ReKi)
       do j = 0,p%NumRadii-1
@@ -729,10 +725,10 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       
       m%dvtdr(0) = 0.0_ReKi
       m%a(0)     = 0.0_ReKi
-      m%b(0)     = p%dr * ( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)  ) / dx + m%vt_tot(0,i-1)/p%dr
+      m%b(0)     = p%dr * ( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)) / absdx + m%vt_tot(0,i-1)/p%dr
       m%c(0)     = -m%vt_tot(0,i-1)/p%dr
       m%c(p%NumRadii-1) = 0.0_ReKi
-      m%d(0)     = (p%dr * (xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)) / dx - m%vt_tot(0,i-1)/p%dr  ) * xd%Vx_wake(0,i-1) + ( m%vt_tot(0,i-1)/p%dr ) * xd%Vx_wake(1,i-1) 
+      m%d(0)     = (p%dr * (xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(0,i-1)) / absdx - m%vt_tot(0,i-1)/p%dr  ) * xd%Vx_wake(0,i-1) + ( m%vt_tot(0,i-1)/p%dr ) * xd%Vx_wake(1,i-1) 
       
       do j = p%NumRadii-1, 1, -1 
          
@@ -740,25 +736,25 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
             m%dvtdr(j) = ( m%vt_tot(j+1,i-1) - m%vt_tot(j-1,i-1) ) / (2_ReKi*p%dr)
             m%c(j) = real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi+2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi
             m%d(j) =    ( real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi-2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi) * xd%Vx_wake(j-1,i-1) &
-                    + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/dx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i-1) &
+                    + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/absdx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i-1) &
                     + (-real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi + (1_ReKi+2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) + real(j,ReKi)*m%dvtdr(j)/4.0_ReKi ) * xd%Vx_wake(j+1,i-1)
              
          else
             m%dvtdr(j) = 0.0_ReKi
             m%d(j) = ( real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi - (1_ReKi-2_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) - real(j,ReKi)*m%dvtdr(j)/4.0_ReKi) * xd%Vx_wake(j-1,i-1) &
-                    + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/dx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i-1) 
+                    + ( p%r(j)*( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  )/absdx -  real(j,ReKi)*m%vt_tot(j,i-1)/p%dr  ) * xd%Vx_wake(j,i-1) 
                     
          end if  
          
          m%a(j) = -real(j,ReKi)*xd%Vr_wake(j,i-1)/4.0_ReKi + (1.0_ReKi-2.0_ReKi*real(j,ReKi))*m%vt_tot(j,i-1)/(4.0_ReKi*p%dr) + real(j,ReKi)*m%dvtdr(j)/4.0_ReKi 
-         m%b(j) = p%r(j) * ( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  ) / dx + real(j,ReKi)*m%vt_tot(j,i-1)/p%dr
+         m%b(j) = p%r(j) * ( xd%Vx_wind_disk_filt(i-1) + xd%Vx_wake(j,i-1)  ) / absdx + real(j,ReKi)*m%vt_tot(j,i-1)/p%dr
          
         
       end do ! j = 1,p%NumRadii-1
    
          ! Update these states to [n+1]
 
-      xd%x_plane     (i) = xd%x_plane    (i-1) + dx   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT   
+      xd%x_plane     (i) = xd%x_plane    (i-1) + abs(dx)   ! dx = dot_product(xd%xhat_plane(:,i-1),xd%V_plane_filt(:,i-1))*p%DT ; don't use absdx here  
       xd%YawErr_filt (i) = xd%YawErr_filt(i-1)
       xd%xhat_plane(:,i) = xd%xhat_plane(:,i-1)
       
@@ -777,21 +773,26 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
       xd%Vx_wind_disk_filt(i) = xd%Vx_wind_disk_filt(i-1)
       xd%TI_amb_filt      (i) = xd%TI_amb_filt(i-1)
       xd%D_rotor_filt     (i) = xd%D_rotor_filt(i-1)
-      
-         ! Update Vx_wake to [n+1]
-      call ThomasAlgorithm(p%NumRadii, m%a, m%b, m%c, m%d, xd%Vx_wake(:,i), errStat2, errMsg2)
-         call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName) 
-         if (errStat >= AbortErrLev) then
-            ! TEST: E16, E17, or E18
-            call Cleanup()
-            return
-         end if  
-      do j = 1,p%NumRadii-1
-            ! NOTE: xd%Vr_wake(0,:) was initialized to 0 and remains 0.
-         xd%Vr_wake(j,i) = real(  j-1,ReKi)*(  xd%Vr_wake(j-1,i)  )/real(j,ReKi) &
-            !  Vx_wake is for the                         [n+1]       ,      [n+1]        ,      [n]          , and    [n]        increments             
-                         - real(2*j-1,ReKi)*p%dr * (  xd%Vx_wake(j,i) + xd%Vx_wake(j-1,i) - xd%Vx_wake(j,i-1) - xd%Vx_wake(j-1,i-1)  ) / ( real(4*j,ReKi) * dx )
-      end do  
+
+         ! Update Vx_wake and Vr_wake to [n+1]
+      if ( EqualRealNos( dx, 0.0_ReKi ) ) then
+         xd%Vx_wake(:,i) = xd%Vx_wake(:,i-1)
+         xd%Vr_wake(:,i) = xd%Vr_wake(:,i-1)
+      else
+         call ThomasAlgorithm(p%NumRadii, m%a, m%b, m%c, m%d, xd%Vx_wake(:,i), errStat2, errMsg2)
+            call SetErrStat(errStat2, errMsg2, errStat, errMsg, RoutineName) 
+            if (errStat >= AbortErrLev) then
+               ! TEST: E16, E17, or E18
+               call Cleanup()
+               return
+            end if  
+         do j = 1,p%NumRadii-1
+               ! NOTE: xd%Vr_wake(0,:) was initialized to 0 and remains 0.
+            xd%Vr_wake(j,i) = real(  j-1,ReKi)*(  xd%Vr_wake(j-1,i)  )/real(j,ReKi) &
+               !  Vx_wake is for the                         [n+1]       ,      [n+1]        ,      [n]          , and    [n]        increments             
+                            - real(2*j-1,ReKi)*p%dr * (  xd%Vx_wake(j,i) + xd%Vx_wake(j-1,i) - xd%Vx_wake(j,i-1) - xd%Vx_wake(j-1,i-1)  ) / ( real(4*j,ReKi) * absdx )
+         end do  
+      end if
    end do ! i = 1,min(n+2,p%NumPlanes-1) 
  
 
@@ -835,22 +836,6 @@ subroutine WD_UpdateStates( t, n, u, p, x, xd, z, OtherState, m, errStat, errMsg
    xd%TI_amb_filt      (0) =  xd%TI_amb_filt(0)*p%filtParam + u%TI_amb*p%oneMinusFiltParam
    xd%D_rotor_filt     (0) =  xd%D_rotor_filt(0)*p%filtParam + u%D_rotor*p%oneMinusFiltParam  
    xd%Vx_rel_disk_filt     =  xd%Vx_rel_disk_filt*p%filtParam + u%Vx_rel_disk*p%oneMinusFiltParam 
-   
-   
-   do i = 1,maxPln
-      if ( xd%x_plane(i) - xd%x_plane(i-1) <= 0.0_ReKi ) then
-         call SetErrStat(ErrID_FATAL, 'In a 1D sense, wake plane '//trim(num2lstr(i-1))//' is further downstream than wake plane '//trim(num2lstr(i)), errStat, errMsg, RoutineName)   
-         call Cleanup()
-         return
-      end if
-      
-      if ( ( dot_product( xd%xhat_plane(:,i-1), ( xd%p_plane(:,i) - xd%p_plane(:,i-1) ) ) <= 0.0_ReKi ) .or. &
-           ( dot_product( xd%xhat_plane(:,i  ), ( xd%p_plane(:,i) - xd%p_plane(:,i-1) ) ) <= 0.0_ReKi ) )then
-         call SetErrStat(ErrID_FATAL, 'In a 3D sense, wake plane '//trim(num2lstr(i-1))//' is further downstream than wake plane '//trim(num2lstr(i)), errStat, errMsg, RoutineName)   
-         call Cleanup()
-         return 
-      end if
-   end do
    
    
       !  filtered, azimuthally-averaged Ct values at each radial station
@@ -926,15 +911,6 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
          
             ! NOTE: Since we are in firstPass=T, then xd%Vx_wake is already set to zero, so just pass that into WakeDiam
          y%D_wake(i)  =  WakeDiam( p%Mod_WakeDiam, p%NumRadii, p%dr, p%r, xd%Vx_wake(:,i), u%Vx_wind_disk, u%D_rotor, p%C_WakeDiam)
-            
-         if ( (y%p_plane     (3,i) - y%D_wake(i)/2.0_ReKi) < 0 ) then
-            call SetErrStat(ErrID_Warn, 'Wake boundary for wake plane '//trim(num2lstr(i))//' is below the ground.', errStat, errMsg, RoutineName)
-         end if
-         if ( y%p_plane     (3,i) < 0 ) then
-            call SetErrStat(ErrID_FATAL, 'Wake center for wake plane '//trim(num2lstr(i))//' is below the ground.' , errStat, errMsg, RoutineName)
-            return
-         end if
-      
       end do
      
          ! Initialze Vx_wake; Vr_wake is already initialized to zero, so, we don't need to do that here.
@@ -953,14 +929,7 @@ subroutine WD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, errStat, errMsg )
       do i = 0, min(n+1,p%NumPlanes-1)
          
          y%D_wake(i)  =  WakeDiam( p%Mod_WakeDiam, p%NumRadii, p%dr, p%r, xd%Vx_wake(:,i), xd%Vx_wind_disk_filt(i), xd%D_rotor_filt(i), p%C_WakeDiam)
-         if ( y%p_plane     (3,i) < 0.0_ReKi ) then
-            call SetErrStat(ErrID_FATAL, 'Wake center for wake plane '//trim(num2lstr(i))//' is below the ground.' , errStat, errMsg, RoutineName)
-            return
-         else if ( (y%p_plane     (3,i) - y%D_wake(i)/2.0_ReKi) < 0.0_ReKi ) then
-            call SetErrStat(ErrID_Warn, 'Wake boundary for wake plane '//trim(num2lstr(i))//' is below the ground.', errStat, errMsg, RoutineName)
-         end if
-         
-         
+
       end do
    end if
    

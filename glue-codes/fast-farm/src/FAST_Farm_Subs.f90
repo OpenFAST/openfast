@@ -1901,7 +1901,7 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
             ! Loop over user-requested, downstream distances (OutDist), m   
          do iOutDist = 1, farm%p%NOutDist
             
-            if (  farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(min(farm%WD(nt)%p%NumPlanes-1,n+1)) ) then
+            if (  farm%p%OutDist(iOutDist) >= maxval( farm%WD(nt)%y%x_plane(0:min(farm%WD(nt)%p%NumPlanes-1,n+1)) ) ) then
                
                farm%m%AllOuts(WkAxsXTD(iOutDist,nt)) = 0.0_ReKi
                farm%m%AllOuts(WkAxsYTD(iOutDist,nt)) = 0.0_ReKi
@@ -1939,57 +1939,99 @@ subroutine Farm_WriteOutput(n, t, farm, ErrStat, ErrMsg)
                
                   ! Find wake volume which contains the user-requested downstream location.
                do np = 0, min(farm%WD(nt)%p%NumPlanes-2 , n)
-                  if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(np) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%y%x_plane(np+1) ) ) then
+
+                  if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(np) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%y%x_plane(np+1) ) ) then   ! A wake volume has been found
+
                      delta = ( farm%p%OutDist(iOutDist) - farm%WD(nt)%y%x_plane(np) ) / ( farm%WD(nt)%y%x_plane(np+1) - farm%WD(nt)%y%x_plane(np) )
                      deltad = (1.0_ReKi-delta)
+
+                     vec_interp       =  delta*farm%WD(nt)%y%xhat_plane(:, np+1) + deltad*farm%WD(nt)%y%xhat_plane(:, np)
+                     norm2_vec        =  TwoNorm( vec_interp ) 
+                        ! Orientation of the wake centerline for downstream wake volume, np, of turbine, nt, in the global coordinate system, -
+                     farm%m%AllOuts(WkAxsXTD(iOutDist,nt)) = vec_interp(1)/norm2_vec
+                     farm%m%AllOuts(WkAxsYTD(iOutDist,nt)) = vec_interp(2)/norm2_vec
+                     farm%m%AllOuts(WkAxsZTD(iOutDist,nt)) = vec_interp(3)/norm2_vec 
+
+                     if ( farm%AWAE%m%parallelFlag(np,nt) ) then
+                        vec_interp       =  delta*farm%WD(nt)%y%p_plane(:, np+1) + deltad*farm%WD(nt)%y%p_plane(:, np)
+                     else
+                        vec_interp = delta*farm%AWAE%m%rhat_e(:,np,nt) + deltad*farm%AWAE%m%rhat_s(:,np,nt)
+                        vec_interp = delta*farm%AWAE%m%pvec_ce(:,np,nt) + deltad*farm%AWAE%m%pvec_cs(:,np,nt) + ( delta*farm%AWAE%m%r_e(np,nt) + deltad*farm%AWAE%m%r_s(np,nt) )* vec_interp / TwoNorm(vec_interp)
+                     end if
+               
+                        ! Center position of the wake centerline for downstream wake volume, np, of turbine, nt, in the global coordinate system, m
+                     farm%m%AllOuts(WkPosXTD(iOutDist,nt)) = vec_interp(1)
+                     farm%m%AllOuts(WkPosYTD(iOutDist,nt)) = vec_interp(2)
+                     farm%m%AllOuts(WkPosZTD(iOutDist,nt)) = vec_interp(3)
+
+                        ! Advection, deflection, and meandering velocity (not including the horizontal wake-deflection correction) 
+                        !  of the wake for downstream wake volume, np, of turbine, nt, in the global coordinate system, m/s
+                     farm%m%AllOuts(WkVelXTD(iOutDist,nt)) = delta*farm%AWAE%y%V_plane(1,np+1,nt) + deltad*farm%AWAE%y%V_plane(1,np,nt)
+                     farm%m%AllOuts(WkVelYTD(iOutDist,nt)) = delta*farm%AWAE%y%V_plane(2,np+1,nt) + deltad*farm%AWAE%y%V_plane(2,np,nt)
+                     farm%m%AllOuts(WkVelZTD(iOutDist,nt)) = delta*farm%AWAE%y%V_plane(3,np+1,nt) + deltad*farm%AWAE%y%V_plane(3,np,nt)
+
+                        ! Wake diameter for downstream wake volume, np, of turbine, nt, m
+                     farm%m%AllOuts(WkDiamTD(iOutDist,nt)) = delta*farm%WD(nt)%y%D_wake(np+1) + deltad*farm%WD(nt)%y%D_wake(np)  !farm%AWAE%u%D_wake(np,nt)
+            
+                  
+                     do ir = 1, farm%p%NOutRadii
+                  
+                           ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                        farm%m%AllOuts(WkDfVxTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np)
+                        farm%m%AllOuts(WkDfVrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np)
+               
+                           ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
+                           !  or radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                        farm%m%AllOuts(EddVisTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np)
+                        farm%m%AllOuts(EddAmbTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np)
+                        farm%m%AllOuts(EddShrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np)
+                  
+                     end do  
+
+                  else if ( ( farm%p%OutDist(iOutDist) >= farm%WD(nt)%y%x_plane(np+1) ) .and. ( farm%p%OutDist(iOutDist) < farm%WD(nt)%y%x_plane(np) ) ) then   ! Overlapping wake volumes result in invalid output
+               
+                     farm%m%AllOuts(WkAxsXTD(iOutDist,nt)) = 0.0_ReKi
+                     farm%m%AllOuts(WkAxsYTD(iOutDist,nt)) = 0.0_ReKi
+                     farm%m%AllOuts(WkAxsZTD(iOutDist,nt)) = 0.0_ReKi
+                                                           
+                        ! Center position of the wake centerline 
+                     farm%m%AllOuts(WkPosXTD(iOutDist,nt)) = 0.0_ReKi
+                     farm%m%AllOuts(WkPosYTD(iOutDist,nt)) = 0.0_ReKi
+                     farm%m%AllOuts(WkPosZTD(iOutDist,nt)) = 0.0_ReKi
+                                                           
+                        ! Advection, deflection, and meandering  
+                        !  of the wake for downstream wake volum 
+                     farm%m%AllOuts(WkVelXTD(iOutDist,nt)) = 0.0_ReKi
+                     farm%m%AllOuts(WkVelYTD(iOutDist,nt)) = 0.0_ReKi
+                     farm%m%AllOuts(WkVelZTD(iOutDist,nt)) = 0.0_ReKi
+                                                           
+                        ! Wake diameter for downstream wake volu 
+                     farm%m%AllOuts(WkDiamTD(iOutDist,nt)) = 0.0_ReKi
+               
+                     do ir = 1, farm%p%NOutRadii
+                  
+                           ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                        farm%m%AllOuts(WkDfVxTND(ir,iOutDist,nt)) = 0.0_ReKi
+                        farm%m%AllOuts(WkDfVrTND(ir,iOutDist,nt)) = 0.0_ReKi
+               
+                           ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
+                           !  or radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
+                        farm%m%AllOuts(EddVisTND(ir,iOutDist,nt)) = 0.0_ReKi
+                        farm%m%AllOuts(EddAmbTND(ir,iOutDist,nt)) = 0.0_ReKi
+                        farm%m%AllOuts(EddShrTND(ir,iOutDist,nt)) = 0.0_ReKi
+                  
+                     end do  
+              
                      exit
+
                   end if
                   
                end do  
-               vec_interp       =  delta*farm%WD(nt)%y%xhat_plane(:, np+1) + deltad*farm%WD(nt)%y%xhat_plane(:, np)
-               norm2_vec        =  TwoNorm( vec_interp ) 
-                  ! Orientation of the wake centerline for downstream wake volume, np, of turbine, nt, in the global coordinate system, -
-               farm%m%AllOuts(WkAxsXTD(iOutDist,nt)) = vec_interp(1)/norm2_vec
-               farm%m%AllOuts(WkAxsYTD(iOutDist,nt)) = vec_interp(2)/norm2_vec
-               farm%m%AllOuts(WkAxsZTD(iOutDist,nt)) = vec_interp(3)/norm2_vec 
 
-               if ( farm%AWAE%m%parallelFlag(np,nt) ) then
-                  vec_interp       =  delta*farm%WD(nt)%y%p_plane(:, np+1) + deltad*farm%WD(nt)%y%p_plane(:, np)
-               else
-                  vec_interp = delta*farm%AWAE%m%rhat_e(:,np,nt) + deltad*farm%AWAE%m%rhat_s(:,np,nt)
-                  vec_interp = delta*farm%AWAE%m%pvec_ce(:,np,nt) + deltad*farm%AWAE%m%pvec_cs(:,np,nt) + ( delta*farm%AWAE%m%r_e(np,nt) + deltad*farm%AWAE%m%r_s(np,nt) )* vec_interp / TwoNorm(vec_interp)
-               end if
-               
-                  ! Center position of the wake centerline for downstream wake volume, np, of turbine, nt, in the global coordinate system, m
-               farm%m%AllOuts(WkPosXTD(iOutDist,nt)) = vec_interp(1)
-               farm%m%AllOuts(WkPosYTD(iOutDist,nt)) = vec_interp(2)
-               farm%m%AllOuts(WkPosZTD(iOutDist,nt)) = vec_interp(3)
-
-                  ! Advection, deflection, and meandering velocity (not including the horizontal wake-deflection correction) 
-                  !  of the wake for downstream wake volume, np, of turbine, nt, in the global coordinate system, m/s
-               farm%m%AllOuts(WkVelXTD(iOutDist,nt)) = delta*farm%AWAE%y%V_plane(1,np+1,nt) + deltad*farm%AWAE%y%V_plane(1,np,nt)
-               farm%m%AllOuts(WkVelYTD(iOutDist,nt)) = delta*farm%AWAE%y%V_plane(2,np+1,nt) + deltad*farm%AWAE%y%V_plane(2,np,nt)
-               farm%m%AllOuts(WkVelZTD(iOutDist,nt)) = delta*farm%AWAE%y%V_plane(3,np+1,nt) + deltad*farm%AWAE%y%V_plane(3,np,nt)
-
-                  ! Wake diameter for downstream wake volume, np, of turbine, nt, m
-               farm%m%AllOuts(WkDiamTD(iOutDist,nt)) = delta*farm%WD(nt)%y%D_wake(np+1) + deltad*farm%WD(nt)%y%D_wake(np)  !farm%AWAE%u%D_wake(np,nt)
-            
-                  
-               do ir = 1, farm%p%NOutRadii
-                  
-                     ! Axial and radial wake velocity deficits for radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
-                  farm%m%AllOuts(WkDfVxTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vx_wake(farm%p%OutRadii(ir),np)
-                  farm%m%AllOuts(WkDfVrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%y%Vr_wake(farm%p%OutRadii(ir),np)
-               
-                     ! Total eddy viscosity, and individual contributions to the eddy viscosity from ambient turbulence and the shear layer, 
-                     !  or radial node, OutRadii(ir), and downstream wake volume, np, of turbine, nt, m/s
-                  farm%m%AllOuts(EddVisTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_tot(farm%p%OutRadii(ir),np)
-                  farm%m%AllOuts(EddAmbTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_amb(farm%p%OutRadii(ir),np)
-                  farm%m%AllOuts(EddShrTND(ir,iOutDist,nt)) = delta*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np+1) + deltad*farm%WD(nt)%m%vt_shr(farm%p%OutRadii(ir),np)
-                  
-               end do  
             end if
+
          end do
+
       end do
       
       !.......................................................................................

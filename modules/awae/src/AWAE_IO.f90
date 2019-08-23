@@ -202,7 +202,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    integer(IntKi),              intent(  out) :: errStat
    character(*),                intent(  out) :: errMsg
 
-   integer(IntKi)                             :: NumGrid_low, NumGrid_high
+   integer(IntKi)                             :: NumGrid_high
    integer(IntKi)                             :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                       :: errMsg2       ! temporary error message 
    character(*), parameter                    :: RoutineName = 'AWAE_IO_InitGridInfo'
@@ -273,7 +273,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
    InitOut%dY_low     = gridSpacing(2)
    InitOut%dZ_low     = gridSpacing(3)
    
-   NumGrid_low        = p%nX_Low*p%nY_Low*p%nZ_Low
+   p%NumGrid_low      = p%nX_Low*p%nY_Low*p%nZ_Low
    
    p%dXYZ_Low = gridSpacing
    p%dpol = (gridSpacing(1)+gridSpacing(2)+gridSpacing(3))/3.0_ReKi
@@ -282,7 +282,7 @@ subroutine AWAE_IO_InitGridInfo(InitInp, p, InitOut, errStat, errMsg)
       ! (0,0,0) to (180,180,180) 
      
   
-   allocate( p%Grid_low(3,NumGrid_low),stat=errStat2)
+   allocate( p%Grid_low(3,p%NumGrid_low),stat=errStat2)
       if (errStat2 /= 0) then
          call SetErrStat ( ErrID_Fatal, 'Could not allocate memory for Grid_low.', errStat, errMsg, RoutineName )
          return
