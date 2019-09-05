@@ -91,13 +91,14 @@ MODULE AeroAcoustics_IO
    INTEGER(IntKi), PARAMETER      :: MaxOutPts = 1103
 contains
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE ReadInputFiles( InputFileName, BL_Files, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
     ! This subroutine reads the input file and stores all the data in the AA_InputFile structure.
     ! It does not perform data validation.
     !..................................................................................................................................
     ! Passed variables
     REAL(DbKi),              INTENT(IN)    :: Default_DT      ! The default DT (from glue code)
-    CHARACTER(*),            INTENT(IN)    :: InputFileName   ! Name of the input file
+    CHARACTER(*),            INTENT(IN)    :: InputFileName   ! Name of the aeroacoustics input file
+    CHARACTER(*), dimension(:),            INTENT(IN)    :: BL_Files         ! Name of the BL input file
     CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
     TYPE(AA_InputFile),      INTENT(OUT)   :: InputFileData   ! Data stored in the module's input file
     INTEGER(IntKi),          INTENT(OUT)   :: UnEcho          ! Unit number for the echo file
@@ -115,6 +116,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
     ErrMsg  = ''
     UnEcho  = -1
     InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
+    
 
     ! Reads the module input-file data
     CALL ReadPrimaryFile( InputFileName, InputFileData, AABlFile,  OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
@@ -135,7 +137,7 @@ SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot
 
     if ((InputFileData%ITURB.eq.2) .or. (InputFileData%X_BLMethod.eq.2)) then
         ! We need to read the BL tables
-        CALL ReadBLTables( InputFileName,InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
+        CALL ReadBLTables( InputFileName, BL_Files, InputFileData, InputFileData%BladeProps(1)%NumBlNds,  ErrStat2, ErrMsg2 )
         if (Failed())return
     endif
 
@@ -419,10 +421,11 @@ end subroutine
 
 
 
-SUBROUTINE ReadBLTables( InputFile,InputFileData, nAirfoils, ErrStat, ErrMsg )
+SUBROUTINE ReadBLTables( InputFile,BL_Files,InputFileData, nAirfoils, ErrStat, ErrMsg )
     ! Passed variables
     character(*),       intent(in)      :: InputFile                           ! Name of the file containing the primary input data
-    type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
+    character(*), dimension(:),       intent(in)      :: BL_Files                           ! Name of the file containing the primary input data    
+type(AA_InputFile), intent(inout)   :: InputFileData                       ! All the data in the Noise input file
     integer(IntKi),     intent(in)      :: nAirfoils                           ! Number of Airfoil tables 
     integer(IntKi),     intent(out)     :: ErrStat                             ! Error status
     character(*),       intent(out)     :: ErrMsg                              ! Error message
@@ -447,11 +450,9 @@ SUBROUTINE ReadBLTables( InputFile,InputFileData, nAirfoils, ErrStat, ErrMsg )
     CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
     do iAF=1,nAirfoils 
-        if (InputFileData%ITRIP.eq.0) then
-            FileName = TRIM(PriPath)//'AirfoilsModified/AF'//TRIM(Num2LStr(iAF))//'BL_TripMod0.txt'
-        ELSE
-            FileName = TRIM(PriPath)//'AirfoilsModified/AF'//TRIM(Num2LStr(iAF))//'BL_TripMod1.txt'
-        ENDIF
+
+        FileName = trim(BL_Files(iAF))
+
         print*,'AeroAcoustics_IO: reading BL table:'//trim(Filename)
 
         CALL GetNewUnit(UnIn, ErrStat2, ErrMsg2); if(Failed()) return

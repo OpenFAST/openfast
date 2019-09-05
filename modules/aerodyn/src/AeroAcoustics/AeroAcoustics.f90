@@ -84,7 +84,7 @@ subroutine AA_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    p%RootName  = TRIM(InitInp%RootName)//'.NN'
    
    ! Read the primary AeroAcoustics input file in AeroAcoustics_IO
-   call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, p%NumBlades, UnEcho, ErrStat2, ErrMsg2 )   
+   call ReadInputFiles( InitInp%InputFile, InitInp%AFInfo%BL_file, InputFileData, interval, p%RootName, p%NumBlades, UnEcho, ErrStat2, ErrMsg2 )   
    if (Failed()) return
       
    ! Validate the inputs
@@ -195,7 +195,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     tri=.true.
     IF( (p%ITURB.eq.2) .or. (p%IInflow.gt.1) )then
         ! if tno is on or one of the guidati models is on, check if we have airfoil coordinates
-        DO k=1,size(p%AFInfo) ! if any of the airfoil coordinates are missing change calucaltion method
+        DO k=1,size(p%AFInfo) ! if any of the airfoil coordinates are missing change calculation method
             IF( (size(p%AFInfo(k)%X_Coord) .lt. 5) .or. (size(p%AFInfo(k)%Y_Coord).lt.5) )then
                 IF (tri) then ! Print the message for once only
                     print*, 'Airfoil coordinates are missing: If Full or Simplified Guidati or Bl Calculation is on coordinates are needed '
@@ -207,7 +207,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
             ENDIF
         ENDDO
     ENDIF
-
+    
     ! Check 2
     ! if passed the first check and if  tno  or full guidati model is still on, turn on boundary layer calculation
     IF( (p%ITURB.eq.2) .or. (p%IInflow.eq.2) )then
