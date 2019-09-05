@@ -33,11 +33,11 @@ def readFASTOut(fastoutput):
 def passRegressionTest(norm, tolerance):
     return True if max(norm) < tolerance else False
 
-def maxnorm(data):
-    return LA.norm(data, np.inf, axis=0)
+def maxnorm(data, axis=0):
+    return LA.norm(data, np.inf, axis=axis)
     
-def l2norm(data):
-    return LA.norm(data, 2, axis=0)
+def l2norm(data, axis=0):
+    return LA.norm(data, 2, axis=axis)
 
 def calculate_relative_norm(testData, baselineData):
     norm_diff = l2norm(testData - baselineData)
@@ -46,21 +46,19 @@ def calculate_relative_norm(testData, baselineData):
     # replace any 0s with small number before for division
     norm_baseline[norm_baseline == 0] = 1e-16
     
-    norm = np.ones(len(norm_baseline))
-    for i,n in enumerate(norm_baseline):
-        norm[i] = norm_diff[i] if n < 1 else norm_diff[i] / norm_baseline[i]
+    norm = norm_diff.copy()
+    ix_non_diff = (norm_baseline >= 1)
+    norm[ix_non_diff] = norm_diff[ix_non_diff] / norm_baseline[ix_non_diff]
     return norm
     
-def calculate_max_norm_over_range(testData, baselineData): 
-    numChannels = baselineData.shape[1]
+def calculate_max_norm_over_range(test_data, baseline_data):
+    channel_ranges = np.abs(baseline_data.max(axis=0) - baseline_data.min(axis=0))
+    diff = abs(test_data - baseline_data)
     
-    channelRanges = [abs(max(baselineData[:,i]) - min(baselineData[:,i])) for i in range(numChannels)]
-    diff = abs(testData-baselineData)
-    norm = np.zeros(numChannels)
-    
-    for i, channelRange in enumerate(channelRanges):
-        norm[i] = maxnorm( diff[:,i] ) if channelRange < 1 else maxnorm( diff[:,i] / channelRange )
-        
+    ix_non_diff = (channel_ranges >= 1)
+    norm = maxnorm(diff, axis=0)
+    norm[ix_non_diff] = maxnorm(diff[:, ix_non_diff] / channel_ranges[ix_non_diff])
+
     return norm
     
 def calculate_max_norm(testData, baselineData):
