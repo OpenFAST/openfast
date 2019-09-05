@@ -160,26 +160,30 @@ rtl.validateFileOrExit(baselineOutFile)
 
 testData, testInfo, testPack = pass_fail.readFASTOut(localOutFile)
 baselineData, baselineInfo, _ = pass_fail.readFASTOut(baselineOutFile)
-normalizedNorm, maxNorm = pass_fail.calculateNorms(testData, baselineData, tolerance)
+performance = pass_fail.calculateNorms(testData, baselineData, tolerance)
+normalizedNorm = performance[:, 1]
 
 # export all case summaries
-results = list(zip(testInfo["attribute_names"], normalizedNorm, maxNorm))
+results = list(zip(testInfo["attribute_names"], [*performance]))
+results_max = performance.max(axis=0)
 exportCaseSummary(testBuildDirectory, caseName, results)
 
 # failing case
 if not pass_fail.passRegressionTest(normalizedNorm, tolerance):
     if plotError:
         from errorPlotting import initializePlotDirectory, plotOpenfastError
-        failChannels = [channel for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
-        failRelNorm = [normalizedNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
-        failMaxNorm = [maxNorm[i] for i,channel in enumerate(testInfo["attribute_names"]) if normalizedNorm[i] > tolerance]
-        initializePlotDirectory(localOutFile, failChannels, failRelNorm, failMaxNorm)
+        ixFailChannels = [i for i in range(len(testInfo["attribute_names"])) if normalizedNorm[i] > tolerance]
+        failChannels = [channel for i, channel in enumerate(testInfo["attribute_names"]) if i in ixFailChannels]
+        failResults = [res for i, res in enumerate(results) if i in ixFailChannels]
+        initializePlotDirectory(localOutFile, failChannels, results, results_max)
         for channel in failChannels:
             try:
                 plotOpenfastError(localOutFile, baselineOutFile, channel)
             except:
                 error = sys.exc_info()[1]
                 print("Error generating plots: {}".format(error.msg))
+        finalizePlotDirectory(localOutFile, failChannels)
+
     sys.exit(1)
 
 # passing case
