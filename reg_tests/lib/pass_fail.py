@@ -39,7 +39,7 @@ def maxnorm(data):
 def l2norm(data):
     return LA.norm(data, 2, axis=0)
 
-def calculateRelativeNorm(testData, baselineData):
+def calculate_relative_norm(testData, baselineData):
     norm_diff = l2norm(testData - baselineData)
     norm_baseline = l2norm(baselineData)
     
@@ -51,7 +51,7 @@ def calculateRelativeNorm(testData, baselineData):
         norm[i] = norm_diff[i] if n < 1 else norm_diff[i] / norm_baseline[i]
     return norm
     
-def calculateMaxNormOverRange(testData, baselineData, tolerance): 
+def calculate_max_norm_over_range(testData, baselineData): 
     numChannels = baselineData.shape[1]
     
     channelRanges = [abs(max(baselineData[:,i]) - min(baselineData[:,i])) for i in range(numChannels)]
@@ -63,13 +63,18 @@ def calculateMaxNormOverRange(testData, baselineData, tolerance):
         
     return norm
     
-def calculateMaxNorm(testData, baselineData):
+def calculate_max_norm(testData, baselineData):
     return maxnorm(abs(testData - baselineData))
     
-def calculateNorms(testData, baselineData, tolerance):
-    relativeNorm = calculateMaxNormOverRange(testData, baselineData, tolerance)
-    maxNorm = calculateMaxNorm(testData, baselineData)
-    return relativeNorm, maxNorm
+def calculateNorms(test_data, baseline_data):
+    relative_norm = calculate_max_norm_over_range(test_data, baseline_data)
+    max_norm = calculate_max_norm(test_data, baseline_data)
+    relative_l2_norm = calculate_relative_norm(test_data, baseline_data)
+    results = np.hstack((
+        relative_norm.reshape(-1, 1), relative_l2_norm.reshape(-1, 1),
+        max_norm.reshape(-1, 1)
+    ))
+    return results
     
 if __name__=="__main__":
 

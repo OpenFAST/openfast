@@ -171,7 +171,7 @@ def initializePlotDirectory(testSolution, plotList, results, results_max):
         html.write('  <h4 class="text-center">Maximum values for each norm are highlighted</h2>' + '\n')
         
         results_names = [
-            'Channel', 'Relative Max Norm', 'Infinity Norm', 'Relative L2 Norm'
+            'Channel', 'Relative Max Norm', 'Relative L2 Norm', 'Infinity Norm'
         ]
         data = [
             ('<a href="#{0}">{0}</a>'.format(plot), *results[i])
