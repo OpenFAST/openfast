@@ -70,9 +70,9 @@ buildDirectory = args.buildDirectory[0]
 tolerance = args.tolerance[0]
 systemName = args.systemName[0]
 compilerId = args.compilerId[0]
-plotError = args.plot if args.plot is False else True
-noExec = args.noExec if args.noExec is False else True
-verbose = args.verbose if args.verbose is False else True
+plotError = args.plot if args.plot
+noExec = args.noExec if args.noExec
+verbose = args.verbose if args.verbose
 
 # validate inputs
 rtl.validateExeOrExit(executable)
