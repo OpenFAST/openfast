@@ -72,6 +72,20 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     
     return script, div
 
+def _replace_id_div(html_string, plot):
+    id_start = html_string.find('id=') + 4
+    id_end = html_string[id_start:].find('"') + id_start
+    html_string = plot.join((html_string[:id_start], html_string[id_end:]))
+    return html_string
+
+def _replace_id_script(html_string, plot):
+    id_start = html_string.find('var render_items')    
+    id_start += html_string[id_start:].find('roots')    
+    id_start += html_string[id_start:].find('":"') + 3    
+    id_end = html_string[id_start:].find('"') + id_start
+    html_string = plot.join((html_string[:id_start], html_string[id_end:]))
+    return html_string
+
 def _save_plot(script, div, path, attribute):
     div_class = ' class="col-sm-12 col-md-6 col-lg-6"'
 
@@ -82,7 +96,7 @@ def _save_plot(script, div, path, attribute):
     
     file_name = "_div".join((attribute, ".txt"))
     with open(os.path.join(path, file_name), 'w') as f:
-        div _replace_id_div(div, attribute)
+        div = _replace_id_div(div, attribute)
         ix_insert = div.find('></div>')
         div = div_class.join((div[:ix_insert], div[ix_insert:]))
         f.write(div)
@@ -162,7 +176,6 @@ def initializePlotDirectory(testSolution, plotList, results, results_max):
     rtl.validateDirOrMkdir(plotPath)
     
     with open(os.path.join(plotPath, "plots.html"), "w") as html:
-        
         html.write( _htmlHead(caseName) )
         
         html.write('<body>' + '\n')
@@ -203,20 +216,6 @@ def initializePlotDirectory(testSolution, plotList, results, results_max):
         html.write('    <br>' + '\n')
         html.write('    <div class="row">' + '\n')
 
-def _replace_id_div(html_string, plot):
-    id_start = html_string.find('id=') + 4
-    id_end = html_string[id_start:].find('"') + id_start
-    html_string = plot.join((html_string[:id_start], html_string[id_end:]))
-    return html_string
-
-def _replace_id_script(html_string, plot):
-    id_start = html_string.find('var render_items')    
-    id_start += html_string[id_start:].find('roots')    
-    id_start += html_string[id_start:].find('":"') + 3    
-    id_end = html_string[id_start:].find('"') + id_start
-    html_string = plot.join((html_string[:id_start], html_string[id_end:]))
-    return html_string
-
 def finalizePlotDirectory(test_solution, plot_list):
     base_path = os.path.sep.join(test_solution.split(os.path.sep)[:-1])
     plot_path = os.path.join(base_path, "plots")
@@ -224,9 +223,9 @@ def finalizePlotDirectory(test_solution, plot_list):
     with open(os.path.join(plot_path, 'plots.html'), 'r') as html:
         html = html.read()
         script_ix = html.rfind('</script>\n') + len('</script>\n')
-        div_class = ' class="col-sm-12 col-md-6 col-lg-6"'
+
         for i, plot in enumerate(plot_list):
-            _path = os.path.join(plotPath, f'{plot}_div.txt')
+            _path = os.path.join(plot_path, plot + '_div.txt')
             with open(_path, 'r') as f:
                 div = f.read().strip().join(('      ', '\n'))
             html = ''.join((html, div))
@@ -288,9 +287,8 @@ def exportResultsSummary(path, results):
         html.write( _htmlTail() )
     html.close()
     
-def exportCaseSummary(path, case, results):
+def exportCaseSummary(path, case, results, results_max):
     with open(os.path.join(path, case+".html"), "w") as html:
-        
         html.write( _htmlHead(case + " Summary") )
         
         html.write('<body>' + '\n')
@@ -300,10 +298,12 @@ def exportCaseSummary(path, case, results):
         html.write('  <div class="container">' + '\n')
         
         # Channel - Relative Norm - Max Norm
-        data = [(r[0], r[1], r[2]) for i,r in enumerate(results)]
-        maxRelNorm = max([r[1] for i,r in enumerate(results)])
-        maxMaxNorm = max([r[2] for i,r in enumerate(results)])
-        table = _tableHead(['Channel', 'Relative Max Norm', 'Infinity Norm'])
+        data = [(r[0], r[1][0], r[1][1], r[1][2]) for i,r in enumerate(results)]
+        cols = [
+            'Channel', 'Relative Max Norm',
+            'Relative L2 Norm', 'Infinity Norm'
+        ]
+        table = _tableHead(cols)
         body = '      <tbody>' + '\n'
         for i, d in enumerate(data):
             body += '        <tr>' + '\n'
@@ -311,15 +311,12 @@ def exportCaseSummary(path, case, results):
             body += '          <td>{0:s}</td>'.format(d[0]) + '\n'
             
             fmt = '{0:0.4e}'
-            if d[1] == maxRelNorm:
-                body += ('          <td class="cell-highlight">' + fmt + '</td>').format(d[1]) + '\n'
-            else:
-                body += ('          <td>' + fmt + '</td>').format(d[1]) + '\n'
-                    
-            if d[2] == maxMaxNorm:
-                body += ('          <td class="cell-highlight">' + fmt + '</td>').format(d[2]) + '\n'
-            else:
-                body += ('          <td>' + fmt + '</td>').format(d[2]) + '\n'
+            for j, val in enumerate(d[1:]):
+                if val == results_max[j]:
+                    body += ('          <td class="cell-highlight">' + fmt + '</td>\n').format(d[1])
+                else:
+                    body += ('          <td>' + fmt + '</td>\n').format(d[1])
+            
             body += '        </tr>' + '\n'
         body += '      </tbody>' + '\n'
         table += body
@@ -330,4 +327,3 @@ def exportCaseSummary(path, case, results):
         html.write('  </div>' + '\n')
         html.write('</body>' + '\n')
         html.write( _htmlTail() )
-    html.close()
