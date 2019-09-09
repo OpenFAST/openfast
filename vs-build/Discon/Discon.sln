@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2043
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "Discon", "Discon.vfproj", "{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}"
 EndProject
@@ -19,10 +19,10 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Debug|Win32.ActiveCfg = Debug|Win32
 		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Debug|Win32.Build.0 = Debug|Win32
-		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Debug|x64.ActiveCfg = Debug|Win32
-		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Debug|x64.Build.0 = Debug|Win32
-		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Release|Win32.ActiveCfg = Release|x64
-		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Release|Win32.Build.0 = Release|x64
+		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Debug|x64.ActiveCfg = Debug|x64
+		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Debug|x64.Build.0 = Debug|x64
+		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Release|Win32.ActiveCfg = Release|Win32
+		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Release|Win32.Build.0 = Release|Win32
 		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Release|x64.ActiveCfg = Release|x64
 		{183CC593-AD4C-4A15-81C1-7D6D20A9A5ED}.Release|x64.Build.0 = Release|x64
 		{11A28263-1385-47DF-9122-30BF9C0DF013}.Debug|Win32.ActiveCfg = Debug|Win32
@@ -44,5 +44,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A4EE85D3-EA0C-4285-B446-0E8D70945A10}
 	EndGlobalSection
 EndGlobal

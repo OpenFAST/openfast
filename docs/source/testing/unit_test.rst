@@ -99,7 +99,7 @@ structured as
 ::
   
   openfast/
-  |-- modules-local/
+  |-- modules/
     |-- beamdyn/
       |-- src/
         |-- BeamDyn.f90
