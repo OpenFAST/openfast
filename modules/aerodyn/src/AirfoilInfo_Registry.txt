@@ -90,6 +90,7 @@ typedef	^	^	INTEGER	NumClReKts	-	-	-	"The number of log(Re) knots for 2D splines
 typedef	^	^	INTEGER	NumCmAoAkts	-	-	-	"The number of angle-of-attack knots for 2D splines of Cm"	-
 typedef	^	^	INTEGER	NumCmReKts	-	-	-	"The number of log(Re) knots for 2D splines of Cm"	-
 typedef	^	^	INTEGER	NumCoords	-	-	-	"The number of coordinates in the airfoil-shape table"	-
+typedef	^	^	CHARACTER(1024)	BL_file  	-	-	-	"The name of the file with the boundary layer data"	-
 typedef	^	^	INTEGER	NumCpminAoAkts	-	-	-	"The number of angle-of-attack knots for 2D splines of Cpmin"	-
 typedef	^	^	INTEGER	NumCpminReKts	-	-	-	"The number of log(Re) knots for 2D splines of Cpmin"	-
 typedef	^	^	INTEGER	NumTabs	-	-	-	"The number of airfoil tables in the airfoil file"	-

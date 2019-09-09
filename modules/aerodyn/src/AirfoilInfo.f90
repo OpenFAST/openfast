@@ -517,11 +517,13 @@ CONTAINS
       CHARACTER(ErrMsgLen)                    :: ErrMsg2
       CHARACTER(*), PARAMETER                 :: RoutineName = 'ReadAFfile'
       CHARACTER(10)                           :: defaultStr
-      
+      CHARACTER(1024)                           :: PriPath
+    
       ErrStat = ErrID_None
       ErrMsg  = ""
       defaultStr = ""
-      
+      ! Getting parent folder of airfoils data (e.g. "Arifoils/")
+      CALL GetPath( AFFile, PriPath )
          ! Process the (possibly) nested set of files.  This copies the decommented contents of
          ! AFI_FileInfo%FileName and the files it includes (both directly and indirectly) into
          ! the FileInfo structure that we can then parse.
@@ -585,9 +587,14 @@ CONTAINS
          ENDDO ! Row
 
       ENDIF
-
-
-         ! How many columns do we need to read in the input and how many total coefficients will be used?
+      
+      
+      CALL ParseVar ( FileInfo, CurLine, 'BL_file' , AFInfo%BL_file , ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      AFInfo%BL_file=trim(PriPath)//trim(AFInfo%BL_file)
+         
+    ! How many columns do we need to read in the input and how many total coefficients will be used?
 
       Cols2Parse = MAX( InCol_Alfa, InCol_Cl, InCol_Cd, InCol_Cm, InCol_Cpmin )
       ALLOCATE ( SiAry( Cols2Parse ) , STAT=ErrStat2 )
