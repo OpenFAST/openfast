@@ -5,7 +5,7 @@
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
 		<Configuration Name="Debug|Win32" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)_$(ConfigurationName)">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUnalignedData="false" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" WarnUnalignedData="false" InitLocalVarToNAN="true" FloatingPointExceptionHandling="fpe0" FloatingPointStackCheck="true" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="999999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -15,7 +15,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|Win32" OutputDirectory="..\..\build\bin">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" InitLocalVarToNAN="true" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" InitLocalVarToNAN="true" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" OutputFile="$(OutDir)\HydroDynDriver_dev_$(ConfigurationName)_$(PlatformName).exe" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="999999999" LargeAddressAware="addrAwareLarge"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
@@ -25,7 +25,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Debug|x64">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" WarnDeclarations="true" RealKIND="realKIND8" DoublePrecisionKIND="doublePrecisionKIND16" Traceback="true" NullPointerCheck="true" BoundsCheck="true" UninitializedVariablesCheck="true" RuntimeLibrary="rtMultiThreadedDebug" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" GenerateDebugInformation="true" SubSystem="subSystemConsole" StackReserveSize="100000000"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -35,7 +35,7 @@
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
 		<Configuration Name="Release|x64" OutputDirectory="..\..\build\bin" TargetName="$(ProjectName)_$(PlatformName)">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" UseMkl="mklSequential"/>
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" PreprocessorDefinitions="&quot;GIT_INCLUDE_FILE='$(ProjectDir)\..\gitVersionInfo.h'&quot;" StandardWarnings="standardWarningsF03" DisableSpecificDiagnostics="5268" UseMkl="mklSequential"/>
 				<Tool Name="VFLinkerTool" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" GenerateManifest="false" SubSystem="subSystemConsole" StackReserveSize="999999999"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
@@ -50,7 +50,7 @@
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<Filter Name="HydroDyn">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Conv_Radiation.txt">
+		<File RelativePath="..\..\modules\HydroDyn\src\Conv_Radiation.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Conv_Radiation" Description="Running Registry for Conv_Radiation" Outputs="..\..\build\types-files\Conv_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
@@ -58,7 +58,7 @@
 		<File RelativePath="..\..\build\types-files\Conv_Radiation_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Current.txt">
+		<File RelativePath="..\..\modules\HydroDyn\src\Current.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Current" Description="Running Registry for Current" Outputs="..\..\build\types-files\Current_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
@@ -66,7 +66,7 @@
 		<File RelativePath="..\..\build\types-files\Current_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\HydroDyn.txt">
+		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat HydroDyn" Description="Running Registry for HydroDyn" Outputs="..\..\build\types-files\HydroDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
@@ -74,7 +74,7 @@
 		<File RelativePath="..\..\build\types-files\HydroDyn_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Morison.txt">
+		<File RelativePath="..\..\modules\HydroDyn\src\Morison.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Morison" Description="Running Registry for Morison" Outputs="..\..\build\types-files\Morison_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
@@ -82,7 +82,7 @@
 		<File RelativePath="..\..\build\types-files\Morison_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\hydrodyn\src\SS_Excitation.txt">
+		<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -92,7 +92,7 @@
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Excitation" Description="Running Registry for SS_Excitation" Outputs="..\..\build\types-files\SS_Excitation_Types.f90"/></FileConfiguration></File>
 		<File RelativePath="..\..\build\types-files\SS_Excitation_Types.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\SS_Radiation.txt">
+		<File RelativePath="..\..\modules\HydroDyn\src\SS_Radiation.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SS_Radiation" Description="Running Registry for SS_Radiation" Outputs="..\..\build\types-files\SS_Radiation_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
@@ -100,12 +100,12 @@
 		<File RelativePath="..\..\build\types-files\SS_Radiation_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\WAMIT.txt">
+		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\build\types-files\WAMIT_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT" Description="Running Registry for WAMIT" Outputs="..\..\build\types-files\WAMIT_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\WAMIT2.txt">
+		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT2.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat WAMIT2" Description="Running Registry for WAMIT2" Outputs="..\..\build\types-files\WAMIT2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
@@ -116,12 +116,12 @@
 		<File RelativePath="..\..\build\types-files\WAMIT_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Waves.txt">
+		<File RelativePath="..\..\modules\HydroDyn\src\Waves.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\build\types-files\Waves_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves" Description="Running Registry for Waves" Outputs="..\..\build\types-files\Waves_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Waves2.txt">
+		<File RelativePath="..\..\modules\HydroDyn\src\Waves2.txt">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat Waves2" Description="Running Registry for Waves2" Outputs="..\..\build\types-files\Waves2_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
@@ -132,27 +132,27 @@
 		<File RelativePath="..\..\build\types-files\Waves_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Conv_Radiation.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Current.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\HydroDyn.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\HydroDyn_DriverCode.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\HydroDyn_Input.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\HydroDyn_Output.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Morison.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Morison_Output.f90"/>
-		<File RelativePath="..\..\modules-local\hydrodyn\src\SS_Excitation.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\SS_Radiation.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\UserWaves.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\WAMIT.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\WAMIT2.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\WAMIT2_Output.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\WAMIT_Interp.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\WAMIT_Output.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Waves.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Waves2.f90"/>
-		<File RelativePath="..\..\modules-local\HydroDyn\src\Waves2_Output.f90"/></Filter>
+		<File RelativePath="..\..\modules\HydroDyn\src\Conv_Radiation.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\Current.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn_DriverCode.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn_Input.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\HydroDyn_Output.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\Morison.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\Morison_Output.f90"/>
+		<File RelativePath="..\..\modules\hydrodyn\src\SS_Excitation.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\SS_Radiation.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\UserWaves.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT2.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT2_Output.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT_Interp.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\WAMIT_Output.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\Waves.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\Waves2.f90"/>
+		<File RelativePath="..\..\modules\HydroDyn\src\Waves2_Output.f90"/></Filter>
 		<Filter Name="NetLib">
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\fftpack\fftpack4.1.f">
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\fftpack4.1.f">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -161,10 +161,10 @@
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnDeclarations="false" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" StandardWarnings="standardWarningsNone" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\fftpack\NWTC_FFTPACK.f90"/>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\fftpack\NWTC_FFTPACK.f90"/>
+		<File RelativePath="..\..\modules\nwtc-library\src\NetLib\lapack\NWTC_LAPACK.f90"/></Filter>
 		<Filter Name="NWTC_Library">
-		<File RelativePath="..\..\modules-local\nwtc-library\src\ModMesh.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -173,7 +173,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\ModMesh_Mapping.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Mapping.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -182,7 +182,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\ModMesh_Types.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\ModMesh_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -191,7 +191,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Base.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Base.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -200,7 +200,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_IO.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_IO.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -209,7 +209,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Library.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -218,7 +218,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Library_Types.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Library_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -227,7 +227,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\NWTC_Num.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\NWTC_Num.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -236,7 +236,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\SingPrec.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\SingPrec.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -245,7 +245,7 @@
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules-local\nwtc-library\src\SysIVF.f90">
+		<File RelativePath="..\..\modules\nwtc-library\src\SysIVF.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
@@ -253,5 +253,6 @@
 			<FileConfiguration Name="Debug|x64">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter></Filter></Files>
+				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
+		<File RelativePath="..\..\modules\version\src\VersionInfo.f90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

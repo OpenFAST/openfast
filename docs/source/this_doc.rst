@@ -3,8 +3,18 @@
 This documentation
 ==================
 
-OpenFAST documentation is built using `Sphinx <http://www.sphinx-doc.org>`_, which uses `reStructuredText <http://docutils.sourceforge.net/rst.html>`_ as its markup language. 
-Online documentation is hosted on `readthedocs <http://openfast.readthedocs.io>`_, where one can choose between documentation generated from the OpenFAST `master` or `dev` github branches  (if viewing this on http://openfast.readthedocs.io click on  ``Read the Docs`` "box" on the lower left corner of the browser screen for options).  
+OpenFAST documentation is hosted on
+`readthedocs <http://openfast.readthedocs.io/>`_, and is automatically
+generated from both the
+`master <http://github.com/openfast/openfast/tree/master/>`_ and
+`dev <http://github.com/openfast/openfast/tree/dev/>`_ branches whenever
+new commits are added. A PDF of the documentation can be retrieved from
+`readthedocs <http://openfast.readthedocs.io/>`_ by clicking the arrow on the
+lower left corner of the page next to ``v:master`` or ``v:dev``.
+
+While OpenFAST developer documentation is being enhanced here, developers are
+encouraged to consult the legacy FAST v8
+`Programmer's Handbook <https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf>`_.
 
 This documentation is divided into two parts:
 
@@ -12,9 +22,9 @@ This documentation is divided into two parts:
 
    Directed towards end-users, this part provides detailed documentation
    regarding installation and usage of the OpenFAST and its underlying modules,
-   as well as theory and verification documentation. 
-   Also included are instructions for using the automated test suite, which 
-   serves as a suite of examples.
+   as well as theory and verification documentation. Also included are
+   instructions for using the automated test suite, which serves as a suite of
+   examples.
 
 :ref:`dev_guide`
 
@@ -22,6 +32,3 @@ This documentation is divided into two parts:
    functionality provided within OpenFAST. Here you will find details
    regarding the code structure, API supported by various classes, and links to
    source code documentation extracted using Doxygen.
-
-**Note:** If viewing this on http://openfast.readthedocs.io,  one can get this documentation in PDF form via ``Read the Docs`` "box" on the lower left corner of the browser screen.  
-
