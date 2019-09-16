@@ -48,7 +48,7 @@ def _parseSolution(solution):
 def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     from bokeh.embed import components
     from bokeh.layouts import gridplot
-    from bokeh.plotting import figure, output_file, show
+    from bokeh.plotting import figure
     from bokeh.models.tools import HoverTool
     from bokeh.models.widgets import RangeSlider
 
@@ -67,7 +67,7 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     p2.line(xseries, abs(y2series - y1series), color='blue')
     p2.add_tools(HoverTool(tooltips=[('Time','$x'), ('Error', '$y')], mode='vline'))
 
-    grid = gridplot([[p1], [p2]], plot_width=650, plot_height=375)
+    grid = gridplot([[p1, p2]], plot_width=650, plot_height=375, sizing_mode="scale_both")
     script, div = components(grid)
     
     return script, div
@@ -99,6 +99,8 @@ def _save_plot(script, div, path, attribute):
         div = _replace_id_div(div, attribute)
         ix_insert = div.find('></div>')
         div = div_class.join((div[:ix_insert], div[ix_insert:]))
+        style = 'style="margin:10 auto"'
+        div = div.replace("<div", " ".join(("<div", style)))
         f.write(div)
 
 def plotOpenfastError(testSolution, baselineSolution, attribute):
@@ -145,10 +147,10 @@ def _htmlHead(title):
     
     head += '  <style media="screen" type="text/css">'
     head += '    .cell-warning {'
-    head += '      background-color: #FF6666;'
+    head += '      background-color: #efc15c;'
     head += '    }'
     head += '    .cell-highlight {'
-    head += '      background-color: #E5E589;'
+    head += '      background-color: #f5ed86 ;'
     head += '    }'
     head += '  </style>'
     head += '</head>' + '\n'
@@ -168,59 +170,12 @@ def _tableHead(columns):
     head += '        </tr>' + '\n'
     head += '      </thead>' + '\n'
     return head
-    
-def initializePlotDirectory(testSolution, plotList, results, results_max):
-    basePath = os.path.sep.join(testSolution.split(os.path.sep)[:-1])
-    plotPath = os.path.join(basePath, "plots")
-    caseName = basePath.split(os.path.sep)[-1]
-    rtl.validateDirOrMkdir(plotPath)
-    
-    with open(os.path.join(plotPath, "plots.html"), "w") as html:
-        html.write( _htmlHead(caseName) )
-        
-        html.write('<body>' + '\n')
-        html.write('  <h2 class="text-center">{}</h2>'.format(caseName) + '\n')
-        html.write('  <div class="container">' + '\n')
-        html.write('  <h4 class="text-center">Maximum values for each norm are highlighted</h2>' + '\n')
-        
-        results_names = [
-            'Channel', 'Relative Max Norm', 'Relative L2 Norm', 'Infinity Norm'
-        ]
-        data = [
-            ('<a href="#{0}">{0}</a>'.format(plot), *results[i])
-            for i, plot in enumerate(plotList)
-        ]
-        max_results = {
-            header: maximum
-            for header, maximum in zip(results_names[1:], results_max)
-        }
-        table = _tableHead(results_names)
-        body = '      <tbody>' + '\n'
-        for i, d in enumerate(data):
-            body += '        <tr>\n'
-            body += '          <th scope="row">{}</th>'.format(i+1) + '\n'
-            body += '          <td>{0:s}</td>'.format(d[0]) + '\n'
-            
-            fmt = '{0:0.4e}'
-            for val, name in zip(d[2], results_names[1:]):
-                if val == max_results[name]:
-                    body += ('          <td class="cell-highlight">' + fmt + '</td>\n').format(val)
-                else:
-                    body += ('          <td>' + fmt + '</td>\n').format(val)
-            body += '        </tr>\n'
-        body += '      </tbody>\n'
-        table += body
-        table += '    </table>\n'
-        html.write(table)
-        
-        html.write('    <br>' + '\n')
-        html.write('    <div class="row">' + '\n')
 
-def finalizePlotDirectory(test_solution, plot_list):
+def finalizePlotDirectory(test_solution, plot_list, case):
     base_path = os.path.sep.join(test_solution.split(os.path.sep)[:-1])
     plot_path = os.path.join(base_path, "plots")
 
-    with open(os.path.join(plot_path, 'plots.html'), 'r') as html:
+    with open(os.path.join(base_path, '.'.join((case, 'html'))), 'r') as html:
         html = html.read()
         script_ix = html.rfind('</script>\n') + len('</script>\n')
 
@@ -248,7 +203,7 @@ def finalizePlotDirectory(test_solution, plot_list):
 
     script = ''.join((script, '\n'))
     html = script.join((html[:script_ix], html[script_ix:]))
-    with open(os.path.join(plot_path, 'plots.html'), 'w') as f:
+    with open(os.path.join(base_path, '.'.join((case, 'html'))), 'w') as f:
         f.write(html)
     
 def exportResultsSummary(path, results):
@@ -287,23 +242,25 @@ def exportResultsSummary(path, results):
         html.write( _htmlTail() )
     html.close()
     
-def exportCaseSummary(path, case, results, results_max):
+def exportCaseSummary(path, case, results, results_max, tolerance):
     with open(os.path.join(path, case+".html"), "w") as html:
         html.write( _htmlHead(case + " Summary") )
         
-        html.write('<body>' + '\n')
-        html.write('  <h2 class="text-center">{}</h2>'.format(case + " Summary") + '\n')
-        html.write('  <h4 class="text-center"><a href="plots/plots.html">Go To Plots</a></h2>' + '\n')
-        html.write('  <h4 class="text-center">Maximum values for each norm are highlighted</h2>' + '\n')
-        html.write('  <div class="container">' + '\n')
+        html.write('<body>\n')
+        html.write('  <h2 class="text-center">{}</h2>\n'.format(case + " Summary"))
+        html.write('  <h4 class="text-center">Maximum values for each norm are <span class="cell-warning">highlighted</span> and failing norms (norm >= {0}) are <span class="cell-highlight">highlighted</span></h2>\n'.format(tolerance))
+        html.write('  <div class="container">\n')
         
-        # Channel - Relative Norm - Max Norm
-        data = [(r[0], r[1][0], r[1][1], r[1][2]) for i,r in enumerate(results)]
+        data = [
+            ('<a href="#{0}">{0}</a>'.format(attribute), *norms)
+            for attribute, *norms in results
+        ]
         cols = [
             'Channel', 'Relative Max Norm',
             'Relative L2 Norm', 'Infinity Norm'
         ]
         table = _tableHead(cols)
+        
         body = '      <tbody>' + '\n'
         for i, d in enumerate(data):
             body += '        <tr>' + '\n'
@@ -311,11 +268,13 @@ def exportCaseSummary(path, case, results, results_max):
             body += '          <td>{0:s}</td>'.format(d[0]) + '\n'
             
             fmt = '{0:0.4e}'
-            for j, val in enumerate(d[1:]):
+            for j, val in enumerate(d[1]):
                 if val == results_max[j]:
-                    body += ('          <td class="cell-highlight">' + fmt + '</td>\n').format(d[1])
+                    body += ('          <td class="cell-warning">' + fmt + '</td>\n').format(val)
+                elif val > tolerance:
+                    body += ('          <td class="cell-highlight">' + fmt + '</td>\n').format(val)
                 else:
-                    body += ('          <td>' + fmt + '</td>\n').format(d[1])
+                    body += ('          <td>' + fmt + '</td>\n').format(val)
             
             body += '        </tr>' + '\n'
         body += '      </tbody>' + '\n'
