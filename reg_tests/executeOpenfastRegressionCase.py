@@ -58,7 +58,7 @@ parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, 
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
 parser.add_argument("-p", "-plot", dest="plot", action='store_false', help="bool to include matplotlib plots in failed cases")
-parser.add_argument("-n", "-no-exec", dest="noExec", action='store_false', help="bool to prevent execution of the test cases")
+parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
 parser.add_argument("-v", "-verbose", dest="verbose", action='store_false', help="bool to include verbose system output")
 
 args = parser.parse_args()
@@ -166,23 +166,22 @@ normalizedNorm = performance[:, 1]
 # export all case summaries
 results = list(zip(testInfo["attribute_names"], [*performance]))
 results_max = performance.max(axis=0)
-exportCaseSummary(testBuildDirectory, caseName, results, results_max)
+exportCaseSummary(testBuildDirectory, caseName, results, results_max, tolerance)
 
 # failing case
 if not pass_fail.passRegressionTest(normalizedNorm, tolerance):
     if plotError:
-        from errorPlotting import initializePlotDirectory, finalizePlotDirectory, plotOpenfastError
+        from errorPlotting import finalizePlotDirectory, plotOpenfastError
         ixFailChannels = [i for i in range(len(testInfo["attribute_names"])) if normalizedNorm[i] > tolerance]
         failChannels = [channel for i, channel in enumerate(testInfo["attribute_names"]) if i in ixFailChannels]
         failResults = [res for i, res in enumerate(results) if i in ixFailChannels]
-        initializePlotDirectory(localOutFile, failChannels, results, results_max)
         for channel in failChannels:
             try:
                 plotOpenfastError(localOutFile, baselineOutFile, channel)
             except:
                 error = sys.exc_info()[1]
                 print("Error generating plots: {}".format(error.msg))
-        finalizePlotDirectory(localOutFile, failChannels)
+        finalizePlotDirectory(localOutFile, failChannels, caseName)
 
     sys.exit(1)
 
