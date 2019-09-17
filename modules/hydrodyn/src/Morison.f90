@@ -1611,13 +1611,13 @@ SUBROUTINE SplitElementOnZBoundary( axis, boundary, iCurrentElement, numNodes, n
    CALL FindInterpFactor( boundary, node1%JointPos(axis), node2%JointPos(axis), s )
    newNode = node1 ! copy all base node properties
    
-   newNode%JointPos(axis) =  boundary                    !@mhall: set [axis] coordinate of new node based on provided input [boundary]
-   
    !@mthall: set other two coordinates of new node based on interpolation of original end node coordinates
    DO I=axis,axis+1
       J = MOD(I,3) + 1
       newNode%JointPos(J) =  node1%JointPos(J)*(1-s) + node2%JointPos(J)*s
    END DO
+   
+   newNode%JointPos(axis) =  boundary                    !@mhall: set [axis] coordinate of new node based on provided input [boundary]
    
    newNode%R_LToG         =  node1%R_LToG   
       ! Create the new  node information.  
@@ -3794,7 +3794,7 @@ SUBROUTINE Morison_ProcessMorisonGeometry( InitInp, ErrStat, ErrMsg )
   
       ! Local variables
          
-   INTEGER                                      :: I    !, J, j1, j2, tempINT                ! generic integer for counting
+   INTEGER                                      :: I, J  !, j1, j2, tempINT                ! generic integer for counting
 !   TYPE(Morison_JointType)                      :: joint1, joint2                                   
 !   Real(ReKi)                                   :: z1
 !   Real(ReKi)                                   :: z2
@@ -3920,6 +3920,24 @@ SUBROUTINE Morison_ProcessMorisonGeometry( InitInp, ErrStat, ErrMsg )
             InitInp%Elements(I)%InpMbrDist1         = 1.0
             InitInp%Elements(I)%InpMbrDist2         = 0.0
             
+            ! --- Swap member coeffs if needed. 
+
+            ! Fine in this loop since there is a unique CoefMember per Member (otherwise we could swap them several times).
+            J = InitInp%InpMembers(I)%MmbrCoefIDIndx ! Index in CoefMembers table
+            IF (J>0) THEN 
+                ! NOTE: SWAP defined at the end of the current subroutine
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCd1    , InitInp%CoefMembers(J)%MemberCd2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCa1    , InitInp%CoefMembers(J)%MemberCa2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCp1    , InitInp%CoefMembers(J)%MemberCp2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberAxCa1  , InitInp%CoefMembers(J)%MemberAxCa2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberAxCp1  , InitInp%CoefMembers(J)%MemberAxCp2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCdMG1  , InitInp%CoefMembers(J)%MemberCdMG2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCaMG1  , InitInp%CoefMembers(J)%MemberCaMG2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberCpMG1  , InitInp%CoefMembers(J)%MemberCpMG2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberAxCaMG1, InitInp%CoefMembers(J)%MemberAxCaMG2)
+                CALL SWAP(InitInp%CoefMembers(J)%MemberAxCpMG1, InitInp%CoefMembers(J)%MemberAxCpMG2)
+            END IF 
+            
          END IF
          
          propSet = InitInp%MPropSets(prop1Indx)
@@ -4044,7 +4062,15 @@ SUBROUTINE Morison_ProcessMorisonGeometry( InitInp, ErrStat, ErrMsg )
     !  p%NMorisonElements = 0
       
    END IF
-   
+      CONTAINS
+
+        SUBROUTINE SWAP(x1,x2)
+           Real(Reki),intent(inout) :: x1,x2
+           Real(Reki) :: tmp
+           tmp = x1
+           x1  = x2
+           x2  = tmp
+        END SUBROUTINE SWAP
 END SUBROUTINE Morison_ProcessMorisonGeometry
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4575,7 +4601,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          qdotdot2(1)    =       elementWaterState *u%DistribMesh%TranslationAcc(1,J)
          qdotdot2(2)    =       elementWaterState *u%DistribMesh%TranslationAcc(2,J)
          qdotdot2(3)    =       elementWaterState *u%DistribMesh%TranslationAcc(3,J)
-         m%D_F_AM_M(:,J)  = -matmul( p%D_AM_M (:,:,J) , qdotdot2 )  !bjj: these lines take up a lot of time. are the matrices sparse?
+         
+            ! calculated the added mass forces (moments are zero)
+         m%D_F_AM_M(1:3,J)  = -matmul( p%D_AM_M (:,:,J) , qdotdot2 )  !bjj: these lines take up a lot of time. are the matrices sparse?
 
          DO I=1,6
             IF (I < 4 ) THEN
