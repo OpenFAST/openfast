@@ -27,6 +27,20 @@ We have the following guidance for developers:
   suite via a GitHub issue or pull request at the `openfast/r-test <https://github.com/openfast/r-test>`_
   repository.
 
+Code Style
+----------
+OpenFAST and its underlying modules are mostly written in Fortran adhering to
+the 2003 standard, but modules can be written in C or C++. The
+`NWTC Programmer's Handbook <https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf>`__
+is the definitive reference for all questions related to working with the
+FAST Framework and adding code to OpenFAST.
+
+Generally, code should be written such that it is straightforward to read.
+Syntactic sugar or brevity should not detract from readability. The exception
+to this is in situations where performance dictates a poorly readable code.
+Here, comment blocks should be used to describe what is not readily apparent
+in the code. Indentation is typically three spaces and no tabs.
+
 Versioning
 ----------
 OpenFAST follows `semantic versioning <https://semver.org>`_. In summary, this
@@ -45,15 +59,3 @@ For example, ``OpenFAST-v1.0.0-123-gabcd1234-dirty`` describes OpenFAST as:
   build [the ``-g`` is for ``git``]
 - abcd1234 is the first 8 characters of the current commit hash
 - dirty denotes that local changes have been made but not committed
-
-Code Style
-----------
-OpenFAST and its underlying modules are mostly written in Fortran adhering to
-the 2003 standard, but modules can be written in C or C++. Indentation is
-typically three spaces and no tabs.
-
-Generally, code should be written such that it is straightforward to read.
-Syntactic sugar or brevity should not detract from readability. The exception
-to this is in situations where performance dictates a poorly readable code.
-Here, comment blocks should be used to describe what is not readily apparent
-in the code.

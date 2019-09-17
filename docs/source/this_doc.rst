@@ -8,9 +8,14 @@ OpenFAST documentation is hosted on
 generated from both the
 `master <http://github.com/openfast/openfast/tree/master/>`_ and
 `dev <http://github.com/openfast/openfast/tree/dev/>`_ branches whenever
-new commits are added. A PDF of the documentation can be retrieved from
-`readthedocs <http://openfast.readthedocs.io/>`_ by clicking the arrow on the
-lower left corner of the page next to ``v:master`` or ``v:dev``.
+new commits are added. Clicking on the bar on the lower left corner of the
+page reveals a panel (see image below) containing options to select the branch
+of the repository, download the documentation other formats (PFD, HTML, EPub),
+and link to other relevant websites.
+
+.. figure:: ../_static/docs_options.png
+   :width: 30%
+   :align: center
 
 While OpenFAST developer documentation is being enhanced here, developers are
 encouraged to consult the legacy FAST v8
