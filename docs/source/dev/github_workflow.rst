@@ -47,18 +47,14 @@ New pull requests should contain the following:
 Git workflow and interacting with the main repository
 -----------------------------------------------------
 OpenFAST development should follow "Git Flow" when interacting with the github
-repository. Git Flow is a git workflow outlining safe methods of pushing and
-pulling commits to a shared repository. Maintaining Git Flow is critical to
-prevent remote changes from blocking your local development.
-
-Git Flow
---------
-The Git Flow process is well defined and adopted throughout the software
-development community. It is detailed nicely
+repository. Git Flow is a well-defined and widely adopted workflow for using
+git that outlines safe methods of pushing and pulling commits to a shared
+repository. Maintaining Git Flow is critical to prevent remote changes from
+blocking your local development. This workflow is detailed nicely
 `here <http://nvie.com/posts/a-successful-git-branching-model>`__
 and the chart below provides a high level perspective.
 
-.. figure:: ../../_static/GitFlowFeatureBranches.png
+.. image:: ../../_static/GitFlowFeatureBranches.png
    :width: 70%
    :align: center
 
