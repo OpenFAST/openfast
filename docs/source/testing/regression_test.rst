@@ -2,101 +2,120 @@
 
 Regression test
 ===============
+The regression test executes a series of test cases which intend to fully
+describe OpenFAST and its module's capabilities. Jump to
+:ref:`regression_test_ctest`, :ref:`regression_test_example`, or
+:ref:`regression_test_windows` for instructions on running the regression
+tests.
 
-The regression test executes a series of test cases which intend to fully describe
-OpenFAST and its module's capabilities.
-
-Jump to :ref:`regression_test_ctest`, :ref:`regression_test_example`, or :ref:`regression_test_windows`
-for instructions on running the regression tests locally.
-
-Each locally computed result is compared
-to a static set of baseline results. To account for system, hardware, and compiler
+Each locally computed result is compared to a static set of baseline
+results. To account for system, hardware, and compiler
 differences, the regression test attempts to match the current machine and
 compiler type to the appropriate solution set from these combinations:
 
 - macOS with GNU compiler (default)
-- Red Hat Enterprise Linux with Intel compiler
+- CentOS 7 with Intel compiler
+- CentOS 7 with GNU compiler
 - Windows with Intel compiler
 
-The compiler versions, specific math libraries, and hardware used to generate these baseline
-solutions are documented in the
-`r-test repository documentation <https://github.com/openFAST/r-test#baselines>`__. Currently,
+The compiler versions, specific math libraries, and hardware used to generate
+the baseline solutions are documented in the
+`r-test repository documentation <https://github.com/openFAST/r-test>`__. Currently,
 the regression test supports only double precision solutions, so it is required
-to build OpenFAST in double precision for testing. All baseline solutions are generated
-with a double precision build.
+to build OpenFAST in double precision for testing. All baseline solutions are
+generated with a double precision build.
 
-The regression test system can be executed with CMake and CTest or manually with
-an included Python driver. Both systems provide similar functionality with respect
-to testing, but CTest integration provides access to multithreading, automation,
-and test reporting via CDash. Both modes of execution require some configuration
-as outlined below.
+The regression test system can be executed with CMake/CTest or manually with
+an included Python driver. Both systems provide similar functionality with
+respect to testing, but CTest integration provides access to multithreading,
+automation, and test reporting via CDash. Both modes of execution require some
+configuration as outlined below.
 
-In both modes of execution a subdirectory is created in the build directory
+In both modes of execution a directory is created in the build directory
 called ``reg_tests`` where all of the input files for the test cases are copied
-and all of the locally generated outputs are stored.
+and all of the locally generated outputs are stored. Ultimately, both CTest and
+the manual execution program call a series of Python scripts and libraries in
+``reg_tests`` and ``reg_tests/lib``. One such script is ``lib/pass_fail.py``
+which reads the output files and computes a norm on each channel reported. If
+the maximum norm is greater than a preset tolerance, that particular test is
+reported as failed. The failure criteria is outlined in pseudocode below.
 
-Ultimately, both CTest and the manual execution program call a series of Python
-scripts and libraries in ``reg_tests`` and ``reg_tests/lib``. One such script is
-``lib/pass_fail.py`` which reads the output files and computes a norm on each
-channel reported. If the maximum norm is greater than a preset tolerance, that particular
-test is reported as failed. The failure criteria is outlined in pseudocode below.
+.. code-block:: python
 
-::
+    difference = abs(testData - baselineData)
+    for i in nChannels:
+        if channelRange < 1:
+            norm[i] = MaxNorm( difference[:,i] )
+        else:
+            norm[i] = MaxNorm( difference[:,i] ) / channelRange
 
-  difference = abs(testData-baselineData)
-  for i in nChannels
-     if channelRange < 1 {
-        norm[i] = MaxNorm( difference[:,i] )
-     } else {
-        norm[i] = MaxNorm( difference[:,i] ) / channelRange
-     }
-
-  if max(norm) < tolerance:
-    success
+    if max(norm) < tolerance:
+        success!
 
 Dependencies
 ------------
-    - Python 3+
-    - Numpy
-    - CMake and CTest (Optional)
-    - matplotlib (Optional)
+The following packages are required for regression testing:
 
-Manual driver configuration
----------------------------
+- Python 3+
+- Numpy
+- CMake and CTest (Optional)
+- matplotlib (Optional)
 
-The regression test can be executed manually with the included driver
-``openfast/reg_tests/manualRegressionTest.py``. This program reads a case list file at
-``openfast/reg_tests/r-test/glue-codes/openfast/CaseList.md``. Cases can be removed
-or ignored with a ``#``. This driver program includes multiple optional flags
-which can be obtained by executing with the help option:
-``openfast/reg_tests/manualRegressionTest.py -h``
+Manual driver
+-------------
+The regression test can be executed manually with the included driver at
+``openfast/reg_tests/manualRegressionTest.py``. This program reads a case list
+file at ``openfast/reg_tests/r-test/glue-codes/openfast/CaseList.md``. Cases
+can be removed or ignored with a ``#``. This driver program includes multiple
+optional flags which can be obtained by executing with the help option:
+
+::
+
+    >>>$ python manualRegressionTest.py -h
+    usage: manualRegressionTest.py [-h] [-p [Plotting-Flag]] [-n [No-Execution]]
+                                [-v [Verbose-Flag]] [-case [Case-Name]]
+                                OpenFAST System-Name Compiler-Id Test-Tolerance
+
+    Executes OpenFAST and a regression test for a single test case.
+
+    positional arguments:
+    OpenFAST              path to the OpenFAST executable
+    System-Name           current system's name: [Darwin,Linux,Windows]
+    Compiler-Id           compiler's id: [Intel,GNU]
+    Test-Tolerance        tolerance defining pass or failure in the regression
+                            test
+
+    optional arguments:
+    -h, --help            show this help message and exit
+    -p [Plotting-Flag], -plot [Plotting-Flag]
+                            bool to include matplotlib plots in failed cases
+    -n [No-Execution], -no-exec [No-Execution]
+                            bool to prevent execution of the test cases
+    -v [Verbose-Flag], -verbose [Verbose-Flag]
+                            bool to include verbose system output
+    -case [Case-Name]     single case name to execute
 
 For the NREL 5MW turbine test cases, an external ServoDyn controller must be compiled and
 included in the appropriate directory or all NREL 5MW cases will fail without starting.
 More information is available in the documentation for the
 `r-test repository <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__.
 
-CTest configuration
--------------------
-
+CTest driver
+------------
 CTest is included with CMake and is mostly a set of preconfigured targets and
-commands. To use the CTest driver for the regression test, CMake must be run with
-one of two ``CMakeLists.txt``'s:
-
-- openfast/CMakeList.txt
-- openfast/reg_tests/CMakeLists.txt
-
-CMake variables can be configured in the `CMake
-GUI <https://cmake.org/download/>`__ or through the command line interface with
-``ccmake``.
+commands. To use the CTest driver for the regression test, execute CMake as
+described in :ref:`installation`, but with this additional flag:
+``BUILD_TESTING=ON``.
 
 The regression test specific CMake variables are
 
-- BUILD_TESTING
-- CTEST_OPENFAST_EXECUTABLE
-- CTEST_[MODULE]_EXECUTABLE
-- CTEST_PLOT_ERRORS
-- CTEST_REGRESSION_TOL
+::
+
+    - BUILD_TESTING
+    - CTEST_OPENFAST_EXECUTABLE
+    - CTEST_[MODULE]_EXECUTABLE
+    - CTEST_PLOT_ERRORS
+    - CTEST_REGRESSION_TOL
 
 **IT IS IMPORTANT** to verify that NREL 5MW turbine external controllers are compiled
 and placed in the correct location. More information is available in the documentation for the
@@ -105,9 +124,9 @@ but be aware that these three DISCON controllers must exist
 
 .. code-block:: bash
 
-  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON.dll
-  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_ITIBarge.dll
-  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_OC3Hywind.dll
+    openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON.dll
+    openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_ITIBarge.dll
+    openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_OC3Hywind.dll
 
 This can be accomplished manually with the CMake projects included with the DISCON source codes
 at ``openfast/reg_tests/r-test/glue-codes/openfast/5MW_Baseline/ServoData/``
@@ -169,8 +188,31 @@ are strictly read not modified by the automated process.
 
 Regression test example
 -----------------------
+The following examples illustrate ways to run the regression tests.
 
-- Build OpenFAST and the test suite
+CTest driver
+~~~~~~~~~~~~
+
+Python driver
+~~~~~~~~~~~~~
+
+
+.. code-block:: bash
+
+    git clone --recursive https://github.com/openfast/openfast.git
+    cd openfast
+
+    ## Build the ServoDyn external controller libraries
+    # Open the Visual Studio Solution (DISCON.sln) located in 'openfast\vs-build\DISCON'
+    # Choose Release and x64 for the Solutions Configuration and Solutions Platform
+    # Build Solution
+
+    ## Execute the OpenFAST regression Tests
+    # Open a command prompt which is configured for Python (like Anaconda)
+    cd openfast\reg_tests
+    python manualRegressionTest.py ..\build\bin\openfast_x64.exe Windows Intel 1e-5
+
+
 
 .. code-block:: bash
 
@@ -186,7 +228,6 @@ Regression test example
   make install
   ctest
 
-- Build only the test suite if an openfast binary already exists
 
 .. code-block:: bash
 
@@ -207,17 +248,3 @@ Regression test example
 Follow the link above for a detailed procedure. It is summarized below though
 excluding the procedure to build OpenFAST itself.
 
-.. code-block:: bash
-
-  git clone --recursive https://github.com/openfast/openfast.git
-  cd openfast
-
-  ## Build the ServoDyn external controller libraries
-  # Open the Visual Studio Solution (DISCON.sln) located in 'openfast\vs-build\DISCON'
-  # Choose Release and x64 for the Solutions Configuration and Solutions Platform
-  # Build Solution
-
-  ## Execute the OpenFAST regression Tests
-  # Open a command prompt which is configured for Python (like Anaconda)
-  cd openfast\reg_tests
-  python manualRegressionTest.py ..\build\bin\openfast_x64.exe Windows Intel 1e-5
