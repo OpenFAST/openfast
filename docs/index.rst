@@ -41,16 +41,18 @@ existing code, and we expect that new capabilities will include adequate
 testing and documentation.
 
 Here are some important links:
-- `Github Organization Page <https://github.com/OpenFAST>`_
+
+- `OpenFAST Github Organization <https://github.com/OpenFAST>`_
 - `Github Repository <https://github.com/OpenFAST/OpenFAST>`_
-- `Nightly Testing Results <http://my.cdash.org/index.php?project=OpenFAST>`_
+- `Nightly Tests <http://my.cdash.org/index.php?project=OpenFAST>`_
+
+**Documentation Directory**
 
 .. toctree::
    :numbered:
    :maxdepth: 2
 
    source/this_doc.rst
-   source/get_started.rst
    source/install/index.rst
    source/testing/index.rst
    source/user/index.rst
@@ -58,6 +60,3 @@ Here are some important links:
    source/license.rst
    source/help.rst
    source/acknowledgements.rst
-
-   Nightly Testing Results <http://my.cdash.org/index.php?project=OpenFAST>
-   github.com Repository <https://github.com/openfast/openfast>
