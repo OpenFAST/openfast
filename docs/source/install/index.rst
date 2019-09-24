@@ -147,22 +147,22 @@ tool like ``make``, Visual Studio, or ``ninja``. CMake does not compile code
 or run compilers directly, but
 rather creates the environment needed for another tool to run compilers and
 create binaries. A CMake project is described by a series of files called
-``CMakeLists.txt`` located in various directories. The main CMake file for OpenFAST
-is located at ``openfast/CMakeLists.txt`` and each module and glue-code has
-its own ``CMakeLists.txt``; for example, AeroDyn and BeamDyn have one at
-``openfast/modules/aerodyn/CMakeLists.txt`` and
+``CMakeLists.txt`` located in various directories. The main CMake file for
+OpenFAST is located at ``openfast/CMakeLists.txt`` and each module and
+glue-code has its own ``CMakeLists.txt``; for example, AeroDyn and BeamDyn
+have one at ``openfast/modules/aerodyn/CMakeLists.txt`` and
 ``openfast/modules/beamdyn/CMakeLists.txt``, respectively.
 
 **Running CMake**
 
-Running CMake and compiling will create many files (text files and binaries) used in the
-various stages of the build. For this reason, a ``build`` folder is created
-which contains all of the generated files associated with the build process.
-Here, an important file called ``CMakeCache.txt`` contains the user-defined
-settings for the CMake configuration. This file functions like memory storage
-for the build. It is initially created the first time the CMake command is run
-and populated with the initial settings. Then, any subsequent changes to the settings
-will be updated and stored there.
+Running CMake and compiling will create many files (text files and binaries)
+used in the various stages of the build. For this reason, a ``build`` folder
+is created which contains all of the generated files associated with the build
+process. Here, an important file called ``CMakeCache.txt`` contains the
+user-defined settings for the CMake configuration. This file functions like
+memory storage for the build. It is initially created the first time the CMake
+command is run and populated with the initial settings. Then, any subsequent
+changes to the settings will be updated and stored there.
 
 CMake can be executed in a few ways:
 
@@ -182,8 +182,8 @@ line syntax to run CMake for OpenFAST is generally:
     Options
         -D <var>[:<type>]=<value>    = Create or update a cmake cache entry.
 
-For example, a common CMake command issued from the ``openfast/build`` directory
-is:
+For example, a common CMake command issued from the ``openfast/build``
+directory is:
 
 .. code-block:: bash
 

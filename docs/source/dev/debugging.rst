@@ -66,7 +66,7 @@ open the launch configuration and add a block similar to this:
             "target": "${workspaceRoot}/build/glue-codes/openfast/openfast",
             "cwd": "${workspaceRoot}/build/reg_tests/glue-codes/openfast/AOC_WSt/",
             "arguments": "${workspaceRoot}/build/reg_tests/glue-codes/openfast/AOC_WSt/AOC_WSt.fst",
-        },
+        }
 
 Mac-specific configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -98,4 +98,6 @@ breakpoints in fortran files by adding this line to ``.vscode/settings.json``:
 
 .. code-block:: json
 
-    "debug.allowBreakpointsEverywhere": true,
+    {
+        "debug.allowBreakpointsEverywhere": true
+    }

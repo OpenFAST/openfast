@@ -50,7 +50,7 @@ reported as failed. The failure criteria is outlined in pseudocode below.
             norm[i] = MaxNorm( difference[:,i] ) / channelRange
 
     if max(norm) < tolerance:
-        success!
+        pass = True
 
 Dependencies
 ------------
