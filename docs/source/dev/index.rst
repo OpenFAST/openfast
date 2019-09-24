@@ -45,12 +45,14 @@ For other questions regarding OpenFAST, please contact
 
 API Reference
 ~~~~~~~~~~~~~
-If the Doxygen documentation is available, it can be found at the following
-locations:
+Some subroutines and derived types throughout the source code have in-source
+documentation which is compiled with Doxygen. This portion of the documentation
+is always under development, but the existing API reference can be found in the
+following pages:
 
-- `Main Page <../../../doxygen/html/index.html>`_
-- `Index of Classes <../../../doxygen/html/classes.html>`_
-- `Files <../../../doxygen/html/files.html>`_
+- `Main Page <../../html/index.html>`_
+- `Index of Types <../../html/classes.html>`_
+- `Source Files <../../html/files.html>`_
 
 .. _development_philosophy:
 
