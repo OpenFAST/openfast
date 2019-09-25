@@ -23,7 +23,6 @@ MODULE WAMIT
 
    USE Waves
    USE WAMIT_Types 
-   USE WAMIT_Output
    USE WAMIT_Interp
    USE NWTC_Library
   ! USE Waves_Types
@@ -102,8 +101,8 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       COMPLEX(SiKi), ALLOCATABLE             :: HdroExctn (:,:,:)                    ! Frequency- and direction-dependent complex hydrodynamic wave excitation force per unit wave amplitude vector (kg/s^2, kg-m/s^2)
       COMPLEX(SiKi), ALLOCATABLE             :: WaveExctnC(:,:)                      ! Discrete Fourier transform of the instantaneous value of the total excitation force on the support platfrom from incident waves (N, N-m)
       REAL(ReKi)                             :: DffrctDim (6)                        ! Matrix used to redimensionalize WAMIT hydrodynamic wave excitation force  output (kg/s^2, kg-m/s^2            )
-      REAL(SiKi), ALLOCATABLE                :: HdroAddMs (:,:)                      ! The upper-triangular portion (diagonal and above) of the frequency-dependent hydrodynamic added mass matrix from the radiation problem (kg  , kg-m  , kg-m^2  )
-      REAL(SiKi), ALLOCATABLE                :: HdroDmpng (:,:)                      ! The upper-triangular portion (diagonal and above) of the frequency-dependent hydrodynamic damping    matrix from the radiation problem (kg/s, kg-m/s, kg-m^2/s)
+      REAL(SiKi), ALLOCATABLE                :: HdroAddMs (:,:,:)                    ! The frequency-dependent hydrodynamic added mass matrix from the radiation problem (kg  , kg-m  , kg-m^2  )
+      REAL(SiKi), ALLOCATABLE                :: HdroDmpng (:,:,:)                    ! The frequency-dependent hydrodynamic damping    matrix from the radiation problem (kg/s, kg-m/s, kg-m^2/s)
       REAL(SiKi), ALLOCATABLE                :: HdroFreq  (:)                        ! Frequency components inherent in the hydrodynamic added mass matrix, hydrodynamic daming matrix, and complex wave excitation force per unit wave amplitude vector (rad/s)
       REAL(SiKi), ALLOCATABLE                :: HdroWvDir (:)                        ! Incident wave propagation heading direction components inherent in the complex wave excitation force per unit wave amplitude vector (degrees)
       REAL(ReKi)                             :: HighFreq                             ! The highest frequency component in the WAMIT file, not counting infinity.
@@ -148,7 +147,10 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       CHARACTER(1024)                        :: Line                                 ! String to temporarily hold the value of a line within a WAMIT output file.
 
       TYPE(FFT_DataType)                     :: FFT_Data                             ! the instance of the FFT module we're using
-
+      integer(IntKi)                         :: iSub, jSub                           ! indices into the 6x6 sub-matrices used to redimensionalize the WAMIT data (Needed because NBodyMod=1 could have WAMIT matrices which are 6N x 6N)
+      integer(IntKi)                         :: iBody                                ! WAMIT body index
+      real(R8Ki)                             :: orientation(3,3)                     ! Initial orientation of the WAMIT body 
+      real(R8Ki)                             :: theta(3)                             ! Euler angle rotations of the WAMIT body
          ! Error handling
       CHARACTER(1024)                        :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
@@ -179,77 +181,56 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
          ! Copy Output Init data from Waves Module Init call
          
-      p%RhoXg        = InitInp%RhoXg
       p%NStepWave    = InitInp%NStepWave
       p%NumOuts      = InitInp%NumOuts
       p%ExctnMod     = InitInp%ExctnMod
+      p%NBodyMod     = InitInp%NBodyMod
+      p%NBody        = InitInp%NBody
       
-         ! For now, we are forcing WAMIT to use the glue-code time-step.  If the Convolution-based radiation module was requesting a different timestep (RdtnDT)
-         ! Then HydroDyn will have already thrown an error.
-         
-      p%DT = Interval 
-       
-      !IF ( InitInp%HasWAMIT ) THEN
-      !   p%NumOuts  = InitInp%NumOuts
-      !ELSE
-      !   p%NumOuts  = 0    ! Need to set this so the when a call uses generic output writing code, there will be no WAMIT outputs
-      !   
-      !   RETURN            ! We don't need to do any further initialization work because we are not using  WAMIT
+         ! This module's implementation requires that if NBodyMod = 2 or 3, then there is one instance of a WAMIT module for each body, therefore, HydroDyn may have NBody > 1, but this WAMIT module will have NBody = 1
+      if ( (p%NBodyMod > 1) .and. (p%NBody > 1) ) then
+         CALL SetErrStat( ErrID_Fatal, "DEVELOPER ERROR: If NBodyMod = 2 or 3, then NBody for the a WAMIT object must be equal to 1", ErrStat, ErrMsg, 'WAMIT_Init') 
+         return
+      end if     
       
-         ! Need to allocate and copy data and then destroy the original ???
-      ALLOCATE ( p%WaveTime  (0:p%NStepWave                    ) , STAT=ErrStat2 )
-      IF ( ErrStat2 /= 0 )  THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveTime array.', ErrStat, ErrMsg, 'WAMIT_Init')
-         CALL Cleanup()
-         RETURN
-      END IF
-      p%WaveTime     = InitInp%WaveTime
-      
-         ! Copy Input Init data into parameters
-         
-      p%PtfmVol0     = InitInp%PtfmVol0     
-      p%PtfmCOBxt     = InitInp%PtfmCOBxt
-      p%PtfmCOByt     = InitInp%PtfmCOByt
-      
-           
-      
-      
-      
-      
-      
-     
-      
-   
-      
+         ! Allocate misc var and parameter vectors/matrices
+      call AllocAry( p%F_HS_Moment_Offset, 3, p%NBody, 'p%F_HS_Moment_Offset', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+      call AllocAry( m%F_HS              ,  6*p%NBody, 'm%F_HS'              , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+      call AllocAry( m%F_Waves1          ,  6*p%NBody, 'm%F_Waves1'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+      call AllocAry( m%F_Rdtn            ,  6*p%NBody, 'm%F_Rdtn'            , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+      call AllocAry( m%F_PtfmAM          ,  6*p%NBody, 'm%F_PtfmAM'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+      call AllocAry( p%HdroAdMsI, 6*p%NBody,6*p%NBody, 'p%HdroAdMsI'         , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+      call AllocAry( p%HdroSttc , 6*p%NBody,6*p%NBody, 'p%HdroSttc'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
 
-
-         
       
-      
-      
+      do iBody = 1, p%NBody     
+         p%F_HS_Moment_Offset(1,iBody) =  InitInp%RhoXg*InitInp%PtfmVol0(iBody)                                             ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
+         p%F_HS_Moment_Offset(2,iBody) =  InitInp%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOByt(iBody) - InitInp%PtfmRefyt(iBody)  )  ! and the moment about X due to the COB being offset from the local WAMIT reference point
+         p%F_HS_Moment_Offset(3,iBody) = -InitInp%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOBxt(iBody) - InitInp%PtfmRefxt(iBody)  )  ! and the moment about Y due to the COB being offset from the localWAMIT reference point
+      end do 
 
          
          ! Tell our nice users what is about to happen that may take a while:
 
       CALL WrScr ( ' Reading in WAMIT output with root name "'//TRIM(InitInp%WAMITFile)//'".' )
 
-
+!TODO: Augment this for NBodyMod = 1 
 
          ! Let's set up the matrices used to redimensionalize the hydrodynamic data
          !   from WAMIT; all these matrices are symmetric and need to be used with
          !   element-by-element multiplication, instead of matrix-by-matrix
          !   multiplication:
 
-      SttcDim(1,1) = p%RhoXg  *InitInp%WAMITULEN**2  ! Force-translation
-      SttcDim(1,4) = p%RhoXg  *InitInp%WAMITULEN**3  ! Force-rotation/Moment-translation - Hydrostatic restoring
-      SttcDim(4,4) = p%RhoXg  *InitInp%WAMITULEN**4  ! Moment-rotation
+      SttcDim(1,1) = InitInp%RhoXg  *InitInp%WAMITULEN**2  ! Force-translation
+      SttcDim(1,4) = InitInp%RhoXg  *InitInp%WAMITULEN**3  ! Force-rotation/Moment-translation - Hydrostatic restoring
+      SttcDim(4,4) = InitInp%RhoXg  *InitInp%WAMITULEN**4  ! Moment-rotation
 
       RdtnDim(1,1) = InitInp%WtrDens*InitInp%WAMITULEN**3  ! Force-translation
       RdtnDim(1,4) = InitInp%WtrDens*InitInp%WAMITULEN**4  ! Force-rotation/Moment-translation - Hydrodynamic added mass and damping
       RdtnDim(4,4) = InitInp%WtrDens*InitInp%WAMITULEN**5  ! Moment-rotation
 
-      DffrctDim(1) = p%RhoXg  *InitInp%WAMITULEN**2  ! Force-translation - Hydrodynamic wave excitation force
-      DffrctDim(4) = p%RhoXg  *InitInp%WAMITULEN**3  ! Moment-rotation
+      DffrctDim(1) = InitInp%RhoXg  *InitInp%WAMITULEN**2  ! Force-translation - Hydrodynamic wave excitation force
+      DffrctDim(4) = InitInp%RhoXg  *InitInp%WAMITULEN**3  ! Moment-rotation
 
       DO I = 1,3     ! Loop through all force-translation elements (rows)
 
@@ -317,10 +298,15 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          READ (UnWh,*,IOSTAT=Sttus)  I, J, TmpData1   ! Read in the row index, column index, and nondimensional data from the WAMIT file
 
          IF ( Sttus == 0 )  THEN                ! .TRUE. when data is read in successfully
-!bjj: TODO verify that I and J are valid values
-            p%HdroSttc (I,J) = TmpData1*SttcDim(I,J)    ! Redimensionalize the data and place it at the appropriate location within the array
 
-         ELSE                                   ! We must have reached the end of the file, so stop reading in data
+         ! In case NBodyMod = 1, we now have WAMIT matrices which are potentially larger than 6x6, so we need to determine how the SttcDim multiplier matrix (a 6x6)
+         !   should be applied to the larger WAMIT matrix.  
+            
+            iSub = mod(I-1,6)+1                         ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
+            jSub = mod(J-1,6)+1  
+            p%HdroSttc (I,J) = TmpData1*SttcDim(iSub,jSub)    ! Redimensionalize the data and place it at the appropriate location within the array
+
+         ELSE                                           ! We must have reached the end of the file, so stop reading in data
 
             EXIT
 
@@ -386,8 +372,8 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       CALL AllocAry( WAMITPer,     NInpFreq,    'WAMITPer',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
       CALL AllocAry( SortFreqInd,  NInpFreq,    'SortFreqInd',  ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
       CALL AllocAry( HdroFreq,     NInpFreq,    'HdroFreq',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
-      CALL AllocAry( HdroAddMs,    NInpFreq, 21,'HdroAddMs',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
-      CALL AllocAry( HdroDmpng,    NInpFreq, 21,'HdroDmpng',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+      CALL AllocAry( HdroAddMs,    NInpFreq, 6*p%NBody, 6*p%NBody, 'HdroAddMs',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+      CALL AllocAry( HdroDmpng,    NInpFreq, 6*p%NBody, 6*p%NBody, 'HdroDmpng',    ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
             
          IF ( ErrStat >= AbortErrLev )  THEN
             CALL Cleanup()
@@ -463,8 +449,8 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       PrvPer         = 0.0    ! Initialize to a don't care
       FirstPass      = .TRUE. ! Initialize to .TRUE. for the first pass
 
-      HdroAddMs(:,:) = 0.0    ! Initialize to zero
-      HdroDmpng(:,:) = 0.0    ! Initialize to zero
+      HdroAddMs = 0.0    ! Initialize to zero
+      HdroDmpng = 0.0    ! Initialize to zero
 
       DO    ! Loop through all rows in the file
 
@@ -506,28 +492,32 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 !bjj: verify that I and J are valid indices for RdtnDim                  
                   
                   
-               IF ( J >= I )  THEN  ! .TRUE. if we are on or above the diagonal
-                  Indx = 6*( I - 1 ) + J - ( I*( I - 1 ) )/2                                       ! Convert from row/column indices to an index in the format used to save only the upper-triangular portion of the matrix.  NOTE: ( I*( I - 1 ) )/2 = SUM(I,START=1,END=I-1).
+              !  IF ( J >= I )  THEN  ! .TRUE. if we are on or above the diagonal
+              !    Indx = 6*( I - 1 ) + J - ( I*( I - 1 ) )/2                                       ! Convert from row/column indices to an index in the format used to save only the upper-triangular portion of the matrix.  NOTE: ( I*( I - 1 ) )/2 = SUM(I,START=1,END=I-1).
+                  iSub = mod(I-1,6)+1                                                              ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
+                  jSub = mod(J-1,6)+1  
 
-                  HdroAddMs(SortFreqInd(K),Indx) = TmpData1*RdtnDim(I,J)                           ! Redimensionalize the data and place it at the appropriate location within the array
-               END IF
+                  HdroAddMs(SortFreqInd(K),I,J) = TmpData1*RdtnDim(iSub,jSub)                     ! Redimensionalize the data and place it at the appropriate location within the array
+              ! END IF
 
             ELSE                                ! We must have a positive, non-infinite frequency.
 
-               READ (Line,*,IOSTAT=Sttus)  TmpPer, I, J, TmpData1, TmpData2 ! Read in the period, row index, column index, and nondimensional data from the WAMIT file
+               READ (Line,*,IOSTAT=Sttus)  TmpPer, I, J, TmpData1, TmpData2                        ! Read in the period, row index, column index, and nondimensional data from the WAMIT file
                IF ( Sttus /= 0 ) THEN
                   CALL SetErrStat( ErrID_Fatal, "Error reading line from WAMIT file", ErrStat, ErrMsg, 'WAMIT_Init')
                   CALL Cleanup()
                   RETURN
                END IF              
-!bjj: verify that I and J are valid indices for RdtnDim                  
+                  
 
-               IF ( J >= I )  THEN  ! .TRUE. if we are on or above the diagonal
-                  Indx = 6*( I - 1 ) + J - ( I*( I - 1 ) )/2                                       ! Convert from row/column indices to an index in the format used to save only the upper-triangular portion of the matrix.  NOTE: ( I*( I - 1 ) )/2 = SUM(I,START=1,END=I-1).
+               !IF ( J >= I )  THEN  ! .TRUE. if we are on or above the diagonal
+                !  Indx = 6*( I - 1 ) + J - ( I*( I - 1 ) )/2                                             ! Convert from row/column indices to an index in the format used to save only the upper-triangular portion of the matrix.  NOTE: ( I*( I - 1 ) )/2 = SUM(I,START=1,END=I-1).
+                  iSub = mod(I-1,6)+1                                                                    ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
+                  jSub = mod(J-1,6)+1  
 
-                  HdroAddMs(SortFreqInd(K),Indx) = TmpData1*RdtnDim(I,J)                           ! Redimensionalize the data and place it at the appropriate location within the array
-                  HdroDmpng(SortFreqInd(K),Indx) = TmpData2*RdtnDim(I,J)*HdroFreq(SortFreqInd(K))  ! Redimensionalize the data and place it at the appropriate location within the array
-               END IF
+                  HdroAddMs(SortFreqInd(K),I,J) = TmpData1*RdtnDim(iSub,jSub)                           ! Redimensionalize the data and place it at the appropriate location within the array
+                  HdroDmpng(SortFreqInd(K),I,J) = TmpData2*RdtnDim(iSub,jSub)*HdroFreq(SortFreqInd(K))  ! Redimensionalize the data and place it at the appropriate location within the array
+              ! END IF
 
             END IF
 
@@ -623,7 +613,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             RETURN
          END IF
             
-      ALLOCATE ( HdroExctn   (NInpFreq,NInpWvDir,6) , STAT=ErrStat2 ) ! complex so we don't have a reoutine
+      ALLOCATE ( HdroExctn   (NInpFreq,NInpWvDir,6*p%NBody) , STAT=ErrStat2 ) ! complex so we don't have a built in subroutine
       IF ( ErrStat2 /= 0 )  THEN
          CALL SetErrStat( ErrID_Fatal, 'Error allocating space for HdroExctn array', ErrStat, ErrMsg, 'WAMIT_Init')
          CALL Cleanup()
@@ -783,8 +773,8 @@ if (p%ExctnMod == 1 ) then
 
             END IF
 
-
-            HdroExctn(SortFreqInd(K),SortWvDirInd(J),I) = CMPLX( TmpRe, TmpIm )*DffrctDim(I) ! Redimensionalize the data and place it at the appropriate location within the array
+            iSub = mod(I-1,6)+1                                                                    ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix 
+            HdroExctn(SortFreqInd(K),SortWvDirInd(J),I) = CMPLX( TmpRe, TmpIm )*DffrctDim(iSub) ! Redimensionalize the data and place it at the appropriate location within the array
 
 
          ELSE                    ! We must have reached the end of the file, so stop reading in data
@@ -850,16 +840,16 @@ end if
 
          ! Set the infinite-frequency limit of the frequency-dependent hydrodynamic
          !   added mass matrix, HdroAdMsI, based on the highest frequency available:
-
-      Indx = 0
-      DO J = 1,6        ! Loop through all rows    of HdroAdMsI
-         DO K = J,6     ! Loop through all columns of HdroAdMsI above and including the diagonal
-            Indx = Indx + 1
-            p%HdroAdMsI(J,K) = HdroAddMs(NInpFreq,Indx)
+!TODO: Is this index order correct for computational speed? GJH 9/5/19
+      !Indx = 0
+      DO J = 1,6*p%NBody        ! Loop through all rows    of HdroAdMsI
+         DO K = 1,6*p%NBody     ! Loop through all columns of HdroAdMsI above and including the diagonal
+           ! Indx = Indx + 1
+            p%HdroAdMsI(J,K) = HdroAddMs(NInpFreq,J,K)
          END DO          ! K - All columns of HdroAdMsI above and including the diagonal
-         DO K = J+1,6   ! Loop through all rows    of HdroAdMsI below the diagonal
-            p%HdroAdMsI(K,J) = p%HdroAdMsI(J,K)
-         END DO          ! K - All rows    of HdroAdMsI below the diagonal
+      !   DO K = J+1,6   ! Loop through all rows    of HdroAdMsI below the diagonal
+      !      p%HdroAdMsI(K,J) = p%HdroAdMsI(J,K)
+      !   END DO          ! K - All rows    of HdroAdMsI below the diagonal
       END DO             ! J - All rows    of HdroAdMsI
 
 
@@ -882,7 +872,18 @@ end if
                   RETURN
                END IF
 
-               p%WaveExctn = 0.0   
+
+
+            ! Initialize everything to zero:
+
+         ALLOCATE ( p%WaveExctn (0:InitInp%NStepWave,6*p%NBody) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctn array.', ErrStat, ErrMsg, 'WAMIT_Init')
+            CALL Cleanup()
+            RETURN
+         END IF
+
+         p%WaveExctn = 0.0   
          
             else if ( p%ExctnMod == 2 ) then
                Interval_Sub                  = InitInp%Conv_Rdtn%RdtnDT
@@ -950,9 +951,19 @@ end if
                END IF
 
 
+         ALLOCATE (         WaveExctnC(0:InitInp%NStepWave2 ,6*p%NBody) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctnC array.', ErrStat, ErrMsg, 'WAMIT_Init')
+            CALL Cleanup()
+            RETURN            
+         END IF
 
-               ! Compute the positive-frequency components (including zero) of the discrete
-               !   Fourier transform of the wave excitation force:
+         ALLOCATE ( p%WaveExctn (0:InitInp%NStepWave,6*p%NBody) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the WaveExctn array.', ErrStat, ErrMsg, 'WAMIT_Init')
+            CALL Cleanup()
+            RETURN            
+         END IF
 
                DO I = 0,InitInp%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
 
@@ -976,7 +987,23 @@ end if
                   END DO                ! J - All wave excitation forces and moments
 
 
-               END DO                ! I - The positive frequency components (including zero) of the discrete Fourier transform
+               ! Compute the discrete Fourier transform of the instantaneous value of the
+               !   total excitation force on the support platfrom from incident waves:
+
+            DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
+               TmpCoord(1) = Omega
+               TmpCoord(2) = InitInp%WaveDirArr(I)
+               CALL WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,J), HdroFreq, HdroWvDir, LastInd2, WaveExctnC(I,J), ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF
+               WaveExctnC(I,J) = WaveExctnC(I,J) * CMPLX(InitInp%WaveElevC0(1,I), InitInp%WaveElevC0(2,I))
+            END DO                ! J - All wave excitation forces and moments
+
+
+         END DO                ! I - The positive frequency components (including zero) of the discrete Fourier transform
         
 
 
@@ -1021,13 +1048,13 @@ end if
                      RETURN
                   END IF
          
-               DO J = 1,6           ! Loop through all wave excitation forces and moments
-                  CALL ApplyFFT_cx ( p%WaveExctn(0:InitInp%NStepWave-1,J), WaveExctnC(:,J), FFT_Data, ErrStat2 )
-                  CALL SetErrStat( ErrStat2, ' An error occured while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, 'WAMIT_Init')
-                  IF ( ErrStat >= AbortErrLev) THEN
-                     CALL Cleanup()
-                     RETURN
-                  END IF
+         DO J = 1,6*p%NBody           ! Loop through all wave excitation forces and moments
+            CALL ApplyFFT_cx ( p%WaveExctn(0:InitInp%NStepWave-1,J), WaveExctnC(:,J), FFT_Data, ErrStat2 )
+            CALL SetErrStat( ErrStat2, ' An error occured while applying an FFT to WaveExctnC.', ErrStat, ErrMsg, 'WAMIT_Init')
+            IF ( ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
             
                      ! Append first datpoint as the last as aid for repeated wave data
                   p%WaveExctn(InitInp%NStepWave,J) = p%WaveExctn(0,J)
@@ -1093,7 +1120,7 @@ end if
             CALL MOVE_ALLOC( HdroFreq,  Conv_Rdtn_InitInp%HdroFreq  )
             CALL MOVE_ALLOC( HdroAddMs, Conv_Rdtn_InitInp%HdroAddMs )
             CALL MOVE_ALLOC( HdroDmpng, Conv_Rdtn_InitInp%HdroDmpng )
-                  
+            Conv_Rdtn_InitInp%NBody               = InitInp%NBody      
             Conv_Rdtn_InitInp%RdtnTMax            = InitInp%RdtnTMax
             Conv_Rdtn_InitInp%RdtnDT              = InitInp%Conv_Rdtn%RdtnDT                     
             Conv_Rdtn_InitInp%HighFreq            = HighFreq                          
@@ -1150,54 +1177,62 @@ end if
 
       
       
-      ! Define system output initializations (set up mesh) here:
+      ! Define system output initializations (set up meshes) here:
       
-      
+     
           ! Create the input and output meshes associated with lumped loads
+     
       
-      CALL MeshCreate( BlankMesh        = u%Mesh            &
-                     ,IOS               = COMPONENT_INPUT   &
-                     ,Nnodes            = 1                 &
-                     ,ErrStat           = ErrStat2          &
-                     ,ErrMess           = ErrMsg2           &
-                     ,TranslationDisp   = .TRUE.            &
-                     ,Orientation       = .TRUE.            &
-                     ,TranslationVel    = .TRUE.            &
-                     ,RotationVel       = .TRUE.            &
-                     ,TranslationAcc    = .TRUE.            &
-                     ,RotationAcc       = .TRUE.)
+     
+         call MeshCreate( BlankMesh        = u%Mesh            &
+                        ,IOS               = COMPONENT_INPUT   &
+                        ,Nnodes            = p%NBody           &
+                        ,ErrStat           = ErrStat2          &
+                        ,ErrMess           = ErrMsg2           &
+                        ,TranslationDisp   = .TRUE.            &
+                        ,Orientation       = .TRUE.            &
+                        ,TranslationVel    = .TRUE.            &
+                        ,RotationVel       = .TRUE.            &
+                        ,TranslationAcc    = .TRUE.            &
+                        ,RotationAcc       = .TRUE.)
          
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
+
+      do iBody = 1, p%NBody
+
+         theta = (/ 0.0_R8Ki, 0.0_R8Ki, InitInp%PtfmRefztRot(iBody)/)
+         orientation = EulerConstruct(theta)
+         
+         
+            ! Create the node on the mesh
+  
+         CALL MeshPositionNode (u%Mesh                                &
+                                 , iBody                              &
+                                 , (/InitInp%PtfmRefxt(iBody), InitInp%PtfmRefyt(iBody), InitInp%PtfmRefzt(iBody)/)   &  
+                                 , ErrStat2                           &
+                                 , ErrMsg2                            &
+                                 , orientation )
       
-         ! Create the node on the mesh
-            
-         
-         
-      CALL MeshPositionNode (u%Mesh                                &
-                              , 1                                  &
-                              , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/)   &  
-                              , ErrStat2                           &
-                              , ErrMsg2                            )
-      
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
        
       
-         ! Create the mesh element
-      CALL MeshConstructElement (  u%Mesh              &
-                                  , ELEMENT_POINT      &                         
-                                  , ErrStat2           &
-                                  , ErrMsg2            &
-                                  , 1                  &
-                                              )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+            ! Create the mesh element
+         CALL MeshConstructElement (  u%Mesh              &
+                                     , ELEMENT_POINT      &                         
+                                     , ErrStat2           &
+                                     , ErrMsg2            &
+                                     , iBody              &
+                                                 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+      end do
 
       CALL MeshCommit ( u%Mesh              &
-                      , ErrStat2            &
-                      , ErrMsg2             )
+                        , ErrStat2            &
+                        , ErrMsg2             )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
@@ -1221,18 +1256,12 @@ end if
          END IF      
       
       
-     u%Mesh%RemapFlag  = .TRUE.
-     y%Mesh%RemapFlag  = .TRUE.
-         
+      u%Mesh%RemapFlag  = .TRUE.
+      y%Mesh%RemapFlag  = .TRUE.
+
+      
          ! Define initialization-routine output here:
          
-            ! Initialize the outputs
-      CALL WMTOUT_Init( InitInp, y, p, InitOut, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
-         IF ( ErrStat >= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         END IF      
       
      
                                                
@@ -1364,6 +1393,10 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
 
       INTEGER                                           :: I               ! Generic loop counter
       INTEGER                                           :: nTime           ! Number of inputs
+      integer(IntKi)                                    :: iBody           ! WAMIT body index
+
+      integer(IntKi)                                    :: indxStart, indxEnd                   ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
+
 !      INTEGER(IntKi)                                    :: ErrStat2        ! Error status of the operation (secondary error)
 !      CHARACTER(ErrMsgLen)                              :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
       
@@ -1400,7 +1433,16 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
          END IF
          
          DO I=1,nTime
-            Conv_Rdtn_u(I)%Velocity = (/Inputs(I)%Mesh%TranslationVel(:,1), Inputs(I)%Mesh%RotationVel(:,1)/)   
+            ALLOCATE( Conv_Rdtn_u(I)%Velocity(size(m%Conv_Rdtn_u%Velocity)), STAT = ErrStat  )
+            IF (ErrStat /=0) THEN
+               ErrMsg = ' Failed to allocate array Conv_Rdtn_u(I)%Velocity.'
+               RETURN
+            END IF
+            do iBody=1,p%NBody
+               indxStart = (iBody-1)*6+1
+               indxEnd   = indxStart+5        
+               Conv_Rdtn_u(I)%Velocity(indxStart:indxEnd) = (/Inputs(I)%Mesh%TranslationVel(:,iBody), Inputs(I)%Mesh%RotationVel(:,iBody)/) 
+            end do
          END DO
                  
          CALL Conv_Rdtn_UpdateStates( t, n, Conv_Rdtn_u, InputTimes, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, &
@@ -1419,9 +1461,12 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
          END IF
          
          DO I=1,nTime
-            SS_Rdtn_u(I)%dq(1:3) = Inputs(I)%Mesh%TranslationVel(:,1)
-            SS_Rdtn_u(I)%dq(4:6) = Inputs(I)%Mesh%RotationVel(:,1)
-            !SS_Rdtn_u(I)%dq = reshape((/Inputs(I)%Mesh%TranslationVel(:,1), Inputs(I)%Mesh%RotationVel(:,1)/), (/6,1/)) !reshape(u%Velocity, (/6,1/)) ! dq is a 6x1 matrix
+            do iBody=1,p%NBody
+               indxStart = (iBody-1)*6+1 
+               SS_Rdtn_u(I)%dq(indxStart:indxStart+2)   = Inputs(I)%Mesh%TranslationVel(:,iBody)
+               SS_Rdtn_u(I)%dq(indxStart+3:indxStart+5) = Inputs(I)%Mesh%RotationVel(:,iBody)
+               !SS_Rdtn_u(I)%dq = reshape((/Inputs(I)%Mesh%TranslationVel(:,1), Inputs(I)%Mesh%RotationVel(:,1)/), (/6,1/)) !reshape(u%Velocity, (/6,1/)) ! dq is a 6x1 matrix
+            end do
          END DO
          
          CALL SS_Rad_UpdateStates( t, n, SS_Rdtn_u, InputTimes, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, ErrStat, ErrMsg )
@@ -1449,10 +1494,11 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
 END SUBROUTINE WAMIT_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
+SUBROUTINE WAMIT_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
       REAL(DbKi),                      INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      real(SiKi),                      intent(in   )  :: WaveTime(:) !< Array of wave kinematic time samples, (sec)
       TYPE(WAMIT_InputType),           INTENT(IN   )  :: u           !< Inputs at Time
       TYPE(WAMIT_ParameterType),       INTENT(IN   )  :: p           !< Parameters
       TYPE(WAMIT_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
@@ -1474,9 +1520,11 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       INTEGER(IntKi)                       :: I                                       ! Generic index
       INTEGER(IntKi)                       :: J                                       ! Generic index
 !      INTEGER(IntKi)                       :: K                                       ! Generic index
-      REAL(ReKi)                           :: q(6), qdot(6), qdotdot(6)
+      REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotdot(6*p%NBody)  ! kinematics for all WAMIT bodies
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
-      REAL(ReKi)                           :: AllOuts(MaxWAMITOutputs)  
+      REAL(ReKi)                           :: AllOuts(MaxWAMITOutputs)
+      integer(IntKi)                       :: iBody                                   ! Counter for WAMIT bodies.  If NBodyMod > 1 then NBody = 1, and hence iBody = 1
+      integer(IntKi)                       :: indxStart, indxEnd                      ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
       
       
          ! Initialize ErrStat
@@ -1503,11 +1551,10 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
             RETURN
          END IF
 
-         DO I = 1,6     ! Loop through all wave excitation forces and moments
-            m%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveExctn(:,I), &
-                                                     m%LastIndWave, p%NStepWave + 1       )
-         END DO          ! I - All wave excitation forces and moments
-         
+      DO I = 1,6*p%NBody     ! Loop through all wave excitation forces and moments
+         m%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, SiKi), WaveTime(:), p%WaveExctn(:,I), &
+                                                  m%LastIndWave, p%NStepWave + 1       )
+      END DO          ! I - All wave excitation forces and moments
       else if ( p%ExctnMod == 2 ) then
          
          call SS_Exc_CalcOutput( Time, m%SS_Exctn_u, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn,  &
@@ -1517,42 +1564,29 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       end if
       
       
-
+      do iBody = 1, p%NBody
          
-         ! Determine the rotational angles from the direction-cosine matrix
-      rotdisp = GetSmllRotAngs ( u%Mesh%Orientation(:,:,1), ErrStat, ErrMsg )
-
-      q         = reshape((/real(u%Mesh%TranslationDisp(:,1),ReKi),rotdisp(:)/),(/6/))
-      qdot      = reshape((/u%Mesh%TranslationVel(:,1),u%Mesh%RotationVel(:,1)/),(/6/))
-      qdotdot   = reshape((/u%Mesh%TranslationAcc(:,1),u%Mesh%RotationAcc(:,1)/),(/6/))
-      
-      
-         ! Compute the load contirbution from user-supplied added stiffness and damping
-      ! This is being done by the HydroDyn Module now.  GJH 1/6/14  
-      m%F_PtfmAdd = 0.0  !  p%AddF0 - matmul(p%AddCLin, q) - matmul(p%AddBLin, qdot) - matmul(p%AddBQuad, qdotsq)
-      
-      
-      
-      
+            ! Determine the rotational angles from the direction-cosine matrix
+         rotdisp   = GetSmllRotAngs ( u%Mesh%Orientation(:,:,iBody), ErrStat, ErrMsg )
+         indxStart = (iBody-1)*6+1
+         indxEnd   = indxStart+5
+         q      (indxStart:indxEnd)   = reshape((/real(u%Mesh%TranslationDisp(:,iBody),ReKi),rotdisp(:)/),(/6/))
+         qdot   (indxStart:indxEnd)   = reshape((/u%Mesh%TranslationVel(:,iBody),u%Mesh%RotationVel(:,iBody)/),(/6/))
+         qdotdot(indxStart:indxEnd)   = reshape((/u%Mesh%TranslationAcc(:,iBody),u%Mesh%RotationAcc(:,iBody)/),(/6/))
+         
+      end do
       
          ! Compute the load contribution from hydrostatics:
 
-      m%F_HS(:) =  0.0                              ! Initialize to zero...
-      m%F_HS(3) =  p%RhoXg*p%PtfmVol0               ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
-      m%F_HS(4) =  p%RhoXg*p%PtfmVol0*p%PtfmCOByt   ! and the moment about X due to the COB being offset from the WAMIT reference point
-      m%F_HS(5) = -p%RhoXg*p%PtfmVol0*p%PtfmCOBxt   ! and the moment about Y due to the COB being offset from the WAMIT reference point
+      m%F_HS = -matmul(p%HdroSttc,q)
       
-      DO I = 1,6     ! Loop through all hydrostatic forces and moments
-         DO J = 1,6  ! Loop through all platform DOFs
-            m%F_HS(I) = m%F_HS(I) - p%HdroSttc(I,J)*q(J)
-         END DO       ! J -  platform DOFs
-   
-      END DO          ! I - All hydrostatic forces and moments
+      do iBody = 1, p%NBody
+         indxStart = (iBody-1)*6+3
+         indxEnd   = indxStart+2
+         m%F_HS(indxStart:indxEnd) =  m%F_HS(indxStart:indxEnd) + p%F_HS_Moment_Offset(:,iBody)  ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
+      end do   
       
-         
-
-      
-   
+     
          ! If necessary, compute the load contribution from wave radiation damping
          !   (i.e., the radiation problem):
 
@@ -1591,30 +1625,34 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
       
       
          ! Compute outputs here:
-      DO I=1,3
-         y%Mesh%Force(I,1)    = m%F_PtfmAM(I) + m%F_Rdtn(I)   + m%F_Waves1(I)   + m%F_HS(I)    + m%F_PtfmAdd(I)    
-      END DO
-      DO I=1,3
-         y%Mesh%Moment(I,1)   = m%F_PtfmAM(I+3) + m%F_Rdtn(I+3) + m%F_Waves1(I+3) + m%F_HS(I+3)  + m%F_PtfmAdd(I+3)   
-      END DO
+      do iBody = 1, p%NBody
+         indxStart = (iBody-1)*6
+         
+         DO I=1,3
+            y%Mesh%Force(I,iBody)    = m%F_PtfmAM(indxStart+I)   + m%F_Rdtn(indxStart+I)   + m%F_Waves1(indxStart+I)   + m%F_HS(indxStart+I) 
+         END DO
+         DO I=1,3
+            y%Mesh%Moment(I,iBody)   = m%F_PtfmAM(indxStart+I+3) + m%F_Rdtn(indxStart+I+3) + m%F_Waves1(indxStart+I+3) + m%F_HS(indxStart+I+3)
+         END DO
+      end do
       
       
+      ! Output channels will be dealt with by the HydroDyn module
       
-      
-      
-      
-      
-         ! Map calculated results into the AllOuts Array
-      CALL WMTOut_MapOutputs(Time, y, m%F_Waves1, m%F_HS, m%F_Rdtn, m%F_PtfmAM, AllOuts, ErrStat, ErrMsg)
-      
-
-              ! Put the output data in the OutData array
-   
-      DO I = 1,p%NumOuts
-
-         y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-      
-      END DO      
+ !TODO: Clean this up     
+      !
+      !
+      !   ! Map calculated results into the AllOuts Array
+      !CALL WMTOut_MapOutputs(Time, p%NBody, p%BodyID, y, m%F_Waves1, m%F_HS, m%F_Rdtn, m%F_PtfmAM, AllOuts, ErrStat, ErrMsg)
+      !
+      !
+      !        ! Put the output data in the OutData array
+      !
+      !DO I = 1,p%NumOuts
+      !
+      !   y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
+      !
+      !END DO      
                
 
 END SUBROUTINE WAMIT_CalcOutput
@@ -1635,23 +1673,26 @@ SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, 
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
-               
+      integer(IntKi)                                    :: iBody                ! WAMIT body index
+      integer(IntKi)                                    :: indxStart            ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
+         
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       
       
-            ! Compute the first time derivatives of the continuous states here:
-      m%SS_Rdtn_u%dq(1:3) = u%Mesh%TranslationVel(:,1) 
-      m%SS_Rdtn_u%dq(4:6) = u%Mesh%RotationVel(:,1) 
-    
-      CALL SS_Rad_CalcContStateDeriv( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, dxdt%SS_Rdtn, ErrStat, ErrMsg )      
-      
+         ! Compute the first time derivatives of the continuous states here:
+      do iBody = 1, p%NBody
+         indxStart = (iBody-1)*6+1 
+         m%SS_Rdtn_u%dq(indxStart:indxStart+2)   = u%Mesh%TranslationVel(:,iBody) 
+         m%SS_Rdtn_u%dq(indxStart+3:indxStart+5) = u%Mesh%RotationVel(:,iBody) 
+      end do
+   CALL SS_Rad_CalcContStateDeriv( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, dxdt%SS_Rdtn, ErrStat, ErrMsg )      
+         
          ! NOTE: The input below (0.0) will only work as part of a linearization Get_OP call! If this routine (WAMIT_CalcContStateDeriv) is called in another context, then the following
          ! input needs to be implemented generically.
       CALL SS_Exc_CalcContStateDeriv( Time, 0.0_SiKi, p%SS_Exctn, x%SS_Exctn, xd%SS_Exctn, z%SS_Exctn, OtherState%SS_Exctn, m%SS_Exctn, dxdt%SS_Exctn, ErrStat, ErrMsg )      
-       
 
 END SUBROUTINE WAMIT_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1672,7 +1713,9 @@ SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrSta
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       
-      
+      integer(IntKi)                                     :: iBody               ! WAMIT body index
+      integer(IntKi)                                     :: indxStart, indxEnd  ! Starting and ending indices for the iBody_th sub vector in an NBody long vector
+
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
@@ -1681,9 +1724,11 @@ SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrSta
       
          ! Update discrete states here:
       IF ( p%RdtnMod == 1 )  THEN ! .TRUE. when we will be modeling wave radiation damping.   
-         
-         m%Conv_Rdtn_u%Velocity = (/u%Mesh%TranslationVel(:,1), u%Mesh%RotationVel(:,1)/)
-      
+         do iBody=1,p%NBody
+               indxStart = (iBody-1)*6+1
+               indxEnd   = indxStart+5    
+               m%Conv_Rdtn_u%Velocity(indxStart:indxEnd) = (/u%Mesh%TranslationVel(:,iBody), u%Mesh%RotationVel(:,iBody)/)
+         end do
          CALL Conv_Rdtn_UpdateDiscState( Time, n, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, &
                                          OtherState%Conv_Rdtn, m%Conv_Rdtn, ErrStat, ErrMsg )
          

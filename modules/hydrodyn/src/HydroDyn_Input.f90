@@ -26,7 +26,6 @@ MODULE HydroDyn_Input
    USE                              HydroDyn_Output
    USE                              Waves
    USE                              Morison
-   USE                              WAMIT_Output
    USE                              WAMIT2_Output
    USE                              Waves2_Output
    USE                              Morison_Output
@@ -200,26 +199,17 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
       ! Local variables
 
-   INTEGER                                          :: I                    ! generic integer for counting
-!   INTEGER                                          :: J                    ! generic integer for counting
+   INTEGER                                          :: I, j                 ! generic integer for counting
    CHARACTER(   2)                                  :: strI                 ! string version of the loop counter
-
    INTEGER                                          :: UnIn                 ! Unit number for the input file
-!   LOGICAL                                          :: EchoStore            ! Stored version of NWTC_Library Echo variable
-!   INTEGER                                          :: UnEchoStore          ! Stored unit name for another module's echo file
    INTEGER                                          :: UnEchoLocal          ! The local unit number for this module's echo file
    CHARACTER(1024)                                  :: EchoFile             ! Name of HydroDyn echo file
    CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line
-!   CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
-!   CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
    CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file
    CHARACTER(  35)                                  :: Frmt                 ! Output format for logical parameters. (matches NWTC Subroutine Library format)
-!   INTEGER                                          :: JointID              ! Temporary storage of JointID read from HydroDyn input file
-!   INTEGER                                          :: PropSetID            ! Temporary storage of PropSetID read from HydroDyn input file
-!   INTEGER                                          :: MemberID             ! Temporary storage of MemberID read from HydroDyn input file
    INTEGER, ALLOCATABLE                             :: tmpArray(:)          ! Temporary array storage of the joint output list
-
-
+   real(ReKi), ALLOCATABLE                          :: tmpVec1(:), tmpVec2(:) ! Temporary arrays for WAMIT data
+   integer(IntKi)                                   :: startIndx, endIndx   ! indices into working arrays
    INTEGER(IntKi)                                   :: ErrStat2
    CHARACTER(ErrMsgLen)                             :: ErrMsg2
    
@@ -820,20 +810,74 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
 
+      ! NBody - Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data 
+      !         contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there 
+      !         are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]
 
-      ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
-
-   CALL ReadVar ( UnIn, FileName, InitInp%PotFile, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%NBody, 'NBody', 'Number of WAMIT bodies', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
          RETURN
       END IF
 
+      ! NBodyMod - Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 
+      !            2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms 
+      !            between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]
+
+   CALL ReadVar ( UnIn, FileName, InitInp%NBodyMod, 'NBodyMod', 'Body coupling model', ErrStat2, ErrMsg2, UnEchoLocal )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
+      ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
+      
+         ! allocate space for the WAMIT-related data arrays:
+   InitInp%nWAMITObj    = InitInp%NBody
+   InitInp%vecMultiplier = 1
+               
+   if ( InitInp%NBodyMod == 1 )  then
+      InitInp%nWAMITObj = 1  ! Special case where all data in a single WAMIT input file as opposed to  InitInp%NBody number of separate input files.
+      InitInp%vecMultiplier = InitInp%NBody
+   end if
+   
+   CALL AllocAry( InitInp%PotFile        , InitInp%nWAMITObj, 'PotFile'   , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%WAMITULEN, InitInp%nWAMITObj, 'WAMITULEN' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%PtfmRefxt, InitInp%NBody, 'PtfmRefxt' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%PtfmRefyt, InitInp%NBody, 'PtfmRefyt' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%PtfmRefzt, InitInp%NBody, 'PtfmRefzt' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%PtfmRefztRot, InitInp%NBody, 'PtfmRefztRot' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%PtfmVol0 , InitInp%NBody, 'PtfmVol0'  , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%PtfmCOBxt, InitInp%NBody, 'PtfmCOBxt' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%PtfmCOByt, InitInp%NBody, 'PtfmCOByt' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF      
+
+   CALL ReadAry ( UnIn, FileName, InitInp%PotFile, InitInp%nWAMITObj, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
 
       ! WAMITULEN - WAMIT characteristic body length scale
 
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%WAMITULEN, 'WAMITULEN', 'WAMIT characteristic body length scale', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadAry ( UnIn, FileName, InitInp%WAMITULEN, InitInp%nWAMITObj, 'WAMITULEN', 'WAMIT characteristic body length scale', ErrStat2, ErrMsg2, UnEchoLocal )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
+      ! PtfmRefxt  - The xt offset of the body reference point(s) from (0,0,0) (meters)
+
+   CALL ReadAry ( UnIn, FileName, InitInp%PtfmRefxt, InitInp%NBody, 'PtfmRefxt', &
+      'xt offset of the body reference point(s) from (0,0,0)', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -841,9 +885,40 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
       END IF
 
 
+      ! PtfmRefyt  - The yt offset of the body reference point(s) from (0,0,0) (meters)
+
+   CALL ReadAry ( UnIn, FileName, InitInp%PtfmRefyt, InitInp%NBody, 'PtfmRefyt', &
+      'yt offset of the body reference point(s) from (0,0,0)', ErrStat2, ErrMsg2, UnEchoLocal )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
+      ! PtfmRefzt  - The zt offset of the body reference point(s) from (0,0,0) (meters)
+
+   CALL ReadAry ( UnIn, FileName, InitInp%PtfmRefzt, InitInp%NBody, 'PtfmRefzt', &
+      'zt offset of the body reference point(s) from (0,0,0)', ErrStat2, ErrMsg2, UnEchoLocal )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
+      ! PtfmRefztRot  - The rotation about zt of the body reference frame(s) from xt/yt (deg)
+
+   CALL ReadAry ( UnIn, FileName, InitInp%PtfmRefztRot, InitInp%NBody, 'PtfmRefzt', &
+      'The rotation about zt of the body reference frame(s) from xt/yt', ErrStat2, ErrMsg2, UnEchoLocal )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+   InitInp%PtfmRefztRot = InitInp%PtfmRefztRot*D2R_D ! Convert to radians
+   
       ! PtfmVol0 - Displaced volume of water when the platform is in its undisplaced position
 
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%PtfmVol0, 'PtfmVol0', &
+   CALL ReadAry ( UnIn, FileName, InitInp%PtfmVol0, InitInp%NBody, 'PtfmVol0', &
       'Displaced volume of water when the platform is in its undisplaced position', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
@@ -854,7 +929,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
       ! PtfmCOBxt  - The xt offset of the center of buoyancy (COB) from the WAMIT reference point
 
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%PtfmCOBxt, 'PtfmCOBxt', &
+   CALL ReadAry ( UnIn, FileName, InitInp%PtfmCOBxt, InitInp%NBody, 'PtfmCOBxt', &
       'xt offset of the center of buoyancy (COB) from the WAMIT reference point', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
@@ -865,7 +940,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
       ! PtfmCOByt - The yt offset of the center of buoyancy (COB) from the WAMIT reference point
 
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%PtfmCOByt, 'PtfmCOByt', &
+   CALL ReadAry ( UnIn, FileName, InitInp%PtfmCOByt, InitInp%NBody, 'PtfmCOByt', &
       'yt offset of the center of buoyancy (COB) from the WAMIT reference point', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
@@ -1091,9 +1166,15 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! Floating Platform Additional Stiffness and Damping Section
    !-------------------------------------------------------------------------------------------------
+   
+   CALL AllocAry( InitInp%AddF0,     InitInp%vecMultiplier*6, InitInp%nWAMITObj, 'InitInp%AddF0'    , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%AddCLin,   InitInp%vecMultiplier*6, InitInp%vecMultiplier*6, InitInp%nWAMITObj, 'InitInp%AddCLin'  , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%AddBLin,   InitInp%vecMultiplier*6, InitInp%vecMultiplier*6, InitInp%nWAMITObj, 'InitInp%AddBLin'  , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( InitInp%AddBQuad,  InitInp%vecMultiplier*6, InitInp%vecMultiplier*6, InitInp%nWAMITObj, 'InitInp%AddBQuad' , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( tmpVec1, InitInp%nWAMITObj, 'tmpVec1', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+   CALL AllocAry( tmpVec2, 6*InitInp%NBody,   'tmpVec2', ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
 
-
-     ! Header
+   ! Header
 
    CALL ReadCom( UnIn, FileName, 'Additional stiffness and damping header', ErrStat2, ErrMsg2, UnEchoLocal )
 
@@ -1105,38 +1186,46 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
 
       ! AddF0 - Additional preload
-      
-   CALL ReadAry ( UnIn, FileName, InitInp%AddF0, 6, 'AddF0', &
-                           ' Additional preload vector', ErrStat2,  ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-   
+   do i = 1,6*InitInp%vecMultiplier   
+      CALL ReadAry ( UnIn, FileName, tmpVec1, InitInp%nWAMITObj, 'AddF0', &
+                              ' Additional preload vector', ErrStat2,  ErrMsg2, UnEchoLocal )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+      do j = 1, InitInp%nWAMITObj
+         InitInp%AddF0(i,j) = tmpVec1(j)
+      end do
+   end do
    
       ! AddCLin
 
-   DO I=1,6
+   do i=1,6*InitInp%vecMultiplier
 
-      WRITE(strI,'(I1)') I
-      CALL ReadAry ( UnIn, FileName, InitInp%AddCLin(I,:), 6, 'AddCLin', &
+      write(strI,'(I1)') i
+      call ReadAry ( UnIn, FileName, tmpVec2, 6*InitInp%NBody, 'AddCLin', &
                            ' Row '//strI//' of the additional linear stiffness matrix', ErrStat2,  ErrMsg2, UnEchoLocal )
 
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-   END DO
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      if (ErrStat >= AbortErrLev) then
+         call CleanUp()
+         return
+      end if
+      do j = 1, InitInp%nWAMITObj
+         startIndx = 6*InitInp%vecMultiplier*(j-1) + 1
+         endIndx   = startIndx + 6*InitInp%vecMultiplier - 1
+         InitInp%AddCLin(I,:,j) = tmpVec2(startIndx:endIndx)
+      end do
+   end do
 
 
        ! AddBLin
 
-   DO I=1,6
+   DO I=1,6*InitInp%vecMultiplier
 
       WRITE(strI,'(I1)') I
-      CALL ReadAry ( UnIn, FileName, InitInp%AddBLin(I,:), 6, 'AddBLin', &
+      CALL ReadAry ( UnIn, FileName, tmpVec2, 6*InitInp%NBody, 'AddBLin', &
                            ' Row '//strI//' of the additional linear damping matrix', ErrStat2,  ErrMsg2, UnEchoLocal )
 
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
@@ -1144,15 +1233,20 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          CALL CleanUp()
          RETURN
       END IF
+      do j = 1, InitInp%nWAMITObj
+         startIndx = 6*InitInp%vecMultiplier*(j-1) + 1
+         endIndx   = startIndx + 6*InitInp%vecMultiplier - 1
+         InitInp%AddBLin(I,:,j) = tmpVec2(startIndx:endIndx)
+      end do
    END DO
 
 
        ! AddBQuad
 
-   DO I=1,6
+   DO I=1,6*InitInp%vecMultiplier
 
       WRITE(strI,'(I1)') I
-      CALL ReadAry ( UnIn, FileName, InitInp%AddBQuad(I,:), 6, 'AddBQuad', &
+      CALL ReadAry ( UnIn, FileName, tmpVec2, 6*InitInp%NBody, 'AddBQuad', &
                            ' Row '//strI//' of the additional quadratic damping matrix', ErrStat2,  ErrMsg2, UnEchoLocal )
 
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
@@ -1160,6 +1254,11 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          CALL CleanUp()
          RETURN
       END IF
+      do j = 1, InitInp%nWAMITObj
+         startIndx = 6*InitInp%vecMultiplier*(j-1) + 1
+         endIndx   = startIndx + 6*InitInp%vecMultiplier - 1
+         InitInp%AddBQuad(I,:,j) = tmpVec2(startIndx:endIndx)
+      end do
    END DO
 
 
@@ -2936,24 +3035,28 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
        ! PotFile - Root name of potential flow files
 
    IF ( InitInp%PotMod > 0 ) THEN
-       IF ( LEN_TRIM( InitInp%PotFile ) == 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal,'PotFile must not be an empty string.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
+      do i = 1,InitInp%nWAMITObj
+          IF ( LEN_TRIM( InitInp%PotFile(i) ) == 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'PotFile must not be an empty string.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
 
-         ! if this is a relative path, let's make it relative to the location of the main input file
-         ! tell the WAMIT and WAMIT2 modules what the filename is
+            ! if this is a relative path, let's make it relative to the location of the main input file
+            ! tell the WAMIT and WAMIT2 modules what the filename is
 
-      IF ( PathIsRelative( InitInp%PotFile ) ) THEN
-         CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
-         InitInp%PotFile            = TRIM(TmpPath)//TRIM(InitInp%PotFile)
-      END IF
-      InitInp%WAMIT%WAMITFile    = InitInp%PotFile
-      InitInp%WAMIT2%WAMITFile   = InitInp%PotFile
+         IF ( PathIsRelative( InitInp%PotFile(i) ) ) THEN
+            CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
+            InitInp%PotFile(i)            = TRIM(TmpPath)//TRIM(InitInp%PotFile(i))
+         END IF
+      end do
+
+   !TODO: Move this to where the WAMIT modules are initialized
+         InitInp%WAMIT%WAMITFile    = InitInp%PotFile(1)
+         InitInp%WAMIT2%WAMITFile   = InitInp%PotFile(1)
       
          ! Set the flag for multidirectional waves for WAMIT2 module.  It needs to know since the Newman approximation
          ! can only use uni-directional waves.
-      InitInp%WAMIT2%WaveMultiDir = InitInp%Waves%WaveMultiDir
+         InitInp%WAMIT2%WaveMultiDir = InitInp%Waves%WaveMultiDir
 
    ELSE
       InitInp%PotFile            = ""
@@ -2967,15 +3070,17 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       ! WAMITULEN - WAMIT characteristic body length scale
 
    IF ( InitInp%PotMod == 1 ) THEN
-
-      InitInp%WAMIT2%WAMITULEN = InitInp%WAMIT%WAMITULEN    ! Copy to the WAMIT2 module info
-      IF ( InitInp%WAMIT%WAMITULEN < 0.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WAMITULEN must be positive.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
+!TODO: Deal with WAMIT2 and check each WAMITULEN not just the first
+      InitInp%WAMIT2%WAMITULEN = InitInp%WAMITULEN(1)    ! Copy to the WAMIT2 module info
+      do i = 1,InitInp%nWAMITObj
+         IF ( InitInp%WAMITULEN(1) < 0.0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'WAMITULEN must be positive.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+      end do
    ELSE
 
-      InitInp%WAMIT%WAMITULEN = 1.0
+      InitInp%WAMITULEN = 1.0
       InitInp%WAMIT2%WAMITULEN = 1.0
 
    END IF
@@ -2984,15 +3089,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       ! PtfmVol0 - Displaced volume of water when the platform is in its undisplaced position
 
    IF ( InitInp%PotMod == 1 ) THEN
-
-      IF ( InitInp%WAMIT%PtfmVol0 < 0.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal,'PtfmVol0 must not be negative.',ErrStat,ErrMsg,RoutineName)
-         RETURN
-      END IF
-
+      do i = 1,InitInp%nWAMITObj
+         IF ( InitInp%PtfmVol0(i) < 0.0 ) THEN
+            CALL SetErrStat( ErrID_Fatal,'PtfmVol0 must not be negative.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+      end do
    ELSE
 
-      InitInp%WAMIT%PtfmVol0 = 0.0
+      InitInp%PtfmVol0 = 0.0
 
    END IF
 
@@ -4116,31 +4221,25 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       END IF
       foundMask = .FALSE.
          ! Extract Waves2 list
-      InitInp%Waves2%NumOuts  = GetWaves2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      InitInp%Waves2%NumOuts  = GetWaves2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Waves2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
-         ! Extract WAMIT list
-      InitInp%WAMIT%NumOuts   = GetWAMITChannels    ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT%OutList,  foundMask, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
          ! Extract WAMIT2 list
-      InitInp%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      InitInp%WAMIT2%NumOuts  = GetWAMIT2Channels   ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%WAMIT2%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          ! Extract Morison list
          !foundMask = .FALSE.
-      InitInp%Morison%NumOuts = GetMorisonChannels  ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Morison%OutList, foundMask, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      InitInp%Morison%NumOuts = GetMorisonChannels  ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%Morison%OutList, foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
          ! Attach remaining items to the HydroDyn list
          !foundMask = .FALSE.
-      InitInp%NumOuts       = HDOut_GetChannels ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%OutList        , foundMask, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL PrintBadChannelWarning(InitInp%NUserOutputs, InitInp%UserOutputs , foundMask, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call Allocary(InitInp%OutList, InitInp%NUserOutputs, "InitInp%OutList", ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      InitInp%NumOuts       = HDOut_GetChannels ( InitInp%NUserOutputs, InitInp%UserOutputs, InitInp%OutList        , foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL PrintBadChannelWarning(InitInp%NUserOutputs, InitInp%UserOutputs , foundMask, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
       IF (ErrStat >= AbortErrLev ) RETURN
 
       DEALLOCATE(foundMask)
+      
    END IF
       ! Now that we have the sub-lists organized, lets do some additional validation.
    

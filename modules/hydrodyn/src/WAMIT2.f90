@@ -3025,13 +3025,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
       p%DT                    =  Interval                   ! Timestep from calling program
 
-         ! Allocate array for the WaveTime information -- array of times to generate output for.  NOTE: can't use MOVE_ALLOC since InitInp is intent in.
-      CALL AllocAry( p%WaveTime, SIZE(InitInp%WaveTime,1), 'array to hold WaveTime', ErrStatTmp, ErrMsgTmp )
-      IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal, ErrMsgTmp, ErrStat, ErrMsg, 'CheckInitInput')
-         RETURN
-      ENDIF
-      p%WaveTime              =  InitInp%WaveTime
 
 
 
@@ -5414,10 +5407,11 @@ END SUBROUTINE WAMIT2_UpdateStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE WAMIT2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
+SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                         INTENT(IN   )  :: Time           !< Current simulation time in seconds
+      real(SiKi),                         intent(in   )  :: WaveTime(:)    !< Array of wave kinematic time samples, (sec)
       TYPE(WAMIT2_InputType),             INTENT(IN   )  :: u              !< Inputs at Time
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p              !< Parameters
       TYPE(WAMIT2_ContinuousStateType),   INTENT(IN   )  :: x              !< Continuous states at Time
@@ -5459,7 +5453,7 @@ SUBROUTINE WAMIT2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, E
          ! Compute the 2nd order load contribution from incident waves:
 
       DO I = 1,6     ! Loop through all wave excitation forces and moments
-         m%F_Waves2(I) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveExctn2(:,I), &
+         m%F_Waves2(I) = InterpWrappedStpReal ( REAL(Time, SiKi), WaveTime(:), p%WaveExctn2(:,I), &
                                                   m%LastIndWave, p%NStepWave + 1       )
       END DO          ! I - All wave excitation forces and moments
 

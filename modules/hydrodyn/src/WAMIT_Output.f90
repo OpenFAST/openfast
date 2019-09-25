@@ -102,39 +102,53 @@ CONTAINS
 
 
 
-!====================================================================================================
-SUBROUTINE WMTOUT_MapOutputs( CurrentTime, y, F_Waves1, F_HS, F_Rdtn, F_PtfmAM, AllOuts, ErrStat, ErrMsg )
-! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
-! This is called by WAMIT_CalcOutput() at each time step.
-!---------------------------------------------------------------------------------------------------- 
-   REAL(DbKi),                         INTENT( IN    )  :: CurrentTime    ! Current simulation time in seconds
-   TYPE(WAMIT_OutputType),             INTENT( INOUT )  :: y              ! WAMIT's output data
-   REAL(ReKi),                         INTENT( IN    )  :: F_Waves1(6)
-   REAL(ReKi),                         INTENT( IN    )  :: F_HS(6)
-   REAL(ReKi),                         INTENT( IN    )  :: F_Rdtn(6)
-   REAL(ReKi),                         INTENT( IN    )  :: F_PtfmAM(6)
-   REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(MaxWAMITOutputs)
-   INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat        ! Error status of the operation
-   CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
-
-!   INTEGER                                              :: I
-   
-   ErrStat = ErrID_None
-   ErrMsg = ""
-   
-   
-   ! TODO:  use y%mesh for the forces instead of individual parameters
-
-   !AllOuts(Time)      = REAL(CurrentTime,ReKi)
-   AllOuts(FWaves1)  = F_Waves1
-   AllOuts(FHdrSttc) = F_HS
-   AllOuts(FRdtn)    = F_Rdtn + F_PtfmAM
-   
-   
-   
-   
-   
-END SUBROUTINE WMTOUT_MapOutputs
+!!====================================================================================================
+!SUBROUTINE WMTOUT_MapOutputs( CurrentTime, NBody, BodyID, y, F_Waves1, F_HS, F_Rdtn, F_PtfmAM, AllOuts, ErrStat, ErrMsg )
+!! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
+!! This is called by WAMIT_CalcOutput() at each time step.
+!!---------------------------------------------------------------------------------------------------- 
+!   REAL(DbKi),                         INTENT( IN    )  :: CurrentTime    ! Current simulation time in seconds
+!   integer(IntKi),                     intent( in    )  :: NBody          ! If NBody > 1 then BodyID is ignored.  If NBody = 1 then BodyID is used and force arrays are 6 elements long otherwise they are 6*NBody long
+!   integer(IntKi),                     intent( in    )  :: BodyID         ! The body index for this WAMIT object within the HydroDyn context when NBodyMod > 1, if NBody> 1 then BodyID is ignored
+!   TYPE(WAMIT_OutputType),             INTENT( INOUT )  :: y              ! WAMIT's output data
+!   REAL(ReKi),                         INTENT( IN    )  :: F_Waves1(:)
+!   REAL(ReKi),                         INTENT( IN    )  :: F_HS(:)
+!   REAL(ReKi),                         INTENT( IN    )  :: F_Rdtn(:)
+!   REAL(ReKi),                         INTENT( IN    )  :: F_PtfmAM(:)
+!   REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(MaxWAMITOutputs)
+!   INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat        ! Error status of the operation
+!   CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+!
+!   integer(IntKi)            :: iBody, startIndx, endIndx    ! indices
+!   
+!   ErrStat = ErrID_None
+!   ErrMsg = ""
+!   
+!   
+!   ! Need to use individual components of force for output reporting, the y%mesh data has total forces from all contributions
+!
+!   if ( NBody == 1 ) then
+!      
+!      ! This happens when NBodyMod > 1, in which case, each WAMIT object is for a single body, but there may be multiple bodies in the HydroDyn model, 
+!      !   so we need to use BodyID to determine the index into the complete HydroDyn list of WAMIT bodies
+!      
+!      AllOuts(FWaves  (BodyID)) = F_Waves1
+!      AllOuts(FHdrSttc(BodyID)) = F_HS
+!      AllOuts(FRdtn   (BodyID)) = F_Rdtn + F_PtfmAM  
+!      
+!   else
+!      ! The only happens if NBodyMod = 1, and all HydroDyn WAMIT bodies are represented in this single WAMIT object
+!      do iBody = 1,NBody
+!         startIndx = 6*(iBody-1) + 1
+!         endIndx   = startIndx + 5
+!         AllOuts(FWaves  (iBody)) = F_Waves1(startIndx:endIndx)
+!         AllOuts(FHdrSttc(iBody)) = F_HS(startIndx:endIndx)
+!         AllOuts(FRdtn   (iBody)) = F_Rdtn(startIndx:endIndx) + F_PtfmAM(startIndx:endIndx)
+!      end do
+!      
+!   end if
+!
+!END SUBROUTINE WMTOUT_MapOutputs
 
 
 !====================================================================================================

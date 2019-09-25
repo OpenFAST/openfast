@@ -101,9 +101,9 @@ PROGRAM HydroDynDriver
    INTEGER(IntKi)                                     :: I                    ! Generic loop counter
    INTEGER(IntKi)                                     :: J                    ! Generic loop counter
    INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
-   INTEGER(IntKi)                                     :: ErrStat              ! Status of error message
-   CHARACTER(1024)                                    :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   REAL(ReKi)                                         :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
+   INTEGER(IntKi)                                     :: ErrStat,ErrStat2     ! Status of error message
+   CHARACTER(1024)                                    :: ErrMsg,ErrMsg2       ! Error message if ErrStat /= ErrID_None
+   REAL(R8Ki)                                         :: dcm (3,3)            ! The resulting transformation matrix from X to x, (-).
    CHARACTER(1024)                                    :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
    TYPE(HD_Drvr_InitInput)                            :: drvrInitInp          ! Initialization data for the driver program
    
@@ -118,6 +118,9 @@ PROGRAM HydroDynDriver
    real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
    integer                                        :: n_SttsTime                              ! Number of time steps between screen status messages (-)
 
+   type(MeshType)                                 :: RefPtMesh                               ! 1-node Point mesh located at (0,0,0) in global system where all WAMIT-related driver inputs are set
+   type(MeshMapType)                              :: HD_Ref_2_WB_P                           ! Mesh mapping between Reference pt mesh and WAMIT body(ies) mesh
+   real(R8Ki)                                     :: theta(3)                                ! mesh creation helper data
    
    ! For testing
    LOGICAL                                            :: DoTight = .FALSE.
@@ -198,9 +201,6 @@ PROGRAM HydroDynDriver
     
  !BJJ: added this for IceFloe/IceDyn
    InitInData%hasIce = .FALSE.
-
-
-  
   
 
 !-------------------------------------------------------------------------------------
@@ -325,25 +325,96 @@ PROGRAM HydroDynDriver
    CALL HydroDyn_DestroyInitOutput( InitOutData, ErrStat, ErrMsg )
    
    
-      ! Set any steady-state inputs, once before the time-stepping loop
+      
       
    IF ( u(1)%Mesh%Initialized ) THEN 
+      
+         ! Create a motions mesh a (0,0,0) where all kinematics are specified
+      call MeshCreate( BlankMesh        = RefPtMesh            &
+                        ,IOS               = COMPONENT_INPUT   &
+                        ,Nnodes            = 1                 &
+                        ,ErrStat           = ErrStat2          &
+                        ,ErrMess           = ErrMsg2           &
+                        ,TranslationDisp   = .TRUE.            &
+                        ,Orientation       = .TRUE.            &
+                        ,TranslationVel    = .TRUE.            &
+                        ,RotationVel       = .TRUE.            &
+                        ,TranslationAcc    = .TRUE.            &
+                        ,RotationAcc       = .TRUE.)
+         
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+            if (errStat >= AbortErrLev) then
+               ! Clean up and exit
+               call HD_DvrCleanup()
+            end if  
+
+      theta = (/ 0.0_R8Ki, 0.0_R8Ki, 0.0_R8Ki /)
+      dcm   = EulerConstruct(theta)
+         
+         
+            ! Create the node on the mesh
+  
+      CALL MeshPositionNode (RefPtMesh                             &
+                                 , 1                                  &
+                                 , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/)   &  
+                                 , ErrStat2                           &
+                                 , ErrMsg2                            &
+                                 , dcm )
+      
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+       
+      
+            ! Create the mesh element
+      CALL MeshConstructElement (  RefPtMesh           &
+                                     , ELEMENT_POINT      &                         
+                                     , ErrStat2           &
+                                     , ErrMsg2            &
+                                     , 1                  &
+                                                 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+
+      CALL MeshCommit ( RefPtMesh             &
+                        , ErrStat2            &
+                        , ErrMsg2             )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+         if (errStat >= AbortErrLev) then
+            ! Clean up and exit
+            call HD_DvrCleanup()
+         end if    
+         
+      RefPtMesh%RemapFlag  = .TRUE.
+      
+      ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ] 
+         
+      CALL MeshMapCreate( RefPtMesh, u(1)%Mesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
+      if (errStat >= AbortErrLev) then
+         ! Clean up and exit
+         call HD_DvrCleanup()
+      end if   
+         
+      ! Set any steady-state inputs, once before the time-stepping loop   
          
       IF ( drvrInitInp%WAMITInputsMod /= 2 ) THEN
       
             
-         u(1)%Mesh%TranslationDisp(:,1)   = drvrInitInp%uWAMITInSteady(1:3) 
+         RefPtMesh%TranslationDisp(:,1)   = drvrInitInp%uWAMITInSteady(1:3) 
             
             
             ! Compute direction cosine matrix from the rotation angles
          CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uWAMITInSteady(4), ReKi), REAL(drvrInitInp%uWAMITInSteady(5), ReKi), REAL(drvrInitInp%uWAMITInSteady(6), ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
-         u(1)%Mesh%Orientation(:,:,1)     = dcm
+         RefPtMesh%Orientation(:,:,1)     = dcm
+
+         RefPtMesh%TranslationVel(:,1)    = drvrInitInp%uDotWAMITInSteady(1:3)  
+         RefPtMesh%RotationVel(:,1)       = drvrInitInp%uDotWAMITInSteady(4:6) 
+         RefPtMesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotWAMITInSteady(1:3)  
+         RefPtMesh%RotationAcc(:,1)       = drvrInitInp%uDotDotWAMITInSteady(4:6) 
             
-         u(1)%Mesh%TranslationVel(:,1)    = drvrInitInp%uDotWAMITInSteady(1:3)  
-         u(1)%Mesh%RotationVel(:,1)       = drvrInitInp%uDotWAMITInSteady(4:6) 
-         u(1)%Mesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotWAMITInSteady(1:3)  
-         u(1)%Mesh%RotationAcc(:,1)       = drvrInitInp%uDotDotWAMITInSteady(4:6) 
-            
+            ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
+         CALL Transfer_Point_to_Point( RefPtMesh, u(1)%Mesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
+         if (errStat >= AbortErrLev) then
+            ! Clean up and exit
+            call HD_DvrCleanup()
+         end if
       END IF
    END IF
    
