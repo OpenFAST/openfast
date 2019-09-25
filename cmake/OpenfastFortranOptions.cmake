@@ -95,6 +95,13 @@ macro(set_fast_gfortran)
   if(CMAKE_BUILD_TYPE MATCHES Debug)
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all -pedantic -fbacktrace" )
   endif()
+
+  if(CYGWIN)
+    # increase the default 2MB stack size to 16 MB
+    MATH(EXPR stack_size "16 * 1024 * 1024")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS},--stack,${stack_size}")
+  endif()
+
 endmacro(set_fast_gfortran)
 
 #

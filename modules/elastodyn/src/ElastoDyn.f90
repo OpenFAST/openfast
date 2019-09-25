@@ -10810,7 +10810,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
 
       ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
 
-      ! allocate dXdu if necessary
+      ! allocate dXdx if necessary
       if (.not. allocated(dXdx)) then
          call AllocAry(dXdx, p%DOFs%NActvDOF * 2, p%DOFs%NActvDOF * 2, 'dXdx', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -11203,7 +11203,11 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
    call allocAry(p%dx,               p%NDof,            'p%dx',       ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%LinNames_x, p%DOFs%NActvDOF*2, 'LinNames_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL AllocAry(InitOut%RotFrame_x, p%DOFs%NActvDOF*2, 'RotFrame_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(InitOut%DerivOrder_x, p%DOFs%NActvDOF*2, 'DerivOrder_x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
+   
+      ! All Elastodyn continuous states are max order = 2
+   if ( allocated(InitOut%DerivOrder_x) ) InitOut%DerivOrder_x = 2
    
    p%dx = 0.0_R8Ki ! initialize in case we have only 1 blade
    
@@ -11530,9 +11534,9 @@ SUBROUTINE ED_Perturb_u( p, n, perturb_sign, u, du )
    CASE (12) !Module/Mesh/Field: u%HubPtLoad%Moment = 12
       u%HubPtLoad%Moment(fieldIndx,node) = u%HubPtLoad%Moment(fieldIndx,node) + du * perturb_sign            
   
-   CASE (13) !Module/Mesh/Field: u%HubPtLoad%Force = 13
+   CASE (13) !Module/Mesh/Field: u%NacelleLoads%Force = 13
       u%NacelleLoads%Force( fieldIndx,node) = u%NacelleLoads%Force( fieldIndx,node) + du * perturb_sign       
-   CASE (14) !Module/Mesh/Field: u%HubPtLoad%Moment = 14
+   CASE (14) !Module/Mesh/Field: u%NacelleLoads%Moment = 14
       u%NacelleLoads%Moment(fieldIndx,node) = u%NacelleLoads%Moment(fieldIndx,node) + du * perturb_sign            
    
    CASE (15) !Module/Mesh/Field: u%BlPitchCom = 15

@@ -15,6 +15,7 @@
 include   Registry_NWTC_Library.txt
 usefrom   Conv_Radiation.txt
 usefrom   SS_Radiation.txt
+usefrom   SS_Excitation.txt
 usefrom   Waves.txt
 param     WAMIT/WAMIT                  unused                        INTEGER                  MaxWAMITOutputs                      -         18        -         ""    -
 typedef   WAMIT/WAMIT                  InitInputType                 ReKi                     PtfmVol0                        -          -        -         ""    -
@@ -23,14 +24,18 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     PtfmCOBxt                       -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     PtfmCOByt                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  RdtnMod                         -          -        -         ""    -
+typedef   ^                            ^                             INTEGER                  ExctnMod                        -          -        -         ""    -
 typedef   ^                            ^                             DbKi                     RdtnTMax                        -          -        -         ""    -
+typedef   ^                            ^                             ReKi                     WaveDir                         -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)          WAMITFile                       -          -        -         ""    -
 typedef   ^                            ^                             Conv_Rdtn_InitInputType  Conv_Rdtn                       -          -        -         ""    -
-typedef   ^                            ^                             SS_Rad_InitInputType     SS_Rdtn                         -          -        -         ""    -
+#typedef   ^                            ^                             SS_Rad_InitInputType     SS_Rdtn                         -          -        -         ""    -
+#typedef   ^                            ^                             SS_Exc_InitInputType     SS_Excn                         -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     Rhoxg                           -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave2                      -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     WaveDOmega                      -          -        -         ""    -
+typedef   ^                 	         ^                             SiKi	                   WaveElev0                      {:}         -        -         "Wave elevation time history at origin (needed for SS_Excitation module)" m
 typedef   ^                            ^                             SiKi                     WaveElevC0                      {:}{:}     -        -         "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
 typedef   ^                            ^                             SiKi                     WaveTime                        {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  WaveMod                         -          -        -         ""    -
@@ -54,6 +59,7 @@ typedef   ^                            ^                             CHARACTER(1
 # Define continuous (differentiable) states here:
 #
 typedef   ^                            ContinuousStateType           SS_Rad_ContinuousStateType            SS_Rdtn           -          -        -        "continuous states from the State Space radiation module"        -
+typedef   ^                            ContinuousStateType           SS_Exc_ContinuousStateType            SS_Exctn           -          -        -        "continuous states from the State Space radiation module"        -
 typedef   ^                            ^                             Conv_Rdtn_ContinuousStateType         Conv_Rdtn         -          -        -        "placeholder"   -
 #
 #
@@ -61,17 +67,20 @@ typedef   ^                            ^                             Conv_Rdtn_C
 #
 typedef   ^                            DiscreteStateType             Conv_Rdtn_DiscreteStateType           Conv_Rdtn         -          -         -       "discrete states from the convolution radiation module"        -
 typedef   ^                            DiscreteStateType             SS_Rad_DiscreteStateType              SS_Rdtn           -          -         -       "placeholder"        -
+typedef   ^                            DiscreteStateType             SS_Exc_DiscreteStateType              SS_Exctn          -          -         -       "placeholder"        -
 #
 #
 # Define constraint states here:
 #
 typedef   ^                            ConstraintStateType           Conv_Rdtn_ConstraintStateType           Conv_Rdtn       -         -         -         "placeholder"        -
 typedef   ^                            ConstraintStateType           SS_Rad_ConstraintStateType              SS_Rdtn         -         -         -         "placeholder"        -
+typedef   ^                            ConstraintStateType           SS_Exc_ConstraintStateType              SS_Exctn         -         -         -         "placeholder"        -
 #
 #
 
 # Define any data that are integer or logical states here:
 typedef   ^                            OtherStateType                SS_Rad_OtherStateType    SS_Rdtn                         -              -         -         ""   -
+typedef   ^                            OtherStateType                SS_Exc_OtherStateType    SS_Exctn                        -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_OtherStateType Conv_Rdtn                       -              -         -         ""   -
 
 
@@ -87,6 +96,9 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             SS_Rad_MiscVarType       SS_Rdtn                         -              -         -         ""   -
 typedef   ^                            ^                             SS_Rad_InputType         SS_Rdtn_u                       -              -         -         ""   -
 typedef   ^                            ^                             SS_Rad_OutputType        SS_Rdtn_y                       -              -         -         ""   -
+typedef   ^                            ^                             SS_Exc_MiscVarType       SS_Exctn                        -              -         -         ""   -
+typedef   ^                            ^                             SS_Exc_InputType         SS_Exctn_u                      -              -         -         ""   -
+typedef   ^                            ^                             SS_Exc_OutputType        SS_Exctn_y                      -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_MiscVarType    Conv_Rdtn                       -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_InputType      Conv_Rdtn_u                     -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_OutputType     Conv_Rdtn_y                     -              -         -         ""   -
@@ -101,12 +113,14 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     PtfmCOBxt                -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     PtfmCOByt                -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  RdtnMod                  -          -         -         ""        -
+typedef   ^                            ^                             INTEGER                  ExctnMod                        -          -        -         ""    -
 typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}     -         -         ""        -
 typedef   ^                            ^                             ReKi                     RhoXg                    -          -         -         ""        -
 typedef   ^                            ^                             SiKi                     WaveTime                 {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NStepWave                -          -         -         ""        -
 typedef   ^                            ^                             Conv_Rdtn_ParameterType  Conv_Rdtn                -          -         -         ""        -
 typedef   ^                            ^                             SS_Rad_ParameterType     SS_Rdtn                  -          -         -         ""        -
+typedef   ^                            ^                             SS_Exc_ParameterType     SS_Exctn                 -          -         -         ""        -
 typedef   ^                            ^                             DbKi                     DT                       -          -         -         ""        -
 typedef   ^                            ^                             LOGICAL                  PtfmSgF                  -          -         -         ""        -
 typedef   ^                            ^                             LOGICAL                  PtfmSwF                  -          -         -         ""        -

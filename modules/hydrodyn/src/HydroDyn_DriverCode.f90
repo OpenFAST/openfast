@@ -36,6 +36,7 @@ PROGRAM HydroDynDriver
       REAL(ReKi)              :: Gravity
       CHARACTER(1024)         :: HDInputFile
       CHARACTER(1024)         :: OutRootName
+      LOGICAL                 :: Linearize
       INTEGER                 :: NSteps
       REAL(DbKi)              :: TimeInterval
       INTEGER                 :: WAMITInputsMod
@@ -184,6 +185,7 @@ PROGRAM HydroDynDriver
       InitInData%InputFile    = drvrInitInp%HDInputFile
       InitInData%OutRootName  = drvrInitInp%OutRootName
       InitInData%TMax         = drvrInitInp%NSteps * drvrInitInp%TimeInterval
+      InitInData%Linearize    = drvrInitInp%Linearize
    END IF
   
       ! Get the current time
@@ -743,7 +745,19 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       RETURN
    END IF   
      
+       ! Linearize
    
+   CALL ReadVar ( UnIn, FileName, InitInp%Linearize, 'Linearize', &
+                                    'Linearize parameter', ErrStat, ErrMsg, UnEchoLocal )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read Linearize parameter.'
+      ErrStat = ErrID_Fatal
+      CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   END IF   
+  
       ! NSteps
    
    CALL ReadVar ( UnIn, FileName, InitInp%NSteps, 'NSteps', &
