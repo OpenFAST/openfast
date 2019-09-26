@@ -810,6 +810,53 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
 
+      ! ExctnMod  - Wave Excitation model {0: None, 1: DFT, 2: state-space} (switch)
+      ! [STATE-SPACE REQUIRES *.ssexctn INPUT FILE]
+
+   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%ExctnMod, 'ExctnMod', &
+                                 'Wave Excitation model', ErrStat2, ErrMsg2, UnEchoLocal )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
+      ! RdtnMod  - Radiation memory-effect model {1: convolution, 2: state-space} (switch)
+      ! [STATE-SPACE REQUIRES *.ss INPUT FILE]
+
+  CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%RdtnMod, 'RdtnMod', &
+                                 'Radiation memory-effect model', ErrStat2, ErrMsg2, UnEchoLocal )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
+
+      ! RdtnTMax - Analysis time for wave radiation kernel calculations
+      ! NOTE: Use RdtnTMax = 0.0 to eliminate wave radiation damping
+
+   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%RdtnTMax, 'RdtnTMax', &
+                                 'Analysis time for wave radiation kernel calculations', ErrStat2, ErrMsg2, UnEchoLocal )
+
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
+
+      ! RdtnDT - Time step for wave radiation kernel calculations
+
+
+   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%Conv_Rdtn%RdtnDTChr, 'RdtnDT', 'Time step for wave radiation kernel calculations', ErrStat2, ErrMsg2, UnEchoLocal )
+
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL CleanUp()
+         RETURN
+      END IF
+
       ! NBody - Number of WAMIT bodies to be used (-) [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data 
       !         contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there 
       !         are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6]
@@ -948,52 +995,6 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
 
-      ! ExctnMod  - Wave Excitation model {0: None, 1: DFT, 2: state-space} (switch)
-      ! [STATE-SPACE REQUIRES *.ssexctn INPUT FILE]
-
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%ExctnMod, 'ExctnMod', &
-                                 'Wave Excitation model', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-      ! RdtnMod  - Radiation memory-effect model {1: convolution, 2: state-space} (switch)
-      ! [STATE-SPACE REQUIRES *.ss INPUT FILE]
-
-  CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%RdtnMod, 'RdtnMod', &
-                                 'Radiation memory-effect model', ErrStat2, ErrMsg2, UnEchoLocal )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
-      ! RdtnTMax - Analysis time for wave radiation kernel calculations
-      ! NOTE: Use RdtnTMax = 0.0 to eliminate wave radiation damping
-
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%RdtnTMax, 'RdtnTMax', &
-                                 'Analysis time for wave radiation kernel calculations', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
-      ! RdtnDT - Time step for wave radiation kernel calculations
-
-
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%Conv_Rdtn%RdtnDTChr, 'RdtnDT', 'Time step for wave radiation kernel calculations', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
 
    
 !bjj: should we add this?
