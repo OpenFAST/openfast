@@ -118,7 +118,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     HdroAdMsI                {:}{:}     -         -         ""  (sec)
 typedef   ^                            ^                             ReKi                     HdroSttc                 {:}{:}     -         -         ""        -
 typedef   ^                            ^                             INTEGER                  RdtnMod                  -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  ExctnMod                        -          -        -         ""    -
+typedef   ^                            ^                             INTEGER                  ExctnMod                 -          -        -          ""        -
 typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}     -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NStepWave                -          -         -         ""        -
 typedef   ^                            ^                             Conv_Rdtn_ParameterType  Conv_Rdtn                -          -         -         ""        -
@@ -133,7 +133,7 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            ^                             LOGICAL                  PtfmYF                   -          -         -         ""        -
 typedef   ^                            ^                             OutParmType              OutParam                 {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                  -          -         -         ""        -
-typedef   ^                            ^                             INTEGER                  NumOutAll                -          -         -         ""    -
+typedef   ^                            ^                             INTEGER                  NumOutAll                -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                   -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                  -          -         -         ""        -
 typedef   ^                            ^                             CHARACTER(10)            Delim                    -          -         -         ""        -
