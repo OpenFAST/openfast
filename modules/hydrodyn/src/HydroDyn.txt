@@ -187,6 +187,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  NWaveElev                       -          -          -         "Number of wave elevation outputs"        -
 typedef   ^                            ^                             SiKi                     WaveElev                    {:}{:}         -          -         "Total wave elevation"   -
 typedef   ^                            ^                             SiKi                     WaveElev1                   {:}{:}         -          -         "First order wave elevation"        -
+typedef   ^                            ^                             ReKi                     WtrDpth                         -          -          -         "Water depth"    (m)
 typedef   ^                            ^                             ReKi                     AddF0                       {:}{:}         -          -         "Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m)"    -
 typedef   ^                            ^                             ReKi                     AddCLin                     {:}{:}{:}      -          -         "Additional stiffness matrix"    -
 typedef   ^                            ^                             ReKi                     AddBLin                     {:}{:}{:}      -          -         "Additional linear damping matrix"    -
