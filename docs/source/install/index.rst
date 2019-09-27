@@ -32,7 +32,7 @@ available:
 
 All precompiled binaries can be found in the ``Assets`` dropdown in the
 `GitHub Releases <https://github.com/openfast/openfast/releases>`__. Click
-`here <https://github.com/OpenFAST/openfast/releases/download/latest/windows_openfast_binaries.zip>`__
+`here <https://github.com/OpenFAST/openfast/releases/latest/download/windows_openfast_binaries.zip>`__
 to download the latest binaries.
 
 Compile from source
