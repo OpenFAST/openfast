@@ -43,10 +43,6 @@ function(generate_f90_types regfile outfile)
   get_filename_component(input ${regfile} ABSOLUTE)
   get_filename_component(outdir ${outfile} DIRECTORY)
 
-  # first, delete the existing file
-  file(REMOVE ${outfile})
-
-  # then, generate the new one
   add_custom_command(
     OUTPUT ${outfile}
     DEPENDS openfast_registry ${input}
