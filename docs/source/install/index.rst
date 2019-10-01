@@ -5,9 +5,9 @@ Installing OpenFAST
 Guidelines and procedures for obtaining precompiled binaries or compiling
 OpenFAST from source code are described here. While there
 are multiple ways to achieve the same outcome, the OpenFAST team has developed
-a comprehensive and well though out system for compiling the source code. Thus,
-the methods described here are the only officially supported and maintained
-paths for obtaining an OpenFAST executable.
+a comprehensive and well thought out system for compiling the source code.
+Thus, the methods described here are the only officially supported and
+maintained paths for obtaining an OpenFAST executable.
 
 For Windows users only, precompiled binaries are available as described in the
 :ref:`download_binaries` section. For all platforms, OpenFAST is configured
@@ -38,26 +38,28 @@ to download the latest binaries.
 Compile from source
 ~~~~~~~~~~~~~~~~~~~
 For compiling from source code, the NREL OpenFAST team has developed an
-approach that uses CMake to generate build files for all platforms. At the
-moment, CMake support for Visual Studio while doing active development
+approach that uses CMake to generate build files for all platforms. Currently,
+CMake support for Visual Studio while doing active development
 is not well supported, so OpenFAST maintains a Visual Studio solution
 giving Windows developers a better option for developing code, compiling
-and debugging in a streamlined manner.
+and debugging in a streamlined manner. See :ref:`installation_appendix`
+for more information.
 
 Dependencies
 ------------
 Compiling OpenFAST from source requires additional libraries and tools that
 are not distributed with the OpenFAST repository. In many cases, these tools
-can be installed with a system's package manager (e.g. ``homebrew``, ``yum``,
-or ``apt``). If binaries are downloaded or compiled locally, be sure they are
+can be installed with a system's package manager (e.g. ``homebrew`` for macOS,
+``yum`` for CentOS/Red Hat, or ``apt`` for Debian-based systems like Ubuntu).
+If binaries are downloaded or compiled manually, be sure they are
 installed in a standard location for your system so that the other components
 of the OpenFAST build system can find the dependencies.
 
 Build tools
 +++++++++++
 
-A build system is required and may consist of a combination of the following
-packages:
+An environment-specific build system is required and may consist of a
+combination of the following packages:
 
 - `CMake <https://cmake.org>`__ - minimum version 3.0
 - `GNU Make <https://www.gnu.org/software/make/>`__
@@ -112,7 +114,7 @@ When using the C++ API, the following packages are required:
 
 Get the code
 ------------
-OpenFAST can be cloned (i.e., downloaded) from its `Github Repository <https:// github.com/OpenFAST/OpenFAST>`_
+OpenFAST can be cloned (i.e., downloaded) from its `Github repository <https:// github.com/OpenFAST/OpenFAST>`_
 via the command line:
 
 .. code-block:: bash
@@ -124,7 +126,7 @@ An archive of the source code can also be downloaded directly from these links:
 - `"master" branch <https://github.com/OpenFAST/openfast/archive/master.zip>`__ - Stable release
 - `"dev" branch <https://github.com/OpenFAST/openfast/archive/dev.zip>`__ - Latest updates
 
-.. _understanding_cmake:
+.. _vs_windows:
 
 Visual Studio Solution for Windows
 ----------------------------------
@@ -137,13 +139,15 @@ with the build process are documentated in the following section:
 
    install_vs_windows.rst
 
+.. _understanding_cmake:
+
 Understanding CMake
 -------------------
 To more fully understand CMake and its methodology, visit this guide on
 `running CMake <https://cmake.org/runningcmake/>`__.
 
 CMake is a build configuration system that creates files as input to a build
-tool like ``make``, Visual Studio, or ``ninja``. CMake does not compile code
+tool like GNU Make, Visual Studio, or Ninja. CMake does not compile code
 or run compilers directly, but
 rather creates the environment needed for another tool to run compilers and
 create binaries. A CMake project is described by a series of files called
@@ -157,8 +161,8 @@ have one at ``openfast/modules/aerodyn/CMakeLists.txt`` and
 
 Running CMake and compiling will create many files (text files and binaries)
 used in the various stages of the build. For this reason, a ``build`` folder
-is created which contains all of the generated files associated with the build
-process. Here, an important file called ``CMakeCache.txt`` contains the
+should be created to contain all of the generated files associated with the
+build process. Here, an important file called ``CMakeCache.txt`` contains the
 user-defined settings for the CMake configuration. This file functions like
 memory storage for the build. It is initially created the first time the CMake
 command is run and populated with the initial settings. Then, any subsequent
@@ -207,8 +211,8 @@ happens through keyboard inputs.
 
 **OpenFAST CMake options**
 
-CMake has a large number of configuration variables avaiable. Here is a good
-resource for useful CMake variables: `GitLab CMake variables <https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/Useful-Variables>`_.
+CMake has a large number of general configuration variables available. A good
+resource for useful CMake variables is at this link: `GitLab CMake variables <https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/Useful-Variables>`_.
 The `CMake API documentation <https://cmake.org/cmake/help/latest/>`_
 is also helpful for searching through variables and determining the resulting
 action. Note that the CMake process should be well understood before
@@ -284,9 +288,13 @@ populated:
     # Eclipse CDT4 - Ninja         = Generates Eclipse CDT 4.0 project files.
     # Eclipse CDT4 - Unix Makefiles= Generates Eclipse CDT 4.0 project files.
 
-    # Choose on from the list above and pass it as an argument after -G
+    # Choose one from the list above and pass it as an argument after -G
     #   NOTE: wrap this is in quotes!
     cmake .. -G"Sublime Text 2 - Ninja"
+
+.. note::
+
+    If the chosen generator name contains spaces, be sure to wrap it in quotes.
 
 **Math libraries**
 
@@ -335,9 +343,12 @@ and Mac systems is given below.
     make help
 
     # Choose a particular target or give no target to compile everything
-    #   NOTE: compile in parallel by adding "-jN" where N is
-    #         where N is the number of parallel processes to use
     make
+
+.. tip::
+
+    Compile in parallel by adding "-jN" where N is the number of parallel
+    processes to use
 
 This will build the OpenFAST project in the ``build`` directory. Binaries are
 located in ``openfast/build/glue-codes/`` and ``openfast/build/modules/``. Since
@@ -392,11 +403,16 @@ OpenFAST executable will be located at ``openfast/build/glue-codes/Release/openf
 when compiling in *Release* mode.
 
 **The CMake-generated Visual Studio build is currently damaged.** Some modules
-are compiled before their associated registry type files are seen by Visual
-Studio so an initial build may fail. However, a simple work around is to run
-the build command in Visual Studio multiple times until it succeeds.
+are compiled before their associated OpenFAST Registry type-files are seen by
+Visual Studio so an initial build may fail. However, a simple work around is
+to run the build command in Visual Studio multiple times until it succeeds.
+Futher, any configurations made to the Solution in the Visual Studio UI will be
+lost when CMake is executed, and this can happen whenever a change is made to
+the structure of the file system. It is recommended that this method **not** be
+used for debugging or active development on Windows. Instead, see
+:ref:`vs_windows`.
 
-.. _vs_windows:
+.. _installation_appendix:
 
 Appendix
 ~~~~~~~~
@@ -409,3 +425,4 @@ test or may be deprecated in the future.
    install_spack.rst
 
 .. TODO: Check the windows paths: math library command, installation location
+.. TODO: Add cygwin?

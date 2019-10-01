@@ -16,7 +16,7 @@ corresponding to the tested module.
 Configuring the test suite
 --------------------------
 Portions of the test suite are linked to the OpenFAST repository through a
-``git submodule``. Specifically,
+`git submodule`. Specifically,
 
 - `r-test <https://github.com/openfast/r-test>`__
 - `pFUnit <https://github.com/Goddard-Fortran-Ecosystem/pFUnit>`__

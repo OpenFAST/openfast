@@ -28,9 +28,9 @@ The following packages are required for unit testing:
 Compiling
 ---------
 Compiling the unit tests is handled with CMake similar to compiling OpenFAST
-in general. After configuring CMake with ``BUILD_TESTING`` turned on, new make
-targets are created for each module included in the unit test framework named
-``[module]_utest``. Then, simply make the target to test
+in general. After configuring CMake with ``BUILD_TESTING`` turned on, new
+``make`` targets are created for each module included in the unit test
+framework named ``[module]_utest``. Then, simply ``make`` the target to test
 
 .. code-block:: bash
 
@@ -38,7 +38,7 @@ targets are created for each module included in the unit test framework named
     make beamdyn_utest
 
 This creates a unit test executable at
-``openfast/build/unit_tests/[module]_utest``.
+``openfast/build/unit_tests/beamdyn_utest``.
 
 Executing
 ---------
@@ -56,7 +56,7 @@ To execute a module's unit test, simply run the unit test binary. For example:
 pFUnit will display a ``.`` for each unit test successfully completed
 and a ``F`` for each failing test. If any tests do fail, the failure
 criteria will be displayed listing which particular value caused
-the failure. Failure cases display the following output
+the failure. Failure cases display the following output:
 
 .. code-block:: bash
 
