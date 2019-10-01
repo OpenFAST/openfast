@@ -528,7 +528,8 @@ SUBROUTINE DistrMGLoads(MGdens, g, R, tMG, F_MG )
    
 END SUBROUTINE DistrMGLoads
           
-SUBROUTINE DistrDragConst( densWater, Cd, R, tMG, DragConst  ) 
+SUBROUTINE DistrDragConst( densWater, Cd, R, tMG, DragConst  )   !@mhall: is there any reason to have this function?
+                                                         ! It's only called once and it's a simple multiplication.
 
    ! This is used to minimize the computations which occur at each timestep
    
@@ -1005,8 +1006,8 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, WtrDpth, numNodes, nodes, numElemen
    TYPE(MeshType),           INTENT ( INOUT )  :: outDistribMesh
    REAL(ReKi),               INTENT ( IN    )  :: L_F_B(:,:)           ! Lumped buoyancy force associated with the member
    REAL(ReKi),               INTENT ( IN    )  :: L_F_BF(:,:)          ! Lumped buoyancy force associated flooded/filled fluid within the member
-   REAL(ReKi),               INTENT ( IN    )  :: D_F_B(:,:)           ! Lumped buoyancy force associated with the member
-   REAL(ReKi),               INTENT ( IN    )  :: D_F_BF(:,:)          ! Lumped buoyancy force associated flooded/filled fluid within the member
+   REAL(ReKi),               INTENT ( IN    )  :: D_F_B(:,:)           ! Distributed buoyancy force associated with the member
+   REAL(ReKi),               INTENT ( IN    )  :: D_F_BF(:,:)          ! Distributed buoyancy force associated flooded/filled fluid within the member
    REAL(ReKi),               INTENT ( IN    )  :: D_F_MG(:,:)
    REAL(ReKi),               INTENT ( IN    )  :: g                    ! gravity
    !INTEGER,                  INTENT ( IN    )  :: numDistribMarkers
@@ -4609,7 +4610,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
             IF (I < 4 ) THEN
                   ! We are now combining the dynamic pressure term into the inertia term  
                m%D_F_AM_MG(I,J) = -p%D_AM_MG(J)*u%DistribMesh%TranslationAcc(I,J)
-               m%D_F_AM_F(:,J)  = -p%D_AM_F(J)*u%DistribMesh%TranslationAcc(I,J)
+               m%D_F_AM_F(:,J)  = -p%D_AM_F(J)*u%DistribMesh%TranslationAcc(I,J)  !@mhall: should D_F_AM_F(:,J) be D_F_AM_F(I,J) ?
                m%D_F_AM(I,J)    = m%D_F_AM_M(I,J) + m%D_F_AM_MG(I,J) + m%D_F_AM_F(I,J)           
                m%D_F_D(I,J) = elementWaterState * vmag*v(I) * p%D_dragConst(J)      
                m%D_F_B(I,J) = elementWaterState * p%D_F_B(I,J)
