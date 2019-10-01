@@ -26,15 +26,12 @@ Portions of the test suite are linked to the OpenFAST repository through a
     Be sure to clone the repo with the ``--recursive`` flag or execute
     ``git submodule update --init --recursive`` after cloning.
 
-The test suite can be configured with `CMake <https://cmake.org/>`__ similar to
-OpenFAST. The default CMake configuration is useful, but may need customization
-for particular build environments. See the :ref:`installation` section for more
-details on configuring the CMake targets.
-
-While the unit tests must be built with CMake due to its external dependencies,
-the regression test may be executed without CMake. :numref:`unit_test` and
-:numref:`regression_test` have more information on unit testing and regression
-testing, respectively.
+The test suite can be configured with CMake similar to OpenFAST. The default
+CMake configuration is generally applicable, but may need customization
+for particular build environments. See the :ref:`understanding_cmake` section
+for more details on configuring the CMake targets. While the unit tests must
+be built with CMake due to its external dependencies, the regression test
+may be executed without CMake.
 
 Test specific documentation
 ---------------------------
@@ -43,7 +40,6 @@ Test specific documentation
 
    unit_test.rst
    regression_test.rst
-   regression_test_windows.rst
 
 Continuous integration
 ----------------------

@@ -3,8 +3,8 @@
 Regression test
 ===============
 The regression test executes a series of test cases which intend to fully
-describe OpenFAST and its module's capabilities. Jump to
-:ref:`regression_test_ctest`, :ref:`regression_test_example`, or
+describe OpenFAST and its module's capabilities. Jump to :ref:`python_driver`
+:ref:`ctest_driver`, :ref:`regression_test_example`, or
 :ref:`regression_test_windows` for instructions on running the regression
 tests.
 
@@ -37,8 +37,8 @@ and all of the locally generated outputs are stored. Ultimately, both CTest and
 the manual execution program call a series of Python scripts and libraries in
 ``reg_tests`` and ``reg_tests/lib``. One such script is ``lib/pass_fail.py``
 which reads the output files and computes a norm on each channel reported. If
-the maximum norm is greater than a preset tolerance, that particular test is
-reported as failed. The failure criteria is outlined in pseudocode below.
+the maximum norm is greater than the given tolerance, that particular test is
+reported as failed. The failure criteria is outlined below.
 
 .. code-block:: python
 
@@ -61,8 +61,10 @@ The following packages are required for regression testing:
 - CMake and CTest (Optional)
 - matplotlib (Optional)
 
-Manual driver
--------------
+.. _python_driver:
+
+Executing with Python driver
+----------------------------
 The regression test can be executed manually with the included driver at
 ``openfast/reg_tests/manualRegressionTest.py``. This program reads a case list
 file at ``openfast/reg_tests/r-test/glue-codes/openfast/CaseList.md``. Cases
@@ -95,156 +97,276 @@ optional flags which can be obtained by executing with the help option:
                             bool to include verbose system output
     -case [Case-Name]     single case name to execute
 
-For the NREL 5MW turbine test cases, an external ServoDyn controller must be compiled and
-included in the appropriate directory or all NREL 5MW cases will fail without starting.
-More information is available in the documentation for the
-`r-test repository <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__.
+.. note::
 
-CTest driver
-------------
-CTest is included with CMake and is mostly a set of preconfigured targets and
-commands. To use the CTest driver for the regression test, execute CMake as
+    For the NREL 5MW turbine test cases, an external ServoDyn controller must
+    be compiled and included in the appropriate directory or all NREL 5MW
+    cases will fail without starting. More information is available in the
+    documentation for the `r-test repository <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__,
+    but be aware that these three DISCON controllers must exist
+
+    .. code-block:: bash
+
+        openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON.dll
+        openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_ITIBarge.dll
+        openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_OC3Hywind.dll
+
+.. _ctest_driver:
+
+Executing with CTest
+--------------------
+CTest is included with CMake and is primarily a set of preconfigured targets
+and commands. To use the CTest driver for the regression test, execute CMake as
 described in :ref:`installation`, but with this additional flag:
-``BUILD_TESTING=ON``.
+``-DBUILD_TESTING=ON``.
 
 The regression test specific CMake variables are
 
 ::
 
-    - BUILD_TESTING
-    - CTEST_OPENFAST_EXECUTABLE
-    - CTEST_[MODULE]_EXECUTABLE
-    - CTEST_PLOT_ERRORS
-    - CTEST_REGRESSION_TOL
+    BUILD_TESTING
+    CTEST_OPENFAST_EXECUTABLE
+    CTEST_[MODULE]_EXECUTABLE where [MODULE] is the module name
+    CTEST_PLOT_ERRORS
+    CTEST_REGRESSION_TOL
 
-**IT IS IMPORTANT** to verify that NREL 5MW turbine external controllers are compiled
-and placed in the correct location. More information is available in the documentation for the
-`r-test repository <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__,
-but be aware that these three DISCON controllers must exist
+Some additional resources that are required for the full regression test suite
+are included in the CMake project. Specifically, external ServoDyn controllers
+must be compiled for a given system and placed in a particular location. Thus,
+be sure to execute the build command with the ``install`` target:
 
 .. code-block:: bash
 
-    openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON.dll
-    openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_ITIBarge.dll
-    openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_OC3Hywind.dll
+    # configure cmake
+    cmake .. -DBUILD_TESTING=ON
 
-This can be accomplished manually with the CMake projects included with the DISCON source codes
-at ``openfast/reg_tests/r-test/glue-codes/openfast/5MW_Baseline/ServoData/``
-or during CMake configuration by setting the ``CMAKE_INSTALL_PREFIX`` CMake variable.
-If using this method, the install prefix variable should point to an existing and appropriate
-location for CMake to place the compiled binaries. This is important because the NREL 5MW turbine external
-controller CMake projects are preconfigured to install themselves in the appropriate
-location in the build directory. Then, it is important to execute ``make install``
-rather than simply ``make``. If ``CMAKE_INSTALL_PREFIX`` is not appropriately configured,
-the install step may fail or openfast binaries may be placed in some inappropriate default location.
+    # build and install
+    make install
 
-After CMake configuration, the automated regression test can be executed
-by running either of the commands ``make test`` or ``ctest`` from the build
-directory. If the entire OpenFAST package is to be built, CMake will configure
-CTest to find the new binary at ``openfast/build/glue-codes/openfast/openfast``.
-However, if the intention is to build only the test suite, the OpenFAST binary
-should be specified in the CMake configuration under the ``CTEST_OPENFAST_EXECUTABLE``
-flag. There is also a corresponding ``CTEST_[MODULE]_NAME`` flag for each module
-included in the regression test.
+.. note::
 
-.. _regression_test_ctest:
+    REMINDER: For the NREL 5MW turbine test cases, an external ServoDyn controller must
+    be compiled and included in the appropriate directory or all NREL 5MW
+    cases will fail without starting. More information is available in the
+    documentation for the `r-test repository <https://github.com/openfast/r-test#note---servodyn-external-controllers-for-5mw_baseline-cases>`__,
+    but be aware that these three DISCON controllers must exist
 
-Running the regression test with CTest
---------------------------------------
+    .. code-block:: bash
+
+        openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON.dll
+        openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_ITIBarge.dll
+        openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_OC3Hywind.dll
+
+After CMake configuration and compiling, the automated regression test can be
+executed by running either of the commands ``make test`` or ``ctest`` from the
+``build`` directory. If the entire OpenFAST package is to be built, CMake will
+configure CTest to find the new binary at
+``openfast/build/glue-codes/openfast/openfast``. However, if the intention is
+to build only the test suite, the OpenFAST binary should be specified in the
+CMake configuration under the ``CTEST_OPENFAST_EXECUTABLE`` flag. There is
+also a corresponding ``CTEST_[MODULE]_NAME`` flag for each module included in
+the regression test.
 
 When driven by CTest, the regression test can be executed by running various
-forms of the command ``ctest`` from the build directory. The basic commands are
+forms of the command ``ctest`` from the build directory. The basic commands
+are:
 
-- ``ctest`` - Run the entire regression test
-- ``ctest -N`` - Disable actual execution of tests; this is helpful in formulating a particular ctest command
-- ``ctest -V`` - Run the entire regression test with verbose output
-- ``ctest -R [TestName]`` - Run a test by name where TestName is a regex to search
-- ``ctest -j [N]`` - Run all tests with N tests executing in parallel
+.. code-block:: bash
+
+    # Run the entire regression test
+    ctest
+
+    # Disable actual execution of tests;
+    # this is helpful in formulating a particular ctest command
+    ctest -N
+
+    # Run the entire regression test with verbose output
+    ctest -V
+
+    # Run a test by name where TestName is a regular expression (regex)
+    ctest -R [TestName]
+
+    # Run all tests with N tests executing in parallel
+    ctest -j [N]
 
 Each regression test case contains a series of labels associating all of the
 modules used. The labeling can be seen in the test instantiation in
-``reg_tests/CTestList.cmake`` or with the command
+``reg_tests/CTestList.cmake`` or with the command:
 
-- ``ctest --print-labels`` - Print all available test labels
+.. code-block:: bash
 
-Labels can be called directly with
+    # Print all available test labels
+    ctest --print-labels
 
-- ``ctest -L [Label]``
+The test cases corresponding to a particular label can be executed with this
+command:
 
-These flags can be compounded making useful variations of ``ctest`` such as
+.. code-block:: bash
 
-- ``ctest -V -L aerodyn14`` - Runs all cases that use AeroDyn14 with verbose output
-- ``ctest -j 16 -L aerodyn14`` - Runs all cases that use AeroDyn14 in 16 concurrent processes
-- ``ctest -V -R 5MW_DLL_Potential_WTurb`` - Runs the case with name "5MW_DLL_Potential_WTurb"
-- ``ctest -N -L beamdyn`` - Lists all tests with the "beamdyn" label
-- ``ctest -N -R bd --print-labels`` - Lists the labels included in all tests matching the regex "bd"
+    # Filter the test cases corresponding to a particular label
+    ctest -L [Label]
 
-The automated regression test writes new files only into the build directory. Specifically,
-all locally generated solutions are located in the corresponding glue-code or module within
-``openfast/build/reg_tests``. The baseline solutions contained in ``openfast/reg_tests/r-test``
-are strictly read not modified by the automated process.
+Flags can be compounded making useful variations of ``ctest`` such as
+
+.. code-block:: bash
+
+    # Run all cases that use AeroDyn14 with verbose output
+    ctest -V -L aerodyn14
+
+    # Run all cases that use AeroDyn14 in 16 concurrent processes
+    ctest -j 16 -L aerodyn14
+
+    # Run the case with name "5MW_DLL_Potential_WTurb" with verbose output
+    ctest -V -R 5MW_DLL_Potential_WTurb
+
+    # List all tests with the "beamdyn" label
+    ctest -N -L beamdyn
+
+    # List the labels included in all tests matching the regex "bd"
+    ctest -N -R bd --print-labels
+
+
+The automated regression test writes new files only into the build directory.
+Specifically, all locally generated solutions are located in the corresponding
+glue-code or module within ``openfast/build/reg_tests``. The baseline solutions
+contained in ``openfast/reg_tests/r-test`` are strictly read not modified by
+the automated process.
 
 .. _regression_test_example:
 
-Regression test example
------------------------
-The following examples illustrate ways to run the regression tests.
+Regression test examples
+------------------------
+The following examples illustrate methods of running the regression tests.
 
-CTest driver
-~~~~~~~~~~~~
-
-Python driver
-~~~~~~~~~~~~~
-
+Compile OpenFAST and execute with CTest
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The following example assumes the user is starting completely from scratch.
+The commands below download the source code, configure the OpenFAST project
+with CMake, compile all executables, and execute the full regression test
+suite.
 
 .. code-block:: bash
 
+    # Download the source code from GitHub
+    #    Note: The default branch is 'master'
     git clone --recursive https://github.com/openfast/openfast.git
     cd openfast
 
-    ## Build the ServoDyn external controller libraries
-    # Open the Visual Studio Solution (DISCON.sln) located in 'openfast\vs-build\DISCON'
-    # Choose Release and x64 for the Solutions Configuration and Solutions Platform
-    # Build Solution
+    # If necessary, switch to another target branch and update r-test
+    git checkout dev
+    git submodule update
 
-    ## Execute the OpenFAST regression Tests
-    # Open a command prompt which is configured for Python (like Anaconda)
-    cd openfast\reg_tests
-    python manualRegressionTest.py ..\build\bin\openfast_x64.exe Windows Intel 1e-5
+    # Create the build directory and move into it
+    mkdir build install && cd build
 
+    # Configure CMake for testing
+    # - BUILD_TESTING - turn ON
+    # - CTEST_OPENFAST_EXECUTABLE - accept the default
+    # - CTEST_[MODULE]_EXECUTABLE - accept the default
+    cmake .. -DBUILD_TESTING=ON
 
+    # Compile and install
+    make install
+
+    # Execute the full test suite with 4 processes
+    ctest -j4
+
+Configure with CMake and a given executable
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This example assumes the user has a fully functional OpenFAST executable
+available along with any necessary libraries, but does not have the source
+code repository downloaded. This might be the case when executables are
+distributed within an organization. Here, nothing will be compiled, but the
+test suite will be configured with CMake for use with the CTest command.
 
 .. code-block:: bash
 
-  git clone --recursive https://github.com/openfast/openfast.git
-  # The default git branch is 'master'. If necessary, switch to your target branch:
-  # git checkout dev
-  mkdir build install && cd build
-  # Configure CMake with openfast/CMakeLists.txt
-  # - BUILD_TESTING
-  # - CTEST_OPENFAST_EXECUTABLE
-  # - CTEST_[MODULE]_EXECUTABLE
-  cmake .. -DBUILD_TESTING=ON
-  make install
-  ctest
+    # Download the source code from GitHub
+    #    Note: The default branch is 'master'
+    git clone --recursive https://github.com/openfast/openfast.git
+    cd openfast
 
+    # If necessary, switch to another target branch and update r-test
+    git checkout dev
+    git submodule update
+
+    # Create the build directory and move into it
+    mkdir build install && cd build
+
+    # Configure CMake with openfast/reg_tests/CMakeLists.txt
+    # - BUILD_TESTING
+    # - CTEST_OPENFAST_EXECUTABLE
+    # - CTEST_[MODULE]_EXECUTABLE
+
+    # Configure CMake for testing
+    # - BUILD_TESTING - turn ON
+    # - CTEST_OPENFAST_EXECUTABLE - provide a path
+    # - CTEST_[MODULE]_EXECUTABLE - provide a path
+    cmake ../reg_tests -DBUILD_TESTING=ON -DCTEST_OPENFAST_EXECUTABLE=/home/user/Desktop/openfast_executable -DCTEST_BEAMDYN_EXECUTABLE=/home/user/Desktop/beamdyn_driver
+
+    # Install required files
+    make install
+
+    # Execute the full test suite with 4 processes
+    ctest -j4
+
+.. _example_python_driver:
+
+Python driver with a given executable
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This example assumes the user has a fully functional OpenFAST executable
+available along with any necessary libraries, but does not have the source
+code repository downloaded. This might be the case when executables are
+distributed within an organization. Nothing will be compiled, but the
+test suite will be executed with the included Python driver.
 
 .. code-block:: bash
 
-  git clone --recursive https://github.com/openfast/openfast.git
-  # The default git branch is 'master'. If necessary, switch to your target branch:
-  # git checkout dev
-  mkdir build install && cd build
-  # Configure CMake with openfast/reg_tests/CMakeLists.txt
-  # - BUILD_TESTING
-  # - CTEST_OPENFAST_EXECUTABLE
-  # - CTEST_[MODULE]_EXECUTABLE
-  cmake ../reg_tests
-  make install
-  ctest
+    # Download the source code from GitHub
+    #    Note: The default branch is 'master'
+    git clone --recursive https://github.com/openfast/openfast.git
+    cd openfast
 
-- :ref:`regression_test_windows`
+    # If necessary, switch to another target branch and update r-test
+    git checkout dev
+    git submodule update
 
-Follow the link above for a detailed procedure. It is summarized below though
-excluding the procedure to build OpenFAST itself.
+    # Execute the Python driver
+    cd reg_tests
+    python manualRegressionTest.py -h
+    # usage: manualRegressionTest.py [-h] [-p [Plotting-Flag]] [-n [No-Execution]]
+    #                                [-v [Verbose-Flag]] [-case [Case-Name]]
+    #                                OpenFAST System-Name Compiler-Id Test-Tolerance
+    # 
+    # Executes OpenFAST and a regression test for a single test case.
+    # 
+    # positional arguments:
+    #   OpenFAST              path to the OpenFAST executable
+    #   System-Name           current system's name: [Darwin,Linux,Windows]
+    #   Compiler-Id           compiler's id: [Intel,GNU]
+    #   Test-Tolerance        tolerance defining pass or failure in the regression
+    #                         test
+    # 
+    # optional arguments:
+    #   -h, --help            show this help message and exit
+    #   -p [Plotting-Flag], -plot [Plotting-Flag]
+    #                         bool to include matplotlib plots in failed cases
+    #   -n [No-Execution], -no-exec [No-Execution]
+    #                         bool to prevent execution of the test cases
+    #   -v [Verbose-Flag], -verbose [Verbose-Flag]
+    #                         bool to include verbose system output
+    #   -case [Case-Name]     single case name to execute
 
+    python manualRegressionTest.py ..\build\bin\openfast_x64_Double.exe Windows Intel 1e-5
+
+Detailed example of running on Windows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The example :ref:`example_python_driver` can be generally used for running the
+regression tests on a Windows computer. However, a more detailed, step-by-step
+description is given in :ref:`regression_test_windows`.
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   regression_test_windows.rst
