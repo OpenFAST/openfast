@@ -19,10 +19,10 @@ matrix:
       dist: bionic
       env: FC=/usr/bin/gfortran-7; DOUBLE_PRECISION=ON; CPP_API=ON; CMAKE_FLAGS="-DBUILD_OPENFAST_CPP_API=$CPP_API -DGENERATE_TYPES=ON"
     - os: osx
-      osx_image: xcode9.2
+      osx_image: xcode11
       env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=ON
     - os: osx
-      osx_image: xcode9.2
+      osx_image: xcode11
       env: FC=/usr/local/bin/gfortran-7; DOUBLE_PRECISION=OFF
 
 # macos dependency install
@@ -36,10 +36,7 @@ addons:
     update: true
     
 before_install:
-    # mac configuration
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew upgrade python; fi
-
-    # linux configuration
+      # linux configuration
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gfortran libblas-dev liblapack-dev; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" && "$CPP_API" == "ON" ]]; then sudo apt-get install libopenmpi-dev libyaml-cpp-dev libhdf5-dev libxml2-dev; fi
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then pyenv shell 3.7.1; fi
