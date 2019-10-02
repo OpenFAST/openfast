@@ -124,56 +124,56 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
     <TargetName>MAP_$(PlatformName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
     <TargetName>MAP_$(PlatformName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>MAP_$(PlatformName)</TargetName>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'">
     <TargetName>MAP_$(PlatformName)</TargetName>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
     <TargetName>MAP_$(PlatformName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
     <TargetName>MAP_$(PlatformName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>MAP_$(PlatformName)</TargetName>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'">
     <TargetName>MAP_$(PlatformName)</TargetName>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\build\types-files</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -184,7 +184,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\build\types-files</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\modules\map\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -199,7 +199,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\build\types-files</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\modules\map\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -244,7 +244,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\build\types-files</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\modules\map\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -262,7 +262,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\build\types-files</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\modules\map\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -344,7 +344,7 @@
     <ClInclude Include="..\..\modules\map\src\mapinit.h" />
     <ClInclude Include="..\..\modules\map\src\mapsys.h" />
     <ClInclude Include=".\WinSock2.h" />
-    <ClInclude Include="..\..\build\types-files\MAP_Types.h" />
+    <ClInclude Include="..\..\modules\map\src\MAP_Types.h" />
     <ClInclude Include="..\..\modules\map\src\numeric.h" />
     <ClInclude Include="..\..\modules\map\src\outputstream.h" />
     <ClInclude Include="..\..\modules\map\src\residual.h" />
@@ -354,26 +354,26 @@
     <CustomBuild Include="..\..\modules\map\src\MAP_Registry.txt">
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CALL ..\RunRegistry.bat MAP</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">CALL ..\RunRegistry.bat MAP</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\build\types-files\MAP_Types.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">..\..\build\types-files\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\modules\map\src\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">..\..\modules\map\src\MAP_Types.h</Outputs>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</TreatOutputAsContent>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release_Double|Win32'">false</TreatOutputAsContent>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">CALL ..\RunRegistry.bat MAP</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'">CALL ..\RunRegistry.bat MAP</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\build\types-files\MAP_Types.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'">..\..\build\types-files\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\modules\map\src\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'">..\..\modules\map\src\MAP_Types.h</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">CALL ..\RunRegistry.bat MAP</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'">CALL ..\RunRegistry.bat MAP</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\build\types-files\MAP_Types.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'">..\..\build\types-files\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\modules\map\src\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'">..\..\modules\map\src\MAP_Types.h</Outputs>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</TreatOutputAsContent>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Release_Double|x64'">false</TreatOutputAsContent>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</TreatOutputAsContent>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug_Double|x64'">false</TreatOutputAsContent>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">CALL ..\RunRegistry.bat MAP</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'">CALL ..\RunRegistry.bat MAP</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\build\types-files\MAP_Types.h</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'">..\..\build\types-files\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\modules\map\src\MAP_Types.h</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'">..\..\modules\map\src\MAP_Types.h</Outputs>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</TreatOutputAsContent>
       <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug_Double|Win32'">false</TreatOutputAsContent>
     </CustomBuild>
