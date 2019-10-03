@@ -90,28 +90,28 @@
 		<Filter Name="Source Files" Filter="f90;for;f;fpp;ftn;def;odl;idl">
 		<Filter Name="BeamDyn">
 		<Filter Name="RegistryFiles">
-		<File RelativePath="..\..\build\types-files\BeamDyn_Types.f90">
+		<File RelativePath="..\..\modules\beamdyn\src\BeamDyn_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" DisableSpecificDiagnostics="5268" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" DisableSpecificDiagnostics="5268" WarnUnusedVariables="false"/></FileConfiguration></File>
 		<File RelativePath="..\..\modules\beamdyn\src\Registry_BeamDyn.txt">
 			<FileConfiguration Name="Debug_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\modules\beamdyn\src\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\modules\beamdyn\src\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\modules\beamdyn\src\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\modules\beamdyn\src\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\modules\beamdyn\src\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\modules\beamdyn\src\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\modules\beamdyn\src\BeamDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\build\types-files\BeamDyn_Types.f90"/></FileConfiguration></File></Filter>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat BeamDyn" Description="Running Registry for BeamDyn" Outputs="..\..\modules\beamdyn\src\BeamDyn_Types.f90"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\beamdyn\src\BeamDyn.f90"/>
 		<File RelativePath="..\..\modules\beamdyn\src\BeamDyn_IO.f90"/>
 		<File RelativePath="..\..\modules\beamdyn\src\BeamDyn_Subs.f90"/>
