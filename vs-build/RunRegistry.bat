@@ -77,7 +77,7 @@ GOTO checkError
 :SuperController
 SET CURR_LOC=%SC_Loc%
 SET Output_Loc=%CURR_LOC%
-%REGISTRY% "%CURR_LOC%\SuperController_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%" -ccode -noextrap
+%REGISTRY% "%CURR_LOC%\SuperController_Registry.txt" -I "%NWTC_Lib_Loc%" -O "%Output_Loc%" -ccode
 GOTO checkError
 
 :ElastoDyn
@@ -230,8 +230,6 @@ GOTO checkError
 :IceFloe
 SET CURR_LOC=%IceF_Loc%
 SET Output_Loc=%Modules_Loc%\icefloe\src\icefloe
-ECHO Output_Loc for %ModuleName% %Output_Loc%.
-ECHO %REGISTRY% "%CURR_LOC%\%ModuleName%_FASTRegistry.inp" -I "%NWTC_Lib_Loc%"  -O "%Output_Loc%"
 %REGISTRY% "%CURR_LOC%\%ModuleName%_FASTRegistry.inp" -I "%NWTC_Lib_Loc%"  -O "%Output_Loc%"
 GOTO checkError
 
