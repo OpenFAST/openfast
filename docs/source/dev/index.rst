@@ -95,6 +95,7 @@ generally debugging and building out features.
     github_workflow.rst
     code_style.rst
     build_doc.rst
+    types_files.rst
     debugging.rst
     performance.rst
     versioning.rst
