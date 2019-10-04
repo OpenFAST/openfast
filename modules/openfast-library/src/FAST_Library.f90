@@ -605,6 +605,9 @@ subroutine SetOpenFOAM_pointers(iTurb, OpFM_Input_from_FAST, OpFM_Output_to_FAST
    OpFM_Input_from_FAST%pxForce_Len = Turbine(iTurb)%OpFM%u%c_obj%pxForce_Len; OpFM_Input_from_FAST%pxForce = Turbine(iTurb)%OpFM%u%c_obj%pxForce
    OpFM_Input_from_FAST%pyForce_Len = Turbine(iTurb)%OpFM%u%c_obj%pyForce_Len; OpFM_Input_from_FAST%pyForce = Turbine(iTurb)%OpFM%u%c_obj%pyForce
    OpFM_Input_from_FAST%pzForce_Len = Turbine(iTurb)%OpFM%u%c_obj%pzForce_Len; OpFM_Input_from_FAST%pzForce = Turbine(iTurb)%OpFM%u%c_obj%pzForce
+   OpFM_Input_from_FAST%xdotForce_Len = Turbine(iTurb)%OpFM%u%c_obj%xdotForce_Len; OpFM_Input_from_FAST%xdotForce = Turbine(iTurb)%OpFM%u%c_obj%xdotForce
+   OpFM_Input_from_FAST%ydotForce_Len = Turbine(iTurb)%OpFM%u%c_obj%ydotForce_Len; OpFM_Input_from_FAST%ydotForce = Turbine(iTurb)%OpFM%u%c_obj%ydotForce
+   OpFM_Input_from_FAST%zdotForce_Len = Turbine(iTurb)%OpFM%u%c_obj%zdotForce_Len; OpFM_Input_from_FAST%zdotForce = Turbine(iTurb)%OpFM%u%c_obj%zdotForce
    OpFM_Input_from_FAST%pOrientation_Len = Turbine(iTurb)%OpFM%u%c_obj%pOrientation_Len; OpFM_Input_from_FAST%pOrientation = Turbine(iTurb)%OpFM%u%c_obj%pOrientation
    OpFM_Input_from_FAST%fx_Len = Turbine(iTurb)%OpFM%u%c_obj%fx_Len; OpFM_Input_from_FAST%fx = Turbine(iTurb)%OpFM%u%c_obj%fx
    OpFM_Input_from_FAST%fy_Len = Turbine(iTurb)%OpFM%u%c_obj%fy_Len; OpFM_Input_from_FAST%fy = Turbine(iTurb)%OpFM%u%c_obj%fy
