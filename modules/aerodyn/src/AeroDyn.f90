@@ -3881,7 +3881,7 @@ FUNCTION CheckBEMTInputPerturbations( p, m ) RESULT(ValidPerturb)
             do j=1,p%NumBlNds         
             
                   ! don't allow the input perturbations to change Vx or Vy so that Vx=0 or Vy=0:
-               if ( EqualRealNos( m%BEMT_u(indx)%Vx(j,k), 0.0_ReKi ) .or. EqualRealNos( m%BEMT_u(indx)%Vy(j,k), 0.0_ReKi ) ) then
+               if ( EqualRealNos( m%BEMT_u(indx)%Vx(j,k), 0.0_ReKi ) .and. EqualRealNos( m%BEMT_u(indx)%Vy(j,k), 0.0_ReKi ) ) then
                   ValidPerturb = .false.
                   return
                end if
