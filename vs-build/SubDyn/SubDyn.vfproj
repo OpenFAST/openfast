@@ -164,14 +164,14 @@
 		<Filter Name="RegistryFiles">
 		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Registry.txt">
 			<FileConfiguration Name="Debug|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\modules\subdyn\src\SubDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\modules\subdyn\src\SubDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Debug|x64">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration>
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\modules\subdyn\src\SubDyn_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release|Win32">
-				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\build\types-files\SubDyn_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\build\types-files\SubDyn_Types.f90">
+				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat SubDyn" Description="Running Registry for SubDyn" Outputs="..\..\modules\subdyn\src\SubDyn_Types.f90"/></FileConfiguration></File>
+		<File RelativePath="..\..\modules\subdyn\src\SubDyn_Types.f90">
 			<FileConfiguration Name="Debug|Win32">
 				<Tool Name="VFFortranCompilerTool" DisableSpecificDiagnostics="5268" WarnUnusedVariables="false"/></FileConfiguration></File></Filter>
 		<File RelativePath="..\..\modules\subdyn\src\qsort_c_module.f90"/>
