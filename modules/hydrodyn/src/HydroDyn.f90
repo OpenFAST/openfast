@@ -850,6 +850,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             p%nWAMITObj              = InitLocal%nWAMITObj      ! All the data for the various WAMIT bodies are stored in a single WAMIT file
             p%vecMultiplier          = InitLocal%vecMultiplier  ! Multiply all vectors and matrices row/column lengths by NBody
             InitLocal%WAMIT%NBodyMod = InitLocal%NBodyMod
+            InitLocal%WAMIT%Gravity  = InitLocal%Gravity
+            InitLocal%WAMIT%WtrDpth  = InitLocal%Morison%WtrDpth ! The data in InitLocal%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
             p%NBody                  = InitLocal%NBody
             p%NBodyMod               = InitLocal%NBodyMod
             
@@ -970,16 +972,16 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                    ! Compute the load contribution from hydrostatics:
                IF ( InitLocal%UnSum > 0 ) THEN
                   do iBody = 1, InitLocal%NBody
-                  WRITE( InitLocal%UnSum, '(A18,I5)')          'WAMIT Model - Body',iBody
-                  WRITE( InitLocal%UnSum, '(A18)')             '------------------'
-                  WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'Displaced volume (m^3)                 :', InitLocal%PtfmVol0(iBody)
-                  WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'X-offset of the center of buoyancy (m) :', InitLocal%PtfmCOBxt(iBody)
-                  WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'Y-offset of the center of buoyancy (m) :', InitLocal%PtfmCOByt(iBody)
-                  WRITE( InitLocal%UnSum,  '(/)' ) 
-                  WRITE( InitLocal%UnSum, '(A81)' ) 'Buoyancy loads from members modelled with WAMIT, summed about ( 0.0, 0.0, 0.0 )'
-                  WRITE( InitLocal%UnSum, '(18x,6(2X,A20))' ) ' BuoyFxi ', ' BuoyFyi ', ' BuoyFzi ', ' BuoyMxi ', ' BuoyMyi ', ' BuoyMzi '
-                  WRITE( InitLocal%UnSum, '(18x,6(2X,A20))' ) '   (N)   ', '   (N)   ', '   (N)   ', '  (N-m)  ', '  (N-m)  ', '  (N-m)  '
-                  WRITE( InitLocal%UnSum, '(A18,6(2X,ES20.6))') '  External:       ',0.0,0.0,InitLocal%WAMIT%RhoXg*InitLocal%PtfmVol0(iBody),InitLocal%WAMIT%RhoXg*InitLocal%PtfmVol0(iBody)*InitLocal%PtfmCOByt(iBody), -InitLocal%WAMIT%RhoXg*InitLocal%PtfmVol0(iBody)*InitLocal%PtfmCOBxt(iBody), 0.0   ! and the moment about Y due to the COB being offset from the WAMIT reference point
+                     WRITE( InitLocal%UnSum, '(A18,I5)')          'WAMIT Model - Body',iBody
+                     WRITE( InitLocal%UnSum, '(A18)')             '------------------'
+                     WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'Displaced volume (m^3)                 :', InitLocal%PtfmVol0(iBody)
+                     WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'X-offset of the center of buoyancy (m) :', InitLocal%PtfmCOBxt(iBody)
+                     WRITE( InitLocal%UnSum, '(A42,2X,ES15.6)') 'Y-offset of the center of buoyancy (m) :', InitLocal%PtfmCOByt(iBody)
+                     WRITE( InitLocal%UnSum,  '(/)' ) 
+                     WRITE( InitLocal%UnSum, '(A81)' ) 'Buoyancy loads from members modelled with WAMIT, summed about ( 0.0, 0.0, 0.0 )'
+                     WRITE( InitLocal%UnSum, '(18x,6(2X,A20))' ) ' BuoyFxi ', ' BuoyFyi ', ' BuoyFzi ', ' BuoyMxi ', ' BuoyMyi ', ' BuoyMzi '
+                     WRITE( InitLocal%UnSum, '(18x,6(2X,A20))' ) '   (N)   ', '   (N)   ', '   (N)   ', '  (N-m)  ', '  (N-m)  ', '  (N-m)  '
+                     WRITE( InitLocal%UnSum, '(A18,6(2X,ES20.6))') '  External:       ',0.0,0.0,InitLocal%WAMIT%RhoXg*InitLocal%PtfmVol0(iBody),InitLocal%WAMIT%RhoXg*InitLocal%PtfmVol0(iBody)*InitLocal%PtfmCOByt(iBody), -InitLocal%WAMIT%RhoXg*InitLocal%PtfmVol0(iBody)*InitLocal%PtfmCOBxt(iBody), 0.0   ! and the moment about Y due to the COB being offset from the WAMIT reference point
                   end do
                END IF
             

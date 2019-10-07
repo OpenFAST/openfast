@@ -882,12 +882,13 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
       ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
       
          ! allocate space for the WAMIT-related data arrays:
-   InitInp%nWAMITObj    = InitInp%NBody
-   InitInp%vecMultiplier = 1
                
    if ( InitInp%NBodyMod == 1 )  then
       InitInp%nWAMITObj = 1  ! Special case where all data in a single WAMIT input file as opposed to  InitInp%NBody number of separate input files.
       InitInp%vecMultiplier = InitInp%NBody
+   else
+      InitInp%nWAMITObj    = InitInp%NBody
+      InitInp%vecMultiplier = 1
    end if
    
    CALL AllocAry( InitInp%PotFile        , InitInp%nWAMITObj, 'PotFile'   , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
@@ -1167,7 +1168,8 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! Floating Platform Additional Stiffness and Damping Section
    !-------------------------------------------------------------------------------------------------
-   
+   ! If NBodyMod = 1 then vecMultiplier = NBody and nWAMITObj = 1
+   ! Else                 vecMultiplier = 1     and nWAMITObj = NBody
    CALL AllocAry( InitInp%AddF0,     InitInp%vecMultiplier*6, InitInp%nWAMITObj, 'InitInp%AddF0'    , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
    CALL AllocAry( InitInp%AddCLin,   InitInp%vecMultiplier*6, InitInp%vecMultiplier*6, InitInp%nWAMITObj, 'InitInp%AddCLin'  , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
    CALL AllocAry( InitInp%AddBLin,   InitInp%vecMultiplier*6, InitInp%vecMultiplier*6, InitInp%nWAMITObj, 'InitInp%AddBLin'  , ErrStat2, ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
@@ -1216,7 +1218,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
       do j = 1, InitInp%nWAMITObj
          startIndx = 6*InitInp%vecMultiplier*(j-1) + 1
          endIndx   = startIndx + 6*InitInp%vecMultiplier - 1
-         InitInp%AddCLin(I,:,j) = tmpVec2(startIndx:endIndx)
+         InitInp%AddCLin(i,:,j) = tmpVec2(startIndx:endIndx)
       end do
    end do
 
@@ -2308,9 +2310,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
       
          ! OutList - list of requested parameters to output to a file
 
-   !CALL ReadOutputList ( UnIn, FileName, InitInp%WAMIT%OutList, InitInp%WAMIT%NumOuts, &
-   !                                           'OutList', 'List of floating platform outputs requested', ErrStat2, ErrMsg2, UnEchoLocal )
-   ALLOCATE( InitInp%UserOutputs(2778), Stat=ErrStat2)  !todo: bjj: what is this 2778? 
+   ALLOCATE( InitInp%UserOutputs(4526), Stat=ErrStat2)  ! Total possible number of output channels:  Waves2 = 18 + SS_Excitation = 7 + SS_Radiation = 7 + WAMIT2 = 6 + Morison= 4032 + HydroDyn=456   =  4526
       IF (ErrStat2 /= 0) THEN
          CALL SetErrStat( ErrID_Fatal, 'Error allocating UserOutputs.', ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
          CALL CleanUp()
@@ -2326,32 +2326,6 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          RETURN
       END IF
 
-   !
-   !
-   !!-------------------------------------------------------------------------------------------------
-   !! Data section for MESH-BASED OUTPUTS
-   !!-------------------------------------------------------------------------------------------------
-   !
-   !   ! Header
-   !   
-   !CALL ReadCom( UnIn, FileName, 'Mesh-based Outputs header', ErrStat2, ErrMsg2, UnEchoLocal )
-   !
-   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   !   IF (ErrStat >= AbortErrLev) THEN
-   !      CALL CleanUp()
-   !      RETURN
-   !   END IF
-   !
-   !      ! OutList - list of requested parameters to output to a file
-   !
-   !CALL ReadOutputList ( UnIn, FileName, InitInp%Morison%OutList, InitInp%Morison%NumOuts, &
-   !                                           'OutList', 'List of mesh-based outputs requested', ErrStat2, ErrMsg2, UnEchoLocal )
-   !
-   !CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-   !IF (ErrStat >= AbortErrLev) THEN
-   !   CALL CleanUp()
-   !   RETURN
-   !END IF
    
    !-------------------------------------------------------------------------------------------------
    ! This is the end of the input file
@@ -3074,7 +3048,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 !TODO: Deal with WAMIT2 and check each WAMITULEN not just the first
       InitInp%WAMIT2%WAMITULEN = InitInp%WAMITULEN(1)    ! Copy to the WAMIT2 module info
       do i = 1,InitInp%nWAMITObj
-         IF ( InitInp%WAMITULEN(1) < 0.0 ) THEN
+         IF ( InitInp%WAMITULEN(i) < 0.0 ) THEN
             CALL SetErrStat( ErrID_Fatal,'WAMITULEN must be positive.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
@@ -3102,6 +3076,17 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    END IF
 
+      ! PtfmRefzt - The zt offset of the body reference point(s) from (0,0,0) (meters) [1 to NBody] 
+      ! NOTE: only used when PotMod=1. If NBodyMod=2,PtfmRefzt=0.0
+
+   IF ( InitInp%PotMod == 1 .and. InitInp%NBodyMod == 2) THEN
+      do i = 1,InitInp%NBody
+         IF ( .not. EqualRealNos( InitInp%PtfmRefzt(i), 0.0_ReKi ) THEN
+            CALL SetErrStat( ErrID_Fatal,'PtfmRefzt must be 0.0 for all WAMIT bodies when NBodyMod=2.',ErrStat,ErrMsg,RoutineName)
+            RETURN
+         END IF
+      end do
+   END IF
 
       ! RdtnTMax - Analysis time for wave radiation kernel calculations
       ! NOTE: Use RdtnTMax = 0.0 to eliminate wave radiation damping
@@ -3245,7 +3230,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    !-------------------------------------------------------------------------------------------------
    ! Second order Forces due to Waves section (WAMIT2 Module)
    !-------------------------------------------------------------------------------------------------
-
+!TODO: Add check on NBody > 1 and MnDrift and NewmanApp cannot equal 8
    
       ! Check that we only specified one of MnDrift, NewmanApp, or DiffQTF
       !        (compared pairwise -- if any two are both true, we have a problem)

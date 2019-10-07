@@ -151,6 +151,10 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       integer(IntKi)                         :: iBody                                ! WAMIT body index
       real(R8Ki)                             :: orientation(3,3)                     ! Initial orientation of the WAMIT body 
       real(R8Ki)                             :: theta(3)                             ! Euler angle rotations of the WAMIT body
+      real(ReKi)                             :: WaveNmbr                             ! Frequency-dependent wave number
+      COMPLEX(SiKi)                          :: Fxy                                  ! Phase correction term for Wave excitation forces
+      real(ReKi)                             :: tmpAngle                             ! Frequency and heading and platform offset dependent phase shift angle for Euler's Equation e^(-j*tmpAngle)
+      COMPLEX(SiKi), ALLOCATABLE             :: HdroExctn_Local (:,:,:)              ! Temporary Frequency- and direction-dependent complex hydrodynamic wave excitation force per unit wave amplitude vector (kg/s^2, kg-m/s^2)
          ! Error handling
       CHARACTER(1024)                        :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
@@ -185,7 +189,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       p%NumOuts      = InitInp%NumOuts
       p%ExctnMod     = InitInp%ExctnMod
       p%NBodyMod     = InitInp%NBodyMod
-      p%NBody        = InitInp%NBody
+      p%NBody        = InitInp%NBody            ! In the context of this WAMIT object NBody is 1 if NBodyMod > 1 [there are NBody different WAMIT objects in this case]
       
          ! This module's implementation requires that if NBodyMod = 2 or 3, then there is one instance of a WAMIT module for each body, therefore, HydroDyn may have NBody > 1, but this WAMIT module will have NBody = 1
       if ( (p%NBodyMod > 1) .and. (p%NBody > 1) ) then
@@ -194,7 +198,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       end if     
       
          ! Allocate misc var and parameter vectors/matrices
-      call AllocAry( p%F_HS_Moment_Offset, 3, p%NBody, 'p%F_HS_Moment_Offset', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+      call AllocAry( p%F_HS_Moment_Offset,  6, p%NBody, 'p%F_HS_Moment_Offset', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
       call AllocAry( m%F_HS              ,  6*p%NBody, 'm%F_HS'              , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
       call AllocAry( m%F_Waves1          ,  6*p%NBody, 'm%F_Waves1'          , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
       call AllocAry( m%F_Rdtn            ,  6*p%NBody, 'm%F_Rdtn'            , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
@@ -204,17 +208,18 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
       
       do iBody = 1, p%NBody     
-         p%F_HS_Moment_Offset(1,iBody) =  InitInp%RhoXg*InitInp%PtfmVol0(iBody)                                             ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
-         p%F_HS_Moment_Offset(2,iBody) =  InitInp%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOByt(iBody) - InitInp%PtfmRefyt(iBody)  )  ! and the moment about X due to the COB being offset from the local WAMIT reference point
-         p%F_HS_Moment_Offset(3,iBody) = -InitInp%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOBxt(iBody) - InitInp%PtfmRefxt(iBody)  )  ! and the moment about Y due to the COB being offset from the localWAMIT reference point
+         p%F_HS_Moment_Offset(1,iBody) = 0.0_ReKi
+         p%F_HS_Moment_Offset(2,iBody) = 0.0_ReKi
+         p%F_HS_Moment_Offset(3,iBody) =  InitInp%RhoXg*InitInp%PtfmVol0(iBody)                                             ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
+         p%F_HS_Moment_Offset(4,iBody) =  InitInp%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOByt(iBody) - InitInp%PtfmRefyt(iBody)  )  ! and the moment about X due to the COB being offset from the local WAMIT reference point
+         p%F_HS_Moment_Offset(5,iBody) = -InitInp%RhoXg*InitInp%PtfmVol0(iBody)*( InitInp%PtfmCOBxt(iBody) - InitInp%PtfmRefxt(iBody)  )  ! and the moment about Y due to the COB being offset from the localWAMIT reference point
+         p%F_HS_Moment_Offset(6,iBody) = 0.0_ReKi
       end do 
 
          
          ! Tell our nice users what is about to happen that may take a while:
 
       CALL WrScr ( ' Reading in WAMIT output with root name "'//TRIM(InitInp%WAMITFile)//'".' )
-
-!TODO: Augment this for NBodyMod = 1 
 
          ! Let's set up the matrices used to redimensionalize the hydrodynamic data
          !   from WAMIT; all these matrices are symmetric and need to be used with
@@ -304,6 +309,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             
             iSub = mod(I-1,6)+1                         ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
             jSub = mod(J-1,6)+1  
+!TODO need to transform this when PtfmRefztRot is nonzero per plan
             p%HdroSttc (I,J) = TmpData1*SttcDim(iSub,jSub)    ! Redimensionalize the data and place it at the appropriate location within the array
 
          ELSE                                           ! We must have reached the end of the file, so stop reading in data
@@ -514,7 +520,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
                 !  Indx = 6*( I - 1 ) + J - ( I*( I - 1 ) )/2                                             ! Convert from row/column indices to an index in the format used to save only the upper-triangular portion of the matrix.  NOTE: ( I*( I - 1 ) )/2 = SUM(I,START=1,END=I-1).
                   iSub = mod(I-1,6)+1                                                                    ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
                   jSub = mod(J-1,6)+1  
-
+!TODO need to transform these when PtfmRefztRot is nonzero per plan
                   HdroAddMs(SortFreqInd(K),I,J) = TmpData1*RdtnDim(iSub,jSub)                           ! Redimensionalize the data and place it at the appropriate location within the array
                   HdroDmpng(SortFreqInd(K),I,J) = TmpData2*RdtnDim(iSub,jSub)*HdroFreq(SortFreqInd(K))  ! Redimensionalize the data and place it at the appropriate location within the array
               ! END IF
@@ -940,8 +946,57 @@ end if
                   RETURN            
                END IF
 
+               !====================================
+               ! Transform the wave excitation coefs
+               !====================================
+               
+               
+               if ( p%NBodyMod == 2 ) then
+                  
+                  ! Since NBodyMod = 2, then NBody = 1 for this WAMIT object (this requirement is encoded at the HydroDyn module level)
+                  
+                  allocate (  HdroExctn_Local(NInpFreq, NInpWvDir, 6),   STAT=ErrStat2 )
+                  IF ( ErrStat2 /= 0 )  THEN
+                     CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the HdroExctn_Local array.', ErrStat, ErrMsg, 'WAMIT_Init')
+                     CALL Cleanup()
+                  RETURN            
+               END IF
 
+                  do K = 1,6           ! Loop through all wave excitation forces and moments
+                     do J = 1, NInpWvDir                       
+                        TmpCoord(2) = HdroWvDir(J) - InitInp%PtfmRefztRot(1)*R2D  ! apply locale Z rotation to heading angle (degrees)
+                        do I = 1, NInpFreq
+                           TmpCoord(1) = HdroFreq(I)
+                           ! Iterpolate to find new coef
+                           call WAMIT_Interp2D_Cplx( TmpCoord, HdroExctn(:,:,K), HdroFreq, HdroWvDir, LastInd2, HdroExctn_Local(I,J,K), ErrStat2, ErrMsg2 )
+                        end do
+                     end do
+                  end do
 
+                  ! Now apply rotation and phase shift 
+
+                  do J = 1, NInpWvDir  
+                     do I = 1, NInpFreq
+
+                           ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
+                        WaveNmbr   = WaveNumber ( HdroFreq(I), InitInp%Gravity, InitInp%WtrDpth )
+                        tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(HdroWvDir(J)*D2R) + InitInp%PtfmRefyt(1)*sin(HdroWvDir(J)*D2R) )
+                        TmpRe =  cos(tmpAngle)
+                        TmpIm = -sin(tmpAngle)
+                        Fxy   = CMPLX( TmpRe, TmpIm )
+
+                        HdroExctn(I,J,1) = Fxy*( HdroExctn_Local(I,J,1)*cos(InitInp%PtfmRefztRot(1)) -  HdroExctn_Local(I,J,2)*sin(InitInp%PtfmRefztRot(1)) )
+                        HdroExctn(I,J,2) = Fxy*( HdroExctn_Local(I,J,1)*sin(InitInp%PtfmRefztRot(1)) +  HdroExctn_Local(I,J,2)*cos(InitInp%PtfmRefztRot(1)) )
+                        HdroExctn(I,J,3) = Fxy*( HdroExctn_Local(I,J,3) )
+                        HdroExctn(I,J,4) = Fxy*( HdroExctn_Local(I,J,4)*cos(InitInp%PtfmRefztRot(1)) -  HdroExctn_Local(I,J,5)*sin(InitInp%PtfmRefztRot(1)) )
+                        HdroExctn(I,J,5) = Fxy*( HdroExctn_Local(I,J,4)*sin(InitInp%PtfmRefztRot(1)) +  HdroExctn_Local(I,J,5)*cos(InitInp%PtfmRefztRot(1)) )
+                        HdroExctn(I,J,6) = Fxy*( HdroExctn_Local(I,J,6) )
+
+                     end do
+                  end do  
+                  deallocate(HdroExctn_Local)
+               end if
+               
                ! Compute the positive-frequency components (including zero) of the discrete
                !   Fourier transform of the wave excitation force:
 
@@ -1546,8 +1601,8 @@ SUBROUTINE WAMIT_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, E
       m%F_HS = -matmul(p%HdroSttc,q)
       
       do iBody = 1, p%NBody
-         indxStart = (iBody-1)*6+3
-         indxEnd   = indxStart+2
+         indxStart = (iBody-1)*6+1
+         indxEnd   = indxStart+5
          m%F_HS(indxStart:indxEnd) =  m%F_HS(indxStart:indxEnd) + p%F_HS_Moment_Offset(:,iBody)  ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
       end do   
       
@@ -1603,22 +1658,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, E
       
       
       ! Output channels will be dealt with by the HydroDyn module
-      
- !TODO: Clean this up     
-      !
-      !
-      !   ! Map calculated results into the AllOuts Array
-      !CALL WMTOut_MapOutputs(Time, p%NBody, p%BodyID, y, m%F_Waves1, m%F_HS, m%F_Rdtn, m%F_PtfmAM, AllOuts, ErrStat, ErrMsg)
-      !
-      !
-      !        ! Put the output data in the OutData array
-      !
-      !DO I = 1,p%NumOuts
-      !
-      !   y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
-      !
-      !END DO      
-               
+             
 
 END SUBROUTINE WAMIT_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
