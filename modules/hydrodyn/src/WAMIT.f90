@@ -55,6 +55,42 @@ MODULE WAMIT
         
    
 CONTAINS
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine transforms  WAMIT input file data from a local (heading-angle, based) coordinate system to the global system. 
+   subroutine TransformWAMITMatrices( NBody, RotZ, M )
+!..................................................................................................................................
+      integer(IntKi), intent( in    ) :: NBody   ! Number of WAMIT bodies in this WAMIT object ( = 1 if NBodyMod > 1)
+      real(R8Ki),     intent( in    ) :: RotZ(:) ! NBody heading angles (radians)
+      real(SiKi),     intent( inout ) :: M(:,:)  ! Matrix data to be transformed, if NBodyMOD = 1 and NBody > 1 then we will be transforming the individual sub 6x6 matrices
+      
+      integer(IntKi)   :: i,j,ii,jj,iSub,jSub
+      real(R8Ki)       :: Rj(3,3)
+      real(R8Ki)       :: Ri(3,3)
+      
+      do j = 1, NBody
+         Rj(1,:) = (/ cos(RotZ(j)), sin(RotZ(j)), 0.0_R8Ki/)
+         Rj(2,:) = (/-sin(RotZ(j)), cos(RotZ(j)), 0.0_R8Ki/)
+         Rj(3,:) = (/ 0.0_R8Ki    , 0.0_R8Ki    , 1.0_R8Ki/)
+         do i = 1, NBody
+            if ( (.not. EqualRealNos(RotZ(i), 0.0_R8Ki)) .or. (.not. EqualRealNos(RotZ(j), 0.0_R8Ki)) ) then
+               Ri(1,:) = (/ cos(RotZ(i)), sin(RotZ(i)), 0.0_R8Ki/)
+               Ri(2,:) = (/-sin(RotZ(i)), cos(RotZ(i)), 0.0_R8Ki/)
+               Ri(3,:) = (/ 0.0_R8Ki    , 0.0_R8Ki    , 1.0_R8Ki/)
+               do jj = 1,2
+                  jSub = (j-1)*6 + (jj-1)*3 + 1  
+                  do ii = 1,2
+                     iSub = (i-1)*6 + (ii-1)*3 + 1
+                     M(iSub:iSub+2,jSub:jSub+2) = matmul( transpose(Ri), matmul( M(iSub:iSub+2,jSub:jSub+2), Rj ) )
+                  end do
+               end do 
+            end if
+         end do
+
+      end do
+   end subroutine TransformWAMITMatrices
+   
+   
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps. 
 !! The parameters are set here and not changed during the simulation.
@@ -309,7 +345,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
             
             iSub = mod(I-1,6)+1                         ! Finds the 6x6 sub-matrix indexing for the SttcDim multiplier matrix
             jSub = mod(J-1,6)+1  
-!TODO need to transform this when PtfmRefztRot is nonzero per plan
+
             p%HdroSttc (I,J) = TmpData1*SttcDim(iSub,jSub)    ! Redimensionalize the data and place it at the appropriate location within the array
 
          ELSE                                           ! We must have reached the end of the file, so stop reading in data
@@ -323,7 +359,8 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
       CLOSE ( UnWh ) ! Close file.
 
-
+         ! need to transform p%HdroSttc when PtfmRefztRot is nonzero per plan
+      call TransformWAMITMatrices( p%NBody, InitInp%PtfmRefztRot, p%HdroSttc )
 
          ! Linear, frequency-dependent hydrodynamic added mass and damping from the
          !   radiation problem:
@@ -542,8 +579,13 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
 
       CLOSE ( UnW1 ) ! Close file.
 
-
-
+         ! need to transform HdroAddMs and HdroDmpng when PtfmRefztRot is nonzero per plan
+      do I = 1, NInpFreq
+         call TransformWAMITMatrices( p%NBody, InitInp%PtfmRefztRot, HdroAddMs(I,:,:) )
+         call TransformWAMITMatrices( p%NBody, InitInp%PtfmRefztRot, HdroDmpng(I,:,:) )
+      end do
+      
+      
          ! Linear, frequency- and direction-dependent complex hydrodynamic wave
          !   excitation force per unit wave amplitude vector from the diffraction
          !   problem:
@@ -1221,7 +1263,7 @@ end if
                CALL Cleanup()
                RETURN
             END IF
-
+         
       do iBody = 1, p%NBody
 
          theta = (/ 0.0_R8Ki, 0.0_R8Ki, InitInp%PtfmRefztRot(iBody)/)
@@ -1238,7 +1280,7 @@ end if
                                  , orientation )
       
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
-       
+
       
             ! Create the mesh element
          CALL MeshConstructElement (  u%Mesh              &
@@ -1248,6 +1290,7 @@ end if
                                      , iBody              &
                                                  )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+            
       end do
 
       CALL MeshCommit ( u%Mesh              &
@@ -1259,23 +1302,20 @@ end if
             RETURN
          END IF      
 
-         
-      CALL MeshCopy ( SrcMesh      = u%Mesh                 &
-                     ,DestMesh     = y%Mesh                 &
-                     ,CtrlCode     = MESH_SIBLING           &
-                     ,IOS          = COMPONENT_OUTPUT       &
-                     ,ErrStat      = ErrStat2               &
-                     ,ErrMess      = ErrMsg2                &
-                     ,Force        = .TRUE.                 &
-                     ,Moment       = .TRUE.                 )
-     
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
+        call MeshCopy ( SrcMesh   = u%Mesh           &
+                       ,DestMesh  = y%Mesh           &
+                       ,CtrlCode  = MESH_SIBLING     &
+                       ,IOS       = COMPONENT_OUTPUT &
+                       ,ErrStat   = ErrStat2         &
+                       ,ErrMess   = ErrMsg2          &
+                       ,Force     = .TRUE.           &
+                       ,Moment    = .TRUE.           )
+        
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
-         END IF      
-      
-      
+         END IF    
       u%Mesh%RemapFlag  = .TRUE.
       y%Mesh%RemapFlag  = .TRUE.
 
