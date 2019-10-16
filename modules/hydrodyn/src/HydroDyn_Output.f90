@@ -1152,27 +1152,6 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
          Frmt = '('//TRIM(Int2LStr(p%NumTotalOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
          WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WriteOutput(I)  , I=1,p%NumTotalOuts )   
       END IF
-      
-      !   ! HydroDyn Outputs
-      !IF (ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0) THEN
-      !!IF (p%DoOutput) THEN
-      !   Frmt = '('//TRIM(Int2LStr(p%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-      !   WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WriteOutput(I)  , I=1,p%NumOuts )   
-      !END IF
-      !
-      !   ! WAMIT Outputs
-      !IF (ALLOCATED( p%WAMIT%OutParam ) .AND. p%WAMIT%NumOuts > 0) THEN
-      !!IF (p%WAMIT%DoOutput) THEN
-      !   Frmt = '('//TRIM(Int2LStr(p%WAMIT%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-      !   WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%WAMIT%WriteOutput(I)  , I=1,p%WAMIT%NumOuts )
-      !END IF
-      !
-      !   ! Morison Outputs
-      !IF (ALLOCATED( p%Morison%OutParam ) .AND. p%Morison%NumOuts > 0) THEN
-      !!IF (p%Morison%DoOutput) THEN
-      !   Frmt = '('//TRIM(Int2LStr(p%Morison%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
-      !   WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim,  y%Morison%WriteOutput(I), I=1,p%Morison%NumOuts )
-      !END IF
           
       WRITE (p%UnOutFile,'()', IOSTAT=ErrStat)          ! write the line return
    
@@ -1238,47 +1217,9 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
    
    CALL HDOUT_ChkOutLst( InitInp%OutList(1:p%NumOuts), y, p, ErrStat, ErrMsg )
    IF ( ErrStat /= 0 ) RETURN
-   
-   
-  !IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file            
-  !    
-  !    ALLOCATE( y%WriteOutput( p%NumOuts ),  STAT = ErrStat )
-  !    IF ( ErrStat /= ErrID_None ) THEN
-  !       ErrMsg  = ' Error allocating space for WriteOutput array.'
-  !       ErrStat = ErrID_Fatal
-  !       RETURN
-  !    END IF
-  !    y%WriteOutput = 0.0_ReKi
-  !    
-  !      ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts), STAT = ErrStat )
-  !    IF ( ErrStat /= ErrID_None ) THEN
-  !       ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
-  !       ErrStat = ErrID_Fatal
-  !       RETURN
-  !    END IF
-  !    
-  !    ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts), STAT = ErrStat )
-  !    IF ( ErrStat /= ErrID_None ) THEN
-  !       ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
-  !       ErrStat = ErrID_Fatal
-  !       RETURN
-  !    END IF   
-  !
-  !    DO I = 1,p%NumOuts
-  !       
-  !       InitOut%WriteOutputHdr(I) = TRIM( p%OutParam(I)%Name  )
-  !       InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )      
-  !    
-  !    END DO   
-  !    
-  ! END IF   ! there are any requested outputs   
 
-      
-     
          ! Aggregate the sub-module initialization outputs for the glue code
-      !IF ( p%OutSwtch == 2 .OR. p%OutSwtch == 3 ) THEN
-         
-         !hasWAMITOuts   = .FALSE.
+
          hasWAMIT2Outs  = .FALSE.
          hasWaves2Outs  = .FALSE.
          hasMorisonOuts = .FALSE.
@@ -1286,11 +1227,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
          m%LastOutTime  = 0.0_DbKi
          m%Decimate     = 0
          p%OutDec       = 1             !TODO: Remove this once the parameter has been added to the HD input file GJH 7/8/2014
-         
-         !IF (ALLOCATED( p%WAMIT(1)%OutParam ) .AND. p%WAMIT(1)%NumOuts > 0) THEN
-         !   hasWAMITOuts = .TRUE.
-         !   p%NumTotalOuts = p%NumTotalOuts + p%WAMIT(1)%NumOuts  * p%nWAMITObj     
-         !END IF
+
          IF (ALLOCATED( p%WAMIT2%OutParam ) .AND. p%WAMIT2%NumOuts > 0) THEN
             hasWAMIT2Outs = .TRUE.
             p%NumTotalOuts = p%NumTotalOuts + p%WAMIT2%NumOuts       
@@ -1340,16 +1277,6 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
             
          J = p%NumOuts + 1
          
-         !IF ( hasWAMITOuts ) THEN
-         !   do iWAMIT = 1, p%nWAMITObj
-         !      DO I=1, p%WAMIT(iWAMIT)%NumOuts
-         !         InitOut%WriteOutputHdr(J) = InitOut%WAMIT(iWAMIT)%WriteOutputHdr(I)
-         !         InitOut%WriteOutputUnt(J) = InitOut%WAMIT(iWAMIT)%WriteOutputUnt(I)
-         !         J = J + 1
-         !      END DO
-         !   end do
-         !END IF
-         
          IF ( hasWaves2Outs ) THEN
             DO I=1, p%Waves2%NumOuts
                InitOut%WriteOutputHdr(J) = InitOut%Waves2%WriteOutputHdr(I)
@@ -1373,9 +1300,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, E
                J = J + 1
             END DO
          END IF
-         
-      !END IF
-      
+
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
          CALL HDOut_OpenOutput( HydroDyn_ProgDesc, InitInp%OutRootName, p, InitOut, ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev ) RETURN
@@ -1451,13 +1376,6 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
          WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim, TRIM( InitOut%WriteOutputHdr(I)   ), I=1,p%NumOuts )
       END IF
       
-      IF (ALLOCATED( p%WAMIT(1)%OutParam ) .AND. p%WAMIT(1)%NumOuts > 0) THEN
-         do iWAMIT = 1, p%nWAMITObj
-            Frmt = '('//TRIM(Int2LStr(p%WAMIT(iWAMIT)%NumOuts))//'(:,A,'//TRIM( p%OutSFmt )//'))'
-            WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim, TRIM( InitOut%WAMIT(iWAMIT)%WriteOutputHdr(I)   ), I=1,p%WAMIT(iWAMIT)%NumOuts )
-         end do
-      END IF
-      
       IF (ALLOCATED( p%WAMIT2%OutParam ) .AND. p%WAMIT2%NumOuts > 0) THEN
          Frmt = '('//TRIM(Int2LStr(p%WAMIT2%NumOuts))//'(:,A,'//TRIM( p%OutSFmt )//'))'
          WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim, TRIM( InitOut%WAMIT2%WriteOutputHdr(I)   ), I=1,p%WAMIT2%NumOuts )
@@ -1487,14 +1405,7 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
          Frmt = '('//TRIM(Int2LStr(p%NumOuts))//'(:,A,'//TRIM( p%OutSFmt )//'))'
          WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim, TRIM( InitOut%WriteOutputUnt(I)   ), I=1,p%NumOuts )
       END IF
-      
-      IF (ALLOCATED( p%WAMIT(1)%OutParam ) .AND. p%WAMIT(1)%NumOuts > 0) THEN
-         do iWAMIT = 1, p%nWAMITObj
-            Frmt = '('//TRIM(Int2LStr(p%WAMIT(iWAMIT)%NumOuts))//'(:,A,'//TRIM( p%OutSFmt )//'))'
-            WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim, TRIM( InitOut%WAMIT(iWAMIT)%WriteOutputUnt(I)   ), I=1,p%WAMIT(iWAMIT)%NumOuts )
-         end do
-      END IF
-      
+
       IF (ALLOCATED( p%WAMIT2%OutParam ) .AND. p%WAMIT2%NumOuts > 0) THEN
          Frmt = '('//TRIM(Int2LStr(p%WAMIT2%NumOuts))//'(:,A,'//TRIM( p%OutSFmt )//'))'
          WRITE(p%UnOutFile,Frmt,ADVANCE='no')   ( p%Delim, TRIM( InitOut%WAMIT2%WriteOutputUnt(I)   ), I=1,p%WAMIT2%NumOuts )
