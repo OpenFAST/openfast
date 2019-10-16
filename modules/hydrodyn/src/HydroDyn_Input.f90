@@ -3081,7 +3081,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    IF ( InitInp%PotMod == 1 .and. InitInp%NBodyMod == 2) THEN
       do i = 1,InitInp%NBody
-         IF ( .not. EqualRealNos( InitInp%PtfmRefzt(i), 0.0_ReKi ) THEN
+         IF ( .not. EqualRealNos( InitInp%PtfmRefzt(i), 0.0_ReKi ) )THEN
             CALL SetErrStat( ErrID_Fatal,'PtfmRefzt must be 0.0 for all WAMIT bodies when NBodyMod=2.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
@@ -3226,11 +3226,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    InitInp%WAMIT2%PtfmYF2     =  InitInp%PtfmYF
 
 
-
    !-------------------------------------------------------------------------------------------------
    ! Second order Forces due to Waves section (WAMIT2 Module)
    !-------------------------------------------------------------------------------------------------
-!TODO: Add check on NBody > 1 and MnDrift and NewmanApp cannot equal 8
    
       ! Check that we only specified one of MnDrift, NewmanApp, or DiffQTF
       !        (compared pairwise -- if any two are both true, we have a problem)
@@ -3241,7 +3239,16 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       RETURN
    END IF
 
+   if ( InitInp%NBody > 1 .and. InitInp%WAMIT2%MnDrift == 8 ) then
+      call SetErrStat( ErrID_Fatal,'MnDrift cannot equal 8 when NBody > 1.',ErrStat,ErrMsg,RoutineName)
+      return
+   end if
 
+   if ( InitInp%NBody > 1 .and. InitInp%WAMIT2%NewmanApp == 8 ) then
+      call SetErrStat( ErrID_Fatal,'NewmanApp cannot equal 8 when NBody > 1.',ErrStat,ErrMsg,RoutineName)
+      return
+   end if
+   
       ! Check MnDrift and set the flag indicating WAMIT2 should perform the mean drift calculation.
       ! Also make sure we have a valid input value for the file extension
 
