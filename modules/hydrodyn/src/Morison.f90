@@ -1941,7 +1941,7 @@ SUBROUTINE SubdivideMembers( numNodes, nodes, numElements, elements, ErrStat, Er
          ! If the requested division size is less then the member length, we will subdivide the member
          
       IF ( element%MDivSize < memLen ) THEN
-	  
+
          ! Ensure a safe choice of x/y/z axis to use for splitting.
          IF ( .NOT. ( EqualRealNos( node2%JointPos(3) , node1%JointPos(3) ) ) ) THEN
             axis  = 3
@@ -2070,6 +2070,8 @@ SUBROUTINE SetDepthBasedCoefs( z, NCoefDpth, CoefDpths, Cd, CdMG, Ca, CaMG, Cp, 
    foundLess = .FALSE.
    indx1     = 1
    indx2     = 1 
+   
+   if (NCoefDpth == 0) return
    
    DO I = 1, NCoefDpth
       IF ( CoefDpths(I)%Dpth <= z .AND. .NOT. foundLess ) THEN
