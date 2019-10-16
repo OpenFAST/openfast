@@ -327,7 +327,7 @@ PROGRAM HydroDynDriver
    
       
       
-   IF ( u(1)%Mesh%Initialized ) THEN 
+   IF ( u(1)%WAMITMesh%Initialized ) THEN 
       
          ! Create a motions mesh a (0,0,0) where all kinematics are specified
       call MeshCreate( BlankMesh        = RefPtMesh            &
@@ -386,7 +386,7 @@ PROGRAM HydroDynDriver
       
       ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ] 
          
-      CALL MeshMapCreate( RefPtMesh, u(1)%Mesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
+      CALL MeshMapCreate( RefPtMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
       if (errStat >= AbortErrLev) then
          ! Clean up and exit
          call HD_DvrCleanup()
@@ -410,7 +410,7 @@ PROGRAM HydroDynDriver
          RefPtMesh%RotationAcc(:,1)       = drvrInitInp%uDotDotWAMITInSteady(4:6) 
             
             ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
-         CALL Transfer_Point_to_Point( RefPtMesh, u(1)%Mesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
+         CALL Transfer_Point_to_Point( RefPtMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
          if (errStat >= AbortErrLev) then
             ! Clean up and exit
             call HD_DvrCleanup()
@@ -478,12 +478,12 @@ PROGRAM HydroDynDriver
       
          ! Modify u (likely from the outputs of another module or a set of test conditions) here:
          
-      IF ( u(1)%Mesh%Initialized ) THEN 
+      IF ( u(1)%WAMITMesh%Initialized ) THEN 
          
          IF ( drvrInitInp%WAMITInputsMod == 2 ) THEN
                         
             
-            u(1)%Mesh%TranslationDisp(:,1)   = WAMITin(n,2:4) 
+            u(1)%WAMITMesh%TranslationDisp(:,1)   = WAMITin(n,2:4) 
             
             
                ! Compute direction cosine matrix from the rotation angles
@@ -493,13 +493,13 @@ PROGRAM HydroDynDriver
             IF ( abs(WAMITin(n,7)) > maxAngle ) maxAngle = abs(WAMITin(n,7))
             
             CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,5),ReKi), REAL(WAMITin(n,6),ReKi), REAL(WAMITin(n,7),ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
-            u(1)%Mesh%Orientation(:,:,1)     = dcm 
+            u(1)%WAMITMesh%Orientation(:,:,1)     = dcm 
             
             
-            u(1)%Mesh%TranslationVel(:,1)    = WAMITin(n,8:10)  
-            u(1)%Mesh%RotationVel(:,1)       = WAMITin(n,11:13) 
-            u(1)%Mesh%TranslationAcc(:,1)    = WAMITin(n,14:16)  
-            u(1)%Mesh%RotationAcc(:,1)       = WAMITin(n,17:19) 
+            u(1)%WAMITMesh%TranslationVel(:,1)    = WAMITin(n,8:10)  
+            u(1)%WAMITMesh%RotationVel(:,1)       = WAMITin(n,11:13) 
+            u(1)%WAMITMesh%TranslationAcc(:,1)    = WAMITin(n,14:16)  
+            u(1)%WAMITMesh%RotationAcc(:,1)       = WAMITin(n,17:19) 
             
          END IF
          

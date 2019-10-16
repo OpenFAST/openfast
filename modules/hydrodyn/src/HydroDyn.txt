@@ -164,7 +164,7 @@ typedef   ^                            ^                             WAMIT_MiscV
 typedef   ^                            ^                             WAMIT2_MiscVarType       WAMIT2                          -          -          -         "misc var information from the WAMIT2 module"   -
 typedef   ^                            ^                             Waves2_MiscVarType       Waves2                          -          -          -         "misc var information from the Waves2 module"   -
 typedef   ^                            ^                             Morison_MiscVarType      Morison                         -          -          -         "misc var information from the Morison module"   -
-typedef   ^                            ^                             WAMIT_InputType          u_WAMIT                         -          -          -         "WAMIT module inputs" -
+typedef   ^                            ^                             WAMIT_InputType          u_WAMIT                        {:}         -          -         "WAMIT module inputs" -
 typedef   ^                            ^                             WAMIT2_InputType         u_WAMIT2                        -          -          -         "WAMIT2 module inputs" -
 typedef   ^                            ^                             Waves2_InputType         u_Waves2                        -          -          -         "Waves2 module inputs" -
 typedef	 ^	                           ^                             Logical	                IgnoreMod	                     -	        -	       -	        "whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
@@ -212,7 +212,7 @@ typedef	 ^	                           ^                             Integer	    
 # Define inputs that are contained on the mesh here:
 #
 typedef   ^                            InputType                     Morison_InputType        Morison                         -          -          -         "Morison module inputs" -
-typedef   ^                            InputType                     MeshType                 Mesh                            -          -          -         "Displacements at the WAMIT reference point in the inertial frame" -
+typedef   ^                            InputType                     MeshType                 WAMITMesh                       -          -          -         "Displacements at the WAMIT reference point in the inertial frame" -
 #
 #
 # ..... Outputs ...................................................................................................................
@@ -221,6 +221,6 @@ typedef   ^                            OutputType                   WAMIT_Output
 typedef   ^                            OutputType                   WAMIT2_OutputType         WAMIT2                          -          -          -         "WAMIT2 module outputs"  -
 typedef   ^                            OutputType                   Waves2_OutputType         Waves2                          -          -          -         "Waves2 module outputs"  -
 typedef   ^                            ^                            Morison_OutputType        Morison                         -          -          -         "Morison module outputs"  -
-typedef   ^                            OutputType                   MeshType                  Mesh                            -        -          -         "Point Loads at the WAMIT reference point in the inertial frame" -
+typedef   ^                            OutputType                   MeshType                  WAMITMesh                       -        -          -         "Point Loads at the WAMIT reference point in the inertial frame" -
 typedef   ^                            OutputType                   MeshType                  AllHdroOrigin                   -          -          -         "All HD-related loads integrated to the origin, (0,0,0) in the inertial frame" -
 typedef   ^                            ^                            ReKi                      WriteOutput                    {:}         -          -         ""  -
