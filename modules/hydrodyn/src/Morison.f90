@@ -1612,13 +1612,13 @@ SUBROUTINE SplitElementOnZBoundary( axis, boundary, iCurrentElement, numNodes, n
    CALL FindInterpFactor( boundary, node1%JointPos(axis), node2%JointPos(axis), s )
    newNode = node1 ! copy all base node properties
    
+   newNode%JointPos(axis) =  boundary                    !@mhall: set [axis] coordinate of new node based on provided input [boundary]
+   
    !@mthall: set other two coordinates of new node based on interpolation of original end node coordinates
    DO I=axis,axis+1
       J = MOD(I,3) + 1
       newNode%JointPos(J) =  node1%JointPos(J)*(1-s) + node2%JointPos(J)*s
    END DO
-   
-   newNode%JointPos(axis) =  boundary                    !@mhall: set [axis] coordinate of new node based on provided input [boundary]
    
    newNode%R_LToG         =  node1%R_LToG   
       ! Create the new  node information.  
@@ -1941,7 +1941,7 @@ SUBROUTINE SubdivideMembers( numNodes, nodes, numElements, elements, ErrStat, Er
          ! If the requested division size is less then the member length, we will subdivide the member
          
       IF ( element%MDivSize < memLen ) THEN
-
+	  
          ! Ensure a safe choice of x/y/z axis to use for splitting.
          IF ( .NOT. ( EqualRealNos( node2%JointPos(3) , node1%JointPos(3) ) ) ) THEN
             axis  = 3
@@ -3507,7 +3507,7 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
    ! For the buoyancy loads, loop over the elements and then apply one half of the resulting value
    ! to each of the interior element nodes but the full value to an end node.  This means that an internal member node will receive 1/2 of its
    ! load from element A and 1/2 from element B.  If it is the end of a member it will simply receive
-   ! the element A load. 
+   ! the element A load.                                                                         <---@mhall: shouldn't end nodes only receive half too?
    
    count = 1 
    
@@ -4213,7 +4213,7 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
                                   InitOut%Morison_Rad,  ErrStat, ErrMsg )
                                     
                                  
-     !@mhall: forces should become variables rather than parameters <<<<
+     !@mhall: D_F_BF must become a variable rather than a parameter! <<<<
       
                                  
      IF ( ErrStat > ErrID_None ) RETURN
