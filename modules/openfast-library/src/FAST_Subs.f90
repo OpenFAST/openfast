@@ -5166,10 +5166,10 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
       !call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonDistrib_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
       
       if (p_FAST%CompSub == Module_NONE) then
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(VTK_path)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%Mesh )
+         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(VTK_path)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%WAMITMesh )
          outputFields = .false.
       else         
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%Mesh, trim(VTK_path)//'.HD_Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%Mesh )
+         call MeshWrVTK(p_FAST%TurbinePos, HD%y%WAMITMesh, trim(VTK_path)//'.HD_WAMITMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%WAMITMesh )
          outputFields = p_FAST%VTK_fields
       end if
       call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%LumpedMesh, trim(VTK_path)//'.HD_MorisonLumped', y_FAST%VTK_count, outputFields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%Morison%LumpedMesh )     
@@ -5329,7 +5329,7 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW,
    IF ( p_FAST%CompHydro == Module_HD ) THEN 
       
       if (p_FAST%CompSub == Module_NONE) then
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(VTK_path)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%Mesh )
+         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(VTK_path)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%WAMITMesh )
          outputFields = .false.
       else         
          OutputFields = p_FAST%VTK_fields
@@ -5688,7 +5688,7 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
    CALL MeshWrBin( unOut, u_SD%LMesh,                   ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%Morison%distribMesh,     ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%Morison%lumpedMesh,      ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Mesh,                    ErrStat, ErrMsg )
+   CALL MeshWrBin( unOut, u_HD%WAMITMesh,                    ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_MAP%PtFairDisplacement,     ErrStat, ErrMsg )
       ! Add how many BD blade meshes there are:
    NumBl =  SIZE(u_BD,1)   ! Note that NumBl is B4Ki 
@@ -5771,7 +5771,7 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, u_
    CALL MeshWrBin( unOut, y_SD%y2Mesh,                  ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%Morison%distribMesh,     ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%Morison%lumpedMesh,      ErrStat, ErrMsg )
-   CALL MeshWrBin( unOut, u_HD%Mesh,                    ErrStat, ErrMsg )
+   CALL MeshWrBin( unOut, u_HD%WAMITMesh,                    ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_MAP%PtFairDisplacement,     ErrStat, ErrMsg )
    DO K_local = 1,SIZE(y_BD,1)
       CALL MeshWrBin( unOut, u_BD(K_local)%RootMotion, ErrStat, ErrMsg )

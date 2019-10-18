@@ -1761,7 +1761,7 @@ SUBROUTINE Linear_ED_InputSolve_du( p_FAST, y_FAST, u_ED, y_ED, y_AD, u_AD, BD, 
                ! we're mapping loads, so we also need the sibling meshes' displacements:
             HD_Start = Indx_u_HD_PlatformRef_Start(HD%Input(1), y_FAST)
             
-            call Linearize_Point_to_Point( HD%y%AllHdroOrigin, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%Mesh, y_ED%PlatformPtMesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
+            call Linearize_Point_to_Point( HD%y%AllHdroOrigin, u_ED%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, HD%Input(1)%WAMITMesh, y_ED%PlatformPtMesh) !HD%Input(1)%Mesh and y_ED%PlatformPtMesh contain the displaced positions for load calculations
                call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
                ! HD is source in the mapping, so we want M_{uSm}
@@ -2603,18 +2603,18 @@ SUBROUTINE Linear_HD_InputSolve_du( p_FAST, y_FAST, u_HD, y_ED, MeshMapData, dUd
       !  y_ED%PlatformPtMesh and u_HD%Mesh
       !===================================================    
 
-         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 )
+         call Linearize_Point_to_Point( y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
          HD_Start_td = HD_Start_tr + u_HD%Morison%LumpedMesh%NNodes * 6 ! skip 2 field ( TranslationalAcc and RotationAcc)   
-         HD_Start_tr = HD_Start_td + u_HD%Mesh%NNodes  * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field       
+         HD_Start_tr = HD_Start_td + u_HD%WAMITMesh%NNodes  * 6 ! skip 2 fields (TranslationDisp and Orientation) with 3 components before translational velocity field       
             ! translational velocity:
          if (allocated(MeshMapData%ED_P_2_HD_W_P%dM%tv_uD )) then             
             call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_W_P%dM%tv_ud, HD_Start_tr, HD_Start_td )
          end if
 
             ! translational acceleration:
-         HD_Start_tr = HD_Start_tr + u_HD%Mesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
+         HD_Start_tr = HD_Start_tr + u_HD%WAMITMesh%NNodes * 6 ! skip 2 fields ( TranslationVel and RotationVel)
 
          if (allocated(MeshMapData%ED_P_2_HD_W_P%dM%ta_uD )) then
             call SetBlockMatrix( dUdu, MeshMapData%ED_P_2_HD_W_P%dM%ta_ud, HD_Start_tr, HD_Start_td )
@@ -2686,7 +2686,7 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, MeshMapData, dUd
       !...................................
       ! Lumped Platform Reference Pt Mesh
       !...................................
-   IF (u_HD%Mesh%Committed) THEN
+   IF (u_HD%WAMITMesh%Committed) THEN
             
       !!! ! This linearization was done in forming dUdu (see Linear_HD_InputSolve_du()), so we don't need to re-calculate these matrices 
       !!! ! while forming dUdy, too.
@@ -2695,7 +2695,7 @@ SUBROUTINE Linear_HD_InputSolve_dy( p_FAST, y_FAST, u_HD, y_ED, MeshMapData, dUd
       HD_Start     = Indx_u_HD_PlatformRef_Start(u_HD, y_FAST)  ! start of u_HD%Mesh%TranslationDisp field
       
       ED_Out_Start = Indx_y_ED_Platform_Start(y_ED, y_FAST) ! start of y_ED%PlatformPtMesh%TranslationDisp field
-      call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%Mesh, MeshMapData%ED_P_2_HD_W_P, HD_Start, ED_Out_Start, dUdy, .false.)
+      call Assemble_dUdy_Motions(y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%ED_P_2_HD_W_P, HD_Start, ED_Out_Start, dUdy, .false.)
    END IF
 
    
@@ -3755,7 +3755,7 @@ FUNCTION Indx_y_HD_AllHdro_Start(y_HD, y_FAST) RESULT(HD_Start)
       !< starting index of this mesh in HydroDyn Outputs
 
    HD_Start = Indx_y_HD_PlatformRef_Start(y_HD, y_FAST) 
-   if (y_HD%Mesh%committed)  HD_Start =  HD_Start + y_HD%Mesh%NNodes * 6  ! 2 fields (MASKID_FORCE,MASKID_MOMENT) with 3 components
+   if (y_HD%WAMITMesh%committed)  HD_Start =  HD_Start + y_HD%WAMITMesh%NNodes * 6  ! 2 fields (MASKID_FORCE,MASKID_MOMENT) with 3 components
 
 END FUNCTION Indx_y_HD_AllHdro_Start
 END MODULE FAST_Linear
