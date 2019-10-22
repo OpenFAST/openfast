@@ -106,9 +106,10 @@ typedef   ^                            ^                             LOGICAL    
 
 
 # ..... HD_ModuleMapType ....................................................................................................................
-typedef   ^                            HD_ModuleMapType              MeshMapType              HD_P_2_WRP_P
-typedef   ^                            HD_ModuleMapType              MeshMapType              M_P_2_WRP_P
-typedef   ^                            HD_ModuleMapType              MeshMapType              M_L_2_WRP_P
+typedef   ^                            HD_ModuleMapType              MeshMapType              uW_P_2_PRP_P                     -         -        -         "Mesh mapping data: WAMIT body kinematics to PRP node at (0,0,0)" -
+typedef   ^                            HD_ModuleMapType              MeshMapType              W_P_2_PRP_P                      -         -        -         "Mesh mapping data: WAMIT loads to PRP node at (0,0,0)" -
+typedef   ^                            HD_ModuleMapType              MeshMapType              M_P_2_PRP_P                      -         -        -         "Mesh mapping data: lumped Morison loads to PRP node at (0,0,0)" -
+typedef   ^                            HD_ModuleMapType              MeshMapType              M_L_2_PRP_P                      -         -        -         "Mesh mapping data: distributed Morison loads to PRP node at (0,0,0)" -
 
 #
 #
@@ -149,7 +150,7 @@ typedef   ^                            ^                             Morison_Oth
 # ..... Misc/Optimization variables.................................................................................................
 # Define any data that are used only for efficiency purposes (these variables are not associated with time):
 #   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
-typedef   ^                            MiscVarType                   MeshType                 y_mapped                        -          -          -         "An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
+typedef   ^                            MiscVarType                   MeshType                 AllHdroOrigin                   -          -          -         "An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
 typedef   ^                            ^                             MeshType                 AllHdroOrigin_position          -          -          -         "A motions mesh which has all translational displacements set to zero.  Used in the transfer of hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
 typedef   ^                            ^                             MeshType                 MrsnLumpedMesh_position         -          -          -         "A motions mesh which has all translational displacements set to zero.  Used in the transfer of hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
 typedef   ^                            ^                             MeshType                 MrsnDistribMesh_position        -          -          -         "A motions mesh which has all translational displacements set to zero.  Used in the transfer of hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
@@ -222,5 +223,5 @@ typedef   ^                            OutputType                   WAMIT2_Outpu
 typedef   ^                            OutputType                   Waves2_OutputType         Waves2                          -          -          -         "Waves2 module outputs"  -
 typedef   ^                            ^                            Morison_OutputType        Morison                         -          -          -         "Morison module outputs"  -
 typedef   ^                            OutputType                   MeshType                  WAMITMesh                       -        -          -         "Point Loads at the WAMIT reference point in the inertial frame" -
-typedef   ^                            OutputType                   MeshType                  AllHdroOrigin                   -          -          -         "All HD-related loads integrated to the origin, (0,0,0) in the inertial frame" -
+#typedef   ^                            OutputType                   MeshType                  AllHdroOrigin                   -          -          -         "All HD-related loads integrated to the origin, (0,0,0) in the inertial frame" -
 typedef   ^                            ^                            ReKi                      WriteOutput                    {:}         -          -         ""  -
