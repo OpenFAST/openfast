@@ -64,12 +64,6 @@ can then build any module library, module driver, or glue code. Note that any ti
 CMake is rerun, the Visual Studio solution will be regenerated causing the Visual Studio
 GUI to lag momentarily while it reloads the data.
 
-**The CMake-generated Visual Studio build is currently damaged.** Some modules are compiled
-before their associated registry type files are seen by Visual Studio so an initial build
-will fail. However, a simple work around is to run the build command in Visual Studio
-multiple times until it succeeds.
-
-
 CMake options
 ~~~~~~~~~~~~~
 
