@@ -78,6 +78,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: B      !< B matrix [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: C      !< C matrix [-]
     INTEGER(IntKi)  :: N      !< Number of states [-]
+    INTEGER(IntKi) , DIMENSION(1:6)  :: spdof      !< States per dof [-]
   END TYPE SS_Rad_ParameterType
 ! =======================
 ! =========  SS_Rad_InputType  =======
@@ -1292,6 +1293,7 @@ IF (ALLOCATED(SrcParamData%C)) THEN
     DstParamData%C = SrcParamData%C
 ENDIF
     DstParamData%N = SrcParamData%N
+    DstParamData%spdof = SrcParamData%spdof
  END SUBROUTINE SS_Rad_CopyParam
 
  SUBROUTINE SS_Rad_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1366,6 +1368,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%C)  ! C
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! N
+      Int_BufSz  = Int_BufSz  + SIZE(InData%spdof)  ! spdof
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1445,6 +1448,8 @@ ENDIF
   END IF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%N
       Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%spdof))-1 ) = PACK(InData%spdof,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%spdof)
  END SUBROUTINE SS_Rad_PackParam
 
  SUBROUTINE SS_Rad_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1563,6 +1568,17 @@ ENDIF
   END IF
       OutData%N = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+    i1_l = LBOUND(OutData%spdof,1)
+    i1_u = UBOUND(OutData%spdof,1)
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      OutData%spdof = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%spdof))-1 ), mask1, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%spdof)
+    DEALLOCATE(mask1)
  END SUBROUTINE SS_Rad_UnPackParam
 
  SUBROUTINE SS_Rad_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
