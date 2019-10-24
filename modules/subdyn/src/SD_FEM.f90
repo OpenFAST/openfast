@@ -113,7 +113,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    IF( ( Init%FEMMod .GE. 0 ) .and. (Init%FEMMod .LE. 3) ) THEN
       NNE = 2 
    ELSE
-      CALL Abort('FEMMod '//TRIM(Num2LStr(Init%FEMMod))//' not implemented.')
+      CALL Fatal('FEMMod '//TRIM(Num2LStr(Init%FEMMod))//' not implemented.')
       RETURN
    ENDIF
    
@@ -128,7 +128,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    
    ! check the number of interior modes
    IF ( p%Nmodes .GT. 6*(Init%NNode - Init%NInterf - p%NReact) ) THEN
-      CALL Abort(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(Init%NNode - Init%NInterf - p%NReact) )))
+      CALL Fatal(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(Init%NNode - Init%NInterf - p%NReact) )))
       RETURN
    ENDIF
    
@@ -178,7 +178,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
             J = J + 1
          END DO 
          IF ( .NOT. found) THEN
-            CALL Abort(' Member '//TRIM(Num2LStr(I))//' has JointID'//TRIM(Num2LStr(n-1))//' = '// TRIM(Num2LStr(Node))//' which is not in the node list !')
+            CALL Fatal(' Member '//TRIM(Num2LStr(I))//' has JointID'//TRIM(Num2LStr(n-1))//' = '// TRIM(Num2LStr(Node))//' which is not in the node list !')
             RETURN
          END IF
       END DO ! loop through nodes/joints
@@ -200,7 +200,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
             J = J + 1
          END DO
          IF ( .NOT. found) THEN
-            CALL Abort(' Member '//TRIM(Num2LStr(I))//' has PropSetID'//TRIM(Num2LStr(n-3))//' = '//TRIM(Num2LStr(Prop))//' which is not in the Member X-Section Property data!')
+            CALL Fatal(' Member '//TRIM(Num2LStr(I))//' has PropSetID'//TRIM(Num2LStr(n-3))//' = '//TRIM(Num2LStr(Prop))//' which is not in the Member X-Section Property data!')
             RETURN
          END IF
       END DO ! loop through property ids         
@@ -231,7 +231,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
          ENDIF
       ENDDO
       IF (.not. found) THEN
-         CALL Abort(' React has node not in the node list !')
+         CALL Fatal(' React has node not in the node list !')
          RETURN
       ENDIF
       DO J = 1, 6
@@ -254,7 +254,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
          ENDIF
       ENDDO
       IF (.not. found) THEN
-         CALL Abort(' Interf has node not in the node list !')
+         CALL Fatal(' Interf has node not in the node list !')
          RETURN
       ENDIF
       DO J = 1, 6
@@ -286,7 +286,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           Node2 = TempMembers(I, 3)
           
           IF ( Node1==Node2 ) THEN
-             CALL Abort(' Same starting and ending node in the member.')
+             CALL Fatal(' Same starting and ending node in the member.')
              RETURN
           ENDIF
           
@@ -300,7 +300,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
            .OR. ( .not. EqualRealNos(TempProps(Prop1, 3),TempProps(Prop2, 3) ) ) &
            .OR. ( .not. EqualRealNos(TempProps(Prop1, 4),TempProps(Prop2, 4) ) ) )  THEN
           
-             CALL Abort(' Material E,G and rho in a member must be the same')
+             CALL Fatal(' Material E,G and rho in a member must be the same')
              RETURN
           ENDIF
 
@@ -399,11 +399,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
     CALL CleanUp_Discrt()
 
 CONTAINS
-   SUBROUTINE Abort(ErrMsg_in)
+   SUBROUTINE Fatal(ErrMsg_in)
       CHARACTER(len=*), intent(in) :: ErrMsg_in
       CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'SD_Discrt');
       CALL CleanUp_Discrt()
-   END SUBROUTINE Abort
+   END SUBROUTINE Fatal
 
    SUBROUTINE CleanUp_Discrt()
       ! deallocate temp matrices
@@ -488,15 +488,15 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    
    ! for current application
    if    (Init%FEMMod == 2) THEN ! tapered Euler-Bernoulli
-       CALL Abort ('FEMMod = 2 is not implemented.')
+       CALL Fatal ('FEMMod = 2 is not implemented.')
        return
    elseif (Init%FEMMod == 4) THEN ! tapered Timoshenko
-       CALL Abort ('FEMMod = 2 is not implemented.')
+       CALL Fatal ('FEMMod = 2 is not implemented.')
        return
    elseif ((Init%FEMMod == 1) .or. (Init%FEMMod == 3)) THEN !
       ! 1: uniform Euler-Bernouli,  3: uniform Timoshenko
    else
-       CALL Abort('FEMMod is not valid. Please choose from 1, 2, 3, and 4. ')
+       CALL Fatal('FEMMod is not valid. Please choose from 1, 2, 3, and 4. ')
        return
    endif
    
@@ -505,7 +505,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    
    ALLOCATE( p%ElemProps(Init%NElem), STAT=ErrStat2)
    IF (ErrStat2 /= 0) THEN
-       CALL Abort('Error allocating p%ElemProps')
+       CALL Fatal('Error allocating p%ElemProps')
        return
    ENDIF
 
@@ -635,11 +635,11 @@ CONTAINS
         if (Failed) call Cleanup_AssembleKM()
    END FUNCTION Failed
    
-   SUBROUTINE Abort(ErrMsg_in)
+   SUBROUTINE Fatal(ErrMsg_in)
       character(len=*), intent(in) :: ErrMsg_in
       CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'AssembleKM');
       CALL CleanUp_AssembleKM()
-   END SUBROUTINE Abort
+   END SUBROUTINE Fatal
 
    SUBROUTINE CleanUp_AssembleKM()
       IF(ALLOCATED(Ke )) DEALLOCATE(Ke )

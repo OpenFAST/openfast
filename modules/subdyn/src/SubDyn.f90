@@ -738,7 +738,7 @@ CALL GetNewUnit( UnIn )
 CALL OpenFInpfile(UnIn, TRIM(SDInputFile), ErrStat2, ErrMsg2)
 
 IF ( ErrStat2 /= ErrID_None ) THEN
-   Call Abort('Could not open SubDyn input file')
+   Call Fatal('Could not open SubDyn input file')
    return
 END IF
 
@@ -756,7 +756,7 @@ CALL ReadVar(UnIn, SDInputFile, Echo, 'Echo', 'Echo Input File Logic Variable',E
 IF ( Echo )  THEN 
    CALL OpenEcho ( UnEc, TRIM(Init%RootName)//'.ech' ,ErrStat2, ErrMsg2)
    IF ( ErrStat2 /= 0 ) THEN
-      CALL Abort("Could not open SubDyn echo file")
+      CALL Fatal("Could not open SubDyn echo file")
       return
    END IF
    REWIND(UnIn)
@@ -778,7 +778,7 @@ ELSE                                   ! The input must have been specified nume
    CALL CheckIOS ( IOS, SDInputFile, 'SDdeltaT', NumType, ErrStat2,ErrMsg2 ); if(Failed()) return
 
    IF ( ( p%SDdeltaT <=  0 ) )  THEN 
-      call Abort('SDdeltaT must be greater than or equal to 0.')
+      call Fatal('SDdeltaT must be greater than or equal to 0.')
       return         
    END IF  
 END IF
@@ -811,7 +811,7 @@ IF (Init%CBMod) THEN
       ! last entry to fill in remaining values.
       !Check 1st value, we need at least one good value from user or throw error
       IF ((Init%JDampings(1) .LT. 0 ) .OR. (Init%JDampings(1) .GE. 100.0)) THEN
-            CALL Abort('Damping ratio should be larger than 0 and less than 100')
+            CALL Fatal('Damping ratio should be larger than 0 and less than 100')
             return
       ELSE
          DO I = 2, p%Nmodes
@@ -823,7 +823,7 @@ IF (Init%CBMod) THEN
                END IF
                EXIT
             ELSEIF ( ( Init%JDampings(I) .LT. 0 ) .OR.( Init%JDampings(I) .GE. 100.0 ) ) THEN    
-               CALL Abort('Damping ratio should be larger than 0 and less than 100')
+               CALL Fatal('Damping ratio should be larger than 0 and less than 100')
                return
             ENDIF      
         ENDDO
@@ -844,7 +844,7 @@ ELSE   !CBMOD=FALSE  : all modes are retained, not sure how many they are yet
    CALL AllocAry(Init%JDampings, 1, 'JDamping', ErrStat2, ErrMsg2) ; if(Failed()) return
    CALL ReadVar ( UnIn, SDInputFile, Init%JDampings(1), 'JDampings', 'Damping ratio',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    IF ( ( Init%JDampings(1) .LT. 0 ) .OR.( Init%JDampings(1) .GE. 100.0 ) ) THEN 
-         CALL Abort('Damping ratio should be larger than 0 and less than 100.')
+         CALL Fatal('Damping ratio should be larger than 0 and less than 100.')
          RETURN
    ENDIF
 ENDIF
@@ -970,7 +970,7 @@ Swtch: SELECT CASE (p%OutSwtch)
  CASE (2)  Swtch
     !pass to glue code
  CASE DEFAULT Swtch
-    CALL Abort(' Error in file "'//TRIM(SDInputFile)//'": OutSwtch must be >0 and <4')
+    CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": OutSwtch must be >0 and <4')
     return
  END SELECT Swtch
      
@@ -997,7 +997,7 @@ IF ( p%NMOutputs > 0 ) THEN
    ! Allocate memory for filled group arrays
    ALLOCATE ( p%MOutLst(p%NMOutputs), STAT = ErrStat2 )     !this list contains different arrays for each of its elements
    IF ( ErrStat2 /= ErrID_None ) THEN
-      CALL  Abort(' Error in file "'//TRIM(SDInputFile)//': Error allocating MOutLst arrays')
+      CALL  Fatal(' Error in file "'//TRIM(SDInputFile)//': Error allocating MOutLst arrays')
       RETURN
    END IF
 
@@ -1006,7 +1006,7 @@ IF ( p%NMOutputs > 0 ) THEN
       IF (ErrStat2 == 0) THEN
          READ(Line,*,IOSTAT=ErrStat2) p%MOutLst(I)%MemberID, p%MOutLst(I)%NOutCnt
          IF ( ErrStat2 /= 0 .OR. p%MOutLst(I)%NOutCnt < 1 .OR. p%MOutLst(I)%NOutCnt > 9 .OR. p%MOutLst(I)%NOutCnt > Init%Ndiv+1) THEN
-            CALL Abort(' Error in file "'//TRIM(SDInputFile)//'": NOutCnt must be >= 1 and <= minimim(Ndiv+1,9)')
+            CALL Fatal(' Error in file "'//TRIM(SDInputFile)//'": NOutCnt must be >= 1 and <= minimim(Ndiv+1,9)')
             RETURN
          END IF            
          CALL AllocAry( p%MOutLst(I)%NodeCnt, p%MOutLst(I)%NOutCnt, 'NodeCnt', ErrStat2, ErrMsg2); if(Failed()) return
@@ -1023,12 +1023,12 @@ IF ( p%NMOutputs > 0 ) THEN
                   DO K = 1,p%MOutLst(I)%NOutCnt
                      ! node number should be less than NDiv + 1
                      IF( (p%MOutLst(I)%NodeCnt(k) .GT. (Init%NDiv+1)) .or. (p%MOutLst(I)%NodeCnt(k) .LT. 1) ) THEN
-                        CALL Abort(' NodeCnt should be less than NDIV+1 and greater than 0. ')
+                        CALL Fatal(' NodeCnt should be less than NDIV+1 and greater than 0. ')
                         RETURN
                      ENDIF
                   ENDDO
                ELSE
-                  CALL Abort(' NOutCnt should be less than 10 and greater than 0. ')
+                  CALL Fatal(' NOutCnt should be less than 10 and greater than 0. ')
                   RETURN
                ENDIF
             ENDIF
@@ -1059,7 +1059,7 @@ CONTAINS
         logical, intent(in) :: Condition
         character(len=*), intent(in) :: ErrMsg_in
         Check=Condition
-        if (Check) call Abort(' Error in file '//TRIM(SDInputFile)//': '//trim(ErrMsg_in))
+        if (Check) call Fatal(' Error in file '//TRIM(SDInputFile)//': '//trim(ErrMsg_in))
    END FUNCTION Check
 
    LOGICAL FUNCTION Failed()
@@ -1068,11 +1068,11 @@ CONTAINS
         if (Failed) call CleanUp()
    END FUNCTION Failed
 
-   SUBROUTINE Abort(ErrMsg_in)
+   SUBROUTINE Fatal(ErrMsg_in)
       character(len=*), intent(in) :: ErrMsg_in
       CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'SD_Input');
       CALL CleanUp()
-   END SUBROUTINE Abort
+   END SUBROUTINE Fatal
 
    SUBROUTINE CleanUp()
       CLOSE( UnIn )
