@@ -711,7 +711,6 @@ SUBROUTINE SD_Input(SDInputFile, Init, p, ErrStat,ErrMsg)
    CHARACTER(*),            INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
 ! local variable for input and output
 CHARACTER(1024)              :: PriPath                                         ! The path to the primary input file
-CHARACTER(  12)              :: JunkStrg                                        !Temp variable to store a short string  -RRD
 CHARACTER(1024)              :: Line                                            ! String to temporarially hold value of read line
 INTEGER                      :: Sttus
 
@@ -1084,16 +1083,14 @@ END SUBROUTINE SD_Input
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Rotate the joint coordinates with respect to global z
 SUBROUTINE SubRotate(Joints,NJoints,SubRotZ)
-!This subroutine rotates the joint coordinates with respect to global z
    REAL(ReKi),                       INTENT(IN)       :: SubRotZ    ! Rotational angle in degrees
    INTEGER(IntKi),                   INTENT(IN)       :: NJOINTS    ! Row size of Joints 
    REAL(ReKi), DIMENSION(NJOINTS,3), INTENT(INOUT)    :: JOINTS     ! Rotational angle in degrees (Njoints,4)
-   
    !locals
    REAL(ReKi)                 :: rot  !angle in rad
    REAL(ReKi), DIMENSION(2,2) :: ROTM !rotational matrix (cos matrix with -theta)
-   
    
    rot=pi*SubRotz/180.
    ROTM=transpose(reshape([ COS(rot),    -SIN(rot) , &
@@ -1101,14 +1098,10 @@ SUBROUTINE SubRotate(Joints,NJoints,SubRotZ)
    Joints(:,2:3)= transpose(matmul(ROTM,transpose(Joints(:,2:3))))
 
 END SUBROUTINE  SubRotate           
-   
-!----------------------------------------------------------------------------------------------------------------------------------
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
 SUBROUTINE SD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
       TYPE(SD_InputType),           INTENT(INOUT)  :: u           !< System inputs
       TYPE(SD_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
       TYPE(SD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
@@ -1119,62 +1112,30 @@ SUBROUTINE SD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
-
-         ! Initialize ErrStat
-         
+      ! Initialize ErrStat
       ErrStat = ErrID_None         
       ErrMsg  = ""               
-      
-      
-         ! Place any last minute operations or calculations here:
 
-
-         ! Close files here:     
-                  
-                  
-
-         ! Destroy the input data:
-         
-      CALL SD_DestroyInput( u, ErrStat, ErrMsg )
-     
-
-         ! Determine if we need to close the output file
-         
+      ! Determine if we need to close the output file
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN   
          IF ((m%Decimat .EQ. p%OutDec) .OR. (m%Decimat .EQ. 0))  THEN
                ! Write out the last stored set of outputs before closing
             CALL SDOut_WriteOutputs( p%UnJckF, m%LastOutTime, m%SDWrOutput, p, ErrStat, ErrMsg )   
          ENDIF
-         
          CALL SDOut_CloseOutput( p, ErrStat, ErrMsg )         
       END IF 
-         
-         ! Destroy the parameter data:
-         
       
+      ! Destroy data
+      CALL SD_DestroyInput( u, ErrStat, ErrMsg )
       CALL SD_DestroyParam( p, ErrStat, ErrMsg )
-
-
-         ! Destroy the state data:
-         
       CALL SD_DestroyContState(   x,           ErrStat, ErrMsg )
       CALL SD_DestroyDiscState(   xd,          ErrStat, ErrMsg )
       CALL SD_DestroyConstrState( z,           ErrStat, ErrMsg )
       CALL SD_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
-         
       CALL SD_DestroyMisc( m,  ErrStat, ErrMsg )
-
-         ! Destroy the output data:
-         
       CALL SD_DestroyOutput( y, ErrStat, ErrMsg )
 
-
-      
-
 END SUBROUTINE SD_End
-!------------------------------------------------------------------------------------------------------
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
@@ -1185,14 +1146,9 @@ END SUBROUTINE SD_End
 !!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
 !!
 !!  See, e.g.,
-!!  http://en.wikipedia.org/wiki/Linear_multistep_method
-!!
-!!  or
-!!
-!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+!!    - http://en.wikipedia.org/wiki/Linear_multistep_method
+!!    - K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
 SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
       REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
       INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
       TYPE(SD_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t
@@ -1205,14 +1161,9 @@ SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
       TYPE(SD_MiscVarType),           INTENT(INOUT)  :: m           !< Misc/optimization variables
       INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
-
       ! local variables
       TYPE(SD_ContinuousStateType) :: xdot       ! Continuous state derivs at t
       TYPE(SD_InputType)           :: u_interp
-         
-
-      ! Initialize ErrStat
 
       ErrStat = ErrID_None
       ErrMsg  = "" 
@@ -1224,18 +1175,12 @@ SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
       CALL SD_DestroyInput( u_interp, ErrStat, ErrMsg)   ! we don't need this local copy anymore
 
       if (n .le. 2) then
-
          OtherState%n = n
-
          !OtherState%xdot ( 3 - n ) = xdot
          CALL SD_CopyContState( xdot, OtherState%xdot ( 3 - n ), MESH_UPDATECOPY, ErrStat, ErrMsg )
-         
          CALL SD_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-
       else
-
          if (OtherState%n .lt. n) then
-
             OtherState%n = n
             CALL SD_CopyContState( OtherState%xdot ( 3 ), OtherState%xdot ( 4 ), MESH_UPDATECOPY, ErrStat, ErrMsg )
             CALL SD_CopyContState( OtherState%xdot ( 2 ), OtherState%xdot ( 3 ), MESH_UPDATECOPY, ErrStat, ErrMsg )
@@ -1243,31 +1188,22 @@ SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
             !OtherState%xdot(4)    = OtherState%xdot(3)
             !OtherState%xdot(3)    = OtherState%xdot(2)
             !OtherState%xdot(2)    = OtherState%xdot(1)
-
          elseif (OtherState%n .gt. n) then
- 
             ErrStat = ErrID_Fatal
             ErrMsg = ' Backing up in time is not supported with a multistep method '
             RETURN
-
          endif
-
          CALL SD_CopyContState( xdot, OtherState%xdot ( 1 ), MESH_UPDATECOPY, ErrStat, ErrMsg )
          !OtherState%xdot ( 1 )     = xdot  ! make sure this is most up to date
-
          x%qm    = x%qm    + (p%SDDeltaT / 24.) * ( 55.*OtherState%xdot(1)%qm - 59.*OtherState%xdot(2)%qm    + 37.*OtherState%xdot(3)%qm  &
                                        - 9. * OtherState%xdot(4)%qm )
-
          x%qmdot = x%qmdot + (p%SDDeltaT / 24.) * ( 55.*OtherState%xdot(1)%qmdot - 59.*OtherState%xdot(2)%qmdot  &
                                           + 37.*OtherState%xdot(3)%qmdot  - 9.*OtherState%xdot(4)%qmdot )
-
       endif
-
-
       CALL SD_DestroyContState(xdot, ErrStat, ErrMsg)
       CALL SD_DestroyInput(u_interp, ErrStat, ErrMsg)
-      
 END SUBROUTINE SD_AB4
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
 !! differential equations:
@@ -1281,14 +1217,9 @@ END SUBROUTINE SD_AB4
 !!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
 !!
 !!  See, e.g.,
-!!  http://en.wikipedia.org/wiki/Linear_multistep_method
-!!
-!!  or
-!!
-!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+!!     - http://en.wikipedia.org/wiki/Linear_multistep_method
+!!     - K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
 SUBROUTINE SD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
       REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
       INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
       TYPE(SD_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t
@@ -1301,24 +1232,18 @@ SUBROUTINE SD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       TYPE(SD_MiscVarType),           INTENT(INOUT)  :: m           !< Misc/optimization variables
       INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
       ! local variables
-
       TYPE(SD_InputType)            :: u_interp        ! Continuous states at t
       TYPE(SD_ContinuousStateType)  :: x_pred          ! Continuous states at t
       TYPE(SD_ContinuousStateType)  :: xdot_pred       ! Continuous states at t
-
-      ! Initialize ErrStat
 
       ErrStat = ErrID_None
       ErrMsg  = "" 
 
       CALL SD_CopyContState(x, x_pred, MESH_NEWCOPY, ErrStat, ErrMsg) !initialize x_pred      
-
       CALL SD_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       if (n .gt. 2) then
-
          CALL SD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg) ! make copy so that arrays/meshes get initialized/allocated for ExtrapInterp
          CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t + p%SDDeltaT, ErrStat, ErrMsg)
 
@@ -1330,14 +1255,10 @@ SUBROUTINE SD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
    
          x%qmdot = x%qmdot + (p%SDDeltaT / 24.) * ( 9. * xdot_pred%qmdot + 19. * OtherState%xdot(1)%qmdot - 5. * OtherState%xdot(2)%qmdot &
                                           + 1. * OtherState%xdot(3)%qmdot )
-         
          CALL SD_DestroyContState( xdot_pred, ErrStat, ErrMsg) ! local copy no longer needed
-
       else
-
          x%qm    = x_pred%qm
          x%qmdot = x_pred%qmdot
-
       endif
 
       CALL SD_DestroyContState( x_pred, ErrStat, ErrMsg) ! local copy no longer needed
@@ -1361,8 +1282,6 @@ END SUBROUTINE SD_ABM4
 !!   Runge-Kutta." sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
 !!   Cambridge University Press, pp. 704-716, 1992.
 SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
       REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
       INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
       TYPE(SD_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t
@@ -1375,9 +1294,7 @@ SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
       TYPE(SD_MiscVarType),           INTENT(INOUT)  :: m           !< Misc/optimization variables
       INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
       ! local variables
-         
       TYPE(SD_ContinuousStateType)                 :: xdot        ! time derivatives of continuous states      
       TYPE(SD_ContinuousStateType)                 :: k1          ! RK4 constant; see above
       TYPE(SD_ContinuousStateType)                 :: k2          ! RK4 constant; see above 
@@ -1385,9 +1302,7 @@ SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
       TYPE(SD_ContinuousStateType)                 :: k4          ! RK4 constant; see above 
       TYPE(SD_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
       TYPE(SD_InputType)                           :: u_interp    ! interpolated value of inputs 
-
       ! Initialize ErrStat
-
       ErrStat = ErrID_None
       ErrMsg  = "" 
 
@@ -1405,69 +1320,51 @@ SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
 
       ! find xdot at t
       CALL SD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg ) !initializes xdot
-
-      k1%qm    = p%SDDeltaT * xdot%qm
-      k1%qmdot = p%SDDeltaT * xdot%qmdot
-  
+      k1%qm       = p%SDDeltaT * xdot%qm
+      k1%qmdot    = p%SDDeltaT * xdot%qmdot
       x_tmp%qm    = x%qm    + 0.5 * k1%qm
       x_tmp%qmdot = x%qmdot + 0.5 * k1%qmdot
-
       ! interpolate u to find u_interp = u(t + dt/2)
       CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%SDDeltaT, ErrStat, ErrMsg)
 
       ! find xdot at t + dt/2
       CALL SD_CalcContStateDeriv( t + 0.5*p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
-
       k2%qm    = p%SDDeltaT * xdot%qm
       k2%qmdot = p%SDDeltaT * xdot%qmdot
-
       x_tmp%qm    = x%qm    + 0.5 * k2%qm
       x_tmp%qmdot = x%qmdot + 0.5 * k2%qmdot
 
       ! find xdot at t + dt/2
       CALL SD_CalcContStateDeriv( t + 0.5*p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
-     
-      k3%qm    = p%SDDeltaT * xdot%qm
-      k3%qmdot = p%SDDeltaT * xdot%qmdot
-
+      k3%qm       = p%SDDeltaT * xdot%qm
+      k3%qmdot    = p%SDDeltaT * xdot%qmdot
       x_tmp%qm    = x%qm    + k3%qm
       x_tmp%qmdot = x%qmdot + k3%qmdot
-
       ! interpolate u to find u_interp = u(t + dt)
       CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t + p%SDDeltaT, ErrStat, ErrMsg)
 
       ! find xdot at t + dt
       CALL SD_CalcContStateDeriv( t + p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
-
       k4%qm    = p%SDDeltaT * xdot%qm
       k4%qmdot = p%SDDeltaT * xdot%qmdot
+      x%qm     = x%qm    +  ( k1%qm    + 2. * k2%qm    + 2. * k3%qm    + k4%qm    ) / 6.
+      x%qmdot  = x%qmdot +  ( k1%qmdot + 2. * k2%qmdot + 2. * k3%qmdot + k4%qmdot ) / 6.
 
-      x%qm    = x%qm    +  ( k1%qm    + 2. * k2%qm    + 2. * k3%qm    + k4%qm    ) / 6.      
-      x%qmdot = x%qmdot +  ( k1%qmdot + 2. * k2%qmdot + 2. * k3%qmdot + k4%qmdot ) / 6.      
-
-      CALL ExitThisRoutine()
+      CALL CleanUp()
       
-CONTAINS      
-   !...............................................................................................................................
-   SUBROUTINE ExitThisRoutine()
-   ! This subroutine destroys all the local variables
-   !...............................................................................................................................
+CONTAINS       
 
-         ! local variables
+   SUBROUTINE CleanUp()
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
       CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
-   
-   
       CALL SD_DestroyContState( xdot,     ErrStat3, ErrMsg3 )
       CALL SD_DestroyContState( k1,       ErrStat3, ErrMsg3 )
       CALL SD_DestroyContState( k2,       ErrStat3, ErrMsg3 )
       CALL SD_DestroyContState( k3,       ErrStat3, ErrMsg3 )
       CALL SD_DestroyContState( k4,       ErrStat3, ErrMsg3 )
       CALL SD_DestroyContState( x_tmp,    ErrStat3, ErrMsg3 )
-
       CALL SD_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
-         
-   END SUBROUTINE ExitThisRoutine            
+   END SUBROUTINE CleanUp            
       
 END SUBROUTINE SD_RK4
 
@@ -1488,8 +1385,6 @@ END SUBROUTINE SD_RK4
 !!   Thus x_n+1 = x_n - J^-1 *dt/2 * (2*A*x_n + B *(u_n + u_n+1) +2*Fx)
 !!  or    J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)
 SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-!..................................................................................................................................
-
    REAL(DbKi),                     INTENT(IN   )   :: t              !< Current simulation time in seconds
    INTEGER(IntKi),                 INTENT(IN   )   :: n              !< time step number
    TYPE(SD_InputType),             INTENT(INOUT)   :: u(:)           !< Inputs at t
@@ -1502,115 +1397,92 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    TYPE(SD_MiscVarType),           INTENT(INOUT)   :: m              !< Misc/optimization variables
    INTEGER(IntKi),                 INTENT(  OUT)   :: ErrStat        !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-
    ! local variables
-         
    TYPE(SD_InputType)                              :: u_interp       ! interpolated value of inputs 
-!   REAL(ReKi)                                      :: junk1(p%qml)   !temporary states (qm or qmdot only)  (2*A*x_n + B *(u_n + u_n+1) +2*Fx)
    REAL(ReKi)                                      :: junk2(2*p%qml) !temporary states (qm and qmdot only)
-   
    REAL(ReKi)                                      :: udotdot_TP2(6) ! temporary copy of udotdot_TP
    REAL(ReKi)                                      :: UFL2(p%DOFL)   ! temporary copy of UFL
-   
-   ! Initialize ErrStat
-
    INTEGER(IntKi)                                  :: ErrStat2
    CHARACTER(ErrMsgLen)                            :: ErrMsg2
-      
-      ErrStat = ErrID_None
-      ErrMsg  = "" 
 
-      ! Initialize interim vars
-      CALL SD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2,ErrMsg2);CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-      
-            
-     !Start by getting u_n and u_n+1 
-     ! interpolate u to find u_interp = u(t) = u_n     
-     CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-     m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-     CALL ConstructUFL( u_interp, p, m%UFL )     
-                   
-      ! extrapolate u to find u_interp = u(t + dt)=u_n+1
-      CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-      udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-      CALL ConstructUFL( u_interp, p, UFL2 )     
-      
-         ! calculate (u_n + u_n+1)/2
-      udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
-      UFL2        = 0.5_ReKi * ( UFL2        + m%UFL        )
-             
-         ! set junk2 = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)   
-      junk2(      1:  p%qml)=p%SDDeltaT * x%qmdot                                                                                                   !upper portion of array
-     !junk2(1+p%qml:2*p%qml)=p%SDDeltaT * (p%NOmegaM2*x%qm + p%N2OmegaMJDamp*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(p%PhiM_T,UFL2) + p%FX)  !lower portion of array
-      junk2(1+p%qml:2*p%qml)=p%SDDeltaT * (p%NOmegaM2*x%qm + p%N2OmegaMJDamp*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(UFL2,p%PhiM  ) + p%FX)  !lower portion of array
-      ! note: matmul(UFL2,p%PhiM  ) = matmul(p%PhiM_T,UFL2) because UFL2 is 1-D
-                
-      !....................................................
-      ! Solve for junk2: (equivalent to junk2= matmul(p%AM2InvJac,junk2)
-      ! J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)
-      !....................................................   
-      CALL LAPACK_getrs( TRANS='N',N=SIZE(p%AM2Jac,1),A=p%AM2Jac,IPIV=p%AM2JacPiv, B=junk2, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-         !IF ( ErrStat >= AbortErrLev ) RETURN
-      !....................................................
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
+
+   ! Initialize interim vars
+   CALL SD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat2,ErrMsg2);CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
          
-      ! after the LAPACK solve, junk2 = ( x_n - x_n+1 ); so now we can solve for x_n+1:
-        
-       x%qm    = x%qm    - junk2(      1:  p%qml)
-       x%qmdot = x%qmdot - junk2(p%qml+1:2*p%qml)
-           
-        
-      ! clean up temporary variable(s)
-      CALL SD_DestroyInput(  u_interp, ErrStat, ErrMsg )
+   !Start by getting u_n and u_n+1 
+   ! interpolate u to find u_interp = u(t) = u_n     
+   CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
+   m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
+   CALL ConstructUFL( u_interp, p, m%UFL )     
+                
+   ! extrapolate u to find u_interp = u(t + dt)=u_n+1
+   CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
+   udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
+   CALL ConstructUFL( u_interp, p, UFL2 )     
+   
+   ! calculate (u_n + u_n+1)/2
+   udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
+   UFL2        = 0.5_ReKi * ( UFL2        + m%UFL        )
+          
+   ! set junk2 = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)   
+   junk2(      1:  p%qml)=p%SDDeltaT * x%qmdot                                                                                                   !upper portion of array
+   junk2(1+p%qml:2*p%qml)=p%SDDeltaT * (p%NOmegaM2*x%qm + p%N2OmegaMJDamp*x%qmdot - matmul(p%MMB, udotdot_TP2)  + matmul(UFL2,p%PhiM  ) + p%FX)  !lower portion of array
+   ! note: matmul(UFL2,p%PhiM  ) = matmul(p%PhiM_T,UFL2) because UFL2 is 1-D
+             
+   !....................................................
+   ! Solve for junk2: (equivalent to junk2= matmul(p%AM2InvJac,junk2)
+   ! J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)
+   !....................................................   
+   CALL LAPACK_getrs( TRANS='N',N=SIZE(p%AM2Jac,1),A=p%AM2Jac,IPIV=p%AM2JacPiv, B=junk2, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
+      !IF ( ErrStat >= AbortErrLev ) RETURN
       
+   ! after the LAPACK solve, junk2 = ( x_n - x_n+1 ); so now we can solve for x_n+1:
+   x%qm    = x%qm    - junk2(      1:  p%qml)
+   x%qmdot = x%qmdot - junk2(p%qml+1:2*p%qml)
+     
+   ! clean up temporary variable(s)
+   CALL SD_DestroyInput(  u_interp, ErrStat, ErrMsg )
+   
 END SUBROUTINE SD_AM2
 
 !------------------------------------------------------------------------------------------------------
+!> Perform Craig Bampton reduction
 SUBROUTINE Craig_Bampton(Init, p, CBparams, ErrStat, ErrMsg)
-      
    TYPE(SD_InitType),     INTENT(INOUT)      :: Init        ! Input data for initialization routine
    TYPE(SD_ParameterType),INTENT(INOUT)      :: p           ! Parameters
    TYPE(CB_MatArrays),    INTENT(INOUT)      :: CBparams    ! CB parameters that will be passed out for summary file use 
    INTEGER(IntKi),        INTENT(  OUT)      :: ErrStat     ! Error status of the operation
    CHARACTER(*),          INTENT(  OUT)      :: ErrMsg      ! Error message if ErrStat /= ErrID_None   
-   
    ! local variables
-   REAL(ReKi), ALLOCATABLE                   :: MRR(:, :)
-   REAL(ReKi), ALLOCATABLE                   :: MLL(:, :)
-   REAL(ReKi), ALLOCATABLE                   :: MRL(:, :)
-   
-   REAL(ReKi), ALLOCATABLE                   :: KRR(:, :)
-   REAL(ReKi), ALLOCATABLE                   :: KLL(:, :)
-   REAL(ReKi), ALLOCATABLE                   :: KRL(:, :)
-   
-   REAL(ReKi), ALLOCATABLE                   :: FGR(:)
-   REAL(ReKi), ALLOCATABLE                   :: FGL(:)
-         
-   REAL(ReKi),  ALLOCATABLE                  ::  MBBb(:, :)
-   REAL(ReKi),  ALLOCATABLE                  ::  MBMb(:, :)
-   REAL(ReKi),  ALLOCATABLE                  ::  KBBb(:, :)
-   REAL(ReKi),  ALLOCATABLE                  :: PhiRb(:, :)   
-   REAL(ReKi),  ALLOCATABLE                  ::  FGRb(:) 
-
-   REAL(ReKi)                                ::  JDamping1 ! temporary storage for first element of JDamping array 
-      
-   INTEGER(IntKi)                            :: ErrStat2
-   CHARACTER(ErrMsgLen)                      :: ErrMsg2
-   
+   REAL(ReKi), ALLOCATABLE  :: MRR(:, :)
+   REAL(ReKi), ALLOCATABLE  :: MLL(:, :)
+   REAL(ReKi), ALLOCATABLE  :: MRL(:, :)
+   REAL(ReKi), ALLOCATABLE  :: KRR(:, :)
+   REAL(ReKi), ALLOCATABLE  :: KLL(:, :)
+   REAL(ReKi), ALLOCATABLE  :: KRL(:, :)
+   REAL(ReKi), ALLOCATABLE  :: FGR(:)
+   REAL(ReKi), ALLOCATABLE  :: FGL(:)
+   REAL(ReKi), ALLOCATABLE  :: MBBb(:, :)
+   REAL(ReKi), ALLOCATABLE  :: MBMb(:, :)
+   REAL(ReKi), ALLOCATABLE  :: KBBb(:, :)
+   REAL(ReKi), ALLOCATABLE  :: PhiRb(:, :)   
+   REAL(ReKi), ALLOCATABLE  :: FGRb(:) 
+   REAL(ReKi)               :: JDamping1 ! temporary storage for first element of JDamping array 
+   INTEGER(IntKi)           :: ErrStat2
+   CHARACTER(ErrMsgLen)     :: ErrMsg2
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-
-
-      ! number of nodes:
+   ! number of nodes:
    p%NNodes_I  = Init%NInterf                         ! Number of interface nodes
    p%NNodes_L  = Init%NNode - p%NReact - p%NNodes_I   ! Number of Interior nodes =(TDOF-DOFC-DOFI)/6 =  (6*Init%NNode - (p%NReact+p%NNodes_I)*6 ) / 6 = Init%NNode - p%NReact -p%NNodes_I
 
-
-!BJJ: TODO:  are these 6's actually TPdofL?   
-
-      !DOFS of interface
+   !DOFS of interface
+   !BJJ: TODO:  are these 6's actually TPdofL?   
    p%DOFI = p%NNodes_I*6
    p%DOFC = p%NReact*6
    p%DOFR = (p%NReact+p%NNodes_I)*6 ! = p%DOFC + p%DOFI
@@ -1618,7 +1490,7 @@ SUBROUTINE Craig_Bampton(Init, p, CBparams, ErrStat, ErrMsg)
    
             
    IF(Init%CBMod) THEN ! C-B reduction         
-         ! check number of internal modes
+      ! check number of internal modes
       IF(p%Nmodes > p%DOFL) THEN
          CALL SetErrStat(ErrID_Fatal,'Number of internal modes is larger than maximum. ',ErrStat,ErrMsg,'Craig_Bampton')
          CALL CleanupCB()
@@ -1631,159 +1503,112 @@ SUBROUTINE Craig_Bampton(Init, p, CBparams, ErrStat, ErrMsg)
       !So assign value to one temporary variable
       JDamping1=Init%Jdampings(1)
       DEALLOCATE(Init%JDampings)
-      CALL AllocAry( Init%JDampings, p%DOFL, 'Init%JDampings',  ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanupCB()
-         RETURN
-      END IF
- 
+      CALL AllocAry( Init%JDampings, p%DOFL, 'Init%JDampings',  ErrStat2, ErrMsg2 ) ; if(Failed()) return
       Init%JDampings = JDamping1 ! set default values for all modes
       
    ENDIF   
    
    CBparams%DOFM = p%Nmodes  ! retained modes (all if no C-B reduction)
-               
       
    ! matrix dimension paramters
    p%qmL    = p%Nmodes                       ! Length of 1/2 x array, x1 that is (note, do this after check if CBMod is true [Nmodes modified if CMBod is false])
    p%URbarL = p%DOFI !=p%NNodes_I*6          ! Length of URbar array, subarray of Y2  : THIS MAY CHANGE IF SOME DOFS ARE NOT CONSTRAINED       
    
       
-   CALL AllocParameters(p, CBparams%DOFM, ErrStat2, ErrMsg2);                                    CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   
-   CALL AllocAry( MRR,             p%DOFR, p%DOFR,        'matrix MRR',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( MLL,             p%DOFL, p%DOFL,        'matrix MLL',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( MRL,             p%DOFR, p%DOFL,        'matrix MRL',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( KRR,             p%DOFR, p%DOFR,        'matrix KRR',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( KLL,             p%DOFL, p%DOFL,        'matrix KLL',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( KRL,             p%DOFR, p%DOFL,        'matrix KRL',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( FGL,             p%DOFL,                'array FGL',      ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( FGR,             p%DOFR,                'array FGR',      ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
+   CALL AllocParameters(p, CBparams%DOFM, ErrStat2, ErrMsg2);                                  ; if (Failed()) return
+   CALL AllocAry( MRR,             p%DOFR, p%DOFR,        'matrix MRR',     ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( MLL,             p%DOFL, p%DOFL,        'matrix MLL',     ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( MRL,             p%DOFR, p%DOFL,        'matrix MRL',     ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( KRR,             p%DOFR, p%DOFR,        'matrix KRR',     ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( KLL,             p%DOFL, p%DOFL,        'matrix KLL',     ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( KRL,             p%DOFR, p%DOFL,        'matrix KRL',     ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( FGL,             p%DOFL,                'array FGL',      ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( FGR,             p%DOFR,                'array FGR',      ErrStat2, ErrMsg2 ); if (Failed()) return
       
-   CALL AllocAry( CBparams%MBB,    p%DOFR, p%DOFR,       'CBparams%MBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( CBparams%MBM,    p%DOFR, CBparams%DOFM,'CBparams%MBM',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( CBparams%KBB,    p%DOFR, p%DOFR,       'CBparams%KBB',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( CBparams%PhiL,   p%DOFL, p%DOFL,       'CBparams%PhiL',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( CBparams%PhiR,   p%DOFL, p%DOFR,       'CBparams%PhiR',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( CBparams%OmegaL, p%DOFL,               'CBparams%OmegaL', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( CBparams%TI2,    p%DOFR, 6,            'CBparams%TI2',    ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
+   CALL AllocAry( CBparams%MBB,    p%DOFR, p%DOFR,       'CBparams%MBB',    ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( CBparams%MBM,    p%DOFR, CBparams%DOFM,'CBparams%MBM',    ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( CBparams%KBB,    p%DOFR, p%DOFR,       'CBparams%KBB',    ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( CBparams%PhiL,   p%DOFL, p%DOFL,       'CBparams%PhiL',   ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( CBparams%PhiR,   p%DOFL, p%DOFR,       'CBparams%PhiR',   ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( CBparams%OmegaL, p%DOFL,               'CBparams%OmegaL', ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( CBparams%TI2,    p%DOFR, 6,            'CBparams%TI2',    ErrStat2, ErrMsg2 ); if (Failed()) return
+   
+   ! Set the index arrays p%IDI, p%IDR, p%IDL, p%IDC, and p%IDY. 
+   CALL SetIndexArrays(Init, p, ErrStat2, ErrMsg2) ; if(Failed()) return
 
-      
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL CleanUpCB()
-      RETURN
-   END IF
-   
-!................................
-! Set the index arrays p%IDI, p%IDR, p%IDL, p%IDC, and p%IDY. 
-!................................
-   
-   CALL SetIndexArrays(Init, p, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')                  
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUpCB()
-         RETURN
-      END IF   
-      
-!................................
-! SET MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL, based on
-! Init%M, Init%K, and Init%FG data and indices p%IDR and p%IDL:
-!................................
-   
+   ! Set MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL, based on
+   !     Init%M, Init%K, and Init%FG data and indices p%IDR and p%IDL:
    CALL BreakSysMtrx(Init, p, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)   
       
-!................................
-! Set p%TI and CBparams%TI2
-!................................
-   
-   CALL TrnsfTI(Init, p%TI, p%DOFI, p%IDI, CBparams%TI2, p%DOFR, p%IDR, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUpCB()
-         RETURN
-      END IF
-         
-!................................
-! Sets the following values, as documented in the SubDyn Theory Guide:
-! CBparams%OmegaL (omega) and CBparams%PhiL from Eq. 2
-! p%PhiL_T and p%PhiLInvOmgL2 for static improvement (will be added to theory guide later?)
-! CBparams%PhiR from Eq. 3
-! CBparams%MBB, CBparams%MBM, and CBparams%KBB from Eq. 4.
-!................................
-            
+   ! Set p%TI and CBparams%TI2
+   CALL TrnsfTI(Init, p%TI, p%DOFI, p%IDI, CBparams%TI2, p%DOFR, p%IDR, ErrStat2, ErrMsg2); if(Failed()) return
+
+   !................................
+   ! Sets the following values, as documented in the SubDyn Theory Guide:
+   !    CBparams%OmegaL (omega) and CBparams%PhiL from Eq. 2
+   !    p%PhiL_T and p%PhiLInvOmgL2 for static improvement 
+   !    CBparams%PhiR from Eq. 3
+   !    CBparams%MBB, CBparams%MBM, and CBparams%KBB from Eq. 4.
+   !................................
    CALL CBMatrix(MRR, MLL, MRL, KRR, KLL, KRL, CBparams%DOFM, Init, &  ! < inputs
                  CBparams%MBB, CBparams%MBM, CBparams%KBB, CBparams%PhiL, CBparams%PhiR, CBparams%OmegaL, ErrStat2, ErrMsg2, p)  ! <- outputs (p is also input )
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUpCB()
-         RETURN
-      END IF
+   if(Failed()) return
       
    ! to use a little less space, let's deallocate these arrays that we don't need anymore, then allocate the next set of temporary arrays:     
-
    IF(ALLOCATED(MRR)  ) DEALLOCATE(MRR) 
    IF(ALLOCATED(MLL)  ) DEALLOCATE(MLL) 
    IF(ALLOCATED(MRL)  ) DEALLOCATE(MRL) 
-      
    IF(ALLOCATED(KRR)  ) DEALLOCATE(KRR) 
    IF(ALLOCATED(KLL)  ) DEALLOCATE(KLL) 
    IF(ALLOCATED(KRL)  ) DEALLOCATE(KRL) 
 
-      
-      ! "b" stands for "bar"; "t" stands for "tilde"
-   CALL AllocAry( MBBb,  p%DOFI, p%DOFI,       'matrix MBBb',  ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( MBmb,  p%DOFI, CBparams%DOFM,'matrix MBmb',  ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( KBBb,  p%DOFI, p%DOFI,       'matrix KBBb',  ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( PhiRb, p%DOFL, p%DOFI,       'matrix PhiRb', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-   CALL AllocAry( FGRb,  p%DOFI,               'array FGRb',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
-      
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL CleanUpCB()
-      RETURN
-   END IF
-      
+   ! "b" stands for "bar"; "t" stands for "tilde"
+   CALL AllocAry( MBBb,  p%DOFI, p%DOFI,       'matrix MBBb',  ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( MBmb,  p%DOFI, CBparams%DOFM,'matrix MBmb',  ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( KBBb,  p%DOFI, p%DOFI,       'matrix KBBb',  ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( PhiRb, p%DOFL, p%DOFI,       'matrix PhiRb', ErrStat2, ErrMsg2 ); if (Failed()) return
+   CALL AllocAry( FGRb,  p%DOFI,               'array FGRb',   ErrStat2, ErrMsg2 ); if (Failed()) return
    
-!................................
-! Convert CBparams%MBB , CBparams%MBM , CBparams%KBB , CBparams%PhiR , FGR to
-!                  MBBb,          MBMb,          KBBb,          PHiRb, FGRb
-! (throw out rows/columns of first matrices to create second matrices)
-!................................
-      
+   !................................
+   ! Convert CBparams%MBB , CBparams%MBM , CBparams%KBB , CBparams%PhiR , FGR to
+   !                  MBBb,          MBMb,          KBBb,          PHiRb, FGRb
+   ! (throw out rows/columns of first matrices to create second matrices)
+   !................................
    CALL CBApplyConstr(p%DOFI, p%DOFR, CBparams%DOFM,  p%DOFL,  &
                       CBparams%MBB , CBparams%MBM , CBparams%KBB , CBparams%PhiR , FGR ,       &
                                MBBb,          MBMb,          KBBb,          PHiRb, FGRb)
-       
-   
-   
-!................................
-! set values needed to calculate outputs and update states:
-!................................
+   !................................
+   ! set values needed to calculate outputs and update states:
+   !................................
    CALL SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, CBparams%OmegaL, FGL, CBparams%PhiL, ErrStat2, ErrMsg2)  
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
+   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'Craig_Bampton')
       
    CALL CleanUpCB()
 
 contains
+
+   logical function Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUpCB()
+   end function Failed
+
    subroutine CleanUpCB()
-                         
       IF(ALLOCATED(MRR)  ) DEALLOCATE(MRR) 
       IF(ALLOCATED(MLL)  ) DEALLOCATE(MLL) 
       IF(ALLOCATED(MRL)  ) DEALLOCATE(MRL) 
-                      
       IF(ALLOCATED(KRR)  ) DEALLOCATE(KRR) 
       IF(ALLOCATED(KLL)  ) DEALLOCATE(KLL) 
       IF(ALLOCATED(KRL)  ) DEALLOCATE(KRL) 
-
       IF(ALLOCATED(FGL)  ) DEALLOCATE(FGL) 
       IF(ALLOCATED(FGR)  ) DEALLOCATE(FGR) 
-            
       IF(ALLOCATED(MBBb) ) DEALLOCATE(MBBb) 
       IF(ALLOCATED(MBmb) ) DEALLOCATE(MBmb) 
       IF(ALLOCATED(KBBb) ) DEALLOCATE(KBBb) 
       IF(ALLOCATED(PhiRb)) DEALLOCATE(PhiRb) 
       IF(ALLOCATED(FGRb) ) DEALLOCATE(FGRb)             
-   
    end subroutine CleanUpCB
+
 END SUBROUTINE Craig_Bampton 
 !------------------------------------------------------------------------------------------------------
 !------------------------------------------------------------------------------------------------------
