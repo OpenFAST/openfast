@@ -1079,7 +1079,7 @@ SUBROUTINE HDOut_MapOutputs( CurrentTime, p, y, m_WAMIT, NWaveElev, WaveElev, Wa
             AllOuts(FRdtn    (:,iBody)) = m_WAMIT(iBody)%F_Rdtn + m_WAMIT(iBody)%F_PtfmAM
             !AllOuts(FWaves2 (:,iBody)) = F_Waves2
             AllOuts(FAdd     (:,iBody)) = F_Add(startIndx:endIndx)
-            AllOuts(FWavesTot(:,iBody)) = F_Waves
+            AllOuts(FWavesTot(:,iBody)) = F_Waves(startIndx:endIndx)
             AllOuts(WBMotions(:,iBody)) = q(startIndx:endIndx)
             AllOuts(WBVel    (:,iBody)) = qdot(startIndx:endIndx)
             AllOuts(WBAcc    (:,iBody)) = qdotdot(startIndx:endIndx)     
