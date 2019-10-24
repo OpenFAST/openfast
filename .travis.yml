@@ -58,7 +58,7 @@ script:
     - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -j4 -VV -R bd_; fi
 
     # linearization cases
-    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -j5 -L linear; fi
+    - if [[ "$DOUBLE_PRECISION" == "ON" ]]; then ctest -L linear; fi
 
     # subset of openfast regression tests
     # do not run
