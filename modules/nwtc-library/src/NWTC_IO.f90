@@ -231,7 +231,6 @@ MODULE NWTC_IO
       MODULE PROCEDURE WrR8AryFileNR
       MODULE PROCEDURE WrR16AryFileNR
    END INTERFACE
-   
 
 CONTAINS
 
@@ -8031,20 +8030,5 @@ CONTAINS
       
    END SUBROUTINE WrVTK_SP_vectors3D
 
-   !> Returns true if a string is a number, and returns a real number
-   FUNCTION is_numeric(string, x)
-      IMPLICIT NONE
-      CHARACTER(len=*), INTENT(IN) :: string
-      REAL(ReKi), INTENT(OUT) :: x
-      LOGICAL :: is_numeric
-      
-      INTEGER :: e,n
-      CHARACTER(len=12) :: fmt
-      x = 0.0_SiKi
-      n=LEN_TRIM(string)
-      WRITE(fmt,'("(F",I0,".0)")') n
-      READ(string,fmt,IOSTAT=e) x
-      is_numeric = e == 0
-   END FUNCTION is_numeric
       
 END MODULE NWTC_IO

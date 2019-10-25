@@ -485,6 +485,23 @@ SUBROUTINE WaveElev_ReadFile ( InitInp, WaveElevData, ErrStat, ErrMsg )
 END SUBROUTINE WaveElev_ReadFile
    
 !----------------------------------------------------------------------------------------------------------------------------------
+   
+FUNCTION is_numeric(string, x)
+   IMPLICIT NONE
+   CHARACTER(len=*), INTENT(IN) :: string
+   REAL(SiKi), INTENT(OUT) :: x
+   LOGICAL :: is_numeric
+   
+   INTEGER :: e,n
+   CHARACTER(len=12) :: fmt
+   x = 0.0_SiKi
+   n=LEN_TRIM(string)
+   WRITE(fmt,'("(F",I0,".0)")') n
+   READ(string,fmt,IOSTAT=e) x
+   is_numeric = e == 0
+END FUNCTION is_numeric
+    
+!----------------------------------------------------------------------------------------------------------------------------------
 !>  This routine initializes the wave kinematics based a set of user-supplied wave elevations
 !!
 !!                 NOTE: WaveDT in file must match given WaveDT in HydroDyn input file
