@@ -713,9 +713,12 @@ SUBROUTINE SD_Input(SDInputFile, Init, p, ErrStat,ErrMsg)
 CHARACTER(1024)              :: PriPath                                         ! The path to the primary input file
 CHARACTER(1024)              :: Line                                            ! String to temporarially hold value of read line
 INTEGER                      :: Sttus
-
+CHARACTER(64), ALLOCATABLE   :: StrArray(:)  ! Array of strings, for better control of table inputs
 LOGICAL                      :: Echo  
+LOGICAL                      :: LegacyFormat
+LOGICAL                      :: bNumeric
 INTEGER(IntKi)               :: UnIn
+INTEGER(IntKi)               :: nColumns
 INTEGER(IntKi)               :: IOS
 INTEGER(IntKi)               :: UnEc   !Echo file ID
 
@@ -859,11 +862,42 @@ CALL ReadIVar ( UnIn, SDInputFile, Init%NJoints, 'NJoints', 'Number of joints',E
 CALL ReadCom  ( UnIn, SDInputFile,               'Joint Coordinates Headers'  ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,               'Joint Coordinates Units'    ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL AllocAry(Init%Joints, Init%NJoints, JointsCol, 'Joints', ErrStat2, ErrMsg2 ); if(Failed()) return
-DO I = 1, Init%NJoints
-   CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, JointsCol, 'Joints', 'Joint number and coordinates', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-   Init%Joints(I,:) = Dummy_ReAry(1:JointsCol)
-ENDDO
 IF (Check(  Init%NJoints < 2, 'NJoints must be greater than 1')) return
+! --- Reading first line to detect file format
+READ(UnIn, FMT='(A)', IOSTAT=ErrStat2) Line  ; ErrMsg2='First line of joints array'; if (Failed()) return
+! --- Reading first line to detect file format based on number of columns
+nColumns=JointsCol
+CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
+CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Joints', 'First line of joints array', ErrStat2, ErrMsg2 )
+if (ErrStat2/=0) then
+   ! We try we 4 columns (legacy format)
+   nColumns = 4
+   deallocate(StrArray)
+   CALL AllocAry(StrArray, nColumns, 'StrArray',ErrStat2,ErrMsg2); if (Failed()) return 
+   CALL ReadCAryFromStr ( Line, StrArray, nColumns, 'Joints', 'First line of joints array', ErrStat2, ErrMsg2 ); if(Failed()) return
+   print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+   print*,'Warning: Legacy joints table format detected in SubDyn input file!' 
+   print*,'         Some feature might be missing and only partial legacy support is provided.'
+   print*,'         All joints are assumed cantilever, all members regular beams.' 
+   print*,'         Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html'
+   print*,'         Look at the SubDyn API changes to adapt your input files.'
+   print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+   Init%Joints(:,5) = idCantilever ! All joints assumed cantilever
+   Init%Joints(:,6:JointsCol) = 0.0 ! remaining columns set to 0
+   LegacyFormat=.True.  ! Legacy format - Delete me in 2024
+else
+   ! New format
+   LegacyFormat=.False.
+endif
+! Extract fields from first line
+DO I = 1, nColumns
+   bNumeric = is_numeric(StrArray(I), Init%Joints(1,I)) ! Convert from string to float
+ENDDO
+! Read remaining lines
+DO I = 2, Init%NJoints
+   CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, nColumns, 'Joints', 'Joint number and coordinates', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   Init%Joints(I,:) = Dummy_ReAry(1:nColumns)
+ENDDO
 
 !---------- GO AHEAD  and ROTATE STRUCTURE IF DESIRED TO SIMULATE WINDS FROM OTHER DIRECTIONS -------------
 CALL SubRotate(Init%Joints,Init%NJoints,Init%SubRotateZ)
@@ -901,9 +935,15 @@ CALL ReadIVar ( UnIn, SDInputFile, p%NMembers, 'NMembers', 'Number of members',E
 CALL ReadCom  ( UnIn, SDInputFile,             'Members Headers'              ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,             'Members Units  '              ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL AllocAry(Init%Members, p%NMembers, MembersCol, 'Members', ErrStat2, ErrMsg2)
+Init%Members(:,:) = 0.0_ReKi
+if (LegacyFormat) then
+   nColumns = 5
+else
+   nColumns = MembersCol
+endif
 DO I = 1, p%NMembers
-   CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, MembersCol, 'Members', 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
-   Init%Members(I,:) = Dummy_IntAry(1:MembersCol)
+   CALL ReadAry( UnIn, SDInputFile, Dummy_IntAry, nColumns, 'Members', 'Member number and connectivity ', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
+   Init%Members(I,1:nColumns) = Dummy_IntAry(1:nColumns)
 ENDDO   
 IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
 
@@ -929,6 +969,30 @@ DO I = 1, Init%NXPropSets
    CALL ReadAry( UnIn, SDInputFile, Init%XPropSets(I,:), XPropSetsCol, 'XPropSets', 'XPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 ENDDO   
 IF (Check( Init%NXPropSets < 0, 'NXPropSets must be >=0')) return
+
+
+if (.not. LegacyFormat) then
+   !-------------------------- CABLE PROPERTIES  -------------------------------------
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadIVar ( UnIn, SDInputFile, Init%NCablePropSets, 'NCablePropSets', 'Number of cable properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL AllocAry(Init%CablePropSets, Init%NCablePropSets, CablePropSetsCol, 'CablePropSets', ErrStat2, ErrMsg2); if(Failed()) return
+   DO I = 1, Init%NCablePropSets
+      CALL ReadAry( UnIn, SDInputFile, Init%CablePropSets(I,:), CablePropSetsCol, 'CablePropSets', 'CablePropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   ENDDO   
+   IF (Check( Init%NCablePropSets < 0, 'NCablePropSets must be >=0')) return
+   !----------------------- RIGID LINK PROPERTIES ------------------------------------
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Rigid link properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadIVar ( UnIn, SDInputFile, Init%NRigidPropSets, 'NRigidPropSets', 'Number of rigid link properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Rigid link properties Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadCom  ( UnIn, SDInputFile,                  'Rigid link properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL AllocAry(Init%RigidPropSets, Init%NRigidPropSets, RigidPropSetsCol, 'RigidPropSets', ErrStat2, ErrMsg2); if(Failed()) return
+   DO I = 1, Init%NRigidPropSets
+      CALL ReadAry( UnIn, SDInputFile, Init%RigidPropSets(I,:), RigidPropSetsCol, 'RigidPropSets', 'RigidPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   ENDDO   
+   IF (Check( Init%NRigidPropSets < 0, 'NRigidPropSets must be >=0')) return
+endif
 
 !---------------------- MEMBER COSINE MATRICES COSM(i,j) ------------------------
 CALL ReadCom  ( UnIn, SDInputFile,              'Member direction cosine matrices '                   ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
@@ -2562,8 +2626,8 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'Number of elements (NElems):',Init%NElem
-   WRITE(UnSum, '(A8,4(A10))')  'Elem No.',    'Node_I',     'Node_J',      'Prop_I',      'Prop_J'
-   WRITE(UnSum, '(I8,I10,I10,I10,I10)') ((p%Elems(i, j), j = 1, MembersCol), i = 1, Init%NElem)
+   WRITE(UnSum, '(A8,5(A10))')  'Elem No.',    'Node_I',     'Node_J',   'Type',    'Prop_I',      'Prop_J'
+   WRITE(UnSum, '(I8,5(I10))') ((p%Elems(i, j), j = 1, MembersCol), i = 1, Init%NElem)
    
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'Number of properties (NProps):',Init%NProp
@@ -2593,7 +2657,7 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    DO i=1,p%NMembers
        !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
        !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
-       propids=Init%Members(i,4:5)
+       propids=Init%Members(i,iMProp:iMProp+1)
        mlength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg)
        IF (ErrStat .EQ. ErrID_None) THEN
         WRITE(UnSum, '(I9,I10,I10, E15.6, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))')    Init%Members(i,1:3),                &
@@ -2887,5 +2951,20 @@ SUBROUTINE SymMatDebug(M,MAT)
    WRITE(*, '(A,I4,I4)')  'Matrix Symmetry Check: (I,J)=', imax,jmax
 
 END SUBROUTINE SymMatDebug
+
+FUNCTION is_numeric(string, x)
+   IMPLICIT NONE
+   CHARACTER(len=*), INTENT(IN) :: string
+   REAL(SiKi), INTENT(OUT) :: x
+   LOGICAL :: is_numeric
+   
+   INTEGER :: e,n
+   CHARACTER(len=12) :: fmt
+   x = 0.0_SiKi
+   n=LEN_TRIM(string)
+   WRITE(fmt,'("(F",I0,".0)")') n
+   READ(string,fmt,IOSTAT=e) x
+   is_numeric = e == 0
+END FUNCTION is_numeric
 
 End Module SubDyn

@@ -28,15 +28,37 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: TPdofL          = 6                     ! 6 degrees of freedom (length of u subarray [UTP])
    
   ! values of these parameters are ordered by their place in SubDyn input file:
-  INTEGER(IntKi),   PARAMETER  :: JointsCol       = 4                     ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss)
+  INTEGER(IntKi),   PARAMETER  :: JointsCol       = 10                    ! Number of columns in Joints (JointID, JointXss, JointYss, JointZss)
   INTEGER(IntKi),   PARAMETER  :: ReactCol        = 7                     ! Number of columns in reaction dof array (JointID,RctTDxss,RctTDYss,RctTDZss,RctRDXss,RctRDYss,RctRDZss)
   INTEGER(IntKi),   PARAMETER  :: InterfCol       = 7                     ! Number of columns in interf matrix (JointID,ItfTDxss,ItfTDYss,ItfTDZss,ItfRDXss,ItfRDYss,ItfRDZss)
   INTEGER(IntKi),   PARAMETER  :: MaxNodesPerElem = 2                     ! Maximum number of nodes per element (currently 2)
-  INTEGER(IntKi),   PARAMETER  :: MembersCol      = MaxNodesPerElem + 3   ! Number of columns in Members (MemberID,MJointID1,MJointID2,MPropSetID1,MPropSetID2,COSMID) 
+  INTEGER(IntKi),   PARAMETER  :: MembersCol      = MaxNodesPerElem + 3+1 ! Number of columns in Members (MemberID,MJointID1,MJointID2,MPropSetID1,MPropSetID2,COSMID) 
   INTEGER(IntKi),   PARAMETER  :: PropSetsCol     = 6                     ! Number of columns in PropSets  (PropSetID,YoungE,ShearG,MatDens,XsecD,XsecT)  !bjj: this really doesn't need to store k, does it? or is this supposed to be an ID, in which case we shouldn't be storing k (except new property sets), we should be storing IDs
   INTEGER(IntKi),   PARAMETER  :: XPropSetsCol    = 10                    ! Number of columns in XPropSets (PropSetID,YoungE,ShearG,MatDens,XsecA,XsecAsx,XsecAsy,XsecJxx,XsecJyy,XsecJ0)
+  INTEGER(IntKi),   PARAMETER  :: CablePropSetsCol= 4                     ! Number of columns in CablePropSet (PropSetID, EA, MatDens, T0)
+  INTEGER(IntKi),   PARAMETER  :: RigidPropSetsCol= 2                     ! Number of columns in RigidPropSet (PropSetID, MatDens)
   INTEGER(IntKi),   PARAMETER  :: COSMsCol        = 10                    ! Number of columns in (cosine matrices) COSMs (COSMID,COSM11,COSM12,COSM13,COSM21,COSM22,COSM23,COSM31,COSM32,COSM33)
   INTEGER(IntKi),   PARAMETER  :: CMassCol        = 5                     ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ)
+  ! Indices in Members table
+  INTEGER(IntKi),   PARAMETER  :: iMType= 4 ! Index in Members table where the type is stored
+  INTEGER(IntKi),   PARAMETER  :: iMProp= 4 ! Index in Members table where the PropSet1 and 2 are stored
+
+  ! Indices in Joints table
+  INTEGER(IntKi),   PARAMETER  :: iJointType= 5  ! Index in Joints where the joint type is stored
+  INTEGER(IntKi),   PARAMETER  :: iJointDir= 6 ! Index in Joints where the joint-direction are stored
+  INTEGER(IntKi),   PARAMETER  :: iJointStiff= 9 ! Index in Joints where the joint-stiffness is stored
+  INTEGER(IntKi),   PARAMETER  :: iJointDamp= 10 ! Index in Joints where the joint-damping is stored
+
+  ! ID for joint types
+  INTEGER(IntKi),   PARAMETER  :: idCantilever = 1
+  INTEGER(IntKi),   PARAMETER  :: idUniversal  = 2
+  INTEGER(IntKi),   PARAMETER  :: idPin        = 3
+  INTEGER(IntKi),   PARAMETER  :: idBall       = 4
+
+  ! ID for member types
+  INTEGER(IntKi),   PARAMETER  :: idBeam       = 1
+  INTEGER(IntKi),   PARAMETER  :: idCable      = 2
+  INTEGER(IntKi),   PARAMETER  :: idRigid      = 3
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,ReactCol,InterfCol,MembersCol,PropSetsCol,XPropSetsCol,COSMsCol,CMassCol)
 
@@ -104,6 +126,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER                       :: knode, kelem, kprop, nprop
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: found, CreateNewProp
+   INTEGER(IntKi)                :: eType !< Element Type
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(1024)               :: ErrMsg2
    ErrStat = ErrID_None
@@ -162,6 +185,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    p%Elems = 0
    DO I = 1, p%NMembers
       p%Elems(I,     1) = I                     ! element/member number (not MemberID)
+      p%Elems(I, iMType)= Init%Members(I, iMType) ! 
 !bjj: TODO: JMJ wants check that YoungE, ShearG, and MatDens are equal in the two properties because we aren't going to interpolate them. This should be less confusing for users.                                                
       
       ! loop through the JointIDs for this member and find the corresponding indices into the Joints array
@@ -185,9 +209,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
       
       ! loop through the PropSetIDs for this member and find the corresponding indices into the Joints array
       ! we're setting these two values:   
-      ! p%Elems(I, 4) = property set for node 1 (note this sets the YoungE, ShearG, and MatDens columns for the ENTIRE element)   
-      ! p%Elems(I, 5) = property set for node 2 (note this should be used only for the XsecD and XsecT properties in the element [for a linear distribution from node 1 to node 2 of D and T])
-      DO n=4,5 ! Member column for MPropSetID1 and MPropSetID2
+      ! p%Elems(I, 5) = property set for node 1 (note this sets the YoungE, ShearG, and MatDens columns for the ENTIRE element)   
+      ! p%Elems(I, 6) = property set for node 2 (note this should be used only for the XsecD and XsecT properties in the element [for a linear distribution from node 1 to node 2 of D and T])
+      DO n=iMProp,iMProp+1 ! Member column for MPropSetID1 and MPropSetID2
          Prop = Init%Members(I, n)  ! n=4 or 5
          ! ...... search for index of property set whose PropSetID matches Prop ......
          J = 1
@@ -290,8 +314,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
              RETURN
           ENDIF
           
-          Prop1 = TempMembers(I, 4)
-          Prop2 = TempMembers(I, 5)
+         eType = TempMembers(I, iMType  )
+         Prop1 = TempMembers(I, iMProp  )
+         Prop2 = TempMembers(I, iMProp+1)
           
           Init%MemberNodes(I,           1) = Node1
           Init%MemberNodes(I, Init%NDiv+1) = Node2
@@ -340,11 +365,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                kprop = kprop + 1
                CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), TempProps(Prop1, 4), d1+dd, t1+dt, TempProps)           
                kelem = kelem + 1
-               CALL SetNewElem(kelem, Node1, knode, Prop1, kprop, p)  
+               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p)  
                nprop = kprop              
           ELSE
                kelem = kelem + 1
-               CALL SetNewElem(kelem, Node1, knode, Prop1, Prop1, p)                
+               CALL SetNewElem(kelem, Node1, knode, eType, Prop1, Prop1, p)                
                nprop = Prop1 
           ENDIF
           
@@ -364,18 +389,18 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                                   Init%PropSets(Prop1, 4), d1 + J*dd, t1 + J*dt, &
                                   TempProps)           
                   kelem = kelem + 1
-                  CALL SetNewElem(kelem, knode-1, knode, nprop, kprop, p)
+                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p)
                   nprop = kprop                
              ELSE
                   kelem = kelem + 1
-                  CALL SetNewElem(kelem, knode-1, knode, nprop, nprop, p)         
+                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, nprop, p)         
                    
              ENDIF
           ENDDO
           
           ! the element connect to Node2
           kelem = kelem + 1
-          CALL SetNewElem(kelem, knode, Node2, nprop, Prop2, p)                
+          CALL SetNewElem(kelem, knode, Node2, eType, nprop, Prop2, p)                
 
        ENDDO ! loop over all members
 
@@ -430,19 +455,21 @@ END SUBROUTINE SetNewNode
 
 !------------------------------------------------------------------------------------------------------
 !> Set properties of element k
-SUBROUTINE SetNewElem(k, n1, n2, p1, p2, p)
+SUBROUTINE SetNewElem(k, n1, n2, etype, p1, p2, p)
    INTEGER,                INTENT(IN   )   :: k
    INTEGER,                INTENT(IN   )   :: n1
    INTEGER,                INTENT(IN   )   :: n2
+   INTEGER,                INTENT(IN   )   :: eType
    INTEGER,                INTENT(IN   )   :: p1
    INTEGER,                INTENT(IN   )   :: p2
    TYPE(SD_ParameterType), INTENT(INOUT)   :: p
    
-   p%Elems(k, 1) = k
-   p%Elems(k, 2) = n1
-   p%Elems(k, 3) = n2
-   p%Elems(k, 4) = p1
-   p%Elems(k, 5) = p2
+   p%Elems(k, 1)        = k
+   p%Elems(k, 2)        = n1
+   p%Elems(k, 3)        = n2
+   p%Elems(k, iMType)   = eType
+   p%Elems(k, iMProp  ) = p1
+   p%Elems(k, iMProp+1) = p2
 
 END SUBROUTINE SetNewElem
 
@@ -483,6 +510,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    REAL(ReKi), ALLOCATABLE  :: Ke(:,:), Me(:, :), FGe(:) ! element stiffness and mass matrices gravity force vector
    INTEGER, DIMENSION(NNE)  :: nn                        ! node number in element 
    INTEGER                  :: r
+   INTEGER(IntKi)           :: eType
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(1024)          :: ErrMsg2
    
@@ -530,9 +558,10 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       N1 = p%Elems(I,       2)
       N2 = p%Elems(I, NNE + 1)
       
-      P1 = p%Elems(I, NNE + 2)
-      P2 = p%Elems(I, NNE + 3)
-      
+      P1    = p%Elems(I, iMProp  )
+      P2    = p%Elems(I, iMProp+1)
+      eType = p%Elems(I, iMType)
+
       E   = Init%Props(P1, 2)
       G   = Init%Props(P1, 3)
       rho = Init%Props(P1, 4)
