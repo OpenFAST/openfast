@@ -956,6 +956,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                 !-----------------------------------------
                 ! Initialize the WAMIT Calculations 
                 !-----------------------------------------
+                InitLocal%WAMIT%WAMITFile        = InitLocal%PotFile     (i)
                 InitLocal%WAMIT%PtfmVol0    (1)  = InitLocal%PtfmVol0    (i)
                 InitLocal%WAMIT%WAMITULEN        = InitLocal%WAMITULEN   (i)
                 InitLocal%WAMIT%PtfmRefxt   (1)  = InitLocal%PtfmRefxt   (i)

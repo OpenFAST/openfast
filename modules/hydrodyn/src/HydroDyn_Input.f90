@@ -35,6 +35,66 @@ MODULE HydroDyn_Input
    PRIVATE :: CheckMeshOutput
 
 CONTAINS
+   
+SUBROUTINE ReadFileList ( UnIn, Fil, CharAry, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+
+      ! Argument declarations:
+
+   INTEGER,      INTENT(IN)          :: UnIn                                       !< I/O unit for input file.
+   INTEGER,      INTENT(IN)          :: UnEc                                       !< I/O unit for echo file (if > 0).
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    !< Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     !< Error message
+
+   CHARACTER(*), INTENT(INOUT)       :: CharAry(:)                                 !< Character array being read (calling routine dimensions it to max allowable size).
+
+   CHARACTER(*), INTENT(IN)          :: Fil                                        !< Name of the input file.
+   CHARACTER(*), INTENT(IN)          :: AryDescr                                   !< Text string describing the variable.
+   CHARACTER(*), INTENT(IN)          :: AryName                                    !< Text string containing the variable name.
+
+
+      ! Local declarations:
+
+   INTEGER                          :: MaxAryLen                                   ! Maximum length of the array being read
+   INTEGER                          :: NumWords                                    ! Number of words contained on a line
+
+   CHARACTER(1000)                  :: OutLine                                     ! Character string read from file, containing output list
+   CHARACTER(3)                     :: EndOfFile
+
+
+      ! Initialize some values
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   MaxAryLen  = SIZE(CharAry)
+
+   CharAry = ''
+   
+   ! Read the line containing output parameters and store them in CharAry(:).
+
+   CALL ReadVar ( UnIn, Fil, OutLine, AryName, AryDescr, ErrStat, ErrMsg, UnEc )
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+      
+   NumWords = CountWords( OutLine )    ! The number of words in OutLine.
+
+
+      ! Check to see if we found the required number of words.
+
+   IF ( NumWords < MaxAryLen )  THEN
+       
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'ReadOutputList: Did not find the required number of Potfile strings on the input file line: only found '//TRIM( Int2LStr(NumWords) )//'.'
+      RETURN
+
+   ELSE
+
+      CALL GetWords ( OutLine, CharAry(1:NumWords), NumWords )
+
+   END IF
+
+   RETURN
+   
+END SUBROUTINE ReadFileList
 
 !====================================================================================================
 FUNCTION CheckMeshOutput( output, numMemberOut, MOutLst, numJointOut )
@@ -905,8 +965,8 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
          CALL CleanUp()
          RETURN
       END IF      
-
-   CALL ReadAry ( UnIn, FileName, InitInp%PotFile, InitInp%nWAMITObj, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
+   call ReadFileList ( UnIn, FileName, InitInp%PotFile, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
+   !CALL ReadAry ( UnIn, FileName, InitInp%PotFile, InitInp%nWAMITObj, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
