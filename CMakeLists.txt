@@ -28,6 +28,7 @@ if (NOT CMAKE_BUILD_TYPE)
     "Choose the build type: Debug Release" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
+option(GENERATE_TYPES "Use the openfast-regsitry to autogenerate types modules" off)
 option(BUILD_SHARED_LIBS "Enable building shared libraries" off)
 option(DOUBLE_PRECISION "Treat REAL as double precision" on)
 option(USE_DLL_INTERFACE "Enable runtime loading of dynamic libraries" on)
@@ -74,7 +75,9 @@ endif()
 ########################################################################
 # Build rules for OpenFAST Registry
 #
-add_subdirectory(modules/openfast-registry)
+if(GENERATE_TYPES)
+  add_subdirectory(modules/openfast-registry)
+endif()
 
 ########################################################################
 # OpenFAST modules
@@ -101,7 +104,7 @@ set(OPENFAST_MODULES
   icedyn
   icefloe
   map
-  )
+)
 
 set(OPENFAST_REGISTRY_INCLUDES "" CACHE INTERNAL "Registry includes paths")
 set_registry_includes("modules" ${OPENFAST_MODULES})
