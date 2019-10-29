@@ -258,6 +258,48 @@ The commands above are equivalent to having run this command the first time:
     # Initial configuration in Debug mode with dynamic linking
     cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON
 
+CMAKE_BUILD_TYPE
+****************
+This option allows to set the compiler optimization level and debug
+information. The value and its effect are listed in the table below.
+
+================== ================================================================================================================
+ CMAKE_BUILD_TYPE   Effect
+================== ================================================================================================================
+ Release            ``-O3`` optimization level
+ RelWithDebInfo     ``-O2`` optimization level with ``-g`` flag for debug info
+ MinSizeRel         ``-O1`` optimization level
+ Debug              No optimization and `-g` flag for debug info; additional debugging flags: ``-fcheck=all -pedantic -fbacktrace``
+================== ================================================================================================================
+
+Use ``Debug`` during active development to add debug symbols for use with a
+debugger. This build type also adds flags for generating runtime checks that
+would otherwise result in undefined behavior. ``MinSizeRel`` adds basic
+optimizations and targets a minimal size for the generated executable. The next
+level, ``RelWithDebInfo``, enables vectorization and other more agressive
+optimizations. It also adds debugging symbols and results in a larger
+executable size. Finally, use ``Release`` for best performance at the cost
+of increased compile time.
+
+This flag can be set with the following command:
+
+.. code-block:: bash
+
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+CMAKE_INSTALL_PREFIX
+********************
+This flag sets the location of the compiled binaries when the build
+tool runs the ``install`` command. It should be a full path in a carefully
+chosen location. The binaries will be copied into ``include``, ``lib``,
+and ``bin`` subfolders under the value of this flag. The default is to
+install binaries within the repository in a folder called ``install``.
+
+This flag can be set with the following command:
+
+.. code-block:: bash
+
+    cmake .. -DCMAKE_INSTALL_PREFIX="/usr/local/"
 
 Setting the build tool
 ++++++++++++++++++++++
