@@ -9,7 +9,7 @@ C++ API Users Guide
    issued and as needed to provide further information on advancements or
    modifications to the software.
 
-The C++ API provides a high level API to run OpenFAST through a C++ gluecode. The primary purpose of the C++ API is to help interface OpenFAST to external programs like CFD solvers that are typically written in C++. The installation of C++ API is enabled via CMake by turning on the :cmakeval:`BUILD_FAST_CPP_API` flag.
+The C++ API provides a high level API to run OpenFAST through a C++ gluecode. The primary purpose of the C++ API is to help interface OpenFAST to external programs like CFD solvers that are typically written in C++. The installation of C++ API is enabled via CMake by turning on the :cmakeval:`BUILD_OPENFAST_CPP_API` flag.
 
 A sample glue-code `FAST_Prog.cpp <https://github.com/OpenFAST/openfast/blob/dev/glue-codes/openfast-cpp/src/FAST_Prog.cpp>`_ is provided as a demonstration of the usage of the C++ API. The glue-code allows for the simulation of multiple turbines using OpenFAST in parallel over multiple processors. The glue-code takes a single input file named ``cDriver.i`` (:download:`download <files/cDriver.i>`).
 
