@@ -49,11 +49,13 @@ macro(set_fast_fortran)
   # Verify proper compiler versions are available
   # see https://github.com/OpenFAST/openfast/issues/88
   if(${CMAKE_Fortran_COMPILER_ID} STREQUAL "GNU")
-    if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "4.6.0")
-      message(FATAL_ERROR "A version of GNU GFortran greater than 4.6.0 is required. GFortran version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
+    if("${CMAKE_Fortran_COMPILER_VERSION}" STREQUAL "")
+        message(WARNING "A version of GNU GFortran greater than 4.6.0 is required but CMake could not detect your GFortran version.")
+    elseif("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_LESS "4.6.0")  
+        message(FATAL_ERROR "A version of GNU GFortran greater than 4.6.0 is required. GFortran version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
     endif()
   elseif(${CMAKE_Fortran_COMPILER_ID} STREQUAL "Intel")
-    if(CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "11")
+    if("${CMAKE_Fortran_COMPILER_VERSION}" VERSION_LESS "11")
       message(FATAL_ERROR "A version of Intel ifort greater than 11 is required. ifort version detected by CMake: ${CMAKE_Fortran_COMPILER_VERSION}.")
     endif()
   endif()
@@ -81,18 +83,25 @@ macro(set_fast_gfortran)
   endif(NOT WIN32)
 
   # Fix free-form compilation for OpenFAST
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -ffree-line-length-none -cpp")
 
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
     add_definitions(-DDOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -cpp -fdefault-real-8")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fdefault-real-8")
   endif (DOUBLE_PRECISION)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
     set( CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG} -fcheck=all -pedantic -fbacktrace" )
   endif()
+
+  if(CYGWIN)
+    # increase the default 2MB stack size to 16 MB
+    MATH(EXPR stack_size "16 * 1024 * 1024")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS},--stack,${stack_size}")
+  endif()
+
 endmacro(set_fast_gfortran)
 
 #
@@ -111,11 +120,11 @@ endmacro(set_fast_intel_fortran)
 # arch
 #
 macro(set_fast_intel_fortran_posix)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic ")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpic -fpp")
   # Deal with Double/Single precision
   if (DOUBLE_PRECISION)
     add_definitions(-DDOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -fpp -r8 -double_size 128")
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -r8 -double_size 128")
   endif (DOUBLE_PRECISION)
 
   # debug flags
@@ -129,16 +138,16 @@ endmacro(set_fast_intel_fortran_posix)
 # windows arch
 #
 macro(set_fast_intel_fortran_windows)
-  # Deal with Double/Single precision
-  if (DOUBLE_PRECISION)
-    add_definitions(-DDOUBLE_PRECISION)
-    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /fpp /real_size:64 /double_size:128")
-  endif (DOUBLE_PRECISION)
-
   # Turn off specific warnings
   # - 5199: too many continuation lines
   # - 5268: 132 column limit
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268")
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /Qdiag-disable:5199,5268 /fpp")
+
+  # Deal with Double/Single precision
+  if (DOUBLE_PRECISION)
+    add_definitions(-DDOUBLE_PRECISION)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} /real_size:64 /double_size:128")
+  endif (DOUBLE_PRECISION)
 
   # debug flags
   if(CMAKE_BUILD_TYPE MATCHES Debug)
