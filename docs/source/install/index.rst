@@ -423,6 +423,6 @@ test or may be deprecated in the future.
    :maxdepth: 1
 
    install_spack.rst
+   install_cygwin.rst
 
 .. TODO: Check the windows paths: math library command, installation location
-.. TODO: Add cygwin?
