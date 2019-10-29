@@ -157,8 +157,8 @@ glue-code has its own ``CMakeLists.txt``; for example, AeroDyn and BeamDyn
 have one at ``openfast/modules/aerodyn/CMakeLists.txt`` and
 ``openfast/modules/beamdyn/CMakeLists.txt``, respectively.
 
-**Running CMake**
-
+Running CMake
++++++++++++++
 Running CMake and compiling will create many files (text files and binaries)
 used in the various stages of the build. For this reason, a ``build`` folder
 should be created to contain all of the generated files associated with the
@@ -209,8 +209,8 @@ The command line curses interface can be invoked similarly:
 The interface will be rendered in the terminal window and all navigation
 happens through keyboard inputs.
 
-**OpenFAST CMake options**
-
+OpenFAST CMake options
+++++++++++++++++++++++
 CMake has a large number of general configuration variables available. A good
 resource for useful CMake variables is at this link: `GitLab CMake variables <https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/Useful-Variables>`_.
 The `CMake API documentation <https://cmake.org/cmake/help/latest/>`_
@@ -258,8 +258,9 @@ The commands above are equivalent to having run this command the first time:
     # Initial configuration in Debug mode with dynamic linking
     cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_SHARED_LIBS=ON
 
-**Setting the build tool**
 
+Setting the build tool
+++++++++++++++++++++++
 CMake can target a variety of build tools or *generators*. To obtain a list
 of available generators on the current system, run with the empty generator
 flag, select the target from the list, and rerun with the generator flag
@@ -296,8 +297,8 @@ populated:
 
     If the chosen generator name contains spaces, be sure to wrap it in quotes.
 
-**Math libraries**
-
+Math libraries
+++++++++++++++
 The CMake project is configured to search for the required math libraries
 in default locations. However, if math libraries are not found, they can
 be specified directly to CMake. The two required libraries are ``BLAS``
