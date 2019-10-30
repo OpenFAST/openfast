@@ -922,9 +922,11 @@ SUBROUTINE LumpForces(Area1,Area2,crat,L,rho, g, DirCos, F)
    REAL(ReKi), INTENT( OUT) :: F(12)            !< Lumped forces
    !LOCALS
    REAL(ReKi)                         :: TempCoeff,a0,a1,a2  !coefficients of the gravity quadratically distributed force
-   
+   print*,'Error: the function lumpforces is not ready to use'
+   STOP
+
    !Calculate quadratic polynomial coefficients
-   a0 = a1
+   a0 = -99999 ! TODO: this is wrong
    a2 = ( (Area1+A2) - (Area1*crat+Area2/crat) )/L**2. ! *x**2
    a1 = (Area2-Area1)/L -a2*L                          ! *x
    
