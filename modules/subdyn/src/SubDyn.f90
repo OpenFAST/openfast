@@ -810,7 +810,7 @@ IF (Init%CBMod) THEN
       ! note that we don't check the ErrStat2 here; if the user entered fewer than Nmodes values, we will use the
       ! last entry to fill in remaining values.
       !Check 1st value, we need at least one good value from user or throw error
-      IF ((Init%JDampings(1) .LT. 0 ) .OR. (Init%JDampings(1) .GE. 100.0)) THEN
+      IF ((Init%JDampings(1) < 0 ) .OR. (Init%JDampings(1) >= 100.0)) THEN
             CALL Fatal('Damping ratio should be larger than 0 and less than 100')
             return
       ELSE
@@ -822,7 +822,7 @@ IF (Init%CBMod) THEN
                   ErrMsg  = 'Using damping ratio '//trim(num2lstr(Init%JDampings(I-1)))//' for modes '//trim(num2lstr(I))//' - '//trim(num2lstr(p%Nmodes))//'.'
                END IF
                EXIT
-            ELSEIF ( ( Init%JDampings(I) .LT. 0 ) .OR.( Init%JDampings(I) .GE. 100.0 ) ) THEN    
+            ELSEIF ( ( Init%JDampings(I) < 0 ) .OR.( Init%JDampings(I) >= 100.0 ) ) THEN    
                CALL Fatal('Damping ratio should be larger than 0 and less than 100')
                return
             ENDIF      
@@ -843,7 +843,7 @@ ELSE   !CBMOD=FALSE  : all modes are retained, not sure how many they are yet
    !Read 1 damping value for all modes
    CALL AllocAry(Init%JDampings, 1, 'JDamping', ErrStat2, ErrMsg2) ; if(Failed()) return
    CALL ReadVar ( UnIn, SDInputFile, Init%JDampings(1), 'JDampings', 'Damping ratio',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-   IF ( ( Init%JDampings(1) .LT. 0 ) .OR.( Init%JDampings(1) .GE. 100.0 ) ) THEN 
+   IF ( ( Init%JDampings(1) < 0 ) .OR.( Init%JDampings(1) >= 100.0 ) ) THEN 
          CALL Fatal('Damping ratio should be larger than 0 and less than 100.')
          RETURN
    ENDIF
@@ -1019,10 +1019,10 @@ IF ( p%NMOutputs > 0 ) THEN
          DO J = 1, p%NMembers
             IF(p%MOutLst(I)%MemberID .EQ. Init%Members(j, 1)) THEN
                flg = flg + 1 ! flg could be greater than 1, when there are more than 9 internal nodes of a member.
-               IF( (p%MOutLst(I)%NOutCnt .LT. 10) .and. ((p%MOutLst(I)%NOutCnt .GT. 0)) ) THEN
+               IF( (p%MOutLst(I)%NOutCnt < 10) .and. ((p%MOutLst(I)%NOutCnt > 0)) ) THEN
                   DO K = 1,p%MOutLst(I)%NOutCnt
                      ! node number should be less than NDiv + 1
-                     IF( (p%MOutLst(I)%NodeCnt(k) .GT. (Init%NDiv+1)) .or. (p%MOutLst(I)%NodeCnt(k) .LT. 1) ) THEN
+                     IF( (p%MOutLst(I)%NodeCnt(k) > (Init%NDiv+1)) .or. (p%MOutLst(I)%NodeCnt(k) < 1) ) THEN
                         CALL Fatal(' NodeCnt should be less than NDIV+1 and greater than 0. ')
                         RETURN
                      ENDIF
@@ -1174,13 +1174,13 @@ SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
       CALL SD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg ) ! initializes xdot
       CALL SD_DestroyInput( u_interp, ErrStat, ErrMsg)   ! we don't need this local copy anymore
 
-      if (n .le. 2) then
+      if (n <= 2) then
          OtherState%n = n
          !OtherState%xdot ( 3 - n ) = xdot
          CALL SD_CopyContState( xdot, OtherState%xdot ( 3 - n ), MESH_UPDATECOPY, ErrStat, ErrMsg )
          CALL SD_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       else
-         if (OtherState%n .lt. n) then
+         if (OtherState%n < n) then
             OtherState%n = n
             CALL SD_CopyContState( OtherState%xdot ( 3 ), OtherState%xdot ( 4 ), MESH_UPDATECOPY, ErrStat, ErrMsg )
             CALL SD_CopyContState( OtherState%xdot ( 2 ), OtherState%xdot ( 3 ), MESH_UPDATECOPY, ErrStat, ErrMsg )
@@ -1188,7 +1188,7 @@ SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
             !OtherState%xdot(4)    = OtherState%xdot(3)
             !OtherState%xdot(3)    = OtherState%xdot(2)
             !OtherState%xdot(2)    = OtherState%xdot(1)
-         elseif (OtherState%n .gt. n) then
+         elseif (OtherState%n > n) then
             ErrStat = ErrID_Fatal
             ErrMsg = ' Backing up in time is not supported with a multistep method '
             RETURN
@@ -1243,7 +1243,7 @@ SUBROUTINE SD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg
       CALL SD_CopyContState(x, x_pred, MESH_NEWCOPY, ErrStat, ErrMsg) !initialize x_pred      
       CALL SD_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, m, ErrStat, ErrMsg )
 
-      if (n .gt. 2) then
+      if (n > 2) then
          CALL SD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg) ! make copy so that arrays/meshes get initialized/allocated for ExtrapInterp
          CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t + p%SDDeltaT, ErrStat, ErrMsg)
 
@@ -2873,7 +2873,7 @@ SUBROUTINE SymMatDebug(M,MAT)
             IF (MAT(i,j).NE.0) THEN
                 Error=ABS(Error)/MAT(i,j)
             ENDIF    
-            IF (Error.GT.MaxErr) THEN
+            IF (Error > MaxErr) THEN
                 imax=i
                 jmax=j
                 MaxErr=Error
