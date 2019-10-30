@@ -42,14 +42,6 @@ typedef     ^                 ^                 INTEGER              NumOuts    
 typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
 typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here." -
 
-typedef     ^                 ^                 LOGICAL              PtfmSgF2          -        -        -        "Supplied by Driver:  Platform horizontal surge translation force (flag)"      -
-typedef     ^                 ^                 LOGICAL              PtfmSwF2          -        -        -        "Supplied by Driver:  Platform horizontal sway  translation force (flag)"      -
-typedef     ^                 ^                 LOGICAL              PtfmHvF2          -        -        -        "Supplied by Driver:  Platform vertical   heave translation force (flag)"      -
-typedef     ^                 ^                 LOGICAL              PtfmRF2           -        -        -        "Supplied by Driver:  Platform roll  tilt rotation force (flag)"               -
-typedef     ^                 ^                 LOGICAL              PtfmPF2           -        -        -        "Supplied by Driver:  Platform pitch tilt rotation force (flag)"               -
-typedef     ^                 ^                 LOGICAL              PtfmYF2           -        -        -        "Supplied by Driver:  Platform yaw        rotation force (flag)"               -
-
-
 #[note: only one of MnDriff / NewmanApp / DiffQTF can be non-zero
 typedef     ^                 ^                 INTEGER              MnDrift           -        -        -        "Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use}"    -
 typedef     ^                 ^                 INTEGER              NewmanApp         -        -        -        "Slow drift forces computed with Newman approximation from WAMIT file:{0: No slow drift; [7,8,9,10,11, or 12]: WAMIT file to use}"  -
