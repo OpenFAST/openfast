@@ -329,64 +329,10 @@ PROGRAM HydroDynDriver
       
    IF ( u(1)%WAMITMesh%Initialized ) THEN 
       
-         ! Create a motions mesh a (0,0,0) where all kinematics are specified
-      call MeshCreate( BlankMesh        = RefPtMesh            &
-                        ,IOS               = COMPONENT_INPUT   &
-                        ,Nnodes            = 1                 &
-                        ,ErrStat           = ErrStat2          &
-                        ,ErrMess           = ErrMsg2           &
-                        ,TranslationDisp   = .TRUE.            &
-                        ,Orientation       = .TRUE.            &
-                        ,TranslationVel    = .TRUE.            &
-                        ,RotationVel       = .TRUE.            &
-                        ,TranslationAcc    = .TRUE.            &
-                        ,RotationAcc       = .TRUE.)
-         
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
-            if (errStat >= AbortErrLev) then
-               ! Clean up and exit
-               call HD_DvrCleanup()
-            end if  
-
-      theta = (/ 0.0_R8Ki, 0.0_R8Ki, 0.0_R8Ki /)
-      dcm   = EulerConstruct(theta)
-         
-         
-            ! Create the node on the mesh
-  
-      CALL MeshPositionNode (RefPtMesh                             &
-                                 , 1                                  &
-                                 , (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/)   &  
-                                 , ErrStat2                           &
-                                 , ErrMsg2                            &
-                                 , dcm )
-      
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
-       
-      
-            ! Create the mesh element
-      CALL MeshConstructElement (  RefPtMesh           &
-                                     , ELEMENT_POINT      &                         
-                                     , ErrStat2           &
-                                     , ErrMsg2            &
-                                     , 1                  &
-                                                 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
-
-      CALL MeshCommit ( RefPtMesh             &
-                        , ErrStat2            &
-                        , ErrMsg2             )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
-         if (errStat >= AbortErrLev) then
-            ! Clean up and exit
-            call HD_DvrCleanup()
-         end if    
-         
-      RefPtMesh%RemapFlag  = .TRUE.
       
       ! Create mesh mappings between (0,0,0) reference point mesh and the WAMIT body(ies) mesh [ 1 node per body ] 
          
-      CALL MeshMapCreate( RefPtMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
+      CALL MeshMapCreate( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2  ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')   
       if (errStat >= AbortErrLev) then
          ! Clean up and exit
          call HD_DvrCleanup()
@@ -395,30 +341,27 @@ PROGRAM HydroDynDriver
       ! Set any steady-state inputs, once before the time-stepping loop   
          
       IF ( drvrInitInp%WAMITInputsMod /= 2 ) THEN
-      
-            
-         RefPtMesh%TranslationDisp(:,1)   = drvrInitInp%uWAMITInSteady(1:3) 
-            
-            
+                
+         u(1)%PRPMesh%TranslationDisp(:,1)   = drvrInitInp%uWAMITInSteady(1:3) 
+
             ! Compute direction cosine matrix from the rotation angles
          CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uWAMITInSteady(4), ReKi), REAL(drvrInitInp%uWAMITInSteady(5), ReKi), REAL(drvrInitInp%uWAMITInSteady(6), ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
-         RefPtMesh%Orientation(:,:,1)     = dcm
+         u(1)%PRPMesh%Orientation(:,:,1)     = dcm
 
-         RefPtMesh%TranslationVel(:,1)    = drvrInitInp%uDotWAMITInSteady(1:3)  
-         RefPtMesh%RotationVel(:,1)       = drvrInitInp%uDotWAMITInSteady(4:6) 
-         RefPtMesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotWAMITInSteady(1:3)  
-         RefPtMesh%RotationAcc(:,1)       = drvrInitInp%uDotDotWAMITInSteady(4:6) 
+         u(1)%PRPMesh%TranslationVel(:,1)    = drvrInitInp%uDotWAMITInSteady(1:3)  
+         u(1)%PRPMesh%RotationVel(:,1)       = drvrInitInp%uDotWAMITInSteady(4:6) 
+         u(1)%PRPMesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotWAMITInSteady(1:3)  
+         u(1)%PRPMesh%RotationAcc(:,1)       = drvrInitInp%uDotDotWAMITInSteady(4:6) 
             
             ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
-         CALL Transfer_Point_to_Point( RefPtMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
+         CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
          if (errStat >= AbortErrLev) then
             ! Clean up and exit
             call HD_DvrCleanup()
          end if
       END IF
    END IF
-   
-   
+     
    IF ( drvrInitInp%MorisonInputsMod /= 2 ) THEN
       IF ( u(1)%Morison%DistribMesh%Initialized ) THEN
          u(1)%Morison%DistribMesh%TranslationDisp(1,:)   = drvrInitInp%uMorisonInSteady(1) 
@@ -481,11 +424,9 @@ PROGRAM HydroDynDriver
       IF ( u(1)%WAMITMesh%Initialized ) THEN 
          
          IF ( drvrInitInp%WAMITInputsMod == 2 ) THEN
-                        
-            
-            u(1)%WAMITMesh%TranslationDisp(:,1)   = WAMITin(n,2:4) 
-            
-            
+                                  
+            u(1)%PRPMesh%TranslationDisp(:,1)   = WAMITin(n,2:4) 
+
                ! Compute direction cosine matrix from the rotation angles
                
             IF ( abs(WAMITin(n,5)) > maxAngle ) maxAngle = abs(WAMITin(n,5))
@@ -493,26 +434,29 @@ PROGRAM HydroDynDriver
             IF ( abs(WAMITin(n,7)) > maxAngle ) maxAngle = abs(WAMITin(n,7))
             
             CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,5),ReKi), REAL(WAMITin(n,6),ReKi), REAL(WAMITin(n,7),ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
-            u(1)%WAMITMesh%Orientation(:,:,1)     = dcm 
+            u(1)%PRPMesh%Orientation(:,:,1)     = dcm     
+            u(1)%PRPMesh%TranslationVel(:,1)    = WAMITin(n,8:10)  
+            u(1)%PRPMesh%RotationVel(:,1)       = WAMITin(n,11:13) 
+            u(1)%PRPMesh%TranslationAcc(:,1)    = WAMITin(n,14:16)  
+            u(1)%PRPMesh%RotationAcc(:,1)       = WAMITin(n,17:19)
             
-            
-            u(1)%WAMITMesh%TranslationVel(:,1)    = WAMITin(n,8:10)  
-            u(1)%WAMITMesh%RotationVel(:,1)       = WAMITin(n,11:13) 
-            u(1)%WAMITMesh%TranslationAcc(:,1)    = WAMITin(n,14:16)  
-            u(1)%WAMITMesh%RotationAcc(:,1)       = WAMITin(n,17:19) 
-            
+               ! Map kinematics to the WAMIT mesh with 1 to NBody nodes
+            CALL Transfer_Point_to_Point( u(1)%PRPMesh, u(1)%WAMITMesh, HD_Ref_2_WB_P, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDynDriver')  
+            if (errStat >= AbortErrLev) then
+               ! Clean up and exit
+               call HD_DvrCleanup()
+            end if
+   
          END IF
          
       END IF
       
-          
       IF ( u(1)%Morison%DistribMesh%Initialized ) THEN
          IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
                ! Set the Morison Inputs from a time series input file
          END IF
                   
       END IF
-      
       
          ! Calculate outputs at n
 
