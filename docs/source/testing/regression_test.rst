@@ -105,12 +105,12 @@ but be aware that these three DISCON controllers must exist
 
 .. code-block:: bash
 
-  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoDyn/DISCON.dll
-  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoDyn/DISCON_ITIBarge.dll
-  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoDyn/DISCON_OC3Hywind.dll
+  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON.dll
+  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_ITIBarge.dll
+  openfast/build/reg_tests/glue-codes/openfast/5MW_Baseline/ServoData/DISCON_OC3Hywind.dll
 
 This can be accomplished manually with the CMake projects included with the DISCON source codes
-at ``openfast/reg_tests/r-test/glue-codes/openfast/5MW_Baseline/ServoDyn/``
+at ``openfast/reg_tests/r-test/glue-codes/openfast/5MW_Baseline/ServoData/``
 or during CMake configuration by setting the ``CMAKE_INSTALL_PREFIX`` CMake variable.
 If using this method, the install prefix variable should point to an existing and appropriate
 location for CMake to place the compiled binaries. This is important because the NREL 5MW turbine external
