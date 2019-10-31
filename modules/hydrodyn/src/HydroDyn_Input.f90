@@ -3271,22 +3271,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
 
    !-------------------------------------------------------------------------------------------------
-   ! Second order Forces Flags (WAMIT2 Module)
-   !-------------------------------------------------------------------------------------------------
-   !  We don't have separate inputs for the second order force component flags, rather they are taken
-   !  from the platform section in the input file and copied into the InitInp%WAMIT2 derived type.
-   !  Within the WAMIT2_Init subroutine, they are reset if necessary (some second order output files
-   !  from WAMIT don't support all force components -- i.e. the *.8 files).
-
-   InitInp%WAMIT2%PtfmSgF2    =  InitInp%PtfmSgF
-   InitInp%WAMIT2%PtfmSwF2    =  InitInp%PtfmSwF
-   InitInp%WAMIT2%PtfmHvF2    =  InitInp%PtfmHvF
-   InitInp%WAMIT2%PtfmRF2     =  InitInp%PtfmRF
-   InitInp%WAMIT2%PtfmPF2     =  InitInp%PtfmPF
-   InitInp%WAMIT2%PtfmYF2     =  InitInp%PtfmYF
-
-
-   !-------------------------------------------------------------------------------------------------
    ! Second order Forces due to Waves section (WAMIT2 Module)
    !-------------------------------------------------------------------------------------------------
    
