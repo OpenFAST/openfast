@@ -57,12 +57,6 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOuts      !<  [-]
     INTEGER(IntKi)  :: NumOutAll      !<  [-]
     INTEGER(IntKi)  :: WaveMod      !< The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here. [-]
-    LOGICAL  :: PtfmSgF2      !< Supplied by Driver:  Platform horizontal surge translation force (flag) [-]
-    LOGICAL  :: PtfmSwF2      !< Supplied by Driver:  Platform horizontal sway  translation force (flag) [-]
-    LOGICAL  :: PtfmHvF2      !< Supplied by Driver:  Platform vertical   heave translation force (flag) [-]
-    LOGICAL  :: PtfmRF2      !< Supplied by Driver:  Platform roll  tilt rotation force (flag) [-]
-    LOGICAL  :: PtfmPF2      !< Supplied by Driver:  Platform pitch tilt rotation force (flag) [-]
-    LOGICAL  :: PtfmYF2      !< Supplied by Driver:  Platform yaw        rotation force (flag) [-]
     INTEGER(IntKi)  :: MnDrift      !< Calculate the mean drift force {0: no mean drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: NewmanApp      !< Slow drift forces computed with Newman approximation from WAMIT file:{0: No slow drift; [7,8,9,10,11, or 12]: WAMIT file to use} [-]
     INTEGER(IntKi)  :: DiffQTF      !< Full Difference-Frequency forces computed with full QTF's from WAMIT file: {0: No diff-QTF; [10,11, or 12]: WAMIT file to use} [-]
@@ -218,12 +212,6 @@ ENDIF
     DstInitInputData%NumOuts = SrcInitInputData%NumOuts
     DstInitInputData%NumOutAll = SrcInitInputData%NumOutAll
     DstInitInputData%WaveMod = SrcInitInputData%WaveMod
-    DstInitInputData%PtfmSgF2 = SrcInitInputData%PtfmSgF2
-    DstInitInputData%PtfmSwF2 = SrcInitInputData%PtfmSwF2
-    DstInitInputData%PtfmHvF2 = SrcInitInputData%PtfmHvF2
-    DstInitInputData%PtfmRF2 = SrcInitInputData%PtfmRF2
-    DstInitInputData%PtfmPF2 = SrcInitInputData%PtfmPF2
-    DstInitInputData%PtfmYF2 = SrcInitInputData%PtfmYF2
     DstInitInputData%MnDrift = SrcInitInputData%MnDrift
     DstInitInputData%NewmanApp = SrcInitInputData%NewmanApp
     DstInitInputData%DiffQTF = SrcInitInputData%DiffQTF
@@ -328,12 +316,6 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NumOuts
       Int_BufSz  = Int_BufSz  + 1  ! NumOutAll
       Int_BufSz  = Int_BufSz  + 1  ! WaveMod
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmSgF2
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmSwF2
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmHvF2
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmRF2
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmPF2
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmYF2
       Int_BufSz  = Int_BufSz  + 1  ! MnDrift
       Int_BufSz  = Int_BufSz  + 1  ! NewmanApp
       Int_BufSz  = Int_BufSz  + 1  ! DiffQTF
@@ -458,18 +440,6 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumOutAll
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WaveMod
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmSgF2 , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmSwF2 , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmHvF2 , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmRF2 , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmPF2 , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmYF2 , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%MnDrift
       Int_Xferred   = Int_Xferred   + 1
@@ -657,18 +627,6 @@ ENDIF
       OutData%NumOutAll = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%WaveMod = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
-      OutData%PtfmSgF2 = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      OutData%PtfmSwF2 = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      OutData%PtfmHvF2 = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      OutData%PtfmRF2 = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      OutData%PtfmPF2 = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      OutData%PtfmYF2 = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
       OutData%MnDrift = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1

@@ -3054,35 +3054,25 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
       IF (InitInp%MnDriftF)  THEN                        ! if the flag is true, we are doing this calculation
          IF (InitInp%MnDrift == 8) THEN                  ! the .8 files are not complete
-            p%MnDriftDims(1)     =  InitInp%PtfmSgF2
-            p%MnDriftDims(2)     =  InitInp%PtfmSwF2
+            p%MnDriftDims(1)     =  .TRUE.
+            p%MnDriftDims(2)     =  .TRUE.
             p%MnDriftDims(3)     =  .FALSE.              ! the .8 files don't contain this dimension
             p%MnDriftDims(4)     =  .FALSE.              ! the .8 files don't contain this dimension
             p%MnDriftDims(5)     =  .FALSE.              ! the .8 files don't contain this dimension
-            p%MnDriftDims(6)     =  InitInp%PtfmYF2
-               !> Now warn me that we changed the calculations in this case...
-            IF (InitInp%PtfmHvF2) THEN
-               CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
-                  'in the heave direction.  No second order heave forces will be calculated within the mean drift calculations.'//NewLine, &
-                   ErrStat, ErrMsg, 'CheckInitInput')
-            ENDIF
-            IF (InitInp%PtfmRF2) THEN
-               CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
-                  'for platform roll.  No second order roll forces will be calculated within the mean drift calculations.'//NewLine, &
-                  ErrStat, ErrMsg, 'CheckInitInput')
-            ENDIF
-            IF (InitInp%PtfmPF2) THEN
-               CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
-                  'for platform pitch. No second order pitching forces will be calculated within the mean drift calculations.'//NewLine, &
-                  ErrStat, ErrMsg, 'CheckInitInput')
-            ENDIF
+            p%MnDriftDims(6)     =  .TRUE.
+!FIXME: do I want to include these warnings anymore?
+!               !> Now warn me that we changed the calculations in this case...
+!            CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
+!               'in the heave direction.  No second order heave forces will be calculated within the mean drift calculations.'//NewLine, &
+!               ErrStat, ErrMsg, 'CheckInitInput')
+!            CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
+!               'for platform roll.  No second order roll forces will be calculated within the mean drift calculations.'//NewLine, &
+!               ErrStat, ErrMsg, 'CheckInitInput')
+!            CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
+!               'for platform pitch. No second order pitching forces will be calculated within the mean drift calculations.'//NewLine, &
+!               ErrStat, ErrMsg, 'CheckInitInput')
          ELSE
-            p%MnDriftDims(1)     =  InitInp%PtfmSgF2
-            p%MnDriftDims(2)     =  InitInp%PtfmSwF2
-            p%MnDriftDims(3)     =  InitInp%PtfmHvF2
-            p%MnDriftDims(4)     =  InitInp%PtfmRF2
-            p%MnDriftDims(5)     =  InitInp%PtfmPF2
-            p%MnDriftDims(6)     =  InitInp%PtfmYF2
+            p%MnDriftDims        = .TRUE.
          ENDIF
       ELSE
          p%MnDriftDims(:)        = .FALSE.               ! Set all dimensions to false unless we are actually calculating something
@@ -3098,36 +3088,26 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
       IF (InitInp%NewmanAppF)  THEN                      ! if the flag is true, we are doing this calculation
          IF (InitInp%NewmanApp == 8) THEN                ! the .8 files are not complete
-            p%NewmanAppDims(1)   =  InitInp%PtfmSgF2
-            p%NewmanAppDims(2)   =  InitInp%PtfmSwF2
+            p%NewmanAppDims(1)   =  .TRUE.
+            p%NewmanAppDims(2)   =  .TRUE.
             p%NewmanAppDims(3)   =  .FALSE.              ! the .8 files don't contain this dimension
             p%NewmanAppDims(4)   =  .FALSE.              ! the .8 files don't contain this dimension
             p%NewmanAppDims(5)   =  .FALSE.              ! the .8 files don't contain this dimension
-            p%NewmanAppDims(6)   =  InitInp%PtfmYF2
-               !> Now warn me that we changed the calculations in this case...
-            IF (InitInp%PtfmHvF2) THEN
-               CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
-                  'second order force calculations of platform heave.'//NewLine// &
-                  "           No second order heave forces will be calculated within the Newman's Approximation calculations.", ErrStat, ErrMsg, 'CheckInitInput')
-            ENDIF
-            IF (InitInp%PtfmRF2) THEN
-               CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
-                  'second order force calculations of platform roll.'//NewLine// &
-                  "           No second order roll forces will be calculated within the Newman's Approximation calculations.", ErrStat, ErrMsg, 'CheckInitInput')
-            ENDIF
-            IF (InitInp%PtfmPF2) THEN
-               CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
-                  'second order force calculations of platform pitch.'//NewLine// &
-                  "           No second order pitching forces will be calculated within the Newman's Approximation calculations.", &
-                  ErrStat, ErrMsg, 'CheckInitInput')
-            ENDIF
+            p%NewmanAppDims(6)   =  .TRUE.
+!FIXME: do I want to include these warnings anymore?
+!            !> Now warn me that we changed the calculations in this case...
+!            CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
+!               'second order force calculations of platform heave.'//NewLine// &
+!               "           No second order heave forces will be calculated within the Newman's Approximation calculations.", ErrStat, ErrMsg, 'CheckInitInput')
+!            CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
+!               'second order force calculations of platform roll.'//NewLine// &
+!               "           No second order roll forces will be calculated within the Newman's Approximation calculations.", ErrStat, ErrMsg, 'CheckInitInput')
+!            CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
+!               'second order force calculations of platform pitch.'//NewLine// &
+!               "           No second order pitching forces will be calculated within the Newman's Approximation calculations.", &
+!               ErrStat, ErrMsg, 'CheckInitInput')
          ELSE
-            p%NewmanAppDims(1)   =  InitInp%PtfmSgF2
-            p%NewmanAppDims(2)   =  InitInp%PtfmSwF2
-            p%NewmanAppDims(3)   =  InitInp%PtfmHvF2
-            p%NewmanAppDims(4)   =  InitInp%PtfmRF2
-            p%NewmanAppDims(5)   =  InitInp%PtfmPF2
-            p%NewmanAppDims(6)   =  InitInp%PtfmYF2
+            p%NewmanAppDims      = .TRUE.
          ENDIF
       ELSE
          p%NewmanAppDims(:)      = .FALSE.               ! Set all dimensions to false unless we are actually calculating something
@@ -3142,19 +3122,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> 3. For the Difference QTF method,
 
       IF (InitInp%DiffQTFF)  THEN               ! if the flag is true, we are doing this calculation
-         p%DiffQTFDims(1)  =  InitInp%PtfmSgF2
-         p%DiffQTFDims(2)  =  InitInp%PtfmSwF2
-         p%DiffQTFDims(3)  =  InitInp%PtfmHvF2
-         p%DiffQTFDims(4)  =  InitInp%PtfmRF2
-         p%DiffQTFDims(5)  =  InitInp%PtfmPF2
-         p%DiffQTFDims(6)  =  InitInp%PtfmYF2
+         p%DiffQTFDims     = .TRUE.
             ! Also set the MnDrift flags.  We will be passing data from the DiffQTF method to the MnDrift method for the first term
-         p%MnDriftDims(1)     =  InitInp%PtfmSgF2
-         p%MnDriftDims(2)     =  InitInp%PtfmSwF2
-         p%MnDriftDims(3)     =  InitInp%PtfmHvF2
-         p%MnDriftDims(4)     =  InitInp%PtfmRF2
-         p%MnDriftDims(5)     =  InitInp%PtfmPF2
-         p%MnDriftDims(6)     =  InitInp%PtfmYF2
+         p%MnDriftDims     = .TRUE.
       ELSE
          p%DiffQTFDims(:)  = .FALSE.            ! Set all dimensions to false unless we are actually calculating something
       ENDIF
@@ -3163,12 +3133,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> 4. For the Summation QTF method,
 
       IF (InitInp%SumQTFF)  THEN                 ! if the flag is true, we are doing this calculation
-         p%SumQTFDims(1)   =  InitInp%PtfmSgF2
-         p%SumQTFDims(2)   =  InitInp%PtfmSwF2
-         p%SumQTFDims(3)   =  InitInp%PtfmHvF2
-         p%SumQTFDims(4)   =  InitInp%PtfmRF2
-         p%SumQTFDims(5)   =  InitInp%PtfmPF2
-         p%SumQTFDims(6)   =  InitInp%PtfmYF2
+         p%SumQTFDims      = .TRUE.
       ELSE
          p%SumQTFDims(:)   = .FALSE.            ! Set all dimensions to false unless we are actually calculating something
       ENDIF

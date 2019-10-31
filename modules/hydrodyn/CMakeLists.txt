@@ -42,7 +42,6 @@ set(HYDRODYN_SOURCES
   src/WAMIT2.f90
   src/WAMIT2_Output.f90
   src/WAMIT_Interp.f90
-  src/WAMIT_Output.f90
   src/Waves.f90
   src/Waves2.f90
   src/Waves2_Output.f90
