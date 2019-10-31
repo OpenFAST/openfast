@@ -62,7 +62,7 @@ CONTAINS
 !..................................................................................................................................
       integer(IntKi), intent( in    ) :: NBody   ! Number of WAMIT bodies in this WAMIT object ( = 1 if NBodyMod > 1)
       real(R8Ki),     intent( in    ) :: RotZ(:) ! NBody heading angles (radians)
-      real(SiKi),     intent( inout ) :: M(:,:)  ! Matrix data to be transformed, if NBodyMOD = 1 and NBody > 1 then we will be transforming the individual sub 6x6 matrices
+      real(ReKi),     intent( inout ) :: M(:,:)  ! Matrix data to be transformed, if NBodyMOD = 1 and NBody > 1 then we will be transforming the individual sub 6x6 matrices
       
       integer(IntKi)   :: i,j,ii,jj,iSub,jSub
       real(R8Ki)       :: Rj(3,3)
