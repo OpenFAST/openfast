@@ -51,6 +51,7 @@ set(HYDRODYN_SOURCES
   src/HydroDyn_Types.f90
   src/Morison_Types.f90
   src/SS_Radiation_Types.f90
+  src/SS_Excitation_Types.f90
   src/WAMIT_Types.f90
   src/WAMIT2_Types.f90
   src/Waves_Types.f90
