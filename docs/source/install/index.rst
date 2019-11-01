@@ -12,7 +12,7 @@ maintained paths for obtaining an OpenFAST executable.
 For Windows users only, precompiled binaries are available as described in the
 :ref:`download_binaries` section. For all platforms, OpenFAST is configured
 to build with with CMake and a system-appropriate build tool. Background
-on CMake is given in :ref:`understanding_cmake` and procedures for configuring
+on CMake is given in :ref:`understanding_cmake`, and procedures for configuring
 and compiling are given in :ref:`cmake_unix` and :ref:`cmake_windows`. Finally,
 an alternative and more appropriate option for compiling on Windows while
 doing active software development is given in :ref:`vs_windows`.
@@ -42,7 +42,7 @@ approach that uses CMake to generate build files for all platforms. Currently,
 CMake support for Visual Studio while doing active development
 is not well supported, so OpenFAST maintains a Visual Studio solution
 giving Windows developers a better option for developing code, compiling
-and debugging in a streamlined manner. See :ref:`installation_appendix`
+and debugging in a streamlined manner. See :ref:`vs_windows`
 for more information.
 
 Dependencies
@@ -58,22 +58,18 @@ of the OpenFAST build system can find the dependencies.
 Build tools
 +++++++++++
 
-An environment-specific build system is required and may consist of a
-combination of the following packages:
+An environment-specific build system is required and will consist of a
+combination of the packages listed in the table below.
 
-- `CMake <https://cmake.org>`__ - minimum version 3.0
-- `GNU Make <https://www.gnu.org/software/make/>`__
-- `Visual Studio <https://visualstudio.microsoft.com>`__ - minimum version 2015
-- `Intel Parallel Studio <https://software.intel.com/en-us/fortran-compilers/choose-download>`__ - minimum version 2013
-- Fortran compiler
-
-  - `GNU Fortran (gfortran) <https://gcc.gnu.org/fortran/>`__
-  - `Intel Fortran (ifort) <https://software.intel.com/en-us/fortran-compilers>`__
-
-- C and C++ compiler
-
-  - `GNU Compiler Collection (gcc) <https://gcc.gnu.org>`__
-  - `Intel C/C++ (icc/icpp) <https://software.intel.com/en-us/c-compilers>`__
+============================================== ==================== ================= =======
+ Package                                        Applicable systems   Minimum version   Link
+============================================== ==================== ================= =======
+ CMake                                          All                  3.0               https://cmake.org
+ GNU Make                                       macOS, Linux         1.8               https://www.gnu.org/software/make/
+ Visual Studio                                  Windows              2015              https://visualstudio.microsoft.com>
+ GNU Compiler Collection (gfortran, gcc, g++)   macOS, Linux         4.6.0             https://gcc.gnu.org
+ Intel Parallel Studio (ifort, icc)             All                  2013              https://software.intel.com/en-us/parallel-studio-xe/
+============================================== ==================== ================= =======
 
 Math libraries
 ++++++++++++++
@@ -81,20 +77,17 @@ Math libraries
 Math libraries with the BLAS and LAPACK interfaces are also required. These can
 be obtained as free, open source libraries or paid, closed source versions.
 Some packages contain separate libraries for each interface while others have
-the interfaces bundles into a single binary. The most common options are:
+the interfaces bundles into a single binary. The most common options are listed
+in the table below.
 
-- NetLib
-
-  - `BLAS <http://www.netlib.org/blas/>`__
-  - `LAPACK <http://www.netlib.org/lapack/>`__
-
-- OpenBLAS
-
-  - `BLAS/LAPACK <https://www.openblas.net>`__
-
-- Intel MKL
-
-  - `BLAS/LAPACK <https://software.intel.com/en-us/mkl>`__
+============ ============ =========== ============== ======
+Library       Maintainer   Paid/Free   Open Source?   Link
+============ ============ =========== ============== ======
+BLAS          NetLib       Free        Yes            http://www.netlib.org/blas/
+LAPACK        NetLib       Free        Yes            http://www.netlib.org/lapack/
+BLAS/LAPACK   OpenBLAS     Free        Yes            https://www.openblas.net
+MKL           Intel        Paid        No             https://software.intel.com/en-us/mkl
+============ ============ =========== ============== ======
 
 Dependencies for the test suite
 +++++++++++++++++++++++++++++++
@@ -151,15 +144,15 @@ tool like GNU Make, Visual Studio, or Ninja. CMake does not compile code
 or run compilers directly, but
 rather creates the environment needed for another tool to run compilers and
 create binaries. A CMake project is described by a series of files called
-``CMakeLists.txt`` located in various directories. The main CMake file for
-OpenFAST is located at ``openfast/CMakeLists.txt`` and each module and
-glue-code has its own ``CMakeLists.txt``; for example, AeroDyn and BeamDyn
-have one at ``openfast/modules/aerodyn/CMakeLists.txt`` and
+``CMakeLists.txt`` located in directories throughout the project. The main
+CMake file for OpenFAST is located at ``openfast/CMakeLists.txt`` and each
+module and glue-code has its own ``CMakeLists.txt``; for example, AeroDyn
+and BeamDyn have one at ``openfast/modules/aerodyn/CMakeLists.txt`` and
 ``openfast/modules/beamdyn/CMakeLists.txt``, respectively.
 
 Running CMake
 +++++++++++++
-Running CMake and compiling will create many files (text files and binaries)
+Running CMake and a build tool will create many files (text files and binaries)
 used in the various stages of the build. For this reason, a ``build`` folder
 should be created to contain all of the generated files associated with the
 build process. Here, an important file called ``CMakeCache.txt`` contains the
@@ -224,6 +217,7 @@ The CMake options specific to OpenFAST and their default settings are:
 
     BUILD_DOCUMENTATION            - Build documentation (Default: OFF)
     BUILD_OPENFAST_CPP_API         - Enable building OpenFAST - C++ API (Default: OFF)
+    BUILD_OPENFAST_SIMULINK_API    - Enable building OpenFAST for use with Simulink
     BUILD_SHARED_LIBS              - Enable building shared libraries (Default: OFF)
     BUILD_TESTING                  - Build the testing tree (Default: OFF)
     CMAKE_BUILD_TYPE               - Choose the build type: Debug Release (Default: Release)
@@ -231,6 +225,7 @@ The CMake options specific to OpenFAST and their default settings are:
     CMAKE_INSTALL_PREFIX           - Install path prefix, prepended onto install directories.
     DOUBLE_PRECISION               - Treat REAL as double precision (Default: ON)
     FPE_TRAP_ENABLED               - Enable Floating Point Exception (FPE) trap in compiler options (Default: OFF)
+    GENERATE_TYPES                 - Use the openfast-regsitry to autogenerate types modules
     ORCA_DLL_LOAD                  - Enable OrcaFlex library load (Default: OFF)
     USE_DLL_INTERFACE              - Enable runtime loading of dynamic libraries (Default: ON)
 
@@ -364,7 +359,7 @@ Mac systems, so the default settings should work as given. These settings
 should only be changed when a custom build is required.
 
 The procedure for configuring CMake and compiling with GNU Make on Linux
-and Mac systems is given below.
+and macOS systems is given below.
 
 .. code-block:: bash
 
@@ -445,15 +440,12 @@ Studio build type (Release, Debug, or RelWithDebInfo) in
 OpenFAST executable will be located at ``openfast/build/glue-codes/Release/openfast.exe``
 when compiling in *Release* mode.
 
-**The CMake-generated Visual Studio build is currently damaged.** Some modules
-are compiled before their associated OpenFAST Registry type-files are seen by
-Visual Studio so an initial build may fail. However, a simple work around is
-to run the build command in Visual Studio multiple times until it succeeds.
-Futher, any configurations made to the Solution in the Visual Studio UI will be
+**The CMake-generated Visual Studio build is not currently fully functional.**
+Any configurations made to the Solution in the Visual Studio UI will be
 lost when CMake is executed, and this can happen whenever a change is made to
-the structure of the file system. It is recommended that this method **not** be
-used for debugging or active development on Windows. Instead, see
-:ref:`vs_windows`.
+the structure of the file system or if the CMake configuration is changed. It
+is recommended that this method **not** be used for debugging or active
+development on Windows. Instead, see :ref:`vs_windows`.
 
 .. _installation_appendix:
 
