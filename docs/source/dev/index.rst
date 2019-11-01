@@ -3,8 +3,8 @@
 Developer Documentation
 =======================
 
-**Our goal as developers is to ensure that OpenFAST is a sustainable open
-source software that is well tested and well documented.** To that end, we
+**Our goal as developers of OpenFAST is to ensure that it is well tested, well
+documented, and self-sustaining software.** To that end, we
 continually work to improve the documentation and test coverage along with
 feature additions and improvements. This section of the documentation outlines
 the processes and procedures we have established for external developers
@@ -21,7 +21,7 @@ Finally, be sure to review the :doc:`GitHub workflow <github_workflow>` to
 avoid any merge or code conflicts.
 
 With development happening in parallel between NREL, industry partners, and
-universities, NREL relies on these GitHub tools to coordinate efforts:
+universities, NREL relies on GitHub to coordinate efforts:
 
 - `GitHub Issues <https://github.com/openfast/openfast/issues>`_ is the place
   to ask usage or development questions, report bugs, and
@@ -46,9 +46,9 @@ For other questions regarding OpenFAST, please contact
 API Reference
 ~~~~~~~~~~~~~
 Some subroutines and derived types throughout the source code have in-source
-documentation which is compiled with Doxygen. This portion of the documentation
-is always under development, but the existing API reference can be found in the
-following pages:
+documentation which is compiled with Doxygen. Though this portion of the
+documentation is always under development, the existing API reference can
+be found in the following pages:
 
 - `Main Page <../../html/index.html>`_
 - `Index of Types <../../html/classes.html>`_
@@ -67,15 +67,15 @@ expect that new capabilities will include adequate testing and documentation.
 We have the following guidance for developers:
 
 - When fixing a bug, first introduce a unit test that exposes the bug, fix the
-  bug, and submit a Pull Request. See :numref:`testing` and
-  :numref:`github_workflow` for information on testing and the GitHub workflow.
+  bug, and submit a Pull Request. See :ref:`testing` and
+  :ref:`github_workflow` for more information.
 
 - When adding a new feature, create appropriate automated unit and regression
-  tests as described in :numref:`testing`. The objective is to create a GitHub
-  pull request that provides adequate verification and validation such that the
+  tests as described in :ref:`testing`. The objective is to create a GitHub
+  pull request that provides adequate verification and validation so that the
   NREL OpenFAST developer team can merge the pull request with confidence that
   the new feature is "correct" and supports our goal of self-sustaining
-  software. See :numref:`pull_requests` for detailed information on submitting
+  software. See :ref:`pull_requests` for more information on submitting
   a pull request.
 
 - If a code modification affects regression test results in an expected manner,

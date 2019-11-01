@@ -93,6 +93,4 @@ The table below lists make-targets related to the documentation.
 Adding documentation
 --------------------
 
-Coming soon.
-
-Feel like contributing? Start here!
+Coming soon. Feel like contributing? Start here!
