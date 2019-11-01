@@ -23,7 +23,7 @@ Building OpenFAST Semi-Automatically Using Spack on macOS or Linux
 ------------------------------------------------------------------
 
 The following describes how to build OpenFAST and its dependencies
-mostly automatically on your Mac using
+mostly automatically on macOS using
 `Spack <https://spack.readthedocs.io/en/latest>`_. This can also be used as a
 template to build OpenFAST on any Linux system with Spack.
 

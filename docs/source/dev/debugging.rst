@@ -31,8 +31,8 @@ proceed to :ref:`debugging_linux`.
 
 .. _debugging_linux:
 
-Debugging on Linux and Mac
---------------------------
+Debugging on Linux and macOS
+----------------------------
 First, compile OpenFAST in debug mode by setting ``CMAKE_BUILD_TYPE`` to
 "Debug". This can be done on the command line with:
 
@@ -68,9 +68,9 @@ open the launch configuration and add a block similar to this:
             "arguments": "${workspaceRoot}/build/reg_tests/glue-codes/openfast/AOC_WSt/AOC_WSt.fst",
         }
 
-Mac-specific configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-GDB on Mac needs some configuration before the system allows it to take
+macOS-specific configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+GDB on macOS needs some configuration before the system allows it to take
 over a process. It is recommended that ``gdb`` be installed with homebrew
 
 .. code-block:: bash
@@ -93,7 +93,7 @@ For ``gdb 8.2.1``, it looks like this:
 
     echo "set startup-with-shell off" >> ~/.gdbinit
 
-For Native Debug on Mac, you have to sort of hack the extension to allow
+For Native Debug on macOS, you have to sort of hack the extension to allow
 breakpoints in fortran files by adding this line to ``.vscode/settings.json``:
 
 .. code-block:: json

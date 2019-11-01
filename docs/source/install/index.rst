@@ -169,7 +169,7 @@ CMake can be executed in a few ways:
 
 The CMake GUI is only distributed for Windows, but it can be built from source
 for other platforms. OpenFAST's build process focuses on the command line
-execution of CMake for both the Linux/Mac and Windows terminals. The command
+execution of CMake for both the Linux/macOS and Windows terminals. The command
 line syntax to run CMake for OpenFAST is generally:
 
 .. code-block:: bash
@@ -351,11 +351,11 @@ not to the libraries themselves.
 
 .. _cmake_unix:
 
-CMake with Make for Linux/Mac
------------------------------
+CMake with Make for Linux/macOS
+-------------------------------
 After reading :ref:`understanding_cmake`, proceed with
 configuring OpenFAST. The CMake project is well developed for Linux and
-Mac systems, so the default settings should work as given. These settings
+macOS systems, so the default settings should work as given. These settings
 should only be changed when a custom build is required.
 
 The procedure for configuring CMake and compiling with GNU Make on Linux
