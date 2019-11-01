@@ -1043,6 +1043,13 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
    end do
 #else
    p%NumOuts = 0
+
+   !.....................................
+   ! add the following two lines only to avoid compiler warnings about uninitialized variables when not building the UA driver:
+   y%cm = 0.0_ReKi 
+   InitOut%Version = ProgDesc( 'Unsteady Aero', '', '' )
+   !.....................................
+
 #endif   
    
 end subroutine UA_Init
