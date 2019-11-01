@@ -29,8 +29,8 @@ Compiling
 ---------
 Compiling the unit tests is handled with CMake similar to compiling OpenFAST
 in general. After configuring CMake with ``BUILD_TESTING`` turned on, new
-``make`` targets are created for each module included in the unit test
-framework named ``[module]_utest``. Then, simply ``make`` the target to test
+build targets are created for each module included in the unit test
+framework named ``[module]_utest``. Then, ``make`` the target to test:
 
 .. code-block:: bash
 

@@ -3,33 +3,40 @@
 Regression test
 ===============
 The regression test executes a series of test cases which intend to fully
-describe OpenFAST and its module's capabilities. Jump to :ref:`python_driver`
-:ref:`ctest_driver`, :ref:`regression_test_example`, or
-:ref:`regression_test_windows` for instructions on running the regression
-tests.
+describe OpenFAST and its module's capabilities. Jump to one of the following
+sections for instructions on running the regression
+tests:
+
+- :ref:`python_driver`
+- :ref:`ctest_driver`
+- :ref:`regression_test_example`
+- :ref:`regression_test_windows`
 
 Each locally computed result is compared to a static set of baseline
 results. To account for system, hardware, and compiler
 differences, the regression test attempts to match the current machine and
 compiler type to the appropriate solution set from these combinations:
 
-- macOS with GNU compiler (default)
-- CentOS 7 with Intel compiler
-- CentOS 7 with GNU compiler
-- Windows with Intel compiler
+================== ========== ============================
+ Operating System   Compiler   Hardware
+================== ========== ============================
+ **macOS**          **GNU**    **2017 MacbookPro**
+ CentOS 7           Intel      NREL Eagle - Intel Skylake
+ CentOS 7           GNU        NREL Eagle - Intel Skylake
+ Windows 10         Intel      Dell Precision 3530
+================== ========== ============================
 
-The compiler versions, specific math libraries, and hardware used to generate
-the baseline solutions are documented in the
+The compiler versions, specific math libraries, and more info on hardware used
+to generate the baseline solutions are documented in the
 `r-test repository documentation <https://github.com/openFAST/r-test>`__. Currently,
-the regression test supports only double precision solutions, so it is required
-to build OpenFAST in double precision for testing. All baseline solutions are
-generated with a double precision build.
+the regression test supports only double precision builds.
 
-The regression test system can be executed with CMake/CTest or manually with
-an included Python driver. Both systems provide similar functionality with
+The regression test system can be executed with CMake (through its included
+test driver, CTest) or manually with
+a custom Python driver. Both systems provide similar functionality with
 respect to testing, but CTest integration provides access to multithreading,
 automation, and test reporting via CDash. Both modes of execution require some
-configuration as outlined below.
+configuration as described in the following sections.
 
 In both modes of execution a directory is created in the build directory
 called ``reg_tests`` where all of the input files for the test cases are copied
@@ -51,6 +58,8 @@ reported as failed. The failure criteria is outlined below.
 
     if max(norm) < tolerance:
         pass = True
+    else:
+        pass = False
 
 Dependencies
 ------------
@@ -68,8 +77,9 @@ Executing with Python driver
 The regression test can be executed manually with the included driver at
 ``openfast/reg_tests/manualRegressionTest.py``. This program reads a case list
 file at ``openfast/reg_tests/r-test/glue-codes/openfast/CaseList.md``. Cases
-can be removed or ignored with a ``#``. This driver program includes multiple
-optional flags which can be obtained by executing with the help option:
+can be removed or ignored by starting that line with a ``#``. The driver
+program includes multiple optional flags which can be obtained by
+executing with the help option:
 
 ::
 
@@ -137,10 +147,11 @@ be sure to execute the build command with the ``install`` target:
 
 .. code-block:: bash
 
-    # configure cmake
+    # Configure CMake with testing enabled and accept the default
+    # values for all other test-specific CMake variables
     cmake .. -DBUILD_TESTING=ON
 
-    # build and install
+    # Build and install
     make install
 
 .. note::
@@ -183,7 +194,7 @@ are:
     # Run the entire regression test with verbose output
     ctest -V
 
-    # Run a test by name where TestName is a regular expression (regex)
+    # Run tests by name where TestName is a regular expression (regex)
     ctest -R [TestName]
 
     # Run all tests with N tests executing in parallel
@@ -206,7 +217,7 @@ command:
     # Filter the test cases corresponding to a particular label
     ctest -L [Label]
 
-Flags can be compounded making useful variations of ``ctest`` such as
+Flags can be compounded making useful variations such as
 
 .. code-block:: bash
 
@@ -229,14 +240,17 @@ Flags can be compounded making useful variations of ``ctest`` such as
 The automated regression test writes new files only into the build directory.
 Specifically, all locally generated solutions are located in the corresponding
 glue-code or module within ``openfast/build/reg_tests``. The baseline solutions
-contained in ``openfast/reg_tests/r-test`` are strictly read not modified by
-the automated process.
+contained in ``openfast/reg_tests/r-test`` are strictly read and are not
+modified by the automated process.
 
 .. _regression_test_example:
 
 Regression test examples
 ------------------------
-The following examples illustrate methods of running the regression tests.
+The following examples illustrate methods of running the regression tests
+on Unix-based systems. However, similar procedures can be used
+on Windows with CMake and CTest. An alternate method of running the
+regression tests on Windows is given in :ref:`reg_test_windows`.
 
 Compile OpenFAST and execute with CTest
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -256,7 +270,7 @@ suite.
     git checkout dev
     git submodule update
 
-    # Create the build directory and move into it
+    # Create the build and install directories and move into build
     mkdir build install && cd build
 
     # Configure CMake for testing
@@ -268,7 +282,7 @@ suite.
     # Compile and install
     make install
 
-    # Execute the full test suite with 4 processes
+    # Execute the full test suite with 4 concurrent processes
     ctest -j4
 
 Configure with CMake and a given executable
@@ -276,8 +290,10 @@ Configure with CMake and a given executable
 This example assumes the user has a fully functional OpenFAST executable
 available along with any necessary libraries, but does not have the source
 code repository downloaded. This might be the case when executables are
-distributed within an organization. Here, nothing will be compiled, but the
-test suite will be configured with CMake for use with the CTest command.
+distributed within an organization or downloaded from an
+`OpenFAST Release <https://github.com/openfast/openfast/releases>`__.
+Here, nothing will be compiled, but the test suite will be configured
+with CMake for use with the CTest command.
 
 .. code-block:: bash
 
@@ -291,23 +307,21 @@ test suite will be configured with CMake for use with the CTest command.
     git submodule update
 
     # Create the build directory and move into it
-    mkdir build install && cd build
+    mkdir build && cd build
 
-    # Configure CMake with openfast/reg_tests/CMakeLists.txt
-    # - BUILD_TESTING
-    # - CTEST_OPENFAST_EXECUTABLE
-    # - CTEST_[MODULE]_EXECUTABLE
-
-    # Configure CMake for testing
+    # Configure CMake with openfast/reg_tests/CMakeLists.txt for testing
     # - BUILD_TESTING - turn ON
     # - CTEST_OPENFAST_EXECUTABLE - provide a path
     # - CTEST_[MODULE]_EXECUTABLE - provide a path
-    cmake ../reg_tests -DBUILD_TESTING=ON -DCTEST_OPENFAST_EXECUTABLE=/home/user/Desktop/openfast_executable -DCTEST_BEAMDYN_EXECUTABLE=/home/user/Desktop/beamdyn_driver
+    cmake ../reg_tests \
+        -DBUILD_TESTING=ON \
+        -DCTEST_OPENFAST_EXECUTABLE=/home/user/Desktop/openfast_executable \
+        -DCTEST_BEAMDYN_EXECUTABLE=/home/user/Desktop/beamdyn_driver
 
     # Install required files
     make install
 
-    # Execute the full test suite with 4 processes
+    # Execute the full test suite with 4 concurrent processes
     ctest -j4
 
 .. _example_python_driver:
@@ -317,8 +331,10 @@ Python driver with a given executable
 This example assumes the user has a fully functional OpenFAST executable
 available along with any necessary libraries, but does not have the source
 code repository downloaded. This might be the case when executables are
-distributed within an organization. Nothing will be compiled, but the
-test suite will be executed with the included Python driver.
+distributed within an organization or downloaded from an
+`OpenFAST Release <https://github.com/openfast/openfast/releases>`__.
+Nothing will be compiled, but the test suite will be executed with the
+included Python driver.
 
 .. code-block:: bash
 
@@ -357,11 +373,17 @@ test suite will be executed with the included Python driver.
     #                         bool to include verbose system output
     #   -case [Case-Name]     single case name to execute
 
-    python manualRegressionTest.py ..\build\bin\openfast_x64_Double.exe Windows Intel 1e-5
+    python manualRegressionTest.py \
+        ..\build\bin\openfast_x64_Double.exe \
+        Windows \
+        Intel \
+        1e-5
+
+.. _reg_test_windows:
 
 Detailed example of running on Windows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-The example :ref:`example_python_driver` can be generally used for running the
+The :ref:`example_python_driver` example can be used for running the
 regression tests on a Windows computer. However, a more detailed, step-by-step
 description is given in :ref:`regression_test_windows`.
 

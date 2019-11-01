@@ -3,8 +3,8 @@
 Testing OpenFAST
 ================
 
-The OpenFAST test suite consists of system and module level regression tests
-and unit tests. The regression test compares locally generated solutions to
+The OpenFAST test suite consists of glue code and module level regression tests
+and unit tests. The regression tests compare locally generated solutions to
 a set of baseline solutions. The unit tests ensure that individual subroutines
 are functioning as intended.
 
@@ -27,7 +27,7 @@ Portions of the test suite are linked to the OpenFAST repository through a
     ``git submodule update --init --recursive`` after cloning.
 
 The test suite can be configured with CMake similar to OpenFAST. The default
-CMake configuration is generally applicable, but may need customization
+CMake configuration is suitable for most systems, but may need customization
 for particular build environments. See the :ref:`understanding_cmake` section
 for more details on configuring the CMake targets. While the unit tests must
 be built with CMake due to its external dependencies, the regression test
