@@ -4656,11 +4656,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       
    IF (p_FAST%WrSttsTime) then
       IF ( MOD( n_t_global + 1, p_FAST%n_SttsTime ) == 0 ) THEN
-      
-         if (.not. Cmpl4SFun) then   
-            CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )
-         end if
-      
+         CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )      
       ENDIF
    ENDIF
      

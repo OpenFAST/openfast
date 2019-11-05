@@ -133,7 +133,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    ErrMsg  = ""
    
    ! number of nodes per element
-   IF( ( Init%FEMMod .GE. 0 ) .and. (Init%FEMMod .LE. 3) ) THEN
+   IF( ( Init%FEMMod >= 0 ) .and. (Init%FEMMod <= 3) ) THEN
       NNE = 2 
    ELSE
       CALL Fatal('FEMMod '//TRIM(Num2LStr(Init%FEMMod))//' not implemented.')
@@ -150,7 +150,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    !bjj: replaced with max value instead of NNE: Init%MembersCol = Init%MembersCol + (NNE - 2) 
    
    ! check the number of interior modes
-   IF ( p%Nmodes .GT. 6*(Init%NNode - Init%NInterf - p%NReact) ) THEN
+   IF ( p%Nmodes > 6*(Init%NNode - Init%NInterf - p%NReact) ) THEN
       CALL Fatal(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(Init%NNode - Init%NInterf - p%NReact) )))
       RETURN
    ENDIF
@@ -303,7 +303,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
     kprop = Init%NPropSets
     Init%MemberNodes = 0
 
-    IF (Init%NDiv .GT. 1) THEN
+    IF (Init%NDiv > 1) THEN
        DO I = 1, p%NMembers !the first p%NMembers rows of p%Elems contain the element information
           ! create new node
           Node1 = TempMembers(I, 2)
@@ -314,9 +314,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
              RETURN
           ENDIF
           
-         eType = TempMembers(I, iMType  )
-         Prop1 = TempMembers(I, iMProp  )
-         Prop2 = TempMembers(I, iMProp+1)
+          eType = TempMembers(I, iMType  )
+          Prop1 = TempMembers(I, iMProp  )
+          Prop2 = TempMembers(I, iMProp+1)
           
           Init%MemberNodes(I,           1) = Node1
           Init%MemberNodes(I, Init%NDiv+1) = Node2
@@ -954,6 +954,11 @@ SUBROUTINE LumpForces(Area1,Area2,crat,L,rho, g, DirCos, F)
    
    !Calculate quadratic polynomial coefficients
    a0 = a1
+   print*,'Error: the function lumpforces is not ready to use'
+   STOP
+
+   !Calculate quadratic polynomial coefficients
+   a0 = -99999 ! TODO: this is wrong
    a2 = ( (Area1+A2) - (Area1*crat+Area2/crat) )/L**2. ! *x**2
    a1 = (Area2-Area1)/L -a2*L                          ! *x
    
