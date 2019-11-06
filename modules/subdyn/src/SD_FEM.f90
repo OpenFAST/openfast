@@ -40,7 +40,7 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: COSMsCol        = 10                    ! Number of columns in (cosine matrices) COSMs (COSMID,COSM11,COSM12,COSM13,COSM21,COSM22,COSM23,COSM31,COSM32,COSM33)
   INTEGER(IntKi),   PARAMETER  :: CMassCol        = 5                     ! Number of columns in Concentrated Mass (CMJointID,JMass,JMXX,JMYY,JMZZ)
   ! Indices in Members table
-  INTEGER(IntKi),   PARAMETER  :: iMType= 4 ! Index in Members table where the type is stored
+  INTEGER(IntKi),   PARAMETER  :: iMType= 6 ! Index in Members table where the type is stored
   INTEGER(IntKi),   PARAMETER  :: iMProp= 4 ! Index in Members table where the PropSet1 and 2 are stored
 
   ! Indices in Joints table
@@ -61,6 +61,12 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: idRigid      = 3
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,ReactCol,InterfCol,MembersCol,PropSetsCol,XPropSetsCol,COSMsCol,CMassCol)
+
+  INTERFACE FINDLOCI ! In the future, use FINDLOC from intrinsic
+     MODULE PROCEDURE FINDLOCI_ReKi
+     MODULE PROCEDURE FINDLOCI_IntKi
+  END INTERFACE
+
 
 CONTAINS
     
@@ -117,16 +123,20 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variable
-   INTEGER                       :: I, J, n, Node, Node1, Node2, Prop, Prop1, Prop2   
+   INTEGER                       :: I, iMem, J, n, iNode, Node, Node1, Node2, Prop, Prop1, Prop2   
    INTEGER                       :: OldJointIndex(Init%NJoints)
    INTEGER                       :: NNE      ! number of nodes per element
    INTEGER                       :: MaxNProp
-   REAL(ReKi), ALLOCATABLE       :: TempProps(:, :)
+   REAL(ReKi), ALLOCATABLE       :: TempPropsBeam(:, :)
+   REAL(ReKi), ALLOCATABLE       :: TempPropsCable(:, :)
+   REAL(ReKi), ALLOCATABLE       :: TempPropsRigid(:, :)
    INTEGER, ALLOCATABLE          :: TempMembers(:, :) ,TempReacts(:,:)         
    INTEGER                       :: knode, kelem, kprop, nprop
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: found, CreateNewProp
    INTEGER(IntKi)                :: eType !< Element Type
+   INTEGER(IntKi)                :: mType !< Member Type
+   CHARACTER(1024)               :: sType !< String for element type
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(1024)               :: ErrMsg2
    ErrStat = ErrID_None
@@ -163,7 +173,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    CALL AllocAry(Init%IntFc,      6*Init%NInterf,2,          'Init%IntFc',      ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')
    
    CALL AllocAry(TempMembers,     p%NMembers,    MembersCol, 'TempMembers',     ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
-   CALL AllocAry(TempProps,       MaxNProp,      PropSetsCol,'TempProps',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
+   CALL AllocAry(TempPropsBeam,   MaxNProp,      PropSetsCol     ,'TempPropsBeam',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
+   CALL AllocAry(TempPropsCable,  MaxNProp,      CablePropSetsCol,'TempPropsCable',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
+   CALL AllocAry(TempPropsRigid,  MaxNProp,      RigidPropSetsCol,'TempPropsRigid',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
    CALL AllocAry(TempReacts,      p%NReact,      ReactCol,   'TempReacts',      ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')
 
    IF ( ErrStat >= AbortErrLev ) THEN
@@ -183,59 +195,73 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    
    ! Initialize Elems, starting with each member as an element (we'll take NDiv into account later)
    p%Elems = 0
-   DO I = 1, p%NMembers
-      p%Elems(I,     1) = I                     ! element/member number (not MemberID)
-      p%Elems(I, iMType)= Init%Members(I, iMType) ! 
-!bjj: TODO: JMJ wants check that YoungE, ShearG, and MatDens are equal in the two properties because we aren't going to interpolate them. This should be less confusing for users.                                                
-      
-      ! loop through the JointIDs for this member and find the corresponding indices into the Joints array
-      DO n = 2,3  ! Members column for JointIDs for nodes 1 and 2
-         Node = Init%Members(I, n)  ! n=2 or 3
-         ! ...... search for index of joint whose JointID matches Node ......
-         J = 1
-         found = .false.      
-         DO WHILE ( .NOT. found .AND. J <= Init%NJoints )
-            IF ( Node == NINT(Init%Joints(J, 1)) ) THEN
-               p%Elems(I, n) = J                ! index of the joint/node n-1 (i.e., nodes 1 and 2)
-               found = .TRUE.
-            END IF
-            J = J + 1
-         END DO 
-         IF ( .NOT. found) THEN
-            CALL Fatal(' Member '//TRIM(Num2LStr(I))//' has JointID'//TRIM(Num2LStr(n-1))//' = '// TRIM(Num2LStr(Node))//' which is not in the node list !')
-            RETURN
-         END IF
-      END DO ! loop through nodes/joints
-      
-      ! loop through the PropSetIDs for this member and find the corresponding indices into the Joints array
-      ! we're setting these two values:   
-      ! p%Elems(I, 5) = property set for node 1 (note this sets the YoungE, ShearG, and MatDens columns for the ENTIRE element)   
-      ! p%Elems(I, 6) = property set for node 2 (note this should be used only for the XsecD and XsecT properties in the element [for a linear distribution from node 1 to node 2 of D and T])
+   ! --- Replacing "MemberID"  "JointID", and "PropSetID" by simple index in this tables
+   !bjj: TODO: JMJ wants check that YoungE, ShearG, and MatDens are equal in the two properties because we aren't going to interpolate them. This should be less confusing for users.                                                
+   DO iMem = 1, p%NMembers
+      ! Column 1  : member index (instead of MemberID)
+      p%Elems(iMem,     1)  = iMem
+      mType =  Init%Members(iMem, iMType) ! 
+      ! Column 2-3: Joint index (instead of JointIDs)
+      p%Elems(iMem,     1)  = iMem  ! NOTE: element/member number (not MemberID)
+      do iNode=2,3
+         p%Elems(iMem,iNode) = FINDLOCI(Init%Joints(:,1), Init%Members(iMem, iNode) ) 
+         if (p%Elems(iMem,iNode)<=0) then
+            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has JointID'//TRIM(Num2LStr(iNode-1))//' = '// TRIM(Num2LStr(Init%Members(iMem, iNode)))//' which is not in the joint list !')
+            return
+         endif
+      enddo
+      ! Column 4-5: PropIndex 1-2 (instead of PropSetID)
       DO n=iMProp,iMProp+1 ! Member column for MPropSetID1 and MPropSetID2
-         Prop = Init%Members(I, n)  ! n=4 or 5
-         ! ...... search for index of property set whose PropSetID matches Prop ......
-         J = 1
-         found = .false.      
-         DO WHILE ( .NOT. found .AND. J <= Init%NPropSets )
-            IF ( Prop == NINT(Init%PropSets(J, 1)) ) THEN
-               p%Elems(I, n) = J                ! index of the property set n-3 (i.e., property sets 1 and 2)  ! note that previously, this used Prop instead of J, which assumed the list of MemberIDs was sequential, starting at 1.
-               found = .TRUE.
-            END IF
-            J = J + 1
-         END DO
-         IF ( .NOT. found) THEN
-            CALL Fatal(' Member '//TRIM(Num2LStr(I))//' has PropSetID'//TRIM(Num2LStr(n-3))//' = '//TRIM(Num2LStr(Prop))//' which is not in the Member X-Section Property data!')
-            RETURN
-         END IF
-      END DO ! loop through property ids         
-   END DO ! loop through members
+
+         if (mType==idBeam) then
+            sType='Member x-section property'
+            p%Elems(iMem,n) = FINDLOCI(Init%PropSets(:,1), Init%Members(iMem, n) ) 
+         else if (mType==idCable) then
+            sType='Cable property'
+            p%Elems(iMem,n) = FINDLOCI(Init%CablePropSets(:,1), Init%Members(iMem, n) ) 
+         else if (mType==idRigid) then
+            sType='Rigid property'
+            p%Elems(iMem,n) = FINDLOCI(Init%RigidPropSets(:,1), Init%Members(iMem, n) ) 
+         else
+            ! Should not happen
+            print*,'Element type unknown',mType
+            STOP
+         end if
+
+         if (p%Elems(iMem,n)<=0) then
+            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has PropSetID'//TRIM(Num2LStr(n-3))//' = '//TRIM(Num2LStr(Prop))//' which is not in the'//trim(sType)//' table!')
+         endif
+      END DO !n, loop through property ids         
+      ! Column 6: member type
+      p%Elems(iMem, iMType) = Init%Members(iMem, iMType) ! 
+   END DO !iMem, loop through members
    
    ! Initialize TempMembers
    TempMembers = p%Elems(1:p%NMembers,:)
    
    ! Initialize Temp property set, first user defined sets
-   TempProps = 0
-   TempProps(1:Init%NPropSets, :) = Init%PropSets   
+   TempPropsBeam = 0
+   TempPropsBeam(1:Init%NPropSets, :) = Init%PropSets   
+   print*,'TempPropsBeam(:,1:5)'
+   DO I=1,Init%NPropSets
+      print*,TempPropsBeam(I,1:5)
+   enddo
+
+
+   TempPropsCable = 0
+   TempPropsCable(1:Init%NCablePropSets, :) = Init%CablePropSets
+   print*,'TempPropsCable(:,:)'
+   DO I=1,Init%NCablePropSets
+      print*,TempPropsCable(I,1:4)
+   enddo
+
+   TempPropsRigid = 0
+   TempPropsRigid(1:Init%NRigidPropSets, :) = Init%RigidPropSets
+   print*,'TempPropsRigid(:,:)'
+   DO I=1,Init%NRigidPropSets
+      print*,TempPropsRigid(I,:)
+   enddo
+
    
    ! Initialize boundary constraint vector
    ! Change the node number
@@ -321,9 +347,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           Init%MemberNodes(I,           1) = Node1
           Init%MemberNodes(I, Init%NDiv+1) = Node2
           
-          IF  ( ( .not. EqualRealNos(TempProps(Prop1, 2),TempProps(Prop2, 2) ) ) &
-           .OR. ( .not. EqualRealNos(TempProps(Prop1, 3),TempProps(Prop2, 3) ) ) &
-           .OR. ( .not. EqualRealNos(TempProps(Prop1, 4),TempProps(Prop2, 4) ) ) )  THEN
+          IF  ( ( .not. EqualRealNos(TempPropsBeam(Prop1, 2),TempPropsBeam(Prop2, 2) ) ) &
+           .OR. ( .not. EqualRealNos(TempPropsBeam(Prop1, 3),TempPropsBeam(Prop2, 3) ) ) &
+           .OR. ( .not. EqualRealNos(TempPropsBeam(Prop1, 4),TempPropsBeam(Prop2, 4) ) ) )  THEN
           
              CALL Fatal(' Material E,G and rho in a member must be the same')
              RETURN
@@ -341,11 +367,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           dy = ( y2 - y1 )/Init%NDiv
           dz = ( z2 - z1 )/Init%NDiv
           
-          d1 = TempProps(Prop1, 5)
-          t1 = TempProps(Prop1, 6)
+          d1 = TempPropsBeam(Prop1, 5)
+          t1 = TempPropsBeam(Prop1, 6)
 
-          d2 = TempProps(Prop2, 5)
-          t2 = TempProps(Prop2, 6)
+          d2 = TempPropsBeam(Prop2, 5)
+          t2 = TempPropsBeam(Prop2, 6)
           
           dd = ( d2 - d1 )/Init%NDiv
           dt = ( t2 - t1 )/Init%NDiv
@@ -363,7 +389,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                ! create a new property set 
                ! k, E, G, rho, d, t, Init
                kprop = kprop + 1
-               CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), TempProps(Prop1, 4), d1+dd, t1+dt, TempProps)           
+               CALL SetNewProp(kprop, TempPropsBeam(Prop1, 2), TempPropsBeam(Prop1, 3), TempPropsBeam(Prop1, 4), d1+dd, t1+dt, TempPropsBeam)           
                kelem = kelem + 1
                CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p)  
                nprop = kprop              
@@ -385,9 +411,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                   ! k, E, G, rho, d, t, Init
                   
                   kprop = kprop + 1
-                  CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3),&
-                                  Init%PropSets(Prop1, 4), d1 + J*dd, t1 + J*dt, &
-                                  TempProps)           
+                  CALL SetNewProp(kprop, TempPropsBeam(Prop1, 2), TempPropsBeam(Prop1, 3), Init%PropSets(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempPropsBeam)           
                   kelem = kelem + 1
                   CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p)
                   nprop = kprop                
@@ -413,13 +437,14 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
     ! set the props in Init
     Init%NProp = kprop
     CALL AllocAry(Init%Props, Init%NProp, PropSetsCol,  'Init%Props', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')
-       IF (ErrStat >= AbortErrLev ) THEN
-          CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg,'SD_Discrt');
-          CALL CleanUp_Discrt()
+    IF (ErrStat >= AbortErrLev ) THEN
+       CALL CleanUp_Discrt()
        RETURN
     ENDIF
     !Init%Props(1:kprop, 1:Init%PropSetsCol) = TempProps
-    Init%Props = TempProps(1:Init%NProp, :)  !!RRD fixed it on 1/23/14 to account for NDIV=1
+    Init%Props = TempPropsBeam(1:Init%NProp, :)  !!RRD fixed it on 1/23/14 to account for NDIV=1
+    print*,'Init%Props'
+    print*, Init%Props
 
     CALL CleanUp_Discrt()
 
@@ -432,12 +457,51 @@ CONTAINS
 
    SUBROUTINE CleanUp_Discrt()
       ! deallocate temp matrices
-      IF (ALLOCATED(TempProps))   DEALLOCATE(TempProps)
+      IF (ALLOCATED(TempPropsBeam))    DEALLOCATE(TempPropsBeam)
+      IF (ALLOCATED(TempPropsCable))   DEALLOCATE(TempPropsCable)
+      IF (ALLOCATED(TempPropsRigid))   DEALLOCATE(TempPropsRigid)
       IF (ALLOCATED(TempMembers)) DEALLOCATE(TempMembers)
       IF (ALLOCATED(TempReacts))  DEALLOCATE(TempReacts)
    END SUBROUTINE CleanUp_Discrt
 
 END SUBROUTINE SD_Discrt
+
+
+!> Returns index of val in Array (val is an integer!)
+! NOTE: in the future use intrinsinc function findloc
+FUNCTION FINDLOCI_ReKi(Array, Val) result(i)
+   real(ReKi)    , dimension(:), intent(in) :: Array !< Array to search in
+   integer(IntKi), intent(in)               :: val   !< Val
+   integer(IntKi)                           :: i     !< Index of joint in joint table
+   logical :: found
+   i = 1
+   do while ( i <= size(Array) )
+      if ( Val == NINT(Array(i)) ) THEN
+         return ! Exit when found
+      else
+         i = i + 1
+      endif
+   enddo
+   i=-1
+END FUNCTION
+!> Returns index of val in Array (val is an integer!)
+! NOTE: in the future use intrinsinc function findloc
+FUNCTION FINDLOCI_IntKi(Array, Val) result(i)
+   integer(IntKi), dimension(:), intent(in) :: Array !< Array to search in
+   integer(IntKi), intent(in)               :: val   !< Val
+   integer(IntKi)                           :: i     !< Index of joint in joint table
+   logical :: found
+   i = 1
+   do while ( i <= size(Array) )
+      if ( Val == Array(i) ) THEN
+         return ! Exit when found
+      else
+         i = i + 1
+      endif
+   enddo
+   i=-1
+END FUNCTION
+
 
 !------------------------------------------------------------------------------------------------------
 !> Set properties of node k
@@ -510,7 +574,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    REAL(ReKi), ALLOCATABLE  :: Ke(:,:), Me(:, :), FGe(:) ! element stiffness and mass matrices gravity force vector
    INTEGER, DIMENSION(NNE)  :: nn                        ! node number in element 
    INTEGER                  :: r
-   INTEGER(IntKi)           :: eType
+   INTEGER(IntKi)           :: eType !< Member type
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(1024)          :: ErrMsg2
    
@@ -561,15 +625,28 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       P1    = p%Elems(I, iMProp  )
       P2    = p%Elems(I, iMProp+1)
       eType = p%Elems(I, iMType)
-
-      E   = Init%Props(P1, 2)
-      G   = Init%Props(P1, 3)
-      rho = Init%Props(P1, 4)
-      D1  = Init%Props(P1, 5)
-      t1  = Init%Props(P1, 6)
-      D2  = Init%Props(P2, 5)
-      t2  = Init%Props(P2, 6)
+      if (eType==idBeam) then
+         E   = Init%Props(P1, 2)
+         G   = Init%Props(P1, 3)
+         rho = Init%Props(P1, 4)
+         D1  = Init%Props(P1, 5)
+         t1  = Init%Props(P1, 6)
+         D2  = Init%Props(P2, 5)
+         t2  = Init%Props(P2, 6)
+      else if (eType==idCable) then
+         print*,'Member',I,'eType',eType,'Ps',P1,P2
+         print*,'Init%Props',Init%Props
+         STOP
       
+      else if (eType==idRigid) then
+         print*,'Member',I,'eType',eType,'Ps',P1,P2
+         STOP
+      else
+         ! Should not happen
+         print*,'Element type unknown',eType
+         STOP
+      end if
+
       x1  = Init%Nodes(N1, 2)
       y1  = Init%Nodes(N1, 3)
       z1  = Init%Nodes(N1, 4)
