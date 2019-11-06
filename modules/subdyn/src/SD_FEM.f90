@@ -115,6 +115,97 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
    ENDDO                            
 
 END SUBROUTINE NodeCon
+!----------------------------------------------------------------------------
+!>
+! - Creates Nodes and Elems instead of Joints and Members arrays
+! - Removes the notion of "ID" and use Index instead
+SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
+   TYPE(SD_InitType),            INTENT(INOUT)  ::Init
+   TYPE(SD_ParameterType),       INTENT(INOUT)  ::p
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! local variable
+   INTEGER                       :: I, iMem, J, n, iNode, Node, Node1, Node2, Prop, Prop1, Prop2   
+   INTEGER                       :: NNE      ! number of nodes per element
+   LOGICAL                       :: found, CreateNewProp
+   INTEGER(IntKi)                :: mType !< Member Type
+   CHARACTER(1024)               :: sType !< String for element type
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(1024)               :: ErrMsg2
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! TODO See if Elems is actually used elsewhere
+
+   CALL AllocAry(p%Elems,         Init%NElem,    MembersCol, 'p%Elems',         ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(Init%Nodes,      Init%NNode,    JointsCol,  'Init%Nodes',      ErrStat2, ErrMsg2); if(Failed()) return
+
+   ! --- Initialize Nodes
+   Init%Nodes = 0   
+   DO I = 1,Init%NJoints
+      Init%Nodes(I, 1) = I
+      Init%Nodes(I, 2) = Init%Joints(I, 2)
+      Init%Nodes(I, 3) = Init%Joints(I, 3)
+      Init%Nodes(I, 4) = Init%Joints(I, 4)
+   ENDDO
+
+   ! --- Initialize Elems, starting with each member as an element (we'll take NDiv into account later)
+   p%Elems = 0
+   ! --- Replacing "MemberID"  "JointID", and "PropSetID" by simple index in this tables
+   !bjj: TODO: JMJ wants check that YoungE, ShearG, and MatDens are equal in the two properties because we aren't going to interpolate them. This should be less confusing for users.                                                
+   DO iMem = 1, p%NMembers
+      ! Column 1  : member index (instead of MemberID)
+      p%Elems(iMem,     1)  = iMem
+      mType =  Init%Members(iMem, iMType) ! 
+      ! Column 2-3: Joint index (instead of JointIDs)
+      p%Elems(iMem,     1)  = iMem  ! NOTE: element/member number (not MemberID)
+      do iNode=2,3
+         p%Elems(iMem,iNode) = FINDLOCI(Init%Joints(:,1), Init%Members(iMem, iNode) ) 
+         if (p%Elems(iMem,iNode)<=0) then
+            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has JointID'//TRIM(Num2LStr(iNode-1))//' = '// TRIM(Num2LStr(Init%Members(iMem, iNode)))//' which is not in the joint list !')
+            return
+         endif
+      enddo
+      ! Column 4-5: PropIndex 1-2 (instead of PropSetID1&2)
+      ! NOTE: this index has different meaning depending on the member type !
+      DO n=iMProp,iMProp+1
+
+         if (mType==idBeam) then
+            sType='Member x-section property'
+            p%Elems(iMem,n) = FINDLOCI(Init%PropSets(:,1), Init%Members(iMem, n) ) 
+         else if (mType==idCable) then
+            sType='Cable property'
+            p%Elems(iMem,n) = FINDLOCI(Init%CablePropSets(:,1), Init%Members(iMem, n) ) 
+         else if (mType==idRigid) then
+            sType='Rigid property'
+            p%Elems(iMem,n) = FINDLOCI(Init%RigidPropSets(:,1), Init%Members(iMem, n) ) 
+         else
+            ! Should not happen
+            print*,'Element type unknown',mType
+            STOP
+         end if
+
+         if (p%Elems(iMem,n)<=0) then
+            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has PropSetID'//TRIM(Num2LStr(n-3))//' = '//TRIM(Num2LStr(Prop))//' which is not in the'//trim(sType)//' table!')
+         endif
+      END DO !n, loop through property ids         
+      ! Column 6: member type
+      p%Elems(iMem, iMType) = Init%Members(iMem, iMType) ! 
+   END DO !iMem, loop through members
+    
+   ! TODO in theory, we shouldn't need these anymore
+   ! deallocate(Init%Members)
+   ! deallocate(Init%Joints)
+CONTAINS
+   LOGICAL FUNCTION Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_ReIndex_CreateNodesAndElems') 
+      Failed =  ErrStat >= AbortErrLev
+   END FUNCTION Failed
+   SUBROUTINE Fatal(ErrMsg_in)
+      CHARACTER(len=*), intent(in) :: ErrMsg_in
+      CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'SD_ReIndex_CreateNodesAndElems');
+   END SUBROUTINE Fatal
+END SUBROUTINE SD_ReIndex_CreateNodesAndElems
 
 !----------------------------------------------------------------------------
 SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
@@ -124,10 +215,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variable
    INTEGER                       :: I, iMem, J, n, iNode, Node, Node1, Node2, Prop, Prop1, Prop2   
-   INTEGER                       :: OldJointIndex(Init%NJoints)
    INTEGER                       :: NNE      ! number of nodes per element
    INTEGER                       :: MaxNProp
-   REAL(ReKi), ALLOCATABLE       :: TempPropsBeam(:, :)
+   REAL(ReKi), ALLOCATABLE       :: TempPropsBeams(:, :)
    REAL(ReKi), ALLOCATABLE       :: TempPropsCable(:, :)
    REAL(ReKi), ALLOCATABLE       :: TempPropsRigid(:, :)
    INTEGER, ALLOCATABLE          :: TempMembers(:, :) ,TempReacts(:,:)         
@@ -165,15 +255,12 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
       RETURN
    ENDIF
    
-   CALL AllocAry(p%Elems,         Init%NElem,    MembersCol, 'p%Elems',         ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')
-   
-   CALL AllocAry(Init%Nodes,      Init%NNode,    JointsCol,  'Init%Nodes',      ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')
    CALL AllocAry(Init%MemberNodes,p%NMembers,    Init%NDiv+1,'Init%MemberNodes',ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')  ! for two-node element only, otherwise the number of nodes in one element is different
    CALL AllocAry(Init%BCs,        6*p%NReact,    2,          'Init%BCs',        ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') !!!! RRD: THIS MAY NEED TO CHANGE IF NOT ALL NODES ARE RESTRAINED
    CALL AllocAry(Init%IntFc,      6*Init%NInterf,2,          'Init%IntFc',      ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')
    
    CALL AllocAry(TempMembers,     p%NMembers,    MembersCol, 'TempMembers',     ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
-   CALL AllocAry(TempPropsBeam,   MaxNProp,      PropSetsCol     ,'TempPropsBeam',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
+   CALL AllocAry(TempPropsBeams,   MaxNProp,      PropSetsCol     ,'TempPropsBeams',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
    CALL AllocAry(TempPropsCable,  MaxNProp,      CablePropSetsCol,'TempPropsCable',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
    CALL AllocAry(TempPropsRigid,  MaxNProp,      RigidPropSetsCol,'TempPropsRigid',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
    CALL AllocAry(TempReacts,      p%NReact,      ReactCol,   'TempReacts',      ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')
@@ -183,80 +270,28 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
       RETURN
    ENDIF
 
-   ! Initialize Nodes
-   Init%Nodes = 0   
-   DO I = 1,Init%NJoints
-      OldJointIndex(I) = Init%Joints(I, 1)
-      Init%Nodes(I, 1) = I
-      Init%Nodes(I, 2) = Init%Joints(I, 2)
-      Init%Nodes(I, 3) = Init%Joints(I, 3)
-      Init%Nodes(I, 4) = Init%Joints(I, 4)
-   ENDDO
-   
-   ! Initialize Elems, starting with each member as an element (we'll take NDiv into account later)
-   p%Elems = 0
-   ! --- Replacing "MemberID"  "JointID", and "PropSetID" by simple index in this tables
-   !bjj: TODO: JMJ wants check that YoungE, ShearG, and MatDens are equal in the two properties because we aren't going to interpolate them. This should be less confusing for users.                                                
-   DO iMem = 1, p%NMembers
-      ! Column 1  : member index (instead of MemberID)
-      p%Elems(iMem,     1)  = iMem
-      mType =  Init%Members(iMem, iMType) ! 
-      ! Column 2-3: Joint index (instead of JointIDs)
-      p%Elems(iMem,     1)  = iMem  ! NOTE: element/member number (not MemberID)
-      do iNode=2,3
-         p%Elems(iMem,iNode) = FINDLOCI(Init%Joints(:,1), Init%Members(iMem, iNode) ) 
-         if (p%Elems(iMem,iNode)<=0) then
-            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has JointID'//TRIM(Num2LStr(iNode-1))//' = '// TRIM(Num2LStr(Init%Members(iMem, iNode)))//' which is not in the joint list !')
-            return
-         endif
-      enddo
-      ! Column 4-5: PropIndex 1-2 (instead of PropSetID)
-      DO n=iMProp,iMProp+1 ! Member column for MPropSetID1 and MPropSetID2
-
-         if (mType==idBeam) then
-            sType='Member x-section property'
-            p%Elems(iMem,n) = FINDLOCI(Init%PropSets(:,1), Init%Members(iMem, n) ) 
-         else if (mType==idCable) then
-            sType='Cable property'
-            p%Elems(iMem,n) = FINDLOCI(Init%CablePropSets(:,1), Init%Members(iMem, n) ) 
-         else if (mType==idRigid) then
-            sType='Rigid property'
-            p%Elems(iMem,n) = FINDLOCI(Init%RigidPropSets(:,1), Init%Members(iMem, n) ) 
-         else
-            ! Should not happen
-            print*,'Element type unknown',mType
-            STOP
-         end if
-
-         if (p%Elems(iMem,n)<=0) then
-            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has PropSetID'//TRIM(Num2LStr(n-3))//' = '//TRIM(Num2LStr(Prop))//' which is not in the'//trim(sType)//' table!')
-         endif
-      END DO !n, loop through property ids         
-      ! Column 6: member type
-      p%Elems(iMem, iMType) = Init%Members(iMem, iMType) ! 
-   END DO !iMem, loop through members
+   ! ---
+   CALL SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat2, ErrMsg2);  if(Failed()) return
    
    ! Initialize TempMembers
    TempMembers = p%Elems(1:p%NMembers,:)
    
    ! Initialize Temp property set, first user defined sets
-   TempPropsBeam = 0
-   TempPropsBeam(1:Init%NPropSets, :) = Init%PropSets   
-   print*,'TempPropsBeam(:,1:5)'
-   DO I=1,Init%NPropSets
-      print*,TempPropsBeam(I,1:5)
-   enddo
-
-
+   TempPropsBeams = 0
    TempPropsCable = 0
+   TempPropsRigid = 0
+   TempPropsBeams(1:Init%NPropSets, :)      = Init%PropSets   
    TempPropsCable(1:Init%NCablePropSets, :) = Init%CablePropSets
+   TempPropsRigid(1:Init%NRigidPropSets, :) = Init%RigidPropSets
+   print*,'TempPropsBeams(:,1:5)'
+   DO I=1,Init%NPropSets
+      print*,TempPropsBeams(I,1:5)
+   enddo
    print*,'TempPropsCable(:,:)'
    DO I=1,Init%NCablePropSets
       print*,TempPropsCable(I,1:4)
    enddo
 
-   TempPropsRigid = 0
-   TempPropsRigid(1:Init%NRigidPropSets, :) = Init%RigidPropSets
    print*,'TempPropsRigid(:,:)'
    DO I=1,Init%NRigidPropSets
       print*,TempPropsRigid(I,:)
@@ -347,9 +382,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           Init%MemberNodes(I,           1) = Node1
           Init%MemberNodes(I, Init%NDiv+1) = Node2
           
-          IF  ( ( .not. EqualRealNos(TempPropsBeam(Prop1, 2),TempPropsBeam(Prop2, 2) ) ) &
-           .OR. ( .not. EqualRealNos(TempPropsBeam(Prop1, 3),TempPropsBeam(Prop2, 3) ) ) &
-           .OR. ( .not. EqualRealNos(TempPropsBeam(Prop1, 4),TempPropsBeam(Prop2, 4) ) ) )  THEN
+          IF  ( ( .not. EqualRealNos(TempPropsBeams(Prop1, 2),TempPropsBeams(Prop2, 2) ) ) &
+           .OR. ( .not. EqualRealNos(TempPropsBeams(Prop1, 3),TempPropsBeams(Prop2, 3) ) ) &
+           .OR. ( .not. EqualRealNos(TempPropsBeams(Prop1, 4),TempPropsBeams(Prop2, 4) ) ) )  THEN
           
              CALL Fatal(' Material E,G and rho in a member must be the same')
              RETURN
@@ -367,11 +402,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           dy = ( y2 - y1 )/Init%NDiv
           dz = ( z2 - z1 )/Init%NDiv
           
-          d1 = TempPropsBeam(Prop1, 5)
-          t1 = TempPropsBeam(Prop1, 6)
+          d1 = TempPropsBeams(Prop1, 5)
+          t1 = TempPropsBeams(Prop1, 6)
 
-          d2 = TempPropsBeam(Prop2, 5)
-          t2 = TempPropsBeam(Prop2, 6)
+          d2 = TempPropsBeams(Prop2, 5)
+          t2 = TempPropsBeams(Prop2, 6)
           
           dd = ( d2 - d1 )/Init%NDiv
           dt = ( t2 - t1 )/Init%NDiv
@@ -389,7 +424,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                ! create a new property set 
                ! k, E, G, rho, d, t, Init
                kprop = kprop + 1
-               CALL SetNewProp(kprop, TempPropsBeam(Prop1, 2), TempPropsBeam(Prop1, 3), TempPropsBeam(Prop1, 4), d1+dd, t1+dt, TempPropsBeam)           
+               CALL SetNewProp(kprop, TempPropsBeams(Prop1, 2), TempPropsBeams(Prop1, 3), TempPropsBeams(Prop1, 4), d1+dd, t1+dt, TempPropsBeams)           
                kelem = kelem + 1
                CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p)  
                nprop = kprop              
@@ -411,7 +446,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                   ! k, E, G, rho, d, t, Init
                   
                   kprop = kprop + 1
-                  CALL SetNewProp(kprop, TempPropsBeam(Prop1, 2), TempPropsBeam(Prop1, 3), Init%PropSets(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempPropsBeam)           
+                  CALL SetNewProp(kprop, TempPropsBeams(Prop1, 2), TempPropsBeams(Prop1, 3), Init%PropSets(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempPropsBeams)           
                   kelem = kelem + 1
                   CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p)
                   nprop = kprop                
@@ -442,13 +477,18 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
        RETURN
     ENDIF
     !Init%Props(1:kprop, 1:Init%PropSetsCol) = TempProps
-    Init%Props = TempPropsBeam(1:Init%NProp, :)  !!RRD fixed it on 1/23/14 to account for NDIV=1
+    Init%Props = TempPropsBeams(1:Init%NProp, :)  !!RRD fixed it on 1/23/14 to account for NDIV=1
     print*,'Init%Props'
     print*, Init%Props
 
     CALL CleanUp_Discrt()
 
 CONTAINS
+   LOGICAL FUNCTION Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Discrt') 
+      Failed =  ErrStat >= AbortErrLev
+   END FUNCTION Failed
+
    SUBROUTINE Fatal(ErrMsg_in)
       CHARACTER(len=*), intent(in) :: ErrMsg_in
       CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'SD_Discrt');
@@ -457,7 +497,7 @@ CONTAINS
 
    SUBROUTINE CleanUp_Discrt()
       ! deallocate temp matrices
-      IF (ALLOCATED(TempPropsBeam))    DEALLOCATE(TempPropsBeam)
+      IF (ALLOCATED(TempPropsBeams))   DEALLOCATE(TempPropsBeams)
       IF (ALLOCATED(TempPropsCable))   DEALLOCATE(TempPropsCable)
       IF (ALLOCATED(TempPropsRigid))   DEALLOCATE(TempPropsRigid)
       IF (ALLOCATED(TempMembers)) DEALLOCATE(TempMembers)
