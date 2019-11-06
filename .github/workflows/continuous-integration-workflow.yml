@@ -1,10 +1,10 @@
 
 name: OpenFAST Build and Test
 
-on:
-    push:
-        branches:
-            - testing/github_actions
+# on:
+#     push:
+#         branches:
+#             - testing/github_actions
 
 # runs-on: ${{ matrix.os }}
 # strategy:
