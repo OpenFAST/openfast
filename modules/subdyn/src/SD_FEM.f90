@@ -240,14 +240,13 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
       RETURN
    ENDIF
    
-   Init%NNode = Init%NJoints + ( Init%NDiv - 1 )*p%NMembers    ! Calculate total number of nodes according to divisions 
-   Init%NElem = p%NMembers*Init%NDiv                           ! Total number of element   
-   MaxNProp   = Init%NPropSets + Init%NElem*NNE                ! Maximum possible number of property sets (temp): This is property set per element node, for all elements (bjj, added Init%NPropSets to account for possibility of entering many unused prop sets)
-   
-   ! Calculate total number of nodes and elements according to element types
-   ! for 3-node or 4-node beam elements
+   ! Total number of element   
+   Init%NElem = p%NMembers*Init%NDiv                          
+   ! Total number of nodes - Depends on division and number of nodes per element
+   Init%NNode = Init%NJoints + ( Init%NDiv - 1 )*p%NMembers 
    Init%NNode = Init%NNode + (NNE - 2)*Init%NElem
    !bjj: replaced with max value instead of NNE: Init%MembersCol = Init%MembersCol + (NNE - 2) 
+   MaxNProp   = Init%NPropSets + Init%NElem*NNE ! Maximum possible number of property sets (temp): This is property set per element node, for all elements (bjj, added Init%NPropSets to account for possibility of entering many unused prop sets)
    
    ! check the number of interior modes
    IF ( p%Nmodes > 6*(Init%NNode - Init%NInterf - p%NReact) ) THEN
@@ -259,10 +258,6 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    CALL AllocAry(Init%BCs,        6*p%NReact,    2,          'Init%BCs',        ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') !!!! RRD: THIS MAY NEED TO CHANGE IF NOT ALL NODES ARE RESTRAINED
    CALL AllocAry(Init%IntFc,      6*Init%NInterf,2,          'Init%IntFc',      ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')
    
-   CALL AllocAry(TempMembers,     p%NMembers,    MembersCol, 'TempMembers',     ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
-   CALL AllocAry(TempPropsBeams,   MaxNProp,      PropSetsCol     ,'TempPropsBeams',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
-   CALL AllocAry(TempPropsCable,  MaxNProp,      CablePropSetsCol,'TempPropsCable',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
-   CALL AllocAry(TempPropsRigid,  MaxNProp,      RigidPropSetsCol,'TempPropsRigid',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
    CALL AllocAry(TempReacts,      p%NReact,      ReactCol,   'TempReacts',      ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')
 
    IF ( ErrStat >= AbortErrLev ) THEN
@@ -270,32 +265,10 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
       RETURN
    ENDIF
 
-   ! ---
+   ! --- Reindexing JointsID and MembersID into Nodes and Elems arrays
+   ! NOTE: need NNode and NElem 
    CALL SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat2, ErrMsg2);  if(Failed()) return
    
-   ! Initialize TempMembers
-   TempMembers = p%Elems(1:p%NMembers,:)
-   
-   ! Initialize Temp property set, first user defined sets
-   TempPropsBeams = 0
-   TempPropsCable = 0
-   TempPropsRigid = 0
-   TempPropsBeams(1:Init%NPropSets, :)      = Init%PropSets   
-   TempPropsCable(1:Init%NCablePropSets, :) = Init%CablePropSets
-   TempPropsRigid(1:Init%NRigidPropSets, :) = Init%RigidPropSets
-   print*,'TempPropsBeams(:,1:5)'
-   DO I=1,Init%NPropSets
-      print*,TempPropsBeams(I,1:5)
-   enddo
-   print*,'TempPropsCable(:,:)'
-   DO I=1,Init%NCablePropSets
-      print*,TempPropsCable(I,1:4)
-   enddo
-
-   print*,'TempPropsRigid(:,:)'
-   DO I=1,Init%NRigidPropSets
-      print*,TempPropsRigid(I,:)
-   enddo
 
    
    ! Initialize boundary constraint vector
@@ -358,13 +331,33 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
       ENDDO
    ENDDO
 
-    ! discretize structure according to NDiv 
-    knode = Init%NJoints
-    kelem = 0
-    kprop = Init%NPropSets
     Init%MemberNodes = 0
+    ! --- Setting up MemberNodes (And Elems, Props, Nodes if divisions)
+    if (Init%NDiv==1) then
+       ! NDiv = 1
+       Init%MemberNodes(1:p%NMembers, 1:2) = p%Elems(1:Init%NElem, 2:3) 
+       Init%NProp = Init%NPropSets
 
-    IF (Init%NDiv > 1) THEN
+    else if (Init%NDiv > 1) then
+
+       ! Initialize Temp arrays that will contain user inputs + input from the subdivided members
+       CALL AllocAry(TempMembers,     p%NMembers,    MembersCol, 'TempMembers',     ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
+       CALL AllocAry(TempPropsBeams,  MaxNProp,      PropSetsCol     ,'TempPropsBeams',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
+       CALL AllocAry(TempPropsCable,  MaxNProp,      CablePropSetsCol,'TempPropsCable',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
+       CALL AllocAry(TempPropsRigid,  MaxNProp,      RigidPropSetsCol,'TempPropsRigid',       ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt') 
+       TempMembers = p%Elems(1:p%NMembers,:)
+       TempPropsBeams = 0
+       TempPropsCable = 0
+       TempPropsRigid = 0
+       TempPropsBeams(1:Init%NPropSets, :)      = Init%PropSets   
+       TempPropsCable(1:Init%NCablePropSets, :) = Init%CablePropSets
+       TempPropsRigid(1:Init%NRigidPropSets, :) = Init%RigidPropSets
+
+       ! discretize structure according to NDiv 
+       kelem = 0
+       knode = Init%NJoints
+       kprop = Init%NPropSets
+       print*,'>>> NDIV>1'
        DO I = 1, p%NMembers !the first p%NMembers rows of p%Elems contain the element information
           ! create new node
           Node1 = TempMembers(I, 2)
@@ -443,8 +436,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
              
              IF ( CreateNewProp ) THEN   
                   ! create a new property set 
-                  ! k, E, G, rho, d, t, Init
-                  
+                  ! k, E, G, rho, d, t, Init                
                   kprop = kprop + 1
                   CALL SetNewProp(kprop, TempPropsBeams(Prop1, 2), TempPropsBeams(Prop1, 3), Init%PropSets(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempPropsBeams)           
                   kelem = kelem + 1
@@ -452,32 +444,29 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                   nprop = kprop                
              ELSE
                   kelem = kelem + 1
-                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, nprop, p)         
-                   
+                  CALL SetNewElem(kelem, knode-1, knode, eType, nprop, nprop, p)                          
              ENDIF
           ENDDO
           
           ! the element connect to Node2
           kelem = kelem + 1
           CALL SetNewElem(kelem, knode, Node2, eType, nprop, Prop2, p)                
-
        ENDDO ! loop over all members
-
-    ELSE ! NDiv = 1
-
-       Init%MemberNodes(1:p%NMembers, 1:2) = p%Elems(1:Init%NElem, 2:3)   
-
+       !
+       Init%NProp = kprop
     ENDIF ! if NDiv is greater than 1
 
     ! set the props in Init
-    Init%NProp = kprop
     CALL AllocAry(Init%Props, Init%NProp, PropSetsCol,  'Init%Props', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Discrt')
     IF (ErrStat >= AbortErrLev ) THEN
        CALL CleanUp_Discrt()
        RETURN
     ENDIF
-    !Init%Props(1:kprop, 1:Init%PropSetsCol) = TempProps
-    Init%Props = TempPropsBeams(1:Init%NProp, :)  !!RRD fixed it on 1/23/14 to account for NDIV=1
+    if (Init%NDiv==1) then
+       Init%Props(1:Init%NProp,1 :PropSetsCol) = Init%PropSets(1:Init%NProp, 1:PropSetsCol)
+    else if (Init%NDiv>1) then
+       Init%Props = TempPropsBeams(1:Init%NProp, 1:PropSetsCol)
+    endif
     print*,'Init%Props'
     print*, Init%Props
 
