@@ -249,14 +249,12 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER                       :: I, J, n, Node1, Node2, Prop1, Prop2   
    INTEGER                       :: NNE      ! number of nodes per element
    INTEGER                       :: MaxNProp
-   REAL(ReKi), ALLOCATABLE       :: TempPropsB(:, :)
+   REAL(ReKi), ALLOCATABLE       :: TempProps(:, :)
    INTEGER, ALLOCATABLE          :: TempMembers(:, :)
    INTEGER                       :: knode, kelem, kprop, nprop
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: found, CreateNewProp
    INTEGER(IntKi)                :: eType !< Element Type
-   INTEGER(IntKi)                :: mType !< Member Type
-   CHARACTER(1024)               :: sType !< String for element type
    INTEGER(IntKi)                :: ErrStat2
    CHARACTER(1024)               :: ErrMsg2
    ErrStat = ErrID_None
@@ -319,15 +317,14 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
        !  We don't know how many properties will be needed, so allocated to size MaxNProp
        MaxNProp   = Init%NPropSetsB + Init%NElem*NNE ! Maximum possible number of property sets (temp): This is property set per element node, for all elements (bjj, added Init%NPropSets to account for possibility of entering many unused prop sets)
        CALL AllocAry(TempMembers, p%NMembers,    MembersCol , 'TempMembers', ErrStat2, ErrMsg2); if(Failed()) return
-       CALL AllocAry(TempPropsB,  MaxNProp,      PropSetsBCol,'TempPropsB',  ErrStat2, ErrMsg2); if(Failed()) return
-       TempPropsB = -9999.
+       CALL AllocAry(TempProps,  MaxNProp,      PropSetsBCol,'TempProps',  ErrStat2, ErrMsg2); if(Failed()) return
+       TempProps = -9999.
        TempMembers                      = p%Elems(1:p%NMembers,:)
-       TempPropsB(1:Init%NPropSetsB, :) = Init%PropSetsB   
+       TempProps(1:Init%NPropSetsB, :) = Init%PropSetsB   
 
        kelem = 0
        knode = Init%NJoints
        kprop = Init%NPropSetsB
-       print*,'>>> NDIV>1'
        DO I = 1, p%NMembers !the first p%NMembers rows of p%Elems contain the element information
           ! Member data
           Node1 = TempMembers(I, 2)
@@ -357,9 +354,9 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           Init%MemberNodes(I,           1) = Node1
           Init%MemberNodes(I, Init%NDiv+1) = Node2
 
-          IF  ( ( .not. EqualRealNos(TempPropsB(Prop1, 2),TempPropsB(Prop2, 2) ) ) &
-           .OR. ( .not. EqualRealNos(TempPropsB(Prop1, 3),TempPropsB(Prop2, 3) ) ) &
-           .OR. ( .not. EqualRealNos(TempPropsB(Prop1, 4),TempPropsB(Prop2, 4) ) ) )  THEN
+          IF  ( ( .not. EqualRealNos(TempProps(Prop1, 2),TempProps(Prop2, 2) ) ) &
+           .OR. ( .not. EqualRealNos(TempProps(Prop1, 3),TempProps(Prop2, 3) ) ) &
+           .OR. ( .not. EqualRealNos(TempProps(Prop1, 4),TempProps(Prop2, 4) ) ) )  THEN
           
              CALL Fatal(' Material E,G and rho in a member must be the same')
              RETURN
@@ -377,11 +374,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           dy = ( y2 - y1 )/Init%NDiv
           dz = ( z2 - z1 )/Init%NDiv
           
-          d1 = TempPropsB(Prop1, 5)
-          t1 = TempPropsB(Prop1, 6)
+          d1 = TempProps(Prop1, 5)
+          t1 = TempProps(Prop1, 6)
 
-          d2 = TempPropsB(Prop2, 5)
-          t2 = TempPropsB(Prop2, 6)
+          d2 = TempProps(Prop2, 5)
+          t2 = TempProps(Prop2, 6)
           
           dd = ( d2 - d1 )/Init%NDiv
           dt = ( t2 - t1 )/Init%NDiv
@@ -398,7 +395,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                ! create a new property set 
                ! k, E, G, rho, d, t, Init
                kprop = kprop + 1
-               CALL SetNewProp(kprop, TempPropsB(Prop1, 2), TempPropsB(Prop1, 3), TempPropsB(Prop1, 4), d1+dd, t1+dt, TempPropsB)           
+               CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), TempProps(Prop1, 4), d1+dd, t1+dt, TempProps)           
                kelem = kelem + 1
                CALL SetNewElem(kelem, Node1, knode, eType, Prop1, kprop, p)  
                nprop = kprop
@@ -419,7 +416,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
                   ! create a new property set 
                   ! k, E, G, rho, d, t, Init                
                   kprop = kprop + 1
-                  CALL SetNewProp(kprop, TempPropsB(Prop1, 2), TempPropsB(Prop1, 3), Init%PropSetsB(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempPropsB)           
+                  CALL SetNewProp(kprop, TempProps(Prop1, 2), TempProps(Prop1, 3), Init%PropSetsB(Prop1, 4), d1 + J*dd, t1 + J*dt,  TempProps)           
                   kelem = kelem + 1
                   CALL SetNewElem(kelem, knode-1, knode, eType, nprop, kprop, p)
                   nprop = kprop
@@ -446,7 +443,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
     if (Init%NDiv==1) then
        Init%PropsB(1:Init%NPropB, 1:PropSetsBCol) = Init%PropSetsB(1:Init%NPropB, 1:PropSetsBCol)
     else if (Init%NDiv>1) then
-       Init%PropsB(1:Init%NPropB, 1:PropSetsBCol) = TempPropsB(1:Init%NPropB, 1:PropSetsBCol)
+       Init%PropsB(1:Init%NPropB, 1:PropSetsBCol) = TempProps(1:Init%NPropB, 1:PropSetsBCol)
     endif
 
     ! --- Cables and rigid link properties (these cannot be subdivided, so direct copy of inputs)
@@ -474,7 +471,7 @@ CONTAINS
 
    SUBROUTINE CleanUp_Discrt()
       ! deallocate temp matrices
-      IF (ALLOCATED(TempPropsB))  DEALLOCATE(TempPropsB)
+      IF (ALLOCATED(TempProps))   DEALLOCATE(TempProps)
       IF (ALLOCATED(TempMembers)) DEALLOCATE(TempMembers)
    END SUBROUTINE CleanUp_Discrt
 
