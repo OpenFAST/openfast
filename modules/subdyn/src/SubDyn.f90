@@ -951,48 +951,48 @@ IF (Check( p%NMembers < 1 , 'NMembers must be > 0')) return
 
 !------------------ MEMBER X-SECTION PROPERTY data 1/2 [isotropic material for now: use this table if circular-tubular elements ------------------------
 CALL ReadCom  ( UnIn, SDInputFile,                 ' Member X-Section Property Data 1/2 ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSets, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsB, 'NPropSets', 'Number of property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Header'            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                 'Property Data 1/2 Units '            ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(Init%PropSets, Init%NPropSets, PropSetsCol, 'ProSets', ErrStat2, ErrMsg2) ; if(Failed()) return
-DO I = 1, Init%NPropSets
-   CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
-   Init%PropSets(I,:) = Dummy_ReAry(1:PropSetsCol)
+CALL AllocAry(Init%PropSetsB, Init%NPropSetsB, PropSetsBCol, 'ProSets', ErrStat2, ErrMsg2) ; if(Failed()) return
+DO I = 1, Init%NPropSetsB
+   CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, PropSetsBCol, 'PropSets', 'PropSets number and values ', ErrStat2 , ErrMsg2, UnEc); if(Failed()) return
+   Init%PropSetsB(I,:) = Dummy_ReAry(1:PropSetsBCol)
 ENDDO   
-IF (Check( Init%NPropSets < 1 , 'NPropSets must be >0')) return
+IF (Check( Init%NPropSetsB < 1 , 'NPropSets must be >0')) return
 
 !------------------ MEMBER X-SECTION PROPERTY data 2/2 [isotropic material for now: use this table if any section other than circular, however provide COSM(i,j) below) ------------------------
 CALL ReadCom  ( UnIn, SDInputFile,                  'Member X-Section Property Data 2/2 '               ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadIVar ( UnIn, SDInputFile, Init%NXPropSets, 'NXPropSets', 'Number of non-circular property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsX, 'NXPropSets', 'Number of non-circular property sets',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 CALL ReadCom  ( UnIn, SDInputFile,                  'Property Data 2/2 Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(Init%XPropSets, Init%NXPropSets, XPropSetsCol, 'XPropSets', ErrStat2, ErrMsg2); if(Failed()) return
-DO I = 1, Init%NXPropSets
-   CALL ReadAry( UnIn, SDInputFile, Init%XPropSets(I,:), XPropSetsCol, 'XPropSets', 'XPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL AllocAry(Init%PropSetsX, Init%NPropSetsX, PropSetsXCol, 'XPropSets', ErrStat2, ErrMsg2); if(Failed()) return
+DO I = 1, Init%NPropSetsX
+   CALL ReadAry( UnIn, SDInputFile, Init%PropSetsX(I,:), PropSetsXCol, 'XPropSets', 'XPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
 ENDDO   
-IF (Check( Init%NXPropSets < 0, 'NXPropSets must be >=0')) return
+IF (Check( Init%NPropSetsX < 0, 'NXPropSets must be >=0')) return
 
 if (.not. LegacyFormat) then
    !-------------------------- CABLE PROPERTIES  -------------------------------------
    CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-   CALL ReadIVar ( UnIn, SDInputFile, Init%NCablePropSets, 'NCablePropSets', 'Number of cable properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsC, 'NPropSetsC', 'Number of cable properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadCom  ( UnIn, SDInputFile,                  'Cable properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-   CALL AllocAry(Init%CablePropSets, Init%NCablePropSets, CablePropSetsCol, 'CablePropSets', ErrStat2, ErrMsg2); if(Failed()) return
-   DO I = 1, Init%NCablePropSets
-      CALL ReadAry( UnIn, SDInputFile, Init%CablePropSets(I,:), CablePropSetsCol, 'CablePropSets', 'CablePropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL AllocAry(Init%PropSetsC, Init%NPropSetsC, PropSetsCCol, 'PropSetsC', ErrStat2, ErrMsg2); if(Failed()) return
+   DO I = 1, Init%NPropSetsC
+      CALL ReadAry( UnIn, SDInputFile, Init%PropSetsC(I,:), PropSetsCCol, 'PropSetsC', 'PropSetsC ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    ENDDO   
-   IF (Check( Init%NCablePropSets < 0, 'NCablePropSets must be >=0')) return
+   IF (Check( Init%NPropSetsC < 0, 'NPropSetsCable must be >=0')) return
    !----------------------- RIGID LINK PROPERTIES ------------------------------------
    CALL ReadCom  ( UnIn, SDInputFile,                  'Rigid link properties'                                 ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-   CALL ReadIVar ( UnIn, SDInputFile, Init%NRigidPropSets, 'NRigidPropSets', 'Number of rigid link properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL ReadIVar ( UnIn, SDInputFile, Init%NPropSetsR, 'NPropSetsR', 'Number of rigid link properties' ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadCom  ( UnIn, SDInputFile,                  'Rigid link properties Header'                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    CALL ReadCom  ( UnIn, SDInputFile,                  'Rigid link properties Unit  '                          ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-   CALL AllocAry(Init%RigidPropSets, Init%NRigidPropSets, RigidPropSetsCol, 'RigidPropSets', ErrStat2, ErrMsg2); if(Failed()) return
-   DO I = 1, Init%NRigidPropSets
-      CALL ReadAry( UnIn, SDInputFile, Init%RigidPropSets(I,:), RigidPropSetsCol, 'RigidPropSets', 'RigidPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+   CALL AllocAry(Init%PropSetsR, Init%NPropSetsR, PropSetsRCol, 'RigidPropSets', ErrStat2, ErrMsg2); if(Failed()) return
+   DO I = 1, Init%NPropSetsR
+      CALL ReadAry( UnIn, SDInputFile, Init%PropSetsR(I,:), PropSetsRCol, 'RigidPropSets', 'RigidPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    ENDDO   
-   IF (Check( Init%NRigidPropSets < 0, 'NRigidPropSets must be >=0')) return
+   IF (Check( Init%NPropSetsR < 0, 'NPropSetsRigid must be >=0')) return
 endif
 
 !---------------------- MEMBER COSINE MATRICES COSM(i,j) ------------------------
@@ -2631,9 +2631,9 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(I8,5(I10))') ((p%Elems(i, j), j = 1, MembersCol), i = 1, Init%NElem)
    
    WRITE(UnSum, '()') 
-   WRITE(UnSum, '(A,I6)')  'Number of properties (NProps):',Init%NProp
+   WRITE(UnSum, '(A,I6)')  'Number of properties (NProps):',Init%NPropB
    WRITE(UnSum, '(A8,5(A15))')  'Prop No.',     'YoungE',       'ShearG',       'MatDens',     'XsecD',      'XsecT'
-   WRITE(UnSum, '(I8, E15.6,E15.6,E15.6,E15.6,E15.6 ) ') (NINT(Init%Props(i, 1)), (Init%Props(i, j), j = 2, 6), i = 1, Init%NProp)
+   WRITE(UnSum, '(I8, E15.6,E15.6,E15.6,E15.6,E15.6 ) ') (NINT(Init%PropsB(i, 1)), (Init%PropsB(i, j), j = 2, 6), i = 1, Init%NPropB)
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'No. of Reaction DOFs:',p%NReact*6
@@ -2662,8 +2662,8 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
        mlength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg)
        IF (ErrStat .EQ. ErrID_None) THEN
         WRITE(UnSum, '(I9,I10,I10, E15.6, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))')    Init%Members(i,1:3),                &
-        MemberMass(Init%PropSets(propids(1),4),Init%PropSets(propids(1),5),Init%PropSets(propids(1),6),   &
-                    Init%PropSets(propids(2),4),Init%PropSets(propids(2),5),Init%PropSets(propids(2),6), mlength, .TRUE.),  &
+        MemberMass(Init%PropSetsB(propids(1),4),Init%PropSetsB(propids(1),5),Init%PropSetsB(propids(1),6),   &
+                    Init%PropSetsB(propids(2),4),Init%PropSetsB(propids(2),5),Init%PropSetsB(propids(2),6), mlength, .TRUE.),  &
                ' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
        ELSE 
            RETURN
