@@ -117,17 +117,18 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
 END SUBROUTINE NodeCon
 !----------------------------------------------------------------------------
 !>
-! - Creates Nodes and Elems instead of Joints and Members arrays
 ! - Removes the notion of "ID" and use Index instead
+! - Creates Nodes (use indices instead of ID), similar to Joints array
+! - Creates Elems (use indices instead of ID)  similar to Members array
+! - Updates Reacts (use indices instead of ID)
+! - Updates Interf (use indices instead of ID)
 SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
    TYPE(SD_InitType),            INTENT(INOUT)  ::Init
    TYPE(SD_ParameterType),       INTENT(INOUT)  ::p
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variable
-   INTEGER                       :: I, iMem, J, n, iNode, Node, Node1, Node2, Prop, Prop1, Prop2   
-   INTEGER                       :: NNE      ! number of nodes per element
-   LOGICAL                       :: found, CreateNewProp
+   INTEGER                       :: I, n, iMem, iNode, JointID   
    INTEGER(IntKi)                :: mType !< Member Type
    CHARACTER(1024)               :: sType !< String for element type
    INTEGER(IntKi)                :: ErrStat2
@@ -142,17 +143,48 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
 
    ! --- Initialize Nodes
    Init%Nodes = 0   
-   DO I = 1,Init%NJoints
-      Init%Nodes(I, 1) = I
+   do I = 1,Init%NJoints
+      Init%Nodes(I, 1) = I                ! JointID replaced by index I
       Init%Nodes(I, 2) = Init%Joints(I, 2)
       Init%Nodes(I, 3) = Init%Joints(I, 3)
       Init%Nodes(I, 4) = Init%Joints(I, 4)
-   ENDDO
+   enddo
+
+   ! --- Re-Initialize Reactions, pointing to index instead of JointID
+   do I = 1, p%NReact
+      JointID=p%Reacts(I,1)
+      p%Reacts(I,1) = FINDLOCI(Init%Joints(:,1), JointID ) ! Replace JointID with Index
+      if (p%Reacts(I,1)<=0) then
+         CALL Fatal('Reaction joint table: line '//TRIM(Num2LStr(I))//' refers to JointID '//trim(Num2LStr(JointID))//' which is not in the joint list!')
+         return
+      endif
+   enddo
+
+   ! --- Re-Initialize interface joints, pointing to index instead of JointID
+   Init%IntFc = 0
+   do I = 1, Init%NInterf
+      JointID=Init%Interf(I,1)
+      Init%Interf(I,1) = FINDLOCI(Init%Joints(:,1), JointID )
+      if (Init%Interf(I,1)<=0) then
+         CALL Fatal('Interface joint table: line '//TRIM(Num2LStr(I))//' refers to JointID '//trim(Num2LStr(JointID))//' which is not in the joint list!')
+         return
+      endif
+   enddo
+
+   ! Change numbering in concentrated mass matrix
+   do I = 1, Init%NCMass
+      JointID = Init%CMass(I,1)
+      Init%CMass(I,1) = FINDLOCI(Init%Joints(:,1), JointID )
+      if (Init%Interf(I,1)<=0) then
+         CALL Fatal('Concentrated mass table: line '//TRIM(Num2LStr(I))//' refers to JointID '//trim(Num2LStr(JointID))//' which is not in the joint list!')
+         return
+      endif
+   enddo
+
 
    ! --- Initialize Elems, starting with each member as an element (we'll take NDiv into account later)
    p%Elems = 0
    ! --- Replacing "MemberID"  "JointID", and "PropSetID" by simple index in this tables
-   !bjj: TODO: JMJ wants check that YoungE, ShearG, and MatDens are equal in the two properties because we aren't going to interpolate them. This should be less confusing for users.                                                
    DO iMem = 1, p%NMembers
       ! Column 1  : member index (instead of MemberID)
       p%Elems(iMem,     1)  = iMem
@@ -162,7 +194,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
       do iNode=2,3
          p%Elems(iMem,iNode) = FINDLOCI(Init%Joints(:,1), Init%Members(iMem, iNode) ) 
          if (p%Elems(iMem,iNode)<=0) then
-            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has JointID'//TRIM(Num2LStr(iNode-1))//' = '// TRIM(Num2LStr(Init%Members(iMem, iNode)))//' which is not in the joint list !')
+            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has JointID'//TRIM(Num2LStr(iNode-1))//' = '// TRIM(Num2LStr(Init%Members(iMem, iNode)))//' which is not in the joint list!')
             return
          endif
       enddo
@@ -186,7 +218,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
          end if
 
          if (p%Elems(iMem,n)<=0) then
-            CALL Fatal(' MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//' has PropSetID'//TRIM(Num2LStr(n-3))//' = '//TRIM(Num2LStr(Prop))//' which is not in the'//trim(sType)//' table!')
+            CALL Fatal('For MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//'the PropSetID'//TRIM(Num2LStr(n-3))//' is not in the'//trim(sType)//' table!')
          endif
       END DO !n, loop through property ids         
       ! Column 6: member type
@@ -214,11 +246,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variable
-   INTEGER                       :: I, iMem, J, n, iNode, Node, Node1, Node2, Prop, Prop1, Prop2   
+   INTEGER                       :: I, J, n, Node1, Node2, Prop1, Prop2   
    INTEGER                       :: NNE      ! number of nodes per element
    INTEGER                       :: MaxNProp
    REAL(ReKi), ALLOCATABLE       :: TempPropsB(:, :)
-   INTEGER, ALLOCATABLE          :: TempMembers(:, :) ,TempReacts(:,:)         
+   INTEGER, ALLOCATABLE          :: TempMembers(:, :)
    INTEGER                       :: knode, kelem, kprop, nprop
    REAL(ReKi)                    :: x1, y1, z1, x2, y2, z2, dx, dy, dz, dd, dt, d1, d2, t1, t2
    LOGICAL                       :: found, CreateNewProp
@@ -242,7 +274,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    Init%NElem = p%NMembers*Init%NDiv  ! TODO TODO TODO: THIS IS A MAX SINCE CABLE AND RIGID CANNOT BE SUBDIVIDED
    ! Total number of nodes - Depends on division and number of nodes per element
    Init%NNode = Init%NJoints + ( Init%NDiv - 1 )*p%NMembers 
-   Init%NNode = Init%NNode + (NNE - 2)*Init%NElem  ! TODO TODO TODO
+   Init%NNode = Init%NNode + (NNE - 2)*Init%NElem  ! TODO TODO TODO Same as above. 
    
    ! check the number of interior modes
    IF ( p%Nmodes > 6*(Init%NNode - Init%NInterf - p%NReact) ) THEN
@@ -251,74 +283,24 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    ENDIF
    
    CALL AllocAry(Init%MemberNodes,p%NMembers,    Init%NDiv+1,'Init%MemberNodes',ErrStat2, ErrMsg2); if(Failed()) return ! for two-node element only, otherwise the number of nodes in one element is different
-   CALL AllocAry(Init%BCs,        6*p%NReact,    2,          'Init%BCs',        ErrStat2, ErrMsg2); if(Failed()) return ! THIS MAY NEED TO CHANGE IF NOT ALL NODES ARE RESTRAINED
    CALL AllocAry(Init%IntFc,      6*Init%NInterf,2,          'Init%IntFc',      ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(TempReacts,      p%NReact,      ReactCol,   'TempReacts',      ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Reindexing JointsID and MembersID into Nodes and Elems arrays
    ! NOTE: need NNode and NElem 
    CALL SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat2, ErrMsg2);  if(Failed()) return
    
-   ! Initialize boundary constraint vector
-   ! Change the node number
-   ! Allocate array that will be p%Reacts renumbered and ordered so that ID does not play a role, just ordinal position number will count -RRD
-   Init%BCs = 0
-   TempReacts(1:p%NReact,1:ReactCol)=0
-   DO I = 1, p%NReact
-      Node1 = p%Reacts(I, 1);  !NODE ID
-      TempReacts(I,2:ReactCol)=p%Reacts(I, 2:ReactCol)  !Assign all the appropriate fixity to the new Reacts array -RRD
-      found = .false.
-      DO J = 1, Init%NJoints
-         IF ( Node1 == NINT(Init%Joints(J, 1)) ) THEN
-            Node2 = J
-            found = .true.
-            TempReacts(I,1)=Node2      !New node ID for p!React  -RRD
-            EXIT  !Exit J loop if node found -RRD
-         ENDIF
-      ENDDO
-      IF (.not. found) THEN
-         CALL Fatal(' React has node not in the node list !')
-         RETURN
-      ENDIF
-      DO J = 1, 6
-         Init%BCs( (I-1)*6+J, 1) = (Node2-1)*6+J;
-         Init%BCs( (I-1)*6+J, 2) = p%Reacts(I, J+1);
-      ENDDO
-   ENDDO
-   p%Reacts=TempReacts   !UPDATED REACTS
+   ! --- Initialize boundary constraint vector - TODO: assumes order of DOF, NOTE: Needs Reindexing first
+   CALL AllocAry(Init%BCs, 6*p%NReact, 2, 'Init%BCs', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL InitConstr(Init, p)
       
-   ! Initialize interface constraint vector
-   ! Change the node number
-   Init%IntFc = 0
+   ! --- Initialize interface constraint vector - TODO: assumes order of DOF, NOTE: Needs Reindexing first
    DO I = 1, Init%NInterf
-      Node1 = Init%Interf(I, 1);
-      found = .false.
-      DO J = 1, Init%NJoints
-         IF ( Node1 == NINT(Init%Joints(J, 1)) ) THEN
-            Node2 = J
-            found = .true.
-         ENDIF
-      ENDDO
-      IF (.not. found) THEN
-         CALL Fatal(' Interf has node not in the node list !')
-         RETURN
-      ENDIF
       DO J = 1, 6
-         Init%IntFc( (I-1)*6+J, 1) = (Node2-1)*6+J;
+         Init%IntFc( (I-1)*6+J, 1) = (Init%Interf(I,1)-1)*6+J; ! TODO assumes order of DOF, and needs Interf1 reindexed
          Init%IntFc( (I-1)*6+J, 2) = Init%Interf(I, J+1);
       ENDDO
    ENDDO
   
-   ! Change numbering in concentrated mass matrix
-   DO I = 1, Init%NCMass
-      Node1 = NINT( Init%CMass(I, 1) )
-      DO J = 1, Init%NJoints
-         IF ( Node1 == NINT(Init%Joints(J, 1)) ) THEN
-            Init%CMass(I, 1) = J  !bjj: todo: check this. if there is no return after this is found, are we overwritting the value if Node1 == NINT(Init%Joints(J, 1)) is true for multiple Js?
-         ENDIF
-      ENDDO
-   ENDDO
-
     Init%MemberNodes = 0
     ! --- Setting up MemberNodes (And Elems, Props, Nodes if divisions)
     if (Init%NDiv==1) then
@@ -494,7 +476,6 @@ CONTAINS
       ! deallocate temp matrices
       IF (ALLOCATED(TempPropsB))  DEALLOCATE(TempPropsB)
       IF (ALLOCATED(TempMembers)) DEALLOCATE(TempMembers)
-      IF (ALLOCATED(TempReacts))  DEALLOCATE(TempReacts)
    END SUBROUTINE CleanUp_Discrt
 
 END SUBROUTINE SD_Discrt
@@ -991,6 +972,23 @@ SUBROUTINE ElemM(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
 END SUBROUTINE ElemM
 
 !------------------------------------------------------------------------------------------------------
+!> Sets a list of DOF indices and the value these DOF should have
+!! NOTE: need p%Reacts to have an updated first column that uses indices and not JointID
+SUBROUTINE InitConstr(Init, p)
+   TYPE(SD_InitType     ),INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),INTENT(IN   ) :: p
+   !
+   INTEGER(IntKi) :: I,J
+
+   Init%BCs = 0
+   DO I = 1, p%NReact
+      DO J = 1, 6
+         Init%BCs( (I-1)*6+J, 1) = (p%Reacts(I,1)-1)*6+J; ! DOF Index, looping through Joints in index order
+         Init%BCs( (I-1)*6+J, 2) = p%Reacts(I, J+1);
+      ENDDO
+   ENDDO
+END SUBROUTINE InitConstr
+
 !> Apply constraint (Boundary conditions) on Mass and Stiffness matrices
 SUBROUTINE ApplyConstr(Init,p)
    TYPE(SD_InitType     ),INTENT(INOUT):: Init
