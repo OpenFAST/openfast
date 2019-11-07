@@ -112,7 +112,7 @@ typedef	^	^	ReKi	FG	{:}	-	-	"Gravity force vector"	N
 typedef	^	^	ReKi	ElemProps	{:}{:}	-	-	"Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) )"
 typedef	^	^	INTEGER	BCs	{:}{:}	-	-	"Boundary constraint degree of freedoms. First column - DOFs(rows in the system matrices), Second column - constrained(1) or not(0)"
 typedef	^	^	INTEGER	IntFc	{:}{:}	-	-	"Interface constraint degree of freedoms"
-typedef	^	^	INTEGER	MemberNodes	{:}{:}	-	-	"Member number and nodes in the member"
+typedef	^	^	INTEGER	MemberNodes	{:}{:}	-	-	"Member number and list of nodes making up a member (>2 if subdivided)"
 typedef	^	^	INTEGER	NodesConnN	{:}{:}	-	-	"Nodes that connect to a common node"
 typedef	^	^	INTEGER	NodesConnE	{:}{:}	-	-	"Elements that connect to a common node"
 typedef	^	^	LOGICAL	SSSum	-	-	-	"SubDyn Summary File Flag"
