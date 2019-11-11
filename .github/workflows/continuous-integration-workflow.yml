@@ -1,0 +1,22 @@
+
+name: OpenFAST Build and Test
+
+on: [push, pull_request]
+
+# runs-on: ${{ matrix.os }}
+# strategy:
+#   matrix:
+#     os: [macOS-10.14, ubuntu-18.04]
+# runs-on: docker://rafmudaf/openfast-ubuntu:alpha
+
+jobs:
+    build-and-test:
+        runs-on: ubuntu-latest
+        name: OpenFAST tests on Ubuntu
+        steps:
+        - name: Checkout
+          uses: actions/checkout@master
+          with:
+            submodule: recursive
+        - name: Build and test step
+          uses: ./.github/actions/compile-and-test
