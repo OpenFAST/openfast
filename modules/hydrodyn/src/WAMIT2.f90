@@ -226,8 +226,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! Local Variables
-!      TYPE(FFT_DataType)                                 :: FFT_Data             !< the instance of the FFT module we're using
-
       INTEGER(IntKi)                                     :: I                    !< Generic counter
       INTEGER(IntKi)                                     :: J                    !< Generic counter
 
@@ -399,15 +397,17 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
                IF ( p%MnDriftDims(I) .AND. ( .NOT. MnDriftData%Data3D%LoadComponents(I) ) ) &
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the MnDrift method.', ErrStat,ErrMsg,'WAMIT2_Init')
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the MnDrift method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE IF ( MnDriftData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
                IF ( p%MnDriftDims(I) .AND. ( .NOT. MnDriftData%Data4D%LoadComponents(I) )  )&
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the MnDrift method.', ErrStat,ErrMsg,'WAMIT2_Init')
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the MnDrift method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE  ! We didn't find any data to use...
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  MnDrift flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
@@ -424,20 +424,18 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( NewmanAppData%DataIs3D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
-               IF ( p%NewmanAppDims(I) ) THEN
-                  IF ( .NOT. NewmanAppData%Data3D%LoadComponents(I) ) &
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the NewmanApp method.', ErrStat,ErrMsg,'WAMIT2_Init')
-               END IF
+               IF ( p%NewmanAppDims(I) .AND. ( .NOT. NewmanAppData%Data3D%LoadComponents(I) ) ) &
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the NewmanApp method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE IF ( NewmanAppData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
-               IF ( p%NewmanAppDims(I) ) THEN
-                  IF ( .NOT. NewmanAppData%Data4D%LoadComponents(I) ) &
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the NewmanApp method.', ErrStat,ErrMsg,'WAMIT2_Init')
-               END IF
+               IF ( p%NewmanAppDims(I) .AND. ( .NOT. NewmanAppData%Data4D%LoadComponents(I) ) ) &
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the NewmanApp method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  NewmanApp flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
@@ -454,11 +452,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( DiffQTFData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
-               IF ( p%DiffQTFDims(I) ) THEN
-                  IF ( .NOT. DiffQTFData%Data4D%LoadComponents(I) ) &
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(DiffQTFData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the DiffQTF method.', ErrStat,ErrMsg,'WAMIT2_Init')
-               END IF
+               IF ( p%DiffQTFDims(I) .AND. ( .NOT. DiffQTFData%Data4D%LoadComponents(I) ) ) &
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(DiffQTFData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the DiffQTF method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  DiffQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
@@ -475,11 +472,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( SumQTFData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
-               IF ( p%SumQTFDims(I) ) THEN
-                  IF ( .NOT. SumQTFData%Data4D%LoadComponents(I) ) &
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(SumQTFData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the SumQTF method.', ErrStat,ErrMsg,'WAMIT2_Init')
-               END IF
+               IF ( p%SumQTFDims(I) .AND. ( .NOT. SumQTFData%Data4D%LoadComponents(I) ) ) &
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(SumQTFData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the SumQTF method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  SumQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
@@ -1087,8 +1083,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             ! Set the MnDrift force to 0.0 (Even ones we don't calculate)
          MnDriftForce(I)   = 0.0_SiKi
 
-            ! Only on the dimensions we requested
-         IF ( p%MnDriftDims(I) ) THEN
+        IF (MnDriftData%DataIs3D) THEN
+           TmpFlag = MnDriftData%Data3D%LoadComponents(I)
+        ELSE
+           TmpFlag = MnDriftData%Data4D%LoadComponents(I)
+        END IF
+
+            ! Only on the dimensions we requested, and if it is present in the data
+         IF ( p%MnDriftDims(I) .AND. TmpFlag ) THEN
 
                ! Set an initial search index for the 3D and 4D array interpolation
             LastIndex3 = (/0,0,0/)
@@ -1595,8 +1597,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          NewmanTerm1C(0) = CMPLX(0.0_SiKi, 0.0_SiKi)
          NewmanTerm2C(0) = CMPLX(0.0_SiKi, 0.0_SiKi)
 
-            ! Only on the dimensions we requested
-         IF ( p%NewmanAppDims(I) ) THEN
+         IF (NewmanAppData%DataIs3D) THEN
+            TmpFlag = NewmanAppData%Data3D%LoadComponents(I)
+         ELSE
+            TmpFlag = NewmanAppData%Data4D%LoadComponents(I)
+         END IF
+
+            ! Only on the dimensions we requested, and if it is present in the data
+         IF ( p%NewmanAppDims(I) .AND. TmpFlag ) THEN
 
                ! Set an initial search index for the 3D and 4D array interpolation
             LastIndex3 = (/0,0,0/)
@@ -2054,8 +2062,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Now loop through all the dimensions and perform the calculation
       DO I=1,6
 
-            ! Only on the dimensions we requested
-         IF ( p%DiffQTFDims(I) ) THEN
+            ! Only on the dimensions we requested, and it exists in the dataset
+         IF ( p%DiffQTFDims(I) .AND. DiffQTFData%Data4D%LoadComponents(I) ) THEN
 
 
                ! Set an initial search index for the 4D array interpolation
@@ -2464,8 +2472,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Now loop through all the dimensions and perform the calculation
       DO I=1,6
 
-            ! Only on the dimensions we requested
-         IF ( p%SumQTFDims(I) ) THEN
+            ! Only on the dimensions we requested, and if it is present in the data
+         IF ( p%SumQTFDims(I) .AND. SumQTFData%Data4D%LoadComponents(I) ) THEN
 
 
                ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
@@ -3060,17 +3068,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             p%MnDriftDims(4)     =  .FALSE.              ! the .8 files don't contain this dimension
             p%MnDriftDims(5)     =  .FALSE.              ! the .8 files don't contain this dimension
             p%MnDriftDims(6)     =  .TRUE.
-!FIXME: do I want to include these warnings anymore?
-!               !> Now warn me that we changed the calculations in this case...
-!            CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
-!               'in the heave direction.  No second order heave forces will be calculated within the mean drift calculations.'//NewLine, &
-!               ErrStat, ErrMsg, 'CheckInitInput')
-!            CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
-!               'for platform roll.  No second order roll forces will be calculated within the mean drift calculations.'//NewLine, &
-!               ErrStat, ErrMsg, 'CheckInitInput')
-!            CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
-!               'for platform pitch. No second order pitching forces will be calculated within the mean drift calculations.'//NewLine, &
-!               ErrStat, ErrMsg, 'CheckInitInput')
          ELSE
             p%MnDriftDims        = .TRUE.
          ENDIF
@@ -3094,18 +3091,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             p%NewmanAppDims(4)   =  .FALSE.              ! the .8 files don't contain this dimension
             p%NewmanAppDims(5)   =  .FALSE.              ! the .8 files don't contain this dimension
             p%NewmanAppDims(6)   =  .TRUE.
-!FIXME: do I want to include these warnings anymore?
-!            !> Now warn me that we changed the calculations in this case...
-!            CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
-!               'second order force calculations of platform heave.'//NewLine// &
-!               "           No second order heave forces will be calculated within the Newman's Approximation calculations.", ErrStat, ErrMsg, 'CheckInitInput')
-!            CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
-!               'second order force calculations of platform roll.'//NewLine// &
-!               "           No second order roll forces will be calculated within the Newman's Approximation calculations.", ErrStat, ErrMsg, 'CheckInitInput')
-!            CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
-!               'second order force calculations of platform pitch.'//NewLine// &
-!               "           No second order pitching forces will be calculated within the Newman's Approximation calculations.", &
-!               ErrStat, ErrMsg, 'CheckInitInput')
          ELSE
             p%NewmanAppDims      = .TRUE.
          ENDIF
