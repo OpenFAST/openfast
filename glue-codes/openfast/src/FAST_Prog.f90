@@ -24,7 +24,6 @@ PROGRAM FAST
 ! This program models 2- or 3-bladed turbines of a standard configuration.
 !
 ! noted compilation switches:
-!   SOLVE_OPTION_1_BEFORE_2 (uses a different order for solving input-output relationships)
 !   OUTPUT_ADDEDMASS        (outputs a file called "<RootName>.AddedMass" that contains HydroDyn's added-mass matrix.
 !   OUTPUT_JACOBIAN
 !   FPE_TRAP_ENABLED        (use with gfortran when checking for floating point exceptions)

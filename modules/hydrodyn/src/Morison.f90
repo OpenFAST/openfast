@@ -1940,7 +1940,7 @@ SUBROUTINE SubdivideMembers( numNodes, nodes, numElements, elements, ErrStat, Er
          ! If the requested division size is less then the member length, we will subdivide the member
          
       IF ( element%MDivSize < memLen ) THEN
-	  
+
          ! Ensure a safe choice of x/y/z axis to use for splitting.
          IF ( .NOT. ( EqualRealNos( node2%JointPos(3) , node1%JointPos(3) ) ) ) THEN
             axis  = 3
@@ -2153,7 +2153,7 @@ SUBROUTINE SetSplitNodeProperties( numNodes, nodes, numElements, elements, ErrSt
             nodes(element%Node1Indx)%MGdensity = 0.0
             nodes(element%Node2Indx)%MGdensity = 0.0
          END IF
-		 
+
          !@mhall: if this node is Node 1 of the element in question...  ? 
          IF ( element%Node1Indx == I ) THEN
             
@@ -2174,8 +2174,8 @@ SUBROUTINE SetSplitNodeProperties( numNodes, nodes, numElements, elements, ErrSt
             nodes(I)%R    = element%R1
             nodes(I)%t    = element%t1
             nodes(I)%InpMbrDist = element%InpMbrDist1
-			
-         !@mhall: otherwise this must be Node 2 of the element in question?		
+
+         !@mhall: otherwise this must be Node 2 of the element in question?
          ELSE
             
             IF ( nodes(I)%tMG > 0 ) THEN
