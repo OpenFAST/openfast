@@ -83,7 +83,7 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    integer(IntKi)                               :: NumCoords
 #ifdef DBG_OUTS
    integer(IntKi)                               :: m
-   character(5)                                 ::chanPrefix
+   character(6)                                 ::chanPrefix
 #endif   
       ! Initialize variables for this routine
 
