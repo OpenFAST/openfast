@@ -94,7 +94,7 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
                                                     
       INTEGER(IntKi)                                :: UnEcho        ! Unit number for the echo file   
       INTEGER(IntKi)                                :: ErrStat2      ! local error status
-      CHARACTER(1024)                               :: ErrMsg2       ! local error message
+      CHARACTER(ErrMsgLen)                          :: ErrMsg2       ! local error message
       
       CHARACTER(*), PARAMETER                       :: RoutineName = 'TMD_Init'
       
@@ -558,7 +558,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL TMD_DestroyContState( xdot,     ErrStat3, ErrMsg3 )

@@ -53,8 +53,8 @@ program UnsteadyAero_Driver
    type(UA_ParameterType)                        :: p                    ! Parameters
    type(UA_InputType)                            :: u(NumInp)            ! System inputs
    type(UA_OutputType)                           :: y                    ! System outputs
-   integer(IntKi)                                :: ErrStat              ! Status of error message
-   character(1024)                               :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   integer(IntKi)                                :: ErrStat, errStat2    ! Status of error message
+   character(ErrMsgLen)                          :: ErrMsg, errMsg2     ! Error message if ErrStat /= ErrID_None
    
    integer, parameter                            :: NumAFfiles = 1
    character(1024)                               :: afNames(NumAFfiles)
