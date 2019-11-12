@@ -71,25 +71,21 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
     <TargetName>MAP_$(PlatformName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <TargetName>MAP_$(PlatformName)</TargetName>
     <LinkIncremental>true</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
     <TargetName>MAP_$(PlatformName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <TargetName>MAP_$(PlatformName)</TargetName>
     <LinkIncremental>false</LinkIncremental>
     <OutDir>..\..\build\bin\</OutDir>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);..\..\modules\map\src</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -130,7 +126,6 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;MAP_DLL_EXPORTS;CMINPACK_NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\modules\map\src</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -194,7 +189,6 @@
     <ClInclude Include="..\..\modules\map\src\maperror.h" />
     <ClInclude Include="..\..\modules\map\src\mapinit.h" />
     <ClInclude Include="..\..\modules\map\src\mapsys.h" />
-    <ClInclude Include=".\WinSock2.h" />
     <ClInclude Include="..\..\modules\map\src\MAP_Types.h" />
     <ClInclude Include="..\..\modules\map\src\numeric.h" />
     <ClInclude Include="..\..\modules\map\src\outputstream.h" />
