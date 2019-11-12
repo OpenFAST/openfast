@@ -1083,11 +1083,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             ! Set the MnDrift force to 0.0 (Even ones we don't calculate)
          MnDriftForce(I)   = 0.0_SiKi
 
-        IF (MnDriftData%DataIs3D) THEN
-           TmpFlag = MnDriftData%Data3D%LoadComponents(I)
-        ELSE
-           TmpFlag = MnDriftData%Data4D%LoadComponents(I)
-        END IF
+         IF (MnDriftData%DataIs3D) THEN
+            TmpFlag = MnDriftData%Data3D%LoadComponents(I)
+         ELSE
+            TmpFlag = MnDriftData%Data4D%LoadComponents(I)
+         END IF
 
             ! Only on the dimensions we requested, and if it is present in the data
          IF ( p%MnDriftDims(I) .AND. TmpFlag ) THEN
