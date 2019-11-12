@@ -2,10 +2,10 @@
 ! "NREL/TP-442-7817 Appendix B, Viterna used aspect ratio=11"
 ! note that this file uses Marshall Buhl's new input file processing; start all comment lines with !
 ! ------------------------------------------------------------------------------
-"DEFAULT"     InterpOrd         ! Interpolation order to use for quasi-steady table lookup {1=linear; 3=cubic spline; "default"} [default=3]
+"DEFAULT"     InterpOrd         ! Interpolation order to use for quasi-steady table lookup {1=linear; 3=cubic spline; "default"} [default=1]
 ! ------------------------------------------------------------------------------
           1   NonDimArea        ! The non-dimensional area of the airfoil (area/chord^2) (set to 1.0 if unsure or unneeded)
-        67   NumCoords         ! The number of coordinates in the airfoil shape file (including an extra coordinate for airfoil reference).  Set to zero if coordinates… 
+         67   NumCoords         ! The number of coordinates in the airfoil shape file (including an extra coordinate for airfoil reference).
 ! ......... x-y coordinates are next if NumCoords > 0 .............
 ! x-y coordinate of airfoil reference
 !  x/c        y/c
@@ -79,12 +79,12 @@
 0.996141   0.000290
 1.000000   0.000000
 ! ------------------------------------------------------------------------------
-          1   NumTabs           ! Number of airfoil tables in this file.  Each table must have lines for Re and Ctrl.
+          1   NumTabs           ! Number of airfoil tables in this file.
 ! ------------------------------------------------------------------------------
 ! data for table 1
 ! ------------------------------------------------------------------------------
        0.75   Re                ! Reynolds number in millions
-          0   Ctrl              ! Control setting (must be 0 for current AirfoilInfo)
+          0   UserProp          ! User property (control) setting
 true          InclUAdata        ! Is unsteady aerodynamics data included in this table? If TRUE, then include 30 UA coefficients below this line
 !........................................
       -0.38   alpha0            ! 0-lift angle of attack, depends on airfoil.
