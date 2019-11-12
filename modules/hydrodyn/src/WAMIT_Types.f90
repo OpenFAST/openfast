@@ -63,15 +63,15 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveDirArr      !< Array of wave directions (one per frequency) from the Waves module [-]
     REAL(SiKi)  :: WaveDirMin      !< Minimum wave direction from Waves module [-]
     REAL(SiKi)  :: WaveDirMax      !< Maximum wave direction from Waves module [-]
-    CHARACTER(10) , DIMENSION(1:18)  :: OutList      !< This should really be dimensioned with MaxOutPts [-]
+    CHARACTER(ChanLen) , DIMENSION(1:18)  :: OutList      !< This should really be dimensioned with MaxOutPts [-]
     LOGICAL  :: OutAll      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
   END TYPE WAMIT_InitInputType
 ! =======================
 ! =========  WAMIT_InitOutputType  =======
   TYPE, PUBLIC :: WAMIT_InitOutputType
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !<  [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !<  [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !<  [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !<  [-]
   END TYPE WAMIT_InitOutputType
 ! =======================
 ! =========  WAMIT_ContinuousStateType  =======

@@ -78,8 +78,8 @@ IMPLICIT NONE
     CHARACTER(99)  :: progName      !< program name [-]
     CHARACTER(99)  :: version      !< version numnber [-]
     CHARACTER(24)  :: compilingData      !< compiling data [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: writeOutputHdr      !< first line output file contents: output variable names [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: writeOutputUnt      !< second line of output file contents: units [-]
+    CHARACTER(15) , DIMENSION(:), ALLOCATABLE  :: writeOutputHdr      !< first line output file contents: output variable names [-]
+    CHARACTER(15) , DIMENSION(:), ALLOCATABLE  :: writeOutputUnt      !< second line of output file contents: units [-]
     TYPE(ProgDesc)  :: Ver      !< this module's name, version, and date [-]
     TYPE(Lin_InitOutputType)  :: LinInitOut      !< Init Output linearization data (fortran-only) [-]
   END TYPE MAP_InitOutputType

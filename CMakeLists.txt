@@ -36,6 +36,17 @@ option(FPE_TRAP_ENABLED "Enable FPE trap in compiler options" off)
 option(ORCA_DLL_LOAD "Enable OrcaFlex Library Load" off)
 option(BUILD_OPENFAST_CPP_API "Enable building OpenFAST - C++ API" off)
 
+# Precompiler/preprocessor flag configuration
+# Do this before configuring modules so that the flags are included
+option(BUILD_TESTING "Build the testing tree." OFF)
+if(BUILD_TESTING)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
+endif()
+option(BUILD_OPENFAST_SIMULINK_API "Enable building OpenFAST for use with Simulink" off)
+if(BUILD_OPENFAST_SIMULINK_API)
+  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DCOMPILE_SIMULINK")
+endif()
+
 # Setup Fortran Compiler options based on architecture/compiler
 set_fast_fortran()
 
@@ -59,14 +70,6 @@ if (MKL_FOUND)
 else()
   find_package(BLAS REQUIRED)
   find_package(LAPACK REQUIRED)
-endif()
-
-########################################################################
-# Test option configuration
-# Do this before configuring modules so that precompiler flags are included
-option(BUILD_TESTING "Build the testing tree." OFF)
-if(BUILD_TESTING)
-  set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -DUNIT_TEST")
 endif()
 
 ########################################################################

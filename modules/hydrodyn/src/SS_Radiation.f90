@@ -90,7 +90,7 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     !CHARACTER                              :: Line                                 ! Temp line of file
     
     integer                                :: ErrStat2
-    character(1024)                        :: ErrMsg2
+    character(ErrMsgLen)                   :: ErrMsg2
     
     ! Initialize ErrStat   
       ErrStat = ErrID_None         
@@ -664,7 +664,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL SS_Rad_DestroyContState( xdot,     ErrStat3, ErrMsg3 )
@@ -823,7 +823,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL SS_Rad_DestroyInput(     u_interp, ErrStat3, ErrMsg3 )
@@ -956,7 +956,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
    
    
       CALL SS_Rad_DestroyContState( xdot_pred,  ErrStat3, ErrMsg3 )

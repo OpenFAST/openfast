@@ -151,6 +151,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Vy      !< Local tangential velocity at node [m/s]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rLocal      !< Radial distance from center-of-rotation to node [m]
     REAL(ReKi)  :: Un_disk      !< disk-averaged velocity normal to the rotor disk (for input to DBEMT) [m/s]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: UserProp      !< Optional user property for interpolating airfoils (per element per blade) [-]
   END TYPE BEMT_InputType
 ! =======================
 ! =========  BEMT_OutputType  =======
@@ -3622,6 +3623,20 @@ IF (ALLOCATED(SrcInputData%rLocal)) THEN
     DstInputData%rLocal = SrcInputData%rLocal
 ENDIF
     DstInputData%Un_disk = SrcInputData%Un_disk
+IF (ALLOCATED(SrcInputData%UserProp)) THEN
+  i1_l = LBOUND(SrcInputData%UserProp,1)
+  i1_u = UBOUND(SrcInputData%UserProp,1)
+  i2_l = LBOUND(SrcInputData%UserProp,2)
+  i2_u = UBOUND(SrcInputData%UserProp,2)
+  IF (.NOT. ALLOCATED(DstInputData%UserProp)) THEN 
+    ALLOCATE(DstInputData%UserProp(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputData%UserProp.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputData%UserProp = SrcInputData%UserProp
+ENDIF
  END SUBROUTINE BEMT_CopyInput
 
  SUBROUTINE BEMT_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -3647,6 +3662,9 @@ IF (ALLOCATED(InputData%Vy)) THEN
 ENDIF
 IF (ALLOCATED(InputData%rLocal)) THEN
   DEALLOCATE(InputData%rLocal)
+ENDIF
+IF (ALLOCATED(InputData%UserProp)) THEN
+  DEALLOCATE(InputData%UserProp)
 ENDIF
  END SUBROUTINE BEMT_DestroyInput
 
@@ -3713,6 +3731,11 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%rLocal)  ! rLocal
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! Un_disk
+  Int_BufSz   = Int_BufSz   + 1     ! UserProp allocated yes/no
+  IF ( ALLOCATED(InData%UserProp) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! UserProp upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%UserProp)  ! UserProp
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3823,6 +3846,22 @@ ENDIF
   END IF
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Un_disk
       Re_Xferred   = Re_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%UserProp) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UserProp,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UserProp,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%UserProp,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%UserProp,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%UserProp)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%UserProp))-1 ) = PACK(InData%UserProp,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%UserProp)
+  END IF
  END SUBROUTINE BEMT_PackInput
 
  SUBROUTINE BEMT_UnPackInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3992,6 +4031,32 @@ ENDIF
   END IF
       OutData%Un_disk = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! UserProp not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%UserProp)) DEALLOCATE(OutData%UserProp)
+    ALLOCATE(OutData%UserProp(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%UserProp.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%UserProp)>0) OutData%UserProp = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%UserProp))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%UserProp)
+    DEALLOCATE(mask2)
+  END IF
  END SUBROUTINE BEMT_UnPackInput
 
  SUBROUTINE BEMT_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
@@ -4972,7 +5037,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(BEMT_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(BEMT_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
  TYPE(BEMT_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -5019,8 +5084,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(BEMT_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
- TYPE(BEMT_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
+ TYPE(BEMT_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(BEMT_InputType), INTENT(IN)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
  TYPE(BEMT_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -5096,6 +5161,14 @@ IF (ALLOCATED(u_out%rLocal) .AND. ALLOCATED(u1%rLocal)) THEN
 END IF ! check if allocated
   b0 = -(u1%Un_disk - u2%Un_disk)/t(2)
   u_out%Un_disk = u1%Un_disk + b0 * t_out
+IF (ALLOCATED(u_out%UserProp) .AND. ALLOCATED(u1%UserProp)) THEN
+  ALLOCATE(b2(SIZE(u_out%UserProp,1),SIZE(u_out%UserProp,2) ))
+  ALLOCATE(c2(SIZE(u_out%UserProp,1),SIZE(u_out%UserProp,2) ))
+  b2 = -(u1%UserProp - u2%UserProp)/t(2)
+  u_out%UserProp = u1%UserProp + b2 * t_out
+  DEALLOCATE(b2)
+  DEALLOCATE(c2)
+END IF ! check if allocated
  END SUBROUTINE BEMT_Input_ExtrapInterp1
 
 
@@ -5113,9 +5186,9 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(BEMT_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
- TYPE(BEMT_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
- TYPE(BEMT_InputType), INTENT(INOUT)  :: u3      ! Input at t3
+ TYPE(BEMT_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(BEMT_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(BEMT_InputType), INTENT(IN)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
  TYPE(BEMT_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -5206,6 +5279,15 @@ END IF ! check if allocated
   b0 = (t(3)**2*(u1%Un_disk - u2%Un_disk) + t(2)**2*(-u1%Un_disk + u3%Un_disk))/(t(2)*t(3)*(t(2) - t(3)))
   c0 = ( (t(2)-t(3))*u1%Un_disk + t(3)*u2%Un_disk - t(2)*u3%Un_disk ) / (t(2)*t(3)*(t(2) - t(3)))
   u_out%Un_disk = u1%Un_disk + b0 * t_out + c0 * t_out**2
+IF (ALLOCATED(u_out%UserProp) .AND. ALLOCATED(u1%UserProp)) THEN
+  ALLOCATE(b2(SIZE(u_out%UserProp,1),SIZE(u_out%UserProp,2) ))
+  ALLOCATE(c2(SIZE(u_out%UserProp,1),SIZE(u_out%UserProp,2) ))
+  b2 = (t(3)**2*(u1%UserProp - u2%UserProp) + t(2)**2*(-u1%UserProp + u3%UserProp))/(t(2)*t(3)*(t(2) - t(3)))
+  c2 = ( (t(2)-t(3))*u1%UserProp + t(3)*u2%UserProp - t(2)*u3%UserProp ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%UserProp = u1%UserProp + b2 * t_out + c2 * t_out**2
+  DEALLOCATE(b2)
+  DEALLOCATE(c2)
+END IF ! check if allocated
  END SUBROUTINE BEMT_Input_ExtrapInterp2
 
 
@@ -5225,7 +5307,7 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(BEMT_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
+ TYPE(BEMT_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
  TYPE(BEMT_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -5272,8 +5354,8 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(BEMT_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
- TYPE(BEMT_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
+ TYPE(BEMT_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(BEMT_OutputType), INTENT(IN)  :: y2    ! Output at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
  TYPE(BEMT_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -5424,9 +5506,9 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(BEMT_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
- TYPE(BEMT_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
- TYPE(BEMT_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
+ TYPE(BEMT_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(BEMT_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(BEMT_OutputType), INTENT(IN)  :: y3      ! Output at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
  TYPE(BEMT_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to

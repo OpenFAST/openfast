@@ -7957,10 +7957,7 @@ CONTAINS
    
       INTEGER(IntKi)                         :: ErrStat2             ! local error level/status of OpenFOutFile operation
       CHARACTER(ErrMsgLen)                   :: ErrMsg2                   ! local message when error occurs   
-      CHARACTER(1024)                        :: Line, Line2              ! one line of the file
-      CHARACTER(1024)                        :: formatLbl
       CHARACTER(*), PARAMETER                :: RoutineName = 'ReadVTK_SP_vectors'
-      INTEGER(IntKi)                         :: sz, nPts,i,j,k
       
       ErrStat = ErrID_None
       ErrMsg  = ''

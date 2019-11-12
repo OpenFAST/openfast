@@ -143,6 +143,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     Vy                              {:}{:}         -         -         "Local tangential velocity at node" m/s
 typedef   ^                            ^                             ReKi                     rLocal                          {:}{:}         -         -         "Radial distance from center-of-rotation to node" m
 typedef   ^                            InputType                     ReKi                     Un_disk                         -              -         -         "disk-averaged velocity normal to the rotor disk (for input to DBEMT)" m/s
+typedef   ^                            ^                             ReKi                     UserProp                        {:}{:}         -         -         "Optional user property for interpolating airfoils (per element per blade)" -
 #
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
