@@ -1014,21 +1014,46 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
    
                ! Only call the WAMIT2_Init if one of the flags is set for a calculation
             IF ( InitLocal%WAMIT2%MnDriftF .OR. InitLocal%WAMIT2%NewmanAppF .OR. InitLocal%WAMIT2%DiffQTFF .OR. InitLocal%WAMIT2%SumQTFF ) THEN
-   
-               
+
+                  ! Copy Waves initialization output into the initialization input type for the WAMIT module
                InitLocal%WAMIT2%RhoXg       = Waves_InitOut%RhoXg
                InitLocal%WAMIT2%NStepWave   = Waves_InitOut%NStepWave
                InitLocal%WAMIT2%NStepWave2  = Waves_InitOut%NStepWave2
                InitLocal%WAMIT2%WaveDirMin  = Waves_InitOut%WaveDirMin
                InitLocal%WAMIT2%WaveDirMax  = Waves_InitOut%WaveDirMax
                InitLocal%WAMIT2%WaveDOmega  = Waves_InitOut%WaveDOmega
-               
+               InitLocal%WAMIT2%NBodyMod    = InitLocal%NBodyMod        ! There are restrictions in WAMIT2 on which files may be used for MnDriftF or NewmanAppF for BodyMod > 1
+
                   ! Temporarily move arrays to init input for WAMIT2 (save some space)
                CALL MOVE_ALLOC(p%WaveTime, InitLocal%WAMIT2%WaveTime) 
                CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InitLocal%WAMIT2%WaveElevC0) 
                CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InitLocal%WAMIT2%WaveDirArr) 
-               
-               
+
+                  ! Determine how many WAMIT2 modules we need based on NBody and NBodyMod
+               if (p%NBodyMod == 1) then
+                  InitLocal%WAMIT2%NBody     = InitLocal%NBody    ! The WAMIT2 object will contain all NBody WAMIT2 bodies
+
+                     ! Allocate WAMIT2 InitInp arrays based on NBodyMod and copy the inputfile data into the WAMIT2 init data (entire arrays' worth for NBodyMod=1
+                  call AllocAry( InitLocal%WAMIT%PtfmRefxt   , InitLocal%NBody, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT%PtfmRefyt   , InitLocal%NBody, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT%PtfmRefzt   , InitLocal%NBody, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT%PtfmRefztRot, InitLocal%NBody, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               else
+                  InitLocal%WAMIT2%NBody  = 1_IntKi               ! The WAMIT2 object will contain all NBody WAMIT2 bodies
+
+                     ! Allocate WAMIT2 InitInp arrays based on NBodyMod and copy the inputfile data into the 1st WAMIT body init data for NBodyMod > 1
+                  call AllocAry( InitLocal%WAMIT%PtfmRefxt   , 1, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT%PtfmRefyt   , 1, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT%PtfmRefzt   , 1, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT%PtfmRefztRot, 1, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+               endif
+
+                if ( ErrStat >= AbortErrLev ) then
+                   call CleanUp()
+                   return
+                end if
+
                CALL WAMIT2_Init(InitLocal%WAMIT2, m%u_WAMIT2, p%WAMIT2, x%WAMIT2, xd%WAMIT2, z%WAMIT2, OtherState%WAMIT2, &
                                        y%WAMIT2, m%WAMIT2, Interval, InitOut%WAMIT2, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1036,7 +1061,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   CALL CleanUp()
                   RETURN
                END IF
-   
+ 
                   ! move arrays back
                CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveTime,               p%WaveTime  ) 
                CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveElevC0, Waves_InitOut%WaveElevC0) 

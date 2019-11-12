@@ -2792,6 +2792,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   '           MnDriftF flag should be set to true by calling program for MnDrift /= 0.'//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, 'CheckInitInput')
          END IF
+         IF ( InitInp%NBody > 1 .AND. InitInp%MnDrift == 8 ) THEN
+            CALL SetErrStat( ErrID_Fatal, ' Mean drift calculation cannot be used with input file type 8 when more than 1 WAMIT body is present.', &
+                                 ErrStat, ErrMsg, 'CheckInitInput')
+         END IF
       ELSE
          CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to WAMIT2_Init: '//NewLine// &
                   '           MnDrift can only have values of 0, 7, 8, 9, 10, 11, or 12. '//NewLine// &
@@ -2816,13 +2820,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   '           NewmanAppF flag should be set to true by calling program for NewmanApp /= 0.'//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, 'CheckInitInput')
          END IF
+         IF ( InitInp%NBody > 1 .AND. InitInp%NewmanApp == 8 ) THEN
+            CALL SetErrStat( ErrID_Fatal, ' Newman''s approximation cannot be used with input file type 8 when more than 1 WAMIT body is present.', &
+                                 ErrStat, ErrMsg, 'CheckInitInput')
+         END IF
       ELSE
          CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to WAMIT2_Init: '//NewLine// &
                   '           NewmanApp can only have values of 0, 7, 8, 9, 10, 11, or 12. '//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, 'CheckInitInput')
       END IF
-
-
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
          RETURN
