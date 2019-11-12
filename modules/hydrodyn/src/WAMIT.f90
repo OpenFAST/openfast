@@ -62,7 +62,7 @@ CONTAINS
 !..................................................................................................................................
       integer(IntKi), intent( in    ) :: NBody   ! Number of WAMIT bodies in this WAMIT object ( = 1 if NBodyMod > 1)
       real(R8Ki),     intent( in    ) :: RotZ(:) ! NBody heading angles (radians)
-      real(ReKi),     intent( inout ) :: M(:,:)  ! Matrix data to be transformed, if NBodyMOD = 1 and NBody > 1 then we will be transforming the individual sub 6x6 matrices
+      real(SiKi),     intent( inout ) :: M(:,:)  ! Matrix data to be transformed, if NBodyMOD = 1 and NBody > 1 then we will be transforming the individual sub 6x6 matrices
       
       integer(IntKi)   :: i,j,ii,jj,iSub,jSub
       real(R8Ki)       :: Rj(3,3)
@@ -194,7 +194,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
          ! Error handling
       CHARACTER(1024)                        :: ErrMsg2                              ! Temporary error message for calls
       INTEGER(IntKi)                         :: ErrStat2                             ! Temporary error status for calls
-
+      real(SiKi)                             :: tmp1, tmp2, tmp4, tmp5               ! Temporary transformation terms
 
 
          ! Initialize data
@@ -992,7 +992,7 @@ end if
                ! Transform the wave excitation coefs
                !====================================
                
-               
+ ! TODO: Need to create rotation corrrection for NBODYMOD = 1,3, but do not use Fxy and do not adjust beta (tmpAngle)              
                if ( p%NBodyMod == 2 ) then
                   
                   ! Since NBodyMod = 2, then NBody = 1 for this WAMIT object (this requirement is encoded at the HydroDyn module level)
@@ -1001,8 +1001,8 @@ end if
                   IF ( ErrStat2 /= 0 )  THEN
                      CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the HdroExctn_Local array.', ErrStat, ErrMsg, 'WAMIT_Init')
                      CALL Cleanup()
-                  RETURN            
-               END IF
+                     RETURN            
+                  END IF
 
                   do K = 1,6           ! Loop through all wave excitation forces and moments
                      do J = 1, NInpWvDir                       
@@ -1019,7 +1019,6 @@ end if
 
                   do J = 1, NInpWvDir  
                      do I = 1, NInpFreq
-
                            ! Fxy = exp(-j * k(w) * ( X*cos(Beta(w)) + Y*sin(Beta(w)) )
                         WaveNmbr   = WaveNumber ( HdroFreq(I), InitInp%Gravity, InitInp%WtrDpth )
                         tmpAngle   = WaveNmbr * ( InitInp%PtfmRefxt(1)*cos(HdroWvDir(J)*D2R) + InitInp%PtfmRefyt(1)*sin(HdroWvDir(J)*D2R) )
@@ -1037,6 +1036,25 @@ end if
                      end do
                   end do  
                   deallocate(HdroExctn_Local)
+               else
+                  
+                     ! Apply rotation only for NBodyMod = 1,3
+                  do J = 1, NInpWvDir  
+                     do I = 1, NInpFreq
+
+                        tmp1 = ( HdroExctn(I,J,1)*cos(InitInp%PtfmRefztRot(1)) -  HdroExctn(I,J,2)*sin(InitInp%PtfmRefztRot(1)) )
+                        tmp2 = ( HdroExctn(I,J,1)*sin(InitInp%PtfmRefztRot(1)) +  HdroExctn(I,J,2)*cos(InitInp%PtfmRefztRot(1)) )  
+                        tmp4 = ( HdroExctn(I,J,4)*cos(InitInp%PtfmRefztRot(1)) -  HdroExctn(I,J,5)*sin(InitInp%PtfmRefztRot(1)) )
+                        tmp5 = ( HdroExctn(I,J,4)*sin(InitInp%PtfmRefztRot(1)) +  HdroExctn(I,J,5)*cos(InitInp%PtfmRefztRot(1)) )
+
+                        HdroExctn(I,J,1) = tmp1
+                        HdroExctn(I,J,2) = tmp2
+                        HdroExctn(I,J,4) = tmp4
+                        HdroExctn(I,J,5) = tmp5
+
+                     end do
+                  end do  
+                  
                end if
                
                ! Compute the positive-frequency components (including zero) of the discrete
