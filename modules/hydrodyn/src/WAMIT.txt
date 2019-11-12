@@ -118,7 +118,7 @@ typedef   ^                            ParameterType                 INTEGER    
 typedef   ^                            ^                             INTEGER                  NBodyMod                 -          -         -         "Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1]" -
 typedef   ^                            ^                             ReKi                     F_HS_Moment_Offset       {:}{:}     -         -         "The offset moment due to the COB being offset from the WAMIT body's local location {matrix 3xNBody}" N-m
 typedef   ^                            ^                             ReKi                     HdroAdMsI                {:}{:}     -         -         ""  (sec)
-typedef   ^                            ^                             ReKi                     HdroSttc                 {:}{:}     -         -         ""        -
+typedef   ^                            ^                             SiKi                     HdroSttc                 {:}{:}     -         -         ""        -
 typedef   ^                            ^                             INTEGER                  RdtnMod                  -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  ExctnMod                 -          -        -          ""        -
 typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}     -         -         ""        -
