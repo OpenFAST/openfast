@@ -133,7 +133,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NBody      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
     INTEGER(IntKi)  :: NBodyMod      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: F_HS_Moment_Offset      !< The offset moment due to the COB being offset from the WAMIT body's local location {matrix 3xNBody} [N-m]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: HdroAdMsI      !<  [(sec)]
+    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: HdroAdMsI      !<  [(sec)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: HdroSttc      !<  [-]
     INTEGER(IntKi)  :: RdtnMod      !<  [-]
     INTEGER(IntKi)  :: ExctnMod      !<  [-]
@@ -4795,7 +4795,7 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%HdroAdMsI)>0) OutData%HdroAdMsI = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%HdroAdMsI))-1 ), mask2, 0.0_ReKi )
+      IF (SIZE(OutData%HdroAdMsI)>0) OutData%HdroAdMsI = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%HdroAdMsI))-1 ), mask2, 0.0_ReKi ), SiKi)
       Re_Xferred   = Re_Xferred   + SIZE(OutData%HdroAdMsI)
     DEALLOCATE(mask2)
   END IF
