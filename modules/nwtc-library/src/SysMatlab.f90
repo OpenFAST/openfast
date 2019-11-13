@@ -42,7 +42,7 @@ MODULE SysSubs
    !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
-   !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
+   !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )   
    !     SUBROUTINE  UsrAlarm
    !     SUBROUTINE  WrNR ( Str )
    !     SUBROUTINE  WrOver ( Str )
@@ -386,7 +386,7 @@ END SUBROUTINE MKDIR
 
    END SUBROUTINE ProgExit ! ( StatCode )
 !=======================================================================
-   SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
+   SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )   
    
       ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
       ! values for not-a-number and infinity in sindle and double 
@@ -403,12 +403,18 @@ END SUBROUTINE MKDIR
       REAL(ReKi), INTENT(inout)           :: Inf            ! IEEE value for NaN (not-a-number)
       REAL(ReKi), INTENT(inout)           :: NaN            ! IEEE value for Inf (infinity)
    
+      REAL(SiKi), INTENT(inout)           :: Inf_S          ! IEEE value for NaN (not-a-number) in single precision
+      REAL(SiKi), INTENT(inout)           :: NaN_S          ! IEEE value for Inf (infinity) in single precision
+
       
       NaN_D = ieee_value(0.0_DbKi, ieee_quiet_nan)
       Inf_D = ieee_value(0.0_DbKi, ieee_positive_inf)
    
       NaN   = ieee_value(0.0_ReKi, ieee_quiet_nan)
       Inf   = ieee_value(0.0_ReKi, ieee_positive_inf)   
+   
+      NaN_S = ieee_value(0.0_SiKi, ieee_quiet_nan)
+      Inf_S = ieee_value(0.0_SiKi, ieee_positive_inf)
    
    
    END SUBROUTINE Set_IEEE_Constants  

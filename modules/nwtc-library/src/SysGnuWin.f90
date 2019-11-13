@@ -32,7 +32,7 @@ MODULE SysSubs
    !     SUBROUTINE  OpenCon
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
-   !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
+   !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )   
    !     SUBROUTINE  UsrAlarm
    !     SUBROUTINE  WrNR ( Str )
    !     SUBROUTINE  WrOver ( Str )
@@ -288,7 +288,7 @@ SUBROUTINE ProgExit ( StatCode )
 
 END SUBROUTINE ProgExit ! ( StatCode )
 !=======================================================================
-SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
+SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf, NaN_S, Inf_S )   
       
    ! routine that sets the values of NaN_D, Inf_D, NaN, Inf (IEEE 
    ! values for not-a-number and infinity in sindle and double 
@@ -301,10 +301,13 @@ SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )
    REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
    REAL(ReKi), INTENT(inout)           :: Inf            ! IEEE value for NaN (not-a-number)
    REAL(ReKi), INTENT(inout)           :: NaN            ! IEEE value for Inf (infinity)
+   REAL(SiKi), INTENT(inout)           :: Inf_S          ! IEEE value for NaN (not-a-number) in single precision
+   REAL(SiKi), INTENT(inout)           :: NaN_S          ! IEEE value for Inf (infinity) in single precision
 
       ! local variables for getting values of NaN and Inf (not necessary when using ieee_arithmetic)
    REAL(DbKi)                          :: Neg_D          ! a negative real(DbKi) number
    REAL(ReKi)                          :: Neg            ! a negative real(ReKi) number
+   REAL(SiKi)                          :: Neg_S          ! a negative real(SiKi) number
 
    
       ! if compiling with floating-point-exception traps, this will not work, so we've added a compiler directive.
@@ -314,16 +317,20 @@ SUBROUTINE Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )
       ! set variables to negative numbers to calculate NaNs (compilers may complain when taking sqrt of negative constants)
    Neg_D = -1.0_DbKi
    Neg   = -1.0_ReKi
+   Neg_S = -1.0_SiKi
 
    NaN_D = SQRT ( Neg_D )
    NaN   = SQRT ( Neg )
+   NaN_S = SQRT ( Neg_S )
 
       ! set variables to zero to calculate Infs (using division by zero)
    Neg_D = 0.0_DbKi
    Neg   = 0.0_ReKi
+   Neg_S = 0.0_SiKi
    
    Inf_D = 1.0_DbKi / Neg_D
    Inf   = 1.0_ReKi / Neg
+   Inf_S = 1.0_SiKi / Neg_S
 #endif 
 
 END SUBROUTINE Set_IEEE_Constants
