@@ -32,6 +32,7 @@ __pycache__/*
 
 # Build specific files
 build*/
+_build*/
 install/
 vs-build/
 
@@ -40,3 +41,6 @@ vs-build/
 .vscode
 .atom
 .fortls
+
+# backup files
+*.asv

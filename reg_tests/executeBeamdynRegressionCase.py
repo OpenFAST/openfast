@@ -73,7 +73,7 @@ if not os.path.isdir(buildDirectory):
 regtests = os.path.join(sourceDirectory, "reg_tests")
 lib = os.path.join(regtests, "lib")
 rtest = os.path.join(regtests, "r-test")
-moduleDirectory = os.path.join(rtest, "modules-local", "beamdyn")
+moduleDirectory = os.path.join(rtest, "modules", "beamdyn")
 inputsDirectory = os.path.join(moduleDirectory, caseName)
 targetOutputDirectory = os.path.join(inputsDirectory)
 testBuildDirectory = os.path.join(buildDirectory, caseName)

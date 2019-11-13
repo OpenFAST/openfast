@@ -3,69 +3,99 @@
 Developer Documentation
 =======================
 
-**Our goal as developers is to ensure that OpenFAST is a sustainable open source software that is well tested and well documented.**
-To that end, we continually work to improve the documentation and test coverage along with feature additions and improvements.
-This section of the documentation outlines the processes and procedures we have established for external developers
+**Our goal as developers of OpenFAST is to ensure that it is well tested, well
+documented, and self-sustaining software.** To that end, we
+continually work to improve the documentation and test coverage along with
+feature additions and improvements. This section of the documentation outlines
+the processes and procedures we have established for external developers
 to work with the NREL OpenFAST team on code development.
 
-Getting in touch
-----------------
-Please use `GitHub Issues <https://github.com/openfast/openfast/issues>`_ to:
+If you'd like to help with general OpenFAST development or work on a particular
+feature, then first install OpenFAST following the
+:doc:`installation instructions <../install/index>` for your machine. Next,
+verify that your installation is valid by running the test suite following the
+:doc:`testing instructions <../testing/index>`. While OpenFAST is compiling, we
+encourage reading through the :ref:`development_philosophy` section to
+understand the general workflow for individual and coordinated development.
+Finally, be sure to review the :doc:`GitHub workflow <github_workflow>` to
+avoid any merge or code conflicts.
 
-- ask usage or development questions
-- report bugs
-- suggest code enhancements
+With development happening in parallel between NREL, industry partners, and
+universities, NREL relies on GitHub to coordinate efforts:
 
-For other questions regarding OpenFAST, please contact `Mike Sprague <mailto:michael.a.sprague@nrel.gov>`_.
+- `GitHub Issues <https://github.com/openfast/openfast/issues>`_ is the place
+  to ask usage or development questions, report bugs, and
+  suggest code enhancements
+- `GitHub Pull Requests <https://github.com/openfast/openfast/pulls>`_
+  is the place for engaging with the OpenFAST team to have your new code
+  merged into the main repository.
 
-Contributing to OpenFAST
-------------------------
-If you'd like to help with general OpenFAST development or work on a particular feature, then first install OpenFAST
-following the :doc:`installation instructions <../install/index>` for your machine. Next, verify that your installation is 
-valid by running the test suite following the :doc:`testing instructions <../testing/index>`.
+For other questions regarding OpenFAST, please contact
+`Mike Sprague <mailto:michael.a.sprague@nrel.gov>`_.
 
-After a successful and validated build, we encourage reading through the :doc:`OpenFAST development philosophy <dev_phil>` to
-understand the general workflow for individual and coordinated development. Finally, be sure to review the :doc:`GitHub workflow <github_workflow>`
-to avoid any merge or code conflicts.
+.. tip::
 
-Coordination
-------------
-With development happening in parallel between NREL, industry partners, and universities, duplicated effort is likely without
-proper communication. In that regard, the NREL OpenFAST team maintains the GitHub
-`Issues <https://github.com/openfast/openfast/issues>`_ and `Pull Request <https://github.com/openfast/openfast/pulls>`_ pages.
-Any suggested bug fixes, improvements, or new features should be documented there.
+    The following sections provide valuable guidance on workflow and
+    development tips which make the process more efficient and
+    effective:
 
-Issues and work assignment
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-Issues should be opened with proper documentation and data to fully describe the problem or feature gap. It is here that
-communication and coordination should happen regarding ongoing work for new development, and developers should make clear
-any intention to complete a task.
+    - :ref:`github_workflow`
+    - :ref:`code_style`
+    - :ref:`debugging`
 
-Pull requests and reviews
-~~~~~~~~~~~~~~~~~~~~~~~~~
-When a code modification is ready for review, a pull request should be submitted along with all appropriate documentation and tests
-as described in the :doc:`GitHub workflow <github_workflow>`. An NREL OpenFAST team member will assign a reviewer and work with the 
-developer to have the code merged into the main repository.
+API Reference
+~~~~~~~~~~~~~
+Some subroutines and derived types throughout the source code have in-source
+documentation which is compiled with Doxygen. Though this portion of the
+documentation is always under development, the existing API reference can
+be found in the following pages:
 
-Documentation
--------------
-OpenFAST documentation is hosted on `readthedocs <http://openfast.readthedocs.io/>`_. It
-is automatically generated from both the ``master`` and ``dev`` branches whenever new commits are added.
-The documentation can also be generated locally as described in :doc:`build docs <build_doc>` while in development.
+- `Main Page <../../html/index.html>`_
+- `Index of Types <../../html/classes.html>`_
+- `Source Files <../../html/files.html>`_
 
-Note that a PDF of the documentation can be retrieved from `readthedocs <http://openfast.readthedocs.io/>`_ by clicking the arrow on the 
-lower left corner of the page next to ``v:master`` or ``v:dev``.
+.. _development_philosophy:
 
-While OpenFAST developer documentation is being enhanced here, developers are encouraged to
-consult the legacy FAST v8 `Programmer's Handbook <https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf>`_.
+Development Philosophy
+~~~~~~~~~~~~~~~~~~~~~~
 
-Section Map
------------
+OpenFAST is intended to be a self sustaining community developed software.
+A couple of tenets of this goal are that the code should be reasonably
+straightforward to comprehend and manageable to improve. With that in mind, we
+expect that new capabilities will include adequate testing and documentation.
+
+We have the following guidance for developers:
+
+- When fixing a bug, first introduce a unit test that exposes the bug, fix the
+  bug, and submit a Pull Request. See :ref:`testing` and
+  :ref:`github_workflow` for more information.
+
+- When adding a new feature, create appropriate automated unit and regression
+  tests as described in :ref:`testing`. The objective is to create a GitHub
+  pull request that provides adequate verification and validation so that the
+  NREL OpenFAST developer team can merge the pull request with confidence that
+  the new feature is "correct" and supports our goal of self-sustaining
+  software. See :ref:`pull_requests` for more information on submitting
+  a pull request.
+
+- If a code modification affects regression test results in an expected manner,
+  work with the NREL OpenFAST developer team to upgrade the regression test
+  suite via a GitHub issue or pull request at the `openfast/r-test <https://github.com/openfast/r-test>`_
+  repository.
+
+Development Guidelines
+~~~~~~~~~~~~~~~~~~~~~~
+The following sections provide extended guidance on how to develop source code,
+interacting with the NREL OpenFAST team and other community contributors, and
+generally debugging and building out features.
+
 .. toctree::
-   :maxdepth: 1
+    :maxdepth: 1
 
-   dev_phil.rst
-   github_workflow.rst
-   build_doc.rst
-   doxy_doc.rst
-
+    github_workflow.rst
+    code_style.rst
+    build_doc.rst
+    types_files.rst
+    debugging.rst
+    performance.rst
+    versioning.rst

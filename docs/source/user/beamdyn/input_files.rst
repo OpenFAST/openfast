@@ -57,7 +57,7 @@ And the following :math:`3 \times 3` direction cosine matrix (``GlbDCM``) relate
 
 .. _frame:
 
-.. figure:: figs/Frame.jpg
+.. figure:: figs/frame.jpg
    :width: 80%
    :align: center
 
@@ -348,7 +348,7 @@ cases for member and key-point definition.
 
 .. _geometry1-case1:
 
-.. figure:: figs/Geometry_Member1.png
+.. figure:: figs/geometry_member1.png
    :width: 60%
    :align: center
 
@@ -356,7 +356,7 @@ cases for member and key-point definition.
 
 .. _geometry1-case2:
 
-.. figure:: figs/Geometry_Member2.png
+.. figure:: figs/geometry_member2.png
    :width: 60%
    :align: center
 
