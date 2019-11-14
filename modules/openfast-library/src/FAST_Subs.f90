@@ -586,6 +586,22 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
                      IfW%OtherSt(STATE_CURR), IfW%y, IfW%m, p_FAST%dt_module( MODULE_IfW ), InitOutData_IfW, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+!FIXME: how do I remove this?  There is some confusing stuff going on...
+   IF ( p_FAST%CompAero == Module_AD14 ) THEN  !!KS -- added this section
+      !TODO TODO ANDY
+      !AD14%m%FVW%FVW_Wind%InitInputData = InitInData_IfW
+!tempo!rary hard coded size while we figure out how many points FVW actually needs: this will be requested by AD14 in addition to the nodes it normally needs
+      !AD14%m%FVW%FVW_Wind%InitInputData%NumWindPoints = 1000 ! TODO
+      !CALL InflowWind_Init( AD14%m%FVW%FVW_Wind%InitInputData,AD14%m%FVW%FVW_Wind%InputData,&
+      !                          & AD14%m%FVW%FVW_Wind%ParamData,AD14%m%FVW%FVW_Wind%ContData,&
+      !                          & AD14%m%FVW%FVW_Wind%DiscData,AD14%m%FVW%FVW_Wind%ConstrData,&
+      !                          & AD14%m%FVW%FVW_Wind%OtherData, AD14%m%FVW%FVW_Wind%OutputData,&
+      !                          & AD14%m%FVW%FVW_Wind%MiscData,p_FAST%dt_module(MODULE_IfW ),&
+      !                          & AD14%m%FVW%FVW_Wind%InitOutputData, ErrStat2, ErrMsg2 )
+
+      !AD14%p%IfW_DT = p_FAST%dt_module( MODULE_IfW )
+   END IF
+
       p_FAST%ModuleInitialized(Module_IfW) = .TRUE.            
       CALL SetModuleSubstepTime(Module_IfW, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -3456,9 +3472,11 @@ SUBROUTINE SetModuleSubstepTime(ModuleID, p_FAST, y_FAST, ErrStat, ErrMsg)
    ELSE
       IF ( p_FAST%dt_module( ModuleID ) > p_FAST%dt ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg = "The "//TRIM(y_FAST%Module_Ver(ModuleID)%Name)//" module time step ("//&
-                          TRIM(Num2LStr(p_FAST%dt_module( ModuleID )))// &
-                    " s) cannot be larger than FAST time step ("//TRIM(Num2LStr(p_FAST%dt))//" s)."
+         !
+         !ErrMsg = "The "//TRIM(y_FAST%Module_Ver(ModuleID)%Name)//" module time step ("//&
+         !                 TRIM(Num2LStr(p_FAST%dt_module( ModuleID )))// &
+         !           " s) cannot be larger than FAST time step ("//TRIM(Num2LStr(p_FAST%dt))//" s)."
+         p_FAST%n_substeps(ModuleID) = 0 !KS -- and added this line
       ELSE
             ! calculate the number of subcycles:
          p_FAST%n_substeps(ModuleID) = NINT( p_FAST%dt / p_FAST%dt_module( ModuleID ) )
@@ -5190,6 +5208,7 @@ END SUBROUTINE WrVTK_AllMeshes
 !> This routine writes a minimal subset of meshes (enough to visualize the turbine) to VTK-formatted files. It doesn't bother with 
 !! returning an error code.
 SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
+   use FVW_IO, only: WrVTK_FVW
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(IN   ) :: y_FAST              !< Output variables for the glue code
@@ -5260,6 +5279,11 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW,
       END DO  
    END IF   
          
+   ! Free wake
+   IF ( p_FAST%CompAero == Module_AD14 ) THEN  ! These meshes may have airfoil data associated with nodes...
+       call WrVTK_FVW(AD14%p%FVW, AD14%x(1)%FVW, AD14%z(1)%FVW, AD14%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
+   END IF
+         
 ! Tower motions
    call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%TowerLn2Mesh, trim(VTK_path)//'.ED_TowerLn2Mesh_motion', &
                   y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth )     
@@ -5301,6 +5325,7 @@ END SUBROUTINE WrVTK_BasicMeshes
 !> This routine writes a minimal subset of meshes with surfaces to VTK-formatted files. It doesn't bother with 
 !! returning an error code.
 SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
+   use FVW_IO, only: WrVTK_FVW
 
    REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
@@ -5380,6 +5405,11 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, A
          call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, ED%Output(1)%BladeLn2Mesh(K), trim(VTK_path)//'.Blade'//trim(num2lstr(k))//'Surface', &
                                     y_FAST%VTK_count, OutputFields, ErrStat2, ErrMsg2, Twidth , verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords )
       END DO  
+   END IF   
+
+   ! Free wake
+   IF ( p_FAST%CompAero == Module_AD14 ) THEN  ! These meshes may have airfoil data associated with nodes...
+       call WrVTK_FVW(AD14%p%FVW, AD14%x(1)%FVW, AD14%z(1)%FVW, AD14%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
    END IF   
          
 ! Tower motions

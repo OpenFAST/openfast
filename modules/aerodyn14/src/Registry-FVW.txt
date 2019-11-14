@@ -1,0 +1,100 @@
+##################################################################################################################################
+# Registry for FVW
+# Entries are of the form
+# keyword <modulename/modname> <TypeBeingDefined> <FieldType> <FieldName> <Dims> <InitialValue> <Ctrl> "<DESCRIP>" "<UNITS>"
+##################################################################################################################################
+include Registry_NWTC_Library.txt
+usefrom InflowWind.txt
+usefrom Registry-AD14AeroConf.txt
+
+#####################  Registry for FVW ###############
+# ..... PARAMETERS .............
+#FVW_ParameterType  
+typedef  FVW/FVW           ParameterType        IntKi                            nWings            -  -   - "Number of Wings"  -
+typedef     ^                   ^               IntKi                            nSpan             -  -  -  "TODO, should be defined per wing. Number of spanwise element"          -
+typedef     ^                   ^               IntKi                            nNWMax            -  -  -  "Maximum number of nw panels"          -
+typedef     ^                   ^               IntKi                            nFWMax            -  -  -  "Maximum number of fw panels"          -
+typedef     ^                   ^               IntKi                            IntMethod         -  -  -  "Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1)" -
+typedef     ^                   ^               LOGICAL                          FreeWake          -  - -   "Disable roll up, wake convects with wind only (flag)"  -
+typedef     ^                   ^               IntKi                            CirculationMethod       -  -   - "Method to determine the circulation"  -
+typedef     ^                   ^               ReKi                             PrescribedCirculation    :  -  - "Prescribed circulation on all lifting lines" "m/s" 
+
+# ....... OtherStateType ............
+# FVW_OtherStateType
+typedef  FVW/FVW           OtherStateType       IntKi                            NULL              -  -  - "Number of active near wake panels"      -
+
+# ....... MiscVars ............
+# FVW_MiscVarType
+typedef  FVW/FVW           MiscVarType          Logical                          FirstCall      -  - - "True if this is the first call to update state (used in CalcOutput)" -
+# Variables at wing extent
+typedef     ^                   ^               ReKi                             LE           :::  -  -  "Leading edge points" -
+typedef     ^                   ^               ReKi                             TE           :::  -  -  "Trailing edge points" -
+typedef     ^                   ^               ReKi                             s_LL         ::   -  -  "Spanwise coordinate of LL elements" m
+typedef     ^                   ^               ReKi                             chord_LL     ::  -  -   "chord on LL cp " m
+# Variables at control point - Dimensions nSpan 
+typedef     ^                   ^               ReKi                             s_CP_LL      ::   -  -  "Spanwise coordinate of LL CP" m
+typedef     ^                   ^               ReKi                             chord_CP_LL  ::  -  -   "chord on LL cp " m
+typedef     ^                   ^               ReKi                             CP_LL        :::   -  - "Coordinates of LL CP" -
+typedef     ^                   ^               ReKi                             Tang         :::  -  -  "Unit Tangential vector on LL CP" -
+typedef     ^                   ^               ReKi                             Norm         :::  -  -  "Unit Normal vector on LL CP    " -
+typedef     ^                   ^               ReKi                             Orth         :::  -  -  "Unit Orthogonal vector on LL CP" -
+typedef    ^                    ^               Reki                             Gamma_LL     ::   -  -  "Circulation on the wing lifting line (COPY of Constraint State)" -
+typedef     ^                   ^               ReKi                             Vind_LL      :::  -  -  "Induced velocity on lifting line control points" m/s
+typedef     ^                   ^               ReKi                             Vtot_LL      :::  -  -  "Total velocity on lifting line control points" m/s
+typedef     ^                   ^               ReKi                             Vstr_LL      :::  -  -  "Structural velocity on LL CP" m/s
+typedef     ^                   ^               ReKi                             Vwnd_LL      :::  -  -  "Wind on lifting line control points" m/s 
+typedef     ^                   ^               ReKi                             Vwnd_NW      :::: -  -  "Wind on near wake panels" m/s 
+typedef     ^                   ^               ReKi                             Vwnd_FW      :::: -  -  "Wind on far  wake panels" m/s 
+typedef     ^                   ^               IntKi                            nNW           -    -  - "Number of active near wake panels"      -
+typedef     ^                   ^               IntKi                            nFW           -    -  - "Number of active far  wake panels"      -
+
+# ........ Input ............
+# FVW_InputType
+typedef  FVW/FVW           InputType            MeshType                         WingsMesh      :  - - - "Input Mesh defining position and orientation of wings"
+typedef     ^                   ^               ReKi                             V_wind        ::    - - "Wind at requested points (r_wind)"  -
+
+# ........ Output ............
+# FVW_OutputType
+typedef  FVW/FVW           OutputType           ReKi                             Vind      :::   - - "TODO mesh  - Induced velocity vector. "  -
+typedef     ^                   ^               ReKi                             r_wind    ::    - - "List of points where wind is requested for next time step"  -
+typedef     ^                   ^               ReKi                             Cl_KJ      ::   - - "Lift coefficient from circulation (Kutta-Joukowski)"  -
+
+#.......... ContinuousStateType ......
+# FVW_ContinuousStateType
+typedef FVW/FVW            ContinuousStateType  ReKi                             Gamma_NW     :::   -  -  "Circulation of the near wake panels" -
+typedef     ^                   ^               ReKi                             Gamma_FW     :::   -  -  "Circulation of the far  wake panels" -
+typedef     ^                   ^               ReKi                             r_NW         ::::  -  -  "Position    of the near wake panels" -
+typedef     ^                   ^               ReKi                             r_FW         ::::  -  -  "Position    of the far  wake panels" -
+
+
+#.......... DiscreteStateType ......
+# FVW_DiscreteStateType
+typedef FVW/FVW            DiscreteStateType    IntKi                            Null              -  -  - "Empty to satisfy framework"           -
+
+#.......... ConstraintStateType ......
+# FVW_ConstraintStateType
+typedef FVW/FVW            ConstraintStateType  Reki                             residual         -  -  "Residual" -
+typedef    ^                    ^               Reki                             Gamma_LL     ::  -  -  "Circulation on the wing lifting line" -
+
+
+#.......... InitInputType ......
+# FVW_InitInputType
+typedef  FVW/FVW           InitInputType        CHARACTER(1024)                  FVWFileName       -  -  - "Main FVW input file name"  -
+typedef     ^                   ^               MeshType                         WingsMesh         :  -  - "Input Mesh defining position and orientation of wings (nSpan+1) " -
+typedef     ^                   ^               ReKi                             Chord             :  -  - "Chord of each blade element from input file" - 
+typedef     ^                   ^               ReKi                             RElm              :  -  - "radius of center of each element"  - 
+typedef     ^                   ^               IntKi                            NumBl             -  -  - "Number of blades"          -
+
+#.......... InitInputType ......
+# FVW_InputFile
+typedef  FVW/FVW           FVW_InputFile        IntKi                            CirculationMethod   -     - -  "Method to determine the circulation"  -
+typedef     ^                   ^               CHARACTER(1024)                  CirculationFile     -     - -  ""  -
+typedef     ^                   ^               IntKi                            IntMethod           -     - -  "Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1, 7=Corrector/Predictor)" -
+typedef     ^                   ^               LOGICAL                          FreeWake            -     - -  "Disable roll up, wake convects with wind only (flag)"  -
+
+#.......... InitOutputType ......
+# FVW_InitOutputType
+typedef FVW/FVW            InitOutputType       IntKi                            Null              -  -  - "Empty parameter to satisfy framework"           -
+
+
+

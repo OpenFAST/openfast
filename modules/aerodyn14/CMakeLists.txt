@@ -16,7 +16,9 @@
 
 if (GENERATE_TYPES)
   generate_f90_types(src/Registry-AD14.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn14_Types.f90)
+  generate_f90_types(src/Registry-AD14AeroConf.txt ${CMAKE_CURRENT_LIST_DIR}/src/AD14AeroConf_Types.f90)
   generate_f90_types(src/Registry-DWM.txt ${CMAKE_CURRENT_LIST_DIR}/src/DWM_Types.f90)
+  generate_f90_types(src/Registry-FVW.txt ${CMAKE_CURRENT_LIST_DIR}/src/FVW_Types.f90)
 endif()
 
 set(AD14_LIBS_SOURCES
@@ -25,8 +27,19 @@ set(AD14_LIBS_SOURCES
   src/DWM.f90
   src/DWM_Wake_Sub_ver2.f90
   src/GenSubs.f90
+
+  src/FVW.f90
+  src/FVW_IO.f90
+  src/FVW_VortexTools.f90
+  src/FVW_Wings.f90
+  src/FVW_Subs.f90
+  src/VTK.f90
+  src/Interpolation.f90
+
   src/AeroDyn14_Types.f90
   src/DWM_Types.f90
+  src/FVW_Types.f90
+  src/AD14AeroConf_Types.f90
 )
 
 add_library(aerodyn14lib ${AD14_LIBS_SOURCES})
