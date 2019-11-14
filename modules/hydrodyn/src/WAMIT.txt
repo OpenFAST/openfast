@@ -127,12 +127,6 @@ typedef   ^                            ^                             Conv_Rdtn_P
 typedef   ^                            ^                             SS_Rad_ParameterType     SS_Rdtn                  -          -         -         ""        -
 typedef   ^                            ^                             SS_Exc_ParameterType     SS_Exctn                 -          -         -         ""        -
 typedef   ^                            ^                             DbKi                     DT                       -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmSgF                  -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmSwF                  -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmHvF                  -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmRF                   -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmPF                   -          -         -         ""        -
-typedef   ^                            ^                             LOGICAL                  PtfmYF                   -          -         -         ""        -
 typedef   ^                            ^                             OutParmType              OutParam                 {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOuts                  -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NumOutAll                -          -         -         ""        -

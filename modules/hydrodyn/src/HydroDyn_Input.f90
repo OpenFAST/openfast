@@ -1131,97 +1131,97 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
 
 
-   !-------------------------------------------------------------------------------------------------
-   ! Data section for Floating platform force flags
-   !-------------------------------------------------------------------------------------------------
-
-      ! Header
-
-   CALL ReadCom( UnIn, FileName, 'Floating platform force flags header', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-
-       ! PtfmSgFChr - Platform horizontal surge translation force flag
-
-   CALL ReadVar ( UnIn, FileName, InitInp%PtfmSgFChr, 'PtfmSgFChr', 'Platform horizontal surge translation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-   CALL Conv2UC( InitInp%PtfmSgFChr )    ! Convert Line to upper case.
-
-
-      ! PtfmSwFChr - Platform horizontal sway translation force flag
-
-   CALL ReadVar ( UnIn, FileName, InitInp%PtfmSwFChr, 'PtfmSwFChr', 'Platform horizontal sway translation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-   CALL Conv2UC( InitInp%PtfmSwFChr )    ! Convert Line to upper case.
-
-
-       ! PtfmHvFChr - Platform vertical heave translation force flag
-
-   CALL ReadVar ( UnIn, FileName, InitInp%PtfmHvFChr, 'PtfmHvFChr', 'Platform vertical heave translation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-   CALL Conv2UC( InitInp%PtfmHvFChr )    ! Convert Line to upper case.
-
-
-        ! PtfmRFChr - Platform roll tilt rotation force flag
-
-   CALL ReadVar ( UnIn, FileName, InitInp%PtfmRFChr, 'PtfmRFChr', 'Platform roll tilt rotation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-   CALL Conv2UC( InitInp%PtfmRFChr )    ! Convert Line to upper case.
-
-
-        ! PtfmPFChr - Platform pitch tilt rotation force flag
-
-   CALL ReadVar ( UnIn, FileName, InitInp%PtfmPFChr, 'PtfmPFChr', 'Platform pitch tilt rotation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-   CALL Conv2UC( InitInp%PtfmPFChr )    ! Convert Line to upper case.
-
-
-        ! PtfmYFChr - Platform yaw rotation force flag
-
-   CALL ReadVar ( UnIn, FileName, InitInp%PtfmYFChr, 'PtfmYFChr', 'Platform yaw rotation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
-
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-
-   CALL Conv2UC( InitInp%PtfmYFChr )    ! Convert Line to upper case.
+!   !-------------------------------------------------------------------------------------------------
+!   ! Data section for Floating platform force flags
+!   !-------------------------------------------------------------------------------------------------
+!
+!      ! Header
+!
+!   CALL ReadCom( UnIn, FileName, 'Floating platform force flags header', ErrStat2, ErrMsg2, UnEchoLocal )
+!
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+!      IF (ErrStat >= AbortErrLev) THEN
+!         CALL CleanUp()
+!         RETURN
+!      END IF
+!
+!
+!       ! PtfmSgFChr - Platform horizontal surge translation force flag
+!
+!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmSgFChr, 'PtfmSgFChr', 'Platform horizontal surge translation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
+!
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+!      IF (ErrStat >= AbortErrLev) THEN
+!         CALL CleanUp()
+!         RETURN
+!      END IF
+!
+!   CALL Conv2UC( InitInp%PtfmSgFChr )    ! Convert Line to upper case.
+!
+!
+!      ! PtfmSwFChr - Platform horizontal sway translation force flag
+!
+!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmSwFChr, 'PtfmSwFChr', 'Platform horizontal sway translation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
+!
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+!      IF (ErrStat >= AbortErrLev) THEN
+!         CALL CleanUp()
+!         RETURN
+!      END IF
+!
+!   CALL Conv2UC( InitInp%PtfmSwFChr )    ! Convert Line to upper case.
+!
+!
+!       ! PtfmHvFChr - Platform vertical heave translation force flag
+!
+!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmHvFChr, 'PtfmHvFChr', 'Platform vertical heave translation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
+!
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+!      IF (ErrStat >= AbortErrLev) THEN
+!         CALL CleanUp()
+!         RETURN
+!      END IF
+!
+!   CALL Conv2UC( InitInp%PtfmHvFChr )    ! Convert Line to upper case.
+!
+!
+!        ! PtfmRFChr - Platform roll tilt rotation force flag
+!
+!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmRFChr, 'PtfmRFChr', 'Platform roll tilt rotation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
+!
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+!      IF (ErrStat >= AbortErrLev) THEN
+!         CALL CleanUp()
+!         RETURN
+!      END IF
+!
+!   CALL Conv2UC( InitInp%PtfmRFChr )    ! Convert Line to upper case.
+!
+!
+!        ! PtfmPFChr - Platform pitch tilt rotation force flag
+!
+!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmPFChr, 'PtfmPFChr', 'Platform pitch tilt rotation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
+!
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+!      IF (ErrStat >= AbortErrLev) THEN
+!         CALL CleanUp()
+!         RETURN
+!      END IF
+!
+!   CALL Conv2UC( InitInp%PtfmPFChr )    ! Convert Line to upper case.
+!
+!
+!        ! PtfmYFChr - Platform yaw rotation force flag
+!
+!   CALL ReadVar ( UnIn, FileName, InitInp%PtfmYFChr, 'PtfmYFChr', 'Platform yaw rotation force flag', ErrStat2, ErrMsg2, UnEchoLocal )
+!
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
+!      IF (ErrStat >= AbortErrLev) THEN
+!         CALL CleanUp()
+!         RETURN
+!      END IF
+!
+!   CALL Conv2UC( InitInp%PtfmYFChr )    ! Convert Line to upper case.
 
 
 
@@ -3198,76 +3198,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%WAMIT%Conv_Rdtn%RdtnDT = 0.0
 
    END IF
-
-   !-------------------------------------------------------------------------------------------------
-   ! Data section for Floating platform force flags
-   !-------------------------------------------------------------------------------------------------
-
-!FIXME: ADP -- the error handling in this section is broken.
-
-   ! If DEFAULT was requested, then the required value has already been set by the calling program
-   IF ( TRIM(InitInp%PtfmSgFChr) /= 'DEFAULT' )  THEN
-
-      READ (InitInp%PtfmSgFChr,*,IOSTAT=IOS)  InitInp%PtfmSgF
-         CALL CheckIOS ( IOS, "", 'PtfmSgF', NumType, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-   END IF
-
-   IF ( TRIM(InitInp%PtfmSwFChr) /= 'DEFAULT' )  THEN
-
-      READ (InitInp%PtfmSwFChr,*,IOSTAT=IOS)  InitInp%PtfmSwF
-         CALL CheckIOS ( IOS, "", 'PtfmSwF', NumType, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-   END IF
-
-   IF ( TRIM(InitInp%PtfmHvFChr) /= 'DEFAULT' )  THEN
-
-      READ (InitInp%PtfmHvFChr,*,IOSTAT=IOS)  InitInp%PtfmHvF
-         CALL CheckIOS ( IOS, "", 'PtfmHvF', NumType, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-   END IF
-
-   IF ( TRIM(InitInp%PtfmRFChr) /= 'DEFAULT' )  THEN
-
-      READ (InitInp%PtfmRFChr,*,IOSTAT=IOS)  InitInp%PtfmRF
-         CALL CheckIOS ( IOS, "", 'PtfmRF', NumType, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-   END IF
-
-   IF ( TRIM(InitInp%PtfmPFChr) /= 'DEFAULT' )  THEN
-
-      READ (InitInp%PtfmPFChr,*,IOSTAT=IOS)  InitInp%PtfmPF
-         CALL CheckIOS ( IOS, "", 'PtfmPF', NumType, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-   END IF
-
-   IF ( TRIM(InitInp%PtfmYFChr) /= 'DEFAULT' )  THEN
-
-      READ (InitInp%PtfmYFChr,*,IOSTAT=IOS)  InitInp%PtfmYF
-         CALL CheckIOS ( IOS, "", 'PtfmYF', NumType, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat >= AbortErrLev ) RETURN
-
-   END IF
-
-
-      ! Add checks that all platform DOF flags are true.  TODO:  Allow true or false once these have been implemented
-
-   IF ( ( .NOT. InitInp%PtfmSgF ) .OR.  ( .NOT. InitInp%PtfmSwF ) .OR. ( .NOT. InitInp%PtfmHvF ) .OR. ( .NOT. InitInp%PtfmRF ) .OR. ( .NOT. InitInp%PtfmPF ) .OR. ( .NOT. InitInp%PtfmYF ) )THEN
-!      CALL SetErrStat( ErrID_Fatal,'All platform DOF parameters must be set to TRUE.  Future versions of HydroDyn will support values of TRUE,  FALSE, or DEFAULT.',ErrStat,ErrMsg,RoutineName)
-      CALL SetErrStat( ErrID_Warn,' Only the second-order floating platform force calculations (WAMIT2 sub-module) allow for selectively dissabling force DOF parameters, the first order (WAMIT sub-module) does not and will calculate all dimensions.  Future versions of HydroDyn will support values of TRUE,  FALSE, or DEFAULT for both modules.',ErrStat,ErrMsg,RoutineName)
-   END IF
-
 
 
    !-------------------------------------------------------------------------------------------------
