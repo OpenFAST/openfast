@@ -83,7 +83,8 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    integer(IntKi)                               :: NumCoords
 #ifdef DBG_OUTS
    integer(IntKi)                               :: m
-   character(5)                                 ::chanPrefix
+   character(6)                                 ::chanPrefix
+   character(3)                                 :: TmpChar
 #endif   
       ! Initialize variables for this routine
 
@@ -109,7 +110,8 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
          
          m = (k-1)*p%NumBlNds*23 + (j-1)*23 
          
-         chanPrefix = "B"//trim(num2lstr(k))//"N"//trim(num2lstr(j))
+         WRITE (TmpChar,'(I3.3)') j
+         chanPrefix = "B"//trim(num2lstr(k))//"N"//TmpChar
          InitOut%WriteOutputHdr( m + 1 ) = trim(chanPrefix)//"Twst"
          InitOut%WriteOutputUnt( m + 1 ) = '  (deg)  '
          InitOut%WriteOutputHdr( m + 2 ) = trim(chanPrefix)//"Psi"
