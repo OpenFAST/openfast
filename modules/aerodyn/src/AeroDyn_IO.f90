@@ -2725,7 +2725,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
       
       WRITE (UnSu,"(15x,A)")  'Blade nodes selected for output:  Output node  Analysis node'
       WRITE (UnSu,"(15x,A)")  '                                  -----------  -------------'
-      DO I = 1,p%NBlOuts
+      DO I = 1,size(p%BlOutNd)
          WRITE (UnSu,OutPFmt)  I, p%BlOutNd(I)
       END DO  
    end if
