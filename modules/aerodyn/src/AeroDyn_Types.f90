@@ -136,6 +136,10 @@ IMPLICIT NONE
     CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: OutList      !< List of user-requested output channels [-]
     REAL(ReKi)  :: tau1_const      !< time constant for DBEMT [used only when WakeMod=2 and DBEMT_Mod=1] [s]
     INTEGER(IntKi)  :: DBEMT_Mod      !< Type of dynamic BEMT (DBEMT) model {1=constant tau1, 2=time-dependent tau1} [-]
+    INTEGER(IntKi)  :: BldNd_NumOuts      !< Number of requested output channels per blade node (AD_AllBldNdOuts) [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutList      !< List of user-requested output channels (AD_AllBldNdOuts) [-]
+    CHARACTER(1024)  :: BldNd_BlOutNd_Str      !< String to parse for the blade nodes to actually output (AD_AllBldNdOuts) [-]
+    INTEGER(IntKi)  :: BldNd_BladesOut      !< The blades to output (AD_AllBldNdOuts) [-]
   END TYPE AD_InputFile
 ! =======================
 ! =========  AD_ContinuousStateType  =======
@@ -214,6 +218,11 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(1:9)  :: BlOutNd      !< Blade nodes whose values will be output [-]
     INTEGER(IntKi)  :: NTwOuts      !< Number of tower node outputs [0 - 9] [-]
     INTEGER(IntKi) , DIMENSION(1:9)  :: TwOutNd      !< Tower nodes whose values will be output [-]
+    INTEGER(IntKi)  :: BldNd_NumOuts      !< Number of requested output channels per blade node (AD_AllBldNdOuts) [-]
+    INTEGER(IntKi)  :: BldNd_TotNumOuts      !< Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- AD_AllBldNdOuts) [-]
+    TYPE(OutParmType) , DIMENSION(:), ALLOCATABLE  :: BldNd_OutParam      !< Names and units (and other characteristics) of all requested output parameters [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: BldNd_BlOutNd      !< The blade nodes to actually output (AD_AllBldNdOuts) [-]
+    INTEGER(IntKi)  :: BldNd_BladesOut      !< The blades to output (AD_AllBldNdOuts) [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: du      !< vector that determines size of perturbation for u (inputs) [-]
     INTEGER(IntKi)  :: Jac_ny      !< number of outputs in jacobian matrix [-]
@@ -2512,6 +2521,21 @@ IF (ALLOCATED(SrcInputFileData%OutList)) THEN
 ENDIF
     DstInputFileData%tau1_const = SrcInputFileData%tau1_const
     DstInputFileData%DBEMT_Mod = SrcInputFileData%DBEMT_Mod
+    DstInputFileData%BldNd_NumOuts = SrcInputFileData%BldNd_NumOuts
+IF (ALLOCATED(SrcInputFileData%BldNd_OutList)) THEN
+  i1_l = LBOUND(SrcInputFileData%BldNd_OutList,1)
+  i1_u = UBOUND(SrcInputFileData%BldNd_OutList,1)
+  IF (.NOT. ALLOCATED(DstInputFileData%BldNd_OutList)) THEN 
+    ALLOCATE(DstInputFileData%BldNd_OutList(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInputFileData%BldNd_OutList.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInputFileData%BldNd_OutList = SrcInputFileData%BldNd_OutList
+ENDIF
+    DstInputFileData%BldNd_BlOutNd_Str = SrcInputFileData%BldNd_BlOutNd_Str
+    DstInputFileData%BldNd_BladesOut = SrcInputFileData%BldNd_BladesOut
  END SUBROUTINE AD_CopyInputFile
 
  SUBROUTINE AD_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -2543,6 +2567,9 @@ IF (ALLOCATED(InputFileData%TwrCd)) THEN
 ENDIF
 IF (ALLOCATED(InputFileData%OutList)) THEN
   DEALLOCATE(InputFileData%OutList)
+ENDIF
+IF (ALLOCATED(InputFileData%BldNd_OutList)) THEN
+  DEALLOCATE(InputFileData%BldNd_OutList)
 ENDIF
  END SUBROUTINE AD_DestroyInputFile
 
@@ -2672,6 +2699,14 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! tau1_const
       Int_BufSz  = Int_BufSz  + 1  ! DBEMT_Mod
+      Int_BufSz  = Int_BufSz  + 1  ! BldNd_NumOuts
+  Int_BufSz   = Int_BufSz   + 1     ! BldNd_OutList allocated yes/no
+  IF ( ALLOCATED(InData%BldNd_OutList) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BldNd_OutList upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%BldNd_OutList)*LEN(InData%BldNd_OutList)  ! BldNd_OutList
+  END IF
+      Int_BufSz  = Int_BufSz  + 1*LEN(InData%BldNd_BlOutNd_Str)  ! BldNd_BlOutNd_Str
+      Int_BufSz  = Int_BufSz  + 1  ! BldNd_BladesOut
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2906,6 +2941,31 @@ ENDIF
     ReKiBuf(Re_Xferred) = InData%tau1_const
     Re_Xferred = Re_Xferred + 1
     IntKiBuf(Int_Xferred) = InData%DBEMT_Mod
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%BldNd_NumOuts
+    Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%BldNd_OutList) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BldNd_OutList,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BldNd_OutList,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%BldNd_OutList,1), UBOUND(InData%BldNd_OutList,1)
+        DO I = 1, LEN(InData%BldNd_OutList)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%BldNd_OutList(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+    DO I = 1, LEN(InData%BldNd_BlOutNd_Str)
+      IntKiBuf(Int_Xferred) = ICHAR(InData%BldNd_BlOutNd_Str(I:I), IntKi)
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    IntKiBuf(Int_Xferred) = InData%BldNd_BladesOut
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_PackInputFile
 
@@ -3177,6 +3237,34 @@ ENDIF
     OutData%tau1_const = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
     OutData%DBEMT_Mod = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%BldNd_NumOuts = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BldNd_OutList not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BldNd_OutList)) DEALLOCATE(OutData%BldNd_OutList)
+    ALLOCATE(OutData%BldNd_OutList(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BldNd_OutList.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%BldNd_OutList,1), UBOUND(OutData%BldNd_OutList,1)
+        DO I = 1, LEN(OutData%BldNd_OutList)
+          OutData%BldNd_OutList(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred + 1
+        END DO ! I
+      END DO
+  END IF
+    DO I = 1, LEN(OutData%BldNd_BlOutNd_Str)
+      OutData%BldNd_BlOutNd_Str(I:I) = CHAR(IntKiBuf(Int_Xferred))
+      Int_Xferred = Int_Xferred + 1
+    END DO ! I
+    OutData%BldNd_BladesOut = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
  END SUBROUTINE AD_UnPackInputFile
 
@@ -5680,6 +5768,37 @@ ENDIF
     DstParamData%BlOutNd = SrcParamData%BlOutNd
     DstParamData%NTwOuts = SrcParamData%NTwOuts
     DstParamData%TwOutNd = SrcParamData%TwOutNd
+    DstParamData%BldNd_NumOuts = SrcParamData%BldNd_NumOuts
+    DstParamData%BldNd_TotNumOuts = SrcParamData%BldNd_TotNumOuts
+IF (ALLOCATED(SrcParamData%BldNd_OutParam)) THEN
+  i1_l = LBOUND(SrcParamData%BldNd_OutParam,1)
+  i1_u = UBOUND(SrcParamData%BldNd_OutParam,1)
+  IF (.NOT. ALLOCATED(DstParamData%BldNd_OutParam)) THEN 
+    ALLOCATE(DstParamData%BldNd_OutParam(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%BldNd_OutParam.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DO i1 = LBOUND(SrcParamData%BldNd_OutParam,1), UBOUND(SrcParamData%BldNd_OutParam,1)
+      CALL NWTC_Library_Copyoutparmtype( SrcParamData%BldNd_OutParam(i1), DstParamData%BldNd_OutParam(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
+    ENDDO
+ENDIF
+IF (ALLOCATED(SrcParamData%BldNd_BlOutNd)) THEN
+  i1_l = LBOUND(SrcParamData%BldNd_BlOutNd,1)
+  i1_u = UBOUND(SrcParamData%BldNd_BlOutNd,1)
+  IF (.NOT. ALLOCATED(DstParamData%BldNd_BlOutNd)) THEN 
+    ALLOCATE(DstParamData%BldNd_BlOutNd(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%BldNd_BlOutNd.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%BldNd_BlOutNd = SrcParamData%BldNd_BlOutNd
+ENDIF
+    DstParamData%BldNd_BladesOut = SrcParamData%BldNd_BladesOut
 IF (ALLOCATED(SrcParamData%Jac_u_indx)) THEN
   i1_l = LBOUND(SrcParamData%Jac_u_indx,1)
   i1_u = UBOUND(SrcParamData%Jac_u_indx,1)
@@ -5736,6 +5855,15 @@ DO i1 = LBOUND(ParamData%OutParam,1), UBOUND(ParamData%OutParam,1)
   CALL NWTC_Library_Destroyoutparmtype( ParamData%OutParam(i1), ErrStat, ErrMsg )
 ENDDO
   DEALLOCATE(ParamData%OutParam)
+ENDIF
+IF (ALLOCATED(ParamData%BldNd_OutParam)) THEN
+DO i1 = LBOUND(ParamData%BldNd_OutParam,1), UBOUND(ParamData%BldNd_OutParam,1)
+  CALL NWTC_Library_Destroyoutparmtype( ParamData%BldNd_OutParam(i1), ErrStat, ErrMsg )
+ENDDO
+  DEALLOCATE(ParamData%BldNd_OutParam)
+ENDIF
+IF (ALLOCATED(ParamData%BldNd_BlOutNd)) THEN
+  DEALLOCATE(ParamData%BldNd_BlOutNd)
 ENDIF
 IF (ALLOCATED(ParamData%Jac_u_indx)) THEN
   DEALLOCATE(ParamData%Jac_u_indx)
@@ -5877,6 +6005,37 @@ ENDIF
       Int_BufSz  = Int_BufSz  + SIZE(InData%BlOutNd)  ! BlOutNd
       Int_BufSz  = Int_BufSz  + 1  ! NTwOuts
       Int_BufSz  = Int_BufSz  + SIZE(InData%TwOutNd)  ! TwOutNd
+      Int_BufSz  = Int_BufSz  + 1  ! BldNd_NumOuts
+      Int_BufSz  = Int_BufSz  + 1  ! BldNd_TotNumOuts
+  Int_BufSz   = Int_BufSz   + 1     ! BldNd_OutParam allocated yes/no
+  IF ( ALLOCATED(InData%BldNd_OutParam) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BldNd_OutParam upper/lower bounds for each dimension
+    DO i1 = LBOUND(InData%BldNd_OutParam,1), UBOUND(InData%BldNd_OutParam,1)
+      Int_BufSz   = Int_BufSz + 3  ! BldNd_OutParam: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packoutparmtype( Re_Buf, Db_Buf, Int_Buf, InData%BldNd_OutParam(i1), ErrStat2, ErrMsg2, .TRUE. ) ! BldNd_OutParam 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! BldNd_OutParam
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! BldNd_OutParam
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! BldNd_OutParam
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
+    END DO
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! BldNd_BlOutNd allocated yes/no
+  IF ( ALLOCATED(InData%BldNd_BlOutNd) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! BldNd_BlOutNd upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%BldNd_BlOutNd)  ! BldNd_BlOutNd
+  END IF
+      Int_BufSz  = Int_BufSz  + 1  ! BldNd_BladesOut
   Int_BufSz   = Int_BufSz   + 1     ! Jac_u_indx allocated yes/no
   IF ( ALLOCATED(InData%Jac_u_indx) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Jac_u_indx upper/lower bounds for each dimension
@@ -6107,6 +6266,68 @@ ENDIF
       IntKiBuf(Int_Xferred) = InData%TwOutNd(i1)
       Int_Xferred = Int_Xferred + 1
     END DO
+    IntKiBuf(Int_Xferred) = InData%BldNd_NumOuts
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%BldNd_TotNumOuts
+    Int_Xferred = Int_Xferred + 1
+  IF ( .NOT. ALLOCATED(InData%BldNd_OutParam) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BldNd_OutParam,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BldNd_OutParam,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%BldNd_OutParam,1), UBOUND(InData%BldNd_OutParam,1)
+      CALL NWTC_Library_Packoutparmtype( Re_Buf, Db_Buf, Int_Buf, InData%BldNd_OutParam(i1), ErrStat2, ErrMsg2, OnlySize ) ! BldNd_OutParam 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+    END DO
+  END IF
+  IF ( .NOT. ALLOCATED(InData%BldNd_BlOutNd) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%BldNd_BlOutNd,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%BldNd_BlOutNd,1)
+    Int_Xferred = Int_Xferred + 2
+
+      DO i1 = LBOUND(InData%BldNd_BlOutNd,1), UBOUND(InData%BldNd_BlOutNd,1)
+        IntKiBuf(Int_Xferred) = InData%BldNd_BlOutNd(i1)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+    IntKiBuf(Int_Xferred) = InData%BldNd_BladesOut
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%Jac_u_indx) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -6418,6 +6639,86 @@ ENDIF
       OutData%TwOutNd(i1) = IntKiBuf(Int_Xferred)
       Int_Xferred = Int_Xferred + 1
     END DO
+    OutData%BldNd_NumOuts = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+    OutData%BldNd_TotNumOuts = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BldNd_OutParam not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BldNd_OutParam)) DEALLOCATE(OutData%BldNd_OutParam)
+    ALLOCATE(OutData%BldNd_OutParam(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BldNd_OutParam.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    DO i1 = LBOUND(OutData%BldNd_OutParam,1), UBOUND(OutData%BldNd_OutParam,1)
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL NWTC_Library_Unpackoutparmtype( Re_Buf, Db_Buf, Int_Buf, OutData%BldNd_OutParam(i1), ErrStat2, ErrMsg2 ) ! BldNd_OutParam 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+    END DO
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! BldNd_BlOutNd not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%BldNd_BlOutNd)) DEALLOCATE(OutData%BldNd_BlOutNd)
+    ALLOCATE(OutData%BldNd_BlOutNd(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%BldNd_BlOutNd.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+      DO i1 = LBOUND(OutData%BldNd_BlOutNd,1), UBOUND(OutData%BldNd_BlOutNd,1)
+        OutData%BldNd_BlOutNd(i1) = IntKiBuf(Int_Xferred)
+        Int_Xferred = Int_Xferred + 1
+      END DO
+  END IF
+    OutData%BldNd_BladesOut = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Jac_u_indx not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

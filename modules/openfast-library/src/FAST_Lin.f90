@@ -491,9 +491,11 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
    CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_OP' 
    
-   REAL(R8Ki), ALLOCATABLE                 :: dYdz(:,:), dZdz(:,:), dZdu(:,:)
    REAL(R8Ki), ALLOCATABLE                 :: dUdu(:,:), dUdy(:,:) ! variables for glue-code linearization
+#ifdef OLD_AD_LINEAR
+   REAL(R8Ki), ALLOCATABLE                 :: dYdz(:,:), dZdz(:,:), dZdu(:,:)
    INTEGER(IntKi), ALLOCATABLE             :: ipiv(:)
+#endif
    integer(intki)                          :: NumBl
    integer(intki)                          :: k
    CHARACTER(1024)                         :: LinRootName
@@ -724,13 +726,19 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
    !.....................
    if ( p_FAST%CompAero  == Module_AD ) then 
          ! get the jacobians
+#ifdef OLD_AD_LINEAR
       call AD_JacobianPInput( t_global, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), &
                                    AD%OtherSt(STATE_CURR), AD%y, AD%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_AD)%Instance(1)%D, dZdu=dZdu )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
+         
       call AD_JacobianPConstrState( t_global, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), &
                                    AD%OtherSt(STATE_CURR), AD%y, AD%m, ErrStat2, ErrMsg2, dYdz=dYdz, dZdz=dZdz )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+#else
+      call AD_JacobianPInput( t_global, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), &
+                                   AD%OtherSt(STATE_CURR), AD%y, AD%m, ErrStat2, ErrMsg2, dYdu=y_FAST%Lin%Modules(Module_AD)%Instance(1)%D )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+#endif
 
       ! get the operating point
       call AD_GetOP( t_global, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), &
@@ -755,6 +763,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
          
          if (p_FAST%LinOutJac) then
             ! Jacobians
+#ifdef OLD_AD_LINEAR
             ! dZdz:
             call WrPartialMatrix( dZdz, Un, p_FAST%OutFmt, 'dZdz' )
                                     
@@ -763,16 +772,16 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
             
             ! dYdz:
             call WrPartialMatrix( dYdz, Un, p_FAST%OutFmt, 'dYdz', UseRow=y_FAST%Lin%Modules(Module_AD)%Instance(1)%use_y )
-            
+#endif
             !dYdu:
             call WrPartialMatrix( y_FAST%Lin%Modules(Module_AD)%Instance(1)%D, Un, p_FAST%OutFmt, 'dYdu', &
                   UseRow=y_FAST%Lin%Modules(Module_AD)%Instance(1)%use_y, UseCol=y_FAST%Lin%Modules(Module_AD)%Instance(1)%use_u )
             
          end if
          
+#ifdef OLD_AD_LINEAR
       end if
       
-         
       call allocAry( ipiv, size(dZdz,1), 'ipiv', ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) then
@@ -794,18 +803,20 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
       !y_FAST%Lin%Modules(Module_AD)%D = y_FAST%Lin%Modules(Module_AD)%D - matmul(dYdz, dZdu )
       call LAPACK_GEMM( 'N', 'N', -1.0_R8Ki, dYdz, dZdu, 1.0_R8Ki, y_FAST%Lin%Modules(Module_AD)%Instance(1)%D, ErrStat2, ErrMsg2 )
       
-      
       if (p_FAST%LinOutMod) then
+#endif
             ! finish writing the file
          call WrLinFile_txt_End(Un, p_FAST, y_FAST%Lin%Modules(Module_AD)%Instance(1) )
       end if
       
+#ifdef OLD_AD_LINEAR
          ! AD doesn't need these any more, and we may need them for other modules
       if (allocated(dYdz)) deallocate(dYdz)
       if (allocated(dZdz)) deallocate(dZdz)
       if (allocated(dZdu)) deallocate(dZdu)
-      if (allocated(ipiv)) deallocate(ipiv)     
-      
+      if (allocated(ipiv)) deallocate(ipiv)
+#endif
+
    end if
    
    !.....................
@@ -964,16 +975,18 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
 
 contains
    subroutine cleanup()
+#ifdef OLD_AD_LINEAR
       if (allocated(dYdz)) deallocate(dYdz)
       if (allocated(dZdz)) deallocate(dZdz)
       if (allocated(dZdu)) deallocate(dZdu)
       if (allocated(ipiv)) deallocate(ipiv)
+#endif
       
       if (allocated(dUdu)) deallocate(dUdu)
       if (allocated(dUdy)) deallocate(dUdy)
       
       if (Un > 0) close(Un)
-
+      
    end subroutine cleanup
 END SUBROUTINE FAST_Linearize_OP   
 !----------------------------------------------------------------------------------------------------------------------------------

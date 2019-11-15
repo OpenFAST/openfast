@@ -234,9 +234,7 @@ subroutine DBEMT_UpdateStates( i, j, t, u,  p, x, OtherState, m, errStat, errMsg
 
    ! local variables
    real(ReKi)                                   :: spanRatio       ! local version of r / R
-   real(ReKi)                                   :: temp, tau2 , A, B, C0, k_tau, C0_2 ! tau1_plus1, C_tau1, C, K1
-   real(ReKi)                                   :: Un_disk
-   real(ReKi)                                   :: AxInd_disk
+   real(ReKi)                                   :: tau2 , A, B, C0, k_tau, C0_2 ! tau1_plus1, C_tau1, C, K1
    integer(IntKi)                               :: indx
    
    character(*), parameter                      :: RoutineName = 'DBEMT_UpdateStates'

@@ -29,7 +29,6 @@ module UnsteadyAero
    implicit none 
 
 private
-   type(ProgDesc), parameter  :: UA_Ver = ProgDesc( 'UnsteadyAero', '', '' )
 
    public :: UA_Init
    public :: UA_UpdateDiscOtherState
@@ -916,9 +915,6 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
       ! Initialize the NWTC Subroutine Library
    call NWTC_Init( EchoLibVer=.FALSE. )
 
-      ! Display the module information
-   call DispNVD( UA_Ver )
-   
    call UA_ValidateInput(InitInp, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return
