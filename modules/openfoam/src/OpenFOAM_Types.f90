@@ -369,14 +369,14 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumSC2Ctrl
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumCtrl2SC
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumActForcePtsBlade
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumActForcePtsTower
-      Int_Xferred   = Int_Xferred   + 1
+    IntKiBuf(Int_Xferred) = InData%NumSC2Ctrl
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumCtrl2SC
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumActForcePtsBlade
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumActForcePtsTower
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ASSOCIATED(InData%StructBldRNodes) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -387,8 +387,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%StructBldRNodes,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%StructBldRNodes)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%StructBldRNodes))-1 ) = PACK(InData%StructBldRNodes,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%StructBldRNodes)
+      DO i1 = LBOUND(InData%StructBldRNodes,1), UBOUND(InData%StructBldRNodes,1)
+        ReKiBuf(Re_Xferred) = InData%StructBldRNodes(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%StructTwrHNodes) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -400,15 +402,17 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%StructTwrHNodes,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%StructTwrHNodes)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%StructTwrHNodes))-1 ) = PACK(InData%StructTwrHNodes,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%StructTwrHNodes)
+      DO i1 = LBOUND(InData%StructTwrHNodes,1), UBOUND(InData%StructTwrHNodes,1)
+        ReKiBuf(Re_Xferred) = InData%StructTwrHNodes(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%BladeLength
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%TowerHeight
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%TowerBaseHeight
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%BladeLength
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%TowerHeight
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%TowerBaseHeight
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE OpFM_PackInitInput
 
  SUBROUTINE OpFM_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -424,12 +428,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -444,17 +442,17 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%NumSC2Ctrl = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NumSC2Ctrl = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NumSC2Ctrl = OutData%NumSC2Ctrl
-      OutData%NumCtrl2SC = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NumCtrl2SC = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NumCtrl2SC = OutData%NumCtrl2SC
-      OutData%NumActForcePtsBlade = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NumActForcePtsBlade = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NumActForcePtsBlade = OutData%NumActForcePtsBlade
-      OutData%NumActForcePtsTower = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NumActForcePtsTower = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NumActForcePtsTower = OutData%NumActForcePtsTower
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! StructBldRNodes not allocated
     Int_Xferred = Int_Xferred + 1
@@ -472,15 +470,10 @@ ENDIF
     OutData%c_obj%StructBldRNodes_Len = SIZE(OutData%StructBldRNodes)
     IF (OutData%c_obj%StructBldRNodes_Len > 0) &
        OutData%c_obj%StructBldRNodes = C_LOC( OutData%StructBldRNodes(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%StructBldRNodes)>0) OutData%StructBldRNodes = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%StructBldRNodes))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%StructBldRNodes)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%StructBldRNodes,1), UBOUND(OutData%StructBldRNodes,1)
+        OutData%StructBldRNodes(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! StructTwrHNodes not allocated
     Int_Xferred = Int_Xferred + 1
@@ -498,56 +491,111 @@ ENDIF
     OutData%c_obj%StructTwrHNodes_Len = SIZE(OutData%StructTwrHNodes)
     IF (OutData%c_obj%StructTwrHNodes_Len > 0) &
        OutData%c_obj%StructTwrHNodes = C_LOC( OutData%StructTwrHNodes(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%StructTwrHNodes)>0) OutData%StructTwrHNodes = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%StructTwrHNodes))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%StructTwrHNodes)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%StructTwrHNodes,1), UBOUND(OutData%StructTwrHNodes,1)
+        OutData%StructTwrHNodes(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
-      OutData%BladeLength = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%BladeLength = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
       OutData%C_obj%BladeLength = OutData%BladeLength
-      OutData%TowerHeight = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%TowerHeight = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
       OutData%C_obj%TowerHeight = OutData%TowerHeight
-      OutData%TowerBaseHeight = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%TowerBaseHeight = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
       OutData%C_obj%TowerBaseHeight = OutData%TowerBaseHeight
  END SUBROUTINE OpFM_UnPackInitInput
 
- SUBROUTINE OpFM_C2Fary_CopyInitInput( InitInputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_C2Fary_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers )
     TYPE(OpFM_InitInputType), INTENT(INOUT) :: InitInputData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
     InitInputData%NumSC2Ctrl = InitInputData%C_obj%NumSC2Ctrl
     InitInputData%NumCtrl2SC = InitInputData%C_obj%NumCtrl2SC
     InitInputData%NumActForcePtsBlade = InitInputData%C_obj%NumActForcePtsBlade
     InitInputData%NumActForcePtsTower = InitInputData%C_obj%NumActForcePtsTower
 
     ! -- StructBldRNodes InitInput Data fields
-    IF ( .NOT. C_ASSOCIATED( InitInputData%C_obj%StructBldRNodes ) ) THEN
-       NULLIFY( InitInputData%StructBldRNodes )
-    ELSE
-       CALL C_F_POINTER(InitInputData%C_obj%StructBldRNodes, InitInputData%StructBldRNodes, (/InitInputData%C_obj%StructBldRNodes_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InitInputData%C_obj%StructBldRNodes ) ) THEN
+          NULLIFY( InitInputData%StructBldRNodes )
+       ELSE
+          CALL C_F_POINTER(InitInputData%C_obj%StructBldRNodes, InitInputData%StructBldRNodes, (/InitInputData%C_obj%StructBldRNodes_Len/))
+       END IF
     END IF
 
     ! -- StructTwrHNodes InitInput Data fields
-    IF ( .NOT. C_ASSOCIATED( InitInputData%C_obj%StructTwrHNodes ) ) THEN
-       NULLIFY( InitInputData%StructTwrHNodes )
-    ELSE
-       CALL C_F_POINTER(InitInputData%C_obj%StructTwrHNodes, InitInputData%StructTwrHNodes, (/InitInputData%C_obj%StructTwrHNodes_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InitInputData%C_obj%StructTwrHNodes ) ) THEN
+          NULLIFY( InitInputData%StructTwrHNodes )
+       ELSE
+          CALL C_F_POINTER(InitInputData%C_obj%StructTwrHNodes, InitInputData%StructTwrHNodes, (/InitInputData%C_obj%StructTwrHNodes_Len/))
+       END IF
     END IF
     InitInputData%BladeLength = InitInputData%C_obj%BladeLength
     InitInputData%TowerHeight = InitInputData%C_obj%TowerHeight
     InitInputData%TowerBaseHeight = InitInputData%C_obj%TowerBaseHeight
  END SUBROUTINE OpFM_C2Fary_CopyInitInput
+
+ SUBROUTINE OpFM_F2C_CopyInitInput( InitInputData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(OpFM_InitInputType), INTENT(INOUT) :: InitInputData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+    InitInputData%C_obj%NumSC2Ctrl = InitInputData%NumSC2Ctrl
+    InitInputData%C_obj%NumCtrl2SC = InitInputData%NumCtrl2SC
+    InitInputData%C_obj%NumActForcePtsBlade = InitInputData%NumActForcePtsBlade
+    InitInputData%C_obj%NumActForcePtsTower = InitInputData%NumActForcePtsTower
+
+    ! -- StructBldRNodes InitInput Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InitInputData%StructBldRNodes)) THEN 
+          InitInputData%c_obj%StructBldRNodes_Len = 0
+          InitInputData%c_obj%StructBldRNodes = C_NULL_PTR
+       ELSE
+          InitInputData%c_obj%StructBldRNodes_Len = SIZE(InitInputData%StructBldRNodes)
+          IF (InitInputData%c_obj%StructBldRNodes_Len > 0) &
+             InitInputData%c_obj%StructBldRNodes = C_LOC( InitInputData%StructBldRNodes( LBOUND(InitInputData%StructBldRNodes,1) ) ) 
+       END IF
+    END IF
+
+    ! -- StructTwrHNodes InitInput Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InitInputData%StructTwrHNodes)) THEN 
+          InitInputData%c_obj%StructTwrHNodes_Len = 0
+          InitInputData%c_obj%StructTwrHNodes = C_NULL_PTR
+       ELSE
+          InitInputData%c_obj%StructTwrHNodes_Len = SIZE(InitInputData%StructTwrHNodes)
+          IF (InitInputData%c_obj%StructTwrHNodes_Len > 0) &
+             InitInputData%c_obj%StructTwrHNodes = C_LOC( InitInputData%StructTwrHNodes( LBOUND(InitInputData%StructTwrHNodes,1) ) ) 
+       END IF
+    END IF
+    InitInputData%C_obj%BladeLength = InitInputData%BladeLength
+    InitInputData%C_obj%TowerHeight = InitInputData%TowerHeight
+    InitInputData%C_obj%TowerBaseHeight = InitInputData%TowerBaseHeight
+ END SUBROUTINE OpFM_F2C_CopyInitInput
 
  SUBROUTINE OpFM_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(OpFM_InitOutputType), INTENT(IN) :: SrcInitOutputData
@@ -713,12 +761,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputHdr,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%WriteOutputHdr,1), UBOUND(InData%WriteOutputHdr,1)
+      DO i1 = LBOUND(InData%WriteOutputHdr,1), UBOUND(InData%WriteOutputHdr,1)
         DO I = 1, LEN(InData%WriteOutputHdr)
           IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputHdr(i1)(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
+          Int_Xferred = Int_Xferred + 1
         END DO ! I
-    END DO !i1
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%WriteOutputUnt) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -730,12 +778,12 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutputUnt,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%WriteOutputUnt,1), UBOUND(InData%WriteOutputUnt,1)
+      DO i1 = LBOUND(InData%WriteOutputUnt,1), UBOUND(InData%WriteOutputUnt,1)
         DO I = 1, LEN(InData%WriteOutputUnt)
           IntKiBuf(Int_Xferred) = ICHAR(InData%WriteOutputUnt(i1)(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
+          Int_Xferred = Int_Xferred + 1
         END DO ! I
-    END DO !i1
+      END DO
   END IF
       CALL NWTC_Library_Packprogdesc( Re_Buf, Db_Buf, Int_Buf, InData%Ver, ErrStat2, ErrMsg2, OnlySize ) ! Ver 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -780,12 +828,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -813,19 +855,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputHdr.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-    DO i1 = LBOUND(OutData%WriteOutputHdr,1), UBOUND(OutData%WriteOutputHdr,1)
+      DO i1 = LBOUND(OutData%WriteOutputHdr,1), UBOUND(OutData%WriteOutputHdr,1)
         DO I = 1, LEN(OutData%WriteOutputHdr)
           OutData%WriteOutputHdr(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-          Int_Xferred = Int_Xferred   + 1
+          Int_Xferred = Int_Xferred + 1
         END DO ! I
-    END DO !i1
-    DEALLOCATE(mask1)
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutputUnt not allocated
     Int_Xferred = Int_Xferred + 1
@@ -840,19 +875,12 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutputUnt.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-    DO i1 = LBOUND(OutData%WriteOutputUnt,1), UBOUND(OutData%WriteOutputUnt,1)
+      DO i1 = LBOUND(OutData%WriteOutputUnt,1), UBOUND(OutData%WriteOutputUnt,1)
         DO I = 1, LEN(OutData%WriteOutputUnt)
           OutData%WriteOutputUnt(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
-          Int_Xferred = Int_Xferred   + 1
+          Int_Xferred = Int_Xferred + 1
         END DO ! I
-    END DO !i1
-    DEALLOCATE(mask1)
+      END DO
   END IF
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
@@ -896,14 +924,39 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE OpFM_UnPackInitOutput
 
- SUBROUTINE OpFM_C2Fary_CopyInitOutput( InitOutputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_C2Fary_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers )
     TYPE(OpFM_InitOutputType), INTENT(INOUT) :: InitOutputData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
  END SUBROUTINE OpFM_C2Fary_CopyInitOutput
+
+ SUBROUTINE OpFM_F2C_CopyInitOutput( InitOutputData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(OpFM_InitOutputType), INTENT(INOUT) :: InitOutputData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+ END SUBROUTINE OpFM_F2C_CopyInitOutput
 
  SUBROUTINE OpFM_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
    TYPE(OpFM_MiscVarType), INTENT(INOUT) :: SrcMiscData
@@ -1701,12 +1754,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -2171,14 +2218,39 @@ ENDIF
   END IF
  END SUBROUTINE OpFM_UnPackMisc
 
- SUBROUTINE OpFM_C2Fary_CopyMisc( MiscData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_C2Fary_CopyMisc( MiscData, ErrStat, ErrMsg, SkipPointers )
     TYPE(OpFM_MiscVarType), INTENT(INOUT) :: MiscData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
  END SUBROUTINE OpFM_C2Fary_CopyMisc
+
+ SUBROUTINE OpFM_F2C_CopyMisc( MiscData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(OpFM_MiscVarType), INTENT(INOUT) :: MiscData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+ END SUBROUTINE OpFM_F2C_CopyMisc
 
  SUBROUTINE OpFM_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
    TYPE(OpFM_ParameterType), INTENT(IN) :: SrcParamData
@@ -2354,20 +2426,20 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%AirDens
-      Re_Xferred   = Re_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumBl
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NMappings
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NnodesVel
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NnodesForce
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NnodesForceBlade
-      Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NnodesForceTower
-      Int_Xferred   = Int_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%AirDens
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NumBl
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NMappings
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NnodesVel
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NnodesForce
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NnodesForceBlade
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf(Int_Xferred) = InData%NnodesForceTower
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ASSOCIATED(InData%forceBldRnodes) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2378,8 +2450,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%forceBldRnodes,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%forceBldRnodes)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%forceBldRnodes))-1 ) = PACK(InData%forceBldRnodes,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%forceBldRnodes)
+      DO i1 = LBOUND(InData%forceBldRnodes,1), UBOUND(InData%forceBldRnodes,1)
+        ReKiBuf(Re_Xferred) = InData%forceBldRnodes(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%forceTwrHnodes) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2391,15 +2465,17 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%forceTwrHnodes,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%forceTwrHnodes)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%forceTwrHnodes))-1 ) = PACK(InData%forceTwrHnodes,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%forceTwrHnodes)
+      DO i1 = LBOUND(InData%forceTwrHnodes,1), UBOUND(InData%forceTwrHnodes,1)
+        ReKiBuf(Re_Xferred) = InData%forceTwrHnodes(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%BladeLength
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%TowerHeight
-      Re_Xferred   = Re_Xferred   + 1
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%TowerBaseHeight
-      Re_Xferred   = Re_Xferred   + 1
+    ReKiBuf(Re_Xferred) = InData%BladeLength
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%TowerHeight
+    Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%TowerBaseHeight
+    Re_Xferred = Re_Xferred + 1
  END SUBROUTINE OpFM_PackParam
 
  SUBROUTINE OpFM_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2415,12 +2491,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -2435,26 +2505,26 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%AirDens = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%AirDens = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
       OutData%C_obj%AirDens = OutData%AirDens
-      OutData%NumBl = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NumBl = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NumBl = OutData%NumBl
-      OutData%NMappings = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NMappings = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NMappings = OutData%NMappings
-      OutData%NnodesVel = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NnodesVel = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NnodesVel = OutData%NnodesVel
-      OutData%NnodesForce = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NnodesForce = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NnodesForce = OutData%NnodesForce
-      OutData%NnodesForceBlade = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NnodesForceBlade = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NnodesForceBlade = OutData%NnodesForceBlade
-      OutData%NnodesForceTower = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+    OutData%NnodesForceTower = IntKiBuf(Int_Xferred)
+    Int_Xferred = Int_Xferred + 1
       OutData%C_obj%NnodesForceTower = OutData%NnodesForceTower
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! forceBldRnodes not allocated
     Int_Xferred = Int_Xferred + 1
@@ -2472,15 +2542,10 @@ ENDIF
     OutData%c_obj%forceBldRnodes_Len = SIZE(OutData%forceBldRnodes)
     IF (OutData%c_obj%forceBldRnodes_Len > 0) &
        OutData%c_obj%forceBldRnodes = C_LOC( OutData%forceBldRnodes(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%forceBldRnodes)>0) OutData%forceBldRnodes = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%forceBldRnodes))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%forceBldRnodes)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%forceBldRnodes,1), UBOUND(OutData%forceBldRnodes,1)
+        OutData%forceBldRnodes(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! forceTwrHnodes not allocated
     Int_Xferred = Int_Xferred + 1
@@ -2498,34 +2563,37 @@ ENDIF
     OutData%c_obj%forceTwrHnodes_Len = SIZE(OutData%forceTwrHnodes)
     IF (OutData%c_obj%forceTwrHnodes_Len > 0) &
        OutData%c_obj%forceTwrHnodes = C_LOC( OutData%forceTwrHnodes(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%forceTwrHnodes)>0) OutData%forceTwrHnodes = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%forceTwrHnodes))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%forceTwrHnodes)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%forceTwrHnodes,1), UBOUND(OutData%forceTwrHnodes,1)
+        OutData%forceTwrHnodes(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
-      OutData%BladeLength = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%BladeLength = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
       OutData%C_obj%BladeLength = OutData%BladeLength
-      OutData%TowerHeight = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%TowerHeight = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
       OutData%C_obj%TowerHeight = OutData%TowerHeight
-      OutData%TowerBaseHeight = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
+    OutData%TowerBaseHeight = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
       OutData%C_obj%TowerBaseHeight = OutData%TowerBaseHeight
  END SUBROUTINE OpFM_UnPackParam
 
- SUBROUTINE OpFM_C2Fary_CopyParam( ParamData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_C2Fary_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers )
     TYPE(OpFM_ParameterType), INTENT(INOUT) :: ParamData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
     ParamData%AirDens = ParamData%C_obj%AirDens
     ParamData%NumBl = ParamData%C_obj%NumBl
     ParamData%NMappings = ParamData%C_obj%NMappings
@@ -2535,22 +2603,77 @@ ENDIF
     ParamData%NnodesForceTower = ParamData%C_obj%NnodesForceTower
 
     ! -- forceBldRnodes Param Data fields
-    IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%forceBldRnodes ) ) THEN
-       NULLIFY( ParamData%forceBldRnodes )
-    ELSE
-       CALL C_F_POINTER(ParamData%C_obj%forceBldRnodes, ParamData%forceBldRnodes, (/ParamData%C_obj%forceBldRnodes_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%forceBldRnodes ) ) THEN
+          NULLIFY( ParamData%forceBldRnodes )
+       ELSE
+          CALL C_F_POINTER(ParamData%C_obj%forceBldRnodes, ParamData%forceBldRnodes, (/ParamData%C_obj%forceBldRnodes_Len/))
+       END IF
     END IF
 
     ! -- forceTwrHnodes Param Data fields
-    IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%forceTwrHnodes ) ) THEN
-       NULLIFY( ParamData%forceTwrHnodes )
-    ELSE
-       CALL C_F_POINTER(ParamData%C_obj%forceTwrHnodes, ParamData%forceTwrHnodes, (/ParamData%C_obj%forceTwrHnodes_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( ParamData%C_obj%forceTwrHnodes ) ) THEN
+          NULLIFY( ParamData%forceTwrHnodes )
+       ELSE
+          CALL C_F_POINTER(ParamData%C_obj%forceTwrHnodes, ParamData%forceTwrHnodes, (/ParamData%C_obj%forceTwrHnodes_Len/))
+       END IF
     END IF
     ParamData%BladeLength = ParamData%C_obj%BladeLength
     ParamData%TowerHeight = ParamData%C_obj%TowerHeight
     ParamData%TowerBaseHeight = ParamData%C_obj%TowerBaseHeight
  END SUBROUTINE OpFM_C2Fary_CopyParam
+
+ SUBROUTINE OpFM_F2C_CopyParam( ParamData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(OpFM_ParameterType), INTENT(INOUT) :: ParamData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+    ParamData%C_obj%AirDens = ParamData%AirDens
+    ParamData%C_obj%NumBl = ParamData%NumBl
+    ParamData%C_obj%NMappings = ParamData%NMappings
+    ParamData%C_obj%NnodesVel = ParamData%NnodesVel
+    ParamData%C_obj%NnodesForce = ParamData%NnodesForce
+    ParamData%C_obj%NnodesForceBlade = ParamData%NnodesForceBlade
+    ParamData%C_obj%NnodesForceTower = ParamData%NnodesForceTower
+
+    ! -- forceBldRnodes Param Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(ParamData%forceBldRnodes)) THEN 
+          ParamData%c_obj%forceBldRnodes_Len = 0
+          ParamData%c_obj%forceBldRnodes = C_NULL_PTR
+       ELSE
+          ParamData%c_obj%forceBldRnodes_Len = SIZE(ParamData%forceBldRnodes)
+          IF (ParamData%c_obj%forceBldRnodes_Len > 0) &
+             ParamData%c_obj%forceBldRnodes = C_LOC( ParamData%forceBldRnodes( LBOUND(ParamData%forceBldRnodes,1) ) ) 
+       END IF
+    END IF
+
+    ! -- forceTwrHnodes Param Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(ParamData%forceTwrHnodes)) THEN 
+          ParamData%c_obj%forceTwrHnodes_Len = 0
+          ParamData%c_obj%forceTwrHnodes = C_NULL_PTR
+       ELSE
+          ParamData%c_obj%forceTwrHnodes_Len = SIZE(ParamData%forceTwrHnodes)
+          IF (ParamData%c_obj%forceTwrHnodes_Len > 0) &
+             ParamData%c_obj%forceTwrHnodes = C_LOC( ParamData%forceTwrHnodes( LBOUND(ParamData%forceTwrHnodes,1) ) ) 
+       END IF
+    END IF
+    ParamData%C_obj%BladeLength = ParamData%BladeLength
+    ParamData%C_obj%TowerHeight = ParamData%TowerHeight
+    ParamData%C_obj%TowerBaseHeight = ParamData%TowerBaseHeight
+ END SUBROUTINE OpFM_F2C_CopyParam
 
  SUBROUTINE OpFM_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(OpFM_InputType), INTENT(IN) :: SrcInputData
@@ -3044,8 +3167,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%pxVel,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%pxVel)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%pxVel))-1 ) = PACK(InData%pxVel,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%pxVel)
+      DO i1 = LBOUND(InData%pxVel,1), UBOUND(InData%pxVel,1)
+        ReKiBuf(Re_Xferred) = InData%pxVel(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%pyVel) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3057,8 +3182,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%pyVel,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%pyVel)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%pyVel))-1 ) = PACK(InData%pyVel,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%pyVel)
+      DO i1 = LBOUND(InData%pyVel,1), UBOUND(InData%pyVel,1)
+        ReKiBuf(Re_Xferred) = InData%pyVel(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%pzVel) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3070,8 +3197,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%pzVel,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%pzVel)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%pzVel))-1 ) = PACK(InData%pzVel,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%pzVel)
+      DO i1 = LBOUND(InData%pzVel,1), UBOUND(InData%pzVel,1)
+        ReKiBuf(Re_Xferred) = InData%pzVel(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%pxForce) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3083,8 +3212,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%pxForce,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%pxForce)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%pxForce))-1 ) = PACK(InData%pxForce,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%pxForce)
+      DO i1 = LBOUND(InData%pxForce,1), UBOUND(InData%pxForce,1)
+        ReKiBuf(Re_Xferred) = InData%pxForce(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%pyForce) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3096,8 +3227,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%pyForce,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%pyForce)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%pyForce))-1 ) = PACK(InData%pyForce,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%pyForce)
+      DO i1 = LBOUND(InData%pyForce,1), UBOUND(InData%pyForce,1)
+        ReKiBuf(Re_Xferred) = InData%pyForce(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%pzForce) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3109,8 +3242,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%pzForce,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%pzForce)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%pzForce))-1 ) = PACK(InData%pzForce,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%pzForce)
+      DO i1 = LBOUND(InData%pzForce,1), UBOUND(InData%pzForce,1)
+        ReKiBuf(Re_Xferred) = InData%pzForce(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%pOrientation) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3122,8 +3257,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%pOrientation,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%pOrientation)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%pOrientation))-1 ) = PACK(InData%pOrientation,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%pOrientation)
+      DO i1 = LBOUND(InData%pOrientation,1), UBOUND(InData%pOrientation,1)
+        ReKiBuf(Re_Xferred) = InData%pOrientation(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%fx) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3135,8 +3272,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fx,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%fx)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%fx))-1 ) = PACK(InData%fx,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%fx)
+      DO i1 = LBOUND(InData%fx,1), UBOUND(InData%fx,1)
+        ReKiBuf(Re_Xferred) = InData%fx(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%fy) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3148,8 +3287,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fy,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%fy)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%fy))-1 ) = PACK(InData%fy,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%fy)
+      DO i1 = LBOUND(InData%fy,1), UBOUND(InData%fy,1)
+        ReKiBuf(Re_Xferred) = InData%fy(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%fz) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3161,8 +3302,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fz,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%fz)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%fz))-1 ) = PACK(InData%fz,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%fz)
+      DO i1 = LBOUND(InData%fz,1), UBOUND(InData%fz,1)
+        ReKiBuf(Re_Xferred) = InData%fz(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%momentx) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3174,8 +3317,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%momentx,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%momentx)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%momentx))-1 ) = PACK(InData%momentx,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%momentx)
+      DO i1 = LBOUND(InData%momentx,1), UBOUND(InData%momentx,1)
+        ReKiBuf(Re_Xferred) = InData%momentx(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%momenty) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3187,8 +3332,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%momenty,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%momenty)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%momenty))-1 ) = PACK(InData%momenty,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%momenty)
+      DO i1 = LBOUND(InData%momenty,1), UBOUND(InData%momenty,1)
+        ReKiBuf(Re_Xferred) = InData%momenty(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%momentz) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3200,8 +3347,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%momentz,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%momentz)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%momentz))-1 ) = PACK(InData%momentz,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%momentz)
+      DO i1 = LBOUND(InData%momentz,1), UBOUND(InData%momentz,1)
+        ReKiBuf(Re_Xferred) = InData%momentz(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%forceNodesChord) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3213,8 +3362,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%forceNodesChord,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%forceNodesChord)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%forceNodesChord))-1 ) = PACK(InData%forceNodesChord,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%forceNodesChord)
+      DO i1 = LBOUND(InData%forceNodesChord,1), UBOUND(InData%forceNodesChord,1)
+        ReKiBuf(Re_Xferred) = InData%forceNodesChord(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%SuperController) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3226,8 +3377,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SuperController,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%SuperController)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SuperController))-1 ) = PACK(InData%SuperController,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%SuperController)
+      DO i1 = LBOUND(InData%SuperController,1), UBOUND(InData%SuperController,1)
+        ReKiBuf(Re_Xferred) = InData%SuperController(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE OpFM_PackInput
 
@@ -3244,12 +3397,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -3280,15 +3427,10 @@ ENDIF
     OutData%c_obj%pxVel_Len = SIZE(OutData%pxVel)
     IF (OutData%c_obj%pxVel_Len > 0) &
        OutData%c_obj%pxVel = C_LOC( OutData%pxVel(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%pxVel)>0) OutData%pxVel = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%pxVel))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%pxVel)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%pxVel,1), UBOUND(OutData%pxVel,1)
+        OutData%pxVel(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! pyVel not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3306,15 +3448,10 @@ ENDIF
     OutData%c_obj%pyVel_Len = SIZE(OutData%pyVel)
     IF (OutData%c_obj%pyVel_Len > 0) &
        OutData%c_obj%pyVel = C_LOC( OutData%pyVel(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%pyVel)>0) OutData%pyVel = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%pyVel))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%pyVel)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%pyVel,1), UBOUND(OutData%pyVel,1)
+        OutData%pyVel(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! pzVel not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3332,15 +3469,10 @@ ENDIF
     OutData%c_obj%pzVel_Len = SIZE(OutData%pzVel)
     IF (OutData%c_obj%pzVel_Len > 0) &
        OutData%c_obj%pzVel = C_LOC( OutData%pzVel(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%pzVel)>0) OutData%pzVel = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%pzVel))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%pzVel)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%pzVel,1), UBOUND(OutData%pzVel,1)
+        OutData%pzVel(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! pxForce not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3358,15 +3490,10 @@ ENDIF
     OutData%c_obj%pxForce_Len = SIZE(OutData%pxForce)
     IF (OutData%c_obj%pxForce_Len > 0) &
        OutData%c_obj%pxForce = C_LOC( OutData%pxForce(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%pxForce)>0) OutData%pxForce = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%pxForce))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%pxForce)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%pxForce,1), UBOUND(OutData%pxForce,1)
+        OutData%pxForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! pyForce not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3384,15 +3511,10 @@ ENDIF
     OutData%c_obj%pyForce_Len = SIZE(OutData%pyForce)
     IF (OutData%c_obj%pyForce_Len > 0) &
        OutData%c_obj%pyForce = C_LOC( OutData%pyForce(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%pyForce)>0) OutData%pyForce = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%pyForce))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%pyForce)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%pyForce,1), UBOUND(OutData%pyForce,1)
+        OutData%pyForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! pzForce not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3410,15 +3532,10 @@ ENDIF
     OutData%c_obj%pzForce_Len = SIZE(OutData%pzForce)
     IF (OutData%c_obj%pzForce_Len > 0) &
        OutData%c_obj%pzForce = C_LOC( OutData%pzForce(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%pzForce)>0) OutData%pzForce = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%pzForce))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%pzForce)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%pzForce,1), UBOUND(OutData%pzForce,1)
+        OutData%pzForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! pOrientation not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3436,15 +3553,10 @@ ENDIF
     OutData%c_obj%pOrientation_Len = SIZE(OutData%pOrientation)
     IF (OutData%c_obj%pOrientation_Len > 0) &
        OutData%c_obj%pOrientation = C_LOC( OutData%pOrientation(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%pOrientation)>0) OutData%pOrientation = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%pOrientation))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%pOrientation)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%pOrientation,1), UBOUND(OutData%pOrientation,1)
+        OutData%pOrientation(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! fx not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3462,15 +3574,10 @@ ENDIF
     OutData%c_obj%fx_Len = SIZE(OutData%fx)
     IF (OutData%c_obj%fx_Len > 0) &
        OutData%c_obj%fx = C_LOC( OutData%fx(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%fx)>0) OutData%fx = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%fx))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%fx)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%fx,1), UBOUND(OutData%fx,1)
+        OutData%fx(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! fy not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3488,15 +3595,10 @@ ENDIF
     OutData%c_obj%fy_Len = SIZE(OutData%fy)
     IF (OutData%c_obj%fy_Len > 0) &
        OutData%c_obj%fy = C_LOC( OutData%fy(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%fy)>0) OutData%fy = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%fy))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%fy)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%fy,1), UBOUND(OutData%fy,1)
+        OutData%fy(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! fz not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3514,15 +3616,10 @@ ENDIF
     OutData%c_obj%fz_Len = SIZE(OutData%fz)
     IF (OutData%c_obj%fz_Len > 0) &
        OutData%c_obj%fz = C_LOC( OutData%fz(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%fz)>0) OutData%fz = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%fz))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%fz)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%fz,1), UBOUND(OutData%fz,1)
+        OutData%fz(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! momentx not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3540,15 +3637,10 @@ ENDIF
     OutData%c_obj%momentx_Len = SIZE(OutData%momentx)
     IF (OutData%c_obj%momentx_Len > 0) &
        OutData%c_obj%momentx = C_LOC( OutData%momentx(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%momentx)>0) OutData%momentx = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%momentx))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%momentx)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%momentx,1), UBOUND(OutData%momentx,1)
+        OutData%momentx(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! momenty not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3566,15 +3658,10 @@ ENDIF
     OutData%c_obj%momenty_Len = SIZE(OutData%momenty)
     IF (OutData%c_obj%momenty_Len > 0) &
        OutData%c_obj%momenty = C_LOC( OutData%momenty(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%momenty)>0) OutData%momenty = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%momenty))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%momenty)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%momenty,1), UBOUND(OutData%momenty,1)
+        OutData%momenty(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! momentz not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3592,15 +3679,10 @@ ENDIF
     OutData%c_obj%momentz_Len = SIZE(OutData%momentz)
     IF (OutData%c_obj%momentz_Len > 0) &
        OutData%c_obj%momentz = C_LOC( OutData%momentz(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%momentz)>0) OutData%momentz = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%momentz))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%momentz)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%momentz,1), UBOUND(OutData%momentz,1)
+        OutData%momentz(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! forceNodesChord not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3618,15 +3700,10 @@ ENDIF
     OutData%c_obj%forceNodesChord_Len = SIZE(OutData%forceNodesChord)
     IF (OutData%c_obj%forceNodesChord_Len > 0) &
        OutData%c_obj%forceNodesChord = C_LOC( OutData%forceNodesChord(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%forceNodesChord)>0) OutData%forceNodesChord = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%forceNodesChord))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%forceNodesChord)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%forceNodesChord,1), UBOUND(OutData%forceNodesChord,1)
+        OutData%forceNodesChord(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SuperController not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3644,131 +3721,361 @@ ENDIF
     OutData%c_obj%SuperController_Len = SIZE(OutData%SuperController)
     IF (OutData%c_obj%SuperController_Len > 0) &
        OutData%c_obj%SuperController = C_LOC( OutData%SuperController(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%SuperController)>0) OutData%SuperController = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SuperController))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%SuperController)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%SuperController,1), UBOUND(OutData%SuperController,1)
+        OutData%SuperController(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE OpFM_UnPackInput
 
- SUBROUTINE OpFM_C2Fary_CopyInput( InputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_C2Fary_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers )
     TYPE(OpFM_InputType), INTENT(INOUT) :: InputData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
 
-    ! -- pxVel Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pxVel ) ) THEN
-       NULLIFY( InputData%pxVel )
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
     ELSE
-       CALL C_F_POINTER(InputData%C_obj%pxVel, InputData%pxVel, (/InputData%C_obj%pxVel_Len/))
+       SkipPointers_local = .false.
+    END IF
+
+    ! -- pxVel Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pxVel ) ) THEN
+          NULLIFY( InputData%pxVel )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%pxVel, InputData%pxVel, (/InputData%C_obj%pxVel_Len/))
+       END IF
     END IF
 
     ! -- pyVel Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pyVel ) ) THEN
-       NULLIFY( InputData%pyVel )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%pyVel, InputData%pyVel, (/InputData%C_obj%pyVel_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pyVel ) ) THEN
+          NULLIFY( InputData%pyVel )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%pyVel, InputData%pyVel, (/InputData%C_obj%pyVel_Len/))
+       END IF
     END IF
 
     ! -- pzVel Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pzVel ) ) THEN
-       NULLIFY( InputData%pzVel )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%pzVel, InputData%pzVel, (/InputData%C_obj%pzVel_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pzVel ) ) THEN
+          NULLIFY( InputData%pzVel )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%pzVel, InputData%pzVel, (/InputData%C_obj%pzVel_Len/))
+       END IF
     END IF
 
     ! -- pxForce Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pxForce ) ) THEN
-       NULLIFY( InputData%pxForce )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%pxForce, InputData%pxForce, (/InputData%C_obj%pxForce_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pxForce ) ) THEN
+          NULLIFY( InputData%pxForce )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%pxForce, InputData%pxForce, (/InputData%C_obj%pxForce_Len/))
+       END IF
     END IF
 
     ! -- pyForce Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pyForce ) ) THEN
-       NULLIFY( InputData%pyForce )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%pyForce, InputData%pyForce, (/InputData%C_obj%pyForce_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pyForce ) ) THEN
+          NULLIFY( InputData%pyForce )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%pyForce, InputData%pyForce, (/InputData%C_obj%pyForce_Len/))
+       END IF
     END IF
 
     ! -- pzForce Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pzForce ) ) THEN
-       NULLIFY( InputData%pzForce )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%pzForce, InputData%pzForce, (/InputData%C_obj%pzForce_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pzForce ) ) THEN
+          NULLIFY( InputData%pzForce )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%pzForce, InputData%pzForce, (/InputData%C_obj%pzForce_Len/))
+       END IF
     END IF
 
     ! -- pOrientation Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pOrientation ) ) THEN
-       NULLIFY( InputData%pOrientation )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%pOrientation, InputData%pOrientation, (/InputData%C_obj%pOrientation_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%pOrientation ) ) THEN
+          NULLIFY( InputData%pOrientation )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%pOrientation, InputData%pOrientation, (/InputData%C_obj%pOrientation_Len/))
+       END IF
     END IF
 
     ! -- fx Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%fx ) ) THEN
-       NULLIFY( InputData%fx )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%fx, InputData%fx, (/InputData%C_obj%fx_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%fx ) ) THEN
+          NULLIFY( InputData%fx )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%fx, InputData%fx, (/InputData%C_obj%fx_Len/))
+       END IF
     END IF
 
     ! -- fy Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%fy ) ) THEN
-       NULLIFY( InputData%fy )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%fy, InputData%fy, (/InputData%C_obj%fy_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%fy ) ) THEN
+          NULLIFY( InputData%fy )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%fy, InputData%fy, (/InputData%C_obj%fy_Len/))
+       END IF
     END IF
 
     ! -- fz Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%fz ) ) THEN
-       NULLIFY( InputData%fz )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%fz, InputData%fz, (/InputData%C_obj%fz_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%fz ) ) THEN
+          NULLIFY( InputData%fz )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%fz, InputData%fz, (/InputData%C_obj%fz_Len/))
+       END IF
     END IF
 
     ! -- momentx Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%momentx ) ) THEN
-       NULLIFY( InputData%momentx )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%momentx, InputData%momentx, (/InputData%C_obj%momentx_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%momentx ) ) THEN
+          NULLIFY( InputData%momentx )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%momentx, InputData%momentx, (/InputData%C_obj%momentx_Len/))
+       END IF
     END IF
 
     ! -- momenty Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%momenty ) ) THEN
-       NULLIFY( InputData%momenty )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%momenty, InputData%momenty, (/InputData%C_obj%momenty_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%momenty ) ) THEN
+          NULLIFY( InputData%momenty )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%momenty, InputData%momenty, (/InputData%C_obj%momenty_Len/))
+       END IF
     END IF
 
     ! -- momentz Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%momentz ) ) THEN
-       NULLIFY( InputData%momentz )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%momentz, InputData%momentz, (/InputData%C_obj%momentz_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%momentz ) ) THEN
+          NULLIFY( InputData%momentz )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%momentz, InputData%momentz, (/InputData%C_obj%momentz_Len/))
+       END IF
     END IF
 
     ! -- forceNodesChord Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%forceNodesChord ) ) THEN
-       NULLIFY( InputData%forceNodesChord )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%forceNodesChord, InputData%forceNodesChord, (/InputData%C_obj%forceNodesChord_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%forceNodesChord ) ) THEN
+          NULLIFY( InputData%forceNodesChord )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%forceNodesChord, InputData%forceNodesChord, (/InputData%C_obj%forceNodesChord_Len/))
+       END IF
     END IF
 
     ! -- SuperController Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%SuperController ) ) THEN
-       NULLIFY( InputData%SuperController )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%SuperController, InputData%SuperController, (/InputData%C_obj%SuperController_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%SuperController ) ) THEN
+          NULLIFY( InputData%SuperController )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%SuperController, InputData%SuperController, (/InputData%C_obj%SuperController_Len/))
+       END IF
     END IF
  END SUBROUTINE OpFM_C2Fary_CopyInput
+
+ SUBROUTINE OpFM_F2C_CopyInput( InputData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(OpFM_InputType), INTENT(INOUT) :: InputData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+
+    ! -- pxVel Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%pxVel)) THEN 
+          InputData%c_obj%pxVel_Len = 0
+          InputData%c_obj%pxVel = C_NULL_PTR
+       ELSE
+          InputData%c_obj%pxVel_Len = SIZE(InputData%pxVel)
+          IF (InputData%c_obj%pxVel_Len > 0) &
+             InputData%c_obj%pxVel = C_LOC( InputData%pxVel( LBOUND(InputData%pxVel,1) ) ) 
+       END IF
+    END IF
+
+    ! -- pyVel Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%pyVel)) THEN 
+          InputData%c_obj%pyVel_Len = 0
+          InputData%c_obj%pyVel = C_NULL_PTR
+       ELSE
+          InputData%c_obj%pyVel_Len = SIZE(InputData%pyVel)
+          IF (InputData%c_obj%pyVel_Len > 0) &
+             InputData%c_obj%pyVel = C_LOC( InputData%pyVel( LBOUND(InputData%pyVel,1) ) ) 
+       END IF
+    END IF
+
+    ! -- pzVel Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%pzVel)) THEN 
+          InputData%c_obj%pzVel_Len = 0
+          InputData%c_obj%pzVel = C_NULL_PTR
+       ELSE
+          InputData%c_obj%pzVel_Len = SIZE(InputData%pzVel)
+          IF (InputData%c_obj%pzVel_Len > 0) &
+             InputData%c_obj%pzVel = C_LOC( InputData%pzVel( LBOUND(InputData%pzVel,1) ) ) 
+       END IF
+    END IF
+
+    ! -- pxForce Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%pxForce)) THEN 
+          InputData%c_obj%pxForce_Len = 0
+          InputData%c_obj%pxForce = C_NULL_PTR
+       ELSE
+          InputData%c_obj%pxForce_Len = SIZE(InputData%pxForce)
+          IF (InputData%c_obj%pxForce_Len > 0) &
+             InputData%c_obj%pxForce = C_LOC( InputData%pxForce( LBOUND(InputData%pxForce,1) ) ) 
+       END IF
+    END IF
+
+    ! -- pyForce Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%pyForce)) THEN 
+          InputData%c_obj%pyForce_Len = 0
+          InputData%c_obj%pyForce = C_NULL_PTR
+       ELSE
+          InputData%c_obj%pyForce_Len = SIZE(InputData%pyForce)
+          IF (InputData%c_obj%pyForce_Len > 0) &
+             InputData%c_obj%pyForce = C_LOC( InputData%pyForce( LBOUND(InputData%pyForce,1) ) ) 
+       END IF
+    END IF
+
+    ! -- pzForce Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%pzForce)) THEN 
+          InputData%c_obj%pzForce_Len = 0
+          InputData%c_obj%pzForce = C_NULL_PTR
+       ELSE
+          InputData%c_obj%pzForce_Len = SIZE(InputData%pzForce)
+          IF (InputData%c_obj%pzForce_Len > 0) &
+             InputData%c_obj%pzForce = C_LOC( InputData%pzForce( LBOUND(InputData%pzForce,1) ) ) 
+       END IF
+    END IF
+
+    ! -- pOrientation Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%pOrientation)) THEN 
+          InputData%c_obj%pOrientation_Len = 0
+          InputData%c_obj%pOrientation = C_NULL_PTR
+       ELSE
+          InputData%c_obj%pOrientation_Len = SIZE(InputData%pOrientation)
+          IF (InputData%c_obj%pOrientation_Len > 0) &
+             InputData%c_obj%pOrientation = C_LOC( InputData%pOrientation( LBOUND(InputData%pOrientation,1) ) ) 
+       END IF
+    END IF
+
+    ! -- fx Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%fx)) THEN 
+          InputData%c_obj%fx_Len = 0
+          InputData%c_obj%fx = C_NULL_PTR
+       ELSE
+          InputData%c_obj%fx_Len = SIZE(InputData%fx)
+          IF (InputData%c_obj%fx_Len > 0) &
+             InputData%c_obj%fx = C_LOC( InputData%fx( LBOUND(InputData%fx,1) ) ) 
+       END IF
+    END IF
+
+    ! -- fy Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%fy)) THEN 
+          InputData%c_obj%fy_Len = 0
+          InputData%c_obj%fy = C_NULL_PTR
+       ELSE
+          InputData%c_obj%fy_Len = SIZE(InputData%fy)
+          IF (InputData%c_obj%fy_Len > 0) &
+             InputData%c_obj%fy = C_LOC( InputData%fy( LBOUND(InputData%fy,1) ) ) 
+       END IF
+    END IF
+
+    ! -- fz Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%fz)) THEN 
+          InputData%c_obj%fz_Len = 0
+          InputData%c_obj%fz = C_NULL_PTR
+       ELSE
+          InputData%c_obj%fz_Len = SIZE(InputData%fz)
+          IF (InputData%c_obj%fz_Len > 0) &
+             InputData%c_obj%fz = C_LOC( InputData%fz( LBOUND(InputData%fz,1) ) ) 
+       END IF
+    END IF
+
+    ! -- momentx Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%momentx)) THEN 
+          InputData%c_obj%momentx_Len = 0
+          InputData%c_obj%momentx = C_NULL_PTR
+       ELSE
+          InputData%c_obj%momentx_Len = SIZE(InputData%momentx)
+          IF (InputData%c_obj%momentx_Len > 0) &
+             InputData%c_obj%momentx = C_LOC( InputData%momentx( LBOUND(InputData%momentx,1) ) ) 
+       END IF
+    END IF
+
+    ! -- momenty Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%momenty)) THEN 
+          InputData%c_obj%momenty_Len = 0
+          InputData%c_obj%momenty = C_NULL_PTR
+       ELSE
+          InputData%c_obj%momenty_Len = SIZE(InputData%momenty)
+          IF (InputData%c_obj%momenty_Len > 0) &
+             InputData%c_obj%momenty = C_LOC( InputData%momenty( LBOUND(InputData%momenty,1) ) ) 
+       END IF
+    END IF
+
+    ! -- momentz Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%momentz)) THEN 
+          InputData%c_obj%momentz_Len = 0
+          InputData%c_obj%momentz = C_NULL_PTR
+       ELSE
+          InputData%c_obj%momentz_Len = SIZE(InputData%momentz)
+          IF (InputData%c_obj%momentz_Len > 0) &
+             InputData%c_obj%momentz = C_LOC( InputData%momentz( LBOUND(InputData%momentz,1) ) ) 
+       END IF
+    END IF
+
+    ! -- forceNodesChord Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%forceNodesChord)) THEN 
+          InputData%c_obj%forceNodesChord_Len = 0
+          InputData%c_obj%forceNodesChord = C_NULL_PTR
+       ELSE
+          InputData%c_obj%forceNodesChord_Len = SIZE(InputData%forceNodesChord)
+          IF (InputData%c_obj%forceNodesChord_Len > 0) &
+             InputData%c_obj%forceNodesChord = C_LOC( InputData%forceNodesChord( LBOUND(InputData%forceNodesChord,1) ) ) 
+       END IF
+    END IF
+
+    ! -- SuperController Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%SuperController)) THEN 
+          InputData%c_obj%SuperController_Len = 0
+          InputData%c_obj%SuperController = C_NULL_PTR
+       ELSE
+          InputData%c_obj%SuperController_Len = SIZE(InputData%SuperController)
+          IF (InputData%c_obj%SuperController_Len > 0) &
+             InputData%c_obj%SuperController = C_LOC( InputData%SuperController( LBOUND(InputData%SuperController,1) ) ) 
+       END IF
+    END IF
+ END SUBROUTINE OpFM_F2C_CopyInput
 
  SUBROUTINE OpFM_CopyOutput( SrcOutputData, DstOutputData, CtrlCode, ErrStat, ErrMsg )
    TYPE(OpFM_OutputType), INTENT(IN) :: SrcOutputData
@@ -3856,7 +4163,6 @@ IF (ALLOCATED(SrcOutputData%WriteOutput)) THEN
     END IF
   END IF
     DstOutputData%WriteOutput = SrcOutputData%WriteOutput
-    DstOutputData%C_obj%WriteOutput = SrcOutputData%C_obj%WriteOutput
 ENDIF
  END SUBROUTINE OpFM_CopyOutput
 
@@ -3997,8 +4303,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%u,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%u)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%u))-1 ) = PACK(InData%u,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%u)
+      DO i1 = LBOUND(InData%u,1), UBOUND(InData%u,1)
+        ReKiBuf(Re_Xferred) = InData%u(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%v) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -4010,8 +4318,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%v,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%v)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%v))-1 ) = PACK(InData%v,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%v)
+      DO i1 = LBOUND(InData%v,1), UBOUND(InData%v,1)
+        ReKiBuf(Re_Xferred) = InData%v(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%w) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -4023,8 +4333,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%w,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%w)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%w))-1 ) = PACK(InData%w,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%w)
+      DO i1 = LBOUND(InData%w,1), UBOUND(InData%w,1)
+        ReKiBuf(Re_Xferred) = InData%w(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%SuperController) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -4036,8 +4348,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%SuperController,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%SuperController)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%SuperController))-1 ) = PACK(InData%SuperController,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%SuperController)
+      DO i1 = LBOUND(InData%SuperController,1), UBOUND(InData%SuperController,1)
+        ReKiBuf(Re_Xferred) = InData%SuperController(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ALLOCATED(InData%WriteOutput) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -4049,8 +4363,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WriteOutput,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%WriteOutput)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WriteOutput))-1 ) = PACK(InData%WriteOutput,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%WriteOutput)
+      DO i1 = LBOUND(InData%WriteOutput,1), UBOUND(InData%WriteOutput,1)
+        ReKiBuf(Re_Xferred) = InData%WriteOutput(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE OpFM_PackOutput
 
@@ -4067,12 +4383,6 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_Xferred
   INTEGER(IntKi)                 :: i
-  LOGICAL                        :: mask0
-  LOGICAL, ALLOCATABLE           :: mask1(:)
-  LOGICAL, ALLOCATABLE           :: mask2(:,:)
-  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
-  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
@@ -4103,15 +4413,10 @@ ENDIF
     OutData%c_obj%u_Len = SIZE(OutData%u)
     IF (OutData%c_obj%u_Len > 0) &
        OutData%c_obj%u = C_LOC( OutData%u(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%u)>0) OutData%u = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%u))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%u)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%u,1), UBOUND(OutData%u,1)
+        OutData%u(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! v not allocated
     Int_Xferred = Int_Xferred + 1
@@ -4129,15 +4434,10 @@ ENDIF
     OutData%c_obj%v_Len = SIZE(OutData%v)
     IF (OutData%c_obj%v_Len > 0) &
        OutData%c_obj%v = C_LOC( OutData%v(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%v)>0) OutData%v = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%v))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%v)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%v,1), UBOUND(OutData%v,1)
+        OutData%v(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! w not allocated
     Int_Xferred = Int_Xferred + 1
@@ -4155,15 +4455,10 @@ ENDIF
     OutData%c_obj%w_Len = SIZE(OutData%w)
     IF (OutData%c_obj%w_Len > 0) &
        OutData%c_obj%w = C_LOC( OutData%w(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%w)>0) OutData%w = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%w))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%w)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%w,1), UBOUND(OutData%w,1)
+        OutData%w(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! SuperController not allocated
     Int_Xferred = Int_Xferred + 1
@@ -4181,15 +4476,10 @@ ENDIF
     OutData%c_obj%SuperController_Len = SIZE(OutData%SuperController)
     IF (OutData%c_obj%SuperController_Len > 0) &
        OutData%c_obj%SuperController = C_LOC( OutData%SuperController(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%SuperController)>0) OutData%SuperController = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%SuperController))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%SuperController)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%SuperController,1), UBOUND(OutData%SuperController,1)
+        OutData%SuperController(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WriteOutput not allocated
     Int_Xferred = Int_Xferred + 1
@@ -4204,54 +4494,130 @@ ENDIF
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WriteOutput.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%WriteOutput)>0) OutData%WriteOutput = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%WriteOutput))-1 ), mask1, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%WriteOutput)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%WriteOutput,1), UBOUND(OutData%WriteOutput,1)
+        OutData%WriteOutput(i1) = ReKiBuf(Re_Xferred)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
  END SUBROUTINE OpFM_UnPackOutput
 
- SUBROUTINE OpFM_C2Fary_CopyOutput( OutputData, ErrStat, ErrMsg )
+ SUBROUTINE OpFM_C2Fary_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers )
     TYPE(OpFM_OutputType), INTENT(INOUT) :: OutputData
     INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
     CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
     ! 
+    LOGICAL                        :: SkipPointers_local
     ErrStat = ErrID_None
     ErrMsg  = ""
 
-    ! -- u Output Data fields
-    IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%u ) ) THEN
-       NULLIFY( OutputData%u )
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
     ELSE
-       CALL C_F_POINTER(OutputData%C_obj%u, OutputData%u, (/OutputData%C_obj%u_Len/))
+       SkipPointers_local = .false.
+    END IF
+
+    ! -- u Output Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%u ) ) THEN
+          NULLIFY( OutputData%u )
+       ELSE
+          CALL C_F_POINTER(OutputData%C_obj%u, OutputData%u, (/OutputData%C_obj%u_Len/))
+       END IF
     END IF
 
     ! -- v Output Data fields
-    IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%v ) ) THEN
-       NULLIFY( OutputData%v )
-    ELSE
-       CALL C_F_POINTER(OutputData%C_obj%v, OutputData%v, (/OutputData%C_obj%v_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%v ) ) THEN
+          NULLIFY( OutputData%v )
+       ELSE
+          CALL C_F_POINTER(OutputData%C_obj%v, OutputData%v, (/OutputData%C_obj%v_Len/))
+       END IF
     END IF
 
     ! -- w Output Data fields
-    IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%w ) ) THEN
-       NULLIFY( OutputData%w )
-    ELSE
-       CALL C_F_POINTER(OutputData%C_obj%w, OutputData%w, (/OutputData%C_obj%w_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%w ) ) THEN
+          NULLIFY( OutputData%w )
+       ELSE
+          CALL C_F_POINTER(OutputData%C_obj%w, OutputData%w, (/OutputData%C_obj%w_Len/))
+       END IF
     END IF
 
     ! -- SuperController Output Data fields
-    IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%SuperController ) ) THEN
-       NULLIFY( OutputData%SuperController )
-    ELSE
-       CALL C_F_POINTER(OutputData%C_obj%SuperController, OutputData%SuperController, (/OutputData%C_obj%SuperController_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( OutputData%C_obj%SuperController ) ) THEN
+          NULLIFY( OutputData%SuperController )
+       ELSE
+          CALL C_F_POINTER(OutputData%C_obj%SuperController, OutputData%SuperController, (/OutputData%C_obj%SuperController_Len/))
+       END IF
     END IF
  END SUBROUTINE OpFM_C2Fary_CopyOutput
+
+ SUBROUTINE OpFM_F2C_CopyOutput( OutputData, ErrStat, ErrMsg, SkipPointers  )
+    TYPE(OpFM_OutputType), INTENT(INOUT) :: OutputData
+    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers
+    ! 
+    LOGICAL                        :: SkipPointers_local
+    ErrStat = ErrID_None
+    ErrMsg  = ""
+
+    IF (PRESENT(SkipPointers)) THEN
+       SkipPointers_local = SkipPointers
+    ELSE
+       SkipPointers_local = .false.
+    END IF
+
+    ! -- u Output Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(OutputData%u)) THEN 
+          OutputData%c_obj%u_Len = 0
+          OutputData%c_obj%u = C_NULL_PTR
+       ELSE
+          OutputData%c_obj%u_Len = SIZE(OutputData%u)
+          IF (OutputData%c_obj%u_Len > 0) &
+             OutputData%c_obj%u = C_LOC( OutputData%u( LBOUND(OutputData%u,1) ) ) 
+       END IF
+    END IF
+
+    ! -- v Output Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(OutputData%v)) THEN 
+          OutputData%c_obj%v_Len = 0
+          OutputData%c_obj%v = C_NULL_PTR
+       ELSE
+          OutputData%c_obj%v_Len = SIZE(OutputData%v)
+          IF (OutputData%c_obj%v_Len > 0) &
+             OutputData%c_obj%v = C_LOC( OutputData%v( LBOUND(OutputData%v,1) ) ) 
+       END IF
+    END IF
+
+    ! -- w Output Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(OutputData%w)) THEN 
+          OutputData%c_obj%w_Len = 0
+          OutputData%c_obj%w = C_NULL_PTR
+       ELSE
+          OutputData%c_obj%w_Len = SIZE(OutputData%w)
+          IF (OutputData%c_obj%w_Len > 0) &
+             OutputData%c_obj%w = C_LOC( OutputData%w( LBOUND(OutputData%w,1) ) ) 
+       END IF
+    END IF
+
+    ! -- SuperController Output Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(OutputData%SuperController)) THEN 
+          OutputData%c_obj%SuperController_Len = 0
+          OutputData%c_obj%SuperController = C_NULL_PTR
+       ELSE
+          OutputData%c_obj%SuperController_Len = SIZE(OutputData%SuperController)
+          IF (OutputData%c_obj%SuperController_Len > 0) &
+             OutputData%c_obj%SuperController = C_LOC( OutputData%SuperController( LBOUND(OutputData%SuperController,1) ) ) 
+       END IF
+    END IF
+ END SUBROUTINE OpFM_F2C_CopyOutput
 
 
  SUBROUTINE OpFM_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
@@ -4328,12 +4694,12 @@ ENDIF
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
  CHARACTER(*),                    PARAMETER :: RoutineName = 'OpFM_Input_ExtrapInterp1'
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -4346,125 +4712,97 @@ ENDIF
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / t(2)
 IF (ASSOCIATED(u_out%pxVel) .AND. ASSOCIATED(u1%pxVel)) THEN
-  ALLOCATE(b1(SIZE(u_out%pxVel,1)))
-  ALLOCATE(c1(SIZE(u_out%pxVel,1)))
-  b1 = -(u1%pxVel - u2%pxVel)/t(2)
-  u_out%pxVel = u1%pxVel + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pxVel,1),UBOUND(u_out%pxVel,1)
+    b = -(u1%pxVel(i1) - u2%pxVel(i1))
+    u_out%pxVel(i1) = u1%pxVel(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pyVel) .AND. ASSOCIATED(u1%pyVel)) THEN
-  ALLOCATE(b1(SIZE(u_out%pyVel,1)))
-  ALLOCATE(c1(SIZE(u_out%pyVel,1)))
-  b1 = -(u1%pyVel - u2%pyVel)/t(2)
-  u_out%pyVel = u1%pyVel + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pyVel,1),UBOUND(u_out%pyVel,1)
+    b = -(u1%pyVel(i1) - u2%pyVel(i1))
+    u_out%pyVel(i1) = u1%pyVel(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pzVel) .AND. ASSOCIATED(u1%pzVel)) THEN
-  ALLOCATE(b1(SIZE(u_out%pzVel,1)))
-  ALLOCATE(c1(SIZE(u_out%pzVel,1)))
-  b1 = -(u1%pzVel - u2%pzVel)/t(2)
-  u_out%pzVel = u1%pzVel + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pzVel,1),UBOUND(u_out%pzVel,1)
+    b = -(u1%pzVel(i1) - u2%pzVel(i1))
+    u_out%pzVel(i1) = u1%pzVel(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pxForce) .AND. ASSOCIATED(u1%pxForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%pxForce,1)))
-  ALLOCATE(c1(SIZE(u_out%pxForce,1)))
-  b1 = -(u1%pxForce - u2%pxForce)/t(2)
-  u_out%pxForce = u1%pxForce + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pxForce,1),UBOUND(u_out%pxForce,1)
+    b = -(u1%pxForce(i1) - u2%pxForce(i1))
+    u_out%pxForce(i1) = u1%pxForce(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pyForce) .AND. ASSOCIATED(u1%pyForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%pyForce,1)))
-  ALLOCATE(c1(SIZE(u_out%pyForce,1)))
-  b1 = -(u1%pyForce - u2%pyForce)/t(2)
-  u_out%pyForce = u1%pyForce + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pyForce,1),UBOUND(u_out%pyForce,1)
+    b = -(u1%pyForce(i1) - u2%pyForce(i1))
+    u_out%pyForce(i1) = u1%pyForce(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pzForce) .AND. ASSOCIATED(u1%pzForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%pzForce,1)))
-  ALLOCATE(c1(SIZE(u_out%pzForce,1)))
-  b1 = -(u1%pzForce - u2%pzForce)/t(2)
-  u_out%pzForce = u1%pzForce + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pzForce,1),UBOUND(u_out%pzForce,1)
+    b = -(u1%pzForce(i1) - u2%pzForce(i1))
+    u_out%pzForce(i1) = u1%pzForce(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pOrientation) .AND. ASSOCIATED(u1%pOrientation)) THEN
-  ALLOCATE(b1(SIZE(u_out%pOrientation,1)))
-  ALLOCATE(c1(SIZE(u_out%pOrientation,1)))
-  b1 = -(u1%pOrientation - u2%pOrientation)/t(2)
-  u_out%pOrientation = u1%pOrientation + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pOrientation,1),UBOUND(u_out%pOrientation,1)
+    b = -(u1%pOrientation(i1) - u2%pOrientation(i1))
+    u_out%pOrientation(i1) = u1%pOrientation(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%fx) .AND. ASSOCIATED(u1%fx)) THEN
-  ALLOCATE(b1(SIZE(u_out%fx,1)))
-  ALLOCATE(c1(SIZE(u_out%fx,1)))
-  b1 = -(u1%fx - u2%fx)/t(2)
-  u_out%fx = u1%fx + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%fx,1),UBOUND(u_out%fx,1)
+    b = -(u1%fx(i1) - u2%fx(i1))
+    u_out%fx(i1) = u1%fx(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%fy) .AND. ASSOCIATED(u1%fy)) THEN
-  ALLOCATE(b1(SIZE(u_out%fy,1)))
-  ALLOCATE(c1(SIZE(u_out%fy,1)))
-  b1 = -(u1%fy - u2%fy)/t(2)
-  u_out%fy = u1%fy + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%fy,1),UBOUND(u_out%fy,1)
+    b = -(u1%fy(i1) - u2%fy(i1))
+    u_out%fy(i1) = u1%fy(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%fz) .AND. ASSOCIATED(u1%fz)) THEN
-  ALLOCATE(b1(SIZE(u_out%fz,1)))
-  ALLOCATE(c1(SIZE(u_out%fz,1)))
-  b1 = -(u1%fz - u2%fz)/t(2)
-  u_out%fz = u1%fz + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%fz,1),UBOUND(u_out%fz,1)
+    b = -(u1%fz(i1) - u2%fz(i1))
+    u_out%fz(i1) = u1%fz(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%momentx) .AND. ASSOCIATED(u1%momentx)) THEN
-  ALLOCATE(b1(SIZE(u_out%momentx,1)))
-  ALLOCATE(c1(SIZE(u_out%momentx,1)))
-  b1 = -(u1%momentx - u2%momentx)/t(2)
-  u_out%momentx = u1%momentx + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%momentx,1),UBOUND(u_out%momentx,1)
+    b = -(u1%momentx(i1) - u2%momentx(i1))
+    u_out%momentx(i1) = u1%momentx(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%momenty) .AND. ASSOCIATED(u1%momenty)) THEN
-  ALLOCATE(b1(SIZE(u_out%momenty,1)))
-  ALLOCATE(c1(SIZE(u_out%momenty,1)))
-  b1 = -(u1%momenty - u2%momenty)/t(2)
-  u_out%momenty = u1%momenty + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%momenty,1),UBOUND(u_out%momenty,1)
+    b = -(u1%momenty(i1) - u2%momenty(i1))
+    u_out%momenty(i1) = u1%momenty(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%momentz) .AND. ASSOCIATED(u1%momentz)) THEN
-  ALLOCATE(b1(SIZE(u_out%momentz,1)))
-  ALLOCATE(c1(SIZE(u_out%momentz,1)))
-  b1 = -(u1%momentz - u2%momentz)/t(2)
-  u_out%momentz = u1%momentz + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%momentz,1),UBOUND(u_out%momentz,1)
+    b = -(u1%momentz(i1) - u2%momentz(i1))
+    u_out%momentz(i1) = u1%momentz(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%forceNodesChord) .AND. ASSOCIATED(u1%forceNodesChord)) THEN
-  ALLOCATE(b1(SIZE(u_out%forceNodesChord,1)))
-  ALLOCATE(c1(SIZE(u_out%forceNodesChord,1)))
-  b1 = -(u1%forceNodesChord - u2%forceNodesChord)/t(2)
-  u_out%forceNodesChord = u1%forceNodesChord + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%forceNodesChord,1),UBOUND(u_out%forceNodesChord,1)
+    b = -(u1%forceNodesChord(i1) - u2%forceNodesChord(i1))
+    u_out%forceNodesChord(i1) = u1%forceNodesChord(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%SuperController) .AND. ASSOCIATED(u1%SuperController)) THEN
-  ALLOCATE(b1(SIZE(u_out%SuperController,1)))
-  ALLOCATE(c1(SIZE(u_out%SuperController,1)))
-  b1 = -(u1%SuperController - u2%SuperController)/t(2)
-  u_out%SuperController = u1%SuperController + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%SuperController,1),UBOUND(u_out%SuperController,1)
+    b = -(u1%SuperController(i1) - u2%SuperController(i1))
+    u_out%SuperController(i1) = u1%SuperController(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
  END SUBROUTINE OpFM_Input_ExtrapInterp1
 
@@ -4495,13 +4833,14 @@ END IF ! check if allocated
  REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
  REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'OpFM_Input_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -4520,140 +4859,112 @@ END IF ! check if allocated
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
 IF (ASSOCIATED(u_out%pxVel) .AND. ASSOCIATED(u1%pxVel)) THEN
-  ALLOCATE(b1(SIZE(u_out%pxVel,1)))
-  ALLOCATE(c1(SIZE(u_out%pxVel,1)))
-  b1 = (t(3)**2*(u1%pxVel - u2%pxVel) + t(2)**2*(-u1%pxVel + u3%pxVel))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%pxVel + t(3)*u2%pxVel - t(2)*u3%pxVel ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%pxVel = u1%pxVel + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pxVel,1),UBOUND(u_out%pxVel,1)
+    b = (t(3)**2*(u1%pxVel(i1) - u2%pxVel(i1)) + t(2)**2*(-u1%pxVel(i1) + u3%pxVel(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%pxVel(i1) + t(3)*u2%pxVel(i1) - t(2)*u3%pxVel(i1) ) * scaleFactor
+    u_out%pxVel(i1) = u1%pxVel(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pyVel) .AND. ASSOCIATED(u1%pyVel)) THEN
-  ALLOCATE(b1(SIZE(u_out%pyVel,1)))
-  ALLOCATE(c1(SIZE(u_out%pyVel,1)))
-  b1 = (t(3)**2*(u1%pyVel - u2%pyVel) + t(2)**2*(-u1%pyVel + u3%pyVel))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%pyVel + t(3)*u2%pyVel - t(2)*u3%pyVel ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%pyVel = u1%pyVel + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pyVel,1),UBOUND(u_out%pyVel,1)
+    b = (t(3)**2*(u1%pyVel(i1) - u2%pyVel(i1)) + t(2)**2*(-u1%pyVel(i1) + u3%pyVel(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%pyVel(i1) + t(3)*u2%pyVel(i1) - t(2)*u3%pyVel(i1) ) * scaleFactor
+    u_out%pyVel(i1) = u1%pyVel(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pzVel) .AND. ASSOCIATED(u1%pzVel)) THEN
-  ALLOCATE(b1(SIZE(u_out%pzVel,1)))
-  ALLOCATE(c1(SIZE(u_out%pzVel,1)))
-  b1 = (t(3)**2*(u1%pzVel - u2%pzVel) + t(2)**2*(-u1%pzVel + u3%pzVel))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%pzVel + t(3)*u2%pzVel - t(2)*u3%pzVel ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%pzVel = u1%pzVel + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pzVel,1),UBOUND(u_out%pzVel,1)
+    b = (t(3)**2*(u1%pzVel(i1) - u2%pzVel(i1)) + t(2)**2*(-u1%pzVel(i1) + u3%pzVel(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%pzVel(i1) + t(3)*u2%pzVel(i1) - t(2)*u3%pzVel(i1) ) * scaleFactor
+    u_out%pzVel(i1) = u1%pzVel(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pxForce) .AND. ASSOCIATED(u1%pxForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%pxForce,1)))
-  ALLOCATE(c1(SIZE(u_out%pxForce,1)))
-  b1 = (t(3)**2*(u1%pxForce - u2%pxForce) + t(2)**2*(-u1%pxForce + u3%pxForce))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%pxForce + t(3)*u2%pxForce - t(2)*u3%pxForce ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%pxForce = u1%pxForce + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pxForce,1),UBOUND(u_out%pxForce,1)
+    b = (t(3)**2*(u1%pxForce(i1) - u2%pxForce(i1)) + t(2)**2*(-u1%pxForce(i1) + u3%pxForce(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%pxForce(i1) + t(3)*u2%pxForce(i1) - t(2)*u3%pxForce(i1) ) * scaleFactor
+    u_out%pxForce(i1) = u1%pxForce(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pyForce) .AND. ASSOCIATED(u1%pyForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%pyForce,1)))
-  ALLOCATE(c1(SIZE(u_out%pyForce,1)))
-  b1 = (t(3)**2*(u1%pyForce - u2%pyForce) + t(2)**2*(-u1%pyForce + u3%pyForce))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%pyForce + t(3)*u2%pyForce - t(2)*u3%pyForce ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%pyForce = u1%pyForce + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pyForce,1),UBOUND(u_out%pyForce,1)
+    b = (t(3)**2*(u1%pyForce(i1) - u2%pyForce(i1)) + t(2)**2*(-u1%pyForce(i1) + u3%pyForce(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%pyForce(i1) + t(3)*u2%pyForce(i1) - t(2)*u3%pyForce(i1) ) * scaleFactor
+    u_out%pyForce(i1) = u1%pyForce(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pzForce) .AND. ASSOCIATED(u1%pzForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%pzForce,1)))
-  ALLOCATE(c1(SIZE(u_out%pzForce,1)))
-  b1 = (t(3)**2*(u1%pzForce - u2%pzForce) + t(2)**2*(-u1%pzForce + u3%pzForce))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%pzForce + t(3)*u2%pzForce - t(2)*u3%pzForce ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%pzForce = u1%pzForce + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pzForce,1),UBOUND(u_out%pzForce,1)
+    b = (t(3)**2*(u1%pzForce(i1) - u2%pzForce(i1)) + t(2)**2*(-u1%pzForce(i1) + u3%pzForce(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%pzForce(i1) + t(3)*u2%pzForce(i1) - t(2)*u3%pzForce(i1) ) * scaleFactor
+    u_out%pzForce(i1) = u1%pzForce(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pOrientation) .AND. ASSOCIATED(u1%pOrientation)) THEN
-  ALLOCATE(b1(SIZE(u_out%pOrientation,1)))
-  ALLOCATE(c1(SIZE(u_out%pOrientation,1)))
-  b1 = (t(3)**2*(u1%pOrientation - u2%pOrientation) + t(2)**2*(-u1%pOrientation + u3%pOrientation))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%pOrientation + t(3)*u2%pOrientation - t(2)*u3%pOrientation ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%pOrientation = u1%pOrientation + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%pOrientation,1),UBOUND(u_out%pOrientation,1)
+    b = (t(3)**2*(u1%pOrientation(i1) - u2%pOrientation(i1)) + t(2)**2*(-u1%pOrientation(i1) + u3%pOrientation(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%pOrientation(i1) + t(3)*u2%pOrientation(i1) - t(2)*u3%pOrientation(i1) ) * scaleFactor
+    u_out%pOrientation(i1) = u1%pOrientation(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%fx) .AND. ASSOCIATED(u1%fx)) THEN
-  ALLOCATE(b1(SIZE(u_out%fx,1)))
-  ALLOCATE(c1(SIZE(u_out%fx,1)))
-  b1 = (t(3)**2*(u1%fx - u2%fx) + t(2)**2*(-u1%fx + u3%fx))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%fx + t(3)*u2%fx - t(2)*u3%fx ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%fx = u1%fx + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%fx,1),UBOUND(u_out%fx,1)
+    b = (t(3)**2*(u1%fx(i1) - u2%fx(i1)) + t(2)**2*(-u1%fx(i1) + u3%fx(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%fx(i1) + t(3)*u2%fx(i1) - t(2)*u3%fx(i1) ) * scaleFactor
+    u_out%fx(i1) = u1%fx(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%fy) .AND. ASSOCIATED(u1%fy)) THEN
-  ALLOCATE(b1(SIZE(u_out%fy,1)))
-  ALLOCATE(c1(SIZE(u_out%fy,1)))
-  b1 = (t(3)**2*(u1%fy - u2%fy) + t(2)**2*(-u1%fy + u3%fy))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%fy + t(3)*u2%fy - t(2)*u3%fy ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%fy = u1%fy + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%fy,1),UBOUND(u_out%fy,1)
+    b = (t(3)**2*(u1%fy(i1) - u2%fy(i1)) + t(2)**2*(-u1%fy(i1) + u3%fy(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%fy(i1) + t(3)*u2%fy(i1) - t(2)*u3%fy(i1) ) * scaleFactor
+    u_out%fy(i1) = u1%fy(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%fz) .AND. ASSOCIATED(u1%fz)) THEN
-  ALLOCATE(b1(SIZE(u_out%fz,1)))
-  ALLOCATE(c1(SIZE(u_out%fz,1)))
-  b1 = (t(3)**2*(u1%fz - u2%fz) + t(2)**2*(-u1%fz + u3%fz))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%fz + t(3)*u2%fz - t(2)*u3%fz ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%fz = u1%fz + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%fz,1),UBOUND(u_out%fz,1)
+    b = (t(3)**2*(u1%fz(i1) - u2%fz(i1)) + t(2)**2*(-u1%fz(i1) + u3%fz(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%fz(i1) + t(3)*u2%fz(i1) - t(2)*u3%fz(i1) ) * scaleFactor
+    u_out%fz(i1) = u1%fz(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%momentx) .AND. ASSOCIATED(u1%momentx)) THEN
-  ALLOCATE(b1(SIZE(u_out%momentx,1)))
-  ALLOCATE(c1(SIZE(u_out%momentx,1)))
-  b1 = (t(3)**2*(u1%momentx - u2%momentx) + t(2)**2*(-u1%momentx + u3%momentx))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%momentx + t(3)*u2%momentx - t(2)*u3%momentx ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%momentx = u1%momentx + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%momentx,1),UBOUND(u_out%momentx,1)
+    b = (t(3)**2*(u1%momentx(i1) - u2%momentx(i1)) + t(2)**2*(-u1%momentx(i1) + u3%momentx(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%momentx(i1) + t(3)*u2%momentx(i1) - t(2)*u3%momentx(i1) ) * scaleFactor
+    u_out%momentx(i1) = u1%momentx(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%momenty) .AND. ASSOCIATED(u1%momenty)) THEN
-  ALLOCATE(b1(SIZE(u_out%momenty,1)))
-  ALLOCATE(c1(SIZE(u_out%momenty,1)))
-  b1 = (t(3)**2*(u1%momenty - u2%momenty) + t(2)**2*(-u1%momenty + u3%momenty))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%momenty + t(3)*u2%momenty - t(2)*u3%momenty ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%momenty = u1%momenty + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%momenty,1),UBOUND(u_out%momenty,1)
+    b = (t(3)**2*(u1%momenty(i1) - u2%momenty(i1)) + t(2)**2*(-u1%momenty(i1) + u3%momenty(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%momenty(i1) + t(3)*u2%momenty(i1) - t(2)*u3%momenty(i1) ) * scaleFactor
+    u_out%momenty(i1) = u1%momenty(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%momentz) .AND. ASSOCIATED(u1%momentz)) THEN
-  ALLOCATE(b1(SIZE(u_out%momentz,1)))
-  ALLOCATE(c1(SIZE(u_out%momentz,1)))
-  b1 = (t(3)**2*(u1%momentz - u2%momentz) + t(2)**2*(-u1%momentz + u3%momentz))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%momentz + t(3)*u2%momentz - t(2)*u3%momentz ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%momentz = u1%momentz + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%momentz,1),UBOUND(u_out%momentz,1)
+    b = (t(3)**2*(u1%momentz(i1) - u2%momentz(i1)) + t(2)**2*(-u1%momentz(i1) + u3%momentz(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%momentz(i1) + t(3)*u2%momentz(i1) - t(2)*u3%momentz(i1) ) * scaleFactor
+    u_out%momentz(i1) = u1%momentz(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%forceNodesChord) .AND. ASSOCIATED(u1%forceNodesChord)) THEN
-  ALLOCATE(b1(SIZE(u_out%forceNodesChord,1)))
-  ALLOCATE(c1(SIZE(u_out%forceNodesChord,1)))
-  b1 = (t(3)**2*(u1%forceNodesChord - u2%forceNodesChord) + t(2)**2*(-u1%forceNodesChord + u3%forceNodesChord))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%forceNodesChord + t(3)*u2%forceNodesChord - t(2)*u3%forceNodesChord ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%forceNodesChord = u1%forceNodesChord + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%forceNodesChord,1),UBOUND(u_out%forceNodesChord,1)
+    b = (t(3)**2*(u1%forceNodesChord(i1) - u2%forceNodesChord(i1)) + t(2)**2*(-u1%forceNodesChord(i1) + u3%forceNodesChord(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%forceNodesChord(i1) + t(3)*u2%forceNodesChord(i1) - t(2)*u3%forceNodesChord(i1) ) * scaleFactor
+    u_out%forceNodesChord(i1) = u1%forceNodesChord(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%SuperController) .AND. ASSOCIATED(u1%SuperController)) THEN
-  ALLOCATE(b1(SIZE(u_out%SuperController,1)))
-  ALLOCATE(c1(SIZE(u_out%SuperController,1)))
-  b1 = (t(3)**2*(u1%SuperController - u2%SuperController) + t(2)**2*(-u1%SuperController + u3%SuperController))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%SuperController + t(3)*u2%SuperController - t(2)*u3%SuperController ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%SuperController = u1%SuperController + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%SuperController,1),UBOUND(u_out%SuperController,1)
+    b = (t(3)**2*(u1%SuperController(i1) - u2%SuperController(i1)) + t(2)**2*(-u1%SuperController(i1) + u3%SuperController(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%SuperController(i1) + t(3)*u2%SuperController(i1) - t(2)*u3%SuperController(i1) ) * scaleFactor
+    u_out%SuperController(i1) = u1%SuperController(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
  END SUBROUTINE OpFM_Input_ExtrapInterp2
 
@@ -4732,12 +5043,12 @@ END IF ! check if allocated
  REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
  CHARACTER(*),                    PARAMETER :: RoutineName = 'OpFM_Output_ExtrapInterp1'
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -4750,45 +5061,37 @@ END IF ! check if allocated
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / t(2)
 IF (ASSOCIATED(y_out%u) .AND. ASSOCIATED(y1%u)) THEN
-  ALLOCATE(b1(SIZE(y_out%u,1)))
-  ALLOCATE(c1(SIZE(y_out%u,1)))
-  b1 = -(y1%u - y2%u)/t(2)
-  y_out%u = y1%u + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%u,1),UBOUND(y_out%u,1)
+    b = -(y1%u(i1) - y2%u(i1))
+    y_out%u(i1) = y1%u(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(y_out%v) .AND. ASSOCIATED(y1%v)) THEN
-  ALLOCATE(b1(SIZE(y_out%v,1)))
-  ALLOCATE(c1(SIZE(y_out%v,1)))
-  b1 = -(y1%v - y2%v)/t(2)
-  y_out%v = y1%v + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%v,1),UBOUND(y_out%v,1)
+    b = -(y1%v(i1) - y2%v(i1))
+    y_out%v(i1) = y1%v(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(y_out%w) .AND. ASSOCIATED(y1%w)) THEN
-  ALLOCATE(b1(SIZE(y_out%w,1)))
-  ALLOCATE(c1(SIZE(y_out%w,1)))
-  b1 = -(y1%w - y2%w)/t(2)
-  y_out%w = y1%w + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%w,1),UBOUND(y_out%w,1)
+    b = -(y1%w(i1) - y2%w(i1))
+    y_out%w(i1) = y1%w(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(y_out%SuperController) .AND. ASSOCIATED(y1%SuperController)) THEN
-  ALLOCATE(b1(SIZE(y_out%SuperController,1)))
-  ALLOCATE(c1(SIZE(y_out%SuperController,1)))
-  b1 = -(y1%SuperController - y2%SuperController)/t(2)
-  y_out%SuperController = y1%SuperController + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%SuperController,1),UBOUND(y_out%SuperController,1)
+    b = -(y1%SuperController(i1) - y2%SuperController(i1))
+    y_out%SuperController(i1) = y1%SuperController(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
-  ALLOCATE(b1(SIZE(y_out%WriteOutput,1)))
-  ALLOCATE(c1(SIZE(y_out%WriteOutput,1)))
-  b1 = -(y1%WriteOutput - y2%WriteOutput)/t(2)
-  y_out%WriteOutput = y1%WriteOutput + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
+    b = -(y1%WriteOutput(i1) - y2%WriteOutput(i1))
+    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
  END SUBROUTINE OpFM_Output_ExtrapInterp1
 
@@ -4819,13 +5122,14 @@ END IF ! check if allocated
  REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
  REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
  INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
- REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
- REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
- REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
  CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
  CHARACTER(*),            PARAMETER         :: RoutineName = 'OpFM_Output_ExtrapInterp2'
+ INTEGER                                    :: i01    ! dim1 level 0 counter variable for arrays of ddts
+ INTEGER                                    :: i1    ! dim1 counter variable for arrays
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -4844,50 +5148,42 @@ END IF ! check if allocated
      CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
      RETURN
    END IF
+
+   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))
 IF (ASSOCIATED(y_out%u) .AND. ASSOCIATED(y1%u)) THEN
-  ALLOCATE(b1(SIZE(y_out%u,1)))
-  ALLOCATE(c1(SIZE(y_out%u,1)))
-  b1 = (t(3)**2*(y1%u - y2%u) + t(2)**2*(-y1%u + y3%u))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y1%u + t(3)*y2%u - t(2)*y3%u ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%u = y1%u + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%u,1),UBOUND(y_out%u,1)
+    b = (t(3)**2*(y1%u(i1) - y2%u(i1)) + t(2)**2*(-y1%u(i1) + y3%u(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%u(i1) + t(3)*y2%u(i1) - t(2)*y3%u(i1) ) * scaleFactor
+    y_out%u(i1) = y1%u(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(y_out%v) .AND. ASSOCIATED(y1%v)) THEN
-  ALLOCATE(b1(SIZE(y_out%v,1)))
-  ALLOCATE(c1(SIZE(y_out%v,1)))
-  b1 = (t(3)**2*(y1%v - y2%v) + t(2)**2*(-y1%v + y3%v))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y1%v + t(3)*y2%v - t(2)*y3%v ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%v = y1%v + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%v,1),UBOUND(y_out%v,1)
+    b = (t(3)**2*(y1%v(i1) - y2%v(i1)) + t(2)**2*(-y1%v(i1) + y3%v(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%v(i1) + t(3)*y2%v(i1) - t(2)*y3%v(i1) ) * scaleFactor
+    y_out%v(i1) = y1%v(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(y_out%w) .AND. ASSOCIATED(y1%w)) THEN
-  ALLOCATE(b1(SIZE(y_out%w,1)))
-  ALLOCATE(c1(SIZE(y_out%w,1)))
-  b1 = (t(3)**2*(y1%w - y2%w) + t(2)**2*(-y1%w + y3%w))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y1%w + t(3)*y2%w - t(2)*y3%w ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%w = y1%w + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%w,1),UBOUND(y_out%w,1)
+    b = (t(3)**2*(y1%w(i1) - y2%w(i1)) + t(2)**2*(-y1%w(i1) + y3%w(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%w(i1) + t(3)*y2%w(i1) - t(2)*y3%w(i1) ) * scaleFactor
+    y_out%w(i1) = y1%w(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(y_out%SuperController) .AND. ASSOCIATED(y1%SuperController)) THEN
-  ALLOCATE(b1(SIZE(y_out%SuperController,1)))
-  ALLOCATE(c1(SIZE(y_out%SuperController,1)))
-  b1 = (t(3)**2*(y1%SuperController - y2%SuperController) + t(2)**2*(-y1%SuperController + y3%SuperController))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y1%SuperController + t(3)*y2%SuperController - t(2)*y3%SuperController ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%SuperController = y1%SuperController + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%SuperController,1),UBOUND(y_out%SuperController,1)
+    b = (t(3)**2*(y1%SuperController(i1) - y2%SuperController(i1)) + t(2)**2*(-y1%SuperController(i1) + y3%SuperController(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%SuperController(i1) + t(3)*y2%SuperController(i1) - t(2)*y3%SuperController(i1) ) * scaleFactor
+    y_out%SuperController(i1) = y1%SuperController(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
-  ALLOCATE(b1(SIZE(y_out%WriteOutput,1)))
-  ALLOCATE(c1(SIZE(y_out%WriteOutput,1)))
-  b1 = (t(3)**2*(y1%WriteOutput - y2%WriteOutput) + t(2)**2*(-y1%WriteOutput + y3%WriteOutput))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y1%WriteOutput + t(3)*y2%WriteOutput - t(2)*y3%WriteOutput ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%WriteOutput = y1%WriteOutput + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(y_out%WriteOutput,1),UBOUND(y_out%WriteOutput,1)
+    b = (t(3)**2*(y1%WriteOutput(i1) - y2%WriteOutput(i1)) + t(2)**2*(-y1%WriteOutput(i1) + y3%WriteOutput(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*y1%WriteOutput(i1) + t(3)*y2%WriteOutput(i1) - t(2)*y3%WriteOutput(i1) ) * scaleFactor
+    y_out%WriteOutput(i1) = y1%WriteOutput(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
  END SUBROUTINE OpFM_Output_ExtrapInterp2
 

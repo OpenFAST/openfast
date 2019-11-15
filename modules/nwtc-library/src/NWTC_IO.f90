@@ -22,6 +22,7 @@ MODULE NWTC_IO
 
    USE                             SysSubs
    USE                             NWTC_Library_Types  ! ProgDesc and other types with copy and other routines for those types
+   USE                             IEEE_ARITHMETIC
 
    IMPLICIT  NONE
 
@@ -152,6 +153,13 @@ MODULE NWTC_IO
       MODULE PROCEDURE ParseSiAry                                             ! Parse an array of single-precision REAL values.
    END INTERFACE
 
+      !> \copydoc nwtc_io::checkr4var
+   INTERFACE CheckRealVar
+      MODULE PROCEDURE CheckR4Var     ! 4-byte real
+      MODULE PROCEDURE CheckR8Var     ! 8-byte real
+      MODULE PROCEDURE CheckR16Var    ! 16-byte real
+   END INTERFACE
+   
       !> \copydoc nwtc_io::readcvar
    INTERFACE ReadVar
       MODULE PROCEDURE ReadCVar
@@ -1526,6 +1534,8 @@ CONTAINS
                CALL Conv2UC( Arg )
                Flag = Arg(2:) !this results in only the last flag
                IF ( TRIM(Flag) == 'RESTART' ) CYCLE         ! Get next argument (which will be input [checkpoint] file name)
+               IF ( TRIM(Flag) == 'VTKLIN' )  CYCLE         ! Get next argument (which will be input [checkpoint] file name)
+
             END IF
                                                 
             CALL NWTC_DisplaySyntax( InputFile, ProgName )
@@ -1677,7 +1687,7 @@ CONTAINS
    REAL, PARAMETER                  :: TestVal    = -1.0                     ! The value to test the format specifier with.
 
    INTEGER                          :: IOS                                   ! An integer to store the I/O status of the attempted internal write.
-   INTEGER, PARAMETER               :: TestStrLen  = 20                      ! A parameter for specifying the length of RealStr.
+   INTEGER, PARAMETER               :: TestStrLen  = 30                      ! A parameter for specifying the length of RealStr.
 
    CHARACTER(TestStrLen)            :: RealStr                               ! A string to test writing a real number to.
 
@@ -1783,6 +1793,60 @@ CONTAINS
 
    RETURN
    END SUBROUTINE CheckIOS
+!=======================================================================
+!> This routine checks that real values are finite and not NaNs
+SUBROUTINE CheckR4Var( RealVar, RealDesc, ErrStat, ErrMsg )
+
+   REAL(SiKi),  INTENT(IN)            :: RealVar                               !< Real value to check
+   CHARACTER(*),INTENT(IN)            :: RealDesc                              !< description of RealVar
+   INTEGER,     INTENT(OUT)           :: ErrStat                               !< Error status
+   CHARACTER(*),INTENT(OUT)           :: ErrMsg                                !< Error message
+
+   IF (IEEE_IS_NAN(RealVar) .or. .not. IEEE_IS_FINITE( RealVar) ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = trim(RealDesc)//': value is not a finite real number.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+   END IF
+   
+END SUBROUTINE CheckR4Var
+!=======================================================================
+!> \copydoc nwtc_io::checkr4var
+SUBROUTINE CheckR8Var( RealVar, RealDesc, ErrStat, ErrMsg )
+
+   REAL(R8Ki),  INTENT(IN)            :: RealVar                               !< Real value to check
+   CHARACTER(*),INTENT(IN)            :: RealDesc                              !< description of RealVar
+   INTEGER,     INTENT(OUT)           :: ErrStat                               !< Error status
+   CHARACTER(*),INTENT(OUT)           :: ErrMsg                                !< Error message
+
+   IF (IEEE_IS_NAN(RealVar) .or. .not. IEEE_IS_FINITE( RealVar) ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = trim(RealDesc)//': value is not a finite real number.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+   END IF
+   
+END SUBROUTINE CheckR8Var
+!=======================================================================
+!> \copydoc nwtc_io::checkr4var
+SUBROUTINE CheckR16Var( RealVar, RealDesc, ErrStat, ErrMsg )
+
+   REAL(QuKi),  INTENT(IN)            :: RealVar                               !< Real value to check
+   CHARACTER(*),INTENT(IN)            :: RealDesc                              !< description of RealVar
+   INTEGER,     INTENT(OUT)           :: ErrStat                               !< Error status
+   CHARACTER(*),INTENT(OUT)           :: ErrMsg                                !< Error message
+
+   IF (IEEE_IS_NAN(RealVar) .or. .not. IEEE_IS_FINITE( RealVar) ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = trim(RealDesc)//': value is not a finite real number.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+   END IF
+   
+END SUBROUTINE CheckR16Var
 !=======================================================================
 !> This routine converts all the text in a string to upper case.
    SUBROUTINE Conv2UC ( Str )
@@ -2307,12 +2371,13 @@ CONTAINS
 !=======================================================================
 !> Let's parse the path name from the name of the given file.
 !! We'll count everything before (and including) the last "\" or "/".
-   SUBROUTINE GetPath ( GivenFil, PathName )
+   SUBROUTINE GetPath ( GivenFil, PathName, FileName )
 
       ! Argument declarations.
 
-   CHARACTER(*), INTENT(IN)     :: GivenFil                                     !< The name of the given file.
-   CHARACTER(*), INTENT(OUT)    :: PathName                                     !< The path name of the given file (based solely on the GivenFil text string).
+   CHARACTER(*), INTENT(IN)             :: GivenFil                                     !< The name of the given file.
+   CHARACTER(*), INTENT(OUT)            :: PathName                                     !< The path name of the given file (based solely on the GivenFil text string).
+   CHARACTER(*), INTENT(OUT), OPTIONAL  :: FileName                                     !< The name of the given file without the PathName (based solely on the GivenFil text string).
 
 
       ! Local declarations.
@@ -2328,8 +2393,16 @@ CONTAINS
    IF ( I == 0 ) THEN
       ! we don't have a path specified, return '.'
       PathName = '.'//PathSep
+      IF (PRESENT(FileName)) FileName = GivenFil
    ELSE
       PathName = GivenFil(:I)
+      IF (PRESENT(FileName)) THEN
+         IF ( LEN_TRIM(GivenFil) > I ) THEN
+            FileName = GivenFil(I+1:)
+         ELSE
+            FileName = ""
+         END IF
+      END IF
    END IF
 
 
@@ -2570,6 +2643,22 @@ CONTAINS
 
    RETURN
    END FUNCTION Int2LStr
+!=======================================================================
+!> This function returns true if and only if the first character of the input StringToCheck matches on the of comment characters
+!! nwtc_io::commchars.
+   FUNCTION IsComment(StringToCheck)
+         ! Note: only the first character in the word is checked. Otherwise we would falsely grab the units '(%)'
+      LOGICAL                       :: IsComment
+      CHARACTER(*),   INTENT(IN  )  :: StringToCheck                          ! String to check
+
+            
+      if ( LEN_TRIM(StringToCheck) > 0 ) then
+         ISComment = INDEX( CommChars, StringToCheck(1:1) ) > 0
+      else
+         IsComment = .FALSE.
+      end if
+      
+   END FUNCTION IsComment   
 !=======================================================================
 !> This routine gets the name of the input file from the InArgth command-line argument, 
 !! removes the extension if there is one, and appends OutExten to the end.
@@ -2971,6 +3060,7 @@ CONTAINS
 
    RETURN
    END SUBROUTINE OpenFUnkFileAppend ! ( Un, OutFile [, ErrStat] [, ErrMsg] )
+!=======================================================================
 !>  This routine opens an unformatted input file of RecLen-byte data records
 !!  stored in Big Endian format.
    SUBROUTINE OpenUInBEFile( Un, InFile, RecLen, ErrStat, ErrMsg )
@@ -3248,8 +3338,8 @@ CONTAINS
          ! Local declarations.
 
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+      INTEGER(IntKi)                         :: i                             ! Error status local to this routine.
 
-      CHARACTER(20), ALLOCATABLE             :: Words       (:)               ! The array "words" parsed from the line.
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseDbAry'
 
 
@@ -3264,14 +3354,6 @@ CONTAINS
       END IF
       
       
-      ALLOCATE ( Words( AryLen ) , STAT=ErrStatLcl )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for the Words array.',ErrStat,ErrMsg,RoutineName )
-         CALL Cleanup()
-         RETURN
-      ENDIF
-
-
       READ (FileInfo%Lines(LineNum),*,IOSTAT=ErrStatLcl)  Ary
       IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat ( ErrID_Fatal, 'A fatal error occurred when parsing data from "' &
@@ -3280,33 +3362,21 @@ CONTAINS
                    //TRIM( Num2LStr( FileInfo%FileLine(LineNum) ) )//'.'//NewLine//' >> The text being parsed was :'//NewLine &
                    //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"',ErrStat,ErrMsg,RoutineName )
          RETURN
-         CALL Cleanup()         
       ENDIF
+      
+      DO i=1,AryLen
+         call CheckRealVar( Ary(i), AryName, ErrStat, ErrMsg )
+         if (ErrStat>= AbortErrLev) return
+      END DO
+
 
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  TRIM( FileInfo%Lines(LineNum) )
       END IF
 
       LineNum = LineNum + 1
-      CALL Cleanup()
 
       RETURN
-
-   !=======================================================================
-   CONTAINS
-   !=======================================================================
-      SUBROUTINE Cleanup ( )
-
-         ! This subroutine cleans up the parent routine before exiting.
-
-            ! Deallocate the Words array if it had been allocated.
-
-         IF ( ALLOCATED( Words ) ) DEALLOCATE( Words )
-
-
-         RETURN
-
-      END SUBROUTINE Cleanup
 
    END SUBROUTINE ParseDbAry
 !=======================================================================
@@ -3365,7 +3435,9 @@ CONTAINS
                    NewLine//'    "'//TRIM( FileInfo%Lines(LineNum) )//'"', ErrStat, ErrMsg, RoutineName)
          RETURN
       ENDIF
-
+      CALL CheckRealVar( Var, ExpVarName, ErrStatLcl, ErrMsg2)
+         CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
       END IF
@@ -3977,8 +4049,8 @@ CONTAINS
          ! Local declarations.
 
       INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+      INTEGER(IntKi)                         :: i
 
-      CHARACTER(20), ALLOCATABLE             :: Words       (:)               ! The array "words" parsed from the line.
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseSiAry'
 
       ErrStat = ErrID_None
@@ -3991,14 +4063,6 @@ CONTAINS
          RETURN
       END IF
 
-      ALLOCATE ( Words( AryLen ) , STAT=ErrStatLcl )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for the Words array.', ErrStat, ErrMsg, RoutineName )
-         CALL Cleanup()
-         RETURN
-      ENDIF
-
-
       READ (FileInfo%Lines(LineNum),*,IOSTAT=ErrStatLcl)  Ary
       IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data from "' &
@@ -4006,7 +4070,6 @@ CONTAINS
                    ' >> The "'//TRIM( AryName )//'" array was not assigned valid REAL values on line #' &
                    //TRIM( Num2LStr( FileInfo%FileLine(LineNum) ) )//'.'//NewLine//' >> The text being parsed was :'//NewLine &
                    //'    "'//TRIM( FileInfo%Lines(LineNum) )//'"', ErrStat, ErrMsg, RoutineName )
-         CALL Cleanup()
          RETURN
       ENDIF
 
@@ -4014,26 +4077,14 @@ CONTAINS
          IF ( UnEc > 0 )  WRITE (UnEc,'(A)')  TRIM( FileInfo%Lines(LineNum) )
       END IF
 
+      DO i=1,AryLen
+         call CheckRealVar( Ary(i), AryName, ErrStat, ErrMsg )
+         if (ErrStat>= AbortErrLev) return
+      END DO
+      
       LineNum = LineNum + 1
 
-      CALL Cleanup ( )
-
       RETURN
-
-   !=======================================================================
-   CONTAINS
-   !=======================================================================
-      SUBROUTINE Cleanup ( )
-
-         ! This subroutine cleans up the parent routine before exiting.
-
-            ! Deallocate the Words array if it had been allocated.
-
-         IF ( ALLOCATED( Words ) ) DEALLOCATE( Words )
-
-         RETURN
-
-      END SUBROUTINE Cleanup
 
    END SUBROUTINE ParseSiAry
 !=======================================================================
@@ -4092,6 +4143,8 @@ CONTAINS
          RETURN
       ENDIF
 
+      CALL CheckRealVar( Var, ExpVarName, ErrStat, ErrMsg)
+      
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 )  WRITE (UnEc,'(1X,A15," = ",A20)')  Words
       END IF
@@ -5509,7 +5562,7 @@ CONTAINS
 !=============================================================================
 !> This routine reads a line from the specified input file and returns the non-comment
 !! portion of the line.
-   SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, IOStat )
+   SUBROUTINE ReadLine ( UnIn, CommentChars, Line, LineLen, IOStat )
 
       ! Argument declarations.
 
@@ -5518,7 +5571,7 @@ CONTAINS
    INTEGER, INTENT(IN)                       :: UnIn                          !< The unit number for the file being read.
    INTEGER, INTENT(OUT)                      :: LineLen                       !< The length of the line returned from ReadLine().
 
-   CHARACTER(*), INTENT(IN)                  :: CommChars                     !< The list of possible comment characters.
+   CHARACTER(*), INTENT(IN)                  :: CommentChars                  !< The list of possible comment characters.
    CHARACTER(*), INTENT(OUT)                 :: Line                          !< The decommented line being returned to the calling routine.
 
       ! Local declarations.
@@ -5526,7 +5579,7 @@ CONTAINS
    INTEGER                                    :: CommLoc                      !  The left-most location of a given comment character in the Line.
    INTEGER                                    :: FirstComm                    !  The location of first comment character in the Line.
    INTEGER                                    :: IC                           !  The index for the character location in the string.
-   INTEGER                                    :: NumCommChars                 !  The number of comment characters in the CommChars array.
+   INTEGER                                    :: NumCommChars                 !  The number of comment characters in the CommentChars array.
 
 
    READ (UnIn,'(A)',IOSTAT=IOStat)  Line
@@ -5538,14 +5591,14 @@ CONTAINS
    ENDIF
 
    LineLen      = LEN_TRIM( Line )
-   NumCommChars = LEN_TRIM( CommChars )
+   NumCommChars = LEN_TRIM( CommentChars )
 
    IF ( ( NumCommChars == 0 ) .OR. ( LineLen == 0 ) )  RETURN
 
    FirstComm = MIN( LEN( Line ), LineLen + 1 )
 
    DO IC=1,NumCommChars
-      CommLoc = INDEX( Line, CommChars(IC:IC) )
+      CommLoc = INDEX( Line, CommentChars(IC:IC) )
       IF ( CommLoc > 0 )  THEN
          FirstComm = MIN( CommLoc, FirstComm )
       ENDIF
@@ -5757,8 +5810,12 @@ CONTAINS
    READ (UnIn,*,IOSTAT=IOS)  ( Ary(Ind), Ind=1,AryLen )
 
    CALL CheckIOS ( IOS, Fil, TRIM( AryName ), NumType, ErrStat, ErrMsg )
+      IF (ErrStat >= AbortErrLev) RETURN
 
-   IF (ErrStat >= AbortErrLev) RETURN
+   DO Ind=1,AryLen
+      CALL CheckRealVar( Ary(Ind), AryName, ErrStat, ErrMsg)
+         IF (ErrStat >= AbortErrLev) RETURN
+   END DO
 
    IF ( PRESENT(UnEc) )  THEN
       IF ( UnEc > 0 ) THEN
@@ -5807,6 +5864,11 @@ CONTAINS
 
    IF (ErrStat >= AbortErrLev) RETURN
 
+   DO Ind=1,AryLen
+      CALL CheckRealVar( Ary(Ind), AryName, ErrStat, ErrMsg)
+         IF (ErrStat >= AbortErrLev) RETURN
+   END DO
+   
    IF ( PRESENT(UnEc) )  THEN
       IF ( UnEc > 0 ) THEN
          WRITE( UnEc, Ec_ReAryFrmt ) TRIM( AryName ), AryDescr, Ary(1:MIN(AryLen,NWTC_MaxAryLen))
@@ -5853,6 +5915,11 @@ CONTAINS
 
    IF (ErrStat >= AbortErrLev) RETURN
 
+   DO Ind=1,AryLen
+      CALL CheckRealVar( Ary(Ind), AryName, ErrStat, ErrMsg)
+         IF (ErrStat >= AbortErrLev) RETURN
+   END DO
+   
    IF ( PRESENT(UnEc) )  THEN
       IF ( UnEc > 0 ) THEN
          WRITE( UnEc, Ec_ReAryFrmt ) TRIM( AryName ), AryDescr, Ary(1:MIN(AryLen,NWTC_MaxAryLen))
@@ -5895,8 +5962,9 @@ CONTAINS
       READ (UnIn,*,IOSTAT=IOS)  Ary(Ind)
 
       CALL CheckIOS ( IOS, Fil, TRIM( AryName )//'('//TRIM( Num2LStr( Ind ) )//')', NumType, ErrStat, ErrMsg )
-
-      IF (ErrStat >= AbortErrLev) RETURN
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL CheckRealVar( Ary(Ind), AryName, ErrStat, ErrMsg)
+         IF (ErrStat >= AbortErrLev) RETURN
 
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 ) &
@@ -5943,8 +6011,9 @@ CONTAINS
       READ (UnIn,*,IOSTAT=IOS)  Ary(Ind)
 
       CALL CheckIOS ( IOS, Fil, TRIM( AryName )//'('//TRIM( Num2LStr( Ind ) )//')', NumType, ErrStat, ErrMsg )
-
-      IF (ErrStat >= AbortErrLev) RETURN
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL CheckRealVar( Ary(Ind), AryName, ErrStat, ErrMsg)
+         IF (ErrStat >= AbortErrLev) RETURN
 
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 ) &
@@ -5991,8 +6060,9 @@ CONTAINS
       READ (UnIn,*,IOSTAT=IOS)  Ary(Ind)
 
       CALL CheckIOS ( IOS, Fil, TRIM( AryName )//'('//TRIM( Num2LStr( Ind ) )//')', NumType, ErrStat, ErrMsg )
-
-      IF (ErrStat >= AbortErrLev) RETURN
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL CheckRealVar( Ary(Ind), AryName, ErrStat, ErrMsg)
+         IF (ErrStat >= AbortErrLev) RETURN
 
       IF ( PRESENT(UnEc) )  THEN
          IF ( UnEc > 0 ) &
@@ -6040,8 +6110,9 @@ CONTAINS
    READ (Word,*,IOSTAT=IOS)  Var
 
    CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
-
-   IF (ErrStat >= AbortErrLev) RETURN
+      IF (ErrStat >= AbortErrLev) RETURN
+   CALL CheckRealVar( Var, VarName, ErrStat, ErrMsg)
+      IF (ErrStat >= AbortErrLev) RETURN
 
 
    IF ( PRESENT(UnEc) )  THEN
@@ -6086,8 +6157,9 @@ CONTAINS
       READ (Word,*,IOSTAT=IOS)  Var
 
       CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
-
-      IF (ErrStat >= AbortErrLev) RETURN
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL CheckRealVar( Var, VarName, ErrStat, ErrMsg)
+         IF (ErrStat >= AbortErrLev) RETURN
    ELSE
       Var = VarDefault
    END IF   
@@ -6133,9 +6205,9 @@ CONTAINS
    READ (Word,*,IOSTAT=IOS)  Var
 
    CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
-
-
-   IF (ErrStat >= AbortErrLev) RETURN
+      IF (ErrStat >= AbortErrLev) RETURN
+   CALL CheckRealVar( Var, VarName, ErrStat, ErrMsg)
+      IF (ErrStat >= AbortErrLev) RETURN
 
    IF ( PRESENT(UnEc) )  THEN
       IF ( UnEc > 0 ) &
@@ -6180,8 +6252,9 @@ CONTAINS
       READ (Word,*,IOSTAT=IOS)  Var
 
       CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
-
-      IF (ErrStat >= AbortErrLev) RETURN
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL CheckRealVar( Var, VarName, ErrStat, ErrMsg)
+         IF (ErrStat >= AbortErrLev) RETURN
    ELSE
       Var = VarDefault
    END IF   
@@ -6233,9 +6306,9 @@ CONTAINS
    READ (Word,*,IOSTAT=IOS)  Var
 
    CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
-
-
-   IF (ErrStat >= AbortErrLev) RETURN
+      IF (ErrStat >= AbortErrLev) RETURN
+   CALL CheckRealVar( Var, VarName, ErrStat, ErrMsg)
+      IF (ErrStat >= AbortErrLev) RETURN
 
    IF ( PRESENT(UnEc) )  THEN
       IF ( UnEc > 0 ) &
@@ -6280,8 +6353,9 @@ CONTAINS
       READ (Word,*,IOSTAT=IOS)  Var
 
       CALL CheckIOS ( IOS, Fil, VarName, NumType, ErrStat, ErrMsg )
-
-      IF (ErrStat >= AbortErrLev) RETURN
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL CheckRealVar( Var, VarName, ErrStat, ErrMsg)
+         IF (ErrStat >= AbortErrLev) RETURN
    ELSE
       Var = VarDefault
    END IF   
@@ -6383,8 +6457,6 @@ CONTAINS
       LOGICAL                                      :: FileFound               ! A flag that is set to TRUE if this file has already been read.
       LOGICAL                                      :: IsOpen                  ! A flag that is set to TRUE if this file is already open.
 
-! Should the comment characters be passed to this routine instead of being hard coded? -mlb
-      CHARACTER(3), PARAMETER                      :: CommChars = '!#%'       ! Comment characters that mark the end of useful input.
       CHARACTER(1024)                              :: FileName                ! The name of this file being processed.
       CHARACTER(1024)                              :: IncFileName             ! The name of a file that this one includes.
       CHARACTER(512)                               :: Line                    ! The contents of a line returned from ReadLine() with comment removed.
@@ -6647,7 +6719,6 @@ CONTAINS
    IMPLICIT                     NONE
 
    INTEGER(IntKi), PARAMETER     :: LenName     = ChanLen            ! Number of characters allowed in a channel name
-   INTEGER(IntKi), PARAMETER     :: LenUnit     = ChanLen            ! Number of characters allowed in a channel unit
 
       ! Passed data (sorted by element size, then alphabetical)
 
@@ -6657,7 +6728,7 @@ CONTAINS
    INTEGER(B2Ki),     INTENT(IN) :: FileID                           !< File ID, used to determine format of output file (use FileFmtID_WithTime or FileFmtID_WithoutTime)
 
    CHARACTER(LenName),INTENT(IN) :: ChanName(:)                      !< The output channel names (including Time)
-   CHARACTER(LenUnit),INTENT(IN) :: ChanUnit(:)                      !< The output channel units (including Time)
+   CHARACTER(LenName),INTENT(IN) :: ChanUnit(:)                      !< The output channel units (including Time)
    CHARACTER(*),      INTENT(IN) :: DescStr                          !< Description to write to the binary file (e.g., program version, date, & time)
    CHARACTER(*),      INTENT(OUT):: ErrMsg                           !< Error message associated with the ErrStat
    CHARACTER(*),      INTENT(IN) :: FileName                         !< Name of the file to write the output in
@@ -6742,7 +6813,7 @@ CONTAINS
    CALL AllocAry( ChanNameASCII, (1+NumOutChans)*LenName , 'temporary channel name array (ChanNameASCII)', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL AllocAry( ChanUnitASCII, (1+NumOutChans)*LenUnit, 'temporary channel unit names (ChanUnitASCII)', ErrStat2, ErrMsg2 )
+   CALL AllocAry( ChanUnitASCII, (1+NumOutChans)*LenName, 'temporary channel unit names (ChanUnitASCII)', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL AllocAry( DescStrASCII, LenDesc, 'temporary file description (DescStrASCII)', ErrStat2, ErrMsg2 )
@@ -6803,7 +6874,7 @@ CONTAINS
       ! Channel units (ChanUnit)
    J = 1
    DO IC = 1,SIZE(ChanUnit)
-      DO I=1,LenUnit
+      DO I=1,LenName
          ChanUnitASCII(J) = IACHAR( ChanUnit(IC)(I:I) )
          J = J + 1
       END DO
@@ -7866,7 +7937,10 @@ CONTAINS
       ELSE
          sz = len(Line)
          Line = Line(12:sz)
-         READ(Line,*)  dims
+         READ(Line,*, IOSTAT=ErrStat2)  dims
+         if (ErrStat2 /= 0) then
+            CALL SetErrStat( ErrID_Fatal, 'Error reading "dims".', ErrStat, ErrMsg, RoutineName )
+         end if
       END IF 
       
          ! Origin
@@ -7881,7 +7955,11 @@ CONTAINS
       ELSE
          sz = len(Line)
          Line = Line(8:sz)
-         READ(Line,*)  origin
+         READ(Line,*, IOSTAT=ErrStat2)  origin
+         if (ErrStat2 /= 0) then
+            CALL SetErrStat( ErrID_Fatal, 'Error reading "origin".', ErrStat, ErrMsg, RoutineName )
+         end if
+
       END IF 
       
          ! Spacing      
@@ -7896,7 +7974,11 @@ CONTAINS
       ELSE
          sz = len(Line)
          Line = Line(9:sz)
-         READ(Line,*)  gridSpacing
+         READ(Line,*,IOSTAT=ErrStat2)  gridSpacing
+         if (ErrStat2 /= 0) then
+            CALL SetErrStat( ErrID_Fatal, 'Error reading "gridSpacing".', ErrStat, ErrMsg, RoutineName )
+         end if
+         
       END IF 
       
          ! Point Data
@@ -7911,7 +7993,10 @@ CONTAINS
       ELSE
          sz = len(Line)
          Line = Line(12:sz)
-         READ(Line,*)  nPts
+         READ(Line,*,IOSTAT=ErrStat2)  nPts
+         if (ErrStat2 /= 0) then
+            CALL SetErrStat( ErrID_Fatal, 'Error reading "nPts".', ErrStat, ErrMsg, RoutineName )
+         end if
       END IF 
       
          ! Vector Label
@@ -7946,23 +8031,24 @@ CONTAINS
 !> This routine reads the vector data for a vtk, ascii, structured_points dataset file,
 !! The Unit number of the  file is already assumed to be valid via a previous call to
 !! ReadVTK_SP_info.  
-   SUBROUTINE ReadVTK_SP_vectors( FileName, Un, dims, gridVals, ErrStat, ErrMsg ) 
+   SUBROUTINE ReadVTK_SP_vectors( Un, dims, gridVals, ErrStat, ErrMsg ) 
    
-      CHARACTER(*)    , INTENT(IN   )        :: FileName             !< Name of output file     
       INTEGER(IntKi)  , INTENT(IN   )        :: Un                   !< unit number of opened file
       INTEGER(IntKi)  , INTENT(IN   )        :: dims(3)              !< dimension of the 3D grid (nX,nY,nZ)
-      REAL(ReKi)      , INTENT(  OUT)        :: gridVals(:,:,:,:)    !< 3D array of data, size (nX,nY,nZ), must be pre-allocated
+      REAL(ReKi)      , INTENT(  OUT)        :: gridVals(:,:,:,:)    !< 4D array of data, size (3,nX,nY,nZ), must be pre-allocated
       INTEGER(IntKi)  , INTENT(  OUT)        :: ErrStat              !< error level/status of OpenFOutFile operation
       CHARACTER(*)    , INTENT(  OUT)        :: ErrMsg               !< message when error occurs
    
       INTEGER(IntKi)                         :: ErrStat2             ! local error level/status of OpenFOutFile operation
-      CHARACTER(ErrMsgLen)                   :: ErrMsg2                   ! local message when error occurs   
       CHARACTER(*), PARAMETER                :: RoutineName = 'ReadVTK_SP_vectors'
       
       ErrStat = ErrID_None
       ErrMsg  = ''
       
-      READ(Un,*)  gridVals(1:3,1:dims(1),1:dims(2),1:dims(3))
+      READ(Un,*, IOSTAT=ErrStat2)  gridVals(1:3,1:dims(1),1:dims(2),1:dims(3))
+      if (ErrStat2 /= 0) then
+         CALL SetErrStat( ErrID_Fatal, 'Error reading vector data.', ErrStat, ErrMsg, RoutineName )
+      end if
      
       close(Un)
       

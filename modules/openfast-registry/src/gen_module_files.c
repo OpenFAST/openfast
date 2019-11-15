@@ -33,13 +33,20 @@ gen_copy_c2f( FILE         *fp        , // *.f90 file we are writting to
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
-  fprintf(fp," SUBROUTINE %s_C2Fary_Copy%s( %sData, ErrStat, ErrMsg )\n", ModName->nickname, nonick,nonick );
+  fprintf(fp," SUBROUTINE %s_C2Fary_Copy%s( %sData, ErrStat, ErrMsg, SkipPointers )\n", ModName->nickname, nonick,nonick );
   fprintf(fp,"    TYPE(%s), INTENT(INOUT) :: %sData\n"               , addnick, nonick                                      );
   fprintf(fp,"    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n"                                                              );
   fprintf(fp,"    CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n"                                                               );
+  fprintf(fp,"    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers\n"                                                         );
   fprintf(fp,"    ! \n"                                                                                                     );
+  fprintf(fp,"    LOGICAL                        :: SkipPointers_local\n");
   fprintf(fp,"    ErrStat = ErrID_None\n"                                                                                   );
-  fprintf(fp,"    ErrMsg  = \"\"\n"                                                                                         );
+  fprintf(fp,"    ErrMsg  = \"\"\n\n"                                                                                       );
+  fprintf(fp,"    IF (PRESENT(SkipPointers)) THEN\n");
+  fprintf(fp,"       SkipPointers_local = SkipPointers\n");
+  fprintf(fp,"    ELSE\n");
+  fprintf(fp,"       SkipPointers_local = .false.\n");
+  fprintf(fp,"    END IF\n");
 
   sprintf(tmp,"%s",addnick) ;
 
@@ -55,11 +62,13 @@ gen_copy_c2f( FILE         *fp        , // *.f90 file we are writting to
         } else {
             if ( is_pointer(r) ) {
                  fprintf(fp,"\n    ! -- %s %s Data fields\n",r->name,nonick) ;
-                 fprintf(fp,"    IF ( .NOT. C_ASSOCIATED( %sData%%C_obj%%%s ) ) THEN\n",nonick,r->name) ;
-                 fprintf(fp,"       NULLIFY( %sData%%%s )\n",nonick,r->name) ;
-                 fprintf(fp,"    ELSE\n") ;
-                 fprintf(fp,"       CALL C_F_POINTER(%sData%%C_obj%%%s, %sData%%%s, (/%sData%%C_obj%%%s_Len/))\n",nonick,r->name,nonick,r->name,nonick,r->name) ;
-                 fprintf(fp,"    END IF\n") ;
+                 fprintf(fp,"    IF ( .NOT. SkipPointers_local ) THEN\n");                 
+                 fprintf(fp,"       IF ( .NOT. C_ASSOCIATED( %sData%%C_obj%%%s ) ) THEN\n",nonick,r->name) ;
+                 fprintf(fp,"          NULLIFY( %sData%%%s )\n",nonick,r->name) ;
+                 fprintf(fp,"       ELSE\n") ;
+                 fprintf(fp,"          CALL C_F_POINTER(%sData%%C_obj%%%s, %sData%%%s, (/%sData%%C_obj%%%s_Len/))\n",nonick,r->name,nonick,r->name,nonick,r->name) ;
+                 fprintf(fp,"       END IF\n") ;
+                 fprintf(fp, "    END IF\n");
             }
             else if (!has_deferred_dim(r, 0)) {
                if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
@@ -84,6 +93,87 @@ gen_copy_c2f( FILE         *fp        , // *.f90 file we are writting to
 
   fprintf(fp," END SUBROUTINE %s_C2Fary_Copy%s\n\n", ModName->nickname,nonick ) ;
   return(0) ;
+}
+
+int
+gen_copy_f2c(FILE         *fp, // *.f90 file we are writting to
+    const node_t *ModName, // module name
+    char         *inout, // character string written out
+    char         *inoutlong) // not sure what this is used for
+{
+    node_t *q, *r;
+    char tmp[NAMELEN];
+    char addnick[NAMELEN];
+    char nonick[NAMELEN];
+
+    remove_nickname(ModName->nickname, inout, nonick);
+    append_nickname((is_a_fast_interface_type(inoutlong)) ? ModName->nickname : "", inoutlong, addnick);
+    fprintf(fp, " SUBROUTINE %s_F2C_Copy%s( %sData, ErrStat, ErrMsg, SkipPointers  )\n", ModName->nickname, nonick, nonick);
+    fprintf(fp, "    TYPE(%s), INTENT(INOUT) :: %sData\n", addnick, nonick);
+    fprintf(fp, "    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n");
+    fprintf(fp, "    CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n");
+    fprintf(fp, "    LOGICAL,OPTIONAL,INTENT(IN   ) :: SkipPointers\n");
+    fprintf(fp, "    ! \n");
+    fprintf(fp, "    LOGICAL                        :: SkipPointers_local\n");
+    fprintf(fp, "    ErrStat = ErrID_None\n");
+    fprintf(fp, "    ErrMsg  = \"\"\n\n");
+    fprintf(fp, "    IF (PRESENT(SkipPointers)) THEN\n");
+    fprintf(fp, "       SkipPointers_local = SkipPointers\n");
+    fprintf(fp, "    ELSE\n");
+    fprintf(fp, "       SkipPointers_local = .false.\n");
+    fprintf(fp, "    END IF\n");
+
+    sprintf(tmp, "%s", addnick);
+
+    if ((q = get_entry(make_lower_temp(tmp), ModName->module_ddt_list)) == NULL)
+    {
+        fprintf(stderr, "Registry warning: generating %s_F2C_Copy%s: cannot find definition for %s\n", ModName->nickname, nonick, tmp);
+    }
+    else {
+        for (r = q->fields; r; r = r->next)
+        {
+            if (r->type != NULL) {
+                if (r->type->type_type == DERIVED) { // && ! r->type->usefrom
+                    fprintf(stderr, "Registry WARNING: derived data type %s of type %s is not passed through F-C interface\n", r->name, r->type->name);
+                }
+                else {
+                    if (is_pointer(r)) {
+                        fprintf(fp, "\n    ! -- %s %s Data fields\n", r->name, nonick);
+                        fprintf(fp, "    IF ( .NOT. SkipPointers_local ) THEN\n");
+                        fprintf(fp, "       IF ( .NOT. %s(%sData%%%s)) THEN \n", assoc_or_allocated(r), nonick, r->name);
+                        fprintf(fp, "          %sData%%c_obj%%%s_Len = 0\n", nonick, r->name);
+                        fprintf(fp, "          %sData%%c_obj%%%s = C_NULL_PTR\n", nonick, r->name);
+                        fprintf(fp, "       ELSE\n");
+                        fprintf(fp, "          %sData%%c_obj%%%s_Len = SIZE(%sData%%%s)\n", nonick, r->name, nonick, r->name);
+                        fprintf(fp, "          IF (%sData%%c_obj%%%s_Len > 0) &\n", nonick, r->name);
+                        fprintf(fp, "             %sData%%c_obj%%%s = C_LOC( %sData%%%s( LBOUND(%sData%%%s,1) ) ) \n", nonick, r->name, nonick, r->name, nonick, r->name );
+                        fprintf(fp, "       END IF\n");
+                        fprintf(fp, "    END IF\n");
+                    }
+                    else if (!has_deferred_dim(r, 0)) {
+                        if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
+                            !strcmp(r->type->mapsto, "REAL(SiKi)") ||
+                            !strcmp(r->type->mapsto, "REAL(DbKi)") ||
+                            !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
+                            !strcmp(r->type->mapsto, "INTEGER(IntKi)") ||
+                            !strcmp(r->type->mapsto, "LOGICAL"))
+                        {
+                            fprintf(fp, "    %sData%%C_obj%%%s = %sData%%%s\n", nonick, r->name, nonick, r->name);
+                        }
+                        else { // characters need to be copied differently
+                            if (r->ndims == 0) {
+                                //fprintf(stderr, "Registry WARNING: character data type %s of type %s is not passed through F-C interface\n", r->name, r->type->name);
+                                fprintf(fp, "    %sData%%C_obj%%%s = TRANSFER(%sData%%%s, %sData%%C_obj%%%s )\n", nonick, r->name, nonick, r->name, nonick, r->name);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fprintf(fp, " END SUBROUTINE %s_F2C_Copy%s\n\n", ModName->nickname, nonick);
+    return(0);
 }
 
 
@@ -190,13 +280,14 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, con
   fprintf(fp, "    Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
   if (sw_ccode && !is_pointer(r)){
 
-             if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
-                !strcmp(r->type->mapsto, "REAL(SiKi)") ||
-                !strcmp(r->type->mapsto, "REAL(DbKi)") ||
-                !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
-                !strcmp(r->type->mapsto, "INTEGER(IntKi)") ||
-                !strcmp(r->type->mapsto, "LOGICAL") ||
-                r->ndims == 0)
+     //if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
+     //   !strcmp(r->type->mapsto, "REAL(SiKi)") ||
+     //   !strcmp(r->type->mapsto, "REAL(DbKi)") ||
+     //   !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
+     //   !strcmp(r->type->mapsto, "INTEGER(IntKi)") ||
+     //   !strcmp(r->type->mapsto, "LOGICAL") ||
+     //   r->ndims == 0)
+             if ( r->ndims == 0 ) // scalar of any type OR a character array
              {
                 //  fprintf(fp, "    Dst%sData%%C_obj%%%s = Dst%sData%%%s\n", nonick, r->name, nonick, r->name);
                    fprintf(fp, "    Dst%sData%%C_obj%%%s = Src%sData%%C_obj%%%s\n", nonick, r->name, nonick, r->name);
@@ -221,10 +312,10 @@ void
 gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 {
 
-  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
-  char nonick2[NAMELEN];
+  char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
+  char nonick2[NAMELEN], indent[NAMELEN], mainIndent[6];
   node_t *q, * r ;
-  int frst, d;
+  int frst, d, i;
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
@@ -416,26 +507,26 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   for ( r = q->fields ; r ; r = r->next )
   {
 
-    if (has_deferred_dim(r, 0)){
-         // store whether the data type is allocated and the bounds of each dimension
-  fprintf(fp, "  IF ( .NOT. %s(InData%%%s) ) THEN\n", assoc_or_allocated(r), r->name);
-  fprintf(fp, "    IntKiBuf( Int_Xferred ) = 0\n"); // not allocated
-  fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n");
-  //fprintf(fp, "    IntKiBuf( Int_Xferred:Int_Xferred+2*%d-1 ) = 0\n", r->ndims, r->name);
-  //fprintf(fp, "    Int_Xferred = Int_Xferred + 2*%d\n", r->ndims);
-  fprintf(fp, "  ELSE\n");
-  fprintf(fp, "    IntKiBuf( Int_Xferred ) = 1\n"); // allocated
-  fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n");
-  for (d = 1; d <= r->ndims; d++) {
-  fprintf(fp, "    IntKiBuf( Int_Xferred    ) = LBOUND(InData%%%s,%d)\n", r->name, d);
-  fprintf(fp, "    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%%%s,%d)\n", r->name, d);
-  fprintf(fp, "    Int_Xferred = Int_Xferred + 2\n");
-      }
-  fprintf(fp, "\n");
-  sprintf(tmp3, "  IF (SIZE(InData%%%s)>0)", r->name);
-    }
-    else{
-       sprintf(tmp3, " ");
+     if (has_deferred_dim(r, 0)) {
+        // store whether the data type is allocated and the bounds of each dimension
+        fprintf(fp, "  IF ( .NOT. %s(InData%%%s) ) THEN\n", assoc_or_allocated(r), r->name);
+        fprintf(fp, "    IntKiBuf( Int_Xferred ) = 0\n"); // not allocated
+        fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n");
+        //fprintf(fp, "    IntKiBuf( Int_Xferred:Int_Xferred+2*%d-1 ) = 0\n", r->ndims, r->name);
+        //fprintf(fp, "    Int_Xferred = Int_Xferred + 2*%d\n", r->ndims);
+        fprintf(fp, "  ELSE\n");
+        fprintf(fp, "    IntKiBuf( Int_Xferred ) = 1\n"); // allocated
+        fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n");
+        for (d = 1; d <= r->ndims; d++) {
+           fprintf(fp, "    IntKiBuf( Int_Xferred    ) = LBOUND(InData%%%s,%d)\n", r->name, d);
+           fprintf(fp, "    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%%%s,%d)\n", r->name, d);
+           fprintf(fp, "    Int_Xferred = Int_Xferred + 2\n");
+        }
+        fprintf(fp, "\n");
+        strcpy(mainIndent, "  ");
+     } 
+     else {
+        strcpy(mainIndent, "");
     }
 
 
@@ -500,63 +591,55 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
        }
 
     }
-    else {  // intrinsic data types
+    else {  
+       // intrinsic data types
        // do all dimensions of arrays (no need for loop over i%d)
 
-       sprintf(tmp2, "SIZE(InData%%%s)", r->name);
+       strcpy(indent, "  ");
+       strcat(indent, mainIndent);
+       for (d = r->ndims; d >= 1; d--) {
+          fprintf(fp, "%s  DO i%d = LBOUND(InData%%%s,%d), UBOUND(InData%%%s,%d)\n", indent, d, r->name, d, r->name, d);
+          strcat(indent, "  "); //create an indent
+       }
+
 
        if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
           !strcmp(r->type->mapsto, "REAL(SiKi)")) {
-          fprintf(fp, "    %s ReKiBuf ( Re_Xferred:Re_Xferred+(%s)-1 ) = %sInData%%%s%s\n",
-             tmp3, (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "");
-          fprintf(fp, "      Re_Xferred   = Re_Xferred   + %s\n", (r->ndims>0) ? tmp2 : "1");
+          fprintf(fp, "%s  ReKiBuf(Re_Xferred) = InData%%%s%s\n", indent, r->name, dimstr(r->ndims));
+          fprintf(fp, "%s  Re_Xferred = Re_Xferred + 1\n", indent);
        }
        else if (!strcmp(r->type->mapsto, "REAL(DbKi)") ||
                 !strcmp(r->type->mapsto, "REAL(R8Ki)")) {
-          fprintf(fp, "    %s DbKiBuf ( Db_Xferred:Db_Xferred+(%s)-1 ) = %sInData%%%s%s\n",
-             tmp3, (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "");
-          fprintf(fp, "      Db_Xferred   = Db_Xferred   + %s\n", (r->ndims>0) ? tmp2 : "1");
+          fprintf(fp, "%s  DbKiBuf(Db_Xferred) = InData%%%s%s\n", indent, r->name, dimstr(r->ndims));
+          fprintf(fp, "%s  Db_Xferred = Db_Xferred + 1\n", indent);
        }
        else if (!strcmp(r->type->mapsto, "INTEGER(IntKi)") ) {
-          fprintf(fp, "    %s IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ) = %sInData%%%s%s\n",
-             tmp3, (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "");
-          fprintf(fp, "      Int_Xferred   = Int_Xferred   + %s\n", (r->ndims>0) ? tmp2 : "1");
+          fprintf(fp, "%s  IntKiBuf(Int_Xferred) = InData%%%s%s\n", indent, r->name, dimstr(r->ndims));
+          fprintf(fp, "%s  Int_Xferred = Int_Xferred + 1\n", indent);
        }
        else if (!strcmp(r->type->mapsto, "LOGICAL") ) {
-          fprintf(fp, "    %s IntKiBuf ( Int_Xferred:Int_Xferred+%s-1 ) = TRANSFER(%s InData%%%s %s, IntKiBuf(1), %s)\n",
-             tmp3, (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "",
-             (r->ndims>0) ? tmp2 : "1");
-          fprintf(fp, "      Int_Xferred   = Int_Xferred   + %s\n", (r->ndims>0) ? tmp2 : "1");
+          fprintf(fp, "%s  IntKiBuf(Int_Xferred) = TRANSFER(InData%%%s%s, IntKiBuf(1))\n", indent, r->name, dimstr(r->ndims));
+          fprintf(fp, "%s  Int_Xferred = Int_Xferred + 1\n", indent);
        }
 
        else /*if (!strcmp(r->type->mapsto, "CHARACTER")) */{
 
-          for (d = r->ndims; d >= 1; d--) {
-             fprintf(fp, "    DO i%d = LBOUND(InData%%%s,%d), UBOUND(InData%%%s,%d)\n", d, r->name, d, r->name, d);
+          fprintf(fp, "%s  DO I = 1, LEN(InData%%%s)\n", indent, r->name);
+          fprintf(fp, "%s    IntKiBuf(Int_Xferred) = ICHAR(InData%%%s%s(I:I), IntKi)\n", indent, r->name, dimstr(r->ndims));
+          fprintf(fp, "%s    Int_Xferred = Int_Xferred + 1\n", indent);
+          fprintf(fp, "%s  END DO ! I\n", indent);
+
+       }
+
+       for (d = r->ndims; d >= 1; d--) {
+          strcpy(indent, "  ");
+          strcat(indent, mainIndent);
+          for (i = 1; i < d; i++) {
+             strcat(indent, "  ");
           }
+          fprintf(fp, "%s  END DO\n", indent);
+       }
 
-          fprintf(fp, "        DO I = 1, LEN(InData%%%s)\n", r->name);
-          fprintf(fp, "          IntKiBuf(Int_Xferred) = ICHAR(InData%%%s%s(I:I), IntKi)\n", r->name, dimstr(r->ndims));
-          fprintf(fp, "          Int_Xferred = Int_Xferred   + 1\n");
-          fprintf(fp, "        END DO ! I\n");
-
-          for (d = r->ndims; d >= 1; d--) {
-             fprintf(fp, "    END DO !i%d\n",d);
-          }
-
-// bjj: this works, but will produce errors about the source being smaller than the result, thus leaving garbage in some bytes
-#if 0
-          fprintf(fp, "      IntKiBuf ( Int_Xferred:Int_Xferred+%s*LEN(InData%%%s)-1 ) = TRANSFER(%s InData%%%s %s, IntKiBuf(1), %s*LEN(InData%%%s))\n",
-             (r->ndims>0) ? tmp2 : "1", r->name,
-             (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "",
-             (r->ndims>0) ? tmp2 : "1", r->name);
-          fprintf(fp, "      Int_Xferred   = Int_Xferred   + %s*LEN(InData%%%s)\n", (r->ndims>0) ? tmp2 : "1", r->name);
-#endif
-       } /*
-       else
-       {
-          fprintf(fp, "!  missing buffer for %s\n", r->name);
-       }*/
     }
 
     if (has_deferred_dim(r, 0)){
@@ -571,9 +654,9 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 void
 gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
-  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN], nonick2[NAMELEN];
+  char tmp[NAMELEN], tmp2[NAMELEN], indent[NAMELEN], addnick[NAMELEN], nonick[NAMELEN], nonick2[NAMELEN], mainIndent[6];
   node_t *q, * r ;
-  int d ;
+  int d, i ;
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
@@ -599,12 +682,6 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  INTEGER(IntKi)                 :: Db_Xferred\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: Int_Xferred\n") ;
   fprintf(fp,"  INTEGER(IntKi)                 :: i\n") ;
-  fprintf(fp,"  LOGICAL                        :: mask0\n");
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask1(:)\n");
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask2(:,:)\n");
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)\n") ;
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)\n") ;
-  fprintf(fp,"  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)\n") ;
   for (d = 1; d <= q->max_ndims; d++){
   fprintf(fp,"  INTEGER(IntKi)                 :: i%d, i%d_l, i%d_u  !  bounds (upper/lower) for an array dimension %d\n", d, d, d, d);
   }
@@ -659,18 +736,16 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
           fprintf(fp, "    IF (OutData%%c_obj%%%s_Len > 0) &\n", r->name);
           fprintf(fp, "       OutData%%c_obj%%%s = C_LOC( OutData%%%s(i1_l) ) \n", r->name, r->name);
         }
-
-        sprintf(tmp3, "  IF (SIZE(OutData%%%s)>0)", r->name);
+        strcpy(mainIndent, "  ");
      }
      else{
-        sprintf(tmp3, " ");
-
         for (d = 1; d <= r->ndims; d++) {
            fprintf(fp, "    i%d_l = LBOUND(OutData%%%s,%d)\n", d, r->name, d);
            fprintf(fp, "    i%d_u = UBOUND(OutData%%%s,%d)\n", d, r->name, d);
            sprintf(tmp2, ",i%d_l:i%d_u", d, d);
            strcat(tmp, tmp2);
         }
+        strcpy(mainIndent, "");
      }
 
      if (!strcmp(r->type->name, "meshtype") ||
@@ -751,122 +826,73 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         }
 
      }
-     else if (r->ndims > 0){ //non-scalar intrinsic data types (arrays)
-        fprintf(fp, "    ALLOCATE(mask%d(%s),STAT=ErrStat2)\n", r->ndims, (char*)&(tmp[1]));
-        fprintf(fp, "    IF (ErrStat2 /= 0) THEN \n");
-        fprintf(fp, "       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask%d.', ErrStat, ErrMsg,RoutineName)\n", r->ndims);
-        fprintf(fp, "       RETURN\n");
-        fprintf(fp, "    END IF\n");
-        fprintf(fp, "    mask%d = .TRUE. \n", r->ndims);
+     else
+     {
+        strcpy(indent, "  ");
+        strcat(indent, mainIndent);
+        for (d = r->ndims; d >= 1; d--) {
+           fprintf(fp, "%s  DO i%d = LBOUND(OutData%%%s,%d), UBOUND(OutData%%%s,%d)\n", indent, d, r->name, d, r->name, d);
+           strcat(indent, "  "); //create an indent
+        }
 
-        // do all dimensions of arrays (no need for loop over i%d)
-        sprintf(tmp2, "SIZE(OutData%%%s)", r->name);
 
-        if (!strcmp(r->type->mapsto, "REAL(ReKi)")) {
-           if (is_pointer(r)) { // bjj: this isn't very generic, but it's quick and will work for all current cases
-              fprintf(fp, "    %s OutData%%%s = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(%s)-1 ), mask%d, 0.0_ReKi ), C_FLOAT)\n",
-                 tmp3, r->name, tmp2, r->ndims);
+        if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
+            !strcmp(r->type->mapsto, "REAL(SiKi)")) {
+           if (sw_ccode && is_pointer(r)) {
+              fprintf(fp, "%s  OutData%%%s%s = REAL(ReKiBuf(Re_Xferred), C_FLOAT)\n", indent, r->name, dimstr(r->ndims));
+           }
+           else if (!strcmp(r->type->mapsto, "REAL(SiKi)")) {
+              fprintf(fp, "%s  OutData%%%s%s = REAL(ReKiBuf(Re_Xferred), SiKi)\n", indent, r->name, dimstr(r->ndims));
            }
            else {
-              fprintf(fp, "    %s OutData%%%s = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(%s)-1 ), mask%d, 0.0_ReKi )\n",
-                 tmp3, r->name, tmp2, r->ndims);
+              fprintf(fp, "%s  OutData%%%s%s = ReKiBuf(Re_Xferred)\n", indent, r->name, dimstr(r->ndims));
            }
-           fprintf(fp, "      Re_Xferred   = Re_Xferred   + %s\n", tmp2);
+           fprintf(fp, "%s  Re_Xferred = Re_Xferred + 1\n", indent);
         }
-        else if (!strcmp(r->type->mapsto, "REAL(SiKi)"))
-        {
-           fprintf(fp, "    %s OutData%%%s = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(%s)-1 ), mask%d, 0.0_ReKi ), SiKi)\n",
-              tmp3, r->name, tmp2, r->ndims);
-           fprintf(fp, "      Re_Xferred   = Re_Xferred   + %s\n", tmp2);
-        }
-        else if (!strcmp(r->type->mapsto, "REAL(DbKi)")) {
-           if (is_pointer(r)) { // bjj: this isn't very generic, but it's quick and will work for all current cases
-              fprintf(fp, "    %s OutData%%%s = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(%s)-1 ), mask%d, 0.0_DbKi ), C_DOUBLE)\n",
-                 tmp3, r->name, tmp2, r->ndims);
+        else if (!strcmp(r->type->mapsto, "REAL(DbKi)") ||
+                 !strcmp(r->type->mapsto, "REAL(R8Ki)")) {
+           if (sw_ccode && is_pointer(r)) {
+              fprintf(fp, "%s  OutData%%%s%s = REAL(DbKiBuf(Db_Xferred), C_DOUBLE)\n", indent, r->name, dimstr(r->ndims));
+           }
+           else if (!strcmp(r->type->mapsto, "REAL(R8Ki)")) {
+              fprintf(fp, "%s  OutData%%%s%s = REAL(DbKiBuf(Db_Xferred), R8Ki)\n", indent, r->name, dimstr(r->ndims));
            }
            else {
-              fprintf(fp, "    %s OutData%%%s = UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(%s)-1 ), mask%d, 0.0_DbKi )\n",
-                 tmp3, r->name, (r->ndims > 0) ? tmp2 : "1", r->ndims);
+              fprintf(fp, "%s  OutData%%%s%s = DbKiBuf(Db_Xferred)\n", indent, r->name, dimstr(r->ndims));
            }
-           fprintf(fp, "      Db_Xferred   = Db_Xferred   + %s\n", tmp2);
-        }
-        else if (!strcmp(r->type->mapsto, "REAL(R8Ki)"))
-        {
-           fprintf(fp, "    %s OutData%%%s = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(%s)-1 ), mask%d, 0.0_DbKi ), R8Ki)\n",
-              tmp3, r->name, tmp2, r->ndims);
-           fprintf(fp, "      Db_Xferred   = Db_Xferred   + %s\n", tmp2);
+           fprintf(fp, "%s  Db_Xferred = Db_Xferred + 1\n", indent);
         }
         else if (!strcmp(r->type->mapsto, "INTEGER(IntKi)")) {
-           fprintf(fp, "    %s OutData%%%s = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ), mask%d, 0_IntKi )\n",
-              tmp3, r->name, (r->ndims>0) ? tmp2 : "1", r->ndims);
-           fprintf(fp, "      Int_Xferred   = Int_Xferred   + %s\n", tmp2);
+           fprintf(fp, "%s  OutData%%%s%s = IntKiBuf(Int_Xferred)\n", indent, r->name, dimstr(r->ndims));
+           fprintf(fp, "%s  Int_Xferred = Int_Xferred + 1\n", indent);
         }
         else if (!strcmp(r->type->mapsto, "LOGICAL")) {
-           //fprintf(fp, "    %s OutData%%%s = TRANSFER( UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ), mask%d, 0 ), OutData%%%s)\n",
-           fprintf(fp, "    %s OutData%%%s = UNPACK( TRANSFER( IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ), OutData%%%s), mask%d,.TRUE.)\n",
-              tmp3, r->name, (r->ndims>0) ? tmp2 : "1", r->name, r->ndims);
-           fprintf(fp, "      Int_Xferred   = Int_Xferred   + %s\n", tmp2);
+           fprintf(fp, "%s  OutData%%%s%s = TRANSFER(IntKiBuf(Int_Xferred), OutData%%%s%s)\n", indent, r->name, dimstr(r->ndims), r->name, dimstr(r->ndims));
+           fprintf(fp, "%s  Int_Xferred = Int_Xferred + 1\n", indent);
         }
 
-        else /*if (!strcmp(r->type->mapsto, "CHARACTER")) */{
+        else /*if (!strcmp(r->type->mapsto, "CHARACTER")) */ {
 
-           for (d = r->ndims; d >= 1; d--) {
-              fprintf(fp, "    DO i%d = LBOUND(OutData%%%s,%d), UBOUND(OutData%%%s,%d)\n", d, r->name, d, r->name, d);
+           fprintf(fp, "%s  DO I = 1, LEN(OutData%%%s)\n", indent, r->name);
+           fprintf(fp, "%s    OutData%%%s%s(I:I) = CHAR(IntKiBuf(Int_Xferred))\n", indent, r->name, dimstr(r->ndims));
+           fprintf(fp, "%s    Int_Xferred = Int_Xferred + 1\n", indent);
+           fprintf(fp, "%s  END DO ! I\n", indent);
+
+        }
+
+        for (d = r->ndims; d >= 1; d--) {
+           strcpy(indent, "  ");
+           strcat(indent, mainIndent);
+           for (i = 1; i < d; i++) {
+              strcat(indent, "  ");
            }
-
-           fprintf(fp, "        DO I = 1, LEN(OutData%%%s)\n", r->name);
-           fprintf(fp, "          OutData%%%s%s(I:I) = CHAR(IntKiBuf(Int_Xferred))\n", r->name, dimstr(r->ndims));
-           fprintf(fp, "          Int_Xferred = Int_Xferred   + 1\n");
-           fprintf(fp, "        END DO ! I\n");
-
-           for (d = r->ndims; d >= 1; d--) {
-              fprintf(fp, "    END DO !i%d\n", d);
-           }
+           fprintf(fp, "%s  END DO\n", indent);
         }
 
-        fprintf(fp, "    DEALLOCATE(mask%d)\n", r->ndims);
-
-     }
-     else {
-        // scalar intrinsic data types
-        // do all dimensions of arrays (no need for loop over i%d)
-         if (!strcmp(r->type->mapsto, "REAL(ReKi)")) {
-              fprintf(fp, "      OutData%%%s = ReKiBuf( Re_Xferred )\n", r->name);
-              fprintf(fp, "      Re_Xferred   = Re_Xferred + 1\n");
-         }
-        else if (!strcmp(r->type->mapsto, "REAL(SiKi)"))
-        {
-           fprintf(fp, "      OutData%%%s = REAL( ReKiBuf( Re_Xferred ), SiKi) \n", r->name);
-           fprintf(fp, "      Re_Xferred   = Re_Xferred + 1\n");
-        }
-        else if (!strcmp(r->type->mapsto, "REAL(DbKi)")) {
-           fprintf(fp, "      OutData%%%s = DbKiBuf( Db_Xferred ) \n", r->name);
-           fprintf(fp, "      Db_Xferred   = Db_Xferred + 1\n");
-        }
-        else if (!strcmp(r->type->mapsto, "REAL(R8Ki)")) {
-           fprintf(fp, "      OutData%%%s = REAL( DbKiBuf( Db_Xferred ), R8Ki) \n", r->name);
-           fprintf(fp, "      Db_Xferred   = Db_Xferred + 1\n");
-        }
-        else if (!strcmp(r->type->mapsto, "INTEGER(IntKi)")) {
-           fprintf(fp, "      OutData%%%s = IntKiBuf( Int_Xferred ) \n", r->name);
-           fprintf(fp, "      Int_Xferred   = Int_Xferred + 1\n");
-        }
-        else if (!strcmp(r->type->mapsto, "LOGICAL")) {
-           fprintf(fp, "      OutData%%%s = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )\n", r->name);
-           fprintf(fp, "      Int_Xferred   = Int_Xferred + 1\n");
-        }
-
-        else /*if (!strcmp(r->type->mapsto, "CHARACTER")) */{
-
-           fprintf(fp, "      DO I = 1, LEN(OutData%%%s)\n", r->name);
-           fprintf(fp, "        OutData%%%s(I:I) = CHAR(IntKiBuf(Int_Xferred))\n", r->name);
-           fprintf(fp, "        Int_Xferred = Int_Xferred   + 1\n");
-           fprintf(fp, "      END DO ! I\n");
-        }
-
-// need to move this (scalars and strings) to the %c_obj% type, too!
+// need to move scalars and strings to the %c_obj% type, too!
 // compare with copy routine
-        if (sw_ccode && !has_deferred_dim(r, 0)) {
+
+        if (sw_ccode && !is_pointer(r) && r->ndims == 0) {
               if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
                  !strcmp(r->type->mapsto, "REAL(SiKi)") ||
                  !strcmp(r->type->mapsto, "REAL(DbKi)") ||
@@ -877,9 +903,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
                  fprintf(fp, "      OutData%%C_obj%%%s = OutData%%%s\n", r->name, r->name);
               }
               else { // characters need to be copied differently
-                 if (r->ndims == 0){
-                    fprintf(fp, "      OutData%%C_obj%%%s = TRANSFER(OutData%%%s, OutData%%C_obj%%%s )\n", r->name, r->name, r->name);
-                 }
+                 fprintf(fp, "      OutData%%C_obj%%%s = TRANSFER(OutData%%%s, OutData%%C_obj%%%s )\n", r->name, r->name, r->name);
               }
         }
 
@@ -1000,7 +1024,7 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
    node_t *q, *r1 ;
    int j ;
    int mesh = 0 ;
-   char derefrecurse[NAMELEN],dex[NAMELEN],tmp[NAMELEN] ;
+   char derefrecurse[NAMELEN],tmp[NAMELEN] ;
    if ( recurselevel > MAXRECURSE ) {
      fprintf(stderr,"REGISTRY ERROR: too many levels of array subtypes\n") ;
      exit(9) ;
@@ -1028,24 +1052,19 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
            }
          }
        } else if ( !strcmp( r->type->mapsto, "MeshType" ) ) {
-         strcpy(dex,"") ;
          for ( j = r->ndims ; j > 0 ; j-- ) {
-            fprintf(fp, "  DO i%d%d = LBOUND(%s_out%s%%%s,%d),UBOUND(%s_out%s%%%s,%d)\n", 0, 1, uy, deref, r->name, j, uy, deref, r->name, j);
-             if ( j == r->ndims ) strcat(dex,"(") ;
-             sprintf(tmp,"i%d%d",0,j) ;
-             if ( j == 1 ) strcat(tmp,")") ; else strcat(tmp,",") ;
-             strcat(dex,tmp) ;
+            fprintf(fp, "  DO i%d%d = LBOUND(%s_out%s%%%s,%d),UBOUND(%s_out%s%%%s,%d)\n", 0, j, uy, deref, r->name, j, uy, deref, r->name, j);
          }
 
          if        ( order == 0 ) {
-  fprintf(fp, "  CALL MeshCopy(%s(1)%s%%%s%s, %s_out%s%%%s%s, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", uy, deref, r->name, dex
-               , uy, deref, r->name, dex);
+  fprintf(fp, "  CALL MeshCopy(%s(1)%s%%%s%s, %s_out%s%%%s%s, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", uy, deref, r->name, dimstr(r->ndims)
+               , uy, deref, r->name, dimstr(r->ndims));
          } else if ( order == 1 ) {
   fprintf(fp,"  CALL MeshExtrapInterp1(%s(1)%s%%%s%s, %s(2)%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n"
-     , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
+     , uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
          } else if ( order == 2 ) {
   fprintf(fp,"  CALL MeshExtrapInterp2(%s(1)%s%%%s%s, %s(2)%s%%%s%s, %s(3)%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n"
-     , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
+     , uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
          }
    fprintf(fp, "         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
    fprintf(fp, "         IF (ErrStat>=AbortErrLev) RETURN\n");
@@ -1058,19 +1077,19 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
 
           char nonick2[NAMELEN] ;
           remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
-          strcpy(dex,"") ;
+          strcpy(dimstr(r->ndims),"") ;
           for ( j = r->ndims ; j >= 1 ; j-- ) {
-             fprintf(fp, "   DO i%d%d = LBOUND(%s_out%s%%%s,%d), UBOUND(%s_out%s%%%s,%d)\n", 0, 1, uy, deref, r->name, j, uy, deref, r->name, j);
-             if ( j == r->ndims ) strcat(dex,"(") ;
+             fprintf(fp, "   DO i%d%d = LBOUND(%s_out%s%%%s,%d), UBOUND(%s_out%s%%%s,%d)\n", 0, j, uy, deref, r->name, j, uy, deref, r->name, j);
+             if ( j == r->ndims ) strcat(dimstr(r->ndims),"(") ;
              sprintf(tmp,"i%d%d",0,j) ;
              if ( j == 1 ) strcat(tmp,")") ; else strcat(tmp,",") ;
-             strcat(dex,tmp) ;
+             strcat(dimstr(r->ndims),tmp) ;
           }
 
 
   fprintf(fp,"      CALL %s_%s_ExtrapInterp( %s%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n",
                                 r->type->module->nickname,fast_interface_type_shortname(nonick2)
-                                , uy, deref, r->name, dex, uy, deref, r->name, dex);
+                                , uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
   fprintf(fp,"         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
   fprintf(fp,"         IF (ErrStat>=AbortErrLev) RETURN\n");
 
@@ -1139,9 +1158,9 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
 #endif
 void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, const int order, node_t *r, char * deref, int recurselevel) {
    node_t *q, *r1;
-   int j;
+   int i, j;
    int mesh = 0;
-   char derefrecurse[NAMELEN], dex[NAMELEN], tmp[NAMELEN];
+   char derefrecurse[NAMELEN], indent[NAMELEN];
    if (recurselevel > MAXRECURSE) {
       fprintf(stderr, "REGISTRY ERROR: too many levels of array subtypes\n");
       exit(9);
@@ -1154,8 +1173,6 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
             assoc_or_allocated(r), uy, deref, r->name);
       }
       if (r->type->type_type == DERIVED) {
-
-
 
          if ((q = get_entry(make_lower_temp(r->type->name), ModName->module_ddt_list)) != NULL) {
             for (r1 = q->fields; r1; r1 = r1->next)
@@ -1175,27 +1192,22 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
 
          else {
 
-            strcpy(dex, "");
             for (j = r->ndims; j > 0; j--) {
-               fprintf(fp, "  DO i%d%d = LBOUND(%s_out%s%%%s,%d),UBOUND(%s_out%s%%%s,%d)\n", 0, 1, uy, deref, r->name, j, uy, deref, r->name, j);
-               if (j == r->ndims) strcat(dex, "(");
-               sprintf(tmp, "i%d%d", 0, j);
-               if (j == 1) strcat(tmp, ")"); else strcat(tmp, ",");
-               strcat(dex, tmp);
+               fprintf(fp, "  DO i%d = LBOUND(%s_out%s%%%s,%d),UBOUND(%s_out%s%%%s,%d)\n", j, uy, deref, r->name, j, uy, deref, r->name, j);
             }
 
             if (!strcmp(r->type->mapsto, "MeshType")) {
                if (order == 0) {
-                  fprintf(fp, "      CALL MeshCopy(%s1%s%%%s%s, %s_out%s%%%s%s, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", uy, deref, r->name, dex
-                     , uy, deref, r->name, dex);
+                  fprintf(fp, "      CALL MeshCopy(%s1%s%%%s%s, %s_out%s%%%s%s, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", uy, deref, r->name, dimstr(r->ndims)
+                     , uy, deref, r->name, dimstr(r->ndims));
                }
                else if (order == 1) {
                   fprintf(fp, "      CALL MeshExtrapInterp1(%s1%s%%%s%s, %s2%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n"
-                     , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
+                     , uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
                }
                else if (order == 2) {
                   fprintf(fp, "      CALL MeshExtrapInterp2(%s1%s%%%s%s, %s2%s%%%s%s, %s3%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n"
-                     , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
+                     , uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
                }
             }
             else {
@@ -1204,17 +1216,17 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
 
                if (order == 0) {
                   fprintf(fp, "      CALL %s_Copy%s(%s1%s%%%s%s, %s_out%s%%%s%s, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", r->type->module->nickname, fast_interface_type_shortname(nonick2)
-                     , uy, deref, r->name, dex, uy, deref, r->name, dex);
+                     , uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
                }
                else if (order == 1) {
                   fprintf(fp, "      CALL %s_%s_ExtrapInterp1( %s1%s%%%s%s, %s2%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n",
                      r->type->module->nickname, fast_interface_type_shortname(nonick2)
-                     , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
+                     , uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
                }
                else if (order == 2) {
                   fprintf(fp, "      CALL %s_%s_ExtrapInterp2( %s1%s%%%s%s, %s2%s%%%s%s, %s3%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n",
                      r->type->module->nickname, fast_interface_type_shortname(nonick2)
-                     , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
+                     , uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
                }
             }
 
@@ -1230,67 +1242,59 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
          !strcmp(r->type->mapsto, "REAL(SiKi)") ||
          !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
          !strcmp(r->type->mapsto, "REAL(DbKi)")) {
-         if (r->ndims == 0) {
-         }
-         else if (r->ndims == 1 && order > 0) {
-            fprintf(fp, "  ALLOCATE(b1(SIZE(%s_out%s%%%s,1)))\n", uy, deref, r->name);
-            fprintf(fp, "  ALLOCATE(c1(SIZE(%s_out%s%%%s,1)))\n", uy, deref, r->name);
-         }
-         else if (r->ndims == 2 && order > 0) {
-            fprintf(fp, "  ALLOCATE(b2(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2) ))\n", uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "  ALLOCATE(c2(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2) ))\n", uy, deref, r->name, uy, deref, r->name);
-         }
-         else if (r->ndims == 3 && order > 0) {
-            fprintf(fp, "  ALLOCATE(b3(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "              SIZE(%s_out%s%%%s,3)                     ))\n", uy, deref, r->name);
-            fprintf(fp, "  ALLOCATE(c3(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "              SIZE(%s_out%s%%%s,3)                     ))\n", uy, deref, r->name);
-         }
-         else if (r->ndims == 4 && order > 0) {
-            fprintf(fp, "  ALLOCATE(b4(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "              SIZE(%s_out%s%%%s,3),SIZE(%s_out%s%%%s,4) ))\n", uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "  ALLOCATE(c4(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "              SIZE(%s_out%s%%%s,3),SIZE(%s_out%s%%%s,4) ))\n", uy, deref, r->name, uy, deref, r->name);
-         }
-         else if (r->ndims == 5 && order > 0) {
-            fprintf(fp, "  ALLOCATE(b5(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "              SIZE(%s_out%s%%%s,3),SIZE(%s_out%s%%%s,4), &\n", uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "              SIZE(%s_out%s%%%s,5)                         ))\n", uy, deref, r->name);
-            fprintf(fp, "  ALLOCATE(c5(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "              SIZE(%s_out%s%%%s,3),SIZE(%s_out%s%%%s,4), &\n", uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "              SIZE(%s_out%s%%%s,5)                     ))\n", uy, deref, r->name);
-         }
-         else                    {
-            if (order > 0) fprintf(stderr, "Registry WARNING: too many dimensions for %s%%%s\n", deref, r->name);
-         }
+
 
          if (order == 0) {
+            //bjj: this should probably have some "IF ALLOCATED" statements around it, but we're just calling
+            // the copy routine
             fprintf(fp, "  %s_out%s%%%s = %s1%s%%%s\n", uy, deref, r->name, uy, deref, r->name);
          }
-         else if (order == 1) {
-            fprintf(fp, "  b%d = -(%s1%s%%%s - %s2%s%%%s)/t(2)\n", r->ndims, uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "  %s_out%s%%%s = %s1%s%%%s + b%d * t_out\n", uy, deref, r->name, uy, deref, r->name, r->ndims);
+         else
+            strcpy(indent, "");
+            for (j = r->ndims; j > 0; j--) {
+               fprintf(fp, "%s  DO i%d = LBOUND(%s_out%s%%%s,%d),UBOUND(%s_out%s%%%s,%d)\n", indent, j, uy, deref, r->name, j, uy, deref, r->name, j);
+               strcat(indent, "  "); //create an indent
+            }
+
+            if (order == 1) {
+               if (r->gen_periodic) {
+                  fprintf(fp, "%s  CALL Angles_ExtrapInterp( %s1%s%%%s%s, %s2%s%%%s%s, tin, %s_out%s%%%s%s, tin_out )\n",
+                     indent, uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
+               }
+               else {
+                  fprintf(fp, "%s  b = -(%s1%s%%%s%s - %s2%s%%%s%s)\n", indent, uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
+                  fprintf(fp, "%s  %s_out%s%%%s%s = %s1%s%%%s%s + b * ScaleFactor\n", indent, uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
+               };
+            }
+            if (order == 2) {
+               if (r->gen_periodic) {
+                  fprintf(fp, "%s  CALL Angles_ExtrapInterp( %s1%s%%%s%s, %s2%s%%%s%s, %s3%s%%%s%s, tin, %s_out%s%%%s%s, tin_out )\n",
+                     indent, uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
+               }
+               else {
+                  fprintf(fp, "%s  b = (t(3)**2*(%s1%s%%%s%s - %s2%s%%%s%s) + t(2)**2*(-%s1%s%%%s%s + %s3%s%%%s%s))* scaleFactor\n",
+                     indent, uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
+                  fprintf(fp, "%s  c = ( (t(2)-t(3))*%s1%s%%%s%s + t(3)*%s2%s%%%s%s - t(2)*%s3%s%%%s%s ) * scaleFactor\n",
+                     indent, uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
+                  fprintf(fp, "%s  %s_out%s%%%s%s = %s1%s%%%s%s + b  + c * t_out\n",
+                     indent, uy, deref, r->name, dimstr(r->ndims), uy, deref, r->name, dimstr(r->ndims));
+               }
+            }
+            for (j = r->ndims; j >= 1; j--) {
+               strcpy(indent, "");
+               for (i = 1; i < j; i++) {
+                  strcat(indent, "  ");
+               }
+               fprintf(fp, "%s  END DO\n", indent);
+            }
          }
-         else if (order == 2) {
-            fprintf(fp, "  b%d = (t(3)**2*(%s1%s%%%s - %s2%s%%%s) + t(2)**2*(-%s1%s%%%s + %s3%s%%%s))/(t(2)*t(3)*(t(2) - t(3)))\n",
-               r->ndims, uy, deref, r->name, uy, deref, r->name, uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "  c%d = ( (t(2)-t(3))*%s1%s%%%s + t(3)*%s2%s%%%s - t(2)*%s3%s%%%s ) / (t(2)*t(3)*(t(2) - t(3)))\n",
-               r->ndims, uy, deref, r->name, uy, deref, r->name, uy, deref, r->name);
-            fprintf(fp, "  %s_out%s%%%s = %s1%s%%%s + b%d * t_out + c%d * t_out**2\n"
-               , uy, deref, r->name, uy, deref, r->name, r->ndims, r->ndims);
-         }
-         if (r->ndims >= 1 && order > 0) {
-            fprintf(fp, "  DEALLOCATE(b%d)\n", r->ndims);
-            fprintf(fp, "  DEALLOCATE(c%d)\n", r->ndims);
-         }
-      }
       // check if this is an allocatable array:
       if (r->ndims > 0 && has_deferred_dim(r, 0)) {
          fprintf(fp, "END IF ! check if allocated\n");
       }
-
    }
-}
+
+} // gen_extint_order
 
 void calc_extint_order(FILE *fp, const node_t *ModName, node_t *r, int recurselevel, int *max_ndims, int *max_nrecurs, int *max_alloc_ndims) {
    node_t *q, *r1 ;
@@ -1327,6 +1331,7 @@ void calc_extint_order(FILE *fp, const node_t *ModName, node_t *r, int recursele
          !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
          !strcmp(r->type->mapsto, "REAL(DbKi)")) {
          if (/*order > 0 &&*/ r->ndims > *max_alloc_ndims) *max_alloc_ndims = r->ndims;
+         if (r->ndims > *max_ndims)* max_ndims = r->ndims;
       }
 
 
@@ -1574,36 +1579,17 @@ gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, " CHARACTER(*),                    PARAMETER :: RoutineName = '%s_%s_ExtrapInterp1'\n", ModName->nickname, typnm);
 
 
-   if (max_alloc_ndims >= 0){
-      fprintf(fp, " REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation\n");
-      fprintf(fp, " REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation\n");
-      if (max_alloc_ndims >= 1){
-         fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation\n");
-         fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation\n");
-         if (max_alloc_ndims >= 2){
-            fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: b2       ! temporary for extrapolation/interpolation\n");
-            fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: c2       ! temporary for extrapolation/interpolation\n");
-            if (max_alloc_ndims >= 3){
-               fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: b3       ! temporary for extrapolation/interpolation\n");
-               fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: c3       ! temporary for extrapolation/interpolation\n");
-               if (max_alloc_ndims >= 4){
-                  fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: b4       ! temporary for extrapolation/interpolation\n");
-                  fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: c4       ! temporary for extrapolation/interpolation\n");
-                  if (max_alloc_ndims >= 5){
-                     fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: b5       ! temporary for extrapolation/interpolation\n");
-                     fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: c5       ! temporary for extrapolation/interpolation\n");
-                  } // 5
-               } // 4
-            } // 3
-         } // 2
-      } // 1
-   } // 0
+   fprintf(fp, " REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation\n");
+   fprintf(fp, " REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation\n");
    fprintf(fp, " INTEGER(IntKi)                             :: ErrStat2 ! local errors\n");
    fprintf(fp, " CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors\n");
    for (j = 1; j <= max_ndims; j++) {
       for (i = 0; i <= max_nrecurs; i++) {
          fprintf(fp, " INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n", i, j, j, i);
       }
+   }
+   for (j = 1; j <= max_ndims; j++) {
+      fprintf(fp, " INTEGER                                    :: i%d    ! dim%d counter variable for arrays\n", j, j);
    }
 
    fprintf(fp, "    ! Initialize ErrStat\n");
@@ -1618,8 +1604,9 @@ gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, "   IF ( EqualRealNos( t(1), t(2) ) ) THEN\n");
    fprintf(fp, "     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)\n");
    fprintf(fp, "     RETURN\n");
-   fprintf(fp, "   END IF\n");
+   fprintf(fp, "   END IF\n\n");
 
+   fprintf(fp, "   ScaleFactor = t_out / t(2)\n");
 
    for (r = q->fields; r; r = r->next)
    {
@@ -1654,45 +1641,23 @@ gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, "!..................................................................................................................................\n");
    fprintf(fp, "\n");
 
-
    fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s1      ! %s at t1 > t2 > t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
    fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s2      ! %s at t2 > t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
    fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s3      ! %s at t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
    fprintf(fp, " REAL(%s),                 INTENT(IN   )  :: tin(3)    ! Times associated with the %ss\n", xtypnm, typnm);
    fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out     ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
    fprintf(fp, " REAL(%s),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to\n", xtypnm);
-   fprintf(fp, " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n");
+
+   fprintf(fp, " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n" );
    fprintf(fp, " CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n");
    fprintf(fp, "   ! local variables\n");
    fprintf(fp, " REAL(%s)                                 :: t(3)      ! Times associated with the %ss\n", xtypnm, typnm);
    fprintf(fp, " REAL(%s)                                 :: t_out     ! Time to which to be extrap/interpd\n", xtypnm);
    fprintf(fp, " INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)\n");
 
-
-   if (max_alloc_ndims >= 0){
-      fprintf(fp, " REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation\n");
-      fprintf(fp, " REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation\n");
-      if (max_alloc_ndims >= 1){
-         fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation\n");
-         fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation\n");
-         if (max_alloc_ndims >= 2){
-            fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: b2       ! temporary for extrapolation/interpolation\n");
-            fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: c2       ! temporary for extrapolation/interpolation\n");
-            if (max_alloc_ndims >= 3){
-               fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: b3       ! temporary for extrapolation/interpolation\n");
-               fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: c3       ! temporary for extrapolation/interpolation\n");
-               if (max_alloc_ndims >= 4){
-                  fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: b4       ! temporary for extrapolation/interpolation\n");
-                  fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: c4       ! temporary for extrapolation/interpolation\n");
-                  if (max_alloc_ndims >= 5){
-                     fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: b5       ! temporary for extrapolation/interpolation\n");
-                     fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: c5       ! temporary for extrapolation/interpolation\n");
-                  } // 5
-               } // 4
-            } // 3
-         } // 2
-      } // 1
-   } // 0
+   fprintf(fp, " REAL(DbKi)                                 :: b        ! temporary for extrapolation/interpolation\n");
+   fprintf(fp, " REAL(DbKi)                                 :: c        ! temporary for extrapolation/interpolation\n");
+   fprintf(fp, " REAL(DbKi)                                 :: ScaleFactor ! temporary for extrapolation/interpolation\n");
    fprintf(fp, " INTEGER(IntKi)                             :: ErrStat2 ! local errors\n");
    fprintf(fp, " CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors\n");
    fprintf(fp, " CHARACTER(*),            PARAMETER         :: RoutineName = '%s_%s_ExtrapInterp2'\n", ModName->nickname, typnm);
@@ -1700,6 +1665,9 @@ gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
       for (i = 0; i <= max_nrecurs; i++) {
          fprintf(fp, " INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n", i, j, j, i);
       }
+   }
+   for (j = 1; j <= max_ndims; j++) {
+      fprintf(fp, " INTEGER                                    :: i%d    ! dim%d counter variable for arrays\n", j, j);
    }
    fprintf(fp, "    ! Initialize ErrStat\n");
    fprintf(fp, " ErrStat = ErrID_None\n");
@@ -1720,7 +1688,11 @@ gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, "   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN\n");
    fprintf(fp, "     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)\n");
    fprintf(fp, "     RETURN\n");
-   fprintf(fp, "   END IF\n");
+   fprintf(fp, "   END IF\n\n");
+
+   fprintf(fp, "   ScaleFactor = t_out / (t(2) * t(3) * (t(2) - t(3)))\n");
+
+   
 
    for (r = q->fields; r; r = r->next)
    {
@@ -2256,6 +2228,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
         gen_unpack( fp, ModName, ddtname, ddtnamelong ) ;
         if ( sw_ccode ) {
             gen_copy_c2f( fp, ModName, ddtname, ddtnamelong ) ;
+            gen_copy_f2c(fp, ModName, ddtname, ddtnamelong);
         }
 
       }

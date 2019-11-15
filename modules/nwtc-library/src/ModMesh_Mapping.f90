@@ -1227,6 +1227,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
       ! local variables
    INTEGER(IntKi)            :: i , j                          ! counter over the nodes
    INTEGER(IntKi)            :: k                              ! counter components
+   INTEGER(IntKi)            :: nScalars                       ! number of scalars transferred
    INTEGER(IntKi)            :: n, n1, n2                      ! temporary space for node numbers
    REAL(R8Ki)                :: FieldValueN1(3)                ! Temporary variable to store field values on element nodes
    REAL(R8Ki)                :: FieldValueN2(3)                ! Temporary variable to store field values on element nodes
@@ -1495,14 +1496,21 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
       !!              \phi_i\f$
 
    if (Src%FieldMask(MASKID_SCALAR) .AND. Dest%FieldMask(MASKID_SCALAR) ) then
+      nScalars = min(Dest%nScalars, Src%nScalars)
+      
+      if (Dest%nScalars > nScalars) then
+         call SetErrStat(ErrID_Severe, "Not all scalars could be computed from source mesh (insufficient data).", ErrStat, ErrMsg, 'Transfer_Motions_Line2_to_Point')
+         Dest%Scalars(nScalars+1:,:) = 0.0_ReKi
+      end if
+         
       do i=1, Dest%Nnodes
          !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
 
-         Dest%Scalars(:,i) = MeshMap%MapMotions(i)%shape_fn(1)*Src%Scalars(:,n1)  &
-                           + MeshMap%MapMotions(i)%shape_fn(2)*Src%Scalars(:,n2)
+         Dest%Scalars(1:nScalars,i) = MeshMap%MapMotions(i)%shape_fn(1)*Src%Scalars(1:nScalars,n1)  &
+                                    + MeshMap%MapMotions(i)%shape_fn(2)*Src%Scalars(1:nScalars,n2)
 
       end do
    end if
@@ -1941,7 +1949,7 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 
             ! if failed to find an element that the Point projected into, throw an error
          if (.not. found) then
-            if ( closest_elem_distance < 5.0e-3 ) then ! if it is within 5mm of the end of an element, we'll accept it
+            if ( closest_elem_distance <= 7.5e-3 ) then ! if it is within 7.5mm of the end of an element, we'll accept it
                NodeMap(i)%OtherMesh_Element = closest_elem
                NodeMap(i)%shape_fn(1)       = 1.0_ReKi - closest_elem_position
                NodeMap(i)%shape_fn(2)       = closest_elem_position
@@ -1949,7 +1957,8 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
             end if
          
             if (NodeMap(i)%OtherMesh_Element .lt. 1 )  then
-               CALL SetErrStat( ErrID_Fatal, 'Node '//trim(num2Lstr(i))//' does not project onto any line2 element.', ErrStat, ErrMsg, RoutineName)
+               CALL SetErrStat( ErrID_Fatal, 'Node '//trim(num2Lstr(i))//' does not project onto any line2 element.' &
+                           //' Closest distance is '//trim(num2lstr(closest_elem_distance))//' m.', ErrStat, ErrMsg, RoutineName)
                
 #ifdef DEBUG_MESHMAPPING
                   ! output some mesh information for debugging
@@ -2625,6 +2634,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
       ! local variables
+   INTEGER(IntKi)  :: nScalars
    INTEGER(IntKi)  :: i, j                                     ! counter over the nodes
    REAL(R8Ki)      :: RotationMatrix(3,3)
    REAL(ReKi)      :: TmpVec(3)
@@ -2773,10 +2783,17 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
       !> Scalars: \f$S^D = S^S\f$
 
    if (Src%FieldMask(MASKID_SCALAR) .AND. Dest%FieldMask(MASKID_SCALAR) ) then
+      nScalars = min(Dest%nScalars, Src%nScalars)
+      
+      if (Dest%nScalars > nScalars) then
+         call SetErrStat(ErrID_Severe, "Not all scalars could be computed from source mesh (insufficient data).", ErrStat, ErrMsg, 'Transfer_Motions_Point_to_Point')
+         Dest%Scalars(nScalars+1:,:) = 0.0_ReKi
+      end if
+
       do i=1, Dest%Nnodes
          !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
-         Dest%Scalars(:,i) = Src%Scalars(:,MeshMap%MapMotions(i)%OtherMesh_Element)
+         Dest%Scalars(1:nScalars,i) = Src%Scalars(1:nScalars,MeshMap%MapMotions(i)%OtherMesh_Element)
       end do
    end if
 
@@ -5540,7 +5557,7 @@ SUBROUTINE WriteMappingTransferToFile(Mesh1_I,Mesh1_O,Mesh2_I,Mesh2_O,Map_Mod1_M
    INTEGER(IntKi)                         :: i
    INTEGER(IntKi)                         :: un_out
    INTEGER(IntKi)                         :: ErrStat          ! Error status of the operation
-   CHARACTER(1024)                        :: ErrMsg           ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                   :: ErrMsg           ! Error message if ErrStat /= ErrID_None
    CHARACTER(256)                         :: PrintWarnF, PrintWarnM, TmpValues
 
 #ifdef MESH_DEBUG     
