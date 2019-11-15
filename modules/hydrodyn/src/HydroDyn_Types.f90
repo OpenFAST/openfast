@@ -198,7 +198,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: OutSwtch      !< Output requested channels to: [1=Hydrodyn.out 2=GlueCode.out  3=both files] [-]
     CHARACTER(20)  :: OutFmt      !< Output format for numerical results [-]
     CHARACTER(20)  :: OutSFmt      !< Output format for header strings [-]
-    CHARACTER(10)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
+    CHARACTER(ChanLen)  :: Delim      !< Delimiter string for outputs, defaults to tab-delimiters [-]
     INTEGER(IntKi)  :: UnOutFile      !< File unit for the HydroDyn outputs [-]
     INTEGER(IntKi)  :: OutDec      !< Write every OutDec time steps [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Jac_u_indx      !< matrix to help fill/pack the u vector in computing the jacobian [-]

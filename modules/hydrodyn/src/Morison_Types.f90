@@ -396,7 +396,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: UnOutFile      !<  [-]
     CHARACTER(20)  :: OutFmt      !<  [-]
     CHARACTER(20)  :: OutSFmt      !<  [-]
-    CHARACTER(10)  :: Delim      !<  [-]
+    CHARACTER(ChanLen)  :: Delim      !<  [-]
   END TYPE Morison_ParameterType
 ! =======================
 ! =========  Morison_InputType  =======

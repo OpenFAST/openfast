@@ -294,7 +294,7 @@ SUBROUTINE HDOut_WriteWvKinFiles( Rootname, HD_Prog, NStepWave, NNodes, NWaveEle
    CHARACTER(5)                               :: extension(7)     
    INTEGER                                    :: i, j, iFile
    CHARACTER(64)                              :: Frmt, Sfrmt
-   CHARACTER(10)                              :: Delim
+   CHARACTER(ChanLen)                         :: Delim
       ! Initialize ErrStat      
    ErrStat = ErrID_None         
    ErrMsg  = ""       

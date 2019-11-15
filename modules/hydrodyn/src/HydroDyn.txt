@@ -1,4 +1,5 @@
 ###################################################################################################################################
+###################################################################################################################################
 # Registry for HydroDyn in the FAST Modularization Framework
 # This Registry file is used to create MODULE HydroDyn  which contains all of the user-defined types needed in HydroDyn.
 # It also contains copy, destroy, pack,  and unpack routines associated with each defined data types.
@@ -181,7 +182,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  OutSwtch                        -          -          -         "Output requested channels to: [1=Hydrodyn.out 2=GlueCode.out  3=both files]"    -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -          -          -         "Output format for numerical results"    -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -          -          -         "Output format for header strings"    -
-typedef   ^                            ^                             CHARACTER(10)            Delim                           -          -          -         "Delimiter string for outputs, defaults to tab-delimiters"        -
+typedef   ^                            ^                             CHARACTER(ChanLen)       Delim                           -          -          -         "Delimiter string for outputs, defaults to tab-delimiters"        -
 typedef   ^                            ^                             INTEGER                  UnOutFile                       -          -          -         "File unit for the HydroDyn outputs"        -
 typedef   ^                            ^                             INTEGER                  OutDec                          -          -          -         "Write every OutDec time steps"  -
 typedef	 ^	                           ^                             Integer	                Jac_u_indx	                 {:}{:}	        -	       -	        "matrix to help fill/pack the u vector in computing the jacobian"	-

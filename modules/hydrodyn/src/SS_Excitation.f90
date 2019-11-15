@@ -87,8 +87,8 @@ SUBROUTINE SS_Exc_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
     character(ErrMsgLen)                   :: ErrMsg2
     
     ! Initialize ErrStat   
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
+    ErrStat = ErrID_None
+    ErrMsg  = ""
       
     u%DummyInput = 0.0_ReKi
       

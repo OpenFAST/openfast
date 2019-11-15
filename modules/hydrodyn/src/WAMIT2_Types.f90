@@ -130,7 +130,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NumOutAll      !<  [-]
     CHARACTER(20)  :: OutFmt      !<  [-]
     CHARACTER(20)  :: OutSFmt      !<  [-]
-    CHARACTER(10)  :: Delim      !<  [-]
+    CHARACTER(ChanLen)  :: Delim      !<  [-]
     INTEGER(IntKi)  :: UnOutFile      !<  [-]
   END TYPE WAMIT2_ParameterType
 ! =======================
