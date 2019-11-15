@@ -5182,11 +5182,12 @@ SUBROUTINE ValidatePrimaryData( InputFileData, BD4Blades, Linearize, ErrStat, Er
       
    END IF
 
-      ! Check that InputFileData%OutFmt is a valid format specifier and will fit over the column headings
-   CALL ChkRealFmtStr( InputFileData%OutFmt, 'OutFmt', FmtWidth, ErrStat2, ErrMsg2 )
-   CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName )
-   IF ( FmtWidth /= ChanLen ) CALL SetErrStat(ErrID_Warn, 'OutFmt produces a column width of '//TRIM(Num2LStr(FmtWidth))//&
-                                           ' instead of '//TRIM(Num2LStr(ChanLen))//' characters.',ErrStat,ErrMsg,RoutineName )
+   !bjj: since ED doesn't actually use OutFmt at this point, I'm going to remove this check and warning message
+   !!!!   ! Check that InputFileData%OutFmt is a valid format specifier and will fit over the column headings
+   !!!!CALL ChkRealFmtStr( InputFileData%OutFmt, 'OutFmt', FmtWidth, ErrStat2, ErrMsg2 )
+   !!!!CALL SetErrStat(ErrStat2, ErrMsg2,ErrStat,ErrMsg,RoutineName )
+   !!!!IF ( FmtWidth /= ChanLen ) CALL SetErrStat(ErrID_Warn, 'OutFmt produces a column width of '//TRIM(Num2LStr(FmtWidth))//&
+   !!!!                                        ' instead of '//TRIM(Num2LStr(ChanLen))//' characters.',ErrStat,ErrMsg,RoutineName )
 
 
    RETURN

@@ -236,6 +236,9 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
    InitOut%HubHt       = p%HubHt
    InitOut%TwrBasePos  = y%TowerLn2Mesh%Position(:,p%TwrNodes + 2)
    InitOut%HubRad      = p%HubRad
+   InitOut%RotSpeed    = p%RotSpeed
+   InitOut%isFixed_GenDOF = .not. InputFileData%GenDOF
+   
 
    if (.not. p%BD4Blades) then
       ALLOCATE(InitOut%BldRNodes(p%BldNodes),  STAT=ErrStat2)
@@ -2063,7 +2066,7 @@ SUBROUTINE Init_DOFparameters( InputFileData, p, ErrStat, ErrMsg )
    IF ( p%NumBl == 2 )  THEN
       p%NDOF = 22
    ELSE
-      p%NDOF = 24
+      p%NDOF = ED_MaxDOFs
    ENDIF
 
    p%NAug = p%NDOF + 1
@@ -8547,6 +8550,7 @@ END SUBROUTINE FillAugMat
 !> This routine allocates the arrays and meshes stored in the ED_OutputType data structure (y), based on the parameters (p). 
 !! Inputs (u) are included only so that output meshes can be siblings of the inputs.
 !! The routine assumes that the arrays/meshes are not currently allocated (It will produce a fatal error otherwise.)
+!! Also note that this must be called after init_u() so that the misc variables that contain the orientations are set.
 SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -8622,7 +8626,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
                IF (ErrStat >= AbortErrLev) RETURN
             
                ! Use orientation at node 1 for the blade root            
-            CALL MeshPositionNode ( y%BladeLn2Mesh(K), p%BldNodes + 2, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /), ErrStat2, ErrMsg2, Orient=u%BladePtLoads(K)%RefOrientation(:,:,1) )
+            CALL MeshPositionNode ( y%BladeLn2Mesh(K), p%BldNodes + 2, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi /), ErrStat2, ErrMsg2, Orient=u%BladePtLoads(K)%RefOrientation(:,:,1), ref=.true. )
                CALL CheckError( ErrStat2, ErrMsg2 )
                IF (ErrStat >= AbortErrLev) RETURN
                
@@ -8632,6 +8636,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
             DO J = 0,p%TipNode,p%TipNode
                if (j==0) then ! blade root
                   NodeNum = p%BldNodes + 2
+                  y%BladeLn2Mesh(K)%RefNode = NodeNum
                elseif (j==p%TipNode) then ! blade tip
                   NodeNum = p%BldNodes + 1
                end if
@@ -8749,7 +8754,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF (ErrStat >= AbortErrLev) RETURN
          
-      CALL MeshPositionNode ( y%TowerLn2Mesh, p%TwrNodes + 2, (/0.0_ReKi, 0.0_ReKi, p%TowerBsHt  /), ErrStat2, ErrMsg2 )
+      CALL MeshPositionNode ( y%TowerLn2Mesh, p%TwrNodes + 2, (/0.0_ReKi, 0.0_ReKi, p%TowerBsHt  /), ErrStat2, ErrMsg2, ref=.true. )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF (ErrStat >= AbortErrLev) RETURN
 
@@ -11630,7 +11635,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
 END SUBROUTINE Compute_dY
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to pack the data structures representing the operating points into arrays for linearization.
-SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op, NeedLogMap )
 
    REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
    TYPE(ED_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
@@ -11649,6 +11654,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
    REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+   LOGICAL,                 OPTIONAL,    INTENT(IN   )           :: NeedLogMap !< whether a y_op values should contain log maps instead of full orientation matrices
 
 
 
@@ -11657,6 +11663,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_GetOP'
+   LOGICAL                                           :: ReturnLogMap
    TYPE(ED_ContinuousStateType)                      :: dx          !< derivative of continuous states at operating point
    LOGICAL                                           :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
    
@@ -11707,6 +11714,11 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
 
    !..................................
    IF ( PRESENT( y_op ) ) THEN
+      if (present(NeedLogMap)) then
+         ReturnLogMap = NeedLogMap
+      else
+         ReturnLogMap = .false.
+      end if
       
       if (.not. allocated(y_op)) then 
             ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
@@ -11742,13 +11754,13 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
             call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index)
          end do      
       end if
-      call PackMotionMesh(y%PlatformPtMesh, y_op, index)
-      call PackMotionMesh(y%TowerLn2Mesh, y_op, index)
-      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask)
+      call PackMotionMesh(y%PlatformPtMesh, y_op, index, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%TowerLn2Mesh, y_op, index, UseLogMaps=ReturnLogMap)
+      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask, UseLogMaps=ReturnLogMap)
       do k=1,p%NumBl
-         call PackMotionMesh(y%BladeRootMotion(k), y_op, index)
+         call PackMotionMesh(y%BladeRootMotion(k), y_op, index, UseLogMaps=ReturnLogMap)
       end do   
-      call PackMotionMesh(y%NacelleMotion, y_op, index)
+      call PackMotionMesh(y%NacelleMotion, y_op, index, UseLogMaps=ReturnLogMap)
       
       y_op(index) = y%Yaw     ; index = index + 1    
       y_op(index) = y%YawRate ; index = index + 1    

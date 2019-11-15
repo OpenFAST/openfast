@@ -60,6 +60,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:6)  :: PlatformPos      !< Initial platform position (6 DOFs) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TwrBasePos      !< initial position of the tower base (for SrvD) [m]
     REAL(ReKi)  :: HubRad      !< Preconed hub radius (distance from the rotor apex to the blade root) [m]
+    REAL(ReKi)  :: RotSpeed      !< Initial or fixed rotor speed [rad/s]
+    LOGICAL  :: isFixed_GenDOF      !< whether the generator is fixed or free [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_x      !< Names of the continuous states used in linearization [-]
     CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
@@ -1119,6 +1121,8 @@ ENDIF
     DstInitOutputData%PlatformPos = SrcInitOutputData%PlatformPos
     DstInitOutputData%TwrBasePos = SrcInitOutputData%TwrBasePos
     DstInitOutputData%HubRad = SrcInitOutputData%HubRad
+    DstInitOutputData%RotSpeed = SrcInitOutputData%RotSpeed
+    DstInitOutputData%isFixed_GenDOF = SrcInitOutputData%isFixed_GenDOF
 IF (ALLOCATED(SrcInitOutputData%LinNames_y)) THEN
   i1_l = LBOUND(SrcInitOutputData%LinNames_y,1)
   i1_u = UBOUND(SrcInitOutputData%LinNames_y,1)
@@ -1355,6 +1359,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%PlatformPos)  ! PlatformPos
       Re_BufSz   = Re_BufSz   + SIZE(InData%TwrBasePos)  ! TwrBasePos
       Re_BufSz   = Re_BufSz   + 1  ! HubRad
+      Re_BufSz   = Re_BufSz   + 1  ! RotSpeed
+      Int_BufSz  = Int_BufSz  + 1  ! isFixed_GenDOF
   Int_BufSz   = Int_BufSz   + 1     ! LinNames_y allocated yes/no
   IF ( ALLOCATED(InData%LinNames_y) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! LinNames_y upper/lower bounds for each dimension
@@ -1551,6 +1557,10 @@ ENDIF
     END DO
     ReKiBuf(Re_Xferred) = InData%HubRad
     Re_Xferred = Re_Xferred + 1
+    ReKiBuf(Re_Xferred) = InData%RotSpeed
+    Re_Xferred = Re_Xferred + 1
+    IntKiBuf(Int_Xferred) = TRANSFER(InData%isFixed_GenDOF, IntKiBuf(1))
+    Int_Xferred = Int_Xferred + 1
   IF ( .NOT. ALLOCATED(InData%LinNames_y) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1866,6 +1876,10 @@ ENDIF
     END DO
     OutData%HubRad = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    OutData%RotSpeed = ReKiBuf(Re_Xferred)
+    Re_Xferred = Re_Xferred + 1
+    OutData%isFixed_GenDOF = TRANSFER(IntKiBuf(Int_Xferred), OutData%isFixed_GenDOF)
+    Int_Xferred = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LinNames_y not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
@@ -24365,8 +24379,7 @@ END IF ! check if allocated
   END DO
 IF (ALLOCATED(u_out%BlPitchCom) .AND. ALLOCATED(u1%BlPitchCom)) THEN
   DO i1 = LBOUND(u_out%BlPitchCom,1),UBOUND(u_out%BlPitchCom,1)
-    b = -(u1%BlPitchCom(i1) - u2%BlPitchCom(i1))
-    u_out%BlPitchCom(i1) = u1%BlPitchCom(i1) + b * ScaleFactor
+    CALL Angles_ExtrapInterp( u1%BlPitchCom(i1), u2%BlPitchCom(i1), tin, u_out%BlPitchCom(i1), tin_out )
   END DO
 END IF ! check if allocated
   b = -(u1%YawMom - u2%YawMom)
@@ -24470,9 +24483,7 @@ END IF ! check if allocated
   END DO
 IF (ALLOCATED(u_out%BlPitchCom) .AND. ALLOCATED(u1%BlPitchCom)) THEN
   DO i1 = LBOUND(u_out%BlPitchCom,1),UBOUND(u_out%BlPitchCom,1)
-    b = (t(3)**2*(u1%BlPitchCom(i1) - u2%BlPitchCom(i1)) + t(2)**2*(-u1%BlPitchCom(i1) + u3%BlPitchCom(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*u1%BlPitchCom(i1) + t(3)*u2%BlPitchCom(i1) - t(2)*u3%BlPitchCom(i1) ) * scaleFactor
-    u_out%BlPitchCom(i1) = u1%BlPitchCom(i1) + b  + c * t_out
+    CALL Angles_ExtrapInterp( u1%BlPitchCom(i1), u2%BlPitchCom(i1), u3%BlPitchCom(i1), tin, u_out%BlPitchCom(i1), tin_out )
   END DO
 END IF ! check if allocated
   b = (t(3)**2*(u1%YawMom - u2%YawMom) + t(2)**2*(-u1%YawMom + u3%YawMom))* scaleFactor
@@ -24617,12 +24628,10 @@ IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
 END IF ! check if allocated
 IF (ALLOCATED(y_out%BlPitch) .AND. ALLOCATED(y1%BlPitch)) THEN
   DO i1 = LBOUND(y_out%BlPitch,1),UBOUND(y_out%BlPitch,1)
-    b = -(y1%BlPitch(i1) - y2%BlPitch(i1))
-    y_out%BlPitch(i1) = y1%BlPitch(i1) + b * ScaleFactor
+    CALL Angles_ExtrapInterp( y1%BlPitch(i1), y2%BlPitch(i1), tin, y_out%BlPitch(i1), tin_out )
   END DO
 END IF ! check if allocated
-  b = -(y1%Yaw - y2%Yaw)
-  y_out%Yaw = y1%Yaw + b * ScaleFactor
+  CALL Angles_ExtrapInterp( y1%Yaw, y2%Yaw, tin, y_out%Yaw, tin_out )
   b = -(y1%YawRate - y2%YawRate)
   y_out%YawRate = y1%YawRate + b * ScaleFactor
   b = -(y1%LSS_Spd - y2%LSS_Spd)
@@ -24633,8 +24642,7 @@ END IF ! check if allocated
   y_out%RotSpeed = y1%RotSpeed + b * ScaleFactor
   b = -(y1%TwrAccel - y2%TwrAccel)
   y_out%TwrAccel = y1%TwrAccel + b * ScaleFactor
-  b = -(y1%YawAngle - y2%YawAngle)
-  y_out%YawAngle = y1%YawAngle + b * ScaleFactor
+  CALL Angles_ExtrapInterp( y1%YawAngle, y2%YawAngle, tin, y_out%YawAngle, tin_out )
   DO i1 = LBOUND(y_out%RootMyc,1),UBOUND(y_out%RootMyc,1)
     b = -(y1%RootMyc(i1) - y2%RootMyc(i1))
     y_out%RootMyc(i1) = y1%RootMyc(i1) + b * ScaleFactor
@@ -24643,8 +24651,7 @@ END IF ! check if allocated
   y_out%YawBrTAxp = y1%YawBrTAxp + b * ScaleFactor
   b = -(y1%YawBrTAyp - y2%YawBrTAyp)
   y_out%YawBrTAyp = y1%YawBrTAyp + b * ScaleFactor
-  b = -(y1%LSSTipPxa - y2%LSSTipPxa)
-  y_out%LSSTipPxa = y1%LSSTipPxa + b * ScaleFactor
+  CALL Angles_ExtrapInterp( y1%LSSTipPxa, y2%LSSTipPxa, tin, y_out%LSSTipPxa, tin_out )
   DO i1 = LBOUND(y_out%RootMxc,1),UBOUND(y_out%RootMxc,1)
     b = -(y1%RootMxc(i1) - y2%RootMxc(i1))
     y_out%RootMxc(i1) = y1%RootMxc(i1) + b * ScaleFactor
@@ -24765,14 +24772,10 @@ IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
 END IF ! check if allocated
 IF (ALLOCATED(y_out%BlPitch) .AND. ALLOCATED(y1%BlPitch)) THEN
   DO i1 = LBOUND(y_out%BlPitch,1),UBOUND(y_out%BlPitch,1)
-    b = (t(3)**2*(y1%BlPitch(i1) - y2%BlPitch(i1)) + t(2)**2*(-y1%BlPitch(i1) + y3%BlPitch(i1)))* scaleFactor
-    c = ( (t(2)-t(3))*y1%BlPitch(i1) + t(3)*y2%BlPitch(i1) - t(2)*y3%BlPitch(i1) ) * scaleFactor
-    y_out%BlPitch(i1) = y1%BlPitch(i1) + b  + c * t_out
+    CALL Angles_ExtrapInterp( y1%BlPitch(i1), y2%BlPitch(i1), y3%BlPitch(i1), tin, y_out%BlPitch(i1), tin_out )
   END DO
 END IF ! check if allocated
-  b = (t(3)**2*(y1%Yaw - y2%Yaw) + t(2)**2*(-y1%Yaw + y3%Yaw))* scaleFactor
-  c = ( (t(2)-t(3))*y1%Yaw + t(3)*y2%Yaw - t(2)*y3%Yaw ) * scaleFactor
-  y_out%Yaw = y1%Yaw + b  + c * t_out
+  CALL Angles_ExtrapInterp( y1%Yaw, y2%Yaw, y3%Yaw, tin, y_out%Yaw, tin_out )
   b = (t(3)**2*(y1%YawRate - y2%YawRate) + t(2)**2*(-y1%YawRate + y3%YawRate))* scaleFactor
   c = ( (t(2)-t(3))*y1%YawRate + t(3)*y2%YawRate - t(2)*y3%YawRate ) * scaleFactor
   y_out%YawRate = y1%YawRate + b  + c * t_out
@@ -24788,9 +24791,7 @@ END IF ! check if allocated
   b = (t(3)**2*(y1%TwrAccel - y2%TwrAccel) + t(2)**2*(-y1%TwrAccel + y3%TwrAccel))* scaleFactor
   c = ( (t(2)-t(3))*y1%TwrAccel + t(3)*y2%TwrAccel - t(2)*y3%TwrAccel ) * scaleFactor
   y_out%TwrAccel = y1%TwrAccel + b  + c * t_out
-  b = (t(3)**2*(y1%YawAngle - y2%YawAngle) + t(2)**2*(-y1%YawAngle + y3%YawAngle))* scaleFactor
-  c = ( (t(2)-t(3))*y1%YawAngle + t(3)*y2%YawAngle - t(2)*y3%YawAngle ) * scaleFactor
-  y_out%YawAngle = y1%YawAngle + b  + c * t_out
+  CALL Angles_ExtrapInterp( y1%YawAngle, y2%YawAngle, y3%YawAngle, tin, y_out%YawAngle, tin_out )
   DO i1 = LBOUND(y_out%RootMyc,1),UBOUND(y_out%RootMyc,1)
     b = (t(3)**2*(y1%RootMyc(i1) - y2%RootMyc(i1)) + t(2)**2*(-y1%RootMyc(i1) + y3%RootMyc(i1)))* scaleFactor
     c = ( (t(2)-t(3))*y1%RootMyc(i1) + t(3)*y2%RootMyc(i1) - t(2)*y3%RootMyc(i1) ) * scaleFactor
@@ -24802,9 +24803,7 @@ END IF ! check if allocated
   b = (t(3)**2*(y1%YawBrTAyp - y2%YawBrTAyp) + t(2)**2*(-y1%YawBrTAyp + y3%YawBrTAyp))* scaleFactor
   c = ( (t(2)-t(3))*y1%YawBrTAyp + t(3)*y2%YawBrTAyp - t(2)*y3%YawBrTAyp ) * scaleFactor
   y_out%YawBrTAyp = y1%YawBrTAyp + b  + c * t_out
-  b = (t(3)**2*(y1%LSSTipPxa - y2%LSSTipPxa) + t(2)**2*(-y1%LSSTipPxa + y3%LSSTipPxa))* scaleFactor
-  c = ( (t(2)-t(3))*y1%LSSTipPxa + t(3)*y2%LSSTipPxa - t(2)*y3%LSSTipPxa ) * scaleFactor
-  y_out%LSSTipPxa = y1%LSSTipPxa + b  + c * t_out
+  CALL Angles_ExtrapInterp( y1%LSSTipPxa, y2%LSSTipPxa, y3%LSSTipPxa, tin, y_out%LSSTipPxa, tin_out )
   DO i1 = LBOUND(y_out%RootMxc,1),UBOUND(y_out%RootMxc,1)
     b = (t(3)**2*(y1%RootMxc(i1) - y2%RootMxc(i1)) + t(2)**2*(-y1%RootMxc(i1) + y3%RootMxc(i1)))* scaleFactor
     c = ( (t(2)-t(3))*y1%RootMxc(i1) + t(3)*y2%RootMxc(i1) - t(2)*y3%RootMxc(i1) ) * scaleFactor
