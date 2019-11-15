@@ -262,7 +262,7 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
       
       AD%u(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed
                   
-      ! Blade root motions:
+      ! Blade motions:
       do k=1,DvrData%numBlades         
          theta(1) = (k-1)*TwoPi/real(DvrData%numBlades,ReKi)
          theta(2) =  DvrData%precone
@@ -273,7 +273,7 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
          
       end do !k=numBlades
             
-      ! Blade motions:
+      ! Blade and blade root motions:
       do k=1,DvrData%numBlades
          rotateMat = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
          rotateMat = matmul( rotateMat, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) ) 
@@ -283,6 +283,14 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
          rotateMat(2,2) = rotateMat(2,2) - 1.0_ReKi
          rotateMat(3,3) = rotateMat(3,3) - 1.0_ReKi
                   
+
+         position = AD%u(1)%BladeRootMotion(k)%Position(:,1) - AD%u(1)%HubMotion%Position(:,1) 
+         AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
+
+         position =  AD%u(1)%BladeRootMotion(k)%Position(:,1) + AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) &
+                     - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
+         AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
+
          do j=1,AD%u(1)%BladeMotion(k)%nnodes        
             position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1) 
             AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
@@ -462,6 +470,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
    call ReadVar ( unIn, fileName, DvrData%OutFileData%Root, 'OutFileRoot', 'Root name for any output files', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+      IF ( PathIsRelative( DvrData%OutFileData%Root ) ) DvrData%OutFileData%Root = TRIM(PriPath)//TRIM(DvrData%OutFileData%Root)
    if (len_trim(DvrData%OutFileData%Root) == 0) then
       call getroot(fileName,DvrData%OutFileData%Root)
    end if
