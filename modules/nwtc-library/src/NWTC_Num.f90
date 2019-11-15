@@ -5345,7 +5345,7 @@ end function Rad2M180to180Deg
       PrevSimTime   = ZTime
 
       RETURN
-   END SUBROUTINE SimStatus   
+   END SUBROUTINE SimStatus
 !=======================================================================
 !>  This routine computes the 3x3 transformation matrix, \f$TransMat\f$,
 !!   to a coordinate system \f$x\f$ (with orthogonal axes \f$x_1, x_2, x_3\f$)

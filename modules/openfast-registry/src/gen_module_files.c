@@ -2363,6 +2363,15 @@ char * dimstr( int d )
     retval = " REGISTRY ERROR TOO MANY DIMS " ;
   }
   return(retval) ;
+
+  //strcpy(dex, "");
+  //strcat(dex, "(");
+  //for (j = 1; j <= d; j++) {
+  //   sprintf(tmp, "i%d%d", 0, j);
+  //   strcat(dex, tmp);
+  //   if (j == d) strcat(dex, ")"); else strcat(dex, ",");
+  //}
+
 }
 
 char * dimstr_c( int d )

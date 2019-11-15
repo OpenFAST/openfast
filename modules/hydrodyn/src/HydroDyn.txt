@@ -154,7 +154,6 @@ typedef   ^                            ^                             Morison_Mis
 typedef   ^                            ^                             WAMIT_InputType          u_WAMIT                           -          -          -         "WAMIT module inputs" -
 typedef   ^                            ^                             WAMIT2_InputType         u_WAMIT2                        -          -          -         "WAMIT2 module inputs" -
 typedef   ^                            ^                             Waves2_InputType         u_Waves2                        -          -          -         "Waves2 module inputs" -
-typedef	 ^	                           ^                             Logical	                IgnoreMod	                     -	        -	       -	        "whether to ignore the modulo in ED outputs (necessary for linearization perturbations)"	-
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:

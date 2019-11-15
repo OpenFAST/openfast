@@ -552,7 +552,7 @@ END SUBROUTINE SS_Rad_CalcConstrStateResidual
 !!
 !! For details, see:
 !! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
-!!   Runge-Kutta." �16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
+!!   Runge-Kutta."Sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
 !!   Cambridge University Press, pp. 704-716, 1992.
 !!
 SUBROUTINE SS_Rad_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )

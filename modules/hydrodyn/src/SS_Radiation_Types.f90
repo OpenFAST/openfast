@@ -47,7 +47,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  SS_Rad_ContinuousStateType  =======
   TYPE, PUBLIC :: SS_Rad_ContinuousStateType
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: x      !< Continuous States [-]
+    REAL(R8Ki) , DIMENSION(:), ALLOCATABLE  :: x      !< Continuous States [-]
   END TYPE SS_Rad_ContinuousStateType
 ! =======================
 ! =========  SS_Rad_DiscreteStateType  =======
@@ -478,7 +478,7 @@ ENDIF
   Int_BufSz   = Int_BufSz   + 1     ! x allocated yes/no
   IF ( ALLOCATED(InData%x) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! x upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%x)  ! x
+      Db_BufSz   = Db_BufSz   + SIZE(InData%x)  ! x
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -518,8 +518,8 @@ ENDIF
     Int_Xferred = Int_Xferred + 2
 
       DO i1 = LBOUND(InData%x,1), UBOUND(InData%x,1)
-        ReKiBuf(Re_Xferred) = InData%x(i1)
-        Re_Xferred = Re_Xferred + 1
+        DbKiBuf(Db_Xferred) = InData%x(i1)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
  END SUBROUTINE SS_Rad_PackContState
@@ -565,8 +565,8 @@ ENDIF
        RETURN
     END IF
       DO i1 = LBOUND(OutData%x,1), UBOUND(OutData%x,1)
-        OutData%x(i1) = ReKiBuf(Re_Xferred)
-        Re_Xferred = Re_Xferred + 1
+        OutData%x(i1) = REAL(DbKiBuf(Db_Xferred), R8Ki)
+        Db_Xferred = Db_Xferred + 1
       END DO
   END IF
  END SUBROUTINE SS_Rad_UnPackContState

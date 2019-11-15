@@ -61,7 +61,7 @@ MODULE ElastoDyn_Parameters
 
 
    INTEGER(IntKi), PARAMETER        :: DOF_Teet = 22 !DOF_TFrl + 2*(NumBE+NumBF)+ 1    ! DOF index for rotor-teeter
-
+   INTEGER(IntKi), PARAMETER        :: ED_MaxDOFs  = 24
 
 
    INTEGER(IntKi), PARAMETER        :: NPA      =  9                                   ! Number of DOFs that contribute to the angular velocity of the tail (body A) in the inertia frame.

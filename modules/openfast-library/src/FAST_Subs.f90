@@ -1759,23 +1759,31 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
    END IF   
    
    
-   if ( p%WrVTK == VTK_Unknown ) then
-      call SetErrStat(ErrID_Fatal, 'WrVTK must be 0 (none), 1 (initialization only), or 2 (animation).', ErrStat, ErrMsg, RoutineName)
-   else
-      if ( p%VTK_type == VTK_Unknown ) then
-         call SetErrStat(ErrID_Fatal, 'VTK_type must be 1 (surfaces), 2 (basic meshes:lines/points), or 3 (all meshes).', ErrStat, ErrMsg, RoutineName)
-         ! note I'm not going to write that 4 (old) is an option
-      end if      
-   end if
+   if ( p%WrVTK == VTK_Unknown ) then 
+      call SetErrStat(ErrID_Fatal, 'WrVTK must be 0 (none), 1 (initialization only), 2 (animation), or 3 (mode shapes).', ErrStat, ErrMsg, RoutineName) 
+   else 
+      if ( p%VTK_type == VTK_Unknown ) then 
+         call SetErrStat(ErrID_Fatal, 'VTK_type must be 1 (surfaces), 2 (basic meshes:lines/points), or 3 (all meshes).', ErrStat, ErrMsg, RoutineName) 
+         ! note I'm not going to write that 4 (old) is an option 
+      end if 
+       
+      if (p%WrVTK == VTK_ModeShapes .and. .not. p%Linearize) then 
+         call SetErrStat(ErrID_Fatal, 'WrVTK cannot be 3 (mode shapes) when Linearize is false. (Mode shapes require linearization analysis.)', ErrStat, ErrMsg, RoutineName) 
+      end if 
+   end if 
 
-      
    if (p%Linearize) then
-      if (p%LinTimes(1) < 0) call SetErrStat(ErrID_Fatal,'LinTimes must be positive values.',ErrStat, ErrMsg, RoutineName)
-      do i=2,size(p%LinTimes)
-         if (p%LinTimes(i) < 0) call SetErrStat(ErrID_Fatal,'LinTimes must be positive values.',ErrStat, ErrMsg, RoutineName)
-         if (p%LinTimes(i) <= p%LinTimes(i-1)) call SetErrStat(ErrID_Fatal,'LinTimes must be unique values entered in increasing order.',ErrStat, ErrMsg, RoutineName)
-      end do
-      
+      if (.not. allocated(p%LinTimes)) then 
+         call SetErrStat(ErrID_Fatal, 'NLinTimes must be at least 1 for linearization analysis.',ErrStat, ErrMsg, RoutineName) 
+      else 
+         do i=1,size(p%LinTimes) 
+            if (p%LinTimes(i) < 0) call SetErrStat(ErrID_Fatal,'LinTimes must be positive values.',ErrStat, ErrMsg, RoutineName) 
+         end do 
+         do i=2,size(p%LinTimes) 
+            if (p%LinTimes(i) <= p%LinTimes(i-1)) call SetErrStat(ErrID_Fatal,'LinTimes must be unique values entered in increasing order.',ErrStat, ErrMsg, RoutineName) 
+         end do 
+      end if 
+
       if (p%LinInputs < LIN_NONE .or. p%LinInputs > LIN_ALL) call SetErrStat(ErrID_Fatal,'LinInputs must be 0, 1, or 2.',ErrStat, ErrMsg, RoutineName)
       if (p%LinOutputs < LIN_NONE .or. p%LinOutputs > LIN_ALL) call SetErrStat(ErrID_Fatal,'LinOutputs must be 0, 1, or 2.',ErrStat, ErrMsg, RoutineName)
       
@@ -2181,7 +2189,6 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, OverrideAbortErrLev, ErrStat, Err
 
       ! Local variables:
    REAL(DbKi)                    :: TmpRate                                   ! temporary variable to read VTK_fps before converting to #steps based on DT
-   REAL(DbKi)                    :: VTK_fps                                   ! temporary variable to read VTK_fps before converting to #steps based on DT
    REAL(DbKi)                    :: TmpTime                                   ! temporary variable to read SttsTime and ChkptTime before converting to #steps based on DT
    INTEGER(IntKi)                :: I                                         ! loop counter
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
@@ -2794,7 +2801,7 @@ END DO
       end if
       
          ! LinTimes - Times to linearize (s) [1 to NLinTimes]
-   if (NLinTimes >= 1) then
+   if (p%Linearize .and. NLinTimes >= 1) then
       call AllocAry( p%LinTimes, NLinTimes, 'p%LinTimes', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          if (ErrStat < AbortErrLev) then
@@ -2849,15 +2856,15 @@ END DO
          RETURN        
       end if
 
-      ! WrVTK - VTK Visualization data output: (switch) {0=none; 1=initialization data only; 2=animation}:
-   CALL ReadVar( UnIn, InputFile, p%WrVTK, "WrVTK", "Write VTK visualization files (0=none; 1=initialization data only; 2=animation)", ErrStat2, ErrMsg2, UnEc)
+      ! WrVTK - VTK Visualization data output: (switch) {0=none; 1=initialization data only; 2=animation; 3=mode shapes}:
+   CALL ReadVar( UnIn, InputFile, p%WrVTK, "WrVTK", "Write VTK visualization files (0=none; 1=initialization data only; 2=animation; 3=mode shapes)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
          RETURN        
       end if
       
-      IF ( p%WrVTK < 0 .OR. p%WrVTK > 2 ) THEN 
+      IF ( p%WrVTK < 0 .OR. p%WrVTK > 3 ) THEN 
          p%WrVTK = VTK_Unknown
       END IF
       
@@ -2898,7 +2905,7 @@ END DO
       end if
       
       ! VTK_fps - Frame rate for VTK output (frames per second) {will use closest integer multiple of DT} 
-   CALL ReadVar( UnIn, InputFile, VTK_fps, "VTK_fps", "Frame rate for VTK output(fps)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, p%VTK_fps, "VTK_fps", "Frame rate for VTK output(fps)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -2907,19 +2914,21 @@ END DO
       
     
       ! convert frames-per-second to seconds per sample:
-      if ( EqualRealNos(VTK_fps, 0.0_DbKi) ) then
+      if ( EqualRealNos(p%VTK_fps, 0.0_DbKi) ) then
          TmpTime = p%TMax + p%DT
       else
-         TmpTime = 1.0_DbKi / VTK_fps
+         TmpTime = 1.0_DbKi / p%VTK_fps
       end if
       
       ! now save the number of time steps between VTK file output:      
-      IF (TmpTime > p%TMax) THEN
+      IF (p%WrVTK == VTK_ModeShapes) THEN 
+         p%n_VTKTime = 1
+      ELSE IF (TmpTime > p%TMax) THEN
          p%n_VTKTime = HUGE(p%n_VTKTime)
       ELSE         
          p%n_VTKTime = NINT( TmpTime / p%DT )
          ! I'll warn if p%n_VTKTime*p%DT is not TmpTime 
-         IF (p%WrVTK > VTK_None) THEN
+         IF (p%WrVTK  == VTK_Animate) THEN
             TmpRate = p%n_VTKTime*p%DT
             if (.not. EqualRealNos(TmpRate, TmpTime)) then
                call SetErrStat(ErrID_Info, '1/VTK_fps is not an integer multiple of DT. FAST will output VTK information at '//&
