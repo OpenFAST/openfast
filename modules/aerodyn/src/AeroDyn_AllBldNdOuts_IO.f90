@@ -19,7 +19,7 @@ MODULE AeroDyn_AllBldNdOuts_IO
 
       ! Parameters related to output length (number of characters allowed in the output data headers):
 
-   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 16    ! The NREL allowed channel name length is usually 10.  We are making these of the form AeroB#_Z######y_namesuffix
+   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 5    ! The NREL allowed channel name length is usually 10.  We are making these of the form B#N##namesuffix
 
 
 ! ===================================================================================================
@@ -128,7 +128,7 @@ SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat, ErrMsg )
 
                   ! Create the name prefix:
                WRITE (TmpChar,'(I2.2)')  IdxNode         ! 2 digit number
-               ChanPrefix = 'B' // TRIM(Num2LStr(IdxBlade)) // 'N' // TRIM(TmpChar) // '_'
+               ChanPrefix = 'B' // TRIM(Num2LStr(IdxBlade)) // 'N' // TRIM(TmpChar) ! // '_'
                   ! Now write to the header
                InitOut%WriteOutputHdr(INDX) = trim(ChanPrefix) // p%BldNd_OutParam(IdxChan)%Name
                InitOut%WriteOutputUnt(INDX) = p%BldNd_OutParam(IdxChan)%Units
