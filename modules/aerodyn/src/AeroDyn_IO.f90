@@ -2377,7 +2377,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
 
 
    !----------- OUTLIST  -----------------------------------------------------------
-      ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it and assume that it is an NREL compatable input file.
+      ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it.
    ErrMsg_NoAllBldNdOuts='AllBldNd section of AeroDyn input file not found or improperly formatted. Therefore assuming no nodal outputs.'
 
    !----------- OUTLIST for BldNd -----------------------------------------------------------
