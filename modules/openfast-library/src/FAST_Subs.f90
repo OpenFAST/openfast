@@ -6390,6 +6390,7 @@ END SUBROUTINE FAST_CreateCheckpoint_Tary
 SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, CheckpointRoot, ErrStat, ErrMsg, Unit )
 
    USE BladedInterface, ONLY: CallBladedDLL  ! Hack for Bladed-style DLL
+   USE BladedInterface, ONLY: GH_DISCON_STATUS_CHECKPOINT
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           !< initial time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          !< loop counter
@@ -6496,18 +6497,20 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
       if (Turbine%SrvD%m%dll_data%avrSWAP( 1) > 0   ) then
             ! store value to be overwritten
          old_avrSwap1 = Turbine%SrvD%m%dll_data%avrSWAP( 1) 
-         FileName     = Turbine%SrvD%p%DLL_InFile
+         FileName     = Turbine%SrvD%m%dll_data%DLL_InFile
             ! overwrite values:
-         Turbine%SrvD%p%DLL_InFile = DLLFileName
+         Turbine%SrvD%m%dll_data%DLL_InFile = DLLFileName
          Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-         Turbine%SrvD%m%dll_data%avrSWAP( 1) = -8
-         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         Turbine%SrvD%m%dll_data%avrSWAP( 1) = GH_DISCON_STATUS_CHECKPOINT
+         Turbine%SrvD%m%dll_data%SimStatus = Turbine%SrvD%m%dll_data%avrSWAP( 1)
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p, Turbine%SrvD%m%dll_data, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             ! put values back:
-         Turbine%SrvD%p%DLL_InFile = FileName
+         Turbine%SrvD%m%dll_data%DLL_InFile = FileName
          Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
          Turbine%SrvD%m%dll_data%avrSWAP( 1) = old_avrSwap1
+         Turbine%SrvD%m%dll_data%SimStatus = Turbine%SrvD%m%dll_data%avrSWAP( 1)
       end if      
    END IF
    
@@ -6569,6 +6572,7 @@ END SUBROUTINE FAST_RestoreFromCheckpoint_Tary
 !! the turbine instance.
 SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, CheckpointRoot, ErrStat, ErrMsg, Unit )
    USE BladedInterface, ONLY: CallBladedDLL  ! Hack for Bladed-style DLL
+   USE BladedInterface, ONLY: GH_DISCON_STATUS_RESTARTING
 
    REAL(DbKi),               INTENT(INOUT) :: t_initial           !< initial time
    INTEGER(IntKi),           INTENT(INOUT) :: n_t_global          !< loop counter
@@ -6694,17 +6698,19 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
       if (Turbine%SrvD%m%dll_data%avrSWAP( 1) > 0   ) then ! this isn't allocated if UseBladedInterface is FALSE
             ! store value to be overwritten
          old_avrSwap1 = Turbine%SrvD%m%dll_data%avrSWAP( 1) 
-         FileName     = Turbine%SrvD%p%DLL_InFile
+         FileName     = Turbine%SrvD%m%dll_data%DLL_InFile
             ! overwrite values before calling DLL:
-         Turbine%SrvD%p%DLL_InFile = DLLFileName
+         Turbine%SrvD%m%dll_data%DLL_InFile = DLLFileName
          Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-         Turbine%SrvD%m%dll_data%avrSWAP( 1) = -9
-         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         Turbine%SrvD%m%dll_data%avrSWAP( 1) = GH_DISCON_STATUS_RESTARTING
+         Turbine%SrvD%m%dll_data%SimStatus = Turbine%SrvD%m%dll_data%avrSWAP( 1)
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p,  Turbine%SrvD%m%dll_data, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                           
             ! put values back:
-         Turbine%SrvD%p%DLL_InFile = FileName
+         Turbine%SrvD%m%dll_data%DLL_InFile = FileName
          Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-         Turbine%SrvD%m%dll_data%avrSWAP( 1) = old_avrSwap1      
+         Turbine%SrvD%m%dll_data%avrSWAP( 1) = old_avrSwap1
+         Turbine%SrvD%m%dll_data%SimStatus = Turbine%SrvD%m%dll_data%avrSWAP( 1)
       end if      
    end if   
    

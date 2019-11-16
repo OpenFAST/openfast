@@ -29,6 +29,9 @@ typedef	^	InitInputType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simu
 typedef	^	InitInputType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
 typedef	^	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of controller inputs [from supercontroller]"	-
 typedef	^	InitInputType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
+typedef	^	InitInputType	IntKi	TrimCase	-	-	-	"Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True]"	-
+typedef	^	InitInputType	ReKi	TrimGain	-	-	-	"Proportional gain for the rotational speed error (>0) [used only if TrimCase>0]"	"rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque"
+typedef	^	InitInputType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
@@ -118,6 +121,7 @@ typedef	^	SrvD_InputFile	ReKi	GenPwr_Dem	-	-	-	"Record 13: Demanded power [used 
 typedef	^	SrvD_InputFile	IntKi	DLL_NumTrq	-	-	-	"Record 26: No. of points in torque-speed look-up table {0 = none and use the optimal mode PARAMETERs instead, nonzero = ignore the optimal mode PARAMETERs by setting Gain_OM (Record 16) to 0.0} [used only with DLL Interface]"	-
 typedef	^	SrvD_InputFile	ReKi	GenSpd_TLU	{:}	-	-	"Records R:2:R+2*DLL_NumTrq-2: Generator speed values in look-up table [used only with DLL Interface]"	rad/s
 typedef	^	SrvD_InputFile	ReKi	GenTrq_TLU	{:}	-	-	"Records R+1:2:R+2*DLL_NumTrq-1: Generator torque values in look-up table [used only with DLL Interface]"	Nm
+typedef	^	SrvD_InputFile	LOGICAL	UseLegacyInterface	-	-	-	"Flag that determines if the legacy Bladed interface is (legacy=DISCON with avrSWAP instead of CONTROLLER)"	-
 typedef	^	SrvD_InputFile	LOGICAL	CompNTMD	-	-	-	"Compute nacelle tuned mass damper {true/false}"	-
 typedef	^	SrvD_InputFile	CHARACTER(1024)	NTMDfile	-	-	-	"File for nacelle tuned mass damper (quoted string)"	-
 typedef	^	SrvD_InputFile	LOGICAL	CompTTMD	-	-	-	"Compute tower tuned mass damper {true/false}"	-
@@ -125,15 +129,74 @@ typedef	^	SrvD_InputFile	CHARACTER(1024)	TTMDfile	-	-	-	"File for tower tuned ma
 
 # ..... Data for using Bladed DLLs .......................................................................................................
 typedef	^	BladedDLLType	SiKi	avrSWAP	{:}	-	-	"The swap array: used to pass data to and from the DLL controller"	"see Bladed DLL documentation"
-typedef	^	BladedDLLType	ReKi	HSSBrFrac	-	-	-	"Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) - from Bladed DLL"	-
-typedef	^	BladedDLLType	ReKi	HSSBrTrqC	-	-	-	"Braking torque" N-m
+typedef	^	BladedDLLType	ReKi	HSSBrTrqDemand	-	-	-	"Demanded braking torque - from Bladed DLL"	-
 typedef	^	BladedDLLType	ReKi	YawRateCom	-	-	-	"Nacelle yaw rate demanded from Bladed DLL"	rad/s
 typedef	^	BladedDLLType	ReKi	GenTrq	-	-	-	"Electrical generator torque from Bladed DLL"	N-m
-typedef	^	BladedDLLType	IntKi	GenState	-	-	-	"Generator state from Bladed DLL"	N-m
-#typedef	^	BladedDLLType	ReKi	ElecPwr	-	-	-	"Electrical power sent to Bladed DLL"	W
+typedef	^	BladedDLLType	IntKi	GenState	-	-	-	"Generator state from Bladed DLL"	-
 typedef	^	BladedDLLType	ReKi	BlPitchCom	3	-	-	"Commanded blade pitch angles"	radians
 typedef	^	BladedDLLType	ReKi	PrevBlPitch	3	-	-	"Previously commanded blade pitch angles"	radians
+typedef	^	BladedDLLType	ReKi	ElecPwr_prev	-	-	-	"Electrical power (from previous step), sent to Bladed DLL"	W
+typedef	^	BladedDLLType	ReKi	GenTrq_prev	-	-	-	"Electrical generator torque (from previous step), sent to Bladed DLL"	N-m
 typedef	^	BladedDLLType	SiKi	SCoutput	{:}	-	-	"controller output to supercontroller"	-
+typedef	^	BladedDLLType	logical	initialized	-	-	-	"flag that determines if DLL has been called (for difference between CalcOutput and UpdateStates)"	-
+typedef	^	BladedDLLType	INTEGER	NumLogChannels	-	-	-	"number of log channels from controller"	-
+typedef	^	BladedDLLType	OutParmType	LogChannels_OutParam	{:}	-	-	"Names and units (and other characteristics) of logging outputs from DLL"	-
+typedef	^	BladedDLLType	ReKi	LogChannels	{:}	-	-	"logging outputs from controller"	-
+typedef	^	BladedDLLType	IntKi	ErrStat	-	-	-	"error message from external controller API"	-
+typedef	^	BladedDLLType	CHARACTER(ErrMsgLen)	ErrMsg	-	-	-	"error message from external controller API"	-
+typedef	^	BladedDLLType	R8Ki	CurrentTime	-	-	-	"Current Simulation Time"	s
+typedef	^	BladedDLLType	IntKi	SimStatus	-	-	-	"simulation status (see avrSWAP(1): Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation)"	-
+typedef	^	BladedDLLType	IntKi	ShaftBrakeStatusBinaryFlag	-	-	-	"binary flag indicating (on/off) status for shaft brake 1, shaft brake 2, generator brake, shaft brake 3, or brake torque set separately (0, 1, or 16 allowed in FAST)"-
+typedef	^	BladedDLLType	LOGICAL	HSSBrDeployed	-	-	-	"Whether the HSS brake has been deployed" -
+typedef	^	BladedDLLType	R8Ki	TimeHSSBrFullyDeployed	-	-	-	"Time at which the controller high-speed shaft is fully deployed" s
+typedef	^	BladedDLLType	R8Ki	TimeHSSBrDeployed	-	-	-	"Time at which the controller high-speed shaft is first deployed" s
+typedef	^	BladedDLLType	LOGICAL	OverrideYawRateWithTorque	-	-	-	"acts similiar to Yaw_Cntrl"	-
+typedef	^	BladedDLLType	ReKi	YawTorqueDemand	-	-	-	"Demanded yaw actuator torque (override of yaw rate control)"	Nm
+## these are INPUTS copied to the DLL:
+typedef	^	BladedDLLType	ReKi	BlPitchInput	{:}	-	-	"Input blade pitch angles"	radians
+typedef	^	BladedDLLType	ReKi	YawAngleFromNorth	-	-	-	"Yaw angle of the nacelle relative to North (see NacYaw_North)"	rad
+typedef	^	BladedDLLType	ReKi	HorWindV	-	-	-	"Horizontal hub-height wind velocity magnitude"	m/s
+typedef	^	BladedDLLType	ReKi	HSS_Spd	-	-	-	"High-speed shaft (HSS) speed"	rad/s
+typedef	^	BladedDLLType	ReKi	YawErr	-	-	-	"Yaw error"	radians
+typedef	^	BladedDLLType	ReKi	RotSpeed	-	-	-	"Rotor azimuth angular speed"	rad/s
+typedef	^	BladedDLLType	ReKi	YawBrTAxp	-	-	-	"Tower-top / yaw bearing fore-aft (translational) acceleration (absolute)"	m/s^2
+typedef	^	BladedDLLType	ReKi	YawBrTAyp	-	-	-	"Tower-top / yaw bearing side-to-side (translational) acceleration (absolute)"	m/s^2
+typedef	^	BladedDLLType	ReKi	LSSTipMys	-	-	-	"Nonrotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
+typedef	^	BladedDLLType	ReKi	LSSTipMzs	-	-	-	"Nonrotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
+typedef	^	BladedDLLType	ReKi	LSSTipMya	-	-	-	"Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
+typedef	^	BladedDLLType	ReKi	LSSTipMza	-	-	-	"Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
+typedef	^	BladedDLLType	ReKi	LSSTipPxa	-	-	-	"Rotor azimuth angle (position)"	radians
+typedef	^	BladedDLLType	ReKi	Yaw	-	-	-	"Current nacelle yaw"	radians
+typedef	^	BladedDLLType	ReKi	YawRate	-	-	-	"Current nacelle yaw rate"	rad/s
+typedef	^	BladedDLLType	ReKi	YawBrMyn	-	-	-	"Rotating (with nacelle) tower-top / yaw bearing pitch moment"	N-m
+typedef	^	BladedDLLType	ReKi	YawBrMzn	-	-	-	"Tower-top / yaw bearing yaw moment"	N-m
+typedef	^	BladedDLLType	ReKi	NcIMURAxs	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
+typedef	^	BladedDLLType	ReKi	NcIMURAys	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
+typedef	^	BladedDLLType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
+typedef	^	BladedDLLType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
+typedef	^	BladedDLLType	ReKi	LSSTipMxa	-	-	-	"Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader)"	N-m
+typedef	^	BladedDLLType	ReKi	RootMyc	3	-	-	"Out-of-plane moment (i.e., the moment caused by out-of-plane forces) at the blade root for each of the blades (max 3)"	N-m
+typedef	^	BladedDLLType	ReKi	RootMxc	3	-	-	"In-plane moment (i.e., the moment caused by in-plane forces) at the blade root"	N-m
+## these are PARAMETERS sent to the DLL (THEIR VALUES SHOULD NOT CHANGE DURING SIMULATION):
+typedef	^	BladedDLLType	DbKi	DLL_DT	-	-	-	"interval for calling DLL (integer multiple number of DT)"	s
+typedef	^	BladedDLLType	CHARACTER(1024)	DLL_InFile	-	-	-	"Name of input file used in DLL"	-
+typedef	^	BladedDLLType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
+typedef	^	BladedDLLType	ReKi	GenTrq_Dem	-	-	-	"Demanded generator torque above rated"	Nm
+typedef	^	BladedDLLType	ReKi	GenSpd_Dem	-	-	-	"Demanded generator speed above rated"	rad/s
+typedef	^	BladedDLLType	ReKi	Ptch_Max	-	-	-	"Maximum pitch angle"	rad
+typedef	^	BladedDLLType	ReKi	Ptch_Min	-	-	-	"Minimum pitch angle"	rad
+typedef	^	BladedDLLType	ReKi	Ptch_SetPnt	-	-	-	"Below-rated pitch angle set-point"	rad
+typedef	^	BladedDLLType	ReKi	PtchRate_Max	-	-	-	"Maximum pitch rate"	rad/s
+typedef	^	BladedDLLType	ReKi	PtchRate_Min	-	-	-	"Minimum pitch rate (most negative value allowed)"	rad/s
+typedef	^	BladedDLLType	ReKi	GenPwr_Dem	-	-	-	"Demanded power (This is not valid for variable-speed, pitch-regulated controllers.)"	W
+typedef	^	BladedDLLType	ReKi	Gain_OM	-	-	-	"Optimal mode gain"	Nm/(rad/s)^2
+typedef	^	BladedDLLType	ReKi	GenSpd_MaxOM	-	-	-	"Optimal mode maximum speed"	rad/s
+typedef	^	BladedDLLType	ReKi	GenSpd_MinOM	-	-	-	"Minimum generator speed"	rad/s
+typedef	^	BladedDLLType	IntKi	Ptch_Cntrl	-	-	-	"Pitch control: 0 = collective;  1 = individual"	-
+typedef	^	BladedDLLType	IntKi	DLL_NumTrq	-	-	-	"No. of points in torque-speed look-up table, 0 = none and use the optimal mode PARAMETERs instead;  nonzero = ignore the optimal mode PARAMETERs by setting Record 16 to 0.0"	-
+typedef	^	BladedDLLType	ReKi	GenSpd_TLU	{:}	-	-	"Table (array) containing DLL_NumTrq generator speeds  for the torque-speed table look-up (TLU) -- this should be defined using an array constructor; for example,  if DLL_NumTrq = 3,  GenSpd_TLU(DLL_NumTrq)    = (/ 0.0, 99.9,  999.9 /)"	rad/s
+typedef	^	BladedDLLType	ReKi	GenTrq_TLU	{:}	-	-	"Table (array) containing DLL_NumTrq generator torques for the torque-speed table look-up (TLU) -- this should be defined using an array constructor, for example,  if DLL_NumTrq = 3,  GenTrq_TLU(DLL_NumTrq)    = (/ 0.0, 10,  200.0 /)"	Nm
+typedef	^	BladedDLLType	IntKi	Yaw_Cntrl	-	-	-	"Yaw control: 0 = rate;  1 = torque"	-
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
@@ -142,6 +205,7 @@ typedef	^	ContinuousStateType	TMD_ContinuousStateType	NTMD	-	-	-	"TMD module sta
 typedef	^	ContinuousStateType	TMD_ContinuousStateType	TTMD	-	-	-	"TMD module states - tower"	-
 
 # Define discrete (nondifferentiable) states here:
+typedef	^	DiscreteStateType	ReKi	CtrlOffset	-	-	-	"Controller offset parameter" N-m
 #typedef	^	DiscreteStateType	ReKi	BlPitchFilter	{:}	-	-	"blade pitch filter"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	DiscreteStateType	TMD_DiscreteStateType	TTMD	-	-	-	"TMD module states - tower"	-
@@ -185,7 +249,6 @@ typedef	^	MiscVarType	TMD_MiscVarType	TTMD	-	-	-	"TMD module misc vars - tower"	
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	DbKi	HSSBrDT	-	-	-	"Time it takes for HSS brake to reach full deployment once deployed"	seconds
-typedef	^	ParameterType	ReKi	HSSBrFrac	-	-	-	"Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full), (-)"	-
 typedef	^	ParameterType	ReKi	HSSBrTqF	-	-	-	"Fully deployed HSS brake torque"
 typedef	^	ParameterType	ReKi	SIG_POSl	-	-	-	"Pullout slip"
 typedef	^	ParameterType	ReKi	SIG_POTq	-	-	-	"Pullout torque"
@@ -210,7 +273,6 @@ typedef	^	ParameterType	ReKi	GenEff	-	-	-	"Generator efficiency"
 typedef	^	ParameterType	ReKi	BlPitchInit	{:}	-	-	"Initial blade pitch angles"	radians
 typedef	^	ParameterType	ReKi	BlPitchF	{:}	-	-	"Final blade pitch"
 typedef	^	ParameterType	ReKi	PitManRat	{:}	-	-	"Pitch rates at which override pitch maneuvers head toward final pitch angles (does not include sign)"	rad/s
-typedef	^	ParameterType	ReKi	BlAlpha
 typedef	^	ParameterType	ReKi	YawManRat	-	-	-	"Yaw rate at which override yaw maneuver head toward for final yaw angle (does not include sign)"	rad/s
 typedef	^	ParameterType	ReKi	NacYawF	-	-	-	"Final yaw angle after override yaw maneuver"
 typedef	^	ParameterType	ReKi	SpdGenOn	-	-	-	"Generator speed to turn on the generator for a startup"
@@ -250,55 +312,46 @@ typedef	^	ParameterType	LOGICAL	CompNTMD	-	-	-	"Compute nacelle tuned mass dampe
 typedef	^	ParameterType	LOGICAL	CompTTMD	-	-	-	"Compute tower tuned mass damper {true/false}"	-
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
+typedef	^	ParameterType	IntKi	NumOuts_DLL	-	-	-	"Number of logging channels output from the DLL (set at initialization)"	-
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	ParameterType	OutParmType	OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
 typedef	^	ParameterType	CHARACTER(1)	Delim	-	-	-	"Column delimiter for output text files"	-
 # parameters for Bladed Interface (dynamic-link library)
 typedef	^	ParameterType	LOGICAL	UseBladedInterface	-	-	-	"Flag that determines if BladedInterface was used"	-
-typedef	^	ParameterType	LOGICAL	DLL_Ramp	-	-	-	"determines if there is a DLL_DT-ramp time delay (true only when DLL_DT /= DT)"	-
-typedef	^	ParameterType	DbKi	DLL_DT	-	-	-	"interval for calling DLL (integer multiple number of DT)"	s
-typedef	^	ParameterType	IntKi	DLL_NumTrq	-	-	-	"No. of points in torque-speed look-up table, 0 = none and use the optimal mode PARAMETERs instead;  nonzero = ignore the optimal mode PARAMETERs by setting Record 16 to 0.0"	-
-typedef	^	ParameterType	IntKi	Ptch_Cntrl	-	-	-	"Pitch control: 0 = collective;  1 = individual"	-
-typedef	^	ParameterType	ReKi	Gain_OM	-	-	-	"Optimal mode gain"	Nm/(rad/s)^2
-typedef	^	ParameterType	ReKi	GenPwr_Dem	-	-	-	"Demanded power"	W
-typedef	^	ParameterType	ReKi	GenSpd_Dem	-	-	-	"Demanded generator speed above rated"	rad/s
-typedef	^	ParameterType	ReKi	GenSpd_MaxOM	-	-	-	"Optimal mode maximum speed"	rad/s
-typedef	^	ParameterType	ReKi	GenSpd_MinOM	-	-	-	"Minimum generator speed"	rad/s
-typedef	^	ParameterType	ReKi	GenSpd_TLU	{:}	-	-	"Table (array) containing DLL_NumTrq generator speeds  for the torque-speed table look-up (TLU) -- this should be defined using an array constructor; for example,  if DLL_NumTrq = 3,  GenSpd_TLU(DLL_NumTrq)    = (/ 0.0, 99.9,  999.9 /)"	rad/s
-typedef	^	ParameterType	ReKi	GenTrq_Dem	-	-	-	"Demanded generator torque"	Nm
-typedef	^	ParameterType	ReKi	GenTrq_TLU	{:}	-	-	"Table (array) containing DLL_NumTrq generator torques for the torque-speed table look-up (TLU) -- this should be defined using an array constructor, for example,  if DLL_NumTrq = 3,  GenTrq_TLU(DLL_NumTrq)    = (/ 0.0, 10,  200.0 /)"	Nm
-typedef	^	ParameterType	ReKi	Ptch_Max	-	-	-	"Maximum pitch angle"	rad
-typedef	^	ParameterType	ReKi	Ptch_Min	-	-	-	"Minimum pitch angle"	rad
-typedef	^	ParameterType	ReKi	Ptch_SetPnt	-	-	-	"Below-rated pitch angle set-point"	rad
-typedef	^	ParameterType	ReKi	PtchRate_Max	-	-	-	"Maximum pitch rate"	rad/s
-typedef	^	ParameterType	ReKi	PtchRate_Min	-	-	-	"Minimum pitch rate (most negative value allowed)"	rad/s
-typedef	^	ParameterType	ReKi	NacYaw_North	-	-	-	"Reference yaw angle of the nacelle when the upwind end points due North"	rad
-typedef	^	ParameterType	CHARACTER(1024)	DLL_InFile	-	-	-	"Name of input file used in DLL"	-
+typedef	^	ParameterType	LOGICAL	UseLegacyInterface	-	-	-	"Flag that determines if the legacy Bladed interface is (legacy=DISCON with avrSWAP instead of CONTROLLER)"	-
 typedef	^	ParameterType	DLL_Type	DLL_Trgt	-	-	-	"The addresses and names of the Bladed DLL and its procedure"	-
-typedef	^	ParameterType	TMD_ParameterType	NTMD	-	-	-	"TMD module parameters - nacelle"	-
-typedef	^	ParameterType	TMD_ParameterType	TTMD	-	-	-	"TMD module parameters - tower"	-
+typedef	^	ParameterType	LOGICAL	DLL_Ramp	-	-	-	"determines if there is a DLL_DT-ramp time delay (true only when DLL_DT /= DT)"	-
+typedef	^	ParameterType	ReKi	BlAlpha	-	-	-	"parameter for low-pass filter of blade pitch commands from the controller DLL"	-
+typedef	^	ParameterType	IntKi	DLL_n	-	-	-	"number of steps between the controller being called and SrvD being called"	-
+typedef	^	ParameterType	IntKi	avcOUTNAME_LEN	-	-	-	"Length of the avcOUTNAME character array passed to/from the DLL"	-
+typedef	^	ParameterType	ReKi	NacYaw_North	-	-	-	"Reference yaw angle of the nacelle when the upwind end points due North"	rad
 typedef	^	ParameterType	ReKi	AvgWindSpeed	-	-	-	"average wind speed for the simulation"	m/s
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"air density"	kg/m^3
+# parameters for trim-case (linearization):
+typedef	^	ParameterType	IntKi	TrimCase	-	-	-	"Controller parameter to be trimmed {1:yaw; 2:torque; 3:pitch} [used only if CalcSteady=True]"	-
+typedef	^	ParameterType	ReKi	TrimGain	-	-	-	"Proportional gain for the rotational speed error (>0) [used only if TrimCase>0]"	"rad/(rad/s) for yaw or pitch; Nm/(rad/s) for torque"
+typedef	^	ParameterType	ReKi	RotSpeedRef	-	-	-	"Reference rotor speed"	"rad/s"
+# parameters for other modules:
+typedef	^	ParameterType	TMD_ParameterType	NTMD	-	-	-	"TMD module parameters - nacelle"	-
+typedef	^	ParameterType	TMD_ParameterType	TTMD	-	-	-	"TMD module parameters - tower"	-
 
 # ..... Inputs ....................................................................................................................
-# Define inputs that are contained on the mesh here:
-#typedef	^	InputType	MeshType	MeshedInput	-	-	-	"Meshed input data"	-
 # Define inputs that are not on this mesh here:
-typedef	^	InputType	ReKi	BlPitch	{:}	-	-	"Current blade pitch angles"	radians
-typedef	^	InputType	ReKi	Yaw	-	-	-	"Current nacelle yaw"	radians
+typedef	^	InputType	ReKi	BlPitch	{:}	-	2pi	"Current blade pitch angles"	radians
+typedef	^	InputType	ReKi	Yaw	-	-	2pi	"Current nacelle yaw"	radians
 typedef	^	InputType	ReKi	YawRate	-	-	-	"Current nacelle yaw rate"	rad/s
 typedef	^	InputType	ReKi	LSS_Spd	-	-	-	"Low-speed shaft (LSS) speed at entrance to gearbox"	rad/s
 typedef	^	InputType	ReKi	HSS_Spd	-	-	-	"High-speed shaft (HSS) speed"	rad/s
 typedef	^	InputType	ReKi	RotSpeed	-	-	-	"Rotor azimuth angular speed"	rad/s
-typedef	^	InputType	ReKi	ExternalYawPosCom	-	-	-	"Commanded nacelle yaw position from Simulink or Labview"	radians
+typedef	^	InputType	ReKi	ExternalYawPosCom	-	-	2pi	"Commanded nacelle yaw position from Simulink or Labview"	radians
 typedef	^	InputType	ReKi	ExternalYawRateCom	-	-	-	"Commanded nacelle yaw rate from Simulink or Labview"	rad/s
-typedef	^	InputType	ReKi	ExternalBlPitchCom	{:}	-	-	"Commanded blade pitch from Simulink or LabVIEW"	radians
+typedef	^	InputType	ReKi	ExternalBlPitchCom	{:}	-	2pi	"Commanded blade pitch from Simulink or LabVIEW"	radians
 typedef	^	InputType	ReKi	ExternalGenTrq	-	-	-	"Electrical generator torque from Simulink or LabVIEW"	N-m
 typedef	^	InputType	ReKi	ExternalElecPwr	-	-	-	"Electrical power from Simulink or LabVIEW"	W
 typedef	^	InputType	ReKi	ExternalHSSBrFrac	-	-	-	"Fraction of full braking torque: 0 (off) <= HSSBrFrac <= 1 (full) from Simulink or LabVIEW"	-
 typedef	^	InputType	ReKi	TwrAccel	-	-	-	"Tower acceleration for tower feedback control (user routine only)"	m/s^2
-typedef	^	InputType	ReKi	YawErr	-	-	-	"Yaw error"	radians
-typedef	^	InputType	ReKi	WindDir	-	-	-	"Wind direction"	radians
+typedef	^	InputType	ReKi	YawErr	-	-	2pi	"Yaw error"	radians
+typedef	^	InputType	ReKi	WindDir	-	-	2pi	"Wind direction"	radians
 typedef	^	InputType	ReKi	RootMyc	3	-	-	"Out-of-plane moment (i.e., the moment caused by out-of-plane forces) at the blade root for each of the blades (max 3)"	N-m
 typedef	^	InputType	ReKi	YawBrTAxp	-	-	-	"Tower-top / yaw bearing fore-aft (translational) acceleration (absolute)"	m/s^2
 typedef	^	InputType	ReKi	YawBrTAyp	-	-	-	"Tower-top / yaw bearing side-to-side (translational) acceleration (absolute)"	m/s^2
@@ -316,9 +369,7 @@ typedef	^	InputType	ReKi	NcIMURAys	-	-	-	"Nacelle inertial measurement unit angu
 typedef	^	InputType	ReKi	NcIMURAzs	-	-	-	"Nacelle inertial measurement unit angular (rotational) acceleration (absolute)"	rad/s^2
 typedef	^	InputType	ReKi	RotPwr	-	-	-	"Rotor power (this is equivalent to the low-speed shaft power)"	W
 typedef	^	InputType	ReKi	HorWindV	-	-	-	"Horizontal hub-height wind velocity magnitude"	m/s
-typedef	^	InputType	ReKi	YawAngle	-	-	-	"Estimate of yaw (nacelle + platform)"	radians
-typedef	^	InputType	ReKi	ElecPwr_prev	-	-	-	"Electrical power (from previous step), sent to Bladed DLL"	W
-typedef	^	InputType	ReKi	GenTrq_prev	-	-	-	"Electrical generator torque (from previous step), sent to Bladed DLL"	N-m
+typedef	^	InputType	ReKi	YawAngle	-	-	2pi	"Estimate of yaw (nacelle + platform)"	radians
 typedef	^	InputType	TMD_InputType	NTMD	-	-	-	"TMD module inputs - nacelle"	-
 typedef	^	InputType	TMD_InputType	TTMD	-	-	-	"TMD module inputs - tower"	-
 typedef	^	InputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass input data to the DLL controller from the supercontroller"	-
@@ -328,7 +379,7 @@ typedef	^	InputType	SiKi	SuperController	{:}	-	-	"A swap array: used to pass inp
 #typedef	^	OutputType	MeshType	MeshedOutput	-	-	-	"Meshed output data"	-
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
-typedef	^	OutputType	ReKi	BlPitchCom	{:}	-	-	"Commanded blade pitch angles"	radians
+typedef	^	OutputType	ReKi	BlPitchCom	{:}	-	2pi	"Commanded blade pitch angles"	radians
 typedef	^	OutputType	ReKi	YawMom	-	-	-	"Torque transmitted through the yaw bearing"	N-m
 typedef	^	OutputType	ReKi	GenTrq	-	-	-	"Electrical generator torque"	N-m
 typedef	^	OutputType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque"	N-m
