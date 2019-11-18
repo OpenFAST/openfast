@@ -42,6 +42,10 @@ module VTK
             vtk_point_data_scalar_grid2D, &
             vtk_point_data_scalar_grid
     end interface
+    interface vtk_cell_data_scalar; module procedure &
+            vtk_cell_data_scalar_1d,&
+            vtk_cell_data_scalar_2d 
+    end interface
 
     public
     private:: vtk_unit, bFileOpen, nData, nPoints,bBinary, buffer
@@ -453,8 +457,26 @@ contains
         endif
     end subroutine
 
-    subroutine vtk_cell_data_scalar(D,sname)
+    subroutine vtk_cell_data_scalar_1d(D,sname)
         real(ReKi), dimension(:),intent(in)::D
+        character(len=*),intent(in) ::sname
+
+        if ( bFileOpen ) then
+            if (bBinary) then
+                write(vtk_unit)'SCALARS '//trim(sname)//' double 1'//NL
+                write(vtk_unit)'LOOKUP_TABLE default'//NL
+                write(vtk_unit)D
+                write(vtk_unit)NL
+            else
+                write(vtk_unit,fmt='(A,A,A)') 'SCALARS ', sname, ' double'
+                write(vtk_unit,'(A)') 'LOOKUP_TABLE default'
+                write(vtk_unit,'(1'//RFMT//')')D
+            endif
+        endif
+    end subroutine
+
+    subroutine vtk_cell_data_scalar_2d(D,sname)
+        real(ReKi), dimension(:,:),intent(in)::D
         character(len=*),intent(in) ::sname
 
         if ( bFileOpen ) then

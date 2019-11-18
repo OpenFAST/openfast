@@ -106,9 +106,9 @@ contains
          do iSpan = 1,p%nSpan+1
             P_ref = Meshes(iW)%Position(1:3, iSpan )  
             DP_LE(1:3) =  0.0
-            DP_LE(1)   = +m%chord_LL(iSpan,iW)/2  ! TODO TODO TODO Use orientation and might not be c/2
+            DP_LE(1)   = -m%chord_LL(iSpan,iW)/2  ! TODO TODO TODO Use orientation and might not be c/2
             DP_TE(1:3) =  0.0
-            DP_TE(1)   = -m%chord_LL(iSpan,iW)/2  ! TODO TODO TODO Use orientation and might not be c/2
+            DP_TE(1)   = +m%chord_LL(iSpan,iW)/2  ! TODO TODO TODO Use orientation and might not be c/2
             m%LE(1:3, iSpan, iW) = P_ref + DP_LE
             m%TE(1:3, iSpan, iW) = P_ref + DP_TE
          enddo         
@@ -139,20 +139,62 @@ contains
          end do
       enddo
 
-      ! --- Position of control points
+      ! --- Lifting Line/ Bound Circulation panel
+      ! For now: goes from 1/4 chord to TE
+      ! More panelling options may be considered in the future
+      do iW = 1,p%nWings
+         do iSpan = 1,p%nSpan+1
+            m%r_LL(1:3,iSpan,1,iW)= m%TE(1:3,iSpan,iW)*0.25_ReKi+m%LE(1:3,iSpan,iW)*0.75_ReKi  ! 1/4 chord
+            m%r_LL(1:3,iSpan,2,iW)= m%TE(1:3,iSpan,iW)                                         ! TE
+         enddo
+      enddo
+
+      ! --- Position of control points CP_LL
+      ! For now: placed at the "chordwise" middle of the LL panel
       ! NOTE: separated from other loops just in case a special discretization is used
       do iW = 1,p%nWings
-         call interp_lin(m%s_LL(:,iW), m%TE(1,:,iW)*0.25_ReKi+m%LE(1,:,iW)*0.75_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
-         call interp_lin(m%s_LL(:,iW), m%TE(2,:,iW)*0.25_ReKi+m%LE(2,:,iW)*0.75_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
-         call interp_lin(m%s_LL(:,iW), m%TE(3,:,iW)*0.25_ReKi+m%LE(3,:,iW)*0.75_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
+         call interp_lin(m%s_LL(:,iW), m%r_LL(1,:,1,iW)*0.5_ReKi+m%r_LL(1,:,2,iW)*0.5_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
+         call interp_lin(m%s_LL(:,iW), m%r_LL(2,:,1,iW)*0.5_ReKi+m%r_LL(2,:,2,iW)*0.5_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
+         call interp_lin(m%s_LL(:,iW), m%r_LL(3,:,1,iW)*0.5_ReKi+m%r_LL(3,:,2,iW)*0.5_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
       enddo
+
    end subroutine Wings_Panelling
 
 
+   !> Make sure the First panel of the NW match the last panel of the Trailing edge
+   !!  - Same position of points
+   !!  - Same circulation 
+   subroutine Wings_Map_LL_NW(p, m, z, x, ErrStat, ErrMsg )
+      use Interpolation, only: interp_lin
+      type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+      type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+      type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
+      type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
+      integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+      character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+      ! Local
+      integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
+      character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
+      integer(IntKi) ::iSpan , iW
+
+      ! First panel of NW has same position as last panel of lifting line
+      do iW = 1,p%nWings
+         do iSpan = 1,p%nSpan+1
+            x%r_NW(1:3, iSpan, 1, iW) = m%r_LL(1:3, iSpan, 2, iW)
+         enddo
+      enddo
+      ! Circulations of last panel of lifting line are the same as first NW panel
+      do iW = 1,p%nWings
+         do iSpan = 1,p%nSpan
+            x%Gamma_NW(iSpan, 1, iW) = z%Gamma_LL(iSpan,iW) 
+         enddo
+      enddo
+   end subroutine Wings_Map_LL_NW
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
-   subroutine Wings_ComputeCirculation(Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg)
+   subroutine Wings_ComputeCirculation(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg)
+      real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
       real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
       real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
       type(FVW_InputType),             intent(in   )  :: u              !< Parameters
@@ -170,7 +212,13 @@ contains
       if (p%CirculationMethod==idCircPrescribed) then 
          print*,'>>>Prescribing circulation'
          do iW = 1, p%nWings !Loop over lifting lines
-            Gamma_LL(1:p%nSpan,iW) = p%PrescribedCirculation(1:p%nSpan)
+            if (t<5) then
+               ! Slow start
+               print*,'Slow start'
+               Gamma_LL(1:p%nSpan,iW) = (t/5)*p%PrescribedCirculation(1:p%nSpan)
+            else
+               Gamma_LL(1:p%nSpan,iW) = p%PrescribedCirculation(1:p%nSpan)
+            endif
          enddo
 
       else if (p%CirculationMethod==idCircPolarData) then 
