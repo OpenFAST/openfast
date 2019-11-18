@@ -81,7 +81,6 @@ contains
    !!  - Orth    : Unit Orthogonal vector on LL CP" -
    !!  - Vstr_LL : Structural velocity on LL CP" m/s
    subroutine Wings_Panelling(Meshes, p, m, ErrStat, ErrMsg )
-      use Interpolation, only: interp_lin
       type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
@@ -142,9 +141,9 @@ contains
       ! --- Position of control points
       ! NOTE: separated from other loops just in case a special discretization is used
       do iW = 1,p%nWings
-         call interp_lin(m%s_LL(:,iW), m%TE(1,:,iW)*0.25_ReKi+m%LE(1,:,iW)*0.75_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
-         call interp_lin(m%s_LL(:,iW), m%TE(2,:,iW)*0.25_ReKi+m%LE(2,:,iW)*0.75_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
-         call interp_lin(m%s_LL(:,iW), m%TE(3,:,iW)*0.25_ReKi+m%LE(3,:,iW)*0.75_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
+         call InterpArray(m%s_LL(:,iW), m%TE(1,:,iW)*0.25_ReKi+m%LE(1,:,iW)*0.75_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
+         call InterpArray(m%s_LL(:,iW), m%TE(2,:,iW)*0.25_ReKi+m%LE(2,:,iW)*0.75_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
+         call InterpArray(m%s_LL(:,iW), m%TE(3,:,iW)*0.25_ReKi+m%LE(3,:,iW)*0.75_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
       enddo
    end subroutine Wings_Panelling
 

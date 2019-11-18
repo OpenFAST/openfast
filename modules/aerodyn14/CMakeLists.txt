@@ -34,7 +34,6 @@ set(AD14_LIBS_SOURCES
   src/FVW_Wings.f90
   src/FVW_Subs.f90
   src/VTK.f90
-  src/Interpolation.f90
 
   src/AeroDyn14_Types.f90
   src/DWM_Types.f90
