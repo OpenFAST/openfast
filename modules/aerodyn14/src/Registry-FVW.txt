@@ -29,6 +29,7 @@ typedef  FVW/FVW           MiscVarType          Logical                         
 # Variables at wing extent
 typedef     ^                   ^               ReKi                             LE           :::  -  -  "Leading edge points" -
 typedef     ^                   ^               ReKi                             TE           :::  -  -  "Trailing edge points" -
+typedef     ^                   ^               ReKi                             r_LL         :::: - -   "Position    of the Lifting line panels" -
 typedef     ^                   ^               ReKi                             s_LL         ::   -  -  "Spanwise coordinate of LL elements" m
 typedef     ^                   ^               ReKi                             chord_LL     ::  -  -   "chord on LL cp " m
 # Variables at control point - Dimensions nSpan 
@@ -45,6 +46,8 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Vwnd_LL      :::  -  -  "Wind on lifting line control points" m/s 
 typedef     ^                   ^               ReKi                             Vwnd_NW      :::: -  -  "Wind on near wake panels" m/s 
 typedef     ^                   ^               ReKi                             Vwnd_FW      :::: -  -  "Wind on far  wake panels" m/s 
+typedef     ^                   ^               ReKi                             Vind_NW      :::: -  -  "Induced velocity on near wake panels" m/s 
+typedef     ^                   ^               ReKi                             Vind_FW      :::: -  -  "Induced velocity on far  wake panels" m/s 
 typedef     ^                   ^               IntKi                            nNW           -    -  - "Number of active near wake panels"      -
 typedef     ^                   ^               IntKi                            nFW           -    -  - "Number of active far  wake panels"      -
 

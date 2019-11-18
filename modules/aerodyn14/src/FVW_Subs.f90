@@ -2,6 +2,7 @@ module FVW_SUBS
 
    use NWTC_LIBRARY
    use FVW_TYPES
+   use FVW_VortexTools
 
    implicit none
 
@@ -95,7 +96,7 @@ subroutine ReadAndInterpGamma(CirculationFileName, s_CP_LL, L, Gamma_CP_LL)
    do i=1,nLines
       read(iUnit,*, iostat=istat) sPrescr(i), GammaPrescr(i)
       sPrescr(i)     =   sPrescr(i) * L
-      GammaPrescr(i) = - GammaPrescr(i) ! NOTE: Tempoary minus sign until implementation has reversed sign
+      GammaPrescr(i) =   GammaPrescr(i) 
    enddo
    close(iUnit)
    if (istat/=0) then
@@ -274,5 +275,56 @@ subroutine DistributeRequestedWind(V_wind, x, p, m, ErrStat, ErrMsg )
 
 end subroutine DistributeRequestedWind
 
+
+subroutine PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
+   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
+   type(FVW_ConstraintStateType),   intent(in   ) :: z       !< Initial misc/optimization variables
+   integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
+   real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
+   real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
+   integer(IntKi), intent(out)                :: nSeg      !< Total number of segments after packing
+   integer(IntKi), intent(out)                :: nSegP     !< Total number of segments points after packing
+   ! Local
+   integer(IntKi) :: iHeadC, iHeadP, nC, nP, iW
+   real(ReKi), dimension(:,:), allocatable :: Buffer2d
+   !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
+
+   ! Counting total number of segments
+   nP =      p%nWings * (  (p%nSpan+1)*(m%nNW+1)            )
+   nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW+1)-p%nSpan-m%nNW-2)
+!    nP = nP + p%nWings * (p%nSpan+1)*2
+!    nC = nC + p%nWings * (2*(p%nSpan+1)*(2)-p%nSpan-1-2)
+
+   if (allocated(SegConnct)) deallocate(SegConnct)
+   if (allocated(SegPoints)) deallocate(SegPoints)
+   if (allocated(SegGamma))  deallocate(SegGamma)
+   if (allocated(Buffer2d)) deallocate(Buffer2d)
+   allocate(SegConnct(1:2,1:nC)); SegConnct=-1
+   allocate(SegPoints(1:3,1:nP)); SegPoints=-1
+   allocate(SegGamma (1:nC));     SegGamma =-1
+   allocate(Buffer2d(1,p%nSpan))
+   !
+   iHeadP=1
+   iHeadC=1
+   do iW=1,p%nWings
+      CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+   enddo
+!    do iW=1,p%nWings
+!       Buffer2d(1,:)=m%Gamma_LL(:,iW)
+!       CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), Buffer2d, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+!    enddo
+   if ((iHeadP-1)/=nP) then
+      print*,'Number of points wrongly estimated',nP, iHeadP-1
+!       STOP
+   endif
+   if ((iHeadC-1)/=nC) then
+      print*,'Number of segments wrongly estimated',nC, iHeadC-1
+!       STOP
+   endif
+   nSeg  = iHeadC-1
+   nSegP = iHeadP-1
+end subroutine PackAllPanelsToSegments
 
 end module FVW_Subs
