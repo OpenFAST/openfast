@@ -33,6 +33,8 @@ set(AD14_LIBS_SOURCES
   src/FVW_VortexTools.f90
   src/FVW_Wings.f90
   src/FVW_Subs.f90
+  src/FVW_BiotSavart.f90
+  src/FVW_Tests.f90
   src/VTK.f90
   src/Interpolation.f90
 
