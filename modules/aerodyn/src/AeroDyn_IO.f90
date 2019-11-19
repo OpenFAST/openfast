@@ -1500,6 +1500,7 @@ MODULE AeroDyn_IO
    integer(intKi), parameter        :: WakeMod_none  = 0  
    integer(intKi), parameter        :: WakeMod_BEMT  = 1
    integer(intKi), parameter        :: WakeMod_DBEMT = 2
+   integer(intKi), parameter        :: WakeMod_FVW   = 3
    
    integer(intKi), parameter        :: AFAeroMod_steady      = 1  ! steady model
    integer(intKi), parameter        :: AFAeroMod_BL_unsteady = 2  ! Beddoes-Leishman unsteady model
@@ -1990,8 +1991,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF   
       
-      ! WakeMod - Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT} (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%WakeMod, "WakeMod", "Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT} (-)", ErrStat2, ErrMsg2, UnEc)
+      ! WakeMod - Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} (-):
+   CALL ReadVar( UnIn, InputFile, InputFileData%WakeMod, "WakeMod", "Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! AFAeroMod - Type of airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} (-):
@@ -2071,11 +2072,11 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadCom( UnIn, InputFile, 'Section Header: Blade-Element/Momentum Theory Options', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! SkewMod - Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} (-) [unused when WakeMod=0]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%SkewMod, "SkewMod", "Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} (-) [unused when WakeMod=0]", ErrStat2, ErrMsg2, UnEc)
+      ! SkewMod - Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} (-) [unused when WakeMod={0|3}]:
+   CALL ReadVar( UnIn, InputFile, InputFileData%SkewMod, "SkewMod", "Type of skewed-wake correction model {1=uncoupled, 2=Pitt/Peters, 3=coupled} (-) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! SkewModFactor - Constant used in Pitt/Peters skewed wake model {or default is 15/32*pi} (-) [used only when WakeMod/=0 and SkewMod=2]:
+      ! SkewModFactor - Constant used in Pitt/Peters skewed wake model {or default is 15/32*pi} (-) [used only when WakeMod/={0|3} and SkewMod=2]:
    Line = ""
    CALL ReadVar( UnIn, InputFile, Line, "SkewModFactor", "Constant used in Pitt/Peters skewed wake model {or default} (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2090,29 +2091,29 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       END IF
       
       
-      ! TipLoss - Use the Prandtl tip-loss model? (flag) [unused when WakeMod=0]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%TipLoss, "TipLoss", "Use the Prandtl tip-loss model? (flag) [unused when WakeMod=0]", ErrStat2, ErrMsg2, UnEc)
+      ! TipLoss - Use the Prandtl tip-loss model? (flag) [unused when WakeMod={0|3}]:
+   CALL ReadVar( UnIn, InputFile, InputFileData%TipLoss, "TipLoss", "Use the Prandtl tip-loss model? (flag) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! HubLoss - Use the Prandtl hub-loss model? (flag) [unused when WakeMod=0]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%HubLoss, "HubLoss", "Use the Prandtl hub-loss model? (flag) [unused when WakeMod=0]", ErrStat2, ErrMsg2, UnEc)
+      ! HubLoss - Use the Prandtl hub-loss model? (flag) [unused when WakeMod={0|3}]:
+   CALL ReadVar( UnIn, InputFile, InputFileData%HubLoss, "HubLoss", "Use the Prandtl hub-loss model? (flag) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! TanInd - Include tangential induction in BEMT calculations? (flag) [unused when WakeMod=0]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%TanInd, "TanInd", "Include tangential induction in BEMT calculations? (flag) [unused when WakeMod=0]", ErrStat2, ErrMsg2, UnEc)
+      ! TanInd - Include tangential induction in BEMT calculations? (flag) [unused when WakeMod={0|3}]:
+   CALL ReadVar( UnIn, InputFile, InputFileData%TanInd, "TanInd", "Include tangential induction in BEMT calculations? (flag) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! AIDrag - Include the drag term in the axial-induction calculation? (flag) [unused when WakeMod=0]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%AIDrag, "AIDrag", "Include the drag term in the axial-induction calculation? (flag) [unused when WakeMod=0]", ErrStat2, ErrMsg2, UnEc)
+      ! AIDrag - Include the drag term in the axial-induction calculation? (flag) [unused when WakeMod={0|3}]:
+   CALL ReadVar( UnIn, InputFile, InputFileData%AIDrag, "AIDrag", "Include the drag term in the axial-induction calculation? (flag) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! TIDrag - Include the drag term in the tangential-induction calculation? (flag) [unused when WakeMod=0 or TanInd=FALSE]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%TIDrag, "TIDrag", "Include the drag term in the tangential-induction calculation? (flag) [unused when WakeMod=0 or TanInd=FALSE]", ErrStat2, ErrMsg2, UnEc)
+      ! TIDrag - Include the drag term in the tangential-induction calculation? (flag) [unused when WakeMod={0|3} or TanInd=FALSE]:
+   CALL ReadVar( UnIn, InputFile, InputFileData%TIDrag, "TIDrag", "Include the drag term in the tangential-induction calculation? (flag) [unused when WakeMod={0|3} or TanInd=FALSE]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! IndToler - Convergence tolerance for BEM induction factors (or "default"] (-) [unused when WakeMod=0]:
+      ! IndToler - Convergence tolerance for BEM induction factors (or "default"] (-) [unused when WakeMod={0|3}]:
    Line = ""
-   CALL ReadVar( UnIn, InputFile, Line, "IndToler", "Convergence tolerance for BEM induction factors (-) [unused when WakeMod=0]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, Line, "IndToler", "Convergence tolerance for BEM induction factors (-) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
       CALL Conv2UC( Line )
@@ -2129,8 +2130,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       END IF   
       
             
-      ! MaxIter - Maximum number of iteration steps [unused when WakeMod=0] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%MaxIter, "MaxIter", "Maximum number of iteration steps (-) [unused when WakeMod=0]", ErrStat2, ErrMsg2, UnEc)
+      ! MaxIter - Maximum number of iteration steps [unused when WakeMod={0|3}] (-):
+   CALL ReadVar( UnIn, InputFile, InputFileData%MaxIter, "MaxIter", "Maximum number of iteration steps (-) [unused when WakeMod={0|3}]", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )      
       
       ! Return on error at end of section
@@ -2548,6 +2549,8 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
          Msg = 'Blade-Element/Momentum Theory'
       case (WakeMod_DBEMT)
          Msg = 'Dynamic Blade-Element/Momentum Theory'
+      case (WakeMod_FVW)
+         Msg = 'Free Vortex Wake Theory'
       case (WakeMod_None)
          Msg = 'steady'
       case default      

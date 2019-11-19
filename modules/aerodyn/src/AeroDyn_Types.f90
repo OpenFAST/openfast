@@ -89,7 +89,7 @@ IMPLICIT NONE
 ! =========  AD_InputFile  =======
   TYPE, PUBLIC :: AD_InputFile
     REAL(DbKi)  :: DTAero      !< Time interval for aerodynamic calculations {or "default"} [s]
-    INTEGER(IntKi)  :: WakeMod      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT} [-]
+    INTEGER(IntKi)  :: WakeMod      !< Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW} [-]
     INTEGER(IntKi)  :: AFAeroMod      !< Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} [-]
     INTEGER(IntKi)  :: TwrPotent      !< Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} [-]
     LOGICAL  :: TwrShadow      !< Calculate tower influence on wind based on downstream tower shadow? [-]
