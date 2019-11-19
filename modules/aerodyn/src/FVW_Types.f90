@@ -122,9 +122,10 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FVW_InitInputType
     CHARACTER(1024)  :: FVWFileName      !< Main FVW input file name [-]
     TYPE(MeshType) , DIMENSION(:), ALLOCATABLE  :: WingsMesh      !< Input Mesh defining position and orientation of wings (nSpan+1)  [-]
-    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: Chord      !< Chord of each blade element from input file [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Chord      !< Chord of each blade element from input file [idx 1: BladeNode, idx2: Blade number] [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: RElm      !< radius of center of each element [-]
-    INTEGER(IntKi)  :: NumBl      !< Number of blades [-]
+    INTEGER(IntKi)  :: NumBlades      !< Number of blades [-]
+    INTEGER(IntKi)  :: NumBladeNodes      !< Number of nodes on each blade [-]
   END TYPE FVW_InitInputType
 ! =======================
 ! =========  FVW_InputFile  =======
@@ -3537,6 +3538,7 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_CopyInitInput'
@@ -3563,8 +3565,10 @@ ENDIF
 IF (ALLOCATED(SrcInitInputData%Chord)) THEN
   i1_l = LBOUND(SrcInitInputData%Chord,1)
   i1_u = UBOUND(SrcInitInputData%Chord,1)
+  i2_l = LBOUND(SrcInitInputData%Chord,2)
+  i2_u = UBOUND(SrcInitInputData%Chord,2)
   IF (.NOT. ALLOCATED(DstInitInputData%Chord)) THEN 
-    ALLOCATE(DstInitInputData%Chord(i1_l:i1_u),STAT=ErrStat2)
+    ALLOCATE(DstInitInputData%Chord(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
       CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitInputData%Chord.', ErrStat, ErrMsg,RoutineName)
       RETURN
@@ -3584,7 +3588,8 @@ IF (ALLOCATED(SrcInitInputData%RElm)) THEN
   END IF
     DstInitInputData%RElm = SrcInitInputData%RElm
 ENDIF
-    DstInitInputData%NumBl = SrcInitInputData%NumBl
+    DstInitInputData%NumBlades = SrcInitInputData%NumBlades
+    DstInitInputData%NumBladeNodes = SrcInitInputData%NumBladeNodes
  END SUBROUTINE FVW_CopyInitInput
 
  SUBROUTINE FVW_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -3672,7 +3677,7 @@ ENDIF
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Chord allocated yes/no
   IF ( ALLOCATED(InData%Chord) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! Chord upper/lower bounds for each dimension
+    Int_BufSz   = Int_BufSz   + 2*2  ! Chord upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Chord)  ! Chord
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! RElm allocated yes/no
@@ -3680,7 +3685,8 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*1  ! RElm upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%RElm)  ! RElm
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! NumBl
+      Int_BufSz  = Int_BufSz  + 1  ! NumBlades
+      Int_BufSz  = Int_BufSz  + 1  ! NumBladeNodes
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3762,6 +3768,9 @@ ENDIF
     IntKiBuf( Int_Xferred    ) = LBOUND(InData%Chord,1)
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Chord,1)
     Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Chord,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Chord,2)
+    Int_Xferred = Int_Xferred + 2
 
       IF (SIZE(InData%Chord)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Chord))-1 ) = PACK(InData%Chord,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%Chord)
@@ -3779,7 +3788,9 @@ ENDIF
       IF (SIZE(InData%RElm)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%RElm))-1 ) = PACK(InData%RElm,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%RElm)
   END IF
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumBl
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumBlades
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumBladeNodes
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE FVW_PackInitInput
 
@@ -3803,6 +3814,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'FVW_UnPackInitInput'
@@ -3883,21 +3895,24 @@ ENDIF
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
     IF (ALLOCATED(OutData%Chord)) DEALLOCATE(OutData%Chord)
-    ALLOCATE(OutData%Chord(i1_l:i1_u),STAT=ErrStat2)
+    ALLOCATE(OutData%Chord(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
        CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Chord.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%Chord)>0) OutData%Chord = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Chord))-1 ), mask1, 0.0_ReKi )
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%Chord)>0) OutData%Chord = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Chord))-1 ), mask2, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%Chord)
-    DEALLOCATE(mask1)
+    DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! RElm not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3922,7 +3937,9 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%RElm)
     DEALLOCATE(mask1)
   END IF
-      OutData%NumBl = IntKiBuf( Int_Xferred ) 
+      OutData%NumBlades = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%NumBladeNodes = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackInitInput
 

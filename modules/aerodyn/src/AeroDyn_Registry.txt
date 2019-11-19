@@ -13,6 +13,7 @@
 include	Registry_NWTC_Library.txt
 usefrom	AirfoilInfo_Registry.txt
 usefrom	BEMT_Registry.txt
+usefrom  FVW_Registry.txt
 usefrom	UnsteadyAero_Registry.txt
 
 # ..... Initialization data .......................................................................................................
@@ -91,6 +92,7 @@ typedef	^	AD_InputFile	ReKi	InCol_Cd	-	-	-	"The column in the airfoil tables tha
 typedef	^	AD_InputFile	ReKi	InCol_Cm	-	-	-	"The column in the airfoil tables that contains the pitching-moment coefficient; use zero if there is no Cm column"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cpmin	-	-	-	"The column in the airfoil tables that contains the drag coefficient; use zero if there is no Cpmin column"	-
 typedef	^	AD_InputFile	IntKi	NumAFfiles	-	-	-	"Number of airfoil files used"	-
+typedef	^	AD_InputFile	CHARACTER(1024)	FVWFileName	-	-	-	"FVW input filename"	"quoted string"
 typedef	^	AD_InputFile	CHARACTER(1024)	AFNames	{:}	-	-	"Airfoil file names (NumAF lines)"	"quoted strings"
 typedef	^	AD_InputFile	LOGICAL	UseBlCm	-	-	-	"Include aerodynamic pitching moment in calculations?"	flag
 #typedef	^	AD_InputFile	IntKi	NumBlNds	-	-	-	"Number of blade nodes used in the analysis"	-
@@ -112,20 +114,27 @@ typedef	^	AD_InputFile	IntKi	DBEMT_Mod	-	-	-	"Type of dynamic BEMT (DBEMT) model
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 typedef	^	ContinuousStateType	BEMT_ContinuousStateType	BEMT	-	-	-	"Continuous states from the BEMT module"	-
+typedef	^	ContinuousStateType	FVW_ContinuousStateType	FVW	-	-	-	"Continuous states from the FVW module"	-
 
 # Define discrete (nondifferentiable) states here:
 typedef	^	DiscreteStateType	BEMT_DiscreteStateType	BEMT	-	-	-	"Discrete states from the BEMT module"	-
+typedef	^	DiscreteStateType	FVW_DiscreteStateType	FVW	-	-	-	"Discrete states from the FVW module"	-
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	BEMT_ConstraintStateType	BEMT	-	-	-	"Constraint states from the BEMT module"	-
+typedef	^	ConstraintStateType	FVW_ConstraintStateType	FVW	-	-	-	"Constraint states from the FVW module"	-
 
 # Define "other" states here:
 typedef	^	OtherStateType	BEMT_OtherStateType	BEMT	-	-	-	"OtherStates from the BEMT module"	-
+typedef	^	OtherStateType	FVW_OtherStateType	FVW	-	-	-	"OtherStates from the FVW module"	-
 
 # Define misc/optimization variables (any data that are not considered actual states) here:
 typedef	^	MiscVarType	BEMT_MiscVarType	BEMT	-	-	-	"MiscVars from the BEMT module"	-
 typedef	^	MiscVarType	BEMT_OutputType	BEMT_y	-	-	-	"Outputs from the BEMT module"	-
 typedef	^	MiscVarType	BEMT_InputType	BEMT_u	2	-	-	"Inputs to the BEMT module"	-
+typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
+typedef	^	MiscVarType	FVW_OutputType	FVW_y	-	-	-	"Outputs from the FVW module"	-
+typedef	^	MiscVarType	FVW_InputType	FVW_u	2	-	-	"Inputs to the FVW module"	-
 typedef	^	MiscVarType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
 typedef	^	MiscVarType	ReKi	WithoutSweepPitchTwist	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
 typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-
@@ -150,7 +159,7 @@ typedef	^	MiscVarType	Logical	CavitWarnSet {:}{:}	-	-	  "cavitation warning issu
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
-typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT}"	-
+typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT, 2=DBEMT, 3=FVW}"	-
 typedef	^	ParameterType	IntKi	TwrPotent	-	-	-	"Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction}"	-
 typedef	^	ParameterType	LOGICAL	TwrShadow	-	-	-	"Calculate tower influence on wind based on downstream tower shadow?"	-
 typedef	^	ParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
@@ -170,6 +179,7 @@ typedef   ^  ParameterType  ReKi    Pvap      -   -   -  "Vapour pressure" Pa
 typedef   ^  ParameterType  ReKi    FluidDepth -  -   -    "Submerged hub height" m
 typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
+typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-	"Parameters for FVW module"
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-

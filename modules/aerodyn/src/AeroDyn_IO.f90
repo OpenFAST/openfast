@@ -2154,6 +2154,15 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
    
+   !----------- FREE VORTEX WAKE (FVW) THEORY OPTIONS ------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Free Vortex Wake (FVW) Theory Options', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   CALL ReadVar ( UnIn, InputFile, InputFileData%FVWFileName, 'FVWFileName', 'FVW input file name', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF ( PathIsRelative( InputFileData%FVWFileName ) ) InputFileData%FVWFileName = TRIM(PriPath)//TRIM(InputFileData%FVWFileName)
+
+
    !----------- BEDDOES-LEISHMAN UNSTEADY AIRFOIL AERODYNAMICS OPTIONS -------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Beddoes-Leishman Unsteady Airfoil Aerodynamics Options', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

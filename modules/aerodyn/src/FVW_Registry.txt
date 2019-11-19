@@ -84,9 +84,10 @@ typedef    ^                    ^               Reki                            
 # FVW_InitInputType
 typedef  FVW/FVW           InitInputType        CHARACTER(1024)                  FVWFileName       -  -  - "Main FVW input file name"  -
 typedef     ^                   ^               MeshType                         WingsMesh         :  -  - "Input Mesh defining position and orientation of wings (nSpan+1) " -
-typedef     ^                   ^               ReKi                             Chord             :  -  - "Chord of each blade element from input file" - 
+typedef     ^                   ^               ReKi                             Chord             :: -  - "Chord of each blade element from input file [idx 1: BladeNode, idx2: Blade number]" - 
 typedef     ^                   ^               ReKi                             RElm              :  -  - "radius of center of each element"  - 
-typedef     ^                   ^               IntKi                            NumBl             -  -  - "Number of blades"          -
+typedef     ^                   ^               IntKi                            NumBlades         -  -  - "Number of blades"          -
+typedef     ^                   ^               IntKi                            NumBladeNodes     -  -  - "Number of nodes on each blade"          -
 
 #.......... InitInputType ......
 # FVW_InputFile

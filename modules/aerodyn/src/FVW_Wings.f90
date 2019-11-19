@@ -17,7 +17,7 @@ contains
    subroutine Wings_Panelling_Init(Meshes, r, chord, p, m, ErrStat, ErrMsg )
       type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
       real(ReKi), dimension(:),        intent(in   )  :: r              !< 
-      real(ReKi), dimension(:),        intent(in   )  :: chord          !< 
+      real(ReKi), dimension(:,:),      intent(in   )  :: chord          !< 
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
@@ -60,7 +60,7 @@ contains
          print*,'Input mesh size',Meshes(iW)%nNodes,' Number of vortex element', p%nSpan
          do iSpan = 1, p%nSpan+1
             m%s_LL    (iSpan, iW) = s_in(iSpan)
-            m%chord_LL(iSpan, iW) = chord(iSpan)
+            m%chord_LL(iSpan, iW) = chord(iSpan,iW)
          enddo
          ! --- Control points
          ! TODO possibly Control points are not exactly at the middle depending on "meshing" method

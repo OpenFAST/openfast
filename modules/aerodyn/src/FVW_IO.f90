@@ -262,7 +262,7 @@ subroutine LatticeToPanlConnectivity(LatticePoints, Connectivity, Points)
       k=k+1
    enddo; enddo
 
-!     do iWing=1,p%NumBl
+!     do iWing=1,p%NumBlades
 !         if ( vtk_new_ascii_file(trim(filename),Label) ) then
 !             ! Buffer for points
 !             k=1; do iNW=1,nNW; do iSpan=1,nSpan

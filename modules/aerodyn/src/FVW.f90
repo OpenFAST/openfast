@@ -228,7 +228,7 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! 
-   p%nWings       =  InitInp%NumBl
+   p%nWings       =  InitInp%NumBlades
    ! TODO TODO TODO Hack for AD14 mesh that is wrong
    !p%nWings       =  1 
    
