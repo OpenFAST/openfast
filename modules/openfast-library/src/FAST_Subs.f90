@@ -5113,7 +5113,10 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
          END DO            
          call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%HubMotion, trim(VTK_path)//'.AD_HubMotion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth )     
          !call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%TowerMotion, trim(p_FAST%OutFileRoot)//'.AD_TowerMotion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
-               
+      end if
+              
+      if (allocated(AD%y%BladeLoad)) then 
+
          DO K=1,NumBl   
             call MeshWrVTK(p_FAST%TurbinePos, AD%y%BladeLoad(K), trim(VTK_path)//'.AD_Blade'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, AD%Input(1)%BladeMotion(k) )     
          END DO            
