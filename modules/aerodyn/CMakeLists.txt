@@ -21,6 +21,7 @@ if (GENERATE_TYPES)
   generate_f90_types(src/DBEMT_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/DBEMT_Types.f90)
   generate_f90_types(src/UnsteadyAero_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/UnsteadyAero_Types.f90)
   generate_f90_types(src/AeroDyn_Driver_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroDyn_Driver_Types.f90 -noextrap)
+  generate_f90_types(src/Registry-FVW.txt ${CMAKE_CURRENT_LIST_DIR}/src/FVW_Types.f90)
 endif()
 
 # AeroDyn lib
@@ -39,6 +40,16 @@ set(AD_LIBS_SOURCES
   src/BEMT_Types.f90
   src/DBEMT_Types.f90
   src/UnsteadyAero_Types.f90
+
+  src/FVW.f90
+  src/FVW_IO.f90
+  src/FVW_VortexTools.f90
+  src/FVW_Wings.f90
+  src/FVW_Subs.f90
+  src/FVW_BiotSavart.f90
+  src/FVW_Tests.f90
+  src/FVW_Types.f90
+  src/FVW_VTK.f90
 )
 
 add_library(aerodynlib ${AD_LIBS_SOURCES})

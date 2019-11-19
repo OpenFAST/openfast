@@ -1971,9 +1971,9 @@ SUBROUTINE ReadBladeMeshFileAD( BladeKInputFileMesh, MeshFile, UnEc, ErrStat, Er
 
    CALL Conv2UC( Line )
    IF ( INDEX(Line, "NEWTOWER" ) > 0 ) THEN
-      NumLin2Skp = 7+2 ! +2 for FVW
+      NumLin2Skp = 7
    ELSE
-      NumLin2Skp = 5+2+2 ! +2 for FVW
+      NumLin2Skp = 5
    END IF
 
    DO I = 1,NumLin2Skp

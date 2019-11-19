@@ -11,7 +11,6 @@
 ###################################################################################################################################
 include	Registry_NWTC_Library.txt
 usefrom	Registry-DWM.txt
-usefrom  Registry-FVW.txt
 usefrom  Registry-AD14AeroConf.txt
 
 
@@ -255,33 +254,25 @@ typedef	^	InitInputType	INTEGER	NumTwrNodes	-	-	-	"Number of ElastoDyn tower nod
 typedef	^	InitInputType	ReKi	TwrNodeLocs	{:}{:}	-	-	"Location of ElastoDyn tower nodes with respect to the inertial origin."	-
 typedef	^	InitInputType	ReKi	HubHt	-	-	-	"hub height wrt inertial origin"	m
 typedef	^	InitInputType	DWM_InitInputType	DWM	-	-	-		-
-typedef  ^     InitInputType    LOGICAL                  UseFVW         - - - "flag to determine if FVW module should be used" -
-typedef  ^     InitInputType    CHARACTER(1024)          FVWFileName    - - - "Main FVW input file name" -
-typedef  ^     InitInputType    FVW_InitInputType        FVW            - - - ""  -
 
 # Define outputs from the initialization routine here:
 typedef	AeroDyn14/AD14	InitOutputType	ProgDesc	Ver	-	-	-	"version information" -
 typedef	^	InitOutputType	DWM_InitOutputType	DWM	-	-	-		- -
-typedef	^	InitOutputType	FVW_InitOutputType	FVW	-	-	-		- -
 typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 typedef	^	ContinuousStateType	DWM_ContinuousStateType	DWM	-	-	-		-
-typedef	^	ContinuousStateType	FVW_ContinuousStateType	FVW	-	-	-		-
 
 # Define discrete (nondifferentiable) states here:
 typedef	^	DiscreteStateType	DWM_DiscreteStateType	DWM	-	-	-		-
-typedef	^	DiscreteStateType	FVW_DiscreteStateType	FVW	-	-	-		-
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	DWM_ConstraintStateType	DWM	-	-	-		-
-typedef	^	ConstraintStateType	FVW_ConstraintStateType	FVW	-	-	-		-
 
 
 # Define any other states, including integer or logical states here:
 typedef	^	OtherStateType	DWM_OtherStateType	DWM	-	-	-		"variables for DWM module"
-typedef	^	OtherStateType	FVW_OtherStateType	FVW	-	-	-		"variables for FVW module"
 
 
 # ..... Misc/Optimization variables.................................................................................................
@@ -290,7 +281,6 @@ typedef	^	OtherStateType	FVW_OtherStateType	FVW	-	-	-		"variables for FVW module
 typedef	^	MiscVarType	DWM_MiscVarType	DWM	-	-	-		"variables for DWM module"
 typedef	^	MiscVarType	DWM_InputType	DWM_Inputs	-	-	-		-
 typedef	^	MiscVarType	DWM_OutputType	DWM_Outputs	-	-	-		-
-typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-		"variables for FVW module"
 
 #
 # JM: At this point, I don't know which of these are actually discrete, continuous, or constraint, so they're all misc variables for now
@@ -335,7 +325,6 @@ typedef	^	ParameterType	LOGICAL	MultiTab	-
 typedef	^	ParameterType	LOGICAL	LinearizeFlag
 typedef	^	ParameterType	LOGICAL	OutputPlottingInfo	-	.FALSE.
 typedef	^	ParameterType	LOGICAL	UseDWM	-	.FALSE.	-	"flag to determine if DWM module should be used"	-
-typedef ^       ParameterType   LOGICAL UseFVW  -       .TRUE. -       "flag to determine if FVW module should be used"        -
 typedef	^	ParameterType	ReKi	TwoPiNB	-	-	-	"2*pi/num of blades"	-
 typedef	^	ParameterType	INTEGER	NumBl	-	-	-	"Number of Blades"
 typedef	^	ParameterType	INTEGER	NBlInpSt	-	-	-	"Number of Blade Input Stations"
@@ -365,7 +354,6 @@ typedef	^	ParameterType	InducedVelParms	InducedVel
 typedef	^	ParameterType	WindParms	Wind
 typedef	^	ParameterType	RotorParms	Rotor
 typedef	^	ParameterType	DWM_ParameterType	DWM	-	-	-		-
-typedef	^	ParameterType	FVW_ParameterType	FVW	-	-	-		-
 
 ##FIXME: Remove these!!!!
 typedef  ^  ParameterType  DbKi       IfW_DT     -       -       -               -
@@ -380,7 +368,6 @@ typedef	^	InputType	AD14AeroConf_InputType	TurbineComponents	-	-	-	"Current loca
 typedef	^	InputType	ReKi	MulTabLoc	{:}{:}
 typedef	^	InputType	ReKi	InflowVelocity	{:}{:}	-	-	"U,V,W wind inflow speeds at all locations on the Inputmarker and Twr_InputMarker meshes"	"m/s"
 typedef	^	InputType	ReKi	AvgInfVel	{3}	-	-	"an average disk velocity (depends on wind type and should be removed)"	"m/s"
-typedef	^	InputType	FVW_InputType	FVW	-	-	-		"variables for FVW module"
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
@@ -388,4 +375,3 @@ typedef	^	InputType	FVW_InputType	FVW	-	-	-		"variables for FVW module"
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	MeshType	OutputLoads	{:}	-	-	"Output Loads (mesh) for each blade"	-
 typedef	^	OutputType	MeshType	Twr_OutputLoads	-	-	-	"Tower Output Loads (mesh)"	-
-typedef	^	OutputType	FVW_OutputType	FVW	-	-	-		"variables for FVW module"

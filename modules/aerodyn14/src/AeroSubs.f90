@@ -385,23 +385,6 @@ SUBROUTINE AD14_GetInput(InitInp, P, x, xd, z, m, y, ErrStat, ErrMess )
 
    END IF
 
-   ! ---  Free vortex wake inputs
-   CALL ReadVar( UnIn, InitInp%ADFileName, InitInp%UseFVW, 'UseFVW', 'Use free vortex wake', ErrStat,ErrMess)
-      IF (ErrStat >= AbortErrLev) THEN
-         CLOSE(UnIn)
-         RETURN
-      END IF
-   CALL ReadVar( UnIn, InitInp%ADFileName, InitInp%FVWFileName, 'FVWFileName', 'Input file name for free vortex wake', ErrStat,ErrMess)
-      IF (ErrStat >= AbortErrLev) THEN
-         CLOSE(UnIn)
-         RETURN
-      END IF
-   if (InitInp%UseFVW) then
-      print*,'>>> Using FVW',trim(InitInp%FVWFileName)
-   else
-      print*,'>>> Using BEM'
-   endif
-
       ! Read in the air density
    CALL ReadVar( UnIn, InitInp%ADFileName, P%Wind%Rho, VarName='Rho', VarDescr='Air density', ErrStat=ErrStat, ErrMsg=ErrMess)
       IF (ErrStat >= AbortErrLev) THEN

@@ -23,7 +23,6 @@ MODULE AeroDyn14
 
    USE AeroDyn14_Types
    USE AeroSubs
-   USE FVW
    USE NWTC_Library
 
 
@@ -141,7 +140,6 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrSt
       CALL SetErrStat( ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,RoutineName)
       IF (ErrStat >= AbortErrLev ) RETURN 
 
-   p%UseFVW = InitInp%UseFVW 
 
       ! allocate variables for aerodyn forces
    p%LinearizeFlag     = .FALSE.
@@ -591,75 +589,6 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrSt
    ENDDO
  
 
-   !-------------------------------------------------------------------------------------------------
-   ! Initialize FVW module if it is used
-   !-------------------------------------------------------------------------------------------------
-   if (p%UseFVW ) then
-
-         ! Copy some things to the InitInp.  When FVW is incorporated into a different module, there may
-         ! be some additional logic necessary to put it into the correct form for FVW to use (AD15 stores
-         ! things differently)
-      InitInp%FVW%FVWFileName    = InitInp%FVWFileName
-      InitInp%FVW%NumBl          = p%NumBl
-
-      ! --- TODO TODO TODO ANDY
-      ! Change this so that it would match AD 15 mesh
-      ! NOTE: This mesh does not include the azimuthal differences between blades!
-      !       It's just the spanwise location.
-      !       Also, it is off compared to the initial position of the blade
-      !       Also, it's centered on the hub, but that's fine for now
-      IF (.NOT. ALLOCATED( InitInp%FVW%Chord)) ALLOCATE ( InitInp%FVW%Chord( p%Element%NElm ))
-      IF (.NOT. ALLOCATED( InitInp%FVW%RElm )) ALLOCATE ( InitInp%FVW%RElm(  p%Element%NElm ))
-      InitInp%FVW%RElm      = p%Element%RElm 
-      InitInp%FVW%Chord     = p%Blade%C     
-      ALLOCATE( InitInp%FVW%WingsMesh(p%NumBl), STAT = ErrStatLcl )
-         IF (ErrStatLcl /= 0) THEN
-            CALL SetErrStat ( ErrID_Fatal, 'Could not allocate InitInp%FVW%WingsMesh (meshes)', ErrStat,ErrMess,RoutineName )
-            RETURN
-         END IF
-      DO IB = 1, p%NumBl
-          CALL MeshCopy ( SrcMesh  = u%InputMarkers(IB)  &
-                         ,DestMesh = InitInp%FVW%WingsMesh(IB) &
-                         ,CtrlCode = MESH_COUSIN         &
-                         ,Orientation    = .TRUE.        &
-                         ,TranslationVel = .TRUE.        &
-                         ,RotationVel    = .TRUE.        &
-                         ,ErrStat  = ErrStatLcl          &
-                         ,ErrMess  = ErrMessLcl          )
-            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
-            IF (ErrStat >= AbortErrLev) RETURN
-      ENDDO
-      ! ---- END TODO
-
-      call FVW_Init( InitInp%FVW, u%FVW, p%FVW, x%FVW, xd%FVW, z%FVW, O%FVW, y%FVW, m%FVW, Interval, InitOut%FVW, ErrStatLcl, ErrMessLcl )
-         CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
-
-         ! If anything is passed back in InitOut%FVW, deal with it here...
-
-
-
-         ! TODO ANDY
-         !FIXME   This really probably should be done inside of FVW_Init instead of here.
-         !        Not entirely sure how to pass the u%InputMarkers in though.
-      ALLOCATE( u%FVW%WingsMesh(p%NumBl), STAT = ErrStatLcl )
-         IF (ErrStatLcl /= 0) THEN
-            CALL SetErrStat ( ErrID_Fatal, 'Could not allocate u%FVW%InputMarkers (meshes)', ErrStat,ErrMess,RoutineName )
-            RETURN
-         END IF
-      DO IB = 1, p%NumBl
-          CALL MeshCopy ( SrcMesh  = u%InputMarkers(IB)  &
-                         ,DestMesh = u%FVW%WingsMesh(IB) &
-                         ,CtrlCode = MESH_COUSIN         &
-                         ,Orientation    = .TRUE.        &
-                         ,TranslationVel = .TRUE.        &
-                         ,RotationVel    = .TRUE.        &
-                         ,ErrStat  = ErrStatLcl          &
-                         ,ErrMess  = ErrMessLcl          )
-            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
-            IF (ErrStat >= AbortErrLev) RETURN
-      ENDDO
-   endif
-
    
    
    !..........
@@ -730,11 +659,6 @@ SUBROUTINE AD14_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMess )
       !--------------------------
 
 
-      IF (p%UseFVW )    CALL FVW_End( u%FVW, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, y%FVW, m%FVW, ErrStat, ErrMess )
-      
-      !--------------------------
-
-
          ! Close files here:
 
       ! AD14_IOParams
@@ -795,8 +719,6 @@ SUBROUTINE AD14_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrSt
 
       TYPE(AD14_ContinuousStateType)                 :: dxdt        ! Continuous state derivatives at Time
       TYPE(AD14_ConstraintStateType)                 :: z_Residual  ! Residual of the constraint state equations (Z)
-      type(FVW_InputType)      :: u_FVW(1)                !< FVW inputs
-      REAL(DbKi)               :: utimes_FVW(1)           !< Times associated with u(:), in seconds
 
 !      INTEGER(IntKi)                                    :: ErrStat2    ! Error status of the operation (occurs after initial error)
 !      CHARACTER(ErrMsgLen)                              :: ErrMess2     ! Error message if ErrStat2 /= ErrID_None
@@ -810,41 +732,7 @@ SUBROUTINE AD14_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrSt
    ! AeroDyn v14 DOES actually have states, but they are updated in CalcOutput because no one ever took the time to 
    ! identify which variables are states.
       
-   if (p%UseFVW) then
-      !if (abs(t-utimes(2))>1e-6 ) then
-      !   print*,'Problem in AD14 update state, need to adapt which u we provide to FVW'
-      !   STOP
-      !endif
-      ! Setting u(1)%FVW
-      call AD14_to_FVW_u(u(1),p,u(1)%FVW,ErrStat,ErrMess)
-      u_FVW(1) = u(1)%FVW
-      utimes_FVW(1) = utimes(1)
-      CALL FVW_UpdateStates( t, n, u_FVW, utimes_FVW, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW, ErrStat, ErrMess )
-   endif
-      
 END SUBROUTINE AD14_UpdateStates
-!----------------------------------------------------------------------------------------------------------------------------------
-
-!> Wrapper to set inputs needed by FVW from AeroDyn
-SUBROUTINE AD14_to_FVW_u(u,p,u_FVW,ErrStat,ErrMess)
-   TYPE     (AD14_InputType    ),INTENT(IN   ):: u       ! Inputs at Time                                           ! KS changed from IN to INOUT
-   TYPE     (AD14_ParameterType),INTENT(IN   ):: p       ! Parameters
-   TYPE     (FVW_InputType     ),INTENT(INOUT):: u_FVW   ! Inputs at Time                                           ! KS changed from IN to INOUT
-   INTEGER  (IntKi             ),INTENT(OUT  ):: ErrStat ! Error status of the operation
-   CHARACTER(*                 ),INTENT(OUT  ):: ErrMess ! Error message if ErrStat /                  = ErrID_None
-   INTEGER(IntKi) :: iB    ! Index for blades
-
-   !CALL AD14AeroConf_CopyInput( u%TurbineComponents, u_FVW%FVWTurbineComponents, MESH_NEWCOPY, ErrStat, ErrMess )
-   IF (ErrStat >= AbortErrLev) RETURN
-   ! NOTE:  this isn't really being used as a full mesh, so we only set a few things.
-   !        also, if we do a direct copy, we end up with fatal errors at exit since the
-   !        sibling/cousin status will be incorrect
-   DO iB = 1,p%NumBl
-      u_FVW%WingsMesh(iB)%Position       = u%InputMarkers(iB)%Position
-      u_FVW%WingsMesh(iB)%Orientation    = u%InputMarkers(iB)%Orientation
-      u_FVW%WingsMesh(iB)%TranslationVel = u%InputMarkers(iB)%TranslationVel
-   ENDDO
-ENDSUBROUTINE AD14_to_FVW_u
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
@@ -913,10 +801,7 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
    INTEGER                    :: I
    CHARACTER(ErrMsgLen)       :: ErrMessLcl          ! Error message returned by called routines.
 
-   LOGICAL                    :: WakeCalc             ! Are we doing wake calculations this loop?
    CHARACTER(*), PARAMETER                   :: RoutineName = 'AD14_AeroSubs' !KS Not sure why I added this
-
-   REAL(ReKi)                 :: Vind_FVW(3)
 
    ! Initialize ErrStat
       ErrStat = ErrID_None
@@ -1059,27 +944,6 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
    ENDDO
 
 
-
-
-   WakeCalc = p%UseFVW  ! WakeCalc is used to easily switch the Freewake on and off in this routine
-
-   ! ---  Copy of Rotor Mesh to FVW
-   IF (WakeCalc) THEN
-       ! Setting u%FVW
-       call AD14_to_FVW_u(u,p,u%FVW,ErrStat,ErrMess)
-       IF (ErrStat >= AbortErrLev) THEN
-          CALL CleanUp()
-          RETURN
-       END IF
-       ! -- Calc Output
-       CALL FVW_CalcOutput( Time, u%FVW, p%FVW, x%FVW, xd%FVW, z%FVW, O%FVW, y%FVW, m%FVW, ErrStat, ErrMess )
-       IF (ErrStat >= AbortErrLev) THEN
-          CALL CleanUp()
-          RETURN
-       END IF
-   endif
-
-
    Node = 0
    ! --- Loop on blades
    DO IBlade = 1,p%NumBl
@@ -1210,24 +1074,14 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
          ! --------------------------------------------------------------------------------}
          ! --- Setting Element% values: W2, Alpha, A, AP
          ! --------------------------------------------------------------------------------{
-         IF ( .NOT. WakeCalc ) THEN
-            ! --- BEM
-            CALL ELEM_INDUCTIONS( p, m, ErrStatLcl, ErrMessLcl,                             &
-                       AzimuthAngle, rLocal, IElement, IBlade, VelNormalToRotor2, VTTotal, VNWind, &
-                        VNElement, m%NoLoadsCalculated)
-            ! Normal and tangential induced velocities
-            VN_ind =  -  VNWind * m%Element%A (IElement, IBLADE)
-            VT_ind =    VTTotal * m%Element%AP(IElement, IBLADE) 
-         else
-            ! --- FVW - Vortex code
-            Vind_FVW = y%FVW%Vind(:, IElement, IBlade)
-            VT_ind = DOT_PRODUCT( tang_Vector, Vind_FVW)
-            VN_ind = DOT_PRODUCT( norm_Vector, Vind_FVW)
-            ! Normal and tangential induction factors
-            m%Element%A (IElement,IBLADE) = - VN_ind / VNWind
-            m%Element%AP(IElement,IBLADE) =   VT_ind / VTTotal
-            ! Copy over any outputs (y%FVW%) or miscvars (m%FVW%) needed by AD14 and anything else here
-         ENDIF
+         ! --- BEM
+         CALL ELEM_INDUCTIONS( p, m, ErrStatLcl, ErrMessLcl,                             &
+                    AzimuthAngle, rLocal, IElement, IBlade, VelNormalToRotor2, VTTotal, VNWind, &
+                     VNElement, m%NoLoadsCalculated)
+         ! Normal and tangential induced velocities
+         VN_ind =  -  VNWind * m%Element%A (IElement, IBLADE)
+         VT_ind =    VTTotal * m%Element%AP(IElement, IBLADE) 
+
          ! Cumulative (integrated) induction over the blades
          m%InducedVel%SumInfl = m%InducedVel%SumInfl - VN_IND * RLOCAL * p%Blade%DR(IElement)
 
@@ -1248,10 +1102,6 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
                RETURN
             END IF
 
-         IF ( p%UseFVW ) THEN
-            VelocityVec = VelocityVec+Vind_FVW ! TODO this might not be what's really intended for
-            END IF
-            
          !-------------------------------------------------------------------------------------------
          ! Set up dynamic inflow parameters
          !-------------------------------------------------------------------------------------------
