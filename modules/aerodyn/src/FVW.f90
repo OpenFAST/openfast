@@ -276,7 +276,7 @@ end subroutine FVW_ToString
 !> This routine is called at the end of the simulation.
 subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
-   type(FVW_InputType),             intent(inout)  :: u           !< System inputs
+   type(FVW_InputType),             intent(inout)  :: u(2)        !< System inputs
    type(FVW_ParameterType),         intent(inout)  :: p           !< Parameters
    type(FVW_ContinuousStateType),   intent(inout)  :: x           !< Continuous states
    type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Discrete states
@@ -293,7 +293,8 @@ subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    ! Place any last minute operations or calculations here:
    ! Close files here:
    ! Destroy the input data:
-   call FVW_DestroyInput( u, ErrStat, ErrMsg )
+   call FVW_DestroyInput( u(1), ErrStat, ErrMsg )
+   call FVW_DestroyInput( u(2), ErrStat, ErrMsg )
 
    ! Destroy the parameter data:
    call FVW_DestroyParam( p, ErrStat, ErrMsg )

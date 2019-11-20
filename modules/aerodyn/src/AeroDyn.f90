@@ -1013,13 +1013,13 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ErrMsg  = ""
 
 
-         ! Place any last minute operations or calculations here:
-
+         ! End the FVW submodule
+      if (p%WakeMod == WakeMod_FVW ) then
+         call FVW_End( m%FVW_u, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg )
+      endif
 
          ! Close files here:
 
-!!!      IF (p%UseFVW )    CALL FVW_End( u%FVW, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, y%FVW, m%FVW, ErrStat, ErrMess )
-      
 
 
          ! Destroy the input data:
@@ -1108,20 +1108,12 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
    call BEMT_UpdateStates(t, n, m%BEMT_u(1), m%BEMT_u(2),  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI%AFInfo, m%BEMT, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
-!!!      type(FVW_InputType)      :: u_FVW(1)                !< FVW inputs
-!!!      REAL(DbKi)               :: utimes_FVW(1)           !< Times associated with u(:), in seconds
-!!!      
-!!!   if (p%UseFVW) then
-!!!      !if (abs(t-utimes(2))>1e-6 ) then
-!!!      !   print*,'Problem in AD14 update state, need to adapt which u we provide to FVW'
-!!!      !   STOP
-!!!      !endif
-!!!      ! Setting u(1)%FVW
-!!!      call AD14_to_FVW_u(u(1),p,u(1)%FVW,ErrStat,ErrMess)
-!!!      u_FVW(1) = u(1)%FVW
-!!!      utimes_FVW(1) = utimes(1)
-!!!      CALL FVW_UpdateStates( t, n, u_FVW, utimes_FVW, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW, ErrStat, ErrMess )
-!!!   endif
+      ! Call the FVW sub module
+   if (p%WakeMod == WakeMod_FVW) then
+         ! Note: the setup is handled above in the SetInputs routine
+      call FVW_UpdateStates( t, n, m%FVW_u, utimes, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   endif
            
    call Cleanup()
    
