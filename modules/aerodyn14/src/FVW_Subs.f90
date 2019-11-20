@@ -324,11 +324,11 @@ subroutine PackConvectingPoints(p, m, x, Points, nPoints)
    nPoints=iHeadP-1
 end subroutine
 
-subroutine PackPanelsToSegments(p, m, x, iNWStart, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
-   integer(IntKi),                  intent(in   ) :: iNWStart !< Index where we start packing for NW panels
+   integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
    integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
@@ -340,8 +340,8 @@ subroutine PackPanelsToSegments(p, m, x, iNWStart, SegConnct, SegPoints, SegGamm
    !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
 
    ! Counting total number of segments TODO add FarWake
-   nP =      p%nWings * (  (p%nSpan+1)*(m%nNW-iNWStart+2)            )
-   nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iNWStart+2)-(p%nSpan+1)-(m%nNW-iNWStart+1+1))  
+   nP =      p%nWings * (  (p%nSpan+1)*(m%nNW-iDepthStart+2)            )
+   nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iDepthStart+2)-(p%nSpan+1)-(m%nNW-iDepthStart+1+1))  
 !    nP = nP + p%nWings * (p%nSpan+1)*2
 !    nC = nC + p%nWings * (2*(p%nSpan+1)*(2)-p%nSpan-1-2)
 
@@ -357,7 +357,7 @@ subroutine PackPanelsToSegments(p, m, x, iNWStart, SegConnct, SegPoints, SegGamm
    iHeadP=1
    iHeadC=1
    do iW=1,p%nWings
-      CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iNWStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
    enddo
    if ((iHeadP-1)/=nP) then
       print*,'PackPanelsToSegments: Number of points wrongly estimated',nP, iHeadP-1

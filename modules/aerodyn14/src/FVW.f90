@@ -137,8 +137,8 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    ErrMsg  = ""
 
    m%FirstCall = .True.
-   m%nNW       = 0      ! Number of active nearwake panels
-   m%nFW       = 0      ! Number of active farwake  panels
+   m%nNW       = iNWStart-1    ! Number of active nearwake panels
+   m%nFW       = 0             ! Number of active farwake  panels
 
    call AllocAry( m%LE      ,  3  ,  p%nSpan+1  , p%nWings, 'Leading Edge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%LE = -999999_ReKi;
    call AllocAry( m%TE      ,  3  ,  p%nSpan+1  , p%nWings, 'TrailingEdge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%TE = -999999_ReKi;
@@ -231,8 +231,6 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, m, ErrStat, ErrMsg )
    ErrMsg  = ""
    ! 
    p%nWings       =  InitInp%NumBl
-   ! TODO TODO TODO Hack for AD14 mesh that is wrong
-   !p%nWings       =  1 
    
    ! NOTE: temporary limitation, all wings have the same nspan
    p%nSpan        =  size(InitInp%RElm)-1
@@ -378,20 +376,20 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
 
    ! -- Propagate wake m%nNW+1+1
    do iW=1,p%nWings
-      do iAge=p%nNWMax+1,2,-1
+      do iAge=p%nNWMax+1,iNWStart+1,-1 ! TODO TODO TODO Might need update
          do iSpan=1,p%nSpan+1
             x%r_NW(1:3,iSpan,iAge,iW) = x%r_NW(1:3,iSpan,iAge-1,iW)
          enddo
       enddo
-      x%r_NW(1:3,:,1,iW) = -999.0_ReKi
+      x%r_NW(1:3,:,1:iNWStart-1,iW) = -999.0_ReKi
    enddo
    do iW=1,p%nWings
-      do iAge=p%nNWMax,2,-1
+      do iAge=p%nNWMax,iNWStart+1,-1
          do iSpan=1,p%nSpan
             x%Gamma_NW(iSpan,iAge,iW) = x%Gamma_NW(iSpan,iAge-1,iW)
          enddo
       enddo
-      x%Gamma_NW(:,1,iW) = -999.0_ReKi
+      x%Gamma_NW(:,1:iNWStart-1,iW) = -999.0_ReKi
    enddo
 !    do iAge=1,m%nNW+1+1
 !       print*,'iAge',iAge
@@ -477,8 +475,6 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ! (expensive N^2 call)
       ! In  : x%r_NW,    r%r_FW 
       ! Out:  m%Vind_NW, m%Vind_FW
-      m%Vind_NW=-999999._ReKi
-      m%Vind_FW=-999999._ReKi
       call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2)
 
       call print_mean_4d( m%Vind_NW(:,:, 1:m%nNW+1,:), 'Mean induced vel. NW')
@@ -500,6 +496,8 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
       dxdt%r_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings) = m%Vwnd_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings)
    endif
+   ! Bound point does not convect
+   dxdt%r_NW(1:3, :, 1:iNWStart-1, :)=0
 end subroutine FVW_CalcContStateDeriv
 
 !----------------------------------------------------------------------------------------------------------------------------------

@@ -136,12 +136,10 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
       endif
    enddo
    ! --- Lifting line panels
-   allocate(Buffer2d(1,nSpan))
    do iW=1,nWings
       write(Label,'(A,A)') 'LL.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      Buffer2d(1,:)=m%Gamma_LL(:,iW)
-      call WrVTK_Lattice(FileName, m%r_LL(1:3,:,:,iW), Buffer2d)
+      call WrVTK_Lattice(FileName, m%r_LL(1:3,:,:,iW), m%Gamma_LL(:,iW:iW))
    enddo
    ! --------------------------------------------------------------------------------}
    ! --- Near wake 
@@ -150,7 +148,11 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    do iW=1,nWings
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      call WrVTK_Lattice(FileName, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW))
+      if (m%nNW==1) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
+         call WrVTK_Lattice(FileName, m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW))
+      else
+         call WrVTK_Lattice(FileName, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW))
+      endif
    enddo
    ! --------------------------------------------------------------------------------}
    ! --- Far wake 
@@ -165,28 +167,19 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! --- All Segments
    ! --------------------------------------------------------------------------------{
    nP =      nWings * (  (nSpan+1)*(nNW+1)            )
-   if (nNW==0) then
-      nC=0 ! TODO export of single line not supported by Lattice to Segments
-   else
-      nC =      nWings * (2*(nSpan+1)*(nNW+1)-nSpan-nNW-2)
-   endif
-!    nC =      nWings * (2*(nSpan+1)*(nNW+1)-nSpan-nNW-2)
-!    nP = nP + nWings * (nSpan+1)*2
-!    nC = nC + nWings * (2*(nSpan+1)*(2)-nSpan-1-2)
+   nC =      nWings * (2*(nSpan+1)*(nNW+1)-nSpan-nNW-2)
    allocate(SegConnct(1:2,1:nC)); SegConnct=-1
    allocate(SegPoints(1:3,1:nP)); SegPoints=-1
    allocate(SegGamma (1:nC)); SegGamma =-1
    iHeadP=1
    iHeadC=1
    do iW=1,nWings
-      CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      if (m%nNW==1) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
+         CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      else
+         CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      endif
    enddo
-!    if (allocated(Buffer2d)) deallocate(Buffer2d)
-!    allocate(Buffer2d(1,nSpan))
-!    do iW=1,nWings
-!       Buffer2d(1,:)=m%Gamma_LL(:,iW)
-!       CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), Buffer2d, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
-!    enddo
    Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
    CALL WrVTK_Segments(Filename, SegPoints, SegConnct, SegGamma) 
 

@@ -178,16 +178,19 @@ contains
       character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
       integer(IntKi) ::iSpan , iW
 
-      ! First panel of NW has same position as last panel of lifting line
+      ! First panel of NW is the last lifting line panel
       do iW = 1,p%nWings
          do iSpan = 1,p%nSpan+1
-            x%r_NW(1:3, iSpan, 1, iW) = m%r_LL(1:3, iSpan, 2, iW)
+            x%r_NW(1:3, iSpan, iNWStart-1, iW) = m%r_LL(1:3, iSpan, 1, iW)  ! iAge=1
+            x%r_NW(1:3, iSpan, iNWStart  , iW) = m%r_LL(1:3, iSpan, 2, iW)  ! iAge=2
          enddo
       enddo
-      ! Circulations of last panel of lifting line are the same as first NW panel
+      ! First panel of NW is the last lifting line panel
+      ! Circulations are the same on both side of the TE 
       do iW = 1,p%nWings
          do iSpan = 1,p%nSpan
-            x%Gamma_NW(iSpan, 1, iW) = z%Gamma_LL(iSpan,iW) 
+            x%Gamma_NW(iSpan, iNWStart-1, iW) = z%Gamma_LL(iSpan,iW)  ! iAge=1
+            x%Gamma_NW(iSpan, iNWStart  , iW) = z%Gamma_LL(iSpan,iW)  ! iAge=2
          enddo
       enddo
    end subroutine Wings_Map_LL_NW
