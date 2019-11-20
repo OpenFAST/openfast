@@ -34,8 +34,8 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             chord_LL     ::  -  -   "chord on LL cp " m
 # Variables at control point - Dimensions nSpan 
 typedef     ^                   ^               ReKi                             s_CP_LL      ::   -  -  "Spanwise coordinate of LL CP" m
-typedef     ^                   ^               ReKi                             chord_CP_LL  ::  -  -   "chord on LL cp " m
-typedef     ^                   ^               ReKi                             CP_LL        :::   -  - "Coordinates of LL CP" -
+typedef     ^                   ^               ReKi                             chord_CP_LL  ::   -  -  "chord on LL cp " m
+typedef     ^                   ^               ReKi                             CP_LL        :::  -  -  "Coordinates of LL CP" -
 typedef     ^                   ^               ReKi                             Tang         :::  -  -  "Unit Tangential vector on LL CP" -
 typedef     ^                   ^               ReKi                             Norm         :::  -  -  "Unit Normal vector on LL CP    " -
 typedef     ^                   ^               ReKi                             Orth         :::  -  -  "Unit Orthogonal vector on LL CP" -
@@ -48,13 +48,13 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Vwnd_FW      :::: -  -  "Wind on far  wake panels" m/s 
 typedef     ^                   ^               ReKi                             Vind_NW      :::: -  -  "Induced velocity on near wake panels" m/s 
 typedef     ^                   ^               ReKi                             Vind_FW      :::: -  -  "Induced velocity on far  wake panels" m/s 
-typedef     ^                   ^               IntKi                            nNW           -    -  - "Number of active near wake panels"      -
-typedef     ^                   ^               IntKi                            nFW           -    -  - "Number of active far  wake panels"      -
+typedef     ^                   ^               IntKi                            nNW           -   -  -  "Number of active near wake panels"      -
+typedef     ^                   ^               IntKi                            nFW           -   -  -  "Number of active far  wake panels"      -
 
 # ........ Input ............
 # FVW_InputType
-typedef  FVW/FVW           InputType            MeshType                         WingsMesh      :  - - - "Input Mesh defining position and orientation of wings"
-typedef     ^                   ^               ReKi                             V_wind        ::    - - "Wind at requested points (r_wind)"  -
+typedef  FVW/FVW           InputType            MeshType                         WingsMesh      :   -  - "Input Mesh defining position and orientation of wings"
+typedef     ^                   ^               ReKi                             V_wind        ::   -  - "Wind at requested points (r_wind)"  -
 
 # ........ Output ............
 # FVW_OutputType
@@ -72,7 +72,7 @@ typedef     ^                   ^               ReKi                            
 
 #.......... DiscreteStateType ......
 # FVW_DiscreteStateType
-typedef FVW/FVW            DiscreteStateType    IntKi                            Null              -  -  - "Empty to satisfy framework"           -
+typedef FVW/FVW            DiscreteStateType    ReKi                             NULL         -  -  - "Empty to satisfy framework"           -
 
 #.......... ConstraintStateType ......
 # FVW_ConstraintStateType
@@ -84,8 +84,13 @@ typedef    ^                    ^               Reki                            
 # FVW_InitInputType
 typedef  FVW/FVW           InitInputType        CHARACTER(1024)                  FVWFileName       -  -  - "Main FVW input file name"  -
 typedef     ^                   ^               MeshType                         WingsMesh         :  -  - "Input Mesh defining position and orientation of wings (nSpan+1) " -
+typedef     ^                   ^               IntKi                            AFindx            :: -  - "Index to the airfoils from AD15 [idx 1: BladeNode, idx2: Blade number]" - 
 typedef     ^                   ^               ReKi                             Chord             :: -  - "Chord of each blade element from input file [idx 1: BladeNode, idx2: Blade number]" - 
 typedef     ^                   ^               ReKi                             RElm              :  -  - "radius of center of each element"  - 
+typedef     ^                   ^               ReKi                             zHub              :  -  - "Distance to hub for each blade" m
+typedef     ^                   ^               ReKi                             zLocal            :: -  - "Distance to blade node, measured along the blade" m
+typedef     ^                   ^               ReKi                             zTip              :  -  - "Distance to blade tip, measured along the blade" m
+typedef     ^                   ^               ReKi                             rLocal            :: -  - "Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT" m
 typedef     ^                   ^               IntKi                            NumBlades         -  -  - "Number of blades"          -
 typedef     ^                   ^               IntKi                            NumBladeNodes     -  -  - "Number of nodes on each blade"          -
 

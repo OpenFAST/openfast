@@ -27,7 +27,7 @@ module AeroDyn
    use BEMT
    use AirfoilInfo
    use NWTC_LAPACK
-!   use FVW
+   use FVW
    
    
    implicit none
@@ -1178,7 +1178,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                   
    call SetOutputsFromBEMT(p, m, y )
-                          
+
 !!!   REAL(ReKi)                 :: Vind_FVW(3)
 !!!
 !!!   WakeCalc = p%UseFVW  ! WakeCalc is used to easily switch the Freewake on and off in this routine
@@ -1268,28 +1268,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    
    
 end subroutine AD_CalcOutput
-!!!!----------------------------------------------------------------------------------------------------------------------------------
-!!!
-!!!!> Wrapper to set inputs needed by FVW from AeroDyn
-!!!SUBROUTINE AD14_to_FVW_u(u,p,u_FVW,ErrStat,ErrMess)
-!!!   TYPE     (AD14_InputType    ),INTENT(IN   ):: u       ! Inputs at Time                                           ! KS changed from IN to INOUT
-!!!   TYPE     (AD14_ParameterType),INTENT(IN   ):: p       ! Parameters
-!!!   TYPE     (FVW_InputType     ),INTENT(INOUT):: u_FVW   ! Inputs at Time                                           ! KS changed from IN to INOUT
-!!!   INTEGER  (IntKi             ),INTENT(OUT  ):: ErrStat ! Error status of the operation
-!!!   CHARACTER(*                 ),INTENT(OUT  ):: ErrMess ! Error message if ErrStat /                  = ErrID_None
-!!!   INTEGER(IntKi) :: iB    ! Index for blades
-!!!
-!!!   !CALL AD14AeroConf_CopyInput( u%TurbineComponents, u_FVW%FVWTurbineComponents, MESH_NEWCOPY, ErrStat, ErrMess )
-!!!   IF (ErrStat >= AbortErrLev) RETURN
-!!!   ! NOTE:  this isn't really being used as a full mesh, so we only set a few things.
-!!!   !        also, if we do a direct copy, we end up with fatal errors at exit since the
-!!!   !        sibling/cousin status will be incorrect
-!!!   DO iB = 1,p%NumBl
-!!!      u_FVW%WingsMesh(iB)%Position       = u%InputMarkers(iB)%Position
-!!!      u_FVW%WingsMesh(iB)%Orientation    = u%InputMarkers(iB)%Orientation
-!!!      u_FVW%WingsMesh(iB)%TranslationVel = u%InputMarkers(iB)%TranslationVel
-!!!   ENDDO
-!!!ENDSUBROUTINE AD14_to_FVW_u
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for solving for the residual of the constraint state equations
 subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
@@ -1368,8 +1346,13 @@ subroutine SetInputs(p, u, m, indx, errStat, errMsg)
       ! This needs to extract the inputs from the AD data types (mesh) and massage them for the BEMT module
    call SetInputsForBEMT(p, u, m, indx, errStat2, errMsg2)  
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      
-   
+
+   if (p%WakeMod == WakeMod_FVW) then
+         ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
+      call SetInputsForFVW(p, u, m, indx, errStat2, errMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   endif
+
 end subroutine SetInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets m%BEMT_u(indx).
@@ -1526,6 +1509,38 @@ subroutine SetInputsForBEMT(p, u, m, indx, errStat, errMsg)
    end do !k=blades  
   
 end subroutine SetInputsForBEMT
+
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine sets m%FVW_u(indx).
+subroutine SetInputsForFVW(p, u, m, indx, errStat, errMsg)
+
+   type(AD_ParameterType),  intent(in   )  :: p                               !< AD parameters
+   type(AD_InputType),      intent(in   )  :: u                               !< AD Inputs at Time
+   type(AD_MiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
+   integer,                 intent(in   )  :: indx                            !< index into m%FVW_u array; must be 1 or 2 (but not checked here)
+   integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
+   character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
+
+   integer(intKi)                          :: k                      ! loop counter for blades
+   integer(intKi)                          :: ErrStat2
+   character(ErrMsgLen)                    :: ErrMsg2
+   character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
+
+
+      ! Rather than use a meshcopy, we will just copy what we need to the WingsMesh
+      ! NOTE: MeshCopy requires the source mesh to be INOUT intent
+   do k=1,p%NumBlades
+      if ( u%BladeMotion(k)%nNodes /= m%FVW_u(indx)%WingsMesh(k)%nNodes ) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = RoutineName//": WingsMesh contains different number of nodes than the BladeMotion mesh"
+         return
+      endif
+      m%FVW_u(indx)%WingsMesh(k)%TranslationDisp   = u%BladeMotion(k)%TranslationDisp
+      m%FVW_u(indx)%WingsMesh(k)%Orientation       = u%BladeMotion(k)%Orientation
+      m%FVW_u(indx)%WingsMesh(k)%TranslationVel    = u%BladeMotion(k)%TranslationVel
+   enddo
+!FIXME: do we want the hub orientation and rotation? Maybe motion also? u%HubMotion%Orientation(:,:,1)
+end subroutine SetInputsForFVW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from BEMT (stored in m%BEMT_y) into values on the AeroDyn BladeLoad output mesh.
 subroutine SetOutputsFromBEMT(p, m, y )
@@ -1945,6 +1960,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
       if (EqualRealNos(InitInp%zHub(k),0.0_ReKi) ) &
          call SetErrStat( ErrID_Fatal, "zHub for blade "//trim(num2lstr(k))//" is zero.", ErrStat, ErrMsg, RoutineName)
       
+      ! zLocal is the istance along blade curve -- NOTE: this is an approximation.
       InitInp%zLocal(1,k) = InitInp%zHub(k) + TwoNorm( u_AD%BladeMotion(k)%Position(:,1) - u_AD%BladeRootMotion(k)%Position(:,1) )
       do j=2,p%NumBlNds
          InitInp%zLocal(j,k) = InitInp%zLocal(j-1,k) + TwoNorm( u_AD%BladeMotion(k)%Position(:,j) - u_AD%BladeMotion(k)%Position(:,j-1) ) 
@@ -2015,7 +2031,7 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
 !..................................................................................................................................
 
    type(AD_InputFile),              intent(in   ) :: InputFileData  !< All the data in the AeroDyn input file
-   type(AD_InputType),              intent(in   ) :: u_AD           !< AD inputs - used for input mesh node positions
+   type(AD_InputType),              intent(inout) :: u_AD           !< AD inputs - used for input mesh node positions (intent out for meshcopy)
    type(FVW_InputType),             intent(  out) :: u              !< An initial guess for the input; input mesh must be defined
    type(AD_ParameterType),          intent(inout) :: p              !< Parameters ! intent out b/c we set the FVW parameters here
    type(FVW_ContinuousStateType),   intent(  out) :: x              !< Initial continuous states
@@ -2040,10 +2056,10 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
    type(FVW_InitOutputType)                     :: InitOut        ! Output for initialization routine
 
    integer(intKi)                                :: j              ! node index
-   integer(intKi)                                :: k              ! blade index
-!   real(ReKi)                                    :: tmp(3), tmp_sz_y, tmp_sz
-!   real(ReKi)                                    :: y_hat_disk(3)
-!   real(ReKi)                                    :: z_hat_disk(3)
+   integer(intKi)                                :: IB             ! blade index
+   real(ReKi)                                    :: tmp(3), tmp_sz_y, tmp_sz
+   real(ReKi)                                    :: y_hat_disk(3)
+   real(ReKi)                                    :: z_hat_disk(3)
    integer(IntKi)                                :: ErrStat2
    character(ErrMsgLen)                          :: ErrMsg2
    character(*), parameter                       :: RoutineName = 'Init_FVWmodule'
@@ -2054,80 +2070,136 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
    ErrMsg  = ""
 
 
+print*,'===================== Setup before call to FVW_Init ====================='
       ! set initialization data here:
    InitInp%FVWFileName    = InputFileData%FVWFileName
    InitInp%numBlades      = p%numBlades
    InitInp%numBladeNodes  = p%numBlNds
 
 ! --- TODO TODO TODO ANDY
+!FIXME: check the following now that we are in AD15.
 ! Change this so that it would match AD 15 mesh
 ! NOTE: This mesh does not include the azimuthal differences between blades!
 !       It's just the spanwise location.
 !       Also, it is off compared to the initial position of the blade
 !       Also, it's centered on the hub, but that's fine for now
    call AllocAry(InitInp%Chord, InitInp%numBladeNodes,InitInp%numBlades,'chord', ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   call AllocAry(InitInp%AFindx,InitInp%numBladeNodes,InitInp%numBlades,'AFindx',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   call AllocAry(InitInp%zHub,                        InitInp%numBlades,'zHub',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   call AllocAry(InitInp%zLocal,InitInp%numBladeNodes,InitInp%numBlades,'zLocal',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   call AllocAry(InitInp%rLocal,InitInp%numBladeNodes,InitInp%numBlades,'rLocal',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   call AllocAry(InitInp%zTip,                        InitInp%numBlades,'zTip',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!!!      IF (.NOT. ALLOCATED( InitInp%Chord)) ALLOCATE ( InitInp%Chord( p%Element%NElm ))
+   call AllocAry(InitInp%AFindx,InitInp%numBladeNodes,InitInp%numBlades,'AFindx',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(InitInp%zHub,                        InitInp%numBlades,'zHub',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(InitInp%zLocal,InitInp%numBladeNodes,InitInp%numBlades,'zLocal',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(InitInp%rLocal,InitInp%numBladeNodes,InitInp%numBlades,'rLocal',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(InitInp%zTip,                        InitInp%numBlades,'zTip',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
 !!!      IF (.NOT. ALLOCATED( InitInp%RElm )) ALLOCATE ( InitInp%RElm(  p%Element%NElm ))
 !!!      InitInp%RElm      = p%Element%RElm
-!!!      InitInp%Chord     = p%Blade%C
-!!!      ALLOCATE( InitInp%WingsMesh(p%NumBlades), STAT = ErrStatLcl )
-!!!         IF (ErrStatLcl /= 0) THEN
-!!!            CALL SetErrStat ( ErrID_Fatal, 'Could not allocate InitInp%WingsMesh (meshes)', ErrStat,ErrMess,RoutineName )
-!!!            RETURN
-!!!         END IF
-!!!      DO IB = 1, p%NumBlades
-!!!          CALL MeshCopy ( SrcMesh  = u%InputMarkers(IB)  &
-!!!                         ,DestMesh = InitInp%WingsMesh(IB) &
-!!!                         ,CtrlCode = MESH_COUSIN         &
-!!!                         ,Orientation    = .TRUE.        &
-!!!                         ,TranslationVel = .TRUE.        &
-!!!                         ,RotationVel    = .TRUE.        &
-!!!                         ,ErrStat  = ErrStatLcl          &
-!!!                         ,ErrMess  = ErrMessLcl          )
-!!!            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
-!!!            IF (ErrStat >= AbortErrLev) RETURN
-!!!      ENDDO
-!!!      ! ---- END TODO
-!!!
-!!!      call FVW_Init( InitInp%FVW, u%FVW, p%FVW, x%FVW, xd%FVW, z%FVW, O%FVW, y%FVW, m%FVW, Interval, InitOut%FVW, ErrStatLcl, ErrMessLcl )
-!!!         CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
-!!!
-!!!         ! If anything is passed back in InitOut%FVW, deal with it here...
-!!!
-!!!
-!!!
-!!!         ! TODO ANDY
-!!!         !FIXME   This really probably should be done inside of FVW_Init instead of here.
-!!!         !        Not entirely sure how to pass the u%InputMarkers in though.
-!!!      ALLOCATE( u%FVW%WingsMesh(p%NumBlades), STAT = ErrStatLcl )
-!!!         IF (ErrStatLcl /= 0) THEN
-!!!            CALL SetErrStat ( ErrID_Fatal, 'Could not allocate u%FVW%InputMarkers (meshes)', ErrStat,ErrMess,RoutineName )
-!!!            RETURN
-!!!         END IF
-!!!      DO IB = 1, p%NumBlades
-!!!          CALL MeshCopy ( SrcMesh  = u%InputMarkers(IB)  &
-!!!                         ,DestMesh = u%FVW%WingsMesh(IB) &
-!!!                         ,CtrlCode = MESH_COUSIN         &
-!!!                         ,Orientation    = .TRUE.        &
-!!!                         ,TranslationVel = .TRUE.        &
-!!!                         ,RotationVel    = .TRUE.        &
-!!!                         ,ErrStat  = ErrStatLcl          &
-!!!                         ,ErrMess  = ErrMessLcl          )
-!!!            CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
-!!!            IF (ErrStat >= AbortErrLev) RETURN
-!!!      ENDDO
+   if ( ErrStat >= AbortErrLev ) then
+      call Cleanup()
+      return
+   end if
 
-  do k=1,p%numBlades
-     do j=1,p%NumBlNds
-        InitInp%chord (j,k)  = InputFileData%BladeProps(k)%BlChord(j)
-!        InitInp%AFindx(j,k)  = InputFileData%BladeProps(k)%BlAFID(j)
-     end do
-  end do
+
+      ! Hub
+   do IB=1,p%numBlades
+      InitInp%zHub(IB) = TwoNorm( u_AD%BladeRootMotion(IB)%Position(:,1) - u_AD%HubMotion%Position(:,1) )
+      if (EqualRealNos(InitInp%zHub(IB),0.0_ReKi) ) &
+         call SetErrStat( ErrID_Fatal, "zHub for blade "//trim(num2lstr(IB))//" is zero.", ErrStat, ErrMsg, RoutineName)
+   enddo
+   if (ErrStat >= AbortErrLev) then
+      call CleanUp()
+      RETURN
+   endif
+
+      ! Distance along blade curve -- NOTE: this is an approximation.
+   do IB=1,p%numBlades
+      InitInp%zLocal(1,IB) = InitInp%zHub(IB) + TwoNorm( u_AD%BladeMotion(IB)%Position(:,1) - u_AD%BladeRootMotion(IB)%Position(:,1) )
+      do j=2,p%NumBlNds
+         InitInp%zLocal(j,IB) = InitInp%zLocal(j-1,IB) + TwoNorm( u_AD%BladeMotion(IB)%Position(:,j) - u_AD%BladeMotion(IB)%Position(:,j-1) )
+      end do !j=nodes
+   end do !IB=blades
+
+      ! Blade tip curve distance
+   do IB=1,p%numBlades
+      InitInp%zTip(IB) = InitInp%zLocal(p%NumBlNds,IB)
+   end do !IB=blades
+
+      ! Distance from blade to hub axis (includes hub radius)
+   y_hat_disk = u_AD%HubMotion%Orientation(2,:,1)
+   z_hat_disk = u_AD%HubMotion%Orientation(3,:,1)
+   do IB=1,p%numBlades
+      do j=1,p%NumBlNds
+               ! displaced position of the jth node in the kth blade relative to the hub:
+         tmp =  u_AD%BladeMotion(IB)%Position(:,j)  - u_AD%HubMotion%Position(:,1)
+            ! local radius (normalized distance from rotor centerline)
+         tmp_sz_y = dot_product( tmp, y_hat_disk )**2
+         tmp_sz   = dot_product( tmp, z_hat_disk )**2
+         InitInp%rLocal(j,IB) = sqrt( tmp_sz + tmp_sz_y )
+      end do !j=nodes
+   end do !IB=blades
+
+
+      ! Copy over chord information
+   do IB=1,p%numBlades
+      do j=1,p%NumBlNds
+         InitInp%Chord (j,IB)  = InputFileData%BladeProps(IB)%BlChord(j)
+         InitInp%AFindx(j,IB)  = InputFileData%BladeProps(IB)%BlAFID(j)
+      end do
+   end do
+
+!FIXME: do we need this mesh at all?
+      ALLOCATE( InitInp%WingsMesh(p%NumBlades), STAT = ErrStat2 )
+         IF (ErrStat2 /= 0) THEN
+            CALL SetErrStat ( ErrID_Fatal, 'Could not allocate InitInp%WingsMesh (meshes)', ErrStat,ErrMsg,RoutineName )
+            RETURN
+         END IF
+      DO IB = 1, p%NumBlades
+          CALL MeshCopy ( SrcMesh  = u_AD%BladeMotion(IB)  &
+                         ,DestMesh = InitInp%WingsMesh(IB) &
+                         ,CtrlCode = MESH_COUSIN         &
+                         ,Orientation    = .TRUE.        &
+                         ,TranslationVel = .TRUE.        &
+                         ,RotationVel    = .TRUE.        &
+                         ,ErrStat  = ErrStat2          &
+                         ,ErrMess  = ErrMsg2          )
+            CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
+            IF (ErrStat >= AbortErrLev) RETURN
+      ENDDO
+      ! ---- END TODO
+
+
+
+!FIXME: Should we be passing any AFinfo?  Is that needed in FVW for anything?
+!   call FVW_Init( u_AD%BladeMotion, InitInp, u, p%FVW, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
+   call FVW_Init( InitInp, u, p%FVW, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
+      CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+         ! TODO ANDY
+         !FIXME   This really probably should be done inside of FVW_Init instead of here.
+         !        Not entirely sure how to pass the u%InputMarkers in though.
+      ALLOCATE( u%WingsMesh(p%NumBlades), STAT = ErrStat2 )
+         IF (ErrStat2 /= 0) THEN
+            CALL SetErrStat ( ErrID_Fatal, 'Could not allocate u%InputMarkers (meshes)', ErrStat,ErrMsg,RoutineName )
+            RETURN
+         END IF
+      DO IB = 1, p%NumBlades
+          CALL MeshCopy ( SrcMesh  = u_AD%BladeMotion(IB)  &
+                         ,DestMesh = u%WingsMesh(IB)     &
+                         ,CtrlCode = MESH_COUSIN         &
+                         ,Orientation    = .TRUE.        &
+                         ,TranslationVel = .TRUE.        &
+                         ,RotationVel    = .TRUE.        &
+                         ,ErrStat  = ErrStat2          &
+                         ,ErrMess  = ErrMsg2          )
+            CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
+            IF (ErrStat >= AbortErrLev) RETURN
+
+         u%WingsMesh(IB)%RemapFlag = .TRUE.
+       ENDDO
+
+
+      ! If anything is passed back in InitOut%FVW, deal with it here...
+
+   if (.not. equalRealNos(Interval, p%DT) ) &
+      call SetErrStat( ErrID_Fatal, "DTAero was changed in Init_FVWmodule(); this is not allowed.", ErrStat2, ErrMsg2, RoutineName)
 
 contains
    subroutine Cleanup()

@@ -16,7 +16,7 @@ contains
    !!  - chord_LL_CP: chord on LL cp  
    subroutine Wings_Panelling_Init(Meshes, r, chord, p, m, ErrStat, ErrMsg )
       type(MeshType), dimension(:),    intent(in   )  :: Meshes         !< Wings mesh
-      real(ReKi), dimension(:),        intent(in   )  :: r              !< 
+      real(ReKi), dimension(:,:),      intent(in   )  :: r              !< 
       real(ReKi), dimension(:,:),      intent(in   )  :: chord          !< 
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
@@ -40,6 +40,8 @@ contains
          if (allocated(s_in)) deallocate(s_in)
          allocate(s_in(1:Meshes(iW)%nNodes))
          ! --- Computing spanwise coordinate of input mesh normalized from 0 to 1
+!FIXME: does this work for a highly curved blade?
+!also note: this info also exists in InitInp%zLocal or InitInp%rLocal
          s_in(:) = -999
          First  = Meshes(iW)%Position(1:3,1        )
          Last   = Meshes(iW)%Position(1:3,p%nSpan+1)
@@ -115,7 +117,7 @@ contains
       ! --- Generic code below to compute normal/tangential vectors of a lifting line panel
       ! Notations follow vanGarrel [TODO REF]
       do iW = 1,p%nWings
-         do iSpan = 1,p%nSpan+1
+         do iSpan = 1,p%nSpan
             P1                    = m%LE(:,iSpan  , iw)
             P4                    = m%LE(:,iSpan+1, iw)
             P3                    = m%TE(:,iSpan+1, iw)

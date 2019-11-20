@@ -92,7 +92,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
 
    ! Preliminary meshing of the wings (may depend on input file)
    ! NOTE: the mesh is not located at the right position yet, the first call to calcoutput will redo some meshing
-   CALL Wings_Panelling_Init(InitInp%WingsMesh, InitInp%RElm, InitInp%chord, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL Wings_Panelling_Init(InitInp%WingsMesh, InitInp%zLocal, InitInp%chord, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Set parameters from InputFileData (need Misc allocated)
    CALL FVW_SetParametersFromInputFile(InputFileData, p, m, ErrStat2, ErrMsg2); if(Failed()) return
@@ -229,11 +229,9 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, m, ErrStat, ErrMsg )
    ErrMsg  = ""
    ! 
    p%nWings       =  InitInp%NumBlades
-   ! TODO TODO TODO Hack for AD14 mesh that is wrong
-   !p%nWings       =  1 
    
    ! NOTE: temporary limitation, all wings have the same nspan
-   p%nSpan        =  size(InitInp%RElm)-1
+   p%nSpan        =  InitInp%numBladeNodes-1
 
 end subroutine FVW_SetParametersFromInputs
 ! ==============================================================================
