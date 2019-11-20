@@ -116,7 +116,7 @@ contains
       ! --- Generic code below to compute normal/tangential vectors of a lifting line panel
       ! Notations follow vanGarrel [TODO REF]
       do iW = 1,p%nWings
-         do iSpan = 1,p%nSpan+1
+         do iSpan = 1,p%nSpan
             P1                    = m%LE(:,iSpan  , iw)
             P4                    = m%LE(:,iSpan+1, iw)
             P3                    = m%TE(:,iSpan+1, iw)
