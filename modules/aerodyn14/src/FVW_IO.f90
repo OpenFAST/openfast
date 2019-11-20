@@ -36,16 +36,21 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    !------------------------ GENERAL OPTIONS  -------------------------------------------
    CALL ReadCom(UnIn,FileName,                  'General option header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVar(UnIn,FileName,Inp%IntMethod    ,'Integration method' ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%FreeWake     ,'FreeWake'         ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%FreeWakeStart,'FreeWakeStart'      ,'',ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ CIRCULATION SPECIFICATIONS  -------------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Circulation specification header', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL ReadVar(UnIn,FileName,Inp%CirculationMethod,'CirculationMethod','',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%CirculationFile  ,'CirculationFile'  ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%CirculationMethod ,'CirculationMethod','',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ','',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter','',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'  ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart'  ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%PrescribedPolar     ,'PrescribedPolar'       ,'',ErrStat2,ErrMsg2); if(Failed())return
 
    ! Post pro and validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
 
-   if (Check(.not.(ANY((/idCircNoFlowThrough,idCircPrescribed/)==Inp%CirculationMethod)), 'Circulation method not implemented')) return
+   if (Check(.not.(ANY((/idCircPrescribed,idCircPolarData/)==Inp%CirculationMethod)), 'Circulation method not implemented')) return
 
    if (Check( Inp%IntMethod/=idEuler1 , 'Time integration method not implemented')) return
 
@@ -160,7 +165,12 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! --- All Segments
    ! --------------------------------------------------------------------------------{
    nP =      nWings * (  (nSpan+1)*(nNW+1)            )
-   nC =      nWings * (2*(nSpan+1)*(nNW+1)-nSpan-nNW-2)
+   if (nNW==0) then
+      nC=0 ! TODO export of single line not supported by Lattice to Segments
+   else
+      nC =      nWings * (2*(nSpan+1)*(nNW+1)-nSpan-nNW-2)
+   endif
+!    nC =      nWings * (2*(nSpan+1)*(nNW+1)-nSpan-nNW-2)
 !    nP = nP + nWings * (nSpan+1)*2
 !    nC = nC + nWings * (2*(nSpan+1)*(2)-nSpan-1-2)
    allocate(SegConnct(1:2,1:nC)); SegConnct=-1
@@ -182,11 +192,11 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
 
    if ((iHeadP-1)/=nP) then
       print*,'IO: Number of points wrongly estimated',nP, iHeadP-1
-!       STOP
+      STOP
    endif
    if ((iHeadC-1)/=nC) then
       print*,'IO: Number of segments wrongly estimated',nC, iHeadC-1
-!       STOP
+      STOP
    endif
 
 

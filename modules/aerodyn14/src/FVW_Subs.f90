@@ -291,9 +291,9 @@ subroutine PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, n
    real(ReKi), dimension(:,:), allocatable :: Buffer2d
    !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
 
-   ! Counting total number of segments
+   ! Counting total number of segments TODO add FarWake
    nP =      p%nWings * (  (p%nSpan+1)*(m%nNW+1)            )
-   nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW+1)-p%nSpan-m%nNW-2)
+   nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW+1)-p%nSpan-m%nNW-2)  
 !    nP = nP + p%nWings * (p%nSpan+1)*2
 !    nC = nC + p%nWings * (2*(p%nSpan+1)*(2)-p%nSpan-1-2)
 
@@ -317,11 +317,11 @@ subroutine PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, n
 !    enddo
    if ((iHeadP-1)/=nP) then
       print*,'Number of points wrongly estimated',nP, iHeadP-1
-!       STOP
+      STOP
    endif
    if ((iHeadC-1)/=nC) then
       print*,'Number of segments wrongly estimated',nC, iHeadC-1
-!       STOP
+      STOP
    endif
    nSeg  = iHeadC-1
    nSegP = iHeadP-1
