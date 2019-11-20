@@ -49,9 +49,14 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nNWMax      !< Maximum number of nw panels [-]
     INTEGER(IntKi)  :: nFWMax      !< Maximum number of fw panels [-]
     INTEGER(IntKi)  :: IntMethod      !< Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1) [-]
-    LOGICAL  :: FreeWake      !< Disable roll up, wake convects with wind only (flag) [-]
+    REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
+    REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]
     INTEGER(IntKi)  :: CirculationMethod      !< Method to determine the circulation [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: PrescribedCirculation      !< Prescribed circulation on all lifting lines [m/s]
+    INTEGER(IntKi)  :: CircSolvMaxIter      !< Maximum number of iterations for circulation solving [-]
+    REAL(ReKi)  :: CircSolvConvCrit      !< Convergence criterion for circulation solving [-]
+    REAL(ReKi)  :: CircSolvRelaxation      !< Relaxation factor for circulation solving [-]
+    INTEGER(IntKi)  :: PrescribedPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_OtherStateType  =======
@@ -73,6 +78,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Tang      !< Unit Tangential vector on LL CP [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Norm      !< Unit Normal vector on LL CP     [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Orth      !< Unit Orthogonal vector on LL CP [-]
+    REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: dl      !< Vector of elementary length along the LL [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Area      !< Area of each LL panel [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Gamma_LL      !< Circulation on the wing lifting line (COPY of Constraint State) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vind_LL      !< Induced velocity on lifting line control points [m/s]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vtot_LL      !< Total velocity on lifting line control points [m/s]
@@ -130,9 +137,15 @@ IMPLICIT NONE
 ! =========  FVW_InputFile  =======
   TYPE, PUBLIC :: FVW_InputFile
     INTEGER(IntKi)  :: CirculationMethod      !< Method to determine the circulation [-]
-    CHARACTER(1024)  :: CirculationFile      !<  [-]
+    CHARACTER(1024)  :: CirculationFile      !< Prescribed circulation file [-]
+    INTEGER(IntKi)  :: CircSolvMaxIter      !< Maximum number of iterations for circulation solving [-]
+    REAL(ReKi)  :: CircSolvConvCrit      !< Convergence criterion for circulation solving [-]
+    REAL(ReKi)  :: CircSolvRelaxation      !< Relaxation factor for circulation solving [-]
     INTEGER(IntKi)  :: IntMethod      !< Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1, 7=Corrector/Predictor) [-]
     LOGICAL  :: FreeWake      !< Disable roll up, wake convects with wind only (flag) [-]
+    REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
+    REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]
+    INTEGER(IntKi)  :: PrescribedPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
   END TYPE FVW_InputFile
 ! =======================
 ! =========  FVW_InitOutputType  =======
@@ -164,7 +177,8 @@ CONTAINS
     DstParamData%nNWMax = SrcParamData%nNWMax
     DstParamData%nFWMax = SrcParamData%nFWMax
     DstParamData%IntMethod = SrcParamData%IntMethod
-    DstParamData%FreeWake = SrcParamData%FreeWake
+    DstParamData%FreeWakeStart = SrcParamData%FreeWakeStart
+    DstParamData%FullCirculationStart = SrcParamData%FullCirculationStart
     DstParamData%CirculationMethod = SrcParamData%CirculationMethod
 IF (ALLOCATED(SrcParamData%PrescribedCirculation)) THEN
   i1_l = LBOUND(SrcParamData%PrescribedCirculation,1)
@@ -178,6 +192,10 @@ IF (ALLOCATED(SrcParamData%PrescribedCirculation)) THEN
   END IF
     DstParamData%PrescribedCirculation = SrcParamData%PrescribedCirculation
 ENDIF
+    DstParamData%CircSolvMaxIter = SrcParamData%CircSolvMaxIter
+    DstParamData%CircSolvConvCrit = SrcParamData%CircSolvConvCrit
+    DstParamData%CircSolvRelaxation = SrcParamData%CircSolvRelaxation
+    DstParamData%PrescribedPolar = SrcParamData%PrescribedPolar
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -234,13 +252,18 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nNWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWMax
       Int_BufSz  = Int_BufSz  + 1  ! IntMethod
-      Int_BufSz  = Int_BufSz  + 1  ! FreeWake
+      Re_BufSz   = Re_BufSz   + 1  ! FreeWakeStart
+      Re_BufSz   = Re_BufSz   + 1  ! FullCirculationStart
       Int_BufSz  = Int_BufSz  + 1  ! CirculationMethod
   Int_BufSz   = Int_BufSz   + 1     ! PrescribedCirculation allocated yes/no
   IF ( ALLOCATED(InData%PrescribedCirculation) ) THEN
     Int_BufSz   = Int_BufSz   + 2*1  ! PrescribedCirculation upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%PrescribedCirculation)  ! PrescribedCirculation
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! CircSolvMaxIter
+      Re_BufSz   = Re_BufSz   + 1  ! CircSolvConvCrit
+      Re_BufSz   = Re_BufSz   + 1  ! CircSolvRelaxation
+      Int_BufSz  = Int_BufSz  + 1  ! PrescribedPolar
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -278,8 +301,10 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%IntMethod
       Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%FreeWake , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%FreeWakeStart
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%FullCirculationStart
+      Re_Xferred   = Re_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CirculationMethod
       Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%PrescribedCirculation) ) THEN
@@ -295,6 +320,14 @@ ENDIF
       IF (SIZE(InData%PrescribedCirculation)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%PrescribedCirculation))-1 ) = PACK(InData%PrescribedCirculation,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%PrescribedCirculation)
   END IF
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CircSolvMaxIter
+      Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CircSolvConvCrit
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CircSolvRelaxation
+      Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PrescribedPolar
+      Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE FVW_PackParam
 
  SUBROUTINE FVW_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -343,8 +376,10 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%IntMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%FreeWake = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
+      OutData%FreeWakeStart = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%FullCirculationStart = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
       OutData%CirculationMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! PrescribedCirculation not allocated
@@ -370,6 +405,14 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%PrescribedCirculation)
     DEALLOCATE(mask1)
   END IF
+      OutData%CircSolvMaxIter = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%CircSolvConvCrit = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%CircSolvRelaxation = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%PrescribedPolar = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 
  SUBROUTINE FVW_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -692,6 +735,36 @@ IF (ALLOCATED(SrcMiscData%Orth)) THEN
   END IF
     DstMiscData%Orth = SrcMiscData%Orth
 ENDIF
+IF (ALLOCATED(SrcMiscData%dl)) THEN
+  i1_l = LBOUND(SrcMiscData%dl,1)
+  i1_u = UBOUND(SrcMiscData%dl,1)
+  i2_l = LBOUND(SrcMiscData%dl,2)
+  i2_u = UBOUND(SrcMiscData%dl,2)
+  i3_l = LBOUND(SrcMiscData%dl,3)
+  i3_u = UBOUND(SrcMiscData%dl,3)
+  IF (.NOT. ALLOCATED(DstMiscData%dl)) THEN 
+    ALLOCATE(DstMiscData%dl(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%dl.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%dl = SrcMiscData%dl
+ENDIF
+IF (ALLOCATED(SrcMiscData%Area)) THEN
+  i1_l = LBOUND(SrcMiscData%Area,1)
+  i1_u = UBOUND(SrcMiscData%Area,1)
+  i2_l = LBOUND(SrcMiscData%Area,2)
+  i2_u = UBOUND(SrcMiscData%Area,2)
+  IF (.NOT. ALLOCATED(DstMiscData%Area)) THEN 
+    ALLOCATE(DstMiscData%Area(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Area.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%Area = SrcMiscData%Area
+ENDIF
 IF (ALLOCATED(SrcMiscData%Gamma_LL)) THEN
   i1_l = LBOUND(SrcMiscData%Gamma_LL,1)
   i1_u = UBOUND(SrcMiscData%Gamma_LL,1)
@@ -888,6 +961,12 @@ ENDIF
 IF (ALLOCATED(MiscData%Orth)) THEN
   DEALLOCATE(MiscData%Orth)
 ENDIF
+IF (ALLOCATED(MiscData%dl)) THEN
+  DEALLOCATE(MiscData%dl)
+ENDIF
+IF (ALLOCATED(MiscData%Area)) THEN
+  DEALLOCATE(MiscData%Area)
+ENDIF
 IF (ALLOCATED(MiscData%Gamma_LL)) THEN
   DEALLOCATE(MiscData%Gamma_LL)
 ENDIF
@@ -1007,6 +1086,16 @@ ENDIF
   IF ( ALLOCATED(InData%Orth) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! Orth upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Orth)  ! Orth
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! dl allocated yes/no
+  IF ( ALLOCATED(InData%dl) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*3  ! dl upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%dl)  ! dl
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Area allocated yes/no
+  IF ( ALLOCATED(InData%Area) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Area upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Area)  ! Area
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Gamma_LL allocated yes/no
   IF ( ALLOCATED(InData%Gamma_LL) ) THEN
@@ -1283,6 +1372,41 @@ ENDIF
 
       IF (SIZE(InData%Orth)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Orth))-1 ) = PACK(InData%Orth,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%Orth)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%dl) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dl,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dl,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dl,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dl,2)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%dl,3)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%dl,3)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%dl)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%dl))-1 ) = PACK(InData%dl,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%dl)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Area) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Area,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Area,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Area,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Area,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%Area)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Area))-1 ) = PACK(InData%Area,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%Area)
   END IF
   IF ( .NOT. ALLOCATED(InData%Gamma_LL) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -1817,6 +1941,61 @@ ENDIF
       IF (SIZE(OutData%Orth)>0) OutData%Orth = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Orth))-1 ), mask3, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%Orth)
     DEALLOCATE(mask3)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! dl not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i3_l = IntKiBuf( Int_Xferred    )
+    i3_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%dl)) DEALLOCATE(OutData%dl)
+    ALLOCATE(OutData%dl(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%dl.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask3(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask3.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask3 = .TRUE. 
+      IF (SIZE(OutData%dl)>0) OutData%dl = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%dl))-1 ), mask3, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%dl)
+    DEALLOCATE(mask3)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Area not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Area)) DEALLOCATE(OutData%Area)
+    ALLOCATE(OutData%Area(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Area.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%Area)>0) OutData%Area = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Area))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%Area)
+    DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Gamma_LL not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3942,8 +4121,14 @@ ENDIF
    ErrMsg  = ""
     DstInputFileData%CirculationMethod = SrcInputFileData%CirculationMethod
     DstInputFileData%CirculationFile = SrcInputFileData%CirculationFile
+    DstInputFileData%CircSolvMaxIter = SrcInputFileData%CircSolvMaxIter
+    DstInputFileData%CircSolvConvCrit = SrcInputFileData%CircSolvConvCrit
+    DstInputFileData%CircSolvRelaxation = SrcInputFileData%CircSolvRelaxation
     DstInputFileData%IntMethod = SrcInputFileData%IntMethod
     DstInputFileData%FreeWake = SrcInputFileData%FreeWake
+    DstInputFileData%FreeWakeStart = SrcInputFileData%FreeWakeStart
+    DstInputFileData%FullCirculationStart = SrcInputFileData%FullCirculationStart
+    DstInputFileData%PrescribedPolar = SrcInputFileData%PrescribedPolar
  END SUBROUTINE FVW_CopyInputFile
 
  SUBROUTINE FVW_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -3994,8 +4179,14 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1  ! CirculationMethod
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%CirculationFile)  ! CirculationFile
+      Int_BufSz  = Int_BufSz  + 1  ! CircSolvMaxIter
+      Re_BufSz   = Re_BufSz   + 1  ! CircSolvConvCrit
+      Re_BufSz   = Re_BufSz   + 1  ! CircSolvRelaxation
       Int_BufSz  = Int_BufSz  + 1  ! IntMethod
       Int_BufSz  = Int_BufSz  + 1  ! FreeWake
+      Re_BufSz   = Re_BufSz   + 1  ! FreeWakeStart
+      Re_BufSz   = Re_BufSz   + 1  ! FullCirculationStart
+      Int_BufSz  = Int_BufSz  + 1  ! PrescribedPolar
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4029,9 +4220,21 @@ ENDIF
           IntKiBuf(Int_Xferred) = ICHAR(InData%CirculationFile(I:I), IntKi)
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CircSolvMaxIter
+      Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CircSolvConvCrit
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CircSolvRelaxation
+      Re_Xferred   = Re_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%IntMethod
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%FreeWake , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%FreeWakeStart
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%FullCirculationStart
+      Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PrescribedPolar
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE FVW_PackInputFile
 
@@ -4073,9 +4276,21 @@ ENDIF
         OutData%CirculationFile(I:I) = CHAR(IntKiBuf(Int_Xferred))
         Int_Xferred = Int_Xferred   + 1
       END DO ! I
+      OutData%CircSolvMaxIter = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%CircSolvConvCrit = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%CircSolvRelaxation = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
       OutData%IntMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%FreeWake = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
+      OutData%FreeWakeStart = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%FullCirculationStart = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%PrescribedPolar = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackInputFile
 

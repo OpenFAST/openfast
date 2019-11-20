@@ -152,6 +152,8 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%Tang    , 3   ,  p%nSpan    , p%nWings, 'Tangential vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Tang= -999999_ReKi;
    call AllocAry( m%Norm    , 3   ,  p%nSpan    , p%nWings, 'Normal     vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Norm= -999999_ReKi;
    call AllocAry( m%Orth    , 3   ,  p%nSpan    , p%nWings, 'Orthogonal vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Orth= -999999_ReKi;
+   call AllocAry( m%dl      , 3   ,  p%nSpan    , p%nWings, 'Orthogonal vector  ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%dl= -999999_ReKi;
+   call AllocAry( m%Area    ,        p%nSpan    , p%nWings, 'LL Panel area      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Area = -999999_ReKi;
    call AllocAry( m%Vind_LL , 3   ,  p%nSpan    , p%nWings, 'Vind on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vind_LL= -999999_ReKi;
    call AllocAry( m%Vtot_LL , 3   ,  p%nSpan    , p%nWings, 'Vtot on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vtot_LL= -999999_ReKi;
    call AllocAry( m%Vstr_LL , 3   ,  p%nSpan    , p%nWings, 'Vstr on CP ll      ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vstr_LL= -999999_ReKi;
@@ -251,9 +253,14 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    ErrMsg  = ""
 
    ! Set parameters from input file
-   p%IntMethod         = InputFileData%IntMethod
-   p%CirculationMethod = InputFileData%CirculationMethod
-   p%FreeWake          = InputFileData%FreeWake
+   p%IntMethod            = InputFileData%IntMethod
+   p%CirculationMethod    = InputFileData%CirculationMethod
+   p%CircSolvConvCrit     = InputFileData%CircSolvConvCrit
+   p%CircSolvRelaxation   = InputFileData%CircSolvRelaxation
+   p%CircSolvMaxIter      = InputFileData%CircSolvMaxIter
+   p%FreeWakeStart        = InputFileData%FreeWakeStart
+   p%PrescribedPolar      = InputFileData%PrescribedPolar
+   p%FullCirculationStart = InputFileData%FullCirculationStart
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
    if (InputFileData%CirculationMethod==idCircPrescribed) then 

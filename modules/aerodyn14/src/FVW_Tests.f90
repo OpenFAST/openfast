@@ -78,8 +78,8 @@ contains
       CPs(1:3,1)=(/1.5,1.5,0./)
       SegSmooth=100.0_ReKi
       SmoothModel=0 ! No smooth
-      CALL ui_seg(CPs, 1, 1, 1, &
-      SegPoints, SegConnct, SegGamma, 1, nC1, nC1, nP1,   &
+      CALL ui_seg(1, 1, 1, CPs, &
+      1, nC1, nC1, nP1, SegPoints, SegConnct, SegGamma,   &
       SmoothModel, SegSmooth, Uind)
    print*,'Uind',Uind
 
