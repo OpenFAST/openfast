@@ -134,8 +134,9 @@ contains
             m%Norm(1:3,iSpan,iW)  = m%Norm(1:3,iSpan,iW)/norm2(m%Norm(1:3,iSpan,iW))
             m%Tang(1:3,iSpan,iW)  = (DP1)/norm2(DP1)                       ! tangential unit vector, along chord
             ! m%Tscoord(1:3,iSpan) = (DP3)/norm2(DP3)                      ! tangential unit vector, along span, follows ref line
-            ! m%dl(1:3,iSpan)      = DP2
+            m%dl  (1:3,iSpan,iW)  = DP2
             m%Orth(1:3,iSpan,iW)  = cross_product(m%Norm(1:3,iSpan,iW),m%Tang(1:3,iSpan,iW)) ! orthogonal vector to N and T
+            m%Area(iSpan, iW) = norm2(cross_product(DP1,DP3));
          end do
       enddo
 
@@ -212,20 +213,14 @@ contains
       if (p%CirculationMethod==idCircPrescribed) then 
          print*,'>>>Prescribing circulation'
          do iW = 1, p%nWings !Loop over lifting lines
-            if (t<5) then
-               ! Slow start
-               print*,'Slow start'
-               Gamma_LL(1:p%nSpan,iW) = (t/5)*p%PrescribedCirculation(1:p%nSpan)
-            else
-               Gamma_LL(1:p%nSpan,iW) = p%PrescribedCirculation(1:p%nSpan)
-            endif
+            Gamma_LL(1:p%nSpan,iW) = p%PrescribedCirculation(1:p%nSpan)
          enddo
 
       else if (p%CirculationMethod==idCircPolarData) then 
          ! ---  Solve for circulation using polar data
          ! TODO
-         print*,'Circulation method nor implemented', p%CirculationMethod
-         STOP
+         print*,'>>>Circulation solving with polar data'
+         CALL Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg)
 
       else if (p%CirculationMethod==idCircNoFlowThrough) then 
          ! ---  Solve for circulation using the no-flow through condition
@@ -237,6 +232,144 @@ contains
          STOP
       endif
 
+      if (t<p%FullCirculationStart) then
+         ! The circulation is ramped up progressively, starting from 0 
+         ! TODO use a smooth approximation of HeavySide function instead of linear
+         print*,'Slow start'
+         Gamma_LL = (t/p%FullCirculationStart)*Gamma_LL
+      endif
+
    endsubroutine Wings_ComputeCirculation
+
+   !----------------------------------------------------------------------------------------------------------------------------------
+   !>
+   subroutine Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg)
+      real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
+      real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
+      real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
+      type(FVW_InputType),             intent(in   )  :: u              !< Parameters
+      type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+      type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Parameters
+      type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+      integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+      character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+      ! Local
+      real(ReKi), dimension(:,:), allocatable :: DGamma        !< 
+      real(ReKi), dimension(:,:), allocatable :: GammaLastIter !< 
+      logical                                 :: bConverged    !< 
+      integer(IntKi)                          :: iIter         !< iteration step number
+      real(ReKi)                              :: MeanGamma
+      ! Initialize ErrStat
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+      print*,'Parameters for circulation solv: ',p%CircSolvConvCrit ,p%CircSolvRelaxation ,p%CircSolvMaxIter   
+
+      allocate(DGamma       (1:p%nSPan,1:p%nWings))
+      allocate(GammaLastIter(1:p%nSPan,1:p%nWings))
+      !
+      GammaLastIter = Gamma_LL_prev
+
+      ! Building Vrel_cst This part do not change wihtin the iteration loop
+      ! Remember: uiu0 contains U0 and vorticity (free and prescribed)
+      !do icp=1,SW%ncp_ll_tot 
+      ! TODO
+      !    SW%Vrel_ll_cst(1:3,icp)  = SW%U_uiu0(1:3,icp) - SW%U_body(1:3,icp) + SW%U_solv(1:3,icp)
+      !end do 
+
+      ! --- Convergence loop until near wake gives induction coherent with circulation
+      bConverged=.false.
+      iIter=0
+      do while (.not.(bConverged) .and. iIter<p%CircSolvMaxIter) 
+          !! Setting up wings and nw panels intensities
+          !if (pAlgo%EmissionMethod==idEMethCreateTEBEforeSolving) then 
+          !    ! if CreateTEBeforeSolving, then need to get influece of the TE panel 
+          !    SW%GammaPanels(1:SW%ncp_ll_tot)                 = SW%GammaBoundLast
+          !    SW%GammaPanels(1+SW%ncp_ll_tot:2*SW%ncp_ll_tot) = SW%GammaBoundLast ! The NW panels
+          !else
+          !    SW%GammaPanels=SW%GammaBoundLast
+          !end if 
+          !! The induced velocity from the profiles is different at each iteration:
+          !call fUi_VoRing_IR(Panl,SW%CP_ll,SW%ncp_ll_tot,Panl%IUseProfilesWithNW,SW%GammaPanels,SW%U_prof)  ! no side effects
+          !! Building Vrel ( taking advantage of the computation of the constant part)
+          !do icp=1,SW%ncp_ll_tot 
+          !    m%Vtot_ll(1:3,icp) = SW%Vrel_ll_cst(1:3,icp) + SW%U_prof(1:3,icp)
+          !end do 
+          ! --- Computing circulation based on Vtot_LL
+          call CirculationFromPolarData(Gamma_LL, p, m)
+
+          ! --------------------------------------------- 
+          ! Differences between iterations and relaxation
+          DGamma=Gamma_LL-GammaLastIter 
+          GammaLastIter=GammaLastIter+p%CircSolvRelaxation*DGamma
+
+          iIter=iIter+1
+          MeanGamma  = sum(abs(GammaLastIter))/(p%nWings*p%nSpan)
+          bConverged = maxval(abs(DGamma))/(MeanGamma)<p%CircSolvConvCrit
+      end do ! convergence loop
+      if (iIter==p%CircSolvMaxIter) then
+          print*,'Maximum number of iterations reached: ',iIter
+          Gamma_LL=GammaLastIter ! returning relaxed value if not converged
+       else
+          print*,'Circulation solve done after:', iIter,' iterations'
+          ! We return Gamma_LL
+       endif
+
+      deallocate(DGamma       )
+      deallocate(GammaLastIter)
+      STOP
+
+   end subroutine
+
+
+   !>  Compute circulation based on polar data
+   !! Uses m%Vtot_ll to compute Gamma_ll
+   subroutine CirculationFromPolarData(Gamma_LL, p, m)
+      real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
+      type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+      type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+      ! Local
+      integer(IntKi) :: iW, iCP  !< Index on wings and spanwise control points
+      real(ReKi), dimension(3) :: N, Tc      !<  Normal and Tangent vector
+      real(ReKi), dimension(3) :: Vrel, Vrel_orth, Vjouk, Vjouk_orth
+      real(ReKi)               :: Vrel_orth_norm, Vjouk_orth_norm
+      real(ReKi)               :: alpha, Re, Cl
+
+      do iW=1,p%nWings 
+         do icp=1,p%nSpan
+            ! Aliases to shorten notations
+            N    = m%Norm(1:3, icp, iW) 
+            Tc   = m%Tang(1:3, icp, iW)
+            Vrel = m%Vtot_LL(1:3,icp,iW)
+            ! "Orth": cross sectional plane of the lifting line 
+            Vrel_orth(1:3)  = dot_product(Vrel,N)*N + dot_product(Vrel,Tc)*Tc
+            Vrel_orth_norm  = norm2(Vrel_orth(1:3))
+            Vjouk(1:3)      = cross_product(Vrel,m%dl(1:3,icp,iW))
+            Vjouk_orth(1:3) = dot_product(Vjouk,N)*N + dot_product(Vjouk,Tc)*Tc
+            Vjouk_orth_norm = norm2(Vjouk_orth)
+
+            alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
+            !Re    = LL%Vrel_orth_norm(icp)*LL%chord(icp)/KinVisc/(1.E6_MK) ! TODO TODO TODO KinVisc
+
+            if (p%PrescribedPolar==idPolarAeroDyn) then
+               print*,'TODO TODO TODO Get Cl, Cd, Cm from alpha, Re and AirfoilInfo'
+               STOP
+            else if (p%PrescribedPolar==idPolar2PiAlpha) then
+               Cl=TwoPi*alpha
+            else if (p%PrescribedPolar==idPolar2PiSinAlpha) then
+               Cl=TwoPi*sin(alpha)
+            else
+               print*,'Unknown PrescribedPolar value'
+               STOP
+            endif
+            ! Simple method:
+            !    Gamma_LL=(0.5 * Cl * Vrel_orth_norm*chord)
+            ! VanGarrel's method:
+            Gamma_LL(icp,iW) =(0.5_ReKi * Cl * Vrel_orth_norm**2*m%Area(icp,iW)/(Vjouk_orth_norm))
+         enddo
+      enddo
+   end subroutine CirculationFromPolarData
+
+
 
 end module FVW_Wings

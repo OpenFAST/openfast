@@ -460,7 +460,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    integer(IntKi),                intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                  intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)           :: iSpan,iAge, iW, nSeg, nSegP
+   integer(IntKi)           :: iSpan,iAge, iW, nSeg, nSegP, nCPs
    real(ReKi), dimension(3) :: U_mean
    integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
@@ -473,45 +473,77 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    call AllocAry( dxdt%r_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Wind on NW ', ErrStat, ErrMsg ); dxdt%r_NW= -999999_ReKi;
    call AllocAry( dxdt%r_FW , 3   ,      2      ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat, ErrMsg ); dxdt%r_FW= -999999_ReKi;
 
-   if (p%FreeWake) then
-      print*,'TODO free wake convection'
-      STOP
-   else
+   if (t> p%FreeWakeStart) then
+!       print*,' Free wake convection'
+!       ! --- Packing all vortex elements into a list of segments
+!       call PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+!       print*,'Number of segments',nSeg, 'Number of points',nSegP
+! 
+!       ! --- Computing induced velocity
+!       ! TODO for now point by point..
+!       allocate(SegSmooth(1:nSeg));
+!       SegSmooth=10
+!       SmoothModel=idSegSmoothLambOseen
+!       ! --- On NW
+!       allocate(Uind(1:3,1))
+!       allocate(CPs (1:3,1))
+!       CPs=0
+!       Uind=0
+!       do iW=1,p%nWings
+!          do iAge=1,m%nNW+1
+!             do iSpan=1,p%nSpan+1
+!                Uind(1:3,1)=0.0_ReKi
+!                CPs(1:3,1) = x%r_NW(1:3,iSpan,iAge,iW)
+! 
+!                CALL ui_seg(1, 1, 1, CPs, &
+!                      1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma,   &
+!                      SmoothModel, SegSmooth, Uind)
+! !                print*,'Uind',Uind
+!                m%Vind_NW(1:3,iSpan,iAge,iW) = Uind(1:3,1)
+!             enddo
+!          enddo
+!       enddo
+!       deallocate(Uind)
+!       deallocate(CPs)
+!       print*,'1    ', m%Vind_NW(1:3,1,1,1) 
+!       print*,'1last', m%Vind_NW(1:3,p%nSpan+1,1,1) 
+!       print*,'llast', m%Vind_NW(1:3,p%nSpan+1,m%nNW,p%nWings) 
+      
 
       ! --- Packing all vortex elements into a list of segments
       call PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
       print*,'Number of segments',nSeg, 'Number of points',nSegP
-
+! 
       ! --- Computing induced velocity
-      ! TODO for now point by point..
       allocate(SegSmooth(1:nSeg));
       SegSmooth=10
-      allocate(Uind(1:3,1))
-      allocate(CPs (1:3,1))
-      CPs=0
-      Uind=0
       SmoothModel=idSegSmoothLambOseen
-      ! --- On NW
-      do iW=1,p%nWings
-         do iAge=1,m%nNW+1
-            do iSpan=1,p%nSpan+1
-               Uind(1:3,1)=0.0_ReKi
-               CPs(1:3,1) = x%r_NW(1:3,iSpan,iAge,iW)
+      m%Vind_NW = -9999
+      nCPs=nSegP
+      allocate(CPs (1:3,1:nCPs))
+      allocate(Uind(1:3,1:nCPs))
+      Uind=0.0_ReKi !< important due to side effects of ui_seg
+      ! ---
+      call PackConvectingPoints(p, m, x, z, CPs, nCPs)
+      print*,'Number of points packed for Convection:',nCPs, nSegP
+      CALL ui_seg( 1, nCPs, nCPs, CPs, &
+            1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma,   &
+            SmoothModel, SegSmooth, Uind)
+      print*,'1    ',Uind(1:3,1)
+      call UnPackInducedVelocity(p, m, x, z, Uind)
 
-               CALL ui_seg(CPs, 1, 1, 1, &
-                     SegPoints, SegConnct, SegGamma, 1, nSeg, nSeg, nSegP,   &
-                     SmoothModel, SegSmooth, Uind)
-!                print*,'Uind',Uind
-               m%Vind_NW(1:3,iSpan,iAge,iW) = Uind(1:3,1)
-            enddo
-         enddo
-      enddo
+      print*,'1    ', m%Vind_NW(1:3,1,1,1) 
+      print*,'1last', m%Vind_NW(1:3,p%nSpan+1,1,1) 
+      print*,'llast', m%Vind_NW(1:3,p%nSpan+1,m%nNW,p%nWings) 
+
+      deallocate(Uind)
+      deallocate(CPs)
+
       deallocate(SegConnct)
       deallocate(SegGamma)
       deallocate(SegPoints)
       deallocate(SegSmooth)
-      deallocate(Uind)
-      deallocate(CPs)
+
 
       U_mean(1:3)=0
       do iW=1,p%nWings; do iAge=1,m%nNW+1; do iSpan=1,p%nSpan+1;  
@@ -519,7 +551,26 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       enddo; enddo; enddo
       U_mean(1:3) = U_mean(1:3)/ ((m%nNW+1)*(p%nSpan+1)*p%nWings)
       print*,'Mean convection velocity NW: ',U_mean(1:3)
+      U_mean(1:3)=0
+      do iW=1,p%nWings; do iAge=1,m%nNW+1; do iSpan=1,p%nSpan+1;  
+         U_mean(1:3)= U_mean(1:3)+ m%Vwnd_NW(1:3, iSpan, iAge, iW)
+      enddo; enddo; enddo
+      U_mean(1:3) = U_mean(1:3)/ ((m%nNW+1)*(p%nSpan+1)*p%nWings)
+      print*,'Mean convection velocity NW: ',U_mean(1:3)
+      U_mean(1:3)=0
+      do iW=1,p%nWings; do iAge=1,m%nFW+1; do iSpan=1,2;
+         U_mean(1:3)= U_mean(1:3)+ m%Vwnd_FW(1:3, iSpan, iAge, iW)
+      enddo; enddo; enddo
+      U_mean(1:3) = U_mean(1:3)/ ((m%nFW+1)*(2)*p%nWings)
+      print*,'Mean convection velocity FW: ',U_mean(1:3)
 
+
+      ! --- Vortex points are convected with the free stream and induced velocity
+      dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  m%Vind_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
+      !dxdt%r_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings) = m%Vwnd_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings) ! TODO TODO
+!       STOP
+!       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
+   else
 
       U_mean(1:3)=0
       do iW=1,p%nWings; do iAge=1,m%nNW+1; do iSpan=1,p%nSpan+1;  
@@ -538,8 +589,6 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ! --- Vortex points are convected with the free stream
       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
       dxdt%r_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings) = m%Vwnd_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings)
-
-      dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  m%Vind_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
    endif
 end subroutine FVW_CalcContStateDeriv
 

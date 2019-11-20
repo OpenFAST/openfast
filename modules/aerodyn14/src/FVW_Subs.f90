@@ -8,9 +8,13 @@ module FVW_SUBS
 
    ! --- Module parameters
    ! Circulation solving methods
-   integer(IntKi), parameter :: idCircNoFlowThrough = 0
-   integer(IntKi), parameter :: idCircPolarData     = 1
+   integer(IntKi), parameter :: idCircPolarData     = 0
+   integer(IntKi), parameter :: idCircNoFlowThrough = 1
    integer(IntKi), parameter :: idCircPrescribed    = 2
+   ! Polar data
+   integer(IntKi), parameter :: idPolarAeroDyn      = 0
+   integer(IntKi), parameter :: idPolar2PiAlpha     = 1
+   integer(IntKi), parameter :: idPolar2PiSinAlpha  = 2
    ! Integration method
    integer(IntKi), parameter :: idRK4      = 1 
    integer(IntKi), parameter :: idAB4      = 2
@@ -275,6 +279,49 @@ subroutine DistributeRequestedWind(V_wind, x, p, m, ErrStat, ErrMsg )
 
 end subroutine DistributeRequestedWind
 
+
+!> Distribute the induced velocity to the proper location 
+subroutine UnPackInducedVelocity(p, m, x, z, Uind)
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
+   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
+   type(FVW_ConstraintStateType),   intent(in   ) :: z       !< Initial misc/optimization variables
+   real(ReKi), dimension(:,:)   ,   intent(in   ) :: Uind    !< Induced velocity
+   ! Local
+   integer(IntKi) :: iW, iHeadP
+   iHeadP=1
+   do iW=1,p%nWings
+      CALL VecToLattice(Uind, m%Vind_NW(:,:,1:m%nNW+1,iW), iHeadP)
+   enddo
+   if ((iHeadP-1)/=size(Uind,2)) then
+      print*,'UnPackInducedVelocity: Number of points wrongly estimated',size(Uind,2), iHeadP-1
+      STOP
+   endif
+end subroutine
+
+
+!> Distribute the induced velocity to the convecting points
+subroutine PackConvectingPoints(p, m, x, z, Points, nPoints)
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
+   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
+   type(FVW_ConstraintStateType),   intent(in   ) :: z       !< Initial misc/optimization variables
+   real(ReKi), dimension(:,:)   ,   intent(inout) :: Points  !< Points packed
+   integer(IntKi),                  intent(  out) :: nPoints  !< Number of points packed
+   ! Local
+   integer(IntKi) :: iW, iHeadP
+
+   ! --- Compute number of convecting points
+   iHeadP=1
+   do iW=1,p%nWings
+      CALL LatticeToPoints(x%r_NW(1:3,:,1:m%nNW+1,iW) , Points, iHeadP)
+   enddo
+   if ((iHeadP-1)/=size(Points,2)) then
+      print*,'PackConvectingPoints: Number of points wrongly estimated',size(Points,2), iHeadP-1
+      STOP
+   endif
+   nPoints=iHeadP-1
+end subroutine
 
 subroutine PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
