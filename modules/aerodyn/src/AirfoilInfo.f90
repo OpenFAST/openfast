@@ -429,9 +429,6 @@ MODULE AirfoilInfo
       
       ! Default to linear interpolation
    DefaultInterpOrd = 1      
-#ifdef SPLINE_INTERP
-   DefaultInterpOrd = 3      
-#endif
       
       CALL ParseVarWDefault ( FileInfo, CurLine, 'InterpOrd', p%InterpOrd, DefaultInterpOrd, ErrStat2, ErrMsg2, UnEc )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
