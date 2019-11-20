@@ -11,12 +11,13 @@ MODULE FVW_VortexTools
 
 CONTAINS
 
-   subroutine VecToLattice(PointVectors, LatticeVectors, iHeadP)
+   subroutine VecToLattice(PointVectors, iDepthStart, LatticeVectors, iHeadP)
       real(Reki), dimension(:,:),        intent(in   )  :: PointVectors   !< nVal x n
+      integer(IntKi),                    intent(in   )  :: iDepthStart    !< Start index for depth dimension
       real(ReKi), dimension(:,:,:),      intent(inout)  :: LatticeVectors !< nVal x nSpan x nDepth
       integer(IntKi),                    intent(inout)  :: iHeadP         !< Index indicating where to start in PointVectors
       integer(IntKi) :: iSpan, iDepth
-      do iDepth = 1,  size(LatticeVectors,3)
+      do iDepth = iDepthStart,  size(LatticeVectors,3)
          do iSpan = 1, size(LatticeVectors,2)
             LatticeVectors(:, iSpan, iDepth) = PointVectors(:, iHeadP)
             iHeadP=iHeadP+1
@@ -24,8 +25,9 @@ CONTAINS
       enddo
    end subroutine
 
-   subroutine LatticeToPoints(LatticePoints, Points, iHeadP)
+   subroutine LatticeToPoints(LatticePoints, iDepthStart, Points, iHeadP)
       real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points 3 x nSpan x nDepth
+      integer(IntKi),                  intent(in   )  :: iDepthStart    !< Start index for depth dimension
       real(ReKi), dimension(:,:),      intent(inout)  :: Points         !< 
       integer(IntKi),                  intent(inout)  :: iHeadP         !< Index indicating where to start in Points
       ! Local
@@ -38,7 +40,7 @@ CONTAINS
       !   |   |
       !   1---4
       !
-      do iDepth = 1,  size(LatticePoints,3)
+      do iDepth = iDepthStart,  size(LatticePoints,3)
          do iSpan = 1, size(LatticePoints,2)
             Points(1:3,iHeadP) = LatticePoints(1:3, iSpan, iDepth)
             iHeadP=iHeadP+1
@@ -47,9 +49,10 @@ CONTAINS
 
    endsubroutine LatticeToPoints
 
-   subroutine LatticeToSegments(LatticePoints, LatticeGamma, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+   subroutine LatticeToSegments(LatticePoints, LatticeGamma, iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
       real(Reki), dimension(:,:,:),    intent(in   )  :: LatticePoints  !< Points 3 x nSpan x nDepth
       real(Reki), dimension(:,:),      intent(in   )  :: LatticeGamma   !< GammaPanl  nSpan x nDepth
+      integer(IntKi),                  intent(in   )  :: iDepthStart    !< Start index for depth dimension
       real(ReKi), dimension(:,:),      intent(inout)  :: SegPoints      !< 
       integer(IntKi), dimension(:,:),  intent(inout)  :: SegConnct      !< 
       real(ReKi),     dimension(:),    intent(inout)  :: SegGamma       !< 
@@ -70,7 +73,7 @@ CONTAINS
       iHeadP0=iHeadP ! Storing
       ! --- Flattening LatticePoints into SegPoints array, and increment iHeadP
       ! We will need all the points, we flatten the point array
-      call LatticeToPoints(LatticePoints, SegPoints, iHeadP)
+      call LatticeToPoints(LatticePoints, iDepthStart, SegPoints, iHeadP)
 
       ! --- Creating segments
       ! Naming convention for point indices and segments of a panel:
@@ -86,7 +89,7 @@ CONTAINS
       !     2->-3
       !     ^   v
       !     1-<-4
-      do iDepth = 1, nDepth-1
+      do iDepth = iDepthStart, nDepth-1
          do iSpan = 1, nSpan-1
             iseg1 = iHeadP0 + (iSpan-1) +(iDepth-1)*nSpan  ! Point 1
             iseg2 = iHeadP0 + (iSpan  ) +(iDepth-1)*nSpan  ! Point 2
@@ -132,6 +135,19 @@ CONTAINS
 
    end subroutine 
 
+   subroutine print_mean_4d(M, Label)
+      real(ReKi), dimension(:,:,:,:), intent(in) :: M
+      character(len=*), intent(in)               :: Label
+      integer(IntKi) :: i, j, k
+      real(ReKi), dimension(3) :: U
+      !
+      U(1:3)=0
+      do i=1,size(M,4); do j=1,size(M,3); do k=1,size(M,2); 
+         U(1:3)= U(1:3)+ M(1:3, k, j, i)
+      enddo; enddo; enddo; 
+      U(1:3)=U(1:3)/ (size(M,4)*size(M,3)*size(M,2))
+      print'(A20,3F12.4)',trim(Label),U
+   end subroutine
 
 
 END MODULE FVW_VortexTools

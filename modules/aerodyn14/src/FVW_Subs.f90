@@ -3,6 +3,7 @@ module FVW_SUBS
    use NWTC_LIBRARY
    use FVW_TYPES
    use FVW_VortexTools
+   use FVW_BiotSavart
 
    implicit none
 
@@ -21,6 +22,8 @@ module FVW_SUBS
    integer(IntKi), parameter :: idABM4     = 3
    integer(IntKi), parameter :: idEuler1   = 5
 
+   ! Implementation 
+   integer(IntKi), parameter :: iNWStart=2 !< Index in r%NW where the near wake start (if >1 then the Wing panels are included in r_NW)
 contains
 
 !==========================================================================
@@ -281,17 +284,16 @@ end subroutine DistributeRequestedWind
 
 
 !> Distribute the induced velocity to the proper location 
-subroutine UnPackInducedVelocity(p, m, x, z, Uind)
+subroutine UnPackInducedVelocity(p, m, x, Uind)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
-   type(FVW_ConstraintStateType),   intent(in   ) :: z       !< Initial misc/optimization variables
    real(ReKi), dimension(:,:)   ,   intent(in   ) :: Uind    !< Induced velocity
    ! Local
    integer(IntKi) :: iW, iHeadP
    iHeadP=1
    do iW=1,p%nWings
-      CALL VecToLattice(Uind, m%Vind_NW(:,:,1:m%nNW+1,iW), iHeadP)
+      CALL VecToLattice(Uind, 1, m%Vind_NW(:,:,1:m%nNW+1,iW), iHeadP)
    enddo
    if ((iHeadP-1)/=size(Uind,2)) then
       print*,'UnPackInducedVelocity: Number of points wrongly estimated',size(Uind,2), iHeadP-1
@@ -301,11 +303,10 @@ end subroutine
 
 
 !> Distribute the induced velocity to the convecting points
-subroutine PackConvectingPoints(p, m, x, z, Points, nPoints)
+subroutine PackConvectingPoints(p, m, x, Points, nPoints)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
-   type(FVW_ConstraintStateType),   intent(in   ) :: z       !< Initial misc/optimization variables
    real(ReKi), dimension(:,:)   ,   intent(inout) :: Points  !< Points packed
    integer(IntKi),                  intent(  out) :: nPoints  !< Number of points packed
    ! Local
@@ -314,7 +315,7 @@ subroutine PackConvectingPoints(p, m, x, z, Points, nPoints)
    ! --- Compute number of convecting points
    iHeadP=1
    do iW=1,p%nWings
-      CALL LatticeToPoints(x%r_NW(1:3,:,1:m%nNW+1,iW) , Points, iHeadP)
+      CALL LatticeToPoints(x%r_NW(1:3,:,1:m%nNW+1,iW), 1, Points, iHeadP)
    enddo
    if ((iHeadP-1)/=size(Points,2)) then
       print*,'PackConvectingPoints: Number of points wrongly estimated',size(Points,2), iHeadP-1
@@ -323,11 +324,11 @@ subroutine PackConvectingPoints(p, m, x, z, Points, nPoints)
    nPoints=iHeadP-1
 end subroutine
 
-subroutine PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+subroutine PackPanelsToSegments(p, m, x, iNWStart, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_MiscVarType),           intent(in   ) :: m       !< Initial misc/optimization variables
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
-   type(FVW_ConstraintStateType),   intent(in   ) :: z       !< Initial misc/optimization variables
+   integer(IntKi),                  intent(in   ) :: iNWStart !< Index where we start packing for NW panels
    integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
@@ -339,8 +340,8 @@ subroutine PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, n
    !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
 
    ! Counting total number of segments TODO add FarWake
-   nP =      p%nWings * (  (p%nSpan+1)*(m%nNW+1)            )
-   nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW+1)-p%nSpan-m%nNW-2)  
+   nP =      p%nWings * (  (p%nSpan+1)*(m%nNW-iNWStart+2)            )
+   nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iNWStart+2)-(p%nSpan+1)-(m%nNW-iNWStart+1+1))  
 !    nP = nP + p%nWings * (p%nSpan+1)*2
 !    nC = nC + p%nWings * (2*(p%nSpan+1)*(2)-p%nSpan-1-2)
 
@@ -356,22 +357,68 @@ subroutine PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, n
    iHeadP=1
    iHeadC=1
    do iW=1,p%nWings
-      CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iNWStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
    enddo
-!    do iW=1,p%nWings
-!       Buffer2d(1,:)=m%Gamma_LL(:,iW)
-!       CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), Buffer2d, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
-!    enddo
    if ((iHeadP-1)/=nP) then
-      print*,'Number of points wrongly estimated',nP, iHeadP-1
+      print*,'PackPanelsToSegments: Number of points wrongly estimated',nP, iHeadP-1
       STOP
    endif
    if ((iHeadC-1)/=nC) then
-      print*,'Number of segments wrongly estimated',nC, iHeadC-1
+      print*,'PackPanelsToSegments: Number of segments wrongly estimated',nC, iHeadC-1
       STOP
    endif
    nSeg  = iHeadC-1
    nSegP = iHeadP-1
-end subroutine PackAllPanelsToSegments
+end subroutine PackPanelsToSegments
+
+subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
+   type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
+   type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
+   type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
+   ! Local variables
+   integer(IntKi) :: SmoothModel !< TODO input file parameter
+   integer(IntKi) :: iSpan,iAge, iW, nSeg, nSegP, nCPs
+   integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
+   real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
+   real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
+   real(ReKi),    dimension(:)  , allocatable :: SegSmooth  !< Segment smooth parameter
+   real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
+   real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
+   integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
+   character(*),                intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+
+   m%Vind_NW = -9999._ReKi !< Safety
+   m%Vind_FW = -9999._ReKi !< Safety
+
+   ! --- Packing all vortex elements into a list of segments
+   call PackPanelsToSegments(p, m, x, 1, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
+   print*,'Number of segments',nSeg, 'Number of points',nSegP
+   ! 
+   ! --- Computing induced velocity
+   allocate(SegSmooth(1:nSeg));
+   SegSmooth=10
+   SmoothModel=idSegSmoothLambOseen
+   nCPs=nSegP
+   allocate(CPs (1:3,1:nCPs))
+   allocate(Uind(1:3,1:nCPs))
+   Uind=0.0_ReKi !< important due to side effects of ui_seg
+   ! ---
+   call PackConvectingPoints(p, m, x, CPs, nCPs)
+   print*,'Number of points packed for Convection:',nCPs, nSegP
+   CALL ui_seg( 1, nCPs, nCPs, CPs, &
+      1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma,   &
+      SmoothModel, SegSmooth, Uind)
+   call UnPackInducedVelocity(p, m, x, Uind)
+
+   deallocate(Uind)
+   deallocate(CPs)
+   deallocate(SegConnct)
+   deallocate(SegGamma)
+   deallocate(SegPoints)
+   deallocate(SegSmooth)
+end subroutine
+
+
+
 
 end module FVW_Subs

@@ -69,7 +69,7 @@ contains
 
       iHeadP=1
       iHeadC=1
-      CALL LatticeToSegments(LatticePoints1, LatticeGamma1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      CALL LatticeToSegments(LatticePoints1, LatticeGamma1, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
       CALL printall()
       CALL WrVTK_Segments('Points1_seg.vtk', SegPoints, SegConnct, SegGamma) 
 
@@ -96,7 +96,7 @@ contains
       allocate(SegGamma (1:nC2)    ); SegGamma=-9999
       iHeadP=1
       iHeadC=1
-      CALL LatticeToSegments(LatticePoints2, LatticeGamma2, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      CALL LatticeToSegments(LatticePoints2, LatticeGamma2, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
       CALL printall()
       CALL WrVTK_Segments('Points2_seg.vtk', SegPoints, SegConnct, SegGamma) 
 
@@ -111,8 +111,8 @@ contains
       allocate(SegConnct(1:2,1:nC)); SegConnct=-1
       allocate(SegPoints(1:3,1:nP)); SegPoints=-1
       allocate(SegGamma (1:nC)    ); SegGamma=-9999
-      CALL LatticeToSegments(LatticePoints1, LatticeGamma1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
-      CALL LatticeToSegments(LatticePoints2, LatticeGamma2, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      CALL LatticeToSegments(LatticePoints1, LatticeGamma1, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      CALL LatticeToSegments(LatticePoints2, LatticeGamma2, 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
       CALL printall()
       CALL WrVTK_Segments('PointsBoth_seg.vtk', SegPoints, SegConnct, SegGamma) 
 

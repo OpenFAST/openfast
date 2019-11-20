@@ -460,110 +460,31 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    integer(IntKi),                intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                  intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! Local variables
-   integer(IntKi)           :: iSpan,iAge, iW, nSeg, nSegP, nCPs
+   integer(IntKi)          :: iSpan,iAge, iW
+   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
+   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
    real(ReKi), dimension(3) :: U_mean
-   integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
-   real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
-   real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
-   real(ReKi),    dimension(:)  , allocatable :: SegSmooth  !< Segment smooth parameter
-   real(ReKi),    dimension(:,:),   allocatable :: CPs   !< ControlPoints
-   real(ReKi),    dimension(:,:),   allocatable :: Uind  !< Induced velocity
-   integer(IntKi)           :: SmoothModel
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    call AllocAry( dxdt%r_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Wind on NW ', ErrStat, ErrMsg ); dxdt%r_NW= -999999_ReKi;
    call AllocAry( dxdt%r_FW , 3   ,      2      ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat, ErrMsg ); dxdt%r_FW= -999999_ReKi;
 
    if (t> p%FreeWakeStart) then
-!       print*,' Free wake convection'
-!       ! --- Packing all vortex elements into a list of segments
-!       call PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
-!       print*,'Number of segments',nSeg, 'Number of points',nSegP
-! 
-!       ! --- Computing induced velocity
-!       ! TODO for now point by point..
-!       allocate(SegSmooth(1:nSeg));
-!       SegSmooth=10
-!       SmoothModel=idSegSmoothLambOseen
-!       ! --- On NW
-!       allocate(Uind(1:3,1))
-!       allocate(CPs (1:3,1))
-!       CPs=0
-!       Uind=0
-!       do iW=1,p%nWings
-!          do iAge=1,m%nNW+1
-!             do iSpan=1,p%nSpan+1
-!                Uind(1:3,1)=0.0_ReKi
-!                CPs(1:3,1) = x%r_NW(1:3,iSpan,iAge,iW)
-! 
-!                CALL ui_seg(1, 1, 1, CPs, &
-!                      1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma,   &
-!                      SmoothModel, SegSmooth, Uind)
-! !                print*,'Uind',Uind
-!                m%Vind_NW(1:3,iSpan,iAge,iW) = Uind(1:3,1)
-!             enddo
-!          enddo
-!       enddo
-!       deallocate(Uind)
-!       deallocate(CPs)
-!       print*,'1    ', m%Vind_NW(1:3,1,1,1) 
-!       print*,'1last', m%Vind_NW(1:3,p%nSpan+1,1,1) 
-!       print*,'llast', m%Vind_NW(1:3,p%nSpan+1,m%nNW,p%nWings) 
       
+      ! --- Compute Induced velocities on the Near wake and far wake based on the marker postions:
+      ! (expensive N^2 call)
+      ! In  : x%r_NW,    r%r_FW 
+      ! Out:  m%Vind_NW, m%Vind_FW
+      m%Vind_NW=-999999._ReKi
+      m%Vind_FW=-999999._ReKi
+      call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2)
 
-      ! --- Packing all vortex elements into a list of segments
-      call PackAllPanelsToSegments(p, m, x, z, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
-      print*,'Number of segments',nSeg, 'Number of points',nSegP
-! 
-      ! --- Computing induced velocity
-      allocate(SegSmooth(1:nSeg));
-      SegSmooth=10
-      SmoothModel=idSegSmoothLambOseen
-      m%Vind_NW = -9999
-      nCPs=nSegP
-      allocate(CPs (1:3,1:nCPs))
-      allocate(Uind(1:3,1:nCPs))
-      Uind=0.0_ReKi !< important due to side effects of ui_seg
-      ! ---
-      call PackConvectingPoints(p, m, x, z, CPs, nCPs)
-      print*,'Number of points packed for Convection:',nCPs, nSegP
-      CALL ui_seg( 1, nCPs, nCPs, CPs, &
-            1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma,   &
-            SmoothModel, SegSmooth, Uind)
-      print*,'1    ',Uind(1:3,1)
-      call UnPackInducedVelocity(p, m, x, z, Uind)
-
-      print*,'1    ', m%Vind_NW(1:3,1,1,1) 
-      print*,'1last', m%Vind_NW(1:3,p%nSpan+1,1,1) 
-      print*,'llast', m%Vind_NW(1:3,p%nSpan+1,m%nNW,p%nWings) 
-
-      deallocate(Uind)
-      deallocate(CPs)
-
-      deallocate(SegConnct)
-      deallocate(SegGamma)
-      deallocate(SegPoints)
-      deallocate(SegSmooth)
-
-
-      U_mean(1:3)=0
-      do iW=1,p%nWings; do iAge=1,m%nNW+1; do iSpan=1,p%nSpan+1;  
-         U_mean(1:3)= U_mean(1:3)+ m%Vind_NW(1:3, iSpan, iAge, iW)
-      enddo; enddo; enddo
-      U_mean(1:3) = U_mean(1:3)/ ((m%nNW+1)*(p%nSpan+1)*p%nWings)
-      print*,'Mean convection velocity NW: ',U_mean(1:3)
-      U_mean(1:3)=0
-      do iW=1,p%nWings; do iAge=1,m%nNW+1; do iSpan=1,p%nSpan+1;  
-         U_mean(1:3)= U_mean(1:3)+ m%Vwnd_NW(1:3, iSpan, iAge, iW)
-      enddo; enddo; enddo
-      U_mean(1:3) = U_mean(1:3)/ ((m%nNW+1)*(p%nSpan+1)*p%nWings)
-      print*,'Mean convection velocity NW: ',U_mean(1:3)
-      U_mean(1:3)=0
-      do iW=1,p%nWings; do iAge=1,m%nFW+1; do iSpan=1,2;
-         U_mean(1:3)= U_mean(1:3)+ m%Vwnd_FW(1:3, iSpan, iAge, iW)
-      enddo; enddo; enddo
-      U_mean(1:3) = U_mean(1:3)/ ((m%nFW+1)*(2)*p%nWings)
-      print*,'Mean convection velocity FW: ',U_mean(1:3)
-
+      call print_mean_4d( m%Vind_NW(:,:, 1:m%nNW+1,:), 'Mean induced vel. NW')
+      call print_mean_4d( m%Vind_FW(:,:, 1:m%nFW+1,:), 'Mean induced vel. FW')
+      call print_mean_4d( m%Vwnd_NW(:,:, 1:m%nNW+1,:), 'Mean wind vel.    NW')
+      call print_mean_4d( m%Vwnd_FW(:,:, 1:m%nFW+1,:), 'Mean wind vel.    FW')
 
       ! --- Vortex points are convected with the free stream and induced velocity
       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  m%Vind_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
@@ -572,19 +493,8 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
 !       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
    else
 
-      U_mean(1:3)=0
-      do iW=1,p%nWings; do iAge=1,m%nNW+1; do iSpan=1,p%nSpan+1;  
-         U_mean(1:3)= U_mean(1:3)+ m%Vwnd_NW(1:3, iSpan, iAge, iW)
-      enddo; enddo; enddo
-      U_mean(1:3) = U_mean(1:3)/ ((m%nNW+1)*(p%nSpan+1)*p%nWings)
-      print*,'Mean convection velocity NW: ',U_mean(1:3)
-      U_mean(1:3)=0
-      do iW=1,p%nWings; do iAge=1,m%nFW+1; do iSpan=1,2;
-         U_mean(1:3)= U_mean(1:3)+ m%Vwnd_FW(1:3, iSpan, iAge, iW)
-      enddo; enddo; enddo
-      U_mean(1:3) = U_mean(1:3)/ ((m%nFW+1)*(2)*p%nWings)
-      print*,'Mean convection velocity FW: ',U_mean(1:3)
-
+      call print_mean_4d( m%Vwnd_NW(:,1:m%nNW+1,:,:), 'Mean wind vel.    NW')
+      call print_mean_4d( m%Vwnd_FW(:,1:m%nFW+1,:,:), 'Mean wind vel.    FW')
 
       ! --- Vortex points are convected with the free stream
       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
@@ -714,8 +624,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    endif
 
    if (.not. allocated(y%Vind)) then
-      !call AllocAry( y%Vind ,  3, p%nSpan, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 );
-      call AllocAry( y%Vind ,  3, p%nSpan, 3, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! TODO TODO TODO Hack nWings=3 for output
+      call AllocAry( y%Vind ,  3, p%nSpan, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 );
       if(Failed()) return
    endif
    ! Returned guessed locations where wind will be required
@@ -739,9 +648,9 @@ contains
    !==========================================================================
    !> Computes induction on the lifting line (3/4 chord point)
    ! Interpolate the values at the radial station of AeroDyn
-   subroutine CalcInduction_LL()
-
-   end subroutine CalcInduction_LL
+!    subroutine CalcInduction_LL()
+! 
+!    end subroutine CalcInduction_LL
 
 
    subroutine PrepareNextTimeStep()
