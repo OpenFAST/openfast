@@ -105,6 +105,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! TimeStamp
    write(Tstr, '(i' // trim(Num2LStr(Twidth)) //'.'// trim(Num2LStr(Twidth)) // ')') VTKcount
 
+print*,'Printing FVW data to vtk'
    nSpan  = p%nSpan
    nWings = p%nWings
    nNW    = m%nNW
