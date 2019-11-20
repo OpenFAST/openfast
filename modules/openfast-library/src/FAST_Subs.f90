@@ -5123,7 +5123,14 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
          call MeshWrVTK(p_FAST%TurbinePos, AD%y%TowerLoad, trim(VTK_path)//'.AD_Tower', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, AD%Input(1)%TowerMotion )     
          
       end if
-      
+
+         ! FVW submodule of AD15
+      if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
+         DO K=1,NumBl
+            call MeshWrVTK(p_FAST%TurbinePos, AD%m%FVW_u(1)%WingsMesh(k), trim(VTK_path)//'.FVW_WingsMesh'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, AD%Input(1)%BladeMotion(k) )
+            !call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.AD_BladeMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
+         END DO
+      end if
    END IF
    
 ! HydroDyn            
@@ -5274,19 +5281,13 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW,
       DO K=1,NumBl                 
          call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(VTK_path)//'.BD_BldMotion'//trim(num2lstr(k)), &
                         y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth )         
-      END DO  
+      END DO
    ELSE
       DO K=1,NumBl        
          call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%BladeLn2Mesh(K), trim(VTK_path)//'.ED_BladeLn2Mesh_motion'//trim(num2lstr(k)), &
                         y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth )
       END DO  
    END IF   
-         
-   ! Free wake
-!FIXME:FVW
-!   IF ( p_FAST%CompAero == Module_AD14 ) THEN  ! These meshes may have airfoil data associated with nodes...
-!       call WrVTK_FVW(AD14%p%FVW, AD14%x(1)%FVW, AD14%z(1)%FVW, AD14%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
-!   END IF
          
 ! Tower motions
    call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%TowerLn2Mesh, trim(VTK_path)//'.ED_TowerLn2Mesh_motion', &

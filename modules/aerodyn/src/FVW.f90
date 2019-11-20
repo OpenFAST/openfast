@@ -90,9 +90,11 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    p%nFWMax=100 ! TODO
    CALL FVW_InitMiscVars( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
-   ! Preliminary meshing of the wings (may depend on input file)
-   ! NOTE: the mesh is not located at the right position yet, the first call to calcoutput will redo some meshing
-   CALL Wings_Panelling_Init(InitInp%WingsMesh, InitInp%zLocal, InitInp%chord, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Move the InitInp%WingsMesh to u
+   CALL MOVE_ALLOC( InitInp%WingsMesh, u%WingsMesh )     ! Move from InitInp to u
+
+   ! This mesh is passed in as a cousin of the BladeMotion mesh.
+   CALL Wings_Panelling_Init(u%WingsMesh, InitInp%zLocal, InitInp%chord, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Set parameters from InputFileData (need Misc allocated)
    CALL FVW_SetParametersFromInputFile(InputFileData, p, m, ErrStat2, ErrMsg2); if(Failed()) return
@@ -105,13 +107,12 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL FVW_InitConstraint( z, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    ! Panelling wings based on initial input mesh provided
-   ! NOTE: the mesh is not located at the right position yet, the first call to calcoutput will redo some meshing
-   CALL Wings_Panelling     (InitInp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   ! This mesh is now a cousin of the BladeMotion mesh from AD.
+   CALL Wings_Panelling     (u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Returned guessed locations where wind will be required
    CALL SetRequestedWindPoints(y%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
    ! Return anything in FVW_InitOutput that should be passed back to the calling code here
-
 
 CONTAINS
 

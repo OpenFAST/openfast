@@ -70,6 +70,7 @@ contains
             m%s_CP_LL (iSpan, iW) = (m%s_LL    (iSpan,iW)+ m%s_LL    (iSpan+1,iW))/2
             m%chord_LL(iSpan, iW) = (m%chord_LL(iSpan,iW)+ m%chord_LL(iSpan+1,iW))/2
          enddo
+call MeshPrintInfo(CU, Meshes(iW) )
       enddo
    end subroutine Wings_Panelling_Init
 

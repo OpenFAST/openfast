@@ -395,8 +395,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       call FVW_CopyInput( m%FVW_u(1), m%FVW_u(2), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    endif
-
-     
+    
+ 
       !............................................................................................
       ! Define outputs here
       !............................................................................................
@@ -1528,7 +1528,8 @@ subroutine SetInputsForFVW(p, u, m, indx, errStat, errMsg)
 
 
       ! Rather than use a meshcopy, we will just copy what we need to the WingsMesh
-      ! NOTE: MeshCopy requires the source mesh to be INOUT intent
+      ! NOTE:  MeshCopy requires the source mesh to be INOUT intent
+      ! NOTE2: If we change the WingsMesh to not be identical to the BladeMotion mesh, add the mapping stuff here.
    do k=1,p%NumBlades
       if ( u%BladeMotion(k)%nNodes /= m%FVW_u(indx)%WingsMesh(k)%nNodes ) then
          ErrStat = ErrID_Fatal
@@ -2145,55 +2146,31 @@ print*,'===================== Setup before call to FVW_Init ====================
       end do
    end do
 
-!FIXME: do we need this mesh at all?
-      ALLOCATE( InitInp%WingsMesh(p%NumBlades), STAT = ErrStat2 )
-         IF (ErrStat2 /= 0) THEN
-            CALL SetErrStat ( ErrID_Fatal, 'Could not allocate InitInp%WingsMesh (meshes)', ErrStat,ErrMsg,RoutineName )
-            RETURN
-         END IF
-      DO IB = 1, p%NumBlades
-          CALL MeshCopy ( SrcMesh  = u_AD%BladeMotion(IB)  &
-                         ,DestMesh = InitInp%WingsMesh(IB) &
-                         ,CtrlCode = MESH_COUSIN         &
-                         ,Orientation    = .TRUE.        &
-                         ,TranslationVel = .TRUE.        &
-                         ,RotationVel    = .TRUE.        &
-                         ,ErrStat  = ErrStat2          &
-                         ,ErrMess  = ErrMsg2          )
-            CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
-            IF (ErrStat >= AbortErrLev) RETURN
-      ENDDO
-      ! ---- END TODO
 
+      ! Copy the mesh over for InitInp to FVW.  We would not need to copy this if we decided to break the Framework
+      !  by passing u_AD%BladeMotion directly into FVW_Init, but nothing is really gained by doing that.
+   ALLOCATE( InitInp%WingsMesh(p%NumBlades), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Could not allocate InitInp%WingsMesh (meshes)', ErrStat,ErrMsg,RoutineName )
+         RETURN
+      END IF
+   DO IB = 1, p%NumBlades
+      CALL MeshCopy ( SrcMesh  = u_AD%BladeMotion(IB)  &
+                     ,DestMesh = InitInp%WingsMesh(IB) &
+                     ,CtrlCode = MESH_COUSIN         &
+                     ,Orientation    = .TRUE.        &
+                     ,TranslationVel = .TRUE.        &
+                     ,RotationVel    = .TRUE.        &
+                     ,ErrStat  = ErrStat2          &
+                     ,ErrMess  = ErrMsg2          )
+      CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
+      IF (ErrStat >= AbortErrLev) RETURN
+   ENDDO
 
 
 !FIXME: Should we be passing any AFinfo?  Is that needed in FVW for anything?
-!   call FVW_Init( u_AD%BladeMotion, InitInp, u, p%FVW, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
    call FVW_Init( InitInp, u, p%FVW, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
       CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-         ! TODO ANDY
-         !FIXME   This really probably should be done inside of FVW_Init instead of here.
-         !        Not entirely sure how to pass the u%InputMarkers in though.
-      ALLOCATE( u%WingsMesh(p%NumBlades), STAT = ErrStat2 )
-         IF (ErrStat2 /= 0) THEN
-            CALL SetErrStat ( ErrID_Fatal, 'Could not allocate u%InputMarkers (meshes)', ErrStat,ErrMsg,RoutineName )
-            RETURN
-         END IF
-      DO IB = 1, p%NumBlades
-          CALL MeshCopy ( SrcMesh  = u_AD%BladeMotion(IB)  &
-                         ,DestMesh = u%WingsMesh(IB)     &
-                         ,CtrlCode = MESH_COUSIN         &
-                         ,Orientation    = .TRUE.        &
-                         ,TranslationVel = .TRUE.        &
-                         ,RotationVel    = .TRUE.        &
-                         ,ErrStat  = ErrStat2          &
-                         ,ErrMess  = ErrMsg2          )
-            CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,RoutineName )
-            IF (ErrStat >= AbortErrLev) RETURN
-
-         u%WingsMesh(IB)%RemapFlag = .TRUE.
-       ENDDO
 
 
       ! If anything is passed back in InitOut%FVW, deal with it here...
