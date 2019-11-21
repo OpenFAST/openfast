@@ -29,6 +29,7 @@ module FVW_SUBS
 
    ! Implementation 
    integer(IntKi), parameter :: iNWStart=2 !< Index in r%NW where the near wake start (if >1 then the Wing panels are included in r_NW)
+   integer(IntKi), parameter :: FWnSpan=1  !< Number of spanwise far wake panels ! TODO make it an input later
 contains
 
 !==========================================================================
@@ -205,14 +206,21 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
    ! First Panel of Farwake has coordinates of last panel of near wake always
    if (p%nFWMax>0) then
       do iW=1,p%nWings
-         x%r_FW(1:3,1,iAgeFW,iW) =  x%r_NW(1:3,1         ,p%nNWMax+1,iW) ! Point 1 (root)
-         x%r_FW(1:3,2,iAgeFW,iW) =  x%r_NW(1:3,p%nSpan+1 ,p%nNWMax+1,iW) ! Point 2 (tip)
+         x%r_FW(1:3,1        ,iAgeFW,iW) =  x%r_NW(1:3,1         ,p%nNWMax+1,iW) ! Point 1 (root)
+         x%r_FW(1:3,FWnSpan+1,iAgeFW,iW) =  x%r_NW(1:3,p%nSpan+1 ,p%nNWMax+1,iW) ! Point FWnSpan (tip)
+         if ((FWnSpan==2)) then
+            ! in between point
+            x%r_FW(1:3,2,iAgeFW,iW) =  x%r_NW(1:3,int(p%nSpan+1)/4 ,p%nNWMax+1,iW) ! Point (mid)
+         else if ((FWnSpan>2)) then
+            print*,'Error: FWnSpan>2 not implemented.'
+            STOP
+         endif
       enddo
       if (m%nNW==p%nNWMax) then
          ! First circulation of Farwake is taken as the mean circulation of last NW column
          do iW=1,p%nWings
             FWGamma = sum(x%Gamma_NW(:,p%nNWMax,iW))/p%nSpan
-            x%Gamma_FW(1,iAgeFW,iW) = FWGamma
+            x%Gamma_FW(1:FWnSpan,iAgeFW,iW) = FWGamma
          enddo
       endif
    endif
@@ -233,18 +241,20 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
    ! -- Propagate far wake
       do iW=1,p%nWings
          do iAge=p%nFWMax+1,2,-1 ! 
-            do iSpan=1,2
+            do iSpan=1,FWnSpan+1
                x%r_FW(1:3,iSpan,iAge,iW) = x%r_FW(1:3,iSpan,iAge-1,iW)
             enddo
          enddo
-         x%r_FW(1:3,1:2,1,iW) = -999.0_ReKi ! Nullified
+         x%r_FW(1:3,1:FWnSpan,1,iW) = -999.0_ReKi ! Nullified
       enddo
    if (p%nFWMax>0) then
       do iW=1,p%nWings
          do iAge=p%nFWMax,2,-1
-            x%Gamma_FW(1,iAge,iW) = x%Gamma_FW(1,iAge-1,iW)
+            do iSpan=1,FWnSpan
+               x%Gamma_FW(iSpan,iAge,iW) = x%Gamma_FW(iSpan,iAge-1,iW)
+            enddo
          enddo
-         x%Gamma_FW(1,1,iW) = -999.0_ReKi ! Nullified
+         x%Gamma_FW(1,1:FWnSpan-1,iW) = -999.0_ReKi ! Nullified
       enddo
    endif
    ! --- Propagate near wake
@@ -286,9 +296,9 @@ subroutine print_r_NW_FW(p, m, z, x, label)
    print*,'FW'
    do iAge=1,p%nFWMax+1
       print*,'iAge',iAge
-      print*,trim(label), x%r_FW(1, 1:2, iAge,1)
-      print*,trim(label), x%r_FW(2, 1:2, iAge,1)
-      print*,trim(label), x%r_FW(3, 1:2, iAge,1)
+      print*,trim(label), x%r_FW(1, 1, iAge,1), x%r_FW(1, FWnSpan+1, iAge,1)
+      print*,trim(label), x%r_FW(2, 1, iAge,1), x%r_FW(2, FWnSpan+1, iAge,1)
+      print*,trim(label), x%r_FW(3, 1, iAge,1), x%r_FW(3, FWnSpan+1, iAge,1)
    enddo
 endsubroutine
 
@@ -316,7 +326,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
    nTot = 0
    nTot = nTot + p%nWings *  p%nSpan                ! Lifting line Control Points
    nTot = nTot + p%nWings * (p%nSpan+1) * (m%nNW+1) ! Nearwake points
-   nTot = nTot + p%nWings * (   1   +1) * (m%nFW+1) ! War wake points
+   nTot = nTot + p%nWings * (FWnSpan+1) * (m%nFW+1) ! War wake points
 
    call AllocAry( r_wind , 3, nTot, 'Requested Wind Points', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'SetRequestedWindPoints'); 
    r_wind(1:3,1:nTot)= -999999_ReKi;
@@ -343,7 +353,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
 
    ! --- FW points
    do iW = 1, p%nWings
-      do iSpan = 1, 2 ! root and tip
+      do iSpan = 1, FWnSpan+1 ! root and tip
          do iAge = 1, m%nFW + 1
             iP=iP+1
             r_wind(1:3,iP) = x%r_FW(1:3, iSpan, iAge, iW)
@@ -374,7 +384,7 @@ subroutine DistributeRequestedWind(V_wind, x, p, m, ErrStat, ErrMsg )
    nTot = 0
    nTot = nTot + p%nWings *  p%nSpan                ! Lifting line Control Points
    nTot = nTot + p%nWings * (p%nSpan+1) * (m%nNW+1) ! Nearwake points
-   nTot = nTot + p%nWings * (   1   +1) * (m%nFW+1) ! War wake points
+   nTot = nTot + p%nWings * (FWnSpan+1) * (m%nFW+1) ! Far wake points
    if (size(V_wind,2)<nTot) then
       print*,'Wrong number of points, expecting:',nTot,' got:', size(V_wind,2)
       STOP
@@ -401,7 +411,7 @@ subroutine DistributeRequestedWind(V_wind, x, p, m, ErrStat, ErrMsg )
 
    ! --- FW points
    do iW = 1, p%nWings
-      do iSpan = 1, 2 ! root and tip
+      do iSpan = 1, FWnSpan+1 ! root and tip
          do iAge = 1, m%nFW + 1
             iP=iP+1
             m%Vwnd_NW(1:3, iSpan, iAge, iW) = V_wind(1:3,iP)
@@ -430,12 +440,12 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    real(ReKi), dimension(:,:), allocatable :: Buffer2d
    !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
 
-   ! Counting total number of segments TODO add FarWake
+   ! Counting total number of segments
    nP =      p%nWings * (  (p%nSpan+1)*(m%nNW-iDepthStart+2)            )
    nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iDepthStart+2)-(p%nSpan+1)-(m%nNW-iDepthStart+1+1))  
    if (m%nFW>0) then
-      nP = nP + p%nWings * (    2       *(m%nFW+1) )
-      nC = nC + p%nWings * (3*m%nFW+1 )
+      nP = nP + p%nWings * (  (FWnSpan+1)*(m%nFW+1) )
+      nC = nC + p%nWings * (2*(FWnSpan+1)*(m%nFW+1)-(FWnSpan+1)-(m%nFW+1))  
    endif
 
    if (allocated(SegConnct)) deallocate(SegConnct)
@@ -486,13 +496,14 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   integer(IntKi) :: nFWEff ! Number of farwake panels that are free at current tmie step
+   nFWEff = min(m%nFW, p%nFWFree)
 
    m%Vind_NW = -9999._ReKi !< Safety
    m%Vind_FW = -9999._ReKi !< Safety
 
    ! --- Packing all vortex elements into a list of segments
    call PackPanelsToSegments(p, m, x, 1, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
-   print*,'Number of segments',nSeg, 'Number of points',nSegP
 
    ! --- Setting up regularization
    allocate(SegEpsilon(1:nSeg));
@@ -504,12 +515,8 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    endif
 
    ! --- Computing induced velocity
-   nCPs=nSegP ! NOTE This is only try if Far wake convects as well!
-   allocate(CPs (1:3,1:nCPs))
-   allocate(Uind(1:3,1:nCPs))
-   Uind=0.0_ReKi !< important due to side effects of ui_seg
-   ! ---
    call PackConvectingPoints()
+   print'(A,I0,A,I0,A,I0)','Convection - nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
    call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, p%RegFunction, SegEpsilon, Uind)
    call UnPackInducedVelocity()
 
@@ -522,21 +529,32 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
 contains
    !> Pack all the points that convect 
    subroutine PackConvectingPoints()
+      ! Counting total number of control points that convects
+      nCPs =      p%nWings * (  (p%nSpan+1)*(m%nNW+1) )
+      if (nFWEff>0) then
+         nCPs = nCPs + p%nWings * ((FWnSpan+1)*(nFWEff+1) )
+      endif
+
+      ! Allocation
+      allocate(CPs (1:3,1:nCPs))
+      allocate(Uind(1:3,1:nCPs))
+      Uind=0.0_ReKi !< important due to side effects of ui_seg
+
+      ! Packing
       iHeadP=1
       do iW=1,p%nWings
          CALL LatticeToPoints(x%r_NW(1:3,:,1:m%nNW+1,iW), 1, CPs, iHeadP)
       enddo
-      if (m%nFW>0) then
+      if (nFWEff>0) then
          do iW=1,p%nWings
-            CALL LatticeToPoints(x%r_FW(1:3,:,1:m%nFW+1,iW), 1, CPs, iHeadP)
+            CALL LatticeToPoints(x%r_FW(1:3,:,1:nFWEff+1,iW), 1, CPs, iHeadP)
          enddo
       endif
+
       if ((iHeadP-1)/=size(CPs,2)) then
          print*,'PackConvectingPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
          STOP
       endif
-      nCPs=iHeadP-1
-      !print*,'Number of points packed for Convection:',nCPs, nSegP
    end subroutine
    !> Distribute the induced velocity to the proper location 
    subroutine UnPackInducedVelocity()
@@ -545,16 +563,19 @@ contains
          CALL VecToLattice(Uind, 1, m%Vind_NW(:,:,1:m%nNW+1,iW), iHeadP)
       enddo
       ! TODO 
-      m%Vind_FW=0.0_ReKi
-      !if (m%nFW>0) then 
-      !   do iW=1,p%nWings
-      !      CALL VecToLattice(Uind, 1, m%Vind_FW(:,1:2,1:m%nFW+1,iW), iHeadP)
-      !   enddo
-      !endif
-      !if ((iHeadP-1)/=size(Uind,2)) then
-      !   print*,'UnPackInducedVelocity: Number of points wrongly estimated',size(Uind,2), iHeadP-1
-      !   STOP
-      !endif
+      if (nFWEff>0) then 
+         do iW=1,p%nWings
+            CALL VecToLattice(Uind, 1, m%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1,iW), iHeadP)
+         enddo
+         if (any(m%Vind_FW(1:3,1:FWnSpan+1,1:nFWEff+1,:)<-99)) then
+            print*,'UnPackInducedVelocity: Problem in FW induced velocity on FW points'
+            STOP
+         endif
+      endif
+      if ((iHeadP-1)/=size(Uind,2)) then
+         print*,'UnPackInducedVelocity: Number of points wrongly estimated',size(Uind,2), iHeadP-1
+         STOP
+      endif
    end subroutine
 
 end subroutine

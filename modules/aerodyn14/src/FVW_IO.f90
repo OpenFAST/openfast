@@ -50,6 +50,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadCom(UnIn,FileName,                  'Wake options header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVar(UnIn,FileName,Inp%nNWPanels     ,'nNWPanels'       ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%nFWPanels     ,'nFWPanels'       ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%nFWPanelsFree ,'nFWPanelsFree'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%RegFunction   ,'RegFunction'     ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%WakeRegMethod ,'WakeRegMethod'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%WakeRegFactor ,'WakeRegFactor'   ,'',ErrStat2,ErrMsg2); if(Failed())return
@@ -61,7 +62,10 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
 
    if (Check( Inp%IntMethod/=idEuler1 , 'Time integration method not implemented')) return
 
-   if (Check( Inp%nNWPanels<0 , 'Number of near wake panels must be posivive')) return
+   if (Check( Inp%nNWPanels<0     , 'Number of near wake panels must be >=0')) return
+   if (Check( Inp%nFWPanels<0     , 'Number of far wake panels must be >=0')) return
+   if (Check( Inp%nFWPanelsFree<0 , 'Number of free far wake panels must be >=0')) return
+   if (Check( Inp%nFWPanelsFree>Inp%nFWPanels , 'Number of free far wake panels must be <=Number of far wake panels')) return
 
    if (Check(.not.(ANY(idRegVALID      ==Inp%RegFunction  )), 'Regularization function not implemented')) return
    if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method not implemented')) return
@@ -181,16 +185,16 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    do iW=1,nWings
       write(Label,'(A,A)') 'FW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      call WrVTK_Lattice(FileName, x%r_FW(1:3,1:2,1:m%nFW+1,iW), x%Gamma_FW(1:1,1:m%nFW,iW))
+      call WrVTK_Lattice(FileName, x%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1,iW), x%Gamma_FW(1:FWnSpan,1:m%nFW,iW))
    enddo
    ! --------------------------------------------------------------------------------}
    ! --- All Segments
    ! --------------------------------------------------------------------------------{
-   nP =      nWings * (  (nSpan+1)*(m%nNW+1)            )
-   nC =      nWings * (2*(nSpan+1)*(m%nNW+1)-nSpan-m%nNW-2)
-   if (m%nFW>0) then 
-      nP = nP + p%nWings * (    2       *(m%nFW+1) )
-      nC = nC + p%nWings * (3*m%nFW+1 )
+   nP =      p%nWings * (  (p%nSpan+1)*(m%nNW+1)            )
+   nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW+1)-(p%nSpan+1)-(m%nNW+1))
+   if (m%nFW>0) then
+      nP = nP + p%nWings * (  (FWnSpan+1)*(m%nFW+1) )
+      nC = nC + p%nWings * (2*(FWnSpan+1)*(m%nFW+1)-(FWnSpan+1)-(m%nFW+1))  
    endif
    allocate(SegConnct(1:2,1:nC)); SegConnct=-1
    allocate(SegPoints(1:3,1:nP)); SegPoints=-1

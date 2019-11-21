@@ -48,6 +48,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nSpan      !< TODO, should be defined per wing. Number of spanwise element [-]
     INTEGER(IntKi)  :: nNWMax      !< Maximum number of nw panels [-]
     INTEGER(IntKi)  :: nFWMax      !< Maximum number of fw panels [-]
+    INTEGER(IntKi)  :: nFWFree      !< Number of fw panels that are free [-]
     INTEGER(IntKi)  :: IntMethod      !< Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1) [-]
     REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
     REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]
@@ -151,6 +152,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: PrescribedPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
     INTEGER(IntKi)  :: nNWPanels      !< Number of nw panels [-]
     INTEGER(IntKi)  :: nFWPanels      !< Number of fw panels [-]
+    INTEGER(IntKi)  :: nFWPanelsFree      !< Number of fw panels that are free [-]
     INTEGER(IntKi)  :: RegFunction      !< Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart) [-]
     INTEGER(IntKi)  :: WakeRegMethod      !< Method for regularization (constant, stretching, age, etc.) [-]
     REAL(ReKi)  :: WakeRegFactor      !< Factor used in the regularization  [-]
@@ -184,6 +186,7 @@ CONTAINS
     DstParamData%nSpan = SrcParamData%nSpan
     DstParamData%nNWMax = SrcParamData%nNWMax
     DstParamData%nFWMax = SrcParamData%nFWMax
+    DstParamData%nFWFree = SrcParamData%nFWFree
     DstParamData%IntMethod = SrcParamData%IntMethod
     DstParamData%FreeWakeStart = SrcParamData%FreeWakeStart
     DstParamData%FullCirculationStart = SrcParamData%FullCirculationStart
@@ -262,6 +265,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nSpan
       Int_BufSz  = Int_BufSz  + 1  ! nNWMax
       Int_BufSz  = Int_BufSz  + 1  ! nFWMax
+      Int_BufSz  = Int_BufSz  + 1  ! nFWFree
       Int_BufSz  = Int_BufSz  + 1  ! IntMethod
       Re_BufSz   = Re_BufSz   + 1  ! FreeWakeStart
       Re_BufSz   = Re_BufSz   + 1  ! FullCirculationStart
@@ -312,6 +316,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNWMax
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFWMax
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFWFree
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%IntMethod
       Int_Xferred   = Int_Xferred   + 1
@@ -393,6 +399,8 @@ ENDIF
       OutData%nNWMax = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%nFWMax = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%nFWFree = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%IntMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
@@ -4157,6 +4165,7 @@ ENDIF
     DstInputFileData%PrescribedPolar = SrcInputFileData%PrescribedPolar
     DstInputFileData%nNWPanels = SrcInputFileData%nNWPanels
     DstInputFileData%nFWPanels = SrcInputFileData%nFWPanels
+    DstInputFileData%nFWPanelsFree = SrcInputFileData%nFWPanelsFree
     DstInputFileData%RegFunction = SrcInputFileData%RegFunction
     DstInputFileData%WakeRegMethod = SrcInputFileData%WakeRegMethod
     DstInputFileData%WakeRegFactor = SrcInputFileData%WakeRegFactor
@@ -4220,6 +4229,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! PrescribedPolar
       Int_BufSz  = Int_BufSz  + 1  ! nNWPanels
       Int_BufSz  = Int_BufSz  + 1  ! nFWPanels
+      Int_BufSz  = Int_BufSz  + 1  ! nFWPanelsFree
       Int_BufSz  = Int_BufSz  + 1  ! RegFunction
       Int_BufSz  = Int_BufSz  + 1  ! WakeRegMethod
       Re_BufSz   = Re_BufSz   + 1  ! WakeRegFactor
@@ -4275,6 +4285,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNWPanels
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFWPanels
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFWPanelsFree
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%RegFunction
       Int_Xferred   = Int_Xferred   + 1
@@ -4341,6 +4353,8 @@ ENDIF
       OutData%nNWPanels = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%nFWPanels = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%nFWPanelsFree = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%RegFunction = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
