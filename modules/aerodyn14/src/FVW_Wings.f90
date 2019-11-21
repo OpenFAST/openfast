@@ -159,6 +159,14 @@ contains
          call interp_lin(m%s_LL(:,iW), m%r_LL(3,:,1,iW)*0.5_ReKi+m%r_LL(3,:,2,iW)*0.5_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
       enddo
 
+      ! --- Structural velocity on LL
+      ! TODO: difference meshes in/LL
+      do iW = 1,p%nWings
+         call interp_lin(m%s_LL(:,iW), Meshes(iW)%TranslationVel(1,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(1,:,iW))
+         call interp_lin(m%s_LL(:,iW), Meshes(iW)%TranslationVel(2,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(2,:,iW))
+         call interp_lin(m%s_LL(:,iW), Meshes(iW)%TranslationVel(3,:) ,m%s_CP_LL(:,iW), m%Vstr_LL(3,:,iW))
+      enddo
+
    end subroutine Wings_Panelling
 
 
@@ -173,7 +181,7 @@ contains
       type(FVW_InputType),             intent(in   )  :: u              !< Parameters
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Parameters
-      type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+      type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
       ! Local
@@ -191,7 +199,7 @@ contains
       else if (p%CirculationMethod==idCircPolarData) then 
          ! ---  Solve for circulation using polar data
          ! TODO
-         print*,'>>>Circulation solving with polar data'
+         print*,'>>>>>>>>>>>>>>>>> Circulation solving with polar data'
          CALL Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg)
 
       else if (p%CirculationMethod==idCircNoFlowThrough) then 
@@ -222,7 +230,7 @@ contains
       type(FVW_InputType),             intent(in   )  :: u              !< Parameters
       type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
       type(FVW_ContinuousStateType),   intent(in   )  :: x              !< Parameters
-      type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+      type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
       ! Local
@@ -231,42 +239,72 @@ contains
       logical                                 :: bConverged    !< 
       integer(IntKi)                          :: iIter         !< iteration step number
       real(ReKi)                              :: MeanGamma
+      real(ReKi), dimension(:,:,:), allocatable :: Vcst !< Part of the velocity that is constant 
+      real(ReKi), dimension(:,:,:), allocatable :: Vvar !< Part of the velocity that is varies due to the solve
+      integer(IntKi) :: iW, iSpan, iDepth, iWCP, nCPs
+      real(ReKi), dimension(3) :: P1, P2, P3, P4
+      real(ReKi) :: Gamm
+
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
 
       print*,'Parameters for circulation solv: ',p%CircSolvConvCrit ,p%CircSolvRelaxation ,p%CircSolvMaxIter   
 
-      allocate(DGamma       (1:p%nSPan,1:p%nWings))
-      allocate(GammaLastIter(1:p%nSPan,1:p%nWings))
+      allocate(DGamma       (1:p%nSpan,1:p%nWings))
+      allocate(GammaLastIter(1:p%nSpan,1:p%nWings))
       !
-      GammaLastIter = Gamma_LL_prev
+      if (m%FirstCall) then
+         GammaLastIter = 0 ! TODO better guess
+      else
+         GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings)
+      endif
 
-      ! Building Vrel_cst This part do not change wihtin the iteration loop
-      ! Remember: uiu0 contains U0 and vorticity (free and prescribed)
-      !do icp=1,SW%ncp_ll_tot 
-      ! TODO
-      !    SW%Vrel_ll_cst(1:3,icp)  = SW%U_uiu0(1:3,icp) - SW%U_body(1:3,icp) + SW%U_solv(1:3,icp)
-      !end do 
+      ! --- Setting up Vcst: part of the velocity that is constant withing the iteration loop
+      !   Vrel_ll_cst = U_u0 - U_body 
+      call AllocAry(Vvar,  3, p%nSpan, p%nWings, 'Vvar',  ErrStat, ErrMsg)
+      call AllocAry(Vcst,  3, p%nSpan, p%nWings, 'Vcst',  ErrStat, ErrMsg)
+
+      ! Set m%Vind_LL Induced velocity from Known wake only (after iNWStart+1)
+      call LiftingLineInducedVelocities(p, x, iNWStart+1, m, ErrStat, ErrMsg)
+      Vcst = m%Vind_LL + m%Vwnd_LL - m%Vstr_ll
+
+      if (any(m%Vind_LL(1:3,:,:)<-99)) then
+         print*,'Wings_ComputeCirculationPolarData: Problem in induced velocity on LL points'
+         STOP
+      endif
+      if (any(m%Vwnd_LL(1:3,:,:)<-99)) then
+         print*,'Wings_ComputeCirculationPolarData: Problem in wind velocity on LL points'
+         STOP
+      endif
 
       ! --- Convergence loop until near wake gives induction coherent with circulation
       bConverged=.false.
       iIter=0
       do while (.not.(bConverged) .and. iIter<p%CircSolvMaxIter) 
-          !! Setting up wings and nw panels intensities
-          !if (pAlgo%EmissionMethod==idEMethCreateTEBEforeSolving) then 
-          !    ! if CreateTEBeforeSolving, then need to get influece of the TE panel 
-          !    SW%GammaPanels(1:SW%ncp_ll_tot)                 = SW%GammaBoundLast
-          !    SW%GammaPanels(1+SW%ncp_ll_tot:2*SW%ncp_ll_tot) = SW%GammaBoundLast ! The NW panels
-          !else
-          !    SW%GammaPanels=SW%GammaBoundLast
-          !end if 
-          !! The induced velocity from the profiles is different at each iteration:
-          !call fUi_VoRing_IR(Panl,SW%CP_ll,SW%ncp_ll_tot,Panl%IUseProfilesWithNW,SW%GammaPanels,SW%U_prof)  ! no side effects
-          !! Building Vrel ( taking advantage of the computation of the constant part)
-          !do icp=1,SW%ncp_ll_tot 
-          !    m%Vtot_ll(1:3,icp) = SW%Vrel_ll_cst(1:3,icp) + SW%U_prof(1:3,icp)
-          !end do 
+          !print*,'------- ITERATION',iIter
+          !print*,'Gamm: ',GammaLastIter(1:3, 1)
+          ! --- The induced velocity from the profiles is different at each iteration:
+          Vvar=0 
+          nCPs=p%nSpan
+          do iW=1,p%nWings
+             do iSpan=1,p%nSpan
+                do iDepth=1,iNWStart ! Two first panels
+                   P1=x%r_NW(1:3,iSpan  ,iDepth  ,iW)
+                   P2=x%r_NW(1:3,iSpan+1,iDepth  ,iW)
+                   P3=x%r_NW(1:3,iSpan+1,iDepth+1,iW)
+                   P4=x%r_NW(1:3,iSpan  ,iDepth+1,iW)
+                   Gamm=GammaLastIter(iSpan, iW)
+                   do iWCP=1,p%nWings
+                      call ui_quad_n1(m%CP_ll(1:3,1:p%nSpan,iWCP), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, p%WakeRegFactor, Vvar(1:3,1:p%nSpan,iWCP))
+                   enddo
+                enddo
+             enddo
+          enddo
+          ! Total velocity on the lifting line
+          m%vtot_ll = vcst + vvar
+          !call print_mean_3d( Vvar(:,:,:), 'Mean induced vel. LL (var)')
+          !call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
           ! --- Computing circulation based on Vtot_LL
           call CirculationFromPolarData(Gamma_LL, p, m)
 
@@ -274,9 +312,11 @@ contains
           ! Differences between iterations and relaxation
           DGamma=Gamma_LL-GammaLastIter 
           GammaLastIter=GammaLastIter+p%CircSolvRelaxation*DGamma
+          !print*,'DGamm:',DGamma(1:3, 1)
 
           iIter=iIter+1
           MeanGamma  = sum(abs(GammaLastIter))/(p%nWings*p%nSpan)
+          !print*,'Crit',maxval(abs(DGamma))/(MeanGamma)
           bConverged = maxval(abs(DGamma))/(MeanGamma)<p%CircSolvConvCrit
       end do ! convergence loop
       if (iIter==p%CircSolvMaxIter) then
@@ -286,10 +326,24 @@ contains
           print*,'Circulation solve done after:', iIter,' iterations'
           ! We return Gamma_LL
        endif
+       print*,'Gamm: ',Gamma_LL(1:3, 1)
 
+
+      call print_mean_3d( m%Vind_LL(:,:,:), 'Mean induced vel. LL (cst)')
+      call print_mean_3d( Vvar(:,:,:)     , 'Mean induced vel. LL (var)')
+      call print_mean_3d( m%Vwnd_LL(:,:,:), 'Mean wind    vel. LL (cst)')
+      call print_mean_3d( m%Vstr_LL(:,:,:), 'Mean struct  vel. LL (cst)')
+      call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
+      !print*,'m%Vind_LL',m%Vind_LL(1,:,:)
+      !print*,'m%Vwnd_LL',m%Vwnd_LL(1,:,:)
+      !print*,'m%Vcst_LL',Vcst(1,:,:)
+      m%Vind_LL=-9999._ReKi ! < Safety (the induction above was not the true one)
+      m%Vtot_LL=-9999._ReKi ! < Safety 
       deallocate(DGamma       )
       deallocate(GammaLastIter)
-      STOP
+      deallocate(Vcst)
+      deallocate(Vvar)
+!       STOP
 
    end subroutine
 
@@ -338,6 +392,9 @@ contains
             !    Gamma_LL=(0.5 * Cl * Vrel_orth_norm*chord)
             ! VanGarrel's method:
             Gamma_LL(icp,iW) =(0.5_ReKi * Cl * Vrel_orth_norm**2*m%Area(icp,iW)/(Vjouk_orth_norm))
+            !if ((iW==1).and.icp==3) then
+            !   print*,'CL',Cl,alpha,Vrel_orth_norm,m%Area(icp,iW)
+            !endif
          enddo
       enddo
    end subroutine CirculationFromPolarData

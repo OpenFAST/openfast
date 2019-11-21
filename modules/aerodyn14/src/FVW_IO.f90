@@ -34,18 +34,18 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadCom(UnIn, FileName, 'FVW input file header line 1', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadCom(UnIn, FileName, 'FVW input file header line 2', ErrStat2, ErrMsg2 ); if(Failed()) return
    !------------------------ GENERAL OPTIONS  -------------------------------------------
-   CALL ReadCom(UnIn,FileName,                  'General option header', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL ReadVar(UnIn,FileName,Inp%IntMethod    ,'Integration method' ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%FreeWakeStart,'FreeWakeStart'      ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadCom(UnIn,FileName,                         'General option header', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL ReadVar(UnIn,FileName,Inp%IntMethod           ,'Integration method' ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%FreeWakeStart       ,'FreeWakeStart'      ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart'  ,'',ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ CIRCULATION SPECIFICATIONS  -------------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Circulation specification header', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL ReadVar(UnIn,FileName,Inp%CirculationMethod ,'CirculationMethod','',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ','',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%CirculationMethod ,'CirculationMethod' ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter','',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'  ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart'  ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%PrescribedPolar     ,'PrescribedPolar'       ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter'   ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'   ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%PrescribedPolar   ,'PrescribedPolar'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ WAKE OPTIONS -------------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Wake options header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVar(UnIn,FileName,Inp%nNWPanels     ,'nNWPanels'       ,'',ErrStat2,ErrMsg2); if(Failed())return
@@ -54,6 +54,13 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar(UnIn,FileName,Inp%RegFunction   ,'RegFunction'     ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%WakeRegMethod ,'WakeRegMethod'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%WakeRegFactor ,'WakeRegFactor'   ,'',ErrStat2,ErrMsg2); if(Failed())return
+   !------------------------ OUTPUT OPTIONS -----------------------------------------
+   CALL ReadCom(UnIn,FileName,                  'Output options header', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL ReadVar(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%VTKBlades   , 'VTKBlades'          ,'',ErrStat2,ErrMsg2); if(Failed())return
+   !------------------------ HACK OPTIONS -----------------------------------------
+   CALL ReadCom(UnIn,FileName,                  'Hack options header', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL ReadVar(UnIn,FileName,Inp%Uinf        , 'Uinf'   ,'',ErrStat2,ErrMsg2); if(Failed())return
 
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)

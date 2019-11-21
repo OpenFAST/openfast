@@ -91,10 +91,10 @@ CONTAINS
       !     1-<-4
       do iDepth = iDepthStart, nDepth-1
          do iSpan = 1, nSpan-1
-            iseg1 = iHeadP0 + (iSpan-1) +(iDepth-1)*nSpan  ! Point 1
-            iseg2 = iHeadP0 + (iSpan  ) +(iDepth-1)*nSpan  ! Point 2
-            iseg3 = iHeadP0 + (iSpan  ) +(iDepth  )*nSpan  ! Point 3
-            iseg4 = iHeadP0 + (iSpan-1) +(iDepth  )*nSpan  ! Point 4
+            iseg1 = iHeadP0 + (iSpan-1) +(iDepth-1-iDepthStart+1)*nSpan  ! Point 1
+            iseg2 = iHeadP0 + (iSpan  ) +(iDepth-1-iDepthStart+1)*nSpan  ! Point 2
+            iseg3 = iHeadP0 + (iSpan  ) +(iDepth  -iDepthStart+1)*nSpan  ! Point 3
+            iseg4 = iHeadP0 + (iSpan-1) +(iDepth  -iDepthStart+1)*nSpan  ! Point 4
             if (iDepth==1) then
                Gamma12 = LatticeGamma(iSpan,iDepth)
             else

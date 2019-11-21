@@ -441,42 +441,52 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
 
    ! Counting total number of segments
-   nP =      p%nWings * (  (p%nSpan+1)*(m%nNW-iDepthStart+2)            )
-   nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iDepthStart+2)-(p%nSpan+1)-(m%nNW-iDepthStart+1+1))  
+   nP=0
+   nC=0
+   if ((m%nNW-iDepthStart)>=0) then
+      nP =      p%nWings * (  (p%nSpan+1)*(m%nNW-iDepthStart+2)            )
+      nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iDepthStart+2)-(p%nSpan+1)-(m%nNW-iDepthStart+1+1))  
+   endif
    if (m%nFW>0) then
       nP = nP + p%nWings * (  (FWnSpan+1)*(m%nFW+1) )
       nC = nC + p%nWings * (2*(FWnSpan+1)*(m%nFW+1)-(FWnSpan+1)-(m%nFW+1))  
    endif
 
-   if (allocated(SegConnct)) deallocate(SegConnct)
-   if (allocated(SegPoints)) deallocate(SegPoints)
-   if (allocated(SegGamma))  deallocate(SegGamma)
-   if (allocated(Buffer2d)) deallocate(Buffer2d)
-   allocate(SegConnct(1:2,1:nC)); SegConnct=-1
-   allocate(SegPoints(1:3,1:nP)); SegPoints=-1
-   allocate(SegGamma (1:nC));     SegGamma =-1
-   allocate(Buffer2d(1,p%nSpan))
-   !
-   iHeadP=1
-   iHeadC=1
-   do iW=1,p%nWings
-      CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
-   enddo
-   if (m%nFW>0) then
+   if (nP>0) then
+      if (allocated(SegConnct)) deallocate(SegConnct)
+      if (allocated(SegPoints)) deallocate(SegPoints)
+      if (allocated(SegGamma))  deallocate(SegGamma)
+      if (allocated(Buffer2d)) deallocate(Buffer2d)
+      allocate(SegConnct(1:2,1:nC)); SegConnct=-1
+      allocate(SegPoints(1:3,1:nP)); SegPoints=-1
+      allocate(SegGamma (1:nC));     SegGamma =-1
+      allocate(Buffer2d(1,p%nSpan))
+      !
+      iHeadP=1
+      iHeadC=1
       do iW=1,p%nWings
-         CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+         CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
       enddo
+      if (m%nFW>0) then
+         do iW=1,p%nWings
+            CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+         enddo
+      endif
+      if ((iHeadP-1)/=nP) then
+         print*,'PackPanelsToSegments: Number of points wrongly estimated',nP, iHeadP-1
+         STOP
+      endif
+      if ((iHeadC-1)/=nC) then
+         print*,'PackPanelsToSegments: Number of segments wrongly estimated',nC, iHeadC-1
+         STOP
+      endif
+      nSeg  = iHeadC-1
+      nSegP = iHeadP-1
+   else
+      print*,'PackPanelsToSegments: nP=',nP
+      nSeg  = 0
+      nSegP = 0
    endif
-   if ((iHeadP-1)/=nP) then
-      print*,'PackPanelsToSegments: Number of points wrongly estimated',nP, iHeadP-1
-      STOP
-   endif
-   if ((iHeadC-1)/=nC) then
-      print*,'PackPanelsToSegments: Number of segments wrongly estimated',nC, iHeadC-1
-      STOP
-   endif
-   nSeg  = iHeadC-1
-   nSegP = iHeadP-1
 end subroutine PackPanelsToSegments
 
 !> Compute induced velocities from all vortex elements onto all the vortex elements
@@ -583,9 +593,10 @@ end subroutine
 !> Compute induced velocities from all vortex elements onto the lifting line control points
 !! In : x%r_NW, x%r_FW, x%Gamma_NW, x%Gamma_FW
 !! Out: m%Vind_LL
-subroutine LiftingLineInducedVelocities(p, x, m, ErrStat, ErrMsg)
+subroutine LiftingLineInducedVelocities(p, x, iDepthStart, m, ErrStat, ErrMsg)
    type(FVW_ParameterType),         intent(in   ) :: p       !< Parameters
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
+   integer(IntKi),                  intent(in   ) :: iDepthStart !< Index where we start packing for NW panels
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    ! Local variables
    integer(IntKi) :: iSpan,iAge, iW, nSeg, nSegP, nCPs, iHeadP
@@ -597,39 +608,44 @@ subroutine LiftingLineInducedVelocities(p, x, m, ErrStat, ErrMsg)
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
    character(*),                intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
-
-   m%Vind_NW = -9999._ReKi !< Safety
-   m%Vind_FW = -9999._ReKi !< Safety
+   integer(IntKi) :: i
+   m%Vind_LL = -9999._ReKi !< Safety
 
    ! --- Packing all vortex elements into a list of segments
-   call PackPanelsToSegments(p, m, x, 1, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
-   !print*,'Number of segments',nSeg, 'Number of points',nSegP
-
-   ! --- Setting up regularization
-   allocate(SegEpsilon(1:nSeg));
-   if (p%WakeRegMethod==idRegConstant) then
-      SegEpsilon=p%WakeRegFactor ! TODO
-   else
-      print*,'Regularization method not implemented',p%WakeRegMethod
-      STOP
-   endif
+   call PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
 
    ! --- Computing induced velocity
-   nCPs=p%nWings * p%nSpan
-   allocate(CPs (1:3,1:nCPs))
-   allocate(Uind(1:3,1:nCPs))
-   Uind=0.0_ReKi !< important due to side effects of ui_seg
-   ! ---
-   call PackLiftingLinePoints()
-   call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, p%RegFunction, SegEpsilon, Uind)
-   call UnPackLiftingLineVelocities()
+   if (nSegP==0) then
+      nCPs=0
+      m%Vind_LL = 0.0_ReKi
+      print'(A,I0,A,I0,A,I0,A)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs, ' -> No induction'
+   else
+      ! --- Setting up regularization
+      allocate(SegEpsilon(1:nSeg));
+      if (p%WakeRegMethod==idRegConstant) then
+         SegEpsilon=p%WakeRegFactor ! TODO
+      else
+         print*,'Regularization method not implemented',p%WakeRegMethod
+         STOP
+      endif
 
-   deallocate(Uind)
-   deallocate(CPs)
-   deallocate(SegConnct)
-   deallocate(SegGamma)
-   deallocate(SegPoints)
-   deallocate(SegEpsilon)
+      nCPs=p%nWings * p%nSpan
+      allocate(CPs (1:3,1:nCPs))
+      allocate(Uind(1:3,1:nCPs))
+      Uind=0.0_ReKi !< important due to side effects of ui_seg
+      ! ---
+      call PackLiftingLinePoints()
+      print'(A,I0,A,I0,A,I0)','Induction -  nSeg:',nSeg,' - nSegP:',nSegP, ' - nCPs:',nCPs
+      call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, p%RegFunction, SegEpsilon, Uind)
+      call UnPackLiftingLineVelocities()
+
+      deallocate(Uind)
+      deallocate(CPs)
+      deallocate(SegConnct)
+      deallocate(SegGamma)
+      deallocate(SegPoints)
+      deallocate(SegEpsilon)
+   endif
 contains
    !> Pack all the control points
    subroutine PackLiftingLinePoints()

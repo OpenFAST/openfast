@@ -333,7 +333,7 @@ subroutine ui_quad_n1(CPs, nCPs, P1, P2, P3, P4, Gamm, RegModel, RegParam, Uind)
    real(ReKi),                    intent(in)  :: Gamm
    integer(IntKi) , intent(in)                :: RegModel    !< Regularization model (e.g. LambOseen)
    real(ReKi),                    intent(in)  :: RegParam    !< Regularization parameter
-   real(ReKi), dimension(3,nCPs), intent(out) :: Uind        !< no side effects!!!
+   real(ReKi), dimension(3,nCPs), intent(inout) :: Uind        !< side effects!!!
    ! Variable declarations 
    real(ReKi), dimension(3) :: CP           !< 
    real(ReKi), dimension(3) :: Uindtmp        !< 

@@ -93,6 +93,15 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! Initialize Misc Vars (may depend on input file)
    CALL FVW_InitMiscVars( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
+   ! Wind Speed hack, TODO temporary
+   m%Vwnd_LL(:,:,:)   = 0
+   m%Vwnd_NW(:,:,:,:) = 0
+   m%Vwnd_FW(:,:,:,:) = 0
+   m%Vwnd_LL(1,:,:)   = InputFileData%Uinf
+   m%Vwnd_NW(1,:,:,:) = InputFileData%Uinf
+   m%Vwnd_FW(1,:,:,:) = InputFileData%Uinf
+
+
    ! Preliminary meshing of the wings (may depend on input file)
    ! NOTE: the mesh is not located at the right position yet, the first call to calcoutput will redo some meshing
    CALL Wings_Panelling_Init(InitInp%WingsMesh, InitInp%RElm, InitInp%chord, p, m, ErrStat2, ErrMsg2); if(Failed()) return
@@ -167,12 +176,6 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%Vwnd_FW , 3   ,  p%nSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vwnd_FW= -999_ReKi;
    call AllocAry( m%Vind_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Vind on NW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vind_NW= -999_ReKi;
    call AllocAry( m%Vind_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Vind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vind_FW= -999_ReKi;
-   m%Vwnd_NW(1,:,:,:)= 10
-   m%Vwnd_NW(2,:,:,:)= 0
-   m%Vwnd_NW(3,:,:,:)= 0
-   m%Vwnd_FW(1,:,:,:)= 10
-   m%Vwnd_FW(2,:,:,:)= 0
-   m%Vwnd_FW(3,:,:,:)= 0
 end subroutine FVW_InitMiscVars
 ! ==============================================================================
 subroutine FVW_InitStates( x, p, m, ErrStat, ErrMsg )
@@ -265,6 +268,8 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%RegFunction          = InputFileData%RegFunction
    p%WakeRegMethod        = InputFileData%WakeRegMethod
    p%WakeRegFactor        = InputFileData%WakeRegFactor
+   p%WrVTK                = InputFileData%WrVTK
+   p%VTKBlades            = InputFileData%VTKBlades
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
    if (InputFileData%CirculationMethod==idCircPrescribed) then 
@@ -375,6 +380,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    !CALL DistributeRequestedWind(u(1)%V_wind, x, p, m, ErrStat2, ErrMsg2);  if(Failed()) return
 
    ! Solve for circulation at t
+   call AllocAry( z_guess%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat, ErrMsg );
+   z_guess%Gamma_LL = m%Gamma_LL
    call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Map circulation and positions between LL and NW  and then NW and FW
@@ -538,13 +545,13 @@ end subroutine FVW_Euler1
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a tight coupling routine for solving for the residual of the constraint state functions.
-subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_out, ErrStat, ErrMsg )
+subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, z_out, ErrStat, ErrMsg )
    real(DbKi),                    intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),           intent(in   )  :: u           !< Inputs at t
    type(FVW_ParameterType),       intent(in   )  :: p           !< Parameters
    type(FVW_ContinuousStateType), intent(in   )  :: x           !< Continuous states at t
    type(FVW_DiscreteStateType),   intent(in   )  :: xd          !< Discrete states at t
-   type(FVW_ConstraintStateType), intent(in   )  :: z           !< Constraint states at t (possibly a guess)
+   type(FVW_ConstraintStateType), intent(in   )  :: z_guess     !< Constraint states at t (possibly a guess)
    type(FVW_OtherStateType),      intent(in   )  :: OtherState  !< Other states at t
    type(FVW_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
    type(FVW_ConstraintStateType), intent(  out)  :: z_out            !< Residual of the constraint state functions using
@@ -560,7 +567,7 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_out,
    call AllocAry( z_out%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat, ErrMsg );
    z_out%Gamma_LL = -999999_ReKi;
 
-   CALL Wings_ComputeCirculation(t, z_out%Gamma_LL, z%Gamma_LL, u, p, x, m, ErrStat, ErrMsg)
+   CALL Wings_ComputeCirculation(t, z_out%Gamma_LL, z_guess%Gamma_LL, u, p, x, m, ErrStat, ErrMsg)
 
 end subroutine FVW_CalcConstrStateResidual
 
@@ -598,7 +605,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    print'(A,F10.3,A,L1,A,I0,A,I0)','CalcOutput     t:',t,'   ',m%FirstCall,'                                nNW:',m%nNW,' nFW:',m%nFW
 
    if (m%FirstCall) then
-      print*,'>>> First Call of CalcOuput, calling panelling and constrstate'
+      print*,'>>> First Call of CalcOutput, calling panelling and constrstate'
       CALL Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
       CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, ErrStat, ErrMsg) ! For plotting only
    else
@@ -613,7 +620,9 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    CALL SetRequestedWindPoints(y%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    ! Induction on the lifting line control point
-   call LiftingLineInducedVelocities(p, x, m, ErrStat2, ErrMsg2); if(Failed()) return
+   ! Set m%Vind_LL
+   m%Vind_LL=-9999.0_ReKi
+   call LiftingLineInducedVelocities(p, x, 1, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Interpolation to AeroDyn radial station TODO TODO TODO
    y%Vind(1:3,:,:) = 0.0_ReKi
@@ -622,6 +631,9 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
          y%Vind(1:3,iSpan,iW) = m%Vind_LL(1:3,iSpan,iW)
       enddo
    enddo
+
+   ! For plotting only
+   m%Vtot_ll = m%Vind_LL + m%Vwnd_LL - m%Vstr_ll
    !call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
 
    ! We don't propagate the "Old"-> "New" if update states was not called once

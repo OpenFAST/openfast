@@ -61,6 +61,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: RegFunction      !< Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart) [-]
     INTEGER(IntKi)  :: WakeRegMethod      !< Method for regularization (constant, stretching, age, etc.) [-]
     REAL(ReKi)  :: WakeRegFactor      !< Factor used in the regularization  [-]
+    INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
+    INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_OtherStateType  =======
@@ -156,6 +158,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: RegFunction      !< Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart) [-]
     INTEGER(IntKi)  :: WakeRegMethod      !< Method for regularization (constant, stretching, age, etc.) [-]
     REAL(ReKi)  :: WakeRegFactor      !< Factor used in the regularization  [-]
+    INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
+    INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
+    REAL(ReKi)  :: Uinf      !< TODO TODO TEMPORARY HACK [-]
   END TYPE FVW_InputFile
 ! =======================
 ! =========  FVW_InitOutputType  =======
@@ -210,6 +215,8 @@ ENDIF
     DstParamData%RegFunction = SrcParamData%RegFunction
     DstParamData%WakeRegMethod = SrcParamData%WakeRegMethod
     DstParamData%WakeRegFactor = SrcParamData%WakeRegFactor
+    DstParamData%WrVTK = SrcParamData%WrVTK
+    DstParamData%VTKBlades = SrcParamData%VTKBlades
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -282,6 +289,8 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! RegFunction
       Int_BufSz  = Int_BufSz  + 1  ! WakeRegMethod
       Re_BufSz   = Re_BufSz   + 1  ! WakeRegFactor
+      Int_BufSz  = Int_BufSz  + 1  ! WrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -354,6 +363,10 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WakeRegFactor
       Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WrVTK
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKBlades
+      Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE FVW_PackParam
 
  SUBROUTINE FVW_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -447,6 +460,10 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%WakeRegFactor = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%WrVTK = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%VTKBlades = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 
  SUBROUTINE FVW_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -4169,6 +4186,9 @@ ENDIF
     DstInputFileData%RegFunction = SrcInputFileData%RegFunction
     DstInputFileData%WakeRegMethod = SrcInputFileData%WakeRegMethod
     DstInputFileData%WakeRegFactor = SrcInputFileData%WakeRegFactor
+    DstInputFileData%WrVTK = SrcInputFileData%WrVTK
+    DstInputFileData%VTKBlades = SrcInputFileData%VTKBlades
+    DstInputFileData%Uinf = SrcInputFileData%Uinf
  END SUBROUTINE FVW_CopyInputFile
 
  SUBROUTINE FVW_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -4233,6 +4253,9 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! RegFunction
       Int_BufSz  = Int_BufSz  + 1  ! WakeRegMethod
       Re_BufSz   = Re_BufSz   + 1  ! WakeRegFactor
+      Int_BufSz  = Int_BufSz  + 1  ! WrVTK
+      Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
+      Re_BufSz   = Re_BufSz   + 1  ! Uinf
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4293,6 +4316,12 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WakeRegMethod
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WakeRegFactor
+      Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WrVTK
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKBlades
+      Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Uinf
       Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE FVW_PackInputFile
 
@@ -4361,6 +4390,12 @@ ENDIF
       OutData%WakeRegMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%WakeRegFactor = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%WrVTK = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%VTKBlades = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%Uinf = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE FVW_UnPackInputFile
 
