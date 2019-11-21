@@ -57,6 +57,9 @@ IMPLICIT NONE
     REAL(ReKi)  :: CircSolvConvCrit      !< Convergence criterion for circulation solving [-]
     REAL(ReKi)  :: CircSolvRelaxation      !< Relaxation factor for circulation solving [-]
     INTEGER(IntKi)  :: PrescribedPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
+    INTEGER(IntKi)  :: RegFunction      !< Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart) [-]
+    INTEGER(IntKi)  :: WakeRegMethod      !< Method for regularization (constant, stretching, age, etc.) [-]
+    REAL(ReKi)  :: WakeRegFactor      !< Factor used in the regularization  [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_OtherStateType  =======
@@ -148,6 +151,9 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: PrescribedPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
     INTEGER(IntKi)  :: nNWPanels      !< Number of nw panels [-]
     INTEGER(IntKi)  :: nFWPanels      !< Number of fw panels [-]
+    INTEGER(IntKi)  :: RegFunction      !< Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart) [-]
+    INTEGER(IntKi)  :: WakeRegMethod      !< Method for regularization (constant, stretching, age, etc.) [-]
+    REAL(ReKi)  :: WakeRegFactor      !< Factor used in the regularization  [-]
   END TYPE FVW_InputFile
 ! =======================
 ! =========  FVW_InitOutputType  =======
@@ -198,6 +204,9 @@ ENDIF
     DstParamData%CircSolvConvCrit = SrcParamData%CircSolvConvCrit
     DstParamData%CircSolvRelaxation = SrcParamData%CircSolvRelaxation
     DstParamData%PrescribedPolar = SrcParamData%PrescribedPolar
+    DstParamData%RegFunction = SrcParamData%RegFunction
+    DstParamData%WakeRegMethod = SrcParamData%WakeRegMethod
+    DstParamData%WakeRegFactor = SrcParamData%WakeRegFactor
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -266,6 +275,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! CircSolvConvCrit
       Re_BufSz   = Re_BufSz   + 1  ! CircSolvRelaxation
       Int_BufSz  = Int_BufSz  + 1  ! PrescribedPolar
+      Int_BufSz  = Int_BufSz  + 1  ! RegFunction
+      Int_BufSz  = Int_BufSz  + 1  ! WakeRegMethod
+      Re_BufSz   = Re_BufSz   + 1  ! WakeRegFactor
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -330,6 +342,12 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PrescribedPolar
       Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%RegFunction
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WakeRegMethod
+      Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WakeRegFactor
+      Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE FVW_PackParam
 
  SUBROUTINE FVW_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -415,6 +433,12 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%PrescribedPolar = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+      OutData%RegFunction = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%WakeRegMethod = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%WakeRegFactor = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 
  SUBROUTINE FVW_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -4133,6 +4157,9 @@ ENDIF
     DstInputFileData%PrescribedPolar = SrcInputFileData%PrescribedPolar
     DstInputFileData%nNWPanels = SrcInputFileData%nNWPanels
     DstInputFileData%nFWPanels = SrcInputFileData%nFWPanels
+    DstInputFileData%RegFunction = SrcInputFileData%RegFunction
+    DstInputFileData%WakeRegMethod = SrcInputFileData%WakeRegMethod
+    DstInputFileData%WakeRegFactor = SrcInputFileData%WakeRegFactor
  END SUBROUTINE FVW_CopyInputFile
 
  SUBROUTINE FVW_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -4193,6 +4220,9 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! PrescribedPolar
       Int_BufSz  = Int_BufSz  + 1  ! nNWPanels
       Int_BufSz  = Int_BufSz  + 1  ! nFWPanels
+      Int_BufSz  = Int_BufSz  + 1  ! RegFunction
+      Int_BufSz  = Int_BufSz  + 1  ! WakeRegMethod
+      Re_BufSz   = Re_BufSz   + 1  ! WakeRegFactor
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4246,6 +4276,12 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFWPanels
       Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%RegFunction
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WakeRegMethod
+      Int_Xferred   = Int_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WakeRegFactor
+      Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE FVW_PackInputFile
 
  SUBROUTINE FVW_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4306,6 +4342,12 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%nFWPanels = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+      OutData%RegFunction = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%WakeRegMethod = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%WakeRegFactor = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE FVW_UnPackInputFile
 
  SUBROUTINE FVW_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )

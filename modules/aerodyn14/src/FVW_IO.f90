@@ -50,8 +50,11 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadCom(UnIn,FileName,                  'Wake options header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVar(UnIn,FileName,Inp%nNWPanels     ,'nNWPanels'       ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%nFWPanels     ,'nFWPanels'       ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%RegFunction   ,'RegFunction'     ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%WakeRegMethod ,'WakeRegMethod'   ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%WakeRegFactor ,'WakeRegFactor'   ,'',ErrStat2,ErrMsg2); if(Failed())return
 
-   ! Post pro and validation of inputs
+   ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
 
    if (Check(.not.(ANY((/idCircPrescribed,idCircPolarData/)==Inp%CirculationMethod)), 'Circulation method not implemented')) return
@@ -59,6 +62,10 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check( Inp%IntMethod/=idEuler1 , 'Time integration method not implemented')) return
 
    if (Check( Inp%nNWPanels<0 , 'Number of near wake panels must be posivive')) return
+
+   if (Check(.not.(ANY(idRegVALID      ==Inp%RegFunction  )), 'Regularization function not implemented')) return
+   if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method not implemented')) return
+   if (Check(Inp%WakeRegFactor<0                            , 'Wake regularization factor should be positive')) return
 
    call CleanUp()
 

@@ -23,6 +23,9 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               ReKi                             CircSolvConvCrit     -     - - "Convergence criterion for circulation solving"  -
 typedef     ^                   ^               ReKi                             CircSolvRelaxation   -     - - "Relaxation factor for circulation solving"  -
 typedef     ^                   ^               IntKi                            PrescribedPolar   -  -  -  "(0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha)" -
+typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
+typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
+typedef     ^                   ^               ReKi                             WakeRegFactor -  - -   "Factor used in the regularization " 
 
 # ....... OtherStateType ............
 # FVW_OtherStateType
@@ -110,6 +113,9 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            PrescribedPolar   -  -  -  "(0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha)" -
 typedef     ^                   ^               IntKi                            nNWPanels            -  -  -  "Number of nw panels"          -
 typedef     ^                   ^               IntKi                            nFWPanels            -  -  -  "Number of fw panels"          -
+typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
+typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
+typedef     ^                   ^               ReKi                             WakeRegFactor -  - -   "Factor used in the regularization " 
 
 #.......... InitOutputType ......
 # FVW_InitOutputType

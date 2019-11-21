@@ -21,6 +21,11 @@ module FVW_SUBS
    integer(IntKi), parameter :: idAB4      = 2
    integer(IntKi), parameter :: idABM4     = 3
    integer(IntKi), parameter :: idEuler1   = 5
+   ! Regularization Method
+   integer(IntKi), parameter :: idRegConstant   = 0
+   integer(IntKi), parameter :: idRegStretching = 1
+   integer(IntKi), parameter :: idRegAge        = 2
+   integer(IntKi), parameter, dimension(3) :: idRegMethodVALID      = (/idRegConstant,idRegStretching,idRegAge/)
 
    ! Implementation 
    integer(IntKi), parameter :: iNWStart=2 !< Index in r%NW where the near wake start (if >1 then the Wing panels are included in r_NW)
@@ -341,12 +346,11 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    ! Local variables
-   integer(IntKi) :: SmoothModel !< TODO input file parameter
    integer(IntKi) :: iSpan,iAge, iW, nSeg, nSegP, nCPs, iHeadP
-   integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
-   real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
-   real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
-   real(ReKi),    dimension(:)  , allocatable :: SegSmooth  !< Segment smooth parameter
+   integer(IntKi),dimension(:,:), allocatable :: SegConnct  !< Segment connectivity
+   real(ReKi),    dimension(:,:), allocatable :: SegPoints  !< Segment Points
+   real(ReKi),    dimension(:)  , allocatable :: SegGamma   !< Segment Circulation
+   real(ReKi),    dimension(:)  , allocatable :: SegEpsilon !< Segment regularization parameter
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
@@ -358,18 +362,24 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    ! --- Packing all vortex elements into a list of segments
    call PackPanelsToSegments(p, m, x, 1, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
    print*,'Number of segments',nSeg, 'Number of points',nSegP
-   ! 
+
+   ! --- Setting up regularization
+   allocate(SegEpsilon(1:nSeg));
+   if (p%WakeRegMethod==idRegConstant) then
+      SegEpsilon=p%WakeRegFactor ! TODO
+   else
+      print*,'Regularization method not implemented',p%WakeRegMethod
+      STOP
+   endif
+
    ! --- Computing induced velocity
-   allocate(SegSmooth(1:nSeg));
-   SegSmooth=10
-   SmoothModel=idSegSmoothLambOseen
    nCPs=nSegP
    allocate(CPs (1:3,1:nCPs))
    allocate(Uind(1:3,1:nCPs))
    Uind=0.0_ReKi !< important due to side effects of ui_seg
    ! ---
    call PackConvectingPoints()
-   call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, SmoothModel, SegSmooth, Uind)
+   call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, p%RegFunction, SegEpsilon, Uind)
    call UnPackInducedVelocity()
 
    deallocate(Uind)
@@ -377,7 +387,7 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    deallocate(SegConnct)
    deallocate(SegGamma)
    deallocate(SegPoints)
-   deallocate(SegSmooth)
+   deallocate(SegEpsilon)
 contains
    !> Pack all the points that convect 
    subroutine PackConvectingPoints()
@@ -414,12 +424,11 @@ subroutine LiftingLineInducedVelocities(p, x, m, ErrStat, ErrMsg)
    type(FVW_ContinuousStateType),   intent(in   ) :: x       !< States
    type(FVW_MiscVarType),           intent(inout) :: m       !< Initial misc/optimization variables
    ! Local variables
-   integer(IntKi) :: SmoothModel !< TODO input file parameter
    integer(IntKi) :: iSpan,iAge, iW, nSeg, nSegP, nCPs, iHeadP
    integer(IntKi),dimension(:,:), allocatable :: SegConnct !< Segment connectivity
    real(ReKi),    dimension(:,:), allocatable :: SegPoints !< Segment Points
    real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
-   real(ReKi),    dimension(:)  , allocatable :: SegSmooth  !< Segment smooth parameter
+   real(ReKi),    dimension(:)  , allocatable :: SegEpsilon !< Segment smooth parameter
    real(ReKi),    dimension(:,:), allocatable :: CPs   !< ControlPoints
    real(ReKi),    dimension(:,:), allocatable :: Uind  !< Induced velocity
    integer(IntKi),              intent(  out) :: ErrStat    !< Error status of the operation
@@ -432,19 +441,23 @@ subroutine LiftingLineInducedVelocities(p, x, m, ErrStat, ErrMsg)
    call PackPanelsToSegments(p, m, x, 1, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
    print*,'Number of segments',nSeg, 'Number of points',nSegP
 
+   ! --- Setting up regularization
+   allocate(SegEpsilon(1:nSeg));
+   if (p%WakeRegMethod==idRegConstant) then
+      SegEpsilon=p%WakeRegFactor ! TODO
+   else
+      print*,'Regularization method not implemented',p%WakeRegMethod
+      STOP
+   endif
+
    ! --- Computing induced velocity
-   allocate(SegSmooth(1:nSeg));
-   SegSmooth=10
-   SmoothModel=idSegSmoothLambOseen
-
    nCPs=p%nWings * p%nSpan
-
    allocate(CPs (1:3,1:nCPs))
    allocate(Uind(1:3,1:nCPs))
    Uind=0.0_ReKi !< important due to side effects of ui_seg
    ! ---
    call PackLiftingLinePoints()
-   call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, SmoothModel, SegSmooth, Uind)
+   call ui_seg( 1, nCPs, nCPs, CPs, 1, nSeg, nSeg, nSegP, SegPoints, SegConnct, SegGamma, p%RegFunction, SegEpsilon, Uind)
    call UnPackLiftingLineVelocities()
 
    deallocate(Uind)
@@ -452,7 +465,7 @@ subroutine LiftingLineInducedVelocities(p, x, m, ErrStat, ErrMsg)
    deallocate(SegConnct)
    deallocate(SegGamma)
    deallocate(SegPoints)
-   deallocate(SegSmooth)
+   deallocate(SegEpsilon)
 contains
    !> Pack all the control points
    subroutine PackLiftingLinePoints()

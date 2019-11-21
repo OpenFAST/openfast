@@ -261,6 +261,9 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%FreeWakeStart        = InputFileData%FreeWakeStart
    p%PrescribedPolar      = InputFileData%PrescribedPolar
    p%FullCirculationStart = InputFileData%FullCirculationStart
+   p%RegFunction          = InputFileData%RegFunction
+   p%WakeRegMethod        = InputFileData%WakeRegMethod
+   p%WakeRegFactor        = InputFileData%WakeRegFactor
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
    if (InputFileData%CirculationMethod==idCircPrescribed) then 
