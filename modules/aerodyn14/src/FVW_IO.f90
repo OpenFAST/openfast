@@ -67,6 +67,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method not implemented')) return
    if (Check(Inp%WakeRegFactor<0                            , 'Wake regularization factor should be positive')) return
 
+   ! At least one NW panel if FW, this shoudln't be a problem since the LL is in NW, but safety for now
+   !if (Check( (Inp%nNWPanels<=0).and.(Inp%nFWPanels>0)      , 'At least one near wake panel is required if the number of far wake panel is >0')) return
    call CleanUp()
 
 CONTAINS
@@ -93,6 +95,8 @@ CONTAINS
 END SUBROUTINE FVW_ReadInputFile
 
 !=================================================
+!> Export FVW variables to VTK
+!! NOTE: when entering this function nNW and nFW has been ncremented by 1
 subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    use VTK ! for all the vtk_* functions
    type(FVW_ParameterType),        intent(in   ) :: p !< Parameters
@@ -109,7 +113,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    character(Twidth)                     :: Tstr          ! string for current VTK write-out step (padded with zeros)
    integer :: iSeg
    integer :: iSpan, iNW, iFW
-   integer :: nSpan, nNW, nWings, nFW
+   integer :: nSpan, nWings
    integer :: k
    real(ReKi), dimension(:,:), allocatable :: Buffer2d
    character(1), dimension(3) :: I2ABC =(/'A','B','C'/)
@@ -120,6 +124,8 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    integer(IntKi) :: iHeadC, iHeadP, nC, nP
    !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
 
+   print*,'------------------------------------------------------------------------------'
+   print'(A,L1,A,I0,A,I0,A,I0)','VTK Output  -      First call ',m%FirstCall, '                                nNW:',m%nNW,' nFW:',m%nFW,'  i:',VTKCount
    !
    call set_vtk_binary_format(.false.)
 
@@ -128,8 +134,6 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
 
    nSpan  = p%nSpan
    nWings = p%nWings
-   nNW    = m%nNW
-   nFW    = m%nFW
    ! --------------------------------------------------------------------------------}
    ! --- Blade 
    ! --------------------------------------------------------------------------------{
@@ -164,7 +168,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    do iW=1,nWings
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-      if (m%nNW==1) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
+      if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
          call WrVTK_Lattice(FileName, m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW))
       else
          call WrVTK_Lattice(FileName, x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW))
@@ -174,16 +178,20 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! --- Far wake 
    ! --------------------------------------------------------------------------------{
    ! --- Far wake panels
-   !do iW=1,nWings
-   !   write(Label,'(A,A)') 'FW.Bld', i2ABC(iW)
-   !   Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
-   !   call WrVTK_Lattice(FileName, x%r_FW(1:3,:,:,iW), x%Gamma_FW(:,:,iW))
-   !enddo
+   do iW=1,nWings
+      write(Label,'(A,A)') 'FW.Bld', i2ABC(iW)
+      Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
+      call WrVTK_Lattice(FileName, x%r_FW(1:3,1:2,1:m%nFW+1,iW), x%Gamma_FW(1:1,1:m%nFW,iW))
+   enddo
    ! --------------------------------------------------------------------------------}
    ! --- All Segments
    ! --------------------------------------------------------------------------------{
-   nP =      nWings * (  (nSpan+1)*(nNW+1)            )
-   nC =      nWings * (2*(nSpan+1)*(nNW+1)-nSpan-nNW-2)
+   nP =      nWings * (  (nSpan+1)*(m%nNW+1)            )
+   nC =      nWings * (2*(nSpan+1)*(m%nNW+1)-nSpan-m%nNW-2)
+   if (m%nFW>0) then 
+      nP = nP + p%nWings * (    2       *(m%nFW+1) )
+      nC = nC + p%nWings * (3*m%nFW+1 )
+   endif
    allocate(SegConnct(1:2,1:nC)); SegConnct=-1
    allocate(SegPoints(1:3,1:nP)); SegPoints=-1
    allocate(SegGamma (1:nC)); SegGamma =-1
@@ -196,6 +204,11 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
          CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
       endif
    enddo
+   if (m%nFW>0) then !TODO TODO TODO
+      do iW=1,p%nWings
+         CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      enddo
+   endif
    Filename = TRIM(FileRootName)//'.AllSeg.'//Tstr//'.vtk'
    CALL WrVTK_Segments(Filename, SegPoints, SegConnct, SegGamma) 
 
@@ -222,7 +235,7 @@ subroutine WrVTK_Segments(filename, SegPoints, SegConnct, SegGamma)
       call vtk_dataset_polydata(SegPoints(1:3,:))
       call vtk_lines(SegConnct(1:2,:)-1) ! NOTE: VTK indexing at 0
       call vtk_cell_data_init()
-      call vtk_cell_data_scalar(SegGamma,'SegGamma')
+      call vtk_cell_data_scalar(SegGamma,'Gamma')
       !call vtk_point_data_init()
       !call vtk_point_data_vector(Sgmt%UconvP(1:3,1:Sgmt%nP_Storage),'Uconv')
       call vtk_close_file()
@@ -245,7 +258,7 @@ subroutine WrVTK_Lattice(filename, LatticePoints, LatticeGamma, LatticeData3d)
       call vtk_dataset_polydata(Points)
       call vtk_quad(Connectivity)
       call vtk_cell_data_init()
-      call vtk_cell_data_scalar(LatticeGamma,'Gamma_NW')
+      call vtk_cell_data_scalar(LatticeGamma,'Gamma')
       call vtk_close_file()
    endif
 

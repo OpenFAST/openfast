@@ -144,33 +144,158 @@ contains
 
 endsubroutine ReadAndInterpGamma
 ! =====================================================================================
-!> Prescribe circulation on the blade (based on an input file for now...)
-subroutine Prescribe_Gamma( Gamma_LL)
-   real( ReKi ), dimension( : ),   intent(out  ) :: Gamma_LL    !< Circulation on the lifting line
-   integer :: i
-   integer :: iUnit
-   integer :: nr
-   integer :: nr_in
-   real(ReKi), dimension(:), allocatable :: rPrescr, GammaPrescr !< Radius 
-   nr_in = size(Gamma_LL)
-   call GetNewUnit(iUnit)
-   open(unit = iUnit, file = './PrescribedGamma.txt')  ! TODO more general
-   read(iUnit,*)nr
-   if (nr/=nr_in)  then
-      write(*,*)'[ERROR] Number of prescribed point different from number of BS'
-      STOP 1
-   endif
-   allocate(rPrescr(1:nr),GammaPrescr(1:nr))
-   do i=1,nr
-      read(iUnit,*) rPrescr(i), GammaPrescr(i)
-   enddo
-   close(iUnit)
-   ! -- This part is the only part we need once the thing above has been moved
-   do i=1,nr
-      Gamma_LL(i)=GammaPrescr(i)
-   enddo
-endsubroutine Prescribe_Gamma
 
+! --------------------------------------------------------------------------------
+! --- Mapping functions 
+! --------------------------------------------------------------------------------
+
+!> Make sure the First panel of the NW match the last panel of the Trailing edge
+!!  - Same position of points
+!!  - Same circulation 
+subroutine Map_LL_NW(p, m, z, x, ErrStat, ErrMsg )
+   use Interpolation, only: interp_lin
+   type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+   type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+   type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
+   type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
+   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   ! Local
+   integer(IntKi) :: iSpan , iW
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! First panel of NW is the last lifting line panel
+   do iW = 1,p%nWings
+      do iSpan = 1,p%nSpan+1
+         x%r_NW(1:3, iSpan, iNWStart-1, iW) = m%r_LL(1:3, iSpan, 1, iW)  ! iAge=1
+         x%r_NW(1:3, iSpan, iNWStart  , iW) = m%r_LL(1:3, iSpan, 2, iW)  ! iAge=2
+      enddo
+   enddo
+   ! First panel of NW is the last lifting line panel
+   do iW = 1,p%nWings
+      do iSpan = 1,p%nSpan
+         x%Gamma_NW(iSpan, iNWStart-1, iW) = z%Gamma_LL(iSpan,iW)  ! iAge=1
+      enddo
+   enddo
+   ! Circulations are the same on both side of the TE 
+   if (p%nNWMax>iNWStart-1) then
+      do iW = 1,p%nWings
+         do iSpan = 1,p%nSpan
+            x%Gamma_NW(iSpan, iNWStart  , iW) = z%Gamma_LL(iSpan,iW)  ! iAge=2
+         enddo
+      enddo
+   endif
+end subroutine Map_LL_NW
+
+!>  Map the last NW panel with the first FW panel
+subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
+   type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+   type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+   type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
+   type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
+   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   integer(IntKi)            :: iSpan , iW
+   real(ReKi)                :: FWGamma
+   integer(IntKi), parameter :: iAgeFW=1   !< we update the first FW panel
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   ! First Panel of Farwake has coordinates of last panel of near wake always
+   if (p%nFWMax>0) then
+      do iW=1,p%nWings
+         x%r_FW(1:3,1,iAgeFW,iW) =  x%r_NW(1:3,1         ,p%nNWMax+1,iW) ! Point 1 (root)
+         x%r_FW(1:3,2,iAgeFW,iW) =  x%r_NW(1:3,p%nSpan+1 ,p%nNWMax+1,iW) ! Point 2 (tip)
+      enddo
+      if (m%nNW==p%nNWMax) then
+         ! First circulation of Farwake is taken as the mean circulation of last NW column
+         do iW=1,p%nWings
+            FWGamma = sum(x%Gamma_NW(:,p%nNWMax,iW))/p%nSpan
+            x%Gamma_FW(1,iAgeFW,iW) = FWGamma
+         enddo
+      endif
+   endif
+endsubroutine Map_NW_FW
+
+!> Propage the postions and circulation one index forward (loop from end to start) 
+subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
+   type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+   type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+   type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
+   type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
+   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   integer(IntKi) :: iSpan, iAge, iW
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! -- Propagate far wake
+      do iW=1,p%nWings
+         do iAge=p%nFWMax+1,2,-1 ! 
+            do iSpan=1,2
+               x%r_FW(1:3,iSpan,iAge,iW) = x%r_FW(1:3,iSpan,iAge-1,iW)
+            enddo
+         enddo
+         x%r_FW(1:3,1:2,1,iW) = -999.0_ReKi ! Nullified
+      enddo
+   if (p%nFWMax>0) then
+      do iW=1,p%nWings
+         do iAge=p%nFWMax,2,-1
+            x%Gamma_FW(1,iAge,iW) = x%Gamma_FW(1,iAge-1,iW)
+         enddo
+         x%Gamma_FW(1,1,iW) = -999.0_ReKi ! Nullified
+      enddo
+   endif
+   ! --- Propagate near wake
+   do iW=1,p%nWings
+      do iAge=p%nNWMax+1,iNWStart+1,-1 ! TODO TODO TODO Might need update
+         do iSpan=1,p%nSpan+1
+            x%r_NW(1:3,iSpan,iAge,iW) = x%r_NW(1:3,iSpan,iAge-1,iW)
+         enddo
+      enddo
+      x%r_NW(1:3,:,1:iNWStart,iW) = -999.0_ReKi ! Nullified
+   enddo
+   if (p%nNWMax>1) then
+      do iW=1,p%nWings
+         do iAge=p%nNWMax,iNWStart+1,-1
+            do iSpan=1,p%nSpan
+               x%Gamma_NW(iSpan,iAge,iW) = x%Gamma_NW(iSpan,iAge-1,iW)
+            enddo
+         enddo
+         x%Gamma_NW(:,1:iNWStart,iW) = -999.0_ReKi ! Nullified
+      enddo
+   endif
+end subroutine PropagateWake
+
+
+subroutine print_r_NW_FW(p, m, z, x, label)
+   type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+   type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
+   type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
+   type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
+   character(len=*),intent(in) :: label
+   integer(IntKi) :: iAge
+   print*,'NW'
+   do iAge=1,p%nNWMax+1
+      print*,'iAge',iAge
+      print*,trim(label), x%r_NW(1, 1, iAge,1), x%r_NW(1, p%nSpan+1, iAge,1)
+      print*,trim(label), x%r_NW(2, 1, iAge,1), x%r_NW(2, p%nSpan+1, iAge,1)
+      print*,trim(label), x%r_NW(3, 1, iAge,1), x%r_NW(3, p%nSpan+1, iAge,1)
+   enddo
+   print*,'FW'
+   do iAge=1,p%nFWMax+1
+      print*,'iAge',iAge
+      print*,trim(label), x%r_FW(1, 1:2, iAge,1)
+      print*,trim(label), x%r_FW(2, 1:2, iAge,1)
+      print*,trim(label), x%r_FW(3, 1:2, iAge,1)
+   enddo
+endsubroutine
+
+
+! --------------------------------------------------------------------------------
+! --- PACKING/UNPACKING FUNCTIONS
+! --------------------------------------------------------------------------------
 !> Establish the list of points where we will need the free stream
 subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
    real(ReKi), dimension(:,:), allocatable,      intent(inout) :: r_wind  !< Position where wind is requested
@@ -184,7 +309,6 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
    integer(IntKi)          :: nTot              ! Total number of points
    integer(IntKi)          :: iSpan, iW, iAge   ! Index on span, wings, panels
    integer(IntKi)          :: iP                ! Current index of point
-   ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
    if (allocated(r_wind)) deallocate(r_wind)
@@ -309,8 +433,10 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    ! Counting total number of segments TODO add FarWake
    nP =      p%nWings * (  (p%nSpan+1)*(m%nNW-iDepthStart+2)            )
    nC =      p%nWings * (2*(p%nSpan+1)*(m%nNW-iDepthStart+2)-(p%nSpan+1)-(m%nNW-iDepthStart+1+1))  
-!    nP = nP + p%nWings * (p%nSpan+1)*2
-!    nC = nC + p%nWings * (2*(p%nSpan+1)*(2)-p%nSpan-1-2)
+   if (m%nFW>0) then
+      nP = nP + p%nWings * (    2       *(m%nFW+1) )
+      nC = nC + p%nWings * (3*m%nFW+1 )
+   endif
 
    if (allocated(SegConnct)) deallocate(SegConnct)
    if (allocated(SegPoints)) deallocate(SegPoints)
@@ -326,6 +452,11 @@ subroutine PackPanelsToSegments(p, m, x, iDepthStart, SegConnct, SegPoints, SegG
    do iW=1,p%nWings
       CALL LatticeToSegments(x%r_NW(1:3,:,1:m%nNW+1,iW), x%Gamma_NW(:,1:m%nNW,iW), iDepthStart, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
    enddo
+   if (m%nFW>0) then
+      do iW=1,p%nWings
+         CALL LatticeToSegments(x%r_FW(1:3,:,1:m%nFW+1,iW), x%Gamma_FW(:,1:m%nFW,iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
+      enddo
+   endif
    if ((iHeadP-1)/=nP) then
       print*,'PackPanelsToSegments: Number of points wrongly estimated',nP, iHeadP-1
       STOP
@@ -373,7 +504,7 @@ subroutine WakeInducedVelocities(p, x, m, ErrStat, ErrMsg)
    endif
 
    ! --- Computing induced velocity
-   nCPs=nSegP
+   nCPs=nSegP ! NOTE This is only try if Far wake convects as well!
    allocate(CPs (1:3,1:nCPs))
    allocate(Uind(1:3,1:nCPs))
    Uind=0.0_ReKi !< important due to side effects of ui_seg
@@ -395,12 +526,17 @@ contains
       do iW=1,p%nWings
          CALL LatticeToPoints(x%r_NW(1:3,:,1:m%nNW+1,iW), 1, CPs, iHeadP)
       enddo
+      if (m%nFW>0) then
+         do iW=1,p%nWings
+            CALL LatticeToPoints(x%r_FW(1:3,:,1:m%nFW+1,iW), 1, CPs, iHeadP)
+         enddo
+      endif
       if ((iHeadP-1)/=size(CPs,2)) then
          print*,'PackConvectingPoints: Number of points wrongly estimated',size(CPs,2), iHeadP-1
          STOP
       endif
       nCPs=iHeadP-1
-      print*,'Number of points packed for Convection:',nCPs, nSegP
+      !print*,'Number of points packed for Convection:',nCPs, nSegP
    end subroutine
    !> Distribute the induced velocity to the proper location 
    subroutine UnPackInducedVelocity()
@@ -408,10 +544,17 @@ contains
       do iW=1,p%nWings
          CALL VecToLattice(Uind, 1, m%Vind_NW(:,:,1:m%nNW+1,iW), iHeadP)
       enddo
-      if ((iHeadP-1)/=size(Uind,2)) then
-         print*,'UnPackInducedVelocity: Number of points wrongly estimated',size(Uind,2), iHeadP-1
-         STOP
-      endif
+      ! TODO 
+      m%Vind_FW=0.0_ReKi
+      !if (m%nFW>0) then 
+      !   do iW=1,p%nWings
+      !      CALL VecToLattice(Uind, 1, m%Vind_FW(:,1:2,1:m%nFW+1,iW), iHeadP)
+      !   enddo
+      !endif
+      !if ((iHeadP-1)/=size(Uind,2)) then
+      !   print*,'UnPackInducedVelocity: Number of points wrongly estimated',size(Uind,2), iHeadP-1
+      !   STOP
+      !endif
    end subroutine
 
 end subroutine
@@ -439,7 +582,7 @@ subroutine LiftingLineInducedVelocities(p, x, m, ErrStat, ErrMsg)
 
    ! --- Packing all vortex elements into a list of segments
    call PackPanelsToSegments(p, m, x, 1, SegConnct, SegPoints, SegGamma, nSeg, nSegP)
-   print*,'Number of segments',nSeg, 'Number of points',nSegP
+   !print*,'Number of segments',nSeg, 'Number of points',nSegP
 
    ! --- Setting up regularization
    allocate(SegEpsilon(1:nSeg));
@@ -478,7 +621,7 @@ contains
          STOP
       endif
       nCPs=iHeadP-1
-      print*,'Number of points packed for LL:',nCPs, nSegP
+      !print*,'Number of points packed for LL:',nCPs, nSegP
    end subroutine
 
    !> Distribute the induced velocity to the proper location 

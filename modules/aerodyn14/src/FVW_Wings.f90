@@ -162,38 +162,7 @@ contains
    end subroutine Wings_Panelling
 
 
-   !> Make sure the First panel of the NW match the last panel of the Trailing edge
-   !!  - Same position of points
-   !!  - Same circulation 
-   subroutine Wings_Map_LL_NW(p, m, z, x, ErrStat, ErrMsg )
-      use Interpolation, only: interp_lin
-      type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
-      type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
-      type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
-      type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
-      integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
-      character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
-      ! Local
-      integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
-      character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
-      integer(IntKi) ::iSpan , iW
 
-      ! First panel of NW is the last lifting line panel
-      do iW = 1,p%nWings
-         do iSpan = 1,p%nSpan+1
-            x%r_NW(1:3, iSpan, iNWStart-1, iW) = m%r_LL(1:3, iSpan, 1, iW)  ! iAge=1
-            x%r_NW(1:3, iSpan, iNWStart  , iW) = m%r_LL(1:3, iSpan, 2, iW)  ! iAge=2
-         enddo
-      enddo
-      ! First panel of NW is the last lifting line panel
-      ! Circulations are the same on both side of the TE 
-      do iW = 1,p%nWings
-         do iSpan = 1,p%nSpan
-            x%Gamma_NW(iSpan, iNWStart-1, iW) = z%Gamma_LL(iSpan,iW)  ! iAge=1
-            x%Gamma_NW(iSpan, iNWStart  , iW) = z%Gamma_LL(iSpan,iW)  ! iAge=2
-         enddo
-      enddo
-   end subroutine Wings_Map_LL_NW
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
@@ -214,7 +183,7 @@ contains
       ErrMsg  = ""
 
       if (p%CirculationMethod==idCircPrescribed) then 
-         print*,'>>>Prescribing circulation'
+         !print*,'>>>Prescribing circulation'
          do iW = 1, p%nWings !Loop over lifting lines
             Gamma_LL(1:p%nSpan,iW) = p%PrescribedCirculation(1:p%nSpan)
          enddo

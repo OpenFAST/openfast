@@ -795,8 +795,9 @@ SUBROUTINE AD14_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrSt
 
       TYPE(AD14_ContinuousStateType)                 :: dxdt        ! Continuous state derivatives at Time
       TYPE(AD14_ConstraintStateType)                 :: z_Residual  ! Residual of the constraint state equations (Z)
-      type(FVW_InputType)      :: u_FVW(1)                !< FVW inputs
-      REAL(DbKi)               :: utimes_FVW(1)           !< Times associated with u(:), in seconds
+      type(FVW_InputType) , allocatable     :: u_FVW(:)                !< FVW inputs
+      REAL(DbKi)          , allocatable     :: utimes_FVW(:)           !< Times associated with u(:), in seconds
+      integer(IntKi) :: it
 
 !      INTEGER(IntKi)                                    :: ErrStat2    ! Error status of the operation (occurs after initial error)
 !      CHARACTER(ErrMsgLen)                              :: ErrMess2     ! Error message if ErrStat2 /= ErrID_None
@@ -815,11 +816,18 @@ SUBROUTINE AD14_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrSt
       !   print*,'Problem in AD14 update state, need to adapt which u we provide to FVW'
       !   STOP
       !endif
+      allocate(u_FVW     (size(utimes)))
+      allocate(utimes_FVW(size(utimes)))
       ! Setting u(1)%FVW
-      call AD14_to_FVW_u(u(1),p,u(1)%FVW,ErrStat,ErrMess)
-      u_FVW(1) = u(1)%FVW
-      utimes_FVW(1) = utimes(1)
+      do it=1,size(utimes)
+         call AD14_to_FVW_u(u(it),p,u(it)%FVW,ErrStat,ErrMess)
+         u_FVW(it)      = u(it)%FVW
+         utimes_FVW(it) = utimes(it)
+         !print*,'P',it, u(it)%InputMarkers(1)%Position(1:3,1)
+      enddo
       CALL FVW_UpdateStates( t, n, u_FVW, utimes_FVW, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW, ErrStat, ErrMess )
+      deallocate(u_FVW)
+      deallocate(utimes_FVW)
    endif
       
 END SUBROUTINE AD14_UpdateStates

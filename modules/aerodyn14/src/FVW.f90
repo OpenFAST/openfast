@@ -189,8 +189,8 @@ subroutine FVW_InitStates( x, p, m, ErrStat, ErrMsg )
 
    call AllocAry( x%Gamma_NW,    p%nSpan   , p%nNWMax  , p%nWings, 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%Gamma_NW = -999999_ReKi;
    call AllocAry( x%Gamma_FW,       1      , p%nFWMax  , p%nWings, 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%Gamma_FW = -999999_ReKi;
-   call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_NW     = -999999_ReKi;
-   call AllocAry( x%r_FW    , 3,    2      , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_FW     = -999999_ReKi;
+   call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_NW     = -99_ReKi;
+   call AllocAry( x%r_FW    , 3,    2      , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_FW     = -99_ReKi;
 
 
    if (ErrStat >= AbortErrLev) return
@@ -346,29 +346,45 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    character(ErrMsgLen)          :: ErrMsg2                                                            ! temporary Error message
    type(FVW_ConstraintStateType) :: z_guess                                                                              ! <
    integer(IntKi) :: iW, iSpan, iAge
+   real(ReKi) :: dt
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   print'(A,F10.3,A,F10.3,A,F10.3,A,I0,A,I0)','     Update states, t:',t,'  t_u:', utimes(1),' dt: ',utimes(1)-t,'   ',n,' nNW:',m%nNW
+   dt=utimes(1)-t ! TODO TODO TODO
 
-   ! Panelling wings based on input mesh provided
-   CALL Wings_Panelling(u(1)%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   print'(A,F10.3,A,F10.3,A,F10.3,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' dt: ',dt,'   ',n,' nNW:',m%nNW,' nFW:',m%nFW
+
+   ! --- Evaluation at t
+   ! Inputs at t
+   ! TODO TODO TODO AD14 HACK!  inputs at other times are wrong with AD14
+   !   call FVW_CopyInput( u(1), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   !    call FVW_Input_ExtrapInterp(u,utimes,uInterp,t, ErrStat2, ErrMsg2); if(Failed()) return
+   if (m%FirstCall) then
+      call FVW_CopyInput( u(2), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+      ! NOTE AD14 HACK should be put outside!
+      ! Panelling wings based on input mesh provided
+      call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   else
+      call FVW_CopyInput( u(1), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   endif
    
    ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
    ! TODO ANDY
    !CALL DistributeRequestedWind(u(1)%V_wind, x, p, m, ErrStat2, ErrMsg2);  if(Failed()) return
 
    ! Solve for circulation at t
-   CALL FVW_CalcConstrStateResidual(t, u(1), p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2); if(Failed()) return
+   call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! Map circulation and positions between LL and NW 
+   ! Map circulation and positions between LL and NW  and then NW and FW
    ! Changes: x only
-   CALL Wings_Map_LL_NW(p, m, z, x, ErrStat, ErrMsg )
+   call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2)
+   call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
+   !call print_x_NW_FW(p, m, z, x,'Map_')
 
+   ! --- Integration between t and t+dt
    if (p%IntMethod .eq. idEuler1) then 
-     call FVW_Euler1( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
-
+     call FVW_Euler1( t, dt, uInterp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2); if(Failed()) return
    !elseif (p%IntMethod .eq. idRK4) then 
    !   call FVW_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    !elseif (p%IntMethod .eq. idAB4) then
@@ -378,63 +394,38 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    else  
       call SetErrStat(ErrID_Fatal,'Invalid time integration method:'//Num2LStr(p%IntMethod),ErrStat,ErrMsg,'FVW_UpdateState') 
    end IF
+   !call print_x_NW_FW(p, m, z, x,'Conv')
 
-   ! -- Propagate wake m%nNW+1+1
-   do iW=1,p%nWings
-      do iAge=p%nNWMax+1,iNWStart+1,-1 ! TODO TODO TODO Might need update
-         do iSpan=1,p%nSpan+1
-            x%r_NW(1:3,iSpan,iAge,iW) = x%r_NW(1:3,iSpan,iAge-1,iW)
-         enddo
-      enddo
-      x%r_NW(1:3,:,1:iNWStart-1,iW) = -999.0_ReKi
-   enddo
-   do iW=1,p%nWings
-      do iAge=p%nNWMax,iNWStart+1,-1
-         do iSpan=1,p%nSpan
-            x%Gamma_NW(iSpan,iAge,iW) = x%Gamma_NW(iSpan,iAge-1,iW)
-         enddo
-      enddo
-      x%Gamma_NW(:,1:iNWStart-1,iW) = -999.0_ReKi
-   enddo
-!    do iAge=1,m%nNW+1+1
-!       print*,'iAge',iAge
-!       print*,'Prop', x%r_NW(1, 1:p%nSpan+1, iAge,1)
-!       print*,'Prop', x%r_NW(2, 1:p%nSpan+1, iAge,1)
-!       print*,'Prop', x%r_NW(3, 1:p%nSpan+1, iAge,1)
-!    enddo
-!    do iW=1,p%nWings
-!       print*,'Wing',iW
-!       do iAge=1,m%nNW+1+1
-!          print*,'Prop',x%Gamma_NW(:,iAge,iW)
-!       enddo
-!    enddo
+
+   ! --- t+dt
+
+   ! Propagation/creation of new layer of panels
+   call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2)
+   !call print_x_NW_FW(p, m, z, x,'Prop_')
+
+   ! Inputs at t+dt
+   ! TODO TODO TODO  inputs at other times are wrong with AD14
+   !call FVW_Input_ExtrapInterp(u,utimes,uInterp,t+dt, ErrStat2, ErrMsg2); if(Failed()) return
+   call FVW_CopyInput( u(1), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+
+   ! Panelling wings based on input mesh at t+dt
+   call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Solve for circulation at t+dt
-   CALL FVW_CalcConstrStateResidual(t, u(1), p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2); if(Failed()) return
+   call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2); if(Failed()) return
    
-   ! Map circulation and positions between LL and NW 
+   ! Map circulation and positions between LL and NW and then NW and FW
    ! Changes: x only
-   CALL Wings_Map_LL_NW(p, m, z, x, ErrStat, ErrMsg )
+   call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2)
+   call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
+   !call print_x_NW_FW(p, m, z, x,'Map_')
 
-!    do iW=1,p%nWings
-!       print*,'Wing',iW
-!       do iAge=1,m%nNW+1+1
-!          print*,'Map',x%Gamma_NW(:,iAge,iW)
-!       enddo
-!    enddo
-!    do iAge=1,m%nNW+1+1
-!       print*,'iAge',iAge
-!       print*,'Map', x%r_NW(1, 1:p%nSpan+1, iAge,1)
-!       print*,'Map', x%r_NW(2, 1:p%nSpan+1, iAge,1)
-!       print*,'Map', x%r_NW(3, 1:p%nSpan+1, iAge,1)
-!    enddo
-
-!    if (m%nNW>3) STOP
+   !if (m%nFW>4) STOP
+   !if (t>0.5) STOP
 
    if (m%FirstCall) then
       m%FirstCall=.False.
    endif
-
 
    call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2);
 
@@ -482,35 +473,34 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
       ! Out:  m%Vind_NW, m%Vind_FW
       call WakeInducedVelocities(p, x, m, ErrStat2, ErrMsg2)
 
-      call print_mean_4d( m%Vind_NW(:,:, 1:m%nNW+1,:), 'Mean induced vel. NW')
-      call print_mean_4d( m%Vind_FW(:,:, 1:m%nFW+1,:), 'Mean induced vel. FW')
-      call print_mean_4d( m%Vwnd_NW(:,:, 1:m%nNW+1,:), 'Mean wind vel.    NW')
-      call print_mean_4d( m%Vwnd_FW(:,:, 1:m%nFW+1,:), 'Mean wind vel.    FW')
+      !call print_mean_4d( m%Vind_NW(:,:, 1:m%nNW+1,:), 'Mean induced vel. NW')
+      !call print_mean_4d( m%Vind_FW(:,:, 1:m%nFW+1,:), 'Mean induced vel. FW')
+      !call print_mean_4d( m%Vwnd_NW(:,:, 1:m%nNW+1,:), 'Mean wind vel.    NW')
+      !call print_mean_4d( m%Vwnd_FW(:,:, 1:m%nFW+1,:), 'Mean wind vel.    FW')
 
       ! --- Vortex points are convected with the free stream and induced velocity
       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  m%Vind_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-      !dxdt%r_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings) = m%Vwnd_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings) ! TODO TODO
-!       STOP
-!       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
+      dxdt%r_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings) = m%Vwnd_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings) ! TODO/NOTE for now, FW convects with free wind
    else
 
       call print_mean_4d( m%Vwnd_NW(:,:,1:m%nNW+1,:), 'Mean wind vel.    NW')
-      call print_mean_4d( m%Vwnd_FW(:,:,1:m%nFW+1,:), 'Mean wind vel.    FW')
+      !call print_mean_4d( m%Vwnd_FW(:,:,1:m%nFW+1,:), 'Mean wind vel.    FW')
 
       ! --- Vortex points are convected with the free stream
       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
       dxdt%r_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings) = m%Vwnd_FW(1:3, 1:2        , 1:m%nFW+1, 1:p%nWings)
    endif
-   ! Bound point does not convect
+   ! First NW point does not convect (bound to LL)
    dxdt%r_NW(1:3, :, 1:iNWStart-1, :)=0
+   ! First FW point does not convect (bound to NW)
+   !dxdt%r_FW(1:3, :, 1, :)=0
 end subroutine FVW_CalcContStateDeriv
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine FVW_Euler1( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+subroutine FVW_Euler1( t, dt, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    real(DbKi),                    intent(in   ) :: t          !< Current simulation time in seconds
-   integer(IntKi),                intent(in   ) :: n          !< time step number
-   type(FVW_InputType),           intent(inout) :: u(:)       !< Inputs at t
-   real(DbKi),                    intent(in   ) :: utimes(:)  !< times of input
+   real(ReKi),                    intent(in   ) :: dt         !< Time step
+   type(FVW_InputType),           intent(in   ) :: u          !< Input at t
    type(FVW_ParameterType),       intent(in   ) :: p          !< Parameters
    type(FVW_ContinuousStateType), intent(inout) :: x          !< Continuous states at t on input at t + dt on output
    type(FVW_DiscreteStateType),   intent(in   ) :: xd         !< Discrete states at t
@@ -521,16 +511,14 @@ subroutine FVW_Euler1( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, Err
    character(*),                  intent(  out) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
    ! local variables
    type(FVW_ContinuousStateType) :: dxdt        ! time derivatives of continuous states      
-   real(ReKi)                    :: dt          ! Time step
    integer(IntKi) :: iAge
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = "" 
 
    ! Compute "right hand side"
-   CALL FVW_CalcContStateDeriv( t, u(1), p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
+   CALL FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
 
-   dt = utimes(1)-t ! TODO TODO is this correct 
 
 !    do iAge=1,m%nNW+1
 !       print*,'iAge',iAge
@@ -617,7 +605,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   print'(A,F10.3,A,L1)','     CalcOutput     t:',t,'   ',m%FirstCall
+   print'(A,F10.3,A,L1,A,I0,A,I0)','CalcOutput     t:',t,'   ',m%FirstCall,'                                nNW:',m%nNW,' nFW:',m%nFW
 
    if (m%FirstCall) then
       print*,'>>> First Call of CalcOuput, calling panelling and constrstate'
@@ -644,7 +632,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
          y%Vind(1:3,iSpan,iW) = m%Vind_LL(1:3,iSpan,iW)
       enddo
    enddo
-   call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
+   !call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
 
    ! We don't propagate the "Old"-> "New" if update states was not called once
    ! This is introduced since at init, CalcOutput is called before UpdateState
@@ -655,10 +643,11 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
 contains
 
    subroutine PrepareNextTimeStep()
-      ! --- Propagate wake
-      ! 
-      m%nNW=m%nNW+1
-      if (m%nNW>p%nNWMax) m%nNW = p%nNWMax
+      ! --- Increase wake length if maximum not reached
+      if (m%nNW==p%nNWMax) then ! a far wake exist
+         m%nFW=min(m%nFW+1, p%nFWMax)
+      endif
+      m%nNW=min(m%nNW+1, p%nNWMax)
 
    end subroutine PrepareNextTimeStep
 
