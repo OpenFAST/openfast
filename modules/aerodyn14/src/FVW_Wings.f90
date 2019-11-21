@@ -96,6 +96,7 @@ contains
       real(ReKi), dimension(3) :: DP_TE ! Distance between reference point and trailing edge
       real(ReKi), dimension(3) :: P1,P2,P3,P4,P5,P7,P8,P6,P9,P10
       real(ReKi), dimension(3) :: DP1, DP2, DP3
+      !real(ReKi), dimension(3,3) :: MRot
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -109,6 +110,9 @@ contains
             DP_LE(1)   = -m%chord_LL(iSpan,iW)/2  ! TODO TODO TODO Use orientation and might not be c/2
             DP_TE(1:3) =  0.0
             DP_TE(1)   = +m%chord_LL(iSpan,iW)/2  ! TODO TODO TODO Use orientation and might not be c/2
+            !MRot=Meshes(iW)%Orientation(1:3,1:3,iSpan) ! NOTE: this wont work
+            !DP_LE = matmul(MRot,DP_LE)
+            !DP_TE = matmul(MRot,DP_TE)
             m%LE(1:3, iSpan, iW) = P_ref + DP_LE
             m%TE(1:3, iSpan, iW) = P_ref + DP_TE
          enddo         
@@ -377,15 +381,15 @@ contains
             alpha = atan2(dot_product(Vrel,N) , dot_product(Vrel,Tc) ) ! [rad]  
             !Re    = LL%Vrel_orth_norm(icp)*LL%chord(icp)/KinVisc/(1.E6_MK) ! TODO TODO TODO KinVisc
 
-            if (p%PrescribedPolar==idPolarAeroDyn) then
+            if (p%CircSolvPolar==idPolarAeroDyn) then
                print*,'TODO TODO TODO Get Cl, Cd, Cm from alpha, Re and AirfoilInfo'
                STOP
-            else if (p%PrescribedPolar==idPolar2PiAlpha) then
+            else if (p%CircSolvPolar==idPolar2PiAlpha) then
                Cl=TwoPi*alpha
-            else if (p%PrescribedPolar==idPolar2PiSinAlpha) then
+            else if (p%CircSolvPolar==idPolar2PiSinAlpha) then
                Cl=TwoPi*sin(alpha)
             else
-               print*,'Unknown PrescribedPolar value'
+               print*,'Unknown CircSolvPolar value'
                STOP
             endif
             ! Simple method:

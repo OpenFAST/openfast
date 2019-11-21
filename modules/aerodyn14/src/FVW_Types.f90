@@ -57,10 +57,11 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: CircSolvMaxIter      !< Maximum number of iterations for circulation solving [-]
     REAL(ReKi)  :: CircSolvConvCrit      !< Convergence criterion for circulation solving [-]
     REAL(ReKi)  :: CircSolvRelaxation      !< Relaxation factor for circulation solving [-]
-    INTEGER(IntKi)  :: PrescribedPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
+    INTEGER(IntKi)  :: CircSolvPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
     INTEGER(IntKi)  :: RegFunction      !< Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart) [-]
     INTEGER(IntKi)  :: WakeRegMethod      !< Method for regularization (constant, stretching, age, etc.) [-]
     REAL(ReKi)  :: WakeRegFactor      !< Factor used in the regularization  [-]
+    REAL(ReKi)  :: WingRegFactor      !< Factor used in the regularization  [-]
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
   END TYPE FVW_ParameterType
@@ -97,6 +98,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: Vind_FW      !< Induced velocity on far  wake panels [m/s]
     INTEGER(IntKi)  :: nNW      !< Number of active near wake panels [-]
     INTEGER(IntKi)  :: nFW      !< Number of active far  wake panels [-]
+    INTEGER(IntKi)  :: iStep      !< Current step number [-]
   END TYPE FVW_MiscVarType
 ! =======================
 ! =========  FVW_InputType  =======
@@ -151,13 +153,14 @@ IMPLICIT NONE
     LOGICAL  :: FreeWake      !< Disable roll up, wake convects with wind only (flag) [-]
     REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
     REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]
-    INTEGER(IntKi)  :: PrescribedPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
+    INTEGER(IntKi)  :: CircSolvPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
     INTEGER(IntKi)  :: nNWPanels      !< Number of nw panels [-]
     INTEGER(IntKi)  :: nFWPanels      !< Number of fw panels [-]
     INTEGER(IntKi)  :: nFWPanelsFree      !< Number of fw panels that are free [-]
     INTEGER(IntKi)  :: RegFunction      !< Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart) [-]
     INTEGER(IntKi)  :: WakeRegMethod      !< Method for regularization (constant, stretching, age, etc.) [-]
     REAL(ReKi)  :: WakeRegFactor      !< Factor used in the regularization  [-]
+    REAL(ReKi)  :: WingRegFactor      !< Factor used in the regularization  [-]
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     REAL(ReKi)  :: Uinf      !< TODO TODO TEMPORARY HACK [-]
@@ -211,10 +214,11 @@ ENDIF
     DstParamData%CircSolvMaxIter = SrcParamData%CircSolvMaxIter
     DstParamData%CircSolvConvCrit = SrcParamData%CircSolvConvCrit
     DstParamData%CircSolvRelaxation = SrcParamData%CircSolvRelaxation
-    DstParamData%PrescribedPolar = SrcParamData%PrescribedPolar
+    DstParamData%CircSolvPolar = SrcParamData%CircSolvPolar
     DstParamData%RegFunction = SrcParamData%RegFunction
     DstParamData%WakeRegMethod = SrcParamData%WakeRegMethod
     DstParamData%WakeRegFactor = SrcParamData%WakeRegFactor
+    DstParamData%WingRegFactor = SrcParamData%WingRegFactor
     DstParamData%WrVTK = SrcParamData%WrVTK
     DstParamData%VTKBlades = SrcParamData%VTKBlades
  END SUBROUTINE FVW_CopyParam
@@ -285,10 +289,11 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! CircSolvMaxIter
       Re_BufSz   = Re_BufSz   + 1  ! CircSolvConvCrit
       Re_BufSz   = Re_BufSz   + 1  ! CircSolvRelaxation
-      Int_BufSz  = Int_BufSz  + 1  ! PrescribedPolar
+      Int_BufSz  = Int_BufSz  + 1  ! CircSolvPolar
       Int_BufSz  = Int_BufSz  + 1  ! RegFunction
       Int_BufSz  = Int_BufSz  + 1  ! WakeRegMethod
       Re_BufSz   = Re_BufSz   + 1  ! WakeRegFactor
+      Re_BufSz   = Re_BufSz   + 1  ! WingRegFactor
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
   IF ( Re_BufSz  .GT. 0 ) THEN 
@@ -355,13 +360,15 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%CircSolvRelaxation
       Re_Xferred   = Re_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PrescribedPolar
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CircSolvPolar
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%RegFunction
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WakeRegMethod
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WakeRegFactor
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WingRegFactor
       Re_Xferred   = Re_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WrVTK
       Int_Xferred   = Int_Xferred   + 1
@@ -452,13 +459,15 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%CircSolvRelaxation = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
-      OutData%PrescribedPolar = IntKiBuf( Int_Xferred ) 
+      OutData%CircSolvPolar = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%RegFunction = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%WakeRegMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%WakeRegFactor = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%WingRegFactor = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
       OutData%WrVTK = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
@@ -968,6 +977,7 @@ IF (ALLOCATED(SrcMiscData%Vind_FW)) THEN
 ENDIF
     DstMiscData%nNW = SrcMiscData%nNW
     DstMiscData%nFW = SrcMiscData%nFW
+    DstMiscData%iStep = SrcMiscData%iStep
  END SUBROUTINE FVW_CopyMisc
 
  SUBROUTINE FVW_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1195,6 +1205,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! nNW
       Int_BufSz  = Int_BufSz  + 1  ! nFW
+      Int_BufSz  = Int_BufSz  + 1  ! iStep
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1642,6 +1653,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNW
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFW
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%iStep
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE FVW_PackMisc
 
@@ -2321,6 +2334,8 @@ ENDIF
       OutData%nNW = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%nFW = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%iStep = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackMisc
 
@@ -4179,13 +4194,14 @@ ENDIF
     DstInputFileData%FreeWake = SrcInputFileData%FreeWake
     DstInputFileData%FreeWakeStart = SrcInputFileData%FreeWakeStart
     DstInputFileData%FullCirculationStart = SrcInputFileData%FullCirculationStart
-    DstInputFileData%PrescribedPolar = SrcInputFileData%PrescribedPolar
+    DstInputFileData%CircSolvPolar = SrcInputFileData%CircSolvPolar
     DstInputFileData%nNWPanels = SrcInputFileData%nNWPanels
     DstInputFileData%nFWPanels = SrcInputFileData%nFWPanels
     DstInputFileData%nFWPanelsFree = SrcInputFileData%nFWPanelsFree
     DstInputFileData%RegFunction = SrcInputFileData%RegFunction
     DstInputFileData%WakeRegMethod = SrcInputFileData%WakeRegMethod
     DstInputFileData%WakeRegFactor = SrcInputFileData%WakeRegFactor
+    DstInputFileData%WingRegFactor = SrcInputFileData%WingRegFactor
     DstInputFileData%WrVTK = SrcInputFileData%WrVTK
     DstInputFileData%VTKBlades = SrcInputFileData%VTKBlades
     DstInputFileData%Uinf = SrcInputFileData%Uinf
@@ -4246,13 +4262,14 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! FreeWake
       Re_BufSz   = Re_BufSz   + 1  ! FreeWakeStart
       Re_BufSz   = Re_BufSz   + 1  ! FullCirculationStart
-      Int_BufSz  = Int_BufSz  + 1  ! PrescribedPolar
+      Int_BufSz  = Int_BufSz  + 1  ! CircSolvPolar
       Int_BufSz  = Int_BufSz  + 1  ! nNWPanels
       Int_BufSz  = Int_BufSz  + 1  ! nFWPanels
       Int_BufSz  = Int_BufSz  + 1  ! nFWPanelsFree
       Int_BufSz  = Int_BufSz  + 1  ! RegFunction
       Int_BufSz  = Int_BufSz  + 1  ! WakeRegMethod
       Re_BufSz   = Re_BufSz   + 1  ! WakeRegFactor
+      Re_BufSz   = Re_BufSz   + 1  ! WingRegFactor
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Re_BufSz   = Re_BufSz   + 1  ! Uinf
@@ -4303,7 +4320,7 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%FullCirculationStart
       Re_Xferred   = Re_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PrescribedPolar
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%CircSolvPolar
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNWPanels
       Int_Xferred   = Int_Xferred   + 1
@@ -4316,6 +4333,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WakeRegMethod
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WakeRegFactor
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WingRegFactor
       Re_Xferred   = Re_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WrVTK
       Int_Xferred   = Int_Xferred   + 1
@@ -4377,7 +4396,7 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%FullCirculationStart = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
-      OutData%PrescribedPolar = IntKiBuf( Int_Xferred ) 
+      OutData%CircSolvPolar = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%nNWPanels = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
@@ -4390,6 +4409,8 @@ ENDIF
       OutData%WakeRegMethod = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%WakeRegFactor = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%WingRegFactor = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
       OutData%WrVTK = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1

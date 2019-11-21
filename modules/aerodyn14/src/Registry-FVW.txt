@@ -23,10 +23,11 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            CircSolvMaxIter     -     - -  "Maximum number of iterations for circulation solving"  -
 typedef     ^                   ^               ReKi                             CircSolvConvCrit     -     - - "Convergence criterion for circulation solving"  -
 typedef     ^                   ^               ReKi                             CircSolvRelaxation   -     - - "Relaxation factor for circulation solving"  -
-typedef     ^                   ^               IntKi                            PrescribedPolar   -  -  -  "(0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha)" -
+typedef     ^                   ^               IntKi                            CircSolvPolar   -  -  -  "(0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha)" -
 typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
 typedef     ^                   ^               ReKi                             WakeRegFactor -  - -   "Factor used in the regularization " 
+typedef     ^                   ^               ReKi                             WingRegFactor -  - -   "Factor used in the regularization " 
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 
@@ -63,6 +64,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Vind_FW      :::: -  -  "Induced velocity on far  wake panels" m/s 
 typedef     ^                   ^               IntKi                            nNW           -    -  - "Number of active near wake panels"      -
 typedef     ^                   ^               IntKi                            nFW           -    -  - "Number of active far  wake panels"      -
+typedef     ^                   ^               IntKi                            iStep         -    -  - "Current step number"      -
 
 # ........ Input ............
 # FVW_InputType
@@ -113,13 +115,14 @@ typedef     ^                   ^               IntKi                           
 typedef     ^                   ^               LOGICAL                          FreeWake            -     - -  "Disable roll up, wake convects with wind only (flag)"  -
 typedef     ^                   ^               ReKi                             FreeWakeStart     -  - -   "Time when wake starts convecting (rolling up)"  s
 typedef     ^                   ^               ReKi                             FullCirculationStart    -  - -   "Time when the circulation is full"  s
-typedef     ^                   ^               IntKi                            PrescribedPolar   -  -  -  "(0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha)" -
+typedef     ^                   ^               IntKi                            CircSolvPolar   -  -  -  "(0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha)" -
 typedef     ^                   ^               IntKi                            nNWPanels            -  -  -  "Number of nw panels"          -
 typedef     ^                   ^               IntKi                            nFWPanels            -  -  -  "Number of fw panels"          -
 typedef     ^                   ^               IntKi                            nFWPanelsFree        -  -  -  "Number of fw panels that are free"          -
 typedef     ^                   ^               IntKi                            RegFunction   -  -  -  "Type of regularizaion function (LambOseen, Vatistas, see FVW_BiotSavart)"          -
 typedef     ^                   ^               IntKi                            WakeRegMethod -  - -   "Method for regularization (constant, stretching, age, etc.)"  - 
 typedef     ^                   ^               ReKi                             WakeRegFactor -  - -   "Factor used in the regularization " 
+typedef     ^                   ^               ReKi                             WingRegFactor -  - -   "Factor used in the regularization " 
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               ReKi                             Uinf          -  - -   "TODO TODO TEMPORARY HACK" 

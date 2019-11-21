@@ -90,6 +90,7 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    p%nFWMax  = max(InputFileData%nFWPanels,0)
    p%nFWFree = max(InputFileData%nFWPanelsFree,0)
 
+
    ! Initialize Misc Vars (may depend on input file)
    CALL FVW_InitMiscVars( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
@@ -151,6 +152,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    m%FirstCall = .True.
    m%nNW       = iNWStart-1    ! Number of active nearwake panels
    m%nFW       = 0             ! Number of active farwake  panels
+   m%iStep     = 0             ! Current step number
 
    call AllocAry( m%LE      ,  3  ,  p%nSpan+1  , p%nWings, 'Leading Edge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%LE = -999999_ReKi;
    call AllocAry( m%TE      ,  3  ,  p%nSpan+1  , p%nWings, 'TrailingEdge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%TE = -999999_ReKi;
@@ -263,13 +265,14 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%CircSolvRelaxation   = InputFileData%CircSolvRelaxation
    p%CircSolvMaxIter      = InputFileData%CircSolvMaxIter
    p%FreeWakeStart        = InputFileData%FreeWakeStart
-   p%PrescribedPolar      = InputFileData%PrescribedPolar
+   p%CircSolvPolar        = InputFileData%CircSolvPolar
    p%FullCirculationStart = InputFileData%FullCirculationStart
    p%RegFunction          = InputFileData%RegFunction
    p%WakeRegMethod        = InputFileData%WakeRegMethod
    p%WakeRegFactor        = InputFileData%WakeRegFactor
+   p%WingRegFactor        = InputFileData%WingRegFactor
    p%WrVTK                = InputFileData%WrVTK
-   p%VTKBlades            = InputFileData%VTKBlades
+   p%VTKBlades            = min(max(InputFileData%VTKBlades,0),p%nWings)
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
    if (InputFileData%CirculationMethod==idCircPrescribed) then 
@@ -358,6 +361,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ErrMsg  = ""
 
    dt=utimes(1)-t ! TODO TODO TODO
+   m%iStep=n
 
    print'(A,F10.3,A,F10.3,A,F10.3,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' dt: ',dt,'   ',n,' nNW:',m%nNW,' nFW:',m%nFW
 
@@ -640,6 +644,17 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    ! This is introduced since at init, CalcOutput is called before UpdateState
    if (.not. m%FirstCall) then 
        call PrepareNextTimeStep()
+   endif
+
+
+   ! --- Write to VTK 
+   if (p%WrVTK==1) then
+      if (m%FirstCall) then
+         call MKDIR('vtk_out')
+         call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%iStep, 9)
+      else
+         call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%iStep+1, 9)
+      endif
    endif
 
 contains

@@ -44,8 +44,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar(UnIn,FileName,Inp%CircSolvConvCrit  ,'CircSolvConvCrit ' ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%CircSolvRelaxation,'CircSolvRelaxation','',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%CircSolvMaxIter   ,'CircSolvMaxIter'   ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%CircSolvPolar     ,'CircSolvPolar'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'   ,'',ErrStat2,ErrMsg2); if(Failed())return
-   CALL ReadVar(UnIn,FileName,Inp%PrescribedPolar   ,'PrescribedPolar'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ WAKE OPTIONS -------------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Wake options header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVar(UnIn,FileName,Inp%nNWPanels     ,'nNWPanels'       ,'',ErrStat2,ErrMsg2); if(Failed())return
@@ -54,6 +54,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar(UnIn,FileName,Inp%RegFunction   ,'RegFunction'     ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%WakeRegMethod ,'WakeRegMethod'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%WakeRegFactor ,'WakeRegFactor'   ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%WingRegFactor ,'WingRegFactor'   ,'',ErrStat2,ErrMsg2); if(Failed())return
    !------------------------ OUTPUT OPTIONS -----------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Output options header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVar(UnIn,FileName,Inp%WrVTK       , 'WrVTK'              ,'',ErrStat2,ErrMsg2); if(Failed())return
@@ -77,6 +78,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY(idRegVALID      ==Inp%RegFunction  )), 'Regularization function not implemented')) return
    if (Check(.not.(ANY(idRegMethodVALID==Inp%WakeRegMethod)), 'Wake regularization method not implemented')) return
    if (Check(Inp%WakeRegFactor<0                            , 'Wake regularization factor should be positive')) return
+   if (Check(Inp%WingRegFactor<0                            , 'Wing regularization factor should be positive')) return
 
    ! At least one NW panel if FW, this shoudln't be a problem since the LL is in NW, but safety for now
    !if (Check( (Inp%nNWPanels<=0).and.(Inp%nFWPanels>0)      , 'At least one near wake panel is required if the number of far wake panel is >0')) return
@@ -124,7 +126,6 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    character(Twidth)                     :: Tstr          ! string for current VTK write-out step (padded with zeros)
    integer :: iSeg
    integer :: iSpan, iNW, iFW
-   integer :: nSpan, nWings
    integer :: k
    real(ReKi), dimension(:,:), allocatable :: Buffer2d
    character(1), dimension(3) :: I2ABC =(/'A','B','C'/)
@@ -143,13 +144,11 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! TimeStamp
    write(Tstr, '(i' // trim(Num2LStr(Twidth)) //'.'// trim(Num2LStr(Twidth)) // ')') VTKcount
 
-   nSpan  = p%nSpan
-   nWings = p%nWings
    ! --------------------------------------------------------------------------------}
    ! --- Blade 
    ! --------------------------------------------------------------------------------{
    ! --- Blade Quarter chord points (AC)
-   do iW=1,nWings
+   do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'BldPointCP.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if ( vtk_new_ascii_file(trim(filename),Label) ) then
@@ -167,7 +166,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
       endif
    enddo
    ! --- Lifting line panels
-   do iW=1,nWings
+   do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'LL.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       call WrVTK_Lattice(FileName, m%r_LL(1:3,:,:,iW), m%Gamma_LL(:,iW:iW))
@@ -176,7 +175,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! --- Near wake 
    ! --------------------------------------------------------------------------------{
    ! --- Near wake panels
-   do iW=1,nWings
+   do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'NW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       if (m%FirstCall) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
@@ -189,7 +188,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    ! --- Far wake 
    ! --------------------------------------------------------------------------------{
    ! --- Far wake panels
-   do iW=1,nWings
+   do iW=1,p%VTKBlades
       write(Label,'(A,A)') 'FW.Bld', i2ABC(iW)
       Filename = TRIM(FileRootName)//'.'//trim(Label)//'.'//Tstr//'.vtk'
       call WrVTK_Lattice(FileName, x%r_FW(1:3,1:FWnSpan+1,1:m%nFW+1,iW), x%Gamma_FW(1:FWnSpan,1:m%nFW,iW))
@@ -208,7 +207,7 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    allocate(SegGamma (1:nC)); SegGamma =-1
    iHeadP=1
    iHeadC=1
-   do iW=1,nWings
+   do iW=1,p%nWings
       if (m%nNW==1) then ! Small Hack - At t=0, NW not set, but first NW panel is the LL panel
          CALL LatticeToSegments(m%r_LL(1:3,:,1:2,iW), m%Gamma_LL(:,iW:iW), 1, SegPoints, SegConnct, SegGamma, iHeadP, iHeadC )
       else
@@ -231,7 +230,6 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
       print*,'IO: Number of segments wrongly estimated',nC, iHeadC-1
       STOP
    endif
-
 
 end subroutine WrVTK_FVW
 
