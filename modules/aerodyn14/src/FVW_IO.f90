@@ -46,6 +46,10 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    CALL ReadVar(UnIn,FileName,Inp%CirculationFile   ,'CirculationFile'  ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%FullCirculationStart,'FullCirculationStart'  ,'',ErrStat2,ErrMsg2); if(Failed())return
    CALL ReadVar(UnIn,FileName,Inp%PrescribedPolar     ,'PrescribedPolar'       ,'',ErrStat2,ErrMsg2); if(Failed())return
+   !------------------------ WAKE OPTIONS -------------------------------------------
+   CALL ReadCom(UnIn,FileName,                  'Wake options header', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL ReadVar(UnIn,FileName,Inp%nNWPanels     ,'nNWPanels'       ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%nFWPanels     ,'nFWPanels'       ,'',ErrStat2,ErrMsg2); if(Failed())return
 
    ! Post pro and validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)
@@ -53,6 +57,8 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    if (Check(.not.(ANY((/idCircPrescribed,idCircPolarData/)==Inp%CirculationMethod)), 'Circulation method not implemented')) return
 
    if (Check( Inp%IntMethod/=idEuler1 , 'Time integration method not implemented')) return
+
+   if (Check( Inp%nNWPanels<0 , 'Number of near wake panels must be posivive')) return
 
    call CleanUp()
 
@@ -106,6 +112,9 @@ subroutine WrVTK_FVW(p, x, z, m, FileRootName, VTKcount, Twidth)
    real(ReKi),    dimension(:)  , allocatable :: SegGamma  !< Segment Circulation
    integer(IntKi) :: iHeadC, iHeadP, nC, nP
    !real(ReKi),    dimension(:),   allocatable :: SegSmooth !< 
+
+   !
+   call set_vtk_binary_format(.false.)
 
    ! TimeStamp
    write(Tstr, '(i' // trim(Num2LStr(Twidth)) //'.'// trim(Num2LStr(Twidth)) // ')') VTKcount

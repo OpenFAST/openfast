@@ -85,9 +85,11 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! Read and parse the input file here to get other parameters and info
    CALL FVW_ReadInputFile(InitInp%FVWFileName, p, InputFileData, ErrStat2, ErrMsg2); if(Failed()) return
 
+   ! Trigger required before allocations
+   p%nNWMax=InputFileData%nNWPanels+1  ! +1 since LL panel included in NW
+   p%nFWMax=max(InputFileData%nFWPanels,0)
+
    ! Initialize Misc Vars (may depend on input file)
-   p%nNWMax=100 ! TODO 
-   p%nFWMax=100 ! TODO
    CALL FVW_InitMiscVars( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    ! Preliminary meshing of the wings (may depend on input file)
@@ -164,10 +166,10 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%Vwnd_FW , 3   ,  p%nSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vwnd_FW= -999_ReKi;
    call AllocAry( m%Vind_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Vind on NW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vind_NW= -999_ReKi;
    call AllocAry( m%Vind_FW , 3   ,  p%nSpan+1  ,p%nFWMax+1,  p%nWings, 'Vind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vind_FW= -999_ReKi;
-   m%Vwnd_NW(1,:,:,:)= 8 
+   m%Vwnd_NW(1,:,:,:)= 10
    m%Vwnd_NW(2,:,:,:)= 0
    m%Vwnd_NW(3,:,:,:)= 0
-   m%Vwnd_FW(1,:,:,:)= 8 
+   m%Vwnd_FW(1,:,:,:)= 10
    m%Vwnd_FW(2,:,:,:)= 0
    m%Vwnd_FW(3,:,:,:)= 0
 end subroutine FVW_InitMiscVars
@@ -489,8 +491,8 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
 !       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
    else
 
-      call print_mean_4d( m%Vwnd_NW(:,1:m%nNW+1,:,:), 'Mean wind vel.    NW')
-      call print_mean_4d( m%Vwnd_FW(:,1:m%nFW+1,:,:), 'Mean wind vel.    FW')
+      call print_mean_4d( m%Vwnd_NW(:,:,1:m%nNW+1,:), 'Mean wind vel.    NW')
+      call print_mean_4d( m%Vwnd_FW(:,:,1:m%nFW+1,:), 'Mean wind vel.    FW')
 
       ! --- Vortex points are convected with the free stream
       dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = m%Vwnd_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) 
@@ -604,6 +606,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! Local variables
+   integer(IntKi)                :: iSpan, iW
    integer(IntKi)                :: ErrStat2
    character(ErrMsgLen)          :: ErrMsg2
    character(*), parameter       :: RoutineName = 'FVW_CalcOutput'
@@ -622,19 +625,23 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    endif
 
    if (.not. allocated(y%Vind)) then
-      call AllocAry( y%Vind ,  3, p%nSpan, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 );
+      call AllocAry( y%Vind ,  3, p%nSpan+1, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! TODO potentially nSpan+1 for AD15
       if(Failed()) return
    endif
    ! Returned guessed locations where wind will be required
    CALL SetRequestedWindPoints(y%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
-   !if (m%FirstCall) then
-   !endif
+   ! Induction on the lifting line control point
+   call LiftingLineInducedVelocities(p, x, m, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! For now returning 0
-   y%Vind(1,:,:) = 0.0_ReKi
-   y%Vind(2,:,:) = 0.0_ReKi
-   y%Vind(3,:,:) = 0.0_ReKi
+   ! Interpolation to AeroDyn radial station TODO TODO TODO
+   y%Vind(1:3,:,:) = 0.0_ReKi
+   do iW=1,p%nWings
+      do iSpan=1,p%nSpan
+         y%Vind(1:3,iSpan,iW) = m%Vind_LL(1:3,iSpan,iW)
+      enddo
+   enddo
+   call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
 
    ! We don't propagate the "Old"-> "New" if update states was not called once
    ! This is introduced since at init, CalcOutput is called before UpdateState
@@ -643,18 +650,9 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    endif
 
 contains
-   !==========================================================================
-   !> Computes induction on the lifting line (3/4 chord point)
-   ! Interpolate the values at the radial station of AeroDyn
-!    subroutine CalcInduction_LL()
-! 
-!    end subroutine CalcInduction_LL
-
 
    subroutine PrepareNextTimeStep()
       ! --- Propagate wake
-      ! TODO
-      
       ! 
       m%nNW=m%nNW+1
       if (m%nNW>p%nNWMax) m%nNW = p%nNWMax

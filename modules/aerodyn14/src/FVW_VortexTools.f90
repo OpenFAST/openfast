@@ -149,5 +149,19 @@ CONTAINS
       print'(A20,3F12.4)',trim(Label),U
    end subroutine
 
+   subroutine print_mean_3d(M, Label)
+      real(ReKi), dimension(:,:,:), intent(in) :: M
+      character(len=*), intent(in)               :: Label
+      integer(IntKi) :: i, j
+      real(ReKi), dimension(3) :: U
+      !
+      U(1:3)=0
+      do i=1,size(M,3); do j=1,size(M,2)
+         U(1:3)= U(1:3)+ M(1:3, j, i)
+      enddo; enddo;
+      U(1:3)=U(1:3)/ (size(M,3)*size(M,2))
+      print'(A20,3F12.4)',trim(Label),U
+   end subroutine
+
 
 END MODULE FVW_VortexTools

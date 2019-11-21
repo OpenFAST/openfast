@@ -146,6 +146,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
     REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]
     INTEGER(IntKi)  :: PrescribedPolar      !< (0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha) [-]
+    INTEGER(IntKi)  :: nNWPanels      !< Number of nw panels [-]
+    INTEGER(IntKi)  :: nFWPanels      !< Number of fw panels [-]
   END TYPE FVW_InputFile
 ! =======================
 ! =========  FVW_InitOutputType  =======
@@ -4129,6 +4131,8 @@ ENDIF
     DstInputFileData%FreeWakeStart = SrcInputFileData%FreeWakeStart
     DstInputFileData%FullCirculationStart = SrcInputFileData%FullCirculationStart
     DstInputFileData%PrescribedPolar = SrcInputFileData%PrescribedPolar
+    DstInputFileData%nNWPanels = SrcInputFileData%nNWPanels
+    DstInputFileData%nFWPanels = SrcInputFileData%nFWPanels
  END SUBROUTINE FVW_CopyInputFile
 
  SUBROUTINE FVW_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -4187,6 +4191,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! FreeWakeStart
       Re_BufSz   = Re_BufSz   + 1  ! FullCirculationStart
       Int_BufSz  = Int_BufSz  + 1  ! PrescribedPolar
+      Int_BufSz  = Int_BufSz  + 1  ! nNWPanels
+      Int_BufSz  = Int_BufSz  + 1  ! nFWPanels
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4235,6 +4241,10 @@ ENDIF
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%FullCirculationStart
       Re_Xferred   = Re_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%PrescribedPolar
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNWPanels
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nFWPanels
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE FVW_PackInputFile
 
@@ -4291,6 +4301,10 @@ ENDIF
       OutData%FullCirculationStart = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
       OutData%PrescribedPolar = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%nNWPanels = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%nFWPanels = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackInputFile
 

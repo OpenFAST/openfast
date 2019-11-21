@@ -108,6 +108,8 @@ typedef     ^                   ^               LOGICAL                         
 typedef     ^                   ^               ReKi                             FreeWakeStart     -  - -   "Time when wake starts convecting (rolling up)"  s
 typedef     ^                   ^               ReKi                             FullCirculationStart    -  - -   "Time when the circulation is full"  s
 typedef     ^                   ^               IntKi                            PrescribedPolar   -  -  -  "(0=Use AD polars, 1=2PiAlpha, 2=sin(2pialpha)" -
+typedef     ^                   ^               IntKi                            nNWPanels            -  -  -  "Number of nw panels"          -
+typedef     ^                   ^               IntKi                            nFWPanels            -  -  -  "Number of fw panels"          -
 
 #.......... InitOutputType ......
 # FVW_InitOutputType

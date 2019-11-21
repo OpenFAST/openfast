@@ -9,6 +9,7 @@ module FVW_BiotSavart
    real(ReKi),parameter :: MINDENOM=1e-15_ReKi
    real(ReKi),parameter :: MINNORMSIMP=1e-6_ReKi
 
+   integer(IntKi), parameter :: idSegSmoothNone       = 0
    integer(IntKi), parameter :: idSegSmoothRankine    = 1
    integer(IntKi), parameter :: idSegSmoothLambOseen  = 2
    integer(IntKi), parameter :: idSegSmoothVatistas   = 3
@@ -94,7 +95,7 @@ subroutine ui_seg_11(DeltaPa, DeltaPb, Gam, SmoothModel , SmoothParam, Ui)
          !--- Normal Procedure 
          ! smooth model  
          select case (SmoothModel) !
-         case ( 0 ) !! No vortex core model
+         case ( idSegSmoothNone ) !! No vortex core model
             Kv=1.0_ReKi
          case ( idSegSmoothRankine ) !!Rankine - t<=>rc
             ! orthogonal distance r1xr2/r0 
@@ -261,7 +262,7 @@ subroutine ui_seg(iCPStart, iCPEnd, nCPsTot, CPs, &
                ! smooth model  
                h2 = 0.0_ReKi
                select case ((SmoothModel)) !
-               case ( 0 ) !! No vortex core model
+               case ( idSegSmoothNone ) !! No vortex core model
                   Kv=1.0_ReKi
                case ( idSegSmoothRankine ) !!Rankine - t<=>rc
                   ! orthogonal distance r1xr2/r0 
