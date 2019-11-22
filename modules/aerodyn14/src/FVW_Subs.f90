@@ -219,9 +219,10 @@ subroutine Map_NW_FW(p, m, z, x, ErrStat, ErrMsg)
          endif
       enddo
       if (m%nNW==p%nNWMax) then
-         ! First circulation of Farwake is taken as the mean circulation of last NW column
+         ! First circulation of Farwake is taken as the max circulation of last NW column
          do iW=1,p%nWings
-            FWGamma = sum(x%Gamma_NW(:,p%nNWMax,iW))/p%nSpan
+            !FWGamma = sum(x%Gamma_NW(:,p%nNWMax,iW))/p%nSpan
+            FWGamma = maxval(x%Gamma_NW(:,p%nNWMax,iW))
             x%Gamma_FW(1:FWnSpan,iAgeFW,iW) = FWGamma
          enddo
       endif
