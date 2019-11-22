@@ -396,7 +396,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ! Returns: z%Gamma_LL (at t)
    call AllocAry( z_guess%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat, ErrMsg );
    z_guess%Gamma_LL = m%Gamma_LL
-   call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2); if(Failed()) return
+   call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2, 1); if(Failed()) return
 
    ! Map circulation and positions between LL and NW  and then NW and FW
    ! Changes: x only
@@ -566,7 +566,7 @@ end subroutine FVW_Euler1
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a tight coupling routine for solving for the residual of the constraint state functions.
-subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, z_out, ErrStat, ErrMsg )
+subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, z_out, ErrStat, ErrMsg, iLabel)
    real(DbKi),                    intent(in   )  :: t           !< Current simulation time in seconds
    type(FVW_InputType),           intent(in   )  :: u           !< Inputs at t
    type(FVW_ParameterType),       intent(in   )  :: p           !< Parameters
@@ -576,6 +576,7 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
    type(FVW_OtherStateType),      intent(in   )  :: OtherState  !< Other states at t
    type(FVW_MiscVarType),         intent(inout)  :: m           !< Misc variables for optimization (not copied in glue code)
    type(FVW_ConstraintStateType), intent(  out)  :: z_out            !< Residual of the constraint state functions using
+   integer(IntKi), intent(in) :: iLabel
                                                                     !!     the input values described above
    integer(IntKi),                    intent(  OUT)  :: ErrStat     !< Error status of the operation
    character(*),                      intent(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -588,7 +589,7 @@ subroutine FVW_CalcConstrStateResidual( t, u, p, x, xd, z_guess, OtherState, m, 
    call AllocAry( z_out%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat, ErrMsg );
    z_out%Gamma_LL = -999999_ReKi;
 
-   CALL Wings_ComputeCirculation(t, z_out%Gamma_LL, z_guess%Gamma_LL, u, p, x, m, ErrStat, ErrMsg)
+   CALL Wings_ComputeCirculation(t, z_out%Gamma_LL, z_guess%Gamma_LL, u, p, x, m, ErrStat, ErrMsg, iLabel)
 
 end subroutine FVW_CalcConstrStateResidual
 
@@ -628,13 +629,14 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    if (m%FirstCall) then
       print*,'>>> First Call of CalcOutput, calling panelling and constrstate'
       CALL Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
-      CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, ErrStat, ErrMsg) ! For plotting only
+      CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, ErrStat, ErrMsg, 0) ! For plotting only
    else
       m%Gamma_LL = z%Gamma_LL ! For plotting only
    endif
 
    if (.not. allocated(y%Vind)) then
-      call AllocAry( y%Vind ,  3, p%nSpan+1, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! TODO potentially nSpan+1 for AD15
+      !call AllocAry( y%Vind ,  3, p%nSpan+1, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! TODO potentially nSpan+1 for AD15
+      call AllocAry( y%Vind ,  3, p%nSpan+1, 3, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! NOTE: temporary hack 3 blades
       if(Failed()) return
    endif
    ! Returned guessed locations where wind will be required
@@ -655,7 +657,8 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
 
    ! For plotting only
    m%Vtot_ll = m%Vind_LL + m%Vwnd_LL - m%Vstr_ll
-   !call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
+   call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
+   call print_mean_3d(m%Vtot_LL,'Mean relativevel. LL')
 
    ! We don't propagate the "Old"-> "New" if update states was not called once
    ! This is introduced since at init, CalcOutput is called before UpdateState

@@ -60,19 +60,21 @@ END FUNCTION interpolation_array
 
 ! =====================================================================================
 !> Output blade circulation 
-subroutine Output_Gamma(CP, Gamma_LL, iWing, iCall, Time)
+subroutine Output_Gamma(CP, Gamma_LL, iWing, iStep, iLabel, iIter)
    real( ReKi ), dimension( :, : ), intent(in   ) :: CP       !< Control Points
    real( ReKi ), dimension( : ),    intent(in   ) :: Gamma_LL !< Circulation on the lifting line
    integer( IntKi ),                intent(in   ) :: iWing    !< Wing index
-   integer( IntKi ),                intent(in   ) :: iCall    !< Call ID
-   real(DbKi),                      intent(in   ) :: Time
+   integer( IntKi ),                intent(in   ) :: iStep    !< Call ID
+   integer( IntKi ),                intent(in   ) :: iLabel    !< Call ID
+   integer( IntKi ),                intent(in   ) :: iIter    !< Call ID
    character(len=255) :: filename
    integer :: i
    integer :: iUnit
    real(ReKi) :: norm
    call GetNewUnit(iUnit)
    ! TODO output folder
-   write(filename,'(A,I0,A,I0,A,I0,A)')'Gamma/Gamma_call',int(iCall),'_t',int(Time*10000),'_Wing',int(iWing),'.txt'
+   CALL MKDIR('Gamma')
+   write(filename,'(A,I0,A,I0,A,I0,A,I0,A)')'Gamma/Gamma_step',int(iStep),'_lab',iLabel,'_it',iIter,'_Wing',int(iWing),'.txt'
    OPEN(unit = iUnit, file = trim(filename), status="unknown", action="write")
    write(iUnit,'(A)') 'norm_[m],x_[m],y_[m],z_[m], Gamma_[m^2/s]'
    do i=1,size(Gamma_LL)
@@ -245,7 +247,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
                x%r_FW(1:3,iSpan,iAge,iW) = x%r_FW(1:3,iSpan,iAge-1,iW)
             enddo
          enddo
-         x%r_FW(1:3,1:FWnSpan,1,iW) = -999.0_ReKi ! Nullified
+         x%r_FW(1:3,1:FWnSpan,1,iW) = -999.9_ReKi ! Nullified
       enddo
    if (p%nFWMax>0) then
       do iW=1,p%nWings
@@ -254,7 +256,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
                x%Gamma_FW(iSpan,iAge,iW) = x%Gamma_FW(iSpan,iAge-1,iW)
             enddo
          enddo
-         x%Gamma_FW(1,1:FWnSpan-1,iW) = -999.0_ReKi ! Nullified
+         x%Gamma_FW(1,1:FWnSpan-1,iW) = -999.9_ReKi ! Nullified
       enddo
    endif
    ! --- Propagate near wake
@@ -264,7 +266,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
             x%r_NW(1:3,iSpan,iAge,iW) = x%r_NW(1:3,iSpan,iAge-1,iW)
          enddo
       enddo
-      x%r_NW(1:3,:,1:iNWStart,iW) = -999.0_ReKi ! Nullified
+      x%r_NW(1:3,:,1:iNWStart,iW) = -999.9_ReKi ! Nullified
    enddo
    if (p%nNWMax>1) then
       do iW=1,p%nWings
@@ -273,7 +275,7 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
                x%Gamma_NW(iSpan,iAge,iW) = x%Gamma_NW(iSpan,iAge-1,iW)
             enddo
          enddo
-         x%Gamma_NW(:,1:iNWStart,iW) = -999.0_ReKi ! Nullified
+         x%Gamma_NW(:,1:iNWStart,iW) = -999.9_ReKi ! Nullified
       enddo
    endif
 end subroutine PropagateWake

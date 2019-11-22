@@ -175,12 +175,27 @@ contains
 
    end subroutine Wings_Panelling
 
-
+!       print*,'  Norm Tang '
+!       print*, m%Norm(1:3,5,1)
+!       print*, m%Tang(1:3,5,1)
+!       print*,'       '
+!       print*,'LE1',m%LE(1,:,1)
+!       print*,'LE2',m%LE(2,:,1)
+!       print*,'LE3',m%LE(3,:,1)
+!       print*,''
+!       print*,'TE1',m%LE(1,:,1)
+!       print*,'TE2',m%LE(2,:,1)
+!       print*,'TE3',m%LE(3,:,1)
+!       print*,''
+!       print*,'CP1',m%CP_LL(1,:,1)
+!       print*,'CP2',m%CP_LL(2,:,1)
+!       print*,'CP3',m%CP_LL(3,:,1)
+! 
 
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
-   subroutine Wings_ComputeCirculation(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg)
+   subroutine Wings_ComputeCirculation(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg, iLabel)
       real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
       real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
       real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
@@ -190,6 +205,7 @@ contains
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+      integer(IntKi), intent(in) :: iLabel
       ! Local
       integer(IntKi) :: iW
       ! Initialize ErrStat
@@ -204,9 +220,8 @@ contains
 
       else if (p%CirculationMethod==idCircPolarData) then 
          ! ---  Solve for circulation using polar data
-         ! TODO
-         print*,'>>>>>>>>>>>>>>>>> Circulation solving with polar data'
-         CALL Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg)
+         !print*,'>>>>>>>>>>>>>>>>> Circulation solving with polar data >>>>>>>>>>>>>> CALL  ',iLabel
+         CALL Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg, iLabel)
 
       else if (p%CirculationMethod==idCircNoFlowThrough) then 
          ! ---  Solve for circulation using the no-flow through condition
@@ -229,7 +244,7 @@ contains
 
    !----------------------------------------------------------------------------------------------------------------------------------
    !>
-   subroutine Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg)
+   subroutine Wings_ComputeCirculationPolarData(t, Gamma_LL, Gamma_LL_prev, u, p, x, m, ErrStat, ErrMsg, iLabel)
       real(DbKi),                      intent(in   )  :: t           !< Current simulation time in seconds
       real(ReKi), dimension(:,:),      intent(inout)  :: Gamma_LL       !< Circulation on all the lifting lines
       real(ReKi), dimension(:,:),      intent(in   )  :: Gamma_LL_prev  !< Previous/Guessed circulation
@@ -239,6 +254,7 @@ contains
       type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
       integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
       character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+      integer(IntKi), intent(in) :: iLabel
       ! Local
       real(ReKi), dimension(:,:), allocatable :: DGamma        !< 
       real(ReKi), dimension(:,:), allocatable :: GammaLastIter !< 
@@ -268,6 +284,12 @@ contains
       else
          GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings)
       endif
+
+      if (any(x%r_NW(1,:,1:m%nNW+1,:)<-999)) then
+         print*,'Wings_ComputeCirculationPolarData: Problem in input NW points'
+         STOP
+      endif
+
 
       ! --- Setting up Vcst: part of the velocity that is constant withing the iteration loop
       !   Vrel_ll_cst = U_u0 - U_body 
@@ -311,7 +333,7 @@ contains
              enddo
           enddo
           ! Total velocity on the lifting line
-          m%vtot_ll = vcst + vvar
+          m%Vtot_ll = Vcst + Vvar
           !call print_mean_3d( Vvar(:,:,:), 'Mean induced vel. LL (var)')
           !call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
           ! --- Computing circulation based on Vtot_LL
@@ -327,33 +349,38 @@ contains
           MeanGamma  = sum(abs(GammaLastIter))/(p%nWings*p%nSpan)
           !print*,'Crit',maxval(abs(DGamma))/(MeanGamma)
           bConverged = maxval(abs(DGamma))/(MeanGamma)<p%CircSolvConvCrit
+
       end do ! convergence loop
       if (iIter==p%CircSolvMaxIter) then
-          print*,'Maximum number of iterations reached: ',iIter
-          Gamma_LL=GammaLastIter ! returning relaxed value if not converged
-       else
-          print*,'Circulation solve done after:', iIter,' iterations'
-          ! We return Gamma_LL
-       endif
-       print*,'Gamm: ',Gamma_LL(1:3, 1)
+         print*,'Maximum number of iterations reached: ',iIter
+         Gamma_LL=GammaLastIter ! returning relaxed value if not converged
+      else
+         print'(A,I0,A,I0)','Circulation solve, call ',iLabel,', done after ........................ nIter: ', iIter
+         ! We return Gamma_LL
+      endif
 
+      ! KEEP ME:
+      !iW=1
+      !call Output_Gamma(m%CP_ll(1:3,:,iW), Gamma_LL(:,iW), iW, m%iStep, iLabel, iIter)
 
-      call print_mean_3d( m%Vind_LL(:,:,:), 'Mean induced vel. LL (cst)')
-      call print_mean_3d( Vvar(:,:,:)     , 'Mean induced vel. LL (var)')
-      call print_mean_3d( m%Vwnd_LL(:,:,:), 'Mean wind    vel. LL (cst)')
-      call print_mean_3d( m%Vstr_LL(:,:,:), 'Mean struct  vel. LL (cst)')
+      !call print_mean_3d( m%Vwnd_LL(:,:,:), 'Mean wind    vel. LL (cst)')
+      !call print_mean_3d( m%Vstr_LL(:,:,:), 'Mean struct  vel. LL (cst)')
+      !call print_mean_3d( m%Vind_LL(:,:,:), 'Mean induced vel. LL (cst)')
+      !call print_mean_3d( Vvar(:,:,:)     , 'Mean induced vel. LL (var)')
+      call print_mean_3d( Vvar+m%Vind_LL(:,:,:), 'Mean induced vel. LL (tot)')
       call print_mean_3d( m%Vtot_LL(:,:,:), 'Mean relativevel. LL (tot)')
       !print*,'m%Vind_LL',m%Vind_LL(1,:,:)
       !print*,'m%Vwnd_LL',m%Vwnd_LL(1,:,:)
       !print*,'m%Vcst_LL',Vcst(1,:,:)
-      m%Vind_LL=-9999._ReKi ! < Safety (the induction above was not the true one)
-      m%Vtot_LL=-9999._ReKi ! < Safety 
+      m%Vind_LL=-9999._ReKi !< Safety (the induction above was not the true one)
+      m%Vtot_LL=-9999._ReKi !< Safety 
       deallocate(DGamma       )
       deallocate(GammaLastIter)
       deallocate(Vcst)
       deallocate(Vvar)
-!       STOP
-
+      !print*,'Gamm: ',Gamma_LL(1, 1), Gamma_LL(p%nSpan,1)
+      !if (abs(Gamma_LL(1, 1)-Gamma_LL(p%nSpan,1))>0.01)  STOP
+      !if (m%iStep==3) STOP
    end subroutine
 
 
