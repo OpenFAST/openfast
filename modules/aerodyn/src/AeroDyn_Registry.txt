@@ -134,7 +134,7 @@ typedef	^	MiscVarType	BEMT_OutputType	BEMT_y	-	-	-	"Outputs from the BEMT module
 typedef	^	MiscVarType	BEMT_InputType	BEMT_u	2	-	-	"Inputs to the BEMT module"	-
 typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
 typedef	^	MiscVarType	FVW_OutputType	FVW_y	-	-	-	"Outputs from the FVW module"	-
-typedef	^	MiscVarType	FVW_InputType	FVW_u	2	-	-	"Inputs to the FVW module"	-
+typedef	^	MiscVarType	FVW_InputType	FVW_u	:	-	-	"Inputs to the FVW module"	-
 typedef	^	MiscVarType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
 typedef	^	MiscVarType	ReKi	WithoutSweepPitchTwist	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
 typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-

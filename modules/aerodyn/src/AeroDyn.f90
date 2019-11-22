@@ -384,6 +384,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !-------------------------------------------------------------------------------------------------
 
    if (p%WakeMod == WakeMod_FVW) then
+!FIXME: figure out how to allocate based on the order of interpolation for extrap_unterp.
+      if (.not. allocated(m%FVW_u))   Allocate(m%FVW_u(3))
       call Init_FVWmodule( InputFileData, u, m%FVW_u(1), p, x%FVW, xd%FVW, z%FVW, &
                               OtherState%FVW, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1110,7 +1112,11 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
          
       ! Call the FVW sub module
    if (p%WakeMod == WakeMod_FVW) then
+         ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
+      call SetInputsForFVW(p, u, m, errStat2, errMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Note: the setup is handled above in the SetInputs routine
+!FIXME: do we want the hub orientation and rotation? Maybe motion also? u%HubMotion%Orientation(:,:,1)
       call FVW_UpdateStates( t, n, m%FVW_u, utimes, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
@@ -1184,8 +1190,11 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !!!          RETURN
 !!!       END IF
    if (p%WakeMod == WakeMod_FVW) then
+         ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
+      call SetInputsForFVW(p, (/u/), m, errStat2, errMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
        ! -- Calc Output
-       CALL FVW_CalcOutput( t, m%FVW_u(indx), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg2 )
+       CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
 !!!       IF (ErrStat >= AbortErrLev) THEN
@@ -1342,11 +1351,6 @@ subroutine SetInputs(p, u, m, indx, errStat, errMsg)
    call SetInputsForBEMT(p, u, m, indx, errStat2, errMsg2)  
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   if (p%WakeMod == WakeMod_FVW) then
-         ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
-      call SetInputsForFVW(p, u, m, indx, errStat2, errMsg2)
-         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   endif
 
 end subroutine SetInputs
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1507,35 +1511,35 @@ end subroutine SetInputsForBEMT
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets m%FVW_u(indx).
-subroutine SetInputsForFVW(p, u, m, indx, errStat, errMsg)
+subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
 
    type(AD_ParameterType),  intent(in   )  :: p                               !< AD parameters
-   type(AD_InputType),      intent(in   )  :: u                               !< AD Inputs at Time
+   type(AD_InputType),      intent(in   )  :: u(:)                            !< AD Inputs at Time
    type(AD_MiscVarType),    intent(inout)  :: m                               !< Misc/optimization variables
-   integer,                 intent(in   )  :: indx                            !< index into m%FVW_u array; must be 1 or 2 (but not checked here)
    integer(IntKi),          intent(  out)  :: ErrStat                         !< Error status of the operation
    character(*),            intent(  out)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
 
+   integer(intKi)                          :: tIndx
    integer(intKi)                          :: k                      ! loop counter for blades
    integer(intKi)                          :: ErrStat2
    character(ErrMsgLen)                    :: ErrMsg2
    character(*), parameter                 :: RoutineName = 'SetInputsForFVW'
 
-
-      ! Rather than use a meshcopy, we will just copy what we need to the WingsMesh
-      ! NOTE:  MeshCopy requires the source mesh to be INOUT intent
-      ! NOTE2: If we change the WingsMesh to not be identical to the BladeMotion mesh, add the mapping stuff here.
-   do k=1,p%NumBlades
-      if ( u%BladeMotion(k)%nNodes /= m%FVW_u(indx)%WingsMesh(k)%nNodes ) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = RoutineName//": WingsMesh contains different number of nodes than the BladeMotion mesh"
-         return
-      endif
-      m%FVW_u(indx)%WingsMesh(k)%TranslationDisp   = u%BladeMotion(k)%TranslationDisp
-      m%FVW_u(indx)%WingsMesh(k)%Orientation       = u%BladeMotion(k)%Orientation
-      m%FVW_u(indx)%WingsMesh(k)%TranslationVel    = u%BladeMotion(k)%TranslationVel
+   do tIndx=1,size(u)
+         ! Rather than use a meshcopy, we will just copy what we need to the WingsMesh
+         ! NOTE:  MeshCopy requires the source mesh to be INOUT intent
+         ! NOTE2: If we change the WingsMesh to not be identical to the BladeMotion mesh, add the mapping stuff here.
+      do k=1,p%NumBlades
+         if ( u(tIndx)%BladeMotion(k)%nNodes /= m%FVW_u(tIndx)%WingsMesh(k)%nNodes ) then
+            ErrStat = ErrID_Fatal
+            ErrMsg  = RoutineName//": WingsMesh contains different number of nodes than the BladeMotion mesh"
+            return
+         endif
+         m%FVW_u(tIndx)%WingsMesh(k)%TranslationDisp   = u(tIndx)%BladeMotion(k)%TranslationDisp
+         m%FVW_u(tIndx)%WingsMesh(k)%Orientation       = u(tIndx)%BladeMotion(k)%Orientation
+         m%FVW_u(tIndx)%WingsMesh(k)%TranslationVel    = u(tIndx)%BladeMotion(k)%TranslationVel
+      enddo
    enddo
-!FIXME: do we want the hub orientation and rotation? Maybe motion also? u%HubMotion%Orientation(:,:,1)
 end subroutine SetInputsForFVW
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine converts outputs from BEMT (stored in m%BEMT_y) into values on the AeroDyn BladeLoad output mesh.
@@ -2071,6 +2075,7 @@ print*,'===================== Setup before call to FVW_Init ====================
    InitInp%FVWFileName    = InputFileData%FVWFileName
    InitInp%numBlades      = p%numBlades
    InitInp%numBladeNodes  = p%numBlNds
+
 
 ! --- TODO TODO TODO ANDY
 !FIXME: check the following now that we are in AD15.

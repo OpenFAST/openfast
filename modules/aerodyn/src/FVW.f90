@@ -305,7 +305,7 @@ end subroutine FVW_ToString
 !> This routine is called at the end of the simulation.
 subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
-   type(FVW_InputType),             intent(inout)  :: u(2)        !< System inputs
+   type(FVW_InputType),             intent(inout)  :: u(:)        !< System inputs
    type(FVW_ParameterType),         intent(inout)  :: p           !< Parameters
    type(FVW_ContinuousStateType),   intent(inout)  :: x           !< Continuous states
    type(FVW_DiscreteStateType),     intent(inout)  :: xd          !< Discrete states
@@ -316,14 +316,17 @@ subroutine FVW_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    integer(IntKi),                  intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
+   integer(IntKi) :: i
+
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! Place any last minute operations or calculations here:
    ! Close files here:
    ! Destroy the input data:
-   call FVW_DestroyInput( u(1), ErrStat, ErrMsg )
-   call FVW_DestroyInput( u(2), ErrStat, ErrMsg )
+   do i=1,size(u)
+      call FVW_DestroyInput( u(i), ErrStat, ErrMsg )
+   enddo
 
    ! Destroy the parameter data:
    call FVW_DestroyParam( p, ErrStat, ErrMsg )
@@ -377,17 +380,9 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
 
    ! --- Evaluation at t
    ! Inputs at t
-   ! TODO TODO TODO AD14 HACK!  inputs at other times are wrong with AD14
-   !   call FVW_CopyInput( u(1), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
-   !    call FVW_Input_ExtrapInterp(u,utimes,uInterp,t, ErrStat2, ErrMsg2); if(Failed()) return
-   if (m%FirstCall) then
-      call FVW_CopyInput( u(2), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
-      ! NOTE AD14 HACK should be put outside!
-      ! Panelling wings based on input mesh provided
-      call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
-   else
-      call FVW_CopyInput( u(1), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
-   endif
+   call FVW_CopyInput( u(2), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes(:),uInterp,t, ErrStat2, ErrMsg2); if(Failed()) return
+   call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    
    ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
    ! TODO ANDY
@@ -426,9 +421,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    !call print_x_NW_FW(p, m, z, x,'Prop_')
 
    ! Inputs at t+dt
-   ! TODO TODO TODO  inputs at other times are wrong with AD14
-   !call FVW_Input_ExtrapInterp(u,utimes,uInterp,t+dt, ErrStat2, ErrMsg2); if(Failed()) return
-   call FVW_CopyInput( u(1), uInterp, MESH_NEWCOPY, ErrStat2, ErrMsg2); if(Failed()) return
+   call FVW_Input_ExtrapInterp(u(1:size(utimes)),utimes,uInterp,t+dt, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Panelling wings based on input mesh at t+dt
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return

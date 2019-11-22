@@ -179,7 +179,7 @@ IMPLICIT NONE
     TYPE(BEMT_InputType) , DIMENSION(1:2)  :: BEMT_u      !< Inputs to the BEMT module [-]
     TYPE(FVW_MiscVarType)  :: FVW      !< MiscVars from the FVW module [-]
     TYPE(FVW_OutputType)  :: FVW_y      !< Outputs from the FVW module [-]
-    TYPE(FVW_InputType) , DIMENSION(1:2)  :: FVW_u      !< Inputs to the FVW module [-]
+    TYPE(FVW_InputType) , DIMENSION(:), ALLOCATABLE  :: FVW_u      !< Inputs to the FVW module [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: DisturbedInflow      !< InflowOnBlade values modified by tower influence [m/s]
     REAL(ReKi) , DIMENSION(:,:,:,:), ALLOCATABLE  :: WithoutSweepPitchTwist      !< Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: AllOuts      !< An array holding the value of all of the calculated (not only selected) output channels [-]
@@ -4576,11 +4576,22 @@ ENDIF
       CALL FVW_CopyOutput( SrcMiscData%FVW_y, DstMiscData%FVW_y, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcMiscData%FVW_u)) THEN
+  i1_l = LBOUND(SrcMiscData%FVW_u,1)
+  i1_u = UBOUND(SrcMiscData%FVW_u,1)
+  IF (.NOT. ALLOCATED(DstMiscData%FVW_u)) THEN 
+    ALLOCATE(DstMiscData%FVW_u(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%FVW_u.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DO i1 = LBOUND(SrcMiscData%FVW_u,1), UBOUND(SrcMiscData%FVW_u,1)
       CALL FVW_CopyInput( SrcMiscData%FVW_u(i1), DstMiscData%FVW_u(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
+ENDIF
 IF (ALLOCATED(SrcMiscData%DisturbedInflow)) THEN
   i1_l = LBOUND(SrcMiscData%DisturbedInflow,1)
   i1_u = UBOUND(SrcMiscData%DisturbedInflow,1)
@@ -4815,9 +4826,12 @@ DO i1 = LBOUND(MiscData%BEMT_u,1), UBOUND(MiscData%BEMT_u,1)
 ENDDO
   CALL FVW_DestroyMisc( MiscData%FVW, ErrStat, ErrMsg )
   CALL FVW_DestroyOutput( MiscData%FVW_y, ErrStat, ErrMsg )
+IF (ALLOCATED(MiscData%FVW_u)) THEN
 DO i1 = LBOUND(MiscData%FVW_u,1), UBOUND(MiscData%FVW_u,1)
   CALL FVW_DestroyInput( MiscData%FVW_u(i1), ErrStat, ErrMsg )
 ENDDO
+  DEALLOCATE(MiscData%FVW_u)
+ENDIF
 IF (ALLOCATED(MiscData%DisturbedInflow)) THEN
   DEALLOCATE(MiscData%DisturbedInflow)
 ENDIF
@@ -4992,6 +5006,9 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! FVW_u allocated yes/no
+  IF ( ALLOCATED(InData%FVW_u) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! FVW_u upper/lower bounds for each dimension
     DO i1 = LBOUND(InData%FVW_u,1), UBOUND(InData%FVW_u,1)
       Int_BufSz   = Int_BufSz + 3  ! FVW_u: size of buffers for each call to pack subtype
       CALL FVW_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%FVW_u(i1), ErrStat2, ErrMsg2, .TRUE. ) ! FVW_u 
@@ -5011,6 +5028,7 @@ ENDIF
          DEALLOCATE(Int_Buf)
       END IF
     END DO
+  END IF
   Int_BufSz   = Int_BufSz   + 1     ! DisturbedInflow allocated yes/no
   IF ( ALLOCATED(InData%DisturbedInflow) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! DisturbedInflow upper/lower bounds for each dimension
@@ -5293,6 +5311,16 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%FVW_u) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%FVW_u,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%FVW_u,1)
+    Int_Xferred = Int_Xferred + 2
+
     DO i1 = LBOUND(InData%FVW_u,1), UBOUND(InData%FVW_u,1)
       CALL FVW_PackInput( Re_Buf, Db_Buf, Int_Buf, InData%FVW_u(i1), ErrStat2, ErrMsg2, OnlySize ) ! FVW_u 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -5323,6 +5351,7 @@ ENDIF
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
     END DO
+  END IF
   IF ( .NOT. ALLOCATED(InData%DisturbedInflow) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -5861,8 +5890,19 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-    i1_l = LBOUND(OutData%FVW_u,1)
-    i1_u = UBOUND(OutData%FVW_u,1)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! FVW_u not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%FVW_u)) DEALLOCATE(OutData%FVW_u)
+    ALLOCATE(OutData%FVW_u(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%FVW_u.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
     DO i1 = LBOUND(OutData%FVW_u,1), UBOUND(OutData%FVW_u,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
@@ -5905,6 +5945,7 @@ ENDIF
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
+  END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DisturbedInflow not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
