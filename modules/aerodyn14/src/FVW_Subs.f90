@@ -281,21 +281,22 @@ subroutine PropagateWake(p, m, z, x, ErrStat, ErrMsg)
 end subroutine PropagateWake
 
 
-subroutine print_r_NW_FW(p, m, z, x, label)
+subroutine print_x_NW_FW(p, m, z, x, label)
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
    type(FVW_MiscVarType),           intent(in   )  :: m              !< Initial misc/optimization variables
    type(FVW_ConstraintStateType),   intent(in   )  :: z              !< Constraints states
    type(FVW_ContinuousStateType),   intent(inout)  :: x              !< Continuous states
    character(len=*),intent(in) :: label
    integer(IntKi) :: iAge
-   print*,'NW'
+   print*,'-------------------------'
+   print*,' NW .....................'
    do iAge=1,p%nNWMax+1
       print*,'iAge',iAge
       print*,trim(label), x%r_NW(1, 1, iAge,1), x%r_NW(1, p%nSpan+1, iAge,1)
       print*,trim(label), x%r_NW(2, 1, iAge,1), x%r_NW(2, p%nSpan+1, iAge,1)
       print*,trim(label), x%r_NW(3, 1, iAge,1), x%r_NW(3, p%nSpan+1, iAge,1)
    enddo
-   print*,'FW'
+   print*,'FW <<<<<<<<<<<<<<<<<<<<'
    do iAge=1,p%nFWMax+1
       print*,'iAge',iAge
       print*,trim(label), x%r_FW(1, 1, iAge,1), x%r_FW(1, FWnSpan+1, iAge,1)
@@ -561,6 +562,11 @@ contains
          do iW=1,p%nWings
             CALL LatticeToPoints(x%r_FW(1:3,:,1:nFWEff+1,iW), 1, CPs, iHeadP)
          enddo
+      endif
+
+      if (any(CPs(1,:)<=-99)) then
+         print*,'WakeInducedVelocities: Problem in Control points'
+         STOP
       endif
 
       if ((iHeadP-1)/=size(CPs,2)) then

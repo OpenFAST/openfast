@@ -203,8 +203,8 @@ subroutine FVW_InitStates( x, p, m, ErrStat, ErrMsg )
 
    call AllocAry( x%Gamma_NW,    p%nSpan   , p%nNWMax  , p%nWings, 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%Gamma_NW = -999999_ReKi;
    call AllocAry( x%Gamma_FW,    FWnSpan   , p%nFWMax  , p%nWings, 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%Gamma_FW = -999999_ReKi;
-   call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_NW     = -99_ReKi;
-   call AllocAry( x%r_FW    , 3, FWnSpan+1 , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_FW     = -99_ReKi;
+   call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_NW     = -999_ReKi;
+   call AllocAry( x%r_FW    , 3, FWnSpan+1 , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_FW     = -999_ReKi;
 
 
    if (ErrStat >= AbortErrLev) return
@@ -420,7 +420,6 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
 
 
    ! --- t+dt
-
    ! Propagation/creation of new layer of panels
    call PropagateWake(p, m, z, x, ErrStat2, ErrMsg2)
    !call print_x_NW_FW(p, m, z, x,'Prop_')
@@ -437,6 +436,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ! Changes: x only
    call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2)
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
+   !call print_x_NW_FW(p, m, z, x,'Map2')
 
    ! --- Solve for circulation at t+dt
    ! Returns: z%Gamma_LL (at t+dt)
@@ -447,7 +447,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ! Changes: x only
    call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2)
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
-   !call print_x_NW_FW(p, m, z, x,'Map_')
+   !call print_x_NW_FW(p, m, z, x,'Map3')
 
    !if (m%nFW>4) STOP
    !if (t>0.5) STOP
@@ -553,8 +553,9 @@ subroutine FVW_Euler1( t, dt, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
    ! Update of positions
    x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) = x%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings) +  dt * dxdt%r_NW(1:3, 1:p%nSpan+1, 1:m%nNW+1, 1:p%nWings)
-   x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) +  dt * dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
-
+   if ( m%nFW>0) then
+      x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) = x%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings) +  dt * dxdt%r_FW(1:3, 1:FWnSpan+1, 1:m%nFW+1, 1:p%nWings)
+   endif
    ! Update of Gamma
    ! TODO, viscous diffusion, stretching
 
