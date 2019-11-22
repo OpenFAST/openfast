@@ -108,7 +108,7 @@ call MeshPrintInfo(CU, Meshes(iW) )
       !
       do iW = 1,p%nWings
          do iSpan = 1,p%nSpan+1
-            P_ref = Meshes(iW)%Position(1:3, iSpan )  
+            P_ref = Meshes(iW)%Position(1:3, iSpan )+Meshes(iW)%TranslationDisp(1:3, iSpan)
             if (p%HACK==1) then
                P_ref(3)=100
                P_ref(1)=0
