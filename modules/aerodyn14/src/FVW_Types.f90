@@ -64,6 +64,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: WingRegFactor      !< Factor used in the regularization  [-]
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
+    INTEGER(IntKi)  :: HACK      !< HACK ID [-]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_OtherStateType  =======
@@ -164,6 +165,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     REAL(ReKi)  :: Uinf      !< TODO TODO TEMPORARY HACK [-]
+    INTEGER(IntKi)  :: HACK      !< HACK ID [-]
   END TYPE FVW_InputFile
 ! =======================
 ! =========  FVW_InitOutputType  =======
@@ -221,6 +223,7 @@ ENDIF
     DstParamData%WingRegFactor = SrcParamData%WingRegFactor
     DstParamData%WrVTK = SrcParamData%WrVTK
     DstParamData%VTKBlades = SrcParamData%VTKBlades
+    DstParamData%HACK = SrcParamData%HACK
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -296,6 +299,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! WingRegFactor
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
+      Int_BufSz  = Int_BufSz  + 1  ! HACK
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -373,6 +377,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%WrVTK
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%VTKBlades
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%HACK
       Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE FVW_PackParam
 
@@ -472,6 +478,8 @@ ENDIF
       OutData%WrVTK = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%VTKBlades = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%HACK = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 
@@ -4205,6 +4213,7 @@ ENDIF
     DstInputFileData%WrVTK = SrcInputFileData%WrVTK
     DstInputFileData%VTKBlades = SrcInputFileData%VTKBlades
     DstInputFileData%Uinf = SrcInputFileData%Uinf
+    DstInputFileData%HACK = SrcInputFileData%HACK
  END SUBROUTINE FVW_CopyInputFile
 
  SUBROUTINE FVW_DestroyInputFile( InputFileData, ErrStat, ErrMsg )
@@ -4273,6 +4282,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Re_BufSz   = Re_BufSz   + 1  ! Uinf
+      Int_BufSz  = Int_BufSz  + 1  ! HACK
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4342,6 +4352,8 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Uinf
       Re_Xferred   = Re_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%HACK
+      Int_Xferred   = Int_Xferred   + 1
  END SUBROUTINE FVW_PackInputFile
 
  SUBROUTINE FVW_UnPackInputFile( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4418,6 +4430,8 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%Uinf = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%HACK = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
  END SUBROUTINE FVW_UnPackInputFile
 
  SUBROUTINE FVW_CopyInitOutput( SrcInitOutputData, DstInitOutputData, CtrlCode, ErrStat, ErrMsg )

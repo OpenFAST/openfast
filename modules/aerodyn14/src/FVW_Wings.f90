@@ -106,6 +106,9 @@ contains
       do iW = 1,p%nWings
          do iSpan = 1,p%nSpan+1
             P_ref = Meshes(iW)%Position(1:3, iSpan )  
+            if (p%HACK==1) then
+               P_ref(3)=100
+            endif
             DP_LE(1:3) =  0.0
             DP_LE(1)   = -m%chord_LL(iSpan,iW)/2  ! TODO TODO TODO Use orientation and might not be c/2
             DP_TE(1:3) =  0.0

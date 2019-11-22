@@ -62,6 +62,7 @@ SUBROUTINE FVW_ReadInputFile( FileName, p, Inp, ErrStat, ErrMsg )
    !------------------------ HACK OPTIONS -----------------------------------------
    CALL ReadCom(UnIn,FileName,                  'Hack options header', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL ReadVar(UnIn,FileName,Inp%Uinf        , 'Uinf'   ,'',ErrStat2,ErrMsg2); if(Failed())return
+   CALL ReadVar(UnIn,FileName,Inp%HACK        , 'HACK'   ,'',ErrStat2,ErrMsg2); if(Failed())return
 
    ! --- Validation of inputs
    if (PathIsRelative(Inp%CirculationFile)) Inp%CirculationFile = TRIM(PriPath)//TRIM(Inp%CirculationFile)

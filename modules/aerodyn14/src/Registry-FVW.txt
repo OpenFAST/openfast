@@ -30,6 +30,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             WingRegFactor -  - -   "Factor used in the regularization " 
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
+typedef     ^                   ^               IntKi                            HACK          -    -  - "HACK ID"      -
 
 # ....... OtherStateType ............
 # FVW_OtherStateType
@@ -126,6 +127,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               ReKi                             Uinf          -  - -   "TODO TODO TEMPORARY HACK" 
+typedef     ^                   ^               IntKi                            HACK          -    -  - "HACK ID"      -
 
 #.......... InitOutputType ......
 # FVW_InitOutputType

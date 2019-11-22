@@ -90,6 +90,9 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    p%nFWMax  = max(InputFileData%nFWPanels,0)
    p%nFWFree = max(InputFileData%nFWPanelsFree,0)
 
+   if (InputFileData%HACK==1) then
+      p%nWings=1 ! Elliptical wing temporary hack
+   endif
 
    ! Initialize Misc Vars (may depend on input file)
    CALL FVW_InitMiscVars( p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -101,6 +104,11 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    m%Vwnd_LL(1,:,:)   = InputFileData%Uinf
    m%Vwnd_NW(1,:,:,:) = InputFileData%Uinf
    m%Vwnd_FW(1,:,:,:) = InputFileData%Uinf
+   if (InputFileData%HACK==1) then
+      m%Vwnd_LL(3,:,:)   =0.1
+      m%Vwnd_NW(3,:,:,:) =0.1
+      m%Vwnd_FW(3,:,:,:) =0.1
+   endif
 
 
    ! Preliminary meshing of the wings (may depend on input file)
@@ -273,6 +281,7 @@ SUBROUTINE FVW_SetParametersFromInputFile( InputFileData, p, m, ErrStat, ErrMsg 
    p%WingRegFactor        = InputFileData%WingRegFactor
    p%WrVTK                = InputFileData%WrVTK
    p%VTKBlades            = min(max(InputFileData%VTKBlades,0),p%nWings)
+   p%HACK                 = InputFileData%HACK
 
    if (allocated(p%PrescribedCirculation)) deallocate(p%PrescribedCirculation)
    if (InputFileData%CirculationMethod==idCircPrescribed) then 
