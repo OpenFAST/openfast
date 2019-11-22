@@ -193,7 +193,8 @@ subroutine ui_seg(iCPStart, iCPEnd, nCPsTot, CPs, &
    real(ReKi), dimension(3) :: DP1, DP2       !<
    real(ReKi)               :: norm2_r0       !<
    real(ReKi)               :: Gam            !<
-   real(ReKi)               :: RegParam1    !< 
+   real(ReKi)              :: RegParam1    !< 
+   real(ReKi)              :: RegParam2     !< Square of viscous param
    ! Variables declaration 
    real(ReKi),dimension(3) :: crossprod       !< 
    real(ReKi)              :: denom           !< 
@@ -210,15 +211,14 @@ subroutine ui_seg(iCPStart, iCPEnd, nCPsTot, CPs, &
    real(ReKi)              :: xb              !< 
    real(ReKi)              :: yb              !< 
    real(ReKi)              :: zb              !< 
-   real(ReKi)              :: RegParam2     !< Square of viscous param
    real(ReKi)              :: exp_value       !< 
    real(ReKi),parameter    :: fourpi_inv =  0.25_ReKi / ACOS(-1.0_Reki )
 
-   !OMP PARALLEL default(shared)
-   !OMP do private(&
-   !OMP& icp,is,Uind,P1,P2,DP1,DP2,norm2_r0,Gam,RegParam,&
-   !OMP& crossprod,denom,denominator,h2,h,Kv,norm_a,norm_b,norm2_crossprod,xa,ya,za,xb,yb,zb,RegParam2,exp_value&
-   !OMP& ) schedule(runtime)
+   !$OMP PARALLEL default(shared)
+   !$OMP do private(&
+   !$OMP& icp,is,Uind,P1,P2,DP1,DP2,norm2_r0,Gam,RegParam1,RegParam2,&
+   !$OMP& crossprod,denom,denominator,h2,h,Kv,norm_a,norm_b,norm2_crossprod,xa,ya,za,xb,yb,zb,exp_value&
+   !$OMP& ) schedule(runtime)
    ! loop on CPs 
    do icp=iCPStart,iCPEnd
       do is=iSegStart,iSegEnd ! loop on selected segments 
@@ -319,8 +319,8 @@ subroutine ui_seg(iCPStart, iCPEnd, nCPsTot, CPs, &
          Uind_out(1:3,icp) = Uind_out(1:3,icp)+Uind(1:3)
       end do ! Loop on segments
    enddo ! Loop on control points
-   !OMP END DO 
-   !OMP END PARALLEL
+   !$OMP END DO 
+   !$OMP END PARALLEL
 end subroutine  
 
 
