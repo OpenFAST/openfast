@@ -65,8 +65,8 @@ contains
          ! --- Control points
          ! TODO possibly Control points are not exactly at the middle depending on "meshing" method
          do iSpan = 1, p%nSpan
-            m%s_CP_LL (iSpan, iW) = (m%s_LL    (iSpan,iW)+ m%s_LL    (iSpan+1,iW))/2
-            m%chord_LL(iSpan, iW) = (m%chord_LL(iSpan,iW)+ m%chord_LL(iSpan+1,iW))/2
+            m%s_CP_LL    (iSpan, iW) = (m%s_LL    (iSpan,iW)+ m%s_LL    (iSpan+1,iW))/2
+            m%chord_CP_LL(iSpan, iW) = (m%chord_LL(iSpan,iW)+ m%chord_LL(iSpan+1,iW))/2
          enddo
       enddo
    end subroutine Wings_Panelling_Init
