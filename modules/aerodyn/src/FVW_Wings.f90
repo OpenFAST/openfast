@@ -71,7 +71,6 @@ contains
             m%s_CP_LL    (iSpan, iW) = (m%s_LL    (iSpan,iW)+ m%s_LL    (iSpan+1,iW))/2
             m%chord_CP_LL(iSpan, iW) = (m%chord_LL(iSpan,iW)+ m%chord_LL(iSpan+1,iW))/2
          enddo
-call MeshPrintInfo(CU, Meshes(iW) )
       enddo
    end subroutine Wings_Panelling_Init
 
@@ -120,8 +119,8 @@ call MeshPrintInfo(CU, Meshes(iW) )
             !MRot=Meshes(iW)%Orientation(1:3,1:3,iSpan) ! NOTE: this wont work
             !DP_LE = matmul(MRot,DP_LE)
             !DP_TE = matmul(MRot,DP_TE)
-            m%LE(1:3, iSpan, iW) = P_ref + DP_LE
-            m%TE(1:3, iSpan, iW) = P_ref + DP_TE
+            m%LE(1:3, iSpan, iW) = P_ref + DP_LE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
+            m%TE(1:3, iSpan, iW) = P_ref + DP_TE(1)*Meshes(iW)%Orientation(2,1:3,iSpan)
          enddo         
       enddo
       ! --- Generic code below to compute normal/tangential vectors of a lifting line panel

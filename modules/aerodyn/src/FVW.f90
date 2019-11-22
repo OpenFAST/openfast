@@ -611,7 +611,7 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    type(FVW_ContinuousStateType),   intent(in   )  :: x           !< Continuous states at t
    type(FVW_DiscreteStateType),     intent(in   )  :: xd          !< Discrete states at t
 !FIXME:TODO: AD15_CalcOutput has constraint states as intent(in) only. This is forcing me to store z in the AD15 miscvars for now.
-   type(FVW_ConstraintStateType),   intent(inout)  :: z           !< Constraint states at t
+   type(FVW_ConstraintStateType),   intent(in   )  :: z           !< Constraint states at t
    type(FVW_OtherStateType),        intent(in   )  :: OtherState  !< Other states at t
    type(FVW_OutputType),            intent(inout)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                   !!   nectivity information does not have to be recalculated)

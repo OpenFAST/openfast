@@ -122,6 +122,7 @@ typedef	^	DiscreteStateType	FVW_DiscreteStateType	FVW	-	-	-	"Discrete states fro
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	BEMT_ConstraintStateType	BEMT	-	-	-	"Constraint states from the BEMT module"	-
+typedef	^	ConstraintStateType	FVW_ConstraintStateType	FVW	-	-	-	"Constraint states from the FVW module"	-
 
 # Define "other" states here:
 typedef	^	OtherStateType	BEMT_OtherStateType	BEMT	-	-	-	"OtherStates from the BEMT module"	-
@@ -134,7 +135,6 @@ typedef	^	MiscVarType	BEMT_InputType	BEMT_u	2	-	-	"Inputs to the BEMT module"	-
 typedef	^	MiscVarType	FVW_MiscVarType	FVW	-	-	-	"MiscVars from the FVW module"	-
 typedef	^	MiscVarType	FVW_OutputType	FVW_y	-	-	-	"Outputs from the FVW module"	-
 typedef	^	MiscVarType	FVW_InputType	FVW_u	2	-	-	"Inputs to the FVW module"	-
-typedef	^	MiscVarType	FVW_ConstraintStateType	FVW_z	-	-	-	"Constraint states from the FVW module"	-
 typedef	^	MiscVarType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
 typedef	^	MiscVarType	ReKi	WithoutSweepPitchTwist	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
 typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-

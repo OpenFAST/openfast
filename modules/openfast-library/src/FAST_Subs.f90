@@ -5117,7 +5117,7 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
          ! Free wake
 !FIXME: Should the wake info be in a different routine?
       if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
-         call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%m%FVW_z, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
+         call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
       end if   
    END IF
    
@@ -5402,7 +5402,7 @@ SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, A
 ! Free wake
 !FIXME: is there a better way of checking?
    if (allocated(AD%m%FVW_u(1)%WingsMesh)) then
-      call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%m%FVW_z, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
+      call WrVTK_FVW(AD%p%FVW, AD%x(1)%FVW, AD%z(1)%FVW, AD%m%FVW, trim(VTK_path)//'.FVW', y_FAST%VTK_count, Twidth)
    end if   
 
 ! Tower motions
