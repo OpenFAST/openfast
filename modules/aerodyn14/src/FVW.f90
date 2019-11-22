@@ -383,7 +383,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ! TODO ANDY
    !CALL DistributeRequestedWind(u(1)%V_wind, x, p, m, ErrStat2, ErrMsg2);  if(Failed()) return
 
-   ! Solve for circulation at t
+   ! --- Solve for circulation at t
+   ! Returns: z%Gamma_LL (at t)
    call AllocAry( z_guess%Gamma_LL,  p%nSpan, p%nWings, 'Lifting line Circulation', ErrStat, ErrMsg );
    z_guess%Gamma_LL = m%Gamma_LL
    call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2); if(Failed()) return
@@ -423,10 +424,17 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ! Panelling wings based on input mesh at t+dt
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! Solve for circulation at t+dt
-   call FVW_CalcConstrStateResidual(t, uInterp, p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2); if(Failed()) return
-   
-   ! Map circulation and positions between LL and NW and then NW and FW
+   ! Updating positions of first NW and FW panels (Circulation also updated but irrelevant)
+   ! Changes: x only
+   call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2)
+   call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
+
+   ! --- Solve for circulation at t+dt
+   ! Returns: z%Gamma_LL (at t+dt)
+   z_guess%Gamma_LL = z%Gamma_LL ! We use as guess the circulation from the previous time step (see above)
+   call FVW_CalcConstrStateResidual(t+dt, uInterp, p, x, xd, z_guess, OtherState, m, z, ErrStat2, ErrMsg2, 2); if(Failed()) return
+
+   ! Updating circulation of near wake panel (and position but irrelevant)
    ! Changes: x only
    call Map_LL_NW(p, m, z, x, ErrStat2, ErrMsg2)
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
