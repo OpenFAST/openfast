@@ -110,9 +110,9 @@ contains
                P_ref(3)=100
             endif
             DP_LE(1:3) =  0.0
-            DP_LE(1)   = -m%chord_LL(iSpan,iW)/2  ! TODO TODO TODO Use orientation and might not be c/2
+            DP_LE(1)   = -m%chord_LL(iSpan,iW)/4.  ! TODO TODO TODO Use orientation and might not be c/2
             DP_TE(1:3) =  0.0
-            DP_TE(1)   = +m%chord_LL(iSpan,iW)/2  ! TODO TODO TODO Use orientation and might not be c/2
+            DP_TE(1)   = +3.*m%chord_LL(iSpan,iW)/4. ! TODO TODO TODO Use orientation and might not be c/2
             !MRot=Meshes(iW)%Orientation(1:3,1:3,iSpan) ! NOTE: this wont work
             !DP_LE = matmul(MRot,DP_LE)
             !DP_TE = matmul(MRot,DP_TE)
@@ -146,7 +146,6 @@ contains
             m%Area(iSpan, iW) = norm2(cross_product(DP1,DP3));
          end do
       enddo
-
       ! --- Lifting Line/ Bound Circulation panel
       ! For now: goes from 1/4 chord to TE
       ! More panelling options may be considered in the future
@@ -158,12 +157,12 @@ contains
       enddo
 
       ! --- Position of control points CP_LL
-      ! For now: placed at the "chordwise" middle of the LL panel
+      ! For now: placed exactly on the LL panel
       ! NOTE: separated from other loops just in case a special discretization is used
       do iW = 1,p%nWings
-         call interp_lin(m%s_LL(:,iW), m%r_LL(1,:,1,iW)*0.5_ReKi+m%r_LL(1,:,2,iW)*0.5_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
-         call interp_lin(m%s_LL(:,iW), m%r_LL(2,:,1,iW)*0.5_ReKi+m%r_LL(2,:,2,iW)*0.5_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
-         call interp_lin(m%s_LL(:,iW), m%r_LL(3,:,1,iW)*0.5_ReKi+m%r_LL(3,:,2,iW)*0.5_ReKi ,m%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
+         call interp_lin(m%s_LL(:,iW), m%r_LL(1,:,1,iW), m%s_CP_LL(:,iW), m%CP_LL(1,:,iW))
+         call interp_lin(m%s_LL(:,iW), m%r_LL(2,:,1,iW), m%s_CP_LL(:,iW), m%CP_LL(2,:,iW))
+         call interp_lin(m%s_LL(:,iW), m%r_LL(3,:,1,iW), m%s_CP_LL(:,iW), m%CP_LL(3,:,iW))
       enddo
 
       ! --- Structural velocity on LL
