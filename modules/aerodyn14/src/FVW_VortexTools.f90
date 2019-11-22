@@ -95,7 +95,7 @@ CONTAINS
             iseg2 = iHeadP0 + (iSpan  ) +(iDepth-1-iDepthStart+1)*nSpan  ! Point 2
             iseg3 = iHeadP0 + (iSpan  ) +(iDepth  -iDepthStart+1)*nSpan  ! Point 3
             iseg4 = iHeadP0 + (iSpan-1) +(iDepth  -iDepthStart+1)*nSpan  ! Point 4
-            if (iDepth==1) then
+            if (iDepth==iDepthStart) then
                Gamma12 = LatticeGamma(iSpan,iDepth)
             else
                Gamma12 = LatticeGamma(iSpan,iDepth)-LatticeGamma(iSpan,iDepth-1)
