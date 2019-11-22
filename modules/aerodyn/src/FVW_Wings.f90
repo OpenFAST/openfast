@@ -65,6 +65,7 @@ contains
             m%chord_LL(iSpan, iW) = chord(iSpan,iW)
          enddo
          ! --- Control points
+!TODO: does it make sense to keep the global position info here?  It might make it simpler to keep track of the nodes for requesting wind velocity info.
          ! TODO possibly Control points are not exactly at the middle depending on "meshing" method
          do iSpan = 1, p%nSpan
             m%s_CP_LL (iSpan, iW) = (m%s_LL    (iSpan,iW)+ m%s_LL    (iSpan+1,iW))/2
@@ -141,6 +142,7 @@ call MeshPrintInfo(CU, Meshes(iW) )
          end do
       enddo
 
+!FIXME: does it make sense to use the position mesh for this info?
       ! --- Lifting Line/ Bound Circulation panel
       ! For now: goes from 1/4 chord to TE
       ! More panelling options may be considered in the future
@@ -211,6 +213,7 @@ call MeshPrintInfo(CU, Meshes(iW) )
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+!FIXME: Gamma_LL is currently stored as a constraint state.  This routine is called from places where constraint states are considered intent(in) only.
       if (p%CirculationMethod==idCircPrescribed) then 
          print*,'>>>Prescribing circulation'
          do iW = 1, p%nWings !Loop over lifting lines

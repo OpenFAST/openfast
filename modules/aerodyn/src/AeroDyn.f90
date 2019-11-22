@@ -384,7 +384,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !-------------------------------------------------------------------------------------------------
 
    if (p%WakeMod == WakeMod_FVW) then
-      call Init_FVWmodule( InputFileData, u, m%FVW_u(1), p, x%FVW, xd%FVW, z%FVW, &
+      call Init_FVWmodule( InputFileData, u, m%FVW_u(1), p, x%FVW, xd%FVW, m%FVW_z, &
                               OtherState%FVW, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat >= AbortErrLev) then
@@ -1015,7 +1015,7 @@ subroutine AD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
          ! End the FVW submodule
       if (p%WakeMod == WakeMod_FVW ) then
-         call FVW_End( m%FVW_u, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg )
+         call FVW_End( m%FVW_u, p%FVW, x%FVW, xd%FVW, m%FVW_z, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg )
       endif
 
          ! Close files here:
@@ -1111,7 +1111,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       ! Call the FVW sub module
    if (p%WakeMod == WakeMod_FVW) then
          ! Note: the setup is handled above in the SetInputs routine
-      call FVW_UpdateStates( t, n, m%FVW_u, utimes, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW, ErrStat2, ErrMsg2 )
+      call FVW_UpdateStates( t, n, m%FVW_u, utimes, p%FVW, x%FVW, xd%FVW, m%FVW_z, OtherState%FVW, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
            
@@ -1183,8 +1183,11 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !!!          CALL CleanUp()
 !!!          RETURN
 !!!       END IF
-!!!       ! -- Calc Output
-!!!       CALL FVW_CalcOutput( Time, u%FVW, p%FVW, x%FVW, xd%FVW, z%FVW, O%FVW, y%FVW, m%FVW, ErrStat, ErrMess )
+   if (p%WakeMod == WakeMod_FVW) then
+       ! -- Calc Output
+       CALL FVW_CalcOutput( t, m%FVW_u(indx), p%FVW, x%FVW, xd%FVW, m%FVW_z, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg2 )
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   endif
 !!!       IF (ErrStat >= AbortErrLev) THEN
 !!!          CALL CleanUp()
 !!!          RETURN

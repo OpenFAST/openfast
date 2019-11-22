@@ -175,6 +175,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
+!FIXME: let's check if we need to deallocate / reallocate.
    if (allocated(r_wind)) deallocate(r_wind)
 
    nTot = 0
@@ -182,6 +183,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
    nTot = nTot + p%nWings * (p%nSpan+1) * (m%nNW+1) ! Nearwake points
    nTot = nTot + p%nWings * (   1   +1) * (m%nFW+1) ! War wake points
 
+print*,'nTot wind points to request: ',nTot
    call AllocAry( r_wind , 3, nTot, 'Requested Wind Points', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'SetRequestedWindPoints'); 
    r_wind(1:3,1:nTot)= -999999_ReKi;
 
