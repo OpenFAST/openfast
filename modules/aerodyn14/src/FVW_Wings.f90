@@ -256,13 +256,16 @@ contains
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      print*,'Parameters for circulation solv: ',p%CircSolvConvCrit ,p%CircSolvRelaxation ,p%CircSolvMaxIter   
+      !print*,'Parameters for circulation solv: ',p%CircSolvConvCrit ,p%CircSolvRelaxation ,p%CircSolvMaxIter   
 
       allocate(DGamma       (1:p%nSpan,1:p%nWings))
       allocate(GammaLastIter(1:p%nSpan,1:p%nWings))
-      !
+
+      ! --- Last iteration circulation
       if (m%FirstCall) then
-         GammaLastIter = 0 ! TODO better guess
+         ! We find a guess by looking simply at the Wind and Elasticity velocity
+         m%Vtot_ll = m%Vwnd_LL - m%Vstr_ll
+         call CirculationFromPolarData(GammaLastIter, p, m)
       else
          GammaLastIter(1:p%nSpan,1:p%nWings) = Gamma_LL_prev(1:p%nSpan,1:p%nWings)
       endif
