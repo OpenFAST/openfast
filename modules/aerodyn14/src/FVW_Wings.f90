@@ -108,6 +108,7 @@ contains
             P_ref = Meshes(iW)%Position(1:3, iSpan )  
             if (p%HACK==1) then
                P_ref(3)=100
+               P_ref(1)=0
             endif
             DP_LE(1:3) =  0.0
             DP_LE(1)   = -m%chord_LL(iSpan,iW)/4.  ! TODO TODO TODO Use orientation and might not be c/2
@@ -327,7 +328,7 @@ contains
                    P4=x%r_NW(1:3,iSpan  ,iDepth+1,iW)
                    Gamm=GammaLastIter(iSpan, iW)
                    do iWCP=1,p%nWings
-                      call ui_quad_n1(m%CP_ll(1:3,1:p%nSpan,iWCP), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, p%WakeRegFactor, Vvar(1:3,1:p%nSpan,iWCP))
+                      call ui_quad_n1(m%CP_LL(1:3,1:p%nSpan,iWCP), nCPs, P1, P2, P3, P4, Gamm, p%RegFunction, p%WakeRegFactor, Vvar(1:3,1:p%nSpan,iWCP))
                    enddo
                 enddo
              enddo
