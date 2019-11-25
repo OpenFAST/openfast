@@ -4860,7 +4860,8 @@ SUBROUTINE SolveOption2c_Inp2AD_SrvD(this_time, this_state, p_FAST, m_FAST, ED, 
 
          
    IF (p_FAST%CompInflow == Module_IfW) THEN
-            
+         ! Not certain if this is a good way to indicate more wind points were requested, or if a better method has been used. -- ADP 
+      IfW%OtherSt(this_state)%ResizeWindArrays = AD%OtherSt(this_state)%ResizeWindArrays
       CALL InflowWind_CalcOutput( this_time, IfW%Input(1), IfW%p, IfW%x(this_state), IfW%xd(this_state), IfW%z(this_state), &
                                   IfW%OtherSt(this_state), IfW%y, IfW%m, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
