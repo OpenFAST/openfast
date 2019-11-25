@@ -382,10 +382,12 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !-------------------------------------------------------------------------------------------------
       ! Initialize FVW module if it is used
       !-------------------------------------------------------------------------------------------------
-
+      ! Unfortunately we do not know the interpolation order used by OpenFAST glue code at this point,
+      ! so we can't size things exactly.  This means that we either must size too big here, or we must
+      ! resize in the FVW code at the first CalcOutput call.  This is a bit problematic for efficiency
+      ! but not a complete deal-breaker.
    if (p%WakeMod == WakeMod_FVW) then
-!FIXME: figure out how to allocate based on the order of interpolation for extrap_unterp.
-      if (.not. allocated(m%FVW_u))   Allocate(m%FVW_u(3))
+      if (.not. allocated(m%FVW_u))   Allocate(m%FVW_u(3))  !size(u)))
       call Init_FVWmodule( InputFileData, u, m%FVW_u(1), p, x%FVW, xd%FVW, z%FVW, &
                               OtherState%FVW, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -393,9 +395,11 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
             call Cleanup()
             return
          end if
-
-      call FVW_CopyInput( m%FVW_u(1), m%FVW_u(2), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
-         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         ! populate the rest of the FVW_u so that extrap-interp will work
+      do i=2,3 !size(u)
+         call FVW_CopyInput( m%FVW_u(1), m%FVW_u(i), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      enddo
    endif
     
  
@@ -1091,6 +1095,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       end if
 
       ! set values of m%BEMT_u(2) from inputs interpolated at t+dt:
+      ! NOTE: framework has t+dt at u(1)
    call AD_Input_ExtrapInterp(u,utimes,uInterp,t+p%DT, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -1098,6 +1103,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       ! set values of m%BEMT_u(1) from inputs (uInterp) interpolated at t:
+      ! NOTE: framework has t at u(2)
       ! I'm doing this second in case we want the other misc vars at t as before, but I don't think it matters      
    call AD_Input_ExtrapInterp(u,utimes,uInterp, t, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1107,6 +1113,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
          
                         
       ! Call into the BEMT update states    NOTE:  This is a non-standard framework interface!!!!!  GJH
+      ! Also note BEMT_u(1) and BEMT_u(2) are not following the framework convention for t+dt, t
    call BEMT_UpdateStates(t, n, m%BEMT_u(1), m%BEMT_u(2),  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI%AFInfo, m%BEMT, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
@@ -1116,7 +1123,6 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
       call SetInputsForFVW(p, u, m, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Note: the setup is handled above in the SetInputs routine
-!FIXME: do we want the hub orientation and rotation? Maybe motion also? u%HubMotion%Orientation(:,:,1)
       call FVW_UpdateStates( t, n, m%FVW_u, utimes, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    endif
@@ -1153,6 +1159,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
+!FIXME: there are inconsistencies in the usage of m%BEMT_u(i) from the way the framework is setup
    integer, parameter                           :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    integer(intKi)                               :: i
    integer(intKi)                               :: j
@@ -1177,43 +1184,16 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
                   
    call SetOutputsFromBEMT(p, m, y )
 
-!!!   REAL(ReKi)                 :: Vind_FVW(3)
-!!!
-!!!   WakeCalc = p%UseFVW  ! WakeCalc is used to easily switch the Freewake on and off in this routine
-!!!
-!!!   ! ---  Copy of Rotor Mesh to FVW
-!!!   IF (WakeCalc) THEN
-!!!       ! Setting u%FVW
-!!!       call AD14_to_FVW_u(u,p,u%FVW,ErrStat,ErrMess)
-!!!       IF (ErrStat >= AbortErrLev) THEN
-!!!          CALL CleanUp()
-!!!          RETURN
-!!!       END IF
    if (p%WakeMod == WakeMod_FVW) then
          ! This needs to extract the inputs from the AD data types (mesh) and copy pieces for the FVW module
       call SetInputsForFVW(p, (/u/), m, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-       ! -- Calc Output
-       CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg2 )
+         ! Calculate Outputs at time t
+      CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+      ! Add anything that should be passed here
    endif
-!!!       IF (ErrStat >= AbortErrLev) THEN
-!!!          CALL CleanUp()
-!!!          RETURN
-!!!       END IF
-!!!   endif
-!!!
-!!!            ! --- FVW - Vortex code
-!!!            Vind_FVW = y%FVW%Vind(:, IElement, IBlade)
-!!!            VT_ind = DOT_PRODUCT( tang_Vector, Vind_FVW)
-!!!            VN_ind = DOT_PRODUCT( norm_Vector, Vind_FVW)
-!!!            ! Normal and tangential induction factors
-!!!            m%Element%A (IElement,IBLADE) = - VN_ind / VNWind
-!!!            m%Element%AP(IElement,IBLADE) =   VT_ind / VTTotal
-!!!            ! Copy over any outputs (y%FVW%) or miscvars (m%FVW%) needed by AD14 and anything else here
-!!!         IF ( p%UseFVW ) THEN
-!!!            VelocityVec = VelocityVec+Vind_FVW ! TODO this might not be what's really intended for
-!!!         END IF
             
    if ( p%TwrAero ) then
       call ADTwr_CalcOutput(p, u, m, y, ErrStat2, ErrMsg2 )
