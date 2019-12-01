@@ -43,7 +43,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             SiKi                     WaveDirArr                      {:}        -        -         "Array of wave directions (one per frequency) from the Waves module"    -
 typedef   ^                            ^                             SiKi                     WaveDirMin                      -          -        -         "Minimum wave direction from Waves module"    -
 typedef   ^                            ^                             SiKi                     WaveDirMax                      -          -        -         "Maximum wave direction from Waves module"    -
-typedef   ^                            ^                             CHARACTER(10)            OutList                         {18}       -        -         "This should really be dimensioned with MaxOutPts"    -
+typedef   ^                            ^                             CHARACTER(ChanLen)       OutList                         {18}       -        -         "This should really be dimensioned with MaxOutPts"    -
 typedef   ^                            ^                             LOGICAL                  OutAll                          -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -          -        -         ""    -
 #
@@ -51,8 +51,8 @@ typedef   ^                            ^                             INTEGER    
 # Define outputs from the initialization routine here:
 #
 #typedef   ^                            InitOutputType                MeshType                 OutputMesh                      -          -        -         ""  -
-typedef   ^                            InitOutputType                CHARACTER(10)            WriteOutputHdr                   {:}        -        -         ""    -
-typedef   ^                            ^                             CHARACTER(10)            WriteOutputUnt                   {:}        -        -         ""    -
+typedef   ^                            InitOutputType                CHARACTER(ChanLen)        WriteOutputHdr                   {:}        -        -         ""    -
+typedef   ^                            ^                             CHARACTER(ChanLen)        WriteOutputUnt                   {:}        -        -         ""    -
 #
 #
 # ..... States ....................................................................................................................

@@ -62,7 +62,7 @@ IMPLICIT NONE
     REAL(SiKi)  :: WvHiCOffD      !< Maximum frequency used in the difference methods [Ignored if all difference methods = 0] [(rad/s)]
     REAL(SiKi)  :: WvLowCOffS      !< Minimum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
     REAL(SiKi)  :: WvHiCOffS      !< Maximum frequency used in the sum-QTF method     [Ignored if SumQTF = 0] [(rad/s)]
-    CHARACTER(10) , DIMENSION(1:18)  :: OutList      !< This should really be dimensioned with MaxOutPts [-]
+    CHARACTER(ChanLen) , DIMENSION(1:18)  :: OutList      !< This should really be dimensioned with MaxOutPts [-]
     LOGICAL  :: OutAll      !<  [-]
     INTEGER(IntKi)  :: NumOuts      !<  [-]
     INTEGER(IntKi)  :: NumOutAll      !<  [-]
@@ -70,8 +70,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  Waves2_InitOutputType  =======
   TYPE, PUBLIC :: Waves2_InitOutputType
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !<  [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !<  [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !<  [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !<  [-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevSeries2      !<  [(m)]
     REAL(SiKi) , DIMENSION(:,:,:), ALLOCATABLE  :: WaveAcc2D      !<  [(m/s^2)]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveDynP2D      !<  [(N/m^2)]
@@ -3553,7 +3553,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves2_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(Waves2_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
  TYPE(Waves2_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -3600,8 +3600,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves2_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
- TYPE(Waves2_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
+ TYPE(Waves2_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(Waves2_InputType), INTENT(IN)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
  TYPE(Waves2_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -3646,9 +3646,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves2_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
- TYPE(Waves2_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
- TYPE(Waves2_InputType), INTENT(INOUT)  :: u3      ! Input at t3
+ TYPE(Waves2_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(Waves2_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(Waves2_InputType), INTENT(IN)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
  TYPE(Waves2_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -3703,7 +3703,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves2_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
+ TYPE(Waves2_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
  TYPE(Waves2_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -3750,8 +3750,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(Waves2_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
- TYPE(Waves2_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
+ TYPE(Waves2_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(Waves2_OutputType), INTENT(IN)  :: y2    ! Output at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
  TYPE(Waves2_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -3804,9 +3804,9 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(Waves2_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
- TYPE(Waves2_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
- TYPE(Waves2_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
+ TYPE(Waves2_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(Waves2_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(Waves2_OutputType), INTENT(IN)  :: y3      ! Output at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
  TYPE(Waves2_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to

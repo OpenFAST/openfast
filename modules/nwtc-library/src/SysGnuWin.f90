@@ -365,7 +365,7 @@ SUBROUTINE WrOver ( Str )
       WRITE (CU,Fmt,ADVANCE='NO')  CR, Str
    ELSE
       ! bjj: note that this will almost certainly write more than MaxWrScrLen characters on a line
-      WRITE (CU,'(A)',ADVANCE='NO')  CR, Str
+      WRITE (CU,'(2A)',ADVANCE='NO')  CR, Str
    END IF
 
    RETURN

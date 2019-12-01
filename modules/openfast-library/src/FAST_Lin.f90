@@ -50,7 +50,7 @@ SUBROUTINE Init_Lin(p_FAST, y_FAST, m_FAST, AD, NumBl, ErrStat, ErrMsg)
 
    INTEGER(IntKi)                          :: NextStart(3)        ! allocated to be size(LinStartIndx)=size(SizeLin); helps compute the next starting index for the module components
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'Init_Lin' 
    CHARACTER(200)                          :: ModAbrev
    
@@ -344,7 +344,7 @@ SUBROUTINE Init_Lin_InputOutput(p_FAST, y_FAST, NumBl, ErrStat, ErrMsg)
    INTEGER(IntKi)                          :: ThisModule          ! Module ID # 
    
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'Init_Lin_InputOutput' 
    
    
@@ -488,7 +488,7 @@ SUBROUTINE FAST_Linearize_OP(t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD1
       ! local variables
    INTEGER(IntKi)                          :: Un                  ! unit number for linearization output file (written in two parts)
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_OP' 
    
    REAL(R8Ki), ALLOCATABLE                 :: dYdz(:,:), dZdz(:,:), dZdu(:,:)
@@ -993,7 +993,7 @@ SUBROUTINE WrLinFile_txt_Head(t_global, p_FAST, y_FAST, LinData, FileName, Un, E
    INTEGER(IntKi)                          :: i                   ! loop counter
    
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'WrLinFile_txt_Head'    
    INTEGER(IntKi)                          :: n(5)                ! sizes of arrays to print
    CHARACTER(*),             PARAMETER     :: TypeNames(5) = (/ 'continuous states', &
@@ -1262,7 +1262,7 @@ SUBROUTINE Glue_GetOP(p_FAST, y_FAST, ErrStat, ErrMsg)
    INTEGER(IntKi)                          :: i_u                 ! loop/temp variables
    INTEGER(IntKi)                          :: i_y, i_x            ! loop/temp variables
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'Glue_GetOP'    
    
    
@@ -1379,7 +1379,7 @@ SUBROUTINE Glue_Jacobians( t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14,
    INTEGER(IntKi)                          :: r_start, r_end      ! row start/end of glue matrix
    
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'Glue_Jacobians' 
    
    ErrStat = ErrID_None
@@ -2849,7 +2849,7 @@ SUBROUTINE Glue_FormDiag( p_FAST, y_FAST, ErrStat, ErrMsg )
    INTEGER(IntKi)                          :: c_start             ! column in glue matrix where module block matrix starts
    
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'Glue_FormDiag' 
    
    ErrStat = ErrID_None
@@ -2996,7 +2996,7 @@ SUBROUTINE Glue_StateMatrices( p_FAST, y_FAST, dUdu, dUdy, ErrStat, ErrMsg )
    INTEGER(IntKi), ALLOCATABLE             :: ipiv(:)
             
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'Glue_StateMatrices' 
    
    ErrStat = ErrID_None

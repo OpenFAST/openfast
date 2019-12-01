@@ -802,8 +802,8 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    
       ! Variables for error handling
    INTEGER(IntKi)               :: ErrStatTmp                                      !< Temporary error status
-   CHARACTER(1024)              :: ErrMsgTmp                                       !< Temporary error message
-   CHARACTER(1024)              :: ErrMsgTmp2                                      !< Another temporary error message
+   CHARACTER(ErrMsgLen)         :: ErrMsgTmp                                       !< Temporary error message
+   CHARACTER(ErrMsgLen)         :: ErrMsgTmp2                                      !< Another temporary error message
 
 
 
@@ -2155,7 +2155,7 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Init
       
          ! Local Variables:
       INTEGER(IntKi)                                  :: ErrStatTmp  ! Temporary error status for processing
-      CHARACTER(1024)                                 :: ErrMsgTmp   ! Temporary error message for procesing
+      CHARACTER(ErrMsgLen)                            :: ErrMsgTmp   ! Temporary error message for procesing
 !      REAL(ReKi), ALLOCATABLE                         :: tmpWaveKinzi(:)
      
 !      TYPE(FFT_DataType)           :: FFT_Data                                        ! the instance of the FFT module we're using

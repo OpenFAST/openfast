@@ -1523,7 +1523,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, TMax, Tu
    CHARACTER(*), PARAMETER      :: RoutineName = "FAST_Init"
    
    INTEGER(IntKi)               :: ErrStat2
-   CHARACTER(1024)              :: ErrMsg2
+   CHARACTER(ErrMsgLen)         :: ErrMsg2
    
       ! Initialize some variables
    ErrStat = ErrID_None
@@ -3813,25 +3813,6 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
    
-#ifdef SOLVE_OPTION_1_BEFORE_2
-! used for Option 1 before Option 2:
-
-   IF ( p_FAST%CompSub /= Module_None .OR. p_FAST%CompHydro == Module_HD ) THEN
-   ! Because SubDyn needs a better initial guess from ElastoDyn, we'll add an additional call to ED_CalcOutput to get them:
-   ! (we'll do the same for HydroDyn, though I'm not sure it's as critical)
-   
-      CALL ED_CalcOutput( m_FAST%t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt(STATE_CURR), &
-                          ED%Output(1), ED%m, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      CALL Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, ED%Output(1), HD%Input(1), SD%Input(1), ExtPtfm%Input(1), &
-                                            MAPp%Input(1), FEAM%Input(1), MD%Input(1), &
-                                            Orca%Input(1), BD%Input(1,:), MeshMapData, ErrStat2, ErrMsg2 )         
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               
-   END IF   
-#endif   
-
       ! the initial ServoDyn and IfW/Lidar inputs from Simulink:
    IF ( p_FAST%CompServo == Module_SrvD ) CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )   
    IF ( p_FAST%CompInflow == Module_IfW ) CALL IfW_SetExternalInputs( IfW%p, m_FAST, ED%Output(1), IfW%Input(1) )  
@@ -4464,7 +4445,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !! STATE_PRED values contain values at t_global_next.
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       
-      CALL FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, ExtPtfm, &
+      CALL FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, OpFM, HD, SD, ExtPtfm, &
                                MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )               
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) RETURN
@@ -4687,11 +4668,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       
    IF (p_FAST%WrSttsTime) then
       IF ( MOD( n_t_global + 1, p_FAST%n_SttsTime ) == 0 ) THEN
-      
-         if (.not. Cmpl4SFun) then   
-            CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )
-         end if
-      
+         CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax, p_FAST%TDesc )      
       ENDIF
    ENDIF
      
@@ -5801,7 +5778,7 @@ SUBROUTINE FAST_Linearize_Tary(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
       ! local variables
    INTEGER(IntKi)                          :: i_turb, NumTurbines
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_Tary' 
    
    
@@ -5834,7 +5811,7 @@ SUBROUTINE FAST_Linearize_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg)
    REAL(DbKi)                              :: t_global            ! current simulation time
    REAL(DbKi)                              :: next_lin_time       ! next simulation time where linearization analysis should be performed
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(MaxWrScrLen)                  :: BlankLine
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_Linearize_T' 
 
@@ -5948,7 +5925,7 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
    INTEGER(IntKi)                          :: ErrorLevel
                                           
    INTEGER(IntKi)                          :: ErrStat2            ! Error status
-   CHARACTER(1024)                         :: ErrMsg2             ! Error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! Error message
    CHARACTER(1224)                         :: SimMsg              ! optional message to print about where the error took place in the simulation
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'ExitThisProgram'       
@@ -6373,7 +6350,7 @@ SUBROUTINE FAST_CreateCheckpoint_Tary(t_initial, n_t_global, Turbine, Checkpoint
    INTEGER(IntKi)                          :: i_turb
    INTEGER                                 :: Unit
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_CreateCheckpoint_Tary' 
    
    
@@ -6424,7 +6401,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
    INTEGER(IntKi)                          :: unOut               ! unit number for output file 
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_CreateCheckpoint_T' 
   
    CHARACTER(1024)                         :: FileName            ! Name of the (output) checkpoint file
@@ -6552,7 +6529,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, Check
    INTEGER(IntKi)                          :: i_turb
    INTEGER                                 :: Unit
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_RestoreFromCheckpoint_Tary' 
    
    
@@ -6603,7 +6580,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    INTEGER(IntKi)                          :: unIn                ! unit number for input file 
    INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
    INTEGER(IntKi)                          :: ErrStat2            ! local error status
-   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2             ! local error message
    CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_RestoreFromCheckpoint_T' 
 
    CHARACTER(1024)                         :: FileName            ! Name of the (input) checkpoint file

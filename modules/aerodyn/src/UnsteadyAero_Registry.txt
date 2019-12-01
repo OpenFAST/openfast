@@ -76,21 +76,25 @@ typedef   ^                            UA_KelvinChainType            ReKi       
 typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime                      -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     Df                               -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     Df_c                             -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     Df_m                             -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     Dalphaf                          -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     fprime                           -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     fprime_c                         -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime_c                    -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     fprime_m                         -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     fprimeprime_m                    -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     Cn_v                             -             -         -        "normal force coefficient due to the presence of LE vortex" -
 typedef   ^                            UA_KelvinChainType            ReKi                     C_V                              -             -         -        "contribution to the normal force coefficient due to accumulated vorticity in the LE vortex" -
 typedef   ^                            UA_KelvinChainType            ReKi                     Cn_FS                            -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     T_f                              -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_fc                             -             -         -        "" -
+typedef   ^                            UA_KelvinChainType            ReKi                     T_fm                             -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     T_V                              -             -         -        "backwards finite difference of the non-dimensionalized distance parameter" -
 typedef   ^                            UA_KelvinChainType            ReKi                     k_alpha                          -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     k_q                              -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     T_alpha                          -             -         -        "" -
 typedef   ^                            UA_KelvinChainType            ReKi                     T_q                              -             -         -        "" -
-
+typedef   ^                            UA_KelvinChainType            ReKi                     ds                               -             -         -        "non-dimensionalized distance parameter" -
 
 #
 #
@@ -119,13 +123,16 @@ typedef   ^                            DiscreteStateType             ReKi       
 typedef   ^                            DiscreteStateType             ReKi                     Dp_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cm_q_circ, previous time step"       rad/s
 typedef   ^                            DiscreteStateType             ReKi                     Cn_pot_minus1                   {:}{:}        -         -        "deficiency function used in the development of Cn_prime"        -                                  
 typedef   ^                            DiscreteStateType             ReKi                     fprimeprime_minus1              {:}{:}        -         -        "lagged version of fprime, accounting for unsteady boundary layer response, previous time step"        -                 
-typedef   ^                            DiscreteStateType             ReKi                     fprimeprime_c_minus1            {:}{:}        -         -        "lagged version of fprime, accounting for unsteady boundary layer response, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     fprimeprime_c_minus1            {:}{:}        -         -        "lagged version of fprime_c, accounting for unsteady boundary layer response, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     fprimeprime_m_minus1            {:}{:}        -         -        "lagged version of fprime_m, accounting for unsteady boundary layer response, previous time step"        -                 
 typedef   ^                            DiscreteStateType             ReKi                     Df_minus1                       {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
 typedef   ^                            DiscreteStateType             ReKi                     Df_c_minus1                     {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     Df_m_minus1                     {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
 typedef   ^                            DiscreteStateType             ReKi                     Dalphaf_minus1                  {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
 typedef   ^                            DiscreteStateType             ReKi                     alphaf_minus1                   {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
-typedef   ^                            DiscreteStateType             ReKi                     fprime_minus1                   {:}{:}        -         -        "separation point distance from leading edge, expressed in cord fraction, previous time step"        -                 
-typedef   ^                            DiscreteStateType             ReKi                     fprime_c_minus1                 {:}{:}        -         -        "separation point distance from leading edge, expressed in cord fraction, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     fprime_minus1                   {:}{:}        -         -        "separation point Cn distance from leading edge, expressed in cord fraction, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     fprime_c_minus1                 {:}{:}        -         -        "separation point Ct distance from leading edge, expressed in cord fraction, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     fprime_m_minus1                 {:}{:}        -         -        "Distance application of Cn with respect to Cm, previous time step"        -             
 typedef   ^                            DiscreteStateType             ReKi                     tau_V                           {:}{:}        -         -        "time variable, tracking the travel of the LE vortex over the airfoil suction surface"        -                 
 typedef   ^                            DiscreteStateType             ReKi                     tau_V_minus1                    {:}{:}        -         -        "time variable, tracking the travel of the LE vortex over the airfoil suction surface"        -                 
 typedef   ^                            DiscreteStateType             ReKi                     Cn_v_minus1                     {:}{:}        -         -        "normal force coefficient due to the presence of LE vortex, previous time step"        -                 
@@ -140,7 +147,9 @@ typedef   ^                            ConstraintStateType           ReKi       
 #
 # Define any other states, including integer or logical states here:
 typedef   ^                            OtherStateType                LOGICAL                  FirstPass                       {:}{:}        -         -        "logical flag indicating if this is the first time step"   -
-typedef   ^                            OtherStateType                ReKi                     sigma1                          {:}{:}        -         -        "multiplier for T_f"   -
+typedef   ^                            OtherStateType                ReKi                     sigma1                          {:}{:}        -         -        "multiplier for T_fn"   -
+typedef   ^                            OtherStateType                ReKi                     sigma1c                         {:}{:}        -         -        "multiplier for T_fc"   -
+typedef   ^                            OtherStateType                ReKi                     sigma1m                         {:}{:}        -         -        "multiplier for T_fm"   -
 typedef   ^                            OtherStateType                ReKi                     sigma3                          {:}{:}        -         -        "multiplier for T_V"   -
 
 # ..... Misc/Optimization variables.................................................................................................
@@ -183,6 +192,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            InputType                     ReKi                     U                               -         -         -            "air velocity magnitude relative to the airfoil" m/s
 typedef   ^                            ^                             ReKi                     alpha                           -         -         -            "angle of attack" rad
 typedef   ^                            ^                             ReKi                     Re                              -         -         -            "Reynold's number" -
+typedef   ^                            ^                             ReKi                     UserProp                        -         0.0       -            "UserProp value for interpolating airfoil tables" -
 #                                                                                                                                                             
 # ..... Outputs ...................................................................................................................                           
 # Define outputs that are contained on the mesh here:                                                                                                         
