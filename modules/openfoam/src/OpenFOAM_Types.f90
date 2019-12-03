@@ -4495,7 +4495,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(OpFM_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(OpFM_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
  TYPE(OpFM_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -4542,8 +4542,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(OpFM_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
- TYPE(OpFM_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
+ TYPE(OpFM_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(OpFM_InputType), INTENT(IN)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
  TYPE(OpFM_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -4732,9 +4732,9 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(OpFM_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
- TYPE(OpFM_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
- TYPE(OpFM_InputType), INTENT(INOUT)  :: u3      ! Input at t3
+ TYPE(OpFM_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(OpFM_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(OpFM_InputType), INTENT(IN)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
  TYPE(OpFM_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -4950,7 +4950,7 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(OpFM_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
+ TYPE(OpFM_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
  TYPE(OpFM_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -4997,8 +4997,8 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(OpFM_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
- TYPE(OpFM_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
+ TYPE(OpFM_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(OpFM_OutputType), INTENT(IN)  :: y2    ! Output at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
  TYPE(OpFM_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -5083,9 +5083,9 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(OpFM_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
- TYPE(OpFM_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
- TYPE(OpFM_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
+ TYPE(OpFM_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(OpFM_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(OpFM_OutputType), INTENT(IN)  :: y3      ! Output at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
  TYPE(OpFM_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to

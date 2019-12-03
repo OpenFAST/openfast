@@ -22,8 +22,9 @@ RUN git fetch
 RUN git pull
 RUN git submodule update
 
-# Move into the "build" directory and compile
+# Move into the "build" directory, remove the old reg tests, and compile
 WORKDIR /openfast/build
+RUN rm -rf reg_tests
 RUN cmake ..
 RUN make -j4 install
 

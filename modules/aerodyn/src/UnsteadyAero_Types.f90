@@ -186,6 +186,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: U      !< air velocity magnitude relative to the airfoil [m/s]
     REAL(ReKi)  :: alpha      !< angle of attack [rad]
     REAL(ReKi)  :: Re      !< Reynold's number [-]
+    REAL(ReKi)  :: UserProp = 0.0      !< UserProp value for interpolating airfoil tables [-]
   END TYPE UA_InputType
 ! =======================
 ! =========  UA_OutputType  =======
@@ -4507,6 +4508,7 @@ ENDIF
     DstInputData%U = SrcInputData%U
     DstInputData%alpha = SrcInputData%alpha
     DstInputData%Re = SrcInputData%Re
+    DstInputData%UserProp = SrcInputData%UserProp
  END SUBROUTINE UA_CopyInput
 
  SUBROUTINE UA_DestroyInput( InputData, ErrStat, ErrMsg )
@@ -4558,6 +4560,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! U
       Re_BufSz   = Re_BufSz   + 1  ! alpha
       Re_BufSz   = Re_BufSz   + 1  ! Re
+      Re_BufSz   = Re_BufSz   + 1  ! UserProp
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4590,6 +4593,8 @@ ENDIF
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%alpha
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Re
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%UserProp
       Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE UA_PackInput
 
@@ -4630,6 +4635,8 @@ ENDIF
       OutData%alpha = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
       OutData%Re = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%UserProp = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE UA_UnPackInput
 
@@ -4863,7 +4870,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(UA_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
+ TYPE(UA_InputType), INTENT(IN)  :: u(:) ! Input at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
  TYPE(UA_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -4910,8 +4917,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(UA_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
- TYPE(UA_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
+ TYPE(UA_InputType), INTENT(IN)  :: u1    ! Input at t1 > t2
+ TYPE(UA_InputType), INTENT(IN)  :: u2    ! Input at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
  TYPE(UA_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -4943,6 +4950,8 @@ ENDIF
   u_out%alpha = u1%alpha + b0 * t_out
   b0 = -(u1%Re - u2%Re)/t(2)
   u_out%Re = u1%Re + b0 * t_out
+  b0 = -(u1%UserProp - u2%UserProp)/t(2)
+  u_out%UserProp = u1%UserProp + b0 * t_out
  END SUBROUTINE UA_Input_ExtrapInterp1
 
 
@@ -4960,9 +4969,9 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(UA_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
- TYPE(UA_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
- TYPE(UA_InputType), INTENT(INOUT)  :: u3      ! Input at t3
+ TYPE(UA_InputType), INTENT(IN)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(UA_InputType), INTENT(IN)  :: u2      ! Input at t2 > t3
+ TYPE(UA_InputType), INTENT(IN)  :: u3      ! Input at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
  TYPE(UA_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
@@ -5004,6 +5013,9 @@ ENDIF
   b0 = (t(3)**2*(u1%Re - u2%Re) + t(2)**2*(-u1%Re + u3%Re))/(t(2)*t(3)*(t(2) - t(3)))
   c0 = ( (t(2)-t(3))*u1%Re + t(3)*u2%Re - t(2)*u3%Re ) / (t(2)*t(3)*(t(2) - t(3)))
   u_out%Re = u1%Re + b0 * t_out + c0 * t_out**2
+  b0 = (t(3)**2*(u1%UserProp - u2%UserProp) + t(2)**2*(-u1%UserProp + u3%UserProp))/(t(2)*t(3)*(t(2) - t(3)))
+  c0 = ( (t(2)-t(3))*u1%UserProp + t(3)*u2%UserProp - t(2)*u3%UserProp ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%UserProp = u1%UserProp + b0 * t_out + c0 * t_out**2
  END SUBROUTINE UA_Input_ExtrapInterp2
 
 
@@ -5023,7 +5035,7 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(UA_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
+ TYPE(UA_OutputType), INTENT(IN)  :: y(:) ! Output at t1 > t2 > t3
  REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
  TYPE(UA_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
@@ -5070,8 +5082,8 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(UA_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
- TYPE(UA_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
+ TYPE(UA_OutputType), INTENT(IN)  :: y1    ! Output at t1 > t2
+ TYPE(UA_OutputType), INTENT(IN)  :: y2    ! Output at t2 
  REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
  TYPE(UA_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
  REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
@@ -5134,9 +5146,9 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(UA_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
- TYPE(UA_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
- TYPE(UA_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
+ TYPE(UA_OutputType), INTENT(IN)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(UA_OutputType), INTENT(IN)  :: y2      ! Output at t2 > t3
+ TYPE(UA_OutputType), INTENT(IN)  :: y3      ! Output at t3
  REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
  TYPE(UA_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
  REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
