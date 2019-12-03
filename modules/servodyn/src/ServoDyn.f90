@@ -235,8 +235,8 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL SrvD_ReadInput( InitInp, InputFileData, Interval, p%RootName, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-
-   CALL ValidatePrimaryData( InitInp, InputFileData, InitInp%NumBl, ErrStat2, ErrMsg2 )
+      
+   CALL ValidatePrimaryData( InitInp, InputFileData, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
       
@@ -249,7 +249,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
-   CALL SrvD_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )   
+   CALL SrvD_SetParameters( InputFileData, p, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN      
    !p%DT  = Interval
@@ -868,7 +868,7 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    ! update remaining states to values at t+dt:
    !...............................................................................................................................  
       
-      ! Torque control
+      ! Torque control:
    CALL Torque_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
@@ -1742,7 +1742,7 @@ SUBROUTINE SrvD_ReadInput( InitInp, InputFileData, Default_DT, OutFileRoot, ErrS
    
       ! get the primary/platform input-file data
    
-   CALL ReadPrimaryFile( InitInp%InputFile, InputFileData, OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
+   CALL ReadPrimaryFile( InitInp, InputFileData, OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF ( UnEcho > 0 ) CLOSE( UnEcho ) 
@@ -1763,20 +1763,20 @@ END SUBROUTINE SrvD_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine reads in the primary ServoDyn input file and places the values it reads in the InputFileData structure.
 !!   It opens and prints to an echo file if requested.
-SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadPrimaryFile( InitInp, InputFileData, OutFileRoot, UnEc, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    IMPLICIT                        NONE
 
       ! Passed variables
-   INTEGER(IntKi),     INTENT(OUT)     :: UnEc                                !< I/O unit for echo file. If > 0, file is open for writing.
-   INTEGER(IntKi),     INTENT(OUT)     :: ErrStat                             !< Error status
+   INTEGER(IntKi),           INTENT(OUT)     :: UnEc                          !< I/O unit for echo file. If > 0, file is open for writing.
+   INTEGER(IntKi),           INTENT(OUT)     :: ErrStat                       !< Error status
 
-   CHARACTER(*),       INTENT(IN)      :: InputFile                           !< Name of the file containing the primary input data
-   CHARACTER(*),       INTENT(OUT)     :: ErrMsg                              !< Error message
-   CHARACTER(*),       INTENT(IN)      :: OutFileRoot                         !< The rootname of the echo file, possibly opened in this routine
+   TYPE(SrvD_InitInputType), INTENT(IN   )   :: InitInp                       !< Input data for initialization routine
+   CHARACTER(*),             INTENT(OUT)     :: ErrMsg                        !< Error message
+   CHARACTER(*),             INTENT(IN)      :: OutFileRoot                   !< The rootname of the echo file, possibly opened in this routine
 
-   TYPE(SrvD_InputFile), INTENT(INOUT) :: InputFileData                       !< All the data in the ServoDyn input file
+   TYPE(SrvD_InputFile),     INTENT(INOUT)   :: InputFileData                 !< All the data in the ServoDyn input file
    
       ! Local variables:
    REAL(ReKi)                    :: TmpRAry(2)                                ! A temporary array to read a table from the input file
@@ -1793,14 +1793,13 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
    
    
    
-   
       ! Initialize some variables:
    ErrStat = ErrID_None
    ErrMsg  = ""
       
    UnEc = -1
    Echo = .FALSE.   
-   CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
+   CALL GetPath( InitInp%InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
    
 
    CALL AllocAry( InputFileData%OutList, MaxOutPts, "ServoDyn Input File's Outlist", ErrStat2, ErrMsg2 )
@@ -1817,7 +1816,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
 
       ! Open the Primary input file.
 
-   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
+   CALL OpenFInpFile ( UnIn, InitInp%InputFile, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
                   
@@ -1830,24 +1829,24 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
    DO 
    !-------------------------- HEADER ---------------------------------------------
    
-      CALL ReadCom( UnIn, InputFile, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
+      CALL ReadCom( UnIn, InitInp%InputFile, 'File header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF ( ErrStat >= AbortErrLev ) RETURN
    
-      CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc )
+      CALL ReadStr( UnIn, InitInp%InputFile, FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF ( ErrStat >= AbortErrLev ) RETURN
    
    
    !---------------------- SIMULATION CONTROL --------------------------------------
    
-      CALL ReadCom( UnIn, InputFile, 'Section Header: Simulation Control', ErrStat2, ErrMsg2, UnEc )
+      CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Simulation Control', ErrStat2, ErrMsg2, UnEc )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF ( ErrStat >= AbortErrLev ) RETURN
    
          ! Echo - Echo input to "<RootName>.ech".
    
-      CALL ReadVar( UnIn, InputFile, Echo, 'Echo',   'Echo switch', ErrStat2, ErrMsg2, UnEc )
+      CALL ReadVar( UnIn, InitInp%InputFile, Echo, 'Echo',   'Echo switch', ErrStat2, ErrMsg2, UnEc )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF ( ErrStat >= AbortErrLev ) RETURN
    
@@ -1862,11 +1861,11 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF ( ErrStat >= AbortErrLev ) RETURN
    
-      IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(SrvD_Ver%Name)//' primary input file "'//TRIM( InputFile )//'":'
+      IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(SrvD_Ver%Name)//' primary input file "'//TRIM( InitInp%InputFile )//'":'
          
       REWIND( UnIn, IOSTAT=ErrStat2 )  
          IF (ErrStat2 /= 0_IntKi ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error rewinding file "'//TRIM(InputFile)//'".' )      
+            CALL CheckError( ErrID_Fatal, 'Error rewinding file "'//TRIM(InitInp%InputFile)//'".' )      
             RETURN
          END IF         
       
@@ -1879,430 +1878,430 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
    
    
       ! DT - Communication interval for controllers (s):
-   CALL ReadVar( UnIn, InputFile, Line, "DT", "Communication interval for controllers (s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, Line, "DT", "Communication interval for controllers (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DT
          READ( Line, *, IOSTAT=IOS) InputFileData%DT
-            CALL CheckIOS ( IOS, InputFile, 'DT', NumType, ErrStat2, ErrMsg2 )
+            CALL CheckIOS ( IOS, InitInp%InputFile, 'DT', NumType, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2, ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
       END IF   
       
       
    !---------------------- PITCH CONTROL -------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Pitch Control', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Pitch Control', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
       ! PCMode - Pitch control mode (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PCMode, "PCMode", "Pitch control mode (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%PCMode, "PCMode", "Pitch control mode (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TPCOn - Time to enable active pitch control [unused when PCMode=0] (s):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TPCOn, "TPCOn", "Time to enable active pitch control (s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TPCOn, "TPCOn", "Time to enable active pitch control (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TPitManS - Time to start override pitch maneuver for blade (K) and end standard pitch control (s):
-   CALL ReadAryLines( UnIn, InputFile, InputFileData%TPitManS, SIZE(InputFileData%TPitManS), "TPitManS", &
+   CALL ReadAryLines( UnIn, InitInp%InputFile, InputFileData%TPitManS, SIZE(InputFileData%TPitManS), "TPitManS", &
         "Time to start override pitch maneuver for blade K and end standard pitch control (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! PitManRat - Pitch rates at which override pitch maneuvers head toward final pitch angles (degrees/s) (read in deg/s and converted to radians/s here):
-   CALL ReadAryLines( UnIn, InputFile, InputFileData%PitManRat, SIZE(InputFileData%PitManRat), "PitManRat", "Pitch rates at which override pitch maneuvers head toward final pitch angles (deg/s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadAryLines( UnIn, InitInp%InputFile, InputFileData%PitManRat, SIZE(InputFileData%PitManRat), "PitManRat", "Pitch rates at which override pitch maneuvers head toward final pitch angles (deg/s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%PitManRat = InputFileData%PitManRat*D2R
 
       ! BlPitchF - Blade (K) final pitch for pitch maneuvers (deg) (read from file in degrees and converted to radians here):
-   CALL ReadAryLines( UnIn, InputFile, InputFileData%BlPitchF, SIZE(InputFileData%BlPitchF), "BlPitchF", "Blade K final pitch for pitch maneuvers (deg)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadAryLines( UnIn, InitInp%InputFile, InputFileData%BlPitchF, SIZE(InputFileData%BlPitchF), "BlPitchF", "Blade K final pitch for pitch maneuvers (deg)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%BlPitchF = InputFileData%BlPitchF*D2R
    
 
    !---------------------- GENERATOR AND TORQUE CONTROL ----------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Generator and Torque Control', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Generator and Torque Control', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
       ! VSContrl - Variable-speed control mode {0: none, 1: simple VS, 3: user-defined from routine UserVSCont, 4: user-defined from Simulink/LabVIEW} (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%VSContrl, "VSContrl", "Variable-speed control mode (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%VSContrl, "VSContrl", "Variable-speed control mode (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! GenModel - Generator model {1: simple, 2: Thevenin, 3: user-defined from routine UserGen} [used only when VSContrl=0] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%GenModel, "GenModel", "Generator model {1: simple, 2: Thevenin, 3: user-defined from routine UserGen} [used only when VSContrl=0] (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%GenModel, "GenModel", "Generator model {1: simple, 2: Thevenin, 3: user-defined from routine UserGen} [used only when VSContrl=0] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! GenEff - Generator efficiency [ignored by the Thevenin and user-defined generator models] (%) (read in percent and converted to a fraction here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%GenEff, "GenEff", "Generator efficiency [ignored by the Thevenin and user-defined generator models] (%)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%GenEff, "GenEff", "Generator efficiency [ignored by the Thevenin and user-defined generator models] (%)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%GenEff = InputFileData%GenEff*0.01      
 
       ! GenTiStr - Method to start the generator {T: timed using TimGenOn, F: generator speed using SpdGenOn} (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%GenTiStr, "GenTiStr", "Method to start the generator {T: timed using TimGenOn, F: generator speed using SpdGenOn} (flag)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%GenTiStr, "GenTiStr", "Method to start the generator {T: timed using TimGenOn, F: generator speed using SpdGenOn} (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! GenTiStp - Method to stop the generator {T: timed using TimGenOf, F: when generator power = 0} (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%GenTiStp, "GenTiStp", "Method to stop the generator {T: timed using TimGenOf, F: when generator power = 0} (flag)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%GenTiStp, "GenTiStp", "Method to stop the generator {T: timed using TimGenOf, F: when generator power = 0} (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! SpdGenOn - Generator speed to turn on the generator for a startup (HSS speed) [used only when GenTiStr=False] (rpm) (read in rpm and converted to rad/sec here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%SpdGenOn, "SpdGenOn", "Generator speed to turn on the generator for a startup (HSS speed) [used only when GenTiStr=False] (rpm)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%SpdGenOn, "SpdGenOn", "Generator speed to turn on the generator for a startup (HSS speed) [used only when GenTiStr=False] (rpm)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%SpdGenOn = InputFileData%SpdGenOn*RPM2RPS
 
       ! TimGenOn - Time to turn on the generator for a startup [used only when GenTiStr=True] (s):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TimGenOn, "TimGenOn", "Time to turn on the generator for a startup [used only when GenTiStr=True] (s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TimGenOn, "TimGenOn", "Time to turn on the generator for a startup [used only when GenTiStr=True] (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TimGenOf - Time to turn off the generator [used only when GenTiStp=True] (s):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TimGenOf, "TimGenOf", "Time to turn off the generator [used only when GenTiStp=True] (s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TimGenOf, "TimGenOf", "Time to turn off the generator [used only when GenTiStp=True] (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
    !---------------------- SIMPLE VARIABLE-SPEED TORQUE CONTROL --------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Simple Variable-Speed Torque Control', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Simple Variable-Speed Torque Control', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
       ! VS_RtGnSp - Rated generator speed for simple variable-speed generator control (HSS side) [used only when VSContrl=1] (rpm) (read in rpm and converted to rad/sec here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%VS_RtGnSp, "VS_RtGnSp", "Rated generator speed for simple variable-speed generator control (HSS side) [used only when VSContrl=1] (rpm)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%VS_RtGnSp, "VS_RtGnSp", "Rated generator speed for simple variable-speed generator control (HSS side) [used only when VSContrl=1] (rpm)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%VS_RtGnSp = InputFileData%VS_RtGnSp*RPM2RPS
       
       ! VS_RtTq - Rated generator torque/constant generator torque in Region 3 for simple variable-speed generator control (HSS side) [used only when VSContrl=1] (N-m):
-   CALL ReadVar( UnIn, InputFile, InputFileData%VS_RtTq, "VS_RtTq", "Rated generator torque/constant generator torque in Region 3 for simple variable-speed generator control (HSS side) [used only when VSContrl=1] (N-m)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%VS_RtTq, "VS_RtTq", "Rated generator torque/constant generator torque in Region 3 for simple variable-speed generator control (HSS side) [used only when VSContrl=1] (N-m)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! VS_Rgn2K - Generator torque constant in Region 2 for simple variable-speed generator control (HSS side) [used only when VSContrl=1] (N-m/rpm^2) (read in N-m/rpm^2 and converted to N-m/(rad/s)^2 here:
-   CALL ReadVar( UnIn, InputFile, InputFileData%VS_Rgn2K, "VS_Rgn2K", "Generator torque constant in Region 2 for simple variable-speed generator control (HSS side) [used only when VSContrl=1] (N-m/rpm^2)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%VS_Rgn2K, "VS_Rgn2K", "Generator torque constant in Region 2 for simple variable-speed generator control (HSS side) [used only when VSContrl=1] (N-m/rpm^2)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%VS_Rgn2K = InputFileData%VS_Rgn2K/( RPM2RPS**2 )
 
       ! VS_SlPc - Rated generator slip percentage in Region 2 1/2 for simple variable-speed generator control [used only when VSContrl=1] (%) (read in percent and converted to a fraction here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%VS_SlPc, "VS_SlPc", "Rated generator slip percentage in Region 2 1/2 for simple variable-speed generator control [used only when VSContrl=1] (%)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%VS_SlPc, "VS_SlPc", "Rated generator slip percentage in Region 2 1/2 for simple variable-speed generator control [used only when VSContrl=1] (%)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN     
    InputFileData%VS_SlPc = InputFileData%VS_SlPc*.01
    
    !---------------------- SIMPLE INDUCTION GENERATOR ------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Simple Induction Generator', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Simple Induction Generator', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
       ! SIG_SlPc - Rated generator slip percentage [used only when VSContrl=0 and GenModel=1] (%) (read in percent and converted to a fraction here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%SIG_SlPc, "SIG_SlPc", "Rated generator slip percentage [used only when VSContrl=0 and GenModel=1] (%)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%SIG_SlPc, "SIG_SlPc", "Rated generator slip percentage [used only when VSContrl=0 and GenModel=1] (%)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%SIG_SlPc = InputFileData%SIG_SlPc*.01
 
       ! SIG_SySp - Synchronous (zero-torque) generator speed [used only when VSContrl=0 and GenModel=1] (rpm) (read in rpm and convert to rad/sec here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%SIG_SySp, "SIG_SySp", "Synchronous (zero-torque) generator speed [used only when VSContrl=0 and GenModel=1] (rpm)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%SIG_SySp, "SIG_SySp", "Synchronous (zero-torque) generator speed [used only when VSContrl=0 and GenModel=1] (rpm)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%SIG_SySp = InputFileData%SIG_SySp*RPM2RPS  
       
 
       ! SIG_RtTq - Rated torque [used only when VSContrl=0 and GenModel=1] (N-m):
-   CALL ReadVar( UnIn, InputFile, InputFileData%SIG_RtTq, "SIG_RtTq", "Rated torque [used only when VSContrl=0 and GenModel=1] (N-m)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%SIG_RtTq, "SIG_RtTq", "Rated torque [used only when VSContrl=0 and GenModel=1] (N-m)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! SIG_PORt - Pull-out ratio (Tpullout/Trated) [used only when VSContrl=0 and GenModel=1] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%SIG_PORt, "SIG_PORt", "Pull-out ratio (Tpullout/Trated) [used only when VSContrl=0 and GenModel=1] (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%SIG_PORt, "SIG_PORt", "Pull-out ratio (Tpullout/Trated) [used only when VSContrl=0 and GenModel=1] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
    !---------------------- THEVENIN-EQUIVALENT INDUCTION GENERATOR -----------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Thevenin-Equivalent Induction Generator', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Thevenin-Equivalent Induction Generator', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
       ! TEC_Freq - Line frequency [50 or 60] [used only when VSContrl=0 and GenModel=2] (Hz):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TEC_Freq, "TEC_Freq", "Line frequency [50 or 60] [used only when VSContrl=0 and GenModel=2] (Hz)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TEC_Freq, "TEC_Freq", "Line frequency [50 or 60] [used only when VSContrl=0 and GenModel=2] (Hz)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TEC_NPol - Number of poles [even integer > 0] [used only when VSContrl=0 and GenModel=2] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TEC_NPol, "TEC_NPol", "Number of poles [even integer > 0] [used only when VSContrl=0 and GenModel=2] (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TEC_NPol, "TEC_NPol", "Number of poles [even integer > 0] [used only when VSContrl=0 and GenModel=2] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TEC_SRes - Stator resistance [used only when VSContrl=0 and GenModel=2] (ohms):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TEC_SRes, "TEC_SRes", "Stator resistance [used only when VSContrl=0 and GenModel=2] (ohms)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TEC_SRes, "TEC_SRes", "Stator resistance [used only when VSContrl=0 and GenModel=2] (ohms)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TEC_RRes - Rotor resistance [used only when VSContrl=0 and GenModel=2] (ohms):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TEC_RRes, "TEC_RRes", "Rotor resistance [used only when VSContrl=0 and GenModel=2] (ohms)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TEC_RRes, "TEC_RRes", "Rotor resistance [used only when VSContrl=0 and GenModel=2] (ohms)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TEC_VLL - Line-to-line RMS voltage [used only when VSContrl=0 and GenModel=2] (volts):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TEC_VLL, "TEC_VLL", "Line-to-line RMS voltage [used only when VSContrl=0 and GenModel=2] (volts)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TEC_VLL, "TEC_VLL", "Line-to-line RMS voltage [used only when VSContrl=0 and GenModel=2] (volts)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TEC_SLR - Stator leakage reactance [used only when VSContrl=0 and GenModel=2] (ohms):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TEC_SLR, "TEC_SLR", "Stator leakage reactance [used only when VSContrl=0 and GenModel=2] (ohms)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TEC_SLR, "TEC_SLR", "Stator leakage reactance [used only when VSContrl=0 and GenModel=2] (ohms)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TEC_RLR - Rotor leakage reactance [used only when VSContrl=0 and GenModel=2] (ohms):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TEC_RLR, "TEC_RLR", "Rotor leakage reactance [used only when VSContrl=0 and GenModel=2] (ohms)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TEC_RLR, "TEC_RLR", "Rotor leakage reactance [used only when VSContrl=0 and GenModel=2] (ohms)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TEC_MR - Magnetizing reactance [used only when VSContrl=0 and GenModel=2] (ohms):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TEC_MR, "TEC_MR", "Magnetizing reactance [used only when VSContrl=0 and GenModel=2] (ohms)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TEC_MR, "TEC_MR", "Magnetizing reactance [used only when VSContrl=0 and GenModel=2] (ohms)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
    !---------------------- HIGH-SPEED SHAFT BRAKE ----------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: High-Speed Shaft Brake', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: High-Speed Shaft Brake', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
-      ! HSSBrMode - HSS brake model {0: none, 1: simple, 3: user-defined from routine UserHSSBr, 4: user-defined from LabVIEW, 5: user-defined from Bladed-style DLL} (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%HSSBrMode, "HSSBrMode", "HSS brake model {0: none, 1: simple, 3: user-defined from routine UserHSSBr, 4: user-defined from LabVIEW} (-)", ErrStat2, ErrMsg2, UnEc)
+      ! HSSBrMode - HSS brake model {0: none, 1: simple, 3: user-defined from routine UserHSSBr, 4: user-defined from LabVIEW} (-):
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%HSSBrMode, "HSSBrMode", "HSS brake model {0: none, 1: simple, 3: user-defined from routine UserHSSBr, 4: user-defined from LabVIEW} (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! THSSBrDp - Time to initiate deployment of the HSS brake (s):
-   CALL ReadVar( UnIn, InputFile, InputFileData%THSSBrDp, "THSSBrDp", "Time to initiate deployment of the HSS brake (s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%THSSBrDp, "THSSBrDp", "Time to initiate deployment of the HSS brake (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! HSSBrDT - Time for HSS-brake to reach full deployment once initiated [used only when HSSBrMode=1] (sec):
-   CALL ReadVar( UnIn, InputFile, InputFileData%HSSBrDT, "HSSBrDT", "Time for HSS-brake to reach full deployment once initiated [used only when HSSBrMode=1] (sec)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%HSSBrDT, "HSSBrDT", "Time for HSS-brake to reach full deployment once initiated [used only when HSSBrMode=1] (sec)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! HSSBrTqF - Fully deployed HSS-brake torque (N-m):
-   CALL ReadVar( UnIn, InputFile, InputFileData%HSSBrTqF, "HSSBrTqF", "Fully deployed HSS-brake torque (N-m)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%HSSBrTqF, "HSSBrTqF", "Fully deployed HSS-brake torque (N-m)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
    !---------------------- YAW CONTROL ---------------------------------------------
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Yaw Control', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Yaw Control', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
       ! YCMode - Yaw control mode {0: none, 3: user-defined from routine UserYawCont, 4: user-defined from Simulink/LabVIEW} (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%YCMode, "YCMode", "Yaw control mode (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%YCMode, "YCMode", "Yaw control mode (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! TYCOn - Time to enable active yaw control [unused when YCMode=0] (s):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TYCOn, "TYCOn", "Time to enable active yaw control [unused when YCMode=0] (s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TYCOn, "TYCOn", "Time to enable active yaw control [unused when YCMode=0] (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! YawNeut - Neutral yaw position--yaw spring force is zero at this yaw (deg) (read from file in degrees and converted to radians here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%YawNeut, "YawNeut", "Neutral yaw position--yaw spring force is zero at this yaw (deg)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%YawNeut, "YawNeut", "Neutral yaw position--yaw spring force is zero at this yaw (deg)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%YawNeut = InputFileData%YawNeut*D2R
 
       ! YawSpr - Nacelle-yaw spring constant (N-m/rad):
-   CALL ReadVar( UnIn, InputFile, InputFileData%YawSpr, "YawSpr", "Nacelle-yaw spring constant (N-m/rad)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%YawSpr, "YawSpr", "Nacelle-yaw spring constant (N-m/rad)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! YawDamp - Nacelle-yaw constant (N-m/(rad/s)):
-   CALL ReadVar( UnIn, InputFile, InputFileData%YawDamp, "YawDamp", "Nacelle-yaw constant (N-m/(rad/s))", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%YawDamp, "YawDamp", "Nacelle-yaw constant (N-m/(rad/s))", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN      
       
       ! TYawManS - Time to start override yaw maneuver and end standard yaw control (s):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TYawManS, "TYawManS", "Time to start override yaw maneuver and end standard yaw control (s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TYawManS, "TYawManS", "Time to start override yaw maneuver and end standard yaw control (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! YawManRat - Yaw maneuver rate (in absolute value) (deg/s) (read in degrees/second and converted to radians/second here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%YawManRat, "YawManRat", "Yaw maneuver rate (in absolute value) (deg/s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%YawManRat, "YawManRat", "Yaw maneuver rate (in absolute value) (deg/s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%YawManRat = InputFileData%YawManRat*D2R
 
       ! NacYawF - Final yaw angle for override yaw maneuvers (deg) (read from file in degrees and converted to radians here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%NacYawF, "NacYawF", "Final yaw angle for override yaw maneuvers (deg)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%NacYawF, "NacYawF", "Final yaw angle for override yaw maneuvers (deg)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%NacYawF = InputFileData%NacYawF*D2R
       
    
    !---------------------- TUNED MASS DAMPER ----------------------------------------         
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Tuned Mass Damper', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Tuned Mass Damper', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
                   
       ! CompNTMD - Compute nacelle tuned mass damper {true/false} (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%CompNTMD, "CompNTMD", "Compute nacelle tuned mass damper {true/false} (flag)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%CompNTMD, "CompNTMD", "Compute nacelle tuned mass damper {true/false} (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN      
       
       ! NTMDfile - Name of the file for nacelle tuned mass damper (quoted string) [unused when CompNTMD is false]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%NTMDfile, "NTMDfile", "Name of the file for nacelle tuned mass dampe [unused when CompNTMD is false] (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%NTMDfile, "NTMDfile", "Name of the file for nacelle tuned mass dampe [unused when CompNTMD is false] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    IF ( PathIsRelative( InputFileData%NTMDfile ) ) InputFileData%NTMDfile = TRIM(PriPath)//TRIM(InputFileData%NTMDfile)
       
       ! CompTTMD - Compute tower tuned mass damper {true/false} (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%CompTTMD, "CompTTMD", "Compute tower tuned mass damper {true/false} (flag)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%CompTTMD, "CompTTMD", "Compute tower tuned mass damper {true/false} (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN      
       
       ! TTMDfile - Name of the file for nacelle tuned mass damper (quoted string) [unused when CompNTMD is false]:
-   CALL ReadVar( UnIn, InputFile, InputFileData%TTMDfile, "TTMDfile", "Name of the file for tower tuned mass dampe [unused when CompTTMD is false] (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TTMDfile, "TTMDfile", "Name of the file for tower tuned mass dampe [unused when CompTTMD is false] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    IF ( PathIsRelative( InputFileData%TTMDfile ) ) InputFileData%TTMDfile = TRIM(PriPath)//TRIM(InputFileData%TTMDfile)
       
    
    !---------------------- BLADED INTERFACE ----------------------------------------         
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Bladed Interface', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Bladed Interface', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
                   
    InputFileData%UseLegacyInterface = .true.
 
       ! DLL_FileName - Name of the Bladed DLL [used only with DLL Interface] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%DLL_FileName, "DLL_FileName", "Name/location of the external library {.dll [Windows]} in the Bladed-DLL format [used only with DLL Interface] (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%DLL_FileName, "DLL_FileName", "Name/location of the external library {.dll [Windows]} in the Bladed-DLL format [used only with DLL Interface] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    IF ( PathIsRelative( InputFileData%DLL_FileName ) ) InputFileData%DLL_FileName = TRIM(PriPath)//TRIM(InputFileData%DLL_FileName)
       
       ! DLL_InFile - Name of input file used in DLL [used only with DLL Interface] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%DLL_InFile, "DLL_InFile", "Name of input file used in DLL [used only with DLL Interface] (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%DLL_InFile, "DLL_InFile", "Name of input file used in DLL [used only with DLL Interface] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    IF ( PathIsRelative( InputFileData%DLL_InFile ) ) InputFileData%DLL_InFile = TRIM(PriPath)//TRIM(InputFileData%DLL_InFile)   
 
       ! DLL_ProcName - Name of procedure to be called in DLL [used only with DLL Interface] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%DLL_ProcName, "DLL_ProcName", "Name of procedure to be called in DLL [used only with DLL Interface] (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%DLL_ProcName, "DLL_ProcName", "Name of procedure to be called in DLL [used only with DLL Interface] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    
       ! DLL_DT - Communication interval for dynamic library (s):
    InputFileData%DLL_DT = InputFileData%DT
-   CALL ReadVar( UnIn, InputFile, Line, "DLL_DT", "Communication interval for dynamic library (s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, Line, "DLL_DT", "Communication interval for dynamic library (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DLL_DT
          READ( Line, *, IOSTAT=IOS) InputFileData%DLL_DT
-            CALL CheckIOS ( IOS, InputFile, 'DLL_DT', NumType, ErrStat2, ErrMsg2 )
+            CALL CheckIOS ( IOS, InitInp%InputFile, 'DLL_DT', NumType, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2, ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
       END IF   
    
       ! DLL_Ramp - Whether a linear ramp should be used between DLL_DT time steps [introduces time shift when true] (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%DLL_Ramp, "DLL_Ramp", "Whether a linear ramp should be used between DLL_DT time steps [introduces time shift when true]", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%DLL_Ramp, "DLL_Ramp", "Whether a linear ramp should be used between DLL_DT time steps [introduces time shift when true]", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
       ! BPCutoff - Cuttoff frequency for low-pass filter on blade pitch (Hz):
-   CALL ReadVar( UnIn, InputFile, InputFileData%BPCutoff, "BPCutoff", "Cuttoff frequency for low-pass filter on blade pitch (Hz)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%BPCutoff, "BPCutoff", "Cuttoff frequency for low-pass filter on blade pitch (Hz)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
       ! NacYaw_North - Reference yaw angle of the nacelle when the upwind end points due North (deg) (read from file in degrees and converted to radians here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%NacYaw_North, "NacYaw_North", "Reference yaw angle of the nacelle when the upwind end points due North (deg)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%NacYaw_North, "NacYaw_North", "Reference yaw angle of the nacelle when the upwind end points due North (deg)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%NacYaw_North = InputFileData%NacYaw_North*D2R
 
       ! Ptch_Cntrl - Record 28: Use individual pitch control {0: collective pitch; 1: individual pitch control} [used only with DLL Interface] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%Ptch_Cntrl, "Ptch_Cntrl", "Record 28: Use individual pitch control {0: collective pitch; 1: individual pitch control} [used only with DLL Interface] (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%Ptch_Cntrl, "Ptch_Cntrl", "Record 28: Use individual pitch control {0: collective pitch; 1: individual pitch control} [used only with DLL Interface] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! Ptch_SetPnt - Record  5: Below-rated pitch angle set-point [used only with DLL Interface] (deg) (read from file in degrees and converted to radians here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%Ptch_SetPnt, "Ptch_SetPnt", "Record  5: Below-rated pitch angle set-point [used only with DLL Interface] (deg)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%Ptch_SetPnt, "Ptch_SetPnt", "Record  5: Below-rated pitch angle set-point [used only with DLL Interface] (deg)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%Ptch_SetPnt = InputFileData%Ptch_SetPnt*D2R
 
       ! Ptch_Min - Record  6: Minimum pitch angle [used only with DLL Interface] (deg) (read from file in degrees and converted to radians here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%Ptch_Min, "Ptch_Min", "Record  6: Minimum pitch angle [used only with DLL Interface] (deg)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%Ptch_Min, "Ptch_Min", "Record  6: Minimum pitch angle [used only with DLL Interface] (deg)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%Ptch_Min = InputFileData%Ptch_Min*D2R
 
       ! Ptch_Max - Record  7: Maximum pitch angle [used only with DLL Interface] (deg) (read from file in degrees and converted to radians here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%Ptch_Max, "Ptch_Max", "Record  7: Maximum pitch angle [used only with DLL Interface] (deg)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%Ptch_Max, "Ptch_Max", "Record  7: Maximum pitch angle [used only with DLL Interface] (deg)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%Ptch_Max = InputFileData%Ptch_Max*D2R
 
       ! PtchRate_Min - Record  8: Minimum pitch rate (most negative value allowed) [used only with DLL Interface] (deg/s) (read from file in deg/s and converted to rad/s here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtchRate_Min, "PtchRate_Min", "Record  8: Minimum pitch rate (most negative value allowed) [used only with DLL Interface] (deg/s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%PtchRate_Min, "PtchRate_Min", "Record  8: Minimum pitch rate (most negative value allowed) [used only with DLL Interface] (deg/s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%PtchRate_Min = InputFileData%PtchRate_Min*D2R
 
       ! PtchRate_Max - Record  9: Maximum pitch rate [used only with DLL Interface] (deg/s) (read from file in deg/s and converted to rad/s here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%PtchRate_Max, "PtchRate_Max", "Record  9: Maximum pitch rate [used only with DLL Interface] (deg/s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%PtchRate_Max, "PtchRate_Max", "Record  9: Maximum pitch rate [used only with DLL Interface] (deg/s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%PtchRate_Max = InputFileData%PtchRate_Max*D2R
 
       ! Gain_OM - Record 16: Optimal mode gain [used only with DLL Interface] (Nm/(rad/s)^2):
-   CALL ReadVar( UnIn, InputFile, InputFileData%Gain_OM, "Gain_OM", "Record 16: Optimal mode gain [used only with DLL Interface] (Nm/(rad/s)^2)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%Gain_OM, "Gain_OM", "Record 16: Optimal mode gain [used only with DLL Interface] (Nm/(rad/s)^2)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! GenSpd_MinOM - Record 17: Minimum generator speed [used only with DLL Interface] (rpm) (read from file in rpm and converted to rad/s here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%GenSpd_MinOM, "GenSpd_MinOM", "Record 17: Minimum generator speed [used only with DLL Interface] (rpm)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%GenSpd_MinOM, "GenSpd_MinOM", "Record 17: Minimum generator speed [used only with DLL Interface] (rpm)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%GenSpd_MinOM = InputFileData%GenSpd_MinOM*RPM2RPS
 
       ! GenSpd_MaxOM - Record 18: Optimal mode maximum speed [used only with DLL Interface] (rpm) (read from file in rpm and converted to rad/s here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%GenSpd_MaxOM, "GenSpd_MaxOM", "Record 18: Optimal mode maximum speed [used only with DLL Interface] (rpm)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%GenSpd_MaxOM, "GenSpd_MaxOM", "Record 18: Optimal mode maximum speed [used only with DLL Interface] (rpm)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%GenSpd_MaxOM = InputFileData%GenSpd_MaxOM*RPM2RPS
 
       ! GenSpd_Dem - Record 19: Demanded generator speed above rated [used only with DLL Interface] (rpm) (read from file in rpm and converted to rad/s here):
-   CALL ReadVar( UnIn, InputFile, InputFileData%GenSpd_Dem, "GenSpd_Dem", "Record 19: Demanded generator speed above rated [used only with DLL Interface] (rpm)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%GenSpd_Dem, "GenSpd_Dem", "Record 19: Demanded generator speed above rated [used only with DLL Interface] (rpm)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    InputFileData%GenSpd_Dem = InputFileData%GenSpd_Dem*RPM2RPS
 
       ! GenTrq_Dem - Record 22: Demanded generator torque above rated [used only with DLL Interface] (Nm):
-   CALL ReadVar( UnIn, InputFile, InputFileData%GenTrq_Dem, "GenTrq_Dem", "Record 22: Demanded generator torque above rated [used only with DLL Interface] (Nm)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%GenTrq_Dem, "GenTrq_Dem", "Record 22: Demanded generator torque above rated [used only with DLL Interface] (Nm)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! GenPwr_Dem - Record 13: Demanded power [used only with DLL Interface] (W):
-   CALL ReadVar( UnIn, InputFile, InputFileData%GenPwr_Dem, "GenPwr_Dem", "Record 13: Demanded power [used only with DLL Interface] (W)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%GenPwr_Dem, "GenPwr_Dem", "Record 13: Demanded power [used only with DLL Interface] (W)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
    !---------------------- BLADED INTERFACE TORQUE-SPEED LOOK-UP TABLE -------------         
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Bladed Interface Torque-Speed Look-Up Table', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Bladed Interface Torque-Speed Look-Up Table', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN      
 
       ! DLL_NumTrq - Record 26: No. of points in torque-speed look-up table {0 = none and use the optimal mode PARAMETERs instead, nonzero = ignore the optimal mode PARAMETERs by setting Gain_OM (Record 16) to 0.0} (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%DLL_NumTrq, "DLL_NumTrq", "Record 26: No. of points in torque-speed look-up table {0 = none and use the optimal mode PARAMETERs instead, nonzero = ignore the optimal mode PARAMETERs by setting Gain_OM (Record 16) to 0.0} (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%DLL_NumTrq, "DLL_NumTrq", "Record 26: No. of points in torque-speed look-up table {0 = none and use the optimal mode PARAMETERs instead, nonzero = ignore the optimal mode PARAMETERs by setting Gain_OM (Record 16) to 0.0} (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -2316,17 +2315,17 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
             IF ( ErrStat >= AbortErrLev ) RETURN      
    END IF
       
-   CALL ReadCom( UnIn, InputFile, 'Table Header: Bladed Interface Torque-Speed Look-Up Table', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Table Header: Bladed Interface Torque-Speed Look-Up Table', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN      
       
-   CALL ReadCom( UnIn, InputFile, 'Table Units: Bladed Interface Torque-Speed Look-Up Table', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Table Units: Bladed Interface Torque-Speed Look-Up Table', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN      
             
    DO I=1,InputFileData%DLL_NumTrq     
       
-      CALL ReadAry( UnIn, InputFile, TmpRAry, 2_IntKi, 'Line'//TRIM(Num2LStr(I)), 'Bladed Interface Torque-Speed Look-Up Table', &
+      CALL ReadAry( UnIn, InitInp%InputFile, TmpRAry, 2_IntKi, 'Line'//TRIM(Num2LStr(I)), 'Bladed Interface Torque-Speed Look-Up Table', &
                     ErrStat2, ErrMsg2, UnEc )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF ( ErrStat >= AbortErrLev ) RETURN
@@ -2338,52 +2337,52 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
                      
    
    !---------------------- OUTPUT --------------------------------------------------         
-   CALL ReadCom( UnIn, InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: Output', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! SumPrint - Print summary data to <RootName>.sum (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%SumPrint, "SumPrint", "Print summary data to <RootName>.sum (flag)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%SumPrint, "SumPrint", "Print summary data to <RootName>.sum (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! OutFile - Switch to determine where output will be placed: (1: in module output file only; 2: in glue code output file only; 3: both) (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%OutFile, "OutFile", "Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%OutFile, "OutFile", "Switch to determine where output will be placed: {1: in module output file only; 2: in glue code output file only; 3: both} (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
    !   ! OutFileFmt - Format for module tabular (time-marching) output: (1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both):
-   !CALL ReadVar( UnIn, InputFile, InputFileData%OutFileFmt, "OutFileFmt", "Format for module tabular (time-marching) output: (1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both)", ErrStat2, ErrMsg2, UnEc)
+   !CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%OutFileFmt, "OutFileFmt", "Format for module tabular (time-marching) output: (1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both)", ErrStat2, ErrMsg2, UnEc)
    !   CALL CheckError( ErrStat2, ErrMsg2 )
    !   IF ( ErrStat >= AbortErrLev ) RETURN      
       
       ! TabDelim - Flag to cause tab-delimited text output (delimited by space otherwise) (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TabDelim, "TabDelim", "Flag to cause tab-delimited text output (delimited by space otherwise) (flag)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%TabDelim, "TabDelim", "Flag to cause tab-delimited text output (delimited by space otherwise) (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! OutFmt - Format used for module's text tabult output (except time); resulting field should be 10 characters (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%OutFmt, "OutFmt", "Format used for module's text tabular output (except time); resulting field should be 10 characters (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%OutFmt, "OutFmt", "Format used for module's text tabular output (except time); resulting field should be 10 characters (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! Tstart - Time to start module's tabular output (seconds):
-   CALL ReadVar( UnIn, InputFile, InputFileData%Tstart, "Tstart", "Time to start module's tabular output (seconds)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%Tstart, "Tstart", "Time to start module's tabular output (seconds)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    !
    !   ! DecFact - Decimation factor for module's tabular output (1=output every step) (-):
-   !CALL ReadVar( UnIn, InputFile, InputFileData%DecFact, "DecFact", "Decimation factor for module's tabular output (1=output every step) (-)", ErrStat2, ErrMsg2, UnEc)
+   !CALL ReadVar( UnIn, InitInp%InputFile, InputFileData%DecFact, "DecFact", "Decimation factor for module's tabular output (1=output every step) (-)", ErrStat2, ErrMsg2, UnEc)
    !   CALL CheckError( ErrStat2, ErrMsg2 )
    !   IF ( ErrStat >= AbortErrLev ) RETURN
 
    !---------------------- OUTLIST  --------------------------------------------
-      CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
+      CALL ReadCom( UnIn, InitInp%InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! OutList - List of user-requested output channels (-):
-   CALL ReadOutputList ( UnIn, InputFile, InputFileData%OutList, InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
+   CALL ReadOutputList ( UnIn, InitInp%InputFile, InputFileData%OutList, InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN     
       
@@ -2428,14 +2427,13 @@ CONTAINS
 END SUBROUTINE ReadPrimaryFile      
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the primary input file.
-SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
+SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, ErrStat, ErrMsg )
 !..................................................................................................................................
       
       ! Passed variables:
 
    TYPE(SrvD_InitInputType), INTENT(IN   )  :: InitInp                     !< Input data for initialization routine
    TYPE(SrvD_InputFile),     INTENT(IN)     :: InputFileData               !< All the data in the ServoDyn input file
-   INTEGER(IntKi),           INTENT(IN)     :: NumBl                       !< Number of blades
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                     !< Error status
    CHARACTER(*),             INTENT(OUT)    :: ErrMsg                      !< Error message
 
@@ -2532,11 +2530,11 @@ CONTAINS
 
          ! Make sure the number of blades in the simulation doesn't exceed 3:
 
-      IF ( NumBl > SIZE(InputFileData%TPitManS,1) ) CALL SetErrStat( ErrID_Fatal, 'Number of blades exceeds input values.', ErrStat, ErrMsg, RoutineName )
+      IF ( InitInp%NumBl > SIZE(InputFileData%TPitManS,1) ) CALL SetErrStat( ErrID_Fatal, 'Number of blades exceeds input values.', ErrStat, ErrMsg, RoutineName )
       
          ! Check the pitch-maneuver start times and rates:
          
-      DO K=1,MIN(NumBl,SIZE(InputFileData%TPitManS))
+      DO K=1,MIN(InitInp%NumBl,SIZE(InputFileData%TPitManS))
       
          IF ( InputFileData%TPitManS(K) < 0.0_DbKi ) &
             CALL SetErrStat( ErrID_Fatal, 'TPitManS('//TRIM( Num2LStr( K ) )//') must not be negative.', ErrStat, ErrMsg, RoutineName )         
@@ -2609,7 +2607,7 @@ CONTAINS
       !IF ( p%TpBrDT < 0.0_DbKi )  CALL ProgAbort ( ' TpBrDT must not be negative.' )
       
    
-      !DO K=1,MIN(NumBl,SIZE(InputFileData%TTpBrDp))
+      !DO K=1,MIN(InitInp%NumBl,SIZE(InputFileData%TTpBrDp))
       !   IF ( InputFileData%TTpBrDp(K)  < 0.0_DbKi ) &
       !      CALL SetErrStat( ErrID_Fatal, 'TTpBrDp(' //TRIM( Num2LStr( K ) )//') must not be negative.', ErrStat, ErrMsg, RoutineName )
       !   IF ( InputFileData%TBDepISp(K) < 0.0_DbKi ) &

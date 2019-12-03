@@ -774,8 +774,10 @@ SUBROUTINE Fill_avrSWAP( t, u, p, ErrMsgSz, dll_data )
    dll_data%avrSWAP(30) = u%RootMyc(1)                      !> * Record 30: Blade 1 root out-of-plane bending moment (Nm) [SrvD input]
    dll_data%avrSWAP(31) = u%RootMyc(2)                      !> * Record 31: Blade 2 root out-of-plane bending moment (Nm) [SrvD input]
    dll_data%avrSWAP(32) = u%RootMyc(3)                      !> * Record 32: Blade 3 root out-of-plane bending moment (Nm) [SrvD input]
+IF ( p%NumBl > 1 ) THEN
    dll_data%avrSWAP(33) = u%BlPitch(2)                      !> * Record 33: Blade 2 pitch angle (rad) [SrvD input]
-IF ( p%NumBl > 2 ) THEN   
+END IF
+IF ( p%NumBl > 2 ) THEN
    dll_data%avrSWAP(34) = u%BlPitch(3)                      !> * Record 34: Blade 3 pitch angle (rad) [SrvD input]
 !   dll_data%avrSWAP(34) = u%BlPitch(3)                      !> * Record 34: Blade 3 pitch angle (rad) [SrvD input]
 END IF

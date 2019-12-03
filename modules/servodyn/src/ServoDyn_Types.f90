@@ -196,6 +196,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: NcIMURAzs      !< Nacelle inertial measurement unit angular (rotational) acceleration (absolute) [rad/s^2]
     REAL(ReKi)  :: RotPwr      !< Rotor power (this is equivalent to the low-speed shaft power) [W]
     REAL(ReKi)  :: LSSTipMxa      !< Rotating low-speed shaft bending moment at the shaft tip (teeter pin for 2-blader, apex of rotation for 3-blader) [N-m]
+    REAL(ReKi) , DIMENSION(1:3)  :: RootMyc      !< Out-of-plane moment (i.e., the moment caused by out-of-plane forces) at the blade root for each of the blades (max 3) [N-m]
+    REAL(ReKi) , DIMENSION(1:3)  :: RootMxc      !< In-plane moment (i.e., the moment caused by in-plane forces) at the blade root [N-m]
     REAL(DbKi)  :: DLL_DT      !< interval for calling DLL (integer multiple number of DT) [s]
     CHARACTER(1024)  :: DLL_InFile      !< Name of input file used in DLL [-]
     CHARACTER(1024)  :: RootName      !< RootName for writing output files [-]
@@ -215,8 +217,6 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: GenSpd_TLU      !< Table (array) containing DLL_NumTrq generator speeds  for the torque-speed table look-up (TLU) -- this should be defined using an array constructor; for example,  if DLL_NumTrq = 3,  GenSpd_TLU(DLL_NumTrq)    = (/ 0.0, 99.9,  999.9 /) [rad/s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: GenTrq_TLU      !< Table (array) containing DLL_NumTrq generator torques for the torque-speed table look-up (TLU) -- this should be defined using an array constructor, for example,  if DLL_NumTrq = 3,  GenTrq_TLU(DLL_NumTrq)    = (/ 0.0, 10,  200.0 /) [Nm]
     INTEGER(IntKi)  :: Yaw_Cntrl      !< Yaw control: 0 = rate;  1 = torque [-]
-    REAL(ReKi) , DIMENSION(1:3)  :: RootMyc      !< Out-of-plane moment (i.e., the moment caused by out-of-plane forces) at the blade root for each of the blades (max 3) [N-m]
-    REAL(ReKi) , DIMENSION(1:3)  :: RootMxc      !< In-plane moment (i.e., the moment caused by in-plane forces) at the blade root [N-m]
   END TYPE BladedDLLType
 ! =======================
 ! =========  SrvD_ContinuousStateType  =======
@@ -2188,6 +2188,8 @@ ENDIF
     DstBladedDLLTypeData%NcIMURAzs = SrcBladedDLLTypeData%NcIMURAzs
     DstBladedDLLTypeData%RotPwr = SrcBladedDLLTypeData%RotPwr
     DstBladedDLLTypeData%LSSTipMxa = SrcBladedDLLTypeData%LSSTipMxa
+    DstBladedDLLTypeData%RootMyc = SrcBladedDLLTypeData%RootMyc
+    DstBladedDLLTypeData%RootMxc = SrcBladedDLLTypeData%RootMxc
     DstBladedDLLTypeData%DLL_DT = SrcBladedDLLTypeData%DLL_DT
     DstBladedDLLTypeData%DLL_InFile = SrcBladedDLLTypeData%DLL_InFile
     DstBladedDLLTypeData%RootName = SrcBladedDLLTypeData%RootName
@@ -2229,8 +2231,6 @@ IF (ALLOCATED(SrcBladedDLLTypeData%GenTrq_TLU)) THEN
     DstBladedDLLTypeData%GenTrq_TLU = SrcBladedDLLTypeData%GenTrq_TLU
 ENDIF
     DstBladedDLLTypeData%Yaw_Cntrl = SrcBladedDLLTypeData%Yaw_Cntrl
-    DstBladedDLLTypeData%RootMyc = SrcBladedDLLTypeData%RootMyc
-    DstBladedDLLTypeData%RootMxc = SrcBladedDLLTypeData%RootMxc
  END SUBROUTINE SrvD_CopyBladedDLLType
 
  SUBROUTINE SrvD_DestroyBladedDLLType( BladedDLLTypeData, ErrStat, ErrMsg )
@@ -2388,6 +2388,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! NcIMURAzs
       Re_BufSz   = Re_BufSz   + 1  ! RotPwr
       Re_BufSz   = Re_BufSz   + 1  ! LSSTipMxa
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RootMyc)  ! RootMyc
+      Re_BufSz   = Re_BufSz   + SIZE(InData%RootMxc)  ! RootMxc
       Db_BufSz   = Db_BufSz   + 1  ! DLL_DT
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%DLL_InFile)  ! DLL_InFile
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%RootName)  ! RootName
@@ -2415,8 +2417,6 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%GenTrq_TLU)  ! GenTrq_TLU
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! Yaw_Cntrl
-      Re_BufSz   = Re_BufSz   + SIZE(InData%RootMyc)  ! RootMyc
-      Re_BufSz   = Re_BufSz   + SIZE(InData%RootMxc)  ! RootMxc
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -2633,6 +2633,14 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     ReKiBuf(Re_Xferred) = InData%LSSTipMxa
     Re_Xferred = Re_Xferred + 1
+    DO i1 = LBOUND(InData%RootMyc,1), UBOUND(InData%RootMyc,1)
+      ReKiBuf(Re_Xferred) = InData%RootMyc(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    DO i1 = LBOUND(InData%RootMxc,1), UBOUND(InData%RootMxc,1)
+      ReKiBuf(Re_Xferred) = InData%RootMxc(i1)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     DbKiBuf(Db_Xferred) = InData%DLL_DT
     Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(InData%DLL_InFile)
@@ -2701,14 +2709,6 @@ ENDIF
   END IF
     IntKiBuf(Int_Xferred) = InData%Yaw_Cntrl
     Int_Xferred = Int_Xferred + 1
-    DO i1 = LBOUND(InData%RootMyc,1), UBOUND(InData%RootMyc,1)
-      ReKiBuf(Re_Xferred) = InData%RootMyc(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    DO i1 = LBOUND(InData%RootMxc,1), UBOUND(InData%RootMxc,1)
-      ReKiBuf(Re_Xferred) = InData%RootMxc(i1)
-      Re_Xferred = Re_Xferred + 1
-    END DO
  END SUBROUTINE SrvD_PackBladedDLLType
 
  SUBROUTINE SrvD_UnPackBladedDLLType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2958,6 +2958,18 @@ ENDIF
     Re_Xferred = Re_Xferred + 1
     OutData%LSSTipMxa = ReKiBuf(Re_Xferred)
     Re_Xferred = Re_Xferred + 1
+    i1_l = LBOUND(OutData%RootMyc,1)
+    i1_u = UBOUND(OutData%RootMyc,1)
+    DO i1 = LBOUND(OutData%RootMyc,1), UBOUND(OutData%RootMyc,1)
+      OutData%RootMyc(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
+    i1_l = LBOUND(OutData%RootMxc,1)
+    i1_u = UBOUND(OutData%RootMxc,1)
+    DO i1 = LBOUND(OutData%RootMxc,1), UBOUND(OutData%RootMxc,1)
+      OutData%RootMxc(i1) = ReKiBuf(Re_Xferred)
+      Re_Xferred = Re_Xferred + 1
+    END DO
     OutData%DLL_DT = DbKiBuf(Db_Xferred)
     Db_Xferred = Db_Xferred + 1
     DO I = 1, LEN(OutData%DLL_InFile)
@@ -3032,18 +3044,6 @@ ENDIF
   END IF
     OutData%Yaw_Cntrl = IntKiBuf(Int_Xferred)
     Int_Xferred = Int_Xferred + 1
-    i1_l = LBOUND(OutData%RootMyc,1)
-    i1_u = UBOUND(OutData%RootMyc,1)
-    DO i1 = LBOUND(OutData%RootMyc,1), UBOUND(OutData%RootMyc,1)
-      OutData%RootMyc(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
-    i1_l = LBOUND(OutData%RootMxc,1)
-    i1_u = UBOUND(OutData%RootMxc,1)
-    DO i1 = LBOUND(OutData%RootMxc,1), UBOUND(OutData%RootMxc,1)
-      OutData%RootMxc(i1) = ReKiBuf(Re_Xferred)
-      Re_Xferred = Re_Xferred + 1
-    END DO
  END SUBROUTINE SrvD_UnPackBladedDLLType
 
  SUBROUTINE SrvD_CopyContState( SrcContStateData, DstContStateData, CtrlCode, ErrStat, ErrMsg )
