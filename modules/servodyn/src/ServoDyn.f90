@@ -1362,9 +1362,9 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          !.........................................................................................................................   
       AllOuts = 0.0_R8Ki ! all variables not specified below are zeros (either constant or disabled):
          
-      AllOuts(:, GenTq)     = 0.001_R8Ki*dYdu(SrvD_Indx_Y_GenTrq,:)
-      AllOuts(:, GenPwr)    = 0.001_R8Ki*dYdu(SrvD_Indx_Y_ElecPwr,:)
-      AllOuts(:, YawMomCom) =            dYdu(SrvD_Indx_Y_YawMom,:)
+      AllOuts(:, GenTq)     =  0.001_R8Ki*dYdu(SrvD_Indx_Y_GenTrq,:)
+      AllOuts(:, GenPwr)    =  0.001_R8Ki*dYdu(SrvD_Indx_Y_ElecPwr,:)
+      AllOuts(:, YawMomCom) = -0.001_R8Ki*dYdu(SrvD_Indx_Y_YawMom,:)
       
       !...............................................................................................................................   
       ! Place the selected output channels into the WriteOutput(:) portion of the jacobian with the proper sign:
