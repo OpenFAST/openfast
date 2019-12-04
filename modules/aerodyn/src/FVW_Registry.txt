@@ -4,8 +4,6 @@
 # keyword <modulename/modname> <TypeBeingDefined> <FieldType> <FieldName> <Dims> <InitialValue> <Ctrl> "<DESCRIP>" "<UNITS>"
 ##################################################################################################################################
 include Registry_NWTC_Library.txt
-usefrom InflowWind.txt
-usefrom Registry-AD14AeroConf.txt
 
 #####################  Registry for FVW ###############
 # ..... PARAMETERS .............

@@ -18,7 +18,7 @@ MODULE FVW
 
       ! NOTE:  this is a rough format that AD14 stores airfoil info.  This will need
       !        to be replaced by the AirFoilInfo module when we couple FVW into AD15
-   USE AD14AeroConf_Types
+!   USE AD14AeroConf_Types
 
 
    IMPLICIT NONE

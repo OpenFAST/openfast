@@ -45,12 +45,12 @@ USE Lidar_Types
 USE InflowWind_Types
 USE DWM_Types
 USE AD14AeroConf_Types
-USE FVW_Types
 USE AeroDyn14_Types
 USE AirfoilInfo_Types
 USE UnsteadyAero_Types
 USE DBEMT_Types
 USE BEMT_Types
+USE FVW_Types
 USE AeroDyn_Types
 USE SubDyn_Types
 USE Current_Types
