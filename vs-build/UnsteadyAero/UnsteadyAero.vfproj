@@ -111,7 +111,7 @@
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\aerodyn\src\AirfoilInfo_Types.f90"/></FileConfiguration>
 			<FileConfiguration Name="Release_Double|x64">
 				<Tool Name="VFCustomBuildTool" CommandLine="CALL ..\RunRegistry.bat AFI" Description="Running Registry for AirfoilInfo" Outputs="..\..\modules\aerodyn\src\AirfoilInfo_Types.f90"/></FileConfiguration></File>
-		<File RelativePath="..\..\modules\aerodyn\src\AirfoilInfo_Types.f90"/></Filter>
+		<File RelativePath="..\..\modules\aerodyn\src\AirfoilInfo_Types.f90">
 			<FileConfiguration Name="Debug_Double|Win32">
 				<Tool Name="VFFortranCompilerTool" WarnUnusedVariables="false"/></FileConfiguration>
 			<FileConfiguration Name="Debug|Win32">
