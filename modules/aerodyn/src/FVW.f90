@@ -130,6 +130,9 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    ! This mesh is now a cousin of the BladeMotion mesh from AD.
    CALL Wings_Panelling     (u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
+   ! Initialize output
+   CALL FVW_Init_Y( p, y, ErrStat2, ErrMsg2); if(Failed()) return
+
    ! Returned guessed locations where wind will be required
    CALL SetRequestedWindPoints(y%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
    ! Return anything in FVW_InitOutput that should be passed back to the calling code here
@@ -227,6 +230,35 @@ subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
 
    if (ErrStat >= AbortErrLev) return
 end subroutine FVW_InitConstraint
+! ==============================================================================
+subroutine FVW_Init_Y( p, y, ErrStat, ErrMsg )
+   type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+   type(FVW_OutputType),            intent(  out)  :: y              !< Constraints
+   integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
+   character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   integer(IntKi)          :: nMax           ! Total number of wind points possible
+   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
+   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
+   character(*), parameter :: RoutineName = 'FVW_InitMiscVars'
+   ! Initialize ErrStat
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   !
+   nMax = 0
+   nMax = nMax + p%nWings *  p%nSpan                     ! Lifting line Control Points
+   nMax = nMax + p%nWings * (p%nSpan+1) * (p%nNWMax+1)   ! Nearwake points
+   nMax = nMax + p%nWings * (FWnSpan+1) * (p%nFWMax+1)   ! Far wake points
+
+   call AllocAry( y%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_Init_Y' )
+   !call AllocAry( y%Vind ,  3, p%nSpan+1, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! TODO potentially nSpan+1 for AD15
+   call AllocAry( y%Vind ,  3, p%nSpan+1, 3, 'Induced velocity vector',  ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_Init_Y' ) ! NOTE: temporary hack 3 blades
+!FIXME: TODO: allocate y%Cl_KJ   (2d).  Placeholder for now
+   call AllocAry(y%Cl_KJ, 1, 1, 'Lift coefficient from circulation (Kutta-Joukowski)', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_Init_Y' )
+   if (ErrStat >= AbortErrLev) return
+   y%r_wind = 0.0_ReKi     ! set to zero so InflowWind can shortcut calculations
+   y%Vind   = 0.0_ReKi
+   return
+end subroutine FVW_Init_Y
 
 
 ! ==============================================================================
@@ -479,7 +511,7 @@ subroutine FVW_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSt
    ! Local variables
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
-   integer(IntKi) :: nFWEff ! Number of farwake panels that are free at current tmie step
+   integer(IntKi) :: nFWEff ! Number of farwake panels that are free at current time step
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -630,11 +662,6 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
       m%Gamma_LL = z%Gamma_LL ! For plotting only
    endif
 
-   if (.not. allocated(y%Vind)) then
-      !call AllocAry( y%Vind ,  3, p%nSpan+1, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! TODO potentially nSpan+1 for AD15
-      call AllocAry( y%Vind ,  3, p%nSpan+1, 3, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! NOTE: temporary hack 3 blades
-      if(Failed()) return
-   endif
    ! Returned guessed locations where wind will be required
    CALL SetRequestedWindPoints(y%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 

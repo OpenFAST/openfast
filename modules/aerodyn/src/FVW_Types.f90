@@ -37,9 +37,9 @@ IMPLICIT NONE
   TYPE, PUBLIC :: FVW_ParameterType
     INTEGER(IntKi)  :: nWings      !< Number of Wings [-]
     INTEGER(IntKi)  :: nSpan      !< TODO, should be defined per wing. Number of spanwise element [-]
-    INTEGER(IntKi)  :: nNWMax      !< Maximum number of nw panels [-]
-    INTEGER(IntKi)  :: nFWMax      !< Maximum number of fw panels [-]
-    INTEGER(IntKi)  :: nFWFree      !< Number of fw panels that are free [-]
+    INTEGER(IntKi)  :: nNWMax      !< Maximum number of nw panels, per wing [-]
+    INTEGER(IntKi)  :: nFWMax      !< Maximum number of fw panels, per wing [-]
+    INTEGER(IntKi)  :: nFWFree      !< Number of fw panels that are free, per wing [-]
     INTEGER(IntKi)  :: IntMethod      !< Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1) [-]
     REAL(ReKi)  :: FreeWakeStart      !< Time when wake starts convecting (rolling up) [s]
     REAL(ReKi)  :: FullCirculationStart      !< Time when the circulation is full [s]

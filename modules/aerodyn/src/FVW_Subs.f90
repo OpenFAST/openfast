@@ -311,6 +311,9 @@ endsubroutine
 ! --- PACKING/UNPACKING FUNCTIONS
 ! --------------------------------------------------------------------------------
 !> Establish the list of points where we will need the free stream
+!! The r_wind array is allocated at initialization to the largest size possible.  This is to
+!! ensure that we do not violate requirements in the framework later for changing the size
+!! of input and output arrays.
 subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
    real(ReKi), dimension(:,:), allocatable,      intent(inout) :: r_wind  !< Position where wind is requested
    type(FVW_ContinuousStateType),   intent(in   )              :: x       !< States
@@ -320,22 +323,17 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
    character(*),                    intent(  out)              :: ErrMsg  !< Error message if ErrStat /= ErrID_None
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
-   integer(IntKi)          :: nTot              ! Total number of points
+   integer(IntKi)          :: nTot              ! Total number of points requested
    integer(IntKi)          :: iSpan, iW, iAge   ! Index on span, wings, panels
    integer(IntKi)          :: iP                ! Current index of point
    ErrStat = ErrID_None
    ErrMsg  = ""
-!FIXME: let's check if we need to deallocate / reallocate.
-!FIXME: we want to allocate this to the maximum we will need. (used in AD15 to set size of several other things)
-   if (allocated(r_wind)) deallocate(r_wind)
 
    nTot = 0
    nTot = nTot + p%nWings *  p%nSpan                ! Lifting line Control Points
    nTot = nTot + p%nWings * (p%nSpan+1) * (m%nNW+1) ! Nearwake points
-   nTot = nTot + p%nWings * (FWnSpan+1) * (m%nFW+1) ! War wake points
+   nTot = nTot + p%nWings * (FWnSpan+1) * (m%nFW+1) ! Far wake points
 
-print*,'nTot wind points to request: ',nTot
-   call AllocAry( r_wind , 3, nTot, 'Requested Wind Points', ErrStat2, ErrMsg2 );call SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'SetRequestedWindPoints'); 
    r_wind(1:3,1:nTot)= -999999_ReKi;
 
    iP=0

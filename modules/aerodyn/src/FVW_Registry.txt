@@ -10,9 +10,9 @@ include Registry_NWTC_Library.txt
 #FVW_ParameterType  
 typedef  FVW/FVW           ParameterType        IntKi                            nWings            -  -   - "Number of Wings"  -
 typedef     ^                   ^               IntKi                            nSpan             -  -  -  "TODO, should be defined per wing. Number of spanwise element"          -
-typedef     ^                   ^               IntKi                            nNWMax            -  -  -  "Maximum number of nw panels"          -
-typedef     ^                   ^               IntKi                            nFWMax            -  -  -  "Maximum number of fw panels"          -
-typedef     ^                   ^               IntKi                            nFWFree           -  -  -  "Number of fw panels that are free"          -
+typedef     ^                   ^               IntKi                            nNWMax            -  -  -  "Maximum number of nw panels, per wing"          -
+typedef     ^                   ^               IntKi                            nFWMax            -  -  -  "Maximum number of fw panels, per wing"          -
+typedef     ^                   ^               IntKi                            nFWFree           -  -  -  "Number of fw panels that are free, per wing"          -
 typedef     ^                   ^               IntKi                            IntMethod         -  -  -  "Integration Method (1=RK4, 2=AB4, 3=ABM4, 5=Euler1)" -
 typedef     ^                   ^               ReKi                             FreeWakeStart     -  - -   "Time when wake starts convecting (rolling up)"  s
 typedef     ^                   ^               ReKi                             FullCirculationStart    -  - -   "Time when the circulation is full"  s
