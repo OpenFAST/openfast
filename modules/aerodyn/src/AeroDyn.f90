@@ -2153,10 +2153,17 @@ print*,'===================== Setup before call to FVW_Init ====================
       CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
-      ! If anything is passed back in InitOut%FVW, deal with it here...
+      ! If anything is passed back in InitOut%FVW, deal with it here..
+
+      ! set the size of the input and xd arrays for passing wind info to FVW.
+   if (ALLOCATED(y%r_wind)) then
+      call AllocAry(u_AD%InflowWakeVel, 3, size(y%r_wind,DIM=2), 'InflowWakeVel',  ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!FIXME: figure out where we are passing the output r_wind
+   endif
 
    if (.not. equalRealNos(Interval, p%DT) ) &
-      call SetErrStat( ErrID_Fatal, "DTAero was changed in Init_FVWmodule(); this is not allowed.", ErrStat2, ErrMsg2, RoutineName)
+      call SetErrStat( ErrID_Fatal, "DTAero was changed in Init_FVWmodule(); this is not allowed yet.", ErrStat2, ErrMsg2, RoutineName)
 
 contains
    subroutine Cleanup()

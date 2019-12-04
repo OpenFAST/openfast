@@ -326,6 +326,7 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
 !FIXME: let's check if we need to deallocate / reallocate.
+!FIXME: we want to allocate this to the maximum we will need. (used in AD15 to set size of several other things)
    if (allocated(r_wind)) deallocate(r_wind)
 
    nTot = 0
