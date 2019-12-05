@@ -52,17 +52,19 @@ typedef	^	FEM_MatArrays	INTEGER	NOmega	-	-	-	"Number of full FEM Eigenvalues (fo
 typedef	^	FEM_MatArrays	ReKi   	Modes	{:}{:}	-	-	"Eigenmodes of full FEM model,  we calculate them all"
 
 #
-typedef	^	ElemPropType 	ReKi	Area	-	-	-	"Area of an element"
-typedef	^	^	ReKi	Length	-	-	-	"Length of an element"
-typedef	^	^	ReKi	Ixx	-	-	-	"Moment of inertia of an element"
-typedef	^	^	ReKi	Iyy	-	-	-	"Moment of inertia of an element"
-typedef	^	^	ReKi	Jzz	-	-	-	"Moment of inertia of an element"
-typedef	^	^	LOGICAL	Shear	-	-	-	"Use timoshenko (true) E-B (false)"
-typedef	^	^	ReKi	Kappa	-	-	-	"Shear coefficient"
-typedef	^	^	ReKi	YoungE	-	-	-	"Young's modulus"
-typedef	^	^	ReKi	ShearG	-	-	-	"Shear modulus"
-typedef	^	^	ReKi	Rho	-	-	-	"Density"
-typedef	^	^	ReKi	DirCos	{3}{3}	-	-	"Element direction cosine matrix"
+typedef ^   ElemPropType ReKi    Length	 -	-	-	"Length of an element"
+typedef ^        ^       ReKi    Ixx	 -	-	-	"Moment of inertia of an element"
+typedef ^        ^       ReKi    Iyy	 -	-	-	"Moment of inertia of an element"
+typedef ^        ^       ReKi    Jzz	 -	-	-	"Moment of inertia of an element"
+typedef ^        ^       LOGICAL Shear	 -	-	-	"Use timoshenko (true) E-B (false)"
+typedef ^        ^       ReKi    Kappa	 -	-	-	"Shear coefficient"
+typedef ^        ^       ReKi    YoungE	 -	-	-	"Young's modulus"
+typedef ^        ^       ReKi    ShearG	 -	-	-	"Shear modulus"  N/m^2
+# Properties common to all element types:
+typedef ^        ^       ReKi    Area    -	-	-	"Area of an element" m^2
+typedef ^        ^       ReKi    Rho     -	-	-	"Density"        kg/m^3
+typedef ^        ^       ReKi    T0      -	-	-	"Pretension "    N
+typedef ^        ^       ReKi    DirCos	{3}{3}	-	-	"Element direction cosine matrix"
 # ============================== Define initialization data (not from glue code) here: ============================================================================================================================================
 #--------------------------arrays and variables from the input file ---------------------------------------------------------------------------------------------------------------------------------
 typedef	SubDyn/SD	SD_InitType	CHARACTER(1024)	RootName	-	-	-	"SubDyn rootname"

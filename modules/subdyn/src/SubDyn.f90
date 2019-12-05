@@ -2687,7 +2687,7 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
                 XYZ2=Init%Nodes(Init%Members(i,3),2:4)
            ENDIF
        ENDDO    
-       CALL GetDirCos(XYZ1(1), XYZ1(2), XYZ1(3), XYZ2(1), XYZ2(2), XYZ2(3), DirCos, mlength, ErrStat, ErrMsg)
+       CALL GetDirCos(XYZ1(1:3), XYZ2(1:3), DirCos, mlength, ErrStat, ErrMsg)
        DirCos=TRANSPOSE(DirCos) !This is now global to local
        WRITE(UnSum, '(I9,9(E15.6))') Init%Members(i,1), ((DirCos(k,j),j=1,3),k=1,3)
    ENDDO

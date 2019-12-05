@@ -89,7 +89,6 @@ IMPLICIT NONE
 ! =======================
 ! =========  ElemPropType  =======
   TYPE, PUBLIC :: ElemPropType
-    REAL(ReKi)  :: Area      !< Area of an element [-]
     REAL(ReKi)  :: Length      !< Length of an element [-]
     REAL(ReKi)  :: Ixx      !< Moment of inertia of an element [-]
     REAL(ReKi)  :: Iyy      !< Moment of inertia of an element [-]
@@ -97,8 +96,10 @@ IMPLICIT NONE
     LOGICAL  :: Shear      !< Use timoshenko (true) E-B (false) [-]
     REAL(ReKi)  :: Kappa      !< Shear coefficient [-]
     REAL(ReKi)  :: YoungE      !< Young's modulus [-]
-    REAL(ReKi)  :: ShearG      !< Shear modulus [-]
-    REAL(ReKi)  :: Rho      !< Density [-]
+    REAL(ReKi)  :: ShearG      !< Shear modulus [N/m^2]
+    REAL(ReKi)  :: Area      !< Area of an element [m^2]
+    REAL(ReKi)  :: Rho      !< Density [kg/m^3]
+    REAL(ReKi)  :: T0      !< Pretension  [N]
     REAL(ReKi) , DIMENSION(1:3,1:3)  :: DirCos      !< Element direction cosine matrix [-]
   END TYPE ElemPropType
 ! =======================
@@ -2359,7 +2360,6 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstElemPropTypeData%Area = SrcElemPropTypeData%Area
     DstElemPropTypeData%Length = SrcElemPropTypeData%Length
     DstElemPropTypeData%Ixx = SrcElemPropTypeData%Ixx
     DstElemPropTypeData%Iyy = SrcElemPropTypeData%Iyy
@@ -2368,7 +2368,9 @@ ENDIF
     DstElemPropTypeData%Kappa = SrcElemPropTypeData%Kappa
     DstElemPropTypeData%YoungE = SrcElemPropTypeData%YoungE
     DstElemPropTypeData%ShearG = SrcElemPropTypeData%ShearG
+    DstElemPropTypeData%Area = SrcElemPropTypeData%Area
     DstElemPropTypeData%Rho = SrcElemPropTypeData%Rho
+    DstElemPropTypeData%T0 = SrcElemPropTypeData%T0
     DstElemPropTypeData%DirCos = SrcElemPropTypeData%DirCos
  END SUBROUTINE SD_CopyElemPropType
 
@@ -2418,7 +2420,6 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Re_BufSz   = Re_BufSz   + 1  ! Area
       Re_BufSz   = Re_BufSz   + 1  ! Length
       Re_BufSz   = Re_BufSz   + 1  ! Ixx
       Re_BufSz   = Re_BufSz   + 1  ! Iyy
@@ -2427,7 +2428,9 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! Kappa
       Re_BufSz   = Re_BufSz   + 1  ! YoungE
       Re_BufSz   = Re_BufSz   + 1  ! ShearG
+      Re_BufSz   = Re_BufSz   + 1  ! Area
       Re_BufSz   = Re_BufSz   + 1  ! Rho
+      Re_BufSz   = Re_BufSz   + 1  ! T0
       Re_BufSz   = Re_BufSz   + SIZE(InData%DirCos)  ! DirCos
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -2456,8 +2459,6 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Area
-      Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Length
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Ixx
@@ -2474,7 +2475,11 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%ShearG
       Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Area
+      Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Rho
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%T0
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%DirCos))-1 ) = PACK(InData%DirCos,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%DirCos)
@@ -2514,8 +2519,6 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%Area = ReKiBuf( Re_Xferred )
-      Re_Xferred   = Re_Xferred + 1
       OutData%Length = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
       OutData%Ixx = ReKiBuf( Re_Xferred )
@@ -2532,7 +2535,11 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%ShearG = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
+      OutData%Area = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
       OutData%Rho = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%T0 = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
     i1_l = LBOUND(OutData%DirCos,1)
     i1_u = UBOUND(OutData%DirCos,1)

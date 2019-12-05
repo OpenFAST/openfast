@@ -573,7 +573,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER                  :: I, J, K, Jn, Kn
+   INTEGER                  :: I, J, K, Jn, Kn, iTmp
    INTEGER, PARAMETER       :: NNE=2      ! number of nodes in one element, fixed to 2
    INTEGER                  :: N1, N2     ! starting node and ending node in the element
    INTEGER                  :: P1, P2     ! property set numbers for starting and ending nodes
@@ -581,9 +581,11 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    REAL(ReKi)               :: x1, y1, z1, x2, y2, z2    ! coordinates of the nodes
    REAL(ReKi)               :: DirCos(3, 3)              ! direction cosine matrices
    REAL(ReKi)               :: L                         ! length of the element
+   REAL(ReKi)               :: T0                        ! pretension force in cable [N]
    REAL(ReKi)               :: r1, r2, t, Iyy, Jzz, Ixx, A, kappa, nu, ratioSq, D_inner, D_outer
    LOGICAL                  :: shear
    REAL(ReKi), ALLOCATABLE  :: Ke(:,:), Me(:, :), FGe(:) ! element stiffness and mass matrices gravity force vector
+   REAL(ReKi), ALLOCATABLE  :: FCe(:) ! Pretension force from cable element
    INTEGER, DIMENSION(NNE)  :: nn                        ! node number in element 
    INTEGER                  :: r
    INTEGER(IntKi)           :: eType !< Member type
@@ -616,6 +618,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    CALL AllocAry( Ke,     NNE*6,         NNE*6 , 'Ke',      ErrStat2, ErrMsg2); if(Failed()) return; ! element stiffness matrix
    CALL AllocAry( Me,     NNE*6,         NNE*6 , 'Me',      ErrStat2, ErrMsg2); if(Failed()) return; ! element mass matrix 
    CALL AllocAry( FGe,    NNE*6,                 'FGe',     ErrStat2, ErrMsg2); if(Failed()) return; ! element gravity force vector 
+   CALL AllocAry( FCe,    NNE*6,                 'FCe',     ErrStat2, ErrMsg2); if(Failed()) return; ! element pretension force vector 
    CALL AllocAry( Init%K, Init%TDOF, Init%TDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%m, Init%TDOF, Init%TDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
    CALL AllocAry( Init%FG,Init%TDOF,             'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
@@ -637,6 +640,12 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       P1    = p%Elems(I, iMProp  )
       P2    = p%Elems(I, iMProp+1)
       eType = p%Elems(I, iMType)
+
+      ! --- Length and Directional cosine
+      CALL GetDirCos(Init%Nodes(N1,2:4), Init%Nodes(N2,2:4), DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return
+
+
+      FCe = 0.0_ReKi
       if (eType==idBeam) then
          E   = Init%PropsB(P1, 2)
          G   = Init%PropsB(P1, 3)
@@ -645,78 +654,101 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
          t1  = Init%PropsB(P1, 6)
          D2  = Init%PropsB(P2, 5)
          t2  = Init%PropsB(P2, 6)
+         r1 = 0.25*(D1 + D2)
+         t  = 0.5*(t1+t2)
+         IF ( EqualRealNos(t, 0.0_ReKi) ) THEN
+            r2 = 0
+         ELSE
+            r2 = r1 - t
+         ENDIF
+         A = Pi_D*(r1*r1-r2*r2)
+         Ixx = 0.25*Pi_D*(r1**4-r2**4)
+         Iyy = Ixx
+         Jzz = 2.0*Ixx
+         
+         IF( Init%FEMMod == 1 ) THEN ! uniform Euler-Bernoulli
+            Shear = .false.
+            kappa = 0
+         ELSEIF( Init%FEMMod == 3 ) THEN ! uniform Timoshenko
+            Shear = .true.
+          ! kappa = 0.53            
+            ! equation 13 (Steinboeck et al) in SubDyn Theory Manual 
+            nu = E / (2.0_ReKi*G) - 1.0_ReKi
+            D_outer = 2.0_ReKi * r1  ! average (outer) diameter
+            D_inner = D_outer - 2*t  ! remove 2x thickness to get inner diameter
+            ratioSq = ( D_inner / D_outer)**2
+            kappa =   ( 6.0 * (1.0 + nu) **2 * (1.0 + ratioSq)**2 ) &
+                    / ( ( 1.0 + ratioSq )**2 * ( 7.0 + 14.0*nu + 8.0*nu**2 ) + 4.0 * ratioSq * ( 5.0 + 10.0*nu + 4.0 *nu**2 ) )
+         ENDIF
+         ! Storing Beam specific properties
+         p%ElemProps(i)%Ixx = Ixx
+         p%ElemProps(i)%Iyy = Iyy
+         p%ElemProps(i)%Jzz = Jzz
+         p%ElemProps(i)%Shear = Shear
+         p%ElemProps(i)%kappa = kappa
+         p%ElemProps(i)%YoungE = E
+         p%ElemProps(i)%ShearG = G
+
+         ! Element matrices and loads
+         CALL ElemK(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, Ke)
+         CALL ElemM(A, L, Ixx, Iyy, Jzz, rho, DirCos, Me)
       else if (eType==idCable) then
          print*,'Member',I,'eType',eType,'Ps',P1,P2
-         STOP
+         A    = 1                       ! Arbitrary set to 1
+         E    = Init%PropsC(P1, 2)/A    ! Young's modulus, E=EA/A  [N/m^2]
+         rho  = Init%PropsC(P1, 3)      ! Material density [kg/m3]
+         T0   = Init%PropsC(P1, 4)      ! Pretension force [N]
+         ! Storing Cable specific properties
+         p%ElemProps(i)%T0 = T0
+
+         ! Element matrices and loads
+         CALL ElemK_Cable(A, L, E, T0, DirCos, Ke)
+         CALL ElemM_Cable(A, L, rho, DirCos, Me)
+         CALL ElemF_Cable(A, L, T0, DirCos, FCe)
+         print*,'K'
+         do iTmp=1,12
+            print'(12(E9.1))',Ke(iTmp,1:12)
+         enddo
+         print*,'M'
+         do iTmp=1,12
+            print'(12(E9.1))',Me(iTmp,1:12)
+         enddo
+         print*,'F'
+         print'(12(E9.1))',FCe(1:12)
+
       
       else if (eType==idRigid) then
          print*,'Member',I,'eType',eType,'Ps',P1,P2
-         STOP
+         A    = 1                       ! Arbitrary set to 1
+         rho = Init%PropsR(P1, 2)
+         ! Element matrices and loads
+         Ke(1:6,1:6)=0
+         if ( EqualRealNos(rho, 0.0_ReKi) ) then
+            Me(1:6,1:6)=0
+         else
+            !CALL ElemM_(A, L, rho, DirCos, Me)
+            print*,'Mass matrix for rigid members rho/=0 TODO'
+            STOP
+         endif
       else
          ! Should not happen
          print*,'Element type unknown',eType
          STOP
       end if
 
-      x1  = Init%Nodes(N1, 2)
-      y1  = Init%Nodes(N1, 3)
-      z1  = Init%Nodes(N1, 4)
-      
-      x2  = Init%Nodes(N2, 2)
-      y2  = Init%Nodes(N2, 3)
-      z2  = Init%Nodes(N2, 4)
-
-      CALL GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return
-         
-      r1 = 0.25*(D1 + D2)
-      t  = 0.5*(t1+t2)
-      
-      IF ( EqualRealNos(t, 0.0_ReKi) ) THEN
-         r2 = 0
-      ELSE
-         r2 = r1 - t
-      ENDIF
-      
-      A = Pi_D*(r1*r1-r2*r2)
-      Ixx = 0.25*Pi_D*(r1**4-r2**4)
-      Iyy = Ixx
-      Jzz = 2.0*Ixx
-      
-      IF( Init%FEMMod == 1 ) THEN ! uniform Euler-Bernoulli
-         Shear = .false.
-         kappa = 0
-      ELSEIF( Init%FEMMod == 3 ) THEN ! uniform Timoshenko
-         Shear = .true.
-       ! kappa = 0.53            
-         ! equation 13 (Steinboeck et al) in SubDyn Theory Manual 
-         nu = E / (2.0_ReKi*G) - 1.0_ReKi
-         D_outer = 2.0_ReKi * r1  ! average (outer) diameter
-         D_inner = D_outer - 2*t  ! remove 2x thickness to get inner diameter
-         ratioSq = ( D_inner / D_outer)**2
-         kappa =   ( 6.0 * (1.0 + nu) **2 * (1.0 + ratioSq)**2 ) &
-                 / ( ( 1.0 + ratioSq )**2 * ( 7.0 + 14.0*nu + 8.0*nu**2 ) + 4.0 * ratioSq * ( 5.0 + 10.0*nu + 4.0 *nu**2 ) )
-      ENDIF
-      
-      p%ElemProps(i)%Area = A
+      ! --- Properties common to all element types:
+      p%ElemProps(i)%Area   = A
       p%ElemProps(i)%Length = L
-      p%ElemProps(i)%Ixx = Ixx
-      p%ElemProps(i)%Iyy = Iyy
-      p%ElemProps(i)%Jzz = Jzz
-      p%ElemProps(i)%Shear = Shear
-      p%ElemProps(i)%kappa = kappa
-      p%ElemProps(i)%YoungE = E
-      p%ElemProps(i)%ShearG = G
-      p%ElemProps(i)%Rho = rho
+      p%ElemProps(i)%Rho    = rho
       p%ElemProps(i)%DirCos = DirCos
-      
-      CALL ElemK(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, Ke)
-      CALL ElemM(A, L, Ixx, Iyy, Jzz, rho, DirCos, Me)
+      ! --- Gravity common to all element
       CALL ElemG(A, L, rho, DirCos, FGe, Init%g)
+      
       
       ! assemble element matrices to global matrices
       DO J = 1, NNE
          jn = nn(j)
-         Init%FG( (jn*6-5):(jn*6) ) = Init%FG( (jn*6-5):(jn*6) )  + FGe( (J*6-5):(J*6) )
+         Init%FG( (jn*6-5):(jn*6) ) = Init%FG( (jn*6-5):(jn*6) )  + FGe( (J*6-5):(J*6) )+ FCe( (J*6-5):(J*6) )
          DO K = 1, NNE
             kn = nn(k)
             Init%K( (jn*6-5):(jn*6), (kn*6-5):(kn*6) ) = Init%K( (jn*6-5):(jn*6), (kn*6-5):(kn*6) ) + Ke( (J*6-5):(J*6), (K*6-5):(K*6) )
@@ -772,8 +804,8 @@ END SUBROUTINE AssembleKM
 !! bjj: note that this is the transpose of what is normally considered the Direction Cosine Matrix  
 !!      in the FAST framework. It seems to be used consistantly in the code (i.e., the transpose 
 !!      of this matrix is used later).
-SUBROUTINE GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, L, ErrStat, ErrMsg)
-   REAL(ReKi) ,      INTENT(IN   )  :: x1, y1, z1, x2, y2, z2  ! (x,y,z) positions of two nodes making up an element
+SUBROUTINE GetDirCos(P1, P2, DirCos, L, ErrStat, ErrMsg)
+   REAL(ReKi) ,      INTENT(IN   )  :: P1(3), P2(3)            ! (x,y,z) positions of two nodes making up an element
    REAL(ReKi) ,      INTENT(  OUT)  :: DirCos(3, 3)            ! calculated direction cosine matrix
    REAL(ReKi) ,      INTENT(  OUT)  :: L                       ! length of element
    INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat                 ! Error status of the operation
@@ -782,9 +814,9 @@ SUBROUTINE GetDirCos(X1, Y1, Z1, X2, Y2, Z2, DirCos, L, ErrStat, ErrMsg)
    ErrMsg  = ""
    ErrStat = ErrID_None
    
-   Dy=y2-y1
-   Dx=x2-x1
-   Dz=z2-z1
+   Dx=P2(1)-P1(1)
+   Dy=P2(2)-P1(2)
+   Dz=P2(3)-P1(3)
    Dxy = sqrt( Dx**2 + Dy**2 )
    L   = sqrt( Dx**2 + Dy**2 + Dz**2)
    
@@ -898,7 +930,50 @@ SUBROUTINE ElemK(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    K = MATMUL( MATMUL(DC, K), TRANSPOSE(DC) ) ! TODO: change me if DirCos convention is  transposed
    
 END SUBROUTINE ElemK
+!------------------------------------------------------------------------------------------------------
+!> Element stiffness matrix for pretension cable
+!! Element coordinate system:  z along the cable!
+SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
+   REAL(ReKi), INTENT( IN) :: A, L, E
+   REAL(ReKi), INTENT( IN) :: T0 ! Pretension [N]
+   REAL(ReKi), INTENT( IN) :: DirCos(3,3)
+   REAL(ReKi), INTENT(OUT) :: K(12, 12) 
+   ! Local variables
+   REAL(ReKi) :: L0, Eps0, EAL0, EE
+   REAL(ReKi) :: DC(12, 12)
 
+   Eps0 = T0/(E*A)
+   L0   = L/(1+Eps0)  ! "rest length" for which pretension would be 0
+   EAL0 = E*A*L0
+   EE   = EAL0* Eps0/(1+Eps0)
+
+   K(1:12,1:12)=0
+
+   ! Note: only translatoinal DOF involved (1-3, 7-9)
+   K(1,1)= EE
+   K(2,2)= EE
+   K(3,3)= EAL0
+
+   K(1,7)= -EE
+   K(2,8)= -EE
+   K(3,9)= -EAL0
+
+   K(7,1)= -EE
+   K(8,2)= -EE
+   K(9,3)= -EAL0
+
+   K(7,7)= EE
+   K(8,8)= EE
+   K(9,9)= EAL0
+
+   DC = 0
+   DC( 1: 3,  1: 3) = DirCos
+   DC( 4: 6,  4: 6) = DirCos
+   DC( 7: 9,  7: 9) = DirCos
+   DC(10:12, 10:12) = DirCos
+   
+   K = MATMUL( MATMUL(DC, K), TRANSPOSE(DC) ) ! TODO: change me if DirCos convention is  transposed
+END SUBROUTINE ElemK_Cable
 !------------------------------------------------------------------------------------------------------
 !> Element mass matrix for classical beam elements
 SUBROUTINE ElemM(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
@@ -967,6 +1042,44 @@ SUBROUTINE ElemM(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
    M = MATMUL( MATMUL(DC, M), TRANSPOSE(DC) ) ! TODO change me if direction cosine is transposed
 
 END SUBROUTINE ElemM
+
+!> Element stiffness matrix for pretension cable
+SUBROUTINE ElemM_Cable(A, L, rho, DirCos, M)
+   REAL(ReKi), INTENT( IN) :: A, L, rho
+   REAL(ReKi), INTENT( IN) :: DirCos(3,3)
+   REAL(ReKi), INTENT(OUT) :: M(12, 12) 
+   ! Local variables
+   REAL(ReKi) :: DC(12, 12)
+   REAL(ReKi) :: t
+
+   t = rho*A*L;
+
+   M(1:12,1:12) = 0
+
+   M( 1,  1) = 13._ReKi/35._ReKi * t
+   M( 2,  2) = 13._ReKi/35._ReKi * t
+   M( 3,  3) = t/3.0_ReKi
+
+   M( 7,  7) = 13._ReKi/35._ReKi * t
+   M( 8,  8) = 13._ReKi/35._ReKi * t
+   M( 9,  9) = t/3.0_ReKi
+
+   M( 1,  7) =  9._ReKi/70._ReKi * t
+   M( 2,  8) =  9._ReKi/70._ReKi * t
+   M( 3,  9) = t/6.0_ReKi
+
+   M( 7,  1) =  9._ReKi/70._ReKi * t 
+   M( 8,  2) =  9._ReKi/70._ReKi * t
+   M( 9,  3) = t/6.0_ReKi
+   
+   DC = 0
+   DC( 1: 3,  1: 3) = DirCos
+   DC( 4: 6,  4: 6) = DirCos
+   DC( 7: 9,  7: 9) = DirCos
+   DC(10:12, 10:12) = DirCos
+   
+   M = MATMUL( MATMUL(DC, M), TRANSPOSE(DC) ) ! TODO: change me if DirCos convention is  transposed
+END SUBROUTINE ElemM_Cable
 
 !------------------------------------------------------------------------------------------------------
 !> Sets a list of DOF indices and the value these DOF should have
@@ -1043,6 +1156,34 @@ SUBROUTINE ElemG(A, L, rho, DirCos, F, g)
    !F(12) is 0 for g along z alone
    
 END SUBROUTINE ElemG
+
+!> 
+SUBROUTINE ElemF_Cable(A, L, T0, DirCos, F)
+   REAL(ReKi), INTENT( IN ) :: A            !< area
+   REAL(ReKi), INTENT( IN ) :: L            !< element length
+   REAL(ReKi), INTENT( IN ) :: T0           !< Pretension load [N]
+   REAL(ReKi), INTENT( IN ) :: DirCos(3, 3) !< direction cosine matrix
+   REAL(ReKi), INTENT( OUT) :: F(12)        !< returned loads. 1-6 for node 1; 7-12 for node 2.
+   ! Local variables
+   REAL(ReKi) :: L0, Eps0, EAL0, EE
+   REAL(ReKi) :: DC(12, 12)
+
+   F(1:12) = 0  ! init 
+   F(3) = +T0  
+   F(9) = -T0 
+
+   DC = 0
+   DC( 1: 3,  1: 3) = DirCos
+   DC( 4: 6,  4: 6) = DirCos
+   DC( 7: 9,  7: 9) = DirCos
+   DC(10:12, 10:12) = DirCos
+
+   F = MATMUL(DC, F)! TODO: change me if DirCos convention is  transposed
+
+END SUBROUTINE ElemF_Cable
+   
+
+
 !------------------------------------------------------------------------------------------------------
 !> Calculates the lumped gravity forces at the nodes given the element geometry
 !! It assumes a linear variation of the dimensions from node 1 to node 2, thus the area may be quadratically varying if crat<>1
