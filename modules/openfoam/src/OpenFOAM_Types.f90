@@ -3344,8 +3344,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%xdotForce,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%xdotForce)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%xdotForce))-1 ) = PACK(InData%xdotForce,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%xdotForce)
+      DO i1 = LBOUND(InData%xdotForce,1), UBOUND(InData%xdotForce,1)
+        ReKiBuf(Re_Xferred) = InData%xdotForce(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%ydotForce) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3357,8 +3359,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ydotForce,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%ydotForce)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ydotForce))-1 ) = PACK(InData%ydotForce,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%ydotForce)
+      DO i1 = LBOUND(InData%ydotForce,1), UBOUND(InData%ydotForce,1)
+        ReKiBuf(Re_Xferred) = InData%ydotForce(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%zdotForce) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3370,8 +3374,10 @@ ENDIF
     IntKiBuf( Int_Xferred + 1) = UBOUND(InData%zdotForce,1)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%zdotForce)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%zdotForce))-1 ) = PACK(InData%zdotForce,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%zdotForce)
+      DO i1 = LBOUND(InData%zdotForce,1), UBOUND(InData%zdotForce,1)
+        ReKiBuf(Re_Xferred) = InData%zdotForce(i1)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( .NOT. ASSOCIATED(InData%pOrientation) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -3679,15 +3685,10 @@ ENDIF
     OutData%c_obj%xdotForce_Len = SIZE(OutData%xdotForce)
     IF (OutData%c_obj%xdotForce_Len > 0) &
        OutData%c_obj%xdotForce = C_LOC( OutData%xdotForce(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%xdotForce)>0) OutData%xdotForce = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%xdotForce))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%xdotForce)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%xdotForce,1), UBOUND(OutData%xdotForce,1)
+        OutData%xdotForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ydotForce not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3705,15 +3706,10 @@ ENDIF
     OutData%c_obj%ydotForce_Len = SIZE(OutData%ydotForce)
     IF (OutData%c_obj%ydotForce_Len > 0) &
        OutData%c_obj%ydotForce = C_LOC( OutData%ydotForce(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%ydotForce)>0) OutData%ydotForce = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ydotForce))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%ydotForce)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%ydotForce,1), UBOUND(OutData%ydotForce,1)
+        OutData%ydotForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! zdotForce not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3731,15 +3727,10 @@ ENDIF
     OutData%c_obj%zdotForce_Len = SIZE(OutData%zdotForce)
     IF (OutData%c_obj%zdotForce_Len > 0) &
        OutData%c_obj%zdotForce = C_LOC( OutData%zdotForce(i1_l) ) 
-    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask1 = .TRUE. 
-      IF (SIZE(OutData%zdotForce)>0) OutData%zdotForce = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%zdotForce))-1 ), mask1, 0.0_ReKi ), C_FLOAT)
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%zdotForce)
-    DEALLOCATE(mask1)
+      DO i1 = LBOUND(OutData%zdotForce,1), UBOUND(OutData%zdotForce,1)
+        OutData%zdotForce(i1) = REAL(ReKiBuf(Re_Xferred), C_FLOAT)
+        Re_Xferred = Re_Xferred + 1
+      END DO
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! pOrientation not allocated
     Int_Xferred = Int_Xferred + 1
@@ -4003,24 +3994,30 @@ ENDIF
     END IF
 
     ! -- xdotForce Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%xdotForce ) ) THEN
-       NULLIFY( InputData%xdotForce )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%xdotForce, InputData%xdotForce, (/InputData%C_obj%xdotForce_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%xdotForce ) ) THEN
+          NULLIFY( InputData%xdotForce )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%xdotForce, InputData%xdotForce, (/InputData%C_obj%xdotForce_Len/))
+       END IF
     END IF
 
     ! -- ydotForce Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%ydotForce ) ) THEN
-       NULLIFY( InputData%ydotForce )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%ydotForce, InputData%ydotForce, (/InputData%C_obj%ydotForce_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%ydotForce ) ) THEN
+          NULLIFY( InputData%ydotForce )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%ydotForce, InputData%ydotForce, (/InputData%C_obj%ydotForce_Len/))
+       END IF
     END IF
 
     ! -- zdotForce Input Data fields
-    IF ( .NOT. C_ASSOCIATED( InputData%C_obj%zdotForce ) ) THEN
-       NULLIFY( InputData%zdotForce )
-    ELSE
-       CALL C_F_POINTER(InputData%C_obj%zdotForce, InputData%zdotForce, (/InputData%C_obj%zdotForce_Len/))
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. C_ASSOCIATED( InputData%C_obj%zdotForce ) ) THEN
+          NULLIFY( InputData%zdotForce )
+       ELSE
+          CALL C_F_POINTER(InputData%C_obj%zdotForce, InputData%zdotForce, (/InputData%C_obj%zdotForce_Len/))
+       END IF
     END IF
 
     ! -- pOrientation Input Data fields
@@ -4190,6 +4187,42 @@ ENDIF
           InputData%c_obj%pzForce_Len = SIZE(InputData%pzForce)
           IF (InputData%c_obj%pzForce_Len > 0) &
              InputData%c_obj%pzForce = C_LOC( InputData%pzForce( LBOUND(InputData%pzForce,1) ) ) 
+       END IF
+    END IF
+
+    ! -- xdotForce Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%xdotForce)) THEN 
+          InputData%c_obj%xdotForce_Len = 0
+          InputData%c_obj%xdotForce = C_NULL_PTR
+       ELSE
+          InputData%c_obj%xdotForce_Len = SIZE(InputData%xdotForce)
+          IF (InputData%c_obj%xdotForce_Len > 0) &
+             InputData%c_obj%xdotForce = C_LOC( InputData%xdotForce( LBOUND(InputData%xdotForce,1) ) ) 
+       END IF
+    END IF
+
+    ! -- ydotForce Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%ydotForce)) THEN 
+          InputData%c_obj%ydotForce_Len = 0
+          InputData%c_obj%ydotForce = C_NULL_PTR
+       ELSE
+          InputData%c_obj%ydotForce_Len = SIZE(InputData%ydotForce)
+          IF (InputData%c_obj%ydotForce_Len > 0) &
+             InputData%c_obj%ydotForce = C_LOC( InputData%ydotForce( LBOUND(InputData%ydotForce,1) ) ) 
+       END IF
+    END IF
+
+    ! -- zdotForce Input Data fields
+    IF ( .NOT. SkipPointers_local ) THEN
+       IF ( .NOT. ASSOCIATED(InputData%zdotForce)) THEN 
+          InputData%c_obj%zdotForce_Len = 0
+          InputData%c_obj%zdotForce = C_NULL_PTR
+       ELSE
+          InputData%c_obj%zdotForce_Len = SIZE(InputData%zdotForce)
+          IF (InputData%c_obj%zdotForce_Len > 0) &
+             InputData%c_obj%zdotForce = C_LOC( InputData%zdotForce( LBOUND(InputData%zdotForce,1) ) ) 
        END IF
     END IF
 
@@ -4976,28 +5009,22 @@ IF (ASSOCIATED(u_out%pzForce) .AND. ASSOCIATED(u1%pzForce)) THEN
   END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%xdotForce) .AND. ASSOCIATED(u1%xdotForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%xdotForce,1)))
-  ALLOCATE(c1(SIZE(u_out%xdotForce,1)))
-  b1 = -(u1%xdotForce - u2%xdotForce)/t(2)
-  u_out%xdotForce = u1%xdotForce + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%xdotForce,1),UBOUND(u_out%xdotForce,1)
+    b = -(u1%xdotForce(i1) - u2%xdotForce(i1))
+    u_out%xdotForce(i1) = u1%xdotForce(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%ydotForce) .AND. ASSOCIATED(u1%ydotForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%ydotForce,1)))
-  ALLOCATE(c1(SIZE(u_out%ydotForce,1)))
-  b1 = -(u1%ydotForce - u2%ydotForce)/t(2)
-  u_out%ydotForce = u1%ydotForce + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%ydotForce,1),UBOUND(u_out%ydotForce,1)
+    b = -(u1%ydotForce(i1) - u2%ydotForce(i1))
+    u_out%ydotForce(i1) = u1%ydotForce(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%zdotForce) .AND. ASSOCIATED(u1%zdotForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%zdotForce,1)))
-  ALLOCATE(c1(SIZE(u_out%zdotForce,1)))
-  b1 = -(u1%zdotForce - u2%zdotForce)/t(2)
-  u_out%zdotForce = u1%zdotForce + b1 * t_out
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%zdotForce,1),UBOUND(u_out%zdotForce,1)
+    b = -(u1%zdotForce(i1) - u2%zdotForce(i1))
+    u_out%zdotForce(i1) = u1%zdotForce(i1) + b * ScaleFactor
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pOrientation) .AND. ASSOCIATED(u1%pOrientation)) THEN
   DO i1 = LBOUND(u_out%pOrientation,1),UBOUND(u_out%pOrientation,1)
@@ -5153,31 +5180,25 @@ IF (ASSOCIATED(u_out%pzForce) .AND. ASSOCIATED(u1%pzForce)) THEN
   END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%xdotForce) .AND. ASSOCIATED(u1%xdotForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%xdotForce,1)))
-  ALLOCATE(c1(SIZE(u_out%xdotForce,1)))
-  b1 = (t(3)**2*(u1%xdotForce - u2%xdotForce) + t(2)**2*(-u1%xdotForce + u3%xdotForce))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%xdotForce + t(3)*u2%xdotForce - t(2)*u3%xdotForce ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%xdotForce = u1%xdotForce + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%xdotForce,1),UBOUND(u_out%xdotForce,1)
+    b = (t(3)**2*(u1%xdotForce(i1) - u2%xdotForce(i1)) + t(2)**2*(-u1%xdotForce(i1) + u3%xdotForce(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%xdotForce(i1) + t(3)*u2%xdotForce(i1) - t(2)*u3%xdotForce(i1) ) * scaleFactor
+    u_out%xdotForce(i1) = u1%xdotForce(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%ydotForce) .AND. ASSOCIATED(u1%ydotForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%ydotForce,1)))
-  ALLOCATE(c1(SIZE(u_out%ydotForce,1)))
-  b1 = (t(3)**2*(u1%ydotForce - u2%ydotForce) + t(2)**2*(-u1%ydotForce + u3%ydotForce))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%ydotForce + t(3)*u2%ydotForce - t(2)*u3%ydotForce ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%ydotForce = u1%ydotForce + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%ydotForce,1),UBOUND(u_out%ydotForce,1)
+    b = (t(3)**2*(u1%ydotForce(i1) - u2%ydotForce(i1)) + t(2)**2*(-u1%ydotForce(i1) + u3%ydotForce(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%ydotForce(i1) + t(3)*u2%ydotForce(i1) - t(2)*u3%ydotForce(i1) ) * scaleFactor
+    u_out%ydotForce(i1) = u1%ydotForce(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%zdotForce) .AND. ASSOCIATED(u1%zdotForce)) THEN
-  ALLOCATE(b1(SIZE(u_out%zdotForce,1)))
-  ALLOCATE(c1(SIZE(u_out%zdotForce,1)))
-  b1 = (t(3)**2*(u1%zdotForce - u2%zdotForce) + t(2)**2*(-u1%zdotForce + u3%zdotForce))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u1%zdotForce + t(3)*u2%zdotForce - t(2)*u3%zdotForce ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%zdotForce = u1%zdotForce + b1 * t_out + c1 * t_out**2
-  DEALLOCATE(b1)
-  DEALLOCATE(c1)
+  DO i1 = LBOUND(u_out%zdotForce,1),UBOUND(u_out%zdotForce,1)
+    b = (t(3)**2*(u1%zdotForce(i1) - u2%zdotForce(i1)) + t(2)**2*(-u1%zdotForce(i1) + u3%zdotForce(i1)))* scaleFactor
+    c = ( (t(2)-t(3))*u1%zdotForce(i1) + t(3)*u2%zdotForce(i1) - t(2)*u3%zdotForce(i1) ) * scaleFactor
+    u_out%zdotForce(i1) = u1%zdotForce(i1) + b  + c * t_out
+  END DO
 END IF ! check if allocated
 IF (ASSOCIATED(u_out%pOrientation) .AND. ASSOCIATED(u1%pOrientation)) THEN
   DO i1 = LBOUND(u_out%pOrientation,1),UBOUND(u_out%pOrientation,1)
