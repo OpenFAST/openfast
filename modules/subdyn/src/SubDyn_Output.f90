@@ -284,44 +284,37 @@ CONTAINS
 END SUBROUTINE SDOut_Init
 
 !------------------------------------------------------------------------------------------------------
+!>This subroutine allocates and calculated TIreact, Matrix to go from local reactions at constrained nodes to single point reactions
 SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
-!This subroutine allocates and calculated TIreact, Matrix to go from local reactions at constrained nodes to single point reactions
    TYPE(SD_InitType),      INTENT(  IN)  :: Init         ! Input data for initialization routine
    TYPE(SD_ParameterType), INTENT(  INOUT)  :: p         ! Parameter data
    REAL(ReKi),                   INTENT(IN)     :: WtrDpth
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-      ! local variables
+   ! local variables
    INTEGER                             :: I !counter
    INTEGER                             :: rmndr !type-column index
    INTEGER                             ::  n  !node ID
    INTEGER(IntKi)                      :: DOFC !  DOFC = Init%NReact*6
    REAL(ReKi)                          :: x, y, z !coordinates
-   
-   !Initialize
    ErrStat=ErrID_None
    ErrMsg=""
    
    DOFC = p%NReact*6 ! bjj, this is p%DOFC    !Total DOFs at the base of structure 
    
-   ALLOCATE ( p%TIreact(6,DOFC), STAT = ErrStat )
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Error allocating space for TIreact array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-   END IF
+   CALL AllocAry(p%TIreact, 6,DOFC, 'p%TIReact', ErrStat, ErrMsg )
+   if ( ErrStat /= ErrID_None ) return
    
    p%TIreact=0 !Initialize
    
    DO I=1,3  !Take care of first three rows
-   p%TIreact(I,I:DOFC:6)=1
+      p%TIreact(I,I:DOFC:6)=1
    ENDDO 
 
     !Other rows done per column actually  
    DO I = 1, DOFC
       
-      n = p%Reacts(ceiling(I/6.0),1)  !Constrained Node ID (this works in the reordered/renumbered p%Reacts)
+      n = p%Reacts(ceiling(I/6.0),1)  !Constrained Node ID (this works in the reordered/renumbered p%Reacts) ! TODO different DOF ordering
       
       x = Init%Nodes(n, 2)
       y = Init%Nodes(n, 3)
@@ -338,7 +331,7 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
             
          CASE DEFAULT
             ErrStat = ErrID_Fatal
-            ErrMsg  = 'Error calculating transformation matrix TIreact '
+            ErrMsg  = 'Error calculating transformation matrix TIreact, wrong column index '
             RETURN
          END SELECT
    ENDDO
@@ -389,6 +382,8 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    uddout =0 !Initialize and populate with Udotdot data
    uddout(1          : p%URbarL         ) = m%UR_bar_dotdot
    uddout(p%URbarL+1 : p%URbarL+p%DOFL  ) = m%UL_dotdot
+
+   ! TODO TODO TODO, there is a lot of similarity between the three outputs sections with some code redundency
          
       ! Only generate member-based outputs for the number of user-requested member outputs
       !Now store and identify needed output as requested by user
@@ -401,55 +396,47 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
         DO J=1,p%MoutLst(I)%NOutCnt !Iterate on requested nodes for that member 
              !I need to average across potentially up to 2 elements
              !Calculate forces on 1st stored element, and if 2nd exists do averaging with the second
-             K=p%MOutLst(I)%ElmIDs(J,1)  !element number
-             K2=p%MOutLst(I)%ElmNds(J,1)  !first or second node of the element to be considered
-                    !Assign the sign depending on whether it is the 1st or second node
+             K = p%MOutLst(I)%ElmIDs(J,1)  !element number
+             K2= p%MOutLst(I)%ElmNds(J,1)  !first or second node of the element to be considered
+             !Assign the sign depending on whether it is the 1st or second node
              sgn=-1
              IF (K2 .EQ. 2) sgn= +1
-             
              K3=p%Elems(K,2:3)  !first and second node ID associated with element K 
-             
-              L=p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout
-              L2=p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
-                 
-             DIRCOS=tranSpose(p%elemprops(K)%DirCos)! global to local dir-cosine matrix
-             
+             L =p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout
+             L2=p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
+             DIRCOS=transpose(p%elemprops(K)%DirCos)! global to local dir-cosine matrix
              !I need to find the Udotdot() for the two nodes of the element of interest 
              !I need to move the displacements to the local ref system
-             
-               ! bjj: added these temporary storage variables so that the CALC_LOCAL call doesn't created
-               !      new temporary *every time* it's called
+             ! bjj: added these temporary storage variables so that the CALC_NODE_FORCES call doesn't created
+             !      new temporary *every time* it's called
              Tmp_Udotdot(1: 6) = uddout( L : L+5  )
              Tmp_Udotdot(7:12) = uddout( L2 : L2+5 )
-             
              Tmp_y2(1: 6)      = yout( L : L+5 )
              Tmp_y2(7:12)      = yout( L2 : L2+5 )
-
-             CALL CALC_LOCAL( DIRCOS,p%MOutLst(I)%Me(:,:,J,1),p%MOutLst(I)%Ke(:,:,J,1),Tmp_Udotdot, &
+             CALL CALC_NODE_FORCES( DIRCOS,p%MOutLst(I)%Me(:,:,J,1),p%MOutLst(I)%Ke(:,:,J,1),Tmp_Udotdot, &
                               Tmp_y2,p%MoutLst(I)%Fg(:,J,1), K2,FM_elm,FK_elm) 
              
              FM_elm2=sgn*FM_elm
              FK_elm2=sgn*FK_elm
              
              IF (p%MOutLst(I)%ElmIDs(J,p%NavgEls) .NE. 0) THEN  !element number
-                 K=p%MOutLst(I)%ElmIDs(J,p%NavgEls)  !element number
-                 K2=p%MOutLst(I)%ElmNds(J,p%NavgEls)  !first or second node of the element to be considered
-                        !Assign the sign depending on whether it is the 1st or second node
-               sgn=-1
-               IF (K2 .EQ. 2) sgn= +1
-             
+                 K  = p%MOutLst(I)%ElmIDs(J,p%NavgEls)  !element number
+                 K2 = p%MOutLst(I)%ElmNds(J,p%NavgEls)  !first or second node of the element to be considered
+                 !Assign the sign depending on whether it is the 1st or second node
+                 sgn=-1
+                 IF (K2 .EQ. 2) sgn= +1
                  K3=p%Elems(K,2:3)  !first and second node ID associated with element K 
                  
-                 L=p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout
-                 L2=p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
-                 CALL CALC_LOCAL(DIRCOS,p%MOutLst(I)%Me(:,:,J,p%NavgEls),p%MOutLst(I)%Ke(:,:,J,p%NavgEls),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
+                 L  = p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout ! TODO different DOF order
+                 L2 = p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
+                 CALL CALC_NODE_FORCES(DIRCOS,p%MOutLst(I)%Me(:,:,J,p%NavgEls),p%MOutLst(I)%Ke(:,:,J,p%NavgEls),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
                                  (/yout( L : L+5 ),       yout( L2 : L2+5 )/), p%MoutLst(I)%Fg(:,J,p%NavgEls), K2,FM_elm,FK_elm ) 
                                    
                  FM_elm2=0.5*( FM_elm2 + sgn*FM_elm ) !Now Average
                  FK_elm2=0.5*( FK_elm2 + sgn*FK_elm) !Now Average
              ENDIF
            
-           !NOW HERE I WOULD NEED TO PUT IT INTO AllOuts
+              ! Store in AllOuts
               !Forces and moments
               AllOuts(MNfmKe  (:,J,I))     = FK_elm2  !static forces and moments (6) Local Ref
               AllOuts(MNfmMe  (:,J,I))     = FM_elm2  !dynamic forces and moments (6) Local Ref
@@ -457,73 +444,54 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
               L=p%IDY( (p%MOutLst(I)%NodeIDs(J)-1)*6 +1 )! starting index for nodeID(J) within yout
               AllOuts(MNTDss (:,J,I))      = yout(L:L+2)
               !Displacement- Rotational - I need to get the direction cosine matrix to tranform rotations  - In Local reference Element Ref Sys
-              
               AllOuts(MNRDe (:,J,I))        = matmul(DIRCOS,yout(L+3:L+5)  ) !local ref
               !Accelerations- I need to get the direction cosine matrix to tranform displacement and rotations
               AllOuts(MNTRAe (1:3,J,I))     = matmul(DIRCOS,uddout(L:L+2)  )   !translational accel local ref
               AllOuts(MNTRAe (4:6,J,I))     = matmul(DIRCOS,uddout(L+3:L+5) )  !rotational accel  local ref
               
-              
-              
-        ENDDO 
+        ENDDO  ! J, Loop on requested nodes for that member
         
-     ENDDO     
+     ENDDO ! I, Loop on member outputs
    END IF
- 
   
   IF (p%OutAll) THEN  !NEED TO CALCULATE TOTAL FORCES
-         
          DO I=1,p%NMembers    !Cycle on all members
               DO J=1,2 !Iterate on requested nodes for that member (first and last)  
                 K=p%MOutLst2(I)%ElmID2s(J)  !element number
                 K2=p%MOutLst2(I)%ElmNd2s(J)  !first or second node of the element to be considered
-                
                 !Assign the sign depending on whether it is the 1st or second node
                 sgn=-1
                 IF (K2 .EQ. 2) sgn= +1
-                
                 K3=p%Elems(K,2:3)  !first and second node ID associated with element K 
-                
-                L=p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout
+                L =p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout ! TODO different DOF order
                 L2=p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
-                 
-                DIRCOS=tranSpose(p%elemprops(K)%DirCos)! global to local
-                
-                CALL CALC_LOCAL( DIRCOS,p%MOutLst2(I)%Me2(:,:,J),p%MOutLst2(I)%Ke2(:,:,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
+                DIRCOS=transpose(p%elemprops(K)%DirCos)! global to local
+                CALL CALC_NODE_FORCES( DIRCOS,p%MOutLst2(I)%Me2(:,:,J),p%MOutLst2(I)%Ke2(:,:,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
                                  (/yout( L : L+5 ),       yout( L2 : L2+5 )/), p%MoutLst2(I)%Fg2(:,J),  K2,FM_elm,FK_elm) 
-                
-               ! FM_elm2=sgn*FM_elm 
-               ! FK_elm2=sgn*FK_elm
-          
-                 !NOW HERE I WOULD NEED TO PUT IT INTO AllOuts
+                 ! Store in All Outs
                  L=MaxOutPts+(I-1)*24+(J-1)*12+1!start index
                  L2=L+11
-                AllOuts( L:L2 ) =sgn* (/FK_elm,FM_elm/)
-                
-              ENDDO
-         ENDDO
-             
+                 AllOuts( L:L2 ) =sgn* (/FK_elm,FM_elm/)
+              ENDDO !J, nodes 1 and 2
+         ENDDO ! I, Loop on members
   ENDIF
-   
   
   !Assign interface forces and moments 
-   AllOuts(IntfSS(1:TPdofL))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
-   
+  AllOuts(IntfSS(1:TPdofL))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
   !Assign interface translations and rotations at the TP ref point  
   AllOuts(IntfTRss(1:TPdofL))=m%u_TP 
-  
   !Assign interface translations and rotations accelerations
   AllOuts(IntfTRAss(1:TPdofL))= m%udotdot_TP 
-  
+
   ! Assign all SSqm, SSqmdot, SSqmdotdot
-   ! We only have space for the first 99 values
+  ! We only have space for the first 99 values
   maxOutModes = min(p%Nmodes,99)
-   IF ( maxOutModes > 0 ) THEN 
-      !BJJ: TODO: is there a check to see if we requested these channels but didn't request the modes? (i.e., retain 2 modes but asked for 75th mode?)
-      Allouts(SSqm01  :SSqm01  +maxOutModes-1) = x%qm      (1:maxOutModes)
-      Allouts(SSqmd01 :SSqmd01 +maxOutModes-1) = x%qmdot   (1:maxOutModes)
-      Allouts(SSqmdd01:SSqmdd01+maxOutModes-1) = m%qmdotdot(1:maxOutModes)
-   END IF
+  IF ( maxOutModes > 0 ) THEN 
+     !BJJ: TODO: is there a check to see if we requested these channels but didn't request the modes? (i.e., retain 2 modes but asked for 75th mode?)
+     Allouts(SSqm01  :SSqm01  +maxOutModes-1) = x%qm      (1:maxOutModes)
+     Allouts(SSqmd01 :SSqmd01 +maxOutModes-1) = x%qmdot   (1:maxOutModes)
+     Allouts(SSqmdd01:SSqmdd01+maxOutModes-1) = m%qmdotdot(1:maxOutModes)
+  END IF
    
   !Need to Calculate Reaction Forces Now, but only if requested
   IF (p%OutReact) THEN 
@@ -544,51 +512,40 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
        
           !Find the joint forces
              DO J=1,SIZE(p%MOutLst3(I)%ElmIDs(1,:))  !for all the elements connected (normally 1)
-                
-                K=p%MOutLst3(I)%ElmIDs(1,J)  !element number
-                K2=p%MOutLst3(I)%ElmNds(1,J)  !first or second node of the element to be considered
-                
+                K  = p%MOutLst3(I)%ElmIDs(1,J) ! element number
+                K2 = p%MOutLst3(I)%ElmNds(1,J) ! 1=first, 2=second node of the element to be considered
                 !Assign the sign depending on whether it is the 1st or second node                
                 K3=p%Elems(K,2:3)  !first and second node ID associated with element K 
-                
-                L =p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout
+                L =p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout ! TODO different DOF order
                 L2=p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
+                DIRCOS=transpose(p%elemprops(K)%DirCos)! global to local
                 
-                DIRCOS=tranSpose(p%elemprops(K)%DirCos)! global to local
-                
-                CALL CALC_LOCAL( DIRCOS,p%MOutLst3(I)%Me(:,:,1,J),p%MOutLst3(I)%Ke(:,:,1,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
+                CALL CALC_NODE_FORCES( DIRCOS,p%MOutLst3(I)%Me(:,:,1,J),p%MOutLst3(I)%Ke(:,:,1,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
                                  (/yout( L : L+5 ),       yout( L2 : L2+5 )/),  p%MoutLst3(I)%Fg(:,1,J),   K2,FM_elm,FK_elm) 
-                
                 !transform back to global, need to do 3 at a time since cosine matrix is 3x3
                 DO L=1,2  
                    FM_elm2((L-1)*3+1:L*3) = FM_elm2((L-1)*3+1:L*3) + matmul(p%elemprops(K)%DirCos,FM_elm((L-1)*3+1:L*3))  !sum forces at joint in GLOBAL REF
                    FK_elm2((L-1)*3+1:L*3) = FK_elm2((L-1)*3+1:L*3) + matmul(p%elemprops(K)%DirCos,FK_elm((L-1)*3+1:L*3))  !signs may be wrong, we will fix that later;  
                 ! I believe this is all fixed in terms of signs now ,RRD 5/20/13
                 ENDDO           
-                
              ENDDO
              !junk= FK_elm2 ! + FM_elm2  !removed the inertial component 12/13 !Not sure why I need an intermediate step here, but the sum would not work otherwise
-             
              !NEED TO ADD HYDRODYNAMIC FORCES AT THE RESTRAINT NODES
              !   The joind iD of the reaction, i.e. thre reaction node ID is within p%MOutLst3(I)%Noutcnt
              !The index in Y2mesh is? 
              !Since constrained nodes are ordered as given in the input file and so as in the order of y2mesh, i Can do:
              junk =  (/u%LMesh%Force(:,p%NNodes_I+p%NNodes_L+I),u%LMesh%Moment(:,p%NNodes_I+p%NNodes_L+I)/)
-                
              ReactNs((I-1)*6+1:6*I)=FK_elm2 - junk  !Accumulate reactions from all nodes in GLOBAL COORDINATES
        ENDDO
-       
-          !NOW HERE I WOULD NEED TO PUT IT INTO AllOuts
-                
-      AllOuts( ReactSS(1:TPdofL) ) = matmul(p%TIreact,ReactNs)
+       ! Store into AllOuts
+       AllOuts( ReactSS(1:TPdofL) ) = matmul(p%TIreact,ReactNs)
   ENDIF
+  if (allocated(ReactNs)) deallocate(ReactNs)
 
-   if (allocated(ReactNs)) deallocate(ReactNs)
-   
 END SUBROUTINE SDOut_MapOutputs
 
 !====================================================================================================
-   SUBROUTINE CALC_LOCAL(DIRCOS,Me,Ke,Udotdot,Y2,Fg, K2,FM_elm,FK_elm)
+   SUBROUTINE CALC_NODE_FORCES(DIRCOS,Me,Ke,Udotdot,Y2 ,Fg, K2,FM_nod,FK_nod)
    !This function calculates for the given element the static and dynamic forces, given K and M of the element, and 
    !output quantities Udotdot and Y2 containing the 
    !and K2 indicating wheter the 1st (1) or 2nd (2) node is to be picked
@@ -597,88 +554,59 @@ END SUBROUTINE SDOut_MapOutputs
         Real(ReKi), DIMENSION (12,12), INTENT(IN)  :: Me,Ke    !element M and K matrices (12x12) in GLOBAL REFERENCE (DIRCOS^T K DIRCOS)
         Real(ReKi), DIMENSION (12),    INTENT(IN)  :: Udotdot, Y2, Fg     !acceleration and velocities, gravity forces
         Integer(IntKi),                INTENT(IN)  :: K2   !1 or 2 depending on node of interest
-        REAL(ReKi), DIMENSION (6),    INTENT(OUT)  :: FM_elm, FK_elm  !output static and dynamic forces and moments
-        
-       !Locals
-        INTEGER(IntKi)  ::L !counter
-        REAL(DbKi), DIMENSION(12)                    ::Junk,Junk1,Junk3,Junk4      ! temporary storage for output stuff
+        REAL(ReKi), DIMENSION (6),    INTENT(OUT)  :: FM_nod, FK_nod  !output static and dynamic forces and moments
+        !Locals
+        INTEGER(IntKi) :: L !counter
+        REAL(DbKi), DIMENSION(12)                    :: FM_glb, FF_glb, FM_elm, FF_elm  ! temporary storage 
            
-        Junk=matmul(Me,Udotdot)     !GLOBAL REFERENCE
-        Junk1=matmul(Ke,Y2) !GLOBAL REFERENCE 
-        Junk1=Junk1- Fg     !GLOBAL REFERENCE  
-        DO L=1,4  
-            Junk3((L-1)*3+1:L*3)=  matmul(DIRCOS, Junk(  (L-1)*3+1:L*3 ) )
-            Junk4((L-1)*3+1:L*3) = matmul(DIRCOS, Junk1( (L-1)*3+1:L*3 ) ) 
+        FM_glb = matmul(Me,Udotdot)   ! GLOBAL REFERENCE
+        FF_glb = matmul(Ke,Y2)        ! GLOBAL REFERENCE
+        FF_glb = FF_glb - Fg          ! GLOBAL REFERENCE
+        DO L=1,4 ! Transforming coordinates 3 at a time
+            FM_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FM_glb( (L-1)*3+1:L*3 ) )
+            FF_elm((L-1)*3+1:L*3) =  matmul(DIRCOS, FF_glb( (L-1)*3+1:L*3 ) ) 
         ENDDO
-        
-        
-        FM_elm=Junk3(6*(k2-1)+1:k2*6) 
-        FK_elm=Junk4(6*(k2-1)+1:k2*6) 
-        
+        FM_nod=FM_elm(6*(k2-1)+1:k2*6) ! k2=1, 1:6,  k2=2  7:12 
+        FK_nod=FF_elm(6*(k2-1)+1:k2*6) 
    
-   END SUBROUTINE CALC_LOCAL 
+   END SUBROUTINE CALC_NODE_FORCES 
 
-   !====================================================================================================
+!====================================================================================================
 SUBROUTINE SDOut_CloseSum( UnSum, ErrStat, ErrMsg )
-
-
-      ! Passed variables
-      
    INTEGER,                 INTENT( IN    )   :: UnSum                ! the unit number for the SubDyn summary file          
    INTEGER,                 INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),            INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-  
-
-      ! Local variables
+   ! Local variables
    INTEGER                                     :: Stat                 ! status from I/) operation 
-
-      ! Initialize ErrStat
-         
    ErrStat = ErrID_None         
    ErrMsg  = ""
-   
-      ! Write any closing information in the summary file
-      
+   ! Write any closing information in the summary file
    IF ( UnSum > 0 ) THEN
-      
       WRITE (UnSum,'(/,A/)', IOSTAT=Stat)  'This summary file was closed on '//CurDate()//' at '//CurTime()//'.'
       IF (Stat /= 0) THEN
          ErrStat = ErrID_FATAL
          ErrMsg  = ' Problem writing to summary file.'
       END IF
-   
       ! Close the file
-   
       CLOSE( UnSum, IOSTAT=Stat )
       IF (Stat /= 0) THEN
          ErrStat = ErrID_FATAL
          ErrMsg  = TRIM(ErrMsg)//' Problem closing summary file.'
       END IF
-   
       IF ( ErrStat /= ErrID_None ) ErrMsg = 'SDOut_CloseSum'//TRIM(ErrMsg)
-      
    END IF                      
-                      
 END SUBROUTINE SDOut_CloseSum            
 
 !====================================================================================================
 SUBROUTINE SDOut_OpenSum( UnSum, SummaryName, SD_Prog, ErrStat, ErrMsg )
-
-
-      ! Passed variables
-      
    INTEGER,                 INTENT(   OUT )   :: UnSum                ! the unit number for the SubDyn summary file          
    CHARACTER(*),            INTENT( IN    )   :: SummaryName          ! the name of the SubDyn summary file
    TYPE(ProgDesc),          INTENT( IN    )   :: SD_Prog              ! the name/version/date of the  program
    INTEGER,                 INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),            INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-           
    integer                                    :: ErrStat2
-       ! Initialize ErrStat
-         
    ErrStat = ErrID_None         
    ErrMsg  = ""       
-      
 
    CALL GetNewUnit( UnSum )
    CALL OpenFOutFile ( UnSum, SummaryName, ErrStat, ErrMsg ) 
@@ -687,12 +615,9 @@ SUBROUTINE SDOut_OpenSum( UnSum, SummaryName, SD_Prog, ErrStat, ErrMsg )
       RETURN
    END IF
       
-      
-         ! Write the summary file header
-      
+   ! Write the summary file header
    WRITE (UnSum,'(/,A/)', IOSTAT=ErrStat2)  'This summary file was generated by '//TRIM( SD_Prog%Name )//&
                      ' '//TRIM( SD_Prog%Ver )//' on '//CurDate()//' at '//CurTime()//'.'
-                      
 END SUBROUTINE SDOut_OpenSum 
 
 !====================================================================================================
@@ -700,37 +625,23 @@ SUBROUTINE SDOut_OpenOutput( ProgVer, OutRootName,  p, InitOut, ErrStat, ErrMsg 
 ! This subroutine initialized the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 !----------------------------------------------------------------------------------------------------
-
-   
-
-      ! Passed variables
-
+   ! Passed variables
    TYPE(ProgDesc),                INTENT( IN    ) :: ProgVer
    CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
    TYPE(SD_ParameterType),        INTENT( INOUT ) :: p   
    TYPE(SD_InitOutPutType ),      INTENT( IN    ) :: InitOut              !
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   
-      ! Local variables
+   ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
    CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
    CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
    INTEGER                                        :: ErrStat2              
-   
-   !-------------------------------------------------------------------------------------------------      
-   ! Initialize local variables
-   !-------------------------------------------------------------------------------------------------      
    ErrStat = ErrID_None  
    ErrMsg  = ""
-         
-   !-------------------------------------------------------------------------------------------------      
    ! Open the output file, if necessary, and write the header
-   !-------------------------------------------------------------------------------------------------      
-   
    IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file            
-      
-         ! Open the file for output
+      ! Open the file for output
       OutFileName = TRIM(OutRootName)//'.out'
       CALL GetNewUnit( p%UnJckF )
    
@@ -739,31 +650,20 @@ SUBROUTINE SDOut_OpenOutput( ProgVer, OutRootName,  p, InitOut, ErrStat, ErrMsg 
          ErrMsg = ' Error opening SubDyn-level output file: '//TRIM(ErrMsg)
          RETURN
       END IF
-      
        
-         ! Write the output file header
-      
+      ! Write the output file header
       WRITE (p%UnJckF,'(/,A/)', IOSTAT=ErrStat2)  'These predictions were generated by '//TRIM(GETNVD(ProgVer))//&
                       ' on '//CurDate()//' at '//CurTime()//'.'
       
       WRITE(p%UnJckF, '(//)') ! add 3 lines to make file format consistant with FAST v8 (headers on line 7; units on line 8) [this allows easier post-processing]
       
-         ! Write the names of the output parameters:
-      
+      ! Write the names of the output parameters:
       Frmt = '(A8,'//TRIM(Int2LStr(p%NumOuts+p%OutAllInt*p%OutAllDims))//'(:,A,'//TRIM( p%OutSFmt )//'))'
-   
       WRITE(p%UnJckF,Frmt, IOSTAT=ErrStat2)  TRIM( 'Time' ), ( p%Delim, TRIM( InitOut%WriteOutputHdr(I) ), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
-                        
       
-         ! Write the units of the output parameters:                 
+      ! Write the units of the output parameters:                 
       WRITE(p%UnJckF,Frmt, IOSTAT=ErrStat2)  TRIM( 's'), ( p%Delim, TRIM( InitOut%WriteOutputUnt(I) ), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
-                     
-   
-      
    END IF   ! there are any requested outputs   
-
-   RETURN
-
 END SUBROUTINE SDOut_OpenOutput
 
 !====================================================================================================
@@ -774,43 +674,25 @@ SUBROUTINE SDOut_CloseOutput ( p, ErrStat, ErrMsg )
 ! This function cleans up after running the SubDyn output module. It closes the output file,
 ! releases memory, and resets the number of outputs requested to 0.
 !----------------------------------------------------------------------------------------------------
-
-         ! Passed variables
-
-   TYPE(SD_ParameterType),  INTENT( INOUT )  :: p                    ! data for this instance of the floating platform module        
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
+   TYPE(SD_ParameterType),  INTENT( INOUT )       :: p                    ! data for this instance of the floating platform module
+   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
-!      ! Internal variables
    LOGICAL                               :: Err
 
-
-   !-------------------------------------------------------------------------------------------------
-   ! Initialize error information
-   !-------------------------------------------------------------------------------------------------
    ErrStat = 0
    ErrMsg  = ""
-   
    Err     = .FALSE.
 
-   !-------------------------------------------------------------------------------------------------
    ! Close our output file
-   !-------------------------------------------------------------------------------------------------
    CLOSE( p%UnJckF, IOSTAT = ErrStat )
    IF ( ErrStat /= 0 ) Err = .TRUE.
-
-  
  
-   !-------------------------------------------------------------------------------------------------
    ! Make sure ErrStat is non-zero if an error occurred
-   !-------------------------------------------------------------------------------------------------
    IF ( Err ) ErrStat = ErrID_Fatal
-   
    RETURN
 
 END SUBROUTINE SDOut_CloseOutput
 !====================================================================================================
-
 
 SUBROUTINE SDOut_WriteOutputNames( UnJckF, p, ErrStat, ErrMsg )
 
@@ -833,9 +715,7 @@ END SUBROUTINE SDOut_WriteOutputNames
 
 !====================================================================================================
 
-
 SUBROUTINE SDOut_WriteOutputUnits( UnJckF, p, ErrStat, ErrMsg )
-
    INTEGER,                      INTENT( IN    ) :: UnJckF            ! file unit for the output file
    TYPE(SD_ParameterType),  INTENT( IN    ) :: p                    ! SubDyn module's parameter data
    INTEGER,                      INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
@@ -858,24 +738,17 @@ SUBROUTINE SDOut_WriteOutputs( UnJckF, Time, SDWrOutput, p, ErrStat, ErrMsg )
 ! This subroutine writes the data stored in WriteOutputs (and indexed in OutParam) to the file
 ! opened in SDOut_Init()
 !---------------------------------------------------------------------------------------------------- 
-
-      ! Passed variables   
    INTEGER,                      INTENT( IN    ) :: UnJckF               ! file unit for the output file
    REAL(DbKi),                   INTENT( IN    ) :: Time                 ! Time for this output
    REAL(ReKi),                   INTENT( IN    ) :: SDWrOutput(:)        ! SubDyn module's output data
    TYPE(SD_ParameterType),       INTENT( IN    ) :: p                    ! SubDyn module's parameter data
    INTEGER,                      INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                 INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   
-      ! Local variables
-  ! REAL(ReKi)                             :: OutData (0:p%NumOuts)       ! an output array
+   ! Local variables
    INTEGER                                :: I                           ! Generic loop counter
    CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
    
-
-  
       ! Initialize ErrStat and determine if it makes any sense to write output
-      
    IF ( .NOT. ALLOCATED( p%OutParam ) .OR. UnJckF < 0 )  THEN
       ErrStat = ErrID_Fatal
       ErrMsg  = ' To write outputs for SubDyn there must be a valid file ID and OutParam must be allocated.'
@@ -884,17 +757,10 @@ SUBROUTINE SDOut_WriteOutputs( UnJckF, Time, SDWrOutput, p, ErrStat, ErrMsg )
       ErrStat = ErrID_None
    END IF
 
-
       ! Write the output parameters to the file
-      
    Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts+p%OutAllInt*p%OutAllDims))//'(:,A,'//TRIM( p%OutFmt )//'))'
-   
 
    WRITE(UnJckF,Frmt)  Time, ( p%Delim, SDWrOutput(I), I=1,p%NumOuts+p%OutAllInt*p%OutAllDims )
-
-   
-   RETURN
-
 
 END SUBROUTINE SDOut_WriteOutputs
 
@@ -908,35 +774,22 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
 ! name, and units of the output channels). 
 ! NOTE OutParam is populated here
 !----------------------------------------------------------------------------------------------------    
-   
-   
-   
-      ! Passed variables
-      
    TYPE(SD_ParameterType),   INTENT( INOUT ) :: p                    ! SubDyn module parameter data
    CHARACTER(ChanLen),       INTENT( IN    ) :: OutList (:)          ! An array holding the names of the requested output channels.         
    INTEGER,                  INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),             INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   
-      ! Local variables.
-   
+   ! Local variables.
    INTEGER                                   :: I,J,K                                         ! Generic loop-counting index.
    INTEGER                                   :: INDX                                      ! Index for valid arrays
-   
    CHARACTER(ChanLen)                        :: OutListTmp                                ! A string to temporarily hold OutList(I).
    !CHARACTER(28), PARAMETER               :: OutPFmt    = "( I4, 3X,A 10,1 X, A10 )"   ! Output format parameter output list.
    CHARACTER(ChanLen), DIMENSION(24)         :: ToTUnits,ToTNames,ToTNames0
-   
    LOGICAL                  :: InvalidOutput(0:MaxOutPts)                        ! This array determines if the output channel is valid for this configuration
-
    LOGICAL                  :: CheckOutListAgain
    
    InvalidOutput            = .FALSE.
 
-!End of code generated by Matlab script
-   
       ! mark invalid output channels:
-   
    DO k=p%Nmodes+1,99
       InvalidOutput(SSqm01  +k-1) = .true.
       InvalidOutput(SSqmd01 +k-1) = .true.
@@ -963,7 +816,6 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
       END DO
    END DO
   
-   
    !-------------------------------------------------------------------------------------------------
    ! ALLOCATE the OutParam array
    !-------------------------------------------------------------------------------------------------    
@@ -983,7 +835,6 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
    !!!p%OutParam(0)%Units = '(sec)'   !
    !!!p%OutParam(0)%Indx  = Time
    !!!p%OutParam(0)%SignM = 1
-      
      
    DO I = 1,p%NumOuts
    
@@ -1053,10 +904,7 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
        p%OutParam(p%NumOuts+1:p%NumOuts+p%OutAllDims)%Indx= MaxOutPts+(/(J, J=1, p%OutAllDims)/) 
    ENDIF
 
-   RETURN
 END SUBROUTINE SDOut_ChkOutLst
-
-
 !====================================================================================================
 
 
