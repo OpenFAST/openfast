@@ -610,6 +610,17 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       p%ElemProps(i)%Length = L
       p%ElemProps(i)%DirCos = DirCos
 
+      ! Init to excessive values to detect any issue
+      p%ElemProps(i)%Ixx	 = -9.99e+36
+      p%ElemProps(i)%Iyy	 = -9.99e+36
+      p%ElemProps(i)%Jzz	 = -9.99e+36
+      p%ElemProps(i)%Kappa	 = -9.99e+36
+      p%ElemProps(i)%YoungE	 = -9.99e+36
+      p%ElemProps(i)%ShearG	 = -9.99e+36
+      p%ElemProps(i)%Area    = -9.99e+36
+      p%ElemProps(i)%Rho     = -9.99e+36
+      p%ElemProps(i)%T0      = -9.99e+36
+
       ! --- Properties that are specific to some elements
       if (eType==idBeam) then
          E   = Init%PropsB(P1, 2)
@@ -870,7 +881,7 @@ SUBROUTINE ElemF(ep, gravity, Fg, Fo)
    if (ep%eType==idBeam) then
       Fo(1:12)=0
    else if (ep%eType==idCable) then
-      CALL ElemF_Cable(ep%Area, ep%Length, ep%T0           , ep%DirCos, Fo)
+      CALL ElemF_Cable(ep%T0, ep%DirCos, Fo)
    else if (ep%eType==idRigid) then
       Fo(1:12)=0
    endif
@@ -1184,14 +1195,11 @@ SUBROUTINE ElemG(A, L, rho, DirCos, F, g)
 END SUBROUTINE ElemG
 
 !> 
-SUBROUTINE ElemF_Cable(A, L, T0, DirCos, F)
-   REAL(ReKi), INTENT( IN ) :: A            !< area
-   REAL(ReKi), INTENT( IN ) :: L            !< element length
+SUBROUTINE ElemF_Cable(T0, DirCos, F)
    REAL(ReKi), INTENT( IN ) :: T0           !< Pretension load [N]
    REAL(ReKi), INTENT( IN ) :: DirCos(3, 3) !< direction cosine matrix
    REAL(ReKi), INTENT( OUT) :: F(12)        !< returned loads. 1-6 for node 1; 7-12 for node 2.
    ! Local variables
-   REAL(ReKi) :: L0, Eps0, EAL0, EE
    REAL(ReKi) :: DC(12, 12)
 
    F(1:12) = 0  ! init 

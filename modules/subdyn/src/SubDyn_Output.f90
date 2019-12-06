@@ -312,7 +312,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    TYPE(SD_InputType),            INTENT( IN )     :: u                    ! SubDyn module's input data
    TYPE(SD_ContinuousStateType),  INTENT( IN )     :: x                    ! SubDyn module's states data
    TYPE(SD_OutputType),           INTENT( INOUT )  :: y                    ! SubDyn module's output data
-   TYPE(SD_ParameterType),        INTENT( IN    )  :: p                    ! SubDyn module's parameter data
+   TYPE(SD_ParameterType), target,INTENT( IN    )  :: p                    ! SubDyn module's parameter data
    TYPE(SD_MiscVarType),          INTENT( INOUT )  :: m                    ! Misc/optimization variables
    REAL(ReKi),                    INTENT(   OUT )  :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims) ! Array of output data for all possible outputs
    INTEGER(IntKi),                INTENT(   OUT )  :: ErrStat              ! Error status of the operation
@@ -331,6 +331,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    Real(reKi), DIMENSION( p%URbarL+p%DOFL+6*p%Nreact)      :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
    Real(ReKi),  DIMENSION(p%URbarL+p%DOFL+6*p%Nreact)      ::uddout           ! modifications to Y2 and Udotdot to include constrained node DOFs
    Integer(IntKi)                              ::sgn !+1/-1 for node force calculations
+   type(MeshAuxDataType), pointer :: pLst
    ErrStat = ErrID_None   
    ErrMsg  = ""
    
@@ -356,11 +357,12 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
   if (p%NumOuts > 0) then  !bjj: some of these fields aren't allocated when NumOuts==0
      DO I=1,p%NMOutputs
           !I know el # and whether it is 1st node or second node
-        DO J=1,p%MOutLst(I)%NOutCnt !Iterate on requested nodes for that member 
+        pLst=>p%MOutLst(I)
+        DO J=1,pLst%NOutCnt !Iterate on requested nodes for that member 
              !I need to average across potentially up to 2 elements
              !Calculate forces on 1st stored element, and if 2nd exists do averaging with the second
-             K = p%MOutLst(I)%ElmIDs(J,1)  !element number
-             K2= p%MOutLst(I)%ElmNds(J,1)  !first or second node of the element to be considered
+             K = pLst%ElmIDs(J,1)  !element number
+             K2= pLst%ElmNds(J,1)  !first or second node of the element to be considered
              !Assign the sign depending on whether it is the 1st or second node
              sgn=-1
              IF (K2 .EQ. 2) sgn= +1
@@ -376,24 +378,22 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
              Tmp_Udotdot(7:12) = uddout( L2 : L2+5 )
              Tmp_y2(1: 6)      = yout( L : L+5 )
              Tmp_y2(7:12)      = yout( L2 : L2+5 )
-             CALL CALC_NODE_FORCES( DIRCOS,p%MOutLst(I)%Me(:,:,J,1),p%MOutLst(I)%Ke(:,:,J,1),Tmp_Udotdot, &
-                              Tmp_y2,p%MOutLst(I)%Fg(:,J,1), K2,FM_elm,FK_elm) 
+             CALL CALC_NODE_FORCES( DIRCOS,pLst%Me(:,:,J,1),pLst%Ke(:,:,J,1),Tmp_Udotdot, Tmp_y2,pLst%Fg(:,J,1), K2,FM_elm,FK_elm) 
              
              FM_elm2=sgn*FM_elm
              FK_elm2=sgn*FK_elm
              
              IF (p%MOutLst(I)%ElmIDs(J,p%NavgEls) .NE. 0) THEN  !element number
-                 K  = p%MOutLst(I)%ElmIDs(J,p%NavgEls)  !element number
-                 K2 = p%MOutLst(I)%ElmNds(J,p%NavgEls)  !first or second node of the element to be considered
+                 K  = pLst%ElmIDs(J,p%NavgEls)  !element number
+                 K2 = pLst%ElmNds(J,p%NavgEls)  !first or second node of the element to be considered
                  !Assign the sign depending on whether it is the 1st or second node
                  sgn=-1
                  IF (K2 .EQ. 2) sgn= +1
                  K3=p%Elems(K,2:3)  !first and second node ID associated with element K 
-                 
                  L  = p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout ! TODO different DOF order
                  L2 = p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
-                 CALL CALC_NODE_FORCES(DIRCOS,p%MOutLst(I)%Me(:,:,J,p%NavgEls),p%MOutLst(I)%Ke(:,:,J,p%NavgEls),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
-                                 (/yout( L : L+5 ),       yout( L2 : L2+5 )/), p%MOutLst(I)%Fg(:,J,p%NavgEls), K2,FM_elm,FK_elm ) 
+                 CALL CALC_NODE_FORCES(DIRCOS,pLst%Me(:,:,J,p%NavgEls),pLst%Ke(:,:,J,p%NavgEls),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
+                                 (/yout( L : L+5 ), yout( L2 : L2+5 )/), pLst%Fg(:,J,p%NavgEls), K2,FM_elm,FK_elm ) 
                                    
                  FM_elm2=0.5*( FM_elm2 + sgn*FM_elm ) !Now Average
                  FK_elm2=0.5*( FK_elm2 + sgn*FK_elm) !Now Average
@@ -417,11 +417,12 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
      ENDDO ! I, Loop on member outputs
    END IF
   
-  IF (p%OutAll) THEN  !NEED TO CALCULATE TOTAL FORCES
-         DO I=1,p%NMembers    !Cycle on all members
-              DO J=1,2 !Iterate on requested nodes for that member (first and last)  
-                K=p%MOutLst2(I)%ElmID2s(J)  !element number
-                K2=p%MOutLst2(I)%ElmNd2s(J)  !first or second node of the element to be considered
+   IF (p%OutAll) THEN  !NEED TO CALCULATE TOTAL FORCES
+      DO I=1,p%NMembers    !Cycle on all members
+         pLst=>p%MOutLst2(I)
+         DO J=1,2 !Iterate on requested nodes for that member (first and last)  
+                K =pLst%ElmID2s(J)  !element number
+                K2=pLst%ElmNd2s(J)  !first or second node of the element to be considered
                 !Assign the sign depending on whether it is the 1st or second node
                 sgn=-1
                 IF (K2 .EQ. 2) sgn= +1
@@ -429,8 +430,8 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
                 L =p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout ! TODO different DOF order
                 L2=p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
                 DIRCOS=transpose(p%elemprops(K)%DirCos)! global to local
-                CALL CALC_NODE_FORCES( DIRCOS,p%MOutLst2(I)%Me2(:,:,J),p%MOutLst2(I)%Ke2(:,:,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
-                                 (/yout( L : L+5 ),       yout( L2 : L2+5 )/), p%MOutLst2(I)%Fg2(:,J),  K2,FM_elm,FK_elm) 
+                CALL CALC_NODE_FORCES( DIRCOS, pLst%Me2(:,:,J),pLst%Ke2(:,:,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
+                                 (/yout( L : L+5 ), yout( L2 : L2+5 )/), pLst%Fg2(:,J),  K2,FM_elm,FK_elm) 
                  ! Store in All Outs
                  L=MaxOutPts+(I-1)*24+(J-1)*12+1!start index
                  L2=L+11
@@ -469,22 +470,19 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
        ReactNs = 0.0 !Initialize
        
        DO I=1,p%NReact   !Do for each constrained node, they are ordered as given in the input file and so as in the order of y2mesh
-          
-          FK_elm2=0. !Initialize
+          FK_elm2=0. !Initialize for cumulative force
           FM_elm2=0. !Initialize
-       
+          pLst => p%MOutLst3(I)
           !Find the joint forces
-             DO J=1,SIZE(p%MOutLst3(I)%ElmIDs(1,:))  !for all the elements connected (normally 1)
-                K  = p%MOutLst3(I)%ElmIDs(1,J) ! element number
-                K2 = p%MOutLst3(I)%ElmNds(1,J) ! 1=first, 2=second node of the element to be considered
-                !Assign the sign depending on whether it is the 1st or second node                
-                K3=p%Elems(K,2:3)  !first and second node ID associated with element K 
-                L =p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout ! TODO different DOF order
-                L2=p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
+             DO J=1,SIZE(pLst%ElmIDs(1,:))  !for all the elements connected (normally 1)
+                K  = pLst%ElmIDs(1,J) ! element number
+                K2 = pLst%ElmNds(1,J) ! 1=first, 2=second node of the element to be considered
+                K3 = p%Elems(K,2:3)  !first and second node ID associated with element K 
+                L  = p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout ! TODO different DOF order
+                L2 = p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
                 DIRCOS=transpose(p%elemprops(K)%DirCos)! global to local
-                
-                CALL CALC_NODE_FORCES( DIRCOS,p%MOutLst3(I)%Me(:,:,1,J),p%MOutLst3(I)%Ke(:,:,1,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
-                                 (/yout( L : L+5 ),       yout( L2 : L2+5 )/),  p%MOutLst3(I)%Fg(:,1,J),   K2,FM_elm,FK_elm) 
+                CALL CALC_NODE_FORCES( DIRCOS,pLst%Me(:,:,1,J),pLst%Ke(:,:,1,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
+                                 (/yout( L : L+5 ), yout( L2 : L2+5 )/),  pLst%Fg(:,1,J),   K2,FM_elm,FK_elm) 
                 !transform back to global, need to do 3 at a time since cosine matrix is 3x3
                 DO L=1,2  
                    FM_elm2((L-1)*3+1:L*3) = FM_elm2((L-1)*3+1:L*3) + matmul(p%elemprops(K)%DirCos,FM_elm((L-1)*3+1:L*3))  !sum forces at joint in GLOBAL REF
