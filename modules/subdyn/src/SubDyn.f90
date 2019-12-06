@@ -307,6 +307,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! sets Init%NNode, Init%NElm
    CALL SD_Discrt(Init,p, ErrStat2, ErrMsg2); if(Failed()) return
       
+   ! Set element properties (p%ElemProps)
+   CALL SetElementProperties(Init,p, ErrStat2, ErrMsg2); if(Failed()) return
+
    ! Assemble Stiffness and mass matrix
    CALL AssembleKM(Init,p, ErrStat2, ErrMsg2); if(Failed()) return
 
@@ -797,6 +800,8 @@ CALL ReadLVar ( UnIn, SDInputFile, Init%CBMod , 'CBMod' , 'C-B mod flag'        
 IF (Check( (p%IntMethod < 1) .OR.(p%IntMethod > 4)     , 'IntMethod must be 1 through 4.')) return
 IF (Check( (Init%FEMMod < 0 ) .OR. ( Init%FEMMod > 4 ) , 'FEMMod must be 0, 1, 2, or 3.')) return
 IF (Check( Init%NDiv < 1                               , 'NDiv must be a positive integer')) return
+IF (Check( Init%FEMMod==2  , 'FEMMod = 2 (tapered Euler-Bernoulli) not implemented')) return
+IF (Check( Init%FEMMod==4  , 'FEMMod = 4 (tapered Timoshenko) not implemented')) return
 
 IF (Init%CBMod) THEN
    ! Nmodes - Number of interal modes to retain.

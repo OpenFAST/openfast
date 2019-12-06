@@ -570,73 +570,41 @@ SUBROUTINE SetNewProp(k, E, G, rho, d, t, TempProps)
 END SUBROUTINE SetNewProp
 
 !------------------------------------------------------------------------------------------------------
-!> Assemble stiffness and mass matrix, and gravity force vector
-SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
-   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+!> Set Element properties p%ElemProps, different properties are set depening on element type..
+SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
+   TYPE(SD_InitType),            INTENT(IN   ) :: Init
    TYPE(SD_ParameterType),       INTENT(INOUT) :: p
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER                  :: I, J, K, Jn, Kn, iTmp
-   INTEGER, PARAMETER       :: NNE=2      ! number of nodes in one element, fixed to 2
+   INTEGER                  :: I, J, K, iTmp
    INTEGER                  :: N1, N2     ! starting node and ending node in the element
    INTEGER                  :: P1, P2     ! property set numbers for starting and ending nodes
    REAL(ReKi)               :: D1, D2, t1, t2, E, G, rho ! properties of a section
-   REAL(ReKi)               :: x1, y1, z1, x2, y2, z2    ! coordinates of the nodes
    REAL(ReKi)               :: DirCos(3, 3)              ! direction cosine matrices
    REAL(ReKi)               :: L                         ! length of the element
    REAL(ReKi)               :: T0                        ! pretension force in cable [N]
    REAL(ReKi)               :: r1, r2, t, Iyy, Jzz, Ixx, A, kappa, nu, ratioSq, D_inner, D_outer
    LOGICAL                  :: shear
-   REAL(ReKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
-   REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
-   INTEGER, DIMENSION(NNE)  :: nn                        ! node number in element 
-   INTEGER                  :: r
    INTEGER(IntKi)           :: eType !< Member type
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(1024)          :: ErrMsg2
+   ErrMsg  = ""
+   ErrStat = ErrID_None
    
-   ! for current application
-   if    (Init%FEMMod == 2) THEN ! tapered Euler-Bernoulli
-       CALL Fatal ('FEMMod = 2 is not implemented.')
-       return
-   elseif (Init%FEMMod == 4) THEN ! tapered Timoshenko
-       CALL Fatal ('FEMMod = 2 is not implemented.')
-       return
-   elseif ((Init%FEMMod == 1) .or. (Init%FEMMod == 3)) THEN !
-      ! 1: uniform Euler-Bernouli,  3: uniform Timoshenko
-   else
-       CALL Fatal('FEMMod is not valid. Please choose from 1, 2, 3, and 4. ')
-       return
-   endif
-   
-   ! total degrees of freedom of the system 
-   Init%TDOF = 6*Init%NNode
-   
-   ALLOCATE( p%ElemProps(Init%NElem), STAT=ErrStat2)
-   IF (ErrStat2 /= 0) THEN
-       CALL Fatal('Error allocating p%ElemProps')
-       return
-   ENDIF
-
-   CALL AllocAry( Init%K, Init%TDOF, Init%TDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-   CALL AllocAry( Init%m, Init%TDOF, Init%TDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   CALL AllocAry( Init%FG,Init%TDOF,             'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
-   Init%K  = 0.0_ReKi
-   Init%M  = 0.0_ReKi
-   Init%FG = 0.0_ReKi
+   ALLOCATE( p%ElemProps(Init%NElem), STAT=ErrStat2); ErrMsg2='Error allocating p%ElemProps'
+   if(Failed()) return
    
    ! Loop over all elements and set ElementProperties
-   DO I = 1, Init%NElem
-   
-      N1 = p%Elems(I,       2)
-      N2 = p%Elems(I, NNE + 1)
+   do I = 1, Init%NElem
+      N1 = p%Elems(I, 2)
+      N2 = p%Elems(I, 3)
       
       P1    = p%Elems(I, iMProp  )
       P2    = p%Elems(I, iMProp+1)
       eType = p%Elems(I, iMType)
 
-      ! --- Properties common to all element types:
+      ! --- Properties common to all element types: L, DirCos (and Area and rho)
       CALL GetDirCos(Init%Nodes(N1,2:4), Init%Nodes(N2,2:4), DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
       p%ElemProps(i)%eType  = eType
       p%ElemProps(i)%Length = L
@@ -653,20 +621,20 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
          t2  = Init%PropsB(P2, 6)
          r1 = 0.25*(D1 + D2)
          t  = 0.5*(t1+t2)
-         IF ( EqualRealNos(t, 0.0_ReKi) ) THEN
+         if ( EqualRealNos(t, 0.0_ReKi) ) then
             r2 = 0
-         ELSE
+         else
             r2 = r1 - t
-         ENDIF
+         endif
          A = Pi_D*(r1*r1-r2*r2)
          Ixx = 0.25*Pi_D*(r1**4-r2**4)
          Iyy = Ixx
          Jzz = 2.0*Ixx
          
-         IF( Init%FEMMod == 1 ) THEN ! uniform Euler-Bernoulli
+         if( Init%FEMMod == 1 ) then ! uniform Euler-Bernoulli
             Shear = .false.
             kappa = 0
-         ELSEIF( Init%FEMMod == 3 ) THEN ! uniform Timoshenko
+         elseif( Init%FEMMod == 3 ) then ! uniform Timoshenko
             Shear = .true.
           ! kappa = 0.53            
             ! equation 13 (Steinboeck et al) in SubDyn Theory Manual 
@@ -676,13 +644,13 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
             ratioSq = ( D_inner / D_outer)**2
             kappa =   ( 6.0 * (1.0 + nu) **2 * (1.0 + ratioSq)**2 ) &
                     / ( ( 1.0 + ratioSq )**2 * ( 7.0 + 14.0*nu + 8.0*nu**2 ) + 4.0 * ratioSq * ( 5.0 + 10.0*nu + 4.0 *nu**2 ) )
-         ENDIF
+         endif
          ! Storing Beam specific properties
-         p%ElemProps(i)%Ixx = Ixx
-         p%ElemProps(i)%Iyy = Iyy
-         p%ElemProps(i)%Jzz = Jzz
-         p%ElemProps(i)%Shear = Shear
-         p%ElemProps(i)%kappa = kappa
+         p%ElemProps(i)%Ixx    = Ixx
+         p%ElemProps(i)%Iyy    = Iyy
+         p%ElemProps(i)%Jzz    = Jzz
+         p%ElemProps(i)%Shear  = Shear
+         p%ElemProps(i)%kappa  = kappa
          p%ElemProps(i)%YoungE = E
          p%ElemProps(i)%ShearG = G
          p%ElemProps(i)%Area   = A
@@ -705,13 +673,46 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
          print*,'Element type unknown',eType
          STOP
       end if
-   ENDDO ! I end loop over elements
+   enddo ! I end loop over elements
+CONTAINS
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetElementProperties') 
+        Failed =  ErrStat >= AbortErrLev
+   END FUNCTION Failed
+END SUBROUTINE SetElementProperties 
 
+!------------------------------------------------------------------------------------------------------
+!> Assemble stiffness and mass matrix, and gravity force vector
+SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   INTEGER                  :: I, J, K, jn, kn
+   INTEGER                  :: iGlob
+   REAL(ReKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
+   REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
+   INTEGER, DIMENSION(2)    :: nn                        ! node number in element 
+   INTEGER(IntKi)           :: ErrStat2
+   CHARACTER(1024)          :: ErrMsg2
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+   
+   ! total degrees of freedom of the system 
+   Init%TDOF = 6*Init%NNode
 
-   ! loop over all elements
-   DO I = 1, Init%NElem
-      NN(1) = p%Elems(I, 2)
-      NN(2) = p%Elems(I, 3)
+   CALL AllocAry( Init%K, Init%TDOF, Init%TDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   CALL AllocAry( Init%M, Init%TDOF, Init%TDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
+   CALL AllocAry( Init%FG,Init%TDOF,             'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   Init%K  = 0.0_ReKi
+   Init%M  = 0.0_ReKi
+   Init%FG = 0.0_ReKi
+
+   ! loop over all elements, compute element matrices and assemble into global matrices
+   DO i = 1, Init%NElem
+      nn(1) = p%Elems(i, 2)
+      nn(2) = p%Elems(i, 3)
 
       ! --- Element Me,Ke,Fg, Fce
       CALL ElemM(p%ElemProps(i), Me)
@@ -719,33 +720,33 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       CALL ElemF(p%ElemProps(i), Init%g, FGe, FCe)
 
       ! assemble element matrices to global matrices
-      DO J = 1, NNE
+      DO J = 1, 2
          jn = nn(j)
          Init%FG( (jn*6-5):(jn*6) ) = Init%FG( (jn*6-5):(jn*6) )  + FGe( (J*6-5):(J*6) )+ FCe( (J*6-5):(J*6) )
-         DO K = 1, NNE
+         DO K = 1, 2
             kn = nn(k)
             Init%K( (jn*6-5):(jn*6), (kn*6-5):(kn*6) ) = Init%K( (jn*6-5):(jn*6), (kn*6-5):(kn*6) ) + Ke( (J*6-5):(J*6), (K*6-5):(K*6) )
             Init%M( (jn*6-5):(jn*6), (kn*6-5):(kn*6) ) = Init%M( (jn*6-5):(jn*6), (kn*6-5):(kn*6) ) + Me( (J*6-5):(J*6), (K*6-5):(K*6) )
          ENDDO !K
       ENDDO !J
-   ENDDO ! I end loop over elements
+   ENDDO ! end loop over elements , i
       
    ! add concentrated mass 
    DO I = 1, Init%NCMass
       DO J = 1, 3
-          r = ( NINT(Init%CMass(I, 1)) - 1 )*6 + J
-          Init%M(r, r) = Init%M(r, r) + Init%CMass(I, 2)
+          iGlob = ( NINT(Init%CMass(I, 1)) - 1 )*6 + J
+          Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, 2)
       ENDDO
       DO J = 4, 6
-          r = ( NINT(Init%CMass(I, 1)) - 1 )*6 + J
-          Init%M(r, r) = Init%M(r, r) + Init%CMass(I, J-1)
+          iGlob = ( NINT(Init%CMass(I, 1)) - 1 )*6 + J
+          Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, J-1)
       ENDDO
    ENDDO ! Loop on concentrated mass
 
    ! add concentrated mass induced gravity force
    DO I = 1, Init%NCMass
-       r = ( NINT(Init%CMass(I, 1)) - 1 )*6 + 3
-       Init%FG(r) = Init%FG(r) - Init%CMass(I, 2)*Init%g 
+       iGlob = ( NINT(Init%CMass(I, 1)) - 1 )*6 + 3
+       Init%FG(iGlob) = Init%FG(iGlob) - Init%CMass(I, 2)*Init%g 
    ENDDO ! I concentrated mass induced gravity
    
    CALL CleanUp_AssembleKM()
