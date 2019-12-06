@@ -142,14 +142,19 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
     ErrMsg2 = 'Error allocating p%MOutLst2 array in SDOut_Init'
      
     DO I=1,p%NMembers
+      CALL AllocAry(p%MOutLst2(I)%NodeIDs, Init%Ndiv+1, 'MOutLst2(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(p%MOutLst2(I)%ElmIDs,     2, 1, 'MOutLst2(I)%ElmIDs'     , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(p%MOutLst2(I)%ElmNds,     2, 1, 'MOutLst2(I)%ElmNds'     , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(p%MOutLst2(I)%Me, 12, 12, 2, 1, 'MOutLst2(I)%Me'         , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(p%MOutLst2(I)%Ke, 12, 12, 2, 1, 'MOutLst2(I)%Ke'         , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(p%MOutLst2(I)%Fg,     12, 2, 1, 'MOutLst2(I)%Fg'         , ErrStat2, ErrMsg2); if(Failed()) return
 
       p%MOutLst2(I)%MemberID=I !Assign memberID for all members
-      CALL AllocAry(p%MOutLst2(I)%NodeIDs,    Init%Ndiv+1           , 'MOutLst2(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
       p%MOutLst2(I)%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
       
       !Now I need to find out which elements are attached to those nodes and still belong to the member I
-      !ElmID2s could contain the same element twice if Ndiv=1
-      p%MOutLst2(I)%ElmID2s=0  !Initialize to 0
+      !ElmIDs could contain the same element twice if Ndiv=1
+      p%MOutLst2(I)%ElmIDs=0  !Initialize to 0
 
       DO J=1,Init%Ndiv+1,Init%Ndiv !Iterate on requested nodes for that member (first and last)
           !I need to get at most 2 elements that belong to the same I Member
@@ -167,14 +172,14 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
              IF (M(1) .EQ. p%MOutLst2(I)%NodeIDs(J)) Junk=M(2)
              
              IF (ANY(Init%MemberNodes(p%MOutLst2(I)%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
-                  p%MOutLst2(I)%ElmID2s(K2)=L     !This array has for each node requested NODEID(J), for each member I, the element to get results for 
-                  p%MOutLst2(I)%ElmNd2s(K2)=1                        !store whether first or second node of element  
-                  IF (M(2) .EQ. p%MOutLst2(I)%NodeIDs(J) ) p%MOutLst2(I)%ElmNd2s(K2)=2 !store whether first or second node of element  
+                  p%MOutLst2(I)%ElmIDs(K2,1)=L     !This array has for each node requested NODEID(J), for each member I, the element to get results for 
+                  p%MOutLst2(I)%ElmNds(K2,1)=1                        !store whether first or second node of element  
+                  IF (M(2) .EQ. p%MOutLst2(I)%NodeIDs(J) ) p%MOutLst2(I)%ElmNds(K2,1)=2 !store whether first or second node of element  
                   ! --- Element Me, Ke, Fg, Fce
-                  CALL ElemM(p%ElemProps(L),         p%MOutLst2(I)%Me2(:,:,K2))
-                  CALL ElemK(p%ElemProps(L),         p%MOutLst2(I)%Ke2(:,:,K2))
-                  CALL ElemF(p%ElemProps(L), Init%g, p%MOutLst2(I)%Fg2(:,K2), FCe)
-                  p%MOutLst2(I)%Fg2(:,K2) = p%MOutLst2(I)%Fg2(:,K2) + FCe(1:12) ! Adding cable element force 
+                  CALL ElemM(p%ElemProps(L),         p%MOutLst2(I)%Me(:,:,K2, 1))
+                  CALL ElemK(p%ElemProps(L),         p%MOutLst2(I)%Ke(:,:,K2, 1))
+                  CALL ElemF(p%ElemProps(L), Init%g, p%MOutLst2(I)%Fg(:,K2,1), FCe)
+                  p%MOutLst2(I)%Fg(:,K2,1) = p%MOutLst2(I)%Fg(:,K2,1) + FCe(1:12) ! Adding cable element force 
                    
                   EXIT   !We found the element for that node, exit loop on elements
               ENDIF
@@ -421,8 +426,8 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
       DO I=1,p%NMembers    !Cycle on all members
          pLst=>p%MOutLst2(I)
          DO J=1,2 !Iterate on requested nodes for that member (first and last)  
-                K =pLst%ElmID2s(J)  !element number
-                K2=pLst%ElmNd2s(J)  !first or second node of the element to be considered
+                K =pLst%ElmIDs(J,1)  !element number
+                K2=pLst%ElmNds(J,1)  !first or second node of the element to be considered
                 !Assign the sign depending on whether it is the 1st or second node
                 sgn=-1
                 IF (K2 .EQ. 2) sgn= +1
@@ -430,8 +435,8 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
                 L =p%IDY((K3(1)-1)*6+1)! starting index for node K3(1) within yout ! TODO different DOF order
                 L2=p%IDY((K3(2)-1)*6+1)! starting index for node K3(2) within yout
                 DIRCOS=transpose(p%elemprops(K)%DirCos)! global to local
-                CALL CALC_NODE_FORCES( DIRCOS, pLst%Me2(:,:,J),pLst%Ke2(:,:,J),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
-                                 (/yout( L : L+5 ), yout( L2 : L2+5 )/), pLst%Fg2(:,J),  K2,FM_elm,FK_elm) 
+                CALL CALC_NODE_FORCES( DIRCOS, pLst%Me(:,:,J,1),pLst%Ke(:,:,J,1),(/uddout( L : L+5  ),uddout( L2 : L2+5 )/), &
+                                 (/yout( L : L+5 ), yout( L2 : L2+5 )/), pLst%Fg(:,J,1),  K2,FM_elm,FK_elm) 
                  ! Store in All Outs
                  L=MaxOutPts+(I-1)*24+(J-1)*12+1!start index
                  L2=L+11
