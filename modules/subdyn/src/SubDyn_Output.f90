@@ -47,122 +47,56 @@ CONTAINS
 !> This subroutine initializes the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
- TYPE(SD_InitType),        INTENT( INOUT ) :: Init                 ! data needed to initialize the output module     
- TYPE(SD_OutputType),      INTENT( INOUT ) :: y                    ! SubDyn module's output data
- TYPE(SD_ParameterType),   INTENT( INOUT ), target :: p                    ! SubDyn module paramters
- TYPE(SD_MiscVarType),     INTENT( INOUT ) :: misc                 ! SubDyn misc/optimization variables
- TYPE(SD_InitOutputType ), INTENT( INOUT ) :: InitOut              ! SubDyn module initialization output data
- REAL(ReKi),               INTENT( IN    ) :: WtrDpth              ! water depth from initialization routine  
- INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
- CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-! Local variables
- INTEGER(IntKi)       :: ErrStat2      ! Error status of the operation
- CHARACTER(ErrMsgLen) :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
- INTEGER(IntKi)                                   :: I,J,K,K2,L,NconEls   !Counters
- INTEGER(IntKi)                                   :: Junk  !Temporary Holders
- INTEGER(IntKi), Dimension(2)                     :: M   !counter for two nodes at a time
- INTEGER(IntKi)                                   :: eType
- TYPE(ElemPropType), pointer :: eP  !< Element Property, Alias to shorten notations
- REAL(ReKi) :: FCe(12) ! Pretension force from cable element
-!-------------------------------------------------------------------------------------------------      
-! Initialize local variables
-!-------------------------------------------------------------------------------------------------      
-ErrStat = 0      
-ErrMsg=""
+   TYPE(SD_InitType),        INTENT( INOUT ) :: Init                 ! data needed to initialize the output module     
+   TYPE(SD_OutputType),      INTENT( INOUT ) :: y                    ! SubDyn module's output data
+   TYPE(SD_ParameterType),   INTENT( INOUT ), target :: p                    ! SubDyn module paramters
+   TYPE(SD_MiscVarType),     INTENT( INOUT ) :: misc                 ! SubDyn misc/optimization variables
+   TYPE(SD_InitOutputType ), INTENT( INOUT ) :: InitOut              ! SubDyn module initialization output data
+   REAL(ReKi),               INTENT( IN    ) :: WtrDpth              ! water depth from initialization routine  
+   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
+   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   INTEGER(IntKi)       :: ErrStat2      ! Error status of the operation
+   CHARACTER(ErrMsgLen) :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                                   :: I,J,K,K2,L,NconEls   !Counters
+   INTEGER(IntKi)                                   :: Junk  !Temporary Holders
+   INTEGER(IntKi), Dimension(2)                     :: M   !counter for two nodes at a time
+   INTEGER(IntKi)                                   :: eType
+   TYPE(ElemPropType), pointer :: eP  !< Element Property, Alias to shorten notations
+   REAL(ReKi) :: FCe(12) ! Pretension force from cable element
+   ErrStat = 0      
+   ErrMsg=""
 
-p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
+   p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
 
-!-------------------------------------------------------------------------------------------------      
-! Check that the variables in OutList are valid      
-!-------------------------------------------------------------------------------------------------      
+   ! Check that the variables in OutList are valid      
+   CALL SDOut_ChkOutLst( Init%SSOutList, p,  ErrStat2, ErrMsg2 ); if(Failed()) return
 
-!   SDOut_Data%NumOuts = HDO_InitData%NumOuts   
-  CALL SDOut_ChkOutLst( Init%SSOutList, p,  ErrStat, ErrMsg )
-  IF ( ErrStat /= 0 ) RETURN
-
-!-------------------------------------------------------------------------------------------------      
-! INITIALIZE FAST-TYPE OUTPUT  (y)
-!-------------------------------------------------------------------------------------------------      
-  !ALLOCATE( y%Y1(TPdofL), STAT = ErrStat )
-  !IF ( ErrStat/= 0 ) THEN
-  !    ErrStat = ErrID_Fatal
-  !    ErrMsg  = 'Error allocating output Y1 array in SDOut_Init'
-  !    RETURN
-  !END IF
-
-!-------------------------------------------------------------------------------------------------      
-! Open the output file, if necessary, and write the header
-!-------------------------------------------------------------------------------------------------      
-
-  IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested           
-
-    
+   IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested           
    ! Allocate SDWrOuput which is used to store a time step's worth of output channels, prior to writing to a file.
-   ALLOCATE( misc%SDWrOutput( p%NumOuts +p%OutAllInt*p%OutAllDims),  STAT = ErrStat )
-   IF ( ErrStat /= ErrID_None ) THEN
-    ErrMsg  = ' Error allocating space for SDWrOutput array.'
-    ErrStat = ErrID_Fatal
-    RETURN
-   END IF
+   CALL AllocAry(misc%SDWrOutput, p%NumOuts +p%OutAllInt*p%OutAllDims, 'SDWrOutupt', ErrStat2, ErrMsg2) ; if(Failed()) return
    misc%SDWrOutput  = 0.0_ReKi
    misc%LastOutTime = 0.0_DbKi
    misc%Decimat     = 0
    
    !Allocate WriteOuput  
-   ALLOCATE( y%WriteOutput( p%NumOuts +p%OutAllInt*p%OutAllDims),  STAT = ErrStat )
-   IF ( ErrStat /= 0 ) THEN
-    ErrMsg  = ' Error allocating space for WriteOutput array.'
-    ErrStat = ErrID_Fatal
-    RETURN
-   END IF
+   CALL AllocAry(y%WriteOutput, p%NumOuts +p%OutAllInt*p%OutAllDims, 'WriteOutput', ErrStat2, ErrMsg2); if(Failed()) return
    y%WriteOutput = 0
 
-   !Do some final mapping and carry out housekeeping to calculate some of the output variable
-   
-  
- !Store mapping between nodes and elements      
-  CALL NodeCon(Init,p,ErrStat, ErrMsg)
-  IF ( ErrStat /=0) RETURN
+  !Store mapping between nodes and elements      
+  CALL NodeCon(Init,p,ErrStat2, ErrMsg2); if(Failed()) return
   
   DO I=1,p%NMOutputs
-   CALL AllocAry(p%MOutLst(I)%NodeIDs, p%MoutLst(I)%NoutCnt, 'MOutLst(I)%NodeIDs', ErrStat2, ErrMsg2) ; if(Failed()) return
+   CALL AllocAry(p%MOutLst(I)%NodeIDs,    p%MoutLst(I)%NoutCnt           , 'MOutLst(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(p%MOutLst(I)%ElmIDs,     p%MoutLst(I)%NoutCnt, p%NAvgEls, 'MOutLst(I)%ElmIDs' , ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(p%MOutLst(I)%ElmNds,     p%MoutLst(I)%NoutCnt, p%NAvgEls, 'MOutLst(I)%ElmNds' , ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(p%MOutLst(I)%Me, 12, 12, p%MoutLst(I)%NoutCnt, p%NAvgEls, 'MOutLst(I)%Me'     , ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(p%MOutLst(I)%Ke, 12, 12, p%MoutLst(I)%NoutCnt, p%NAvgEls, 'MOutLst(I)%Ke'     , ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(p%MOutLst(I)%Fg,     12, p%MoutLst(I)%NoutCnt, p%NAvgEls, 'MOutLst(I)%Fg'     , ErrStat2, ErrMsg2); if(Failed()) return
+
    p%MOutLst(I)%NodeIDs=Init%MemberNodes(p%MoutLst(I)%MemberID,p%MOutLst(I)%NodeCnt)  !We are storing the actual node numbers corresponding to what the user ordinal number is requesting
-
-   ALLOCATE( p%MOutLst(I)%ElmIDs(p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !ElmIDs has for each selected node within the member, several element numbers to refer to for averaging (max 2 elements)
-   IF ( ErrStat/= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating p%MOutLst(I)%ElmIDs arrays in SDOut_Init'
-      RETURN
-   END IF 
    p%MOutLst(I)%ElmIDs=0  !Initialize to 0
-
-   ALLOCATE( p%MOutLst(I)%ElmNds(p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !ElmNds has for each selected node within the member, for each element number to refer to for averaging, the flag 1 or 2 depending on whether it is the 1st or last node of that element
-   IF ( ErrStat/= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating p%MOutLst(I)%ElmNds arrays in SDOut_Init'
-      RETURN
-   END IF 
-
-   ALLOCATE( p%MOutLst(I)%Me(12,12,p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !Me has for each selected node within the member, and for each element attached to that node for averaging (max 2) a 12x12 matrix
-   IF ( ErrStat/= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating p%MOutLst(I)%Me arrays in SDOut_Init'
-      RETURN
-   END IF 
-   ALLOCATE( p%MOutLst(I)%Ke(12,12,p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !Ke has for each selected node within the member, and for each element attached to that node for averaging (max 2) a 12x12 matrix
-   IF ( ErrStat/= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating p%MOutLst(I)%Ke arrays in SDOut_Init'
-      RETURN
-   END IF 
-    ALLOCATE( p%MOutLst(I)%Fg(12,p%MoutLst(I)%NoutCnt,p%NAvgEls), STAT = ErrStat ) !Fg has for each selected node within the member, and for each element attached to that node for averaging (max 2) a 12x1 vector
-   IF ( ErrStat/= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating p%MOutLst(I)%Fg arrays in SDOut_Init'
-      RETURN
-   END IF 
-
-
+   p%MOutLst(I)%ElmNds=0  !Initialize to 0
 
    DO J=1,p%MoutLst(I)%NoutCnt !Iterate on requested nodes for that member
       !I need to get at most 2 elements that belong to the same MoutLst(I)%MemberID
@@ -223,41 +157,26 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
             ! Adding cable element force to gravity vector
             p%MoutLst(I)%Fg(:,J,K2) = p%MoutLst(I)%Fg(:,J,K2) + FCe(1:12)
          END IF    
-      ENDDO    
-     ENDDO
+      ENDDO  ! K, NconEls
+     ENDDO !J, Noutcnt
+   ENDDO  !I, NMOutputs
 
-   ENDDO       
-
-
-
- END IF   ! there are any requested outputs   
-
+   END IF   ! there are any requested outputs   
  
- IF (p%OutAll) THEN  !I need to store all member end forces and moments 
+   IF (p%OutAll) THEN  !I need to store all member end forces and moments 
      
-    ALLOCATE ( p%MOutLst2(p%NMembers), STAT = ErrStat )     !this list contains different arrays for each of its elements
-    IF ( ErrStat /= ErrID_None ) THEN
-        ErrStat = ErrID_Fatal
-         ErrMsg  = 'Error allocating p%MOutLst2 array in SDOut_Init'
-         RETURN
-    END IF
-    
+    ALLOCATE ( p%MOutLst2(p%NMembers), STAT = ErrStat2 )     !this list contains different arrays for each of its elements
+    ErrMsg2 = 'Error allocating p%MOutLst2 array in SDOut_Init'
      
     DO I=1,p%NMembers
+
       p%MOutLst2(I)%MemberID=I !Assign memberID for all members
-      
-      ALLOCATE( p%MOutLst2(I)%NodeIDs(Init%Ndiv+1), STAT = ErrStat )  !1st and last node of member
-      IF ( ErrStat/= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'Error allocating p%MOutLst2(I)%NodeIDs arrays in SDOut_Init'
-         RETURN
-      END IF
+      CALL AllocAry(p%MOutLst2(I)%NodeIDs,    Init%Ndiv+1           , 'MOutLst2(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
       p%MOutLst2(I)%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
       
       !Now I need to find out which elements are attached to those nodes and still belong to the member I
       !ElmID2s could contain the same element twice if Ndiv=1
       p%MOutLst2(I)%ElmID2s=0  !Initialize to 0
-      
 
       DO J=1,Init%Ndiv+1,Init%Ndiv !Iterate on requested nodes for that member (first and last)
           !I need to get at most 2 elements that belong to the same I Member
@@ -275,9 +194,7 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
              IF (M(1) .EQ. p%MoutLst2(I)%NodeIDs(J)) Junk=M(2)
              
              IF (ANY(Init%MemberNodes(p%MoutLst2(I)%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
-                 
                   p%MoutLst2(I)%ElmID2s(K2)=L     !This array has for each node requested NODEID(J), for each member I, the element to get results for 
-                  
                   p%MoutLst2(I)%ElmNd2s(K2)=1                        !store whether first or second node of element  
                   IF (M(2) .EQ. p%MoutLst2(I)%NodeIDs(J) ) p%MoutLst2(I)%ElmNd2s(K2)=2 !store whether first or second node of element  
                         
@@ -291,146 +208,72 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
                    
                   EXIT   !We found the element for that node, exit loop on elements
               ENDIF
-              
-              
           ENDDO
-          
       ENDDO
-
     ENDDO    
-    
- 
- ENDIF
- 
- !_____________________________________REACTIONS_____________________________________________
-p%OutReact = .FALSE.
-DO I=1,p%NumOuts
-   if ( ANY( p%OutParam(I)%Indx == ReactSS) ) THEN ! bjj: removed check of first 5 characters being "React" because (1) cases matter and (2) we can also ask for "-React*" or "mREACT"
-      p%OutReact   =.TRUE.  
-      EXIT
    ENDIF
-ENDDO
  
- IF (p%OutReact) THEN  !I need to store all constrained forces and moments; WE do not allow more than one member to be connected at a constrained joint for the time being
-    
-    ALLOCATE ( p%MOutLst3(p%NReact), STAT = ErrStat )     !this list contains different arrays for each of its elements
-    IF ( ErrStat /= ErrID_None ) THEN
-        ErrStat = ErrID_Fatal
-         ErrMsg  = 'Error allocating p%MOutLst3 array in SDOut_Init'
-         RETURN
-    END IF
-    
-     
-    DO I=1,p%NReact  !For all constrained node
+   !_____________________________________REACTIONS_____________________________________________
+   p%OutReact = .FALSE.
+   DO I=1,p%NumOuts
+      if ( ANY( p%OutParam(I)%Indx == ReactSS) ) THEN ! bjj: removed check of first 5 characters being "React" because (1) cases matter and (2) we can also ask for "-React*" or "mREACT"
+         p%OutReact   =.TRUE.  
+         EXIT
+      ENDIF
+   ENDDO
  
-      p%MOutLst3(I)%Noutcnt=p%Reacts(I,1) !Assign nodeID for list I, I am using Noutcnt as a temporary holder for it, since nodeID is n array
-      
-      !Next stuff to be eliminated
-      !ALLOCATE( p%MOutLst3(I)%NodeIDs(Init%Ndiv+1), STAT = ErrStat )  !
-      ! IF ( ErrStat/= 0 ) THEN
-      !   ErrStat = ErrID_Fatal
-      !   ErrMsg  = 'Error allocating p%MOutLst3(I)%NodeIDs arrays in SDOut_Init'
-      !   RETURN
-      ! END IF
-      ! 
-      !p%MOutLst3(I)%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
-      !Now I need to find out which elements are attached to those nodes and still belong to the member I
-      !ElmID2s could contain the same element twice if Ndiv=1
-      !p%MOutLst3(I)%ElmID2s=0  !Initialize to 0
-      
-          !I need to get ALL the elements that belong to the same joint
-          !make use of MemberNodes and NodesConnE
-          
-      NconEls=Init%NodesConnE(p%MoutLst3(I)%Noutcnt,1) !Number of elements connecting to the joint
-           
-       ALLOCATE( p%MOutLst3(I)%ElmIDs(1,NconEls), STAT = ErrStat )  !element IDs connecting to the joint; (1,NconEls) and not (NconEls) as the same meshauxtype is used with other Moutlst
-       IF ( ErrStat/= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'Error allocating p%MOutLst3(I)%ElmIDs arrays in SDOut_Init'
-         RETURN
-       END IF
-       
-       ALLOCATE( p%MOutLst3(I)%ElmNds(1,NconEls), STAT = ErrStat )  !This array contains for each element connected to the joint, a flag that tells me whether the joint is node 1 or 2 for the elements
-       IF ( ErrStat/= 0 ) THEN
-         ErrStat = ErrID_Fatal
-         ErrMsg  = 'Error allocating p%MOutLst3(I)%ElmIDs arrays in SDOut_Init'
-         RETURN
-       END IF
-       
-    ALLOCATE( p%MOutLst3(I)%Me(12,12,1,NconEls), STAT = ErrStat ) !Me has for each selected joint, and for each element attached to that node, a 12x12 matrix (extra dimension redundant)
-   IF ( ErrStat/= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating p%MOutLst3(I)%Me arrays in SDOut_Init'
-      RETURN
-   END IF 
-   ALLOCATE( p%MOutLst3(I)%Ke(12,12,1,NconEls), STAT = ErrStat ) !Ke has for each selected joint, and for each element attached to that node  a 12x12 matrix
-   IF ( ErrStat/= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating p%MOutLst3(I)%Ke arrays in SDOut_Init'
-      RETURN
-   END IF 
-    ALLOCATE( p%MOutLst3(I)%Fg(12,1,NconEls), STAT = ErrStat ) !Fg has for each selected joint, and for each element attached to that node  a 12x1 vector
-   IF ( ErrStat/= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Error allocating p%MOutLst3(I)%Ke arrays in SDOut_Init'
-      RETURN
-    END IF 
-    
+   IF (p%OutReact) THEN  !I need to store all constrained forces and moments; WE do not allow more than one member to be connected at a constrained joint for the time being
+
+      ALLOCATE ( p%MOutLst3(p%NReact), STAT = ErrStat2)     !this list contains different arrays for each of its elements
+      ErrMsg2 = 'Error allocating p%MOutLst3 array in SDOut_Init'
+      if(Failed()) return
+
+      DO I=1,p%NReact  !For all constrained node
+         p%MOutLst3(I)%Noutcnt=p%Reacts(I,1) !Assign nodeID for list I, I am using Noutcnt as a temporary holder for it, since nodeID is n array
+         NconEls=Init%NodesConnE(p%MoutLst3(I)%Noutcnt,1) !Number of elements connecting to the joint
+         ! ElmIDs: element IDs connecting to the joint; (1,NconEls) and not (NconEls) as the same meshauxtype is used with other Moutlst
+         ! Me: has for each selected joint, and for each element attached to that node, a 12x12 matrix (extra dimension redundant)
+         ! Ke: has for each selected joint, and for each element attached to that node  a 12x12 matrix
+         CALL AllocAry(p%MOutLst3(I)%ElmIDs,      1, NconEls, ' p%MOutLst3(I)%ElmIds', ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(p%MOutLst3(I)%ElmNds,      1, NconEls, ' p%MOutLst3(I)%ElmNds', ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(p%MOutLst3(I)%Me, 12, 12 , 1, NconEls, ' p%MOutLst3(I)%Me'    , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(p%MOutLst3(I)%Ke, 12, 12 , 1, NconEls, ' p%MOutLst3(I)%Ke'    , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(p%MOutLst3(I)%Fg,     12 , 1, NconEls, ' p%MOutLst3(I)%Fg'    , ErrStat2, ErrMsg2); if(Failed()) return
+
          DO K=1, NconEls 
-              L=Init%NodesConnE(p%MoutLst3(I)%Noutcnt,k+1)  !k-th Element Number in the set of elements attached to the selected node 
-              
-              p%MoutLst3(I)%ElmIDs(1,K)=L     !This array has for each joint requested  the elements' ID to get results for  
-              
-              M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
-             
-              !Select whether the joint is the 1st or second node of the element
-              p%MoutLst3(I)%ElmNds(1,K)=1                        !store whether first or second node of element  
-              IF (M(2) .EQ. p%MoutLst3(I)%Noutcnt ) p%MoutLst3(I)%ElmNds(1,K)=2 !store whether first or second node of element  
-             
-              !Calculate Ke, Me to be used for output
-              CALL ElemK_Beam( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy, &
-                              p%elemprops(L)%Jzz, p%elemprops(L)%Shear, p%elemprops(L)%kappa, p%elemprops(L)%YoungE,  & 
-                              p%elemprops(L)%ShearG, p%elemprops(L)%DirCos, p%MoutLst3(I)%Ke(:,:,1,K) )
-              CALL ElemM_Beam( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy,&
-                              p%elemprops(L)%Jzz,  p%elemprops(L)%rho,  p%elemprops(L)%DirCos, p%MoutLst3(I)%Me(:,:,1,K) )   
-              CALL ElemG( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%rho,  p%elemprops(L)%DirCos, p%MoutLst3(I)%Fg(:,1,K), Init%g )   
-              
-             
-        ENDDO
-          
-    ENDDO
+            L=Init%NodesConnE(p%MoutLst3(I)%Noutcnt,k+1)  !k-th Element Number in the set of elements attached to the selected node 
 
-    !Store the matrix that will let me calculate single point reaction at the base of structure
-    CALL ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
- ENDIF
+            p%MoutLst3(I)%ElmIDs(1,K)=L     !This array has for each joint requested  the elements' ID to get results for  
 
+            M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
+
+            !Select whether the joint is the 1st or second node of the element
+            p%MoutLst3(I)%ElmNds(1,K)=1                        !store whether first or second node of element  
+            IF (M(2) .EQ. p%MoutLst3(I)%Noutcnt ) p%MoutLst3(I)%ElmNds(1,K)=2 !store whether first or second node of element  
+
+            !Calculate Ke, Me to be used for output
+            CALL ElemK_Beam( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy, &
+               p%elemprops(L)%Jzz, p%elemprops(L)%Shear, p%elemprops(L)%kappa, p%elemprops(L)%YoungE,  & 
+               p%elemprops(L)%ShearG, p%elemprops(L)%DirCos, p%MoutLst3(I)%Ke(:,:,1,K) )
+            CALL ElemM_Beam( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy,&
+               p%elemprops(L)%Jzz,  p%elemprops(L)%rho,  p%elemprops(L)%DirCos, p%MoutLst3(I)%Me(:,:,1,K) )   
+            CALL ElemG( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%rho,  p%elemprops(L)%DirCos, p%MoutLst3(I)%Fg(:,1,K), Init%g )   
+         ENDDO
+      ENDDO
+      !Store the matrix that will let me calculate single point reaction at the base of structure
+      CALL ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
+   ENDIF
  
- 
- ! These variables are to help follow the framework template, but the data in them is simply a copy of data
- ! already available in the OutParam data structure
-
-  ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts+p%OutAllint*p%OutAllDims), STAT = ErrStat )
-  IF ( ErrStat /= ErrID_None ) THEN
-   ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
-   ErrStat = ErrID_Fatal
-   RETURN
-  END IF
-
-  ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts+p%OutAllint*p%OutAllDims), STAT = ErrStat )
-  IF ( ErrStat /= ErrID_None ) THEN
-   ErrMsg  = ' Error allocating space for WriteOutputHdr array.'
-   ErrStat = ErrID_Fatal
-   RETURN
-  END IF
-
-   
+   ! These variables are to help follow the framework template, but the data in them is simply a copy of data
+   ! already available in the OutParam data structure
+   CALL AllocAry(InitOut%WriteOutputHdr, p%NumOuts+p%OutAllint*p%OutAllDims, 'WriteOutputHdr', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(InitOut%WriteOutputUnt, p%NumOuts+p%OutAllint*p%OutAllDims, 'WriteOutputUnt', ErrStat2, ErrMsg2); if(Failed()) return
    DO I = 1,p%NumOuts+p%OutAllint*p%OutAllDims
-    InitOut%WriteOutputHdr(I) = TRIM( p%OutParam(I)%Name  )
-    InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )      
+      InitOut%WriteOutputHdr(I) = TRIM( p%OutParam(I)%Name  )
+      InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )      
    END DO  
    
-    
-RETURN
+   RETURN
 
 CONTAINS
    LOGICAL FUNCTION Failed()
@@ -486,33 +329,19 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
       
       rmndr = MOD(I, 6)  !It gives me the column index among the 6 different kinds
       SELECT CASE (rmndr)
-         CASE (1)
-            p%TIreact(4:6, I) = (/0.0_ReKi, z, -y/)
-            
-         CASE (2)
-            p%TIreact(4:6, I) = (/-z, 0.0_ReKi, x/)
-            
-         CASE (3)
-            p%TIreact(4:6, I) = (/y, -x, 0.0_ReKi/)
-         
-         CASE (4)
-            p%TIreact(4:6, I) = (/1.0_ReKi, 0.0_ReKi, 0.0_ReKi/)
-            
-         CASE (5)
-            p%TIreact(4:6, I) = (/0.0_ReKi, 1.0_ReKi, 0.0_ReKi/)
-            
-         CASE (0)
-            p%TIreact(4:6, I) = (/0.0_ReKi, 0.0_ReKi, 1.0_ReKi/)
+         CASE (1); p%TIreact(4:6, I) = (/0.0_ReKi , z        , -y/)
+         CASE (2); p%TIreact(4:6, I) = (/-z       , 0.0_ReKi , x/)
+         CASE (3); p%TIreact(4:6, I) = (/y        , -x       , 0.0_ReKi/)
+         CASE (4); p%TIreact(4:6, I) = (/1.0_ReKi , 0.0_ReKi , 0.0_ReKi/)
+         CASE (5); p%TIreact(4:6, I) = (/0.0_ReKi , 1.0_ReKi , 0.0_ReKi/)
+         CASE (0); p%TIreact(4:6, I) = (/0.0_ReKi , 0.0_ReKi , 1.0_ReKi/)
             
          CASE DEFAULT
             ErrStat = ErrID_Fatal
             ErrMsg  = 'Error calculating transformation matrix TIreact '
             RETURN
          END SELECT
-      
    ENDDO
-   
-   
 END SUBROUTINE ReactMatx
 
 !====================================================================================================
