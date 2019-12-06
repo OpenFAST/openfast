@@ -3766,14 +3766,9 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
 CONTAINS
 
 
-SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
-! This subroutine initializes the output module, checking if the output parameter list (OutList)
+!> This subroutine initializes the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
-!----------------------------------------------------------------------------------------------------
-
-
-! Passed variables
-
+SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
  TYPE(SD_InitType),        INTENT( INOUT ) :: Init                 ! data needed to initialize the output module     
  TYPE(SD_OutputType),      INTENT( INOUT ) :: y                    ! SubDyn module's output data
  TYPE(SD_ParameterType),   INTENT( INOUT ), target :: p                    ! SubDyn module paramters
@@ -3782,9 +3777,9 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
  REAL(ReKi),               INTENT( IN    ) :: WtrDpth              ! water depth from initialization routine  
  INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
  CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
 ! Local variables
-
+ INTEGER(IntKi)       :: ErrStat2      ! Error status of the operation
+ CHARACTER(ErrMsgLen) :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
  INTEGER(IntKi)                                   :: I,J,K,K2,L,NconEls   !Counters
  INTEGER(IntKi)                                   :: Junk  !Temporary Holders
  INTEGER(IntKi), Dimension(2)                     :: M   !counter for two nodes at a time
@@ -3928,28 +3923,28 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
             endif
 
             eP => p%elemprops(L)
-            if (eType==idBeam) then
+            !if (eType==idBeam) then
                !Calculate Ke, Me to be used for output
-               CALL ElemK( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz, eP%Shear, eP%kappa, eP%YoungE, eP%ShearG, eP%DirCos, p%MoutLst(I)%Ke(:,:,J,K2) )
-               CALL ElemM( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho                                 , eP%DirCos, p%MoutLst(I)%Me(:,:,J,K2) )   
+               CALL ElemK_Beam( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz, eP%Shear, eP%kappa, eP%YoungE, eP%ShearG, eP%DirCos, p%MoutLst(I)%Ke(:,:,J,K2) )
+               CALL ElemM_Beam( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho                                 , eP%DirCos, p%MoutLst(I)%Me(:,:,J,K2) )   
                FCe(1:12)=0
 
-            else if (eType==idCable) then
-               CALL ElemK_Cable(ep%Area, ep%Length, ep%YoungE, ep%T0, eP%DirCos, p%MoutLst(I)%Ke(:,:,J,K2))
-               CALL ElemM_Cable(ep%Area, ep%Length, ep%rho          , ep%DirCos, p%MoutLst(I)%Me(:,:,J,K2))
-               CALL ElemF_Cable(ep%Area, ep%Length, ep%T0           , ep%DirCos, FCe)
-
-            else if (eType==idRigid) then
-               FCe(1:12)=0
-               p%MoutLst(I)%Ke(1:12,1:12,J,K2) =0.0_ReKi
-               if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
-                  p%MoutLst(I)%Me(1:12,1:12,J,K2)=0.0_ReKi
-               else
-                  !CALL ElemM_(A, L, rho, DirCos, Me)
-                  print*,'SD_Output: Mass matrix for rigid members rho/=0 TODO'
-                  STOP
-               endif
-            endif
+!             else if (eType==idCable) then
+!                CALL ElemK_Cable(ep%Area, ep%Length, ep%YoungE, ep%T0, eP%DirCos, p%MoutLst(I)%Ke(:,:,J,K2))
+!                CALL ElemM_Cable(ep%Area, ep%Length, ep%rho          , ep%DirCos, p%MoutLst(I)%Me(:,:,J,K2))
+!                CALL ElemF_Cable(ep%Area, ep%Length, ep%T0           , ep%DirCos, FCe)
+! 
+!             else if (eType==idRigid) then
+!                FCe(1:12)=0
+!                p%MoutLst(I)%Ke(1:12,1:12,J,K2) =0.0_ReKi
+!                if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
+!                   p%MoutLst(I)%Me(1:12,1:12,J,K2)=0.0_ReKi
+!                else
+!                   !CALL ElemM_(A, L, rho, DirCos, Me)
+!                   print*,'SD_Output: Mass matrix for rigid members rho/=0 TODO'
+!                   STOP
+!                endif
+!             endif
 
             CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, p%MoutLst(I)%Fg(:,J,K2), Init%g )
             ! Adding cable element force to gravity vector
@@ -4014,10 +4009,10 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
                   IF (M(2) .EQ. p%MoutLst2(I)%NodeIDs(J) ) p%MoutLst2(I)%ElmNd2s(K2)=2 !store whether first or second node of element  
                         
                   !Calculate Ke, Me to be used for output
-                  CALL ElemK( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy, &
+                  CALL ElemK_Beam( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy, &
                               p%elemprops(L)%Jzz, p%elemprops(L)%Shear, p%elemprops(L)%kappa, p%elemprops(L)%YoungE,  & 
                               p%elemprops(L)%ShearG, p%elemprops(L)%DirCos, p%MoutLst2(I)%Ke2(:,:,K2) )
-                  CALL ElemM( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy,&
+                  CALL ElemM_Beam( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy,&
                               p%elemprops(L)%Jzz,  p%elemprops(L)%rho,  p%elemprops(L)%DirCos, p%MoutLst2(I)%Me2(:,:,K2) )      
                   CALL ElemG( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%rho, p%elemprops(L)%DirCos, p%MoutLst2(I)%Fg2(:,K2), Init%g )
                    
@@ -4120,10 +4115,10 @@ ENDDO
               IF (M(2) .EQ. p%MoutLst3(I)%Noutcnt ) p%MoutLst3(I)%ElmNds(1,K)=2 !store whether first or second node of element  
              
               !Calculate Ke, Me to be used for output
-              CALL ElemK( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy, &
+              CALL ElemK_Beam( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy, &
                               p%elemprops(L)%Jzz, p%elemprops(L)%Shear, p%elemprops(L)%kappa, p%elemprops(L)%YoungE,  & 
                               p%elemprops(L)%ShearG, p%elemprops(L)%DirCos, p%MoutLst3(I)%Ke(:,:,1,K) )
-              CALL ElemM( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy,&
+              CALL ElemM_Beam( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy,&
                               p%elemprops(L)%Jzz,  p%elemprops(L)%rho,  p%elemprops(L)%DirCos, p%MoutLst3(I)%Me(:,:,1,K) )   
               CALL ElemG( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%rho,  p%elemprops(L)%DirCos, p%MoutLst3(I)%Fg(:,1,K), Init%g )   
               
@@ -4164,6 +4159,12 @@ ENDDO
     
 RETURN
 
+CONTAINS
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SDOut_Init') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   END FUNCTION Failed
 END SUBROUTINE SDOut_Init
 
 !------------------------------------------------------------------------------------------------------

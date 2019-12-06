@@ -52,7 +52,8 @@ typedef	^	FEM_MatArrays	INTEGER	NOmega	-	-	-	"Number of full FEM Eigenvalues (fo
 typedef	^	FEM_MatArrays	ReKi   	Modes	{:}{:}	-	-	"Eigenmodes of full FEM model,  we calculate them all"
 
 #
-typedef ^   ElemPropType ReKi    Length	 -	-	-	"Length of an element"
+typedef ^   ElemPropType IntKi   eType	 -	-	-	"Element Type"
+typedef ^        ^       ReKi    Length	 -	-	-	"Length of an element"
 typedef ^        ^       ReKi    Ixx	 -	-	-	"Moment of inertia of an element"
 typedef ^        ^       ReKi    Iyy	 -	-	-	"Moment of inertia of an element"
 typedef ^        ^       ReKi    Jzz	 -	-	-	"Moment of inertia of an element"

@@ -89,6 +89,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  ElemPropType  =======
   TYPE, PUBLIC :: ElemPropType
+    INTEGER(IntKi)  :: eType      !< Element Type [-]
     REAL(ReKi)  :: Length      !< Length of an element [-]
     REAL(ReKi)  :: Ixx      !< Moment of inertia of an element [-]
     REAL(ReKi)  :: Iyy      !< Moment of inertia of an element [-]
@@ -2360,6 +2361,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
+    DstElemPropTypeData%eType = SrcElemPropTypeData%eType
     DstElemPropTypeData%Length = SrcElemPropTypeData%Length
     DstElemPropTypeData%Ixx = SrcElemPropTypeData%Ixx
     DstElemPropTypeData%Iyy = SrcElemPropTypeData%Iyy
@@ -2420,6 +2422,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+      Int_BufSz  = Int_BufSz  + 1  ! eType
       Re_BufSz   = Re_BufSz   + 1  ! Length
       Re_BufSz   = Re_BufSz   + 1  ! Ixx
       Re_BufSz   = Re_BufSz   + 1  ! Iyy
@@ -2459,6 +2462,8 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%eType
+      Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Length
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Ixx
@@ -2519,6 +2524,8 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
+      OutData%eType = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
       OutData%Length = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
       OutData%Ixx = ReKiBuf( Re_Xferred )

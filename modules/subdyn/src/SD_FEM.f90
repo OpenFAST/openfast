@@ -588,8 +588,8 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    REAL(ReKi)               :: T0                        ! pretension force in cable [N]
    REAL(ReKi)               :: r1, r2, t, Iyy, Jzz, Ixx, A, kappa, nu, ratioSq, D_inner, D_outer
    LOGICAL                  :: shear
-   REAL(ReKi), ALLOCATABLE  :: Ke(:,:), Me(:, :), FGe(:) ! element stiffness and mass matrices gravity force vector
-   REAL(ReKi), ALLOCATABLE  :: FCe(:) ! Pretension force from cable element
+   REAL(ReKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
+   REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
    INTEGER, DIMENSION(NNE)  :: nn                        ! node number in element 
    INTEGER                  :: r
    INTEGER(IntKi)           :: eType !< Member type
@@ -619,23 +619,15 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
        return
    ENDIF
 
-   CALL AllocAry( Ke,     NNE*6,         NNE*6 , 'Ke',      ErrStat2, ErrMsg2); if(Failed()) return; ! element stiffness matrix
-   CALL AllocAry( Me,     NNE*6,         NNE*6 , 'Me',      ErrStat2, ErrMsg2); if(Failed()) return; ! element mass matrix 
-   CALL AllocAry( FGe,    NNE*6,                 'FGe',     ErrStat2, ErrMsg2); if(Failed()) return; ! element gravity force vector 
-   CALL AllocAry( FCe,    NNE*6,                 'FCe',     ErrStat2, ErrMsg2); if(Failed()) return; ! element pretension force vector 
    CALL AllocAry( Init%K, Init%TDOF, Init%TDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%m, Init%TDOF, Init%TDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
    CALL AllocAry( Init%FG,Init%TDOF,             'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
    Init%K  = 0.0_ReKi
    Init%M  = 0.0_ReKi
    Init%FG = 0.0_ReKi
-
    
-   ! loop over all elements
+   ! Loop over all elements and set ElementProperties
    DO I = 1, Init%NElem
-   
-      NN(1) = p%Elems(I, 2)
-      NN(2) = p%Elems(I, 3)
    
       N1 = p%Elems(I,       2)
       N2 = p%Elems(I, NNE + 1)
@@ -644,11 +636,13 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       P2    = p%Elems(I, iMProp+1)
       eType = p%Elems(I, iMType)
 
-      ! --- Length and Directional cosine
-      CALL GetDirCos(Init%Nodes(N1,2:4), Init%Nodes(N2,2:4), DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return
+      ! --- Properties common to all element types:
+      CALL GetDirCos(Init%Nodes(N1,2:4), Init%Nodes(N2,2:4), DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
+      p%ElemProps(i)%eType  = eType
+      p%ElemProps(i)%Length = L
+      p%ElemProps(i)%DirCos = DirCos
 
-
-      FCe = 0.0_ReKi
+      ! --- Properties that are specific to some elements
       if (eType==idBeam) then
          E   = Init%PropsB(P1, 2)
          G   = Init%PropsB(P1, 3)
@@ -691,63 +685,39 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
          p%ElemProps(i)%kappa = kappa
          p%ElemProps(i)%YoungE = E
          p%ElemProps(i)%ShearG = G
+         p%ElemProps(i)%Area   = A
+         p%ElemProps(i)%Rho    = rho
 
-         ! Element matrices and loads
-         CALL ElemK(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, Ke)
-         CALL ElemM(A, L, Ixx, Iyy, Jzz, rho, DirCos, Me)
       else if (eType==idCable) then
          print*,'Member',I,'eType',eType,'Ps',P1,P2
-         A    = 1                       ! Arbitrary set to 1
-         E    = Init%PropsC(P1, 2)/A    ! Young's modulus, E=EA/A  [N/m^2]
-         rho  = Init%PropsC(P1, 3)      ! Material density [kg/m3]
-         T0   = Init%PropsC(P1, 4)      ! Pretension force [N]
-         ! Storing Cable specific properties
-         p%ElemProps(i)%T0 = T0
+         p%ElemProps(i)%Area   = 1                       ! Arbitrary set to 1
+         p%ElemProps(i)%YoungE = Init%PropsC(P1, 2)/1    ! Young's modulus, E=EA/A  [N/m^2]
+         p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Material density [kg/m3]
+         p%ElemProps(i)%T0     = Init%PropsC(P1, 4)      ! Pretension force [N]
 
-         ! Element matrices and loads
-         CALL ElemK_Cable(A, L, E, T0, DirCos, Ke)
-         CALL ElemM_Cable(A, L, rho, DirCos, Me)
-         CALL ElemF_Cable(A, L, T0, DirCos, FCe)
-         print*,'K'
-         do iTmp=1,12
-            print'(12(E9.1))',Ke(iTmp,1:12)
-         enddo
-         print*,'M'
-         do iTmp=1,12
-            print'(12(E9.1))',Me(iTmp,1:12)
-         enddo
-         print*,'F'
-         print'(12(E9.1))',FCe(1:12)
-
-      
       else if (eType==idRigid) then
          print*,'Member',I,'eType',eType,'Ps',P1,P2
-         A    = 1                       ! Arbitrary set to 1
-         rho = Init%PropsR(P1, 2)
-         ! Element matrices and loads
-         Ke(1:12,1:12)=0
-         if ( EqualRealNos(rho, 0.0_ReKi) ) then
-            Me(1:12,1:12)=0
-         else
-            !CALL ElemM_(A, L, rho, DirCos, Me)
-            print*,'Mass matrix for rigid members rho/=0 TODO'
-            STOP
-         endif
+         p%ElemProps(i)%Area   = 1                  ! Arbitrary set to 1
+         p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)
+
       else
          ! Should not happen
          print*,'Element type unknown',eType
          STOP
       end if
+   ENDDO ! I end loop over elements
 
-      ! --- Properties common to all element types:
-      p%ElemProps(i)%Area   = A
-      p%ElemProps(i)%Length = L
-      p%ElemProps(i)%Rho    = rho
-      p%ElemProps(i)%DirCos = DirCos
-      ! --- Gravity common to all element
-      CALL ElemG(A, L, rho, DirCos, FGe, Init%g)
-      
-      
+
+   ! loop over all elements
+   DO I = 1, Init%NElem
+      NN(1) = p%Elems(I, 2)
+      NN(2) = p%Elems(I, 3)
+
+      ! --- Element Me,Ke,Fg, Fce
+      CALL ElemM(p%ElemProps(i), Me)
+      CALL ElemK(p%ElemProps(i), Ke)
+      CALL ElemF(p%ElemProps(i), Init%g, FGe, FCe)
+
       ! assemble element matrices to global matrices
       DO J = 1, NNE
          jn = nn(j)
@@ -794,9 +764,7 @@ CONTAINS
    END SUBROUTINE Fatal
 
    SUBROUTINE CleanUp_AssembleKM()
-      IF(ALLOCATED(Ke )) DEALLOCATE(Ke )
-      IF(ALLOCATED(Me )) DEALLOCATE(Me )
-      IF(ALLOCATED(FGe)) DEALLOCATE(FGe)
+      !pass
    END SUBROUTINE CleanUp_AssembleKM
    
 END SUBROUTINE AssembleKM
@@ -856,11 +824,65 @@ SUBROUTINE GetDirCos(P1, P2, DirCos, L, ErrStat, ErrMsg)
 
 END SUBROUTINE GetDirCos
 
+
+SUBROUTINE ElemM(ep, Me)
+   TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
+   REAL(ReKi), INTENT(OUT)        :: Me(12, 12)
+   if (ep%eType==idBeam) then
+      !Calculate Ke, Me to be used for output
+      CALL ElemM_Beam(eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho, eP%DirCos, Me)
+
+   else if (ep%eType==idCable) then
+      CALL ElemM_Cable(ep%Area, ep%Length, ep%rho, ep%DirCos, Me)
+
+   else if (ep%eType==idRigid) then
+      if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
+         Me=0.0_ReKi
+      else
+         !CALL ElemM_(A, L, rho, DirCos, Me)
+         print*,'SD_GEM: Mass matrix for rigid members rho/=0 TODO'
+         STOP
+      endif
+   endif
+END SUBROUTINE ElemM
+
+SUBROUTINE ElemK(ep, Ke)
+   TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
+   REAL(ReKi), INTENT(OUT)        :: Ke(12, 12)
+
+   if (ep%eType==idBeam) then
+      CALL ElemK_Beam( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz, eP%Shear, eP%kappa, eP%YoungE, eP%ShearG, eP%DirCos, Ke)
+
+   else if (ep%eType==idCable) then
+      CALL ElemK_Cable(ep%Area, ep%Length, ep%YoungE, ep%T0, eP%DirCos, Ke)
+
+   else if (ep%eType==idRigid) then
+      Ke = 0.0_ReKi
+   endif
+END SUBROUTINE ElemK
+
+SUBROUTINE ElemF(ep, gravity, Fg, Fo)
+   TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
+   REAL(ReKi), INTENT(IN)     :: gravity       !< acceleration of gravity
+   REAL(ReKi), INTENT(OUT)    :: Fg(12)
+   REAL(ReKi), INTENT(OUT)    :: Fo(12)
+   if (ep%eType==idBeam) then
+      Fo(1:12)=0
+   else if (ep%eType==idCable) then
+      CALL ElemF_Cable(ep%Area, ep%Length, ep%T0           , ep%DirCos, Fo)
+   else if (ep%eType==idRigid) then
+      Fo(1:12)=0
+   endif
+   CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, Fg, gravity )
+END SUBROUTINE ElemF
+
+
+
 !------------------------------------------------------------------------------------------------------
 !> Element stiffness matrix for classical beam elements
 !! shear is true  -- non-tapered Timoshenko beam 
 !! shear is false -- non-tapered Euler-Bernoulli beam 
-SUBROUTINE ElemK(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
+SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    REAL(ReKi), INTENT( IN) :: A, L, Ixx, Iyy, Jzz, E, G, kappa
    REAL(ReKi), INTENT( IN) :: DirCos(3,3)
    LOGICAL   , INTENT( IN) :: Shear
@@ -932,7 +954,7 @@ SUBROUTINE ElemK(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    
    K = MATMUL( MATMUL(DC, K), TRANSPOSE(DC) ) ! TODO: change me if DirCos convention is  transposed
    
-END SUBROUTINE ElemK
+END SUBROUTINE ElemK_Beam
 !------------------------------------------------------------------------------------------------------
 !> Element stiffness matrix for pretension cable
 !! Element coordinate system:  z along the cable!
@@ -979,7 +1001,7 @@ SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
 END SUBROUTINE ElemK_Cable
 !------------------------------------------------------------------------------------------------------
 !> Element mass matrix for classical beam elements
-SUBROUTINE ElemM(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
+SUBROUTINE ElemM_Beam(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
    REAL(ReKi), INTENT( IN) :: A, L, Ixx, Iyy, Jzz, rho
    REAL(ReKi), INTENT( IN) :: DirCos(3,3)
    REAL(ReKi), INTENT(OUT) :: M(12, 12)
@@ -1044,7 +1066,7 @@ SUBROUTINE ElemM(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
    
    M = MATMUL( MATMUL(DC, M), TRANSPOSE(DC) ) ! TODO change me if direction cosine is transposed
 
-END SUBROUTINE ElemM
+END SUBROUTINE ElemM_Beam
 
 !> Element stiffness matrix for pretension cable
 SUBROUTINE ElemM_Cable(A, L, rho, DirCos, M)
