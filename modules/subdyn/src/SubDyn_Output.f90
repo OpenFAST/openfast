@@ -3776,7 +3776,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
 
  TYPE(SD_InitType),        INTENT( INOUT ) :: Init                 ! data needed to initialize the output module     
  TYPE(SD_OutputType),      INTENT( INOUT ) :: y                    ! SubDyn module's output data
- TYPE(SD_ParameterType),   INTENT( INOUT ) :: p                    ! SubDyn module paramters
+ TYPE(SD_ParameterType),   INTENT( INOUT ), target :: p                    ! SubDyn module paramters
  TYPE(SD_MiscVarType),     INTENT( INOUT ) :: misc                 ! SubDyn misc/optimization variables
  TYPE(SD_InitOutputType ), INTENT( INOUT ) :: InitOut              ! SubDyn module initialization output data
  REAL(ReKi),               INTENT( IN    ) :: WtrDpth              ! water depth from initialization routine  
@@ -3788,6 +3788,9 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
  INTEGER(IntKi)                                   :: I,J,K,K2,L,NconEls   !Counters
  INTEGER(IntKi)                                   :: Junk  !Temporary Holders
  INTEGER(IntKi), Dimension(2)                     :: M   !counter for two nodes at a time
+ INTEGER(IntKi)                                   :: eType
+ TYPE(ElemPropType), pointer :: eP  !< Element Property, Alias to shorten notations
+ REAL(ReKi) :: FCe(12) ! Pretension force from cable element
 !-------------------------------------------------------------------------------------------------      
 ! Initialize local variables
 !-------------------------------------------------------------------------------------------------      
@@ -3901,28 +3904,56 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
       K2=0    !Initialize counter
       DO K=1, NconEls 
          L=Init%NodesConnE(p%MoutLst(I)%NodeIDs(J),k+1)  !k-th Element Number 
-         M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
+         M     = p%Elems(L,2:3) !1st and 2nd node of the k-th element
+         eType = p%Elems(L, iMType)
             
-            !Select only the other node, not the one where elements connect to
+         !Select only the other node, not the one where elements connect to
+          IF (M(1) .EQ. p%MoutLst(I)%NodeIDs(J)) then
+            Junk=M(2)
+         else
             Junk=M(1)
-            IF (M(1) .EQ. p%MoutLst(I)%NodeIDs(J)) Junk=M(2)
+         endif
                         
          IF (ANY(Init%MemberNodes(p%MoutLst(I)%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
+            !print*,'L',L, 'M',M
+            !print*,'etype',eType
             IF (K2 .EQ. 2) EXIT
             K2=K2+1
             p%MoutLst(I)%ElmIDs(J,K2)=L        !This array has for each node requested NODEID(J), for each memberMOutLst(I)%MemberID, the 2 elements to average from, it may have 1 if one of the numbers is 0 
 
-            p%MoutLst(I)%ElmNds(J,K2)=1                        !store whether first or second node of element  
-            IF (M(2) .EQ. p%MoutLst(I)%NodeIDs(J) ) p%MoutLst(I)%ElmNds(J,K2)=2 !store whether first or second node of element  
+            IF (M(2) .EQ. p%MoutLst(I)%NodeIDs(J) )then 
+               p%MoutLst(I)%ElmNds(J,K2)=2 !store whether first or second node of element  
+            else
+               p%MoutLst(I)%ElmNds(J,K2)=1 !store whether first or second node of element  
+            endif
 
-            !Calculate Ke, Me to be used for output
-            CALL ElemK( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy, &
-            p%elemprops(L)%Jzz, p%elemprops(L)%Shear, p%elemprops(L)%kappa, p%elemprops(L)%YoungE,  & 
-            p%elemprops(L)%ShearG, p%elemprops(L)%DirCos, p%MoutLst(I)%Ke(:,:,J,K2) )
-            CALL ElemM( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%Ixx, p%elemprops(L)%Iyy,&
-            p%elemprops(L)%Jzz,  p%elemprops(L)%rho,  p%elemprops(L)%DirCos, p%MoutLst(I)%Me(:,:,J,K2) )   
-                
-                CALL ElemG( p%elemprops(L)%Area, p%elemprops(L)%Length, p%elemprops(L)%rho, p%elemprops(L)%DirCos, p%MoutLst(I)%Fg(:,J,K2), Init%g )
+            eP => p%elemprops(L)
+            if (eType==idBeam) then
+               !Calculate Ke, Me to be used for output
+               CALL ElemK( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz, eP%Shear, eP%kappa, eP%YoungE, eP%ShearG, eP%DirCos, p%MoutLst(I)%Ke(:,:,J,K2) )
+               CALL ElemM( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho                                 , eP%DirCos, p%MoutLst(I)%Me(:,:,J,K2) )   
+               FCe(1:12)=0
+
+            else if (eType==idCable) then
+               CALL ElemK_Cable(ep%Area, ep%Length, ep%YoungE, ep%T0, eP%DirCos, p%MoutLst(I)%Ke(:,:,J,K2))
+               CALL ElemM_Cable(ep%Area, ep%Length, ep%rho          , ep%DirCos, p%MoutLst(I)%Me(:,:,J,K2))
+               CALL ElemF_Cable(ep%Area, ep%Length, ep%T0           , ep%DirCos, FCe)
+
+            else if (eType==idRigid) then
+               FCe(1:12)=0
+               p%MoutLst(I)%Ke(1:12,1:12,J,K2) =0.0_ReKi
+               if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
+                  p%MoutLst(I)%Me(1:12,1:12,J,K2)=0.0_ReKi
+               else
+                  !CALL ElemM_(A, L, rho, DirCos, Me)
+                  print*,'SD_Output: Mass matrix for rigid members rho/=0 TODO'
+                  STOP
+               endif
+            endif
+
+            CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, p%MoutLst(I)%Fg(:,J,K2), Init%g )
+            ! Adding cable element force to gravity vector
+            p%MoutLst(I)%Fg(:,J,K2) = p%MoutLst(I)%Fg(:,J,K2) + FCe(1:12)
          END IF    
       ENDDO    
      ENDDO

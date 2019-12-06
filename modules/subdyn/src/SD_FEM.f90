@@ -86,11 +86,11 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
   CALL AllocAry(Init%NodesConnE, Init%NNode, MaxMemJnt+1,'NodesConnE', ErrStat, ErrMsg); if (ErrStat/=0) return;
   CALL AllocAry(Init%NodesConnN, Init%NNode, MaxMemJnt+2,'NodesConnN', ErrStat, ErrMsg); if (ErrStat/=0) return;
   Init%NodesConnE = 0                                                                                                    
-  Init%NodesConnN = 0                                                                                                    
+  Init%NodesConnN = -99999 ! Not Used
                                                                                                                           
    ! find the node connectivity, nodes/elements that connect to a common node                                             
    DO I = 1, Init%NNode                                                                                                   
-      Init%NodesConnN(I, 1) = NINT( Init%Nodes(I, 1) )      !This should not be needed, could remove the extra 1st column like for the other array                                                                      
+      !Init%NodesConnN(I, 1) = NINT( Init%Nodes(I, 1) )      !This should not be needed, could remove the extra 1st column like for the other array                                                                      
       k = 0                                                                                                               
       DO J = 1, Init%NElem                          !This should be vectorized                                                                      
          IF ( ( NINT(Init%Nodes(I, 1))==p%Elems(J, 2)) .OR. (NINT(Init%Nodes(I, 1))==p%Elems(J, 3) ) ) THEN   !If i-th nodeID matches 1st node or 2nd of j-th element                                                                   
@@ -99,19 +99,23 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
                CALL SetErrStat(ErrID_Fatal, 'Maximum number of members reached on node'//trim(Num2LStr(NINT(Init%Nodes(I,1)))), ErrStat, ErrMsg, 'NodeCon');
             endif
             Init%NodesConnE(I, k + 1) = p%Elems(J, 1)                                                                  
-            Init%NodesConnN(I, k + 1) = p%Elems(J, 3)                                                                  
-            IF ( NINT(Init%Nodes(I, 1))==p%Elems(J, 3) ) Init%NodesConnN(I, k + 1) = p%Elems(J, 2)     !If nodeID matches 2nd node of element                                                                
+            !if ( NINT(Init%Nodes(I, 1))==p%Elems(J, 3) ) then
+            !   Init%NodesConnN(I, k + 1) = p%Elems(J, 2)     !If nodeID matches 2nd node of element                                                                
+            !else
+            !   Init%NodesConnN(I, k + 1) = p%Elems(J, 3)                                                                  
+            !endif
          ENDIF                                                                                                            
       ENDDO                                                                                                               
                                                                                                                           
-      IF( k>1 )THEN ! sort the nodes ascendingly                                                                          
-         SortA(1:k, 1) = Init%NodesConnN(I, 3:(k+2))  
-         CALL QsortC( SortA(1:k, 1:1) )                                                                                   
-         Init%NodesConnN(I, 3:(k+2)) = SortA(1:k, 1)                                                                      
-      ENDIF                                                                                                               
+      !IF( k>1 )THEN ! sort the nodes ascendingly                                                                          
+      !   SortA(1:k, 1) = Init%NodesConnN(I, 3:(k+2))  
+      !   CALL QsortC( SortA(1:k, 1:1) )                                                                                   
+      !   Init%NodesConnN(I, 3:(k+2)) = SortA(1:k, 1)                                                                      
+      !ENDIF                                                                                                               
                                                                                                                           
       Init%NodesConnE(I, 1) = k    !Store how many elements connect i-th node in 2nd column                                                                                       
-      Init%NodesConnN(I, 2) = k                                                                                           
+      !Init%NodesConnN(I, 2) = k                                                                                           
+      !print*,'ConnE',I,'val',Init%NodesConnE(I, 1:5)
    ENDDO                            
 
 END SUBROUTINE NodeCon
@@ -630,9 +634,8 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    ! loop over all elements
    DO I = 1, Init%NElem
    
-      DO J = 1, NNE
-         NN(J) = p%Elems(I, J + 1)
-      ENDDO
+      NN(1) = p%Elems(I, 2)
+      NN(2) = p%Elems(I, 3)
    
       N1 = p%Elems(I,       2)
       N2 = p%Elems(I, NNE + 1)
@@ -722,9 +725,9 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
          A    = 1                       ! Arbitrary set to 1
          rho = Init%PropsR(P1, 2)
          ! Element matrices and loads
-         Ke(1:6,1:6)=0
+         Ke(1:12,1:12)=0
          if ( EqualRealNos(rho, 0.0_ReKi) ) then
-            Me(1:6,1:6)=0
+            Me(1:12,1:12)=0
          else
             !CALL ElemM_(A, L, rho, DirCos, Me)
             print*,'Mass matrix for rigid members rho/=0 TODO'
