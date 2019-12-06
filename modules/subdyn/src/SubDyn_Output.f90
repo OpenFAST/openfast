@@ -47,21 +47,21 @@ CONTAINS
 !> This subroutine initializes the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
-   TYPE(SD_InitType),        INTENT( INOUT ) :: Init                 ! data needed to initialize the output module     
-   TYPE(SD_OutputType),      INTENT( INOUT ) :: y                    ! SubDyn module's output data
-   TYPE(SD_ParameterType),   INTENT( INOUT ) :: p                    ! SubDyn module paramters
-   TYPE(SD_MiscVarType),     INTENT( INOUT ) :: misc                 ! SubDyn misc/optimization variables
-   TYPE(SD_InitOutputType ), INTENT( INOUT ) :: InitOut              ! SubDyn module initialization output data
-   REAL(ReKi),               INTENT( IN    ) :: WtrDpth              ! water depth from initialization routine  
-   INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
-   CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   TYPE(SD_InitType),               INTENT( INOUT ) :: Init                 ! data needed to initialize the output module
+   TYPE(SD_OutputType),             INTENT( INOUT ) :: y                    ! SubDyn module's output data
+   TYPE(SD_ParameterType), target,  INTENT( INOUT ) :: p                    ! SubDyn module paramters
+   TYPE(SD_MiscVarType),            INTENT( INOUT ) :: misc                 ! SubDyn misc/optimization variables
+   TYPE(SD_InitOutputType ),        INTENT( INOUT ) :: InitOut              ! SubDyn module initialization output data
+   REAL(ReKi),                      INTENT( IN    ) :: WtrDpth              ! water depth from initialization routine
+   INTEGER,                         INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred
+   CHARACTER(*),                    INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    ! Local variables
    INTEGER(IntKi)       :: ErrStat2      ! Error status of the operation
    CHARACTER(ErrMsgLen) :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
    INTEGER(IntKi)                                   :: I,J,K,K2,L,NconEls   !Counters
    INTEGER(IntKi)                                   :: Junk  !Temporary Holders
    INTEGER(IntKi), Dimension(2)                     :: M   !counter for two nodes at a time
-   INTEGER(IntKi)                                   :: eType
+   type(MeshAuxDataType), pointer :: pLst !< Alias to shorten notation and highlight code similarities
    REAL(ReKi) :: FCe(12) ! Pretension force from cable element
    ErrStat = 0      
    ErrMsg=""
@@ -86,49 +86,47 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
   CALL NodeCon(Init,p,ErrStat2, ErrMsg2); if(Failed()) return
   
   DO I=1,p%NMOutputs
-   CALL AllocAry(p%MOutLst(I)%NodeIDs,    p%MOutLst(I)%NoutCnt           , 'MOutLst(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(p%MOutLst(I)%ElmIDs,     p%MOutLst(I)%NoutCnt, p%NAvgEls, 'MOutLst(I)%ElmIDs' , ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(p%MOutLst(I)%ElmNds,     p%MOutLst(I)%NoutCnt, p%NAvgEls, 'MOutLst(I)%ElmNds' , ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(p%MOutLst(I)%Me, 12, 12, p%MOutLst(I)%NoutCnt, p%NAvgEls, 'MOutLst(I)%Me'     , ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(p%MOutLst(I)%Ke, 12, 12, p%MOutLst(I)%NoutCnt, p%NAvgEls, 'MOutLst(I)%Ke'     , ErrStat2, ErrMsg2); if(Failed()) return
-   CALL AllocAry(p%MOutLst(I)%Fg,     12, p%MOutLst(I)%NoutCnt, p%NAvgEls, 'MOutLst(I)%Fg'     , ErrStat2, ErrMsg2); if(Failed()) return
+   pLst => p%MOutLst(I)
+   CALL AllocAry(pLst%NodeIDs,    pLst%NoutCnt           , 'MOutLst(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(pLst%ElmIDs,     pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%ElmIDs' , ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(pLst%ElmNds,     pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%ElmNds' , ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(pLst%Me, 12, 12, pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%Me'     , ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(pLst%Ke, 12, 12, pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%Ke'     , ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(pLst%Fg,     12, pLst%NoutCnt, p%NAvgEls, 'MOutLst(I)%Fg'     , ErrStat2, ErrMsg2); if(Failed()) return
 
-   p%MOutLst(I)%NodeIDs=Init%MemberNodes(p%MOutLst(I)%MemberID,p%MOutLst(I)%NodeCnt)  !We are storing the actual node numbers corresponding to what the user ordinal number is requesting
-   p%MOutLst(I)%ElmIDs=0  !Initialize to 0
-   p%MOutLst(I)%ElmNds=0  !Initialize to 0
+   pLst%NodeIDs=Init%MemberNodes(pLst%MemberID,pLst%NodeCnt)  !We are storing the actual node numbers corresponding to what the user ordinal number is requesting
+   pLst%ElmIDs=0  !Initialize to 0
+   pLst%ElmNds=0  !Initialize to 0
 
-   DO J=1,p%MOutLst(I)%NoutCnt !Iterate on requested nodes for that member
+   DO J=1,pLst%NoutCnt !Iterate on requested nodes for that member
       !I need to get at most 2 elements that belong to the same MOutLst(I)%MemberID
       !make use of MemberNodes and NodesConnE
-      NconEls=Init%NodesConnE(p%MOutLst(I)%NodeIDs(J),1)!Number of elements connecting to the j-th node
+      NconEls=Init%NodesConnE(pLst%NodeIDs(J),1)!Number of elements connecting to the j-th node
 
       K2=0    !Initialize counter
       DO K=1, NconEls 
-         L=Init%NodesConnE(p%MOutLst(I)%NodeIDs(J),k+1)  !k-th Element Number 
+         L=Init%NodesConnE(pLst%NodeIDs(J),k+1)  !k-th Element Number 
          M     = p%Elems(L,2:3) !1st and 2nd node of the k-th element
-         eType = p%Elems(L, iMType)
-            
          !Select only the other node, not the one where elements connect to
-          IF (M(1) .EQ. p%MOutLst(I)%NodeIDs(J)) then
+          IF (M(1) .EQ. pLst%NodeIDs(J)) then
             Junk=M(2)
          else
             Junk=M(1)
          endif
-                        
-         IF (ANY(Init%MemberNodes(p%MOutLst(I)%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
+         IF (ANY(Init%MemberNodes(pLst%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
             IF (K2 .EQ. 2) EXIT
             K2=K2+1
-            p%MOutLst(I)%ElmIDs(J,K2)=L        !This array has for each node requested NODEID(J), for each memberMOutLst(I)%MemberID, the 2 elements to average from, it may have 1 if one of the numbers is 0 
-            IF (M(2) .EQ. p%MOutLst(I)%NodeIDs(J) )then 
-               p%MOutLst(I)%ElmNds(J,K2)=2 !store whether first or second node of element  
+            pLst%ElmIDs(J,K2)=L        !This array has for each node requested NODEID(J), for each memberMOutLst(I)%MemberID, the 2 elements to average from, it may have 1 if one of the numbers is 0 
+            IF (M(2) .EQ. pLst%NodeIDs(J) )then 
+               pLst%ElmNds(J,K2)=2 !store whether first or second node of element  
             else
-               p%MOutLst(I)%ElmNds(J,K2)=1 !store whether first or second node of element  
+               pLst%ElmNds(J,K2)=1 !store whether first or second node of element  
             endif
             ! --- Element Me, Ke, Fg, Fce
-            CALL ElemM(p%ElemProps(L),         p%MOutLst(I)%Me(:,:,J,K2))
-            CALL ElemK(p%ElemProps(L),         p%MOutLst(I)%Ke(:,:,J,K2))
-            CALL ElemF(p%ElemProps(L), Init%g, p%MOutLst(I)%Fg(:,J,K2), FCe)
-            p%MOutLst(I)%Fg(:,J,K2) = p%MOutLst(I)%Fg(:,J,K2) + FCe(1:12) ! Adding cable element force 
+            CALL ElemM(p%ElemProps(L),         pLst%Me(:,:,J,K2))
+            CALL ElemK(p%ElemProps(L),         pLst%Ke(:,:,J,K2))
+            CALL ElemF(p%ElemProps(L), Init%g, pLst%Fg(:,J,K2), FCe)
+            pLst%Fg(:,J,K2) = pLst%Fg(:,J,K2) + FCe(1:12) ! Adding cable element force 
          END IF    
       ENDDO  ! K, NconEls
      ENDDO !J, Noutcnt
@@ -142,45 +140,38 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
     ErrMsg2 = 'Error allocating p%MOutLst2 array in SDOut_Init'
      
     DO I=1,p%NMembers
-      CALL AllocAry(p%MOutLst2(I)%NodeIDs, Init%Ndiv+1, 'MOutLst2(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(p%MOutLst2(I)%ElmIDs,     2, 1, 'MOutLst2(I)%ElmIDs'     , ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(p%MOutLst2(I)%ElmNds,     2, 1, 'MOutLst2(I)%ElmNds'     , ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(p%MOutLst2(I)%Me, 12, 12, 2, 1, 'MOutLst2(I)%Me'         , ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(p%MOutLst2(I)%Ke, 12, 12, 2, 1, 'MOutLst2(I)%Ke'         , ErrStat2, ErrMsg2); if(Failed()) return
-      CALL AllocAry(p%MOutLst2(I)%Fg,     12, 2, 1, 'MOutLst2(I)%Fg'         , ErrStat2, ErrMsg2); if(Failed()) return
-
-      p%MOutLst2(I)%MemberID=I !Assign memberID for all members
-      p%MOutLst2(I)%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
-      
+      pLst => p%MOutLst2(I)
+      CALL AllocAry(pLst%NodeIDs, Init%Ndiv+1, 'MOutLst2(I)%NodeIDs', ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(pLst%ElmIDs,     2, 1, 'MOutLst2(I)%ElmIDs'     , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(pLst%ElmNds,     2, 1, 'MOutLst2(I)%ElmNds'     , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(pLst%Me, 12, 12, 2, 1, 'MOutLst2(I)%Me'         , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(pLst%Ke, 12, 12, 2, 1, 'MOutLst2(I)%Ke'         , ErrStat2, ErrMsg2); if(Failed()) return
+      CALL AllocAry(pLst%Fg,     12, 2, 1, 'MOutLst2(I)%Fg'         , ErrStat2, ErrMsg2); if(Failed()) return
+      pLst%MemberID=I !Assign memberID for all members
+      pLst%NodeIDs=Init%MemberNodes(I,1:Init%Ndiv+1)  !We are storing  the actual node numbers in the member
       !Now I need to find out which elements are attached to those nodes and still belong to the member I
       !ElmIDs could contain the same element twice if Ndiv=1
-      p%MOutLst2(I)%ElmIDs=0  !Initialize to 0
-
+      pLst%ElmIDs=0  !Initialize to 0
       DO J=1,Init%Ndiv+1,Init%Ndiv !Iterate on requested nodes for that member (first and last)
           !I need to get at most 2 elements that belong to the same I Member
           !make use of MemberNodes and NodesConnE
-          
-          NconEls=Init%NodesConnE(p%MOutLst2(I)%NodeIDs(J),1) !Number of elements connecting to the 1st or last node of the member
-          
+          NconEls=Init%NodesConnE(pLst%NodeIDs(J),1) !Number of elements connecting to the 1st or last node of the member
           K2= J/(Init%Ndiv+1)+1  !store this quantity used later, basically 1 or 2 depending on J
-         
           DO K=1, NconEls 
-              L=Init%NodesConnE(p%MOutLst2(I)%NodeIDs(J),k+1)  !k-th Element Number in the set of elements attached to the selected node 
+              L=Init%NodesConnE(pLst%NodeIDs(J),k+1)  !k-th Element Number in the set of elements attached to the selected node 
               M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
              !Select only the other node, not the one where elements connect to
              Junk=M(1)
-             IF (M(1) .EQ. p%MOutLst2(I)%NodeIDs(J)) Junk=M(2)
-             
-             IF (ANY(Init%MemberNodes(p%MOutLst2(I)%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
-                  p%MOutLst2(I)%ElmIDs(K2,1)=L     !This array has for each node requested NODEID(J), for each member I, the element to get results for 
-                  p%MOutLst2(I)%ElmNds(K2,1)=1                        !store whether first or second node of element  
-                  IF (M(2) .EQ. p%MOutLst2(I)%NodeIDs(J) ) p%MOutLst2(I)%ElmNds(K2,1)=2 !store whether first or second node of element  
+             IF (M(1) .EQ. pLst%NodeIDs(J)) Junk=M(2)
+             IF (ANY(Init%MemberNodes(pLst%MemberID,:) .EQ. Junk)) THEN  !This means we are in the selected member
+                  pLst%ElmIDs(K2,1)=L     !This array has for each node requested NODEID(J), for each member I, the element to get results for 
+                  pLst%ElmNds(K2,1)=1                        !store whether first or second node of element  
+                  IF (M(2) .EQ. pLst%NodeIDs(J) ) pLst%ElmNds(K2,1)=2 !store whether first or second node of element  
                   ! --- Element Me, Ke, Fg, Fce
-                  CALL ElemM(p%ElemProps(L),         p%MOutLst2(I)%Me(:,:,K2, 1))
-                  CALL ElemK(p%ElemProps(L),         p%MOutLst2(I)%Ke(:,:,K2, 1))
-                  CALL ElemF(p%ElemProps(L), Init%g, p%MOutLst2(I)%Fg(:,K2,1), FCe)
-                  p%MOutLst2(I)%Fg(:,K2,1) = p%MOutLst2(I)%Fg(:,K2,1) + FCe(1:12) ! Adding cable element force 
-                   
+                  CALL ElemM(p%ElemProps(L),         pLst%Me(:,:,K2, 1))
+                  CALL ElemK(p%ElemProps(L),         pLst%Ke(:,:,K2, 1))
+                  CALL ElemF(p%ElemProps(L), Init%g, pLst%Fg(:,K2,1), FCe)
+                  pLst%Fg(:,K2,1) = pLst%Fg(:,K2,1) + FCe(1:12) ! Adding cable element force 
                   EXIT   !We found the element for that node, exit loop on elements
               ENDIF
           ENDDO
@@ -203,29 +194,30 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
       if(Failed()) return
 
       DO I=1,p%NReact  !For all constrained node
-         p%MOutLst3(I)%Noutcnt=p%Reacts(I,1) !Assign nodeID for list I, I am using Noutcnt as a temporary holder for it, since nodeID is n array
-         NconEls=Init%NodesConnE(p%MOutLst3(I)%Noutcnt,1) !Number of elements connecting to the joint
+         pLst => p%MOutLst3(I)
+         pLst%Noutcnt=p%Reacts(I,1) !Assign nodeID for list I, I am using Noutcnt as a temporary holder for it, since nodeID is n array
+         NconEls=Init%NodesConnE(pLst%Noutcnt,1) !Number of elements connecting to the joint
          ! ElmIDs: element IDs connecting to the joint; (1,NconEls) and not (NconEls) as the same meshauxtype is used with other MOutLst
          ! Me: has for each selected joint, and for each element attached to that node, a 12x12 matrix (extra dimension redundant)
          ! Ke: has for each selected joint, and for each element attached to that node  a 12x12 matrix
-         CALL AllocAry(p%MOutLst3(I)%ElmIDs,      1, NconEls, ' p%MOutLst3(I)%ElmIds', ErrStat2, ErrMsg2); if(Failed()) return
-         CALL AllocAry(p%MOutLst3(I)%ElmNds,      1, NconEls, ' p%MOutLst3(I)%ElmNds', ErrStat2, ErrMsg2); if(Failed()) return
-         CALL AllocAry(p%MOutLst3(I)%Me, 12, 12 , 1, NconEls, ' p%MOutLst3(I)%Me'    , ErrStat2, ErrMsg2); if(Failed()) return
-         CALL AllocAry(p%MOutLst3(I)%Ke, 12, 12 , 1, NconEls, ' p%MOutLst3(I)%Ke'    , ErrStat2, ErrMsg2); if(Failed()) return
-         CALL AllocAry(p%MOutLst3(I)%Fg,     12 , 1, NconEls, ' p%MOutLst3(I)%Fg'    , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%ElmIDs,      1, NconEls, ' p%MOutLst3(I)%ElmIds', ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%ElmNds,      1, NconEls, ' p%MOutLst3(I)%ElmNds', ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%Me, 12, 12 , 1, NconEls, ' p%MOutLst3(I)%Me'    , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%Ke, 12, 12 , 1, NconEls, ' p%MOutLst3(I)%Ke'    , ErrStat2, ErrMsg2); if(Failed()) return
+         CALL AllocAry(pLst%Fg,     12 , 1, NconEls, ' p%MOutLst3(I)%Fg'    , ErrStat2, ErrMsg2); if(Failed()) return
 
          DO K=1, NconEls 
-            L=Init%NodesConnE(p%MOutLst3(I)%Noutcnt,k+1)  !k-th Element Number in the set of elements attached to the selected node 
-            p%MOutLst3(I)%ElmIDs(1,K)=L     !This array has for each joint requested  the elements' ID to get results for  
+            L=Init%NodesConnE(pLst%Noutcnt,k+1)  !k-th Element Number in the set of elements attached to the selected node 
+            pLst%ElmIDs(1,K)=L     !This array has for each joint requested  the elements' ID to get results for  
             M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
             !Select whether the joint is the 1st or second node of the element
-            p%MOutLst3(I)%ElmNds(1,K)=1                        !store whether first or second node of element  
-            IF (M(2) .EQ. p%MOutLst3(I)%Noutcnt ) p%MOutLst3(I)%ElmNds(1,K)=2 !store whether first or second node of element  
+            pLst%ElmNds(1,K)=1                        !store whether first or second node of element  
+            IF (M(2) .EQ. pLst%Noutcnt ) pLst%ElmNds(1,K)=2 !store whether first or second node of element  
             ! --- Element Me, Ke, Fg, Fce
-            CALL ElemM(p%ElemProps(L),         p%MOutLst3(I)%Me(:,:,1,K))
-            CALL ElemK(p%ElemProps(L),         p%MOutLst3(I)%Ke(:,:,1,K))
-            CALL ElemF(p%ElemProps(L), Init%g, p%MOutLst3(I)%Fg(:,1,K), FCe)
-            p%MOutLst3(I)%Fg(:,1,K) = p%MOutLst3(I)%Fg(:,1,K) + FCe(1:12) ! Adding cable element force 
+            CALL ElemM(p%ElemProps(L),         pLst%Me(:,:,1,K))
+            CALL ElemK(p%ElemProps(L),         pLst%Ke(:,:,1,K))
+            CALL ElemF(p%ElemProps(L), Init%g, pLst%Fg(:,1,K), FCe)
+            pLst%Fg(:,1,K) = pLst%Fg(:,1,K) + FCe(1:12) ! Adding cable element force 
          ENDDO
       ENDDO
       !Store the matrix that will let me calculate single point reaction at the base of structure
@@ -336,7 +328,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    Real(reKi), DIMENSION( p%URbarL+p%DOFL+6*p%Nreact)      :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
    Real(ReKi),  DIMENSION(p%URbarL+p%DOFL+6*p%Nreact)      ::uddout           ! modifications to Y2 and Udotdot to include constrained node DOFs
    Integer(IntKi)                              ::sgn !+1/-1 for node force calculations
-   type(MeshAuxDataType), pointer :: pLst
+   type(MeshAuxDataType), pointer :: pLst !< Alias to shorten notation and highlight code similarities
    ErrStat = ErrID_None   
    ErrMsg  = ""
    
