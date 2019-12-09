@@ -196,8 +196,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: SDWrOutput      !< Data from previous step to be written to a SubDyn output file [-]
     REAL(DbKi)  :: LastOutTime      !< The time of the most recent stored output data [s]
     INTEGER(IntKi)  :: Decimat      !< Current output decimation counter [-]
-    TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: JointsDOF      !< DOF indices of each joints in assembled system  [-]
-    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: MembersDOF      !< 12 DOF indices of node 1 and 2 of a given memeber in assembled system  [-]
+    TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOF      !< DOF indices of each nodes in unconstrained assembled system  [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemsDOF      !< 12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system  [-]
   END TYPE SD_MiscVarType
 ! =======================
 ! =========  SD_ParameterType  =======
@@ -5437,35 +5437,35 @@ IF (ALLOCATED(SrcMiscData%SDWrOutput)) THEN
 ENDIF
     DstMiscData%LastOutTime = SrcMiscData%LastOutTime
     DstMiscData%Decimat = SrcMiscData%Decimat
-IF (ALLOCATED(SrcMiscData%JointsDOF)) THEN
-  i1_l = LBOUND(SrcMiscData%JointsDOF,1)
-  i1_u = UBOUND(SrcMiscData%JointsDOF,1)
-  IF (.NOT. ALLOCATED(DstMiscData%JointsDOF)) THEN 
-    ALLOCATE(DstMiscData%JointsDOF(i1_l:i1_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMiscData%NodesDOF)) THEN
+  i1_l = LBOUND(SrcMiscData%NodesDOF,1)
+  i1_u = UBOUND(SrcMiscData%NodesDOF,1)
+  IF (.NOT. ALLOCATED(DstMiscData%NodesDOF)) THEN 
+    ALLOCATE(DstMiscData%NodesDOF(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%JointsDOF.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%NodesDOF.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DO i1 = LBOUND(SrcMiscData%JointsDOF,1), UBOUND(SrcMiscData%JointsDOF,1)
-      CALL SD_Copyilist( SrcMiscData%JointsDOF(i1), DstMiscData%JointsDOF(i1), CtrlCode, ErrStat2, ErrMsg2 )
+    DO i1 = LBOUND(SrcMiscData%NodesDOF,1), UBOUND(SrcMiscData%NodesDOF,1)
+      CALL SD_Copyilist( SrcMiscData%NodesDOF(i1), DstMiscData%NodesDOF(i1), CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
-IF (ALLOCATED(SrcMiscData%MembersDOF)) THEN
-  i1_l = LBOUND(SrcMiscData%MembersDOF,1)
-  i1_u = UBOUND(SrcMiscData%MembersDOF,1)
-  i2_l = LBOUND(SrcMiscData%MembersDOF,2)
-  i2_u = UBOUND(SrcMiscData%MembersDOF,2)
-  IF (.NOT. ALLOCATED(DstMiscData%MembersDOF)) THEN 
-    ALLOCATE(DstMiscData%MembersDOF(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMiscData%ElemsDOF)) THEN
+  i1_l = LBOUND(SrcMiscData%ElemsDOF,1)
+  i1_u = UBOUND(SrcMiscData%ElemsDOF,1)
+  i2_l = LBOUND(SrcMiscData%ElemsDOF,2)
+  i2_u = UBOUND(SrcMiscData%ElemsDOF,2)
+  IF (.NOT. ALLOCATED(DstMiscData%ElemsDOF)) THEN 
+    ALLOCATE(DstMiscData%ElemsDOF(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%MembersDOF.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%ElemsDOF.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstMiscData%MembersDOF = SrcMiscData%MembersDOF
+    DstMiscData%ElemsDOF = SrcMiscData%ElemsDOF
 ENDIF
  END SUBROUTINE SD_CopyMisc
 
@@ -5505,14 +5505,14 @@ ENDIF
 IF (ALLOCATED(MiscData%SDWrOutput)) THEN
   DEALLOCATE(MiscData%SDWrOutput)
 ENDIF
-IF (ALLOCATED(MiscData%JointsDOF)) THEN
-DO i1 = LBOUND(MiscData%JointsDOF,1), UBOUND(MiscData%JointsDOF,1)
-  CALL SD_Destroyilist( MiscData%JointsDOF(i1), ErrStat, ErrMsg )
+IF (ALLOCATED(MiscData%NodesDOF)) THEN
+DO i1 = LBOUND(MiscData%NodesDOF,1), UBOUND(MiscData%NodesDOF,1)
+  CALL SD_Destroyilist( MiscData%NodesDOF(i1), ErrStat, ErrMsg )
 ENDDO
-  DEALLOCATE(MiscData%JointsDOF)
+  DEALLOCATE(MiscData%NodesDOF)
 ENDIF
-IF (ALLOCATED(MiscData%MembersDOF)) THEN
-  DEALLOCATE(MiscData%MembersDOF)
+IF (ALLOCATED(MiscData%ElemsDOF)) THEN
+  DEALLOCATE(MiscData%ElemsDOF)
 ENDIF
  END SUBROUTINE SD_DestroyMisc
 
@@ -5601,34 +5601,34 @@ ENDIF
   END IF
       Db_BufSz   = Db_BufSz   + 1  ! LastOutTime
       Int_BufSz  = Int_BufSz  + 1  ! Decimat
-  Int_BufSz   = Int_BufSz   + 1     ! JointsDOF allocated yes/no
-  IF ( ALLOCATED(InData%JointsDOF) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*1  ! JointsDOF upper/lower bounds for each dimension
+  Int_BufSz   = Int_BufSz   + 1     ! NodesDOF allocated yes/no
+  IF ( ALLOCATED(InData%NodesDOF) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! NodesDOF upper/lower bounds for each dimension
    ! Allocate buffers for subtypes, if any (we'll get sizes from these) 
-    DO i1 = LBOUND(InData%JointsDOF,1), UBOUND(InData%JointsDOF,1)
-      Int_BufSz   = Int_BufSz + 3  ! JointsDOF: size of buffers for each call to pack subtype
-      CALL SD_Packilist( Re_Buf, Db_Buf, Int_Buf, InData%JointsDOF(i1), ErrStat2, ErrMsg2, .TRUE. ) ! JointsDOF 
+    DO i1 = LBOUND(InData%NodesDOF,1), UBOUND(InData%NodesDOF,1)
+      Int_BufSz   = Int_BufSz + 3  ! NodesDOF: size of buffers for each call to pack subtype
+      CALL SD_Packilist( Re_Buf, Db_Buf, Int_Buf, InData%NodesDOF(i1), ErrStat2, ErrMsg2, .TRUE. ) ! NodesDOF 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
-      IF(ALLOCATED(Re_Buf)) THEN ! JointsDOF
+      IF(ALLOCATED(Re_Buf)) THEN ! NodesDOF
          Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
          DEALLOCATE(Re_Buf)
       END IF
-      IF(ALLOCATED(Db_Buf)) THEN ! JointsDOF
+      IF(ALLOCATED(Db_Buf)) THEN ! NodesDOF
          Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
          DEALLOCATE(Db_Buf)
       END IF
-      IF(ALLOCATED(Int_Buf)) THEN ! JointsDOF
+      IF(ALLOCATED(Int_Buf)) THEN ! NodesDOF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
     END DO
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! MembersDOF allocated yes/no
-  IF ( ALLOCATED(InData%MembersDOF) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! MembersDOF upper/lower bounds for each dimension
-      Int_BufSz  = Int_BufSz  + SIZE(InData%MembersDOF)  ! MembersDOF
+  Int_BufSz   = Int_BufSz   + 1     ! ElemsDOF allocated yes/no
+  IF ( ALLOCATED(InData%ElemsDOF) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! ElemsDOF upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%ElemsDOF)  ! ElemsDOF
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -5784,18 +5784,18 @@ ENDIF
       Db_Xferred   = Db_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%Decimat
       Int_Xferred   = Int_Xferred   + 1
-  IF ( .NOT. ALLOCATED(InData%JointsDOF) ) THEN
+  IF ( .NOT. ALLOCATED(InData%NodesDOF) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%JointsDOF,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%JointsDOF,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%NodesDOF,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%NodesDOF,1)
     Int_Xferred = Int_Xferred + 2
 
-    DO i1 = LBOUND(InData%JointsDOF,1), UBOUND(InData%JointsDOF,1)
-      CALL SD_Packilist( Re_Buf, Db_Buf, Int_Buf, InData%JointsDOF(i1), ErrStat2, ErrMsg2, OnlySize ) ! JointsDOF 
+    DO i1 = LBOUND(InData%NodesDOF,1), UBOUND(InData%NodesDOF,1)
+      CALL SD_Packilist( Re_Buf, Db_Buf, Int_Buf, InData%NodesDOF(i1), ErrStat2, ErrMsg2, OnlySize ) ! NodesDOF 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -5825,21 +5825,21 @@ ENDIF
       ENDIF
     END DO
   END IF
-  IF ( .NOT. ALLOCATED(InData%MembersDOF) ) THEN
+  IF ( .NOT. ALLOCATED(InData%ElemsDOF) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MembersDOF,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MembersDOF,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ElemsDOF,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ElemsDOF,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%MembersDOF,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%MembersDOF,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ElemsDOF,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ElemsDOF,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%MembersDOF)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%MembersDOF))-1 ) = PACK(InData%MembersDOF,.TRUE.)
-      Int_Xferred   = Int_Xferred   + SIZE(InData%MembersDOF)
+      IF (SIZE(InData%ElemsDOF)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%ElemsDOF))-1 ) = PACK(InData%ElemsDOF,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%ElemsDOF)
   END IF
  END SUBROUTINE SD_PackMisc
 
@@ -6121,20 +6121,20 @@ ENDIF
       Db_Xferred   = Db_Xferred + 1
       OutData%Decimat = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! JointsDOF not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! NodesDOF not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
     i1_l = IntKiBuf( Int_Xferred    )
     i1_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%JointsDOF)) DEALLOCATE(OutData%JointsDOF)
-    ALLOCATE(OutData%JointsDOF(i1_l:i1_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%NodesDOF)) DEALLOCATE(OutData%NodesDOF)
+    ALLOCATE(OutData%NodesDOF(i1_l:i1_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%JointsDOF.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%NodesDOF.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
-    DO i1 = LBOUND(OutData%JointsDOF,1), UBOUND(OutData%JointsDOF,1)
+    DO i1 = LBOUND(OutData%NodesDOF,1), UBOUND(OutData%NodesDOF,1)
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -6168,7 +6168,7 @@ ENDIF
         Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
         Int_Xferred = Int_Xferred + Buf_size
       END IF
-      CALL SD_Unpackilist( Re_Buf, Db_Buf, Int_Buf, OutData%JointsDOF(i1), ErrStat2, ErrMsg2 ) ! JointsDOF 
+      CALL SD_Unpackilist( Re_Buf, Db_Buf, Int_Buf, OutData%NodesDOF(i1), ErrStat2, ErrMsg2 ) ! NodesDOF 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
 
@@ -6177,7 +6177,7 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! MembersDOF not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ElemsDOF not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -6187,10 +6187,10 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%MembersDOF)) DEALLOCATE(OutData%MembersDOF)
-    ALLOCATE(OutData%MembersDOF(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%ElemsDOF)) DEALLOCATE(OutData%ElemsDOF)
+    ALLOCATE(OutData%ElemsDOF(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%MembersDOF.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ElemsDOF.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
@@ -6199,8 +6199,8 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%MembersDOF)>0) OutData%MembersDOF = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%MembersDOF))-1 ), mask2, 0_IntKi )
-      Int_Xferred   = Int_Xferred   + SIZE(OutData%MembersDOF)
+      IF (SIZE(OutData%ElemsDOF)>0) OutData%ElemsDOF = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%ElemsDOF))-1 ), mask2, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%ElemsDOF)
     DEALLOCATE(mask2)
   END IF
  END SUBROUTINE SD_UnPackMisc

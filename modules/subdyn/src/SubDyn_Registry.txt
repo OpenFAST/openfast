@@ -152,8 +152,8 @@ typedef  ^            ^             ReKi                     UL_dotdot     {:}  
 typedef	^	          ^             ReKi                     SDWrOutput {:} -  -  "Data from previous step to be written to a SubDyn output file"
 typedef	^	          ^             DbKi                     LastOutTime -  -  -  "The time of the most recent stored output data"	"s"
 typedef	^	          ^             IntKi                    Decimat     -  -  -  "Current output decimation counter"	"-"
-typedef	^	          ^             IList                    JointsDOF     {:}  -  -  "DOF indices of each joints in assembled system "	"-"
-typedef	^	          ^             IntKi                    MembersDOF  {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given memeber in assembled system "	"-"
+typedef	^	          ^             IList                    NodesDOF     {:}  -  -  "DOF indices of each nodes in unconstrained assembled system "	"-"
+typedef	^	          ^             IntKi                    ElemsDOF  {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system "	"-"
 
 
 

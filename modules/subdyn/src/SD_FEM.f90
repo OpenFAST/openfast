@@ -716,13 +716,12 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    ErrMsg  = ""
    ErrStat = ErrID_None
 
-   allocate(m%JointsDOF(1:Init%NNode), stat=ErrStat2)
-   ErrMsg2="Error allocating JointsDOF"
+   allocate(m%NodesDOF(1:Init%NNode), stat=ErrStat2)
+   ErrMsg2="Error allocating NodesDOF"
    if(Failed()) return
 
-   call AllocAry(m%MembersDOF, 12, Init%NElem, 'MembersDOF', ErrStat2, ErrMsg2); if(Failed()) return;
-
-   m%MembersDOF=-9999
+   call AllocAry(m%ElemsDOF, 12, Init%NElem, 'ElemsDOF', ErrStat2, ErrMsg2); if(Failed()) return;
+   m%ElemsDOF=-9999
 
    iPrev =0
    do iJoint = 1, Init%NNode
@@ -732,8 +731,8 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
       else
          nRot= 3*Init%NodesConnE(iJoint,1) ! Col1: number of elements connected to this joint
       endif
-      call init_list(m%JointsDOF(iJoint), 3+nRot, iPrev, ErrStat2, ErrMsg2)
-      m%JointsDOF(iJoint)%List(1:(3+nRot)) = (/ ((iMember+iPrev), iMember=1,3+nRot) /)
+      call init_list(m%NodesDOF(iJoint), 3+nRot, iPrev, ErrStat2, ErrMsg2)
+      m%NodesDOF(iJoint)%List(1:(3+nRot)) = (/ ((iMember+iPrev), iMember=1,3+nRot) /)
 
       ! --- Distribute to members
       do iMember = 1, Init%NodesConnE(iJoint,1) ! members connected to joint iJ
@@ -743,18 +742,18 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
          else                              ! Current joint is Member node 2
             iOff = 6
          endif
-         m%MembersDOF(iOff+1:iOff+3, idMember) =  m%JointsDOF(iJoint)%List(1:3)
+         m%ElemsDOF(iOff+1:iOff+3, idMember) =  m%NodesDOF(iJoint)%List(1:3)
          if (Init%Nodes(iJoint,iJointType) == idJointCantilever ) then
-            m%MembersDOF(iOff+4:iOff+6, idMember) = m%JointsDOF(iJoint)%List(4:6)
+            m%ElemsDOF(iOff+4:iOff+6, idMember) = m%NodesDOF(iJoint)%List(4:6)
          else
-            m%MembersDOF(iOff+4:iOff+6, idMember) = m%JointsDOF(iJoint)%List(3*iMember+1:3*iMember+3)   
+            m%ElemsDOF(iOff+4:iOff+6, idMember) = m%NodesDOF(iJoint)%List(3*iMember+1:3*iMember+3)   
          endif
       enddo ! iMember, loop on members connect to joint
-      iPrev = iPrev + len(m%JointsDOF(iJoint))
+      iPrev = iPrev + len(m%NodesDOF(iJoint))
    enddo ! iJoint, loop on joints
 
    ! --- Safety check
-   if (any(m%MembersDOF<0)) then
+   if (any(m%ElemsDOF<0)) then
       ErrStat=ErrID_Fatal
       ErrMsg ="Implementation error in Distribute DOF, some member DOF were not allocated"
    endif
@@ -763,7 +762,7 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    do idMember = 1, Init%NElem
       iJoint = p%Elems(idMember, 2)
       DOFJoint_Old= (/ ((iJoint*6-5+k), k=0,5) /)
-      if ( any( (m%MembersDOF(1:6, idMember) /= DOFJoint_Old)) ) then
+      if ( any( (m%ElemsDOF(1:6, idMember) /= DOFJoint_Old)) ) then
          ErrStat=ErrID_Fatal
          ErrMsg ="Implementation error in Distribute DOF, DOF indices have changed for iMember="//trim(Num2LStr(idMember))
          return
@@ -793,12 +792,10 @@ SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
    INTEGER, DIMENSION(2)    :: nn                        ! node number in element 
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(1024)          :: ErrMsg2
+   integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
+   integer(IntKi), dimension(3)  :: IDOF3!  3  DOF indices in global unconstrained system
    ErrMsg  = ""
    ErrStat = ErrID_None
-
-
-
-
    
    ! total unconstrained degrees of freedom of the system 
    Init%TDOF = nDOF_Unconstrained()
@@ -816,42 +813,33 @@ SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
 
    ! loop over all elements, compute element matrices and assemble into global matrices
    DO i = 1, Init%NElem
-      nn(1) = p%Elems(i, 2)
-      nn(2) = p%Elems(i, 3)
-
       ! --- Element Me,Ke,Fg, Fce
       CALL ElemM(p%ElemProps(i), Me)
       CALL ElemK(p%ElemProps(i), Ke)
       CALL ElemF(p%ElemProps(i), Init%g, FGe, FCe)
 
-      ! assemble element matrices to global matrices
-
-      DO J = 1, 2
-         jn = nn(j)
-         Init%FG( (jn*6-5):(jn*6) ) = Init%FG( (jn*6-5):(jn*6) )  + FGe( (J*6-5):(J*6) )+ FCe( (J*6-5):(J*6) )
-         DO K = 1, 2
-            kn = nn(k)
-            Init%K( (jn*6-5):(jn*6), (kn*6-5):(kn*6) ) = Init%K( (jn*6-5):(jn*6), (kn*6-5):(kn*6) ) + Ke( (J*6-5):(J*6), (K*6-5):(K*6) )
-            Init%M( (jn*6-5):(jn*6), (kn*6-5):(kn*6) ) = Init%M( (jn*6-5):(jn*6), (kn*6-5):(kn*6) ) + Me( (J*6-5):(J*6), (K*6-5):(K*6) )
-         ENDDO !K
-      ENDDO !J
+      ! --- Assembly in global unconstrained system
+      IDOF = m%ElemsDOF(1:12, i)
+      Init%FG( IDOF )    = Init%FG( IDOF )     + FGe(1:12)+ FCe(1:12)
+      Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
+      Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO ! end loop over elements , i
       
    ! add concentrated mass 
    DO I = 1, Init%NCMass
       DO J = 1, 3
-          iGlob = ( NINT(Init%CMass(I, 1)) - 1 )*6 + J
+          iGlob = m%NodesDOF(i)%List(J) ! ux, uy, uz
           Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, 2)
       ENDDO
       DO J = 4, 6
-          iGlob = ( NINT(Init%CMass(I, 1)) - 1 )*6 + J
+          iGlob = m%NodesDOF(i)%List(J) ! theta_x, theta_y, theta_z
           Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, J-1)
       ENDDO
    ENDDO ! Loop on concentrated mass
 
    ! add concentrated mass induced gravity force
    DO I = 1, Init%NCMass
-       iGlob = ( NINT(Init%CMass(I, 1)) - 1 )*6 + 3
+       iGlob = m%NodesDOF(i)%List(3) ! uz
        Init%FG(iGlob) = Init%FG(iGlob) - Init%CMass(I, 2)*Init%g 
    ENDDO ! I concentrated mass induced gravity
    
