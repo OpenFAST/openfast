@@ -48,9 +48,9 @@ parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", typ
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
-parser.add_argument("-p", "-plot", dest="plot", action='store_false', help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include matplotlib plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
-parser.add_argument("-v", "-verbose", dest="verbose", action='store_false', help="bool to include verbose system output")
+parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
 
 args = parser.parse_args()
 
