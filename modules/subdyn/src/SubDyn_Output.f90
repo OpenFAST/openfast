@@ -66,7 +66,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    ErrStat = 0      
    ErrMsg=""
 
-   p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
+   p%OutAllDims=12*p%NMembers*2    !size of AllOut Member Joint forces
 
    ! Check that the variables in OutList are valid      
    CALL SDOut_ChkOutLst( Init%SSOutList, p,  ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -156,8 +156,8 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
           NconEls=Init%NodesConnE(pLst%NodeIDs(J),1) !Number of elements connecting to the 1st or last node of the member
           K2= J/(Init%Ndiv+1)+1  !store this quantity used later, basically 1 or 2 depending on J
           DO K=1, NconEls 
-              L=Init%NodesConnE(pLst%NodeIDs(J),k+1)  !k-th Element Number in the set of elements attached to the selected node 
-              M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
+             L=Init%NodesConnE(pLst%NodeIDs(J),k+1)  !k-th Element Number in the set of elements attached to the selected node 
+             M=p%Elems(L,2:3) !1st and 2nd node of the k-th element
              !Select only the other node, not the one where elements connect to
              Junk=M(1)
              IF (M(1) .EQ. pLst%NodeIDs(J)) Junk=M(2)
@@ -252,7 +252,7 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
    ! local variables
    INTEGER                             :: I !counter
    INTEGER                             :: rmndr !type-column index
-   INTEGER                             ::  n  !node ID
+   INTEGER                             :: nodeID  !node ID
    INTEGER(IntKi)                      :: DOFC !  DOFC = Init%NReact*6
    REAL(ReKi)                          :: x, y, z !coordinates
    ErrStat=ErrID_None
@@ -260,7 +260,7 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
    
    DOFC = p%NReact*6 ! bjj, this is p%DOFC    !Total DOFs at the base of structure 
    
-   CALL AllocAry(p%TIreact, 6,DOFC, 'p%TIReact', ErrStat, ErrMsg )
+   CALL AllocAry(p%TIreact, 6, DOFC, 'p%TIReact', ErrStat, ErrMsg )
    if ( ErrStat /= ErrID_None ) return
    
    p%TIreact=0 !Initialize
@@ -271,12 +271,11 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
 
     !Other rows done per column actually  
    DO I = 1, DOFC
+      nodeID = p%Reacts(ceiling(I/6.0),1)  !Constrained Node ID (this works in the reordered/renumbered p%Reacts) 
       
-      n = p%Reacts(ceiling(I/6.0),1)  !Constrained Node ID (this works in the reordered/renumbered p%Reacts) ! TODO different DOF ordering
-      
-      x = Init%Nodes(n, 2)
-      y = Init%Nodes(n, 3)
-      z = Init%Nodes(n, 4) + WtrDpth
+      x = Init%Nodes(nodeID, 2)
+      y = Init%Nodes(nodeID, 3)
+      z = Init%Nodes(nodeID, 4) + WtrDpth
       
       rmndr = MOD(I, 6)  !It gives me the column index among the 6 different kinds
       SELECT CASE (rmndr)
@@ -286,7 +285,6 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
          CASE (4); p%TIreact(4:6, I) = (/1.0_ReKi , 0.0_ReKi , 0.0_ReKi/)
          CASE (5); p%TIreact(4:6, I) = (/0.0_ReKi , 1.0_ReKi , 0.0_ReKi/)
          CASE (0); p%TIreact(4:6, I) = (/0.0_ReKi , 0.0_ReKi , 1.0_ReKi/)
-            
          CASE DEFAULT
             ErrStat = ErrID_Fatal
             ErrMsg  = 'Error calculating transformation matrix TIreact, wrong column index '
@@ -323,7 +321,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    Real(ReKi), ALLOCATABLE                  :: ReactNs(:)    !6*Nreact reactions
    REAL(ReKi)                               :: Tmp_Udotdot(12), Tmp_y2(12) !temporary storage for calls to CALC_LOCAL
    
-   Real(reKi), DIMENSION( p%URbarL+p%DOFL+6*p%Nreact)      :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
+   Real(ReKi), DIMENSION( p%URbarL+p%DOFL+6*p%Nreact)      :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
    Real(ReKi),  DIMENSION(p%URbarL+p%DOFL+6*p%Nreact)      ::uddout           ! modifications to Y2 and Udotdot to include constrained node DOFs
    Integer(IntKi)                              ::sgn !+1/-1 for node force calculations
    type(MeshAuxDataType), pointer :: pLst !< Alias to shorten notation and highlight code similarities
@@ -836,7 +834,6 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
       ELSE
          ErrMsg  = p%OutParam(I)%Name//' is not an available output channel.'
          ErrStat = ErrID_Fatal
-!         RETURN
          p%OutParam(I)%Units = 'INVALID'  
          p%OutParam(I)%Indx  =  0
          p%OutParam(I)%SignM =  0                              ! this will print all zeros
@@ -847,9 +844,9 @@ SUBROUTINE SDOut_ChkOutLst( OutList, p, ErrStat, ErrMsg )
    IF (p%OutAll) THEN   !Finish populating the OutParam with all the joint forces and moments
        ToTNames0=RESHAPE(SPREAD( (/"FKxe", "FKye", "FKze", "MKxe", "MKye", "MKze", "FMxe", "FMye", "FMze", "MMxe", "MMye", "MMze"/), 2, 2), (/24/) )
        ToTUnits=RESHAPE(SPREAD( (/"(N)  ","(N)  ","(N)  ", "(N*m)","(N*m)","(N*m)", "(N)  ","(N)  ","(N)  ", "(N*m)","(N*m)","(N*m)"/), 2, 2), (/24/) )
-       DO I=1,p%Nmembers
+       DO I=1,p%NMembers
            DO K=1,2
-            DO J=1,12  !looks like I cnanot vectorize TRIM etc in Fortran
+            DO J=1,12  
              TotNames(J+(K-1)*12)=TRIM("M"//Int2Lstr(I))//TRIM("J"//Int2Lstr(K))//TRIM(TotNames0(J))
             ENDDO  
            ENDDO

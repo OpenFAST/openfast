@@ -696,7 +696,10 @@ CONTAINS
 END SUBROUTINE SetElementProperties 
 
 
-!> Distribute global DOF indices to joints and members
+!> Distribute global DOF indices to nodes and elements
+!! For Cantilever Joint -> Condensation into 3 translational and 3 rotational DOFs
+!! For other joint type -> Condensation of the 3 translational DOF
+!!                      -> Keeping 3 rotational DOF for each memeber connected to the joint
 SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    use IntegerList, only: init_list => init , len
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
@@ -704,13 +707,13 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   integer(IntKi) :: iJoint, k
-   integer(IntKi) :: iPrev
-   integer(IntKi) :: iMember
-   integer(IntKi) :: idMember
+   integer(IntKi) :: iNode, k
+   integer(IntKi) :: iPrev ! Cumulative counter over the global DOF
+   integer(IntKi) :: iElem ! 
+   integer(IntKi) :: idElem
    integer(IntKi) :: nRot ! Number of rotational DOFs (multiple of 3) to be used at the joint
    integer(IntKi) :: iOff ! Offset, 0 or 6, depending if node 1 or node 2
-   integer(IntKi), dimension(6) :: DOFJoint_Old
+   integer(IntKi), dimension(6) :: DOFNode_Old
    integer(IntKi)           :: ErrStat2
    character(1024)          :: ErrMsg2
    ErrMsg  = ""
@@ -724,33 +727,33 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    m%ElemsDOF=-9999
 
    iPrev =0
-   do iJoint = 1, Init%NNode
+   do iNode = 1, Init%NNode
       ! --- Distribute to joints iPrev + 1:6, or, iPrev + 1:(3+3m)
-      if (Init%Nodes(iJoint,iJointType) == idJointCantilever ) then
+      if (Init%Nodes(iNode,iJointType) == idJointCantilever ) then
          nRot=3
       else
-         nRot= 3*Init%NodesConnE(iJoint,1) ! Col1: number of elements connected to this joint
+         nRot= 3*Init%NodesConnE(iNode,1) ! Col1: number of elements connected to this joint
       endif
-      call init_list(m%NodesDOF(iJoint), 3+nRot, iPrev, ErrStat2, ErrMsg2)
-      m%NodesDOF(iJoint)%List(1:(3+nRot)) = (/ ((iMember+iPrev), iMember=1,3+nRot) /)
+      call init_list(m%NodesDOF(iNode), 3+nRot, iPrev, ErrStat2, ErrMsg2)
+      m%NodesDOF(iNode)%List(1:(3+nRot)) = (/ ((iElem+iPrev), iElem=1,3+nRot) /)
 
       ! --- Distribute to members
-      do iMember = 1, Init%NodesConnE(iJoint,1) ! members connected to joint iJ
-         idMember = Init%NodesConnE(iJoint,iMember+1)
-         if (iJoint == p%Elems(idMember, 2)) then ! Current joint is Member node 1
+      do iElem = 1, Init%NodesConnE(iNode,1) ! members connected to joint iJ
+         idElem = Init%NodesConnE(iNode,iElem+1)
+         if (iNode == p%Elems(idElem, 2)) then ! Current joint is Elem node 1
             iOff = 0
-         else                              ! Current joint is Member node 2
+         else                              ! Current joint is Elem node 2
             iOff = 6
          endif
-         m%ElemsDOF(iOff+1:iOff+3, idMember) =  m%NodesDOF(iJoint)%List(1:3)
-         if (Init%Nodes(iJoint,iJointType) == idJointCantilever ) then
-            m%ElemsDOF(iOff+4:iOff+6, idMember) = m%NodesDOF(iJoint)%List(4:6)
+         m%ElemsDOF(iOff+1:iOff+3, idElem) =  m%NodesDOF(iNode)%List(1:3)
+         if (Init%Nodes(iNode,iJointType) == idJointCantilever ) then
+            m%ElemsDOF(iOff+4:iOff+6, idElem) = m%NodesDOF(iNode)%List(4:6)
          else
-            m%ElemsDOF(iOff+4:iOff+6, idMember) = m%NodesDOF(iJoint)%List(3*iMember+1:3*iMember+3)   
+            m%ElemsDOF(iOff+4:iOff+6, idElem) = m%NodesDOF(iNode)%List(3*iElem+1:3*iElem+3)   
          endif
-      enddo ! iMember, loop on members connect to joint
-      iPrev = iPrev + len(m%NodesDOF(iJoint))
-   enddo ! iJoint, loop on joints
+      enddo ! iElem, loop on members connect to joint
+      iPrev = iPrev + len(m%NodesDOF(iNode))
+   enddo ! iNode, loop on joints
 
    ! --- Safety check
    if (any(m%ElemsDOF<0)) then
@@ -759,15 +762,20 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    endif
 
    ! --- Safety check (backward compatibility, only valid if all joints are Cantilever)
-   do idMember = 1, Init%NElem
-      iJoint = p%Elems(idMember, 2)
-      DOFJoint_Old= (/ ((iJoint*6-5+k), k=0,5) /)
-      if ( any( (m%ElemsDOF(1:6, idMember) /= DOFJoint_Old)) ) then
-         ErrStat=ErrID_Fatal
-         ErrMsg ="Implementation error in Distribute DOF, DOF indices have changed for iMember="//trim(Num2LStr(idMember))
-         return
-      endif
-   enddo
+   if (Init%NNode == count( Init%Nodes(:, iJointType) == idJointCantilever)) then
+      do idElem = 1, Init%NElem
+         iNode = p%Elems(idElem, 2)
+         DOFNode_Old= (/ ((iNode*6-5+k), k=0,5) /)
+         if ( any( (m%ElemsDOF(1:6, idElem) /= DOFNode_Old)) ) then
+            ErrStat=ErrID_Fatal
+            ErrMsg ="Implementation error in Distribute DOF, DOF indices have changed for iElem="//trim(Num2LStr(idElem))
+            return
+         endif
+      enddo
+   else
+      print*,'Not performing safety check' ! remove me in the future 
+      STOP
+   endif
 
 CONTAINS
    LOGICAL FUNCTION Failed()
