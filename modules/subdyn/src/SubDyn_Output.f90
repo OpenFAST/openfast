@@ -82,8 +82,6 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
    CALL AllocAry(y%WriteOutput, p%NumOuts +p%OutAllInt*p%OutAllDims, 'WriteOutput', ErrStat2, ErrMsg2); if(Failed()) return
    y%WriteOutput = 0
 
-  !Store mapping between nodes and elements      
-  CALL NodeCon(Init,p,ErrStat2, ErrMsg2); if(Failed()) return
   
   DO I=1,p%NMOutputs
    pLst => p%MOutLst(I)

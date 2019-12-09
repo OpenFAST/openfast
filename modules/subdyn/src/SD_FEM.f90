@@ -695,11 +695,94 @@ CONTAINS
    END FUNCTION Failed
 END SUBROUTINE SetElementProperties 
 
-!------------------------------------------------------------------------------------------------------
-!> Assemble stiffness and mass matrix, and gravity force vector
-SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
+
+!> Distribute global DOF indices to joints and members
+SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
+   use IntegerList, only: init_list => init , len
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
    TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   integer(IntKi) :: iJoint, k
+   integer(IntKi) :: iPrev
+   integer(IntKi) :: iMember
+   integer(IntKi) :: idMember
+   integer(IntKi) :: nRot ! Number of rotational DOFs (multiple of 3) to be used at the joint
+   integer(IntKi) :: iOff ! Offset, 0 or 6, depending if node 1 or node 2
+   integer(IntKi), dimension(6) :: DOFJoint_Old
+   integer(IntKi)           :: ErrStat2
+   character(1024)          :: ErrMsg2
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+
+   allocate(m%JointsDOF(1:Init%NNode), stat=ErrStat2)
+   ErrMsg2="Error allocating JointsDOF"
+   if(Failed()) return
+
+   call AllocAry(m%MembersDOF, 12, Init%NElem, 'MembersDOF', ErrStat2, ErrMsg2); if(Failed()) return;
+
+   m%MembersDOF=-9999
+
+   iPrev =0
+   do iJoint = 1, Init%NNode
+      ! --- Distribute to joints iPrev + 1:6, or, iPrev + 1:(3+3m)
+      if (Init%Nodes(iJoint,iJointType) == idJointCantilever ) then
+         nRot=3
+      else
+         nRot= 3*Init%NodesConnE(iJoint,1) ! Col1: number of elements connected to this joint
+      endif
+      call init_list(m%JointsDOF(iJoint), 3+nRot, iPrev, ErrStat2, ErrMsg2)
+      m%JointsDOF(iJoint)%List(1:(3+nRot)) = (/ ((iMember+iPrev), iMember=1,3+nRot) /)
+
+      ! --- Distribute to members
+      do iMember = 1, Init%NodesConnE(iJoint,1) ! members connected to joint iJ
+         idMember = Init%NodesConnE(iJoint,iMember+1)
+         if (iJoint == p%Elems(idMember, 2)) then ! Current joint is Member node 1
+            iOff = 0
+         else                              ! Current joint is Member node 2
+            iOff = 6
+         endif
+         m%MembersDOF(iOff+1:iOff+3, idMember) =  m%JointsDOF(iJoint)%List(1:3)
+         if (Init%Nodes(iJoint,iJointType) == idJointCantilever ) then
+            m%MembersDOF(iOff+4:iOff+6, idMember) = m%JointsDOF(iJoint)%List(4:6)
+         else
+            m%MembersDOF(iOff+4:iOff+6, idMember) = m%JointsDOF(iJoint)%List(3*iMember+1:3*iMember+3)   
+         endif
+      enddo ! iMember, loop on members connect to joint
+      iPrev = iPrev + len(m%JointsDOF(iJoint))
+   enddo ! iJoint, loop on joints
+
+   ! --- Safety check
+   if (any(m%MembersDOF<0)) then
+      ErrStat=ErrID_Fatal
+      ErrMsg ="Implementation error in Distribute DOF, some member DOF were not allocated"
+   endif
+
+   ! --- Safety check (backward compatibility, only valid if all joints are Cantilever)
+   do idMember = 1, Init%NElem
+      iJoint = p%Elems(idMember, 2)
+      DOFJoint_Old= (/ ((iJoint*6-5+k), k=0,5) /)
+      if ( any( (m%MembersDOF(1:6, idMember) /= DOFJoint_Old)) ) then
+         ErrStat=ErrID_Fatal
+         ErrMsg ="Implementation error in Distribute DOF, DOF indices have changed for iMember="//trim(Num2LStr(idMember))
+         return
+      endif
+   enddo
+
+CONTAINS
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetElementProperties') 
+        Failed =  ErrStat >= AbortErrLev
+   END FUNCTION Failed
+END SUBROUTINE DistributeDOF
+
+!------------------------------------------------------------------------------------------------------
+!> Assemble stiffness and mass matrix, and gravity force vector
+SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
@@ -721,6 +804,9 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    Init%TDOF = nDOF_Unconstrained()
    print*,'nDOF_unconstrained',Init%TDOF, 6*Init%NNode
 
+   ! --- Allocated DOF indices to joints and members 
+   call DistributeDOF(Init, p ,m ,ErrStat2, ErrMsg2); if(Failed()) return; 
+
    CALL AllocAry( Init%K, Init%TDOF, Init%TDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, Init%TDOF, Init%TDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
    CALL AllocAry( Init%FG,Init%TDOF,             'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
@@ -739,6 +825,7 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
       CALL ElemF(p%ElemProps(i), Init%g, FGe, FCe)
 
       ! assemble element matrices to global matrices
+
       DO J = 1, 2
          jn = nn(j)
          Init%FG( (jn*6-5):(jn*6) ) = Init%FG( (jn*6-5):(jn*6) )  + FGe( (J*6-5):(J*6) )+ FCe( (J*6-5):(J*6) )
@@ -802,6 +889,8 @@ CONTAINS
    END FUNCTION
    
 END SUBROUTINE AssembleKM
+
+
 
 !------------------------------------------------------------------------------------------------------
 !> Computes directional cosine matrix DirCos

@@ -314,8 +314,11 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Set element properties (p%ElemProps)
    CALL SetElementProperties(Init,p, ErrStat2, ErrMsg2); if(Failed()) return
 
+   !Store mapping between nodes and elements      
+   CALL NodeCon(Init,p,ErrStat2, ErrMsg2); if(Failed()) return
+
    ! Assemble Stiffness and mass matrix
-   CALL AssembleKM(Init,p, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AssembleKM(Init,p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Calculate values for FEMparams (for summary file output only
    ! Solve dynamics problem
