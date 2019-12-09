@@ -2632,8 +2632,8 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'Number of elements (NElems):',Init%NElem
-   WRITE(UnSum, '(A8,5(A10))')  'Elem No.',    'Node_I',     'Node_J',   'Type',    'Prop_I',      'Prop_J'
-   WRITE(UnSum, '(I8,5(I10))') ((p%Elems(i, j), j = 1, MembersCol), i = 1, Init%NElem)
+   WRITE(UnSum, '(A10,5(A10))')  'Elem No.',    'Node_I',     'Node_J',   'Type',    'Prop_I',      'Prop_J'
+   WRITE(UnSum, '(6(I10))') ((p%Elems(i, j), j = 1, MembersCol), i = 1, Init%NElem)
    
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'Number of properties (NProps):',Init%NPropB
