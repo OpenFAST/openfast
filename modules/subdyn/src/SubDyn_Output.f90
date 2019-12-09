@@ -489,7 +489,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
              !The index in Y2mesh is? 
              !Since constrained nodes are ordered as given in the input file and so as in the order of y2mesh, i Can do:
              junk =  (/u%LMesh%Force(:,p%NNodes_I+p%NNodes_L+I),u%LMesh%Moment(:,p%NNodes_I+p%NNodes_L+I)/)
-             ReactNs((I-1)*6+1:6*I)=FK_elm2 - junk  !Accumulate reactions from all nodes in GLOBAL COORDINATES
+             ReactNs((I-1)*6+1:6*I)=FK_elm2 - junk  !Accumulate reactions from all nodes in GLOBAL COORDINATES ! TODO TODO TODO assumed DOF order maybe
        ENDDO
        ! Store into AllOuts
        AllOuts( ReactSS(1:TPdofL) ) = matmul(p%TIreact,ReactNs)

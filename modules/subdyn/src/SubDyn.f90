@@ -317,6 +317,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    !Store mapping between nodes and elements      
    CALL NodeCon(Init,p,ErrStat2, ErrMsg2); if(Failed()) return
 
+   ! --- Allocated DOF indices to joints and members 
+   call DistributeDOF(Init, p ,m ,ErrStat2, ErrMsg2); if(Failed()) return; 
+
    ! Assemble Stiffness and mass matrix
    CALL AssembleKM(Init,p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
@@ -2464,10 +2467,10 @@ SUBROUTINE SetIndexArrays(Init, p, ErrStat, ErrMsg)
    ErrMsg  = ""
          
    ! Index IDI for interface DOFs
-   p%IDI = Init%IntFc(1:p%DOFI, 1)  !RRD interface DOFs
+   p%IDI = Init%IntFc(1:p%DOFI, 1)  ! Interface DOFs in global uneliminated system
     
    ! Index IDC for constraint DOFs
-   p%IDC = Init%BCs(1:p%DOFC, 1) !Constraint DOFs 
+   p%IDC = Init%BCs(1:p%DOFC, 1) !Constraint DOFs in global uneliminated system
    
    ! Index IDR for IDR DOFs
    p%IDR(       1:p%DOFC ) = p%IDC  ! Constraint DOFs again
@@ -2502,8 +2505,8 @@ SUBROUTINE SetIndexArrays(Init, p, ErrStat, ErrMsg)
       TempIDY(I, 2) = I   ! this column will become the returned "key" (i.e., the original location in the array)
    ENDDO
    ! set the first column of the temp array      
-   TempIDY(1:p%DOFI, 1) = p%IDI
-   TempIDY(p%DOFI+1 : p%DOFI+p%DOFL, 1) = p%IDL
+   TempIDY(1:p%DOFI, 1)                              = p%IDI
+   TempIDY(p%DOFI+1 : p%DOFI+p%DOFL, 1)              = p%IDL
    TempIDY(p%DOFI+p%DOFL+1: p%DOFI+p%DOFL+p%DOFC, 1) = p%IDC
    ! sort based on the first column
    CALL QsortC( TempIDY )

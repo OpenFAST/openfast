@@ -163,7 +163,6 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
    enddo
 
    ! --- Re-Initialize interface joints, pointing to index instead of JointID
-   Init%IntFc = 0
    do I = 1, Init%NInterf
       JointID=Init%Interf(I,1)
       Init%Interf(I,1) = FINDLOCI(Init%Joints(:,1), JointID )
@@ -283,23 +282,11 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    ENDIF
    
    CALL AllocAry(Init%MemberNodes,p%NMembers,    Init%NDiv+1,'Init%MemberNodes',ErrStat2, ErrMsg2); if(Failed()) return ! for two-node element only, otherwise the number of nodes in one element is different
-   CALL AllocAry(Init%IntFc,      6*Init%NInterf,2,          'Init%IntFc',      ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Reindexing JointsID and MembersID into Nodes and Elems arrays
    ! NOTE: need NNode and NElem 
    CALL SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat2, ErrMsg2);  if(Failed()) return
    
-   ! --- Initialize boundary constraint vector - TODO: assumes order of DOF, NOTE: Needs Reindexing first
-   CALL AllocAry(Init%BCs, 6*p%NReact, 2, 'Init%BCs', ErrStat2, ErrMsg2); if(Failed()) return
-   CALL InitConstr(Init, p)
-      
-   ! --- Initialize interface constraint vector - TODO: assumes order of DOF, NOTE: Needs Reindexing first
-   DO I = 1, Init%NInterf
-      DO J = 1, 6
-         Init%IntFc( (I-1)*6+J, 1) = (Init%Interf(I,1)-1)*6+J; ! TODO assumes order of DOF, and needs Interf1 reindexed
-         Init%IntFc( (I-1)*6+J, 2) = Init%Interf(I, J+1);
-      ENDDO
-   ENDDO
   
     Init%MemberNodes = 0
     ! --- Setting up MemberNodes (And Elems, Props, Nodes if divisions)
@@ -696,14 +683,14 @@ CONTAINS
 END SUBROUTINE SetElementProperties 
 
 
-!> Distribute global DOF indices to nodes and elements
+!> Distribute global DOF indices corresponding to Nodes, Elements, BCs, Reactions
 !! For Cantilever Joint -> Condensation into 3 translational and 3 rotational DOFs
 !! For other joint type -> Condensation of the 3 translational DOF
 !!                      -> Keeping 3 rotational DOF for each memeber connected to the joint
 SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    use IntegerList, only: init_list => init , len
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
    TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -755,6 +742,14 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
       iPrev = iPrev + len(m%NodesDOF(iNode))
    enddo ! iNode, loop on joints
 
+   ! --- Initialize boundary constraint vector - NOTE: Needs Reindexing first
+   CALL AllocAry(Init%BCs, 6*p%NReact, 2, 'Init%BCs', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL InitBCs(Init, p)
+      
+   ! --- Initialize interface constraint vector - NOTE: Needs Reindexing first
+   CALL AllocAry(Init%IntFc,      6*Init%NInterf,2,          'Init%IntFc',      ErrStat2, ErrMsg2); if(Failed()) return
+   CALL InitIntFc(Init, p)
+
    ! --- Safety check
    if (any(m%ElemsDOF<0)) then
       ErrStat=ErrID_Fatal
@@ -782,6 +777,39 @@ CONTAINS
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SetElementProperties') 
         Failed =  ErrStat >= AbortErrLev
    END FUNCTION Failed
+
+   !> Sets a list of DOF indices corresponding to the BC, and the value these DOF should have
+   !! NOTE: need p%Reacts to have an updated first column that uses indices and not JointIDs
+   SUBROUTINE InitBCs(Init, p)
+      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
+      TYPE(SD_ParameterType),INTENT(IN   ) :: p
+      INTEGER(IntKi) :: I, J, iNode
+      Init%BCs = 0
+      DO I = 1, p%NReact
+         iNode = p%Reacts(I,1) ! Node index
+         DO J = 1, 6
+            Init%BCs( (I-1)*6+J, 1) = m%NodesDOF(iNode)%List(J)
+            Init%BCs( (I-1)*6+J, 2) = p%Reacts(I, J+1);
+         ENDDO
+      ENDDO
+   END SUBROUTINE InitBCs
+
+   !> Sets a list of DOF indices and the value these DOF should have
+   !! NOTE: need Init%Interf to have been reindexed so that first column uses indices and not JointIDs
+   SUBROUTINE InitIntFc(Init, p)
+      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
+      TYPE(SD_ParameterType),INTENT(IN   ) :: p
+      INTEGER(IntKi) :: I, J, iNode
+      Init%IntFc = 0
+      DO I = 1, Init%NInterf
+         iNode = Init%Interf(I,1) ! Node index
+         DO J = 1, 6
+            Init%IntFc( (I-1)*6+J, 1) = m%NodesDOF(iNode)%List(J)
+            Init%IntFc( (I-1)*6+J, 2) = Init%Interf(I, J+1);
+         ENDDO
+      ENDDO
+   END SUBROUTINE InitIntFc
+
 END SUBROUTINE DistributeDOF
 
 !------------------------------------------------------------------------------------------------------
@@ -808,9 +836,6 @@ SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
    ! total unconstrained degrees of freedom of the system 
    Init%TDOF = nDOF_Unconstrained()
    print*,'nDOF_unconstrained',Init%TDOF, 6*Init%NNode
-
-   ! --- Allocated DOF indices to joints and members 
-   call DistributeDOF(Init, p ,m ,ErrStat2, ErrMsg2); if(Failed()) return; 
 
    CALL AllocAry( Init%K, Init%TDOF, Init%TDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, Init%TDOF, Init%TDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
@@ -1225,23 +1250,6 @@ SUBROUTINE ElemM_Cable(A, L, rho, DirCos, M)
    M = MATMUL( MATMUL(DC, M), TRANSPOSE(DC) ) ! TODO: change me if DirCos convention is  transposed
 END SUBROUTINE ElemM_Cable
 
-!------------------------------------------------------------------------------------------------------
-!> Sets a list of DOF indices and the value these DOF should have
-!! NOTE: need p%Reacts to have an updated first column that uses indices and not JointID
-SUBROUTINE InitConstr(Init, p)
-   TYPE(SD_InitType     ),INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),INTENT(IN   ) :: p
-   !
-   INTEGER(IntKi) :: I,J
-
-   Init%BCs = 0
-   DO I = 1, p%NReact
-      DO J = 1, 6
-         Init%BCs( (I-1)*6+J, 1) = (p%Reacts(I,1)-1)*6+J; ! DOF Index, looping through Joints in index order
-         Init%BCs( (I-1)*6+J, 2) = p%Reacts(I, J+1);
-      ENDDO
-   ENDDO
-END SUBROUTINE InitConstr
 
 !> Apply constraint (Boundary conditions) on Mass and Stiffness matrices
 SUBROUTINE ApplyConstr(Init,p)
