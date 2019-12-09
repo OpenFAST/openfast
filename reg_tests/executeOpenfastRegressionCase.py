@@ -57,9 +57,9 @@ parser.add_argument("buildDirectory", metavar="path/to/openfast_repo/build", typ
 parser.add_argument("tolerance", metavar="Test-Tolerance", type=float, nargs=1, help="Tolerance defining pass or failure in the regression test.")
 parser.add_argument("systemName", metavar="System-Name", type=str, nargs=1, help="The current system\'s name: [Darwin,Linux,Windows]")
 parser.add_argument("compilerId", metavar="Compiler-Id", type=str, nargs=1, help="The compiler\'s id: [Intel,GNU]")
-parser.add_argument("-p", "-plot", dest="plot", action='store_false', help="bool to include matplotlib plots in failed cases")
+parser.add_argument("-p", "-plot", dest="plot", action='store_true', help="bool to include matplotlib plots in failed cases")
 parser.add_argument("-n", "-no-exec", dest="noExec", action='store_true', help="bool to prevent execution of the test cases")
-parser.add_argument("-v", "-verbose", dest="verbose", action='store_false', help="bool to include verbose system output")
+parser.add_argument("-v", "-verbose", dest="verbose", action='store_true', help="bool to include verbose system output")
 
 args = parser.parse_args()
 
@@ -172,16 +172,13 @@ exportCaseSummary(testBuildDirectory, caseName, results, results_max, tolerance)
 if not pass_fail.passRegressionTest(normalizedNorm, tolerance):
     if plotError:
         from errorPlotting import finalizePlotDirectory, plotOpenfastError
-        ixFailChannels = [i for i in range(len(testInfo["attribute_names"])) if normalizedNorm[i] > tolerance]
-        failChannels = [channel for i, channel in enumerate(testInfo["attribute_names"]) if i in ixFailChannels]
-        failResults = [res for i, res in enumerate(results) if i in ixFailChannels]
-        for channel in failChannels:
+        for channel in testInfo["attribute_names"]:
             try:
                 plotOpenfastError(localOutFile, baselineOutFile, channel)
             except:
                 error = sys.exc_info()[1]
-                print("Error generating plots: {}".format(error.msg))
-        finalizePlotDirectory(localOutFile, failChannels, caseName)
+                print("Error generating plots: {}".format(error))
+        finalizePlotDirectory(localOutFile, testInfo["attribute_names"], caseName)
 
     sys.exit(1)
 

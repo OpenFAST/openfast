@@ -23,6 +23,7 @@
 
 import os
 import sys
+import shutil
 
 import numpy as np
 
@@ -49,15 +50,14 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     from bokeh.embed import components
     from bokeh.layouts import gridplot
     from bokeh.plotting import figure
-    from bokeh.models.tools import HoverTool
-    from bokeh.models.widgets import RangeSlider
+    from bokeh.models.tools import HoverTool, BoxZoomTool
 
     p1 = figure(title=title1)
     p1.title.align = 'center'
     p1.grid.grid_line_alpha=0.3
     p1.xaxis.axis_label = 'Time (s)'
-    p1.line(xseries, y1series, color='green', line_width=3, legend='Baseline')
-    p1.line(xseries, y2series, color='red', line_width=1, legend='Local')
+    p1.line(xseries, y1series, color='green', line_width=3, legend_label='Baseline')
+    p1.line(xseries, y2series, color='red', line_width=1, legend_label='Local')
     p1.add_tools(HoverTool(tooltips=[('Time','$x'), ('Value', '$y')],mode='vline'))
 
     p2 = figure(title=title2, x_range=p1.x_range)
@@ -184,7 +184,7 @@ def finalizePlotDirectory(test_solution, plot_list, case):
             with open(_path, 'r') as f:
                 div = f.read().strip().join(('      ', '\n'))
             html = ''.join((html, div))
-            os.remove(_path)
+
         html = ''.join((html, '    </div>' + '\n'))
         html = ''.join((html, '  </div>' + '\n'))
         html = ''.join((html, '</body>' + '\n'))
@@ -199,7 +199,7 @@ def finalizePlotDirectory(test_solution, plot_list, case):
         else:
             script = ''.join((script, _s))
         
-        os.remove(_path)
+    shutil.rmtree(plot_path, ignore_errors=True)
 
     script = ''.join((script, '\n'))
     html = script.join((html[:script_ix], html[script_ix:]))
