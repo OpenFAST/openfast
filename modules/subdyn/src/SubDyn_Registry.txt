@@ -9,6 +9,11 @@ include	Registry_NWTC_Library.txt
 # <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
 # Keyword	ModuleName/ModName	Derived data type	Field type	Variable name	Dimemsion of the variable	Initial value	not used	Description	Units
 
+typedef SubDyn/SD IList    INTEGER    List  {:}    -   - "List of integers"
+
+!       integer, dimension(:), pointer :: data => null()
+!       type(IList), pointer :: next => null()
+
 # ============================== Define Initialization Inputs (from glue code) here: ============================================================================================================================================
 typedef	SubDyn/SD	InitInputType	CHARACTER(1024)	SDInputFile	-	-	-	"Name of the input file"
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"SubDyn rootname"

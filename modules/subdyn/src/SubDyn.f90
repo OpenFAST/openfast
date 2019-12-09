@@ -27,6 +27,7 @@ Module SubDyn
    USE NWTC_LAPACK
    USE SubDyn_Types
    USE SubDyn_Output
+   USE SubDyn_Tests
    USE SD_FEM
    
    IMPLICIT NONE
@@ -282,6 +283,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Display the module information
    CALL DispNVD( SD_ProgDesc )   
    InitOut%Ver = SD_ProgDesc
+
+   ! --- Test
+   CALL SD_Tests(ErrStat2, ErrMsg2); if(Failed()) return
    
    ! transfer glue-code information to data structure for SubDyn initialization:
    Init%g           = InitInput%g   
