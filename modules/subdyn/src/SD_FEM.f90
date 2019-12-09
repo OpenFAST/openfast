@@ -50,15 +50,15 @@ MODULE SD_FEM
   INTEGER(IntKi),   PARAMETER  :: iJointDamp= 10 ! Index in Joints where the joint-damping is stored
 
   ! ID for joint types
-  INTEGER(IntKi),   PARAMETER  :: idCantilever = 1
-  INTEGER(IntKi),   PARAMETER  :: idUniversal  = 2
-  INTEGER(IntKi),   PARAMETER  :: idPin        = 3
-  INTEGER(IntKi),   PARAMETER  :: idBall       = 4
+  INTEGER(IntKi),   PARAMETER  :: idJointCantilever = 1
+  INTEGER(IntKi),   PARAMETER  :: idJointUniversal  = 2
+  INTEGER(IntKi),   PARAMETER  :: idJointPin        = 3
+  INTEGER(IntKi),   PARAMETER  :: idJointBall       = 4
 
   ! ID for member types
-  INTEGER(IntKi),   PARAMETER  :: idBeam       = 1
-  INTEGER(IntKi),   PARAMETER  :: idCable      = 2
-  INTEGER(IntKi),   PARAMETER  :: idRigid      = 3
+  INTEGER(IntKi),   PARAMETER  :: idMemberBeam       = 1
+  INTEGER(IntKi),   PARAMETER  :: idMemberCable      = 2
+  INTEGER(IntKi),   PARAMETER  :: idMemberRigid      = 3
   
   INTEGER(IntKi),   PARAMETER  :: SDMaxInpCols    = MAX(JointsCol,ReactCol,InterfCol,MembersCol,PropSetsBCol,PropSetsXCol,COSMsCol,CMassCol)
 
@@ -146,12 +146,10 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
    CALL AllocAry(Init%Nodes,      Init%NNode,    JointsCol,  'Init%Nodes',      ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Initialize Nodes
-   Init%Nodes = 0   
+   Init%Nodes = -999999 ! Init to unphysical values
    do I = 1,Init%NJoints
-      Init%Nodes(I, 1) = I                ! JointID replaced by index I
-      Init%Nodes(I, 2) = Init%Joints(I, 2)
-      Init%Nodes(I, 3) = Init%Joints(I, 3)
-      Init%Nodes(I, 4) = Init%Joints(I, 4)
+      Init%Nodes(I, 1) = I                                     ! JointID replaced by index I
+      Init%Nodes(I, 2:JointsCol) = Init%Joints(I, 2:JointsCol) ! All the rest is copied
    enddo
 
    ! --- Re-Initialize Reactions, pointing to index instead of JointID
@@ -206,13 +204,13 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
       ! NOTE: this index has different meaning depending on the member type !
       DO n=iMProp,iMProp+1
 
-         if (mType==idBeam) then
+         if (mType==idMemberBeam) then
             sType='Member x-section property'
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsB(:,1), Init%Members(iMem, n) ) 
-         else if (mType==idCable) then
+         else if (mType==idMemberCable) then
             sType='Cable property'
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsC(:,1), Init%Members(iMem, n) ) 
-         else if (mType==idRigid) then
+         else if (mType==idMemberRigid) then
             sType='Rigid property'
             p%Elems(iMem,n) = FINDLOCI(Init%PropSetsR(:,1), Init%Members(iMem, n) ) 
          else
@@ -342,7 +340,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
              RETURN
           ENDIF
           
-          if (eType/=idBeam) then
+          if (eType/=idMemberBeam) then
              ! --- Cables and rigid links are not subdivided
              ! No need to create new properties or new nodes
              print*,'Member',I, 'not subdivided since it is not a beam. Looping through.'
@@ -393,7 +391,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
           ! node connect to Node1
           knode = knode + 1
           Init%MemberNodes(I, 2) = knode
-          CALL SetNewNode(knode, x1+dx, y1+dy, z1+dz, Init)
+          CALL SetNewNode(knode, x1+dx, y1+dy, z1+dz, Init) ! Set Init%Nodes(knode,:)
           
           IF ( CreateNewProp ) THEN   
                ! create a new property set 
@@ -414,7 +412,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
              knode = knode + 1
              Init%MemberNodes(I, J+1) = knode
 
-             CALL SetNewNode(knode, x1 + J*dx, y1 + J*dy, z1 + J*dz, Init)
+             CALL SetNewNode(knode, x1 + J*dx, y1 + J*dy, z1 + J*dz, Init) ! Set Init%Nodes(knode,:)
              
              IF ( CreateNewProp ) THEN   
                   ! create a new property set 
@@ -525,10 +523,15 @@ SUBROUTINE SetNewNode(k, x, y, z, Init)
    INTEGER,                INTENT(IN)    :: k
    REAL(ReKi),             INTENT(IN)    :: x, y, z
    
-   Init%Nodes(k, 1) = k
-   Init%Nodes(k, 2) = x
-   Init%Nodes(k, 3) = y
-   Init%Nodes(k, 4) = z
+   Init%Nodes(k, 1)                     = k
+   Init%Nodes(k, 2)                     = x
+   Init%Nodes(k, 3)                     = y
+   Init%Nodes(k, 4)                     = z
+   Init%Nodes(k, iJointType)            = idJointCantilever ! Note: all added nodes are Cantilever
+   ! Properties below are for non-cantilever joints
+   Init%Nodes(k, iJointDir:iJointDir+2) = -99999 
+   Init%Nodes(k, iJointStiff)           = -99999 
+   Init%Nodes(k, iJointDamp)            = -99999 
 
 END SUBROUTINE SetNewNode
 
@@ -622,7 +625,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       p%ElemProps(i)%T0      = -9.99e+36
 
       ! --- Properties that are specific to some elements
-      if (eType==idBeam) then
+      if (eType==idMemberBeam) then
          E   = Init%PropsB(P1, 2)
          G   = Init%PropsB(P1, 3)
          rho = Init%PropsB(P1, 4)
@@ -667,14 +670,14 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
          p%ElemProps(i)%Area   = A
          p%ElemProps(i)%Rho    = rho
 
-      else if (eType==idCable) then
+      else if (eType==idMemberCable) then
          print*,'Member',I,'eType',eType,'Ps',P1,P2
          p%ElemProps(i)%Area   = 1                       ! Arbitrary set to 1
          p%ElemProps(i)%YoungE = Init%PropsC(P1, 2)/1    ! Young's modulus, E=EA/A  [N/m^2]
          p%ElemProps(i)%Rho    = Init%PropsC(P1, 3)      ! Material density [kg/m3]
          p%ElemProps(i)%T0     = Init%PropsC(P1, 4)      ! Pretension force [N]
 
-      else if (eType==idRigid) then
+      else if (eType==idMemberRigid) then
          print*,'Member',I,'eType',eType,'Ps',P1,P2
          p%ElemProps(i)%Area   = 1                  ! Arbitrary set to 1
          p%ElemProps(i)%Rho    = Init%PropsR(P1, 2)
@@ -709,9 +712,14 @@ SUBROUTINE AssembleKM(Init,p, ErrStat, ErrMsg)
    CHARACTER(1024)          :: ErrMsg2
    ErrMsg  = ""
    ErrStat = ErrID_None
+
+
+
+
    
-   ! total degrees of freedom of the system 
-   Init%TDOF = 6*Init%NNode
+   ! total unconstrained degrees of freedom of the system 
+   Init%TDOF = nDOF_Unconstrained()
+   print*,'nDOF_unconstrained',Init%TDOF, 6*Init%NNode
 
    CALL AllocAry( Init%K, Init%TDOF, Init%TDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, Init%TDOF, Init%TDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
@@ -778,6 +786,20 @@ CONTAINS
    SUBROUTINE CleanUp_AssembleKM()
       !pass
    END SUBROUTINE CleanUp_AssembleKM
+
+   INTEGER(IntKi) FUNCTION nDOF_Unconstrained()
+      integer(IntKi) :: i
+      integer(IntKi) :: m
+      nDOF_Unconstrained=0
+      do i = 1,Init%NNode
+         if (Init%Nodes(i,iJointType) == idJointCantilever ) then
+            nDOF_Unconstrained = nDOF_Unconstrained + 6
+         else
+            m = Init%NodesConnE(i,1) ! Col1: number of elements connected to this joint
+            nDOF_Unconstrained = nDOF_Unconstrained + 3 + 3*m
+         endif
+      end do
+   END FUNCTION
    
 END SUBROUTINE AssembleKM
 
@@ -840,14 +862,14 @@ END SUBROUTINE GetDirCos
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
    REAL(ReKi), INTENT(OUT)        :: Me(12, 12)
-   if (ep%eType==idBeam) then
+   if (ep%eType==idMemberBeam) then
       !Calculate Ke, Me to be used for output
       CALL ElemM_Beam(eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho, eP%DirCos, Me)
 
-   else if (ep%eType==idCable) then
+   else if (ep%eType==idMemberCable) then
       CALL ElemM_Cable(ep%Area, ep%Length, ep%rho, ep%DirCos, Me)
 
-   else if (ep%eType==idRigid) then
+   else if (ep%eType==idMemberRigid) then
       if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
          Me=0.0_ReKi
       else
@@ -862,13 +884,13 @@ SUBROUTINE ElemK(ep, Ke)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
    REAL(ReKi), INTENT(OUT)        :: Ke(12, 12)
 
-   if (ep%eType==idBeam) then
+   if (ep%eType==idMemberBeam) then
       CALL ElemK_Beam( eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz, eP%Shear, eP%kappa, eP%YoungE, eP%ShearG, eP%DirCos, Ke)
 
-   else if (ep%eType==idCable) then
+   else if (ep%eType==idMemberCable) then
       CALL ElemK_Cable(ep%Area, ep%Length, ep%YoungE, ep%T0, eP%DirCos, Ke)
 
-   else if (ep%eType==idRigid) then
+   else if (ep%eType==idMemberRigid) then
       Ke = 0.0_ReKi
    endif
 END SUBROUTINE ElemK
@@ -878,11 +900,11 @@ SUBROUTINE ElemF(ep, gravity, Fg, Fo)
    REAL(ReKi), INTENT(IN)     :: gravity       !< acceleration of gravity
    REAL(ReKi), INTENT(OUT)    :: Fg(12)
    REAL(ReKi), INTENT(OUT)    :: Fo(12)
-   if (ep%eType==idBeam) then
+   if (ep%eType==idMemberBeam) then
       Fo(1:12)=0
-   else if (ep%eType==idCable) then
+   else if (ep%eType==idMemberCable) then
       CALL ElemF_Cable(ep%T0, ep%DirCos, Fo)
-   else if (ep%eType==idRigid) then
+   else if (ep%eType==idMemberRigid) then
       Fo(1:12)=0
    endif
    CALL ElemG( eP%Area, eP%Length, eP%rho, eP%DirCos, Fg, gravity )

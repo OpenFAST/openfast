@@ -887,7 +887,7 @@ if (ErrStat2/=0) then
    print*,'         Visit: https://openfast.readthedocs.io/en/dev/source/user/api_change.html'
    print*,'         Look at the SubDyn API changes to adapt your input files.'
    print*,'!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
-   Init%Joints(:,iJointType) = idCantilever ! All joints assumed cantilever
+   Init%Joints(:,iJointType) = idJointCantilever ! All joints assumed cantilever
    Init%Joints(:,iJointType+1:JointsCol) = 0.0 ! remaining columns set to 0
    LegacyFormat=.True.  ! Legacy format - Delete me in 2024
 else
@@ -944,7 +944,7 @@ CALL AllocAry(Init%Members, p%NMembers, MembersCol, 'Members', ErrStat2, ErrMsg2
 Init%Members(:,:) = 0.0_ReKi
 if (LegacyFormat) then
    nColumns = 5
-   Init%Members(:,iMType) = idBeam ! Important, in legacy all members are beams
+   Init%Members(:,iMType) = idMemberBeam ! Important, in legacy all members are beams
 else
    nColumns = MembersCol
 endif
