@@ -52,7 +52,8 @@ MODULE NWTC_IO
 
    INTEGER(B2Ki), PARAMETER      :: FileFmtID_WithTime    = 1                    !< ID for FAST Output File Format, specifies that the time channel is included in the output file (use if the output can occur at variable times)
    INTEGER(B2Ki), PARAMETER      :: FileFmtID_WithoutTime = 2                    !< ID for FAST Output File Format, specifies that the time channel is not included in the output file (used only with constant time-step output)
-   INTEGER(B2Ki), PARAMETER      :: FileFmtID_NoCompressWithoutTime = 3          !< ID for FAST Output File Format, specifies that the time channel is not included in the output file (used only with constant time-step output), and data is not compressed, but written as double precision floats
+   INTEGER(B2Ki), PARAMETER      :: FileFmtID_NoCompressWithoutTime = 3          !< ID for FAST Output File Format, specifies that the time channel is not included in the output file (used only with constant time-step output), and data is not compressed, but written as double-precision floats
+   INTEGER(B2Ki), PARAMETER      :: FileFmtID_ChanLen_In  = 4                    !< ID for FAST Output File Format, specifies that the time channel is not included in the output file, and channel length is included in the file
 
 
    LOGICAL                       :: Beep     = .TRUE.                            !< Flag that specifies whether or not to beep for error messages and program terminations.
@@ -4984,14 +4985,14 @@ END SUBROUTINE CheckR16Var
 
       ! Argument declarations.
 
-   INTEGER(IntKi),      INTENT(  OUT)     :: ErrStat                 !< An optional error level to be returned to the calling routine.
-   INTEGER(IntKi),      INTENT(INOUT)     :: UnIn                    !< The IO unit for the FAST binary file.
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< An optional error level to be returned to the calling routine.
+   INTEGER(IntKi),                     INTENT(INOUT)  :: UnIn        !< The IO unit for the FAST binary file.
 
-   LOGICAL,             INTENT(IN)        :: Init                    !< A flag to tell the routine to read only the file header for initialization purposes.
+   LOGICAL,                            INTENT(IN)     :: Init        !< A flag to tell the routine to read only the file header for initialization purposes.
 
-   CHARACTER(*),        INTENT(  OUT)     :: ErrMsg                  !< An optional error message to be returned to the calling routine.
+   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< An optional error message to be returned to the calling routine.
 
-   TYPE (FASTdataType), INTENT(INOUT)     :: FASTdata                !< The derived type for holding FAST output data.
+   TYPE (FASTdataType),                INTENT(INOUT)  :: FASTdata    !< The derived type for holding FAST output data.
 
 
       ! Local declarations.
@@ -5012,17 +5013,18 @@ END SUBROUTINE CheckR16Var
    INTEGER(IntKi)                         :: IRow                    ! The row index used for DO loops.
    INTEGER(IntKi)                         :: LenDesc                 ! The length of the description string, DescStr.
    INTEGER(IntKi), PARAMETER              :: MaxLenDesc = 1024       ! The maximum allowed length of the description string, DescStr.
-   INTEGER(IntKi), PARAMETER              :: MaxChrLen  = 10         ! The maximum length for channel names and units.
-
+   INTEGER(IntKi)                         :: ChanLen2                ! The lengths of channel names in the file
+   
    INTEGER(B4Ki), ALLOCATABLE             :: TmpTimeArray(:)         ! This array holds the normalized time channel that was read from the binary file.
    INTEGER(B4Ki)                          :: Tmp4BInt                ! This scalar temporarially holds a 4-byte integer that was stored in the binary file
 
    INTEGER(B2Ki)                          :: FileType                ! The type of FAST data file (1: Time channel included in file; 2: Time stored as start time and step).
+   INTEGER(B2Ki)                          :: Tmp2BInt                ! This scalar temporarially holds a 2-byte integer that was stored in the binary file.
    INTEGER(B2Ki), ALLOCATABLE             :: TmpInArray(:,:)         ! This array holds the normalized channels that were read from the binary file.
    INTEGER(R8Ki), ALLOCATABLE             :: TmpR8InArray(:,:)       ! This array holds the uncompressed channels that were read from the binary file.
 
    INTEGER(B1Ki), ALLOCATABLE             :: DescStrASCII(:)         ! The ASCII equivalent of DescStr.
-   INTEGER(B1Ki)                          :: TmpStrASCII(MaxChrLen)  ! The temporary ASCII equivalent of a channel name or units.
+   INTEGER(B1Ki), ALLOCATABLE             :: TmpStrASCII(:)          ! The temporary ASCII equivalent of a channel name or units.
 
    INTEGER(IntKi)                         :: ErrStat2
    CHARACTER(ErrMsgLen)                   :: ErrMsg2
@@ -5059,6 +5061,19 @@ END SUBROUTINE CheckR16Var
       CALL Cleanup()
       RETURN
    ENDIF
+
+
+   IF (FileType == FileFmtID_ChanLen_In) THEN
+      READ (UnIn, IOSTAT=ErrStat2)  Tmp2BInt
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Fatal error reading ChanLen from file "'//TRIM( FASTdata%File )//'".', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN
+      ENDIF
+      ChanLen2 = Tmp2BInt
+   ELSE
+      ChanLen2 = 10
+   END IF
 
    READ (UnIn, IOSTAT=ErrStat2)  Tmp4BInt
    IF ( ErrStat2 /= 0 )  THEN
@@ -5253,6 +5268,13 @@ END SUBROUTINE CheckR16Var
       FASTdata%Descr(IChr:IChr) = CHAR( DescStrASCII(IChr) )
    END DO
 
+   
+   ALLOCATE ( TmpStrASCII( ChanLen2 ) , STAT=ErrStat2 )
+   IF ( ErrStat2 /= 0 )  THEN
+      CALL SetErrStat ( ErrID_Fatal, 'Fatal error allocating memory for the DescStrASCII array.', ErrStat, ErrMsg, RoutineName )
+      CALL Cleanup()
+      RETURN
+   ENDIF   
    TmpStrASCII(:) = ICHAR( ' ' )
    DO IChan=1,FASTdata%NumChans+1
       READ (UnIn, IOSTAT=ErrStat2)  TmpStrASCII
@@ -5263,7 +5285,7 @@ END SUBROUTINE CheckR16Var
          RETURN
       ENDIF
       FASTdata%ChanNames(IChan) = ''
-      DO IChr=1,MaxChrLen
+      DO IChr=1,ChanLen2
          FASTdata%ChanNames(IChan)(IChr:IChr) = CHAR( TmpStrASCII(IChr) )
       END DO
    END DO
@@ -5278,7 +5300,7 @@ END SUBROUTINE CheckR16Var
          RETURN
       ENDIF
       FASTdata%ChanUnits(IChan) = ''
-      DO IChr=1,MaxChrLen
+      DO IChr=1,ChanLen2
          FASTdata%ChanUnits(IChan)(IChr:IChr) = CHAR( TmpStrASCII(IChr) )
       END DO
    END DO
@@ -5335,15 +5357,17 @@ END SUBROUTINE CheckR16Var
    END DO ! IRow=1,FASTdata%NumRecs
 
 
-   DO IRow=1,FASTdata%NumRecs
-      IF ( FileType == FileFmtID_NoCompressWithoutTime ) THEN
+   IF ( FileType == FileFmtID_NoCompressWithoutTime ) THEN
+      DO IRow=1,FASTdata%NumRecs
          FASTdata%Data(IRow,2:) = REAL(TmpInArray(IRow,:), ReKi)
-      ELSE
+      END DO ! IRow=1,FASTdata%NumRecs
+   ELSE
+      DO IRow=1,FASTdata%NumRecs
             ! Denormalize the data one row at a time and store it in the FASTdata%Data array.
          FASTdata%Data(IRow,2:) = ( TmpInArray(IRow,:) - ColOff(:) )/ColScl(:)
-      END IF
+      END DO ! IRow=1,FASTdata%NumRecs
+   END IF
       
-   END DO ! IRow=1,FASTdata%NumRecs
 
 
    CALL Cleanup( )
@@ -5364,6 +5388,7 @@ END SUBROUTINE CheckR16Var
          IF ( ALLOCATED( ColOff             ) ) DEALLOCATE( ColOff             )
          IF ( ALLOCATED( ColScl             ) ) DEALLOCATE( ColScl             )
          IF ( ALLOCATED( DescStrASCII       ) ) DEALLOCATE( DescStrASCII       )
+         IF ( ALLOCATED( TmpStrASCII        ) ) DEALLOCATE( TmpStrASCII        )
          IF ( ALLOCATED( TmpInArray         ) ) DEALLOCATE( TmpInArray         )
          IF ( ALLOCATED( TmpR8InArray       ) ) DEALLOCATE( TmpR8InArray         )
          IF ( ALLOCATED( TmpTimeArray       ) ) DEALLOCATE( TmpTimeArray       )
