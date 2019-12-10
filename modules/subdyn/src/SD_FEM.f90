@@ -601,12 +601,12 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       p%ElemProps(i)%DirCos = DirCos
 
       ! Init to excessive values to detect any issue
-      p%ElemProps(i)%Ixx	 = -9.99e+36
-      p%ElemProps(i)%Iyy	 = -9.99e+36
-      p%ElemProps(i)%Jzz	 = -9.99e+36
-      p%ElemProps(i)%Kappa	 = -9.99e+36
-      p%ElemProps(i)%YoungE	 = -9.99e+36
-      p%ElemProps(i)%ShearG	 = -9.99e+36
+      p%ElemProps(i)%Ixx     = -9.99e+36
+      p%ElemProps(i)%Iyy     = -9.99e+36
+      p%ElemProps(i)%Jzz     = -9.99e+36
+      p%ElemProps(i)%Kappa   = -9.99e+36
+      p%ElemProps(i)%YoungE  = -9.99e+36
+      p%ElemProps(i)%ShearG  = -9.99e+36
       p%ElemProps(i)%Area    = -9.99e+36
       p%ElemProps(i)%Rho     = -9.99e+36
       p%ElemProps(i)%T0      = -9.99e+36

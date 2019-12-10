@@ -116,6 +116,54 @@ contains
     ! --------------------------------------------------------------------------------}
     ! --- Specific SubDyn tests 
     ! --------------------------------------------------------------------------------{
+   subroutine Test_CB_Results(MBBt, MBMt, KBBt, OmegaM, DOFTP, DOFM, ErrStat, ErrMsg,Init,p)
+      TYPE(SD_InitType),      INTENT(  in)                :: Init         ! Input data for initialization routine
+      TYPE(SD_ParameterType), INTENT(inout)                :: p           ! Parameters
+      INTEGER(IntKi)                                     :: DOFTP, DOFM
+      REAL(ReKi)                                         :: MBBt(DOFTP, DOFTP)
+      REAL(ReKi)                                         :: MBmt(DOFTP, DOFM)
+      REAL(ReKi)                                         :: KBBt(DOFTP, DOFTP)
+      REAL(ReKi)                                         :: OmegaM(DOFM)
+      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      ! local variables
+      INTEGER(IntKi) :: DOFT, NM, i
+      REAL(ReKi), Allocatable     :: OmegaCB(:), PhiCB(:, :)
+      REAL(ReKi), Allocatable     :: K(:, :)
+      REAL(ReKi), Allocatable     :: M(:, :)
+      Character(1024)             :: rootname
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+      print*,'This test is not a unit test'
+      
+      DOFT = DOFTP + DOFM
+      NM = DOFT - 3
+      Allocate( OmegaCB(NM), K(DOFT, DOFT), M(DOFT, DOFT), PhiCB(DOFT, NM) )
+      K = 0.0
+      M = 0.0
+      OmegaCB = 0.0
+      PhiCB = 0.0
+      
+      M(1:DOFTP, 1:DOFTP) = MBBt
+      M(1:DOFTP, (DOFTP+1):DOFT ) = MBMt
+      M((DOFTP+1):DOFT, 1:DOFTP ) = transpose(mbmt)
+
+      DO i = 1, DOFM
+         K(DOFTP+i, DOFTP+i) = OmegaM(i)*OmegaM(i)
+         M(DOFTP+i, DOFTP+i) = 1.0
+      ENDDO
+         
+      K(1:DOFTP, 1:DOFTP) = KBBt
+
+      ! temporary rootname
+      rootname = './test_assemble_C-B_out'
+      
+      ! NOTE: Eigensolve is in SubDyn
+      !CALL EigenSolve(K, M, DOFT, NM,.False.,Init,p, PhiCB, OmegaCB,  ErrStat, ErrMsg)
+      IF ( ErrStat /= 0 ) RETURN  
+   end subroutine Test_CB_Results
+
+
    subroutine Test_lists(ErrStat,ErrMsg)
       integer(IntKi)      , intent(out) :: ErrStat
       character(ErrMsgLen), intent(out) :: ErrMsg

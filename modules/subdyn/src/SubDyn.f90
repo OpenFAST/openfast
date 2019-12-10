@@ -911,7 +911,7 @@ ENDDO
 ! Read remaining lines
 DO I = 2, Init%NJoints
    CALL ReadAry( UnIn, SDInputFile, Dummy_ReAry, nColumns, 'Joints', 'Joint number and coordinates', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-   Init%Joints(I,:) = Dummy_ReAry(1:nColumns)
+   Init%Joints(I,1:nColumns) = Dummy_ReAry(1:nColumns)
 ENDDO
 IF (Check(  Init%NJoints < 2, 'NJoints must be greater than 1')) return
 
@@ -1008,6 +1008,11 @@ if (.not. LegacyFormat) then
       CALL ReadAry( UnIn, SDInputFile, Init%PropSetsR(I,:), PropSetsRCol, 'RigidPropSets', 'RigidPropSets ID and values ', ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
    ENDDO   
    IF (Check( Init%NPropSetsR < 0, 'NPropSetsRigid must be >=0')) return
+else
+   Init%NPropSetsC=0
+   Init%NPropSetsR=0
+   CALL AllocAry(Init%PropSetsC, Init%NPropSetsC, PropSetsCCol, 'PropSetsC', ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(Init%PropSetsR, Init%NPropSetsR, PropSetsRCol, 'RigidPropSets', ErrStat2, ErrMsg2); if(Failed()) return
 endif
 
 !---------------------- MEMBER COSINE MATRICES COSM(i,j) ------------------------
@@ -2475,7 +2480,7 @@ SUBROUTINE SetIndexArrays(Init, p, ErrStat, ErrMsg)
    ! Index IDR for IDR DOFs
    p%IDR(       1:p%DOFC ) = p%IDC  ! Constraint DOFs again
    p%IDR(p%DOFC+1:p%DOFR)  = p%IDI  ! IDR contains DOFs ofboundaries, constraints first then interface
-   
+
    ! --- Index IDL for IDL DOFs
    ! first set the total DOFs:
    DO I = 1, Init%TDOF  !Total DOFs
@@ -2512,56 +2517,28 @@ SUBROUTINE SetIndexArrays(Init, p, ErrStat, ErrMsg)
    CALL QsortC( TempIDY )
    ! the second column is the key:
    p%IDY = TempIDY(:, 2)
+
+
+!    do I = 1, p%DOFI      !Total DOFs
+!       print*,'IDI  ',I, p%IDI(I)
+!    enddo
+!    do I = 1, p%DOFC  !Total DOFs
+!       print*,'IDR_c',I, p%IDR(I)
+!    enddo
+!    do I = p%DOFC+1,p%DOFR
+!       print*,'IDR_c',I, p%IDR(I)
+!    enddo
+!    do I = 1, p%DOFL  !Total DOFs
+!       print*,'IDL  ',I, p%IDL(I)
+!    enddo
+!    do I = 1, p%DOFC  !Total DOFs
+!       print*,'IDC  ',I, p%IDC(I)
+!    enddo
+!    do I = 1, size(p%IDY)
+!       print*,'IDY  ',I, p%IDY(I)
+!    enddo
    
 END SUBROUTINE SetIndexArrays
-
-!------------------------------------------------------------------------------------------------------
-!>
-SUBROUTINE Test_CB_Results(MBBt, MBMt, KBBt, OmegaM, DOFTP, DOFM, ErrStat, ErrMsg,Init,p)
-   TYPE(SD_InitType),      INTENT(  in)                :: Init         ! Input data for initialization routine
-   TYPE(SD_ParameterType), INTENT(inout)                :: p           ! Parameters
-   INTEGER(IntKi)                                     :: DOFTP, DOFM
-   REAL(ReKi)                                         :: MBBt(DOFTP, DOFTP)
-   REAL(ReKi)                                         :: MBmt(DOFTP, DOFM)
-   REAL(ReKi)                                         :: KBBt(DOFTP, DOFTP)
-   REAL(ReKi)                                         :: OmegaM(DOFM)
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   ! local variables
-   INTEGER(IntKi) :: DOFT, NM, i
-   REAL(ReKi), Allocatable     :: OmegaCB(:), PhiCB(:, :)
-   REAL(ReKi), Allocatable     :: K(:, :)
-   REAL(ReKi), Allocatable     :: M(:, :)
-   Character(1024)             :: rootname
-   ErrStat = ErrID_None
-   ErrMsg  = ''
-   
-   DOFT = DOFTP + DOFM
-   NM = DOFT - 3
-   Allocate( OmegaCB(NM), K(DOFT, DOFT), M(DOFT, DOFT), PhiCB(DOFT, NM) )
-   K = 0.0
-   M = 0.0
-   OmegaCB = 0.0
-   PhiCB = 0.0
-   
-   M(1:DOFTP, 1:DOFTP) = MBBt
-   M(1:DOFTP, (DOFTP+1):DOFT ) = MBMt
-   M((DOFTP+1):DOFT, 1:DOFTP ) = transpose(mbmt)
-
-   DO i = 1, DOFM
-      K(DOFTP+i, DOFTP+i) = OmegaM(i)*OmegaM(i)
-      M(DOFTP+i, DOFTP+i) = 1.0
-   ENDDO
-      
-   K(1:DOFTP, 1:DOFTP) = KBBt
-
-   ! temporary rootname
-   rootname = './test_assemble_C-B_out'
-   
-   CALL EigenSolve(K, M, DOFT, NM,.False.,Init,p, PhiCB, OmegaCB,  ErrStat, ErrMsg)
-   IF ( ErrStat /= 0 ) RETURN  
-
-END SUBROUTINE Test_CB_Results
 
 !------------------------------------------------------------------------------------------------------
 !> Take the input u LMesh and constructs the appropriate corresponding UFL vector
@@ -2599,6 +2576,7 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    CHARACTER(ErrMsgLen)   :: ErrMsg2       ! Temporary storage for local errors
    CHARACTER(1024)        :: SummaryName    ! name of the SubDyn summary file
    INTEGER(IntKi)         :: i, j, k, propids(2)  !counter and temporary holders
+   INTEGER(IntKi)         :: mType ! Member Type
    INTEGER(IntKi)         :: SDtoMeshIndx(Init%NNode)
    REAL(ReKi)             :: MRB(6,6)    !REDUCED SYSTEM Kmatrix, equivalent mass matrix
    REAL(ReKi)             :: XYZ1(3),XYZ2(3), DirCos(3,3), mlength !temporary arrays, member i-th direction cosine matrix (global to local) and member length
@@ -2673,13 +2651,18 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    DO i=1,p%NMembers
        !Calculate member mass here; this should really be done somewhere else, yet it is not used anywhere else
        !IT WILL HAVE TO BE MODIFIED FOR OTHER THAN CIRCULAR PIPE ELEMENTS
-       propids=Init%Members(i,iMProp:iMProp+1)
+       propids=p%Elems(i,iMProp:iMProp+1)
        mlength=MemberLength(Init%Members(i,1),Init,ErrStat,ErrMsg)
        IF (ErrStat .EQ. ErrID_None) THEN
-        WRITE(UnSum, '(I9,I10,I10, E15.6, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))')    Init%Members(i,1:3),                &
-        MemberMass(Init%PropSetsB(propids(1),4),Init%PropSetsB(propids(1),5),Init%PropSetsB(propids(1),6),   &
-                    Init%PropSetsB(propids(2),4),Init%PropSetsB(propids(2),5),Init%PropSetsB(propids(2),6), mlength, .TRUE.),  &
-               ' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
+        mType =  Init%Members(I, iMType) ! 
+        if (mType==idMemberBeam) then
+           WRITE(UnSum, '(I9,I10,I10, E15.6, A3,'//Num2LStr(Init%NDiv + 1 )//'(I6))')    Init%Members(i,1:3),                &
+           MemberMass(Init%PropSetsB(propids(1),4),Init%PropSetsB(propids(1),5),Init%PropSetsB(propids(1),6),   &
+                       Init%PropSetsB(propids(2),4),Init%PropSetsB(propids(2),5),Init%PropSetsB(propids(2),6), mlength, .TRUE.),  &
+                  ' ',(Init%MemberNodes(i, j), j = 1, Init%NDiv+1)
+        else
+           WRITE(UnSum, '(A)') 'TODO, member mass for non-beam elements'
+        endif
        ELSE 
            RETURN
        ENDIF
