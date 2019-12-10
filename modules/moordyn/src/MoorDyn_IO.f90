@@ -908,7 +908,7 @@ CONTAINS
       INTEGER                                        :: I                    ! Generic loop counter
       INTEGER                                        :: J                    ! Generic loop counter
       CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-      INTEGER                                        :: L                           ! counter for index in LineWrOutput
+!      INTEGER                                        :: L                           ! counter for index in LineWrOutput
       INTEGER                                        :: LineNumOuts                 ! number of entries in LineWrOutput for each line
       CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
       INTEGER                                        :: ErrStat2

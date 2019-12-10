@@ -292,11 +292,8 @@ SUBROUTINE Calc_WriteBldNdOutput( p, m, y, ErrStat, ErrMsg )
    INTEGER(IntKi)                               :: nelem                            ! current element
    INTEGER(IntKi)                               :: idx_node                         ! Counter to the blade node we are on
    INTEGER(IntKi)                               :: compIndx                         ! index for array component (x,y,z)
-   REAL(BDKi)                                   :: BladeLocalOrient(3,3)            ! Local blade orientation matrix
    REAL(BDKi)                                   :: Tmp33a(3,3)                      ! Temporary 3x4 for orientation calcs
    REAL(BDKi)                                   :: Tmp33b(3,3)                      ! Temporary 3x4 for orientation calcs
-   REAL(BDKi)                                   :: ThetaYXZabs(3)                   ! Tait-Bryan absolute values for Cant, Toe, Twist angles
-   REAL(BDKi)                                   :: ThetaYXZrd(3)                    ! Tait-Bryan reltative change in Cant, Toe, Twist angles
 
    REAL(BDKi)                                   :: WM_ParamRD(3)                    ! Wiener Milenkovic parameters for current node, in Global coordinates
    REAL(BDKi)                                   :: temp_vec(3)                      ! temporary vector for orientation info.
