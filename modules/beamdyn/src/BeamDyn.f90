@@ -509,10 +509,8 @@ subroutine InitializeNodalLocations(InputFileData,p,GLL_nodes,InitOut,ErrStat, E
    ! local variables
    INTEGER(IntKi)          :: i                ! do-loop counter
    INTEGER(IntKi)          :: j                ! do-loop counter
-   INTEGER(IntKi)          :: idx_qp           !< index of current quadrature point in loop
    INTEGER(IntKi)          :: member_first_kp
    INTEGER(IntKi)          :: member_last_kp
-   INTEGER(IntKi)          :: temp_id2
    REAL(BDKi)              :: eta
    REAL(BDKi)              :: temp_POS(3)
    REAL(BDKi)              :: temp_CRV(3)
@@ -2983,7 +2981,6 @@ SUBROUTINE BD_DissipativeForce( nelem, p, m,fact )
    REAL(BDKi)                  :: b11(3,3)
    REAL(BDKi)                  :: b12(3,3)
    REAL(BDKi)                  :: alpha(3,3)
-   INTEGER(IntKi)              :: i, j
 
    INTEGER(IntKi)              :: idx_qp      !< index of current quadrature point
    
@@ -3613,7 +3610,6 @@ SUBROUTINE BD_Static(t,u,utimes,p,x,OtherState,m,ErrStat,ErrMsg)
 
    TYPE(BD_InputType)                            :: u_interp                     ! temporary copy of inputs, transferred to BD local system
    REAL(BDKi)                                    :: ScaleFactor                  ! Factor for scaling applied loads at each step
-   INTEGER(IntKi)                                :: i
    INTEGER(IntKi)                                :: j                            ! Generic counters
    INTEGER(IntKi)                                :: piter
    REAL(BDKi)                                    :: gravity_temp(3)
@@ -3856,7 +3852,6 @@ SUBROUTINE BD_FD_Stat( x, gravity, p, m )
     ! local variables
     INTEGER(IntKi)                                 :: i
     INTEGER(IntKi)                                 :: idx_dof
-    REAL(BDKi), allocatable                        :: RHS_m(:,:), RHS_p(:,:)
     CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_FD_Stat'
 
     ! zero out the local matrices.
