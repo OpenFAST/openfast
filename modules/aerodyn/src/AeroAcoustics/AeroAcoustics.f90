@@ -1667,7 +1667,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
   REAL(ReKi)                   :: alpstar                                   ! nafnoise 
   REAL(ReKi)                   :: mu                                        ! nafnoise 
   REAL(ReKi)                   :: tinooisess                                ! nafnoise 
-  REAL(ReKi)                   :: L_Gammas                                  ! nafnoise 
+  ! REAL(ReKi)                   :: L_Gammas                                  ! nafnoise 
 
   INTEGER(intKi)           :: I        !I A generic index for DO loops.
    ErrStat = ErrID_None
@@ -1679,7 +1679,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
 ! This part is recently added for height and surface roughness dependent estimation of turbulence intensity and turbulence scales
 !%Lturb=300*(Z/300)^(0.46+0.074*log(p%z0_aa));              !% Gives larger  length scale
 Lturb=25.d0*LE_Location**(0.35)*p%z0_aa**(-0.063)               !% Gives smaller length scale        ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
-L_Gammas=0.24+0.096*log10(p%z0_aa)+0.016*(log10(p%z0_aa))**2;   !% Can be computed or just give it a value.    ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
+! L_Gammas=0.24+0.096*log10(p%z0_aa)+0.016*(log10(p%z0_aa))**2;   !% Can be computed or just give it a value.    ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
 !tinooisess=L_Gammas*log(30.d0/p%z0_aa)/log(LE_Location/p%z0_aa) !% F.E. 16% is 0.16 which is the correct input for SPLhIgh, no need to divide 100   ! ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
        tinooisess=TINoise
 	   
