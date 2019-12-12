@@ -95,7 +95,7 @@ def load_binary_output(filename):
             LenName  = fread(fid, 1, 'int16')[0] # Number of characters in channel names and units
         else:
             LenName = 10                         # default number of characters per channel name
-        end
+
         
         NumOutChans = fread(fid, 1, 'int32')[0]  # The number of output channels, INT(4)
         NT = fread(fid, 1, 'int32')[0]           # The number of time steps, INT(4)

@@ -267,7 +267,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    
    ALLOCATE( ED%Input( p_FAST%InterpOrder+1 ), ED%InputTimes( p_FAST%InterpOrder+1 ),STAT = ErrStat2 )
       IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating ED%Input, ED%Output, and ED%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat(ErrID_Fatal,"Error allocating ED%Input and ED%InputTimes.",ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       END IF
@@ -3186,7 +3186,7 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
    end if
    
    ! determine number of blades
-   NumBl = SIZE(ED%Output(1)%BladeRootMotion,1)
+   NumBl = InitOutData_ED%NumBl
 
    ! initialize the vtk data
 
