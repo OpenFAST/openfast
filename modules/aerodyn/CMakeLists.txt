@@ -24,59 +24,15 @@ set(TNO_SOURCES
 )
 add_library(TNO ${TNO_SOURCES})
 
-# AeroAcoustics - TINoise
-set(FULLGUIDATI_SOURCES
-  src/AeroAcoustics/TINoise/CDA0.f90 
-  src/AeroAcoustics/TINoise/CDI0.f90
-  src/AeroAcoustics/TINoise/DETCP.f90 
-  src/AeroAcoustics/TINoise/DETFIELD.f90
-  src/AeroAcoustics/TINoise/DETSPL.f90
-  src/AeroAcoustics/TINoise/DETSTR.f90
-  src/AeroAcoustics/TINoise/FLAT.f90
-  src/AeroAcoustics/TINoise/FUNCS_LM.f90
-  src/AeroAcoustics/TINoise/HANK0.f90
-  src/AeroAcoustics/TINoise/HANK1.f90
-  src/AeroAcoustics/TINoise/INICON.f90
-  src/AeroAcoustics/TINoise/odeint.f90
-  src/AeroAcoustics/TINoise/PRESOUR.f90
-  src/AeroAcoustics/TINoise/READIN.f90
-  src/AeroAcoustics/TINoise/RHSINT.f90
-  src/AeroAcoustics/TINoise/rkck.f90
-  src/AeroAcoustics/TINoise/rkqs.f90
-  src/AeroAcoustics/TINoise/SETMATA.f90
-  src/AeroAcoustics/TINoise/SETMAT.f90
-  src/AeroAcoustics/TINoise/SETRHSA.f90
-  src/AeroAcoustics/TINoise/SETRHS.f90
-  src/AeroAcoustics/TINoise/SOLSEQA.f90
-  src/AeroAcoustics/TINoise/SOLSEQ.f90
-  src/AeroAcoustics/TINoise/SPL_E0A.f90
-  src/AeroAcoustics/TINoise/SPL_E1A.f90
-  src/AeroAcoustics/TINoise/SPL_EX1.f90
-  src/AeroAcoustics/TINoise/SPL_EX2.f90
-  src/AeroAcoustics/TINoise/SPL_EX3.f90
-  src/AeroAcoustics/TINoise/SPL_EX.f90
-  src/AeroAcoustics/TINoise/SPL_PA.f90
-  src/AeroAcoustics/TINoise/SPL_P.f90
-  src/AeroAcoustics/TINoise/SPL_PPA.f90
-  src/AeroAcoustics/TINoise/SPL_PP.f90
-  src/AeroAcoustics/TINoise/STREAM.f90
-  src/AeroAcoustics/TINoise/TI_Noise.f90
-  src/AeroAcoustics/TINoise/TINoiseMods.f90
-  src/AeroAcoustics/TINoise/WAKE.f90
-)
-add_library(FullGuidati ${FULLGUIDATI_SOURCES})
-
-
 # AeroAcoustics - Main
 set(AEROACOUSTIC_SOURCES
   src/AeroAcoustics/AeroAcoustics.f90
   src/AeroAcoustics/AeroAcoustics_IO.f90
   src/AeroAcoustics_Types.f90
-  # this target shouldnt depend on airfoilinfo as this creates a circular reference
   src/AirfoilInfo_Types.f90
 )
 add_library(AeroAcoustics ${AEROACOUSTIC_SOURCES})
-target_link_libraries(AeroAcoustics nwtclibs FullGuidati TNO)
+target_link_libraries(AeroAcoustics nwtclibs TNO)
 
 if (GENERATE_TYPES)
   generate_f90_types(src/AeroAcoustics_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/AeroAcoustics_Types.f90)
@@ -128,7 +84,7 @@ set(UA_DRIVER_SOURCES
 add_executable(unsteadyaero_driver ${UA_DRIVER_SOURCES})
 target_link_libraries(unsteadyaero_driver aerodynlib nwtclibs versioninfolib ${CMAKE_DL_LIBS})
 
-install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib AeroAcoustics FullGuidati TNO
+install(TARGETS unsteadyaero_driver aerodyn_driver aerodynlib AeroAcoustics TNO
   EXPORT "${CMAKE_PROJECT_NAME}Libraries"
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib

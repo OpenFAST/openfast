@@ -1,11 +1,11 @@
 FUNCTION int1(x2)
 
-USE Atmosphere
-USE BLParams
+USE Atmosphere, only: nu, co
+USE BLParams, only: d99, Cf, edgevel ! that's all of it
 use ISO_FORTRAN_ENV
-USE TNOConstants
+USE TNOConstants ! NOTE: omega is not a constant!
 USE Wavenumber
-USE AirfoilParams
+USE AirfoilParams, only: Mach, ISSUCTION
 
 implicit none
 

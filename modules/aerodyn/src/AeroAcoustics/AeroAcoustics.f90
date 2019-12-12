@@ -2221,11 +2221,10 @@ END SUBROUTINE Simple_Guidati
 !================================ Turbulent Boundary Layer Trailing Edge Noise ====================================================!
 !=================================================== TNO START ====================================================================!
 SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SPLS,SPLALPH,SPLTBL,errStat,errMsgn)
-    USE TNOConstants
-    USE Atmosphere
-    USE Wavenumber
-    USE BLParams
-    USE AirfoilParams
+    USE TNOConstants, only: limit, omega ! NOTE: omega is not a constant at all (used in int1 and int2)
+    USE Atmosphere, only: nu, co, rho
+    USE BLParams, only: Cf, d99, edgevel
+    USE AirfoilParams, only: Mach, ISSUCTION
     REAL(ReKi),                               INTENT(IN   ) :: ALPSTAR    !< AOA                    (deg)
     REAL(ReKi),                               INTENT(IN   ) :: C          !< Chord Length                   (m)
     REAL(ReKi),                               INTENT(IN   ) :: U          !< Unoise                 (m/s)
@@ -2265,6 +2264,7 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     INTEGER (4)  :: iord (limit)
     INTEGER (4)  :: last
     INTEGER (4)  :: n_freq,i_low,i_hi
+    INTEGER (4)  :: i_omega
     REAL(kind=4), EXTERNAL :: int2
     ! Init
     n_freq  = size(p%FreqList)
@@ -2277,18 +2277,19 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
     epsabs = 1e-10     !absolute accuracy
     epsrel = 1e-10     !relative accuracy
     band_ratio = 2.**(1./3.)
-    ! Reynolds number and mach number
+    ! Module AirfoilParams
     Mach = real(U  / p%SpdSound)
-    co   = real(p%SpdSound     )
+    ! Module Atmosphere
+    co   = real(p%SpdSound)
+    rho  = real(p%AirDens)
+    nu   = real(p%KinVisc)
     ! Directivity function
     CALL DIRECTH(REAL(Mach),THETA,PHI,DBARH,errStat2,errMsg2)
     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsgn, RoutineName ) 
-    ! Type conversions
+    ! Module BlParams
     Cf      = real(Cfall    )
     d99     = real(d99all   )
     edgevel = real(ABS(EdgeVelAll))
-    rho     = real(p%AirDens)
-    nu      = real(p%KinVisc)
 
     do i_omega = 1,n_freq
         omega = 2.*pi*freq(i_omega)
@@ -2302,7 +2303,7 @@ SUBROUTINE TBLTE_TNO(ALPSTAR,C,U,THETA,PHI,D,R,Cfall,d99all,EdgeVelAll,p,SPLP,SP
             write(*,*) 'Suction Cf is less than zero, Cf = ',Cf(1)
             write(*,*) 'Using BPM'
         ELSE
-            CALL qk61(int2,a,b,answer,abserr,resabs,resasc)
+            CALL qk61(int2,a,b,answer,abserr,resabs,resasc) ! TODO add omega as argument
             Spectrum = D/(4.*pi*R**2.)*answer
             SPL_suction = 10*log10(Spectrum*DBARH/2.e-5/2.e-5)
             SPLS(i_omega) = SPL_suction + 10*log10(band_width)

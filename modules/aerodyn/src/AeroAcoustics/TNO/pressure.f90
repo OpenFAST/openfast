@@ -1,11 +1,10 @@
 FUNCTION Pressure(k1_in)
 
-    USE Atmosphere
-    USE AirfoilParams
-    USE BLParams
+    USE Atmosphere,    only: rho
+    USE AirfoilParams, only: ISSUCTION
+    USE BLParams,      only: d99
     use ISO_FORTRAN_ENV
-    USE TNOConstants
-    USE Wavenumber
+    USE Wavenumber, only: k, k1, k3 ! NOTE: that's all of it
 
     implicit none
 
