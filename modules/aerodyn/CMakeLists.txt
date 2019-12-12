@@ -28,13 +28,10 @@ add_library(TNO ${TNO_SOURCES})
 set(FULLGUIDATI_SOURCES
   src/AeroAcoustics/TINoise/CDA0.f90 
   src/AeroAcoustics/TINoise/CDI0.f90
-  src/AeroAcoustics/TINoise/DEFGEO.f90
   src/AeroAcoustics/TINoise/DETCP.f90 
   src/AeroAcoustics/TINoise/DETFIELD.f90
   src/AeroAcoustics/TINoise/DETSPL.f90
   src/AeroAcoustics/TINoise/DETSTR.f90
-  src/AeroAcoustics/TINoise/DRM_ACU.f90
-  src/AeroAcoustics/TINoise/DRM_AER.f90
   src/AeroAcoustics/TINoise/FLAT.f90
   src/AeroAcoustics/TINoise/FUNCS_LM.f90
   src/AeroAcoustics/TINoise/HANK0.f90

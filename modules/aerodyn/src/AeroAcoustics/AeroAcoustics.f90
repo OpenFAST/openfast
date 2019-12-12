@@ -209,8 +209,8 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     ENDIF
     
     ! Check 2
-    ! if passed the first check and if  tno  or full guidati model is still on, turn on boundary layer calculation
-    IF( (p%ITURB.eq.2) .or. (p%IInflow.eq.2) )then
+    ! if passed the first check and if tno, turn on boundary layer calculation
+    IF( (p%ITURB.eq.2)) then
         p%X_BLMethod=2
     ENDIF
     
@@ -346,7 +346,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     endif
 
     ! If simplified guidati is on, calculate the airfoil thickness from input airfoil coordinates
-    IF (p%IInflow .EQ. 3) THEN
+    IF (p%IInflow .EQ. 2) THEN
         ! Calculate the Thickness @ 1% chord and  @ 10% chord (normalized thickness)
         call AllocAry(p%AFThickGuida,2,size(p%AFInfo),  'p%AFThickGuida', errStat2, errMsg2); if(Failed()) return
         p%AFThickGuida=0.0_Reki
@@ -496,8 +496,8 @@ subroutine Init_y(y, u, p, errStat, errMsg)
     call AllocAry(y%SumSpecNoiseSep    , 7                      , p%NrObsLoc                , size(p%FreqList)           , 'y%SumSpecNoiseSep' , errStat2               , errMsg2); if(Failed()) return
     call AllocAry(y%OASPL_Mech         , nNoiseMechanism        , p%NrObsLoc                , p%NumBlNds                 , p%NumBlades         , 'y%OASPL_Mech'         , errStat2  , errMsg2); if(Failed()) return
     call AllocAry(y%OutLECoords        , 3                      , size(p%FreqList)          , p%NrObsLoc                 , p%NumBlades         , 'y%OutLECoords'        , errStat2  , errMsg2); if(Failed()) return
-	call AllocAry(y%PtotalFreq    	   , p%NrObsLoc             , size(p%FreqList)		    , 'y%PtotalFreq'       		 , errStat2            , errMsg2); if(Failed()) return
-	
+    call AllocAry(y%PtotalFreq         , p%NrObsLoc             , size(p%FreqList)          , 'y%PtotalFreq'             , errStat2            , errMsg2); if(Failed()) return
+
     y%WriteOutput        = 0.0_reki
     y%WriteOutputSep     = 0.0_reki
     y%WriteOutputForPE   = 0.0_reki
@@ -508,8 +508,8 @@ subroutine Init_y(y, u, p, errStat, errMsg)
     y%SumSpecNoise       = 0.0_reki
     y%SumSpecNoiseSep    = 0.0_reki
     y%OutLECoords        = 0.0_reki
-	y%PtotalFreq		 = 0.0_reki
-	
+    y%PtotalFreq         = 0.0_reki
+
 contains
     logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) 
@@ -980,12 +980,12 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
             ENDDO
         ENDDO;ENDDO
     ENDDO
-	
-	DO K = 1,p%NrObsLoc;
-		DO III = 1,size(p%FreqList);
-			y%PtotalFreq(K,III) = 0.0_ReKi
-		ENDDO
-	ENDDO
+
+    DO K = 1,p%NrObsLoc;
+       DO III = 1,size(p%FreqList);
+          y%PtotalFreq(K,III) = 0.0_ReKi
+       ENDDO
+    ENDDO
 
     !------------------- initialize FFT  -------------------------!
     !!!IF (m%speccou .eq. p%total_sample)THEN
@@ -1086,25 +1086,20 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
                 !--------Inflow Turbulence Noise ------------------------------------------------!
                 ! important checks to be done inflow tubulence inputs
                 IF (p%IInflow.gt.0) then
-				
+
                     ! Amiet's Inflow Noise Model is Calculated as long as InflowNoise is On
                     CALL InflowNoise(AlphaNoise,p%BlChord(J,I),Unoise,m%ChordAngleLE(K,J,I),m%SpanAngleLE(K,J,I),&
                         elementspan,m%rLEtoObserve(K,J,I),xd%MeanVxVyVz(J,I),xd%TIVx(J,I),m%LE_Location(3,J,I),0.050,p,m%SPLti,errStat2,errMsg2 )
                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                     ! If Guidati model (simplified or full version) is also on then the 'SPL correction' to Amiet's model will be added 
-                    IF ( p%IInflow .EQ. 2 )   THEN                                     
-                        CALL FullGuidati(AlphaNoise,UNoise,p%BlChord(J,I),elementspan,m%rLEtoObserve(K,J,I), &
-                            m%ChordAngleLE(K,J,I),m%SpanAngleLE(K,J,I),xd%MeanVrel(J,I),xd%TIVrel(J,I), &
-                            p,p%BlAFID(J,I),m%SPLTIGui,errStat2,errMsg2 )
-                        write(*,*)'FullGuidati: EBRA:  SplTi appears unset. TODO'
-                        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-                        m%SPLti=m%SPLti+m%SPLTIGui+10 ! +10 is fudge factor to match NLR data
-                    ELSEIF ( p%IInflow .EQ. 3 )   THEN      
+                    IF ( p%IInflow .EQ. 2 )   THEN      
                         CALL Simple_Guidati(UNoise,p%BlChord(J,I),p%AFThickGuida(2,p%BlAFID(J,I)), &
                             p%AFThickGuida(1,p%BlAFID(J,I)),p,m%SPLTIGui,errStat2,errMsg2 )
                         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                         m%SPLti=m%SPLti+m%SPLTIGui+10 ! +10 is fudge factor to match NLR data
-
+                    ELSEIF ( p%IInflow .EQ. 3 )   THEN                                     
+                       print*,'Full Guidati removed'
+                       STOP
                     ENDIF    
                 ENDIF
                 !----------------------------------------------------------------------------------------------------------------------------------!
@@ -1416,7 +1411,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
     integer(intKi)      :: I          ! I A generic index for DO loops.
 
     LOGICAL     :: SWITCH  !!LOGICAL FOR COMPUTATION OF ANGLE OF ATTACK CONTRIBUTION  
-	
+
   
 
     ErrStat = ErrID_None
@@ -1544,12 +1539,11 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
         P2  = 10.**(SPLS(I) / 10.)				! SPL_Suction
         P4  = 10.**(SPLALPH(I) / 10.)			! SPL_AoA	
         SPLTBL(I) = 10. * LOG10(P1 + P2 + P4)										! Eq 24 from BPM Airfoil Self-noise and Prediction paper
-		
 
-		
+
+
 	ENDDO
-	
-	
+
 END SUBROUTINE TBLTE
 !==================================================================================================================================!
 SUBROUTINE TIPNOIS(ALPHTIP,ALPRAT2,C,U ,THETA,PHI, R,p,SPLTIP, errStat, errMsg)
@@ -1672,7 +1666,7 @@ SUBROUTINE InflowNoise(AlphaNoise,Chord,U,THETA,PHI,d,RObs,MeanVNoise,TINoise,LE
   INTEGER(intKi)           :: I        !I A generic index for DO loops.
    ErrStat = ErrID_None
    ErrMsg  = ""
-	   
+
    !!!--- NAF NOISE IDENTICAL
    Mach = U/p%SpdSound
    
@@ -1682,7 +1676,7 @@ Lturb=25.d0*LE_Location**(0.35)*p%z0_aa**(-0.063)               !% Gives smaller
 ! L_Gammas=0.24+0.096*log10(p%z0_aa)+0.016*(log10(p%z0_aa))**2;   !% Can be computed or just give it a value.    ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
 !tinooisess=L_Gammas*log(30.d0/p%z0_aa)/log(LE_Location/p%z0_aa) !% F.E. 16% is 0.16 which is the correct input for SPLhIgh, no need to divide 100   ! ! Wei Jun Zhu, Modeling of Aerodynamically generated Noise From Wind Turbines
        tinooisess=TINoise
-	   
+
 !tinooisess=0.1
 !Ums = (tinooisess*U)**2
 !Ums = (tinooisess*8)**2
@@ -2193,66 +2187,6 @@ SUBROUTINE DIRECTL(M,THETA,PHI,DBAR, errStat, errMsg)
     PHIR   = PHI * DEGRAD
     DBAR = (SIN(THETAR)*SIN(PHIR))**2/(1.+M*COS(THETAR))**4													! eq B2 in BPM Airfoil Self-noise and Prediction paper
 END SUBROUTINE DirectL
-!==================================================================================================================================!
-!===============================  Full Guidati Model Inflow Turbulence Noise -  Addition ==========================================!
-!==================================================================================================================================!
-SUBROUTINE FullGuidati(ALPSTAR,U,Chords,d,RObs,THETA,PHI,MeanVNoise,TINoise,p,whichairfoil,SPLti,errStat,errMsgn)
-    USE Atmosphere, only: nu, rho, co
-    USE TINoiseGeneric, only: mach_ti, csound, pi2
-    USE TINoiseGeo, only: alfa
-    USE TINoiseInput, only: npath, nfreq, freq_in, chord, dpath, alpha_in
-    USE TICoords,      only: n_in, x_ti, y_ti
-    USE AirfoilParams, only: aofa, a_chord
-    !USE TI_Guidati
-    REAL(ReKi),                               INTENT(IN   ) :: ALPSTAR        !< AOA                    (deg)
-    REAL(Reki),                               INTENT(IN   ) :: Chords         !< Chord Length
-    REAL(ReKi),                               INTENT(IN   ) :: U              !<
-    REAL(ReKi),                               INTENT(IN   ) :: d              !< element span
-    REAL(ReKi),                               INTENT(IN   ) :: RObs           !< distance to observer
-    REAL(ReKi),                               INTENT(IN   ) :: THETA          !<
-    REAL(ReKi),                               INTENT(IN   ) :: PHI            !< Spanwise directivity angle
-    REAL(ReKi),                               INTENT(IN   ) :: MeanVNoise     !<
-    REAL(ReKi),                               INTENT(IN   ) :: TINoise        !<
-    integer(intKi),                           INTENT(IN   ) :: whichairfoil   !< whichairfoil
-    TYPE(AA_ParameterType),                   INTENT(IN   ) :: p              !< Parameters
-    REAL(ReKi),DIMENSION(size(p%FreqList)),   INTENT(  OUT) :: SPLti          !<
-    INTEGER(IntKi),                           INTENT(  OUT) :: errStat        !< Error status of the operation
-    character(*),                             INTENT(  OUT) :: errMsgn        !< Error message if ErrStat /= ErrID_None
-    ! local variables
-    integer(intKi)                                                 :: ErrStat2       ! temporary Error status
-    character(ErrMsgLen)                                           :: ErrMsg2        ! temporary Error message
-    character(*), parameter                                        :: RoutineName = 'FullGuidati'
-    integer(intKi)                                                 :: loop1       ! temporary 
-    ErrStat = ErrID_None
-    ErrMsgn  = "" 
-    SPLti=0.0_R8Ki ! EBRA: NOTE, this does not seem to be set TODO TODO TODO TODO FIGURE THIS OUT
-    ! NOTE: Type conversions might occur
-    rho     = p%AirDens
-    co      = p%SpdSound
-    nu      = p%KinVisc
-    aofa    = ALPSTAR
-    a_chord = Chords
-    npath   = 40         ! Number of Streamlines                (Guidati full model)
-    dpath   = 0.005      ! Distance between streamlines         (Guidati full model)
-    mach_ti = U / co
-    CALL INICON
-    ! Instead of calling readin routine the necessary variables are assigned within this subroutine
-    csound                      = co
-    chord                       = a_chord
-    alpha_in                    = aofa
-    alfa                        = alpha_in(1) * pi2 / 360.0d0
-    nfreq                       = size(p%FreqList)
-    freq_in(1:size(p%FreqList)) = p%FreqList
-    x_ti                        = 0.0d0
-    y_ti                        = 0.0d0
-    n_in                        = size(p%AFInfo(whichairfoil)%X_Coord)-1
-    x_ti(1:n_in)=p%AFInfo(whichairfoil)%X_Coord(2:n_in+1) ! starts from 2 first value is aerod center
-    y_ti(1:n_in)=p%AFInfo(whichairfoil)%Y_Coord(2:n_in+1) ! starts from 2 first value is aerod center
-
-    CALL DEFGEO
-    CALL DRM_AER
-    CALL DRM_ACU
-END SUBROUTINE FullGuidati
 !==================================================================================================================================!
 !===============================  Simplified Guidati Inflow Turbulence Noise Addition =============================================!
 !==================================================================================================================================!
