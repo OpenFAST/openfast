@@ -1670,9 +1670,9 @@ SUBROUTINE FAST_Init( p, m_FAST, y_FAST, t_initial, InputFile, ErrStat, ErrMsg, 
    p%n_TMax_m1  = CEILING( ( (p%TMax - t_initial) / p%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
    if (p%TMax < 1.0_DbKi) then ! log10(0) gives floating point divide-by-zero error
-      p%TChanLen = ChanLen
+      p%TChanLen = MinChanLen
    else
-      p%TChanLen = max( ChanLen, int(log10(p%TMax))+7 )
+      p%TChanLen = max( MinChanLen, int(log10(p%TMax))+7 )
    end if
    p%OutFmt_t = 'F'//trim(num2lstr( p%TChanLen ))//'.4' ! 'F10.4'    
     
@@ -1734,8 +1734,8 @@ SUBROUTINE ValidateInputData(p, m_FAST, ErrStat, ErrMsg)
    CALL ChkRealFmtStr( p%OutFmt, 'OutFmt', p%FmtWidth, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   IF ( p%WrTxtOutFile .and. p%FmtWidth /= ChanLen ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
-         TRIM(Num2LStr(p%FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLen))//' characters.', ErrStat, ErrMsg, RoutineName )
+   IF ( p%WrTxtOutFile .and. p%FmtWidth < MinChanLen ) CALL SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
+         TRIM(Num2LStr(p%FmtWidth))//'), which may be too small.', ErrStat, ErrMsg, RoutineName )
    
    IF ( p%WrTxtOutFile .AND. p%TChanLen > ChanLen  )  THEN ! ( p%TMax > 9999.999_DbKi )
       CALL SetErrStat( ErrID_Warn, 'TMax is too large for a '//trim(num2lstr(ChanLen))//'-character time column in text tabular (time-marching) output files.'// &
@@ -2140,7 +2140,7 @@ end do
 
    IF (p_FAST%WrTxtOutFile) THEN
 
-      y_FAST%ActualChanLen = max( ChanLen, p_FAST%FmtWidth )
+      y_FAST%ActualChanLen = max( MinChanLen, p_FAST%FmtWidth )
       DO I=1,NumOuts
          y_FAST%ActualChanLen = max( y_FAST%ActualChanLen, LEN_TRIM(y_FAST%ChannelNames(I)) )
          y_FAST%ActualChanLen = max( y_FAST%ActualChanLen, LEN_TRIM(y_FAST%ChannelUnits(I)) )
@@ -2823,7 +2823,7 @@ END DO
          p%WrBinOutFile = .true.
          p%WrBinMod     =  FileFmtID_NoCompressWithoutTime    ! A format specifier for the binary output file format (3=don't include time channel and do not pack data)
       else
-         p%WrBinMod = FileFmtID_WithoutTime                   ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel;3=don't include time channel and do not pack data)
+         p%WrBinMod = FileFmtID_ChanLen_In                    ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel;3=don't include time channel and do not pack data)
       end if
 
       OutFileFmt = OutFileFmt / 2 ! integer division

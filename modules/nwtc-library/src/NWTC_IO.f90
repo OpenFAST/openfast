@@ -6743,8 +6743,6 @@ END SUBROUTINE CheckR16Var
 
    IMPLICIT                     NONE
 
-   INTEGER(IntKi), PARAMETER     :: LenName     = ChanLen            ! Number of characters allowed in a channel name
-
       ! Passed data (sorted by element size, then alphabetical)
 
    REAL(DbKi),        INTENT(IN) :: TimeData(:)                      !< The time being output to the file (if using FileFmtID_WithoutTime: element 1 is the first output time, element 2 is the delta t)
@@ -6752,8 +6750,8 @@ END SUBROUTINE CheckR16Var
    INTEGER(IntKi),    INTENT(OUT):: ErrStat                          !< Indicates whether an error occurred (see NWTC_Library)
    INTEGER(B2Ki),     INTENT(IN) :: FileID                           !< File ID, used to determine format of output file (use FileFmtID_WithTime or FileFmtID_WithoutTime)
 
-   CHARACTER(LenName),INTENT(IN) :: ChanName(:)                      !< The output channel names (including Time)
-   CHARACTER(LenName),INTENT(IN) :: ChanUnit(:)                      !< The output channel units (including Time)
+   CHARACTER(ChanLen),INTENT(IN) :: ChanName(:)                      !< The output channel names (including Time)
+   CHARACTER(ChanLen),INTENT(IN) :: ChanUnit(:)                      !< The output channel units (including Time)
    CHARACTER(*),      INTENT(IN) :: DescStr                          !< Description to write to the binary file (e.g., program version, date, & time)
    CHARACTER(*),      INTENT(OUT):: ErrMsg                           !< Error message associated with the ErrStat
    CHARACTER(*),      INTENT(IN) :: FileName                         !< Name of the file to write the output in
@@ -6801,6 +6799,8 @@ END SUBROUTINE CheckR16Var
    INTEGER(B1Ki), ALLOCATABLE    :: ChanNameASCII(:)                 ! The ASCII equivalent of ChanName
    INTEGER(B1Ki), ALLOCATABLE    :: ChanUnitASCII(:)                 ! The ASCII equivalent of ChanUnit
 
+   INTEGER(IntKi)                :: LenName                          ! Max number of characters in a channel name
+   
    CHARACTER(ErrMsgLen)          :: ErrMsg2                          ! temporary error message
    CHARACTER(*), PARAMETER       :: RoutineName = 'WrBinFAST'
 
@@ -6834,6 +6834,15 @@ END SUBROUTINE CheckR16Var
    !...............................................................................................................................
    ! Allocate arrays
    !...............................................................................................................................
+   IF (FileID==FileFmtID_ChanLen_In) THEN
+      LenName = 1
+      DO IC = 1,NumOutChans+1
+         LenName = MAX(LenName,LEN_TRIM(ChanName(IC)))
+         LenName = MAX(LenName,LEN_TRIM(ChanUnit(IC)))
+      END DO
+   ELSE
+      LenName = 10
+   END IF
 
    CALL AllocAry( ChanNameASCII, (1+NumOutChans)*LenName , 'temporary channel name array (ChanNameASCII)', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -6997,6 +7006,15 @@ END SUBROUTINE CheckR16Var
          CALL Cleanup( )
          RETURN
       END IF
+
+   IF (FileID==FileFmtID_ChanLen_In) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)   INT( LenName          , B2Ki )            ! Length of channel names
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error writing ChanLen to the FAST binary file.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup( )
+            RETURN
+         END IF
+   END IF
 
    WRITE (UnIn, IOSTAT=ErrStat2)   INT( NumOutChans        , B4Ki )            ! The number of output channels
       IF ( ErrStat2 /= 0 ) THEN

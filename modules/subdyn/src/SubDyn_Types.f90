@@ -45,8 +45,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  SD_InitOutputType  =======
   TYPE, PUBLIC :: SD_InitOutputType
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputHdr      !< Names of the output-to-file channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: WriteOutputUnt      !< Units of the output-to-file channels [-]
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
   END TYPE SD_InitOutputType
 ! =======================
@@ -126,7 +126,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: JDampings      !< Damping coefficients for internal modes [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Members      !< Member joints connection [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Interf      !< Interface degree of freedoms [-]
-    CHARACTER(10) , DIMENSION(:), ALLOCATABLE  :: SSOutList      !< List of Output Channels [-]
+    CHARACTER(ChanLen) , DIMENSION(:), ALLOCATABLE  :: SSOutList      !< List of Output Channels [-]
     LOGICAL  :: OutCOSM      !< Output Cos-matrices Flag [-]
     LOGICAL  :: TabDelim      !< Generate a tab-delimited output file in OutJckF-Flag [-]
     INTEGER(IntKi)  :: NNode      !< Total number of nodes [-]

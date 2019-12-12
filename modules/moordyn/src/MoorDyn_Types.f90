@@ -122,8 +122,8 @@ IMPLICIT NONE
 ! =======================
 ! =========  MD_OutParmType  =======
   TYPE, PUBLIC :: MD_OutParmType
-    CHARACTER(10)  :: Name      !< name of output channel [-]
-    CHARACTER(10)  :: Units      !< units string [-]
+    CHARACTER(ChanLen)  :: Name      !< name of output channel [-]
+    CHARACTER(ChanLen)  :: Units      !< units string [-]
     INTEGER(IntKi)  :: QType      !< type of quantity - 0=tension, 1=x, 2=y, 3=z... [-]
     INTEGER(IntKi)  :: OType      !< type of object - 0=line, 1=connect [-]
     INTEGER(IntKi)  :: NodeID      !< node number if OType=0.  0=anchor, -1=N=Fairlead [-]
