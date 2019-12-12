@@ -835,20 +835,20 @@ SUBROUTINE SrvD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState,
    !...............................................................................................................................  
       
       ! Torque control
-   CALL Torque_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )      
+   CALL Torque_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
       
       ! Pitch control:
-   CALL Pitch_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   CALL Pitch_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
       ! Yaw control: 
-   CALL Yaw_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   CALL Yaw_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
       ! Tip brake control:    
-   CALL TipBrake_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+   CALL TipBrake_UpdateStates( t_next, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    !...............................................................................................................................   

@@ -39,8 +39,7 @@ typedef     ^                   InitInputType        ReKi                KinVisc
 typedef     ^                   InitInputType        ReKi                SpdSound         -     -     -     "Speed of sound"     m/s
 typedef     ^                   InitInputType        ReKi                HubHeight         -     -     -     "Hub Height"     m
 typedef     ^                   InitInputType        IntKi               BlAFID          {:}{:} -     -     "Index of airfoil data file for blade node location [array of numBladeNodes by numBlades]"        -
-typedef     ^                   InitInputType        AFInfoType          AFInfo          {:}     -     -      "Airfoil information structure containing the aerodynamic center and airfoil shape coordinates"
-
+typedef     ^                   InitInputType        AFI_ParameterType   AFInfo          {:}     -     -      "Airfoil information structure containing the aerodynamic center and airfoil shape coordinates"
 #
 # Define outputs from the initialization routine here:
 typedef     ^                   InitOutputType       CHARACTER(20)  WriteOutputHdr       {:}    -     -     "Names of the output-to-file channels"     -
@@ -210,7 +209,7 @@ typedef     ^                   ParameterType        ReKi                TEThick
 typedef     ^                   ParameterType        ReKi                TEAngle                {:}{:}  -     -     "ation"     -
 typedef     ^                   ParameterType        ReKi                AerCent                {:}{:}{:}   -     -     "ation"     -
 typedef     ^                   ParameterType        IntKi               BlAFID                 {:}{:} -     -     "Index of airfoil data file for blade node location [array of numBladeNodes by numBlades]"        -
-typedef     ^                   ParameterType        AFInfoType          AFInfo                 {:}     -     -      "Airfoil information structure containing the aerodynamic center and airfoil shape coordinates"
+typedef     ^                   ParameterType        AFI_ParameterType   AFInfo                 {:}     -     -      "Airfoil information structure containing the aerodynamic center and airfoil shape coordinates"
 typedef     ^                   ParameterType        ReKi                AFLECo                 {:}{:}{:}  -     -     "Dimensionalized "
 typedef     ^                   ParameterType        ReKi                AFTECo                 {:}{:}{:}  -     - 
 typedef     ^                   ParameterType        ReKi                BlSpn                  {:}{:}  -     -     "Span at blade node"     m

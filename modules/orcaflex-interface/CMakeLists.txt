@@ -14,7 +14,9 @@
 # limitations under the License.
 #
 
-generate_f90_types(src/OrcaFlexInterface.txt OrcaFlexInterface_Types.f90)
+if (GENERATE_TYPES)
+  generate_f90_types(src/OrcaFlexInterface.txt ${CMAKE_CURRENT_LIST_DIR}/src/OrcaFlexInterface_Types.f90)
+endif()
 
 if (ORCA_DLL_LOAD)
   add_definitions(-DLibLoad)
@@ -24,10 +26,8 @@ endif (ORCA_DLL_LOAD)
 
 add_library(orcaflexlib
   src/OrcaFlexInterface.f90
-
-  # Generated files
-  OrcaFlexInterface_Types.f90
-  )
+  src/OrcaFlexInterface_Types.f90
+)
 target_link_libraries(orcaflexlib nwtclibs)
 
 add_executable(orca_driver

@@ -24,7 +24,6 @@ PROGRAM FAST
 ! This program models 2- or 3-bladed turbines of a standard configuration.
 !
 ! noted compilation switches:
-!   SOLVE_OPTION_1_BEFORE_2 (uses a different order for solving input-output relationships)
 !   OUTPUT_ADDEDMASS        (outputs a file called "<RootName>.AddedMass" that contains HydroDyn's added-mass matrix.
 !   OUTPUT_JACOBIAN
 !   FPE_TRAP_ENABLED        (use with gfortran when checking for floating point exceptions)
@@ -73,7 +72,7 @@ INTEGER(IntKi)                        :: Restart_step                           
          ! initialization
          !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
          
-         CALL FAST_InitializeAll_T( t_initial, i_turb, Turbine(i_turb), ErrStat, ErrMsg )     ! bjj: we need to get the input files for each turbine (not necessarially the same one)
+         CALL FAST_InitializeAll_T( t_initial, i_turb, Turbine(i_turb), ErrStat, ErrMsg )     ! bjj: we need to get the input files for each turbine (not necessarily the same one)
          CALL CheckError( ErrStat, ErrMsg, 'during module initialization' )
                         
       !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

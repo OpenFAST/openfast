@@ -756,6 +756,9 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       RETURN
    END IF
 
+
+
+
    ! Read the first file and set the initial values of the 
    
    CALL GetNewUnit( UnWv )
@@ -910,6 +913,26 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    InitOut%WaveElev(InitOut%NStepWave,:)     = InitOut%WaveElev(0,:)
    InitOut%nodeInWater(InitOut%NStepWave,:)  = InitOut%nodeInWater(0,:)
    
+
+
+   ! For creating animations of the sea surface, the WaveElevXY array is passed in with a series of x,y coordinates
+   ! (index 1).  The second index corresponds to the number of points passed in.  A two dimensional time series
+   ! is created with the first index corresponding to the timestep, and second index corresponding to the second
+   ! index of the WaveElevXY array.
+   IF ( ALLOCATED(InitInp%WaveElevXY)) THEN
+      ALLOCATE ( InitOut%WaveElevSeries (0:InitOut%NStepWave, 1:SIZE(InitInp%WaveElevXY, DIM=2)) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevSeries.',ErrStat,ErrMsg,'VariousWaves_Init')
+         RETURN
+      END IF
+       ! Calculate the wave elevation at all points requested in the array WaveElevXY
+      DO I = 0,InitOut%NStepWave
+          DO J = 1,SIZE(InitInp%WaveElevXY, DIM=2)
+              InitOut%WaveElevSeries(I,J) = 0.0_ReKi ! TODO, these values should be interpolated based on inputs
+          ENDDO
+      ENDDO
+   ENDIF
+
    
 CONTAINS
 
@@ -917,8 +940,8 @@ CONTAINS
    FUNCTION ExtractFields(FU, s, n) result(OK)
       ! Arguments
       INTEGER, INTENT(IN)       :: FU       !< Unit name
-      CHARACTER(*), INTENT(OUT) :: s(n)     !< Fields
       INTEGER, INTENT(IN)       :: n        !< Number of fields
+      CHARACTER(*), INTENT(OUT) :: s(n)     !< Fields
       LOGICAL                   :: OK
       ! Local var
       CHARACTER(2048)           :: TextLine          !< One line of text read from the file

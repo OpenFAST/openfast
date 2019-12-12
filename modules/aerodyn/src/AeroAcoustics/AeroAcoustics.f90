@@ -188,7 +188,7 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
     ENDIF
 
     do i=1,size(InitInp%AFInfo)
-        call AFI_Copyafinfotype(InitInp%AFInfo(i), p%AFInfo(i), MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
+        call AFI_CopyParam(InitInp%AFInfo(i), p%AFInfo(i), MESH_NEWCOPY, errStat2, errMsg2); if(Failed()) return
     end do
 
     ! Check 1

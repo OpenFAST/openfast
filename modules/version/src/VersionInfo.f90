@@ -27,7 +27,6 @@ contains
 FUNCTION QueryGitVersion()
 
    CHARACTER(200) :: QueryGitVersion
-   QueryGitVersion = 'unversioned'
 
 #ifdef GIT_INCLUDE_FILE
 #include GIT_INCLUDE_FILE
@@ -35,6 +34,8 @@ FUNCTION QueryGitVersion()
 
 #ifdef GIT_VERSION_INFO
    QueryGitVersion = GIT_VERSION_INFO
+#else
+   QueryGitVersion = 'unversioned'
 #endif
 
    RETURN
