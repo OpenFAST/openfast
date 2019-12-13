@@ -1604,17 +1604,23 @@ SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, D
       ! Step through all the positions and get the velocities
    DO PointNum = 1, NumPoints
 
-         ! Calculate the velocity for the position
-      Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),ParamData,MiscVars,TmpErrStat,TmpErrMsg)
+         ! If the position is (0,0,0), assume it was never set and skip calculating
+      if (  PositionXYZ(1,PointNum) /= 0.0_ReKi .and. &
+            PositionXYZ(2,PointNum) /= 0.0_ReKi .and. &
+            PositionXYZ(3,PointNum) /= 0.0_ReKi ) then
 
-         ! Error handling
-      IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
-         CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, "IfW_BladedFFWind:CalcOutput [position=("//   &
-                                                      TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
-                                                      TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
-                                                      TRIM(Num2LStr(PositionXYZ(3,PointNum)))//")]" )
-         IF (ErrStat >= AbortErrLev) RETURN
-      END IF
+            ! Calculate the velocity for the position
+         Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),ParamData,MiscVars,TmpErrStat,TmpErrMsg)
+
+            ! Error handling
+         IF (TmpErrStat /= ErrID_None) THEN  !  adding this so we don't have to convert numbers to strings every time
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, "IfW_BladedFFWind:CalcOutput [position=("//   &
+                                                         TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
+                                                         TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
+                                                         TRIM(Num2LStr(PositionXYZ(3,PointNum)))//")]" )
+            IF (ErrStat >= AbortErrLev) RETURN
+         END IF
+      endif
 
    ENDDO
 
