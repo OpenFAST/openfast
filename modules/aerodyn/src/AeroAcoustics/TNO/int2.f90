@@ -1,7 +1,7 @@
 FUNCTION int2(k1)
 
-USE Atmosphere
-USE TNOConstants
+USE Atmosphere, only: co
+USE TNOConstants, only: omega ! NOTE: Not a constant, set it as an argument!
 
 implicit none
 

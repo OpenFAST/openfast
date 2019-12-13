@@ -1,8 +1,9 @@
 MAKE=make --no-print-directory
+CMAKE_ARGS= -DGENERATE_TYPES=ON -DCMAKE_BUILD_TYPE=Debug
 ifeq ($(OS),Windows_NT)
 	OS=Windows
 	suffix=-nmake
-	CMAKE_ARGS=-G"NMake Makefiles"
+	CMAKE_ARGS:=$(CMAKE_ARGS) -G"NMake Makefiles" 
 	MAKE=nmake
 	RMDIR=rmdir /S /Q
 	LIBEXT=.dll

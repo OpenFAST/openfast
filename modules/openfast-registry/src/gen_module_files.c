@@ -1541,11 +1541,9 @@ fprintf(fp,"  END IF\n") ;
 #endif
 
 void
-gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * uy, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims)
+gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * xtypnm, char * uy, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims, const node_t *q)
 {
-   char nonick[NAMELEN];
-   char *ddtname;
-   node_t *q, *r;
+   node_t *r;
    int i, j;
 
    fprintf(fp, "\n");
@@ -1563,16 +1561,16 @@ gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, "\n");
 
 
-   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s1    ! %s at t1 > t2\n", ModName->nickname, typnmlong, uy, typnm);
-   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s2    ! %s at t2 \n", ModName->nickname, typnmlong, uy, typnm);
-   fprintf(fp, " REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the %ss\n", typnm);
+   fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s1    ! %s at t1 > t2\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+   fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s2    ! %s at t2 \n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+   fprintf(fp, " REAL(%s),         INTENT(IN   )          :: tin(2)   ! Times associated with the %ss\n", xtypnm, typnm);
    fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
-   fprintf(fp, " REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to\n");
+   fprintf(fp, " REAL(%s),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to\n", xtypnm);
    fprintf(fp, " INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation\n");
    fprintf(fp, " CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None\n");
    fprintf(fp, "   ! local variables\n");
-   fprintf(fp, " REAL(DbKi)                                 :: t(2)     ! Times associated with the %ss\n", typnm);
-   fprintf(fp, " REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd\n");
+   fprintf(fp, " REAL(%s)                                 :: t(2)     ! Times associated with the %ss\n", xtypnm, typnm);
+   fprintf(fp, " REAL(%s)                                 :: t_out    ! Time to which to be extrap/interpd\n", xtypnm);
    fprintf(fp, " CHARACTER(*),                    PARAMETER :: RoutineName = '%s_%s_ExtrapInterp1'\n", ModName->nickname, typnm);
 
 
@@ -1623,33 +1621,22 @@ gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, "   END IF\n");
 
 
-   for (q = ModName->module_ddt_list; q; q = q->next)
+   for (r = q->fields; r; r = r->next)
    {
-      if (q->usefrom == 0) {
-         ddtname = q->name;
-         remove_nickname(ModName->nickname, ddtname, nonick);
-         if (!strcmp(nonick, make_lower_temp(typnmlong))) {
-            for (r = q->fields; r; r = r->next)
-            {
-               // recursive
-               gen_extint_order(fp, ModName, typnm, uy, 1, r, "", 0);
-            }
-         }
-      }
+      // recursive
+      gen_extint_order(fp, ModName, typnm, uy, 1, r, "", 0);
    }
+
 
    fprintf(fp, " END SUBROUTINE %s_%s_ExtrapInterp1\n", ModName->nickname, typnm);
    fprintf(fp, "\n");
 }
 
 void
-gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * uy, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims)
+gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * xtypnm, char * uy, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims, const node_t *q)
 {
-   char nonick[NAMELEN];
-   char *ddtname;
-   node_t *q, *r;
+   node_t *r;
    int i, j;
-
 
    fprintf(fp, "\n");
    fprintf(fp, " SUBROUTINE %s_%s_ExtrapInterp2(%s1, %s2, %s3, tin, %s_out, tin_out, ErrStat, ErrMsg )\n", ModName->nickname, typnm, uy, uy, uy, uy);
@@ -1668,17 +1655,17 @@ gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, "\n");
 
 
-   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s1      ! %s at t1 > t2 > t3\n", ModName->nickname, typnmlong, uy, typnm);
-   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s2      ! %s at t2 > t3\n", ModName->nickname, typnmlong, uy, typnm);
-   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s3      ! %s at t3\n", ModName->nickname, typnmlong, uy, typnm);
-   fprintf(fp, " REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the %ss\n", typnm);
+   fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s1      ! %s at t1 > t2 > t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+   fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s2      ! %s at t2 > t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+   fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s3      ! %s at t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+   fprintf(fp, " REAL(%s),                 INTENT(IN   )  :: tin(3)    ! Times associated with the %ss\n", xtypnm, typnm);
    fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out     ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
-   fprintf(fp, " REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to\n");
+   fprintf(fp, " REAL(%s),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to\n", xtypnm);
    fprintf(fp, " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n");
    fprintf(fp, " CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n");
    fprintf(fp, "   ! local variables\n");
-   fprintf(fp, " REAL(DbKi)                                 :: t(3)      ! Times associated with the %ss\n", typnm);
-   fprintf(fp, " REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd\n");
+   fprintf(fp, " REAL(%s)                                 :: t(3)      ! Times associated with the %ss\n", xtypnm, typnm);
+   fprintf(fp, " REAL(%s)                                 :: t_out     ! Time to which to be extrap/interpd\n", xtypnm);
    fprintf(fp, " INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)\n");
 
 
@@ -1735,19 +1722,10 @@ gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
    fprintf(fp, "     RETURN\n");
    fprintf(fp, "   END IF\n");
 
-   for (q = ModName->module_ddt_list; q; q = q->next)
+   for (r = q->fields; r; r = r->next)
    {
-      if (q->usefrom == 0) {
-         ddtname = q->name;
-         remove_nickname(ModName->nickname, ddtname, nonick);
-         if (!strcmp(nonick, make_lower_temp(typnmlong))) {
-            for (r = q->fields; r; r = r->next)
-            {
-               // recursive
-               gen_extint_order(fp, ModName, typnm, uy, 2, r, "", 0);
-            }
-         }
-      }
+      // recursive
+      gen_extint_order(fp, ModName, typnm, uy, 2, r, "", 0);
    }
 
 
@@ -1757,7 +1735,7 @@ gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
 
 
 void
-gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong)
+gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * xtypnm)
 {
    char nonick[NAMELEN];
    char *ddtname; char uy[2];
@@ -1771,88 +1749,91 @@ gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlon
       strcpy(uy, "u");
    }
 
-   fprintf(fp, "\n");
-   fprintf(fp, " SUBROUTINE %s_%s_ExtrapInterp(%s, t, %s_out, t_out, ErrStat, ErrMsg )\n", ModName->nickname, typnm, uy, uy);
-   fprintf(fp, "!\n");
-   fprintf(fp, "! This subroutine calculates a extrapolated (or interpolated) %s %s_out at time t_out, from previous/future time\n", typnm, uy);
-   fprintf(fp, "! values of %s (which has values associated with times in t).  Order of the interpolation is given by the size of %s\n", uy, uy);
-   fprintf(fp, "!\n");
-   fprintf(fp, "!  expressions below based on either\n");
-   fprintf(fp, "!\n");
-   fprintf(fp, "!  f(t) = a\n");
-   fprintf(fp, "!  f(t) = a + b * t, or\n");
-   fprintf(fp, "!  f(t) = a + b * t + c * t**2\n");
-   fprintf(fp, "!\n");
-   fprintf(fp, "!  where a, b and c are determined as the solution to\n");
-   fprintf(fp, "!  f(t1) = %s1, f(t2) = %s2, f(t3) = %s3  (as appropriate)\n", uy, uy, uy);
-   fprintf(fp, "!\n");
-   fprintf(fp, "!..................................................................................................................................\n");
-   fprintf(fp, "\n");
-
-
-   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s(:) ! %s at t1 > t2 > t3\n", ModName->nickname, typnmlong, uy, typnm);
-   fprintf(fp, " REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the %ss\n", typnm);
-   //jm Modified from INTENT(  OUT) to INTENT(INOUT) to prevent ALLOCATABLE array arguments in the DDT
-   //jm from being maliciously deallocated through the call.See Sec. 5.1.2.7 of bonehead Fortran 2003 standard
-   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
-   fprintf(fp, " REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to\n");
-   fprintf(fp, " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation\n");
-   fprintf(fp, " CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None\n");
-   fprintf(fp, "   ! local variables\n");
-   fprintf(fp, " INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)\n");
-   fprintf(fp, " INTEGER(IntKi)                             :: ErrStat2        ! local errors\n");
-   fprintf(fp, " CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors\n");
-   fprintf(fp, " CHARACTER(*),    PARAMETER                 :: RoutineName = '%s_%s_ExtrapInterp'\n", ModName->nickname, typnm);
-   fprintf(fp, "    ! Initialize ErrStat\n");
-   fprintf(fp, " ErrStat = ErrID_None\n");
-   fprintf(fp, " ErrMsg  = \"\"\n");
-   fprintf(fp, " if ( size(t) .ne. size(%s)) then\n", uy);
-   fprintf(fp, "    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(%s)',ErrStat,ErrMsg,RoutineName)\n",uy);
-   fprintf(fp, "    RETURN\n");
-   fprintf(fp, " endif\n");
-
-   fprintf(fp, " order = SIZE(%s) - 1\n", uy);
-
-   fprintf(fp, " IF ( order .eq. 0 ) THEN\n");
-   fprintf(fp, "   CALL %s_Copy%s(%s(1), %s_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", ModName->nickname, typnm, uy, uy);
-   fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
-   fprintf(fp, " ELSE IF ( order .eq. 1 ) THEN\n");
-   fprintf(fp, "   CALL %s_%s_ExtrapInterp1(%s(1), %s(2), t, %s_out, t_out, ErrStat2, ErrMsg2 )\n", ModName->nickname, typnm, uy, uy, uy);
-   fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
-   fprintf(fp, " ELSE IF ( order .eq. 2 ) THEN\n");
-   fprintf(fp, "   CALL %s_%s_ExtrapInterp2(%s(1), %s(2), %s(3), t, %s_out, t_out, ErrStat2, ErrMsg2 )\n", ModName->nickname, typnm, uy, uy, uy, uy);
-   fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
-   fprintf(fp, " ELSE \n");
-   fprintf(fp, "   CALL SetErrStat(ErrID_Fatal,'size(%s) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)\n", uy);
-   fprintf(fp, "   RETURN\n");
-   fprintf(fp, " ENDIF \n");
-
-   fprintf(fp, " END SUBROUTINE %s_%s_ExtrapInterp\n", ModName->nickname, typnm);
-   fprintf(fp, "\n");
-
-
-   max_ndims = 0; // ModName->module_ddt_list->max_ndims; //bjj: this is max for module, not for typnmlong
-   max_nrecurs = 0; // MAXRECURSE;
-   max_alloc_ndims = 0;
-
    for (q = ModName->module_ddt_list; q; q = q->next)
    {
       if (q->usefrom == 0) {
          ddtname = q->name;
          remove_nickname(ModName->nickname, ddtname, nonick);
          if (!strcmp(nonick, make_lower_temp(typnmlong))) {
+
+            fprintf(fp, "\n");
+            fprintf(fp, " SUBROUTINE %s_%s_ExtrapInterp(%s, t, %s_out, t_out, ErrStat, ErrMsg )\n", ModName->nickname, typnm, uy, uy);
+            fprintf(fp, "!\n");
+            fprintf(fp, "! This subroutine calculates a extrapolated (or interpolated) %s %s_out at time t_out, from previous/future time\n", typnm, uy);
+            fprintf(fp, "! values of %s (which has values associated with times in t).  Order of the interpolation is given by the size of %s\n", uy, uy);
+            fprintf(fp, "!\n");
+            fprintf(fp, "!  expressions below based on either\n");
+            fprintf(fp, "!\n");
+            fprintf(fp, "!  f(t) = a\n");
+            fprintf(fp, "!  f(t) = a + b * t, or\n");
+            fprintf(fp, "!  f(t) = a + b * t + c * t**2\n");
+            fprintf(fp, "!\n");
+            fprintf(fp, "!  where a, b and c are determined as the solution to\n");
+            fprintf(fp, "!  f(t1) = %s1, f(t2) = %s2, f(t3) = %s3  (as appropriate)\n", uy, uy, uy);
+            fprintf(fp, "!\n");
+            fprintf(fp, "!..................................................................................................................................\n");
+            fprintf(fp, "\n");
+
+
+            fprintf(fp, " TYPE(%s_%s), INTENT(%s)  :: %s(:) ! %s at t1 > t2 > t3\n", ModName->nickname, typnmlong, (q->containsPtr == 1) ? "INOUT" : "IN", uy, typnm);
+            fprintf(fp, " REAL(%s),                 INTENT(IN   )  :: t(:)           ! Times associated with the %ss\n", xtypnm, typnm);
+            //jm Modified from INTENT(  OUT) to INTENT(INOUT) to prevent ALLOCATABLE array arguments in the DDT
+            //jm from being maliciously deallocated through the call.See Sec. 5.1.2.7 of bonehead Fortran 2003 standard
+            fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
+            fprintf(fp, " REAL(%s),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to\n", xtypnm);
+            fprintf(fp, " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation\n");
+            fprintf(fp, " CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None\n");
+            fprintf(fp, "   ! local variables\n");
+            fprintf(fp, " INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)\n");
+            fprintf(fp, " INTEGER(IntKi)                             :: ErrStat2        ! local errors\n");
+            fprintf(fp, " CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors\n");
+            fprintf(fp, " CHARACTER(*),    PARAMETER                 :: RoutineName = '%s_%s_ExtrapInterp'\n", ModName->nickname, typnm);
+            fprintf(fp, "    ! Initialize ErrStat\n");
+            fprintf(fp, " ErrStat = ErrID_None\n");
+            fprintf(fp, " ErrMsg  = \"\"\n");
+            fprintf(fp, " if ( size(t) .ne. size(%s)) then\n", uy);
+            fprintf(fp, "    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(%s)',ErrStat,ErrMsg,RoutineName)\n",uy);
+            fprintf(fp, "    RETURN\n");
+            fprintf(fp, " endif\n");
+
+            fprintf(fp, " order = SIZE(%s) - 1\n", uy);
+
+            fprintf(fp, " IF ( order .eq. 0 ) THEN\n");
+            fprintf(fp, "   CALL %s_Copy%s(%s(1), %s_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", ModName->nickname, typnm, uy, uy);
+            fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
+            fprintf(fp, " ELSE IF ( order .eq. 1 ) THEN\n");
+            fprintf(fp, "   CALL %s_%s_ExtrapInterp1(%s(1), %s(2), t, %s_out, t_out, ErrStat2, ErrMsg2 )\n", ModName->nickname, typnm, uy, uy, uy);
+            fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
+            fprintf(fp, " ELSE IF ( order .eq. 2 ) THEN\n");
+            fprintf(fp, "   CALL %s_%s_ExtrapInterp2(%s(1), %s(2), %s(3), t, %s_out, t_out, ErrStat2, ErrMsg2 )\n", ModName->nickname, typnm, uy, uy, uy, uy);
+            fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
+            fprintf(fp, " ELSE \n");
+            fprintf(fp, "   CALL SetErrStat(ErrID_Fatal,'size(%s) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)\n", uy);
+            fprintf(fp, "   RETURN\n");
+            fprintf(fp, " ENDIF \n");
+
+            fprintf(fp, " END SUBROUTINE %s_%s_ExtrapInterp\n", ModName->nickname, typnm);
+            fprintf(fp, "\n");
+
+
+            max_ndims = 0; // ModName->module_ddt_list->max_ndims; //bjj: this is max for module, not for typnmlong
+            max_nrecurs = 0; // MAXRECURSE;
+            max_alloc_ndims = 0;
+
             for (r = q->fields; r; r = r->next)
             {
                // recursive
                calc_extint_order(fp, ModName, r, 0, &max_ndims, &max_nrecurs, &max_alloc_ndims);
             }
+
+            gen_ExtrapInterp1(fp, ModName, typnm, typnmlong, xtypnm, uy, max_ndims, max_nrecurs, max_alloc_ndims, q);
+            gen_ExtrapInterp2(fp, ModName, typnm, typnmlong, xtypnm, uy, max_ndims, max_nrecurs, max_alloc_ndims, q);
+
          }
       }
    }
 
 
-   gen_ExtrapInterp1(fp, ModName, typnm, typnmlong, uy, max_ndims, max_nrecurs, max_alloc_ndims);
-   gen_ExtrapInterp2(fp, ModName, typnm, typnmlong, uy, max_ndims, max_nrecurs, max_alloc_ndims);
 
 }
 
@@ -2146,13 +2127,13 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
 
                // bjj: we need to make sure these types map to reals, too
                tmp[0] = '\0' ;
-               if (*q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
+               if (*q->mapsto ) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
                if ( must_have_real_or_double(tmp) ) checkOnlyReals( q->mapsto, r );
 
 
             } else {
               tmp[0] = '\0' ;
-              if (*q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
+              if (*q->mapsto ) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
               if ( must_have_real_or_double(tmp) ) {
                 if ( strncmp(r->type->mapsto,"REAL",4) ) {
                   fprintf(stderr,"Registry warning: %s contains a field (%s) whose type is not real or double: %s\n",
@@ -2283,9 +2264,12 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
 //    gen_modname_pack( fp, ModName ) ;
 //    gen_modname_unpack( fp, ModName ) ;
 //    gen_rk4( fp, ModName ) ;
-    if (!sw_noextrap){
-        gen_ExtrapInterp( fp, ModName, "Input", "InputType" ) ;
-        gen_ExtrapInterp( fp, ModName, "Output", "OutputType" ) ;
+    if (strcmp(make_lower_temp(ModName->name), "airfoilinfo") == 0) { // make interpolation routines for AirfoilInfo module
+        gen_ExtrapInterp(fp, ModName, "Output", "OutputType","ReKi");
+        gen_ExtrapInterp(fp, ModName, "UA_BL_Type", "UA_BL_Type", "ReKi");
+    } else if (!sw_noextrap) {
+        gen_ExtrapInterp(fp, ModName, "Input", "InputType", "DbKi");
+        gen_ExtrapInterp(fp, ModName, "Output", "OutputType", "DbKi");
     }
 
     fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;

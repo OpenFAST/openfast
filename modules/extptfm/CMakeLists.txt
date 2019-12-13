@@ -14,14 +14,14 @@
 # limitations under the License.
 #
 
-generate_f90_types(src/ExtPtfm_MCKF_Registry.txt ExtPtfm_MCKF_Types.f90)
+if (GENERATE_TYPES)
+  generate_f90_types(src/ExtPtfm_MCKF_Registry.txt ${CMAKE_CURRENT_LIST_DIR}/src/ExtPtfm_MCKF_Types.f90)
+endif()
 
 add_library(extptfm_mckflib
   src/ExtPtfm_MCKF.f90
-
-  # Generated files
-  ExtPtfm_MCKF_Types.f90
-  )
+  src/ExtPtfm_MCKF_Types.f90
+)
 
 target_link_libraries(extptfm_mckflib nwtclibs)
 
