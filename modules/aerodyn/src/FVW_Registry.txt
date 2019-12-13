@@ -29,6 +29,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               IntKi                            WrVTK         -  - -   "Outputs VTK at each calcoutput call, even if main fst doesnt do it"  - 
 typedef     ^                   ^               IntKi                            VTKBlades     -  - -   "Outputs VTk for each blade 0=no blade, 1=Bld 1"  - 
 typedef     ^                   ^               IntKi                            HACK          -    -  - "HACK ID"      -
+typedef     ^                   ^               DbKi                             DT            -  - -   "Time interval for calls calculations"   s
 
 # ....... OtherStateType ............
 # FVW_OtherStateType
@@ -52,7 +53,7 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Orth         :::  -  -  "Unit Orthogonal vector on LL CP" -
 typedef     ^                   ^               ReKi                             dl           :::  -  -  "Vector of elementary length along the LL" -
 typedef     ^                   ^               ReKi                             Area         ::   -  -  "Area of each LL panel" -
-typedef    ^                    ^               Reki                             Gamma_LL     ::   -  -  "Circulation on the wing lifting line (COPY of Constraint State)" -
+typedef     ^                   ^               Reki                             Gamma_LL     ::   -  -  "Circulation on the wing lifting line (COPY of Constraint State)" -
 typedef     ^                   ^               ReKi                             Vind_LL      :::  -  -  "Induced velocity on lifting line control points" m/s
 typedef     ^                   ^               ReKi                             Vtot_LL      :::  -  -  "Total velocity on lifting line control points" m/s
 typedef     ^                   ^               ReKi                             Vstr_LL      :::  -  -  "Structural velocity on LL CP" m/s
@@ -63,7 +64,9 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             Vind_FW      :::: -  -  "Induced velocity on far  wake panels" m/s 
 typedef     ^                   ^               IntKi                            nNW           -   -  -  "Number of active near wake panels"      -
 typedef     ^                   ^               IntKi                            nFW           -   -  -  "Number of active far  wake panels"      -
-typedef     ^                   ^               IntKi                            iStep         -    -  - "Current step number"      -
+typedef     ^                   ^               IntKi                            iStep         -   -  -  "Current step number"      -
+typedef     ^                   ^               IntKi                            iStepPrev     -   -  -  "Previous step number"     -
+typedef     ^                   ^               ReKi                             r_wind       ::   -  -  "List of points where wind is requested for next time step"  -
 
 # ........ Input ............
 # FVW_InputType
@@ -73,7 +76,6 @@ typedef     ^                   ^               ReKi                            
 # ........ Output ............
 # FVW_OutputType
 typedef  FVW/FVW           OutputType           ReKi                             Vind      :::   - - "TODO mesh  - Induced velocity vector. "  -
-typedef     ^                   ^               ReKi                             r_wind    ::    - - "List of points where wind is requested for next time step"  -
 typedef     ^                   ^               ReKi                             Cl_KJ      ::   - - "Lift coefficient from circulation (Kutta-Joukowski)"  -
 
 #.......... ContinuousStateType ......
@@ -107,8 +109,9 @@ typedef     ^                   ^               ReKi                            
 typedef     ^                   ^               ReKi                             rLocal            :: -  - "Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT" m
 typedef     ^                   ^               IntKi                            NumBlades         -  -  - "Number of blades"          -
 typedef     ^                   ^               IntKi                            NumBladeNodes     -  -  - "Number of nodes on each blade"          -
+typedef     ^                   ^               DbKi                             DT                -  -  - "Time interval for calls (from AD15)"   s
 
-#.......... InitInputType ......
+#.......... InputFileType ......
 # FVW_InputFile
 typedef  FVW/FVW           FVW_InputFile        IntKi                            CirculationMethod   -     - -  "Method to determine the circulation"  -
 typedef     ^                   ^               CHARACTER(1024)                  CirculationFile     -     - -  "Prescribed circulation file"  -

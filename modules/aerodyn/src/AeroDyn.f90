@@ -427,6 +427,13 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       
       !............................................................................................
+      ! Initialize other states
+      !............................................................................................
+      ! The wake from FVW is stored in other states.  This may not be the best place to put it!
+   call Init_OtherStates(m, p, OtherState, errStat2, errMsg2)
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+
+      !............................................................................................
       ! Define initialization output here
       !............................................................................................
    call AD_SetInitOut(p, InputFileData, InitOut, errStat2, errMsg2)
@@ -519,7 +526,7 @@ subroutine Init_MiscVars(m, p, u, y, errStat, errMsg)
    integer(intKi)                               :: k
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
-   character(*), parameter                      :: RoutineName = 'Init_OtherStates'
+   character(*), parameter                      :: RoutineName = 'Init_MiscVars'
 
       ! Initialize variables for this routine
 
@@ -605,6 +612,28 @@ end if
    
    
 end subroutine Init_MiscVars
+!----------------------------------------------------------------------------------------------------------------------------------   
+!> This routine initializes (allocates) the misc variables for use during the simulation.
+subroutine Init_OtherStates(m, p, OtherState, errStat, errMsg)
+   type(AD_MiscVarType),          intent(in   )  :: m                !< misc/optimization data (not defined in submodules)
+   type(AD_ParameterType),        intent(in   )  :: p                !< Parameters
+   type(AD_OtherStateType),       intent(inout)  :: OtherState       !< Discrete states
+   integer(IntKi),                intent(  out)  :: errStat          !< Error status of the operation
+   character(*),                  intent(  out)  :: errMsg           !< Error message if ErrStat /= ErrID_None
+      ! Local variables
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'Init_OtherStates'
+
+   errStat = ErrID_None
+   errMsg  = ""
+   ! store Wake positions in otherstates.  This may not be the best location
+   if (allocated(m%FVW%r_wind)) then
+      call AllocAry( OtherState%WakeLocationPoints, 3_IntKi, size(m%FVW%r_wind,DIM=2), ' OtherState%WakeLocationPoints', ErrStat2, ErrMsg2 ) ! must be same size as m%r_wind from FVW
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      OtherState%WakeLocationPoints = m%FVW%r_wind
+   endif
+end subroutine Init_OtherStates
 !----------------------------------------------------------------------------------------------------------------------------------   
 !> This routine initializes AeroDyn meshes and output array variables for use during the simulation.
 subroutine Init_y(y, u, p, errStat, errMsg)
@@ -1132,6 +1161,10 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errStat
          ! Note: the setup is handled above in the SetInputs routine
       call FVW_UpdateStates( t, n, m%FVW_u, utimes, p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         ! The wind points are passed out as other states.  These really correspond to the propogation of the vortex to the next wind position.
+      if (allocated(OtherState%WakeLocationPoints)) then
+         OtherState%WakeLocationPoints = m%FVW%r_wind
+      endif
    endif
            
    call Cleanup()
@@ -1196,11 +1229,8 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       call SetInputsForFVW(p, (/u/), m, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          ! Calculate Outputs at time t
-      CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat, ErrMsg2 )
+      CALL FVW_CalcOutput( t, m%FVW_u(1), p%FVW, x%FVW, xd%FVW, z%FVW, OtherState%FVW, m%FVW_y, m%FVW, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-      ! Add anything that should be passed here
-!FIXME: pass out the wind request points here
    endif
 
    if ( p%TwrAero ) then
@@ -1529,6 +1559,9 @@ subroutine SetInputsForFVW(p, u, m, errStat, errMsg)
          m%FVW_u(tIndx)%WingsMesh(k)%Orientation       = u(tIndx)%BladeMotion(k)%Orientation
          m%FVW_u(tIndx)%WingsMesh(k)%TranslationVel    = u(tIndx)%BladeMotion(k)%TranslationVel
       enddo
+      if (ALLOCATED(m%FVW_u(tIndx)%V_wind)) then
+         m%FVW_u(tIndx)%V_wind   = u(tIndx)%InflowWakeVel
+      endif
    enddo
 end subroutine SetInputsForFVW
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2049,21 +2082,16 @@ SUBROUTINE Init_FVWmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, m
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-
-print*,'===================== Setup before call to FVW_Init ====================='
       ! set initialization data here:
    InitInp%FVWFileName    = InputFileData%FVWFileName
    InitInp%numBlades      = p%numBlades
    InitInp%numBladeNodes  = p%numBlNds
+   InitInp%DT             = p%DT       ! NOTE: if we subcycle FVW, this will need modification
 
-
-! --- TODO TODO TODO ANDY
-!FIXME: check the following now that we are in AD15.
-! Change this so that it would match AD 15 mesh
-! NOTE: This mesh does not include the azimuthal differences between blades!
-!       It's just the spanwise location.
-!       Also, it is off compared to the initial position of the blade
-!       Also, it's centered on the hub, but that's fine for now
+      ! NOTE: The following are not meshes
+      !       It's just the spanwise location.
+      !       Also, it is off compared to the initial position of the blade
+      !       Also, it's centered on the hub, but that's fine for now
    call AllocAry(InitInp%Chord, InitInp%numBladeNodes,InitInp%numBlades,'chord', ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(InitInp%AFindx,InitInp%numBladeNodes,InitInp%numBlades,'AFindx',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(InitInp%zHub,                        InitInp%numBlades,'zHub',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2071,8 +2099,6 @@ print*,'===================== Setup before call to FVW_Init ====================
    call AllocAry(InitInp%rLocal,InitInp%numBladeNodes,InitInp%numBlades,'rLocal',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(InitInp%zTip,                        InitInp%numBlades,'zTip',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-!!!      IF (.NOT. ALLOCATED( InitInp%RElm )) ALLOCATE ( InitInp%RElm(  p%Element%NElm ))
-!!!      InitInp%RElm      = p%Element%RElm
    if ( ErrStat >= AbortErrLev ) then
       call Cleanup()
       return
@@ -2147,19 +2173,14 @@ print*,'===================== Setup before call to FVW_Init ====================
       IF (ErrStat >= AbortErrLev) RETURN
    ENDDO
 
-
 !FIXME: Should we be passing any AFinfo?  Is that needed in FVW for anything?
    call FVW_Init( InitInp, u, p%FVW, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat2, ErrMsg2 )
       CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-
-      ! If anything is passed back in InitOut%FVW, deal with it here..
-
       ! set the size of the input and xd arrays for passing wind info to FVW.
-   if (ALLOCATED(y%r_wind)) then
-      call AllocAry(u_AD%InflowWakeVel, 3, size(y%r_wind,DIM=2), 'InflowWakeVel',  ErrStat2,ErrMsg2)
+   if (ALLOCATED(m%r_wind)) then
+      call AllocAry(u_AD%InflowWakeVel, 3, size(m%r_wind,DIM=2), 'InflowWakeVel',  ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!FIXME: figure out where we are passing the output r_wind
    endif
 
    if (.not. equalRealNos(Interval, p%DT) ) &

@@ -321,11 +321,11 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
    type(FVW_MiscVarType),           intent(in   )              :: m       !< Initial misc/optimization variables
    integer(IntKi),                  intent(  out)              :: ErrStat !< Error status of the operation
    character(*),                    intent(  out)              :: ErrMsg  !< Error message if ErrStat /= ErrID_None
-   integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
-   character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
-   integer(IntKi)          :: nTot              ! Total number of points requested
-   integer(IntKi)          :: iSpan, iW, iAge   ! Index on span, wings, panels
-   integer(IntKi)          :: iP                ! Current index of point
+   integer(IntKi)          :: ErrStat2             ! temporary error status of the operation
+   character(ErrMsgLen)    :: ErrMsg2              ! temporary error message
+   integer(IntKi)          :: nTot                 ! Total number of points requested
+   integer(IntKi)          :: iSpan, iW, iAge      ! Index on span, wings, panels
+   integer(IntKi)          :: iP,iP_start,iP_end   ! Current index of point, start and end of range
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -334,37 +334,21 @@ subroutine SetRequestedWindPoints(r_wind, x, p, m, ErrStat, ErrMsg )
    nTot = nTot + p%nWings * (p%nSpan+1) * (m%nNW+1) ! Nearwake points
    nTot = nTot + p%nWings * (FWnSpan+1) * (m%nFW+1) ! Far wake points
 
-   r_wind(1:3,1:nTot)= -999999_ReKi;
-
-   iP=0
+      ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
 
    ! --- LL CP
-   do iW = 1, p%nWings
-      do iSpan = 1, p%nSpan
-         iP=iP+1
-         r_wind(1:3,iP) = m%CP_LL(1:3, iSpan, iW)
-      enddo
-   enddo
-
+   iP_start=1
+   iP_end=p%nWings*p%nSpan
+   r_wind(1:3,iP_start:iP_end) = reshape( m%CP_LL(1:3,1:p%nSpan,1:p%nWings), (/ 3, p%nSpan*p%nWings /))
    ! --- NW points
-   do iW = 1, p%nWings
-      do iSpan = 1, p%nSpan + 1
-         do iAge = 1, m%nNW + 1
-            iP=iP+1
-            r_wind(1:3,iP) = x%r_NW(1:3, iSpan, iAge, iW)
-         enddo
-      enddo
-   enddo
-
+   iP_start=iP_end+1
+   iP_end=iP_start-1+(p%nSpan+1)*(p%nNWMax+1)*p%nWings
+   r_wind(1:3,iP_start:iP_end) = reshape( x%r_NW(1:3,1:p%nSpan+1,1:p%nNWMax+1,1:p%nWings), (/ 3, (p%nSpan+1)*(p%nNWMax+1)*p%nWings /))
    ! --- FW points
-   do iW = 1, p%nWings
-      do iSpan = 1, FWnSpan+1 ! root and tip
-         do iAge = 1, m%nFW + 1
-            iP=iP+1
-            r_wind(1:3,iP) = x%r_FW(1:3, iSpan, iAge, iW)
-         enddo
-      enddo
-   enddo
+   iP_start=iP_end+1
+   iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
+   r_wind(1:3,iP_start:iP_end) = reshape( x%r_FW(1:3,1:FWnSpan+1,1:p%nFWMax+1,1:p%nWings), (/ 3, (FWnSpan+1)*(p%nFWMax+1)*p%nWings /))
+
 end subroutine SetRequestedWindPoints
 
 
@@ -380,49 +364,24 @@ subroutine DistributeRequestedWind(V_wind, x, p, m, ErrStat, ErrMsg )
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
    integer(IntKi)          :: nTot              ! Total number of points
    integer(IntKi)          :: iSpan, iW, iAge   ! Index on span, wings, panels
-   integer(IntKi)          :: iP                ! Current index of point
+   integer(IntKi)          :: iP,iP_start,iP_end   ! Current index of point, start and end of range
    ! Initialize ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ! nTot, for satefy check
-   nTot = 0
-   nTot = nTot + p%nWings *  p%nSpan                ! Lifting line Control Points
-   nTot = nTot + p%nWings * (p%nSpan+1) * (m%nNW+1) ! Nearwake points
-   nTot = nTot + p%nWings * (FWnSpan+1) * (m%nFW+1) ! Far wake points
-   if (size(V_wind,2)<nTot) then
-      print*,'Wrong number of points, expecting:',nTot,' got:', size(V_wind,2)
-      STOP
-   endif
-
-   iP=0
+      ! Using array reshaping to ensure a given near or far wake point is always at the same location in the array.
    ! --- LL CP
-   do iW = 1, p%nWings
-      do iSpan = 1, p%nSpan
-         iP=iP+1
-         m%Vwnd_LL(1:3, iSpan, iW) = V_wind(1:3,iP)
-      enddo
-   enddo
-
+   iP_start=1
+   iP_end=p%nWings*p%nSpan
+   m%Vwnd_LL(1:3,1:p%nSpan,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, p%nSpan, p%nWings /))
    ! --- NW points
-   do iW = 1, p%nWings
-      do iSpan = 1, p%nSpan + 1
-         do iAge = 1, m%nNW + 1
-            iP=iP+1
-            m%Vwnd_NW(1:3, iSpan, iAge, iW) = V_wind(1:3,iP)
-         enddo
-      enddo
-   enddo
-
+   iP_start=iP_end+1
+   iP_end=iP_start-1+(p%nSpan+1)*(p%nNWMax+1)*p%nWings
+   m%Vwnd_NW(1:3,1:p%nSpan+1,1:p%nNWMax+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, p%nSpan+1, p%nNWMax+1, p%nWings/))
    ! --- FW points
-   do iW = 1, p%nWings
-      do iSpan = 1, FWnSpan+1 ! root and tip
-         do iAge = 1, m%nFW + 1
-            iP=iP+1
-            m%Vwnd_NW(1:3, iSpan, iAge, iW) = V_wind(1:3,iP)
-         enddo
-      enddo
-   enddo
+   iP_start=iP_end+1
+   iP_end=iP_start-1+(FWnSpan+1)*(p%nFWMax+1)*p%nWings
+   m%Vwnd_FW(1:3,1:p%nSpan+1,1:FWnSpan+1,1:p%nWings) = reshape( V_wind(1:3,iP_start:iP_end), (/ 3, FWnSpan+1, p%nFWMax+1, p%nWings /))
 
 end subroutine DistributeRequestedWind
 

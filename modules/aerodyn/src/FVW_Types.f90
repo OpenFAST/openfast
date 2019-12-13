@@ -56,6 +56,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: WrVTK      !< Outputs VTK at each calcoutput call, even if main fst doesnt do it [-]
     INTEGER(IntKi)  :: VTKBlades      !< Outputs VTk for each blade 0=no blade, 1=Bld 1 [-]
     INTEGER(IntKi)  :: HACK      !< HACK ID [-]
+    REAL(DbKi)  :: DT      !< Time interval for calls calculations [s]
   END TYPE FVW_ParameterType
 ! =======================
 ! =========  FVW_OtherStateType  =======
@@ -91,6 +92,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: nNW      !< Number of active near wake panels [-]
     INTEGER(IntKi)  :: nFW      !< Number of active far  wake panels [-]
     INTEGER(IntKi)  :: iStep      !< Current step number [-]
+    INTEGER(IntKi)  :: iStepPrev      !< Previous step number [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_wind      !< List of points where wind is requested for next time step [-]
   END TYPE FVW_MiscVarType
 ! =======================
 ! =========  FVW_InputType  =======
@@ -102,7 +105,6 @@ IMPLICIT NONE
 ! =========  FVW_OutputType  =======
   TYPE, PUBLIC :: FVW_OutputType
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Vind      !< TODO mesh  - Induced velocity vector.  [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: r_wind      !< List of points where wind is requested for next time step [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Cl_KJ      !< Lift coefficient from circulation (Kutta-Joukowski) [-]
   END TYPE FVW_OutputType
 ! =======================
@@ -138,6 +140,7 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: rLocal      !< Radial distance to blade node from the center of rotation, measured in the rotor plane, needed for DBEMT [m]
     INTEGER(IntKi)  :: NumBlades      !< Number of blades [-]
     INTEGER(IntKi)  :: NumBladeNodes      !< Number of nodes on each blade [-]
+    REAL(DbKi)  :: DT      !< Time interval for calls (from AD15) [s]
   END TYPE FVW_InitInputType
 ! =======================
 ! =========  FVW_InputFile  =======
@@ -221,6 +224,7 @@ ENDIF
     DstParamData%WrVTK = SrcParamData%WrVTK
     DstParamData%VTKBlades = SrcParamData%VTKBlades
     DstParamData%HACK = SrcParamData%HACK
+    DstParamData%DT = SrcParamData%DT
  END SUBROUTINE FVW_CopyParam
 
  SUBROUTINE FVW_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -297,6 +301,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! WrVTK
       Int_BufSz  = Int_BufSz  + 1  ! VTKBlades
       Int_BufSz  = Int_BufSz  + 1  ! HACK
+      Db_BufSz   = Db_BufSz   + 1  ! DT
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -377,6 +382,8 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%HACK
       Int_Xferred   = Int_Xferred   + 1
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
+      Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE FVW_PackParam
 
  SUBROUTINE FVW_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -478,6 +485,8 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%HACK = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+      OutData%DT = DbKiBuf( Db_Xferred ) 
+      Db_Xferred   = Db_Xferred + 1
  END SUBROUTINE FVW_UnPackParam
 
  SUBROUTINE FVW_CopyOtherState( SrcOtherStateData, DstOtherStateData, CtrlCode, ErrStat, ErrMsg )
@@ -983,6 +992,21 @@ ENDIF
     DstMiscData%nNW = SrcMiscData%nNW
     DstMiscData%nFW = SrcMiscData%nFW
     DstMiscData%iStep = SrcMiscData%iStep
+    DstMiscData%iStepPrev = SrcMiscData%iStepPrev
+IF (ALLOCATED(SrcMiscData%r_wind)) THEN
+  i1_l = LBOUND(SrcMiscData%r_wind,1)
+  i1_u = UBOUND(SrcMiscData%r_wind,1)
+  i2_l = LBOUND(SrcMiscData%r_wind,2)
+  i2_u = UBOUND(SrcMiscData%r_wind,2)
+  IF (.NOT. ALLOCATED(DstMiscData%r_wind)) THEN 
+    ALLOCATE(DstMiscData%r_wind(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%r_wind.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%r_wind = SrcMiscData%r_wind
+ENDIF
  END SUBROUTINE FVW_CopyMisc
 
  SUBROUTINE FVW_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1059,6 +1083,9 @@ IF (ALLOCATED(MiscData%Vind_NW)) THEN
 ENDIF
 IF (ALLOCATED(MiscData%Vind_FW)) THEN
   DEALLOCATE(MiscData%Vind_FW)
+ENDIF
+IF (ALLOCATED(MiscData%r_wind)) THEN
+  DEALLOCATE(MiscData%r_wind)
 ENDIF
  END SUBROUTINE FVW_DestroyMisc
 
@@ -1211,6 +1238,12 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! nNW
       Int_BufSz  = Int_BufSz  + 1  ! nFW
       Int_BufSz  = Int_BufSz  + 1  ! iStep
+      Int_BufSz  = Int_BufSz  + 1  ! iStepPrev
+  Int_BufSz   = Int_BufSz   + 1     ! r_wind allocated yes/no
+  IF ( ALLOCATED(InData%r_wind) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! r_wind upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%r_wind)  ! r_wind
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1661,6 +1694,24 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%iStep
       Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%iStepPrev
+      Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%r_wind) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%r_wind,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%r_wind,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%r_wind,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%r_wind,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%r_wind)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%r_wind))-1 ) = PACK(InData%r_wind,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%r_wind)
+  END IF
  END SUBROUTINE FVW_PackMisc
 
  SUBROUTINE FVW_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -2342,6 +2393,34 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%iStep = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+      OutData%iStepPrev = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! r_wind not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%r_wind)) DEALLOCATE(OutData%r_wind)
+    ALLOCATE(OutData%r_wind(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%r_wind.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%r_wind)>0) OutData%r_wind = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%r_wind))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%r_wind)
+    DEALLOCATE(mask2)
+  END IF
  END SUBROUTINE FVW_UnPackMisc
 
  SUBROUTINE FVW_CopyInput( SrcInputData, DstInputData, CtrlCode, ErrStat, ErrMsg )
@@ -2713,20 +2792,6 @@ IF (ALLOCATED(SrcOutputData%Vind)) THEN
   END IF
     DstOutputData%Vind = SrcOutputData%Vind
 ENDIF
-IF (ALLOCATED(SrcOutputData%r_wind)) THEN
-  i1_l = LBOUND(SrcOutputData%r_wind,1)
-  i1_u = UBOUND(SrcOutputData%r_wind,1)
-  i2_l = LBOUND(SrcOutputData%r_wind,2)
-  i2_u = UBOUND(SrcOutputData%r_wind,2)
-  IF (.NOT. ALLOCATED(DstOutputData%r_wind)) THEN 
-    ALLOCATE(DstOutputData%r_wind(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOutputData%r_wind.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstOutputData%r_wind = SrcOutputData%r_wind
-ENDIF
 IF (ALLOCATED(SrcOutputData%Cl_KJ)) THEN
   i1_l = LBOUND(SrcOutputData%Cl_KJ,1)
   i1_u = UBOUND(SrcOutputData%Cl_KJ,1)
@@ -2754,9 +2819,6 @@ ENDIF
   ErrMsg  = ""
 IF (ALLOCATED(OutputData%Vind)) THEN
   DEALLOCATE(OutputData%Vind)
-ENDIF
-IF (ALLOCATED(OutputData%r_wind)) THEN
-  DEALLOCATE(OutputData%r_wind)
 ENDIF
 IF (ALLOCATED(OutputData%Cl_KJ)) THEN
   DEALLOCATE(OutputData%Cl_KJ)
@@ -2802,11 +2864,6 @@ ENDIF
   IF ( ALLOCATED(InData%Vind) ) THEN
     Int_BufSz   = Int_BufSz   + 2*3  ! Vind upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%Vind)  ! Vind
-  END IF
-  Int_BufSz   = Int_BufSz   + 1     ! r_wind allocated yes/no
-  IF ( ALLOCATED(InData%r_wind) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! r_wind upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%r_wind)  ! r_wind
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Cl_KJ allocated yes/no
   IF ( ALLOCATED(InData%Cl_KJ) ) THEN
@@ -2858,22 +2915,6 @@ ENDIF
 
       IF (SIZE(InData%Vind)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Vind))-1 ) = PACK(InData%Vind,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%Vind)
-  END IF
-  IF ( .NOT. ALLOCATED(InData%r_wind) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%r_wind,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%r_wind,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%r_wind,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%r_wind,2)
-    Int_Xferred = Int_Xferred + 2
-
-      IF (SIZE(InData%r_wind)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%r_wind))-1 ) = PACK(InData%r_wind,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%r_wind)
   END IF
   IF ( .NOT. ALLOCATED(InData%Cl_KJ) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -2956,32 +2997,6 @@ ENDIF
       IF (SIZE(OutData%Vind)>0) OutData%Vind = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Vind))-1 ), mask3, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%Vind)
     DEALLOCATE(mask3)
-  END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! r_wind not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%r_wind)) DEALLOCATE(OutData%r_wind)
-    ALLOCATE(OutData%r_wind(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%r_wind.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%r_wind)>0) OutData%r_wind = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%r_wind))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%r_wind)
-    DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Cl_KJ not allocated
     Int_Xferred = Int_Xferred + 1
@@ -3905,6 +3920,7 @@ IF (ALLOCATED(SrcInitInputData%rLocal)) THEN
 ENDIF
     DstInitInputData%NumBlades = SrcInitInputData%NumBlades
     DstInitInputData%NumBladeNodes = SrcInitInputData%NumBladeNodes
+    DstInitInputData%DT = SrcInitInputData%DT
  END SUBROUTINE FVW_CopyInitInput
 
  SUBROUTINE FVW_DestroyInitInput( InitInputData, ErrStat, ErrMsg )
@@ -4042,6 +4058,7 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NumBlades
       Int_BufSz  = Int_BufSz  + 1  ! NumBladeNodes
+      Db_BufSz   = Db_BufSz   + 1  ! DT
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4221,6 +4238,8 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NumBladeNodes
       Int_Xferred   = Int_Xferred   + 1
+      DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
+      Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE FVW_PackInitInput
 
  SUBROUTINE FVW_UnPackInitInput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4494,6 +4513,8 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%NumBladeNodes = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
+      OutData%DT = DbKiBuf( Db_Xferred ) 
+      Db_Xferred   = Db_Xferred + 1
  END SUBROUTINE FVW_UnPackInitInput
 
  SUBROUTINE FVW_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
@@ -5173,14 +5194,6 @@ IF (ALLOCATED(y_out%Vind) .AND. ALLOCATED(y1%Vind)) THEN
   DEALLOCATE(b3)
   DEALLOCATE(c3)
 END IF ! check if allocated
-IF (ALLOCATED(y_out%r_wind) .AND. ALLOCATED(y1%r_wind)) THEN
-  ALLOCATE(b2(SIZE(y_out%r_wind,1),SIZE(y_out%r_wind,2) ))
-  ALLOCATE(c2(SIZE(y_out%r_wind,1),SIZE(y_out%r_wind,2) ))
-  b2 = -(y1%r_wind - y2%r_wind)/t(2)
-  y_out%r_wind = y1%r_wind + b2 * t_out
-  DEALLOCATE(b2)
-  DEALLOCATE(c2)
-END IF ! check if allocated
 IF (ALLOCATED(y_out%Cl_KJ) .AND. ALLOCATED(y1%Cl_KJ)) THEN
   ALLOCATE(b2(SIZE(y_out%Cl_KJ,1),SIZE(y_out%Cl_KJ,2) ))
   ALLOCATE(c2(SIZE(y_out%Cl_KJ,1),SIZE(y_out%Cl_KJ,2) ))
@@ -5257,15 +5270,6 @@ IF (ALLOCATED(y_out%Vind) .AND. ALLOCATED(y1%Vind)) THEN
   y_out%Vind = y1%Vind + b3 * t_out + c3 * t_out**2
   DEALLOCATE(b3)
   DEALLOCATE(c3)
-END IF ! check if allocated
-IF (ALLOCATED(y_out%r_wind) .AND. ALLOCATED(y1%r_wind)) THEN
-  ALLOCATE(b2(SIZE(y_out%r_wind,1),SIZE(y_out%r_wind,2) ))
-  ALLOCATE(c2(SIZE(y_out%r_wind,1),SIZE(y_out%r_wind,2) ))
-  b2 = (t(3)**2*(y1%r_wind - y2%r_wind) + t(2)**2*(-y1%r_wind + y3%r_wind))/(t(2)*t(3)*(t(2) - t(3)))
-  c2 = ( (t(2)-t(3))*y1%r_wind + t(3)*y2%r_wind - t(2)*y3%r_wind ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%r_wind = y1%r_wind + b2 * t_out + c2 * t_out**2
-  DEALLOCATE(b2)
-  DEALLOCATE(c2)
 END IF ! check if allocated
 IF (ALLOCATED(y_out%Cl_KJ) .AND. ALLOCATED(y1%Cl_KJ)) THEN
   ALLOCATE(b2(SIZE(y_out%Cl_KJ,1),SIZE(y_out%Cl_KJ,2) ))

@@ -120,7 +120,6 @@ typedef	^	ContinuousStateType	FVW_ContinuousStateType	FVW	-	-	-	"Continuous stat
 # Define discrete (nondifferentiable) states here:
 typedef	^	DiscreteStateType	BEMT_DiscreteStateType	BEMT	-	-	-	"Discrete states from the BEMT module"	-
 typedef	^	DiscreteStateType	FVW_DiscreteStateType	FVW	-	-	-	"Discrete states from the FVW module"	-
-typedef	^	DiscreteStateType	ReKi	WakeLocationPoints	{:}{:}	-	-	"wake points velocity"	m/s
 
 # Define constraint states here:
 typedef	^	ConstraintStateType	BEMT_ConstraintStateType	BEMT	-	-	-	"Constraint states from the BEMT module"	-
@@ -129,6 +128,7 @@ typedef	^	ConstraintStateType	FVW_ConstraintStateType	FVW	-	-	-	"Constraint stat
 # Define "other" states here:
 typedef	^	OtherStateType	BEMT_OtherStateType	BEMT	-	-	-	"OtherStates from the BEMT module"	-
 typedef	^	OtherStateType	FVW_OtherStateType	FVW	-	-	-	"OtherStates from the FVW module"	-
+typedef	^	OtherStateType	ReKi	WakeLocationPoints	{:}{:}	-	-	"wake points velocity"	m/s
 
 # Define misc/optimization variables (any data that are not considered actual states) here:
 typedef	^	MiscVarType	BEMT_MiscVarType	BEMT	-	-	-	"MiscVars from the BEMT module"	-

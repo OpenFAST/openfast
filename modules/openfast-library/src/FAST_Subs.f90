@@ -558,6 +558,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          DO k=1,InitOutData_ED%NumBl
             InitInData_IfW%NumWindPoints = InitInData_IfW%NumWindPoints + AD%Input(1)%BladeMotion(k)%NNodes
          END DO
+         if (allocated(AD%OtherSt(STATE_CURR)%WakeLocationPoints)) then
+            InitInData_IfW%NumWindPoints = InitInData_IfW%NumWindPoints + size(AD%OtherSt(STATE_CURR)%WakeLocationPoints,DIM=2)
+         end if
       END IF
       
       ! lidar        

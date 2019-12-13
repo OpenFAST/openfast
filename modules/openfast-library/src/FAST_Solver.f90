@@ -264,13 +264,13 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
 END SUBROUTINE ED_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine determines the points in space where InflowWind needs to compute wind speeds.
-SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, xd_AD, y_ED, ErrStat, ErrMsg )
+SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, OtherSt_AD, y_ED, ErrStat, ErrMsg )
 
-   TYPE(InflowWind_InputType),     INTENT(INOUT)   :: u_IfW       !< The inputs to InflowWind
+   TYPE(InflowWind_InputType),     INTENT(INOUT)   :: u_IfW(:)    !< The inputs to InflowWind
    TYPE(InflowWind_ParameterType), INTENT(IN   )   :: p_IfW       !< The parameters to InflowWind   
    TYPE(AD14_InputType),           INTENT(IN)      :: u_AD14      !< The input meshes (already calculated) from AeroDyn14
    TYPE(AD_InputType),             INTENT(IN)      :: u_AD        !< The input meshes (already calculated) from AeroDyn
-   TYPE(AD_DiscreteStateType),     INTENT(IN)      :: xd_AD       !< The wake points from AeroDyn (Free Vortex Wake)
+   TYPE(AD_OtherStateType),        INTENT(IN)      :: OtherSt_AD  !< The wake points from AeroDyn are in here (Free Vortex Wake)
    TYPE(ED_OutputType),            INTENT(IN)      :: y_ED        !< The outputs of the structural dynamics module
    TYPE(FAST_ParameterType),       INTENT(IN   )   :: p_FAST      !< FAST parameter data 
    TYPE(FAST_MiscVarType),         INTENT(IN   )   :: m_FAST      !< misc FAST data, including inputs from external codes like Simulink      
@@ -294,7 +294,7 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, xd_AD, y_
    Node = 0      
    IF (p_FAST%CompServo == MODULE_SrvD) THEN
       Node = Node + 1
-      u_IfW%PositionXYZ(:,Node) = y_ED%HubPtMotion%Position(:,1) ! undisplaced position. Maybe we want to use the displaced position (y_ED%HubPtMotion%TranslationDisp) at some point in time.
+      u_IfW(1)%PositionXYZ(:,Node) = y_ED%HubPtMotion%Position(:,1) ! undisplaced position. Maybe we want to use the displaced position (y_ED%HubPtMotion%TranslationDisp) at some point in time.
    END IF       
             
    IF (p_FAST%CompAero == MODULE_AD14) THEN   
@@ -302,13 +302,13 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, xd_AD, y_
       DO K = 1,SIZE(u_AD14%InputMarkers)
          DO J = 1,u_AD14%InputMarkers(K)%nnodes  !this mesh isn't properly set up (it's got the global [absolute] position and no reference position)
             Node = Node + 1
-            u_IfW%PositionXYZ(:,Node) = u_AD14%InputMarkers(K)%Position(:,J)
+            u_IfW(1)%PositionXYZ(:,Node) = u_AD14%InputMarkers(K)%Position(:,J)
          END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
       END DO !K = 1,p%NumBl         
                   
       DO J=1,u_AD14%Twr_InputMarkers%nnodes
          Node = Node + 1      
-         u_IfW%PositionXYZ(:,Node) = u_AD14%Twr_InputMarkers%TranslationDisp(:,J) + u_AD14%Twr_InputMarkers%Position(:,J)
+         u_IfW(1)%PositionXYZ(:,Node) = u_AD14%Twr_InputMarkers%TranslationDisp(:,J) + u_AD14%Twr_InputMarkers%Position(:,J)
       END DO      
          
    ELSEIF (p_FAST%CompAero == MODULE_AD) THEN               
@@ -317,27 +317,31 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, xd_AD, y_
          DO J = 1,u_AD%BladeMotion(k)%Nnodes
             
             Node = Node + 1
-            u_IfW%PositionXYZ(:,Node) = u_AD%BladeMotion(k)%TranslationDisp(:,j) + u_AD%BladeMotion(k)%Position(:,j)
+            u_IfW(1)%PositionXYZ(:,Node) = u_AD%BladeMotion(k)%TranslationDisp(:,j) + u_AD%BladeMotion(k)%Position(:,j)
             
          END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
       END DO !K = 1,p%NumBl         
 
       DO J=1,u_AD%TowerMotion%nnodes
          Node = Node + 1
-         u_IfW%PositionXYZ(:,Node) = u_AD%TowerMotion%TranslationDisp(:,J) + u_AD%TowerMotion%Position(:,J)
+         u_IfW(1)%PositionXYZ(:,Node) = u_AD%TowerMotion%TranslationDisp(:,J) + u_AD%TowerMotion%Position(:,J)
       END DO      
                   
          ! vortex points from FVW in AD15
-      IF (ALLOCATED(xd_AD%WakeLocationPoints)) then
-         DO J=1,size(xd_AD%WakeLocationPoints,DIM=2)
+      if (allocated(OtherSt_AD%WakeLocationPoints)) then
+         do J=1,size(OtherSt_AD%WakeLocationPoints,DIM=2)
             Node = Node + 1
-            u_IfW%PositionXYZ(:,Node) = xd_AD%WakeLocationPoints(:,J)
-         END DO
-      END IF
+            u_IfW(1)%PositionXYZ(:,Node) = OtherSt_AD%WakeLocationPoints(:,J)
+            ! rewrite the history of this so that extrapolation doesn't make a mess of things
+            do k=2,size(u_IfW)
+               if (allocated(u_IfW(k)%PositionXYZ))   u_IfW(k)%PositionXYZ(:,Node) = u_IfW(1)%PositionXYZ(:,Node)
+            end do
+         enddo
+      end if
    END IF
    
                
-   CALL IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW )
+   CALL IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW(1) )
 
 
 END SUBROUTINE IfW_InputSolve
@@ -417,7 +421,15 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, y_OpFM, ErrStat, ErrMsg )
             node = node + 1
          end do      
       end if
-!FIXME: add the FVW wake points velocity array handoff here 
+         ! velocity at vortex wake points velocity array handoff here
+      if ( allocated(u_AD%InflowWakeVel) ) then
+         Nnodes = size(u_AD%InflowWakeVel,DIM=2)
+         do j=1,Nnodes
+            u_AD%InflowWakeVel(:,j) = y_IfW%VelocityUVW(:,node)
+            node = node + 1
+         end do
+      end if
+
          
    ELSEIF ( p_FAST%CompInflow == MODULE_OpFM ) THEN
       node = 2 !start of inputs to AD15
@@ -4496,7 +4508,7 @@ end if
    END IF
 
    IF ( p_FAST%CompInflow == Module_IfW ) THEN
-      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(1), IfW%p, AD14%Input(1), AD%Input(1), AD%xd(1), ED%Output(1), ErrStat2, ErrMsg2 )
+      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(:), IfW%p, AD14%Input(1), AD%Input(1), AD%OtherSt(1), ED%Output(1), ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
    ! OpenFOAM is the driver and it sets these inputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
@@ -4816,7 +4828,7 @@ SUBROUTINE SolveOption2b_Inp2IfW(this_time, this_state, p_FAST, m_FAST, ED, BD, 
    
    IF (p_FAST%CompInflow == Module_IfW) THEN
       ! must be done after ED_CalcOutput and before AD_CalcOutput and SrvD
-      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(1), IfW%p, AD14%Input(1), AD%Input(1), AD%xd(1), ED%Output(1), ErrStat2, ErrMsg2 )
+      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(:), IfW%p, AD14%Input(1), AD%Input(1), AD%OtherSt(1), ED%Output(1), ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
    ! ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
@@ -5175,7 +5187,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AD_CopyOtherState( AD%OtherSt(STATE_CURR), AD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            
+
       DO j_ss = 1, p_FAST%n_substeps( MODULE_AD )
          n_t_module = n_t_global*p_FAST%n_substeps( MODULE_AD ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( MODULE_AD ) + t_initial
@@ -5183,6 +5195,10 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
          CALL AD_UpdateStates( t_module, n_t_module, AD%Input, AD%InputTimes, AD%p, AD%x(STATE_PRED), &
                                AD%xd(STATE_PRED), AD%z(STATE_PRED), AD%OtherSt(STATE_PRED), AD%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            ! We don't want to extrapolate any values for the WakeLocations (those are exactly calculated) 
+         if (allocated(AD%OtherSt(STATE_PRED)%WakeLocationPoints)) then
+            AD%OtherSt(STATE_CURR)%WakeLocationPoints = AD%OtherSt(STATE_PRED)%WakeLocationPoints
+         endif
       END DO !j_ss
    END IF            
 

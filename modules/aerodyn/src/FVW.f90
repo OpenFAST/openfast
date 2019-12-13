@@ -131,10 +131,10 @@ subroutine FVW_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
    CALL Wings_Panelling     (u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Initialize output
-   CALL FVW_Init_Y( p, y, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL FVW_Init_Y( p, u, y, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! Returned guessed locations where wind will be required
-   CALL SetRequestedWindPoints(y%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL SetRequestedWindPoints(m%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
    ! Return anything in FVW_InitOutput that should be passed back to the calling code here
 
 CONTAINS
@@ -153,6 +153,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    type(FVW_MiscVarType),           intent(inout)  :: m              !< Initial misc/optimization variables
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
+   integer(IntKi)          :: nMax           ! Total number of wind points possible
    integer(IntKi)          :: ErrStat2       ! temporary error status of the operation
    character(ErrMsgLen)    :: ErrMsg2        ! temporary error message
    character(*), parameter :: RoutineName = 'FVW_InitMiscVars'
@@ -164,6 +165,7 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    m%nNW       = iNWStart-1    ! Number of active nearwake panels
    m%nFW       = 0             ! Number of active farwake  panels
    m%iStep     = 0             ! Current step number
+   m%iStepPrev = 0             ! Previous step number (used to check if a correction step is calculated)
 
    call AllocAry( m%LE      ,  3  ,  p%nSpan+1  , p%nWings, 'Leading Edge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%LE = -999999_ReKi;
    call AllocAry( m%TE      ,  3  ,  p%nSpan+1  , p%nWings, 'TrailingEdge Points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%TE = -999999_ReKi;
@@ -188,7 +190,13 @@ subroutine FVW_InitMiscVars( p, m, ErrStat, ErrMsg )
    call AllocAry( m%Vwnd_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Wind on NW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vwnd_NW= -999_ReKi;
    call AllocAry( m%Vwnd_FW , 3   ,  p%nSpan+1  ,p%nFWMax+1,  p%nWings, 'Wind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vwnd_FW= -999_ReKi;
    call AllocAry( m%Vind_NW , 3   ,  p%nSpan+1  ,p%nNWMax+1,  p%nWings, 'Vind on NW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vind_NW= -999_ReKi;
-   call AllocAry( m%Vind_FW , 3   ,  FWnSpan+1  ,p%nFWMax+1,  p%nWings, 'Vind on FW ', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' ); m%Vind_FW= -999_ReKi;
+   ! Wind request points
+   nMax = 0
+   nMax = nMax +  p%nSpan                   * p%nWings   ! Lifting line Control Points
+   nMax = nMax + (p%nSpan+1) * (p%nNWMax+1) * p%nWings   ! Nearwake points
+   nMax = nMax + (FWnSpan+1) * (p%nFWMax+1) * p%nWings   ! Far wake points
+   call AllocAry( m%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitMisc' )
+   m%r_wind = 0.0_ReKi     ! set to zero so InflowWind can shortcut calculations
 end subroutine FVW_InitMiscVars
 ! ==============================================================================
 subroutine FVW_InitStates( x, p, m, ErrStat, ErrMsg )
@@ -206,9 +214,9 @@ subroutine FVW_InitStates( x, p, m, ErrStat, ErrMsg )
 
    call AllocAry( x%Gamma_NW,    p%nSpan   , p%nNWMax  , p%nWings, 'NW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%Gamma_NW = -999999_ReKi;
    call AllocAry( x%Gamma_FW,    FWnSpan   , p%nFWMax  , p%nWings, 'FW Panels Circulation', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%Gamma_FW = -999999_ReKi;
-   call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_NW     = -999_ReKi;
-   call AllocAry( x%r_FW    , 3, FWnSpan+1 , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_FW     = -999_ReKi;
-
+   ! set x%r_NW and x%r_FW to (0,0,0) so that InflowWind can shortcut the calculations
+   call AllocAry( x%r_NW    , 3, p%nSpan+1 , p%nNWMax+1, p%nWings, 'NW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_NW     = 0.0_ReKi;
+   call AllocAry( x%r_FW    , 3, FWnSpan+1 , p%nFWMax+1, p%nWings, 'FW Panels Points'     , ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_InitStates' ); x%r_FW     = 0.0_ReKi;
 
    if (ErrStat >= AbortErrLev) return
 end subroutine FVW_InitStates
@@ -231,8 +239,10 @@ subroutine FVW_InitConstraint( z, p, m, ErrStat, ErrMsg )
    if (ErrStat >= AbortErrLev) return
 end subroutine FVW_InitConstraint
 ! ==============================================================================
-subroutine FVW_Init_Y( p, y, ErrStat, ErrMsg )
+subroutine FVW_Init_Y( p, u, y, ErrStat, ErrMsg )
+!TODO: move the r_wind to Miscvars
    type(FVW_ParameterType),         intent(in   )  :: p              !< Parameters
+   type(FVW_InputType),             intent(inout)  :: u              !< An initial guess for the input; input mesh must be defined
    type(FVW_OutputType),            intent(  out)  :: y              !< Constraints
    integer(IntKi),                  intent(  out)  :: ErrStat        !< Error status of the operation
    character(*),                    intent(  out)  :: ErrMsg         !< Error message if ErrStat /= ErrID_None
@@ -245,17 +255,16 @@ subroutine FVW_Init_Y( p, y, ErrStat, ErrMsg )
    ErrMsg  = ""
    !
    nMax = 0
-   nMax = nMax + p%nWings *  p%nSpan                     ! Lifting line Control Points
-   nMax = nMax + p%nWings * (p%nSpan+1) * (p%nNWMax+1)   ! Nearwake points
-   nMax = nMax + p%nWings * (FWnSpan+1) * (p%nFWMax+1)   ! Far wake points
+   nMax = nMax +  p%nSpan                   * p%nWings   ! Lifting line Control Points
+   nMax = nMax + (p%nSpan+1) * (p%nNWMax+1) * p%nWings   ! Nearwake points
+   nMax = nMax + (FWnSpan+1) * (p%nFWMax+1) * p%nWings   ! Far wake points
 
-   call AllocAry( y%r_wind, 3, nMax, 'Requested wind points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_Init_Y' )
+   call AllocAry( u%V_wind, 3, nMax, 'Wind Velocity at points', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_Init_Y' )
    !call AllocAry( y%Vind ,  3, p%nSpan+1, p%nWings, 'Induced velocity vector',  ErrStat2, ErrMsg2 ); ! TODO potentially nSpan+1 for AD15
    call AllocAry( y%Vind ,  3, p%nSpan+1, 3, 'Induced velocity vector',  ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_Init_Y' ) ! NOTE: temporary hack 3 blades
 !FIXME: TODO: allocate y%Cl_KJ   (2d).  Placeholder for now
    call AllocAry(y%Cl_KJ, 1, 1, 'Lift coefficient from circulation (Kutta-Joukowski)', ErrStat2, ErrMsg2 );call SetErrStat ( ErrStat2, ErrMsg2, ErrStat,ErrMsg,'FVW_Init_Y' )
    if (ErrStat >= AbortErrLev) return
-   y%r_wind = 0.0_ReKi     ! set to zero so InflowWind can shortcut calculations
    y%Vind   = 0.0_ReKi
    return
 end subroutine FVW_Init_Y
@@ -282,6 +291,9 @@ SUBROUTINE FVW_SetParametersFromInputs( InitInp, p, m, ErrStat, ErrMsg )
    
    ! NOTE: temporary limitation, all wings have the same nspan
    p%nSpan        =  InitInp%numBladeNodes-1
+
+   ! Set time step
+   p%DT           =  InitInp%DT
 
 end subroutine FVW_SetParametersFromInputs
 ! ==============================================================================
@@ -405,10 +417,19 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    ErrStat = ErrID_None
    ErrMsg  = ""
 
+!FIXME: why not use p%DT?  DT from AD15 does not change.
    dt=utimes(1)-t ! TODO TODO TODO
-   m%iStep=n
+   m%iStepPrev = m%iStep
+   m%iStep = n
 
    print'(A,F10.3,A,F10.3,A,F10.3,A,I0,A,I0,A,I0)','Update states, t:',t,'  t_u:', utimes(1),' dt: ',dt,'   ',n,' nNW:',m%nNW,' nFW:',m%nFW
+
+   ! We don't propagate the "Old"-> "New" if we we are not taking another timestep (such as during a correction step) 
+   if (m%iStep /= m%iStepPrev) then 
+       call PrepareNextTimeStep()
+   endif
+
+
 
    ! --- Evaluation at t
    ! Inputs at t
@@ -417,8 +438,7 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    call Wings_Panelling(uInterp%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    
    ! Distribute the Wind we requested to Inflow wind to storage Misc arrays
-   ! TODO ANDY
-   !CALL DistributeRequestedWind(u(1)%V_wind, x, p, m, ErrStat2, ErrMsg2);  if(Failed()) return
+   CALL DistributeRequestedWind(u(1)%V_wind, x, p, m, ErrStat2, ErrMsg2);  if(Failed()) return
 
    ! --- Solve for circulation at t
    ! Returns: z%Gamma_LL (at t)
@@ -475,8 +495,8 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    call Map_NW_FW(p, m, z, x, ErrStat2, ErrMsg2)
    !call print_x_NW_FW(p, m, z, x,'Map3')
 
-   !if (m%nFW>4) STOP
-   !if (t>0.5) STOP
+   ! set the wind points required for t+dt timestep
+   CALL SetRequestedWindPoints(m%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    if (m%FirstCall) then
       m%FirstCall=.False.
@@ -485,6 +505,14 @@ subroutine FVW_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, errSta
    call FVW_DestroyConstrState(z_guess, ErrStat2, ErrMsg2);
 
 contains
+   subroutine PrepareNextTimeStep()
+      ! --- Increase wake length if maximum not reached
+      if (m%nNW==p%nNWMax) then ! a far wake exist
+         m%nFW=min(m%nFW+1, p%nFWMax)
+      endif
+      m%nNW=min(m%nNW+1, p%nNWMax)
+   end subroutine PrepareNextTimeStep
+
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_UpdateStates') 
       Failed =  ErrStat >= AbortErrLev
@@ -654,16 +682,12 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
 
    print'(A,F10.3,A,L1,A,I0,A,I0)','CalcOutput     t:',t,'   ',m%FirstCall,'                                nNW:',m%nNW,' nFW:',m%nFW
 
-   if (m%FirstCall) then
-      print*,'>>> First Call of CalcOutput, calling panelling and constrstate'
-      CALL Wings_Panelling(u%WingsMesh, p, m, ErrStat2, ErrMsg2); if(Failed()) return
-      CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, ErrStat, ErrMsg, 0) ! For plotting only
-   else
-      m%Gamma_LL = z%Gamma_LL ! For plotting only
-   endif
+   ! if we are on a correction step, CalcOutput may be called again with different inputs
+      CALL Wings_ComputeCirculation(t, m%Gamma_LL, z%Gamma_LL, u, p, x, m, ErrStat2, ErrMsg2, 0); if(Failed()) return ! For plotting only
 
-   ! Returned guessed locations where wind will be required
-   CALL SetRequestedWindPoints(y%r_wind, x, p, m, ErrStat2, ErrMsg2 ); if(Failed()) return
+   ! Set the wind velocity at vortex
+   CALL DistributeRequestedWind(u%V_wind, x, p, m, ErrStat2, ErrMsg2);  if(Failed()) return
+
 
    ! Induction on the lifting line control point
    ! Set m%Vind_LL
@@ -683,33 +707,17 @@ subroutine FVW_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg 
    call print_mean_3d(m%Vind_LL,'Mean induced vel. LL')
    call print_mean_3d(m%Vtot_LL,'Mean relativevel. LL')
 
-   ! We don't propagate the "Old"-> "New" if update states was not called once
-   ! This is introduced since at init, CalcOutput is called before UpdateState
-   if (.not. m%FirstCall) then 
-       call PrepareNextTimeStep()
-   endif
-
-
-   ! --- Write to VTK 
+   ! --- Write to VTK
+!FIXME: This should be glue code level (all VTK output writing is done there) 
    if (p%WrVTK==1) then
       if (m%FirstCall) then
          call MKDIR('vtk_out')
-         call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%iStep, 9)
-      else
-         call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%iStep+1, 9)
       endif
+      call WrVTK_FVW(p, x, z, m, 'vtk_out/FVW', m%iStep, 9)
    endif
 
+
 contains
-
-   subroutine PrepareNextTimeStep()
-      ! --- Increase wake length if maximum not reached
-      if (m%nNW==p%nNWMax) then ! a far wake exist
-         m%nFW=min(m%nFW+1, p%nFWMax)
-      endif
-      m%nNW=min(m%nNW+1, p%nNWMax)
-
-   end subroutine PrepareNextTimeStep
 
    logical function Failed()
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'FVW_CalcOutput') 

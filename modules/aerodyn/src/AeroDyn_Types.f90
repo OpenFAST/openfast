@@ -150,7 +150,6 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD_DiscreteStateType
     TYPE(BEMT_DiscreteStateType)  :: BEMT      !< Discrete states from the BEMT module [-]
     TYPE(FVW_DiscreteStateType)  :: FVW      !< Discrete states from the FVW module [-]
-    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WakeLocationPoints      !< wake points velocity [m/s]
   END TYPE AD_DiscreteStateType
 ! =======================
 ! =========  AD_ConstraintStateType  =======
@@ -163,6 +162,7 @@ IMPLICIT NONE
   TYPE, PUBLIC :: AD_OtherStateType
     TYPE(BEMT_OtherStateType)  :: BEMT      !< OtherStates from the BEMT module [-]
     TYPE(FVW_OtherStateType)  :: FVW      !< OtherStates from the FVW module [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: WakeLocationPoints      !< wake points velocity [m/s]
   END TYPE AD_OtherStateType
 ! =======================
 ! =========  AD_MiscVarType  =======
@@ -3638,8 +3638,6 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'AD_CopyDiscState'
@@ -3652,20 +3650,6 @@ ENDIF
       CALL FVW_CopyDiscState( SrcDiscStateData%FVW, DstDiscStateData%FVW, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
-IF (ALLOCATED(SrcDiscStateData%WakeLocationPoints)) THEN
-  i1_l = LBOUND(SrcDiscStateData%WakeLocationPoints,1)
-  i1_u = UBOUND(SrcDiscStateData%WakeLocationPoints,1)
-  i2_l = LBOUND(SrcDiscStateData%WakeLocationPoints,2)
-  i2_u = UBOUND(SrcDiscStateData%WakeLocationPoints,2)
-  IF (.NOT. ALLOCATED(DstDiscStateData%WakeLocationPoints)) THEN 
-    ALLOCATE(DstDiscStateData%WakeLocationPoints(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstDiscStateData%WakeLocationPoints.', ErrStat, ErrMsg,RoutineName)
-      RETURN
-    END IF
-  END IF
-    DstDiscStateData%WakeLocationPoints = SrcDiscStateData%WakeLocationPoints
-ENDIF
  END SUBROUTINE AD_CopyDiscState
 
  SUBROUTINE AD_DestroyDiscState( DiscStateData, ErrStat, ErrMsg )
@@ -3679,9 +3663,6 @@ ENDIF
   ErrMsg  = ""
   CALL BEMT_DestroyDiscState( DiscStateData%BEMT, ErrStat, ErrMsg )
   CALL FVW_DestroyDiscState( DiscStateData%FVW, ErrStat, ErrMsg )
-IF (ALLOCATED(DiscStateData%WakeLocationPoints)) THEN
-  DEALLOCATE(DiscStateData%WakeLocationPoints)
-ENDIF
  END SUBROUTINE AD_DestroyDiscState
 
  SUBROUTINE AD_PackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3754,11 +3735,6 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
-  Int_BufSz   = Int_BufSz   + 1     ! WakeLocationPoints allocated yes/no
-  IF ( ALLOCATED(InData%WakeLocationPoints) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! WakeLocationPoints upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%WakeLocationPoints)  ! WakeLocationPoints
-  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3842,22 +3818,6 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
-  IF ( .NOT. ALLOCATED(InData%WakeLocationPoints) ) THEN
-    IntKiBuf( Int_Xferred ) = 0
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    IntKiBuf( Int_Xferred ) = 1
-    Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WakeLocationPoints,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WakeLocationPoints,1)
-    Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WakeLocationPoints,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WakeLocationPoints,2)
-    Int_Xferred = Int_Xferred + 2
-
-      IF (SIZE(InData%WakeLocationPoints)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WakeLocationPoints))-1 ) = PACK(InData%WakeLocationPoints,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%WakeLocationPoints)
-  END IF
  END SUBROUTINE AD_PackDiscState
 
  SUBROUTINE AD_UnPackDiscState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -3879,8 +3839,6 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
-  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
-  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_UnPackDiscState'
@@ -3974,32 +3932,6 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WakeLocationPoints not allocated
-    Int_Xferred = Int_Xferred + 1
-  ELSE
-    Int_Xferred = Int_Xferred + 1
-    i1_l = IntKiBuf( Int_Xferred    )
-    i1_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    i2_l = IntKiBuf( Int_Xferred    )
-    i2_u = IntKiBuf( Int_Xferred + 1)
-    Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%WakeLocationPoints)) DEALLOCATE(OutData%WakeLocationPoints)
-    ALLOCATE(OutData%WakeLocationPoints(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WakeLocationPoints.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
-    IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
-       RETURN
-    END IF
-    mask2 = .TRUE. 
-      IF (SIZE(OutData%WakeLocationPoints)>0) OutData%WakeLocationPoints = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%WakeLocationPoints))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%WakeLocationPoints)
-    DEALLOCATE(mask2)
-  END IF
  END SUBROUTINE AD_UnPackDiscState
 
  SUBROUTINE AD_CopyConstrState( SrcConstrStateData, DstConstrStateData, CtrlCode, ErrStat, ErrMsg )
@@ -4314,6 +4246,8 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'AD_CopyOtherState'
@@ -4326,6 +4260,20 @@ ENDIF
       CALL FVW_CopyOtherState( SrcOtherStateData%FVW, DstOtherStateData%FVW, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcOtherStateData%WakeLocationPoints)) THEN
+  i1_l = LBOUND(SrcOtherStateData%WakeLocationPoints,1)
+  i1_u = UBOUND(SrcOtherStateData%WakeLocationPoints,1)
+  i2_l = LBOUND(SrcOtherStateData%WakeLocationPoints,2)
+  i2_u = UBOUND(SrcOtherStateData%WakeLocationPoints,2)
+  IF (.NOT. ALLOCATED(DstOtherStateData%WakeLocationPoints)) THEN 
+    ALLOCATE(DstOtherStateData%WakeLocationPoints(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstOtherStateData%WakeLocationPoints.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstOtherStateData%WakeLocationPoints = SrcOtherStateData%WakeLocationPoints
+ENDIF
  END SUBROUTINE AD_CopyOtherState
 
  SUBROUTINE AD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -4339,6 +4287,9 @@ ENDIF
   ErrMsg  = ""
   CALL BEMT_DestroyOtherState( OtherStateData%BEMT, ErrStat, ErrMsg )
   CALL FVW_DestroyOtherState( OtherStateData%FVW, ErrStat, ErrMsg )
+IF (ALLOCATED(OtherStateData%WakeLocationPoints)) THEN
+  DEALLOCATE(OtherStateData%WakeLocationPoints)
+ENDIF
  END SUBROUTINE AD_DestroyOtherState
 
  SUBROUTINE AD_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -4411,6 +4362,11 @@ ENDIF
          Int_BufSz = Int_BufSz + SIZE( Int_Buf )
          DEALLOCATE(Int_Buf)
       END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WakeLocationPoints allocated yes/no
+  IF ( ALLOCATED(InData%WakeLocationPoints) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! WakeLocationPoints upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WakeLocationPoints)  ! WakeLocationPoints
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -4494,6 +4450,22 @@ ENDIF
       ELSE
         IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
       ENDIF
+  IF ( .NOT. ALLOCATED(InData%WakeLocationPoints) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WakeLocationPoints,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WakeLocationPoints,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WakeLocationPoints,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WakeLocationPoints,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%WakeLocationPoints)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WakeLocationPoints))-1 ) = PACK(InData%WakeLocationPoints,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%WakeLocationPoints)
+  END IF
  END SUBROUTINE AD_PackOtherState
 
  SUBROUTINE AD_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4515,6 +4487,8 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'AD_UnPackOtherState'
@@ -4608,6 +4582,32 @@ ENDIF
       IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
       IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WakeLocationPoints not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WakeLocationPoints)) DEALLOCATE(OutData%WakeLocationPoints)
+    ALLOCATE(OutData%WakeLocationPoints(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WakeLocationPoints.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%WakeLocationPoints)>0) OutData%WakeLocationPoints = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%WakeLocationPoints))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%WakeLocationPoints)
+    DEALLOCATE(mask2)
+  END IF
  END SUBROUTINE AD_UnPackOtherState
 
  SUBROUTINE AD_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
