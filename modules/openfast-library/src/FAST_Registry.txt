@@ -407,6 +407,7 @@ typedef	FAST	FAST_ModuleMapType	MeshMapType	ED_P_2_BD_P	{:}	-	-	"Map ElastoDyn B
 typedef	FAST	FAST_ModuleMapType	MeshMapType	BD_P_2_ED_P	{:}	-	-	"Map BeamDyn ReactionForce loads point meshes to ElastoDyn HubPtLoad point mesh"
 typedef	FAST	FAST_ModuleMapType	MeshMapType	ED_P_2_BD_P_Hub	{:}	-	-	"ElastoDyn hub to BeamDyn for hub orientation necessary for pitch actuator"
 # ED <-> HD
+typedef	FAST	FAST_ModuleMapType	MeshMapType	ED_P_2_HD_PRP_P	-	-	-	"Map ElastoDyn PlatformPtMesh to HydroDyn platform reference Point"
 typedef	FAST	FAST_ModuleMapType	MeshMapType	ED_P_2_HD_W_P	-	-	-	"Map ElastoDyn PlatformPtMesh to HydroDyn WAMIT Point"
 typedef	^	FAST_ModuleMapType	MeshMapType	HD_W_P_2_ED_P	-	-	-	"Map HydroDyn WAMIT Point (from either y%WAMITMesh or y%AllHydroOrigin) to ElastoDyn PlatformPtMesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_HD_M_P	-	-	-	"Map ElastoDyn PlatformPtMesh to HydroDyn Morison Point"

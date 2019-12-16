@@ -924,7 +924,11 @@ SUBROUTINE Transfer_ED_to_HD( y_ED, u_HD, MeshMapData, ErrStat, ErrMsg )
    
    IF ( u_HD%WAMITMesh%Committed ) THEN
 
-      ! These are the motions for the lumped point loads associated the WAMIT body and include: hydrostatics, radiation memory effect,
+         ! Transfer the ED outputs of the platform motions to the HD input of which represents the same data
+      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_ED_to_HD (u_HD%PRPMesh)' )
+         
+      ! These are the motions for the lumped point loads associated the WAMIT body(ies) and include: hydrostatics, radiation memory effect,
       !    wave kinematics, additional preload, additional stiffness, additional linear damping, additional quadratic damping,
       !    hydrodynamic added mass
 
@@ -2465,8 +2469,12 @@ END IF
             CALL Transfer_SD_to_HD( y_SD, u_HD%Morison%LumpedMesh, u_HD%Morison%DistribMesh, MeshMapData, ErrStat2, ErrMsg2 )      
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                
-               ! Map ED outputs to HD inputs (keeping the accelerations we just calculated):
+            ! Map ED outputs to HD inputs (keeping the accelerations we just calculated):
                
+                ! Transfer the ED outputs of the platform motions to the HD input of which represents the same data
+            CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_HD%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName )
+              
             CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_HD%WAMITMesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 ) 
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                                              
@@ -4063,6 +4071,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, ExtPtfm, SrvD, M
                ! HydroDyn WAMIT point mesh to/from ElastoDyn point mesh
             CALL MeshMapCreate( HD%y%AllHdroOrigin, ED%Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':HD_W_P_2_ED_P' )
+            CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh, HD%Input(1)%PRPMesh, MeshMapData%ED_P_2_HD_PRP_P, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_PRP_P' )
             CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh, HD%Input(1)%WAMITMesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_W_P' )
          END IF            
