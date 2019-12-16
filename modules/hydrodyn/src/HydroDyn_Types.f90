@@ -56,18 +56,6 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElevXY      !< Supplied by Driver:  X-Y locations for WaveElevation output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number. [m,-]
     REAL(ReKi)  :: PtfmLocationX      !< Supplied by Driver:  X coordinate of platform location in the wave field [m]
     REAL(ReKi)  :: PtfmLocationY      !< Supplied by Driver:  Y coordinate of platform location in the wave field [m]
-    CHARACTER(80)  :: PtfmSgFChr      !< Platform horizontal surge translation force (flag) or DEFAULT [-]
-    LOGICAL  :: PtfmSgF      !< Optionally Supplied by Driver:  Platform horizontal surge translation force (flag) [-]
-    CHARACTER(80)  :: PtfmSwFChr      !< Platform horizontal sway translation force (flag) or DEFAULT [-]
-    LOGICAL  :: PtfmSwF      !< Optionally Supplied by Driver:  Platform horizontal sway translation force (flag) [-]
-    CHARACTER(80)  :: PtfmHvFChr      !< Platform vertical heave translation force (flag) or DEFAULT [-]
-    LOGICAL  :: PtfmHvF      !< Optionally Supplied by Driver:  Platform vertical heave translation force (flag) [-]
-    CHARACTER(80)  :: PtfmRFChr      !< Platform roll tilt rotation force (flag) or DEFAULT [-]
-    LOGICAL  :: PtfmRF      !< Optionally Supplied by Driver:  Platform roll tilt rotation force (flag) [-]
-    CHARACTER(80)  :: PtfmPFChr      !< Platform pitch tilt rotation force (flag) or DEFAULT [-]
-    LOGICAL  :: PtfmPF      !< Optionally Supplied by Driver:  Platform pitch tilt rotation force (flag) [-]
-    CHARACTER(80)  :: PtfmYFChr      !< Platform yaw rotation force (flag) or DEFAULT [-]
-    LOGICAL  :: PtfmYF      !< Optionally Supplied by Driver:  Platform yaw rotation force (flag) [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AddF0      !< Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddCLin      !< Additional stiffness matrix [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddBLin      !< Additional linear damping matrix [-]
@@ -284,18 +272,6 @@ IF (ALLOCATED(SrcInitInputData%WaveElevXY)) THEN
 ENDIF
     DstInitInputData%PtfmLocationX = SrcInitInputData%PtfmLocationX
     DstInitInputData%PtfmLocationY = SrcInitInputData%PtfmLocationY
-    DstInitInputData%PtfmSgFChr = SrcInitInputData%PtfmSgFChr
-    DstInitInputData%PtfmSgF = SrcInitInputData%PtfmSgF
-    DstInitInputData%PtfmSwFChr = SrcInitInputData%PtfmSwFChr
-    DstInitInputData%PtfmSwF = SrcInitInputData%PtfmSwF
-    DstInitInputData%PtfmHvFChr = SrcInitInputData%PtfmHvFChr
-    DstInitInputData%PtfmHvF = SrcInitInputData%PtfmHvF
-    DstInitInputData%PtfmRFChr = SrcInitInputData%PtfmRFChr
-    DstInitInputData%PtfmRF = SrcInitInputData%PtfmRF
-    DstInitInputData%PtfmPFChr = SrcInitInputData%PtfmPFChr
-    DstInitInputData%PtfmPF = SrcInitInputData%PtfmPF
-    DstInitInputData%PtfmYFChr = SrcInitInputData%PtfmYFChr
-    DstInitInputData%PtfmYF = SrcInitInputData%PtfmYF
 IF (ALLOCATED(SrcInitInputData%AddF0)) THEN
   i1_l = LBOUND(SrcInitInputData%AddF0,1)
   i1_u = UBOUND(SrcInitInputData%AddF0,1)
@@ -640,18 +616,6 @@ ENDIF
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationX
       Re_BufSz   = Re_BufSz   + 1  ! PtfmLocationY
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PtfmSgFChr)  ! PtfmSgFChr
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmSgF
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PtfmSwFChr)  ! PtfmSwFChr
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmSwF
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PtfmHvFChr)  ! PtfmHvFChr
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmHvF
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PtfmRFChr)  ! PtfmRFChr
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmRF
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PtfmPFChr)  ! PtfmPFChr
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmPF
-      Int_BufSz  = Int_BufSz  + 1*LEN(InData%PtfmYFChr)  ! PtfmYFChr
-      Int_BufSz  = Int_BufSz  + 1  ! PtfmYF
   Int_BufSz   = Int_BufSz   + 1     ! AddF0 allocated yes/no
   IF ( ALLOCATED(InData%AddF0) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! AddF0 upper/lower bounds for each dimension
@@ -912,42 +876,6 @@ ENDIF
       Re_Xferred   = Re_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%PtfmLocationY
       Re_Xferred   = Re_Xferred   + 1
-        DO I = 1, LEN(InData%PtfmSgFChr)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%PtfmSgFChr(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmSgF , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-        DO I = 1, LEN(InData%PtfmSwFChr)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%PtfmSwFChr(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmSwF , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-        DO I = 1, LEN(InData%PtfmHvFChr)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%PtfmHvFChr(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmHvF , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-        DO I = 1, LEN(InData%PtfmRFChr)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%PtfmRFChr(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmRF , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-        DO I = 1, LEN(InData%PtfmPFChr)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%PtfmPFChr(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmPF , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
-        DO I = 1, LEN(InData%PtfmYFChr)
-          IntKiBuf(Int_Xferred) = ICHAR(InData%PtfmYFChr(I:I), IntKi)
-          Int_Xferred = Int_Xferred   + 1
-        END DO ! I
-      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%PtfmYF , IntKiBuf(1), 1)
-      Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%AddF0) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -1465,42 +1393,6 @@ ENDIF
       Re_Xferred   = Re_Xferred + 1
       OutData%PtfmLocationY = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
-      DO I = 1, LEN(OutData%PtfmSgFChr)
-        OutData%PtfmSgFChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      OutData%PtfmSgF = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      DO I = 1, LEN(OutData%PtfmSwFChr)
-        OutData%PtfmSwFChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      OutData%PtfmSwF = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      DO I = 1, LEN(OutData%PtfmHvFChr)
-        OutData%PtfmHvFChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      OutData%PtfmHvF = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      DO I = 1, LEN(OutData%PtfmRFChr)
-        OutData%PtfmRFChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      OutData%PtfmRF = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      DO I = 1, LEN(OutData%PtfmPFChr)
-        OutData%PtfmPFChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      OutData%PtfmPF = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
-      DO I = 1, LEN(OutData%PtfmYFChr)
-        OutData%PtfmYFChr(I:I) = CHAR(IntKiBuf(Int_Xferred))
-        Int_Xferred = Int_Xferred   + 1
-      END DO ! I
-      OutData%PtfmYF = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
-      Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! AddF0 not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE

@@ -68,7 +68,7 @@ MODULE WAMIT2
                                                                               !! It is used by the DispNVD routine in the library and as header
                                                                               !! information in output files.
 
-   REAL(DbKi), PARAMETER, PRIVATE                        :: OnePlusEps  = 1.0 + EPSILON(OnePlusEps)   ! The number slighty greater than unity in the precision of DbKi.
+   REAL(SiKi), PARAMETER, PRIVATE                        :: OnePlusEps  = 1.0 + EPSILON(OnePlusEps)   ! The number slighty greater than unity in the precision of SiKi.
 
 
       ! ..... Public Subroutines ...................................................................................................
@@ -226,8 +226,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! Local Variables
-!      TYPE(FFT_DataType)                                 :: FFT_Data             !< the instance of the FFT module we're using
-
       INTEGER(IntKi)                                     :: I                    !< Generic counter
       INTEGER(IntKi)                                     :: J                    !< Generic counter
 
@@ -399,15 +397,17 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
                IF ( p%MnDriftDims(I) .AND. ( .NOT. MnDriftData%Data3D%LoadComponents(I) ) ) &
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the MnDrift method.', ErrStat,ErrMsg,'WAMIT2_Init')
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the MnDrift method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE IF ( MnDriftData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
                IF ( p%MnDriftDims(I) .AND. ( .NOT. MnDriftData%Data4D%LoadComponents(I) )  )&
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the MnDrift method.', ErrStat,ErrMsg,'WAMIT2_Init')
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the MnDrift method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE  ! We didn't find any data to use...
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  MnDrift flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
@@ -424,20 +424,18 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( NewmanAppData%DataIs3D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
-               IF ( p%NewmanAppDims(I) ) THEN
-                  IF ( .NOT. NewmanAppData%Data3D%LoadComponents(I) ) &
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the NewmanApp method.', ErrStat,ErrMsg,'WAMIT2_Init')
-               END IF
+               IF ( p%NewmanAppDims(I) .AND. ( .NOT. NewmanAppData%Data3D%LoadComponents(I) ) ) &
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the NewmanApp method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE IF ( NewmanAppData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
-               IF ( p%NewmanAppDims(I) ) THEN
-                  IF ( .NOT. NewmanAppData%Data4D%LoadComponents(I) ) &
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the NewmanApp method.', ErrStat,ErrMsg,'WAMIT2_Init')
-               END IF
+               IF ( p%NewmanAppDims(I) .AND. ( .NOT. NewmanAppData%Data4D%LoadComponents(I) ) ) &
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the NewmanApp method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  NewmanApp flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
@@ -454,11 +452,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( DiffQTFData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
-               IF ( p%DiffQTFDims(I) ) THEN
-                  IF ( .NOT. DiffQTFData%Data4D%LoadComponents(I) ) &
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(DiffQTFData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the DiffQTF method.', ErrStat,ErrMsg,'WAMIT2_Init')
-               END IF
+               IF ( p%DiffQTFDims(I) .AND. ( .NOT. DiffQTFData%Data4D%LoadComponents(I) ) ) &
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(DiffQTFData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the DiffQTF method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  DiffQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
@@ -475,11 +472,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( SumQTFData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
             DO I=1,6
-               IF ( p%SumQTFDims(I) ) THEN
-                  IF ( .NOT. SumQTFData%Data4D%LoadComponents(I) ) &
-                     CALL SetErrStat( ErrID_Fatal, ' '//TRIM(SumQTFData%Filename)//' does not contain information for the '// &
-                           TRIM(Num2LStr(I))//' force component for the SumQTF method.', ErrStat,ErrMsg,'WAMIT2_Init')
-               END IF
+               IF ( p%SumQTFDims(I) .AND. ( .NOT. SumQTFData%Data4D%LoadComponents(I) ) ) &
+                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(SumQTFData%Filename)//' does not contain information for the '// &
+                        TRIM(Num2LStr(I))//' force component for the SumQTF method.  Setting this component to zero.',    &
+                        ErrStat,ErrMsg,'WAMIT2_Init')
             ENDDO
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  SumQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
@@ -799,7 +795,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Wave information and QTF temporary
       COMPLEX(SiKi)                                      :: QTF_Value            !< Temporary complex number for QTF
       COMPLEX(SiKi)                                      :: aWaveElevC           !< Wave elevation of current frequency component.  NStepWave2 normalization is removed.
-      REAL(SiKi)                                         :: Omega1               !< Wave frequency of this component
+      REAL(ReKi)                                         :: Omega1               !< Wave frequency of this component
 
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex3(3)        !< Last used index for searching in the interpolation algorithms
@@ -1087,8 +1083,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             ! Set the MnDrift force to 0.0 (Even ones we don't calculate)
          MnDriftForce(I)   = 0.0_SiKi
 
-            ! Only on the dimensions we requested
-         IF ( p%MnDriftDims(I) ) THEN
+         IF (MnDriftData%DataIs3D) THEN
+            TmpFlag = MnDriftData%Data3D%LoadComponents(I)
+         ELSE
+            TmpFlag = MnDriftData%Data4D%LoadComponents(I)
+         END IF
+
+            ! Only on the dimensions we requested, and if it is present in the data
+         IF ( p%MnDriftDims(I) .AND. TmpFlag ) THEN
 
                ! Set an initial search index for the 3D and 4D array interpolation
             LastIndex3 = (/0,0,0/)
@@ -1106,7 +1108,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                   ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                   ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.
-               aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J)) / InitInp%NStepWave2
+               aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
 
                   ! Calculate the frequency
                Omega1 = J * InitInp%WaveDOmega
@@ -1120,7 +1122,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   IF ( MnDriftData%DataIs3D ) THEN
 
                         ! Set the (omega1,beta1,beta2) point we are looking for.
-                     Coord3 = (/ Omega1, InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                     Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
                         ! get the interpolated value for F(omega1,beta1,beta2)
                      CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, MnDriftData%Data3D%WvFreq1, &
@@ -1129,7 +1131,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   ELSE
 
                         ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                     Coord4 = (/ Omega1, Omega1, InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
                         ! get the interpolated value for F(omega1,omega2,beta1,beta2)
                      CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, MnDriftData%Data4D%WvFreq1, MnDriftData%Data4D%WvFreq2, &
@@ -1141,7 +1143,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                ELSE     ! outside the frequency range
 
-                  QTF_Value = CMPLX(0.0_SiKi,0.0_SiKi)
+                  QTF_Value = CMPLX(0.0,0.0,SiKi)
 
                ENDIF    ! frequency check
 
@@ -1158,7 +1160,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   ! Now we have the value of the QTF.  These values should only be real for the omega1=omega2 case of the mean drift.
                   ! However if the value came from the 4D interpolation routine, it might have some residual complex part to it.  So
                   ! we throw the complex part out.
-               QTF_Value = CMPLX(REAL(QTF_Value),0.0_SiKi)
+               QTF_Value = CMPLX(REAL(QTF_Value,SiKi),0.0,SiKi)
 
 
                   ! Now put it all together... note the frequency stepsize is multiplied after the summation
@@ -1262,7 +1264,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm1t(:)      !< First  term in the newman calculation, time domain.  Current load dimension.
       COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm2t(:)      !< Second term in the newman calculation, time domain.  Current load dimension.
       COMPLEX(SiKi)                                      :: aWaveElevC           !< Wave elevation of current frequency component.  NStepWave2 factor removed.
-      REAL(SiKi)                                         :: Omega1               !< Wave frequency of this component
+      REAL(ReKi)                                         :: Omega1               !< Wave frequency of this component
 
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex3(3)        !< Last used index for searching in the interpolation algorithms
@@ -1592,11 +1594,17 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       DO I=1,6
 
             ! set zero frequency term to zero
-         NewmanTerm1C(0) = CMPLX(0.0_SiKi, 0.0_SiKi)
-         NewmanTerm2C(0) = CMPLX(0.0_SiKi, 0.0_SiKi)
+         NewmanTerm1C(0) = CMPLX(0.0, 0.0, SiKi)
+         NewmanTerm2C(0) = CMPLX(0.0, 0.0, SiKi)
 
-            ! Only on the dimensions we requested
-         IF ( p%NewmanAppDims(I) ) THEN
+         IF (NewmanAppData%DataIs3D) THEN
+            TmpFlag = NewmanAppData%Data3D%LoadComponents(I)
+         ELSE
+            TmpFlag = NewmanAppData%Data4D%LoadComponents(I)
+         END IF
+
+            ! Only on the dimensions we requested, and if it is present in the data
+         IF ( p%NewmanAppDims(I) .AND. TmpFlag ) THEN
 
                ! Set an initial search index for the 3D and 4D array interpolation
             LastIndex3 = (/0,0,0/)
@@ -1614,7 +1622,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                   ! First get the wave amplitude -- must be reconstructed from the WaveElevC array.  First index is the real (1) or
                   ! imaginary (2) part.  Divide by NStepWave2 so that the wave amplitude is of the same form as the paper.
-               aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J)) / InitInp%NStepWave2
+               aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
                   ! Calculate the frequency
                Omega1 = J * InitInp%WaveDOmega
 
@@ -1626,7 +1634,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   IF ( NewmanAppData%DataIs3D ) THEN
 
                         ! Set the (omega1,beta1,beta2) point we are looking for.
-                     Coord3 = (/ Omega1, InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                     Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
                         ! get the interpolated value for F(omega1,beta1,beta2)
                      CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, NewmanAppData%Data3D%WvFreq1, &
@@ -1635,7 +1643,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   ELSE
 
                         ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                     Coord4 = (/ Omega1, Omega1, InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
                         ! get the interpolated value for F(omega1,omega2,beta1,beta2)
                      CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, NewmanAppData%Data4D%WvFreq1, NewmanAppData%Data4D%WvFreq2, &
@@ -1647,7 +1655,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                ELSE     ! outside the frequency range
 
-                  QTF_Value = CMPLX(0.0_SiKi,0.0_SiKi)
+                  QTF_Value = CMPLX(0.0,0.0,SiKi)
 
                ENDIF    ! frequency check
 
@@ -1671,24 +1679,24 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   ! Now we have the value of the QTF.  These values should only be real for the omega1=omega2 case of the approximation.
                   ! However if the value came from the 4D interpolation routine, it might have some residual complex part to it.  So
                   ! we throw the complex part out.
-               QTF_Value = CMPLX(REAL(QTF_Value),0.0_SiKi)
+               QTF_Value = CMPLX(REAL(QTF_Value,SiKi),0.0,SiKi)
 
 
                   ! Now we place these results into the arrays
                IF (REAL(QTF_Value) > 0.0_SiKi) THEN
 
                   NewmanTerm1C(J) = aWaveElevC * (QTF_Value)**0.5_SiKi
-                  NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi)
+                  NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
 
                ELSE IF (REAL(QTF_Value) < 0.0_SiKi) THEN
 
-                  NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi)
+                  NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
                   NewmanTerm2C(J) = aWaveElevC * (-QTF_Value)**0.5_SiKi
 
                ELSE ! at 0
 
-                  NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi)
-                  NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi)
+                  NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+                  NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
 
                ENDIF
 
@@ -1833,10 +1841,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       COMPLEX(SiKi)                                      :: TmpHMinusC           !< Temporary variable for holding the current value of \f$ H^- \f$
       COMPLEX(SiKi)                                      :: aWaveElevC1          !< Wave elevation of the first  frequency component.  NStepWave2 factor removed.
       COMPLEX(SiKi)                                      :: aWaveElevC2          !< Wave elevation of the second frequency component.  NStepWave2 factor removed.
-      REAL(SiKi)                                         :: OmegaDiff            !< Wave difference frequency
+      REAL(ReKi)                                         :: OmegaDiff            !< Wave difference frequency
       REAL(SiKi),    ALLOCATABLE                         :: TmpDiffQTFForce(:)   !< The resulting diffQTF force for this load component
-      REAL(SiKi)                                         :: Omega1               !< First  wave frequency
-      REAL(SiKi)                                         :: Omega2               !< Second wave frequency
+      REAL(ReKi)                                         :: Omega1               !< First  wave frequency
+      REAL(ReKi)                                         :: Omega2               !< Second wave frequency
       REAL(SiKi)                                         :: MnDriftForce(6)      !< Mean drift force (first term).  MnDrift_InitCalc routine will return this.
 
          ! Interpolation routine indices and value to search for, and smaller array to pass
@@ -2054,8 +2062,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Now loop through all the dimensions and perform the calculation
       DO I=1,6
 
-            ! Only on the dimensions we requested
-         IF ( p%DiffQTFDims(I) ) THEN
+            ! Only on the dimensions we requested, and it exists in the dataset
+         IF ( p%DiffQTFDims(I) .AND. DiffQTFData%Data4D%LoadComponents(I) ) THEN
 
 
                ! Set an initial search index for the 4D array interpolation
@@ -2065,7 +2073,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             TmpData4D = DiffQTFData%Data4D%DataSet(:,:,:,:,I)
 
                ! Initialize the temporary array to zero.
-            TmpComplexArr = CMPLX(0.0_SiKi,0.0_SiKi)
+            TmpComplexArr = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
 
                ! Outer loop to create the TmpComplexArr
@@ -2079,7 +2087,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                IF ( (OmegaDiff >= InitInp%WvLowCOffD) .AND. (OmegaDiff <= InitInp%WvHiCOffD) ) THEN
 
                      ! Set the \f$ H^- \f$ term to zero before we start
-                  TmpHMinusC = CMPLX(0.0_SiKi,0.0_SiKi)
+                  TmpHMinusC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
 
                     ! Do the sum over H^-
@@ -2091,11 +2099,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
                         ! Find the Wave amplitudes 1 and 2
-                     aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J+K), InitInp%WaveElevC0(2,J+K))  / InitInp%NStepWave2
-                     aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,K),   InitInp%WaveElevC0(2,K))    / InitInp%NStepWave2
+                     aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J+K), InitInp%WaveElevC0(2,J+K), SiKi)  / InitInp%NStepWave2
+                     aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,K),   InitInp%WaveElevC0(2,K),   SiKi)  / InitInp%NStepWave2
 
                         ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                     Coord4 = (/ Omega1, Omega2, InitInp%WaveDirArr(J+K), InitInp%WaveDirArr(K) /)
+                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(J+K), InitInp%WaveDirArr(K) /)
 
                         ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                      CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, DiffQTFData%Data4D%WvFreq1, DiffQTFData%Data4D%WvFreq2, &
@@ -2120,7 +2128,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                ELSE     ! outside the frequency range, so
 
-                  TmpComplexArr(J) = CMPLX(0.0_SiKi,0.0_SiKi)
+                  TmpComplexArr(J) = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
                ENDIF    ! frequency check
 
@@ -2272,9 +2280,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       COMPLEX(SiKi)                                      :: TmpHPlusC            !< Temporary variable for holding the current value of \f$ H^+ \f$
       COMPLEX(SiKi)                                      :: aWaveElevC1          !< Wave elevation of the first  frequency component.  NStepWave2 factor removed.
       COMPLEX(SiKi)                                      :: aWaveElevC2          !< Wave elevation of the second frequency component.  NStepWave2 factor removed.
-      REAL(SiKi)                                         :: OmegaSum             !< Wave difference frequency
-      REAL(SiKi)                                         :: Omega1               !< First  wave frequency
-      REAL(SiKi)                                         :: Omega2               !< Second wave frequency
+      REAL(ReKi)                                         :: OmegaSum             !< Wave difference frequency
+      REAL(ReKi)                                         :: Omega1               !< First  wave frequency
+      REAL(ReKi)                                         :: Omega2               !< Second wave frequency
 
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms.  First  wave freq
@@ -2464,8 +2472,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Now loop through all the dimensions and perform the calculation
       DO I=1,6
 
-            ! Only on the dimensions we requested
-         IF ( p%SumQTFDims(I) ) THEN
+            ! Only on the dimensions we requested, and if it is present in the data
+         IF ( p%SumQTFDims(I) .AND. SumQTFData%Data4D%LoadComponents(I) ) THEN
 
 
                ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
@@ -2487,7 +2495,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             LastIndex4 = (/0,0,0,0/)
 
                ! Initialize the array to zero
-            Term1ArrayC = CMPLX(0.0_SiKi,0.0_SiKi)
+            Term1ArrayC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
 
                ! The limits look a little funny.  But remember we are placing the value in the 2*J location,
@@ -2496,7 +2504,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             DO J=1,FLOOR(REAL(InitInp%NStepWave2-1)/2.0_SiKi)
 
                   ! The frequency
-               Omega1   = J * InitInp%WaveDOmega
+               Omega1   = REAL(J,ReKi) * InitInp%WaveDOmega
                OmegaSum = 2.0_SiKi * Omega1           ! the sum frequency
 
                   ! Only perform calculations if the difference frequency is in the right range
@@ -2504,10 +2512,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
                      ! Find the wave amplitude at frequency omega
-                  aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J))  / InitInp%NStepWave2
+                  aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi )  / InitInp%NStepWave2
 
                      ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                  Coord4 = (/ Omega1, Omega1, InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+                  Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
                      ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                   CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
@@ -2539,7 +2547,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             LastIndex4 = (/0,0,0,0/)
 
                ! Initialize the temporary arrays for each term to zero.
-            Term2ArrayC = CMPLX(0.0_SiKi,0.0_SiKi)
+            Term2ArrayC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
 
                ! Check the limits for the high frequency cutoff. If WvHiCOffS is less than the
@@ -2575,7 +2583,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
                   ! Set the \f$ H^+ \f$ term to zero before we start
-               TmpHPlusC = CMPLX(0.0_SiKi,0.0_SiKi)
+               TmpHPlusC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
 
                   ! Only perform calculations if the difference frequency is in the right range
@@ -2595,11 +2603,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                      Omega2 = (J-K) * InitInp%WaveDOmega
 
                         ! Find the wave amplitude at frequency omega.  Remove the NStepWave2 normalization built into WaveElevC0 from Waves module
-                     aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,  K), InitInp%WaveElevC0(2,  K))    / InitInp%NStepWave2
-                     aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,J-K), InitInp%WaveElevC0(2,J-K))    / InitInp%NStepWave2
+                     aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,  K), InitInp%WaveElevC0(2,  K), SiKi )    / InitInp%NStepWave2
+                     aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,J-K), InitInp%WaveElevC0(2,J-K), SiKi )    / InitInp%NStepWave2
 
                         ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                     Coord4 = (/ Omega1, Omega2, InitInp%WaveDirArr(K), InitInp%WaveDirArr(J-K) /)
+                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(K), InitInp%WaveDirArr(J-K) /)
 
                         ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                      CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
@@ -2645,7 +2653,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                ! Now we add the two terms together.  The 0.5 multiplier on is because the double sided FFT was used.
             DO J=0,InitInp%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get over-flow errors here. SumQTFForce(InitInp%NStepWave,I) gets overwritten later, so I'm setting the array bounds to be -1.
-               SumQTFForce(J,I) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J)))
+               SumQTFForce(J,I) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J), SiKi))
             ENDDO
 
                ! Copy the last first term to the last so that it is cyclic
@@ -2784,6 +2792,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   '           MnDriftF flag should be set to true by calling program for MnDrift /= 0.'//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, 'CheckInitInput')
          END IF
+         IF ( InitInp%NBody > 1 .AND. InitInp%MnDrift == 8 ) THEN
+            CALL SetErrStat( ErrID_Fatal, ' Mean drift calculation cannot be used with input file type 8 when more than 1 WAMIT body is present.', &
+                                 ErrStat, ErrMsg, 'CheckInitInput')
+         END IF
       ELSE
          CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to WAMIT2_Init: '//NewLine// &
                   '           MnDrift can only have values of 0, 7, 8, 9, 10, 11, or 12. '//NewLine// &
@@ -2808,13 +2820,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   '           NewmanAppF flag should be set to true by calling program for NewmanApp /= 0.'//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, 'CheckInitInput')
          END IF
+         IF ( InitInp%NBody > 1 .AND. InitInp%NewmanApp == 8 ) THEN
+            CALL SetErrStat( ErrID_Fatal, ' Newman''s approximation cannot be used with input file type 8 when more than 1 WAMIT body is present.', &
+                                 ErrStat, ErrMsg, 'CheckInitInput')
+         END IF
       ELSE
          CALL SetErrStat( ErrID_Fatal, ' Programming Error in call to WAMIT2_Init: '//NewLine// &
                   '           NewmanApp can only have values of 0, 7, 8, 9, 10, 11, or 12. '//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, 'CheckInitInput')
       END IF
-
-
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
          RETURN
@@ -3060,17 +3074,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             p%MnDriftDims(4)     =  .FALSE.              ! the .8 files don't contain this dimension
             p%MnDriftDims(5)     =  .FALSE.              ! the .8 files don't contain this dimension
             p%MnDriftDims(6)     =  .TRUE.
-!FIXME: do I want to include these warnings anymore?
-!               !> Now warn me that we changed the calculations in this case...
-!            CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
-!               'in the heave direction.  No second order heave forces will be calculated within the mean drift calculations.'//NewLine, &
-!               ErrStat, ErrMsg, 'CheckInitInput')
-!            CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
-!               'for platform roll.  No second order roll forces will be calculated within the mean drift calculations.'//NewLine, &
-!               ErrStat, ErrMsg, 'CheckInitInput')
-!            CALL SetErrStat( ErrID_Warn, ' WARNING: the .8 WAMIT output file does not contain information for second order forces '//&
-!               'for platform pitch. No second order pitching forces will be calculated within the mean drift calculations.'//NewLine, &
-!               ErrStat, ErrMsg, 'CheckInitInput')
          ELSE
             p%MnDriftDims        = .TRUE.
          ENDIF
@@ -3094,18 +3097,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             p%NewmanAppDims(4)   =  .FALSE.              ! the .8 files don't contain this dimension
             p%NewmanAppDims(5)   =  .FALSE.              ! the .8 files don't contain this dimension
             p%NewmanAppDims(6)   =  .TRUE.
-!FIXME: do I want to include these warnings anymore?
-!            !> Now warn me that we changed the calculations in this case...
-!            CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
-!               'second order force calculations of platform heave.'//NewLine// &
-!               "           No second order heave forces will be calculated within the Newman's Approximation calculations.", ErrStat, ErrMsg, 'CheckInitInput')
-!            CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
-!               'second order force calculations of platform roll.'//NewLine// &
-!               "           No second order roll forces will be calculated within the Newman's Approximation calculations.", ErrStat, ErrMsg, 'CheckInitInput')
-!            CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
-!               'second order force calculations of platform pitch.'//NewLine// &
-!               "           No second order pitching forces will be calculated within the Newman's Approximation calculations.", &
-!               ErrStat, ErrMsg, 'CheckInitInput')
          ELSE
             p%NewmanAppDims      = .TRUE.
          ENDIF
@@ -3454,7 +3445,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ELSE IF ( RawData3D(I,1) < 0 ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
          ELSE
-            RawData3D(I,1) =  TwoPi/RawData3D(I,1)       ! First column is Tau1
+            RawData3D(I,1) =  TwoPi_S/RawData3D(I,1)       ! First column is Tau1
          ENDIF
       ENDDO
 
@@ -3795,7 +3786,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                ! Store the data after dimensionalizing
             Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) = &
-                      InitInp%RhoXg * InitInp%WAMITULEN**K * CMPLX(RawData3D(I,7),RawData3D(I,8))
+                      REAL(InitInp%RhoXg * InitInp%WAMITULEN**K,SiKi) * CMPLX(RawData3D(I,7),RawData3D(I,8),SiKi)
 
                ! Set flag indicating that this value has been inserted.
             Data3D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) = .TRUE.
@@ -4201,14 +4192,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ELSE IF ( RawData4D(I,1) < 0 ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
          ELSE
-            RawData4D(I,1) =  TwoPi/RawData4D(I,1)       ! First column is Tau1
+            RawData4D(I,1) =  TwoPi_S/RawData4D(I,1)       ! First column is Tau1
          ENDIF
          IF ( EqualRealNos(RawData4D(I,2), 0.0_SiKi) ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
          ELSE IF ( RawData4D(I,2) < 0 ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
          ELSE
-            RawData4D(I,2) =  TwoPi/RawData4D(I,2)       ! First column is Tau2
+            RawData4D(I,2) =  TwoPi_S/RawData4D(I,2)       ! First column is Tau2
          ENDIF
       ENDDO
 
@@ -4641,7 +4632,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
                ! Store the data after dimensionalizing
             Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ) = &
-                      InitInp%RhoXg * InitInp%WAMITULEN**K * CMPLX(RawData4D(I,8),RawData4D(I,9))
+                      REAL(InitInp%RhoXg * InitInp%WAMITULEN**K,SiKi) * CMPLX(RawData4D(I,8),RawData4D(I,9),SiKi)
 
                ! Set flag indicating that this value has been inserted.
             Data4D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ) = .TRUE.
@@ -4739,17 +4730,17 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       !----------------------------------------------------------------------------------
 
       IF (.NOT. HaveZeroFreq1) THEN
-         Data4D%DataSet( 1:2,:,:,:,:)  = CMPLX(0.0_SiKi,0.0_SiKi)                                     ! Set the values to zero for everything before entered frequency range
+         Data4D%DataSet( 1:2,:,:,:,:)  = CMPLX(0.0,0.0,SiKi)                                          ! Set the values to zero for everything before entered frequency range
          Data4D%DataMask(1:2,:,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
       ENDIF      
-      Data4D%DataSet( Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = CMPLX(0.0_SiKi,0.0_SiKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
+      Data4D%DataSet( Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = CMPLX(0.0,0.0,SiKi)            ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
       Data4D%DataMask(Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
 
       IF (.NOT. HaveZeroFreq2) THEN
-         Data4D%DataSet( :,1:2,:,:,:)  = CMPLX(0.0_SiKi,0.0_SiKi)                                     ! Set the values to zero for everything before entered frequency range
+         Data4D%DataSet( :,1:2,:,:,:)  = CMPLX(0.0,0.0,SiKi)                                          ! Set the values to zero for everything before entered frequency range
          Data4D%DataMask(:,1:2,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
       ENDIF      
-      Data4D%DataSet( :,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = CMPLX(0.0_SiKi,0.0_SiKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
+      Data4D%DataSet( :,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = CMPLX(0.0,0.0,SiKi)            ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
       Data4D%DataMask(:,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
             
 
@@ -5185,7 +5176,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IsRealNum   = .TRUE.
       else
          IsRealNum   = .FALSE.
-         ValueRead   = NaN                ! This is NaN as defined in the NWTC_Num.
+         ValueRead   = NaN_S           ! This is NaN as defined in the NWTC_Num.
          ErrMsg      = 'Not a real number. '//TRIM(ErrMsgTmp)//NewLine
          ErrSTat     = ErrID_Severe
       endif
@@ -5251,7 +5242,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IsRealNum   = .TRUE.
       else
          IsRealNum   = .FALSE.
-         VarRead     = NaN                ! This is NaN as defined in the NWTC_Num.
+         VarRead     = NaN_S        ! This is NaN as defined in the NWTC_Num.
          ErrMsg      = 'Not a real number. '//TRIM(ErrMsgTmp)//NewLine
          ErrStat     = ErrStatTmp         ! The ErrStatTmp returned by the ReadNum routine is an ErrID level.
       endif
