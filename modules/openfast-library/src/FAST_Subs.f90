@@ -5143,7 +5143,7 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
       !call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonDistrib_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
       
       if (p_FAST%CompSub == Module_NONE) then
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(VTK_path)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%WAMITMesh )
+         call MeshWrVTK(p_FAST%TurbinePos, HD%y%WAMITMesh, trim(VTK_path)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%WAMITMesh )
          outputFields = .false.
       else         
          call MeshWrVTK(p_FAST%TurbinePos, HD%y%WAMITMesh, trim(VTK_path)//'.HD_WAMITMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%WAMITMesh )
@@ -5306,7 +5306,7 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW,
    IF ( p_FAST%CompHydro == Module_HD ) THEN 
       
       if (p_FAST%CompSub == Module_NONE) then
-         call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(VTK_path)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%WAMITMesh )
+         call MeshWrVTK(p_FAST%TurbinePos, HD%y%WAMITMesh, trim(VTK_path)//'.HD_AllHdroOrigin', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Twidth, HD%Input(1)%WAMITMesh )
          outputFields = .false.
       else         
          OutputFields = p_FAST%VTK_fields
