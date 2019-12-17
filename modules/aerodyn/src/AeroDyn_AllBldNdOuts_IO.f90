@@ -102,7 +102,7 @@ SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat, ErrMsg )
    INTEGER(IntKi)                               :: IdxBlade                         ! Counter to which blade we are on
    INTEGER(IntKi)                               :: IdxNode                          ! Counter to the blade node we ae on
    INTEGER(IntKi)                               :: IdxChan                          ! Counter to the channel we are outputting.
-   CHARACTER(16)                                :: ChanPrefix                       ! Name prefix (B#N###)
+   CHARACTER(16)                                :: ChanPrefix                       ! Name prefix (AB#N###)
    CHARACTER(6)                                 :: TmpChar                          ! Temporary char array to hold the node digits (3 places only!!!!)
    CHARACTER(*), PARAMETER                      :: RoutineName = ('AllBldNdOuts_InitOut')
 
@@ -128,7 +128,7 @@ SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat, ErrMsg )
 
                   ! Create the name prefix:
                WRITE (TmpChar,'(I3.3)')  IdxNode         ! 3 digit number
-               ChanPrefix = 'B' // TRIM(Num2LStr(IdxBlade)) // 'N' // TRIM(TmpChar) ! // '_'
+               ChanPrefix = 'AB' // TRIM(Num2LStr(IdxBlade)) // 'N' // TRIM(TmpChar) ! // '_' ! note that I added an "AB" to indicate "Aero B1" in case of confusion with structural nodal outputs with the same name
                   ! Now write to the header
                InitOut%WriteOutputHdr(INDX) = trim(ChanPrefix) // p%BldNd_OutParam(IdxChan)%Name
                InitOut%WriteOutputUnt(INDX) = p%BldNd_OutParam(IdxChan)%Units
