@@ -69,7 +69,42 @@ MODULE SD_FEM
 
 
 CONTAINS
+!------------------------------------------------------------------------------------------------------
+!> Remove degrees of freedom from a matrix (lines and rows)
+!! Generic function
+SUBROUTINE RemoveDOF(A, bDOF, Ared, ErrStat, ErrMsg )
+   REAL(ReKi),             INTENT(IN   ) :: A(:, :)        ! full matrix
+   logical,                INTENT(IN   ) :: bDOF(:)        ! Array of logical specifying whether a DOF is to be kept(True), or removed (False)
+   REAL(LAKi),ALLOCATABLE, INTENT(  OUT) :: Ared(:,:)      ! reduced matrix
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat        ! Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+   !locals
+   INTEGER                               :: I, J           ! counters into full matrix
+   INTEGER                               :: Ir, Jr         ! counters into reduced matrix
+   INTEGER                               :: nr             ! number of reduced DOF
+   ErrStat = ErrID_None
+   ErrMsg  = ''    
+
+   nr= count(bDOF)
+   CALL AllocAry(Ared, nr, nr, 'Ared', ErrStat, ErrMsg ); if (ErrStat >= AbortErrLev) return
+
+   ! Remove rows and columns from A when bDOF is 
+   Jr=0
+   do J = 1, size(A,1)
+      if (bDOF(J)) then
+         Jr=Jr+1
+         Ir=0
+         do I = 1, size(A,1)
+            if (bDOF(I)) then
+               Ir=Ir+1
+               Ared(Ir, Jr) = REAL( A(I, J), LAKi )
+            end if
+         end do
+      endif
+   end do
+END SUBROUTINE RemoveDOF
     
+!------------------------------------------------------------------------------------------------------
 !> Maps nodes to elements 
 !! allocate NodesConnE and NodesConnN                                                                               
 SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
@@ -577,6 +612,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    REAL(ReKi)               :: r1, r2, t, Iyy, Jzz, Ixx, A, kappa, nu, ratioSq, D_inner, D_outer
    LOGICAL                  :: shear
    INTEGER(IntKi)           :: eType !< Member type
+   REAL(ReKi)               :: Point1(3), Point2(3) ! (x,y,z) positions of two nodes making up an element
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(1024)          :: ErrMsg2
    ErrMsg  = ""
@@ -595,7 +631,9 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
       eType = p%Elems(I, iMType)
 
       ! --- Properties common to all element types: L, DirCos (and Area and rho)
-      CALL GetDirCos(Init%Nodes(N1,2:4), Init%Nodes(N2,2:4), DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
+      Point1 = Init%Nodes(N1,2:4)
+      Point2 = Init%Nodes(N2,2:4)
+      CALL GetDirCos(Point1, Point2, DirCos, L, ErrStat2, ErrMsg2); if(Failed()) return ! L and DirCos
       p%ElemProps(i)%eType  = eType
       p%ElemProps(i)%Length = L
       p%ElemProps(i)%DirCos = DirCos

@@ -1953,13 +1953,13 @@ END SUBROUTINE TrnsfTI
 
 !------------------------------------------------------------------------------------------------------
 !> Return eigenvalues, Omega, and eigenvectors, Phi, 
-SUBROUTINE EigenSolve(K, M, nDOF, NOmega, Reduced, Init,p, Phi, Omega, ErrStat, ErrMsg )
+SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init,p, Phi, Omega, ErrStat, ErrMsg )
    USE NWTC_ScaLAPACK, only: ScaLAPACK_LASRT
    INTEGER,                INTENT(IN   )    :: nDOF                               ! Total degrees of freedom of the incoming system
    REAL(ReKi),             INTENT(IN   )    :: K(nDOF, nDOF)                      ! stiffness matrix 
    REAL(ReKi),             INTENT(IN   )    :: M(nDOF, nDOF)                      ! mass matrix 
    INTEGER,                INTENT(IN   )    :: NOmega                             ! RRD: no. of requested eigenvalues
-   LOGICAL,                INTENT(IN   )    :: Reduced                            ! Whether or not to reduce matrices, this will be removed altogether later, when reduction will be done apriori
+   LOGICAL,                INTENT(IN   )    :: bRemoveConstraints                 ! Whether or not to reduce matrices, this will be removed altogether later, when reduction will be done apriori
    TYPE(SD_InitType),      INTENT(IN   )    :: Init  
    TYPE(SD_ParameterType), INTENT(IN   )    :: p  
    REAL(ReKi),             INTENT(  OUT)    :: Phi(nDOF, NOmega)                  ! RRD: Returned Eigenvectors
@@ -1982,14 +1982,14 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, Reduced, Init,p, Phi, Omega, ErrStat, 
    ErrMsg  = ''
          
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
-   IF (Reduced) THEN !bjj: i.e., We need to reduce; it's not reduced yet
+   IF (bRemoveConstraints) THEN 
       ! First I need to remove constrained nodes DOFs
       ! This is actually done when we are printing out the 'full' set of eigenvalues
-      CALL ReduceKMdofs(Kred,K,nDOF, Init,p, ErrStat2, ErrMsg2 ); if(Failed()) return
-      CALL ReduceKMdofs(Mred,M,nDOF, Init,p, ErrStat2, ErrMsg2 ); if(Failed()) return
+      CALL RemoveBCConstraints(Kred,K,nDOF, Init,p, ErrStat2, ErrMsg2 ); if(Failed()) return
+      CALL RemoveBCConstraints(Mred,M,nDOF, Init,p, ErrStat2, ErrMsg2 ); if(Failed()) return
       N=SIZE(Kred,1)    
    ELSE
-      ! This is actually done whe we are generating the CB-reduced set of eigenvalues, so the the variable 'Reduced' can be a bit confusing. GJH 8/1/13
+      ! This is actually done whe we are generating the CB-reduced set of eigenvalues
       N=SIZE(K,1)
       CALL AllocAry( Kred, n, n, 'Kred', ErrStat2, ErrMsg2 ); if(Failed()) return
       CALL AllocAry( Mred, n, n, 'Mred', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -2012,7 +2012,7 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, Reduced, Init,p, Phi, Omega, ErrStat, 
    CALL AllocAry( ALPHAI, n,         'ALPHAI', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
    CALL AllocAry( BETA,   n,         'BETA',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
    CALL AllocAry( VR,     n,  n,     'VR',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
-   CALL AllocAry( VL,     n,  n,     'VR',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+   CALL AllocAry( VL,     n,  n,     'VL',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
    CALL AllocAry( KEY,    n,         'KEY',    ErrStat2, ErrMsg2 ); if(Failed()) return
     
    CALL  LAPACK_ggev('N','V',N ,Kred, Mred, ALPHAR, ALPHAI, BETA, VL, VR, work, lwork, ErrStat2, ErrMsg2)
@@ -2050,10 +2050,10 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, Reduced, Init,p, Phi, Omega, ErrStat, 
    ! --- Finish EigenSolve
    ! Note:  NOmega must be <= N, which is the length of Omega2, Phi!
    Omega=SQRT( Omega2(1:NOmega) ) !Assign my new Omega and below my new Phi (eigenvectors) [eigenvalues are actually the square of omega]
-   IF ( Reduced ) THEN ! this is called for the full system Eigenvalues:
+   IF ( bRemoveConstraints ) THEN ! this is called for the full system Eigenvalues:
       !Need to expand eigenvectors for removed DOFs, setting Phi 
       CALL UnReduceVRdofs(VR(:,1:NOmega),Phi,N,NOmega, Init,p, ErrStat2, ErrMsg2 ) ; if(Failed()) return
-   ELSE ! IF (.NOT.(Reduced)) THEN !For the time being Phi gets updated only when CB eigensolver is requested. I need to fix it for the other case (full fem) and then get rid of the other eigensolver, this implies "unreducing" the VR
+   ELSE ! For the time being Phi gets updated only when CB eigensolver is requested. I need to fix it for the other case (full fem) and then get rid of the other eigensolver, this implies "unreducing" the VR
        ! This is done as part of the CB-reduced eigensolve
       Phi=REAL( VR(:,1:NOmega), ReKi )   ! eigenvectors
    ENDIF  
@@ -2086,20 +2086,18 @@ END SUBROUTINE EigenSolve
 !------------------------------------------------------------------------------------------------------
 !> Calculate Kred from K after removing consstrained node DOFs from the full M and K matrices
 !!Note it works for constrained nodes, still to see how to make it work for interface nodes if needed
-SUBROUTINE ReduceKMdofs(Kred,K,TDOF, Init,p, ErrStat, ErrMsg )
+SUBROUTINE RemoveBCConstraints(Ared,A,TDOF, Init,p, ErrStat, ErrMsg )
    TYPE(SD_InitType),      INTENT(  in)  :: Init  
    TYPE(SD_ParameterType), INTENT(  in)  :: p  
    INTEGER,                INTENT(IN   ) :: TDOF           ! Size of matrix K (total DOFs)                              
-   REAL(ReKi),             INTENT(IN   ) :: K(TDOF, TDOF)  ! full matrix
-   REAL(LAKi),ALLOCATABLE, INTENT(  OUT) :: Kred(:,:)      ! reduced matrix
+   REAL(ReKi),             INTENT(IN   ) :: A(TDOF, TDOF)  ! full matrix
+   REAL(LAKi),ALLOCATABLE, INTENT(  OUT) :: Ared(:,:)      ! reduced matrix
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat        ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg         ! Error message if ErrStat /= ErrID_None
    !locals
-   INTEGER                               :: I, J           ! counters into full or reduced matrix
-   INTEGER                               :: L              ! number of DOFs to eliminate 
-   INTEGER, ALLOCATABLE                  :: idx(:)         ! vector to map reduced matrix to full matrix
+   INTEGER                               :: I              ! counters into full or reduced matrix
+   logical, allocatable                  :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
    INTEGER                               :: NReactDOFs
-   INTEGER                               :: DOF_reduced
    INTEGER                               :: ErrStat2
    CHARACTER(1024)                       :: ErrMsg2
    
@@ -2109,60 +2107,31 @@ SUBROUTINE ReduceKMdofs(Kred,K,TDOF, Init,p, ErrStat, ErrMsg )
    NReactDOFs = p%NReact*6 !p%DOFC
    IF (NReactDOFs > TDOF) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = 'ReduceKMdofs:invalid matrix sizes.'
+      ErrMsg = 'RemoveBCConstraints:invalid matrix sizes.'
       RETURN
    END IF
   
-   CALL AllocAry(idx,  TDOF, 'idx',  ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'ReduceKMdofs')
+   CALL AllocAry(bDOF, TDOF, 'bDOF',  ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'RemoveBCConstraints')
    IF (ErrStat >= AbortErrLev) THEN
       RETURN
    END IF   
-   
-   ! Calculate how many rows/columns need to be eliminated:
-   DO I = 1, TDOF       
-      idx(I) = I
-   END DO
-         
-   L = 0
+
+   ! Setting array of DOF, true if we keep them
+   bDOF(1:TDOF)=.True.
    DO I = 1, NReactDOFs  !Cycle on reaction DOFs      
       IF (Init%BCs(I, 2) == 1) THEN
-         L=L+1 !number of DOFs to eliminate
-         idx( Init%BCs(I, 1) ) = 0 ! Eliminate this one
+         bDOF(Init%BCs(I, 1)) = .False. ! Eliminate this one
       END IF    
    END DO   
-   
-   ! Allocate the output matrix and the index mapping array
-   DOF_reduced = TDOF-L   
-   CALL AllocAry(Kred, DOF_reduced, DOF_reduced, 'Kred', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'ReduceKMdofs')
-   IF (ErrStat >= AbortErrLev) THEN
-      CALL CleanUp()
-      RETURN
-   END IF
-   
-   ! set the indices we want to keep (i.e., a mapping from reduced to full matrix)
-   J  = 1   
-   DO I=1,TDOF
-      idx(J) = idx(I)      
-      IF ( idx(J) /= 0 ) J = J + 1         
-   END DO
-         
-   ! Remove rows and columns from every row/column in full matrix where Init%BC(:,2) == 1,
-   ! using the mapping created above. (This is a symmetric matrix.)
-   DO J = 1, DOF_reduced  !Cycle on reaction DOFs      
-      DO I = 1, DOF_reduced  !Cycle on reaction DOFs      
-         Kred(I,J) = REAL( K( idx(I), idx(J) ), LAKi )
-      END DO
-   END DO
-   ! clean up local variables:
-   CALL CleanUp()
-CONTAINS
-   subroutine CleanUp()
-      IF (ALLOCATED(idx)) DEALLOCATE(idx)
-   end subroutine
-END SUBROUTINE ReduceKMdofs
+   ! --- Creating Ared = A[bDOF,bDOF], reduced version 
+   call RemoveDOF(A, bDOF, Ared, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'RemoveBCConstraints')
+   deallocate(bDOF)
+END SUBROUTINE RemoveBCConstraints
+
+
 
 !------------------------------------------------------------------------------------------------------
-!> Augments VRred to VR for the constrained DOFs, somehow reversing what ReducedKM did for matrices
+!> Augments VRred to VR for the constrained DOFs, somehow reversing what RemoveBCConstraints did for matrices
 !Note it works for constrained nodes, still to see how to make it work for interface nodes if needed
 SUBROUTINE UnReduceVRdofs(VRred,VR,rDOF,rModes, Init,p, ErrStat, ErrMsg )
    TYPE(SD_InitType),      INTENT(in   ) :: Init  
@@ -2551,7 +2520,7 @@ SUBROUTINE ConstructUFL( u, p, UFL )
    ! note that p%DOFL = p%NNodes_L*6
    DO I = 1, p%NNodes_L   !Only interior nodes here     
       ! starting index in the master arrays for the current node    
-      startDOF = (I-1)*6 + 1
+      startDOF = (I-1)*6 + 1 ! TODO
       ! index into the Y2Mesh
       J  = p%NNodes_I + I
       ! Construct UFL array from the Force and Moment fields of the input mesh

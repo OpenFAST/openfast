@@ -102,8 +102,7 @@ contains
         if(bTest) then
             if(cpt>0) then
                 call test_fail(InfoAbs)
-                STOP -1 !OTHER-COMPILER
-	         	STOP ! COMPAQ-COMPILER
+                STOP 
             else
                 call test_success(InfoAbs)
             endif
