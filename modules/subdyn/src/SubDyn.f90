@@ -1953,7 +1953,7 @@ END SUBROUTINE TrnsfTI
 
 !------------------------------------------------------------------------------------------------------
 !> Return eigenvalues, Omega, and eigenvectors, Phi, 
-SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init,p, Phi, Omega, ErrStat, ErrMsg )
+SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, Phi, Omega, ErrStat, ErrMsg )
    USE NWTC_ScaLAPACK, only: ScaLAPACK_LASRT
    INTEGER,                INTENT(IN   )    :: nDOF                               ! Total degrees of freedom of the incoming system
    REAL(ReKi),             INTENT(IN   )    :: K(nDOF, nDOF)                      ! stiffness matrix 
@@ -1977,16 +1977,19 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init,p, Phi, Omega
    INTEGER,    ALLOCATABLE                   :: KEY(:)
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
+   logical, allocatable                      :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
       
    ErrStat = ErrID_None
    ErrMsg  = ''
          
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
    IF (bRemoveConstraints) THEN 
-      ! First I need to remove constrained nodes DOFs
+      ! Removing constrained nodes DOFs
       ! This is actually done when we are printing out the 'full' set of eigenvalues
-      CALL RemoveBCConstraints(Kred,K,nDOF, Init,p, ErrStat2, ErrMsg2 ); if(Failed()) return
-      CALL RemoveBCConstraints(Mred,M,nDOF, Init,p, ErrStat2, ErrMsg2 ); if(Failed()) return
+      !    Mred = M[bDOF,bDOF],  Kred = K[bDOF,bDOF]
+      call SelectNonBCConstraintsDOF(Init, p, nDOF, bDOF, ErrStat2, ErrMsg2); if(Failed()) return
+      call RemoveDOF(M, bDOF, Mred, ErrStat2, ErrMsg2); if(Failed()) return
+      call RemoveDOF(M, bDOF, Kred, ErrStat2, ErrMsg2); if(Failed()) return
       N=SIZE(Kred,1)    
    ELSE
       ! This is actually done whe we are generating the CB-reduced set of eigenvalues
@@ -2031,7 +2034,7 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init,p, Phi, Omega
          Omega2(I) = REAL( ALPHAR(I)/BETA(I), ReKi )
       END IF           
    ENDDO  
-   CALL ScaLAPACK_LASRT('I',N,Omega2,key,ErrStat2,ErrMsg2); if(Failed()) return
+   CALL ScaLAPACK_LASRT('I',N,Omega2,KEY,ErrStat2,ErrMsg2); if(Failed()) return
     
    !we need to rearrange eigenvectors based on sorting of Omega2
    !Now rearrange VR based on the new key, also I might have to scale the eigenvectors following generalized mass =idnetity criterion, also if i reduced the matrix I will need to re-expand the eigenvector
@@ -2052,7 +2055,7 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init,p, Phi, Omega
    Omega=SQRT( Omega2(1:NOmega) ) !Assign my new Omega and below my new Phi (eigenvectors) [eigenvalues are actually the square of omega]
    IF ( bRemoveConstraints ) THEN ! this is called for the full system Eigenvalues:
       !Need to expand eigenvectors for removed DOFs, setting Phi 
-      CALL UnReduceVRdofs(VR(:,1:NOmega),Phi,N,NOmega, Init,p, ErrStat2, ErrMsg2 ) ; if(Failed()) return
+      CALL InsertDOFrows(VR(:,1:NOmega), bDOF, 0.0_ReKi, Phi, ErrStat2, ErrMsg2 ); if(Failed()) return
    ELSE ! For the time being Phi gets updated only when CB eigensolver is requested. I need to fix it for the other case (full fem) and then get rid of the other eigensolver, this implies "unreducing" the VR
        ! This is done as part of the CB-reduced eigensolve
       Phi=REAL( VR(:,1:NOmega), ReKi )   ! eigenvectors
@@ -2079,54 +2082,42 @@ CONTAINS
       IF (ALLOCATED(KEY)   ) DEALLOCATE(KEY)
       IF (ALLOCATED(Kred)  ) DEALLOCATE(Kred)
       IF (ALLOCATED(Mred)  ) DEALLOCATE(Mred)
+      IF (ALLOCATED(bDOF)  ) DEALLOCATE(bDOF)
    END SUBROUTINE CleanupEigen
   
 END SUBROUTINE EigenSolve
 
-!------------------------------------------------------------------------------------------------------
-!> Calculate Kred from K after removing consstrained node DOFs from the full M and K matrices
-!!Note it works for constrained nodes, still to see how to make it work for interface nodes if needed
-SUBROUTINE RemoveBCConstraints(Ared,A,TDOF, Init,p, ErrStat, ErrMsg )
-   TYPE(SD_InitType),      INTENT(  in)  :: Init  
-   TYPE(SD_ParameterType), INTENT(  in)  :: p  
-   INTEGER,                INTENT(IN   ) :: TDOF           ! Size of matrix K (total DOFs)                              
-   REAL(ReKi),             INTENT(IN   ) :: A(TDOF, TDOF)  ! full matrix
-   REAL(LAKi),ALLOCATABLE, INTENT(  OUT) :: Ared(:,:)      ! reduced matrix
-   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat        ! Error status of the operation
-   CHARACTER(*),           INTENT(  OUT) :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+!> Returns a list of boolean which are true if a DOF is not part of a BC constraint
+SUBROUTINE SelectNonBCConstraintsDOF(Init, p, nDOF, bDOF, ErrStat, ErrMsg )
+   TYPE(SD_InitType),      INTENT(  in) :: Init  
+   TYPE(SD_ParameterType), INTENT(  in) :: p  
+   INTEGER(IntKi),         INTENT(  in) :: nDOF
+   LOGICAL, ALLOCATABLE,   INTENT( out) :: bDOF(:)  ! Mask, False for DOF that are Constraints BC DOF
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat ! Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg  ! Error message if ErrStat /= ErrID_None
    !locals
    INTEGER                               :: I              ! counters into full or reduced matrix
-   logical, allocatable                  :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
    INTEGER                               :: NReactDOFs
-   INTEGER                               :: ErrStat2
-   CHARACTER(1024)                       :: ErrMsg2
-   
    ErrStat = ErrID_None
    ErrMsg  = ''    
-  
+
    NReactDOFs = p%NReact*6 !p%DOFC
-   IF (NReactDOFs > TDOF) THEN
+   IF (NReactDOFs > nDOF) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = 'RemoveBCConstraints:invalid matrix sizes.'
+      ErrMsg = 'SelectNonBCConstraintsDOF: invalid matrix sizes.'
       RETURN
    END IF
-  
-   CALL AllocAry(bDOF, TDOF, 'bDOF',  ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'RemoveBCConstraints')
-   IF (ErrStat >= AbortErrLev) THEN
-      RETURN
-   END IF   
+
+   CALL AllocAry(bDOF, nDOF, 'bDOF',  ErrStat, ErrMsg ); IF (ErrStat >= AbortErrLev) RETURN
 
    ! Setting array of DOF, true if we keep them
-   bDOF(1:TDOF)=.True.
-   DO I = 1, NReactDOFs  !Cycle on reaction DOFs      
-      IF (Init%BCs(I, 2) == 1) THEN
+   bDOF(1:nDOF)=.True.
+   do I = 1, NReactDOFs  !Cycle on reaction DOFs      
+      if (Init%BCs(I, 2) == 1) THEN
          bDOF(Init%BCs(I, 1)) = .False. ! Eliminate this one
-      END IF    
-   END DO   
-   ! --- Creating Ared = A[bDOF,bDOF], reduced version 
-   call RemoveDOF(A, bDOF, Ared, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg,'RemoveBCConstraints')
-   deallocate(bDOF)
-END SUBROUTINE RemoveBCConstraints
+      end if    
+   end do   
+END SUBROUTINE
 
 
 

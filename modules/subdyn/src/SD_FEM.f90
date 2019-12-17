@@ -71,7 +71,6 @@ MODULE SD_FEM
 CONTAINS
 !------------------------------------------------------------------------------------------------------
 !> Remove degrees of freedom from a matrix (lines and rows)
-!! Generic function
 SUBROUTINE RemoveDOF(A, bDOF, Ared, ErrStat, ErrMsg )
    REAL(ReKi),             INTENT(IN   ) :: A(:, :)        ! full matrix
    logical,                INTENT(IN   ) :: bDOF(:)        ! Array of logical specifying whether a DOF is to be kept(True), or removed (False)
@@ -103,6 +102,45 @@ SUBROUTINE RemoveDOF(A, bDOF, Ared, ErrStat, ErrMsg )
       endif
    end do
 END SUBROUTINE RemoveDOF
+
+!> Expand a matrix to includes rows where bDOF is False (inverse behavior as RemoveDOF)
+SUBROUTINE InsertDOFrows(Ared, bDOF, DefaultVal, A, ErrStat, ErrMsg )
+   REAL(LAKi),             INTENT(IN   ) :: Ared(:, :)     ! Reduced matrix
+   logical,                INTENT(IN   ) :: bDOF(:)        ! Array of logical specifying whether a DOF is to be kept(True), or removed (False)
+   REAL(ReKi),             INTENT(IN   ) :: DefaultVal     ! Default value to fill the 
+   REAL(ReKi)            , INTENT(INOUT) :: A(:,:)         ! Full matrix
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat        ! Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+   !locals
+   INTEGER                               :: I         ! counter into full matrix
+   INTEGER                               :: Ir        ! counter into reduced matrix
+   INTEGER                               :: n         ! number of DOF (fullsystem)
+   ErrStat = ErrID_None
+   ErrMsg  = ''    
+   n= size(bDOF)
+   IF ( size(Ared,1) > n) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'InsertDOFrows: Number of reduced rows needs to be lower than full system rows'
+      RETURN
+   END IF
+   IF ( size(Ared,2) /= size(A,2) ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'InsertDOFrows: Inconsistent number of columns between A and Ared'
+      RETURN
+   END IF
+   !CALL AllocAry(A, n, size(Ared,2), 'A', ErrStat, ErrMsg ); if (ErrStat >= AbortErrLev) return
+
+   ! Use rows from Ared when bDOF is true, use default value otherwise
+   ir=0 ! initialize 
+   do i=1,n
+      if (bDOF(i)) then
+         ir =ir +1
+         A(i,:)=real( Ared(ir,:), ReKi ) 
+      else
+         A(i,:)=DefaultVal
+      endif   
+   enddo
+END SUBROUTINE InsertDOFrows
     
 !------------------------------------------------------------------------------------------------------
 !> Maps nodes to elements 
