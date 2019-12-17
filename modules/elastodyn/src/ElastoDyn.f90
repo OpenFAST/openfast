@@ -28,6 +28,8 @@ MODULE ElastoDyn
 
    USE ED_UserSubs         ! <- module not in the FAST Framework!
 
+   USE ElastoDyn_AllBldNdOuts_IO
+
    IMPLICIT NONE
 
    PRIVATE
@@ -214,10 +216,11 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       !............................................................................................
       ! Define initialization-routine output here:
       !............................................................................................
-   CALL AllocAry( InitOut%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', ErrStat2, ErrMsg2 )
+   CALL AllocAry( InitOut%WriteOutputHdr, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutputHdr', errStat2, errMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-   CALL AllocAry( InitOut%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', ErrStat2, ErrMsg2 )
+
+   CALL AllocAry( InitOut%WriteOutputUnt, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutputUnt', errStat2, errMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -225,6 +228,11 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut
       InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
       InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
    end do
+
+      ! Set the info in WriteOutputHdr and WriteOutputUnt
+   CALL AllBldNdOuts_InitOut( InitOut, p, ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF (ErrStat >= AbortErrLev) RETURN
       
    InitOut%Ver         = ED_Ver
    InitOut%NumBl       = p%NumBl
@@ -1289,7 +1297,15 @@ END IF
 
    ENDDO             ! I - All selected output channels
 
-   
+   IF ( .NOT. p%BD4Blades ) THEN
+      y%WriteOutput(p%NumOuts+1:) = 0.0_ReKi
+
+         ! Now we need to populate the blade node outputs here
+      call Calc_WriteAllBldNdOutput( p, u, m, y, LinAccES, ErrStat2, ErrMsg2 )   ! Call after normal writeoutput.  Will just postpend data on here.
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ED_CalcOutput')
+   ENDIF
+
+
    !...............................................................................................................................
    ! Outputs required for AeroDyn
    !...............................................................................................................................
@@ -2008,8 +2024,12 @@ SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
+   CALL AllBldNdOuts_SetParameters( p, InputFileData, ErrStat2, ErrMsg2 )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+    !p%BldNd_NumOuts = 0_IntKi
+    !p%BldNd_TotNumOuts = 0_IntKi
 
-   
 CONTAINS
    !...............................................................................................................................
    SUBROUTINE CheckError(ErrID,Msg)
@@ -8577,7 +8597,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
    ErrMsg  = ""
       
 
-   CALL AllocAry( y%WriteOutput, p%NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 )
+   CALL AllocAry( y%WriteOutput, p%numOuts + p%BldNd_TotNumOuts, 'WriteOutput', errStat2, errMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -10249,6 +10269,19 @@ END IF
       WRITE (UnSu,OutPFmt)  I, p%OutParam(I)%Name, p%OutParam(I)%Units
    END DO             
 
+   IF (.not. p%BD4Blades) THEN
+      WRITE (UnSu,'(2x,A)')
+      WRITE (UnSu,'(2x,A)')
+      WRITE (UnSu,'(2x,A)')  'Requested Output Channels at each blade station:'
+      WRITE (UnSu,OutPFmtS)  "Col", TitleStr
+      WRITE (UnSu,OutPFmtS)  "---", TitleStrLines
+      !WRITE (UnSu,'(2x,A)')  'Col   Parameter       Units'
+      !WRITE (UnSu,'(2x,A)')  '----  --------------  ----------'
+      DO I = 1,p%BldNd_NumOuts
+         WRITE (UnSu,OutPFmt)  I, p%BldNd_OutParam(I)%Name, p%BldNd_OutParam(I)%Units
+      END DO
+   ENDIF
+
    CLOSE(UnSu)
 
 RETURN
@@ -11074,7 +11107,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
       + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
       + 3                                       & ! Yaw, YawRate, and HSS_Spd
-      + p%NumOuts                                 ! WriteOutput values 
+      + p%NumOuts  + p%BldNd_TotNumOuts           ! WriteOutput values 
       
    do i=1,p%NumBl
       p%Jac_ny = p%Jac_ny + y%BladeRootMotion(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each (1) node on each blade
@@ -11118,7 +11151,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    InitOut%LinNames_y(index_next) = 'YawRate, rad/s'; index_next = index_next+1
    InitOut%LinNames_y(index_next) = 'HSS_Spd, rad/s'
          
-   do i=1,p%NumOuts
+   do i=1,p%NumOuts + p%BldNd_TotNumOuts
       InitOut%LinNames_y(i+index_next) = trim(InitOut%WriteOutputHdr(i))//', '//trim(InitOut%WriteOutputUnt(i)) !trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do   
    
@@ -11178,6 +11211,10 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    do i=1,p%NumOuts
       InitOut%RotFrame_y(i+index_next) = AllOut( p%OutParam(i)%Indx )      
    end do    
+   
+   do i=1, p%BldNd_TotNumOuts
+      InitOut%RotFrame_y(i+p%NumOuts+index_next) = .true.     
+   end do
    
    deallocate(AllOut)         
    
@@ -11626,7 +11663,7 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    dY(indx_first) = y_p%HSS_Spd - y_m%HSS_Spd;   indx_first = indx_first + 1
    
    !indx_last = indx_first + p%NumOuts - 1
-   do k=1,p%NumOuts
+   do k=1,p%NumOuts + p%BldNd_TotNumOuts
       dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
    end do   
    
@@ -11766,7 +11803,7 @@ SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op,
       y_op(index) = y%YawRate ; index = index + 1    
       y_op(index) = y%HSS_Spd 
    
-      do i=1,p%NumOuts
+      do i=1,p%NumOuts + p%BldNd_TotNumOuts
          y_op(i+index) = y%WriteOutput(i)
       end do   
                         

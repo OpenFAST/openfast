@@ -19,7 +19,7 @@ MODULE AeroDyn_AllBldNdOuts_IO
 
       ! Parameters related to output length (number of characters allowed in the output data headers):
 
-   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 5    ! The NREL allowed channel name length is usually 10.  We are making these of the form B#N##namesuffix
+   INTEGER(IntKi), PARAMETER      :: OutStrLenM1 = ChanLen - 6    ! The NREL allowed channel name length is usually 20.  We are making these of the form B#N##namesuffix
 
 
 ! ===================================================================================================
@@ -102,8 +102,8 @@ SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat, ErrMsg )
    INTEGER(IntKi)                               :: IdxBlade                         ! Counter to which blade we are on
    INTEGER(IntKi)                               :: IdxNode                          ! Counter to the blade node we ae on
    INTEGER(IntKi)                               :: IdxChan                          ! Counter to the channel we are outputting.
-   CHARACTER(16)                                :: ChanPrefix                       ! Name prefix (AeroB#_Z######y_)
-   CHARACTER(6)                                 :: TmpChar                          ! Temporary char array to hold the node digits (2 places only!!!!)
+   CHARACTER(16)                                :: ChanPrefix                       ! Name prefix (B#N###)
+   CHARACTER(6)                                 :: TmpChar                          ! Temporary char array to hold the node digits (3 places only!!!!)
    CHARACTER(*), PARAMETER                      :: RoutineName = ('AllBldNdOuts_InitOut')
 
 
@@ -113,8 +113,8 @@ SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat, ErrMsg )
 
 
          ! Warn if we will run into issues with more than 99 nodes.
-      IF (p%NumBlNds > 99 ) CALL SetErrStat(ErrID_Severe,'More than 99 blade nodes in use.  Output channel headers will not '// &
-            'correctly reflect blade stations beyond 99. Modifications to the variable ChanLen in FAST are required.',ErrStat,ErrMsg,RoutineName)
+      IF (p%NumBlNds > 999 ) CALL SetErrStat(ErrID_Severe,'More than 999 blade nodes in use.  Output channel headers will not '// &
+            'correctly reflect blade stations beyond 999. Modifications to the variable ChanLen in FAST are required.',ErrStat,ErrMsg,RoutineName)
 
 
          ! Populate the header an unit lines for all blades and nodes
@@ -127,7 +127,7 @@ SUBROUTINE AllBldNdOuts_InitOut( InitOut, p, InputFileData, ErrStat, ErrMsg )
             DO IdxNode=1,p%NumBlNds
 
                   ! Create the name prefix:
-               WRITE (TmpChar,'(I2.2)')  IdxNode         ! 2 digit number
+               WRITE (TmpChar,'(I3.3)')  IdxNode         ! 3 digit number
                ChanPrefix = 'B' // TRIM(Num2LStr(IdxBlade)) // 'N' // TRIM(TmpChar) ! // '_'
                   ! Now write to the header
                InitOut%WriteOutputHdr(INDX) = trim(ChanPrefix) // p%BldNd_OutParam(IdxChan)%Name

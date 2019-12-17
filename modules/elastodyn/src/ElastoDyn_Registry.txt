@@ -272,6 +272,12 @@ typedef	^	ED_InputFile	ReKi	TFrlUSDmp	-	-	-	"Tail-furl up-stop damping constant"
 typedef	^	ED_InputFile	ReKi	TFrlDSDmp	-	-	-	"Tail-furl down-stop damping constant"	N-m/(rad/s)
 typedef	^	ED_InputFile	IntKi	method	-	-	-	"Identifier for integration method (1 [RK4], 2 [AB4], or 3 [ABM4])"	-
 
+# ..... ED_AllBldNdOuts compile option ............................................................................................
+typedef  ^  ED_InputFile   IntKi BldNd_NumOuts   -       -       -       "Number of requested output channels per blade node (ED_AllBldNdOuts)"  -
+typedef  ^  ED_InputFile   CHARACTER(ChanLen)      BldNd_OutList   {:}     -       -       "List of user-requested output channels (ED_AllBldNdOuts)"      -
+#typedef  ^  ED_InputFile   IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
+typedef  ^  ED_InputFile   CHARACTER(1024) BldNd_BlOutNd_Str - - - "String to parse for the blade nodes to actually output (ED_AllBldNdOuts)" -
+typedef  ^  ED_InputFile   IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
 
 # ..... Internal data types .......................................................................................................
 
@@ -798,6 +804,13 @@ typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [
 typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
 typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
 typedef	^	ParameterType	LOGICAL	UseAD14	-	-	-	"flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14."	-
+# .... ED_AllBlNds option ........................................................................................................
+typedef  ^  ParameterType  IntKi   BldNd_NumOuts        -  -  -  "Number of requested output channels per blade node (ED_AllBldNdOuts)"  -
+typedef  ^  ParameterType  IntKi   BldNd_TotNumOuts     -  -  -  "Total number of requested output channels of blade node information (BldNd_NumOuts * BldNd_BlOutNd * BldNd_BladesOut -- ED_AllBldNdOuts)" -
+typedef  ^  ParameterType  OutParmType BldNd_OutParam  {:} -  -  "Names and units (and other characteristics) of all requested output parameters"        -
+#typedef  ^  ParameterType  IntKi BldNd_BlOutNd {:} - - "The blade nodes to actually output (ED_AllBldNdOuts)" -
+typedef  ^  ParameterType  IntKi BldNd_BladesOut - - - "The blades to output (ED_AllBldNdOuts)" -
+
 typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
 typedef	^	ParameterType	R8Ki	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
 typedef	^	ParameterType	R8Ki	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states)"

@@ -26,6 +26,8 @@ MODULE ElastoDyn_Parameters
 
    USE NWTC_Library
 
+   USE ElastoDyn_AllBldNdOuts_IO
+
    TYPE(ProgDesc), PARAMETER  :: ED_Ver = ProgDesc( 'ElastoDyn', '', '' )
    
    REAL(ReKi), PARAMETER      :: SmallAngleLimit_Deg  =  15.0                     ! Largest input angle considered "small" (used as a check on input data), degrees
@@ -3247,12 +3249,15 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
    INTEGER(IntKi)               :: ErrStat2                                  ! Temporary Error status
    LOGICAL                      :: Echo                                      ! Determines if an echo file should be written
    CHARACTER(ErrMsgLen)         :: ErrMsg2                                   ! Temporary Error message
+   CHARACTER(ErrMsgLen)         :: ErrMsg_NoAllBldNdOuts                     ! Temporary Error message
    CHARACTER(*), PARAMETER      :: RoutineName = 'ReadPrimaryFile'
    CHARACTER(1024)              :: PriPath                                   ! Path name of the primary file
    CHARACTER(1024)              :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
    CHARACTER(200)               :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
-   
+
       ! Initialize some variables:
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
    Echo = .FALSE.
    UnEc = -1                             ! Echo file not opened, yet
    CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
@@ -3302,6 +3307,10 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          CALL Cleanup()
          RETURN
       END IF
+
+      ! Allocate array for holding the list of node outputs
+   CALL AllocAry( InputFileData%BldNd_OutList, BldNd_MaxOutPts, "BldNd_Outlist", ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
    ! Read the lines up/including to the "Echo" simulation control variable
@@ -4320,6 +4329,62 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, BldFile, FurlFile, TwrFile
          RETURN
       END IF
 
+
+   !----------- OUTLIST  -----------------------------------------------------------
+      ! In case there is something ill-formed in the additional nodal outputs section, we will simply ignore it and assume that it is an NREL compatable input file.
+   ErrMsg_NoAllBldNdOuts='AllBldNd section of ElastoDyn input file not found or improperly formatted. Therefore assuming no nodal outputs.'
+
+   !----------- OUTLIST for BldNd -----------------------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList for Blade node channels', ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+
+     ! Number of blade nodes to output:  will modify this at some point for arrays
+      ! TODO:  In a future release, allow this to be an array of N blade numbers (change BldNd_BladesOut to an array if we do that).
+      !        Will likely require reading this line in as a string (BldNd_BladesOut_Str) and parsing it
+   CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BladesOut, 'BldNd_BladesOut', 'Which blades to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+
+      ! Which blades to output for:  will add this at some point
+      ! TODO: Parse this string into an array of nodes to output at (one idea is to set an array of boolean to T/F for which nodes to output).  At present, we ignore it entirely.
+   CALL ReadVar(  UnIn, InputFile, InputFileData%BldNd_BlOutNd_Str, 'BldNd_BlOutNd_Str', 'Which nodes to output node data on.'//TRIM(Num2Lstr(I)), ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+
+      ! Section header for outlist
+   CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      CALL Cleanup()
+      RETURN
+   ENDIF
+
+
+      ! OutList - List of user-requested output channels at each node(-):
+   CALL ReadOutputList ( UnIn, InputFile, InputFileData%BldNd_OutList, InputFileData%BldNd_NumOuts, 'BldNd_OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
+   IF ( ErrStat2 >= AbortErrLev ) THEN
+      InputFileData%BldNd_NumOuts = 0
+      call wrscr( trim(ErrMsg_NoAllBldNdOuts)//' --> '//trim(ErrMsg2) )
+      CALL Cleanup()
+      RETURN
+   ENDIF
    !---------------------- END OF FILE -----------------------------------------
    
    call cleanup()
