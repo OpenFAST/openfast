@@ -56,8 +56,8 @@ def _plotError(xseries, y1series, y2series, xlabel, title1, title2):
     p1.title.align = 'center'
     p1.grid.grid_line_alpha=0.3
     p1.xaxis.axis_label = 'Time (s)'
-    p1.line(xseries, y1series, color='green', line_width=3, legend_label='Baseline')
-    p1.line(xseries, y2series, color='red', line_width=1, legend_label='Local')
+    p1.line(xseries, y2series, color='green', line_width=3, legend_label='Baseline')
+    p1.line(xseries, y1series, color='red', line_width=1, legend_label='Local')
     p1.add_tools(HoverTool(tooltips=[('Time','$x'), ('Value', '$y')],mode='vline'))
 
     p2 = figure(title=title2, x_range=p1.x_range)
