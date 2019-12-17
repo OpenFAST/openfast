@@ -40,5 +40,5 @@ True          GlbRotBladeT0 - Reference orientation for BeamDyn calculations is 
 Non-dim blade-span eta   Fx          Fy            Fz           Mx           My           Mz
 (-)                      (N)         (N)           (N)          (N-m)        (N-m)        (N-m)
 ---------------------- PRIMARY INPUT FILE --------------------------------------
-"bd_primary_nrel_5mw_static.inp"    InputFile - Name of the primary BeamDyn input file
+"bd_primary_nrel_5mw.inp"    InputFile - Name of the primary BeamDyn input file
 

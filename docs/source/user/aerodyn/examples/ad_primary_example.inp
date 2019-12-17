@@ -82,7 +82,7 @@ True          SumPrint            - Generate a summary file listing input option
 "B1N1AxInd, B1N2AxInd, B1N3AxInd"  
 "B1N1Alpha, B1N2Alpha, B1N3Alpha"  
 "B1N1Theta, B1N2Theta, B1N3Theta"  
-END of input file (the word "END" must appear in the first 3 columns of this last OutList line)
+END of OutList section (the word "END" must appear in the first 3 columns of the last OutList line)
 ====== Outputs for all blade stations (same ending as above for B1N1.... =========================== [optional section]
    1              BldNd_BladesOut     - Number of blades to output all node information at.  Up to number of blades on turbine. (-)
    "All"          BldNd_BlOutNd       - Future feature will allow selecting a portion of the nodes to output.  Not implemented yet. (-)
@@ -97,4 +97,4 @@ Phi
 Vindx
 Vindy
 Alpha
-END (of optional nodal output section)
+END (the word "END" must appear in the first 3 columns of this last OutList line in the optional nodal output section)
