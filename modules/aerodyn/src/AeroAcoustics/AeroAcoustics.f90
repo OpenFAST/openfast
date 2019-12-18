@@ -1444,7 +1444,7 @@ SUBROUTINE TBLTE(ALPSTAR,C,U,THETA,PHI,L,R,p,jj,ii,kk,d99Var2,dstarVar1,dstarVar
     RDSTRP = DSTRP * U  / p%KinVisc
     ! Determine peak strouhal numbers to be used for 'a' and 'b' curve calculations
     ST1    = .02 * M ** (-.6)																							! Eq 32 from BPM Airfoil Self-noise and Prediction paper
-    ! corrected with respect to the Suzlon document Contact Pat Moriarty for further. added 4 lines below.(EB_DTU)		! Eq 34 from BPM Airfoil Self-noise and Prediction paper
+  	! Eq 34 from BPM Airfoil Self-noise and Prediction paper
     IF  (ALPSTAR .LE. 1.333)                          ST2 = ST1
     IF ((ALPSTAR .GT. 1.333).AND.(ALPSTAR .LE. 12.5)) ST2 = ST1*10.**(.0054*(ALPSTAR-1.333)**2.)
     IF (ALPSTAR .GT. 12.5)                           ST2 = 4.72 * ST1
@@ -1961,18 +1961,8 @@ SUBROUTINE BLUNT(ALPSTAR,C,U ,THETA,PHI,L,R,H,PSI,p,d99Var2,dstarVar1,dstarVar2,
         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
         G5(I) = G50 + .0714 * PSI * (G514-G50)													! interpolate G5 from G50 and G514
         IF (G5(I) .GT. 0.) G5(I) = 0.
-        !!!        SCALE = 10. * LOG10(M**5.5*H*DBARH*L/R**2.) ! moved out of frequency loop, nothing frequency dependent (EB_DTU) 
-        ! This part is changed with respect to Suzlon document. contact Pat Moriarty for futher info.(EB_DTU) 
-        ! OLD VERSION START (if desired uncomment everything within old version and comment new version two lines)
-        !        CALL G5COMP(0.250d0,ETA,F4TEMP,errStat2,errMsg2 )
-        !        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-        !       IF (G5(I) .GT. F4TEMP) G5 = F4TEMP
-        !       SPLBLUNT(I) = G4 + G5(I) + SCALE 
-        ! OLD VERSION END
-        ! NEW VERSION START
         G5Sum = 10**(G5(I)/10)+G5Sum     ! to be subtracted
         SPLBLUNT(I) = G4 + G5(I) + SCALE - 10*log10(1/G5Sum) ! equation mentioned there is plus but it is stated subtract, thus ''- 10*log10(1/G5Sum)'' 
-        ! NEW VERSION END
     end do
 END SUBROUTINE Blunt
 !====================================================================================================
@@ -2109,7 +2099,6 @@ SUBROUTINE THICK(C,M,RC,ALPSTAR,p,DELTAP,DSTRS,DSTRP,errStat,errMsg)
     ErrMsg  = ""
     !
     DELTA0   = 10.**(1.6569-.9045*LOG10(RC)+.0596*LOG10(RC)**2.)*C
-    !      IF (p%ITRIP .EQ. 2) DELTA0 = .6 * DELTA0  ! corrected with respect to the Suzlon document Contact Pat Moriarty for further. added 2 lines below.(EB_DTU)
     IF (p%ITRIP .GT. 0) DELTA0 = 10.**(1.892-0.9045*LOG(RC)+0.0596*LOG(RC)**2.)*C
     IF (p%ITRIP .EQ. 2) DELTA0=.6*DELTA0
     ! Pressure side boundary layer thickness
