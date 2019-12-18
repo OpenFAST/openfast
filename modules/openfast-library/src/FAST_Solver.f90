@@ -3594,7 +3594,7 @@ SUBROUTINE Perturb_u_FullOpt1( p_FAST, Jac_u_indx, n, u_perturb, u_ED_perturb, u
    INTEGER( IntKi )                    , INTENT(IN   ) :: Jac_u_indx(:,:)        !< Index to map Jacobian u-vector into mesh fields 
    INTEGER( IntKi )                    , INTENT(IN   ) :: n                      !< number of array element to use 
    REAL( ReKi )                        , INTENT(INOUT) :: u_perturb(:)           !< array to be perturbed
-   TYPE(ED_InputType),        OPTIONAL , INTENT(INOUT) :: u_ED_perturb           !< ED System inputs  (needed only when                                  1 <= n <= NumEDNodes=max(NumEDNodes,NumMBDNodes))
+   TYPE(ED_InputType),        OPTIONAL , INTENT(INOUT) :: u_ED_perturb           !< ED System inputs  (needed only when                                  1 <= n <= NumEDNodes=NumEDNodes)
    TYPE(SD_InputType),        OPTIONAL , INTENT(INOUT) :: u_SD_perturb           !< SD System inputs  (needed only when NumEDNodes                      +1 <= n <= NumEDNodes+NumSDNodes) [if SD is used] 
    TYPE(HydroDyn_InputType),  OPTIONAL , INTENT(INOUT) :: u_HD_perturb           !< HD System inputs  (needed only when NumEDNodes+NumSDNodes           +1 <= n <= NumEDNodes+NumSDNodes+NumHDNodes) [if HD is used and SD is used. if SD not used, 
    TYPE(BD_InputType),        OPTIONAL , INTENT(INOUT) :: u_BD_perturb           !< BD System inputs  (needed only when NumEDNodes+NumSDNodes+NumHDNodes+1 <= n <= inf) [if BD is used]

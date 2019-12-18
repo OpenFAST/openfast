@@ -2790,19 +2790,19 @@ END DO
       !!
       !!  Combinations of output files are possible by adding the values corresponding to each file.  The possible combination of options are therefore
       !!
-      !! | `OutFileFmt` | Description |
-      !! |:------------:|:-------------------------|
-      !! | 1            | Text file only `<RootName>.out`             |
-      !! | 2            | Binary file only `<RootName>.outb`          |
-      !! | 3            | Text and binary files                       |
-      !! | 4            | uncompressed binary file `<RootName>.outbu` |
-      !! | 5            | Text and uncompressed binary files          |
-      !! | 6            | Binary and uncompressed binary files        |
-      !! | 7            | Text, Binary, and uncompressed binary files |
+      !! | `OutFileFmt` | Description                                                          |
+      !! |:------------:|:---------------------------------------------------------------------|
+      !! | 1            | Text file only `<RootName>.out`                                      |
+      !! | 2            | Binary file only `<RootName>.outb`                                   |
+      !! | 3            | Text and binary files                                                |
+      !! | 4            | uncompressed binary file `<RootName>.outbu`                          |
+      !! | 5            | Text and uncompressed binary files                                   |
+      !! | 6  => 4      | Binary (not written) and uncompressed binary files; same as 4        |
+      !! | 7  => 5      | Text, Binary (not written), and uncompressed binary files; same as 5 |
       !!
 
       ! OutFileFmt - Format for tabular (time-marching) output file(s) (1: text file [<RootName>.out], 2: binary file [<RootName>.outb], 3: both) (-):
-   CALL ReadVar( UnIn, InputFile, OutFileFmt, "OutFileFmt", "Format for tabular (time-marching) output file(s) {0: uncompressed binary and text file, 1: text file [<RootName>.out], 2: compressed binary file [<RootName>.outb], 3: both text and compressed binary, 4: uncompressed binary <RootName>.outbu]; add for combinations) (-)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, OutFileFmt, "OutFileFmt", "Format for tabular (time-marching) output file(s) {0: uncompressed binary and text file, 1: text file [<RootName>.out], 2: compressed binary file [<RootName>.outb], 3: both text and compressed binary, 4: uncompressed binary <RootName>.outb]; add for combinations) (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if ( ErrStat >= AbortErrLev ) then
          call cleanup()
@@ -2820,10 +2820,15 @@ END DO
       OutFileFmt = OutFileFmt / 2 ! integer division
       if (mod(OutFileFmt,2) == 1) then
          ! This is a feature for the regression testing system.  It writes binary output stored as uncompressed double floating point data instead of compressed int16 data.
-         p%WrBinOutFile = .true.
-         p%WrBinMod     =  FileFmtID_NoCompressWithoutTime    ! A format specifier for the binary output file format (3=don't include time channel and do not pack data)
+         ! If the compressed binary version was requested, that will not be generated
+         if (p%WrBinOutFile) then
+            call SetErrStat(ErrID_Warn,'Binary compressed file will not be generated because the uncompressed version was also requested.', ErrStat, ErrMsg, RoutineName)
+         else
+            p%WrBinOutFile = .true.
+         end if
+         p%WrBinMod = FileFmtID_NoCompressWithoutTime    ! A format specifier for the binary output file format (3=don't include time channel and do not pack data)
       else
-         p%WrBinMod = FileFmtID_ChanLen_In                    ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel;3=don't include time channel and do not pack data)
+         p%WrBinMod = FileFmtID_ChanLen_In               ! A format specifier for the binary output file format (4=don't include time channel; do include channel width; do pack data)
       end if
 
       OutFileFmt = OutFileFmt / 2 ! integer division

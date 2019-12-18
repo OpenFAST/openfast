@@ -421,20 +421,24 @@ SUBROUTINE BladedInterface_Init(u, p, m, y, InputFileData, InitInp, ErrStat, Err
 
 !--------------------------------------
    p%NumOuts_DLL = 0
-!!!   CALL GetBladedLoggingChannels(u,p,m, ErrStat2, ErrMsg2) ! this calls the DLL, but we don't have the correct inputs for a time step, so we'll close the DLL and start it again
-!!!      CALL CheckError(ErrStat2,ErrMsg2)
-!!!      IF ( ErrStat >= AbortErrLev ) RETURN
-!!!      
-!!!      ! close and reload library here...
-!!!      
-!!!   CALL BladedInterface_End(u, p, m, ErrStat2, ErrMsg2)
-!!!      CALL CheckError(ErrStat2,ErrMsg2)
-!!!      IF ( ErrStat >= AbortErrLev ) RETURN
+#ifdef LOAD_DLL_TWICE_FOR_LOGGING_CHANNELS
+   CALL GetBladedLoggingChannels(u,p,m, ErrStat2, ErrMsg2) ! this calls the DLL, but we don't have the correct inputs for a time step, so we'll close the DLL and start it again
+      CALL CheckError(ErrStat2,ErrMsg2)
+      IF ( ErrStat >= AbortErrLev ) RETURN
+      
+      ! close and reload library here...
+      ! (if the DLL could be guaranteed to not do anything with the 
+      !  inputs on the initial step, we could avoid this this part)
+      
+   CALL BladedInterface_End(u, p, m, ErrStat2, ErrMsg2)
+      CALL CheckError(ErrStat2,ErrMsg2)
+      IF ( ErrStat >= AbortErrLev ) RETURN
       
    CALL LoadDynamicLib ( p%DLL_Trgt, ErrStat2, ErrMsg2 )
       CALL CheckError(ErrStat2,ErrMsg2)
       IF ( ErrStat >= AbortErrLev ) RETURN
-   
+#endif
+
 !--------------------------------------
 #endif
 
