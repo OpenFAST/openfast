@@ -8,7 +8,8 @@ module IntegerList
 
    public :: IList
 
-   public :: init
+   public :: init_list
+   public :: destroy_list
    public :: len
    public :: append
    public :: pop
@@ -16,10 +17,14 @@ module IntegerList
    public :: find
    public :: sort
    public :: reverse
+   interface pop
+      module procedure pop_last
+      module procedure pop_item
+   end interface
 contains
 
    !> Initialize an integer list
-   subroutine init(L,n,default_val,ErrStat,ErrMsg)
+   subroutine init_list(L,n,default_val,ErrStat,ErrMsg)
       type(IList), intent(inout)                  :: L !< List
       integer(IntKi), intent(in)                  :: n !< number of initial values
       integer(IntKi), intent(in)                  :: default_val !< default values
@@ -32,7 +37,17 @@ contains
       if (ErrStat/=ErrID_None) return
       L%List(1:n) = default_val
 
-   end subroutine init
+   end subroutine init_list
+
+   !> Deallocate list
+   subroutine destroy_list(L,ErrStat,ErrMsg)
+      type(IList), intent(inout)                  :: L !< List
+      integer(IntKi),               intent(  out) :: ErrStat     !< Error status of the operation
+      character(*),                 intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      if (allocated(L%List)) deallocate(L%List)
+   end subroutine destroy_list
 
    !> Returns list length
    integer function len(L)
@@ -55,7 +70,7 @@ contains
       if (allocated(L%List)) then
          call resize_array(L%List,len(L)+1,e)
       else
-         call init(L, 1, e, ErrStat, ErrMsg)
+         call init_list(L, 1, e, ErrStat, ErrMsg)
       endif
    end subroutine append
 
@@ -77,7 +92,7 @@ contains
    end function get
 
    !> Pop last element of the list and reduce list size by 1
-   integer function pop(L,ErrStat,ErrMsg)
+   integer function pop_last(L,ErrStat,ErrMsg)
       type(IList), intent(inout)     :: L
       integer(IntKi),  intent(  out) :: ErrStat !< Error status of the operation
       character(*),    intent(  out) :: ErrMsg  !< Error message if ErrStat /    = ErrID_None
@@ -85,9 +100,24 @@ contains
       ErrStat = ErrID_None
       ErrMsg  = ""
       n=len(L)
-      pop = get(L, n, ErrStat, ErrMsg) ! index array out of bound will be thrown
+      pop_last = get(L, n, ErrStat, ErrMsg) ! index array out of bound will be thrown
       call resize_array(L%List,n-1,0)
-   end function pop
+   end function pop_last
+
+   !> Pop element i from the list and reduce the size of the list by 1
+   integer function pop_item(L,i,ErrStat,ErrMsg)
+      type(IList), intent(inout)     :: L
+      integer(IntKi), intent(in)     :: i
+      integer(IntKi),  intent(  out) :: ErrStat !< Error status of the operation
+      character(*),    intent(  out) :: ErrMsg  !< Error message if ErrStat /    = ErrID_None
+      integer(IntKi) :: n
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      n=len(L)
+      pop_item = get(L, i, ErrStat, ErrMsg) ! index array out of bound will be thrown
+      L%List(i:n-1)=L%List(i+1:n)
+      call resize_array(L%List,n-1,0)
+   end function pop_item
 
    !> Sort list
    subroutine sort(L, ErrStat, ErrMsg)
@@ -137,17 +167,20 @@ contains
       character(*),    intent(  out) :: ErrMsg  !< Error message if ErrStat /    = ErrID_None
       ErrStat = ErrID_None
       ErrMsg  = ""
-      if (allocated(L%List)) then
-          find = binary_search(L%List, e) 
+      if (len(L)>0) then
+         find = binary_search(L%List, e) ! Binary search returns index for inequality List(i)<=e
+         if (find>0) then
+            if (L%List(find)/=e) then
+               find=-1
+            endif
+         endif
       else
-         ErrStat=ErrID_Fatal
-         ErrMsg="Cannot find in an unallocated list"
-         find=0
+         find=-1
       endif
    end function find
 
    !> Print
-   subroutine print(L, varname, u_opt)
+   subroutine print_list(L, varname, u_opt)
       type(IList),     intent(in)          :: L
       character(len=*),intent(in)          :: varname
       integer(IntKi),  intent(in),optional :: u_opt
@@ -169,7 +202,7 @@ contains
       else
          write(u,'(A,A)') varname,'=[];'
       endif
-   end subroutine print
+   end subroutine print_list
 
    ! --------------------------------------------------------------------------------
    ! --- Generic helper functions (should be part of NWTC library)

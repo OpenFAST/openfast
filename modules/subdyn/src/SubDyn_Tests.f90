@@ -173,8 +173,8 @@ contains
       ErrMsg  = ""
       testname='Lists'
 
-      call init(L1, 0, 0 ,ErrStat, ErrMsg)
-      call init(L2, 10, 12,ErrStat, ErrMsg)
+      call init_list(L1, 0, 0 ,ErrStat, ErrMsg)
+      call init_list(L2, 10, 12,ErrStat, ErrMsg)
 
       ! test len
       call test_equal('length',0 ,len(L1))

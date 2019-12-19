@@ -192,6 +192,62 @@ SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
    ENDDO                            
 
 END SUBROUTINE NodeCon
+
+!----------------------------------------------------------------------------
+!> Check if two elements are connected
+!! returns true if they are, and return which node (1 or 2) of each element is involved
+LOGICAL FUNCTION ElementsConnected(p, ie1, ie2, iWhichNode_e1, iWhichNode_e2)
+   TYPE(SD_ParameterType),       INTENT(IN)  :: p
+   INTEGER(IntKi),               INTENT(IN)  :: ie1, ie2 ! Indices of elements
+   INTEGER(IntKi),               INTENT(OUT) :: iWhichNode_e1, iWhichNode_e2 ! 1 or 2 if node 1 or node 2
+   if      ((p%Elems(ie1, 2) == p%Elems(ie2, 2))) then ! node 1 connected to node 1
+      iWhichNode_e1=1
+      iWhichNode_e2=1
+      ElementsConnected=.True.
+   else if((p%Elems(ie1, 2) == p%Elems(ie2, 3))) then  ! node 1 connected to node 2
+      iWhichNode_e1=1
+      iWhichNode_e2=2
+      ElementsConnected=.True.
+   else if((p%Elems(ie1, 3) == p%Elems(ie2, 2))) then  ! node 2 connected to node 1
+      iWhichNode_e1=2
+      iWhichNode_e2=1
+      ElementsConnected=.True.
+   else if((p%Elems(ie1, 3) == p%Elems(ie2, 3))) then  ! node 2 connected to node 2
+      iWhichNode_e1=2
+      iWhichNode_e2=2
+      ElementsConnected=.True.
+   else
+      ElementsConnected=.False.
+      iWhichNode_e1=-1
+      iWhichNode_e2=-1
+   endif
+END FUNCTION ElementsConnected
+
+!> Loop through a list of elements and returns a list of unique joints
+TYPE(IList) FUNCTION JointsList(p, Elements)
+   use IntegerList, only: init_list, append, find, sort
+   use IntegerList, only: print_list
+   TYPE(SD_ParameterType),       INTENT(IN)  :: p
+   integer(IntKi), dimension(:), INTENT(IN)  :: Elements
+   integer(IntKi)  :: ie, ei, j1, j2
+   INTEGER(IntKi)  :: ErrStat2
+   CHARACTER(1024) :: ErrMsg2
+
+   call init_list(JointsList, 0, 0, ErrStat2, ErrMsg2)
+   do ie = 1, size(Elements)
+      ei = Elements(ie)  ! Element index
+      j1 = p%Elems(ei,2) ! Joint 1 
+      j2 = p%Elems(ei,3) ! Joint 2
+      ! Append joints indices if not in list already
+      if (find(JointsList, j1, ErrStat2, ErrMsg2)<=0) call append(JointsList, j1, ErrStat2, ErrMsg2)
+      if (find(JointsList, j2, ErrStat2, ErrMsg2)<=0) call append(JointsList, j2, ErrStat2, ErrMsg2)
+      ! Sorting required by find function
+      call sort(JointsList, ErrStat2, ErrMsg2)
+   enddo
+   call print_list(JointsList, 'Joint list')
+END FUNCTION JointsList
+
+
 !----------------------------------------------------------------------------
 !>
 ! - Removes the notion of "ID" and use Index instead
@@ -292,7 +348,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
          end if
 
          if (p%Elems(iMem,n)<=0) then
-            CALL Fatal('For MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//'the PropSetID'//TRIM(Num2LStr(n-3))//' is not in the'//trim(sType)//' table!')
+            CALL Fatal('For MemberID '//TRIM(Num2LStr(Init%Members(iMem,1)))//', the PropSetID'//TRIM(Num2LStr(n-3))//' is not in the'//trim(sType)//' table!')
          endif
       END DO !n, loop through property ids         
       ! Column 6: member type
@@ -764,7 +820,7 @@ END SUBROUTINE SetElementProperties
 !! For other joint type -> Condensation of the 3 translational DOF
 !!                      -> Keeping 3 rotational DOF for each memeber connected to the joint
 SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
-   use IntegerList, only: init_list => init , len
+   use IntegerList, only: init_list, len
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
    TYPE(SD_ParameterType),       INTENT(IN   ) :: p
    TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
@@ -986,8 +1042,246 @@ CONTAINS
    END FUNCTION
    
 END SUBROUTINE AssembleKM
+!------------------------------------------------------------------------------------------------------
+!> Assemble stiffness and mass matrix, and gravity force vector
+SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   INTEGER(IntKi)                            :: ErrStat2
+   CHARACTER(1024)                           :: ErrMsg2
+   type(IList), dimension(:), allocatable    :: RA       !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
+   integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
+   integer(IntKi), dimension(:), allocatable :: njRA     !< Number of joints per RA
+   integer(IntKi) :: nDOF
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   call RigidLinkAssemblies(Init, p, RA, RAm1, njRA, ErrStat2, ErrMsg2); if(Failed()) return
+
+   nDOF = nDOF_ConstraintReduced()
+   print*,'nDOF constraint elim', nDOF
+   deallocate(RAm1)
+   deallocate(RA)
+   deallocate(njRA)
+
+CONTAINS
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'DirectElimination') 
+        Failed =  ErrStat >= AbortErrLev
+        !if (Failed) call Cleanup_AssembleKM()
+   END FUNCTION Failed
+   
+   !SUBROUTINE Fatal(ErrMsg_in)
+   !   character(len=*), intent(in) :: ErrMsg_in
+   !   CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'AssembleKM');
+   !   CALL CleanUp_AssembleKM()
+   !END SUBROUTINE Fatal
+
+   !SUBROUTINE CleanUp_AssembleKM()
+      !pass
+   !END SUBROUTINE CleanUp_AssembleKM
+
+   !> Returns number of DOF after constraint reduction (via the matrix T)
+   INTEGER(IntKi) FUNCTION nDOF_ConstraintReduced()
+      integer(IntKi) :: iNode
+      integer(IntKi) :: ia ! Index on rigid link assembly
+      integer(IntKi) :: m  ! Number of elements connected to a joint
+      nDOF_ConstraintReduced = 0
+
+      ! Rigid assemblies contribution
+      nDOF_ConstraintReduced = nDOF_ConstraintReduced + 6*size(RA)
+
+      ! Contribution from all the other joints
+      do iNode = 1, Init%NNode
+         m = Init%NodesConnE(iNode,1) ! Col1: number of elements connected to this joint
+
+         if    (Init%Nodes(iNode,iJointType) == idJointPin ) then
+            nDOF_ConstraintReduced = nDOF_ConstraintReduced + 5 + 1*m
+            print*,'Node',iNode, 'is a pin joint'
+
+         elseif(Init%Nodes(iNode,iJointType) == idJointUniversal ) then
+            nDOF_ConstraintReduced = nDOF_ConstraintReduced + 4 + 2*m
+            print*,'Node',iNode, 'is an universal joint'
+
+         elseif(Init%Nodes(iNode,iJointType) == idJointBall ) then
+            nDOF_ConstraintReduced = nDOF_ConstraintReduced + 4 + 3*m
+            print*,'Node',iNode, 'is a ball joint'
+
+         elseif(Init%Nodes(iNode,iJointType) == idJointCantilever ) then
+            if ( NodeHasRigidElem(iNode, Init, p)) then
+               ! This joint is involved in a rigid link assembly, we skip it (accounted for above)
+               print*,'Node',iNode, 'is involved in a RA'
+            else
+               ! That's a regular Cantilever joint
+               nDOF_ConstraintReduced = nDOF_ConstraintReduced + 6
+               !print*,'Node',iNode, 'is a regular cantilever'
+            endif
+         else
+            ErrMsg='Wrong joint type'; ErrStat=ErrID_Fatal
+         endif
+      end do
+   END FUNCTION nDOF_ConstraintReduced
+END SUBROUTINE DirectElimination
 
 
+!------------------------------------------------------------------------------------------------------
+!> Returns list of rigid link elements (Er) 
+TYPE(IList) FUNCTION RigidLinkElements(Init, p, ErrStat, ErrMsg)
+   use IntegerList, only: init_list, append
+   use IntegerList, only: print_list
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi)  :: ie       !< Index on elements
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   ! --- Establish a list of rigid link elements
+   call init_list(RigidLinkElements, 0, 0, ErrStat, ErrMsg);
+
+   do ie = 1, Init%NElem
+      if (p%ElemProps(ie)%eType == idMemberRigid) then
+         call append(RigidLinkElements, ie, ErrStat, ErrMsg);
+      endif
+   end do
+   call print_list(RigidLinkElements,'Rigid element list')
+END FUNCTION RigidLinkElements
+
+!------------------------------------------------------------------------------------------------------
+!> Returns true if one of the element connected to the node is a rigid link
+LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p)
+   INTEGER(IntKi),               INTENT(IN   ) :: iJoint  
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   ! Local variables
+   integer(IntKi) :: ie       !< Loop index on elements
+   integer(IntKi) :: ei       !< Element index
+   integer(IntKi) :: m  ! Number of elements connected to a joint
+
+   NodeHasRigidElem = .False. ! default return value
+
+   ! Loop through elements connected to node J 
+   do ie = 1, Init%NodesConnE(iJoint, 1)
+      ei = Init%NodesConnE(iJoint, ie+1)
+      if (p%ElemProps(ei)%eType == idMemberRigid) then
+         NodeHasRigidElem = .True.
+         return  ! we exit as soon as one rigid member is found
+      endif
+   enddo
+END FUNCTION NodeHasRigidElem
+
+!------------------------------------------------------------------------------------------------------
+!> Setup a list of rigid link assemblies (RA)
+SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, njRA, ErrStat, ErrMsg)
+   use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   type(IList), dimension(:), allocatable    :: RA   !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
+   integer(IntKi), dimension(:), allocatable :: njRA !< Number of joints per RA
+   integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
+   ! Local variables
+   type(IList)                               :: Er    !< List of rigid elements
+   type(IList)                               :: Ea    !< List of elements in a rigid assembly
+   integer(IntKi)                            :: nRA  !< Number of rigid assemblies
+   integer(IntKi)                            :: ie  !< Index on elements
+   integer(IntKi)                            :: ia  !< Index on assemblies
+   integer(IntKi)                            :: e0  !< Index of an element
+   INTEGER(IntKi)                :: ErrStat2
+   CHARACTER(1024)               :: ErrMsg2
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   allocate(RAm1(1:Init%NElem))
+   RAm1(1:Init%NElem) = -1
+
+   ! --- Establish a list of rigid link elements
+   Er = RigidLinkElements(Init, p, ErrStat2, ErrMsg2)
+   nRA=0
+   do while (len(Er)>0)
+      nRA=nRA+1
+      ! Creating List Ea of elements of a given assembly
+      call init_list(Ea, 0, 0, ErrStat2, ErrMsg2);
+      e0 = pop(Er, ErrStat2, ErrMsg2);
+      call append(Ea, e0, ErrStat2, ErrMsg2);
+      call AddNeighbors(e0, Er, Ea)
+      call print_list(Ea,'Rigid assembly')
+      do ie = 1, len(Ea)
+         e0 = get(Ea, ie, ErrStat2, ErrMsg2)
+         RAm1(e0) = nRA ! Index of rigid assembly that this element belongs to
+      enddo
+      call destroy_list(Ea, ErrStat2, ErrMsg2)
+   enddo
+   call destroy_list(Er, ErrStat2, ErrMsg2)
+
+   ! --- Creating RA, array of lists of assembly elements.
+   ! Note: exactly the same as all the Ea created above, but we didn't know the total number of RA
+   allocate(RA(1:nRA))
+   do ia = 1, nRA
+      call init_list(RA(ia), 0, 0, ErrStat2, ErrMsg2)
+   enddo
+   do ie = 1, Init%NElem
+      ia = RAm1(ie) ! Index of the assembly the element belongs to: RA^{-1}(ie) = ia
+      if (ia>0) then
+         call append(RA(ia), ie, ErrStat2, ErrMsg2)
+      endif
+   enddo
+   do ia = 1, nRA
+      call print_list(RA(ia),'Rigid assembly')
+   enddo
+
+   ! --- Counting unique joints involved in Rigid assembly
+   allocate(njRA(1:nRA))
+   do ia = 1, nRA
+      ! Getting list of joints involved in RA(ia)
+      Er = JointsList(p, RA(ia)%List)
+      njRA(ia) = len(Er)
+      call destroy_list(Er, ErrStat2, ErrMsg2)
+   enddo
+   print*,'njRA',njRA
+CONTAINS
+   !> The neighbors of e0 (that are found within the list Er) are added to the list Ea  
+   RECURSIVE SUBROUTINE AddNeighbors(e0, Er, Ea) 
+      integer(IntKi), intent(in) :: e0  !< Index of an element
+      type(IList), intent(inout) :: Er  !< List of rigid elements
+      type(IList), intent(inout) :: Ea  !< List of elements in a rigid assembly
+      type(IList)     :: En             !< List of neighbors of e0
+      integer (IntKi) :: ik
+      integer (IntKi) :: ek, ek2
+      integer (IntKi) :: iWhichNode_e0, iWhichNode_ek
+      call init_list(En, 0, 0, ErrStat2, ErrMsg2)
+      ! Loop through all elements, setup list of e0-neighbors, add them to Ea, remove them from Er
+      ik=0
+      do while (ik< len(Er))
+         ik=ik+1
+         ek = Er%List(ik)
+         if (ElementsConnected(p, e0, ek, iWhichNode_e0, iWhichNode_ek)) then
+            print*,'Element ',ek,'is connected to ',e0,'via its node',iWhichNode_ek
+            ! Remove element from Er (a rigid element can belong to only one assembly)
+            ek2 =  pop(Er, ik,  ErrStat2, ErrMsg2) ! same as ek before
+            ik=ik-1
+            if (ek/=ek2) then
+               print*,'Problem in popping',ek,ek2
+            endif
+            call append(En, ek, ErrStat2, ErrMsg2)
+            call append(Ea, ek, ErrStat2, ErrMsg2)
+         endif
+      enddo
+      ! Loop through neighbors and recursively add neighbors of neighbors
+      do ik = 1, len(En)
+         ek = En%List(ik)
+         call AddNeighbors(ek, Er, Ea)
+      enddo
+      call destroy_list(En, ErrStat2, ErrMsg2)
+   END SUBROUTINE AddNeighbors
+
+
+END SUBROUTINE RigidLinkAssemblies
 
 !------------------------------------------------------------------------------------------------------
 !> Computes directional cosine matrix DirCos
@@ -1059,9 +1353,9 @@ SUBROUTINE ElemM(ep, Me)
       if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
          Me=0.0_ReKi
       else
+         print*,'SD_FEM: Mass matrix for rigid members rho/=0 TODO'
+         CALL ElemM_Cable(ep%Area, ep%Length, ep%rho, ep%DirCos, Me)
          !CALL ElemM_(A, L, rho, DirCos, Me)
-         print*,'SD_GEM: Mass matrix for rigid members rho/=0 TODO'
-         STOP
       endif
    endif
 END SUBROUTINE ElemM

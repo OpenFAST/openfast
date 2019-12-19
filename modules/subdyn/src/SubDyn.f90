@@ -51,8 +51,8 @@ CONTAINS
 
 SUBROUTINE CreateTPMeshes( TP_RefPoint, inputMesh, outputMesh, ErrStat, ErrMsg )
    REAL(ReKi),                INTENT( IN    ) :: TP_RefPoint(3)
-   TYPE(MeshType),            INTENT( INOUT ) :: inputMesh
-   TYPE(MeshType),            INTENT( INOUT ) :: outputMesh
+   TYPE(MeshType),            INTENT( INOUT ) :: inputMesh  ! u%TPMesh
+   TYPE(MeshType),            INTENT( INOUT ) :: outputMesh ! y%Y1Mesh
    INTEGER(IntKi),            INTENT(   OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    
@@ -106,8 +106,8 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, NNodes_I, IDI, NNodes_L, IDL, NNodes_C,
    INTEGER(IntKi),            INTENT( IN    ) :: IDL(NNodes_L*6)
    INTEGER(IntKi),            INTENT( IN    ) :: NNodes_C                  ! number base reaction nodes  i.e. Y2 stuff after interior stuff
    INTEGER(IntKi),            INTENT( IN    ) :: IDC(NNodes_C*6)
-   TYPE(MeshType),            INTENT( INOUT ) :: inputMesh
-   TYPE(MeshType),            INTENT( INOUT ) :: outputMesh
+   TYPE(MeshType),            INTENT( INOUT ) :: inputMesh   ! u%LMesh
+   TYPE(MeshType),            INTENT( INOUT ) :: outputMesh  ! y%Y2Mesh
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat                   ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    ! Local variables
@@ -321,18 +321,19 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    call DistributeDOF(Init, p ,m ,ErrStat2, ErrMsg2); if(Failed()) return; 
 
    ! Assemble Stiffness and mass matrix
-   CALL AssembleKM(Init,p, m, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AssembleKM(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Calculate values for FEMparams (for summary file output only
    ! Solve dynamics problem
-   FEMparams%NOmega = Init%TDOF - p%Nreact*6 !removed an extra "-6"  !Note if fixity changes at the reaction points, this will need to change
-     
-   CALL AllocAry(FEMparams%Omega,            FEMparams%NOmega, 'FEMparams%Omega', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL AllocAry(FEMparams%Modes, Init%TDOF, FEMparams%NOmega, 'FEMparams%Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
-   
    ! We call the EigenSolver here only so that we get a print-out the eigenvalues from the full system (minus Reaction DOF)
    ! The results, Phi is not used in the remainder of this Init subroutine, Omega goes to outsummary.
+   FEMparams%NOmega = Init%TDOF - p%Nreact*6 !removed an extra "-6"  !Note if fixity changes at the reaction points, this will need to change
+   CALL AllocAry(FEMparams%Omega,            FEMparams%NOmega, 'FEMparams%Omega', ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL AllocAry(FEMparams%Modes, Init%TDOF, FEMparams%NOmega, 'FEMparams%Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL EigenSolve( Init%K, Init%M, Init%TDOF, FEMparams%NOmega, .True., Init, p, FEMparams%Modes, FEMparams%Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
+
+   ! --- Elimination
+   CALL DirectElimination(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
    
 
    ! --- Craig-Bampton reduction (sets many parameters)
