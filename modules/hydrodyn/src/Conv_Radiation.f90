@@ -469,7 +469,8 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
       TYPE(Conv_Rdtn_InputType)                           :: u               !< Instantaneous inputs
       INTEGER(IntKi)                                      :: ErrStat2        !< Error status of the operation (secondary error)
       CHARACTER(ErrMsgLen)                                :: ErrMsg2         !< Error message if ErrStat2 /= ErrID_None
-
+      character(*), parameter                             :: RoutineName = 'Conv_Rdtn_UpdateStates'
+ 
       
          ! Initialize variables
 
@@ -482,8 +483,12 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
       
       
          ! Get the inputs at time t, based on the array of values sent by the glue code:
+      call Conv_Rdtn_CopyInput( Inputs(1), u, MESH_NEWCOPY, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+  
          
-      CALL Conv_Rdtn_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat, ErrMsg )  
+      CALL Conv_Rdtn_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat2, ErrMsg2 )  
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       IF ( ErrStat >= AbortErrLev ) RETURN
        
       
@@ -491,7 +496,8 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
          !   Note that xd [discrete state] is changed in Conv_Rdtn_UpdateDiscState() so xd will now contain values at t+Interval
          !   We'll first make a copy that contains xd at time t, which will be used in computing the constraint states
  
-      CALL Conv_Rdtn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
+      CALL Conv_Rdtn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
      
  
          ! Integrate (update) continuous states (x) here:
@@ -630,9 +636,8 @@ SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, Er
          
       ErrStat = ErrID_None         
       ErrMsg  = ""               
-      
-      
-    
+
+
          ! Find the index xd%IndRdtn, where RdtnTime(IndRdtn) is the largest value in
          !   RdtnTime(:) that is less than or equal to Time and find the amount of
          !   time remaining from this calculation:

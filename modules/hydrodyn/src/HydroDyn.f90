@@ -1034,18 +1034,18 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   InitLocal%WAMIT2%NBody     = InitLocal%NBody    ! The WAMIT2 object will contain all NBody WAMIT2 bodies
 
                      ! Allocate WAMIT2 InitInp arrays based on NBodyMod and copy the inputfile data into the WAMIT2 init data (entire arrays' worth for NBodyMod=1
-                  call AllocAry( InitLocal%WAMIT%PtfmRefxt   , InitLocal%NBody, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  call AllocAry( InitLocal%WAMIT%PtfmRefyt   , InitLocal%NBody, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  call AllocAry( InitLocal%WAMIT%PtfmRefzt   , InitLocal%NBody, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  call AllocAry( InitLocal%WAMIT%PtfmRefztRot, InitLocal%NBody, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefxt   , InitLocal%NBody, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefyt   , InitLocal%NBody, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefzt   , InitLocal%NBody, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefztRot, InitLocal%NBody, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                else
                   InitLocal%WAMIT2%NBody  = 1_IntKi               ! The WAMIT2 object will contain all NBody WAMIT2 bodies
 
                      ! Allocate WAMIT2 InitInp arrays based on NBodyMod and copy the inputfile data into the 1st WAMIT body init data for NBodyMod > 1
-                  call AllocAry( InitLocal%WAMIT%PtfmRefxt   , 1, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  call AllocAry( InitLocal%WAMIT%PtfmRefyt   , 1, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  call AllocAry( InitLocal%WAMIT%PtfmRefzt   , 1, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                  call AllocAry( InitLocal%WAMIT%PtfmRefztRot, 1, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefxt   , 1, "PtfmRefxt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefyt   , 1, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefzt   , 1, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  call AllocAry( InitLocal%WAMIT2%PtfmRefztRot, 1, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                endif
 

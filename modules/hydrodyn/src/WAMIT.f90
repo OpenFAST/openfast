@@ -1496,10 +1496,6 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
       nTime = size(Inputs)   
       
       
-      
-      
-      
-      
       IF      ( p%RdtnMod == 1 )  THEN       ! Update the convolution radiation memory effect sub-module's state  
          
             ! Allocate array of Conv_Rdtn inputs
