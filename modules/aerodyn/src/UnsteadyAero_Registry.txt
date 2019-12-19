@@ -183,6 +183,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            InputType                     ReKi                     U                               -         -         -            "air velocity magnitude relative to the airfoil" m/s
 typedef   ^                            ^                             ReKi                     alpha                           -         -         -            "angle of attack" rad
 typedef   ^                            ^                             ReKi                     Re                              -         -         -            "Reynold's number" -
+typedef   ^                            ^                             ReKi                     UserProp                        -         0.0       -            "UserProp value for interpolating airfoil tables" -
 #                                                                                                                                                             
 # ..... Outputs ...................................................................................................................                           
 # Define outputs that are contained on the mesh here:                                                                                                         
