@@ -645,7 +645,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Create the input and output meshes associated with lumped loads
       CALL MeshCreate(  BlankMesh         = u%Mesh           , &
                         IOS               = COMPONENT_INPUT  , &
-                        Nnodes            = 1                , &
+                        Nnodes            = p%NBody          , &
                         ErrStat           = ErrStatTmp       , &
                         ErrMess           = ErrMsgTmp        , &
                         TranslationDisp   = .TRUE.           , &
@@ -661,14 +661,22 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          RETURN
       END IF
 
-         ! Create the node on the mesh
-      CALL MeshPositionNode (u%Mesh, 1, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/), ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+      DO ThisBodyNum = 1,p%NBody
 
-         ! Create the mesh element
-      CALL MeshConstructElement (  u%Mesh, ELEMENT_POINT, ErrStatTmp, ErrMsgTmp, 1 )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+            ! Set orientation and position for each body in mesh
+         theta       = (/ 0.0_R8Ki, 0.0_R8Ki, InitInp%PtfmRefztRot(ThisBodyNum)/)
+         orientation = EulerConstruct(theta)
+         XYZloc      = (/InitInp%PtfmRefxt(ThisBodyNum), InitInp%PtfmRefyt(ThisBodyNum), InitInp%PtfmRefzt(ThisBodyNum)/)
 
+            ! Create the node on the mesh
+         CALL MeshPositionNode (u%Mesh, ThisBodyNum, XYZloc, ErrStatTmp, ErrMsgTmp, orientation )
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
+ 
+            ! Create the mesh element
+         CALL MeshConstructElement (  u%Mesh, ELEMENT_POINT, ErrStatTmp, ErrMsgTmp, ThisBodyNum )
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
+      ENDDO
+ 
       CALL MeshCommit ( u%Mesh, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
       IF ( ErrStat >= AbortErrLev ) THEN

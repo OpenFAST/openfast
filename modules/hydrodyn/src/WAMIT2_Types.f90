@@ -116,6 +116,8 @@ IMPLICIT NONE
     REAL(SiKi) , DIMENSION(:), ALLOCATABLE  :: WaveTime      !< Simulation times at which the instantaneous second order loads associated with the incident waves are determined [sec]
     INTEGER(IntKi)  :: NStepWave      !< Number of wave time steps [-]
     REAL(DbKi)  :: DT      !<  [-]
+    INTEGER(IntKi)  :: NBody      !< [>=1; only used when PotMod=1. If NBodyMod=1, the WAMIT data contains a vector of size 6*NBody x 1 and matrices of size 6*NBody x 6*NBody; if NBodyMod>1, there are NBody sets of WAMIT data each with a vector of size 6 x 1 and matrices of size 6 x 6] [-]
+    INTEGER(IntKi)  :: NBodyMod      !< Body coupling model {1: include coupling terms between each body and NBody in HydroDyn equals NBODY in WAMIT, 2: neglect coupling terms between each body and NBODY=1 with XBODY=0 in WAMIT, 3: Neglect coupling terms between each body and NBODY=1 with XBODY=/0 in WAMIT} (switch) [only used when PotMod=1] [-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveExctn2      !< Time series of the resulting 2nd order force (first index is timestep, second index is load component) [(N)]
     LOGICAL , DIMENSION(1:6)  :: MnDriftDims      !< Flags for which dimensions to calculate in MnDrift   calculations [-]
     LOGICAL , DIMENSION(1:6)  :: NewmanAppDims      !< Flags for which dimensions to calculate in NewmanApp calculations [-]
@@ -1857,6 +1859,8 @@ IF (ALLOCATED(SrcParamData%WaveTime)) THEN
 ENDIF
     DstParamData%NStepWave = SrcParamData%NStepWave
     DstParamData%DT = SrcParamData%DT
+    DstParamData%NBody = SrcParamData%NBody
+    DstParamData%NBodyMod = SrcParamData%NBodyMod
 IF (ALLOCATED(SrcParamData%WaveExctn2)) THEN
   i1_l = LBOUND(SrcParamData%WaveExctn2,1)
   i1_u = UBOUND(SrcParamData%WaveExctn2,1)
@@ -1968,6 +1972,8 @@ ENDIF
   END IF
       Int_BufSz  = Int_BufSz  + 1  ! NStepWave
       Db_BufSz   = Db_BufSz   + 1  ! DT
+      Int_BufSz  = Int_BufSz  + 1  ! NBody
+      Int_BufSz  = Int_BufSz  + 1  ! NBodyMod
   Int_BufSz   = Int_BufSz   + 1     ! WaveExctn2 allocated yes/no
   IF ( ALLOCATED(InData%WaveExctn2) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! WaveExctn2 upper/lower bounds for each dimension
@@ -2055,6 +2061,10 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) = InData%DT
       Db_Xferred   = Db_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NBody
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NBodyMod
+      Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%WaveExctn2) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
@@ -2209,6 +2219,10 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%DT = DbKiBuf( Db_Xferred ) 
       Db_Xferred   = Db_Xferred + 1
+      OutData%NBody = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%NBodyMod = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveExctn2 not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
