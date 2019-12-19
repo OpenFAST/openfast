@@ -115,7 +115,7 @@ MODULE WAMIT2
 
       !> This type is only used locally for holding data during the Initialization.  It will not be used outside of the WAMIT2_Init
       !! routine.  The 3D data is of the form F_k( WvFreq1, WvDir1, WvDir2, k ) where k is coordinate index to the load components
-      !! (surge, sway, heave, roll, pitch, yaw).  DataSet is of size (NumFreq1,NumWvDir1,NumWvDir2,6). The LoadComponents array
+      !! (surge, sway, heave, roll, pitch, yaw).  DataSet is of size (NumFreq1,NumWvDir1,NumWvDir2,6*NumBodies). The LoadComponents array
       !! contains flags that will indicate which of the LoadComponents were read in from the data file.
       !!
       !! The DataMask array is of the same size as the DataSet matrix and corresponds to it.  Each point in DataMask that is true
@@ -126,8 +126,9 @@ MODULE WAMIT2
       INTEGER(IntKi)                   :: NumWvFreq1           !< Number of frequencies in first  frequency direction set
       INTEGER(IntKi)                   :: NumWvDir1            !< Number of wave directions in first   wave direction set
       INTEGER(IntKi)                   :: NumWvDir2            !< Number of wave directions in second  wave direction set
-      LOGICAL                          :: DataIsSparse(6)      !< Flag to indicate if the data is sparse or complete.  One per component direction
-      LOGICAL                          :: LoadComponents(6)    !< Which load components actually exist in the input file
+      INTEGER(IntKi)                   :: NumBodies            !< Number of bodies in the file (based on highest LoadComponent listed)
+      LOGICAL,          ALLOCATABLE    :: DataIsSparse(:)      !< Flag to indicate if the data is sparse or complete.  One per component direction
+      LOGICAL,          ALLOCATABLE    :: LoadComponents(:)    !< Which load components actually exist in the input file
       COMPLEX(SiKi),    ALLOCATABLE    :: DataSet(:,:,:,:)     !< Storage for 3D data from the 2nd order WAMIT file
       LOGICAL,          ALLOCATABLE    :: DataMask(:,:,:,:)    !< Mask for knowing which data points are complete, which are missing
       REAL(SiKi),       ALLOCATABLE    :: WvFreq1(:)           !< (1:NumFreq1)  elements -- values correspond to index 1 of DataSet
@@ -138,7 +139,7 @@ MODULE WAMIT2
 
       !> This type is only used locally for holding data during the Initialization.  It will not be used outside of the WAMIT2_Init
       !! routine.  The 4D data is of the form F_k( WvFreq1, WvFreq2, WvDir1, WvDir2, k ) where k is coordinate index to the load components
-      !! (surge, sway, heave, roll, pitch, yaw).  DataSet is of size (NumFreq1,NumFreq2,NumWvDir1,NumWvDir2,6).  The LoadComponents
+      !! (surge, sway, heave, roll, pitch, yaw).  DataSet is of size (NumFreq1,NumFreq2,NumWvDir1,NumWvDir2,6*NumBodies).  The LoadComponents
       !! array contains flags that will indicate which of the LoadComponents were read in from the data file.
       !!
       !! The DataMask array is of the same size as the DataSet matrix and corresponds to it.  Each point in DataMask that is true
@@ -149,10 +150,11 @@ MODULE WAMIT2
       INTEGER(IntKi)                   :: NumWvFreq2           !< Number of frequencies in second frequency direction set
       INTEGER(IntKi)                   :: NumWvDir1            !< Number of wave directions in first   wave direction set
       INTEGER(IntKi)                   :: NumWvDir2            !< Number of wave directions in second  wave direction set
-      LOGICAL                          :: DataIsSparse(6)      !< Flag to indicate if the data is sparse or complete.  One per component direction
+      INTEGER(IntKi)                   :: NumBodies            !< Number of bodies in the file (based on highest LoadComponent listed)
+      LOGICAL,          ALLOCATABLE    :: DataIsSparse(:)      !< Flag to indicate if the data is sparse or complete.  One per component direction
       LOGICAL                          :: WvFreqDiagComplete   !< Flag to indicate if the diagonal element is complete or not (Omega_m, Omega_m).
       LOGICAL                          :: IsSumForce           !< Flag to indicate that this is a sum type array.  Used in setting the F_{nm} term from F_{mn} term.
-      LOGICAL                          :: LoadComponents(6)    !< Which load components actually exist in the input file
+      LOGICAL,          ALLOCATABLE    :: LoadComponents(:)    !< Which load components actually exist in the input file
       COMPLEX(SiKi),    ALLOCATABLE    :: DataSet(:,:,:,:,:)   !< Storage for 4D data from the 2nd order WAMIT file
       LOGICAL,          ALLOCATABLE    :: DataMask(:,:,:,:,:)  !< Mask for knowing which data points are complete, which are missing
       REAL(SiKi),       ALLOCATABLE    :: WvFreq1(:)           !< (1:NumFreq1)  elements -- values correspond to index 1 of DataSet
@@ -228,6 +230,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Local Variables
       INTEGER(IntKi)                                     :: I                    !< Generic counter
       INTEGER(IntKi)                                     :: J                    !< Generic counter
+      INTEGER(IntKi)                                     :: ThisBodyNum          !< Current body number
+      REAL(R8Ki)                                         :: theta(3)             !< rotation about z for ThisBodyNum (0 about x,y)
+      REAL(R8Ki)                                         :: orientation(3,3)     !< Orientation matrix for orientation of ThisBodyNum
+      REAL(ReKi)                                         :: XYZloc(3)            !< Starting position of this WAMIT2 body
+
 
          ! QTF storage -- from the data files that are read in
       TYPE(W2_DiffData_Type)                             :: MnDriftData          !< Data storage for the Mean Drift method
@@ -244,6 +251,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Temporary error trapping variables
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary variable for holding the error status  returned from a CALL statement
       CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary variable for holding the error message returned from a CALL statement
+      CHARACTER(*), PARAMETER                            :: RoutineName = 'WAMIT2_Init'
 
 
          !> ### Subroutine contents
@@ -294,7 +302,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> 1. Check the data file related values (_MnDrift_, _MnDriftF_ etc). Also copy over important things from _InitInp_ to _p_ and _InitOut_.
 
       CALL CheckInitInput( InitInp, InitOut, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
          RETURN
@@ -310,14 +318,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( p%MnDriftF ) THEN
          IF ( MnDriftData%DataIs3D ) THEN
             CALL Read_DataFile3D( TRIM(MnDriftData%Filename), MnDriftData%Data3D, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSEIF ( MnDriftData%DataIs4D ) THEN
             MnDriftData%Data4D%IsSumForce = .FALSE.
             CALL Read_DataFile4D( TRIM(MnDriftData%Filename), MnDriftData%Data4D, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  MnDrift method flags incorrectly set by '// &
-                  'CheckInitInput subroutine.', ErrStat, ErrMsg, 'WAMIT2_Init' )
+                  'CheckInitInput subroutine.', ErrStat, ErrMsg, RoutineName )
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -330,14 +338,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( p%NewmanAppF ) THEN
          IF ( NewmanAppData%DataIs3D ) THEN
             CALL Read_DataFile3D( TRIM(NewmanAppData%Filename), NewmanAppData%Data3D, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSEIF ( NewmanAppData%DataIs4D ) THEN
             NewmanAppData%Data4D%IsSumForce = .FALSE.
             CALL Read_DataFile4D( TRIM(NewmanAppData%Filename), NewmanAppData%Data4D, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  NewmanApp method flags incorrectly set by '// &
-                  'CheckInitInput subroutine.', ErrStat, ErrMsg, 'WAMIT2_Init' )
+                  'CheckInitInput subroutine.', ErrStat, ErrMsg, RoutineName )
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -352,14 +360,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( p%DiffQTFF ) THEN
          IF ( DiffQTFData%DataIs3D ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  DiffQTF method flags incorrectly set by '// &
-                  'CheckInitInput subroutine. 3D data cannot be used in the DiffQTF method.', ErrStat, ErrMsg, 'WAMIT2_Init' )
+                  'CheckInitInput subroutine. 3D data cannot be used in the DiffQTF method.', ErrStat, ErrMsg, RoutineName )
          ELSEIF ( DiffQTFData%DataIs4D ) THEN
             DiffQTFData%Data4D%IsSumForce = .FALSE.
             CALL Read_DataFile4D( TRIM(DiffQTFData%Filename), DiffQTFData%Data4D, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  DiffQTF method flags incorrectly set by '// &
-                                          'CheckInitInput subroutine.', ErrStat, ErrMsg, 'WAMIT2_Init' )
+                                          'CheckInitInput subroutine.', ErrStat, ErrMsg, RoutineName )
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -373,10 +381,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF ( SumQTFData%DataIs4D ) THEN
             SumQTFData%Data4D%IsSumForce = .TRUE.
             CALL Read_DataFile4D( TRIM(SumQTFData%Filename), SumQTFData%Data4D, ErrStatTmp, ErrMsgTmp )
-            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+            CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  SumQTF method flags incorrectly set by '// &
-                  'CheckInitInput subroutine.', ErrStat, ErrMsg, 'WAMIT2_Init' )
+                  'CheckInitInput subroutine.', ErrStat, ErrMsg, RoutineName )
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -395,22 +403,22 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( p%MnDriftF ) THEN
          IF ( MnDriftData%DataIs3D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,6
+            DO I=1,MnDriftData%Data3D%NumBodies
                IF ( p%MnDriftDims(I) .AND. ( .NOT. MnDriftData%Data3D%LoadComponents(I) ) ) &
                   CALL SetErrStat( ErrID_Warn, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
                         TRIM(Num2LStr(I))//' force component for the MnDrift method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,'WAMIT2_Init')
+                        ErrStat,ErrMsg,RoutineName)
             ENDDO
          ELSE IF ( MnDriftData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,6
+            DO I=1,MnDriftData%Data4D%NumBodies
                IF ( p%MnDriftDims(I) .AND. ( .NOT. MnDriftData%Data4D%LoadComponents(I) )  )&
                   CALL SetErrStat( ErrID_Warn, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
                         TRIM(Num2LStr(I))//' force component for the MnDrift method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,'WAMIT2_Init')
+                        ErrStat,ErrMsg,RoutineName)
             ENDDO
          ELSE  ! We didn't find any data to use...
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  MnDrift flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  MnDrift flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -423,22 +431,22 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( p%NewmanAppF ) THEN
          IF ( NewmanAppData%DataIs3D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,6
+            DO I=1,NewmanAppData%Data3D%NumBodies
                IF ( p%NewmanAppDims(I) .AND. ( .NOT. NewmanAppData%Data3D%LoadComponents(I) ) ) &
                   CALL SetErrStat( ErrID_Warn, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
                         TRIM(Num2LStr(I))//' force component for the NewmanApp method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,'WAMIT2_Init')
+                        ErrStat,ErrMsg,RoutineName)
             ENDDO
          ELSE IF ( NewmanAppData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,6
+            DO I=1,NewmanAppData%Data4D%NumBodies
                IF ( p%NewmanAppDims(I) .AND. ( .NOT. NewmanAppData%Data4D%LoadComponents(I) ) ) &
                   CALL SetErrStat( ErrID_Warn, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
                         TRIM(Num2LStr(I))//' force component for the NewmanApp method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,'WAMIT2_Init')
+                        ErrStat,ErrMsg,RoutineName)
             ENDDO
          ELSE
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  NewmanApp flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  NewmanApp flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -451,14 +459,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( p%DiffQTFF ) THEN
          IF ( DiffQTFData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,6
+            DO I=1,DiffQTFData%Data4D%NumBodies
                IF ( p%DiffQTFDims(I) .AND. ( .NOT. DiffQTFData%Data4D%LoadComponents(I) ) ) &
                   CALL SetErrStat( ErrID_Warn, ' '//TRIM(DiffQTFData%Filename)//' does not contain information for the '// &
                         TRIM(Num2LStr(I))//' force component for the DiffQTF method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,'WAMIT2_Init')
+                        ErrStat,ErrMsg,RoutineName)
             ENDDO
          ELSE
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  DiffQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  DiffQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -471,14 +479,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( p%SumQTFF ) THEN
          IF ( SumQTFData%DataIs4D ) THEN
                ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,6
+            DO I=1,SumQTFData%Data4D%NumBodies
                IF ( p%SumQTFDims(I) .AND. ( .NOT. SumQTFData%Data4D%LoadComponents(I) ) ) &
                   CALL SetErrStat( ErrID_Warn, ' '//TRIM(SumQTFData%Filename)//' does not contain information for the '// &
                         TRIM(Num2LStr(I))//' force component for the SumQTF method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,'WAMIT2_Init')
+                        ErrStat,ErrMsg,RoutineName)
             ENDDO
          ELSE
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  SumQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, 'WAMIT2_Init')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  SumQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
          ENDIF
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -522,8 +530,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order mean drift force.' )
 
-         CALL MnDrift_InitCalc( InitInp, p, MnDriftData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init' )
+         CALL MnDrift_InitCalc( InitInp, p, ThisBodyNum, MnDriftData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
             RETURN
@@ -536,8 +544,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( " Calculating second order difference-frequency force using the Newman's approximation." )
 
-         CALL NewmanApp_InitCalc( InitInp, p, NewmanAppData, NewmanAppForce, ErrMsgTmp, ErrStatTmp )
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init' )
+         CALL NewmanApp_InitCalc( InitInp, p, ThisBodyNum, NewmanAppData, NewmanAppForce, ErrMsgTmp, ErrStatTmp )
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
             RETURN
@@ -552,8 +560,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order difference-frequency force using the full quadratic transfer function.' )
 
-         CALL DiffQTF_InitCalc( InitInp, p, DiffQTFData, DiffQTFForce, ErrMsgTmp, ErrStatTmp )
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init' )
+         CALL DiffQTF_InitCalc( InitInp, p, ThisBodyNum, DiffQTFData, DiffQTFForce, ErrMsgTmp, ErrStatTmp )
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
             RETURN
@@ -566,8 +574,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order sum-frequency force using the full quadratic transfer function.' )
 
-         CALL SumQTF_InitCalc( InitInp, p, SumQTFData, SumQTFForce, ErrMsgTmp, ErrStatTmp )
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init' )
+         CALL SumQTF_InitCalc( InitInp, p, ThisBodyNum, SumQTFData, SumQTFForce, ErrMsgTmp, ErrStatTmp )
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
             RETURN
@@ -655,7 +663,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         TranslationAcc    = .FALSE.          , &
                         RotationAcc       = .FALSE.)
 
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
          RETURN
@@ -678,7 +686,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ENDDO
  
       CALL MeshCommit ( u%Mesh, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
          RETURN
@@ -687,7 +695,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
       CALL MeshCopy( SrcMesh=u%Mesh, DestMesh=y%Mesh, CtrlCode=MESH_SIBLING, IOS=COMPONENT_OUTPUT, &
                      ErrStat=ErrStatTmp, ErrMess=ErrMsgTmp, Force=.TRUE., Moment=.TRUE. )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
          RETURN
@@ -701,7 +709,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
             ! Initialize the outputs
       CALL WMT2OUT_Init( InitInp, y, p, InitOut, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WAMIT2_Init')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
          RETURN
@@ -779,12 +787,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    !! Since the frequency range of the QTF has not yet been checked, we will do that now.
    !!
    !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE MnDrift_InitCalc( InitInp, p, MnDriftData, MnDriftForce, ErrMsg, ErrStat )
+   SUBROUTINE MnDrift_InitCalc( InitInp, p, ThisBodyNum, MnDriftData, MnDriftForce, ErrMsg, ErrStat )
 
       IMPLICIT NONE
 
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
+      INTEGER(IntKi),                     INTENT(IN   )  :: ThisBodyNum          !< Which body are we on
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: MnDriftData          !< Data storage for the MnDrift method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(SiKi),                         INTENT(  OUT)  :: MnDriftForce(6)      !< Force data.  Index 1 is the force component.  Constant for all time.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
@@ -810,6 +819,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex3(3)        !< Last used index for searching in the interpolation algorithms
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms
+      REAL(SiKi)                                         :: RotateZ              !< The rotation to apply to the body
+      REAL(SiKi)                                         :: OffsetXY(2)          !< The phase shift offset to apply to the body
       REAL(SiKi)                                         :: Coord3(3)            !< The (omega1,beta1,beta2) coordinate we want in the 3D dataset
       REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
       COMPLEX(SiKi),ALLOCATABLE                          :: TmpData3D(:,:,:)     !< Temporary 3D array we put the 3D data into (minus the load component indice)
@@ -1021,7 +1032,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
       IF ( .NOT. MnDriftData%DataIs3D .AND. MnDriftData%Data4D%WvFreqDiagComplete ) THEN
          TmpFlag = .FALSE.    ! if this goes true, then we need to convert to 3D data
-         DO I=1,6
+         DO I=1,MnDriftData%Data4D%NumBodies
             IF ( p%MnDriftDims(I) ) THEN        ! Flag indicating which dimension we are calculating for
                IF ( MnDriftData%Data4D%DataIsSparse(I) .AND. MnDriftData%Data4D%LoadComponents(I) )      TmpFlag = .TRUE.
             ENDIF
@@ -1045,11 +1056,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !! FIXME: remove this check and warning once the sparse matrix interpolation routines are implimented.
       TmpFlag = .FALSE.
       IF ( MnDriftData%DataIs3D ) THEN
-         DO I=1,6
+         DO I=1,MnDriftData%Data3D%NumBodies
             IF ( MnDriftData%Data3D%DataIsSparse(I) .AND. MnDriftData%Data3D%LoadComponents(I) .AND. p%MnDriftDims(I) )    TmpFlag = .TRUE.
          ENDDO
       ELSE     ! must be 4D -- we checked that we had something at the start of this routine.
-         DO I=1,6
+         DO I=1,MnDriftData%Data4D%NumBodies
             IF ( MnDriftData%Data4D%DataIsSparse(I) .AND. MnDriftData%Data4D%LoadComponents(I) .AND. p%MnDriftDims(I) )    TmpFlag = .TRUE.
          ENDDO
       ENDIF
@@ -1244,12 +1255,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    !! Since the frequency range of the QTF has not yet been checked, we will do that now.
    !!
    !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE NewmanApp_InitCalc( InitInp, p, NewmanAppData, NewmanAppForce, ErrMsg, ErrStat )
+   SUBROUTINE NewmanApp_InitCalc( InitInp, p, ThisBodyNum, NewmanAppData, NewmanAppForce, ErrMsg, ErrStat )
 
       IMPLICIT NONE
 
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
+      INTEGER(IntKi),                     INTENT(IN   )  :: ThisBodyNum          !< Which body are we on
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: NewmanAppData        !< Data storage for the NewmanApp method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: NewmanAppForce(:,:)  !< Force data.  Index 1 is the timestep, index 2 is the load component.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
@@ -1823,12 +1835,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    !! Since the frequency range of the QTF has not yet been checked, we will do that now as well.
    !!
    !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE DiffQTF_InitCalc( InitInp, p, DiffQTFData, DiffQTFForce, ErrMsg, ErrStat )
+   SUBROUTINE DiffQTF_InitCalc( InitInp, p, ThisBodyNum, DiffQTFData, DiffQTFForce, ErrMsg, ErrStat )
 
       IMPLICIT NONE
 
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
+      INTEGER(IntKi),                     INTENT(IN   )  :: ThisBodyNum          !< Which body are we on
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: DiffQTFData          !< Data storage for the DiffQTF method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: DiffQTFForce(:,:)    !< Force data.  Index 1 is the timestep, index 2 is the load component.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
@@ -2042,7 +2055,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Before we continue, we will get the MnDriftForce results.
          !  --> Note that we can pass the DiffQTFData directly since we are using the same type for both
-      CALL MnDrift_InitCalc( InitInp, p, MnDriftData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
+      CALL MnDrift_InitCalc( InitInp, p, ThisBodyNum, DiffQTFData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
@@ -2262,12 +2275,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
    !! if the cutoff for the highest sum frequency, _WvHiCOffS_ is above the Nyquist frequency.
    !!
    !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE SumQTF_InitCalc( InitInp, p, SumQTFData, SumQTFForce, ErrMsg, ErrStat )
+   SUBROUTINE SumQTF_InitCalc( InitInp, p, ThisBodyNum, SumQTFData, SumQTFForce, ErrMsg, ErrStat )
 
       IMPLICIT NONE
 
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
+      INTEGER(IntKi),                     INTENT(IN   )  :: ThisBodyNum          !< Which body are we on
       TYPE(W2_SumData_Type),              INTENT(INOUT)  :: SumQTFData           !< Data storage for the SumQTF method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: SumQTFForce(:,:)     !< Force data.  Index 1 is the timestep, index 2 is the load component.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
@@ -3054,6 +3068,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       p%DT                    =  Interval                   ! Timestep from calling program
 
 
+      !--------------------------------------------------------------------------------
+      !> 3. WAMIT body related information
+      !--------------------------------------------------------------------------------
+
+      p%NBody                 =  InitInp%NBody              ! Number of bodies WAMIT2 sees
+      p%NBodyMod              =  InitInp%NBodyMod           ! How multiple bodys are treated
 
 
       !--------------------------------------------------------------------------------
@@ -3266,7 +3286,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ErrStatTmp  = ErrID_None
       ErrMsg      = ''
       ErrMsgTmp   = ''
-      Data3D%DataIsSparse = .TRUE.        ! Assume the data is sparse, then change this after checking on the dimensions of interest.
       HaveZeroFreq1 = .FALSE.             ! If we find a zero frequency, we will set this to true
 
 
@@ -3561,9 +3580,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       CALL UniqueRealValues( RawData3D(:,4), TmpRealArr, K, ErrStatTmp,ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
 
-         ! If the value of K is more than 6, we have some serious issues
-      IF ( K > 6 ) CALL SetErrStat( ErrID_Fatal, ' More than 6 load components found in column 4 of '// &
-                     TRIM(Filename3D)//'.', ErrStat,ErrMsg,RoutineName)
+         ! Now figure out how many bodies there are. Each body will have up to 6 components.  The component
+         ! column can be up to 6*N where N is the number of bodies in the file.  We will assume that we don't
+         ! skip groups of bodies.
+      Data3D%NumBodies = ceiling((maxval(TmpRealArr)-0.1_ReKi) / 6.0_ReKi)    ! Account for any uncertainty in the number
+      IF ( Data3D%NumBodies < 1 ) CALL SetErrStat( ErrID_Fatal, ' No WAMIT bodies found (no positive load component numbers in column 4) in '// &
+                     TRIM(Filename3D)//'.', ErrStat,ErrMsg,RoutineName )
+      IF ( Data3D%NumBodies > 1 ) CALL SetErrStat( ErrID_Info, ' Found data for '//TRIM(Num2LStr(Data3D%NumBodies))//' WAMIT bodies in '// &
+                     TRIM(Filename3D)//'.', ErrStat,ErrMsg,RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
@@ -3574,13 +3598,21 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          RETURN
       ENDIF
 
+
+         ! Now that we know how many bodies are in the file, allocate the size of the arrays
+      CALL AllocAry( Data3D%DataIsSparse,   6*Data3D%NumBodies, ' Array for tracking which dimension indices are sparsely populated', ErrStatTmp, ErrMsgTmp )
+      CALL AllocAry( Data3D%LoadComponents, 6*Data3D%NumBodies, ' Array for tracking which dimension indices contain information',    ErrStatTmp, ErrMsgTmp )
+      Data3D%DataIsSparse = .TRUE.        ! Assume the data is sparse, then change this after checking on the dimensions of interest.
+
+
          ! Now check the values we got back and set the LoadComponents flags for those with data. The
          ! load component direction must be between 1 and 6 (translational: 1,2,3; rotational: 4,5,6).
       Data3D%LoadComponents = .FALSE.
       DO I=1,K
-         IF ( NINT(TmpRealArr(I)) < 1 .OR. NINT(TmpRealArr(K)) > 6 ) THEN
+         IF ( NINT(TmpRealArr(I)) < 1 .OR. NINT(TmpRealArr(K)) > 6*Data3D%NumBodies ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Load components listed in column 4 of '//TRIM(Filename3D)// &
-                  ' must be between 1 and 6.', ErrStat,ErrMsg,RoutineName)
+                  ' must be between 1 and '//TRIM(Num2LStr(6*Data3D%NumBodies))//' for '//TRIM(Num2LStr(Data3D%NumBodies))// &
+                  ' WAMIT bodies.', ErrStat,ErrMsg,RoutineName)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
@@ -4010,7 +4042,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ErrStatTmp  = ErrID_None
       ErrMsg      = ''
       ErrMsgTmp   = ''
-      Data4D%DataIsSparse = .TRUE.        ! Assume the data is sparse, then change this after checking on the dimensions of interest.
       HaveZeroFreq1 = .FALSE.             ! If we find a zero frequency, we will set this to true
       HaveZeroFreq2 = .FALSE.             ! If we find a zero frequency, we will set this to true
 
@@ -4337,29 +4368,42 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Find out which load components are actually in use
       CALL UniqueRealValues( RawData4D(:,5), TmpRealArr, K, ErrStatTmp,ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
 
-         ! If the value of K is more than 6, we have some serious issues
-      IF ( K > 6 ) CALL SetErrStat( ErrID_Fatal, ' More than 6 load components found in column 4 of '// &
-                     TRIM(Filename4D)//'.', ErrStat,ErrMsg,RoutineName)
+         ! Now figure out how many bodies there are. Each body will have up to 6 components.  The component
+         ! column can be up to 6*N where N is the number of bodies in the file.  We will assume that we don't
+         ! skip groups of bodies.
+      Data4D%NumBodies = ceiling((maxval(TmpRealArr)-0.1_ReKi) / 6.0_ReKi)    ! Account for any uncertainty in the number
+      IF ( Data4D%NumBodies < 1 ) CALL SetErrStat( ErrID_Fatal, ' No WAMIT bodies found (no positive load component numbers in column 4) in '// &
+                     TRIM(Filename4D)//'.', ErrStat,ErrMsg,RoutineName )
+      IF ( Data4D%NumBodies > 1 ) CALL SetErrStat( ErrID_Info, ' Found data for '//TRIM(Num2LStr(Data4D%NumBodies))//' WAMIT bodies in '// &
+                     TRIM(Filename4D)//'.', ErrStat,ErrMsg,RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
+         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
          CALL CleanUp
          RETURN
       ENDIF
+
+
+         ! Now that we know how many bodies are in the file, allocate the size of the arrays
+      CALL AllocAry( Data4D%DataIsSparse,   6*Data4D%NumBodies, ' Array for tracking which dimension indices are sparsely populated', ErrStatTmp, ErrMsgTmp )
+      CALL AllocAry( Data4D%LoadComponents, 6*Data4D%NumBodies, ' Array for tracking which dimension indices contain information',    ErrStatTmp, ErrMsgTmp )
+      Data4D%DataIsSparse = .TRUE.        ! Assume the data is sparse, then change this after checking on the dimensions of interest.
+
+     CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+
 
          ! Now check the values we got back and set the LoadComponents flags for those with data. The
          ! load component direction must be between 1 and 6 (translational: 1,2,3; rotational: 4,5,6).
       Data4D%LoadComponents = .FALSE.
       DO I=1,K
-         IF ( NINT(TmpRealArr(I)) < 1 .OR. NINT(TmpRealArr(K)) > 6 ) THEN
+         IF ( NINT(TmpRealArr(I)) < 1 .OR. NINT(TmpRealArr(K)) > 6*Data4D%NumBodies ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Load components listed in column 4 of '//TRIM(Filename4D)// &
-                  ' must be between 1 and 6.', ErrStat,ErrMsg,RoutineName)
+                  ' must be between 1 and '//TRIM(Num2LStr(6*Data4D%NumBodies))//' for '//TRIM(Num2LStr(Data4D%NumBodies))// &
+                  ' WAMIT bodies.', ErrStat,ErrMsg,RoutineName)
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -4549,7 +4593,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL CleanUp
             RETURN
          ENDIF
-         TmpCoord(1) =  TmpCoord(1) + ( WvFreq1LoIdx - 1 )     ! shift to the point in the Data3D%WvFreq1 array by adding the zero frequency step function
+         TmpCoord(1) =  TmpCoord(1) + ( WvFreq1LoIdx - 1 )     ! shift to the point in the Data4D%WvFreq1 array by adding the zero frequency step function
 
             ! Find the location in the WvFreq2 array that this point corresponds to.  We will check only between the
             ! cutoffs that were added to the frequency range.  This is contained within TmpWvFreq2 from reading in.
@@ -4565,7 +4609,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             CALL CleanUp
             RETURN
          ENDIF
-         TmpCoord(2) =  TmpCoord(2) + ( WvFreq2LoIdx - 1 )     ! shift to the point in the Data3D%WvFreq2 array by adding the zero frequency step function
+         TmpCoord(2) =  TmpCoord(2) + ( WvFreq2LoIdx - 1 )     ! shift to the point in the Data4D%WvFreq2 array by adding the zero frequency step function
 
             ! Find the location in the WvDir1 array that this point corresponds to.
          CALL LocateStp( RawData4D(I,3), Data4D%WvDir1,  TmpCoord(3),   Data4D%NumWvDir1 )
@@ -4863,7 +4907,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
 
-   !> This subroutine counts the number of uniqe values in an array and returns a sorted array of them.
+   !> This subroutine counts the number of unique values in an array and returns a sorted array of them.
    !! This is called by the _Read_DataFile3D_ and _Read_DataFile4D_ routines.
    SUBROUTINE UniqueRealValues( DataArrayIn, DataArrayOut, NumUnique, ErrStat, ErrMsg )
       IMPLICIT NONE
@@ -5585,6 +5629,7 @@ SUBROUTINE Copy_InitData4Dto3D( Data4D, Data3D, ErrStat, ErrMsg )
    INTEGER(IntKi)                            :: L              !< Generic counter
    INTEGER(IntKi)                            :: ErrStatTmp     !< Temporary error status for calls
    CHARACTER(2048)                           :: ErrMsgTmp      !< Temporary error message for calls
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'Copy_InitData4Dto3D'
 
 
       ! Initialize the error handling
@@ -5596,20 +5641,20 @@ SUBROUTINE Copy_InitData4Dto3D( Data4D, Data3D, ErrStat, ErrMsg )
 
       ! Make sure we aren't trying to copy 4D sum frequency data in to a 3D type that only holds information for difference frequencies
    IF ( Data4D%IsSumForce ) THEN
-      CALL SetErrStat( ErrID_Fatal, ' Attempted to copy 4D sum-frequency data into a 3D difference frequency type.', ErrStat, ErrMsg,'Copy_InitData4Dto3D')
+      CALL SetErrStat( ErrID_Fatal, ' Attempted to copy 4D sum-frequency data into a 3D difference frequency type.', ErrStat, ErrMsg,RoutineName)
       RETURN
    ENDIF
 
       ! Make sure the dimensions work
    IF ( Data4D%NumWvFreq1 /= Data4D%NumWvFreq2 ) THEN
-      CALL SetErrStat( ErrID_Fatal, ' Attempted to copy 4D data to 3D data when NumFreq1 /= NumFreq2.', ErrStat, ErrMsg,'Copy_InitData4Dto3D')
+      CALL SetErrStat( ErrID_Fatal, ' Attempted to copy 4D data to 3D data when NumFreq1 /= NumFreq2.', ErrStat, ErrMsg,RoutineName)
       RETURN
    ENDIF
 
       ! Make sure that the frequencies actually match each other
    DO I=1,Data4D%NumWvFreq1
       IF ( .NOT. EqualRealNos(Data4D%WvFreq1(I), Data4D%WvFreq2(I)) ) THEN
-         CALL SetErrStat( ErrID_Fatal, ' Attempted to copy 4D data to 3D data when wave frequencies are not the same.', ErrStat, ErrMsg,'Copy_InitData4Dto3D')
+         CALL SetErrStat( ErrID_Fatal, ' Attempted to copy 4D data to 3D data when wave frequencies are not the same.', ErrStat, ErrMsg,RoutineName)
          RETURN
       ENDIF
    ENDDO
@@ -5623,7 +5668,7 @@ SUBROUTINE Copy_InitData4Dto3D( Data4D, Data3D, ErrStat, ErrMsg )
    IF (ALLOCATED(Data3D%WvDir1))    ErrStatTmp = ErrID_Fatal
    IF (ALLOCATED(Data3D%WvDir2))    ErrStatTmp = ErrID_Fatal
    IF ( ErrStatTmp >= ErrID_Fatal ) THEN
-      CALL SetErrStat( ErrID_Fatal, ' Attempted to copy 4D data into a populated 3D dataset.', ErrStat, ErrMsg,'Copy_InitData4Dto3D')
+      CALL SetErrStat( ErrID_Fatal, ' Attempted to copy 4D data into a populated 3D dataset.', ErrStat, ErrMsg,RoutineName)
    ENDIF
 
 
@@ -5632,22 +5677,26 @@ SUBROUTINE Copy_InitData4Dto3D( Data4D, Data3D, ErrStat, ErrMsg )
    Data3D%NumWvFreq1       =  Data4D%NumWvFreq1
    Data3D%NumWvDir1        =  Data4D%NumWvDir1
    Data3D%NumWvDir2        =  Data4D%NumWvDir2
-   Data3D%LoadComponents   =  Data4D%LoadComponents
+   Data3D%NumBodies        =  Data4D%NumBodies
 
 
       ! Now allocate the storage arrays
    ALLOCATE( Data3D%DataSet( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%DataSet to store '// &
-                           'the 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,'Copy_InitData4Dto3D')
+                           'the 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
    ALLOCATE( Data3D%DataMask( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%DataMask to store '// &
-                           'the information on the 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,'Copy_InitData4Dto3D')
+                           'the information on the 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
    CALL AllocAry( Data3D%WvFreq1, Data3D%NumWvFreq1, 'Data3D WvFreq array', ErrStatTmp, ErrMsgTmp )
-   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Copy_InitData4Dto3D' )
+   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( Data3D%WvDir1, Data3D%NumWvDir1, 'Data3D WvDir1 array', ErrStatTmp, ErrMsgTmp )
-   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Copy_InitData4Dto3D' )
+   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry( Data3D%WvDir2, Data3D%NumWvDir2, 'Data3D WvDir2 array', ErrStatTmp, ErrMsgTmp )
-   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Copy_InitData4Dto3D' )
+   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( Data3D%LoadComponents, 6*Data3D%NumBodies, 'Data3D LoadComponents array', ErrStatTmp, ErrMsgTmp )
+   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry( Data3D%DataIsSparse, 6*Data3D%NumBodies, 'Data3D DataIsSparse array', ErrStatTmp, ErrMsgTmp )
+   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
 
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL Destroy_InitData3D( Data3D )
@@ -5659,6 +5708,7 @@ SUBROUTINE Copy_InitData4Dto3D( Data4D, Data3D, ErrStat, ErrMsg )
    Data3D%WvFreq1    = Data4D%WvFreq1
    Data3D%WvDir1     = Data4D%WvDir1
    Data3D%WvDir2     = Data4D%WvDir2
+   Data3D%LoadComponents   =  Data4D%LoadComponents
 
    DO I=1,Data3D%NumWvFreq1
       Data3D%DataSet(I,:,:,:)    = Data4D%DataSet(I,I,:,:,:)
