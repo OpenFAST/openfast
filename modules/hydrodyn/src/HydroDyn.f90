@@ -1468,68 +1468,72 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
       
       u%PRPMesh%RemapFlag  = .TRUE.
 
-   ! Create the input mesh associated with kinematics of the various WAMIT bodies      
-      CALL MeshCreate( BlankMesh        = u%WAMITMesh       &
-                     ,IOS               = COMPONENT_INPUT   &
-                     ,Nnodes            = p%NBody           &
-                     ,ErrStat           = ErrStat2          &
-                     ,ErrMess           = ErrMsg2           &
-                     ,TranslationDisp   = .TRUE.            &
-                     ,Orientation       = .TRUE.            &
-                     ,TranslationVel    = .TRUE.            &
-                     ,RotationVel       = .TRUE.            &
-                     ,TranslationAcc    = .TRUE.            &
-                     ,RotationAcc       = .TRUE.            ) 
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      do iBody = 1, p%NBody     
-         theta = (/ 0.0_R8Ki, 0.0_R8Ki, InitLocal%PtfmRefztRot(iBody)/)
-         orientation = EulerConstruct(theta)        
-         
-         CALL MeshPositionNode (u%WAMITMesh                                                                              &
-                              , iBody                                                                                    &
-                              , (/InitLocal%PtfmRefxt(iBody), InitLocal%PtfmRefyt(iBody), InitLocal%PtfmRefzt(iBody)/)   &  
-                              , ErrStat2                                                                                 &
-                              , ErrMsg2                                                                                  &
-                              , orientation )
+      ! Create the input mesh associated with kinematics of the various WAMIT bodies
+      IF (p%PotMod >= 1) THEN
+         CALL MeshCreate( BlankMesh        = u%WAMITMesh       &
+                        ,IOS               = COMPONENT_INPUT   &
+                        ,Nnodes            = p%NBody           &
+                        ,ErrStat           = ErrStat2          &
+                        ,ErrMess           = ErrMsg2           &
+                        ,TranslationDisp   = .TRUE.            &
+                        ,Orientation       = .TRUE.            &
+                        ,TranslationVel    = .TRUE.            &
+                        ,RotationVel       = .TRUE.            &
+                        ,TranslationAcc    = .TRUE.            &
+                        ,RotationAcc       = .TRUE.            )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-         CALL MeshConstructElement (  u%WAMITMesh        &
-                                    , ELEMENT_POINT      &                         
-                                    , ErrStat2           &
-                                    , ErrMsg2            &
-                                    , iBody              )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      end do
-         
-      CALL MeshCommit ( u%WAMITMesh           &
-                        , ErrStat2            &
-                        , ErrMsg2             )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp()
-         RETURN
-      END IF
-      
+         do iBody = 1, p%NBody
+            theta = (/ 0.0_R8Ki, 0.0_R8Ki, InitLocal%PtfmRefztRot(iBody)/)
+            orientation = EulerConstruct(theta)
 
-   ! Output mesh for loads at each WAMIT body          
-      CALL MeshCopy (   SrcMesh    = u%WAMITMesh            &
-                     ,DestMesh     = y%WAMITMesh            &
-                     ,CtrlCode     = MESH_SIBLING           &
-                     ,IOS          = COMPONENT_OUTPUT       &
-                     ,ErrStat      = ErrStat2               &
-                     ,ErrMess      = ErrMsg2                &
-                     ,Force        = .TRUE.                 &
-                     ,Moment       = .TRUE.                 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:y%WAMITMesh')
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp()
-         RETURN
-      END IF      
-      u%WAMITMesh%RemapFlag  = .TRUE.
-      y%WAMITMesh%RemapFlag  = .TRUE.
-      
+            CALL MeshPositionNode (u%WAMITMesh                                                                              &
+                                 , iBody                                                                                    &
+                                 , (/InitLocal%PtfmRefxt(iBody), InitLocal%PtfmRefyt(iBody), InitLocal%PtfmRefzt(iBody)/)   &
+                                 , ErrStat2                                                                                 &
+                                 , ErrMsg2                                                                                  &
+                                 , orientation )
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+            CALL MeshConstructElement (  u%WAMITMesh        &
+                                       , ELEMENT_POINT      &
+                                       , ErrStat2           &
+                                       , ErrMsg2            &
+                                       , iBody              )
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         end do
+
+         CALL MeshCommit ( u%WAMITMesh           &
+                           , ErrStat2            &
+                           , ErrMsg2             )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+
+
+      ! Output mesh for loads at each WAMIT body
+         CALL MeshCopy (   SrcMesh    = u%WAMITMesh            &
+                        ,DestMesh     = y%WAMITMesh            &
+                        ,CtrlCode     = MESH_SIBLING           &
+                        ,IOS          = COMPONENT_OUTPUT       &
+                        ,ErrStat      = ErrStat2               &
+                        ,ErrMess      = ErrMsg2                &
+                        ,Force        = .TRUE.                 &
+                        ,Moment       = .TRUE.                 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'HydroDyn_Init:y%WAMITMesh')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
+         u%WAMITMesh%RemapFlag  = .TRUE.
+         y%WAMITMesh%RemapFlag  = .TRUE.
+      ENDIF    ! PotMod > 1
+
+
    ! Create helper mesh to map all Hydrodynamics loads to the platform reference point to (0,0,0)
       CALL MeshCreate (  BlankMesh      = m%AllHdroOrigin   &
                      ,IOS               = COMPONENT_OUTPUT  &
