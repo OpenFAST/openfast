@@ -224,28 +224,28 @@ LOGICAL FUNCTION ElementsConnected(p, ie1, ie2, iWhichNode_e1, iWhichNode_e2)
 END FUNCTION ElementsConnected
 
 !> Loop through a list of elements and returns a list of unique joints
-TYPE(IList) FUNCTION JointsList(p, Elements)
+TYPE(IList) FUNCTION NodesList(p, Elements)
    use IntegerList, only: init_list, append, find, sort
    use IntegerList, only: print_list
    TYPE(SD_ParameterType),       INTENT(IN)  :: p
    integer(IntKi), dimension(:), INTENT(IN)  :: Elements
    integer(IntKi)  :: ie, ei, j1, j2
    INTEGER(IntKi)  :: ErrStat2
-   CHARACTER(1024) :: ErrMsg2
+   CHARACTER(ErrMsgLen) :: ErrMsg2
 
-   call init_list(JointsList, 0, 0, ErrStat2, ErrMsg2)
+   call init_list(NodesList, 0, 0, ErrStat2, ErrMsg2)
    do ie = 1, size(Elements)
       ei = Elements(ie)  ! Element index
       j1 = p%Elems(ei,2) ! Joint 1 
       j2 = p%Elems(ei,3) ! Joint 2
       ! Append joints indices if not in list already
-      if (find(JointsList, j1, ErrStat2, ErrMsg2)<=0) call append(JointsList, j1, ErrStat2, ErrMsg2)
-      if (find(JointsList, j2, ErrStat2, ErrMsg2)<=0) call append(JointsList, j2, ErrStat2, ErrMsg2)
+      if (find(NodesList, j1, ErrStat2, ErrMsg2)<=0) call append(NodesList, j1, ErrStat2, ErrMsg2)
+      if (find(NodesList, j2, ErrStat2, ErrMsg2)<=0) call append(NodesList, j2, ErrStat2, ErrMsg2)
       ! Sorting required by find function
-      call sort(JointsList, ErrStat2, ErrMsg2)
+      call sort(NodesList, ErrStat2, ErrMsg2)
    enddo
-   call print_list(JointsList, 'Joint list')
-END FUNCTION JointsList
+   call print_list(NodesList, 'Joint list')
+END FUNCTION NodesList
 
 
 !----------------------------------------------------------------------------
@@ -263,9 +263,9 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
    ! local variable
    INTEGER                       :: I, n, iMem, iNode, JointID   
    INTEGER(IntKi)                :: mType !< Member Type
-   CHARACTER(1024)               :: sType !< String for element type
+   CHARACTER(1255)               :: sType !< String for element type
    INTEGER(IntKi)                :: ErrStat2
-   CHARACTER(1024)               :: ErrMsg2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -386,7 +386,7 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    LOGICAL                       :: found, CreateNewProp
    INTEGER(IntKi)                :: eType !< Element Type
    INTEGER(IntKi)                :: ErrStat2
-   CHARACTER(1024)               :: ErrMsg2
+   CHARACTER(ErrMsgLen)          :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
    
@@ -708,7 +708,7 @@ SUBROUTINE SetElementProperties(Init, p, ErrStat, ErrMsg)
    INTEGER(IntKi)           :: eType !< Member type
    REAL(ReKi)               :: Point1(3), Point2(3) ! (x,y,z) positions of two nodes making up an element
    INTEGER(IntKi)           :: ErrStat2
-   CHARACTER(1024)          :: ErrMsg2
+   CHARACTER(ErrMsgLen)     :: ErrMsg2
    ErrMsg  = ""
    ErrStat = ErrID_None
    
@@ -834,7 +834,7 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    integer(IntKi) :: iOff ! Offset, 0 or 6, depending if node 1 or node 2
    integer(IntKi), dimension(6) :: DOFNode_Old
    integer(IntKi)           :: ErrStat2
-   character(1024)          :: ErrMsg2
+   character(ErrMsgLen)     :: ErrMsg2
    ErrMsg  = ""
    ErrStat = ErrID_None
 
@@ -959,7 +959,7 @@ SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
    REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
    INTEGER, DIMENSION(2)    :: nn                        ! node number in element 
    INTEGER(IntKi)           :: ErrStat2
-   CHARACTER(1024)          :: ErrMsg2
+   CHARACTER(ErrMsgLen)     :: ErrMsg2
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    integer(IntKi), dimension(3)  :: IDOF3!  3  DOF indices in global unconstrained system
    ErrMsg  = ""
@@ -1047,23 +1047,27 @@ END SUBROUTINE AssembleKM
 SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
    TYPE(SD_ParameterType),       INTENT(INOUT) :: p
-   TYPE(SD_MiscVarType),         INTENT(INOUT) :: m
+   TYPE(SD_MiscVarType),target,  INTENT(INOUT) :: m
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
    INTEGER(IntKi)                            :: ErrStat2
-   CHARACTER(1024)                           :: ErrMsg2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
+   ! Varaibles for rigid assembly
    type(IList), dimension(:), allocatable    :: RA       !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
    integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    integer(IntKi), dimension(:), allocatable :: njRA     !< Number of joints per RA
-   integer(IntKi) :: nDOF
+
+
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    call RigidLinkAssemblies(Init, p, RA, RAm1, njRA, ErrStat2, ErrMsg2); if(Failed()) return
 
-   nDOF = nDOF_ConstraintReduced()
-   print*,'nDOF constraint elim', nDOF
+
+   call BuildTMatrix(); if (Failed()) return
+
+
    deallocate(RAm1)
    deallocate(RA)
    deallocate(njRA)
@@ -1077,13 +1081,124 @@ CONTAINS
    
    !SUBROUTINE Fatal(ErrMsg_in)
    !   character(len=*), intent(in) :: ErrMsg_in
-   !   CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'AssembleKM');
-   !   CALL CleanUp_AssembleKM()
+   !   CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'DirectElimination');
+   !   CALL CleanUp_DirectElimination()
    !END SUBROUTINE Fatal
 
-   !SUBROUTINE CleanUp_AssembleKM()
+   !SUBROUTINE CleanUp_DirectElimination()
       !pass
-   !END SUBROUTINE CleanUp_AssembleKM
+   !END SUBROUTINE CleanUp_DirectElimination
+
+   SUBROUTINE BuildTMatrix()
+      ! Variables for Building T
+      use IntegerList, only: init_list, find, pop, destroy_list, len
+      use IntegerList, only: print_list
+      real(ReKi), dimension(:,:), allocatable   :: T
+      real(ReKi), dimension(6,6)                :: I6       !< Identity matrix of size 6
+      integer(IntKi), dimension(:), allocatable :: Elements !< List of elements
+      real(ReKi), dimension(:,:), allocatable   :: Tc
+      integer(IntKi), dimension(:), allocatable :: INodesID !< List of unique nodes involved in Elements
+      integer(IntKi), dimension(:), allocatable :: IDOFOld !< 
+      integer(IntKi), dimension(:), pointer :: IDOFNew !< 
+      integer(IntKi) :: iPrev
+      type(IList) :: IRA
+      integer(IntKi) :: nDOF
+      integer(IntKi) :: aID, ia ! assembly ID, and index in IRA
+      integer(IntKi) :: iNode
+      integer(IntKi) :: I
+      integer(IntKi) :: nc !< Number of DOF after constraints applied
+      integer(IntKi) :: nj
+
+      ! --- Misc inits
+      nullify(IDOFNew)
+      I6(1:6,1:6)=0; do i = 1,6 ; I6(i,i)=1_ReKi; enddo ! I6 =  eye(6)
+
+
+      allocate(m%NodesDOFtilde(1:Init%NNode), stat=ErrStat2) ! Indices of DOF for each joint, in reduced system
+
+
+      nDOF = nDOF_ConstraintReduced()
+      print*,'nDOF constraint elim', nDOF
+      allocate(T(1:Init%TDOF, 1:nDOF))
+      T=0
+      iPrev =0 
+      call init_list(IRA, size(RA), 0, ErrStat2, ErrMsg2);
+      IRA%List(1:size(RA)) = (/(ia , ia = 1,size(RA))/)
+      call print_list(IRA, 'List of RA indices')
+      print*,'------------------ BUILD T ----------------------------------'
+
+      ! --- For each node:
+      !  - create list of indices I      in the assembled vector of DOF
+      !  - create list of indices Itilde in the reduced vector of DOF
+      do iNode = 1, Init%NNode
+         nc=0
+         if (allocated(Tc)) deallocate(Tc)
+         if (allocated(IDOFOld)) deallocate(IDOFOld)
+
+         if    (Init%Nodes(iNode,iJointType) == idJointPin ) then
+            print*,'TODO T Build'
+            STOP
+
+         elseif(Init%Nodes(iNode,iJointType) == idJointUniversal ) then
+            print*,'TODO T Build'
+            STOP
+
+         elseif(Init%Nodes(iNode,iJointType) == idJointBall ) then
+            print*,'TODO T Build'
+            STOP
+
+         elseif(Init%Nodes(iNode,iJointType) == idJointCantilever ) then
+            if ( NodeHasRigidElem(iNode, Init, p)) then
+               ! This joint is involved in a rigid link assembly, we skip it (accounted for above)
+               aID = RAm1(iNode)
+               ia  = find(IRA, aID, ErrStat2, ErrMsg2) 
+               print*,'Node',iNode, 'is involved in RA', aID, ia
+               if ( ia <= 0) then
+                  ! This rigid assembly has already been processed, pass to next node
+                  cycle
+               else
+                  call RAElimination( RA(aID)%List, Tc, INodesID, Init, p, ErrStat2, ErrMsg2)
+                  aID = pop(IRA, ia, ErrStat2, ErrMsg2) ! this assembly has been processed 
+                  nj = size(INodesID)
+                  allocate(IDOFOld(1:6*nj))
+                  do I=1, nj
+                     IDOFOld( (I-1)*6+1 : I*6 ) = m%NodesDOF(INodesID(I))%List(1:6)
+                  enddo
+               endif
+            else
+               ! That's a regular Cantilever joint
+               allocate(Tc(1:6,1:6))
+               allocate(IDOFOld(1:6))
+               Tc=I6
+               IDOFOld = m%NodesDOF(iNode)%List(1:6)
+            endif
+         else
+            ErrMsg2='Wrong joint type'; ErrStat2=ErrID_Fatal
+         endif
+         if (allocated(Tc)) then
+            nc=size(Tc,2) 
+            call init_list(m%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
+            m%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
+            IDOFNew => m%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
+            !print*,'N',iNode,'I ',IDOFOld
+            !print*,'N',iNode,'It',IDOFNew
+            T(IDOFOld, IDOFNew) = Tc
+            iPrev = iPrev + nc
+         else
+            print*,'Error, Tc not allocated, TODO'
+            STOP
+         endif
+      enddo
+      deallocate(T)
+      nullify(IDOFNew)
+      ! --- Safety checks
+      if (len(IRA)>0) then 
+         ErrMsg2='Not all rigid assemblies were processed'; ErrStat2=ErrID_Fatal
+      endif
+
+      call destroy_list(IRA, ErrStat2, ErrMsg2)
+
+   END SUBROUTINE BuildTMatrix
 
    !> Returns number of DOF after constraint reduction (via the matrix T)
    INTEGER(IntKi) FUNCTION nDOF_ConstraintReduced()
@@ -1176,6 +1291,128 @@ LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p)
 END FUNCTION NodeHasRigidElem
 
 !------------------------------------------------------------------------------------------------------
+!> Rigid transformation matrix between DOFs of node j and k where node j is the leader node.
+SUBROUTINE GetRigidTransformation(Pj, Pk, TRigid, ErrStat, ErrMsg)
+   REAL(ReKi),       INTENT(IN   )  :: Pj(3)         ! (x,y,z) positions of leader node
+   REAL(ReKi),       INTENT(IN   )  :: Pk(3)         ! (x,y,z) positions of follower node
+   REAL(ReKi),       INTENT(  OUT)  :: TRigid(6,6)   ! Transformation matrix such that xk = T.xj
+   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat       ! Error status of the operation
+   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   ! Local
+   !REAL(ReKi) :: L             ! length of element
+   !REAL(ReKi) :: DirCos(3, 3)  ! direction cosine matrix
+   !REAL(ReKi) :: R0(3,3) 
+   integer(IntKi) :: I
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! --- Formulation using Delta of Global coordinates
+   Trigid=0; do I = 1,6; Trigid(I,I) = 1; enddo
+   Trigid ( 1, 5 ) =  (Pk(3) - Pj(3))
+   Trigid ( 1, 6 ) = -(Pk(2) - Pj(2))
+   Trigid ( 2, 4 ) = -(Pk(3) - Pj(3))
+   Trigid ( 2, 6 ) =  (Pk(1) - Pj(1))
+   Trigid ( 3, 4 ) =  (Pk(2) - Pj(2))
+   Trigid ( 3, 5 ) = -(Pk(1) - Pj(1))
+
+   ! --- Formulation bty transforming the "local" matrix into a global one
+   !call GetDirCos(Pj, Pk, R0, L, ErrStat, ErrMsg)
+   !TRigid = 0 ; do I = 1,6; TRigid(I,I) = 1; enddo
+   !TRigid (1, 5) =  L
+   !TRigid (2, 4) = -L
+   !TRigid(1:3,4:6) =  matmul( R0 , matmul(TRigid(1:3,4:6), transpose(R0)) )
+
+   ! --- Formulation using L and Rotation matrix
+   !TRigid = 0; do I = 1,6; TRigid(I,I) = 1; enddo
+   !TRigid ( 1, 5 ) =  L*R0(3,3)
+   !TRigid ( 1, 6 ) = -L*R0(2,3)
+   !TRigid ( 2, 4 ) = -L*R0(3,3)
+   !TRigid ( 2, 6 ) =  L*R0(1,3)
+   !TRigid ( 3, 4 ) =  L*R0(2,3)
+   !TRigid ( 3, 5 ) = -L*R0(1,3)
+END SUBROUTINE GetRigidTransformation
+
+!------------------------------------------------------------------------------------------------------
+!> Returns constrains matrix for a rigid assembly (RA) formed by a set of elements. 
+!! 
+SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
+   use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
+   integer(IntKi), dimension(:), INTENT(IN   ) :: Elements !< List of elements
+   real(ReKi), dimension(:,:), allocatable     :: Tc
+   integer(IntKi), dimension(:), allocatable   :: INodesID !< List of unique nodes involved in Elements
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat  !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   type(IList)          :: LNodesID     !< List of nodes id involved in element
+   type(IList)          :: INodesInterf !< List of indices for Nodes involved in interface
+   integer(IntKi)       :: NodeID   !< NodeID
+   integer(IntKi)       :: iTmp     !< Temporary index
+   integer(IntKi)       :: iNodeID  !< Loop index on node ID list
+   integer(IntKi)       :: iMainNode !< Index of main node selected for rigid assembly within INodesID list
+   integer(IntKi)       :: nNodes  !< Number of Nodes involved in RA
+   integer(IntKi)       :: iFound  !< Loop index on node ID list
+   integer(IntKi)       :: i       !< Loop index 
+   real(ReKi)           :: TRigid(6,6) ! Transformation matrix such that xi = T.x1
+   real(ReKi)           :: P1(3), Pi(3) ! Nodal points
+   INTEGER(IntKi)       :: ErrStat2
+   CHARACTER(ErrMsgLen) :: ErrMsg2
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! --- List of nodes stored first in LINodes than moved to INodes
+   LNodesID = NodesList(p, Elements)
+   call move_alloc(LNodesID%List, INodesID)
+   call destroy_list(LNodesID, ErrStat2, ErrMsg2)
+   print*,'Nodes involved in assembly (befr) ',INodesID
+
+   !--- Look for potential interface node
+   call init_list(INodesInterf, 0, 0, ErrStat2, ErrMsg2);
+   do iNodeID = 1, size(INodesID)
+      NodeID = INodesID(iNodeID)
+      iFound =  FINDLOCI( Init%Interf(:,1), NodeID)
+      if (iFound>0) then
+         call append(INodesInterf, iNodeID, ErrStat2, ErrMsg2)
+         ! This node is an interface node
+         print*,'Node',NodeID, 'is an interface node, selecting it for the rigid assembly'
+      endif
+   enddo
+
+   ! --- Decide which node will be the main node of the rigid assembly
+   if      (len(INodesInterf)==0) then
+      iMainNode = 1 ! By default we select the first node
+   else if (len(INodesInterf)==1) then
+      iMainNode = pop(INodesInterf, ErrStat2, ErrMsg2)
+   else
+      ErrStat=ErrID_Fatal
+      ErrMsg='Cannot have several interface nodes linked within a same rigid assembly'
+      return
+   endif
+   call destroy_list(INodesInterf, ErrStat2, ErrMsg2)
+
+   ! --- Order list of joints with main node first (swapping iMainNode with INodes(1))
+   iTmp                = INodesID(1)
+   INodesID(1)         = iMainNode
+   INodesID(iMainNode) = iTmp
+   print*,'Nodes involved in assembly (after)',INodesID
+
+   ! --- Building Transformation matrix
+   nNodes =size(INodesID)
+   allocate(Tc(6*nNodes,6))
+   Tc(:,:)=0
+   ! I6 for first node
+   do i = 1,6 ; Tc(i,i)=1_ReKi; enddo ! I6 =  eye(6)
+   ! Rigid transformation matrix for the other nodes 
+   P1 = Init%Nodes(INodesID(1), 2:4) ! reference node coordinates
+   do i = 2, nNodes
+      Pi = Init%Nodes(INodesID(i), 2:4) ! follower node coordinates
+      call GetRigidTransformation(P1, Pi, TRigid, ErrStat2, ErrMsg2)
+      Tc( ((i-1)*6)+1:6*i, 1:6) = TRigid(1:6,1:6)
+   enddo
+END SUBROUTINE RAElimination
+
+!------------------------------------------------------------------------------------------------------
 !> Setup a list of rigid link assemblies (RA)
 SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, njRA, ErrStat, ErrMsg)
    use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
@@ -1193,8 +1430,8 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, njRA, ErrStat, ErrMsg)
    integer(IntKi)                            :: ie  !< Index on elements
    integer(IntKi)                            :: ia  !< Index on assemblies
    integer(IntKi)                            :: e0  !< Index of an element
-   INTEGER(IntKi)                :: ErrStat2
-   CHARACTER(1024)               :: ErrMsg2
+   INTEGER(IntKi)       :: ErrStat2
+   CHARACTER(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
    allocate(RAm1(1:Init%NElem))
@@ -1238,8 +1475,8 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, njRA, ErrStat, ErrMsg)
    ! --- Counting unique joints involved in Rigid assembly
    allocate(njRA(1:nRA))
    do ia = 1, nRA
-      ! Getting list of joints involved in RA(ia)
-      Er = JointsList(p, RA(ia)%List)
+      ! Getting list of nodes involved in RA(ia)
+      Er = NodesList(p, RA(ia)%List)
       njRA(ia) = len(Er)
       call destroy_list(Er, ErrStat2, ErrMsg2)
    enddo
@@ -1285,17 +1522,18 @@ END SUBROUTINE RigidLinkAssemblies
 
 !------------------------------------------------------------------------------------------------------
 !> Computes directional cosine matrix DirCos
-!! rrd: This should be from local to global 
+!! Transforms from element to global coordinates:  xg = DC.xe,  Kg = DC.Ke.DC^t
+!! Assumes that the element main direction is along ze.
+!!
 !! bjj: note that this is the transpose of what is normally considered the Direction Cosine Matrix  
-!!      in the FAST framework. It seems to be used consistantly in the code (i.e., the transpose 
-!!      of this matrix is used later).
+!!      in the FAST framework.
 SUBROUTINE GetDirCos(P1, P2, DirCos, L, ErrStat, ErrMsg)
-   REAL(ReKi) ,      INTENT(IN   )  :: P1(3), P2(3)            ! (x,y,z) positions of two nodes making up an element
-   REAL(ReKi) ,      INTENT(  OUT)  :: DirCos(3, 3)            ! calculated direction cosine matrix
-   REAL(ReKi) ,      INTENT(  OUT)  :: L                       ! length of element
-   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat                 ! Error status of the operation
-   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg                  ! Error message if ErrStat /= ErrID_None
-   REAL(ReKi)                       ::  Dx,Dy,Dz, Dxy          ! distances between nodes
+   REAL(ReKi) ,      INTENT(IN   )  :: P1(3), P2(3)      ! (x,y,z) global positions of two nodes making up an element
+   REAL(ReKi) ,      INTENT(  OUT)  :: DirCos(3, 3)      ! calculated direction cosine matrix
+   REAL(ReKi) ,      INTENT(  OUT)  :: L                 ! length of element
+   INTEGER(IntKi),   INTENT(  OUT)  :: ErrStat           ! Error status of the operation
+   CHARACTER(*),     INTENT(  OUT)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   REAL(ReKi)                       :: Dx, Dy, Dz, Dxy   ! distances between nodes
    ErrMsg  = ""
    ErrStat = ErrID_None
    

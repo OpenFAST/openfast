@@ -153,6 +153,7 @@ typedef	^	          ^             ReKi                     SDWrOutput {:} -  -  
 typedef	^	          ^             DbKi                     LastOutTime -  -  -  "The time of the most recent stored output data"	"s"
 typedef	^	          ^             IntKi                    Decimat     -  -  -  "Current output decimation counter"	"-"
 typedef	^	          ^             IList                    NodesDOF     {:}  -  -  "DOF indices of each nodes in unconstrained assembled system "	"-"
+typedef	^	          ^             IList                    NodesDOFtilde {:}  -  -  "DOF indices of each nodes in unconstrained assembled system "	"-"
 typedef	^	          ^             IntKi                    ElemsDOF  {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system "	"-"
 
 

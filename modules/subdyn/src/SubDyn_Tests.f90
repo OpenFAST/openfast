@@ -12,6 +12,10 @@ module SubDyn_Tests
          test_equal_i1, &
          test_equal_i0
    end interface
+    interface test_almost_equal; module procedure &
+          test_almost_equal_1, &
+          test_almost_equal_2
+    end interface
 contains
 
    ! --------------------------------------------------------------------------------
@@ -109,13 +113,74 @@ contains
         endif
     end subroutine
 
+    subroutine  test_almost_equal_1(Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
+        ! Arguments
+        character(len=*), intent(in) :: Var
+        real(ReKi), dimension(:), intent(in) :: VecRef         !< 
+        real(ReKi), dimension(:), intent(in) :: VecTry         !< 
+        real(ReKi), intent(in) :: MINNORM
+        logical, intent(in) :: bStop
+        logical, intent(in) :: bPrint
+        logical, intent(out),optional :: bPassed
+        ! Variables
+        character(len=255) :: InfoAbs
+        integer :: i,cpt
+        real(ReKi) :: delta
+        real(ReKi) :: delta_cum
+        ! 
+        cpt=0
+        delta_cum=0.0_ReKi
+        do i=1,size(VecRef,1)
+            delta=abs(VecRef(i)-VecTry(i))
+            delta_cum=delta_cum+delta
+            if(delta>MINNORM) then
+                cpt=cpt+1
+            endif
+        enddo
+        delta_cum=delta_cum/size(VecRef)
+
+        if(cpt>0) then
+            write(InfoAbs,'(A,ES8.1E2,A,ES8.1E2,A,I0)') trim(Var)//' tol: ',MINNORM,', mean: ',delta_cum,' - Failed:',cpt
+            call test_fail(InfoAbs,bPrint,bStop)
+        else
+            write(InfoAbs,'(A,ES8.1E2,A,ES8.1E2)') trim(Var)//' tol: ',MINNORM,', mean: ',delta_cum
+            call test_success(InfoAbs,bPrint)
+        endif
+        if(present(bPassed)) then
+            bPassed=(cpt==0)
+        endif
+    end subroutine
+    subroutine  test_almost_equal_2(Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
+        ! Arguments
+        character(len=*), intent(in) :: Var
+        real(ReKi), dimension(:,:), intent(in) :: VecRef         !< 
+        real(ReKi), dimension(:,:), intent(in) :: VecTry         !< 
+        real(ReKi), intent(in) :: MINNORM
+        logical, intent(in) :: bStop
+        logical, intent(in) :: bPrint
+        logical, intent(out),optional :: bPassed
+        ! Variables
+        real(ReKi), dimension(:),allocatable :: VecRef2    !< 
+        real(ReKi), dimension(:),allocatable :: VecTry2   !<
+        integer :: p, i,j,n1,n2,nCPs
+        ! 
+        n1 = size(VecRef,1); n2 = size(VecRef,2); nCPs=n1*n2
+        allocate ( VecRef2 (n1*n2)  ) ; allocate ( VecTry2 (n1*n2)  ) 
+        p=0
+        do j=1,n2; do i=1,n1
+            p=p+1
+            VecRef2(p)=VecRef(i,j)
+            VecTry2(p)=VecTry(i,j)
+        enddo; enddo;
+        call  test_almost_equal(Var,VecRef2,VecTry2,MINNORM,bStop,bPrint,bPassed)
+    end subroutine
 
 
 
-    ! --------------------------------------------------------------------------------}
-    ! --- Specific SubDyn tests 
-    ! --------------------------------------------------------------------------------{
-   subroutine Test_CB_Results(MBBt, MBMt, KBBt, OmegaM, DOFTP, DOFM, ErrStat, ErrMsg,Init,p)
+   ! --------------------------------------------------------------------------------}
+   ! --- Specific SubDyn tests 
+   ! --------------------------------------------------------------------------------{
+   subroutine Test_CB_Results(MBBt, MBMt, KBBt, OmegaM, DOFTP, DOFM, ErrStat, ErrMsg, Init, p)
       TYPE(SD_InitType),      INTENT(  in)                :: Init         ! Input data for initialization routine
       TYPE(SD_ParameterType), INTENT(inout)                :: p           ! Parameters
       INTEGER(IntKi)                                     :: DOFTP, DOFM
@@ -162,7 +227,37 @@ contains
       IF ( ErrStat /= 0 ) RETURN  
    end subroutine Test_CB_Results
 
+   !> Transformation matrices tests
+   subroutine Test_Transformations(ErrStat,ErrMsg)
+      integer(IntKi)      , intent(out) :: ErrStat
+      character(ErrMsgLen), intent(out) :: ErrMsg
 
+      real(ReKi), dimension(3) :: P1, P2
+      real(ReKi), dimension(3,3) :: DirCos, A, R0, Ref
+      real(ReKi), dimension(6,6) :: T, Tref
+      real(ReKi) :: L
+      integer(IntKi) :: I
+
+      ! --- DirCos
+      P1=(/0,0,0/)
+      P2=(/2,0,0/)
+      call GetDirCos(P1, P2, DirCos, L, ErrStat, ErrMsg)
+      Ref = reshape( (/0_ReKi,-1_ReKi,0_ReKi, 0_ReKi, 0_ReKi, -1_ReKi, 1_ReKi, 0_ReKi, 0_ReKi/) , (/3,3/))
+      call  test_almost_equal('DirCos',Ref,DirCos,1e-8,.true.,.true.)
+
+      ! --- Rigid Transo
+      P1=(/1,2,-1/)
+      P2=(/2,5,5/)
+      call GetRigidTransformation(P1, P2, T, ErrStat, ErrMsg)
+      Tref = 0; do I=1,6; Tref(I,I) =1_ReKi; enddo
+      Tref(1,5) = 6._ReKi; Tref(1,6) =-3._ReKi;
+      Tref(2,4) =-6._ReKi; Tref(2,6) = 1._ReKi;
+      Tref(3,4) = 3._ReKi; Tref(3,5) =-1._ReKi;
+      call  test_almost_equal('TRigid',Tref,T,1e-8,.true.,.true.)
+      
+   end subroutine  Test_Transformations
+
+   !> Series of tests for integer lists
    subroutine Test_lists(ErrStat,ErrMsg)
       integer(IntKi)      , intent(out) :: ErrStat
       character(ErrMsgLen), intent(out) :: ErrMsg
@@ -221,6 +316,7 @@ contains
       ErrMsg  = ""
 
       call Test_lists(ErrStat2, ErrMsg2)
+      call Test_Transformations(ErrStat2, ErrMsg2)
    end subroutine SD_Tests
 
 
