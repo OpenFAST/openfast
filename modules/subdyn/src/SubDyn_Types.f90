@@ -199,6 +199,7 @@ IMPLICIT NONE
     TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOF      !< DOF indices of each nodes in unconstrained assembled system  [-]
     TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOFtilde      !< DOF indices of each nodes in unconstrained assembled system  [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemsDOF      !< 12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system  [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Tred      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
   END TYPE SD_MiscVarType
 ! =======================
 ! =========  SD_ParameterType  =======
@@ -5484,6 +5485,20 @@ IF (ALLOCATED(SrcMiscData%ElemsDOF)) THEN
   END IF
     DstMiscData%ElemsDOF = SrcMiscData%ElemsDOF
 ENDIF
+IF (ALLOCATED(SrcMiscData%Tred)) THEN
+  i1_l = LBOUND(SrcMiscData%Tred,1)
+  i1_u = UBOUND(SrcMiscData%Tred,1)
+  i2_l = LBOUND(SrcMiscData%Tred,2)
+  i2_u = UBOUND(SrcMiscData%Tred,2)
+  IF (.NOT. ALLOCATED(DstMiscData%Tred)) THEN 
+    ALLOCATE(DstMiscData%Tred(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%Tred.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%Tred = SrcMiscData%Tred
+ENDIF
  END SUBROUTINE SD_CopyMisc
 
  SUBROUTINE SD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -5536,6 +5551,9 @@ ENDDO
 ENDIF
 IF (ALLOCATED(MiscData%ElemsDOF)) THEN
   DEALLOCATE(MiscData%ElemsDOF)
+ENDIF
+IF (ALLOCATED(MiscData%Tred)) THEN
+  DEALLOCATE(MiscData%Tred)
 ENDIF
  END SUBROUTINE SD_DestroyMisc
 
@@ -5675,6 +5693,11 @@ ENDIF
   IF ( ALLOCATED(InData%ElemsDOF) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! ElemsDOF upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%ElemsDOF)  ! ElemsDOF
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! Tred allocated yes/no
+  IF ( ALLOCATED(InData%Tred) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! Tred upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%Tred)  ! Tred
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -5927,6 +5950,22 @@ ENDIF
 
       IF (SIZE(InData%ElemsDOF)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%ElemsDOF))-1 ) = PACK(InData%ElemsDOF,.TRUE.)
       Int_Xferred   = Int_Xferred   + SIZE(InData%ElemsDOF)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%Tred) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Tred,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Tred,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%Tred,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%Tred,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%Tred)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%Tred))-1 ) = PACK(InData%Tred,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%Tred)
   END IF
  END SUBROUTINE SD_PackMisc
 
@@ -6344,6 +6383,32 @@ ENDIF
     mask2 = .TRUE. 
       IF (SIZE(OutData%ElemsDOF)>0) OutData%ElemsDOF = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%ElemsDOF))-1 ), mask2, 0_IntKi )
       Int_Xferred   = Int_Xferred   + SIZE(OutData%ElemsDOF)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Tred not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%Tred)) DEALLOCATE(OutData%Tred)
+    ALLOCATE(OutData%Tred(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%Tred.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%Tred)>0) OutData%Tred = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%Tred))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%Tred)
     DEALLOCATE(mask2)
   END IF
  END SUBROUTINE SD_UnPackMisc

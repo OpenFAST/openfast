@@ -985,65 +985,69 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    ! Varaibles for rigid assembly
    type(IList), dimension(:), allocatable    :: RA       !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
    integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
-   integer(IntKi), dimension(:), allocatable :: njRA     !< Number of joints per RA
    !
-   real(ReKi), dimension(:,:), allocatable :: T
    real(ReKi), dimension(:,:), allocatable :: MM, KK
+   real(ReKi), dimension(:),   allocatable :: FF
    integer(IntKi) :: nDOF
-
-
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   call RigidLinkAssemblies(Init, p, RA, RAm1, njRA, ErrStat2, ErrMsg2); if(Failed()) return
+   call RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat2, ErrMsg2); if(Failed()) return
 
-
-   call BuildTMatrix(); if (Failed()) return
+   call BuildTMatrix(m%Tred); if (Failed()) return
 
    ! --- DOF elimination for system matrices and RHS vector
    ! Temporary backup of M and K of full system
-   !call move_alloc(Init%M, Init%M)
-   !call move_alloc(Init%K, Init%K)
-   !! Reallocating
-   !nDOF = size(T,2)
-   !CALL AllocAry( Init%K, Init%TDOF, Init%TDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-   !CALL AllocAry( Init%M, Init%TDOF, Init%TDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   !CALL AllocAry( Init%FG,Init%TDOF,             'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   call move_alloc(Init%M,  MM)
+   call move_alloc(Init%K,  KK)
+   call move_alloc(Init%FG, FF)
+   !  Reallocating
+   nDOF = size(m%Tred,2)
+   CALL AllocAry( Init%K, nDOF, nDOF, 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   CALL AllocAry( Init%M, nDOF, nDOF, 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
+   CALL AllocAry( Init%FG,nDOF,       'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   ! Elimination
+   Init%M  = matmul(transpose(m%Tred), matmul(MM, m%Tred))
+   Init%K  = matmul(transpose(m%Tred), matmul(KK, m%Tred))
+   Init%FG = matmul(transpose(m%Tred), FF)
 
-   deallocate(RAm1)
-   deallocate(RA)
-   deallocate(njRA)
+   call CleanUp_DirectElimination()
 
 CONTAINS
    LOGICAL FUNCTION Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'DirectElimination') 
         Failed =  ErrStat >= AbortErrLev
-        !if (Failed) call Cleanup_AssembleKM()
+        if (Failed) call CleanUp_DirectElimination()
    END FUNCTION Failed
    
    !SUBROUTINE Fatal(ErrMsg_in)
    !   character(len=*), intent(in) :: ErrMsg_in
-   !   CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'DirectElimination');
-   !   CALL CleanUp_DirectElimination()
+   !   call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'DirectElimination');
+   !   call CleanUp_DirectElimination()
    !END SUBROUTINE Fatal
 
-   !SUBROUTINE CleanUp_DirectElimination()
-      !pass
-   !END SUBROUTINE CleanUp_DirectElimination
+   SUBROUTINE CleanUp_DirectElimination()
+      ! Cleaning up memory
+      if (allocated(MM  )) deallocate(MM  )
+      if (allocated(KK  )) deallocate(KK  )
+      if (allocated(FF  )) deallocate(FF  )
+      if (allocated(RA  )) deallocate(RA  )
+      if (allocated(RAm1)) deallocate(RAm1)
+      if (allocated(RA  )) deallocate(RA  )
+   END SUBROUTINE CleanUp_DirectElimination
 
-   SUBROUTINE BuildTMatrix()
+   SUBROUTINE BuildTMatrix(Tred)
       ! Variables for Building T
       use IntegerList, only: init_list, find, pop, destroy_list, len
       use IntegerList, only: print_list
-      !real(ReKi), dimension(:,:), allocatable   :: T
-      real(ReKi), dimension(6,6)                :: I6       !< Identity matrix of size 6
-      integer(IntKi), dimension(:), allocatable :: Elements !< List of elements
+      real(ReKi), dimension(:,:), allocatable :: Tred !< Transformation matrix for DOF elimination
       real(ReKi), dimension(:,:), allocatable   :: Tc
       integer(IntKi), dimension(:), allocatable :: INodesID !< List of unique nodes involved in Elements
       integer(IntKi), dimension(:), allocatable :: IDOFOld !< 
       integer(IntKi), dimension(:), pointer :: IDOFNew !< 
+      real(ReKi), dimension(6,6) :: I6       !< Identity matrix of size 6
       integer(IntKi) :: iPrev
-      type(IList) :: IRA
+      type(IList) :: IRA !< list of rigid assembly indices to process
       integer(IntKi) :: nDOF
       integer(IntKi) :: aID, ia ! assembly ID, and index in IRA
       integer(IntKi) :: iNode
@@ -1055,23 +1059,21 @@ CONTAINS
       nullify(IDOFNew)
       I6(1:6,1:6)=0; do i = 1,6 ; I6(i,i)=1_ReKi; enddo ! I6 =  eye(6)
 
-
       allocate(m%NodesDOFtilde(1:Init%NNode), stat=ErrStat2) ! Indices of DOF for each joint, in reduced system
-
 
       nDOF = nDOF_ConstraintReduced()
       print*,'nDOF constraint elim', nDOF
-      allocate(T(1:Init%TDOF, 1:nDOF))
-      T=0
-      iPrev =0 
+      CALL AllocAry( m%Tred, nDOF, nDOF, 'm%Tred',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+      Tred=0
       call init_list(IRA, size(RA), 0, ErrStat2, ErrMsg2);
       IRA%List(1:size(RA)) = (/(ia , ia = 1,size(RA))/)
       call print_list(IRA, 'List of RA indices')
-      print*,'------------------ BUILD T ----------------------------------'
 
       ! --- For each node:
       !  - create list of indices I      in the assembled vector of DOF
       !  - create list of indices Itilde in the reduced vector of DOF
+      !  - increment iPrev by the number of DOF of Itilde
+      iPrev =0 
       do iNode = 1, Init%NNode
          nc=0
          if (allocated(Tc)) deallocate(Tc)
@@ -1124,21 +1126,24 @@ CONTAINS
             IDOFNew => m%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
             !print*,'N',iNode,'I ',IDOFOld
             !print*,'N',iNode,'It',IDOFNew
-            T(IDOFOld, IDOFNew) = Tc
+            Tred(IDOFOld, IDOFNew) = Tc
             iPrev = iPrev + nc
          else
             print*,'Error, Tc not allocated, TODO'
             STOP
          endif
       enddo
-      deallocate(T)
-      nullify(IDOFNew)
       ! --- Safety checks
       if (len(IRA)>0) then 
          ErrMsg2='Not all rigid assemblies were processed'; ErrStat2=ErrID_Fatal
       endif
 
+      ! --- Cleanup
+      nullify(IDOFNew)
       call destroy_list(IRA, ErrStat2, ErrMsg2)
+      if (allocated(Tc)     ) deallocate(Tc)
+      if (allocated(IDOFOld)) deallocate(IDOFOld)
+      if (allocated(INodesID)) deallocate(INodesID)
 
    END SUBROUTINE BuildTMatrix
 
@@ -1215,6 +1220,7 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
 
    ! --- List of nodes stored first in LINodes than moved to INodes
    LNodesID = NodesList(p, Elements)
+   if (allocated(INodesID)) deallocate(INodesID)
    call move_alloc(LNodesID%List, INodesID)
    call destroy_list(LNodesID, ErrStat2, ErrMsg2)
    print*,'Nodes involved in assembly (befr) ',INodesID
@@ -1266,14 +1272,13 @@ END SUBROUTINE RAElimination
 
 !------------------------------------------------------------------------------------------------------
 !> Setup a list of rigid link assemblies (RA)
-SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, njRA, ErrStat, ErrMsg)
+SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat, ErrMsg)
    use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
    TYPE(SD_ParameterType),       INTENT(INOUT) :: p
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    type(IList), dimension(:), allocatable    :: RA   !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
-   integer(IntKi), dimension(:), allocatable :: njRA !< Number of joints per RA
    integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    ! Local variables
    type(IList)                               :: Er    !< List of rigid elements
@@ -1323,16 +1328,6 @@ SUBROUTINE RigidLinkAssemblies(Init, p, RA, RAm1, njRA, ErrStat, ErrMsg)
    do ia = 1, nRA
       call print_list(RA(ia),'Rigid assembly')
    enddo
-
-   ! --- Counting unique joints involved in Rigid assembly
-   allocate(njRA(1:nRA))
-   do ia = 1, nRA
-      ! Getting list of nodes involved in RA(ia)
-      Er = NodesList(p, RA(ia)%List)
-      njRA(ia) = len(Er)
-      call destroy_list(Er, ErrStat2, ErrMsg2)
-   enddo
-   print*,'njRA',njRA
 CONTAINS
    !> The neighbors of e0 (that are found within the list Er) are added to the list Ea  
    RECURSIVE SUBROUTINE AddNeighbors(e0, Er, Ea) 
