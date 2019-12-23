@@ -1933,6 +1933,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
 #endif      
       REAL(ReKi)                           :: WaveElev (p%NWaveElev) ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
       REAL(ReKi)                           :: WaveElev1(p%NWaveElev)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
+      REAL(ReKi)                           :: WaveElev2(p%NWaveElev)    ! Instantaneous first order elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
       
       REAL(ReKi)                           :: q(6*p%NBody), qdot(6*p%NBody), qdotsq(6*p%NBody), qdotdot(6*p%NBody)
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
@@ -2006,7 +2007,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          end if
        
          m%F_Waves = 0.0_ReKi
-         
+
          if ( m%u_WAMIT(1)%Mesh%Committed ) then  ! Make sure we are using WAMIT / there is a valid mesh
       
             if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then 
@@ -2105,6 +2106,8 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          ! Compute the wave elevations at the requested output locations for this time.  Note that p%WaveElev has the second order added to it already.
          
       DO I=1,p%NWaveElev   
+         WaveElev2(I)   = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%Waves2%WaveElev2(:,I),          &
+                                    m%LastIndWave, p%NStepWave + 1       )                      
          WaveElev1(I)   = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev1(:,I),          &
                                     m%LastIndWave, p%NStepWave + 1       )                      
          WaveElev(I)    = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev(:,I), &
@@ -2125,7 +2128,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       
       
          ! Map calculated results into the AllOuts Array
-      CALL HDOut_MapOutputs( Time, p, y, m%WAMIT, p%NWaveElev, WaveElev, WaveElev1, m%F_PtfmAdd, m%F_Waves, m%F_Hydro, q, qdot, qdotdot, AllOuts, ErrStat2, ErrMsg2 )
+      CALL HDOut_MapOutputs( Time, p, y, m%WAMIT, m%WAMIT2, p%NWaveElev, WaveElev, WaveElev1, WaveElev2, m%F_PtfmAdd, m%F_Waves, m%F_Hydro, q, qdot, qdotdot, AllOuts, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
       
       DO I = 1,p%NumOuts
@@ -2141,13 +2144,6 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          IF (ALLOCATED( p%Waves2%OutParam ) .AND. p%Waves2%NumOuts > 0) THEN
             DO I=1, p%Waves2%NumOuts
                y%WriteOutput(J) = y%Waves2%WriteOutput(I)
-               J = J + 1
-            END DO
-         END IF
-
-         IF (ALLOCATED( p%WAMIT2%OutParam ) .AND. p%WAMIT2%NumOuts > 0) THEN
-            DO I=1, p%WAMIT2%NumOuts
-               y%WriteOutput(J) = y%WAMIT2%WriteOutput(I)
                J = J + 1
             END DO
          END IF
