@@ -40,6 +40,9 @@ set(CTEST_OPENFAST_EXECUTABLE "${CMAKE_BINARY_DIR}/glue-codes/openfast/openfast"
 # Set the BeamDyn executable configuration option and default
 set(CTEST_BEAMDYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/beamdyn/beamdyn_driver" CACHE FILEPATH "Specify the BeamDyn driver executable to use in testing.")
 
+# Set the BeamDyn executable configuration option and default
+set(CTEST_HYDRODYN_EXECUTABLE "${CMAKE_BINARY_DIR}/modules/hydrodyn/hydrodyn_driver" CACHE FILEPATH "Specify the HydroDyn driver executable to use in testing.")
+
 # Set the python executable configuration option and default
 if(NOT EXISTS ${PYTHON_EXECUTABLE})
   find_program(PYTHON_EXECUTABLE NAMES python3 python py)
@@ -61,7 +64,7 @@ add_subdirectory("${CMAKE_CURRENT_LIST_DIR}/r-test")
 
 # build and seed the test directories with the data they need to run the tests
 file(MAKE_DIRECTORY ${CTEST_BINARY_DIR})
-foreach(regTest glue-codes/openfast modules/beamdyn)
+foreach(regTest glue-codes/openfast modules/beamdyn modules/hydrodyn)
   file(MAKE_DIRECTORY ${CTEST_BINARY_DIR}/${regTest})
 endforeach()
 
