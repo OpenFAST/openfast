@@ -70,6 +70,8 @@ MODULE SD_FEM
 
 CONTAINS
 !------------------------------------------------------------------------------------------------------
+! --- Helper functions
+!------------------------------------------------------------------------------------------------------
 !> Maps nodes to elements 
 !! allocate NodesConnE and NodesConnN                                                                               
 SUBROUTINE NodeCon(Init,p, ErrStat, ErrMsg)
@@ -173,9 +175,56 @@ TYPE(IList) FUNCTION NodesList(p, Elements)
    enddo
    call print_list(NodesList, 'Joint list')
 END FUNCTION NodesList
+!------------------------------------------------------------------------------------------------------
+!> Returns list of rigid link elements (Er) 
+TYPE(IList) FUNCTION RigidLinkElements(Init, p, ErrStat, ErrMsg)
+   use IntegerList, only: init_list, append
+   use IntegerList, only: print_list
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi)  :: ie       !< Index on elements
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   ! --- Establish a list of rigid link elements
+   call init_list(RigidLinkElements, 0, 0, ErrStat, ErrMsg);
 
+   do ie = 1, Init%NElem
+      if (p%ElemProps(ie)%eType == idMemberRigid) then
+         call append(RigidLinkElements, ie, ErrStat, ErrMsg);
+      endif
+   end do
+   call print_list(RigidLinkElements,'Rigid element list')
+END FUNCTION RigidLinkElements
 
-!----------------------------------------------------------------------------
+!------------------------------------------------------------------------------------------------------
+!> Returns true if one of the element connected to the node is a rigid link
+LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p)
+   INTEGER(IntKi),               INTENT(IN   ) :: iJoint  
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   ! Local variables
+   integer(IntKi) :: ie       !< Loop index on elements
+   integer(IntKi) :: ei       !< Element index
+   integer(IntKi) :: m  ! Number of elements connected to a joint
+
+   NodeHasRigidElem = .False. ! default return value
+
+   ! Loop through elements connected to node J 
+   do ie = 1, Init%NodesConnE(iJoint, 1)
+      ei = Init%NodesConnE(iJoint, ie+1)
+      if (p%ElemProps(ei)%eType == idMemberRigid) then
+         NodeHasRigidElem = .True.
+         return  ! we exit as soon as one rigid member is found
+      endif
+   enddo
+END FUNCTION NodeHasRigidElem
+
+!------------------------------------------------------------------------------------------------------
+! --- Main routines, more or less listed in order in which they are called
+!------------------------------------------------------------------------------------------------------
 !>
 ! - Removes the notion of "ID" and use Index instead
 ! - Creates Nodes (use indices instead of ID), similar to Joints array
@@ -520,63 +569,53 @@ CONTAINS
       IF (ALLOCATED(TempMembers)) DEALLOCATE(TempMembers)
    END SUBROUTINE CleanUp_Discrt
 
+   !> Set properties of node k
+   SUBROUTINE SetNewNode(k, x, y, z, Init)
+      TYPE(SD_InitType),      INTENT(INOUT) :: Init
+      INTEGER,                INTENT(IN)    :: k
+      REAL(ReKi),             INTENT(IN)    :: x, y, z
+      Init%Nodes(k, 1)                     = k
+      Init%Nodes(k, 2)                     = x
+      Init%Nodes(k, 3)                     = y
+      Init%Nodes(k, 4)                     = z
+      Init%Nodes(k, iJointType)            = idJointCantilever ! Note: all added nodes are Cantilever
+      ! Properties below are for non-cantilever joints
+      Init%Nodes(k, iJointDir:iJointDir+2) = -99999 
+      Init%Nodes(k, iJointStiff)           = -99999 
+      Init%Nodes(k, iJointDamp)            = -99999 
+   END SUBROUTINE SetNewNode
+   
+   !> Set properties of element k
+   SUBROUTINE SetNewElem(k, n1, n2, etype, p1, p2, p)
+      INTEGER,                INTENT(IN   )   :: k
+      INTEGER,                INTENT(IN   )   :: n1
+      INTEGER,                INTENT(IN   )   :: n2
+      INTEGER,                INTENT(IN   )   :: eType
+      INTEGER,                INTENT(IN   )   :: p1
+      INTEGER,                INTENT(IN   )   :: p2
+      TYPE(SD_ParameterType), INTENT(INOUT)   :: p
+      p%Elems(k, 1)        = k
+      p%Elems(k, 2)        = n1
+      p%Elems(k, 3)        = n2
+      p%Elems(k, iMProp  ) = p1
+      p%Elems(k, iMProp+1) = p2
+      p%Elems(k, iMType)   = eType
+   END SUBROUTINE SetNewElem
+
+   !> Set material properties of element k,  NOTE: this is only for a beam
+   SUBROUTINE SetNewProp(k, E, G, rho, d, t, TempProps)
+      INTEGER   , INTENT(IN)   :: k
+      REAL(ReKi), INTENT(IN)   :: E, G, rho, d, t
+      REAL(ReKi), INTENT(INOUT):: TempProps(:, :)
+      TempProps(k, 1) = k
+      TempProps(k, 2) = E
+      TempProps(k, 3) = G
+      TempProps(k, 4) = rho
+      TempProps(k, 5) = d
+      TempProps(k, 6) = t
+   END SUBROUTINE SetNewProp
+
 END SUBROUTINE SD_Discrt
-
-!------------------------------------------------------------------------------------------------------
-!> Set properties of node k
-SUBROUTINE SetNewNode(k, x, y, z, Init)
-   TYPE(SD_InitType),      INTENT(INOUT) :: Init
-   INTEGER,                INTENT(IN)    :: k
-   REAL(ReKi),             INTENT(IN)    :: x, y, z
-   
-   Init%Nodes(k, 1)                     = k
-   Init%Nodes(k, 2)                     = x
-   Init%Nodes(k, 3)                     = y
-   Init%Nodes(k, 4)                     = z
-   Init%Nodes(k, iJointType)            = idJointCantilever ! Note: all added nodes are Cantilever
-   ! Properties below are for non-cantilever joints
-   Init%Nodes(k, iJointDir:iJointDir+2) = -99999 
-   Init%Nodes(k, iJointStiff)           = -99999 
-   Init%Nodes(k, iJointDamp)            = -99999 
-
-END SUBROUTINE SetNewNode
-
-!------------------------------------------------------------------------------------------------------
-!> Set properties of element k
-SUBROUTINE SetNewElem(k, n1, n2, etype, p1, p2, p)
-   INTEGER,                INTENT(IN   )   :: k
-   INTEGER,                INTENT(IN   )   :: n1
-   INTEGER,                INTENT(IN   )   :: n2
-   INTEGER,                INTENT(IN   )   :: eType
-   INTEGER,                INTENT(IN   )   :: p1
-   INTEGER,                INTENT(IN   )   :: p2
-   TYPE(SD_ParameterType), INTENT(INOUT)   :: p
-   
-   p%Elems(k, 1)        = k
-   p%Elems(k, 2)        = n1
-   p%Elems(k, 3)        = n2
-   p%Elems(k, iMProp  ) = p1
-   p%Elems(k, iMProp+1) = p2
-   p%Elems(k, iMType)   = eType
-
-END SUBROUTINE SetNewElem
-
-!------------------------------------------------------------------------------------------------------
-!> Set material properties of element k
-!! NOTE: this is only for a beam
-SUBROUTINE SetNewProp(k, E, G, rho, d, t, TempProps)
-   INTEGER   , INTENT(IN)   :: k
-   REAL(ReKi), INTENT(IN)   :: E, G, rho, d, t
-   REAL(ReKi), INTENT(INOUT):: TempProps(:, :)
-   
-   TempProps(k, 1) = k
-   TempProps(k, 2) = E
-   TempProps(k, 3) = G
-   TempProps(k, 4) = rho
-   TempProps(k, 5) = d
-   TempProps(k, 6) = t
-
-END SUBROUTINE SetNewProp
 
 !------------------------------------------------------------------------------------------------------
 !> Set Element properties p%ElemProps, different properties are set depening on element type..
@@ -1145,53 +1184,6 @@ CONTAINS
    END FUNCTION nDOF_ConstraintReduced
 END SUBROUTINE DirectElimination
 
-
-!------------------------------------------------------------------------------------------------------
-!> Returns list of rigid link elements (Er) 
-TYPE(IList) FUNCTION RigidLinkElements(Init, p, ErrStat, ErrMsg)
-   use IntegerList, only: init_list, append
-   use IntegerList, only: print_list
-   TYPE(SD_InitType),            INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
-   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   ! Local variables
-   integer(IntKi)  :: ie       !< Index on elements
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   ! --- Establish a list of rigid link elements
-   call init_list(RigidLinkElements, 0, 0, ErrStat, ErrMsg);
-
-   do ie = 1, Init%NElem
-      if (p%ElemProps(ie)%eType == idMemberRigid) then
-         call append(RigidLinkElements, ie, ErrStat, ErrMsg);
-      endif
-   end do
-   call print_list(RigidLinkElements,'Rigid element list')
-END FUNCTION RigidLinkElements
-
-!------------------------------------------------------------------------------------------------------
-!> Returns true if one of the element connected to the node is a rigid link
-LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p)
-   INTEGER(IntKi),               INTENT(IN   ) :: iJoint  
-   TYPE(SD_InitType),            INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
-   ! Local variables
-   integer(IntKi) :: ie       !< Loop index on elements
-   integer(IntKi) :: ei       !< Element index
-   integer(IntKi) :: m  ! Number of elements connected to a joint
-
-   NodeHasRigidElem = .False. ! default return value
-
-   ! Loop through elements connected to node J 
-   do ie = 1, Init%NodesConnE(iJoint, 1)
-      ei = Init%NodesConnE(iJoint, ie+1)
-      if (p%ElemProps(ei)%eType == idMemberRigid) then
-         NodeHasRigidElem = .True.
-         return  ! we exit as soon as one rigid member is found
-      endif
-   enddo
-END FUNCTION NodeHasRigidElem
 !------------------------------------------------------------------------------------------------------
 !> Returns constrains matrix for a rigid assembly (RA) formed by a set of elements. 
 !! 
