@@ -773,6 +773,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             
             
             
+!FIXME: why is this called again? I'm either not remembering something, or I don't undestand the wave stretching above.  -- ADP
             CALL Waves2_Init(InitLocal%Waves2, m%u_Waves2, p%Waves2, x%Waves2, xd%Waves2, z%Waves2, OtherState%Waves2, &
                                     y%Waves2, m%Waves2, Interval, InitOut%Waves2, ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -827,6 +828,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                         p%WaveElev(I,J)  =  p%Waves2%WaveElev2(I,J) + p%WaveElev(I,J)
                      ENDDO
                   ENDDO
+                  CALL MOVE_ALLOC(p%Waves2%WaveElev2,p%WaveElev2)
                ENDIF
             ENDIF
    
@@ -1007,13 +1009,21 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             CALL MOVE_ALLOC(InitLocal%WAMIT%WaveElevC0, Waves_InitOut%WaveElevC0) 
             CALL MOVE_ALLOC(InitLocal%WAMIT%WaveDirArr, Waves_InitOut%WaveDirArr) 
                
-   
+
                !-----------------------------------------
                ! Initialize the WAMIT2 Calculations
                !-----------------------------------------
-   
+
                ! Only call the WAMIT2_Init if one of the flags is set for a calculation
             IF ( InitLocal%WAMIT2%MnDriftF .OR. InitLocal%WAMIT2%NewmanAppF .OR. InitLocal%WAMIT2%DiffQTFF .OR. InitLocal%WAMIT2%SumQTFF ) THEN
+
+                  ! Flag required for indicating when to try using arrays that are allocated
+               p%WAMIT2used   = .TRUE.
+
+                  ! Temporarily move arrays to init input for WAMIT2 (save some space)
+               CALL MOVE_ALLOC(p%WaveTime, InitLocal%WAMIT2%WaveTime)
+               CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InitLocal%WAMIT2%WaveElevC0)
+               CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InitLocal%WAMIT2%WaveDirArr)
 
                   ! Copy Waves initialization output into the initialization input type for the WAMIT module
                InitLocal%WAMIT2%RhoXg       = Waves_InitOut%RhoXg
@@ -1022,12 +1032,10 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                InitLocal%WAMIT2%WaveDirMin  = Waves_InitOut%WaveDirMin
                InitLocal%WAMIT2%WaveDirMax  = Waves_InitOut%WaveDirMax
                InitLocal%WAMIT2%WaveDOmega  = Waves_InitOut%WaveDOmega
-               InitLocal%WAMIT2%NBodyMod    = InitLocal%NBodyMod        ! There are restrictions in WAMIT2 on which files may be used for MnDriftF or NewmanAppF for BodyMod > 1
 
-                  ! Temporarily move arrays to init input for WAMIT2 (save some space)
-               CALL MOVE_ALLOC(p%WaveTime, InitLocal%WAMIT2%WaveTime) 
-               CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InitLocal%WAMIT2%WaveElevC0) 
-               CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InitLocal%WAMIT2%WaveDirArr) 
+                  ! Set values for all NBodyMods
+               InitLocal%WAMIT2%NBodyMod    = InitLocal%NBodyMod        ! There are restrictions in WAMIT2 on which files may be used for MnDriftF or NewmanAppF for BodyMod > 1
+               InitLocal%WAMIT2%WAMITULEN   = InitLocal%WAMITULEN(1)
 
                   ! Determine how many WAMIT2 modules we need based on NBody and NBodyMod
                if (p%NBodyMod == 1) then
@@ -1038,6 +1046,19 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   call AllocAry( InitLocal%WAMIT2%PtfmRefyt   , InitLocal%NBody, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   call AllocAry( InitLocal%WAMIT2%PtfmRefzt   , InitLocal%NBody, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   call AllocAry( InitLocal%WAMIT2%PtfmRefztRot, InitLocal%NBody, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  allocate( p%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( x%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array x%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( xd%WAMIT2(        1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array xd%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( OtherState%WAMIT2(1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array OtherState%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( y%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array y%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( m%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( m%u_WAMIT2(       1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( InitOut%WAMIT2(   1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  InitLocal%WAMIT2%PtfmRefxt   (1)  = InitLocal%PtfmRefxt   (1)
+                  InitLocal%WAMIT2%PtfmRefyt   (1)  = InitLocal%PtfmRefyt   (1)
+                  InitLocal%WAMIT2%PtfmRefzt   (1)  = InitLocal%PtfmRefzt   (1)
+                  InitLocal%WAMIT2%PtfmRefztRot(1)  = InitLocal%PtfmRefztRot(1)
+
                else
                   InitLocal%WAMIT2%NBody  = 1_IntKi               ! The WAMIT2 object will contain all NBody WAMIT2 bodies
 
@@ -1046,6 +1067,18 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   call AllocAry( InitLocal%WAMIT2%PtfmRefyt   , 1, "PtfmRefyt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   call AllocAry( InitLocal%WAMIT2%PtfmRefzt   , 1, "PtfmRefzt"   , ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   call AllocAry( InitLocal%WAMIT2%PtfmRefztRot, 1, "PtfmRefztRot", ErrStat2, ErrMsg2 ); call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  allocate( p%WAMIT2(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( x%WAMIT2(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array x%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( xd%WAMIT2(        InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array xd%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( OtherState%WAMIT2(InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array OtherState%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( y%WAMIT2(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array y%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( m%WAMIT2(         InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( m%u_WAMIT2(       InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  allocate( InitOut%WAMIT2(   InitLocal%NBody), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+                  InitLocal%WAMIT2%PtfmRefxt   (1)  = InitLocal%PtfmRefxt   (1)
+                  InitLocal%WAMIT2%PtfmRefyt   (1)  = InitLocal%PtfmRefyt   (1)
+                  InitLocal%WAMIT2%PtfmRefzt   (1)  = InitLocal%PtfmRefzt   (1)
+                  InitLocal%WAMIT2%PtfmRefztRot(1)  = InitLocal%PtfmRefztRot(1)
 
                endif
 
@@ -1061,13 +1094,32 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   CALL CleanUp()
                   RETURN
                END IF
- 
+
+                     ! For NBodyMod > 1 and NBody > 1, set the body info and init the WAMIT2 body
+               do i = 2, p%nWAMITObj
+                   InitLocal%WAMIT2%WAMITFile        = InitLocal%PotFile     (i)
+                   InitLocal%WAMIT2%WAMITULEN        = InitLocal%WAMITULEN   (i)
+                   InitLocal%WAMIT2%PtfmRefxt   (1)  = InitLocal%PtfmRefxt   (i)
+                   InitLocal%WAMIT2%PtfmRefyt   (1)  = InitLocal%PtfmRefyt   (i)
+                   InitLocal%WAMIT2%PtfmRefzt   (1)  = InitLocal%PtfmRefzt   (i)
+                   InitLocal%WAMIT2%PtfmRefztRot(1)  = InitLocal%PtfmRefztRot(i)
+
+                   CALL WAMIT2_Init(InitLocal%WAMIT2, m%u_WAMIT2(i), p%WAMIT2(i), x%WAMIT2(i), xd%WAMIT2(i), z%WAMIT2, OtherState%WAMIT2(i), &
+                                           y%WAMIT2(i), m%WAMIT2(i), Interval, InitOut%WAMIT2(i), ErrStat2, ErrMsg2 )
+                   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                   IF ( ErrStat >= AbortErrLev ) THEN
+                       CALL CleanUp()
+                       RETURN
+                   END IF
+               end do
+
+
                   ! move arrays back
-               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveTime,               p%WaveTime  ) 
-               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveElevC0, Waves_InitOut%WaveElevC0) 
-               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveDirArr, Waves_InitOut%WaveDirArr) 
-   
-               
+               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveTime,               p%WaveTime  )
+               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveElevC0, Waves_InitOut%WaveElevC0)
+               CALL MOVE_ALLOC(InitLocal%WAMIT2%WaveDirArr, Waves_InitOut%WaveDirArr)
+ 
+
                   ! Verify that WAMIT2_Init() did not request a different Interval!
    
                IF ( p%DT /= Interval ) THEN
@@ -1076,7 +1128,16 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   CALL CleanUp()
                   RETURN
                END IF
-               
+
+            ELSE
+                  ! Flag used in output handling to indicate when to ignore WAMIT2 outputs.
+               p%WAMIT2used   = .FALSE.
+               allocate( p%WAMIT2(1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array p%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+               allocate( m%WAMIT2(1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT2.', ErrStat, ErrMsg, RoutineName )
+               p%WAMIT2%MnDriftF    = .FALSE.
+               p%WAMIT2%NewmanAppF  = .FALSE.
+               p%WAMIT2%DiffQTFF    = .FALSE.
+               p%WAMIT2%SumQTFF     = .FALSE.
             ENDIF
 
 #ifdef USE_FIT 
@@ -1939,7 +2000,9 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
-      ErrMsg  = ""               
+      ErrMsg  = ""
+      WaveElev1 = 0.0_ReKi
+      WaveElev2 = 0.0_ReKi    ! In case we don't use 2nd order waves
       
       
          ! Compute outputs here:
@@ -2004,92 +2067,95 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
        
          m%F_Waves = 0.0_ReKi
 
-         if ( m%u_WAMIT(1)%Mesh%Committed ) then  ! Make sure we are using WAMIT / there is a valid mesh
-      
-            if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then 
-                  ! Copy the inputs from the HD mesh into the WAMIT mesh
-               call MeshCopy( u%WAMITMesh, m%u_WAMIT(1)%Mesh, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )  
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
-                     if ( ErrStat >= AbortErrLev ) return             
-         
-               call WAMIT_CalcOutput( Time, p%WaveTime, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1),  &
-                                       z%WAMIT, OtherState%WAMIT(1), y%WAMIT(1), m%WAMIT(1), ErrStat2, ErrMsg2 )
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )      
-               do iBody=1,p%NBody
-                  y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT(1)%Mesh%Force (:,iBody)
-                  y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT(1)%Mesh%Moment(:,iBody)  
-                  
-               end do
-                  ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
-               m%F_Waves   = m%F_Waves + m%WAMIT(1)%F_Waves1
-            else
-               do iBody=1,p%NBody
-                  
-                     ! We need to copy the iWAMIT-th node data from the Inputs(I)%WAMITMesh onto the 1st node of the Inputs_WAMIT(I)%Mesh
-                  m%u_WAMIT(iBody)%Mesh%TranslationDisp(:,1)  = u%WAMITMesh%TranslationDisp(:,iBody)
-                  m%u_WAMIT(iBody)%Mesh%Orientation    (:,:,1)= u%WAMITMesh%Orientation    (:,:,iBody)
-                  m%u_WAMIT(iBody)%Mesh%TranslationVel (:,1)  = u%WAMITMesh%TranslationVel (:,iBody)
-                  m%u_WAMIT(iBody)%Mesh%RotationVel    (:,1)  = u%WAMITMesh%RotationVel    (:,iBody)
-                  m%u_WAMIT(iBody)%Mesh%TranslationAcc (:,1)  = u%WAMITMesh%TranslationAcc (:,iBody)
-                  m%u_WAMIT(iBody)%Mesh%RotationAcc    (:,1)  = u%WAMITMesh%RotationAcc    (:,iBody)               
-               
-                  call WAMIT_CalcOutput( Time, p%WaveTime, m%u_WAMIT(iBody), p%WAMIT(iBody), x%WAMIT(iBody), xd%WAMIT(iBody),  &
-                                       z%WAMIT, OtherState%WAMIT(iBody), y%WAMIT(iBody), m%WAMIT(iBody), ErrStat2, ErrMsg2 )
+         if (allocated(m%u_WAMIT)) then               ! Check that we allocated u_WAMIT, otherwise there is an error checking the mesh
+            if ( m%u_WAMIT(1)%Mesh%Committed ) then  ! Make sure we are using WAMIT / there is a valid mesh
+
+               if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
+                     ! Copy the inputs from the HD mesh into the WAMIT mesh
+                  call MeshCopy( u%WAMITMesh, m%u_WAMIT(1)%Mesh, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
-                  y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT(iBody)%Mesh%Force (:,1)
-                  y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT(iBody)%Mesh%Moment(:,1) 
-                  
+                        if ( ErrStat >= AbortErrLev ) return
+
+                  call WAMIT_CalcOutput( Time, p%WaveTime, m%u_WAMIT(1), p%WAMIT(1), x%WAMIT(1), xd%WAMIT(1),  &
+                                          z%WAMIT, OtherState%WAMIT(1), y%WAMIT(1), m%WAMIT(1), ErrStat2, ErrMsg2 )
+                     call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
+                  do iBody=1,p%NBody
+                     y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT(1)%Mesh%Force (:,iBody)
+                     y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT(1)%Mesh%Moment(:,iBody)
+
+                  end do
                      ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
-                  indxStart = (iBody-1)*6+1
-                  indxEnd   = indxStart+5
-                  m%F_Waves(indxStart:indxEnd) = m%F_Waves(indxStart:indxEnd) + m%WAMIT(iBody)%F_Waves1
-               end do
-            end if
-         end if
+                  m%F_Waves   = m%F_Waves + m%WAMIT(1)%F_Waves1
+               else
+                  do iBody=1,p%NBody
+
+                        ! We need to copy the iWAMIT-th node data from the Inputs(I)%WAMITMesh onto the 1st node of the Inputs_WAMIT(I)%Mesh
+                     m%u_WAMIT(iBody)%Mesh%TranslationDisp(:,1)  = u%WAMITMesh%TranslationDisp(:,iBody)
+                     m%u_WAMIT(iBody)%Mesh%Orientation    (:,:,1)= u%WAMITMesh%Orientation    (:,:,iBody)
+                     m%u_WAMIT(iBody)%Mesh%TranslationVel (:,1)  = u%WAMITMesh%TranslationVel (:,iBody)
+                     m%u_WAMIT(iBody)%Mesh%RotationVel    (:,1)  = u%WAMITMesh%RotationVel    (:,iBody)
+                     m%u_WAMIT(iBody)%Mesh%TranslationAcc (:,1)  = u%WAMITMesh%TranslationAcc (:,iBody)
+                     m%u_WAMIT(iBody)%Mesh%RotationAcc    (:,1)  = u%WAMITMesh%RotationAcc    (:,iBody)
+
+                     call WAMIT_CalcOutput( Time, p%WaveTime, m%u_WAMIT(iBody), p%WAMIT(iBody), x%WAMIT(iBody), xd%WAMIT(iBody),  &
+                                          z%WAMIT, OtherState%WAMIT(iBody), y%WAMIT(iBody), m%WAMIT(iBody), ErrStat2, ErrMsg2 )
+                        call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
+                     y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT(iBody)%Mesh%Force (:,1)
+                     y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT(iBody)%Mesh%Moment(:,1)
+
+                        ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
+                     indxStart = (iBody-1)*6+1
+                     indxEnd   = indxStart+5
+                     m%F_Waves(indxStart:indxEnd) = m%F_Waves(indxStart:indxEnd) + m%WAMIT(iBody)%F_Waves1
+                  end do
+               end if
+            end if   ! m%u_WAMIT(1)%Mesh%Committed
+         end if      ! m%u_WAMIT is allocated
+
+
 
             ! Second order
-         if ( m%u_WAMIT2(1)%Mesh%Committed ) then  ! Make sure we are using WAMIT / there is a valid mesh
-      
-            if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then 
+         if (p%WAMIT2used) then
+
+            if ( p%NBodyMod == 1 .or. p%NBody == 1 ) then
                   ! Copy the inputs from the HD mesh into the WAMIT mesh
-               call MeshCopy( u%WAMITMesh, m%u_WAMIT2(1)%Mesh, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )  
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )                  
-                     if ( ErrStat >= AbortErrLev ) return             
-         
+               call MeshCopy( u%WAMITMesh, m%u_WAMIT2(1)%Mesh, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
+                     if ( ErrStat >= AbortErrLev ) return
                call WAMIT2_CalcOutput( Time, p%WaveTime, m%u_WAMIT2(1), p%WAMIT2(1), x%WAMIT2(1), xd%WAMIT2(1),  &
                                        z%WAMIT2, OtherState%WAMIT2(1), y%WAMIT2(1), m%WAMIT2(1), ErrStat2, ErrMsg2 )
-                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )      
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                do iBody=1,p%NBody
                   y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(1)%Mesh%Force (:,iBody)
-                  y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(1)%Mesh%Moment(:,iBody)  
+                  y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(1)%Mesh%Moment(:,iBody)
                end do
                   ! Add F_Waves2 to m%F_Waves
                m%F_Waves  = m%F_Waves + m%WAMIT2(1)%F_Waves2
             else
                do iBody=1,p%NBody
-                  
+
                      ! We need to copy the iWAMIT2-th node data from the Inputs(I)%WAMIT2Mesh onto the 1st node of the Inputs_WAMIT2(I)%Mesh
                   m%u_WAMIT2(iBody)%Mesh%TranslationDisp(:,1)  = u%WAMITMesh%TranslationDisp(:,iBody)
                   m%u_WAMIT2(iBody)%Mesh%Orientation    (:,:,1)= u%WAMITMesh%Orientation    (:,:,iBody)
                   m%u_WAMIT2(iBody)%Mesh%TranslationVel (:,1)  = u%WAMITMesh%TranslationVel (:,iBody)
                   m%u_WAMIT2(iBody)%Mesh%RotationVel    (:,1)  = u%WAMITMesh%RotationVel    (:,iBody)
                   m%u_WAMIT2(iBody)%Mesh%TranslationAcc (:,1)  = u%WAMITMesh%TranslationAcc (:,iBody)
-                  m%u_WAMIT2(iBody)%Mesh%RotationAcc    (:,1)  = u%WAMITMesh%RotationAcc    (:,iBody)               
-               
+                  m%u_WAMIT2(iBody)%Mesh%RotationAcc    (:,1)  = u%WAMITMesh%RotationAcc    (:,iBody)
+
                   call WAMIT2_CalcOutput( Time, p%WaveTime, m%u_WAMIT2(iBody), p%WAMIT2(iBody), x%WAMIT2(iBody), xd%WAMIT2(iBody),  &
                                        z%WAMIT2, OtherState%WAMIT2(iBody), y%WAMIT2(iBody), m%WAMIT2(iBody), ErrStat2, ErrMsg2 )
                      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )
                   y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(iBody)%Mesh%Force (:,1)
-                  y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(iBody)%Mesh%Moment(:,1) 
-                  
+                  y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(iBody)%Mesh%Moment(:,1)
+
                      ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
                   indxStart = (iBody-1)*6+1
                   indxEnd   = indxStart+5
                   m%F_Waves(indxStart:indxEnd) = m%F_Waves(indxStart:indxEnd) + m%WAMIT2(iBody)%F_Waves2
                end do
             end if
-         end if
-         
+         end if         !  p%WAMIT2used
+
 #ifdef USE_FIT          
       ELSE IF ( p%PotMod ==2 ) THEN !FIT
          Inputs_FIT%roll     = rotdisp(1)
@@ -2122,9 +2188,15 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
       
          ! Compute the wave elevations at the requested output locations for this time.  Note that p%WaveElev has the second order added to it already.
          
-      DO I=1,p%NWaveElev   
-         WaveElev2(I)   = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%Waves2%WaveElev2(:,I),          &
-                                    m%LastIndWave, p%NStepWave + 1       )                      
+         ! Second order wave elevation, if calculated (This array is split out for speed because of the if)
+      if (allocated(p%WaveElev2)) then
+         DO I=1,p%NWaveElev
+            WaveElev2(I)   = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev2(:,I),          &
+                                       m%LastIndWave, p%NStepWave + 1       )
+         END DO
+      endif
+
+      DO I=1,p%NWaveElev
          WaveElev1(I)   = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev1(:,I),          &
                                     m%LastIndWave, p%NStepWave + 1       )                      
          WaveElev(I)    = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev(:,I), &

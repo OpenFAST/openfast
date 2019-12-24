@@ -182,6 +182,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: vecMultiplier      !< multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1 [-]
     TYPE(WAMIT_ParameterType) , DIMENSION(:), ALLOCATABLE  :: WAMIT      !< Parameter data for the WAMIT module [-]
     TYPE(WAMIT2_ParameterType) , DIMENSION(:), ALLOCATABLE  :: WAMIT2      !< Parameter data for the WAMIT2 module [-]
+    LOGICAL  :: WAMIT2used = .FALSE.      !< Indicates when WAMIT2 is used.  Shortcuts some calculations [-]
     TYPE(Waves2_ParameterType)  :: Waves2      !< Parameter data for the Waves2 module [-]
     TYPE(Morison_ParameterType)  :: Morison      !< Parameter data for the Morison module [-]
     INTEGER(IntKi)  :: PotMod      !< 1 if using WAMIT model, 0 if no potential flow model, or 2 if FIT model [-]
@@ -192,6 +193,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NWaveElev      !< Number of wave elevation outputs [-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElev      !< Total wave elevation [-]
     REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElev1      !< First order wave elevation [-]
+    REAL(SiKi) , DIMENSION(:,:), ALLOCATABLE  :: WaveElev2      !< Second order wave elevation [-]
     REAL(ReKi)  :: WtrDpth      !< Water depth [(m)]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: AddF0      !< Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m) [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: AddCLin      !< Additional stiffness matrix [-]
@@ -7497,6 +7499,7 @@ IF (ALLOCATED(SrcParamData%WAMIT2)) THEN
          IF (ErrStat>=AbortErrLev) RETURN
     ENDDO
 ENDIF
+    DstParamData%WAMIT2used = SrcParamData%WAMIT2used
       CALL Waves2_CopyParam( SrcParamData%Waves2, DstParamData%Waves2, CtrlCode, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
          IF (ErrStat>=AbortErrLev) RETURN
@@ -7547,6 +7550,20 @@ IF (ALLOCATED(SrcParamData%WaveElev1)) THEN
     END IF
   END IF
     DstParamData%WaveElev1 = SrcParamData%WaveElev1
+ENDIF
+IF (ALLOCATED(SrcParamData%WaveElev2)) THEN
+  i1_l = LBOUND(SrcParamData%WaveElev2,1)
+  i1_u = UBOUND(SrcParamData%WaveElev2,1)
+  i2_l = LBOUND(SrcParamData%WaveElev2,2)
+  i2_u = UBOUND(SrcParamData%WaveElev2,2)
+  IF (.NOT. ALLOCATED(DstParamData%WaveElev2)) THEN 
+    ALLOCATE(DstParamData%WaveElev2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstParamData%WaveElev2.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstParamData%WaveElev2 = SrcParamData%WaveElev2
 ENDIF
     DstParamData%WtrDpth = SrcParamData%WtrDpth
 IF (ALLOCATED(SrcParamData%AddF0)) THEN
@@ -7709,6 +7726,9 @@ ENDIF
 IF (ALLOCATED(ParamData%WaveElev1)) THEN
   DEALLOCATE(ParamData%WaveElev1)
 ENDIF
+IF (ALLOCATED(ParamData%WaveElev2)) THEN
+  DEALLOCATE(ParamData%WaveElev2)
+ENDIF
 IF (ALLOCATED(ParamData%AddF0)) THEN
   DEALLOCATE(ParamData%AddF0)
 ENDIF
@@ -7822,6 +7842,7 @@ ENDIF
       END IF
     END DO
   END IF
+      Int_BufSz  = Int_BufSz  + 1  ! WAMIT2used
       Int_BufSz   = Int_BufSz + 3  ! Waves2: size of buffers for each call to pack subtype
       CALL Waves2_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%Waves2, ErrStat2, ErrMsg2, .TRUE. ) ! Waves2 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -7875,6 +7896,11 @@ ENDIF
   IF ( ALLOCATED(InData%WaveElev1) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! WaveElev1 upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElev1)  ! WaveElev1
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! WaveElev2 allocated yes/no
+  IF ( ALLOCATED(InData%WaveElev2) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! WaveElev2 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%WaveElev2)  ! WaveElev2
   END IF
       Re_BufSz   = Re_BufSz   + 1  ! WtrDpth
   Int_BufSz   = Int_BufSz   + 1     ! AddF0 allocated yes/no
@@ -8058,6 +8084,8 @@ ENDIF
       ENDIF
     END DO
   END IF
+      IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%WAMIT2used , IntKiBuf(1), 1)
+      Int_Xferred   = Int_Xferred   + 1
       CALL Waves2_PackParam( Re_Buf, Db_Buf, Int_Buf, InData%Waves2, ErrStat2, ErrMsg2, OnlySize ) ! Waves2 
         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
         IF (ErrStat >= AbortErrLev) RETURN
@@ -8168,6 +8196,22 @@ ENDIF
 
       IF (SIZE(InData%WaveElev1)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WaveElev1))-1 ) = PACK(InData%WaveElev1,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%WaveElev1)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%WaveElev2) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev2,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev2,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%WaveElev2,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%WaveElev2,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%WaveElev2)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%WaveElev2))-1 ) = PACK(InData%WaveElev2,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%WaveElev2)
   END IF
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%WtrDpth
       Re_Xferred   = Re_Xferred   + 1
@@ -8506,6 +8550,8 @@ ENDIF
       IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
     END DO
   END IF
+      OutData%WAMIT2used = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
+      Int_Xferred   = Int_Xferred + 1
       Buf_size=IntKiBuf( Int_Xferred )
       Int_Xferred = Int_Xferred + 1
       IF(Buf_size > 0) THEN
@@ -8669,6 +8715,32 @@ ENDIF
     mask2 = .TRUE. 
       IF (SIZE(OutData%WaveElev1)>0) OutData%WaveElev1 = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%WaveElev1))-1 ), mask2, 0.0_ReKi ), SiKi)
       Re_Xferred   = Re_Xferred   + SIZE(OutData%WaveElev1)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! WaveElev2 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%WaveElev2)) DEALLOCATE(OutData%WaveElev2)
+    ALLOCATE(OutData%WaveElev2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%WaveElev2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%WaveElev2)>0) OutData%WaveElev2 = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%WaveElev2))-1 ), mask2, 0.0_ReKi ), SiKi)
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%WaveElev2)
     DEALLOCATE(mask2)
   END IF
       OutData%WtrDpth = ReKiBuf( Re_Xferred )

@@ -164,6 +164,7 @@ typedef   ^                            ParameterType                 INTEGER    
 typedef   ^                            ^                             INTEGER                  vecMultiplier                   -          -          -         "multiplier for the WAMIT vectors and matrices.  If NBodyMod=1 then this = NBody, else 1" -
 typedef   ^                            ^                             WAMIT_ParameterType      WAMIT                           {:}        -          -         "Parameter data for the WAMIT module"  -
 typedef   ^                            ^                             WAMIT2_ParameterType     WAMIT2                          {:}        -          -         "Parameter data for the WAMIT2 module"  -
+typedef   ^                            ^                             LOGICAL                  WAMIT2used                      -          .FALSE.    -         "Indicates when WAMIT2 is used.  Shortcuts some calculations" -
 #typedef   ^                            ^                             FIT_ParameterType        FIT                             -          -          -         "Parameter data for the FIT module"        -
 typedef   ^                            ^                             Waves2_ParameterType     Waves2                          -          -          -         "Parameter data for the Waves2 module"  -
 typedef   ^                            ^                             Morison_ParameterType    Morison                         -          -          -         "Parameter data for the Morison module"        -
@@ -175,6 +176,7 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  NWaveElev                       -          -          -         "Number of wave elevation outputs"        -
 typedef   ^                            ^                             SiKi                     WaveElev                    {:}{:}         -          -         "Total wave elevation"   -
 typedef   ^                            ^                             SiKi                     WaveElev1                   {:}{:}         -          -         "First order wave elevation"        -
+typedef   ^                            ^                             SiKi                     WaveElev2                   {:}{:}         -          -         "Second order wave elevation"        -
 typedef   ^                            ^                             ReKi                     WtrDpth                         -          -          -         "Water depth"    (m)
 typedef   ^                            ^                             ReKi                     AddF0                       {:}{:}         -          -         "Additional pre-load forces and moments (N,N,N,N-m,N-m,N-m)"    -
 typedef   ^                            ^                             ReKi                     AddCLin                     {:}{:}{:}      -          -         "Additional stiffness matrix"    -

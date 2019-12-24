@@ -1148,8 +1148,6 @@ SUBROUTINE HDOut_MapOutputs( CurrentTime, p, y, m_WAMIT, m_WAMIT2, NWaveElev, Wa
    ErrStat = ErrID_None
    ErrMsg = ""
    
-   
-   
 
    ! Need to use individual components of force for output reporting, the y%mesh data has total forces from all contributions
    if ( p%potMod == 1 ) then
@@ -1160,7 +1158,7 @@ SUBROUTINE HDOut_MapOutputs( CurrentTime, p, y, m_WAMIT, m_WAMIT2, NWaveElev, Wa
             AllOuts(FWaves1  (:,iBody)) = m_WAMIT(1)%F_Waves1(startIndx:endIndx)
             AllOuts(FHdrSttc (:,iBody)) = m_WAMIT(1)%F_HS(startIndx:endIndx)
             AllOuts(FRdtn    (:,iBody)) = m_WAMIT(1)%F_Rdtn(startIndx:endIndx) + m_WAMIT(1)%F_PtfmAM(startIndx:endIndx)
-            AllOuts(FWaves2  (:,iBody)) = m_WAMIT2(1)%F_Waves2(startIndx:endIndx)  ! These are reported by the WAMIT2 module
+            if (p%WAMIT2used) AllOuts(FWaves2  (:,iBody)) = m_WAMIT2(1)%F_Waves2(startIndx:endIndx)  ! These are reported by the WAMIT2 module
             AllOuts(FAdd     (:,iBody)) = F_Add(startIndx:endIndx)
             AllOuts(FWavesTot(:,iBody)) = F_Waves(startIndx:endIndx)
             AllOuts(WBMotions(:,iBody)) = q(startIndx:endIndx)
@@ -1178,7 +1176,7 @@ SUBROUTINE HDOut_MapOutputs( CurrentTime, p, y, m_WAMIT, m_WAMIT2, NWaveElev, Wa
             AllOuts(FWaves1  (:,iBody)) = m_WAMIT(iBody)%F_Waves1
             AllOuts(FHdrSttc (:,iBody)) = m_WAMIT(iBody)%F_HS
             AllOuts(FRdtn    (:,iBody)) = m_WAMIT(iBody)%F_Rdtn + m_WAMIT(iBody)%F_PtfmAM
-            AllOuts(FWaves2  (:,iBody)) = m_WAMIT2(iBody)%F_Waves2
+            if (p%WAMIT2used) AllOuts(FWaves2  (:,iBody)) = m_WAMIT2(iBody)%F_Waves2
             AllOuts(FAdd     (:,iBody)) = F_Add(startIndx:endIndx)
             AllOuts(FWavesTot(:,iBody)) = F_Waves(startIndx:endIndx)
             AllOuts(WBMotions(:,iBody)) = q(startIndx:endIndx)
