@@ -1077,10 +1077,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   RETURN
                END IF
                
-            ELSE
-               
-               p%WAMIT2%NumOuts = 0  !This doesn't get initialized if we don't call WAMIT2_Init
-   
             ENDIF
 
 #ifdef USE_FIT 
@@ -1873,7 +1869,7 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
          
             ! Determine the rotational angles from the direction-cosine matrix
          rotdisp = GetSmllRotAngs ( Inputs(I)%WAMITMesh%Orientation(:,:,1), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_CalcOutput' )   
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDyn_UpdateStates' )   
          Inputs_FIT(I)%roll     = rotdisp(1)
          Inputs_FIT(I)%pitch    = rotdisp(2)
          Inputs_FIT(I)%yaw      = rotdisp(3)
@@ -2067,8 +2063,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
                   y%WAMITMesh%Force (:,iBody) = y%WAMITMesh%Force (:,iBody) + y%WAMIT2(1)%Mesh%Force (:,iBody)
                   y%WAMITMesh%Moment(:,iBody) = y%WAMITMesh%Moment(:,iBody) + y%WAMIT2(1)%Mesh%Moment(:,iBody)  
                end do
-!FIXME: check how we should deal with m%F_Waves
-                  ! Copy the F_Waves1 information to the HydroDyn level so we can combine it with the 2nd order
+                  ! Add F_Waves2 to m%F_Waves
                m%F_Waves  = m%F_Waves + m%WAMIT2(1)%F_Waves2
             else
                do iBody=1,p%NBody

@@ -67,9 +67,7 @@ typedef     ^                 ^                 ReKi                 WvHiCOffS  
 
 # Define outputs from the initialization routine here:
 #
-#typedef    ^                 InitOutputType    MeshType             OutputMesh        -        -        -        ""    -
-typedef     ^                 InitOutputType    CHARACTER(10)        WriteOutputHdr    {:}      -        -        ""    -
-typedef     ^                 ^                 CHARACTER(10)        WriteOutputUnt    {:}      -        -        ""    -
+typedef     ^                 InitOutputType    ReKi                NULLVAL            -        -        -        ""  -
 
 
 # ..... States ....................................................................................................................
@@ -142,4 +140,3 @@ typedef     ^                 InputType         MeshType             Mesh       
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef     ^                 OutputType        MeshType             Mesh              -        -        -        "Loads at the platform reference point in the inertial frame" -
-typedef     ^                 ^                 ReKi                 WriteOutput       {:}      -        -        ""  -

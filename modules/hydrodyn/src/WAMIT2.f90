@@ -54,7 +54,6 @@ MODULE WAMIT2
 
    USE WAMIT2_Types
    USE WAMIT_Interp
-   USE WAMIT2_Output
    USE NWTC_Library
    USE NWTC_FFTPACK
 
@@ -704,17 +703,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
       u%Mesh%RemapFlag  = .TRUE.
       y%Mesh%RemapFlag  = .TRUE.
-
-
-
-            ! Initialize the outputs
-      CALL WMT2OUT_Init( InitInp, y, p, InitOut, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
-         RETURN
-      END IF
-
 
 
          !----------------------------------------------------------------------
@@ -5479,18 +5467,6 @@ SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, 
       END DO
       DO I=1,3
          y%Mesh%Moment(I,1)   = m%F_Waves2(I+3)
-      END DO
-
-
-
-         ! Map the calculated results into the AllOuts Array
-      CALL WMT2Out_MapOutputs(Time, y, m%F_Waves2, AllOuts, ErrStat, ErrMsg)
-
-
-
-              ! Put the output data in the OutData array
-      DO I = 1,p%NumOuts
-         y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
       END DO
 
 
