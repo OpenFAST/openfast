@@ -1128,6 +1128,10 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 			
 					! If flag for LBL is ON and Boundary Layer Trip is OFF, then compute LBL
                     IF ( (p%ILAM .EQ. 1) .AND. (p%ITRIP .EQ. 0) )  THEN
+                        IF (p%AweightFlag .eqv. .TRUE.) THEN
+                            m%SPLLBL(III) = m%SPLLBL(III) + p%Aweight(III)              ! A-weighting
+                        ENDIF
+                        
                         PLBL = 10.0_ReKi**(m%SPLLBL(III)/10.0_ReKi)						! SPL to Sound Pressure (P) Conversion for III Frequency
                         
 						PtotalLBL = PtotalLBL + PLBL									! Sum of Current LBL with LBL Running Total
@@ -1139,6 +1143,12 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
 					! If flag for TBL is ON, compute Pressure, Suction, and AoA contributions
                     IF ( p%ITURB .GT. 0 )  THEN
+                        IF (p%AweightFlag .eqv. .TRUE.) THEN
+                            m%SPLP(III) = m%SPLP(III) + p%Aweight(III)                      ! A-weighting
+                            m%SPLS(III) = m%SPLS(III) + p%Aweight(III)                      ! A-weighting
+                            m%SPLALPH(III) = m%SPLALPH(III) + p%Aweight(III)                ! A-weighting
+                        ENDIF
+
                         PTBLP = 10.0_ReKi**(m%SPLP(III)/10.0_ReKi)							! SPL to P Conversion for III Frequency
                         PTBLS = 10.0_ReKi**(m%SPLS(III)/10.0_ReKi)							! SPL to P Conversion for III Frequency
                         PTBLALH = 10.0_ReKi**(m%SPLALPH(III)/10.0_ReKi)						! SPL to P Conversion for III Frequency
@@ -1158,6 +1168,10 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
 					! If flag for Blunt TE is ON, compute Blunt contribution
                     IF ( p%IBLUNT .GT. 0 )  THEN											! NOTE: .EQ. 1 would be more accurate since only options are 0 and 1
+                        IF (p%AweightFlag .eqv. .TRUE.) THEN
+                            m%SPLBLUNT(III) = m%SPLBLUNT(III) + p%Aweight(III)              ! A-weighting
+                        ENDIF
+                        
                         PBLNT = 10.0_ReKi**(m%SPLBLUNT(III)/10.0_ReKi)						! SPL to P Conversion for III Frequency
                         
 						PtotalBlunt = PtotalBlunt + PBLNT									! Sum of Current Blunt with Blunt Running Total
@@ -1169,6 +1183,10 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
 					! If flag for Tip is ON and the current blade node (J) is the last node (tip), compute Tip contribution
                     IF ( (p%ITIP .GT. 0) .AND. (J .EQ. p%NumBlNds) )  THEN					! NOTE: .EQ. 1 would again be more accurate
+                        IF (p%AweightFlag .eqv. .TRUE.) THEN
+                            m%SPLTIP(III) = m%SPLTIP(III) + p%Aweight(III)                  ! A-weighting
+                        ENDIF
+                        
                         PTip = 10.0_ReKi**(m%SPLTIP(III)/10.0_ReKi)							! SPL to P Conversion for III Frequency
                         
 						PtotalTip = PtotalTip + PTip										! Sum of Current Tip with Tip Running Total
@@ -1180,6 +1198,10 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 
 					! If flag for TI is ON, compute Turbulent Inflow contribution
                     IF ( (p%IInflow .GT. 0)  )  THEN
+                        IF (p%AweightFlag .eqv. .TRUE.) THEN
+                            m%SPLti(III) = m%SPLti(III) + p%Aweight(III)                    ! A-weighting
+                        ENDIF
+                        
                         PTI = 10.0_ReKi**(m%SPLti(III)/10.0_ReKi)							! SPL to P Conversion for III Frequency
                         
 						PtotalInflow = PtotalInflow + PTI									! Sum of Current TI with TI Running Total
@@ -1207,12 +1229,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 		DO K = 1,p%NrObsLoc
 			DO III=1,size(p%FreqList)
 				IF (y%PtotalFreq(K,III) .EQ. 0.)	    y%PtotalFreq(K,III) = 1
-				! If A-weighting flag is ON, combine PtotalFreq with Aweight
-				IF (p%AweightFlag .eqv. .TRUE.) THEN
-					y%PtotalFreq(K,III)    = 10.*LOG10(y%PtotalFreq(K,III))+p%Aweight(III)	! P to SPL conversion
-				ELSE
-					y%PtotalFreq(K,III)    = 10.*LOG10(y%PtotalFreq(K,III))					! P to SPL conversion
-				ENDIF
+                y%PtotalFreq(K,III)    = 10.*LOG10(y%PtotalFreq(K,III))					! P to SPL conversion
 			ENDDO
 		ENDDO
     ENDIF
@@ -1221,7 +1238,7 @@ SUBROUTINE CalcAeroAcousticsOutput(u,p,m,xd,y,errStat,errMsg)
 	DO K = 1,p%NrObsLoc
 		DO III = 1,size(p%FreqList)
 			DO oi = 1,7
-				IF (y%SumSpecNoiseSep(oi,K,III)  .EQ. 0.) y%SumSpecNoiseSep(oi,K,III) =1 
+				IF (y%SumSpecNoiseSep(oi,K,III)  .EQ. 0.) y%SumSpecNoiseSep(oi,K,III) = 1 
 			ENDDO
 		ENDDO
 	ENDDO
