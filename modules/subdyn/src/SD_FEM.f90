@@ -777,7 +777,7 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    iPrev =0
    do iNode = 1, Init%NNode
       ! --- Distribute to joints iPrev + 1:6, or, iPrev + 1:(3+3m)
-      if (Init%Nodes(iNode,iJointType) == idJointCantilever ) then
+      if (int(Init%Nodes(iNode,iJointType)) == idJointCantilever ) then
          nRot=3
       else
          nRot= 3*Init%NodesConnE(iNode,1) ! Col1: number of elements connected to this joint
@@ -794,7 +794,7 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
             iOff = 6
          endif
          m%ElemsDOF(iOff+1:iOff+3, idElem) =  m%NodesDOF(iNode)%List(1:3)
-         if (Init%Nodes(iNode,iJointType) == idJointCantilever ) then
+         if (int(Init%Nodes(iNode,iJointType)) == idJointCantilever ) then
             m%ElemsDOF(iOff+4:iOff+6, idElem) = m%NodesDOF(iNode)%List(4:6)
          else
             m%ElemsDOF(iOff+4:iOff+6, idElem) = m%NodesDOF(iNode)%List(3*iElem+1:3*iElem+3)   
@@ -829,8 +829,7 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
          endif
       enddo
    else
-      print*,'Not performing safety check' ! remove me in the future 
-      STOP
+      ! Safety check does not apply if some joints are non-cantilever
    endif
 
 CONTAINS
@@ -896,7 +895,7 @@ SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
    
    ! total unconstrained degrees of freedom of the system 
    Init%TDOF = nDOF_Unconstrained()
-   print*,'nDOF_unconstrained',Init%TDOF, 6*Init%NNode
+   print*,'nDOF_unconstrained:',Init%TDOF, ' (if all Cantilever, it would be: ',6*Init%NNode,')'
 
    CALL AllocAry( Init%K, Init%TDOF, Init%TDOF , 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, Init%TDOF, Init%TDOF , 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
@@ -961,7 +960,7 @@ CONTAINS
       integer(IntKi) :: m
       nDOF_Unconstrained=0
       do i = 1,Init%NNode
-         if (Init%Nodes(i,iJointType) == idJointCantilever ) then
+         if (int(Init%Nodes(i,iJointType)) == idJointCantilever ) then
             nDOF_Unconstrained = nDOF_Unconstrained + 6
          else
             m = Init%NodesConnE(i,1) ! Col1: number of elements connected to this joint
@@ -1051,9 +1050,11 @@ CONTAINS
       integer(IntKi) :: nDOF
       integer(IntKi) :: aID, ia ! assembly ID, and index in IRA
       integer(IntKi) :: iNode
+      integer(IntKi) :: JType
       integer(IntKi) :: I
       integer(IntKi) :: nc !< Number of DOF after constraints applied
       integer(IntKi) :: nj
+      real(ReKi)  :: phat(3) !< Directional vector of the joint
 
       ! --- Misc inits
       nullify(IDOFNew)
@@ -1078,20 +1079,8 @@ CONTAINS
          nc=0
          if (allocated(Tc)) deallocate(Tc)
          if (allocated(IDOFOld)) deallocate(IDOFOld)
-
-         if    (Init%Nodes(iNode,iJointType) == idJointPin ) then
-            print*,'TODO T Build'
-            STOP
-
-         elseif(Init%Nodes(iNode,iJointType) == idJointUniversal ) then
-            print*,'TODO T Build'
-            STOP
-
-         elseif(Init%Nodes(iNode,iJointType) == idJointBall ) then
-            print*,'TODO T Build'
-            STOP
-
-         elseif(Init%Nodes(iNode,iJointType) == idJointCantilever ) then
+         JType = int(Init%Nodes(iNode,iJointType))
+         if(JType == idJointCantilever ) then
             if ( NodeHasRigidElem(iNode, Init, p)) then
                ! This joint is involved in a rigid link assembly, we skip it (accounted for above)
                aID = RAm1(iNode)
@@ -1117,15 +1106,18 @@ CONTAINS
                IDOFOld = m%NodesDOF(iNode)%List(1:6)
             endif
          else
-            ErrMsg2='Wrong joint type'; ErrStat2=ErrID_Fatal
+            allocate(IDOFOld(1:len(m%NodesDOF(iNode))))
+            IDOFOld(:) = m%NodesDOF(iNode)%List(:)
+            phat = Init%Nodes(iNode, iJointDir:iJointDir+2)
+            call JointElimination(Init%NodesConnE(iNode,:), JType, phat, Tc, Init, p, ErrStat2, ErrMsg2)
          endif
          if (allocated(Tc)) then
             nc=size(Tc,2) 
             call init_list(m%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
             m%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
             IDOFNew => m%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
-            !print*,'N',iNode,'I ',IDOFOld
-            !print*,'N',iNode,'It',IDOFNew
+            print*,'N',iNode,'I ',IDOFOld
+            print*,'N',iNode,'It',IDOFNew
             Tred(IDOFOld, IDOFNew) = Tc
             iPrev = iPrev + nc
          else
@@ -1152,6 +1144,7 @@ CONTAINS
       integer(IntKi) :: iNode
       integer(IntKi) :: ia ! Index on rigid link assembly
       integer(IntKi) :: m  ! Number of elements connected to a joint
+      integer(IntKi) :: NodeType
       nDOF_ConstraintReduced = 0
 
       ! Rigid assemblies contribution
@@ -1160,20 +1153,21 @@ CONTAINS
       ! Contribution from all the other joints
       do iNode = 1, Init%NNode
          m = Init%NodesConnE(iNode,1) ! Col1: number of elements connected to this joint
+         NodeType = Init%Nodes(iNode,iJointType)
 
-         if    (Init%Nodes(iNode,iJointType) == idJointPin ) then
+         if    (NodeType == idJointPin ) then
             nDOF_ConstraintReduced = nDOF_ConstraintReduced + 5 + 1*m
-            print*,'Node',iNode, 'is a pin joint'
+            print*,'Node',iNode, 'is a pin joint, number of members involved: ', m
 
-         elseif(Init%Nodes(iNode,iJointType) == idJointUniversal ) then
+         elseif(NodeType == idJointUniversal ) then
             nDOF_ConstraintReduced = nDOF_ConstraintReduced + 4 + 2*m
-            print*,'Node',iNode, 'is an universal joint'
+            print*,'Node',iNode, 'is an universal joint, number of members involved: ', m
 
-         elseif(Init%Nodes(iNode,iJointType) == idJointBall ) then
-            nDOF_ConstraintReduced = nDOF_ConstraintReduced + 4 + 3*m
-            print*,'Node',iNode, 'is a ball joint'
+         elseif(NodeType == idJointBall ) then
+            nDOF_ConstraintReduced = nDOF_ConstraintReduced + 3 + 3*m
+            print*,'Node',iNode, 'is a ball joint, number of members involved: ', m
 
-         elseif(Init%Nodes(iNode,iJointType) == idJointCantilever ) then
+         elseif(NodeType == idJointCantilever ) then
             if ( NodeHasRigidElem(iNode, Init, p)) then
                ! This joint is involved in a rigid link assembly, we skip it (accounted for above)
                print*,'Node',iNode, 'is involved in a RA'
@@ -1190,8 +1184,9 @@ CONTAINS
 END SUBROUTINE DirectElimination
 
 !------------------------------------------------------------------------------------------------------
-!> Returns constrains matrix for a rigid assembly (RA) formed by a set of elements. 
-!! 
+!> Returns constraint matrix Tc for a rigid assembly (RA) formed by a set of elements. 
+!!   x_c = Tc.x_c_tilde  
+!! where x_c are all the DOF of the rigid assembly, and x_c_tilde are the 6 reduced DOF (leader DOF)
 SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
    use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
    integer(IntKi), dimension(:), INTENT(IN   ) :: Elements !< List of elements
@@ -1269,6 +1264,72 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
       Tc( ((i-1)*6)+1:6*i, 1:6) = TRigid(1:6,1:6)
    enddo
 END SUBROUTINE RAElimination
+!------------------------------------------------------------------------------------------------------
+!> Returns constraint matrix Tc for a joint involving several Elements
+!!   x_c = Tc.x_c_tilde  
+!! where
+!    x_c       are all the DOF of the joint (3 translation + 3*m, m the number of elements) 
+!    x_c_tilde are the nc reduced DOF 
+SUBROUTINE JointElimination(Elements, JType, phat, Tc, Init, p, ErrStat, ErrMsg)
+   use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
+   integer(IntKi), dimension(:), INTENT(IN   ) :: Elements !< List of elements involved at a joint
+   integer(IntKi),               INTENT(IN   ) :: JType !< Joint type
+   real(ReKi),                   INTENT(IN   ) :: phat(3) !< Directional vector of the joint
+   real(ReKi), dimension(:,:), allocatable     :: Tc  !< Transformation matrix from eliminated to full
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat  !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
+   ! Local variables
+   !type(IList)          :: I !< List of indices for Nodes involved in interface
+   integer(IntKi)       :: i, ie, ne       !< Loop index 
+   integer(IntKi)       :: nDOFr     !< Number of reduced DOF
+   integer(IntKi)       :: nDOFt     !< Number of total DOF *nreduced)
+   !real(ReKi)           :: P1(3), Pi(3) ! Nodal points
+   INTEGER(IntKi)       :: ErrStat2
+   CHARACTER(ErrMsgLen) :: ErrMsg2
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ne = Elements(1) ! TODO TODO
+   nDOFt = 3 + 3*ne
+
+   ! The elements already share the same translational DOF
+
+   if    (JType == idJointPin ) then
+      nDOFr = 5 + 1*ne
+      allocate(Tc(nDOFt, nDOFr)); 
+      Tc(:,:)=0
+      do i = 1,3    ; Tc(i,i)=1_ReKi; enddo !  I3 for translational DOF
+      !
+      print*,'TODO pin'
+      STOP
+
+   elseif(JType == idJointUniversal ) then
+      nDOFr = 4 + 2*ne
+      allocate(Tc(nDOFt, nDOFr)); 
+      Tc(:,:)=0
+      do i = 1,3    ; Tc(i,i)=1_ReKi; enddo !  I3 for translational DOF
+      !
+      print*,'TODO univ'
+      STOP
+
+   elseif(JType == idJointBall      ) then
+      print*,'Elements',Elements
+      nDOFr = 3 + 3*ne
+      allocate(Tc(nDOFt, nDOFr)); 
+      Tc(:,:)=0
+      do i = 1,3    ; Tc(i,i)=1_ReKi; enddo !  I3 for translational DOF
+      do i = 3,nDOFr; Tc(i,i)=1_ReKi; enddo ! Identity for other DOF as well
+
+   else
+      ErrMsg='JointElimination: Wrong joint type'; ErrStat=ErrID_Fatal
+   endif
+   !do i=1,nDOFt
+   !   print*,'Tc',Tc(i,:)
+   !enddo
+
+END SUBROUTINE JointElimination
 
 !------------------------------------------------------------------------------------------------------
 !> Setup a list of rigid link assemblies (RA)
