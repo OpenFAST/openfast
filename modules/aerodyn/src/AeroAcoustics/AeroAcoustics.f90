@@ -2350,15 +2350,17 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
   character(*),                  intent(  out)         :: ErrMsg         !< Error message if ErrStat /= ErrID_None
   character(*), parameter :: RoutineName = 'BL_Param_Interp'
   REAL(ReKi)              :: redif1,redif2,aoadif1,aoadif2,xx1,xx2,RC
-  INTEGER(intKi)          :: loop1,loop2
+  INTEGER(intKi)          :: loop1,loop2,re_flag
   ErrStat = ErrID_None
   ErrMsg  = ""
 
   !!!! this if is not used but if necessary two sets of tables can be populated for tripped and untripped cases
   RC = U  * C/p%KinVisc       ! REYNOLDS NUMBER BASED ON  CHORD
 
+  re_flag = 0
   DO loop1=1,size(p%ReListBL)-1
       IF (   (RC.le.p%ReListBL(loop1+1)) .and. (RC.gt.p%ReListBL(loop1))  ) then
+          re_flag = 1
           redif1=abs(RC-p%ReListBL(loop1+1))
           redif2=abs(RC-p%ReListBL(loop1))
           DO loop2=1,size(p%AOAListBL)-1
@@ -2432,6 +2434,10 @@ SUBROUTINE BL_Param_Interp(p,m,U,AlphaNoise,C,whichairfoil, errStat, errMsg)
           enddo
       endif    
   enddo 
+  if (re_flag .eq. 0) then  
+  print*, 'Warning AeroAcoustics Module - the Reynolds number is not in the range provided by the user. Code stopping.'
+  stop
+  endif 
 END SUBROUTINE BL_Param_Interp
 
 
