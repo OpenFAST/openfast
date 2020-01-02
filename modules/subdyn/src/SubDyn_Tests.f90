@@ -13,6 +13,7 @@ module SubDyn_Tests
          test_equal_i0
    end interface
     interface test_almost_equal; module procedure &
+          test_almost_equal_0, &
           test_almost_equal_1, &
           test_almost_equal_2
     end interface
@@ -113,6 +114,32 @@ contains
         endif
     end subroutine
 
+    subroutine  test_almost_equal_0(Var,Ref,Try,MINNORM,bStop,bPrint,bPassed)
+        ! Arguments
+        character(len=*), intent(in) :: Var
+        real(ReKi), intent(in) :: Ref         !< 
+        real(ReKi), intent(in) :: Try         !< 
+        real(ReKi), intent(in) :: MINNORM
+        logical, intent(in) :: bStop
+        logical, intent(in) :: bPrint
+        logical, intent(out),optional :: bPassed
+        ! Variables
+        character(len=255) :: InfoAbs
+        real(ReKi) :: delta
+        ! 
+        cpt=0
+        delta=abs(Ref-Try)
+        if(delta>MINNORM) then
+            write(InfoAbs,'(A,ES8.1E2,A,ES8.1E2,A,I0)') trim(Var)//' tol: ',MINNORM,', mean: ',delta,' - Failed:',cpt
+            call test_fail(InfoAbs,bPrint,bStop)
+        else
+            write(InfoAbs,'(A,ES8.1E2,A,ES8.1E2)') trim(Var)//' tol: ',MINNORM,', mean: ',delta
+            call test_success(InfoAbs,bPrint)
+        endif
+        if(present(bPassed)) then
+            bPassed=delta>MINNORM
+        endif
+    end subroutine
     subroutine  test_almost_equal_1(Var,VecRef,VecTry,MINNORM,bStop,bPrint,bPassed)
         ! Arguments
         character(len=*), intent(in) :: Var
@@ -232,7 +259,7 @@ contains
       integer(IntKi)      , intent(out) :: ErrStat
       character(ErrMsgLen), intent(out) :: ErrMsg
 
-      real(ReKi), dimension(3) :: P1, P2
+      real(ReKi), dimension(3) :: P1, P2, e1, e2, e3
       real(ReKi), dimension(3,3) :: DirCos, A, R0, Ref
       real(ReKi), dimension(6,6) :: T, Tref
       real(ReKi) :: L
@@ -255,7 +282,67 @@ contains
       Tref(3,4) = 3._ReKi; Tref(3,5) =-1._ReKi;
       call  test_almost_equal('TRigid',Tref,T,1e-8,.true.,.true.)
       
+
+      ! --- Orthogonal vectors
+      e1 = (/10,0,0/)
+      call GetOrthVectors(e1,e2,e3,ErrStat, ErrMsg)
+      call  test_almost_equal('orth',e2,(/0._ReKi,0._ReKi,-1._ReKi/),1e-8,.true.,.true.)
+      call  test_almost_equal('orth',e3,(/0._ReKi,1._ReKi, 0._ReKi/),1e-8,.true.,.true.)
+      e1 = (/0,10,0/)
+      call GetOrthVectors(e1,e2,e3,ErrStat, ErrMsg)
+      call  test_almost_equal('orth',e2,(/0._ReKi,0._ReKi, 1._ReKi/),1e-8,.true.,.true.)
+      call  test_almost_equal('orth',e3,(/1._ReKi,0._ReKi, 0._ReKi/),1e-8,.true.,.true.)
+      e1 = (/1,2,4/)
+      call GetOrthVectors(e1,e2,e3,ErrStat, ErrMsg)
+      call test_almost_equal('dot', 0._ReKi, dot_product(e1,e2),  1e-8, .true., .true.)
+      call test_almost_equal('dot', 0._ReKi, dot_product(e1,e3),  1e-8, .true., .true.)
    end subroutine  Test_Transformations
+
+
+   !> Linear algebra tests
+   subroutine Test_Linalg(ErrStat,ErrMsg)
+      integer(IntKi)      , intent(out) :: ErrStat
+      character(ErrMsgLen), intent(out) :: ErrMsg
+      real(LaKi), dimension(:,:), allocatable :: A, Ainv, Aref
+      integer(IntKi) :: I, J
+
+      ! --- Inverse of a 3x3 matrix
+      allocate(A(3,3)); allocate(Aref(3,3))
+      A(1,1) = 7 ; A(1,2) = 2 ; A(1,3) =  1 ;
+      A(2,1) = 0 ; A(2,2) = 3 ; A(2,3) = -1 ;
+      A(3,1) =-3 ; A(3,2) = 4 ; A(3,3) = -2 ;
+      Aref(1,1) =-2 ; Aref(1,2) = 8 ; Aref(1,3) = -5 ;
+      Aref(2,1) = 3 ; Aref(2,2) =-11; Aref(2,3) =  7 ;
+      Aref(3,1) = 9 ; Aref(3,2) =-34; Aref(3,3) =  21;
+      call PseudoInverse(A, Ainv, ErrStat, ErrMsg)
+      call test_almost_equal('Inverse of 3x3 matrix', real(Aref,ReKi), real(Ainv,ReKi), 1e-8, .true., .true.)
+      deallocate(A   )
+      deallocate(Ainv)
+      deallocate(Aref)
+
+      ! --- Inverse of a 3x6 matrix
+      allocate(A(3,6))
+      allocate(Aref(6,3))
+      A(1,:) =  (/  0,   1,   2,   0,   1,   2 /)
+      A(2,:) =  (/ -1,   1,   2,  -0,   0,   0 /)
+      A(3,:) =  (/ -0,   0,   0,  -1,   1,   2 /)
+      Aref(:,:) = transpose(reshape( (/ 0.500000,  -0.583333,  -0.416667, 0.100000,   0.083333,  -0.083333 , 0.200000,   0.166667,  -0.166667 , 0.500000,  -0.416667,  -0.583333 , 0.100000,  -0.083333,   0.083333 , 0.200000,  -0.166667,   0.166667 /), (/ 3, 6 /)))
+      call PseudoInverse(A, Ainv, ErrStat, ErrMsg)
+      call test_almost_equal('Inverse of 3x6 matrix', real(Aref,ReKi), real(Ainv,ReKi), 1e-6, .true., .true.)
+      deallocate(A   )
+      deallocate(Ainv)
+      deallocate(Aref)
+
+      ! --- Inverse of a 6x3 matrix
+      allocate(A(6,3))
+      allocate(Aref(3,6))
+      A(:,1) =  (/  0,   1,   2,   0,   1,   2 /)
+      A(:,2) =  (/ -1,   1,   2,  -0,   0,   0 /)
+      A(:,3) =  (/ -0,   0,   0,  -1,   1,   2 /)
+      Aref(:,:) = reshape( (/ 0.500000,  -0.583333,  -0.416667, 0.100000,   0.083333,  -0.083333 , 0.200000,   0.166667,  -0.166667 , 0.500000,  -0.416667,  -0.583333 , 0.100000,  -0.083333,   0.083333 , 0.200000,  -0.166667,   0.166667 /), (/ 3, 6 /))
+      call PseudoInverse(A, Ainv, ErrStat, ErrMsg)
+      call test_almost_equal('Inverse of 6x3 matrix', real(Aref,ReKi), real(Ainv,ReKi), 1e-6, .true., .true.)
+   end subroutine  Test_Linalg
 
    !> Series of tests for integer lists
    subroutine Test_lists(ErrStat,ErrMsg)
@@ -317,6 +404,7 @@ contains
 
       call Test_lists(ErrStat2, ErrMsg2)
       call Test_Transformations(ErrStat2, ErrMsg2)
+      call Test_Linalg(ErrStat2, ErrMsg2)
    end subroutine SD_Tests
 
 

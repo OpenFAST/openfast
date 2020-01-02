@@ -557,4 +557,75 @@ SUBROUTINE LumpForces(Area1,Area2,crat,L,rho, g, DirCos, F)
    !F(12) is 0 for g along z alone
 END SUBROUTINE LumpForces
 
+!------------------------------------------------------------------------------------------------------
+!>
+!! Method 1:  pinv_A = A \ eye(m) (matlab)
+!!    call _GELSS to solve A.X=B 
+!!    pinv(A) = B(1:n,1:m)
+!! Method 2: [U,S,V] = svd(A); pinv_A = ( V / S ) * U'; (matlab) 
+!     perform lapack GESVD and then  pinv(A) = V*(inv(S))*U'
+SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
+   use NWTC_LAPACK, only: LAPACK_DGESVD, LAPACK_GEMM
+   real(LaKi), dimension(:,:), intent(inout)  :: A
+   real(LaKi), dimension(:,:), allocatable :: Ainv
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat       ! < Error status of the operation
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg        ! < Error message if ErrStat /    = ErrID_None
+   !
+   real(LaKi), dimension(:),   allocatable :: S
+   real(LaKi), dimension(:,:), allocatable :: U
+   real(LaKi), dimension(:,:), allocatable :: Vt
+   real(LaKi), dimension(:),   allocatable :: WORK
+   integer :: i, j ! Loop indices
+   integer :: M !< The number of rows of the input matrix A
+   integer :: N !< The number of columns of the input matrix A
+   integer :: K !< 
+   integer :: L !< 
+   integer :: LWORK !< 
+   INTEGER :: INFO 
+   M = size(A,1)
+   N = size(A,2)
+   K = min(M,N)
+   L = max(M,N)
+   LWORK = MAX(1,3*K +L,5*K)
+   allocate(S(K)); S = 0;
+   !! LWORK >= MAX(1,3*MIN(M,N) + MAX(M,N),5*MIN(M,N)) for the other paths
+   allocate(Work(LWORK)); Work=0
+   allocate(U (M,K) ); U=0;
+   allocate(Vt(K,N) ); Vt=0;
+   allocate(Ainv(N,M)); Ainv=0;
+
+   ! --- Compute the SVD of A
+   ! [U,S,V] = svd(A)
+   !call DGESVD       ('S', 'S', M, N, A, M,  S, U, M  , Vt  , K,   WORK, LWORK, INFO)
+   call LAPACK_DGESVD('S', 'S', M, N, A, S, U, Vt, WORK, LWORK, ErrStat, ErrMsg)
+
+   !--- Compute PINV = V**T * SIGMA * U**T in two steps
+   !  SIGMA = S^(-1)=1/S(j), S is diagonal
+   do j = 1, K
+      U(:,j) = U(:,j)/S(j)
+   end do
+   ! Compute Ainv = 1.0*V^t * U^t + 0.0*Ainv     V*(inv(S))*U' 
+   !call DGEMM( 'T', 'T', N, M, K, 1.0, V, K, U, M, 0.0, Ainv, N)
+   call LAPACK_GEMM( 'T', 'T', 1.0_Laki, Vt, U, 0.0_LaKi, Ainv, ErrStat, ErrMsg)
+   ! --- Compute rank
+   ! tol=maxval(shape(A))*epsilon(maxval(S))
+   !r=0
+   !do i=1,K
+   !   if(S(i) .gt. tol)then
+   !      r=r+1
+   !   end if
+   !end do
+   ! --- Scale
+   !do j = 1, K
+   !   do i = 1, K
+   !      if (i .eq. j .and. i .le. r)then
+   !         s_inv(i,j)=1.0_reki/s(i)
+   !      else
+   !         s_inv(i,j)=0.0_reki
+   !      end if
+   !   end do
+   !end do
+   !   Ainv=transpose(matmul(matmul(U(:,1:r),S_inv(1:r,1:r)),V(1:r,:)))
+   END SUBROUTINE PseudoInverse
+
 END MODULE FEM
