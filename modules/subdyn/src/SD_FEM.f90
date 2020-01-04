@@ -281,7 +281,7 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
    do I = 1, Init%NCMass
       JointID = Init%CMass(I,1)
       Init%CMass(I,1) = FINDLOCI(Init%Joints(:,1), JointID )
-      if (Init%Interf(I,1)<=0) then
+      if (Init%CMass(I,1)<=0) then
          CALL Fatal('Concentrated mass table: line '//TRIM(Num2LStr(I))//' refers to JointID '//trim(Num2LStr(JointID))//' which is not in the joint list!')
          return
       endif
@@ -920,12 +920,18 @@ SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
       
    ! add concentrated mass 
    DO I = 1, Init%NCMass
+      iNode = NINT(Init%CMass(I, 1)) ! Note index where concentrated mass is to be added
+      ! Safety
+      if (Init%Nodes(iNode,iJointType) /= idJointCantilever) then
+         ErrMsg2='Concentrated mass is only for cantilever joints. Problematic node: '//trim(Num2LStr(iNode)); ErrStat2=ErrID_Fatal;
+         if(Failed()) return
+      endif
       DO J = 1, 3
-          iGlob = m%NodesDOF(i)%List(J) ! ux, uy, uz
+          iGlob = m%NodesDOF(iNode)%List(J) ! ux, uy, uz
           Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, 2)
       ENDDO
       DO J = 4, 6
-          iGlob = m%NodesDOF(i)%List(J) ! theta_x, theta_y, theta_z
+          iGlob = m%NodesDOF(iNode)%List(J) ! theta_x, theta_y, theta_z
           Init%M(iGlob, iGlob) = Init%M(iGlob, iGlob) + Init%CMass(I, J-1)
       ENDDO
    ENDDO ! Loop on concentrated mass
