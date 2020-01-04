@@ -202,9 +202,9 @@ END FUNCTION RigidLinkElements
 !------------------------------------------------------------------------------------------------------
 !> Returns true if one of the element connected to the node is a rigid link
 LOGICAL FUNCTION NodeHasRigidElem(iJoint, Init, p)
-   INTEGER(IntKi),               INTENT(IN   ) :: iJoint  
-   TYPE(SD_InitType),            INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   INTEGER(IntKi),               INTENT(IN) :: iJoint  
+   TYPE(SD_InitType),            INTENT(IN) :: Init
+   TYPE(SD_ParameterType),       INTENT(IN) :: p
    ! Local variables
    integer(IntKi) :: ie       !< Loop index on elements
    integer(IntKi) :: ei       !< Element index
@@ -913,7 +913,7 @@ SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
 
       ! --- Assembly in global unconstrained system
       IDOF = m%ElemsDOF(1:12, i)
-      Init%FG( IDOF )    = Init%FG( IDOF )     + FGe(1:12)+ FCe(1:12)
+      Init%FG( IDOF )    = Init%FG( IDOF )     + FGe(1:12)+ FCe(1:12) ! Note: gravity and pretension cable forces
       Init%K(IDOF, IDOF) = Init%K( IDOF, IDOF) + Ke(1:12,1:12)
       Init%M(IDOF, IDOF) = Init%M( IDOF, IDOF) + Me(1:12,1:12)
    ENDDO ! end loop over elements , i
@@ -970,174 +970,128 @@ CONTAINS
    END FUNCTION
    
 END SUBROUTINE AssembleKM
+
 !------------------------------------------------------------------------------------------------------
-!> Assemble stiffness and mass matrix, and gravity force vector
-SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
-   TYPE(SD_InitType),            INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+!> Build transformation matrix T, such that x= T.x~ where x~ is the reduced vector of DOF
+SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, m, Tred, ErrStat, ErrMsg)
+   use IntegerList, only: init_list, find, pop, destroy_list, len
+   use IntegerList, only: print_list
+   TYPE(SD_InitType),            INTENT(IN   ) :: Init
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
+   type(IList), dimension(:),    INTENT(IN   ) :: RA   !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
+   integer(IntKi), dimension(:), INTENT(IN   ) :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    TYPE(SD_MiscVarType),target,  INTENT(INOUT) :: m
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   ! Local variables
-   INTEGER(IntKi)                            :: ErrStat2
-   CHARACTER(ErrMsgLen)                      :: ErrMsg2
-   ! Varaibles for rigid assembly
-   type(IList), dimension(:), allocatable    :: RA       !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
-   integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
-   !
-   real(ReKi), dimension(:,:), allocatable :: MM, KK
-   real(ReKi), dimension(:),   allocatable :: FF
+   real(ReKi), dimension(:,:), allocatable :: Tred !< Transformation matrix for DOF elimination
+   ! Local  
+   real(ReKi), dimension(:,:), allocatable   :: Tc
+   integer(IntKi), dimension(:), allocatable :: INodesID !< List of unique nodes involved in Elements
+   integer(IntKi), dimension(:), allocatable :: IDOFOld !< 
+   integer(IntKi), dimension(:), pointer :: IDOFNew !< 
+   real(ReKi), dimension(6,6) :: I6       !< Identity matrix of size 6
+   integer(IntKi) :: iPrev
+   type(IList) :: IRA !< list of rigid assembly indices to process
    integer(IntKi) :: nDOF
+   integer(IntKi) :: aID, ia ! assembly ID, and index in IRA
+   integer(IntKi) :: iNode
+   integer(IntKi) :: JType
+   integer(IntKi) :: I
+   integer(IntKi) :: nc !< Number of DOF after constraints applied
+   integer(IntKi) :: nj
+   real(ReKi)  :: phat(3) !< Directional vector of the joint
+   INTEGER(IntKi)       :: ErrStat2
+   CHARACTER(ErrMsgLen) :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   call RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat2, ErrMsg2); if(Failed()) return
+   ! --- Misc inits
+   nullify(IDOFNew)
+   I6(1:6,1:6)=0; do i = 1,6 ; I6(i,i)=1_ReKi; enddo ! I6 =  eye(6)
+   allocate(m%NodesDOFtilde(1:Init%NNode), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each joint, in reduced system
 
-   call BuildTMatrix(m%Tred); if (Failed()) return
+   nDOF = nDOF_ConstraintReduced()
+   print*,'nDOF constraint elim', nDOF , '/' , Init%TDOF
+   CALL AllocAry( m%Tred, Init%TDOF, nDOF, 'm%Tred',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   Tred=0
+   call init_list(IRA, size(RA), 0, ErrStat2, ErrMsg2); if(Failed()) return;
+   IRA%List(1:size(RA)) = (/(ia , ia = 1,size(RA))/)
+   call print_list(IRA, 'List of RA indices')
 
-   ! --- DOF elimination for system matrices and RHS vector
-   ! Temporary backup of M and K of full system
-   call move_alloc(Init%M,  MM)
-   call move_alloc(Init%K,  KK)
-   call move_alloc(Init%FG, FF)
-   !  Reallocating
-   nDOF = size(m%Tred,2)
-   CALL AllocAry( Init%K, nDOF, nDOF, 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-   CALL AllocAry( Init%M, nDOF, nDOF, 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   CALL AllocAry( Init%FG,nDOF,       'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
-   ! Elimination
-   Init%M  = matmul(transpose(m%Tred), matmul(MM, m%Tred))
-   Init%K  = matmul(transpose(m%Tred), matmul(KK, m%Tred))
-   Init%FG = matmul(transpose(m%Tred), FF)
-
-   call CleanUp_DirectElimination()
-
-CONTAINS
-   LOGICAL FUNCTION Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'DirectElimination') 
-        Failed =  ErrStat >= AbortErrLev
-        if (Failed) call CleanUp_DirectElimination()
-   END FUNCTION Failed
-   
-   !SUBROUTINE Fatal(ErrMsg_in)
-   !   character(len=*), intent(in) :: ErrMsg_in
-   !   call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'DirectElimination');
-   !   call CleanUp_DirectElimination()
-   !END SUBROUTINE Fatal
-
-   SUBROUTINE CleanUp_DirectElimination()
-      ! Cleaning up memory
-      if (allocated(MM  )) deallocate(MM  )
-      if (allocated(KK  )) deallocate(KK  )
-      if (allocated(FF  )) deallocate(FF  )
-      if (allocated(RA  )) deallocate(RA  )
-      if (allocated(RAm1)) deallocate(RAm1)
-      if (allocated(RA  )) deallocate(RA  )
-   END SUBROUTINE CleanUp_DirectElimination
-
-   SUBROUTINE BuildTMatrix(Tred)
-      ! Variables for Building T
-      use IntegerList, only: init_list, find, pop, destroy_list, len
-      use IntegerList, only: print_list
-      real(ReKi), dimension(:,:), allocatable :: Tred !< Transformation matrix for DOF elimination
-      real(ReKi), dimension(:,:), allocatable   :: Tc
-      integer(IntKi), dimension(:), allocatable :: INodesID !< List of unique nodes involved in Elements
-      integer(IntKi), dimension(:), allocatable :: IDOFOld !< 
-      integer(IntKi), dimension(:), pointer :: IDOFNew !< 
-      real(ReKi), dimension(6,6) :: I6       !< Identity matrix of size 6
-      integer(IntKi) :: iPrev
-      type(IList) :: IRA !< list of rigid assembly indices to process
-      integer(IntKi) :: nDOF
-      integer(IntKi) :: aID, ia ! assembly ID, and index in IRA
-      integer(IntKi) :: iNode
-      integer(IntKi) :: JType
-      integer(IntKi) :: I
-      integer(IntKi) :: nc !< Number of DOF after constraints applied
-      integer(IntKi) :: nj
-      real(ReKi)  :: phat(3) !< Directional vector of the joint
-
-      ! --- Misc inits
-      nullify(IDOFNew)
-      I6(1:6,1:6)=0; do i = 1,6 ; I6(i,i)=1_ReKi; enddo ! I6 =  eye(6)
-
-      allocate(m%NodesDOFtilde(1:Init%NNode), stat=ErrStat2) ! Indices of DOF for each joint, in reduced system
-
-      nDOF = nDOF_ConstraintReduced()
-      print*,'nDOF constraint elim', nDOF
-      CALL AllocAry( m%Tred, nDOF, nDOF, 'm%Tred',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-      Tred=0
-      call init_list(IRA, size(RA), 0, ErrStat2, ErrMsg2);
-      IRA%List(1:size(RA)) = (/(ia , ia = 1,size(RA))/)
-      call print_list(IRA, 'List of RA indices')
-
-      ! --- For each node:
-      !  - create list of indices I      in the assembled vector of DOF
-      !  - create list of indices Itilde in the reduced vector of DOF
-      !  - increment iPrev by the number of DOF of Itilde
-      iPrev =0 
-      do iNode = 1, Init%NNode
-         nc=0
-         if (allocated(Tc)) deallocate(Tc)
-         if (allocated(IDOFOld)) deallocate(IDOFOld)
-         JType = int(Init%Nodes(iNode,iJointType))
-         if(JType == idJointCantilever ) then
-            if ( NodeHasRigidElem(iNode, Init, p)) then
-               ! This joint is involved in a rigid link assembly, we skip it (accounted for above)
-               aID = RAm1(iNode)
-               ia  = find(IRA, aID, ErrStat2, ErrMsg2) 
-               print*,'Node',iNode, 'is involved in RA', aID, ia
-               if ( ia <= 0) then
-                  ! This rigid assembly has already been processed, pass to next node
-                  cycle
-               else
-                  call RAElimination( RA(aID)%List, Tc, INodesID, Init, p, ErrStat2, ErrMsg2)
-                  aID = pop(IRA, ia, ErrStat2, ErrMsg2) ! this assembly has been processed 
-                  nj = size(INodesID)
-                  allocate(IDOFOld(1:6*nj))
-                  do I=1, nj
-                     IDOFOld( (I-1)*6+1 : I*6 ) = m%NodesDOF(INodesID(I))%List(1:6)
-                  enddo
-               endif
+   ! --- For each node:
+   !  - create list of indices I      in the assembled vector of DOF
+   !  - create list of indices Itilde in the reduced vector of DOF
+   !  - increment iPrev by the number of DOF of Itilde
+   iPrev =0 
+   do iNode = 1, Init%NNode
+      if (allocated(Tc)) deallocate(Tc)
+      if (allocated(IDOFOld)) deallocate(IDOFOld)
+      JType = int(Init%Nodes(iNode,iJointType))
+      if(JType == idJointCantilever ) then
+         if ( NodeHasRigidElem(iNode, Init, p)) then
+            ! --- Joint involved in a rigid link assembly
+            aID = RAm1(iNode)
+            ia  = find(IRA, aID, ErrStat2, ErrMsg2) 
+            print*,'Node',iNode, 'is involved in RA', aID, ia
+            if ( ia <= 0) then
+               ! This rigid assembly has already been processed, pass to next node
+               cycle
             else
-               ! That's a regular Cantilever joint
-               allocate(Tc(1:6,1:6))
-               allocate(IDOFOld(1:6))
-               Tc=I6
-               IDOFOld = m%NodesDOF(iNode)%List(1:6)
+               call RAElimination( RA(aID)%List, Tc, INodesID, Init, p, ErrStat2, ErrMsg2); if(Failed()) return;
+               aID = pop(IRA, ia, ErrStat2, ErrMsg2) ! this assembly has been processed 
+               nj = size(INodesID)
+               allocate(IDOFOld(1:6*nj))
+               do I=1, nj
+                  IDOFOld( (I-1)*6+1 : I*6 ) = m%NodesDOF(INodesID(I))%List(1:6)
+               enddo
             endif
          else
-            allocate(IDOFOld(1:len(m%NodesDOF(iNode))))
-            IDOFOld(:) = m%NodesDOF(iNode)%List(:)
-            phat = Init%Nodes(iNode, iJointDir:iJointDir+2)
-            call JointElimination(Init%NodesConnE(iNode,:), JType, phat, Tc, Init, p, ErrStat2, ErrMsg2)
+            ! --- Regular cantilever joint
+            allocate(Tc(1:6,1:6))
+            allocate(IDOFOld(1:6))
+            Tc=I6
+            IDOFOld = m%NodesDOF(iNode)%List(1:6)
          endif
-         if (allocated(Tc)) then
-            nc=size(Tc,2) 
-            call init_list(m%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
-            m%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
-            IDOFNew => m%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
-            print*,'N',iNode,'I ',IDOFOld
-            print*,'N',iNode,'It',IDOFNew
-            Tred(IDOFOld, IDOFNew) = Tc
-            iPrev = iPrev + nc
-         else
-            print*,'Error, Tc not allocated, TODO'
-            STOP
-         endif
-      enddo
-      ! --- Safety checks
-      if (len(IRA)>0) then 
-         ErrMsg2='Not all rigid assemblies were processed'; ErrStat2=ErrID_Fatal
+      else
+         ! --- Ball/Pin/Universal joint
+         allocate(IDOFOld(1:len(m%NodesDOF(iNode))))
+         IDOFOld(:) = m%NodesDOF(iNode)%List(:)
+         phat = Init%Nodes(iNode, iJointDir:iJointDir+2)
+         call JointElimination(Init%NodesConnE(iNode,:), JType, phat, Init, p, Tc, ErrStat2, ErrMsg2); if(Failed()) return
       endif
+      nc=size(Tc,2) 
+      call init_list(m%NodesDOFtilde(iNode), nc, 0, ErrStat2, ErrMsg2)
+      m%NodesDOFtilde(iNode)%List(1:nc) = (/ (iprev + i, i=1,nc) /)
+      IDOFNew => m%NodesDOFtilde(iNode)%List(1:nc) ! alias to shorten notations
+      print*,'N',iNode,'I ',IDOFOld
+      print*,'N',iNode,'It',IDOFNew
+      Tred(IDOFOld, IDOFNew) = Tc
+      iPrev = iPrev + nc
+   enddo
+   ! --- Safety checks
+   if (len(IRA)>0) then 
+      ErrMsg2='Not all rigid assemblies were processed'; ErrStat2=ErrID_Fatal
+      if(Failed()) return
+   endif
+   if (iPrev /= nDOF) then 
+      ErrMsg2='Inconsistency in number of reduced DOF'; ErrStat2=ErrID_Fatal
+      if(Failed()) return
+   endif
+   call CleanUp_BuildTMatrix()
+contains
+   LOGICAL FUNCTION Failed()
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'BuildTMatrix') 
+      Failed =  ErrStat >= AbortErrLev
+      if (Failed) call CleanUp_BuildTMatrix()
+   END FUNCTION Failed
 
-      ! --- Cleanup
+   SUBROUTINE CleanUp_BuildTMatrix()
       nullify(IDOFNew)
       call destroy_list(IRA, ErrStat2, ErrMsg2)
       if (allocated(Tc)     ) deallocate(Tc)
       if (allocated(IDOFOld)) deallocate(IDOFOld)
       if (allocated(INodesID)) deallocate(INodesID)
-
-   END SUBROUTINE BuildTMatrix
+   END SUBROUTINE CleanUp_BuildTMatrix
 
    !> Returns number of DOF after constraint reduction (via the matrix T)
    INTEGER(IntKi) FUNCTION nDOF_ConstraintReduced()
@@ -1181,6 +1135,72 @@ CONTAINS
          endif
       end do
    END FUNCTION nDOF_ConstraintReduced
+END SUBROUTINE BuildTMatrix
+!------------------------------------------------------------------------------------------------------
+!> Assemble stiffness and mass matrix, and gravity force vector
+SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   TYPE(SD_MiscVarType),target,  INTENT(INOUT) :: m
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   INTEGER(IntKi)                            :: ErrStat2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
+   ! Varaibles for rigid assembly
+   type(IList), dimension(:), allocatable    :: RA       !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
+   integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
+   real(ReKi), dimension(:,:), allocatable :: MM, KK
+   real(ReKi), dimension(:),   allocatable :: FF
+   integer(IntKi) :: nDOF
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   call RigidLinkAssemblies(Init, p, RA, RAm1, ErrStat2, ErrMsg2); if(Failed()) return
+
+   call BuildTMatrix(Init, p, RA, RAm1, m, m%Tred, ErrStat2, ErrMsg2); if (Failed()) return
+
+   ! --- DOF elimination for system matrices and RHS vector
+   ! Temporary backup of M and K of full system
+   call move_alloc(Init%M,  MM)
+   call move_alloc(Init%K,  KK)
+   call move_alloc(Init%FG, FF)
+   !  Reallocating
+   nDOF = size(m%Tred,2)
+   CALL AllocAry( Init%K, nDOF, nDOF, 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   CALL AllocAry( Init%M, nDOF, nDOF, 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
+   CALL AllocAry( Init%FG,nDOF,       'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   ! Elimination
+   Init%M  = matmul(transpose(m%Tred), matmul(MM, m%Tred))
+   Init%K  = matmul(transpose(m%Tred), matmul(KK, m%Tred))
+   Init%FG = matmul(transpose(m%Tred), FF)
+
+   call CleanUp_DirectElimination()
+
+CONTAINS
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'DirectElimination') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp_DirectElimination()
+   END FUNCTION Failed
+   
+   !SUBROUTINE Fatal(ErrMsg_in)
+   !   character(len=*), intent(in) :: ErrMsg_in
+   !   call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'DirectElimination');
+   !   call CleanUp_DirectElimination()
+   !END SUBROUTINE Fatal
+
+   SUBROUTINE CleanUp_DirectElimination()
+      ! Cleaning up memory
+      if (allocated(MM  )) deallocate(MM  )
+      if (allocated(KK  )) deallocate(KK  )
+      if (allocated(FF  )) deallocate(FF  )
+      if (allocated(RA  )) deallocate(RA  )
+      if (allocated(RAm1)) deallocate(RAm1)
+      if (allocated(RA  )) deallocate(RA  )
+   END SUBROUTINE CleanUp_DirectElimination
+
+
 END SUBROUTINE DirectElimination
 
 !------------------------------------------------------------------------------------------------------
@@ -1192,8 +1212,8 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
    integer(IntKi), dimension(:), INTENT(IN   ) :: Elements !< List of elements
    real(ReKi), dimension(:,:), allocatable     :: Tc
    integer(IntKi), dimension(:), allocatable   :: INodesID !< List of unique nodes involved in Elements
-   TYPE(SD_InitType),            INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
+   TYPE(SD_InitType),            INTENT(IN   ) :: Init
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat  !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! Local variables
@@ -1270,24 +1290,27 @@ END SUBROUTINE RAElimination
 !! where
 !    x_c       are all the DOF of the joint (3 translation + 3*m, m the number of elements) 
 !    x_c_tilde are the nc reduced DOF 
-SUBROUTINE JointElimination(Elements, JType, phat, Tc, Init, p, ErrStat, ErrMsg)
+SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
    use IntegerList, only: init_list, len, append, print_list, pop, destroy_list, get
    integer(IntKi), dimension(:), INTENT(IN   ) :: Elements !< List of elements involved at a joint
    integer(IntKi),               INTENT(IN   ) :: JType !< Joint type
    real(ReKi),                   INTENT(IN   ) :: phat(3) !< Directional vector of the joint
+   TYPE(SD_InitType),            INTENT(IN   ) :: Init
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
    real(ReKi), dimension(:,:), allocatable     :: Tc  !< Transformation matrix from eliminated to full
-   TYPE(SD_InitType),            INTENT(INOUT) :: Init
-   TYPE(SD_ParameterType),       INTENT(INOUT) :: p
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat  !< Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg   !< Error message if ErrStat /= ErrID_None
    ! Local variables
    !type(IList)          :: I !< List of indices for Nodes involved in interface
-   integer(IntKi)       :: i, ie, ne       !< Loop index 
+   integer(IntKi)       :: i, j, ie, ne       !< Loop index 
    integer(IntKi)       :: nDOFr     !< Number of reduced DOF
    integer(IntKi)       :: nDOFt     !< Number of total DOF *nreduced)
-   !real(ReKi)           :: P1(3), Pi(3) ! Nodal points
-   INTEGER(IntKi)       :: ErrStat2
-   CHARACTER(ErrMsgLen) :: ErrMsg2
+   real(ReKi)           :: e1(3), e2(3), e3(3) ! forming orthonormal basis with phat 
+   integer(IntKi)       :: ErrStat2
+   character(ErrMsgLen) :: ErrMsg2
+   real(LaKi), dimension(:,:), allocatable :: Tc_rot !< Part of Tc just for rotational DOF
+   real(LaKi), dimension(:,:), allocatable :: Tc_rot_m1 !< Inverse of Tc_rot
+   real(ReKi) :: ColMean
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -1298,12 +1321,48 @@ SUBROUTINE JointElimination(Elements, JType, phat, Tc, Init, p, ErrStat, ErrMsg)
 
    if    (JType == idJointPin ) then
       nDOFr = 5 + 1*ne
-      allocate(Tc(nDOFt, nDOFr)); 
+      allocate(Tc  (nDOFt, nDOFr)); 
+      allocate(Tc_rot_m1(nDOFr-3, nDOFt-3)); 
       Tc(:,:)=0
+      Tc_rot_m1(:,:)=0
+
+      ! Normalizing 
+      e3= phat/sqrt(phat(1)**2 + phat(2)**2 + phat(3)**2)
+      call GetOrthVectors(e3, e1, e2, ErrStat2, ErrMsg2);
+      print*,'e1',e1
+      print*,'e2',e2
+      print*,'e3',e3
+      print*,'shape',shape(Tc_rot_m1)
+      print*,'ne',ne
+      print*,'nDOF',nDOFr, nDOFt
+
+      ! Forming Tcm1, inverse of Tc
+      do ie=1,ne
+         Tc_rot_m1(1   , (ie-1)*3+1:ie*3 ) = e1(1:3)/ne
+         Tc_rot_m1(2   , (ie-1)*3+1:ie*3 ) = e2(1:3)/ne
+         Tc_rot_m1(ie+2, (ie-1)*3+1:ie*3 ) = e3(1:3)
+      enddo
+      ! Pseudo inverse:
+      call PseudoInverse(Tc_rot_m1, Tc_rot, ErrStat2, ErrMsg2)
+      !allocate(Tc_rot   (nDOFt-3, nDOFr-3)); 
+      !print*,'Tc_rm1',Tc_rot_m1(1,:)
+      !print*,'Tc_rm1',Tc_rot_m1(2,:)
+      !print*,'Tc_rm1',Tc_rot_m1(3,:)
+      !print*,'Tc_rot',Tc_rot(1,:)
+      !print*,'Tc_rot',Tc_rot(2,:)
+      !print*,'Tc_rot',Tc_rot(3,:)
+      !print*,'Tc_rot',Tc_rot(4,:)
+      !print*,'Tc_rot',Tc_rot(5,:)
+      !print*,'Tc_rot',Tc_rot(6,:)
+      !print*,'Tc_rot',Tc_rot(7,:)
+      !print*,'Tc_rot',Tc_rot(8,:)
+      !print*,'Tc_rot',Tc_rot(9,:)
+
+      ! --- Forming Tc
       do i = 1,3    ; Tc(i,i)=1_ReKi; enddo !  I3 for translational DOF
-      !
-      print*,'TODO pin'
-      STOP
+      Tc(4:nDOFt,4:nDOFr)=Tc_rot(1:nDOFt-3, 1:nDOFr-3)
+      deallocate(Tc_rot)
+      deallocate(Tc_rot_m1)
 
    elseif(JType == idJointUniversal ) then
       nDOFr = 4 + 2*ne
@@ -1328,6 +1387,16 @@ SUBROUTINE JointElimination(Elements, JType, phat, Tc, Init, p, ErrStat, ErrMsg)
    !do i=1,nDOFt
    !   print*,'Tc',Tc(i,:)
    !enddo
+
+   ! --- Safety check
+   do j =1, size(Tc,2)
+      ColMean=0; do i=1,size(Tc,1) ; ColMean = ColMean + abs(Tc(i,j)); enddo
+      ColMean = ColMean/size(Tc,1)
+      if (ColMean<1e-6) then
+         ErrMsg='JointElimination: a reduced degree of freedom has a singular mapping.'; ErrStat=ErrID_Fatal
+         return
+      endif
+   enddo
 
 END SUBROUTINE JointElimination
 

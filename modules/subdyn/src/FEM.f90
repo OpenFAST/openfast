@@ -229,6 +229,40 @@ SUBROUTINE GetDirCos(P1, P2, DirCos, L, ErrStat, ErrMsg)
 
 END SUBROUTINE GetDirCos
 !------------------------------------------------------------------------------------------------------
+!> Returns two vectors orthonormal to the input vector
+SUBROUTINE GetOrthVectors(e1, e2, e3, ErrStat, ErrMsg)
+   real(ReKi) ,      intent(in   )  :: e1(3) !<
+   real(ReKi) ,      intent(  out)  :: e2(3) !<
+   real(ReKi) ,      intent(  out)  :: e3(3) !<
+   integer(IntKi),   intent(  out)  :: ErrStat           ! error status of the operation
+   character(*),     intent(  out)  :: ErrMsg            ! error message if errstat /= errid_none
+   real(ReKi) :: min_norm
+   real(ReKi) :: e2_norm
+   real(ReKi) :: e1b(3)
+   ErrMsg  = ""
+   ErrStat = ErrID_None
+
+   min_norm = min( abs(e1(1)),  abs(e1(2)), abs(e1(3)) )
+   ! Finding a good candidate for orthogonality
+   if      (min_norm == abs(e1(1))) then; e2 = (/ 0._ReKi, -e1(3),  e1(2) /)
+   else if (min_norm == abs(e1(2))) then; e2 = (/ e1(3)  , 0._ReKi, -e1(1) /)
+   else if (min_norm == abs(e1(3))) then; e2 = (/-e1(2)  ,  e1(1), 0._ReKi /)
+   endif
+   ! Normalizing
+   e2_norm=sqrt(e2(1)**2 + e2(2)**2 + e2(3)**2)
+   if (abs(e2_norm)<1e-8) then
+      ErrStat=ErrID_Fatal
+      ErrMsg='Failed to determine orthogonal vector'
+      e2=-99999._ReKi
+      e3=-99999._ReKi
+      return
+   endif
+   e2 = e2/e2_norm
+   e1b= e1/sqrt(e1(1)**2 + e1(2)**2 + e1(3)**2)
+   ! Third 
+   e3 =  cross_product(e1b,e2)
+END SUBROUTINE GetOrthVectors
+!------------------------------------------------------------------------------------------------------
 !> Element stiffness matrix for classical beam elements
 !! shear is true  -- non-tapered Timoshenko beam 
 !! shear is false -- non-tapered Euler-Bernoulli beam 
@@ -566,7 +600,7 @@ END SUBROUTINE LumpForces
 !     perform lapack GESVD and then  pinv(A) = V*(inv(S))*U'
 SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    use NWTC_LAPACK, only: LAPACK_DGESVD, LAPACK_GEMM
-   real(LaKi), dimension(:,:), intent(inout)  :: A
+   real(LaKi), dimension(:,:), intent(in)  :: A
    real(LaKi), dimension(:,:), allocatable :: Ainv
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat       ! < Error status of the operation
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg        ! < Error message if ErrStat /    = ErrID_None
@@ -575,13 +609,16 @@ SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    real(LaKi), dimension(:,:), allocatable :: U
    real(LaKi), dimension(:,:), allocatable :: Vt
    real(LaKi), dimension(:),   allocatable :: WORK
+   real(LaKi), dimension(:,:), allocatable :: Acopy
    integer :: i, j ! Loop indices
    integer :: M !< The number of rows of the input matrix A
    integer :: N !< The number of columns of the input matrix A
    integer :: K !< 
    integer :: L !< 
    integer :: LWORK !< 
-   INTEGER :: INFO 
+   integer :: INFO 
+   integer :: rank
+   real(ReKi) :: tol
    M = size(A,1)
    N = size(A,2)
    K = min(M,N)
@@ -593,11 +630,12 @@ SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    allocate(U (M,K) ); U=0;
    allocate(Vt(K,N) ); Vt=0;
    allocate(Ainv(N,M)); Ainv=0;
+   allocate(Acopy(M,N)); Acopy=A;
 
    ! --- Compute the SVD of A
    ! [U,S,V] = svd(A)
    !call DGESVD       ('S', 'S', M, N, A, M,  S, U, M  , Vt  , K,   WORK, LWORK, INFO)
-   call LAPACK_DGESVD('S', 'S', M, N, A, S, U, Vt, WORK, LWORK, ErrStat, ErrMsg)
+   call LAPACK_DGESVD('S', 'S', M, N, Acopy, S, U, Vt, WORK, LWORK, ErrStat, ErrMsg)
 
    !--- Compute PINV = V**T * SIGMA * U**T in two steps
    !  SIGMA = S^(-1)=1/S(j), S is diagonal
@@ -608,24 +646,15 @@ SUBROUTINE PseudoInverse(A, Ainv, ErrStat, ErrMsg)
    !call DGEMM( 'T', 'T', N, M, K, 1.0, V, K, U, M, 0.0, Ainv, N)
    call LAPACK_GEMM( 'T', 'T', 1.0_Laki, Vt, U, 0.0_LaKi, Ainv, ErrStat, ErrMsg)
    ! --- Compute rank
-   ! tol=maxval(shape(A))*epsilon(maxval(S))
-   !r=0
-   !do i=1,K
-   !   if(S(i) .gt. tol)then
-   !      r=r+1
-   !   end if
-   !end do
-   ! --- Scale
-   !do j = 1, K
-   !   do i = 1, K
-   !      if (i .eq. j .and. i .le. r)then
-   !         s_inv(i,j)=1.0_reki/s(i)
-   !      else
-   !         s_inv(i,j)=0.0_reki
-   !      end if
-   !   end do
-   !end do
-   !   Ainv=transpose(matmul(matmul(U(:,1:r),S_inv(1:r,1:r)),V(1:r,:)))
+   tol=maxval(shape(A))*epsilon(maxval(S))
+   rank=0
+   do i=1,K
+      if(S(i) .gt. tol)then
+         rank=rank+1
+      end if
+   end do
+   print*,'Rank',rank
+   !   Ainv=transpose(matmul(matmul(U(:,1:r),S_inv(1:r,1:r)),Vt(1:r,:)))
    END SUBROUTINE PseudoInverse
 
 END MODULE FEM
