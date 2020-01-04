@@ -317,7 +317,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    !Store mapping between nodes and elements      
    CALL NodeCon(Init,p,ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! --- Allocated DOF indices to joints and members 
+   ! --- Allocate DOF indices to joints and members 
    call DistributeDOF(Init, p ,m ,ErrStat2, ErrMsg2); if(Failed()) return; 
 
    ! Assemble Stiffness and mass matrix
@@ -332,9 +332,11 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry(FEMparams%Modes, Init%TDOF, FEMparams%NOmega, 'FEMparams%Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL EigenSolve( Init%K, Init%M, Init%TDOF, FEMparams%NOmega, .True., Init, p, FEMparams%Modes, FEMparams%Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
 
-   ! --- Elimination
+   ! --- Elimination of constraints (reset M, K, D)
    CALL DirectElimination(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
-   
+
+   ! --- Additional Damping and stiffness at pin/ball/universal joints
+   CALL InsertJointStiffDamp(p, m, Init, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Craig-Bampton reduction (sets many parameters)
    CALL Craig_Bampton(Init, p, CBparams, ErrStat2, ErrMsg2); if(Failed()) return
@@ -1664,6 +1666,7 @@ SUBROUTINE Craig_Bampton(Init, p, CBparams, ErrStat, ErrMsg)
    CALL CBApplyConstr(p%DOFI, p%DOFR, CBparams%DOFM,  p%DOFL,  &
                       CBparams%MBB , CBparams%MBM , CBparams%KBB , CBparams%PhiR , FGR ,       &
                                MBBb,          MBMb,          KBBb,          PHiRb, FGRb)
+   ! TODO TODO TODO Transform new damping matrix as well
    !................................
    ! set values needed to calculate outputs and update states:
    !................................

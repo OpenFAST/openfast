@@ -881,13 +881,13 @@ SUBROUTINE AssembleKM(Init, p, m, ErrStat, ErrMsg)
    INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER                  :: I, J, K, jn, kn
+   INTEGER                  :: I, J, K
    INTEGER                  :: iGlob
    REAL(ReKi)               :: Ke(12,12), Me(12, 12), FGe(12) ! element stiffness and mass matrices gravity force vector
    REAL(ReKi)               :: FCe(12) ! Pretension force from cable element
-   INTEGER, DIMENSION(2)    :: nn                        ! node number in element 
    INTEGER(IntKi)           :: ErrStat2
    CHARACTER(ErrMsgLen)     :: ErrMsg2
+   INTEGER(IntKi)           :: iNode !< Node index
    integer(IntKi), dimension(12) :: IDOF !  12 DOF indices in global unconstrained system
    integer(IntKi), dimension(3)  :: IDOF3!  3  DOF indices in global unconstrained system
    ErrMsg  = ""
@@ -1173,6 +1173,7 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    call move_alloc(Init%FG, FF)
    !  Reallocating
    nDOF = size(m%Tred,2)
+   CALL AllocAry( Init%D, nDOF, nDOF, 'Init%D',  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
    CALL AllocAry( Init%K, nDOF, nDOF, 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, nDOF, nDOF, 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
    CALL AllocAry( Init%FG,nDOF,       'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
@@ -1180,6 +1181,7 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    Init%M  = matmul(transpose(m%Tred), matmul(MM, m%Tred))
    Init%K  = matmul(transpose(m%Tred), matmul(KK, m%Tred))
    Init%FG = matmul(transpose(m%Tred), FF)
+   Init%D = 0 !< Used for additional stiffness
 
    call CleanUp_DirectElimination()
 
@@ -1189,13 +1191,6 @@ CONTAINS
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUp_DirectElimination()
    END FUNCTION Failed
-   
-   !SUBROUTINE Fatal(ErrMsg_in)
-   !   character(len=*), intent(in) :: ErrMsg_in
-   !   call SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'DirectElimination');
-   !   call CleanUp_DirectElimination()
-   !END SUBROUTINE Fatal
-
    SUBROUTINE CleanUp_DirectElimination()
       ! Cleaning up memory
       if (allocated(MM  )) deallocate(MM  )
@@ -1205,8 +1200,6 @@ CONTAINS
       if (allocated(RAm1)) deallocate(RAm1)
       if (allocated(RA  )) deallocate(RA  )
    END SUBROUTINE CleanUp_DirectElimination
-
-
 END SUBROUTINE DirectElimination
 
 !------------------------------------------------------------------------------------------------------
@@ -1502,6 +1495,55 @@ CONTAINS
 
 
 END SUBROUTINE RigidLinkAssemblies
+
+
+!------------------------------------------------------------------------------------------------------
+!> Add stiffness and damping to some joints
+SUBROUTINE InsertJointStiffDamp(p, m, Init, ErrStat, ErrMsg)
+   TYPE(SD_ParameterType),       INTENT(IN   ) :: p
+   TYPE(SD_MiscVarType),target,  INTENT(IN   ) :: m
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   ! Local variables
+   integer(IntKi) :: iNode, JType, iStart
+   real(ReKi) :: StifAdd, DampAdd
+   integer(IntKi), dimension(:), pointer :: Ifreerot
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   do iNode = 1, Init%NNode
+      JType   = int(Init%Nodes(iNode,iJointType))
+      StifAdd = Init%Nodes(iNode, iJointStiff)
+      DampAdd = Init%Nodes(iNode, iJointDamp )
+      if(JType == idJointCantilever ) then
+         ! Cantilever joints should not have damping or stiffness
+         if(StifAdd>0) then 
+            ErrMsg='InsertJointStiffDamp: Additional stiffness should be 0 for cantilever joints. Index of problematic node: '//trim(Num2LStr(iNode)); ErrStat=ErrID_Fatal;
+            return
+         endif
+         if(DampAdd>0) then 
+            ErrMsg='InsertJointStiffDamp: Additional damping should be 0 for cantilever joints. Index of problematic node: '//trim(Num2LStr(iNode)); ErrStat=ErrID_Fatal;
+            return
+         endif
+      else
+         ! Ball/Univ/Pin joints have damping/stiffness inserted at indices of "free rotation"
+         if      ( JType == idJointBall      ) then; iStart=4;
+         else if ( JType == idJointUniversal ) then; iStart=5;
+         else if ( JType == idJointPin       ) then; iStart=6;
+         endif
+         Ifreerot=>m%NodesDOFtilde(iNode)%List(iStart:)
+         ! Ball/Pin/Universal joints
+         if(StifAdd>0) then 
+            print*,'StiffAdd, Node',iNode,StifAdd, Ifreerot
+            Init%K(Ifreerot,Ifreerot) = Init%K(Ifreerot,Ifreerot) + StifAdd
+         endif
+         if(DampAdd>0) then 
+            print*,'DampAdd, Node',iNode,DampAdd, Ifreerot
+            Init%D(Ifreerot,Ifreerot) = Init%D(Ifreerot,Ifreerot) +DampAdd
+         endif
+      endif
+   enddo
+END SUBROUTINE InsertJointStiffDamp
 
 !> Apply constraint (Boundary conditions) on Mass and Stiffness matrices
 SUBROUTINE ApplyConstr(Init,p)

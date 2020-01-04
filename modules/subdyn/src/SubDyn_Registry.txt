@@ -110,6 +110,7 @@ typedef	^	^	ReKi	PropsC    	{:}{:}	-	-	"Property sets and values for Cable"
 typedef	^	^	ReKi	PropsR    	{:}{:}	-	-	"Property sets and values for Rigid link"
 typedef	^	^	ReKi	K	{:}{:}	-	-	"System stiffness matrix"
 typedef	^	^	ReKi	M	{:}{:}	-	-	"System mass matrix"
+typedef	^	^	ReKi	D	{:}{:}	-	-	"System damping matrix"
 typedef	^	^	ReKi	F	{:}	-	-	"System force vector"	N
 typedef	^	^	ReKi	FG	{:}	-	-	"Gravity force vector"	N
 typedef	^	^	ReKi	ElemProps	{:}{:}	-	-	"Element properties(A, L, Ixx, Iyy, Jzz, Shear, Kappa, E, G, Rho, DirCos(1,1), DirCos(2, 1), ....., DirCos(3, 3) )"
