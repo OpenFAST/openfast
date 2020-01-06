@@ -102,7 +102,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  WAMIT2_MiscVarType  =======
   TYPE, PUBLIC :: WAMIT2_MiscVarType
-    INTEGER(IntKi)  :: LastIndWave      !< Index for last interpolation step of 2nd order forces [-]
+    INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: LastIndWave      !< Index for last interpolation step of 2nd order forces [-]
     REAL(ReKi) , DIMENSION(1:6)  :: F_Waves2      !< 2nd order force from this timestep [-]
   END TYPE WAMIT2_MiscVarType
 ! =======================
@@ -1525,7 +1525,18 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
+IF (ALLOCATED(SrcMiscData%LastIndWave)) THEN
+  i1_l = LBOUND(SrcMiscData%LastIndWave,1)
+  i1_u = UBOUND(SrcMiscData%LastIndWave,1)
+  IF (.NOT. ALLOCATED(DstMiscData%LastIndWave)) THEN 
+    ALLOCATE(DstMiscData%LastIndWave(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%LastIndWave.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
     DstMiscData%LastIndWave = SrcMiscData%LastIndWave
+ENDIF
     DstMiscData%F_Waves2 = SrcMiscData%F_Waves2
  END SUBROUTINE WAMIT2_CopyMisc
 
@@ -1538,6 +1549,9 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(MiscData%LastIndWave)) THEN
+  DEALLOCATE(MiscData%LastIndWave)
+ENDIF
  END SUBROUTINE WAMIT2_DestroyMisc
 
  SUBROUTINE WAMIT2_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -1575,7 +1589,11 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
-      Int_BufSz  = Int_BufSz  + 1  ! LastIndWave
+  Int_BufSz   = Int_BufSz   + 1     ! LastIndWave allocated yes/no
+  IF ( ALLOCATED(InData%LastIndWave) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! LastIndWave upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%LastIndWave)  ! LastIndWave
+  END IF
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_Waves2)  ! F_Waves2
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -1604,8 +1622,19 @@ ENDIF
   Db_Xferred  = 1
   Int_Xferred = 1
 
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%LastIndWave
-      Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%LastIndWave) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LastIndWave,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LastIndWave,1)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%LastIndWave)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%LastIndWave))-1 ) = PACK(InData%LastIndWave,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%LastIndWave)
+  END IF
       ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%F_Waves2))-1 ) = PACK(InData%F_Waves2,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%F_Waves2)
  END SUBROUTINE WAMIT2_PackMisc
@@ -1643,8 +1672,29 @@ ENDIF
   Re_Xferred  = 1
   Db_Xferred  = 1
   Int_Xferred  = 1
-      OutData%LastIndWave = IntKiBuf( Int_Xferred ) 
-      Int_Xferred   = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LastIndWave not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%LastIndWave)) DEALLOCATE(OutData%LastIndWave)
+    ALLOCATE(OutData%LastIndWave(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LastIndWave.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+      IF (SIZE(OutData%LastIndWave)>0) OutData%LastIndWave = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%LastIndWave))-1 ), mask1, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%LastIndWave)
+    DEALLOCATE(mask1)
+  END IF
     i1_l = LBOUND(OutData%F_Waves2,1)
     i1_u = UBOUND(OutData%F_Waves2,1)
     ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)

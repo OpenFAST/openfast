@@ -242,7 +242,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       TYPE(W2_SumData_Type)                              :: SumQTFData           !< Data storage for the full sum QTF method
 
          ! Force arrays
-      REAL(SiKi)                                         :: MnDriftForce(6)      !< MnDrift force array.   Constant for all time.  First index is force component
+      REAL(SiKi)                                         :: MnDriftForce(:)      !< MnDrift force array.   Constant for all time.  First index is force component
       REAL(SiKi),    ALLOCATABLE                         :: NewmanAppForce(:,:)  !< NewmanApp force array.  Index 1: Time,    Index 2: force component
       REAL(SiKi),    ALLOCATABLE                         :: DiffQTFForce(:,:)    !< DiffQTF force array.    Index 1: Time,    Index 2: force component
       REAL(SiKi),    ALLOCATABLE                         :: SumQTFForce(:,:)     !< SumQTF force array.     Index 1: Time,    Index 2: force component
@@ -523,6 +523,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
 
+!FIXME: does this actually need to be passed in?  All body iterations occur within each init routine
+ThisBodyNum=1
          !> If the MnDrift method will be used, call the subroutine to calculate the force time series
       IF ( p%MnDriftF ) THEN
          
@@ -594,7 +596,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
       IF ( p%MnDriftF ) THEN
 
-         DO I=1,6                ! Loop through load components. Set ones that are calculated.
+         DO I=1,6*p%NBody        ! Loop through load components. Set ones that are calculated.
             IF ( p%MnDriftDims(I) ) THEN
                p%WaveExctn2(:,I) = MnDriftForce(I)
             ENDIF
@@ -602,7 +604,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
       ELSE IF ( p%NewmanAppF ) THEN
 
-         DO I=1,6                ! Loop through load components. Set ones that are calculated.
+         DO I=1,6*p%NBody        ! Loop through load components. Set ones that are calculated.
             IF ( p%NewmanAppDims(I) ) THEN
                p%WaveExctn2(:,I) = NewmanAppForce(:,I)
             ENDIF
@@ -610,7 +612,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
       ELSE IF ( p%DiffQTFF ) THEN
 
-         DO I=1,6                ! Loop through load components. Set ones that are calculated.
+         DO I=1,6*p%NBody        ! Loop through load components. Set ones that are calculated.
             IF ( p%DiffQTFDims(I) ) THEN
                p%WaveExctn2(:,I) = DiffQTFForce(:,I)
             ENDIF
@@ -622,7 +624,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Summation method
       IF ( p%SumQTFF ) THEN
 
-         DO I=1,6                ! Loop through load components. Set ones that are calculated.
+         DO I=1,6*p%NBody        ! Loop through load components. Set ones that are calculated.
             IF ( p%SumQTFDims(I) ) THEN
                   ! Add the sum force to the difference force calculated above (if there was one).  Loop through all timesteps.
                DO J=1,InitInp%NStepWave
@@ -639,7 +641,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF (ALLOCATED(NewmanAppForce))         DEALLOCATE(NewmanAppForce)
       IF (ALLOCATED(DiffQTFForce))           DEALLOCATE(DiffQTFForce)
       IF (ALLOCATED(SumQTFForce))            DEALLOCATE(SumQTFForce)
-
 
 
 
@@ -671,7 +672,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       DO ThisBodyNum = 1,p%NBody
 
             ! Set orientation and position for each body in mesh
-         theta       = (/ 0.0_R8Ki, 0.0_R8Ki, InitInp%PtfmRefztRot(ThisBodyNum)/)
+         theta       = (/ 0.0_R8Ki, 0.0_R8Ki, InitInp%PtfmRefztRot(ThisBodyNum)/)      ! angle in radians
          orientation = EulerConstruct(theta)
          XYZloc      = (/InitInp%PtfmRefxt(ThisBodyNum), InitInp%PtfmRefyt(ThisBodyNum), InitInp%PtfmRefzt(ThisBodyNum)/)
 
@@ -712,6 +713,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       x%DummyContState           = 0.0_SiKi
       xd%DummyDiscState          = 0.0_SiKi
       z%DummyConstrState         = 0.0_SiKi
+      CALL AllocAry( m%LastIndWave, p%NBody, 'm%LastIndWave', ErrStatTmp, ErrMsgTmp)
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       m%LastIndWave              = 1_IntKi
 
       OtherState%DummyOtherState = 0
@@ -783,7 +786,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
       INTEGER(IntKi),                     INTENT(IN   )  :: ThisBodyNum          !< Which body are we on
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: MnDriftData          !< Data storage for the MnDrift method.  Set to INOUT in case we need to convert 4D to 3D
-      REAL(SiKi),                         INTENT(  OUT)  :: MnDriftForce(6)      !< Force data.  Index 1 is the force component.  Constant for all time.
+      REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: MnDriftForce(:)      !< Force data.  Index 1 is the force component.  Constant for all time.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
 
@@ -820,6 +823,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ErrMsgTmp   = ''
       ErrStat     = ErrID_None
       ErrStatTmp  = ErrID_None
+
+         ! Initialize resulting forces
+      ALLOCATE( MnDriftForce(6*p%NBody), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the resulting mean drift force '// &
+                                             'of the 2nd order force.',ErrStat, ErrMsg, RoutineName)
+         RETURN
+      ENDIF
       MnDriftForce = 0.0_SiKi
 
 
@@ -1087,7 +1098,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! Now loop through all the dimensions and perform the calculation
-      DO I=1,6
+      DO I=1,6*p%NBody
 
             ! Set the MnDrift force to 0.0 (Even ones we don't calculate)
          MnDriftForce(I)   = 0.0_SiKi
@@ -1175,8 +1186,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   ! Now put it all together... note the frequency stepsize is multiplied after the summation
                MnDriftForce(I) = MnDriftForce(I) + REAL(QTF_Value * aWaveElevC * CONJG(aWaveElevC)) !bjj: put QTF_Value first so that if it's zero, the rest gets set to zero (to hopefully avoid overflow issues)
 
-            ENDDO
-
+            ENDDO ! NStepWave2
 
          ENDIF    ! Load component to calculate
 
@@ -1562,7 +1572,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ALLOCATE( NewmanTerm2C( 0:InitInp%NStepWave2 ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the second term of the Newmans '// &
                                              'approximation in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanAppForce( 0:InitInp%NStepWave, 6), STAT=ErrStatTmp )
+      ALLOCATE( NewmanAppForce( 0:InitInp%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the resulting Newmans '// &
                                              'approximation of the 2nd order force.',ErrStat, ErrMsg, RoutineName)
 
@@ -2009,7 +2019,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ALLOCATE( TmpComplexArr( 0:InitInp%NStepWave2), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for one load component of the full difference '// &
                                              'QTF 2nd order force in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( DiffQTFForce( 0:InitInp%NStepWave, 6), STAT=ErrStatTmp )
+      ALLOCATE( DiffQTFForce( 0:InitInp%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the full difference '// &
                                              'QTF 2nd order force time series.',ErrStat, ErrMsg, RoutineName)
 
@@ -2073,7 +2083,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! Now loop through all the dimensions and perform the calculation
-      DO I=1,6
+      DO I=1,6*p%NBody
 
             ! Only on the dimensions we requested, and it exists in the dataset
          IF ( p%DiffQTFDims(I) .AND. DiffQTFData%Data4D%LoadComponents(I) ) THEN
@@ -2454,7 +2464,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ALLOCATE( Term2Array( 0:InitInp%NStepWave), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the second term of one load component of the full sum '// &
                                              'QTF 2nd order force in the time domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( SumQTFForce( 0:InitInp%NStepWave, 6), STAT=ErrStatTmp )
+      ALLOCATE( SumQTFForce( 0:InitInp%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for the full difference '// &
                                              'QTF 2nd order force time series.',ErrStat, ErrMsg, RoutineName)
 
@@ -2485,7 +2495,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! Now loop through all the dimensions and perform the calculation
-      DO I=1,6
+      DO I=1,6*p%NBody
 
             ! Only on the dimensions we requested, and if it is present in the data
          IF ( p%SumQTFDims(I) .AND. SumQTFData%Data4D%LoadComponents(I) ) THEN
@@ -3063,6 +3073,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       p%NBody                 =  InitInp%NBody              ! Number of bodies WAMIT2 sees
       p%NBodyMod              =  InitInp%NBodyMod           ! How multiple bodys are treated
 
+         ! This module's implementation requires that if NBodyMod = 2 or 3, then there is one instance of a WAMIT module for each body, therefore, HydroDyn may have NBody > 1, but this WAMIT module will have NBody = 1
+      if ( (p%NBodyMod > 1) .and. (p%NBody > 1) ) then
+         CALL SetErrStat( ErrID_Fatal, "DEVELOPER ERROR: If NBodyMod = 2 or 3, then NBody for the a WAMIT2 object must be equal to 1", ErrStat, ErrMsg, RoutineName)
+         CALL CleanUp 
+         return
+      end if    
+
 
       !--------------------------------------------------------------------------------
       !> ### Flags indicating forces to calculate for with each method
@@ -3102,10 +3119,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       ELSE
          p%MnDriftDims(:)        = .FALSE.               ! Set all dimensions to false unless we are actually calculating something
       ENDIF
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
-         RETURN
-      ENDIF
 
 
 
@@ -3124,10 +3137,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ENDIF
       ELSE
          p%NewmanAppDims(:)      = .FALSE.               ! Set all dimensions to false unless we are actually calculating something
-      ENDIF
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL CleanUp
-         RETURN
       ENDIF
 
 
@@ -3176,18 +3185,18 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       !--------------------------------------------------------------------------------
 
          ! Allocate array for the WaveExtcn2.
-      ALLOCATE( p%WaveExctn2(0:InitInp%NStepWave,6), STAT=ErrStatTmp)
+      ALLOCATE( p%WaveExctn2(0:InitInp%NStepWave,6*p%NBody), STAT=ErrStatTmp)
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveExctn2 to store '// &
                               'the 2nd order force data.',  ErrStat,ErrMsg,'CheckInitInp')
       IF (ErrStat >= AbortErrLev ) RETURN
 
-
-      !--------------------------------------------------------------------------------
-      !> FAST channel output
-      !--------------------------------------------------------------------------------
-
-      p%NumOuts               =  InitInp%NumOuts
-      p%NumOutAll             =  InitInp%NumOutAll
+!
+!      !--------------------------------------------------------------------------------
+!      !> FAST channel output
+!      !--------------------------------------------------------------------------------
+!
+!      p%NumOuts               =  InitInp%NumOuts
+!      p%NumOutAll             =  InitInp%NumOutAll
 
 
    END SUBROUTINE CheckInitInput
@@ -5429,10 +5438,9 @@ SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, 
 
 
          ! Local Variables:
-      INTEGER(IntKi)                                     :: I                          ! Generic index
-!      INTEGER(IntKi)                                     :: J                          ! Generic index
-!      INTEGER(IntKi)                                     :: K                          ! Generic index
-      REAL(ReKi)                                         :: AllOuts(MaxWAMIT2Outputs)
+      INTEGER(IntKi)                                     :: I              ! Generic index
+      INTEGER(IntKi)                                     :: IBody          ! Index to body number
+      INTEGER(IntKi)                                     :: indxStart      ! Starting index
 
 
          ! Initialize ErrStat
@@ -5451,23 +5459,27 @@ SUBROUTINE WAMIT2_CalcOutput( Time, WaveTime, u, p, x, xd, z, OtherState, y, m, 
       END IF
 
 
-
          ! Compute the 2nd order load contribution from incident waves:
 
-      DO I = 1,6     ! Loop through all wave excitation forces and moments
-         m%F_Waves2(I) = InterpWrappedStpReal ( REAL(Time, SiKi), WaveTime(:), p%WaveExctn2(:,I), &
-                                                  m%LastIndWave, p%NStepWave + 1       )
-      END DO          ! I - All wave excitation forces and moments
+      do iBody = 1, p%NBody
+         indxStart = (iBody-1)*6
+
+         DO I = 1,6     ! Loop through all wave excitation forces and moments
+            m%F_Waves2(indxStart+I) = InterpWrappedStpReal ( REAL(Time, SiKi), WaveTime(:), p%WaveExctn2(:,indxStart+I), &
+                                                  m%LastIndWave(IBody), p%NStepWave + 1       )
+         END DO          ! I - All wave excitation forces and moments
 
 
 
          ! Copy results to the output point mesh
-      DO I=1,3
-         y%Mesh%Force(I,1)    = m%F_Waves2(I)
-      END DO
-      DO I=1,3
-         y%Mesh%Moment(I,1)   = m%F_Waves2(I+3)
-      END DO
+         DO I=1,3
+            y%Mesh%Force(I,IBody)    = m%F_Waves2(indxStart+I)
+         END DO
+         DO I=1,3
+            y%Mesh%Moment(I,IBody)   = m%F_Waves2(indxStart+I+3)
+         END DO
+
+      enddo
 
 
 END SUBROUTINE WAMIT2_CalcOutput
