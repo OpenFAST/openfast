@@ -42,10 +42,6 @@ typedef     ^                 ^                 SiKi                 WaveDirMin 
 typedef     ^                 ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction from Waves module"    -
 typedef     ^                 ^                 SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
 
-typedef     ^                 ^                 CHARACTER(10)        OutList           {27}     -        -        "This should really be dimensioned with MaxOutPts"    -
-typedef     ^                 ^                 LOGICAL              OutAll            -        -        -        ""                                                    -
-typedef     ^                 ^                 INTEGER              NumOuts           -        -        -        ""                                                    -
-typedef     ^                 ^                 INTEGER              NumOutAll         -        -        -        ""    -
 typedef     ^                 ^                 INTEGER              WaveMod           -        -        -        "The wave model to use.  This is for error checking -- ideally this would be done in the main calling routine, not here." -
 
 #[note: only one of MnDriff / NewmanApp / DiffQTF can be non-zero

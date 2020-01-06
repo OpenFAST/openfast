@@ -4180,7 +4180,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       ! WAMIT2
       InitInp%WAMIT2%WtrDens     = InitInp%Waves%WtrDens
       InitInp%WAMIT2%WaveMod     = InitInp%Waves%WaveMod
-      InitInp%WAMIT2%OutAll      = InitInp%OutAll
       InitInp%WAMIT2%HasWAMIT    = InitInp%PotMod == 1
       ! Morison
       InitInp%Morison%UnSum      = InitInp%UnSum

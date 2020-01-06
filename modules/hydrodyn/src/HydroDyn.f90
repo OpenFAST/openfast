@@ -663,9 +663,6 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
             CALL MOVE_ALLOC(Waves_InitOut%WaveElevC0, InitLocal%Waves2%WaveElevC0)
             CALL MOVE_ALLOC(Waves_InitOut%WaveDirArr, InitLocal%Waves2%WaveDirArr)
    
-   !bjj: note that this doesn't get called if .not. (InitLocal%Waves2%WvDiffQTFF .OR. InitLocal%Waves2%WvSumQTFF), so p%waves2%* never get set
-   ! however, they get queried later in the code!!!! I've set these parameters in an "else" statement, below
-
 !==========================================================================
 ! Initialize Wave Stretching data for 2nd Order Waves
 !==========================================================================
@@ -841,7 +838,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                p%Waves2%WvSumQTFF  = .FALSE.
                p%Waves2%NumOuts    = 0
                
-         ENDIF
+         ENDIF ! InitLocal%Waves2%WvDiffQTFF .OR. InitLocal%Waves2%WvSumQTFF 
    
    
    
@@ -2012,7 +2009,6 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat,
          ! Additional stiffness, damping forces.  These need to be placed on a point mesh which is located at the WAMIT reference point (WRP).
          ! This mesh will need to get mapped by the glue code for use by either ElastoDyn or SubDyn.
          !-------------------------------------------------------------------
-!bjj: if these are false in the input file, the parameter verions of these variables don't get set:
 
          ! Deal with any output from the Waves2 module....
       IF (p%Waves2%WvDiffQTFF .OR. p%Waves2%WvSumQTFF ) THEN
