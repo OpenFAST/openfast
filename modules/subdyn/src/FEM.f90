@@ -268,7 +268,7 @@ END SUBROUTINE GetOrthVectors
 !! shear is false -- non-tapered Euler-Bernoulli beam 
 SUBROUTINE ElemK_Beam(A, L, Ixx, Iyy, Jzz, Shear, kappa, E, G, DirCos, K)
    REAL(ReKi), INTENT( IN) :: A, L, Ixx, Iyy, Jzz, E, G, kappa
-   REAL(ReKi), INTENT( IN) :: DirCos(3,3)
+   REAL(ReKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
    LOGICAL   , INTENT( IN) :: Shear
    REAL(ReKi), INTENT(OUT) :: K(12, 12) 
    ! Local variables
@@ -345,7 +345,7 @@ END SUBROUTINE ElemK_Beam
 SUBROUTINE ElemK_Cable(A, L, E, T0, DirCos, K)
    REAL(ReKi), INTENT( IN) :: A, L, E
    REAL(ReKi), INTENT( IN) :: T0 ! Pretension [N]
-   REAL(ReKi), INTENT( IN) :: DirCos(3,3)
+   REAL(ReKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
    REAL(ReKi), INTENT(OUT) :: K(12, 12) 
    ! Local variables
    REAL(ReKi) :: L0, Eps0, EAL0, EE
@@ -387,7 +387,7 @@ END SUBROUTINE ElemK_Cable
 !> Element mass matrix for classical beam elements
 SUBROUTINE ElemM_Beam(A, L, Ixx, Iyy, Jzz, rho, DirCos, M)
    REAL(ReKi), INTENT( IN) :: A, L, Ixx, Iyy, Jzz, rho
-   REAL(ReKi), INTENT( IN) :: DirCos(3,3)
+   REAL(ReKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
    REAL(ReKi), INTENT(OUT) :: M(12, 12)
 
    REAL(ReKi) :: t, rx, ry, po
@@ -455,7 +455,7 @@ END SUBROUTINE ElemM_Beam
 !> Element stiffness matrix for pretension cable
 SUBROUTINE ElemM_Cable(A, L, rho, DirCos, M)
    REAL(ReKi), INTENT( IN) :: A, L, rho
-   REAL(ReKi), INTENT( IN) :: DirCos(3,3)
+   REAL(ReKi), INTENT( IN) :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
    REAL(ReKi), INTENT(OUT) :: M(12, 12) 
    ! Local variables
    REAL(ReKi) :: DC(12, 12)
@@ -495,12 +495,12 @@ END SUBROUTINE ElemM_Cable
 !!    Fx_n1=1,Fy_n1=2,Fz_n1=3,Mx_n1= 4,My_n1= 5,Mz_n1= 6,
 !!    Fx_n2=7,Fy_n2=8,Fz_n2=9,Mx_n2=10,My_n2=11,Mz_n2=12
 SUBROUTINE ElemG(A, L, rho, DirCos, F, g)
-   REAL(ReKi), INTENT( IN )           :: A            !< area
-   REAL(ReKi), INTENT( IN )           :: L            !< element length
-   REAL(ReKi), INTENT( IN )           :: rho          !< density
-   REAL(ReKi), INTENT( IN )           :: DirCos(3, 3) !< direction cosine matrix (for determining distance between nodes 1 and 2)
-   REAL(ReKi), INTENT( IN )           :: g            !< gravity
-   REAL(ReKi), INTENT( OUT)           :: F(12)        !< returned loads. positions 1-6 are the loads for node 1; 7-12 are loads for node 2.
+   REAL(ReKi), INTENT( IN ) :: A     !< area
+   REAL(ReKi), INTENT( IN ) :: L     !< element length
+   REAL(ReKi), INTENT( IN ) :: rho   !< density
+   REAL(ReKi), INTENT( IN)  :: DirCos(3,3)      !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
+   REAL(ReKi), INTENT( IN ) :: g     !< gravity
+   REAL(ReKi), INTENT( OUT) :: F(12) !< returned loads. positions 1-6 are the loads for node 1 ; 7-12 are loads for node 2.
    REAL(ReKi) :: TempCoeff
    REAL(ReKi) :: w            ! weight per unit length
    
@@ -527,9 +527,9 @@ END SUBROUTINE ElemG
 !------------------------------------------------------------------------------------------------------
 !> 
 SUBROUTINE ElemF_Cable(T0, DirCos, F)
-   REAL(ReKi), INTENT( IN ) :: T0           !< Pretension load [N]
-   REAL(ReKi), INTENT( IN ) :: DirCos(3, 3) !< direction cosine matrix
-   REAL(ReKi), INTENT( OUT) :: F(12)        !< returned loads. 1-6 for node 1; 7-12 for node 2.
+   REAL(ReKi), INTENT( IN ) :: T0          !< Pretension load [N]
+   REAL(ReKi), INTENT( IN)  :: DirCos(3,3) !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
+   REAL(ReKi), INTENT( OUT) :: F(12)       !< returned loads. 1-6 for node 1; 7-12 for node 2.
    ! Local variables
    REAL(ReKi) :: DC(12, 12)
 
@@ -555,7 +555,7 @@ SUBROUTINE LumpForces(Area1,Area2,crat,L,rho, g, DirCos, F)
    REAL(ReKi), INTENT( IN ) :: g                !< gravity
    REAL(ReKi), INTENT( IN ) :: L                !< Length of element
    REAL(ReKi), INTENT( IN ) :: rho              !< density
-   REAL(ReKi), INTENT( IN ) :: DirCos(3, 3)     !< Direction cosine matrix
+   REAL(ReKi), INTENT( IN)  :: DirCos(3,3)      !< From element to global: xg = DC.xe,  Kg = DC.Ke.DC^t
    REAL(ReKi), INTENT( OUT) :: F(12)            !< Lumped forces
    !LOCALS
    REAL(ReKi)                         :: TempCoeff,a0,a1,a2  !coefficients of the gravity quadratically distributed force

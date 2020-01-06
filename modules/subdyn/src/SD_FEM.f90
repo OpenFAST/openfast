@@ -1328,13 +1328,6 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
       ! Normalizing 
       e3= phat/sqrt(phat(1)**2 + phat(2)**2 + phat(3)**2)
       call GetOrthVectors(e3, e1, e2, ErrStat2, ErrMsg2);
-      print*,'e1',e1
-      print*,'e2',e2
-      print*,'e3',e3
-      print*,'shape',shape(Tc_rot_m1)
-      print*,'ne',ne
-      print*,'nDOF',nDOFr, nDOFt
-
       ! Forming Tcm1, inverse of Tc
       do ie=1,ne
          Tc_rot_m1(1   , (ie-1)*3+1:ie*3 ) = e1(1:3)/ne
@@ -1343,20 +1336,6 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
       enddo
       ! Pseudo inverse:
       call PseudoInverse(Tc_rot_m1, Tc_rot, ErrStat2, ErrMsg2)
-      !allocate(Tc_rot   (nDOFt-3, nDOFr-3)); 
-      !print*,'Tc_rm1',Tc_rot_m1(1,:)
-      !print*,'Tc_rm1',Tc_rot_m1(2,:)
-      !print*,'Tc_rm1',Tc_rot_m1(3,:)
-      !print*,'Tc_rot',Tc_rot(1,:)
-      !print*,'Tc_rot',Tc_rot(2,:)
-      !print*,'Tc_rot',Tc_rot(3,:)
-      !print*,'Tc_rot',Tc_rot(4,:)
-      !print*,'Tc_rot',Tc_rot(5,:)
-      !print*,'Tc_rot',Tc_rot(6,:)
-      !print*,'Tc_rot',Tc_rot(7,:)
-      !print*,'Tc_rot',Tc_rot(8,:)
-      !print*,'Tc_rot',Tc_rot(9,:)
-
       ! --- Forming Tc
       do i = 1,3    ; Tc(i,i)=1_ReKi; enddo !  I3 for translational DOF
       Tc(4:nDOFt,4:nDOFr)=Tc_rot(1:nDOFt-3, 1:nDOFr-3)
@@ -1364,16 +1343,31 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
       deallocate(Tc_rot_m1)
 
    elseif(JType == idJointUniversal ) then
+      if (ne/=2) then
+         ErrMsg='JointElimination: universal joints should only connect two elements.'; ErrStat=ErrID_Fatal
+         return
+      endif
       nDOFr = 4 + 2*ne
       allocate(Tc(nDOFt, nDOFr)); 
+      allocate(Tc_rot_m1(nDOFr-3, nDOFt-3)); 
       Tc(:,:)=0
+      Tc_rot_m1(:,:)=0 ! Important init
+      ! Forming the inverse of Tc_rot
+      Tc_rot_m1(1,1:3) = p%ElemProps(Elements(1))%DirCos(:,3)/2._ReKi
+      Tc_rot_m1(1,4:6) = p%ElemProps(Elements(2))%DirCos(:,3)/2._ReKi
+      Tc_rot_m1(2,1:3) = p%ElemProps(Elements(1))%DirCos(:,1)
+      Tc_rot_m1(3,1:3) = p%ElemProps(Elements(1))%DirCos(:,2)
+      Tc_rot_m1(4,4:6) = p%ElemProps(Elements(2))%DirCos(:,1)
+      Tc_rot_m1(5,4:6) = p%ElemProps(Elements(2))%DirCos(:,2)
+      ! Pseudo inverse
+      call PseudoInverse(Tc_rot_m1, Tc_rot, ErrStat2, ErrMsg2)
+      ! --- Forming Tc
       do i = 1,3    ; Tc(i,i)=1_ReKi; enddo !  I3 for translational DOF
-      !
-      print*,'TODO univ'
-      STOP
+      Tc(4:nDOFt,4:nDOFr)=Tc_rot(1:nDOFt-3, 1:nDOFr-3)
+      deallocate(Tc_rot)
+      deallocate(Tc_rot_m1)
 
    elseif(JType == idJointBall      ) then
-      print*,'Elements',Elements
       nDOFr = 3 + 3*ne
       allocate(Tc(nDOFt, nDOFr)); 
       Tc(:,:)=0
@@ -1386,7 +1380,7 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
    !do i=1,nDOFt
    !   print*,'Tc',Tc(i,:)
    !enddo
-
+   STOP
    ! --- Safety check
    do j =1, size(Tc,2)
       ColMean=0; do i=1,size(Tc,1) ; ColMean = ColMean + abs(Tc(i,j)); enddo
