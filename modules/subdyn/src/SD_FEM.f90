@@ -1380,7 +1380,6 @@ SUBROUTINE JointElimination(Elements, JType, phat, Init, p, Tc, ErrStat, ErrMsg)
    !do i=1,nDOFt
    !   print*,'Tc',Tc(i,:)
    !enddo
-   STOP
    ! --- Safety check
    do j =1, size(Tc,2)
       ColMean=0; do i=1,size(Tc,1) ; ColMean = ColMean + abs(Tc(i,j)); enddo
@@ -1565,12 +1564,15 @@ END SUBROUTINE ApplyConstr
 SUBROUTINE ElemM(ep, Me)
    TYPE(ElemPropType), INTENT(IN) :: eP        !< Element Property
    REAL(ReKi), INTENT(OUT)        :: Me(12, 12)
+   REAL(ReKi) :: L0, Eps0
    if (ep%eType==idMemberBeam) then
       !Calculate Ke, Me to be used for output
       CALL ElemM_Beam(eP%Area, eP%Length, eP%Ixx, eP%Iyy, eP%Jzz,  eP%rho, eP%DirCos, Me)
 
    else if (ep%eType==idMemberCable) then
-      CALL ElemM_Cable(ep%Area, ep%Length, ep%rho, ep%DirCos, Me)
+      Eps0 = ep%T0/(ep%YoungE*ep%Area)
+      L0   = ep%Length/(1+Eps0)  ! "rest length" for which pretension would be 0
+      CALL ElemM_Cable(ep%Area, L0, ep%rho, ep%DirCos, Me)
 
    else if (ep%eType==idMemberRigid) then
       if ( EqualRealNos(eP%rho, 0.0_ReKi) ) then
