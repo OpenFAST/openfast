@@ -23,7 +23,7 @@
 ! distributed under the License is distributed on an "AS IS" BASIS,
 ! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 ! See the License for the specific language governing permissions and
-!    
+!
 !**********************************************************************************************************************************
 MODULE WAMIT2
 
@@ -300,7 +300,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !-------------------------------------------------------------------------------------------------------------
          !> 1. Check the data file related values (_MnDrift_, _MnDriftF_ etc). Also copy over important things from _InitInp_ to _p_ and _InitOut_.
 
-      CALL CheckInitInput( InitInp, InitOut, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStatTmp, ErrMsgTmp )
+      CALL CheckInitInput( InitInp, Interval, InitOut, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
@@ -527,7 +527,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 ThisBodyNum=1
          !> If the MnDrift method will be used, call the subroutine to calculate the force time series
       IF ( p%MnDriftF ) THEN
-         
+
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order mean drift force.' )
 
@@ -679,12 +679,12 @@ ThisBodyNum=1
             ! Create the node on the mesh
          CALL MeshPositionNode (u%Mesh, ThisBodyNum, XYZloc, ErrStatTmp, ErrMsgTmp, orientation )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
- 
+
             ! Create the mesh element
          CALL MeshConstructElement (  u%Mesh, ELEMENT_POINT, ErrStatTmp, ErrMsgTmp, ThisBodyNum )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       ENDDO
- 
+
       CALL MeshCommit ( u%Mesh, ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -718,7 +718,7 @@ ThisBodyNum=1
       m%LastIndWave              = 1_IntKi
 
       OtherState%DummyOtherState = 0
-      
+
          ! Cleanup remaining stuff
       CALL CleanUp
 
@@ -1043,7 +1043,7 @@ ThisBodyNum=1
          IF (ErrStat >= AbortErrLev) RETURN
 
          MnDriftData%DataIs3D = .TRUE.       ! Set flag to indicate we now have the 3D data.
-         
+
       ENDIF
 
 
@@ -1276,7 +1276,7 @@ ThisBodyNum=1
       INTEGER(IntKi)                                     :: K                    !< Generic counter
       TYPE(FFT_DataType)                                 :: FFT_Data             !< Temporary array for the FFT module we're using
       CHARACTER(*), PARAMETER                            :: RoutineName = 'NewmanApp_InitCalc'
- 
+
 
          ! Wave information and QTF temporary
       COMPLEX(SiKi)                                      :: QTF_Value            !< Temporary complex number for QTF
@@ -1507,7 +1507,7 @@ ThisBodyNum=1
          IF (ErrStat >= AbortErrLev) RETURN
 
          NewmanAppData%DataIs3D = .TRUE.       ! Set flag to indicate we now have the 3D data.
-       
+
       ENDIF
 
 
@@ -1856,7 +1856,7 @@ ThisBodyNum=1
       INTEGER(IntKi)                                     :: K                    !< Generic counter
       TYPE(FFT_DataType)                                 :: FFT_Data             !< Temporary array for the FFT module we're using
       CHARACTER(*), PARAMETER                            :: RoutineName = 'DiffQTF_InitCalc'
- 
+
 
          ! Wave information and QTF temporary
       COMPLEX(SiKi)                                      :: QTF_Value            !< Temporary complex number for QTF
@@ -2294,7 +2294,7 @@ ThisBodyNum=1
       INTEGER(IntKi)                                     :: K                    !< Generic counter
       TYPE(FFT_DataType)                                 :: FFT_Data             !< Temporary array for the FFT module we're using. For the first  term in the equation.
       CHARACTER(*), PARAMETER                            :: RoutineName = 'SumQTF_InitCalc'
- 
+
 
          ! Wave information and QTF temporary
       COMPLEX(SiKi)                                      :: QTF_Value           !< Temporary complex number for QTF
@@ -3666,7 +3666,7 @@ ThisBodyNum=1
          Data3D%WvFreq1( 1 )                 = 0.0_SiKi
          Data3D%WvFreq1( 2 )                 = MAX( TmpWvFreq1(1) - 10.0_SiKi*EPSILON(0.0_SiKi), 0.0_SiKi )  ! make sure the Frequencies are still monotonically increasing
       ENDIF
-      
+
          ! add the two points for step-change after last entered frequency
       Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = Data3D%WvFreq1(Data3D%NumWvFreq1-2) + 10.0_SiKi*EPSILON(0.0_SiKi)
       Data3D%WvFreq1( Data3D%NumWvFreq1   )     = HUGE(1.0_SiKi)/5 ! floating overflow occurs later with arithmetic so I divided by a small constant
@@ -4487,7 +4487,7 @@ ThisBodyNum=1
          Data4D%WvFreq1( 1 )                 = 0.0_SiKi
          Data4D%WvFreq1( 2 )                 = MAX( TmpWvFreq1(1) - 10.0_SiKi*EPSILON(0.0_SiKi), 0.0_SiKi )  ! make sure the Frequencies are still monotonically increasing
       ENDIF
-      
+
          ! add the two points for step-change after last entered frequency
       Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = Data4D%WvFreq1(Data4D%NumWvFreq1-2) + 10.0_SiKi*EPSILON(0.0_SiKi)
       Data4D%WvFreq1( Data4D%NumWvFreq1   )     = HUGE(1.0_SiKi)/5 ! floating overflow occurs later with arithmetic so I divided by a small constant
@@ -4502,7 +4502,7 @@ ThisBodyNum=1
          Data4D%WvFreq2( 1 )                 = 0.0_SiKi
          Data4D%WvFreq2( 2 )                 = MAX( TmpWvFreq2(1) - 10.0_SiKi*EPSILON(0.0_SiKi), 0.0_SiKi )  ! make sure the Frequencies are still monotonically increasing
       ENDIF
-      
+
          ! add the two points for step-change after last entered frequency
       Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = Data4D%WvFreq2(Data4D%NumWvFreq2-2) + 10.0_SiKi*EPSILON(0.0_SiKi)
       Data4D%WvFreq2( Data4D%NumWvFreq2   )     = HUGE(1.0_SiKi)/5 ! floating overflow occurs later with arithmetic so I divided by a small constant
