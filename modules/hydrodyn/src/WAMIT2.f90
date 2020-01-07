@@ -227,8 +227,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
          ! Local Variables
-      INTEGER(IntKi)                                     :: I                    !< Generic counter
+      INTEGER(IntKi)                                     :: IBody                !< Counter for current body
+      INTEGER(IntKi)                                     :: ThisDim              !< Counter to currrent dimension
       INTEGER(IntKi)                                     :: J                    !< Generic counter
+      INTEGER(IntKi)                                     :: Idx                  !< Generic counter
       INTEGER(IntKi)                                     :: ThisBodyNum          !< Current body number
       REAL(R8Ki)                                         :: theta(3)             !< rotation about z for ThisBodyNum (0 about x,y)
       REAL(R8Ki)                                         :: orientation(3,3)     !< Orientation matrix for orientation of ThisBodyNum
@@ -242,7 +244,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       TYPE(W2_SumData_Type)                              :: SumQTFData           !< Data storage for the full sum QTF method
 
          ! Force arrays
-      REAL(SiKi)                                         :: MnDriftForce(:)      !< MnDrift force array.   Constant for all time.  First index is force component
+      REAL(SiKi),    ALLOCATABLE                         :: MnDriftForce(:)      !< MnDrift force array.   Constant for all time.  First index is force component
       REAL(SiKi),    ALLOCATABLE                         :: NewmanAppForce(:,:)  !< NewmanApp force array.  Index 1: Time,    Index 2: force component
       REAL(SiKi),    ALLOCATABLE                         :: DiffQTFForce(:,:)    !< DiffQTF force array.    Index 1: Time,    Index 2: force component
       REAL(SiKi),    ALLOCATABLE                         :: SumQTFForce(:,:)     !< SumQTF force array.     Index 1: Time,    Index 2: force component
@@ -397,24 +399,29 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> 3. Now check the data to ensure that all the dimensions that were requested acually exist in the file.  At
          !!    this point, the MnDriftData and NewmanApp data will be either 3D or 4D, but not both.
          !!
-
          !> Check the MnDrift data: check both in case we have already copied 4D data into the 3D.  Will decide later which is used.
       IF ( p%MnDriftF ) THEN
          IF ( MnDriftData%DataIs3D ) THEN
-               ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,MnDriftData%Data3D%NumBodies
-               IF ( p%MnDriftDims(I) .AND. ( .NOT. MnDriftData%Data3D%LoadComponents(I) ) ) &
-                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
-                        TRIM(Num2LStr(I))//' force component for the MnDrift method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,RoutineName)
+               ! Check the dimensions used.  The LoadComponents(Idx) flag will be set to .TRUE. if data was found in the file
+            DO IBody=1,MnDriftData%Data3D%NumBodies
+               DO ThisDim=1,6
+                  Idx =  (IBody-1)*6+ThisDim
+                  IF ( p%MnDriftDims(ThisDim) .AND. ( .NOT. MnDriftData%Data3D%LoadComponents(Idx) ) ) &
+                     CALL SetErrStat( ErrID_Warn, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
+                           TRIM(Num2LStr(ThisDim))//' force component for the MnDrift method.  Setting this component to zero.',    &
+                           ErrStat,ErrMsg,RoutineName)
+               ENDDO
             ENDDO
          ELSE IF ( MnDriftData%DataIs4D ) THEN
-               ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,MnDriftData%Data4D%NumBodies
-               IF ( p%MnDriftDims(I) .AND. ( .NOT. MnDriftData%Data4D%LoadComponents(I) )  )&
-                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
-                        TRIM(Num2LStr(I))//' force component for the MnDrift method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,RoutineName)
+               ! Check the dimensions used.  The LoadComponents(Idx) flag will be set to .TRUE. if data was found in the file
+            DO IBody=1,MnDriftData%Data4D%NumBodies
+               DO ThisDim=1,6
+                  Idx =  (IBody-1)*6+ThisDim
+                  IF ( p%MnDriftDims(ThisDim) .AND. ( .NOT. MnDriftData%Data4D%LoadComponents(Idx) )  )&
+                     CALL SetErrStat( ErrID_Warn, ' '//TRIM(MnDriftData%Filename)//' does not contain information for the '// &
+                           TRIM(Num2LStr(ThisDim))//' force component for the MnDrift method.  Setting this component to zero.',    &
+                           ErrStat,ErrMsg,RoutineName)
+               ENDDO
             ENDDO
          ELSE  ! We didn't find any data to use...
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  MnDrift flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
@@ -429,20 +436,26 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> Check the NewmanApp data: check both in case we have already copied 4D data into the 3D.  Will decide later which is used.
       IF ( p%NewmanAppF ) THEN
          IF ( NewmanAppData%DataIs3D ) THEN
-               ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,NewmanAppData%Data3D%NumBodies
-               IF ( p%NewmanAppDims(I) .AND. ( .NOT. NewmanAppData%Data3D%LoadComponents(I) ) ) &
-                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
-                        TRIM(Num2LStr(I))//' force component for the NewmanApp method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,RoutineName)
+               ! Check the dimensions used.  The LoadComponents(Idx) flag will be set to .TRUE. if data was found in the file
+            DO IBody=1,NewmanAppData%Data3D%NumBodies
+               DO ThisDim=1,6
+                  Idx =  (IBody-1)*6+ThisDim
+                  IF ( p%NewmanAppDims(ThisDim) .AND. ( .NOT. NewmanAppData%Data3D%LoadComponents(Idx) ) ) &
+                     CALL SetErrStat( ErrID_Warn, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
+                           TRIM(Num2LStr(ThisDim))//' force component for the NewmanApp method.  Setting this component to zero.',    &
+                           ErrStat,ErrMsg,RoutineName)
+               ENDDO
             ENDDO
          ELSE IF ( NewmanAppData%DataIs4D ) THEN
-               ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,NewmanAppData%Data4D%NumBodies
-               IF ( p%NewmanAppDims(I) .AND. ( .NOT. NewmanAppData%Data4D%LoadComponents(I) ) ) &
-                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
-                        TRIM(Num2LStr(I))//' force component for the NewmanApp method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,RoutineName)
+               ! Check the dimensions used.  The LoadComponents(Idx) flag will be set to .TRUE. if data was found in the file
+            DO IBody=1,NewmanAppData%Data4D%NumBodies
+               DO ThisDim=1,6
+                  Idx =  (IBody-1)*6+ThisDim
+                  IF ( p%NewmanAppDims(ThisDim) .AND. ( .NOT. NewmanAppData%Data4D%LoadComponents(Idx) ) ) &
+                     CALL SetErrStat( ErrID_Warn, ' '//TRIM(NewmanAppData%Filename)//' does not contain information for the '// &
+                           TRIM(Num2LStr(ThisDim))//' force component for the NewmanApp method.  Setting this component to zero.',    &
+                           ErrStat,ErrMsg,RoutineName)
+               ENDDO
             ENDDO
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  NewmanApp flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
@@ -457,12 +470,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> Check the DiffQTF data: Don't check the 3D data.  We may have copied 4D into it for the MnDrift term.
       IF ( p%DiffQTFF ) THEN
          IF ( DiffQTFData%DataIs4D ) THEN
-               ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,DiffQTFData%Data4D%NumBodies
-               IF ( p%DiffQTFDims(I) .AND. ( .NOT. DiffQTFData%Data4D%LoadComponents(I) ) ) &
-                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(DiffQTFData%Filename)//' does not contain information for the '// &
-                        TRIM(Num2LStr(I))//' force component for the DiffQTF method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,RoutineName)
+               ! Check the dimensions used.  The LoadComponents(Idx) flag will be set to .TRUE. if data was found in the file
+            DO IBody=1,DiffQTFData%Data4D%NumBodies
+               DO ThisDim=1,6
+                  Idx =  (IBody-1)*6+ThisDim
+                  IF ( p%DiffQTFDims(ThisDim) .AND. ( .NOT. DiffQTFData%Data4D%LoadComponents(Idx) ) ) &
+                     CALL SetErrStat( ErrID_Warn, ' '//TRIM(DiffQTFData%Filename)//' does not contain information for the '// &
+                           TRIM(Num2LStr(ThisDim))//' force component for the DiffQTF method.  Setting this component to zero.',    &
+                           ErrStat,ErrMsg,RoutineName)
+               ENDDO
             ENDDO
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  DiffQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
@@ -477,12 +493,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> Check the SumQTF data
       IF ( p%SumQTFF ) THEN
          IF ( SumQTFData%DataIs4D ) THEN
-               ! Check the dimensions used.  The LoadComponents(I) flag will be set to .TRUE. if data was found in the file
-            DO I=1,SumQTFData%Data4D%NumBodies
-               IF ( p%SumQTFDims(I) .AND. ( .NOT. SumQTFData%Data4D%LoadComponents(I) ) ) &
-                  CALL SetErrStat( ErrID_Warn, ' '//TRIM(SumQTFData%Filename)//' does not contain information for the '// &
-                        TRIM(Num2LStr(I))//' force component for the SumQTF method.  Setting this component to zero.',    &
-                        ErrStat,ErrMsg,RoutineName)
+               ! Check the dimensions used.  The LoadComponents(Idx) flag will be set to .TRUE. if data was found in the file
+            DO IBody=1,SumQTFData%Data4D%NumBodies
+               DO ThisDim=1,6
+                  Idx =  (IBody-1)*6+ThisDim
+                  IF ( p%SumQTFDims(ThisDim) .AND. ( .NOT. SumQTFData%Data4D%LoadComponents(Idx) ) ) &
+                     CALL SetErrStat( ErrID_Warn, ' '//TRIM(SumQTFData%Filename)//' does not contain information for the '// &
+                           TRIM(Num2LStr(ThisDim))//' force component for the SumQTF method.  Setting this component to zero.',    &
+                           ErrStat,ErrMsg,RoutineName)
+               ENDDO
             ENDDO
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  SumQTF flag is set, but no data has been read in.',ErrStat,ErrMsg, RoutineName)
@@ -593,29 +612,37 @@ ThisBodyNum=1
 
 
          ! Difference method data.  Only one difference method can be calculated at a time.
-
       IF ( p%MnDriftF ) THEN
 
-         DO I=1,6*p%NBody        ! Loop through load components. Set ones that are calculated.
-            IF ( p%MnDriftDims(I) ) THEN
-               p%WaveExctn2(:,I) = MnDriftForce(I)
-            ENDIF
+         DO IBody=1,p%NBody        ! Loop through load components. Set ones that are calculated.
+            DO ThisDim=1,6
+               Idx =  (IBody-1)*6+ThisDim
+               IF ( p%MnDriftDims(ThisDim) ) THEN
+                  p%WaveExctn2(:,Idx) = MnDriftForce(Idx)
+               ENDIF
+            ENDDO
          ENDDO
 
       ELSE IF ( p%NewmanAppF ) THEN
 
-         DO I=1,6*p%NBody        ! Loop through load components. Set ones that are calculated.
-            IF ( p%NewmanAppDims(I) ) THEN
-               p%WaveExctn2(:,I) = NewmanAppForce(:,I)
-            ENDIF
+         DO IBody=1,p%NBody        ! Loop through load components. Set ones that are calculated.
+            DO ThisDim=1,6
+               Idx =  (IBody-1)*6+ThisDim
+               IF ( p%NewmanAppDims(ThisDim) ) THEN
+                  p%WaveExctn2(:,Idx) = NewmanAppForce(:,Idx)
+               ENDIF
+            ENDDO
          ENDDO
 
       ELSE IF ( p%DiffQTFF ) THEN
 
-         DO I=1,6*p%NBody        ! Loop through load components. Set ones that are calculated.
-            IF ( p%DiffQTFDims(I) ) THEN
-               p%WaveExctn2(:,I) = DiffQTFForce(:,I)
-            ENDIF
+         DO IBody=1,p%NBody        ! Loop through load components. Set ones that are calculated.
+            DO ThisDim=1,6
+               Idx =  (IBody-1)*6+ThisDim
+               IF ( p%DiffQTFDims(ThisDim) ) THEN
+                  p%WaveExctn2(:,Idx) = DiffQTFForce(:,Idx)
+               ENDIF
+            ENDDO
          ENDDO
 
       ENDIF
@@ -624,13 +651,13 @@ ThisBodyNum=1
          ! Summation method
       IF ( p%SumQTFF ) THEN
 
-         DO I=1,6*p%NBody        ! Loop through load components. Set ones that are calculated.
-            IF ( p%SumQTFDims(I) ) THEN
-                  ! Add the sum force to the difference force calculated above (if there was one).  Loop through all timesteps.
-               DO J=1,InitInp%NStepWave
-                  p%WaveExctn2(J,I) = p%WaveExctn2(J,I) + SumQTFForce(J,I)
-               ENDDO
-            ENDIF
+         DO IBody=1,p%NBody        ! Loop through load components. Set ones that are calculated.
+            DO ThisDim=1,6
+               Idx =  (IBody-1)*6+ThisDim
+               IF ( p%SumQTFDims(ThisDim) ) THEN
+                  p%WaveExctn2(:,Idx) = p%WaveExctn2(:,Idx) + SumQTFForce(:,Idx)
+               ENDIF
+            ENDDO
          ENDDO
 
       ENDIF
@@ -769,10 +796,14 @@ ThisBodyNum=1
    !!
    !! where \f$ k \f$ indicates the index to the load component,  \f$ {F_{{ex}~k}^{{-}(2)}} \f$ is the resulting time
    !! independent mean drift force, and \f$ a_m \f$ and \f$ a_m^* \f$ are the complex wave amplitude and its complex conjugate for
-   !! the \f$ m^{th} \f$ frequency.  Note the lack of time dependence in this equation: the mean drift is the average drift
+   !! the \f$ m^{th} \f$ frequency.  _Note the lack of time dependence in this equation:_ the mean drift is the average drift
    !! force over the entire simulation. Note also that \f$ F_k^{-} (\omega_m, \beta_m) \f$ is the dimensionalized real valued
    !! diagonal of the QTF read from the WAMIT file and interpolated for the \f$ m^{th} \f$ wave frequency.  Note that this is
    !! is a numerical integral, so the \f$ \Delta\omega \f$ term is necessary.
+   !!
+   !! @note The mean drift is a static value representing the mean drift force for the entire simulation.  Therefore, any offset
+   !!       in the body location can be ignored since it cancels out (it is in the complex part that is ignored in the summation).
+   !!       The orientation of the platform is therefore handled after the summation.
    !!
    !! Since the frequency range of the QTF has not yet been checked, we will do that now.
    !!
@@ -795,7 +826,9 @@ ThisBodyNum=1
       REAL(SiKi)                                         :: TmpReal1             !< Temporary real
       REAL(SiKi)                                         :: TmpReal2             !< Temporary real
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
-      INTEGER(IntKi)                                     :: I                    !< Generic counter
+      INTEGER(IntKi)                                     :: ThisDim              !< Generic counter for dimension
+      INTEGER(IntKi)                                     :: IBody                !< Index to which body we are on
+      INTEGER(IntKi)                                     :: Idx                  !< Index to the full set of 6*NBody
       INTEGER(IntKi)                                     :: J                    !< Generic counter
       INTEGER(IntKi)                                     :: K                    !< Generic counter
       CHARACTER(*), PARAMETER                            :: RoutineName = 'MnDrift_InitCalc'
@@ -809,8 +842,7 @@ ThisBodyNum=1
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex3(3)        !< Last used index for searching in the interpolation algorithms
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms
-      REAL(SiKi)                                         :: RotateZ              !< The rotation to apply to the body
-      REAL(SiKi)                                         :: OffsetXY(2)          !< The phase shift offset to apply to the body
+      REAL(SiKi)                                         :: RotateZMatrixT(2,2)  !< The transpose of rotation in matrix form for rotation about z (from global to local)
       REAL(SiKi)                                         :: Coord3(3)            !< The (omega1,beta1,beta2) coordinate we want in the 3D dataset
       REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
       COMPLEX(SiKi),ALLOCATABLE                          :: TmpData3D(:,:,:)     !< Temporary 3D array we put the 3D data into (minus the load component indice)
@@ -1030,10 +1062,13 @@ ThisBodyNum=1
 
       IF ( .NOT. MnDriftData%DataIs3D .AND. MnDriftData%Data4D%WvFreqDiagComplete ) THEN
          TmpFlag = .FALSE.    ! if this goes true, then we need to convert to 3D data
-         DO I=1,MnDriftData%Data4D%NumBodies
-            IF ( p%MnDriftDims(I) ) THEN        ! Flag indicating which dimension we are calculating for
-               IF ( MnDriftData%Data4D%DataIsSparse(I) .AND. MnDriftData%Data4D%LoadComponents(I) )      TmpFlag = .TRUE.
-            ENDIF
+         DO IBody=1,MnDriftData%Data4D%NumBodies
+            DO ThisDim=1,6
+               Idx = (IBody-1)*6+ThisDim
+               IF ( p%MnDriftDims(IBody) ) THEN        ! Flag indicating which dimension we are calculating for
+                  IF ( MnDriftData%Data4D%DataIsSparse(Idx) .AND. MnDriftData%Data4D%LoadComponents(Idx) )      TmpFlag = .TRUE.
+               ENDIF
+            ENDDO
          ENDDO
 
             ! If we need to create the 3D data set, then
@@ -1054,12 +1089,18 @@ ThisBodyNum=1
          !! FIXME: remove this check and warning once the sparse matrix interpolation routines are implimented.
       TmpFlag = .FALSE.
       IF ( MnDriftData%DataIs3D ) THEN
-         DO I=1,MnDriftData%Data3D%NumBodies
-            IF ( MnDriftData%Data3D%DataIsSparse(I) .AND. MnDriftData%Data3D%LoadComponents(I) .AND. p%MnDriftDims(I) )    TmpFlag = .TRUE.
+         DO IBody=1,MnDriftData%Data3D%NumBodies
+            DO ThisDim=1,6
+               Idx = (IBody-1)*6+ThisDim
+               IF ( MnDriftData%Data3D%DataIsSparse(Idx) .AND. MnDriftData%Data3D%LoadComponents(Idx) .AND. p%MnDriftDims(ThisDim) )    TmpFlag = .TRUE.
+            ENDDO
          ENDDO
       ELSE     ! must be 4D -- we checked that we had something at the start of this routine.
-         DO I=1,MnDriftData%Data4D%NumBodies
-            IF ( MnDriftData%Data4D%DataIsSparse(I) .AND. MnDriftData%Data4D%LoadComponents(I) .AND. p%MnDriftDims(I) )    TmpFlag = .TRUE.
+         DO IBody=1,MnDriftData%Data4D%NumBodies
+            DO ThisDim=1,6
+               Idx = (IBody-1)*6+ThisDim
+               IF ( MnDriftData%Data4D%DataIsSparse(Idx) .AND. MnDriftData%Data4D%LoadComponents(Idx) .AND. p%MnDriftDims(ThisDim) )    TmpFlag = .TRUE.
+            ENDDO
          ENDDO
       ENDIF
       IF (TmpFlag) THEN
@@ -1097,99 +1138,124 @@ ThisBodyNum=1
 
 
          ! Now loop through all the dimensions and perform the calculation
-      DO I=1,6*p%NBody
+      DO IBody=1,p%NBody
+         DO ThisDim=1,6
 
-            ! Set the MnDrift force to 0.0 (Even ones we don't calculate)
-         MnDriftForce(I)   = 0.0_SiKi
+            Idx = (IBody-1)*6 + ThisDim
 
-         IF (MnDriftData%DataIs3D) THEN
-            TmpFlag = MnDriftData%Data3D%LoadComponents(I)
-         ELSE
-            TmpFlag = MnDriftData%Data4D%LoadComponents(I)
-         END IF
+               ! Set the MnDrift force to 0.0 (Even ones we don't calculate)
+            MnDriftForce(Idx)   = 0.0_SiKi
 
-            ! Only on the dimensions we requested, and if it is present in the data
-         IF ( p%MnDriftDims(I) .AND. TmpFlag ) THEN
-
-               ! Set an initial search index for the 3D and 4D array interpolation
-            LastIndex3 = (/0,0,0/)
-            LastIndex4 = (/0,0,0,0/)
-
-               ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
             IF (MnDriftData%DataIs3D) THEN
-               TmpData3D = MnDriftData%Data3D%DataSet(:,:,:,I)
+               TmpFlag = MnDriftData%Data3D%LoadComponents(Idx)
             ELSE
-               TmpData4D = MnDriftData%Data4D%DataSet(:,:,:,:,I)
+               TmpFlag = MnDriftData%Data4D%LoadComponents(Idx)
             END IF
-            
 
-            DO J=1,InitInp%NStepWave2
+               ! Only on the dimensions we requested, and if it is present in the data
+            IF ( p%MnDriftDims(ThisDim) .AND. TmpFlag ) THEN
 
-                  ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
-                  ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.
-               aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
+                  ! Set an initial search index for the 3D and 4D array interpolation
+               LastIndex3 = (/0,0,0/)
+               LastIndex4 = (/0,0,0,0/)
 
-                  ! Calculate the frequency
-               Omega1 = J * InitInp%WaveDOmega
-
-
-                  ! Only get a QTF value if within the range of frequencies we have wave amplitudes for (first order cutoffs).  This
-                  ! is done only for efficiency. 
-               IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
-
-                     ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
-                  IF ( MnDriftData%DataIs3D ) THEN
-
-                        ! Set the (omega1,beta1,beta2) point we are looking for.
-                     Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
-
-                        ! get the interpolated value for F(omega1,beta1,beta2)
-                     CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, MnDriftData%Data3D%WvFreq1, &
-                                          MnDriftData%Data3D%WvDir1, MnDriftData%Data3D%WvDir2, LastIndex3, QTF_Value, ErrStatTmp, ErrMsgTmp )
-
-                  ELSE
-
-                        ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
-
-                        ! get the interpolated value for F(omega1,omega2,beta1,beta2)
-                     CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, MnDriftData%Data4D%WvFreq1, MnDriftData%Data4D%WvFreq2, &
-                                          MnDriftData%Data4D%WvDir1, MnDriftData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
+                  ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
+               IF (MnDriftData%DataIs3D) THEN
+                  TmpData3D = MnDriftData%Data3D%DataSet(:,:,:,Idx)
+               ELSE
+                  TmpData4D = MnDriftData%Data4D%DataSet(:,:,:,:,Idx)
+               END IF
 
 
-                  ENDIF !QTF value find
+               DO J=1,InitInp%NStepWave2
+
+                     ! NOTE: since the Mean Drift only returns a static time independent average value for the drift force, we do not
+                     !        need to account for any offset in the location of the WAMIT body (this term vanishes).
+                     ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
+                     ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.
+                  aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
+
+                     ! Calculate the frequency
+                  Omega1 = J * InitInp%WaveDOmega
 
 
-               ELSE     ! outside the frequency range
+                     ! Only get a QTF value if within the range of frequencies we have wave amplitudes for (first order cutoffs).  This
+                     ! is done only for efficiency.
+                  IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
 
-                  QTF_Value = CMPLX(0.0,0.0,SiKi)
+                        ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
+                     IF ( MnDriftData%DataIs3D ) THEN
 
-               ENDIF    ! frequency check
+                           ! Set the (omega1,beta1,beta2) point we are looking for. (angles in degrees here)
+                        Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+
+                           ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
+                        Coord3(2) = Coord3(2) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+                        Coord3(3) = Coord3(3) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+
+                           ! get the interpolated value for F(omega1,beta1,beta2)
+                        CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, MnDriftData%Data3D%WvFreq1, &
+                                             MnDriftData%Data3D%WvDir1, MnDriftData%Data3D%WvDir2, LastIndex3, QTF_Value, ErrStatTmp, ErrMsgTmp )
+
+                     ELSE
+
+                           ! Set the (omega1,omega2,beta1,beta2) point we are looking for. (angles in degrees here)
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+
+                           ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
+                        Coord4(3) = Coord4(3) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+                        Coord4(4) = Coord4(4) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+
+                           ! get the interpolated value for F(omega1,omega2,beta1,beta2)
+                        CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, MnDriftData%Data4D%WvFreq1, MnDriftData%Data4D%WvFreq2, &
+                                             MnDriftData%Data4D%WvDir1, MnDriftData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
 
 
-                  ! Check and make sure nothing bombed in the interpolation that we need to be aware of
-               CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
-                  IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-                  RETURN
-               ENDIF
+                     ENDIF !QTF value find
 
 
-                  ! Now we have the value of the QTF.  These values should only be real for the omega1=omega2 case of the mean drift.
-                  ! However if the value came from the 4D interpolation routine, it might have some residual complex part to it.  So
-                  ! we throw the complex part out.
-               QTF_Value = CMPLX(REAL(QTF_Value,SiKi),0.0,SiKi)
+                  ELSE     ! outside the frequency range
+
+                     QTF_Value = CMPLX(0.0,0.0,SiKi)
+
+                  ENDIF    ! frequency check
 
 
-                  ! Now put it all together... note the frequency stepsize is multiplied after the summation
-               MnDriftForce(I) = MnDriftForce(I) + REAL(QTF_Value * aWaveElevC * CONJG(aWaveElevC)) !bjj: put QTF_Value first so that if it's zero, the rest gets set to zero (to hopefully avoid overflow issues)
+                     ! Check and make sure nothing bombed in the interpolation that we need to be aware of
+                  CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+                  IF ( ErrStat >= AbortErrLev ) THEN
+                     IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
+                     IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+                     RETURN
+                  ENDIF
 
-            ENDDO ! NStepWave2
 
-         ENDIF    ! Load component to calculate
+                     ! Now we have the value of the QTF.  These values should only be real for the omega1=omega2 case of the mean drift.
+                     ! However if the value came from the 4D interpolation routine, it might have some residual complex part to it.  So
+                     ! we throw the complex part out.
+                  QTF_Value = CMPLX(REAL(QTF_Value,SiKi),0.0,SiKi)
 
-      ENDDO
+                     ! NOTE:  any offset in platform location vanishes when the only the REAL part is kept (the offset resides in the
+                     !        phase shift, which is in the imaginary part)
+                     ! Now put it all together... note the frequency stepsize is multiplied after the summation
+                  MnDriftForce(Idx) = MnDriftForce(Idx) + REAL(QTF_Value * aWaveElevC * CONJG(aWaveElevC)) !bjj: put QTF_Value first so that if it's zero, the rest gets set to zero (to hopefully avoid overflow issues)
+
+               ENDDO ! NStepWave2
+
+            ENDIF    ! Load component to calculate
+
+
+               ! Now rotate the force components with platform orientation
+               ! NOTE: RotateZMatrixT is the rotation from local to global.
+            RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(ThisBodyNum)), -sin(InitInp%PtfmRefztRot(ThisBodyNum)) /)
+            RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(ThisBodyNum)),  cos(InitInp%PtfmRefztRot(ThisBodyNum)) /)
+
+
+            MnDriftForce(1:2) = MATMUL( RotateZMatrixT, MnDriftForce(1:2) )       ! Fx and Fy, rotation about z
+            MnDriftForce(4:5) = MATMUL( RotateZMatrixT, MnDriftForce(4:5) )       ! Mx and My, rotation about z
+
+         ENDDO ! ThisDim   -- Load Component on body
+      ENDDO    ! IBody
 
 
 
@@ -1270,7 +1336,9 @@ ThisBodyNum=1
       REAL(SiKi)                                         :: TmpReal1             !< Temporary real
       REAL(SiKi)                                         :: TmpReal2             !< Temporary real
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
-      INTEGER(IntKi)                                     :: I                    !< Generic counter
+      INTEGER(IntKi)                                     :: ThisDim              !< Generic counter for dimension
+      INTEGER(IntKi)                                     :: IBody                !< Index to which body we are on
+      INTEGER(IntKi)                                     :: Idx                  !< Index to the full set of 6*NBody
       INTEGER(IntKi)                                     :: J                    !< Generic counter
       INTEGER(IntKi)                                     :: K                    !< Generic counter
       TYPE(FFT_DataType)                                 :: FFT_Data             !< Temporary array for the FFT module we're using
@@ -1291,6 +1359,8 @@ ThisBodyNum=1
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms
       REAL(SiKi)                                         :: Coord3(3)            !< The (omega1,beta1,beta2) coordinate we want in the 3D dataset
       REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
+      REAL(SiKi)                                         :: RotateZMatrixT(2,2)  !< The transpose of rotation in matrix form for rotation about z (from global to local)
+      REAL(SiKi)                                         :: OffsetXY(2)          !< The phase shift offset to apply to the body
       COMPLEX(SiKi), ALLOCATABLE                         :: TmpData3D(:,:,:)     !< Temporary 3D array we put the 3D data into (minus the load component indice)
       COMPLEX(SiKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
 
@@ -1494,10 +1564,13 @@ ThisBodyNum=1
 
       IF ( .NOT. NewmanAppData%DataIs3D .AND. NewmanAppData%Data4D%WvFreqDiagComplete ) THEN
          TmpFlag = .FALSE.    ! if this goes true, then we need to convert to 3D data
-         DO I=1,6
-            IF ( p%NewmanAppDims(I) ) THEN        ! Flag indicating which dimension we are calculating for
-               IF ( NewmanAppData%Data4D%DataIsSparse(I) .AND. NewmanAppData%Data4D%LoadComponents(I) )      TmpFlag = .TRUE.
-            ENDIF
+         DO IBody=1,NewmanAppData%Data4D%NumBodies
+            DO ThisDim=1,6
+               Idx = (IBody-1)*6+ThisDim
+               IF ( p%NewmanAppDims(ThisDim) ) THEN        ! Flag indicating which dimension we are calculating for
+                  IF ( NewmanAppData%Data4D%DataIsSparse(Idx) .AND. NewmanAppData%Data4D%LoadComponents(Idx) )      TmpFlag = .TRUE.
+               ENDIF
+            ENDDO
          ENDDO
 
             ! If we need to create the 3D data set, then
@@ -1518,12 +1591,18 @@ ThisBodyNum=1
          !! FIXME: remove this check and warning once the sparse matrix interpolation routines are implimented.
       TmpFlag = .FALSE.
       IF ( NewmanAppData%DataIs3D ) THEN
-         DO I=1,6
-            IF ( NewmanAppData%Data3D%DataIsSparse(I) .AND. NewmanAppData%Data3D%LoadComponents(I) .AND. p%NewmanAppDims(I) )    TmpFlag = .TRUE.
+         DO IBody=1,NewmanAppData%Data3D%NumBodies
+            DO ThisDim=1,6
+               Idx = (IBody-1)*6+ThisDim
+               IF ( NewmanAppData%Data3D%DataIsSparse(Idx) .AND. NewmanAppData%Data3D%LoadComponents(Idx) .AND. p%NewmanAppDims(ThisDim) )    TmpFlag = .TRUE.
+            ENDDO
          ENDDO
       ELSE     ! must be 4D -- we checked that we had something at the start of this routine.
-         DO I=1,6
-            IF ( NewmanAppData%Data4D%DataIsSparse(I) .AND. NewmanAppData%Data4D%LoadComponents(I) .AND. p%NewmanAppDims(I) )    TmpFlag = .TRUE.
+         DO IBody=1,NewmanAppData%Data4D%NumBodies
+            DO ThisDim=1,6
+               Idx = (IBody-1)*6+ThisDim
+               IF ( NewmanAppData%Data4D%DataIsSparse(Idx) .AND. NewmanAppData%Data4D%LoadComponents(Idx) .AND. p%NewmanAppDims(ThisDim) )    TmpFlag = .TRUE.
+            ENDDO
          ENDDO
       ENDIF
       IF (TmpFlag) THEN
@@ -1611,77 +1690,144 @@ ThisBodyNum=1
 
 
          ! Now loop through all the dimensions and perform the calculation
-      DO I=1,6
+      DO IBody=1,p%NBody
+         DO ThisDim=1,6
 
-            ! set zero frequency term to zero
-         NewmanTerm1C(0) = CMPLX(0.0, 0.0, SiKi)
-         NewmanTerm2C(0) = CMPLX(0.0, 0.0, SiKi)
+            Idx= (IBody-1)*6+ThisDim
 
-         IF (NewmanAppData%DataIs3D) THEN
-            TmpFlag = NewmanAppData%Data3D%LoadComponents(I)
-         ELSE
-            TmpFlag = NewmanAppData%Data4D%LoadComponents(I)
-         END IF
+               ! set zero frequency term to zero
+            NewmanTerm1C(0) = CMPLX(0.0, 0.0, SiKi)
+            NewmanTerm2C(0) = CMPLX(0.0, 0.0, SiKi)
 
-            ! Only on the dimensions we requested, and if it is present in the data
-         IF ( p%NewmanAppDims(I) .AND. TmpFlag ) THEN
-
-               ! Set an initial search index for the 3D and 4D array interpolation
-            LastIndex3 = (/0,0,0/)
-            LastIndex4 = (/0,0,0,0/)
-
-               ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
             IF (NewmanAppData%DataIs3D) THEN
-               TmpData3D = NewmanAppData%Data3D%DataSet(:,:,:,I)
+               TmpFlag = NewmanAppData%Data3D%LoadComponents(Idx)
             ELSE
-               TmpData4D = NewmanAppData%Data4D%DataSet(:,:,:,:,I)
+               TmpFlag = NewmanAppData%Data4D%LoadComponents(Idx)
             END IF
-            
 
-            DO J=1,InitInp%NStepWave2
+               ! Only on the dimensions we requested, and if it is present in the data
+            IF ( p%NewmanAppDims(ThisDim) .AND. TmpFlag ) THEN
 
-                  ! First get the wave amplitude -- must be reconstructed from the WaveElevC array.  First index is the real (1) or
-                  ! imaginary (2) part.  Divide by NStepWave2 so that the wave amplitude is of the same form as the paper.
-               aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
-                  ! Calculate the frequency
-               Omega1 = J * InitInp%WaveDOmega
+                  ! Set an initial search index for the 3D and 4D array interpolation
+               LastIndex3 = (/0,0,0/)
+               LastIndex4 = (/0,0,0,0/)
 
-
-                  ! Only get a QTF value if within the range of frequencies between the cutoffs for the difference frequency
-               IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
-
-                     ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
-                  IF ( NewmanAppData%DataIs3D ) THEN
-
-                        ! Set the (omega1,beta1,beta2) point we are looking for.
-                     Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
-
-                        ! get the interpolated value for F(omega1,beta1,beta2)
-                     CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, NewmanAppData%Data3D%WvFreq1, &
-                                          NewmanAppData%Data3D%WvDir1, NewmanAppData%Data3D%WvDir2, LastIndex3, QTF_Value, ErrStatTmp, ErrMsgTmp )
-
-                  ELSE
-
-                        ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
-
-                        ! get the interpolated value for F(omega1,omega2,beta1,beta2)
-                     CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, NewmanAppData%Data4D%WvFreq1, NewmanAppData%Data4D%WvFreq2, &
-                                          NewmanAppData%Data4D%WvDir1, NewmanAppData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
+                  ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
+               IF (NewmanAppData%DataIs3D) THEN
+                  TmpData3D = NewmanAppData%Data3D%DataSet(:,:,:,Idx)
+               ELSE
+                  TmpData4D = NewmanAppData%Data4D%DataSet(:,:,:,:,Idx)
+               END IF
 
 
-                  ENDIF !QTF value find
+               DO J=1,InitInp%NStepWave2
+
+                     ! First get the wave amplitude -- must be reconstructed from the WaveElevC array.  First index is the real (1) or
+                     ! imaginary (2) part.  Divide by NStepWave2 so that the wave amplitude is of the same form as the paper.
+                  aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
+                     ! Calculate the frequency
+                  Omega1 = J * InitInp%WaveDOmega
 
 
-               ELSE     ! outside the frequency range
+                     ! Only get a QTF value if within the range of frequencies between the cutoffs for the difference frequency
+                  IF ( (Omega1 >= InitInp%WvLowCOff) .AND. (Omega1 <= InitInp%WvHiCOff) ) THEN
 
-                  QTF_Value = CMPLX(0.0,0.0,SiKi)
+                        ! Now get the QTF value that corresponds to this frequency and wavedirection pair.
+                     IF ( NewmanAppData%DataIs3D ) THEN
 
-               ENDIF    ! frequency check
+                           ! Set the (omega1,beta1,beta2) point we are looking for.
+                        Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+
+                           ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
+                        Coord3(2) = Coord3(2) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+                        Coord3(3) = Coord3(3) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+
+                           ! get the interpolated value for F(omega1,beta1,beta2)
+                        CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, NewmanAppData%Data3D%WvFreq1, &
+                                             NewmanAppData%Data3D%WvDir1, NewmanAppData%Data3D%WvDir2, LastIndex3, QTF_Value, ErrStatTmp, ErrMsgTmp )
+
+                     ELSE
+
+                           ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
+
+                           ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
+                        Coord4(3) = Coord4(3) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+                        Coord4(4) = Coord4(4) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+
+                           ! get the interpolated value for F(omega1,omega2,beta1,beta2)
+                        CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, NewmanAppData%Data4D%WvFreq1, NewmanAppData%Data4D%WvFreq2, &
+                                             NewmanAppData%Data4D%WvDir1, NewmanAppData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
+
+
+                     ENDIF !QTF value find
+
+
+                  ELSE     ! outside the frequency range
+
+                     QTF_Value = CMPLX(0.0,0.0,SiKi)
+
+                  ENDIF    ! frequency check
 
 
 
-                  ! Check and make sure nothing bombed in the interpolation that we need to be aware of
+                     ! Check and make sure nothing bombed in the interpolation that we need to be aware of
+                  CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+                  IF ( ErrStat >= AbortErrLev ) THEN
+                     IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
+                     IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+                     IF (ALLOCATED(NewmanTerm1t))     DEALLOCATE(NewmanTerm1t,STAT=ErrStatTmp)
+                     IF (ALLOCATED(NewmanTerm2t))     DEALLOCATE(NewmanTerm2t,STAT=ErrStatTmp)
+                     IF (ALLOCATED(NewmanTerm1C))     DEALLOCATE(NewmanTerm1C,STAT=ErrStatTmp)
+                     IF (ALLOCATED(NewmanTerm2C))     DEALLOCATE(NewmanTerm2C,STAT=ErrStatTmp)
+                     IF (ALLOCATED(NewmanAppForce))   DEALLOCATE(NewmanAppForce,STAT=ErrStatTmp)
+                     RETURN
+                  ENDIF
+
+
+
+                     ! Now we have the value of the QTF.  These values should only be real for the omega1=omega2 case of the approximation.
+                     ! However if the value came from the 4D interpolation routine, it might have some residual complex part to it.  So
+                     ! we throw the complex part out.
+                  QTF_Value = CMPLX(REAL(QTF_Value,SiKi),0.0,SiKi)
+
+
+                     ! Now we place these results into the arrays
+                  IF (REAL(QTF_Value) > 0.0_SiKi) THEN
+
+                     NewmanTerm1C(J) = aWaveElevC * (QTF_Value)**0.5_SiKi
+                     NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+
+                  ELSE IF (REAL(QTF_Value) < 0.0_SiKi) THEN
+
+                     NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+                     NewmanTerm2C(J) = aWaveElevC * (-QTF_Value)**0.5_SiKi
+
+                  ELSE ! at 0
+
+                     NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+                     NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+
+                  ENDIF
+
+               ENDDO    ! J=1,InitInp%NStepWave2
+
+                  ! Now we apply the FFT to the first piece.
+               CALL ApplyCFFT(  NewmanTerm1t(:), NewmanTerm1C(:), FFT_Data, ErrStatTmp )
+               CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
+                  IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+                  IF (ALLOCATED(NewmanTerm1t))     DEALLOCATE(NewmanTerm1t,STAT=ErrStatTmp)
+                  IF (ALLOCATED(NewmanTerm2t))     DEALLOCATE(NewmanTerm2t,STAT=ErrStatTmp)
+                  IF (ALLOCATED(NewmanTerm1C))     DEALLOCATE(NewmanTerm1C,STAT=ErrStatTmp)
+                  IF (ALLOCATED(NewmanTerm2C))     DEALLOCATE(NewmanTerm2C,STAT=ErrStatTmp)
+                  IF (ALLOCATED(NewmanAppForce))   DEALLOCATE(NewmanAppForce,STAT=ErrStatTmp)
+                  RETURN
+               END IF
+
+                  ! Now we apply the FFT to the second piece.
+               CALL ApplyCFFT( NewmanTerm2t(:), NewmanTerm2C(:), FFT_Data, ErrStatTmp )
                CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) THEN
                   IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
@@ -1695,75 +1841,18 @@ ThisBodyNum=1
                ENDIF
 
 
+                  ! Now square the real part of the resulting time domain pieces and add them together to get the final force time series.
+               DO J=0,InitInp%NStepWave-1
+                  NewmanAppForce(J,Idx) = (abs(NewmanTerm1t(J)))**2 - (abs(NewmanTerm2t(J)))**2
+               ENDDO
 
-                  ! Now we have the value of the QTF.  These values should only be real for the omega1=omega2 case of the approximation.
-                  ! However if the value came from the 4D interpolation routine, it might have some residual complex part to it.  So
-                  ! we throw the complex part out.
-               QTF_Value = CMPLX(REAL(QTF_Value,SiKi),0.0,SiKi)
+                  ! Copy the last first term to the last so that it is cyclic
+               NewmanAppForce(InitInp%NStepWave,Idx) = NewmanAppForce(0,Idx)
 
+            ENDIF    ! Load component to calculate
 
-                  ! Now we place these results into the arrays
-               IF (REAL(QTF_Value) > 0.0_SiKi) THEN
-
-                  NewmanTerm1C(J) = aWaveElevC * (QTF_Value)**0.5_SiKi
-                  NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
-
-               ELSE IF (REAL(QTF_Value) < 0.0_SiKi) THEN
-
-                  NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
-                  NewmanTerm2C(J) = aWaveElevC * (-QTF_Value)**0.5_SiKi
-
-               ELSE ! at 0
-
-                  NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
-                  NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
-
-               ENDIF
-
-
-
-            ENDDO
-
-               ! Now we apply the FFT to the first piece.
-            CALL ApplyCFFT(  NewmanTerm1t(:), NewmanTerm1C(:), FFT_Data, ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-               IF (ALLOCATED(NewmanTerm1t))     DEALLOCATE(NewmanTerm1t,STAT=ErrStatTmp)
-               IF (ALLOCATED(NewmanTerm2t))     DEALLOCATE(NewmanTerm2t,STAT=ErrStatTmp)
-               IF (ALLOCATED(NewmanTerm1C))     DEALLOCATE(NewmanTerm1C,STAT=ErrStatTmp)
-               IF (ALLOCATED(NewmanTerm2C))     DEALLOCATE(NewmanTerm2C,STAT=ErrStatTmp)
-               IF (ALLOCATED(NewmanAppForce))   DEALLOCATE(NewmanAppForce,STAT=ErrStatTmp)
-               RETURN
-            END IF
-
-               ! Now we apply the FFT to the second piece.
-            CALL ApplyCFFT( NewmanTerm2t(:), NewmanTerm2C(:), FFT_Data, ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-               IF (ALLOCATED(NewmanTerm1t))     DEALLOCATE(NewmanTerm1t,STAT=ErrStatTmp)
-               IF (ALLOCATED(NewmanTerm2t))     DEALLOCATE(NewmanTerm2t,STAT=ErrStatTmp)
-               IF (ALLOCATED(NewmanTerm1C))     DEALLOCATE(NewmanTerm1C,STAT=ErrStatTmp)
-               IF (ALLOCATED(NewmanTerm2C))     DEALLOCATE(NewmanTerm2C,STAT=ErrStatTmp)
-               IF (ALLOCATED(NewmanAppForce))   DEALLOCATE(NewmanAppForce,STAT=ErrStatTmp)
-               RETURN
-            ENDIF
-
-
-               ! Now square the real part of the resulting time domain pieces and add them together to get the final force time series.
-            DO J=0,InitInp%NStepWave-1
-               NewmanAppForce(J,I) = (abs(NewmanTerm1t(J)))**2 - (abs(NewmanTerm2t(J)))**2
-            ENDDO
-
-               ! Copy the last first term to the last so that it is cyclic
-            NewmanAppForce(InitInp%NStepWave,I) = NewmanAppForce(0,I)
-
-         ENDIF    ! Load component to calculate
-
-      ENDDO
+         ENDDO ! ThisDim -- index to current dimension
+      ENDDO    ! IBody -- current body
 
 
          ! Done with the FFT library routines, so end them.
@@ -1850,7 +1939,9 @@ ThisBodyNum=1
       REAL(SiKi)                                         :: TmpReal1             !< Temporary real
       REAL(SiKi)                                         :: TmpReal2             !< Temporary real
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
-      INTEGER(IntKi)                                     :: I                    !< Generic counter
+      INTEGER(IntKi)                                     :: ThisDim              !< Generic counter for dimension
+      INTEGER(IntKi)                                     :: IBody                !< Index to which body we are on
+      INTEGER(IntKi)                                     :: Idx                  !< Index to the full set of 6*NBody
       INTEGER(IntKi)                                     :: J                    !< Generic counter
       INTEGER(IntKi)                                     :: K                    !< Generic counter
       TYPE(FFT_DataType)                                 :: FFT_Data             !< Temporary array for the FFT module we're using
@@ -1867,7 +1958,7 @@ ThisBodyNum=1
       REAL(SiKi),    ALLOCATABLE                         :: TmpDiffQTFForce(:)   !< The resulting diffQTF force for this load component
       REAL(ReKi)                                         :: Omega1               !< First  wave frequency
       REAL(ReKi)                                         :: Omega2               !< Second wave frequency
-      REAL(SiKi)                                         :: MnDriftForce(6)      !< Mean drift force (first term).  MnDrift_InitCalc routine will return this.
+      REAL(SiKi),    ALLOCATABLE                         :: MnDriftForce(:)      !< Mean drift force (first term).  MnDrift_InitCalc routine will return this.
 
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms.  First  wave freq
@@ -1990,8 +2081,11 @@ ThisBodyNum=1
          !!    and set the TmpFlag to true if there is a sparse matrix for one of them.
          !! FIXME: remove this check and warning once the sparse matrix interpolation routines are implemented.
       TmpFlag = .FALSE.
-      DO I=1,6
-         IF ( DiffQTFData%Data4D%DataIsSparse(I) .AND. DiffQTFData%Data4D%LoadComponents(I) .AND. p%DiffQTFDims(I) )    TmpFlag = .TRUE.
+      DO IBody=1,DiffQTFData%Data4D%NumBodies
+         DO ThisDim=1,6
+            Idx = (IBody-1)*6+ThisDim
+            IF ( DiffQTFData%Data4D%DataIsSparse(Idx) .AND. DiffQTFData%Data4D%LoadComponents(Idx) .AND. p%DiffQTFDims(ThisDim) )    TmpFlag = .TRUE.
+         ENDDO
       ENDDO
       IF (TmpFlag) THEN
          CALL SetErrStat(ErrID_Fatal,' The second order WAMIT data in '//TRIM(DiffQTFData%Filename)//' is too sparse '// &
@@ -2065,8 +2159,8 @@ ThisBodyNum=1
          ! Make sure we have a value for the mean drift for each of the dimensions we were requested to calculate. To
          ! find out we will just check the status of the flags for each dimension in the MnDriftDims against the ones
          ! for the DiffQTFDims
-      DO I=1,6
-         IF ( p%DiffQTFDims(I) .AND. (.NOT. p%MnDriftDims(I)) ) &
+      DO ThisDim=1,6
+         IF ( p%DiffQTFDims(ThisDim) .AND. (.NOT. p%MnDriftDims(ThisDim)) ) &
             CALL SetErrStat( ErrID_Fatal,' The DiffQTF method requires the use of the MnDrift method for the first term. '// &
                      'Something went wrong and the MnDrift method returned a different number of load components.', &
                      ErrStat,ErrMsg,RoutineName)
@@ -2082,105 +2176,108 @@ ThisBodyNum=1
 
 
          ! Now loop through all the dimensions and perform the calculation
-      DO I=1,6*p%NBody
+      DO IBody=1,p%NBody
+         DO ThisDim=1,6
+            Idx = (IBody-1)*6+ThisDim
 
-            ! Only on the dimensions we requested, and it exists in the dataset
-         IF ( p%DiffQTFDims(I) .AND. DiffQTFData%Data4D%LoadComponents(I) ) THEN
-
-
-               ! Set an initial search index for the 4D array interpolation
-            LastIndex4 = (/0,0,0,0/)
-
-               ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
-            TmpData4D = DiffQTFData%Data4D%DataSet(:,:,:,:,I)
-
-               ! Initialize the temporary array to zero.
-            TmpComplexArr = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
+               ! Only on the dimensions we requested, and it exists in the dataset
+            IF ( p%DiffQTFDims(ThisDim) .AND. DiffQTFData%Data4D%LoadComponents(Idx) ) THEN
 
 
-               ! Outer loop to create the TmpComplexArr
-            DO J=1,InitInp%NStepWave2-1
+                  ! Set an initial search index for the 4D array interpolation
+               LastIndex4 = (/0,0,0,0/)
 
-                  ! Calculate the frequency  -- This is the difference frequency.
-               OmegaDiff = J * InitInp%WaveDOmega
+                  ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
+               TmpData4D = DiffQTFData%Data4D%DataSet(:,:,:,:,Idx)
 
-
-                  ! Only perform calculations if the difference frequency is in the right range
-               IF ( (OmegaDiff >= InitInp%WvLowCOffD) .AND. (OmegaDiff <= InitInp%WvHiCOffD) ) THEN
-
-                     ! Set the \f$ H^- \f$ term to zero before we start
-                  TmpHMinusC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
+                  ! Initialize the temporary array to zero.
+               TmpComplexArr = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
 
-                    ! Do the sum over H^-
-                  DO K=1,InitInp%NStepWave2-J        ! note the funny upper limit.  This is because we are doing a summation on a triangular area.
+                  ! Outer loop to create the TmpComplexArr
+               DO J=1,InitInp%NStepWave2-1
 
-                        ! set the two frequencies that the difference frequency comes from
-                     Omega1 = (J + K) * InitInp%WaveDOmega        ! the mth frequency -- \mu^- + n = m
-                     Omega2 = K * InitInp%WaveDOmega              ! the nth frequency
-
-
-                        ! Find the Wave amplitudes 1 and 2
-                     aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J+K), InitInp%WaveElevC0(2,J+K), SiKi)  / InitInp%NStepWave2
-                     aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,K),   InitInp%WaveElevC0(2,K),   SiKi)  / InitInp%NStepWave2
-
-                        ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(J+K), InitInp%WaveDirArr(K) /)
-
-                        ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
-                     CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, DiffQTFData%Data4D%WvFreq1, DiffQTFData%Data4D%WvFreq2, &
-                                          DiffQTFData%Data4D%WvDir1, DiffQTFData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
-                     CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-                     IF (ErrStat >= AbortErrLev ) THEN
-                        IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-                        IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-                        IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-                        IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
-                        RETURN
-                     ENDIF
-
-                        ! Calculate this value and add it to what we have so far.
-                     TmpHMinusC = TmpHMinusC + aWaveElevC1 * CONJG(aWaveElevC2) * QTF_Value
-
-                  ENDDO
-
-                     ! Copy this value difference frequency information over to the array we will take the IFFT.  Divide 
-                     ! by two for the single sided FFT given in the documentation.
-                  TmpComplexArr(J) = TmpHMinusC / 2.0_SiKi
-
-               ELSE     ! outside the frequency range, so
-
-                  TmpComplexArr(J) = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
-
-               ENDIF    ! frequency check
+                     ! Calculate the frequency  -- This is the difference frequency.
+                  OmegaDiff = J * InitInp%WaveDOmega
 
 
-            ENDDO
+                     ! Only perform calculations if the difference frequency is in the right range
+                  IF ( (OmegaDiff >= InitInp%WvLowCOffD) .AND. (OmegaDiff <= InitInp%WvHiCOffD) ) THEN
 
-               ! Now we apply the FFT to the result of the sum
-            CALL ApplyFFT_cx(  TmpDiffQTFForce(:),  TmpComplexArr(:), FFT_Data, ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the difference QTF.', &
-                           ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-               IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
-               IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
-               RETURN
-            END IF
+                        ! Set the \f$ H^- \f$ term to zero before we start
+                     TmpHMinusC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
 
-               ! Now we multiply the result by 2 and save it to the DiffQTFForce array and add the MnDrift term
-            DO K=0,InitInp%NStepWave-1  ! bjj: added the "-1" here because TmpDiffQTFForce(InitInp%NStepWave) is not set and DiffQTFForce(InitInp%NStepWave,I) gets overwritten next, anyway
-               DiffQTFForce(K,I) = 2.0_SiKi * TmpDiffQTFForce(K) + MnDriftForce(I)
-            ENDDO
+                       ! Do the sum over H^-
+                     DO K=1,InitInp%NStepWave2-J        ! note the funny upper limit.  This is because we are doing a summation on a triangular area.
 
-               ! Copy the last first term to the last so that it is cyclic
-            DiffQTFForce(InitInp%NStepWave,I) = DiffQTFForce(0,I)
+                           ! set the two frequencies that the difference frequency comes from
+                        Omega1 = (J + K) * InitInp%WaveDOmega        ! the mth frequency -- \mu^- + n = m
+                        Omega2 = K * InitInp%WaveDOmega              ! the nth frequency
 
-         ENDIF    ! Load component to calculate
 
-      ENDDO
+                           ! Find the Wave amplitudes 1 and 2
+                        aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J+K), InitInp%WaveElevC0(2,J+K), SiKi)  / InitInp%NStepWave2
+                        aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,K),   InitInp%WaveElevC0(2,K),   SiKi)  / InitInp%NStepWave2
+
+                           ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(J+K), InitInp%WaveDirArr(K) /)
+
+                           ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
+                        CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, DiffQTFData%Data4D%WvFreq1, DiffQTFData%Data4D%WvFreq2, &
+                                             DiffQTFData%Data4D%WvDir1, DiffQTFData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
+                        CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+                        IF (ErrStat >= AbortErrLev ) THEN
+                           IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+                           IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
+                           IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
+                           IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+                           RETURN
+                        ENDIF
+
+                           ! Calculate this value and add it to what we have so far.
+                        TmpHMinusC = TmpHMinusC + aWaveElevC1 * CONJG(aWaveElevC2) * QTF_Value
+
+                     ENDDO
+
+                        ! Copy this value difference frequency information over to the array we will take the IFFT.  Divide
+                        ! by two for the single sided FFT given in the documentation.
+                     TmpComplexArr(J) = TmpHMinusC / 2.0_SiKi
+
+                  ELSE     ! outside the frequency range, so
+
+                     TmpComplexArr(J) = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
+
+                  ENDIF    ! frequency check
+
+
+               ENDDO
+
+                  ! Now we apply the FFT to the result of the sum
+               CALL ApplyFFT_cx(  TmpDiffQTFForce(:),  TmpComplexArr(:), FFT_Data, ErrStatTmp )
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the difference QTF.', &
+                              ErrStat,ErrMsg,RoutineName)
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+                  IF (ALLOCATED(DiffQTFForce))     DEALLOCATE(DiffQTFForce,STAT=ErrStatTmp)
+                  IF (ALLOCATED(TmpDiffQTFForce))  DEALLOCATE(TmpDiffQTFForce,STAT=ErrStatTmp)
+                  IF (ALLOCATED(TmpComplexArr))    DEALLOCATE(TmpComplexArr,STAT=ErrStatTmp)
+                  RETURN
+               END IF
+
+
+                  ! Now we multiply the result by 2 and save it to the DiffQTFForce array and add the MnDrift term
+               DO K=0,InitInp%NStepWave-1  ! bjj: added the "-1" here because TmpDiffQTFForce(InitInp%NStepWave) is not set and DiffQTFForce(InitInp%NStepWave,Idx) gets overwritten next, anyway
+                  DiffQTFForce(K,Idx) = 2.0_SiKi * TmpDiffQTFForce(K) + MnDriftForce(Idx)
+               ENDDO
+
+                  ! Copy the last first term to the first so that it is cyclic
+               DiffQTFForce(InitInp%NStepWave,Idx) = DiffQTFForce(0,Idx)
+
+            ENDIF    ! Load component to calculate
+
+         ENDDO ! ThisDim -- The current dimension
+      ENDDO    ! IBody -- This WAMIT body
 
 
 
@@ -2288,7 +2385,9 @@ ThisBodyNum=1
       CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary error message for calls
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
-      INTEGER(IntKi)                                     :: I                    !< Generic counter
+      INTEGER(IntKi)                                     :: ThisDim              !< Generic counter for dimension
+      INTEGER(IntKi)                                     :: IBody                !< Index to which body we are on
+      INTEGER(IntKi)                                     :: Idx                  !< Index to the full set of 6*NBody
       INTEGER(IntKi)                                     :: J                    !< Generic counter
       INTEGER(IntKi)                                     :: K                    !< Generic counter
       TYPE(FFT_DataType)                                 :: FFT_Data             !< Temporary array for the FFT module we're using. For the first  term in the equation.
@@ -2429,8 +2528,11 @@ ThisBodyNum=1
          !!    and set the TmpFlag to true if there is a sparse matrix for one of them.
          !! FIXME: remove this check and warning once the sparse matrix interpolation routines are implimented.
       TmpFlag = .FALSE.
-      DO I=1,6
-         IF ( SumQTFData%Data4D%DataIsSparse(I) .AND. SumQTFData%Data4D%LoadComponents(I) .AND. p%SumQTFDims(I) )    TmpFlag = .TRUE.
+      DO IBody=1,SumQTFData%Data4D%NumBodies
+         DO ThisDim=1,6
+            Idx = (IBody-1)*6+ThisDim
+            IF ( SumQTFData%Data4D%DataIsSparse(Idx) .AND. SumQTFData%Data4D%LoadComponents(Idx) .AND. p%SumQTFDims(ThisDim) )    TmpFlag = .TRUE.
+         ENDDO
       ENDDO
       IF (TmpFlag) THEN
          CALL SetErrStat(ErrID_Fatal,' The second order WAMIT data in '//TRIM(SumQTFData%Filename)//' is too sparse '// &
@@ -2494,144 +2596,55 @@ ThisBodyNum=1
 
 
          ! Now loop through all the dimensions and perform the calculation
-      DO I=1,6*p%NBody
+      DO IBody=1,p%NBody
+         DO ThisDim=1,6
 
-            ! Only on the dimensions we requested, and if it is present in the data
-         IF ( p%SumQTFDims(I) .AND. SumQTFData%Data4D%LoadComponents(I) ) THEN
+            Idx = (IBody-1)*6+ThisDim
 
-
-               ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
-            TmpData4D = SumQTFData%Data4D%DataSet(:,:,:,:,I)
-
+               ! Only on the dimensions we requested, and if it is present in the data
+            IF ( p%SumQTFDims(ThisDim) .AND. SumQTFData%Data4D%LoadComponents(Idx) ) THEN
 
 
-            !---------------------------------------------------------------------------------
-            ! Calculate the first term
-            ! This term is only the FFT over the diagonal elements where omega_1 = omega_2
-            ! note that the sum frequency is 2*omega.  The index for the sum frequency is
-            ! therefore 2*J.  Since we are placing the calculated value for the A_m * A_m *
-            ! F_k^+ term in the 2*omega location, we will only run through the first half of
-            ! the frequencies (the sum frequency will exceed the bounds of the frequencies
-            ! used in the FFT otherwise).
-            ! The IFFT will be calculated later.
-
-               ! Set an initial search index for the 4D array interpolation
-            LastIndex4 = (/0,0,0,0/)
-
-               ! Initialize the array to zero
-            Term1ArrayC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
-
-
-               ! The limits look a little funny.  But remember we are placing the value in the 2*J location,
-               ! so we cannot overun the end of the array, and the highest frequency must be zero.  The
-               ! floor function is just in case (NStepWave2 - 1) is an odd number
-            DO J=1,FLOOR(REAL(InitInp%NStepWave2-1)/2.0_SiKi)
-
-                  ! The frequency
-               Omega1   = REAL(J,ReKi) * InitInp%WaveDOmega
-               OmegaSum = 2.0_SiKi * Omega1           ! the sum frequency
-
-                  ! Only perform calculations if the difference frequency is in the right range
-               IF ( (OmegaSum >= InitInp%WvLowCOffS) .AND. (OmegaSum <= InitInp%WvHiCOffS) ) THEN
-
-
-                     ! Find the wave amplitude at frequency omega
-                  aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi )  / InitInp%NStepWave2
-
-                     ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                  Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
-
-                     ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
-                  CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
-                                       SumQTFData%Data4D%WvDir1, SumQTFData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
-                  CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-                  IF (ErrStat >= AbortErrLev ) THEN
-                     IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-                     RETURN
-                  ENDIF
-
-                     ! Set the value of the first term in the frequency domain
-                  Term1ArrayC(2*J) = aWaveElevC1 * aWaveElevC1 * QTF_Value
-
-
-               ENDIF    ! Check on the limits
-            ENDDO       ! First term calculation
+                  ! To make things run slightly quicker, copy the data we will be interpolating over into the temporary arrays
+               TmpData4D = SumQTFData%Data4D%DataSet(:,:,:,:,Idx)
 
 
 
-            !---------------------------------------------------------------------------------
-            ! Calculate the second term.
-            ! In this term, we are are now stepping through the sum frequencies.  The inner
-            ! sum essentially covers all the off diagonal terms (omega_m /= omega_n).  The limits
-            ! on the outer integral that is the FFT run through the full frequency range that
-            ! we are using
+               !---------------------------------------------------------------------------------
+               ! Calculate the first term
+               ! This term is only the FFT over the diagonal elements where omega_1 = omega_2
+               ! note that the sum frequency is 2*omega.  The index for the sum frequency is
+               ! therefore 2*J.  Since we are placing the calculated value for the A_m * A_m *
+               ! F_k^+ term in the 2*omega location, we will only run through the first half of
+               ! the frequencies (the sum frequency will exceed the bounds of the frequencies
+               ! used in the FFT otherwise).
+               ! The IFFT will be calculated later.
+
+                  ! Set an initial search index for the 4D array interpolation
+               LastIndex4 = (/0,0,0,0/)
+
+                  ! Initialize the array to zero
+               Term1ArrayC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
 
-               ! Set an initial search index for the 4D array interpolation
-            LastIndex4 = (/0,0,0,0/)
+                  ! The limits look a little funny.  But remember we are placing the value in the 2*J location,
+                  ! so we cannot overun the end of the array, and the highest frequency must be zero.  The
+                  ! floor function is just in case (NStepWave2 - 1) is an odd number
+               DO J=1,FLOOR(REAL(InitInp%NStepWave2-1)/2.0_SiKi)
 
-               ! Initialize the temporary arrays for each term to zero.
-            Term2ArrayC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
+                     ! The frequency
+                  Omega1   = REAL(J,ReKi) * InitInp%WaveDOmega
+                  OmegaSum = 2.0_SiKi * Omega1           ! the sum frequency
 
-
-               ! Check the limits for the high frequency cutoff. If WvHiCOffS is less than the
-               ! maximum frequency possible with the value of WaveDT (omega_max = pi/WaveDT = NStepWave2*WaveDOmega),
-               ! then we are good.  If the WvHiCOff > 1/2 omega_max, then we will be potentially
-               ! throwing away information.  However, remember the following:
-               !     WaveDT   Omega_max    wavelength
-               !      (s)      (rad/s)        (m)
-               !       .25       4 Pi           < 1
-               !      0.5        2 Pi           1
-               !      1.0          Pi          10
-               ! so, we don't need a really small WaveDT
-
-      !This section has been removed since it is kind of annoying.
-      !      IF ( InitInp%WvHiCOffS > InitInp%NStepWave2*InitInp%WaveDOmega ) THEN
-      !         CALL SetErrStat( ErrID_Warn,' The high frequency cutoff for second order wave forces, WvHiCOffS, '// &
-      !                  'is larger than the Nyquist frequency for the given time step of WaveDT. The Nyquist frequency '// &
-      !                  '(highest frequency) that can be computed is OmegaMax = PI/WaveDT = '// &
-      !                  TRIM(Num2LStr(InitInp%NStepWave2*InitInp%WaveDOmega))// &
-      !                  ' radians/second.  If you need those frequencies, decrease WaveDT.  For reference, 2*PI '// &
-      !                  'radians/second corresponds to a wavelength of ~1 meter.',&
-      !                  ErrStat,ErrMsg,RoutineName)
-      !      ENDIF
+                     ! Only perform calculations if the difference frequency is in the right range
+                  IF ( (OmegaSum >= InitInp%WvLowCOffS) .AND. (OmegaSum <= InitInp%WvHiCOffS) ) THEN
 
 
-
-               ! Outer loop to create the Term2ArrayC. This is stepwise through the sum frequencies.
-            DO J=1,InitInp%NStepWave2
-
-                  ! Calculate the frequency  -- This is the sum frequency.
-               OmegaSum = J * InitInp%WaveDOmega
-
-
-
-                  ! Set the \f$ H^+ \f$ term to zero before we start
-               TmpHPlusC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
-
-
-                  ! Only perform calculations if the difference frequency is in the right range
-               IF ( (OmegaSum >= InitInp%WvLowCOffS) .AND. (OmegaSum <= InitInp%WvHiCOffS) ) THEN
-
-                  !> Now do the inner sum.  We are going to perform a sum up to the maximum frequency that we
-                  !! can support (Nyquist frequency) for the given WaveDOmega and NStepWave2 (WaveOmegaMax =
-                  !! NStepWave2 * WaveDOmega = Pi / WaveDT rad/second). Note that this means the largest diagonal
-                  !! frequency we use is \f$ \omega = \Delta\omega * \f$ _NStepwave_/4.
-                  !! So, we essentially end up running into the sampling limit.  If we want higher frequency
-                  !! terms, we need to use a smaller stepsize.
-
-                  DO K=0,FLOOR(Real(J-1)/2.0_SiKi)
-
-                        ! Calculate the frequency pair
-                     Omega1 =    K  * InitInp%WaveDOmega
-                     Omega2 = (J-K) * InitInp%WaveDOmega
-
-                        ! Find the wave amplitude at frequency omega.  Remove the NStepWave2 normalization built into WaveElevC0 from Waves module
-                     aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,  K), InitInp%WaveElevC0(2,  K), SiKi )    / InitInp%NStepWave2
-                     aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,J-K), InitInp%WaveElevC0(2,J-K), SiKi )    / InitInp%NStepWave2
+                        ! Find the wave amplitude at frequency omega
+                     aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi )  / InitInp%NStepWave2
 
                         ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
-                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(K), InitInp%WaveDirArr(J-K) /)
+                     Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
                         ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
                      CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
@@ -2642,50 +2655,143 @@ ThisBodyNum=1
                         RETURN
                      ENDIF
 
-                        ! Set the value of the first term in the frequency domain.
-                     TmpHPlusC = TmpHPlusC + aWaveElevC1 * aWaveElevC2 * QTF_Value
-
-                  ENDDO
-
-                     ! Save the value from the summation.
-                  Term2ArrayC(J) = TmpHPlusC
+                        ! Set the value of the first term in the frequency domain
+                     Term1ArrayC(2*J) = aWaveElevC1 * aWaveElevC1 * QTF_Value
 
 
-               ENDIF    ! Check on the limits
-
-            ENDDO       ! Second term calculation -- frequency step on the sum frequency
+                  ENDIF    ! Check on the limits
+               ENDDO       ! First term calculation
 
 
 
-               ! Now we apply the FFT to the result of the sum.
-            CALL ApplyFFT_cx(  Term1Array(:),  Term1ArrayC(:), FFT_Data, ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the first term of the Sum QTF.', &
-                           ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-               RETURN
-            END IF
+               !---------------------------------------------------------------------------------
+               ! Calculate the second term.
+               ! In this term, we are are now stepping through the sum frequencies.  The inner
+               ! sum essentially covers all the off diagonal terms (omega_m /= omega_n).  The limits
+               ! on the outer integral that is the FFT run through the full frequency range that
+               ! we are using
 
-               ! Now we apply the FFT to the result of the sum.
-            CALL ApplyFFT_cx(  Term2Array(:), Term2ArrayC(:), FFT_Data, ErrStatTmp )
-            CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the Sum QTF.', &
-                           ErrStat,ErrMsg,RoutineName)
-            IF ( ErrStat >= AbortErrLev ) THEN
-               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-               RETURN
-            ENDIF
 
-               ! Now we add the two terms together.  The 0.5 multiplier on is because the double sided FFT was used.
-            DO J=0,InitInp%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get over-flow errors here. SumQTFForce(InitInp%NStepWave,I) gets overwritten later, so I'm setting the array bounds to be -1.
-               SumQTFForce(J,I) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J), SiKi))
-            ENDDO
+                  ! Set an initial search index for the 4D array interpolation
+               LastIndex4 = (/0,0,0,0/)
 
-               ! Copy the last first term to the last so that it is cyclic
-            SumQTFForce(InitInp%NStepWave,I) = SumQTFForce(0,I)
+                  ! Initialize the temporary arrays for each term to zero.
+               Term2ArrayC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
 
-         ENDIF    ! Load component to calculate
 
-      ENDDO
+                  ! Check the limits for the high frequency cutoff. If WvHiCOffS is less than the
+                  ! maximum frequency possible with the value of WaveDT (omega_max = pi/WaveDT = NStepWave2*WaveDOmega),
+                  ! then we are good.  If the WvHiCOff > 1/2 omega_max, then we will be potentially
+                  ! throwing away information.  However, remember the following:
+                  !     WaveDT   Omega_max    wavelength
+                  !      (s)      (rad/s)        (m)
+                  !       .25       4 Pi           < 1
+                  !      0.5        2 Pi           1
+                  !      1.0          Pi          10
+                  ! so, we don't need a really small WaveDT
+
+         !This section has been removed since it is kind of annoying.
+         !      IF ( InitInp%WvHiCOffS > InitInp%NStepWave2*InitInp%WaveDOmega ) THEN
+         !         CALL SetErrStat( ErrID_Warn,' The high frequency cutoff for second order wave forces, WvHiCOffS, '// &
+         !                  'is larger than the Nyquist frequency for the given time step of WaveDT. The Nyquist frequency '// &
+         !                  '(highest frequency) that can be computed is OmegaMax = PI/WaveDT = '// &
+         !                  TRIM(Num2LStr(InitInp%NStepWave2*InitInp%WaveDOmega))// &
+         !                  ' radians/second.  If you need those frequencies, decrease WaveDT.  For reference, 2*PI '// &
+         !                  'radians/second corresponds to a wavelength of ~1 meter.',&
+         !                  ErrStat,ErrMsg,RoutineName)
+         !      ENDIF
+
+
+
+                  ! Outer loop to create the Term2ArrayC. This is stepwise through the sum frequencies.
+               DO J=1,InitInp%NStepWave2
+
+                     ! Calculate the frequency  -- This is the sum frequency.
+                  OmegaSum = J * InitInp%WaveDOmega
+
+
+
+                     ! Set the \f$ H^+ \f$ term to zero before we start
+                  TmpHPlusC = CMPLX(0.0_SiKi,0.0_SiKi,SiKi)
+
+
+                     ! Only perform calculations if the difference frequency is in the right range
+                  IF ( (OmegaSum >= InitInp%WvLowCOffS) .AND. (OmegaSum <= InitInp%WvHiCOffS) ) THEN
+
+                     !> Now do the inner sum.  We are going to perform a sum up to the maximum frequency that we
+                     !! can support (Nyquist frequency) for the given WaveDOmega and NStepWave2 (WaveOmegaMax =
+                     !! NStepWave2 * WaveDOmega = Pi / WaveDT rad/second). Note that this means the largest diagonal
+                     !! frequency we use is \f$ \omega = \Delta\omega * \f$ _NStepwave_/4.
+                     !! So, we essentially end up running into the sampling limit.  If we want higher frequency
+                     !! terms, we need to use a smaller stepsize.
+
+                     DO K=0,FLOOR(Real(J-1)/2.0_SiKi)
+
+                           ! Calculate the frequency pair
+                        Omega1 =    K  * InitInp%WaveDOmega
+                        Omega2 = (J-K) * InitInp%WaveDOmega
+
+                           ! Find the wave amplitude at frequency omega.  Remove the NStepWave2 normalization built into WaveElevC0 from Waves module
+                        aWaveElevC1 = CMPLX( InitInp%WaveElevC0(1,  K), InitInp%WaveElevC0(2,  K), SiKi )    / InitInp%NStepWave2
+                        aWaveElevC2 = CMPLX( InitInp%WaveElevC0(1,J-K), InitInp%WaveElevC0(2,J-K), SiKi )    / InitInp%NStepWave2
+
+                           ! Set the (omega1,omega2,beta1,beta2) point we are looking for.
+                        Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega2,SiKi), InitInp%WaveDirArr(K), InitInp%WaveDirArr(J-K) /)
+
+                           ! get the interpolated value for F(omega1,omega2,beta1,beta2)  --> QTF_Value
+                        CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, SumQTFData%Data4D%WvFreq1, SumQTFData%Data4D%WvFreq2, &
+                                             SumQTFData%Data4D%WvDir1, SumQTFData%Data4D%WvDir2, LastIndex4, QTF_Value, ErrStatTmp, ErrMsgTmp )
+                        CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+                        IF (ErrStat >= AbortErrLev ) THEN
+                           IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+                           RETURN
+                        ENDIF
+
+                           ! Set the value of the first term in the frequency domain.
+                        TmpHPlusC = TmpHPlusC + aWaveElevC1 * aWaveElevC2 * QTF_Value
+
+                     ENDDO
+
+                        ! Save the value from the summation.
+                     Term2ArrayC(J) = TmpHPlusC
+
+
+                  ENDIF    ! Check on the limits
+
+               ENDDO       ! Second term calculation -- frequency step on the sum frequency
+
+
+
+                  ! Now we apply the FFT to the result of the sum.
+               CALL ApplyFFT_cx(  Term1Array(:),  Term1ArrayC(:), FFT_Data, ErrStatTmp )
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the first term of the Sum QTF.', &
+                              ErrStat,ErrMsg,RoutineName)
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+                  RETURN
+               END IF
+
+                  ! Now we apply the FFT to the result of the sum.
+               CALL ApplyFFT_cx(  Term2Array(:), Term2ArrayC(:), FFT_Data, ErrStatTmp )
+               CALL SetErrStat(ErrStatTmp,'Error occured while applying the FFT to the second term of the Sum QTF.', &
+                              ErrStat,ErrMsg,RoutineName)
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+                  RETURN
+               ENDIF
+
+                  ! Now we add the two terms together.  The 0.5 multiplier on is because the double sided FFT was used.
+               DO J=0,InitInp%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get over-flow errors here. SumQTFForce(InitInp%NStepWave,Idx) gets overwritten later, so Idx'm setting the array bounds to be -1.
+                  SumQTFForce(J,Idx) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J), SiKi))
+               ENDDO
+
+                  ! Copy the last first term to the first so that it is cyclic
+               SumQTFForce(InitInp%NStepWave,Idx) = SumQTFForce(0,Idx)
+
+            ENDIF    ! Load component to calculate
+
+         ENDDO ! ThisDim -- current dimension
+      ENDDO    ! IBody -- current WAMIT body
 
 
 
