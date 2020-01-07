@@ -19,7 +19,7 @@
 !**********************************************************************************************************************************
 !> SubDyn is a time-domain structural-dynamics module for multi-member fixed-bottom substructures.
 !! SubDyn relies on two main engineering schematizations: (1) a linear frame finite-element beam model (LFEB), and 
-!! (2) a dynamics system reduction via Craig-Bampton�s (C-B) method, together with a Static-Improvement method, greatly reducing 
+!! (2) a dynamics system reduction via Craig-Bampton's (C-B) method, together with a Static-Improvement method, greatly reducing 
 !!  the number of modes needed to obtain an accurate solution.   
 Module SubDyn
    
@@ -332,14 +332,14 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL AllocAry(FEMparams%Modes, Init%TDOF, FEMparams%NOmega, 'FEMparams%Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL EigenSolve( Init%K, Init%M, Init%TDOF, FEMparams%NOmega, .True., Init, p, FEMparams%Modes, FEMparams%Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
 
-   ! --- Elimination of constraints (reset M, K, D)
+   ! --- Elimination of constraints (reset M, K, D, and BCs IntFc )
    CALL DirectElimination(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Additional Damping and stiffness at pin/ball/universal joints
    CALL InsertJointStiffDamp(p, m, Init, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Craig-Bampton reduction (sets many parameters)
-   CALL Craig_Bampton(Init, p, CBparams, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL Craig_Bampton(Init, p, m, CBparams, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Initial system states 
    IF ( p%qmL > 0 ) THEN
@@ -1538,9 +1538,11 @@ END SUBROUTINE SD_AM2
 
 !------------------------------------------------------------------------------------------------------
 !> Perform Craig Bampton reduction
-SUBROUTINE Craig_Bampton(Init, p, CBparams, ErrStat, ErrMsg)
+SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
+   use IntegerList, only: len
    TYPE(SD_InitType),     INTENT(INOUT)      :: Init        ! Input data for initialization routine
    TYPE(SD_ParameterType),INTENT(INOUT)      :: p           ! Parameters
+   TYPE(SD_MiscVarType),  INTENT(IN   )      :: m
    TYPE(CB_MatArrays),    INTENT(INOUT)      :: CBparams    ! CB parameters that will be passed out for summary file use 
    INTEGER(IntKi),        INTENT(  OUT)      :: ErrStat     ! Error status of the operation
    CHARACTER(*),          INTENT(  OUT)      :: ErrMsg      ! Error message if ErrStat /= ErrID_None   
@@ -1569,22 +1571,18 @@ SUBROUTINE Craig_Bampton(Init, p, CBparams, ErrStat, ErrMsg)
    p%NNodes_I  = Init%NInterf                         ! Number of interface nodes
    p%NNodes_L  = Init%NNode - p%NReact - p%NNodes_I   ! Number of Interior nodes =(TDOF-DOFC-DOFI)/6 =  (6*Init%NNode - (p%NReact+p%NNodes_I)*6 ) / 6 = Init%NNode - p%NReact -p%NNodes_I
 
-   !DOFS of interface
-   !BJJ: TODO:  are these 6's actually TPdofL?   
-   p%DOFI = p%NNodes_I*6
-   p%DOFC = p%NReact*6
-   p%DOFR = (p%NReact+p%NNodes_I)*6 ! = p%DOFC + p%DOFI
-   p%DOFL = p%NNodes_L*6            ! = Init%TDOF - p%DOFR
-   
-            
+   ! --- Counting DOFs:  
+   ! DOFR (retained) = DOFI (interface), DOFC (reaction),
+   ! DOFL (internal)
+   ! DOFM (CB modes)
+   call CountDOFs(); if(Failed()) return
    IF(Init%CBMod) THEN ! C-B reduction         
       ! check number of internal modes
       IF(p%Nmodes > p%DOFL) THEN
-         CALL SetErrStat(ErrID_Fatal,'Number of internal modes is larger than maximum. ',ErrStat,ErrMsg,'Craig_Bampton')
+         CALL SetErrStat(ErrID_Fatal,'Number of internal modes is larger than number of internal DOFs. ',ErrStat,ErrMsg,'Craig_Bampton')
          CALL CleanupCB()
          RETURN
       ENDIF
-      
    ELSE ! full FEM 
       p%Nmodes = p%DOFL
       !Jdampings  need to be reallocated here because DOFL not known during Init
@@ -1593,15 +1591,12 @@ SUBROUTINE Craig_Bampton(Init, p, CBparams, ErrStat, ErrMsg)
       DEALLOCATE(Init%JDampings)
       CALL AllocAry( Init%JDampings, p%DOFL, 'Init%JDampings',  ErrStat2, ErrMsg2 ) ; if(Failed()) return
       Init%JDampings = JDamping1 ! set default values for all modes
-      
    ENDIF   
-   
    CBparams%DOFM = p%Nmodes  ! retained modes (all if no C-B reduction)
       
    ! matrix dimension paramters
-   p%qmL    = p%Nmodes                       ! Length of 1/2 x array, x1 that is (note, do this after check if CBMod is true [Nmodes modified if CMBod is false])
-   p%URbarL = p%DOFI !=p%NNodes_I*6          ! Length of URbar array, subarray of Y2  : THIS MAY CHANGE IF SOME DOFS ARE NOT CONSTRAINED       
-   
+   p%qmL    = p%Nmodes   ! Length of 1/2 x array, x1 that is (note, do this after check if CBMod is true [Nmodes modified if CMBod is false])
+   p%URbarL = p%DOFI     ! Length of URbar array, subarray of Y2  : THIS MAY CHANGE IF SOME DOFS ARE NOT CONSTRAINED       
       
    CALL AllocParameters(p, CBparams%DOFM, ErrStat2, ErrMsg2);                                  ; if (Failed()) return
 
@@ -1676,6 +1671,43 @@ SUBROUTINE Craig_Bampton(Init, p, CBparams, ErrStat, ErrMsg)
    CALL CleanUpCB()
 
 contains
+   SUBROUTINE CountDOFs()
+      INTEGER(IntKi) :: iNode, iiNode
+      ErrStat2 = ErrID_None
+      ErrMsg2  = ""
+      ! Interface DOFS
+      p%DOFI =0
+      do iiNode= 1,Init%NInterf
+         iNode = Init%Interf(iiNode,1)
+         p%DOFI = p%DOFI + len(m%NodesDOFtilde(iNode))
+      enddo
+      if (p%DOFI /= p%NNodes_I*6) then
+         ErrMsg2='Wrong number of DOF for interface nodes, likely some interface nodes are special joints and should be cantilever instead.'; ErrStat2=ErrID_Fatal
+         return
+      endif
+      ! Reaction DOFs
+      do iiNode= 1,p%NReact
+         iNode = p%Reacts(iiNode,1)
+         p%DOFC = p%DOFC + len(m%NodesDOFtilde(iNode))
+      enddo
+      if (p%DOFC /= p%NReact*6) then
+         ErrMsg2='Wrong number of DOF for reactions nodes, likely some reaction nodes are special joints and should be cantilever instead.'; ErrStat2=ErrID_Fatal
+         return
+      endif
+      p%DOFR = p%DOFC + p%DOFI
+      p%DOFL = Init%nDOFRed - p%DOFR ! TODO
+      print*,'Number of DOFs: "interface" (I)',p%DOFI
+      print*,'Number of DOFs: "reactions" (C)',p%DOFC
+      print*,'Number of DOFs: interface   (R)',p%DOFR
+      print*,'Number of DOFs: internal    (L)',p%DOFL
+      print*,'Number of DOFs: total     (R+L)',Init%nDOFRed
+   END SUBROUTINE
+
+   SUBROUTINE Fatal(ErrMsg_in)
+      character(len=*), intent(in) :: ErrMsg_in
+      CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'Craig_Bampton');
+      CALL CleanUp()
+   END SUBROUTINE Fatal
 
    logical function Failed()
         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton') 
@@ -2436,7 +2468,8 @@ SUBROUTINE SetIndexArrays(Init, p, ErrStat, ErrMsg)
    ErrMsg  = ""
          
    ! Index IDI for interface DOFs
-   p%IDI = Init%IntFc(1:p%DOFI, 1)  ! Interface DOFs in global uneliminated system
+   p%IDI = Init%IntFc(1:p%DOFI, 1)  ! Interface DOFs (indices updated after DirectElimination)
+   print*,'IDI',p%IDI
     
    ! Index IDC for constraint DOFs
    p%IDC = Init%BCs(1:p%DOFC, 1) !Constraint DOFs in global uneliminated system

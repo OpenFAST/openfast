@@ -141,6 +141,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NPropC      !< Total number of property sets for Cable [-]
     INTEGER(IntKi)  :: NPropR      !< Total number of property sets for Rigid [-]
     INTEGER(IntKi)  :: TDOF      !< Total degree of freedom [-]
+    INTEGER(IntKi)  :: nDOFRed      !< Total degree of freedom after constraint reduction [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Nodes      !< Nodes number and coordinates [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsB      !< Property sets and values for Beams [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: PropsC      !< Property sets and values for Cable [-]
@@ -2856,6 +2857,7 @@ ENDIF
     DstInitTypeData%NPropC = SrcInitTypeData%NPropC
     DstInitTypeData%NPropR = SrcInitTypeData%NPropR
     DstInitTypeData%TDOF = SrcInitTypeData%TDOF
+    DstInitTypeData%nDOFRed = SrcInitTypeData%nDOFRed
 IF (ALLOCATED(SrcInitTypeData%Nodes)) THEN
   i1_l = LBOUND(SrcInitTypeData%Nodes,1)
   i1_u = UBOUND(SrcInitTypeData%Nodes,1)
@@ -3268,6 +3270,7 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! NPropC
       Int_BufSz  = Int_BufSz  + 1  ! NPropR
       Int_BufSz  = Int_BufSz  + 1  ! TDOF
+      Int_BufSz  = Int_BufSz  + 1  ! nDOFRed
   Int_BufSz   = Int_BufSz   + 1     ! Nodes allocated yes/no
   IF ( ALLOCATED(InData%Nodes) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Nodes upper/lower bounds for each dimension
@@ -3594,6 +3597,8 @@ ENDIF
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NPropR
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%TDOF
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nDOFRed
       Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%Nodes) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -4209,6 +4214,8 @@ ENDIF
       OutData%NPropR = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%TDOF = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%nDOFRed = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Nodes not allocated
     Int_Xferred = Int_Xferred + 1

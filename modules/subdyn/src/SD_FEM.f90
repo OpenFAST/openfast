@@ -840,6 +840,7 @@ CONTAINS
 
    !> Sets a list of DOF indices corresponding to the BC, and the value these DOF should have
    !! NOTE: need p%Reacts to have an updated first column that uses indices and not JointIDs
+   !! Note: try to remove me and merge me with ApplyConstr, but used by "SelectNonBCConstraintsDOF" and "UnReduceVRdofs"
    SUBROUTINE InitBCs(Init, p)
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
       TYPE(SD_ParameterType),INTENT(IN   ) :: p
@@ -848,14 +849,15 @@ CONTAINS
       DO I = 1, p%NReact
          iNode = p%Reacts(I,1) ! Node index
          DO J = 1, 6
-            Init%BCs( (I-1)*6+J, 1) = m%NodesDOF(iNode)%List(J)
-            Init%BCs( (I-1)*6+J, 2) = p%Reacts(I, J+1);
+            Init%BCs( (I-1)*6+J, 1) = m%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
+            Init%BCs( (I-1)*6+J, 2) = p%Reacts(I, J+1);         ! 0 or 1 if fixed reaction or not
          ENDDO
       ENDDO
    END SUBROUTINE InitBCs
 
    !> Sets a list of DOF indices and the value these DOF should have
    !! NOTE: need Init%Interf to have been reindexed so that first column uses indices and not JointIDs
+   !! TODO remove me and merge me with CraigBampton
    SUBROUTINE InitIntFc(Init, p)
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
       TYPE(SD_ParameterType),INTENT(IN   ) :: p
@@ -863,9 +865,9 @@ CONTAINS
       Init%IntFc = 0
       DO I = 1, Init%NInterf
          iNode = Init%Interf(I,1) ! Node index
-         DO J = 1, 6
-            Init%IntFc( (I-1)*6+J, 1) = m%NodesDOF(iNode)%List(J)
-            Init%IntFc( (I-1)*6+J, 2) = Init%Interf(I, J+1);
+         DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
+            Init%IntFc( (I-1)*6+J, 1) = m%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
+            Init%IntFc( (I-1)*6+J, 2) = Init%Interf(I, J+1);      ! 0 or 1 if fixed to interface 
          ENDDO
       ENDDO
    END SUBROUTINE InitIntFc
@@ -982,7 +984,7 @@ END SUBROUTINE AssembleKM
 SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, m, Tred, ErrStat, ErrMsg)
    use IntegerList, only: init_list, find, pop, destroy_list, len
    use IntegerList, only: print_list
-   TYPE(SD_InitType),            INTENT(IN   ) :: Init
+   TYPE(SD_InitType),            INTENT(INOUT) :: Init
    TYPE(SD_ParameterType),       INTENT(IN   ) :: p
    type(IList), dimension(:),    INTENT(IN   ) :: RA   !< RA(a) = [e1,..,en]  list of elements forming a rigid link assembly
    integer(IntKi), dimension(:), INTENT(IN   ) :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
@@ -998,7 +1000,6 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, m, Tred, ErrStat, ErrMsg)
    real(ReKi), dimension(6,6) :: I6       !< Identity matrix of size 6
    integer(IntKi) :: iPrev
    type(IList) :: IRA !< list of rigid assembly indices to process
-   integer(IntKi) :: nDOF
    integer(IntKi) :: aID, ia ! assembly ID, and index in IRA
    integer(IntKi) :: iNode
    integer(IntKi) :: JType
@@ -1016,9 +1017,9 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, m, Tred, ErrStat, ErrMsg)
    I6(1:6,1:6)=0; do i = 1,6 ; I6(i,i)=1_ReKi; enddo ! I6 =  eye(6)
    allocate(m%NodesDOFtilde(1:Init%NNode), stat=ErrStat2); if(Failed()) return; ! Indices of DOF for each joint, in reduced system
 
-   nDOF = nDOF_ConstraintReduced()
-   print*,'nDOF constraint elim', nDOF , '/' , Init%TDOF
-   CALL AllocAry( m%Tred, Init%TDOF, nDOF, 'm%Tred',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   Init%nDOFRed = nDOF_ConstraintReduced()
+   print*,'nDOF constraint elim', Init%nDOFRed , '/' , Init%TDOF
+   CALL AllocAry( m%Tred, Init%TDOF, Init%nDOFRed, 'm%Tred',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    Tred=0
    call init_list(IRA, size(RA), 0, ErrStat2, ErrMsg2); if(Failed()) return;
    IRA%List(1:size(RA)) = (/(ia , ia = 1,size(RA))/)
@@ -1079,7 +1080,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, m, Tred, ErrStat, ErrMsg)
       ErrMsg2='Not all rigid assemblies were processed'; ErrStat2=ErrID_Fatal
       if(Failed()) return
    endif
-   if (iPrev /= nDOF) then 
+   if (iPrev /= Init%nDOFRed) then 
       ErrMsg2='Inconsistency in number of reduced DOF'; ErrStat2=ErrID_Fatal
       if(Failed()) return
    endif
@@ -1183,6 +1184,10 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    Init%FG = matmul(transpose(m%Tred), FF)
    Init%D = 0 !< Used for additional stiffness
 
+   ! --- Triggers for storage of DOF indices, replacing with indices in constrained system
+   CALL ReInitBCs(Init, p)
+   CALL ReInitIntFc(Init, p)
+
    call CleanUp_DirectElimination()
 
 CONTAINS
@@ -1200,6 +1205,33 @@ CONTAINS
       if (allocated(RAm1)) deallocate(RAm1)
       if (allocated(RA  )) deallocate(RA  )
    END SUBROUTINE CleanUp_DirectElimination
+
+   !> Reset DOF indices after elimination
+   SUBROUTINE ReInitBCs(Init, p)
+      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
+      TYPE(SD_ParameterType),INTENT(IN   ) :: p
+      INTEGER(IntKi) :: I, J, iNode
+      DO I = 1, p%NReact
+         iNode = p%Reacts(I,1) ! Node index
+         DO J = 1, 6
+            Init%BCs( (I-1)*6+J, 1) = m%NodesDOFtilde(iNode)%List(J) ! DOF number (constrained)
+         ENDDO
+      ENDDO
+   END SUBROUTINE ReInitBCs
+
+   !> Reset DOF indices after elimination
+   SUBROUTINE ReInitIntFc(Init, p)
+      TYPE(SD_InitType     ),INTENT(INOUT) :: Init
+      TYPE(SD_ParameterType),INTENT(IN   ) :: p
+      INTEGER(IntKi) :: I, J, iNode
+      Init%IntFc = 0
+      DO I = 1, Init%NInterf
+         iNode = Init%Interf(I,1) ! Node index
+         DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
+            Init%IntFc( (I-1)*6+J, 1) = m%NodesDOFtilde(iNode)%List(J) ! DOF number (unconstrained)
+         ENDDO
+      ENDDO
+   END SUBROUTINE ReInitIntFc
 END SUBROUTINE DirectElimination
 
 !------------------------------------------------------------------------------------------------------
