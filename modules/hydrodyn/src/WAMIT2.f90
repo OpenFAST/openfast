@@ -316,11 +316,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> If the MnDrift method will be used, read in the data for it.
       IF ( p%MnDriftF ) THEN
          IF ( MnDriftData%DataIs3D ) THEN
-            CALL Read_DataFile3D( TRIM(MnDriftData%Filename), MnDriftData%Data3D, ErrStatTmp, ErrMsgTmp )
+            CALL Read_DataFile3D( InitInp, TRIM(MnDriftData%Filename), MnDriftData%Data3D, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSEIF ( MnDriftData%DataIs4D ) THEN
             MnDriftData%Data4D%IsSumForce = .FALSE.
-            CALL Read_DataFile4D( TRIM(MnDriftData%Filename), MnDriftData%Data4D, ErrStatTmp, ErrMsgTmp )
+            CALL Read_DataFile4D( InitInp, TRIM(MnDriftData%Filename), MnDriftData%Data4D, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  MnDrift method flags incorrectly set by '// &
@@ -336,11 +336,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> If the NewmanApp method will be used, read in the data for it.
       IF ( p%NewmanAppF ) THEN
          IF ( NewmanAppData%DataIs3D ) THEN
-            CALL Read_DataFile3D( TRIM(NewmanAppData%Filename), NewmanAppData%Data3D, ErrStatTmp, ErrMsgTmp )
+            CALL Read_DataFile3D( InitInp, TRIM(NewmanAppData%Filename), NewmanAppData%Data3D, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSEIF ( NewmanAppData%DataIs4D ) THEN
             NewmanAppData%Data4D%IsSumForce = .FALSE.
-            CALL Read_DataFile4D( TRIM(NewmanAppData%Filename), NewmanAppData%Data4D, ErrStatTmp, ErrMsgTmp )
+            CALL Read_DataFile4D( InitInp, TRIM(NewmanAppData%Filename), NewmanAppData%Data4D, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  NewmanApp method flags incorrectly set by '// &
@@ -362,7 +362,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                   'CheckInitInput subroutine. 3D data cannot be used in the DiffQTF method.', ErrStat, ErrMsg, RoutineName )
          ELSEIF ( DiffQTFData%DataIs4D ) THEN
             DiffQTFData%Data4D%IsSumForce = .FALSE.
-            CALL Read_DataFile4D( TRIM(DiffQTFData%Filename), DiffQTFData%Data4D, ErrStatTmp, ErrMsgTmp )
+            CALL Read_DataFile4D( InitInp, TRIM(DiffQTFData%Filename), DiffQTFData%Data4D, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  DiffQTF method flags incorrectly set by '// &
@@ -379,7 +379,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( p%SumQTFF ) THEN
          IF ( SumQTFData%DataIs4D ) THEN
             SumQTFData%Data4D%IsSumForce = .TRUE.
-            CALL Read_DataFile4D( TRIM(SumQTFData%Filename), SumQTFData%Data4D, ErrStatTmp, ErrMsgTmp )
+            CALL Read_DataFile4D( InitInp, TRIM(SumQTFData%Filename), SumQTFData%Data4D, ErrStatTmp, ErrMsgTmp )
             CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          ELSE
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  SumQTF method flags incorrectly set by '// &
@@ -745,7 +745,6 @@ ThisBodyNum=1
 
 
 
-
    !-------------------------------------------------------------------------------------------------------------------------------
    !> This subroutine calculates the force time series using the MnDrift calculation.
    !! The data is stored in either 3D or 4D arrays depending on the file type used.
@@ -800,7 +799,7 @@ ThisBodyNum=1
       INTEGER(IntKi)                                     :: J                    !< Generic counter
       INTEGER(IntKi)                                     :: K                    !< Generic counter
       CHARACTER(*), PARAMETER                            :: RoutineName = 'MnDrift_InitCalc'
- 
+
 
          ! Wave information and QTF temporary
       COMPLEX(SiKi)                                      :: QTF_Value            !< Temporary complex number for QTF
@@ -835,7 +834,7 @@ ThisBodyNum=1
 
 
          !> 1. Check the data to see if low cutoff on the difference frequency is 0.  If it is above zero, that implies no mean drift
-         !!    term since \f$ \omega_1=\omega_2 \f$ 
+         !!    term since \f$ \omega_1=\omega_2 \f$
 
       IF ( InitInp%WvLowCOffD > 0.0_SiKi )  THEN
          CALL SetErrStat( ErrID_Warn, ' WvLowCOffD > 0.0, so no mean drift term is calculated (the mean drift uses only the equal '//&
@@ -2720,12 +2719,13 @@ ThisBodyNum=1
    !!
    !! This subroutine also populates the InitOut and creates the filenames for each of the calculation types.
    !!
-   SUBROUTINE CheckInitInput( InitInp, InitOut, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStat, ErrMsg )
+   SUBROUTINE CheckInitInput( InitInp, Interval, InitOut, p, MnDriftData, NewmanAppData, DiffQTFData, SumQTFData, ErrStat, ErrMsg )
 
       IMPLICIT NONE
 
          ! Passed variables.
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp        !< Input data for initialization routine
+      REAL(DbKi),                         INTENT(IN   )  :: Interval       !< Coupling interval in seconds: don't change it from the glue code provided value.
       TYPE(WAMIT2_InitOutputType),        INTENT(INOUT)  :: InitOut        !< The output from the init routine
       TYPE(WAMIT2_ParameterType),         INTENT(  OUT)  :: p              !< The parameters
 
@@ -2745,7 +2745,7 @@ ThisBodyNum=1
       INTEGER(IntKi)                                     :: ErrStatTmp     !< Temporary variable for the local error status
       CHARACTER(2048)                                    :: ErrMsgTmp      !< Temporary error message variable
       CHARACTER(*), PARAMETER                            :: RoutineName = 'CheckInitInput'
- 
+
       !> ## Subroutine contents
 
       !--------------------------------------------------------------------------------
@@ -3076,9 +3076,9 @@ ThisBodyNum=1
          ! This module's implementation requires that if NBodyMod = 2 or 3, then there is one instance of a WAMIT module for each body, therefore, HydroDyn may have NBody > 1, but this WAMIT module will have NBody = 1
       if ( (p%NBodyMod > 1) .and. (p%NBody > 1) ) then
          CALL SetErrStat( ErrID_Fatal, "DEVELOPER ERROR: If NBodyMod = 2 or 3, then NBody for the a WAMIT2 object must be equal to 1", ErrStat, ErrMsg, RoutineName)
-         CALL CleanUp 
+         CALL CleanUp
          return
-      end if    
+      end if
 
 
       !--------------------------------------------------------------------------------
@@ -3221,11 +3221,12 @@ ThisBodyNum=1
    !!
    !! At the end of all this, we check the data for completeness and set the flags accordingly.
    !!
-   SUBROUTINE Read_DataFile3D( Filename3D, Data3D, ErrStat, Errmsg )
+   SUBROUTINE Read_DataFile3D( InitInp, Filename3D, Data3D, ErrStat, Errmsg )
 
       IMPLICIT NONE
 
          ! Passed variables.
+      TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       CHARACTER(*),                       INTENT(IN   )  :: Filename3D        !< Name of the file containing the 3D data
       TYPE(W2_InitData3D_Type),           INTENT(INOUT)  :: Data3D            !< 3D QTF data
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat           !< The error value
@@ -3629,9 +3630,9 @@ ThisBodyNum=1
 
 
          ! Now we need to figure out if the zero frequency was given in the file.  If so, we change NumWvFreq1 to
-         ! NumWvFreq1+2.  If not, change to NumWvFreq1+4.  We will add on the inifinite frequency value and 
+         ! NumWvFreq1+2.  If not, change to NumWvFreq1+4.  We will add on the inifinite frequency value and
          ! zero out all values not in the input frequency range. The inifinite frequency value will be set to HUGE
-         ! and we'll add/subtract epsilon to the first non-zero frequency entered so that we can achieve a step 
+         ! and we'll add/subtract epsilon to the first non-zero frequency entered so that we can achieve a step
          ! change for zeroing the values outside the input frequency range.
       IF (HaveZeroFreq1) THEN
          Data3D%NumWvFreq1 = Data3D%NumWvFreq1+2
@@ -3661,7 +3662,7 @@ ThisBodyNum=1
          ! Populate the wave frequencies with what we read in
       Data3D%WvFreq1( WvFreq1LoIdx:WvFreq1HiIdx ) = TmpWvFreq1
 
-         ! If no zero frequency was supplied, add the two points for step-change before first entered frequency 
+         ! If no zero frequency was supplied, add the two points for step-change before first entered frequency
       IF ( .NOT. HaveZeroFreq1) THEN
          Data3D%WvFreq1( 1 )                 = 0.0_SiKi
          Data3D%WvFreq1( 2 )                 = MAX( TmpWvFreq1(1) - 10.0_SiKi*EPSILON(0.0_SiKi), 0.0_SiKi )  ! make sure the Frequencies are still monotonically increasing
@@ -3852,7 +3853,7 @@ ThisBodyNum=1
          !! to be performed only when \f$ \omega_1 = \omega_2 \f$.
 
          ! Loop over the wave components, but only perform calculations on the ones that have values
-      DO L=1,6
+      DO L=1,6*Data3D%NumBodies
          IF (Data3D%LoadComponents(L)) THEN        ! Only do this for the load components that exist
             DO I=1,Data3D%NumWvFreq1               ! Frequencies
 
@@ -3892,19 +3893,19 @@ ThisBodyNum=1
 
 
       !----------------------------------------------------------------------------------
-      !> We added two frequencies for the \f$ omega = 0 \f$ term if it did not exist, 
+      !> We added two frequencies for the \f$ omega = 0 \f$ term if it did not exist,
       !! and added two frequencies for the infinite frequency term on the end of the array,
-      !! to create step changes outside the entered frequency ranges. We need to populate 
+      !! to create step changes outside the entered frequency ranges. We need to populate
       !! the these new terms (set to zero).
       !----------------------------------------------------------------------------------
 
       IF (.NOT. HaveZeroFreq1) THEN
          Data3D%DataSet( 1:2,:,:,:)  = CMPLX(0.0_SiKi,0.0_SiKi)                                     ! Set the values to zero for everything before entered frequency range
          Data3D%DataMask(1:2,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
-      ENDIF      
+      ENDIF
       Data3D%DataSet( Data3D%NumWvFreq1-1:Data3D%NumWvFreq1,:,:,:) = CMPLX(0.0_SiKi,0.0_SiKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
-      Data3D%DataMask(Data3D%NumWvFreq1-1:Data3D%NumWvFreq1,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
-            
+      Data3D%DataMask(Data3D%NumWvFreq1-1:Data3D%NumWvFreq1,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies
+
 
       !----------------------------------------------------------------------------------
       !> Find out if the data is sparse or full.  Verification that the requested component
@@ -3913,7 +3914,7 @@ ThisBodyNum=1
       !! for only the values of k that have data in them.
       !----------------------------------------------------------------------------------
 
-      DO L=1,6       ! Loop over force component directions
+      DO L=1,6*Data3D%NumBodies       ! Loop over force component directions
          TmpSparseFlag  = .FALSE.                  ! Change this to true if any empty values are found
          IF (Data3D%LoadComponents(L)) THEN        ! Only if we found data for that component
             DO I=1,Data3D%NumWvFreq1
@@ -3970,11 +3971,12 @@ ThisBodyNum=1
    !!
    !! At the end of all this, we check the data for completeness and set the flags accordingly.
    !!
-   SUBROUTINE Read_DataFile4D( Filename4D, Data4D, ErrStat, Errmsg )
+   SUBROUTINE Read_DataFile4D( InitInp, Filename4D, Data4D, ErrStat, Errmsg )
 
       IMPLICIT NONE
 
          ! Passed variables.
+      TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       CHARACTER(*),                       INTENT(IN   )  :: Filename4D        !< Name of the file containing the 4D data
       TYPE(W2_InitData4D_Type),           INTENT(INOUT)  :: Data4D            !< 4D QTF data
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat           !< The error value
@@ -4419,9 +4421,9 @@ ThisBodyNum=1
 
 
          ! Now we need to figure out if the zero frequency was given in the file.  If so, we change NumWvFreq1 to
-         ! NumWvFreq1+2.  If not, change to NumWvFreq1+4.  We will add on the inifinite frequency value and 
+         ! NumWvFreq1+2.  If not, change to NumWvFreq1+4.  We will add on the inifinite frequency value and
          ! zero out all values not in the input frequency range. The inifinite frequency value will be set to HUGE
-         ! and we'll add/subtract epsilon to the first non-zero frequency entered so that we can achieve a step 
+         ! and we'll add/subtract epsilon to the first non-zero frequency entered so that we can achieve a step
          ! change for zeroing the values outside the input frequency range.
       IF (HaveZeroFreq1) THEN
          Data4D%NumWvFreq1 = Data4D%NumWvFreq1+2
@@ -4482,7 +4484,7 @@ ThisBodyNum=1
          ! Populate the wave frequencies with what we read in
       Data4D%WvFreq1( WvFreq1LoIdx:WvFreq1HiIdx ) = TmpWvFreq1
 
-         ! If no zero frequency was supplied, add the two points for step-change before first entered frequency 
+         ! If no zero frequency was supplied, add the two points for step-change before first entered frequency
       IF ( .NOT. HaveZeroFreq1) THEN
          Data4D%WvFreq1( 1 )                 = 0.0_SiKi
          Data4D%WvFreq1( 2 )                 = MAX( TmpWvFreq1(1) - 10.0_SiKi*EPSILON(0.0_SiKi), 0.0_SiKi )  ! make sure the Frequencies are still monotonically increasing
@@ -4497,7 +4499,7 @@ ThisBodyNum=1
          ! Populate the wave frequencies with what we read in
       Data4D%WvFreq2( WvFreq2LoIdx:WvFreq2HiIdx ) = TmpWvFreq2
 
-         ! If no zero frequency was supplied, add the two points for step-change before first entered frequency 
+         ! If no zero frequency was supplied, add the two points for step-change before first entered frequency
       IF ( .NOT. HaveZeroFreq2) THEN
          Data4D%WvFreq2( 1 )                 = 0.0_SiKi
          Data4D%WvFreq2( 2 )                 = MAX( TmpWvFreq2(1) - 10.0_SiKi*EPSILON(0.0_SiKi), 0.0_SiKi )  ! make sure the Frequencies are still monotonically increasing
@@ -4778,26 +4780,26 @@ ThisBodyNum=1
 
 
       !----------------------------------------------------------------------------------
-      !> We added two frequencies for the \f$ omega = 0 \f$ term if it did not exist, 
+      !> We added two frequencies for the \f$ omega = 0 \f$ term if it did not exist,
       !! and added two frequencies for the infinite frequency term on the end of the array,
-      !! to create step changes outside the entered frequency ranges. We need to populate 
+      !! to create step changes outside the entered frequency ranges. We need to populate
       !! the these new terms (set to zero).
       !----------------------------------------------------------------------------------
 
       IF (.NOT. HaveZeroFreq1) THEN
          Data4D%DataSet( 1:2,:,:,:,:)  = CMPLX(0.0,0.0,SiKi)                                          ! Set the values to zero for everything before entered frequency range
          Data4D%DataMask(1:2,:,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
-      ENDIF      
+      ENDIF
       Data4D%DataSet( Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = CMPLX(0.0,0.0,SiKi)            ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
-      Data4D%DataMask(Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
+      Data4D%DataMask(Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies
 
       IF (.NOT. HaveZeroFreq2) THEN
          Data4D%DataSet( :,1:2,:,:,:)  = CMPLX(0.0,0.0,SiKi)                                          ! Set the values to zero for everything before entered frequency range
          Data4D%DataMask(:,1:2,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
-      ENDIF      
+      ENDIF
       Data4D%DataSet( :,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = CMPLX(0.0,0.0,SiKi)            ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
-      Data4D%DataMask(:,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
-            
+      Data4D%DataMask(:,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies
+
 
       !----------------------------------------------------------------------------------
       !> Find out if the data is sparse or full.  Verification that the requested component
@@ -4806,7 +4808,7 @@ ThisBodyNum=1
       !! for only the values of k that have data in them.
       !----------------------------------------------------------------------------------
 
-      DO M=1,6       ! Loop over force component directions
+      DO M=1,6*Data4D%NumBodies       ! Loop over force component directions
          TmpSparseFlag  = .FALSE.                  ! Change this to true if any empty values are found
          IF (Data4D%LoadComponents(M)) THEN        ! Only if we found data for that component
             DO I=1,Data4D%NumWvFreq1
@@ -4861,7 +4863,7 @@ ThisBodyNum=1
       IF (Data4D%NumWvFreq1 /= Data4D%NumWvFreq2) THEN
          TmpDiagComplete = .FALSE.
       ELSE  ! Same number of frequencies, so we can proceed.
-         DO M=1,6       ! Loop over force component directions
+         DO M=1,6*Data4D%NumBodies       ! Loop over force component directions
                ! If we have data for this component, and it is sparse, proceed to check it.
             IF (Data4D%LoadComponents(M) .AND. Data4D%DataIsSparse(M)) THEN
 
@@ -5214,6 +5216,7 @@ ThisBodyNum=1
       CHARACTER(*),        INTENT(  OUT)           :: ErrMsg         !< Error message including message from ReadNum
       INTEGER(IntKi),      INTENT(  OUT)           :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
 
+      CHARACTER(2048)                              :: ErrMsgTmp            !< Temporary variable for holding the error message returned from a CALL statement
 
 
          ! Initialize some things
@@ -5717,7 +5720,7 @@ SUBROUTINE Copy_InitData4Dto3D( Data4D, Data3D, ErrStat, ErrMsg )
       !! for only the values of k that have data in them.
       !----------------------------------------------------------------------------------
 
-   DO L=1,6       ! Loop over force component directions
+   DO L=1,6*Data3D%NumBodies       ! Loop over force component directions
       TmpSparseFlag  = .FALSE.                  ! Change this to true if any empty values are found
       IF (Data3D%LoadComponents(L)) THEN        ! Only if we found data for that component
          DO I=1,Data3D%NumWvFreq1
