@@ -127,7 +127,7 @@ SUBROUTINE CallBladedDLL ( u, filt_fromSCglob, filt_fromSC, DLL, dll_data, p, Er
    PROCEDURE(BladedDLL_Procedure), POINTER   :: DLL_Subroutine                 ! The address of the procedure in the Bladed DLL
    PROCEDURE(BladedDLL_SC_Procedure),POINTER :: DLL_SC_Subroutine              ! The address of the supercontroller procedure in the Bladed DLL
 
-      
+      !PRINT*, 'DEBUGGGGGG'
       ! initialize aviFAIL
    aviFAIL = 0                ! bjj, this won't necessarially work if aviFAIL is INTENT(OUT) in DLL_Procedure()--could be undefined???
    

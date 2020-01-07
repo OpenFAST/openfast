@@ -294,6 +294,8 @@ SUBROUTINE Farm_Initialize( farm, InputFile, ErrStat, ErrMsg )
       SC_InitOut%NumSC2CtrlGlob = 0
       SC_InitOut%NumSC2Ctrl = 0
       SC_InitOut%NumCtrl2SC = 0
+      allocate(farm%SC%y%fromscglob(0))
+      allocate(farm%SC%y%fromsc(0))
    end if
    
       !-------------------

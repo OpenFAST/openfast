@@ -358,6 +358,13 @@ abstract interface
       p%NumCtrl2SC = 0
       p%NumStatesGlobal = 0
       p%NumStatesTurbine = 0
+
+        !!KS I moved the following 3 lines from below to up here.
+      !   allocate(p%ParamGlobal(p%NumParamGlobal))
+      !   p%ParamGlobal = 0
+      !   nParams = p%NumParamTurbine*p%nTurbines
+      !   allocate(p%ParamTurbine(nParams))
+      !   p%ParamTurbine = 0
       
 #ifdef STATIC_DLL_LOAD
 
@@ -374,15 +381,6 @@ abstract interface
       
 #endif
 
-      print *, 'nInpGlobal = ', p%nInpGlobal
-      print *, 'NumParamGlobal = ', p%NumParamGlobal
-      print *, 'p%NumParamTurbine = ', p%NumParamTurbine 
-      print *, 'p%NumSC2CtrlGlob = ', p%NumSC2CtrlGlob
-      print *, 'p%NumSC2Ctrl = ', p%NumSC2Ctrl
-      print *, 'p%NumCtrl2SC = ', p%NumCtrl2SC
-      print *, 'p%NumStatesGlobal = ', p%NumStatesGlobal
-      print *, 'p%NumStatesTurbine = ', p%NumStatesTurbine
-
       ! NOTE: For now we have not implemented the global super controller inputs in any of the openfast glue codes,
       !       so the number must be set to zero    
       if (p%nInpGlobal        /= 0) call SetErrStat( ErrID_Fatal, "nInpGlobal must to be equal to zero."     , errStat, errMsg, RoutineName )   
@@ -397,7 +395,8 @@ abstract interface
           ! allocate output arrays  
       allocate(y%fromSCglob(p%NumSC2CtrlGlob))   
            
-      allocate(y%fromSC    (p%NumSC2Ctrl*p%nTurbines    ))    
+      allocate(y%fromSC    (p%NumSC2Ctrl*p%nTurbines    ))
+
       
          ! Copy the Parameter and Output data created by the SuperController library into the FAST-framework parameters data structure
       if ( (p%NumParamGlobal > 0) .or. (p%NumParamTurbine > 0) .or. (p%NumSC2CtrlGlob > 0) .or. (p%NumSC2Ctrl > 0) ) then 
@@ -423,15 +422,6 @@ abstract interface
       end if          !IDEALLY THROW AN ERROR AND QUIT HERE IF THIS CRITERIA IS NOT MET
       
 
-      print *, 'nInpGlobal = ', p%nInpGlobal
-      print *, 'NumParamGlobal = ', p%NumParamGlobal
-      print *, 'p%NumParamTurbine = ', p%NumParamTurbine 
-      print *, 'p%NumSC2CtrlGlob = ', p%NumSC2CtrlGlob
-      print *, 'p%NumSC2Ctrl = ', p%NumSC2Ctrl
-      print *, 'p%NumCtrl2SC = ', p%NumCtrl2SC
-      print *, 'p%NumStatesGlobal = ', p%NumStatesGlobal
-      print *, 'p%NumStatesTurbine = ', p%NumStatesTurbine
-      
       ! TODO Fix allocations for error handling
       
       allocate(xd%Global(p%NumStatesGlobal))
@@ -451,15 +441,6 @@ abstract interface
       allocate(u%toSCglob(p%nInpGlobal))        
       allocate(u%toSC    (p%NumCtrl2SC*p%nTurbines))        
 
-      print *, 'nInpGlobal = ', p%nInpGlobal
-      print *, 'NumParamGlobal = ', p%NumParamGlobal
-      print *, 'p%NumParamTurbine = ', p%NumParamTurbine 
-      print *, 'p%NumSC2CtrlGlob = ', p%NumSC2CtrlGlob
-      print *, 'p%NumSC2Ctrl = ', p%NumSC2Ctrl
-      print *, 'p%NumCtrl2SC = ', p%NumCtrl2SC
-      print *, 'p%NumStatesGlobal = ', p%NumStatesGlobal
-      print *, 'p%NumStatesTurbine = ', p%NumStatesTurbine
-      
          ! Set the initialization output data for the glue code so that it knows
          ! how many inputs/outputs there are
       InitOut%nInpGlobal       = p%nInpGlobal       
