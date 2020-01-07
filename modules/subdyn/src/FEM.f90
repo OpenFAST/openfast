@@ -133,6 +133,27 @@ FUNCTION FINDLOCI_IntKi(Array, Val) result(i)
    i=-1
 END FUNCTION
 !------------------------------------------------------------------------------------------------------
+SUBROUTINE RigidTransformationLine(dx,dy,dz,iLine,Line)
+   real(ReKi),               INTENT(IN)  :: dx,dy,dz
+   integer(IntKi)     ,      INTENT(IN)  :: iLine 
+   Real(ReKi), dimension(6), INTENT(OUT) :: Line
+   SELECT CASE (iLine)
+      CASE (1); Line = (/1.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi,       dz,      -dy/)
+      CASE (2); Line = (/0.0_ReKi, 1.0_ReKi, 0.0_ReKi,      -dz, 0.0_ReKi,       dx/)
+      CASE (3); Line = (/0.0_ReKi, 0.0_ReKi, 1.0_ReKi,       dy,      -dx, 0.0_ReKi/)
+      CASE (4); Line = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 1.0_ReKi, 0.0_ReKi, 0.0_ReKi/)
+      CASE (5); Line = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 1.0_ReKi, 0.0_ReKi/)
+      CASE (6); Line = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 1.0_ReKi/)
+      CASE DEFAULT
+         Line=-99999999_ReKi
+         print*,'Error in RigidTransformationLine'
+         STOP
+!          ErrStat = ErrID_Fatal
+!          ErrMsg  = 'Error calculating transformation matrix TI '
+!          return
+   END SELECT
+END SUBROUTINE
+!------------------------------------------------------------------------------------------------------
 !> Rigid transformation matrix between DOFs of node j and k where node j is the leader node.
 SUBROUTINE GetRigidTransformation(Pj, Pk, TRigid, ErrStat, ErrMsg)
    REAL(ReKi),       INTENT(IN   )  :: Pj(3)         ! (x,y,z) positions of leader node

@@ -126,7 +126,7 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, NNodes_I, IDI, NNodes_L, IDL, NNodes_C,
    !---------------------------------------------------------------------
    DO I = 1,NNodes_I 
       ! Create the node on the mesh
-      nodeIndx = IDI(I*6) / 6     !integer division gives me the actual node index, is it true? Yes it is not the nodeID
+      nodeIndx = IDI(I*6) / 6     ! TODO TODO TODO integer division gives me the actual node index, is it true? Yes it is not the nodeID
       CALL MeshPositionNode (   inputMesh           &
                               , I                   &
                               , Nodes(nodeIndx,2:4) &  ! position
@@ -147,7 +147,7 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, NNodes_I, IDI, NNodes_L, IDL, NNodes_C,
    !---------------------------------------------------------------------
    DO I = 1,NNodes_L 
       ! Create the node on the mesh
-      nodeIndx = IDL(I*6) / 6     !integer division gives me the actual node index, is it true? Yes it is not the nodeID of the input file that may not be sequential, but the renumbered list of nodes
+      nodeIndx = IDL(I*6) / 6     !TODO TODO TODO integer division gives me the actual node index, is it true? Yes it is not the nodeID of the input file that may not be sequential, but the renumbered list of nodes
       CALL MeshPositionNode (   inputMesh           &
                               , I + NNodes_I        &
                               , Nodes(nodeIndx,2:4) &
@@ -168,7 +168,7 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, NNodes_I, IDI, NNodes_L, IDL, NNodes_C,
    !---------------------------------------------------------------------
    DO I = 1,NNodes_C 
       ! Create the node on the mesh
-      nodeIndx = IDC(I*6) / 6     !integer division gives me the actual node index, is it true? Yes it is not the nodeID
+      nodeIndx = IDC(I*6) / 6     ! TODO  TODO TODO integer division gives me the actual node index, is it true? Yes it is not the nodeID
       CALL MeshPositionNode (   inputMesh                 &
                               , I + NNodes_I + NNodes_L   &
                               , Nodes(nodeIndx,2:4)       &  
@@ -221,21 +221,21 @@ SUBROUTINE SD_Y2Mesh_Mapping(p, SDtoMesh )
    ! Interface nodes (IDI)
    DO I = 1,SIZE(p%IDI,1)/6
       y2Node = y2Node + 1      
-      SDnode = p%IDI(I*6) / 6     !integer division gives me the actual node index; it is not the nodeID
+      SDnode = p%IDI(I*6) / 6     ! TODO TODO TODO integer division gives me the actual node index; it is not the nodeID
       SDtoMesh( SDnode ) = y2Node ! TODO add safety check
    END DO
    
    ! Interior nodes (IDL)
    DO I = 1,SIZE(p%IDL,1)/6 
       y2Node = y2Node + 1      
-      SDnode = p%IDL(I*6) / 6     !integer division gives me the actual node index; it is not the nodeID
+      SDnode = p%IDL(I*6) / 6     ! TODO TODO TODO integer division gives me the actual node index; it is not the nodeID
       SDtoMesh( SDnode ) = y2Node ! TODO add safety check
    END DO
 
    ! Base Reaction nodes (IDC)
    DO I = 1,SIZE(p%IDC,1)/6 
       y2Node = y2Node + 1      
-      SDnode = p%IDC(I*6) / 6     !integer division gives me the actual node index; it is not the nodeID
+      SDnode = p%IDC(I*6) / 6     ! TODO TODO TODO integer division gives me the actual node index; it is not the nodeID
       SDtoMesh( SDnode ) = y2Node ! TODO add safety check
    END DO
 
@@ -1539,7 +1539,6 @@ END SUBROUTINE SD_AM2
 !------------------------------------------------------------------------------------------------------
 !> Perform Craig Bampton reduction
 SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
-   use IntegerList, only: len
    TYPE(SD_InitType),     INTENT(INOUT)      :: Init        ! Input data for initialization routine
    TYPE(SD_ParameterType),INTENT(INOUT)      :: p           ! Parameters
    TYPE(SD_MiscVarType),  INTENT(IN   )      :: m
@@ -1625,7 +1624,7 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    CALL BreakSysMtrx(Init, p, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL)   
       
    ! Set p%TI and CBparams%TI2
-   CALL TrnsfTI(Init, p%TI, p%DOFI, p%IDI, CBparams%TI2, p%DOFR, p%IDR, ErrStat2, ErrMsg2); if(Failed()) return
+   CALL TrnsfTI(Init, m, p%TI, p%DOFI, p%IDI, CBparams%TI2, p%DOFR, p%IDR, ErrStat2, ErrMsg2); if(Failed()) return
 
    !................................
    ! Sets the following values, as documented in the SubDyn Theory Guide:
@@ -1672,6 +1671,7 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
 
 contains
    SUBROUTINE CountDOFs()
+      use IntegerList, only: len
       INTEGER(IntKi) :: iNode, iiNode
       ErrStat2 = ErrID_None
       ErrMsg2  = ""
@@ -1734,7 +1734,10 @@ contains
 END SUBROUTINE Craig_Bampton 
 
 !------------------------------------------------------------------------------------------------------
-!>
+!> Partition matrices and vectors into Boundary (R) and internal (L) nodes
+!! MRR = M(IDR, IDR),  KRR = M(IDR, IDR), FGR = FG(IDR)
+!! MLL = M(IDL, IDL),  KRR = K(IDL, IDL), FGL = FG(IDL)
+!! MRL = M(IDR, IDL),  KRR = K(IDR, IDL)
 SUBROUTINE BreakSysMtrx(Init, p, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL   )
    TYPE(SD_InitType),      INTENT(IN   )  :: Init         ! Input data for initialization routine
    TYPE(SD_ParameterType), INTENT(IN   )  :: p  
@@ -1749,6 +1752,8 @@ SUBROUTINE BreakSysMtrx(Init, p, MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL   )
    ! local variables
    INTEGER(IntKi)          :: I, J, II, JJ
    
+   !MRR = Init%M(p%IDR,p%IDR)
+   !KRR = Init%K(p%IDR,p%IDR)
    DO I = 1, p%DOFR   !Boundary DOFs
       II = p%IDR(I)
       FGR(I) = Init%FG(II)
@@ -1918,8 +1923,9 @@ END SUBROUTINE CBMatrix
 
 !------------------------------------------------------------------------------------------------------
 !>
-SUBROUTINE TrnsfTI(Init, TI, DOFI, IDI, TI2, DOFR, IDR, ErrStat, ErrMsg)
+SUBROUTINE TrnsfTI(Init, m, TI, DOFI, IDI, TI2, DOFR, IDR, ErrStat, ErrMsg)
    TYPE(SD_InitType),      INTENT(IN   )  :: Init         ! Input data for initialization routine
+   TYPE(SD_MiscVarType),   INTENT(IN   )  :: m        
    INTEGER(IntKi),         INTENT(IN   )  :: DOFI         ! # of DOFS of interface nodes
    INTEGER(IntKi),         INTENT(IN   )  :: DOFR         ! # of DOFS of restrained nodes (restraints and interface)
    INTEGER(IntKi),         INTENT(IN   )  :: IDI(DOFI)
@@ -1929,60 +1935,59 @@ SUBROUTINE TrnsfTI(Init, TI, DOFI, IDI, TI2, DOFR, IDR, ErrStat, ErrMsg)
    INTEGER(IntKi),         INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
-   INTEGER                                :: I, di 
-   INTEGER                                :: rmndr, n
+   INTEGER                                :: I, J, K, iDOF, iiDOF, iNode, nDOFPerNode
    REAL(ReKi)                             :: dx, dy, dz
+   REAL(ReKi), dimension(6)               :: Line
    
    ErrStat = ErrID_None
    ErrMsg  = ""
-      
-   TI(:,:) = 0. !Initialize     
+
+   ! --- TI: Transformation matrix from interface points to ref point
+   TI(:,:)=0
    DO I = 1, DOFI
-      di = IDI(I)
-      rmndr = MOD(di, 6)
-      n = CEILING(di/6.0)
+      iDOF = IDI(I) ! DOF index in constrained system
+      iNode       = m%DOFtilde2Nodes(iDOF,1) ! First column is node 
+      nDOFPerNode = m%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
+      iiDOF       = m%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+
+      if ((iiDOF<1) .or. (iiDOF>6)) then
+         ErrMsg  = 'TransfTI, interface node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
+         return
+      endif
+      if (nDOFPerNode/=6) then
+         ErrMsg  = 'TransfTI, interface node doesnt have 6 DOFs. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' nDOF:'//trim(Num2LStr(nDOFPerNode)); ErrStat = ErrID_Fatal
+         return
+      endif
       
-      dx = Init%Nodes(n, 2) - Init%TP_RefPoint(1)
-      dy = Init%Nodes(n, 3) - Init%TP_RefPoint(2)
-      dz = Init%Nodes(n, 4) - Init%TP_RefPoint(3)
-      
-      SELECT CASE (rmndr)
-         CASE (1); TI(I, 1:6) = (/1.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi,       dz,      -dy/)
-         CASE (2); TI(I, 1:6) = (/0.0_ReKi, 1.0_ReKi, 0.0_ReKi,      -dz, 0.0_ReKi,       dx/)
-         CASE (3); TI(I, 1:6) = (/0.0_ReKi, 0.0_ReKi, 1.0_ReKi,       dy,      -dx, 0.0_ReKi/)
-         CASE (4); TI(I, 1:6) = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 1.0_ReKi, 0.0_ReKi, 0.0_ReKi/)
-         CASE (5); TI(I, 1:6) = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 1.0_ReKi, 0.0_ReKi/)
-         CASE (0); TI(I, 1:6) = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 1.0_ReKi/)
-         CASE DEFAULT
-            ErrStat = ErrID_Fatal
-            ErrMsg  = 'Error calculating transformation matrix TI '
-            RETURN
-         END SELECT
-      
+      dx = Init%Nodes(iNode, 2) - Init%TP_RefPoint(1)
+      dy = Init%Nodes(iNode, 3) - Init%TP_RefPoint(2)
+      dz = Init%Nodes(iNode, 4) - Init%TP_RefPoint(3)
+
+      CALL RigidTransformationLine(dx,dy,dz,iiDOF,Line) !returns Line
+      TI(I, 1:6) = Line
    ENDDO
-   
-   !Augment with TI2
+   ! --- TI2: Transformation matrix from reaction points to origin
    TI2(:,:) = 0. !Initialize 
    DO I = 1, DOFR
-      di = IDR(I)
-      rmndr = MOD(di, 6)
-      n = CEILING(di/6.0)
+      iDOF = IDR(I) ! DOF index in constrained system
+      iNode       = m%DOFtilde2Nodes(iDOF,1) ! First column is node
+      nDOFPerNode = m%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
+      iiDOF       = m%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+
+      if ((iiDOF<1) .or. (iiDOF>6)) then
+         ErrMsg  = 'TransfTI, reaction node DOF number is not valid. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' iiDOF:'//trim(Num2LStr(iiDOF)); ErrStat = ErrID_Fatal
+         return
+      endif
+      if (nDOFPerNode/=6) then
+         ErrMsg  = 'TransfTI, reaction node doesnt have 6 DOFs. DOF:'//trim(Num2LStr(iDOF))//' Node:'//trim(Num2LStr(iNode))//' nDOF:'//trim(Num2LStr(nDOFPerNode)); ErrStat = ErrID_Fatal
+         return
+      endif
       
-      dx = Init%Nodes(n, 2)
-      dy = Init%Nodes(n, 3) 
-      dz = Init%Nodes(n, 4) 
-     SELECT CASE (rmndr)
-         CASE (1); TI2(I, 1:6) = (/1.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi,       dz,      -dy/)
-         CASE (2); TI2(I, 1:6) = (/0.0_ReKi, 1.0_ReKi, 0.0_ReKi,      -dz, 0.0_ReKi,       dx/)
-         CASE (3); TI2(I, 1:6) = (/0.0_ReKi, 0.0_ReKi, 1.0_ReKi,       dy,      -dx, 0.0_ReKi/)
-         CASE (4); TI2(I, 1:6) = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 1.0_ReKi, 0.0_ReKi, 0.0_ReKi/)
-         CASE (5); TI2(I, 1:6) = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 1.0_ReKi, 0.0_ReKi/)
-         CASE (0); TI2(I, 1:6) = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 0.0_ReKi, 1.0_ReKi/)
-         CASE DEFAULT
-            ErrStat = ErrID_Fatal
-            ErrMsg  = 'Error calculating transformation matrix TI2 '
-            RETURN
-         END SELECT 
+      dx = Init%Nodes(iNode, 2)
+      dy = Init%Nodes(iNode, 3) 
+      dz = Init%Nodes(iNode, 4) 
+      CALL RigidTransformationLine(dx,dy,dz,iiDOF,Line) ! returns Line
+      TI2(I, 1:6) = Line
    ENDDO
    
 END SUBROUTINE TrnsfTI
@@ -2461,48 +2466,51 @@ SUBROUTINE SetIndexArrays(Init, p, ErrStat, ErrMsg)
    INTEGER(IntKi),          INTENT(  OUT)       :: ErrStat     ! Error status of the operation
    CHARACTER(*),            INTENT(  OUT)       :: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
-   INTEGER(IntKi)                               :: TempIDY(p%DOFC+p%DOFI+p%DOFL, 2)
-   INTEGER(IntKi)                               :: IDT(Init%TDOF)
+   INTEGER(IntKi), allocatable                  :: TempIDY(:,:)
+   INTEGER(IntKi), allocatable                  :: IDT(:)
    INTEGER(IntKi)                               :: I, K  ! counters
    ErrStat = ErrID_None
    ErrMsg  = ""
          
-   ! Index IDI for interface DOFs
+   ! Indices IDI for interface DOFs
    p%IDI = Init%IntFc(1:p%DOFI, 1)  ! Interface DOFs (indices updated after DirectElimination)
-   print*,'IDI',p%IDI
     
-   ! Index IDC for constraint DOFs
-   p%IDC = Init%BCs(1:p%DOFC, 1) !Constraint DOFs in global uneliminated system
+   ! Indices IDC for constraint DOFs
+   p%IDC = Init%BCs(1:p%DOFC, 1) ! Reaction DOFs (indices updated after DirectElimination)
    
-   ! Index IDR for IDR DOFs
+   ! Indices IDR = [IDC, IDI], "retained interface DOFS" 
    p%IDR(       1:p%DOFC ) = p%IDC  ! Constraint DOFs again
    p%IDR(p%DOFC+1:p%DOFR)  = p%IDI  ! IDR contains DOFs ofboundaries, constraints first then interface
 
-   ! --- Index IDL for IDL DOFs
-   ! first set the total DOFs:
-   DO I = 1, Init%TDOF  !Total DOFs
+   ! --- Indices IDL for internal DOFs = AllDOF - IDR 
+   ! First set the all DOFs indices IDT = 1:nDOFRed
+   allocate(IDT(1:Init%nDOFRed))
+   DO I = 1, Init%nDOFRed  !Total DOFs
       IDT(I) = I      
    ENDDO
-   ! remove DOFs on the boundaries:
+   ! Then, remove DOFs on the boundaries:
    DO I = 1, p%DOFR  !Boundary DOFs (Interface + Constraints)
       IDT(p%IDR(I)) = 0   !Set 0 wherever DOFs belong to boundaries
    ENDDO
    ! That leaves the internal DOFs:
    K = 0
-   DO I = 1, Init%TDOF
+   DO I = 1, Init%nDOFRed
       IF ( IDT(I) .NE. 0 ) THEN
          K = K+1
          p%IDL(K) = IDT(I)   !Internal DOFs
       ENDIF
    ENDDO   
+   deallocate(IDT)
    IF ( K /= p%DOFL ) THEN
       ErrStat = ErrID_Fatal
       ErrMsg = "SetIndexArrays: IDL or p%DOFL are the incorrect size."
       RETURN
    END IF
    
-   ! --- Index IDY for all DOFs:
+   ! --- Index [_,IDY] =sort([IDI, IDL, IDC]), DOF map, Y is in the continuous order [I,L,C]
    ! set the second column of the temp array      
+   allocate(TempIDY(p%DOFI+p%DOFL+p%DOFC, 2))
+   print*,SIZE(TempIDY),Init%nDOFRed
    DO I = 1, SIZE(TempIDY,1)
       TempIDY(I, 2) = I   ! this column will become the returned "key" (i.e., the original location in the array)
    ENDDO
@@ -2514,26 +2522,7 @@ SUBROUTINE SetIndexArrays(Init, p, ErrStat, ErrMsg)
    CALL QsortC( TempIDY )
    ! the second column is the key:
    p%IDY = TempIDY(:, 2)
-
-
-!    do I = 1, p%DOFI      !Total DOFs
-!       print*,'IDI  ',I, p%IDI(I)
-!    enddo
-!    do I = 1, p%DOFC  !Total DOFs
-!       print*,'IDR_c',I, p%IDR(I)
-!    enddo
-!    do I = p%DOFC+1,p%DOFR
-!       print*,'IDR_c',I, p%IDR(I)
-!    enddo
-!    do I = 1, p%DOFL  !Total DOFs
-!       print*,'IDL  ',I, p%IDL(I)
-!    enddo
-!    do I = 1, p%DOFC  !Total DOFs
-!       print*,'IDC  ',I, p%IDC(I)
-!    enddo
-!    do I = 1, size(p%IDY)
-!       print*,'IDY  ',I, p%IDY(I)
-!    enddo
+   deallocate(TempIDY)
    
 END SUBROUTINE SetIndexArrays
 

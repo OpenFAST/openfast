@@ -1146,6 +1146,7 @@ END SUBROUTINE BuildTMatrix
 !------------------------------------------------------------------------------------------------------
 !> Assemble stiffness and mass matrix, and gravity force vector
 SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
+   use IntegerList, only: len
    TYPE(SD_InitType),            INTENT(INOUT) :: Init
    TYPE(SD_ParameterType),       INTENT(INOUT) :: p
    TYPE(SD_MiscVarType),target,  INTENT(INOUT) :: m
@@ -1159,7 +1160,7 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    integer(IntKi), dimension(:), allocatable :: RAm1 !< RA^-1(e) = a , for a given element give the index of a rigid assembly
    real(ReKi), dimension(:,:), allocatable :: MM, KK
    real(ReKi), dimension(:),   allocatable :: FF
-   integer(IntKi) :: nDOF
+   integer(IntKi) :: nDOF, iDOF, nDOFPerNode, iNode, iiDOF
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -1173,7 +1174,7 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    call move_alloc(Init%K,  KK)
    call move_alloc(Init%FG, FF)
    !  Reallocating
-   nDOF = size(m%Tred,2)
+   nDOF = Init%nDOFRed
    CALL AllocAry( Init%D, nDOF, nDOF, 'Init%D',  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
    CALL AllocAry( Init%K, nDOF, nDOF, 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    CALL AllocAry( Init%M, nDOF, nDOF, 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
@@ -1187,6 +1188,19 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    ! --- Triggers for storage of DOF indices, replacing with indices in constrained system
    CALL ReInitBCs(Init, p)
    CALL ReInitIntFc(Init, p)
+
+   ! --- Creating a convenient Map from DOF to Nodes
+   call AllocAry(m%DOFtilde2Nodes, Init%nDOFRed, 3, 'DOFtilde2Nodes', ErrStat2, ErrMsg2); if(Failed()) return;
+   m%DOFtilde2Nodes=-999
+   do iNode=1,Init%NNode
+      nDOFPerNode = len(m%NodesDOFtilde(iNode))
+      do iiDOF = 1, nDOFPerNode
+         iDOF = m%NodesDOFtilde(iNode)%List(iiDOF)
+         m%DOFtilde2Nodes(iDOF,1) = iNode       ! First column is Node index
+         m%DOFtilde2Nodes(iDOF,2) = nDOFPerNode ! Second column is number of DOF per node
+         m%DOFtilde2Nodes(iDOF,3) = iiDOF       ! Third column is number of DOF per node
+      enddo
+   enddo
 
    call CleanUp_DirectElimination()
 

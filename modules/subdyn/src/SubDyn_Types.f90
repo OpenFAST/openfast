@@ -199,8 +199,9 @@ IMPLICIT NONE
     REAL(DbKi)  :: LastOutTime      !< The time of the most recent stored output data [s]
     INTEGER(IntKi)  :: Decimat      !< Current output decimation counter [-]
     TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOF      !< DOF indices of each nodes in unconstrained assembled system  [-]
-    TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOFtilde      !< DOF indices of each nodes in unconstrained assembled system  [-]
+    TYPE(IList) , DIMENSION(:), ALLOCATABLE  :: NodesDOFtilde      !< DOF indices of each nodes in constrained assembled system  [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: ElemsDOF      !< 12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system  [-]
+    INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: DOFtilde2Nodes      !< nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1 [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: Tred      !< Transformation matrix performing the constraint reduction x = T. xtilde [-]
   END TYPE SD_MiscVarType
 ! =======================
@@ -5557,6 +5558,20 @@ IF (ALLOCATED(SrcMiscData%ElemsDOF)) THEN
   END IF
     DstMiscData%ElemsDOF = SrcMiscData%ElemsDOF
 ENDIF
+IF (ALLOCATED(SrcMiscData%DOFtilde2Nodes)) THEN
+  i1_l = LBOUND(SrcMiscData%DOFtilde2Nodes,1)
+  i1_u = UBOUND(SrcMiscData%DOFtilde2Nodes,1)
+  i2_l = LBOUND(SrcMiscData%DOFtilde2Nodes,2)
+  i2_u = UBOUND(SrcMiscData%DOFtilde2Nodes,2)
+  IF (.NOT. ALLOCATED(DstMiscData%DOFtilde2Nodes)) THEN 
+    ALLOCATE(DstMiscData%DOFtilde2Nodes(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMiscData%DOFtilde2Nodes.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMiscData%DOFtilde2Nodes = SrcMiscData%DOFtilde2Nodes
+ENDIF
 IF (ALLOCATED(SrcMiscData%Tred)) THEN
   i1_l = LBOUND(SrcMiscData%Tred,1)
   i1_u = UBOUND(SrcMiscData%Tred,1)
@@ -5623,6 +5638,9 @@ ENDDO
 ENDIF
 IF (ALLOCATED(MiscData%ElemsDOF)) THEN
   DEALLOCATE(MiscData%ElemsDOF)
+ENDIF
+IF (ALLOCATED(MiscData%DOFtilde2Nodes)) THEN
+  DEALLOCATE(MiscData%DOFtilde2Nodes)
 ENDIF
 IF (ALLOCATED(MiscData%Tred)) THEN
   DEALLOCATE(MiscData%Tred)
@@ -5765,6 +5783,11 @@ ENDIF
   IF ( ALLOCATED(InData%ElemsDOF) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! ElemsDOF upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%ElemsDOF)  ! ElemsDOF
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! DOFtilde2Nodes allocated yes/no
+  IF ( ALLOCATED(InData%DOFtilde2Nodes) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! DOFtilde2Nodes upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%DOFtilde2Nodes)  ! DOFtilde2Nodes
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! Tred allocated yes/no
   IF ( ALLOCATED(InData%Tred) ) THEN
@@ -6022,6 +6045,22 @@ ENDIF
 
       IF (SIZE(InData%ElemsDOF)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%ElemsDOF))-1 ) = PACK(InData%ElemsDOF,.TRUE.)
       Int_Xferred   = Int_Xferred   + SIZE(InData%ElemsDOF)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%DOFtilde2Nodes) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DOFtilde2Nodes,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DOFtilde2Nodes,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%DOFtilde2Nodes,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%DOFtilde2Nodes,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%DOFtilde2Nodes)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%DOFtilde2Nodes))-1 ) = PACK(InData%DOFtilde2Nodes,.TRUE.)
+      Int_Xferred   = Int_Xferred   + SIZE(InData%DOFtilde2Nodes)
   END IF
   IF ( .NOT. ALLOCATED(InData%Tred) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6455,6 +6494,32 @@ ENDIF
     mask2 = .TRUE. 
       IF (SIZE(OutData%ElemsDOF)>0) OutData%ElemsDOF = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%ElemsDOF))-1 ), mask2, 0_IntKi )
       Int_Xferred   = Int_Xferred   + SIZE(OutData%ElemsDOF)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! DOFtilde2Nodes not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%DOFtilde2Nodes)) DEALLOCATE(OutData%DOFtilde2Nodes)
+    ALLOCATE(OutData%DOFtilde2Nodes(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%DOFtilde2Nodes.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%DOFtilde2Nodes)>0) OutData%DOFtilde2Nodes = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(OutData%DOFtilde2Nodes))-1 ), mask2, 0_IntKi )
+      Int_Xferred   = Int_Xferred   + SIZE(OutData%DOFtilde2Nodes)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Tred not allocated
