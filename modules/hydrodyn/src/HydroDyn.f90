@@ -1051,10 +1051,10 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                   allocate( m%WAMIT2(         1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%WAMIT2.', ErrStat, ErrMsg, RoutineName )
                   allocate( m%u_WAMIT2(       1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array m%u_WAMIT2.', ErrStat, ErrMsg, RoutineName )
                   allocate( InitOut%WAMIT2(   1), stat = ErrStat2 ); if (ErrStat2 /=0) call SetErrStat( ErrID_Fatal, 'Failed to allocate array InitOut%WAMIT2.', ErrStat, ErrMsg, RoutineName )
-                  InitLocal%WAMIT2%PtfmRefxt   (1)  = InitLocal%PtfmRefxt   (1)
-                  InitLocal%WAMIT2%PtfmRefyt   (1)  = InitLocal%PtfmRefyt   (1)
-                  InitLocal%WAMIT2%PtfmRefzt   (1)  = InitLocal%PtfmRefzt   (1)
-                  InitLocal%WAMIT2%PtfmRefztRot(1)  = InitLocal%PtfmRefztRot(1)
+                  InitLocal%WAMIT2%PtfmRefxt     = InitLocal%PtfmRefxt
+                  InitLocal%WAMIT2%PtfmRefyt     = InitLocal%PtfmRefyt
+                  InitLocal%WAMIT2%PtfmRefzt     = InitLocal%PtfmRefzt
+                  InitLocal%WAMIT2%PtfmRefztRot  = InitLocal%PtfmRefztRot
 
                else
                   InitLocal%WAMIT2%NBody  = 1_IntKi               ! The WAMIT2 object will contain all NBody WAMIT2 bodies
