@@ -231,9 +231,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       INTEGER(IntKi)                                     :: ThisDim              !< Counter to currrent dimension
       INTEGER(IntKi)                                     :: J                    !< Generic counter
       INTEGER(IntKi)                                     :: Idx                  !< Generic counter
-      INTEGER(IntKi)                                     :: ThisBodyNum          !< Current body number
-      REAL(R8Ki)                                         :: theta(3)             !< rotation about z for ThisBodyNum (0 about x,y)
-      REAL(R8Ki)                                         :: orientation(3,3)     !< Orientation matrix for orientation of ThisBodyNum
+      REAL(R8Ki)                                         :: theta(3)             !< rotation about z for the current body (0 about x,y)
+      REAL(R8Ki)                                         :: orientation(3,3)     !< Orientation matrix for orientation of the current body
       REAL(ReKi)                                         :: XYZloc(3)            !< Starting position of this WAMIT2 body
 
 
@@ -542,15 +541,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
 
-!FIXME: does this actually need to be passed in?  All body iterations occur within each init routine
-ThisBodyNum=1
          !> If the MnDrift method will be used, call the subroutine to calculate the force time series
       IF ( p%MnDriftF ) THEN
 
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order mean drift force.' )
 
-         CALL MnDrift_InitCalc( InitInp, p, ThisBodyNum, MnDriftData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
+         CALL MnDrift_InitCalc( InitInp, p, MnDriftData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -564,7 +561,7 @@ ThisBodyNum=1
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( " Calculating second order difference-frequency force using the Newman's approximation." )
 
-         CALL NewmanApp_InitCalc( InitInp, p, ThisBodyNum, NewmanAppData, NewmanAppForce, ErrMsgTmp, ErrStatTmp )
+         CALL NewmanApp_InitCalc( InitInp, p, NewmanAppData, NewmanAppForce, ErrMsgTmp, ErrStatTmp )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -580,7 +577,7 @@ ThisBodyNum=1
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order difference-frequency force using the full quadratic transfer function.' )
 
-         CALL DiffQTF_InitCalc( InitInp, p, ThisBodyNum, DiffQTFData, DiffQTFForce, ErrMsgTmp, ErrStatTmp )
+         CALL DiffQTF_InitCalc( InitInp, p, DiffQTFData, DiffQTFForce, ErrMsgTmp, ErrStatTmp )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -594,7 +591,7 @@ ThisBodyNum=1
             ! Tell our nice users what is about to happen that may take a while:
          CALL WrScr ( ' Calculating second order sum-frequency force using the full quadratic transfer function.' )
 
-         CALL SumQTF_InitCalc( InitInp, p, ThisBodyNum, SumQTFData, SumQTFForce, ErrMsgTmp, ErrStatTmp )
+         CALL SumQTF_InitCalc( InitInp, p, SumQTFData, SumQTFForce, ErrMsgTmp, ErrStatTmp )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
@@ -696,19 +693,19 @@ ThisBodyNum=1
          RETURN
       END IF
 
-      DO ThisBodyNum = 1,p%NBody
+      DO IBody = 1,p%NBody
 
             ! Set orientation and position for each body in mesh
-         theta       = (/ 0.0_R8Ki, 0.0_R8Ki, InitInp%PtfmRefztRot(ThisBodyNum)/)      ! angle in radians
+         theta       = (/ 0.0_R8Ki, 0.0_R8Ki, InitInp%PtfmRefztRot(IBody)/)      ! angle in radians
          orientation = EulerConstruct(theta)
-         XYZloc      = (/InitInp%PtfmRefxt(ThisBodyNum), InitInp%PtfmRefyt(ThisBodyNum), InitInp%PtfmRefzt(ThisBodyNum)/)
+         XYZloc      = (/InitInp%PtfmRefxt(IBody), InitInp%PtfmRefyt(IBody), InitInp%PtfmRefzt(IBody)/)
 
             ! Create the node on the mesh
-         CALL MeshPositionNode (u%Mesh, ThisBodyNum, XYZloc, ErrStatTmp, ErrMsgTmp, orientation )
+         CALL MeshPositionNode (u%Mesh, IBody, XYZloc, ErrStatTmp, ErrMsgTmp, orientation )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
 
             ! Create the mesh element
-         CALL MeshConstructElement (  u%Mesh, ELEMENT_POINT, ErrStatTmp, ErrMsgTmp, ThisBodyNum )
+         CALL MeshConstructElement (  u%Mesh, ELEMENT_POINT, ErrStatTmp, ErrMsgTmp, IBody )
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       ENDDO
 
@@ -808,13 +805,12 @@ ThisBodyNum=1
    !! Since the frequency range of the QTF has not yet been checked, we will do that now.
    !!
    !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE MnDrift_InitCalc( InitInp, p, ThisBodyNum, MnDriftData, MnDriftForce, ErrMsg, ErrStat )
+   SUBROUTINE MnDrift_InitCalc( InitInp, p, MnDriftData, MnDriftForce, ErrMsg, ErrStat )
 
       IMPLICIT NONE
 
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
-      INTEGER(IntKi),                     INTENT(IN   )  :: ThisBodyNum          !< Which body are we on
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: MnDriftData          !< Data storage for the MnDrift method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: MnDriftForce(:)      !< Force data.  Index 1 is the force component.  Constant for all time.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
@@ -1247,8 +1243,8 @@ ThisBodyNum=1
 
                ! Now rotate the force components with platform orientation
                ! NOTE: RotateZMatrixT is the rotation from local to global.
-            RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(ThisBodyNum)), -sin(InitInp%PtfmRefztRot(ThisBodyNum)) /)
-            RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(ThisBodyNum)),  cos(InitInp%PtfmRefztRot(ThisBodyNum)) /)
+            RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
+            RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
 
             MnDriftForce(1:2) = MATMUL( RotateZMatrixT, MnDriftForce(1:2) )       ! Fx and Fy, rotation about z
@@ -1318,13 +1314,12 @@ ThisBodyNum=1
    !! Since the frequency range of the QTF has not yet been checked, we will do that now.
    !!
    !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE NewmanApp_InitCalc( InitInp, p, ThisBodyNum, NewmanAppData, NewmanAppForce, ErrMsg, ErrStat )
+   SUBROUTINE NewmanApp_InitCalc( InitInp, p, NewmanAppData, NewmanAppForce, ErrMsg, ErrStat )
 
       IMPLICIT NONE
 
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
-      INTEGER(IntKi),                     INTENT(IN   )  :: ThisBodyNum          !< Which body are we on
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: NewmanAppData        !< Data storage for the NewmanApp method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: NewmanAppForce(:,:)  !< Force data.  Index 1 is the timestep, index 2 is the load component.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
@@ -1825,8 +1820,8 @@ ThisBodyNum=1
 
             ! Set rotation
             ! NOTE: RotateZMatrixT is the rotation from local to global.
-         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(ThisBodyNum)), -sin(InitInp%PtfmRefztRot(ThisBodyNum)) /)
-         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(ThisBodyNum)),  cos(InitInp%PtfmRefztRot(ThisBodyNum)) /)
+         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(IBody)), -sin(InitInp%PtfmRefztRot(IBody)) /)
+         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(IBody)),  cos(InitInp%PtfmRefztRot(IBody)) /)
 
             ! Loop through all the frequencies
          DO J=1,InitInp%NStepWave2
@@ -1981,13 +1976,12 @@ ThisBodyNum=1
    !! Since the frequency range of the QTF has not yet been checked, we will do that now as well.
    !!
    !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE DiffQTF_InitCalc( InitInp, p, ThisBodyNum, DiffQTFData, DiffQTFForce, ErrMsg, ErrStat )
+   SUBROUTINE DiffQTF_InitCalc( InitInp, p, DiffQTFData, DiffQTFForce, ErrMsg, ErrStat )
 
       IMPLICIT NONE
 
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
-      INTEGER(IntKi),                     INTENT(IN   )  :: ThisBodyNum          !< Which body are we on
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: DiffQTFData          !< Data storage for the DiffQTF method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: DiffQTFForce(:,:)    !< Force data.  Index 1 is the timestep, index 2 is the load component.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
@@ -2206,7 +2200,7 @@ ThisBodyNum=1
 
          ! Before we continue, we will get the MnDriftForce results.
          !  --> Note that we can pass the DiffQTFData directly since we are using the same type for both
-      CALL MnDrift_InitCalc( InitInp, p, ThisBodyNum, DiffQTFData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
+      CALL MnDrift_InitCalc( InitInp, p, DiffQTFData, MnDriftForce, ErrMsgTmp, ErrStatTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
@@ -2429,13 +2423,12 @@ ThisBodyNum=1
    !! if the cutoff for the highest sum frequency, _WvHiCOffS_ is above the Nyquist frequency.
    !!
    !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE SumQTF_InitCalc( InitInp, p, ThisBodyNum, SumQTFData, SumQTFForce, ErrMsg, ErrStat )
+   SUBROUTINE SumQTF_InitCalc( InitInp, p, SumQTFData, SumQTFForce, ErrMsg, ErrStat )
 
       IMPLICIT NONE
 
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
-      INTEGER(IntKi),                     INTENT(IN   )  :: ThisBodyNum          !< Which body are we on
       TYPE(W2_SumData_Type),              INTENT(INOUT)  :: SumQTFData           !< Data storage for the SumQTF method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: SumQTFForce(:,:)     !< Force data.  Index 1 is the timestep, index 2 is the load component.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
