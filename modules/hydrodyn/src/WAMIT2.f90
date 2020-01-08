@@ -838,6 +838,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex3(3)        !< Last used index for searching in the interpolation algorithms
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms
+      REAL(SiKi)                                         :: RotateZdegOffset     !< Offset to wave heading (NBodyMod==2 only)
       REAL(SiKi)                                         :: RotateZMatrixT(2,2)  !< The transpose of rotation in matrix form for rotation about z (from global to local)
       REAL(SiKi)                                         :: Coord3(3)            !< The (omega1,beta1,beta2) coordinate we want in the 3D dataset
       REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
@@ -1135,6 +1136,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
          ! Now loop through all the dimensions and perform the calculation
       DO IBody=1,p%NBody
+
+            ! Heading correction, only applies to NBodyMod == 2
+         if (p%NBodyMod==2) then
+            RotateZdegOffset = InitInp%PtfmRefztRot(IBody)*R2D
+         else
+            RotateZdegOffset = 0.0_SiKi
+         endif
+
+
          DO ThisDim=1,6
 
             Idx = (IBody-1)*6 + ThisDim
@@ -1186,8 +1196,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
-                        Coord3(2) = Coord3(2) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
-                        Coord3(3) = Coord3(3) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+                        Coord3(2) = Coord3(2) - RotateZdegOffset
+                        Coord3(3) = Coord3(3) - RotateZdegOffset
 
                            ! get the interpolated value for F(omega1,beta1,beta2)
                         CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, MnDriftData%Data3D%WvFreq1, &
@@ -1199,8 +1209,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
-                        Coord4(3) = Coord4(3) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
-                        Coord4(4) = Coord4(4) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+                        Coord4(3) = Coord4(3) - RotateZdegOffset
+                        Coord4(4) = Coord4(4) - RotateZdegOffset
 
                            ! get the interpolated value for F(omega1,omega2,beta1,beta2)
                         CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, MnDriftData%Data4D%WvFreq1, MnDriftData%Data4D%WvFreq2, &
@@ -1354,6 +1364,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms
       REAL(SiKi)                                         :: Coord3(3)            !< The (omega1,beta1,beta2) coordinate we want in the 3D dataset
       REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
+      REAL(SiKi)                                         :: RotateZdegOffset     !< Offset to wave heading (NBodyMod==2 only)
       REAL(SiKi)                                         :: RotateZMatrixT(2,2)  !< The transpose of rotation in matrix form for rotation about z (from global to local)
       COMPLEX(SiKi)                                      :: PhaseShiftXY         !< The phase shift offset to apply to the body
       REAL(SiKi)                                         :: WaveNmbr1            !< Wavenumber for this frequency
@@ -1691,6 +1702,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          NewmanTerm1C(:,:) = CMPLX(0.0, 0.0, SiKi)
          NewmanTerm2C(:,:) = CMPLX(0.0, 0.0, SiKi)
 
+
+            ! Heading correction, only applies to NBodyMod == 2
+         if (p%NBodyMod==2) then
+            RotateZdegOffset = InitInp%PtfmRefztRot(IBody)*R2D
+         else
+            RotateZdegOffset = 0.0_SiKi
+         endif
+
          !----------------------------------------------------
          ! Populate the frequency terms for this body
          !----------------------------------------------------
@@ -1740,8 +1759,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         Coord3 = (/ REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
-                        Coord3(2) = Coord3(2) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
-                        Coord3(3) = Coord3(3) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+                        Coord3(2) = Coord3(2) - RotateZdegOffset
+                        Coord3(3) = Coord3(3) - RotateZdegOffset
 
                            ! get the interpolated value for F(omega1,beta1,beta2)
                         CALL WAMIT_Interp3D_Cplx( Coord3, TmpData3D, NewmanAppData%Data3D%WvFreq1, &
@@ -1753,8 +1772,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
                         Coord4 = (/ REAL(Omega1,SiKi), REAL(Omega1,SiKi), InitInp%WaveDirArr(J), InitInp%WaveDirArr(J) /)
 
                            ! Apply local Z rotation to heading angle (degrees) to put wave direction into the local (rotated) body frame
-                        Coord4(3) = Coord4(3) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
-                        Coord4(4) = Coord4(4) - InitInp%PtfmRefztRot(ThisBodyNum)*R2D
+                        Coord4(3) = Coord4(3) - RotateZdegOffset
+                        Coord4(4) = Coord4(4) - RotateZdegOffset
 
                            ! get the interpolated value for F(omega1,omega2,beta1,beta2)
                         CALL WAMIT_Interp4D_Cplx( Coord4, TmpData4D, NewmanAppData%Data4D%WvFreq1, NewmanAppData%Data4D%WvFreq2, &
@@ -1841,11 +1860,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             PhaseShiftXY = CMPLX( cos(TmpReal1), -sin(TmpReal1) )
 
 
-               ! Apply the phase shift
-            DO ThisDim=1,6
-               NewmanTerm1C(J,ThisDim) = NewmanTerm1C(J,ThisDim)*PhaseShiftXY       ! Newman term 1
-               NewmanTerm2C(J,ThisDim) = NewmanTerm2C(J,ThisDim)*PhaseShiftXY       ! Newman term 2
-            ENDDO
+               ! Apply the phase shift, but only to the NBodyMod=2 case
+            if (p%NBodyMod == 2) then
+               DO ThisDim=1,6
+                  NewmanTerm1C(J,ThisDim) = NewmanTerm1C(J,ThisDim)*PhaseShiftXY       ! Newman term 1
+                  NewmanTerm2C(J,ThisDim) = NewmanTerm2C(J,ThisDim)*PhaseShiftXY       ! Newman term 2
+               ENDDO
+            endif
 
 
                ! Apply the rotation to get back to global frame  -- Term 1
