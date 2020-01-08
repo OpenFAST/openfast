@@ -1029,6 +1029,8 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, I
                InitLocal%WAMIT2%WaveDirMin  = Waves_InitOut%WaveDirMin
                InitLocal%WAMIT2%WaveDirMax  = Waves_InitOut%WaveDirMax
                InitLocal%WAMIT2%WaveDOmega  = Waves_InitOut%WaveDOmega
+               InitLocal%WAMIT2%Gravity     = InitLocal%Gravity
+               InitLocal%WAMIT2%WtrDpth     = InitLocal%Morison%WtrDpth ! The data in InitLocal%Morison%WtrDpth was directly placed there when we parsed the HydroDyn input file
 
                   ! Set values for all NBodyMods
                InitLocal%WAMIT2%NBodyMod    = InitLocal%NBodyMod        ! There are restrictions in WAMIT2 on which files may be used for MnDriftF or NewmanAppF for BodyMod > 1
