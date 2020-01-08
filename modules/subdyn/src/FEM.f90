@@ -26,6 +26,96 @@ MODULE FEM
  
 CONTAINS
 !------------------------------------------------------------------------------------------------------
+!> Return eigenvalues, Omega, and eigenvectors
+SUBROUTINE EigenSolve(K, M, N, EigVect, Omega2, ErrStat, ErrMsg )
+   USE NWTC_LAPACK, only: LAPACK_ggev
+   USE NWTC_ScaLAPACK, only : ScaLAPACK_LASRT
+   INTEGER       ,          INTENT(IN   )    :: N             !< Number of degrees of freedom, size of M and K
+   REAL(LaKi),              INTENT(INOUT)    :: K(N, N)       !< Stiffness matrix 
+   REAL(LaKi),              INTENT(INOUT)    :: M(N, N)       !< Mass matrix 
+   REAL(LaKi),              INTENT(INOUT)    :: EigVect(N, N) !< Returned Eigenvectors
+   REAL(LaKi),              INTENT(INOUT)    :: Omega2(N)      !< Returned Eigenvalues
+   INTEGER(IntKi),          INTENT(  OUT)    :: ErrStat       !< Error status of the operation
+   CHARACTER(*),            INTENT(  OUT)    :: ErrMsg        !< Error message if ErrStat /= ErrID_None
+   ! LOCALS         
+   REAL(LAKi), ALLOCATABLE                   :: WORK (:),  VL(:,:), ALPHAR(:), ALPHAI(:), BETA(:) ! eigensolver variables
+   INTEGER                                   :: i  
+   INTEGER                                   :: LWORK                          !variables for the eigensolver
+   INTEGER,    ALLOCATABLE                   :: KEY(:)
+   INTEGER(IntKi)                            :: ErrStat2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
+      
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+         
+   ! allocate working arrays and return arrays for the eigensolver
+   LWORK=8*N + 16  !this is what the eigensolver wants  >> bjj: +16 because of MKL ?ggev documenation ( "lwork >= max(1, 8n+16) for real flavors"), though LAPACK documenation says 8n is fine
+   !bjj: there seems to be a memory problem in *GGEV, so I'm making the WORK array larger to see if I can figure it out
+   CALL AllocAry( Work,    LWORK, 'Work',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve') 
+   CALL AllocAry( ALPHAR,  N,     'ALPHAR', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+   CALL AllocAry( ALPHAI,  N,     'ALPHAI', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+   CALL AllocAry( BETA,    N,     'BETA',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+   CALL AllocAry( VL,      N,  N, 'VL',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
+   CALL AllocAry( KEY,     N,     'KEY',    ErrStat2, ErrMsg2 ); if(Failed()) return
+    
+   ! --- Eigenvalue  analysis
+   ! note: SGGEV seems to have memory issues in certain cases. The eigenvalues seem to be okay, but the eigenvectors vary wildly with different compiling options.
+   !       DGGEV seems to work better, so I'm making these variables LAKi (which is set to R8Ki for now)   - bjj 4/25/2014
+   ! bjj: This comes from the LAPACK documentation:
+   !   Note: the quotients ALPHAR(j)/BETA(j) and ALPHAI(j)/BETA(j) may easily over- or underflow, and BETA(j) may even be zero.
+   !   Thus, the user should avoid naively computing the ratio alpha/beta.  However, ALPHAR and ALPHAI will be always less
+   !   than and usually comparable with norm(A) in magnitude, and BETA always less than and usually comparable with norm(B).    
+   ! Omega2=ALPHAR/BETA  !Note this may not be correct if ALPHAI<>0 and/or BETA=0 TO INCLUDE ERROR CHECK, also they need to be sorted
+   CALL  LAPACK_ggev('N','V',N ,K, M, ALPHAR, ALPHAI, BETA, VL, EigVect, WORK, LWORK, ErrStat2, ErrMsg2)
+   if(Failed()) return
+
+   ! --- Determinign and sorting eigen frequencies 
+   DO I=1,N !Initialize the key and calculate Omega
+      KEY(I)=I
+      IF ( EqualRealNos(Beta(I),0.0_LAKi) ) THEN
+         Omega2(I) = HUGE(Omega2)  ! bjj: should this be an error?
+      ELSE
+         Omega2(I) = REAL( ALPHAR(I)/BETA(I), ReKi )
+      END IF           
+   ENDDO  
+   ! Sorting
+   CALL ScaLAPACK_LASRT('I',N,Omega2,KEY,ErrStat2,ErrMsg2); if(Failed()) return 
+    
+   ! --- Sorting eigen vectors
+   ! KEEP ME: scaling of the eigenvectors using generalized mass =identity criterion
+   ! ALLOCATE(normcoeff(N,N), STAT = ErrStat )
+   ! result1 = matmul(M,EigVect)
+   ! result2 = matmul(transpose(EigVect),result1)
+   ! normcoeff=sqrt(result2)  !This should be a diagonal matrix which contains the normalization factors
+   ! normcoeff=sqrt(matmul(transpose(EigVect),matmul(M,EigVect)))  !This should be a diagonal matrix which contains the normalization factors
+   VL=EigVect  !temporary storage for sorting EigVect
+   DO I=1,N 
+      !EigVect(:,I)=VL(:,KEY(I))/normcoeff(KEY(I),KEY(I))  !reordered and normalized
+      EigVect(:,I)=VL(:,KEY(I))  !just reordered as Huimin had a normalization outside of this one
+   ENDDO
+   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+   CALL CleanupEigen()
+   RETURN
+
+CONTAINS
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'EigenSolve') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUpEigen()
+   END FUNCTION Failed
+
+   SUBROUTINE CleanupEigen()
+      IF (ALLOCATED(Work)  ) DEALLOCATE(Work)
+      IF (ALLOCATED(ALPHAR)) DEALLOCATE(ALPHAR)
+      IF (ALLOCATED(ALPHAI)) DEALLOCATE(ALPHAI)
+      IF (ALLOCATED(BETA)  ) DEALLOCATE(BETA)
+      IF (ALLOCATED(VL)    ) DEALLOCATE(VL)
+      IF (ALLOCATED(KEY)   ) DEALLOCATE(KEY)
+   END SUBROUTINE CleanupEigen
+  
+END SUBROUTINE EigenSolve
+
+!------------------------------------------------------------------------------------------------------
 !> Remove degrees of freedom from a matrix (lines and rows)
 SUBROUTINE RemoveDOF(A, bDOF, Ared, ErrStat, ErrMsg )
    REAL(ReKi),             INTENT(IN   ) :: A(:, :)        ! full matrix

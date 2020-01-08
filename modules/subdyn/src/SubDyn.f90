@@ -330,7 +330,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    FEMparams%NOmega = Init%TDOF - p%Nreact*6 !removed an extra "-6"  !Note if fixity changes at the reaction points, this will need to change
    CALL AllocAry(FEMparams%Omega,            FEMparams%NOmega, 'FEMparams%Omega', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL AllocAry(FEMparams%Modes, Init%TDOF, FEMparams%NOmega, 'FEMparams%Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
-   CALL EigenSolve( Init%K, Init%M, Init%TDOF, FEMparams%NOmega, .True., Init, p, FEMparams%Modes, FEMparams%Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL EigenSolveWrap( Init%K, Init%M, Init%TDOF, FEMparams%NOmega, .True., Init, p, FEMparams%Modes, FEMparams%Omega, ErrStat2, ErrMsg2 ); if(Failed()) return
 
    ! --- Elimination of constraints (reset M, K, D, and BCs IntFc )
    CALL DirectElimination(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
@@ -1794,8 +1794,8 @@ END SUBROUTINE BreakSysMtrx
 !................................
 SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, DOFM, Init, &
                      MBB, MBM, KBB, PhiL, PhiR, OmegaL, ErrStat, ErrMsg,p)
-   TYPE(SD_InitType),      INTENT(IN)    :: Init
-   TYPE(SD_ParameterType), INTENT(INOUT) :: p  
+   TYPE(SD_InitType),      INTENT(IN)    :: Init ! TODO remove me
+   TYPE(SD_ParameterType), INTENT(INOUT) :: p    ! TODO remove m
    INTEGER(IntKi),         INTENT(  in)  :: DOFM
    REAL(ReKi),             INTENT(  IN)  :: MRR( p%DOFR, p%DOFR)
    REAL(ReKi),             INTENT(  IN)  :: MLL( p%DOFL, p%DOFL) 
@@ -1839,7 +1839,7 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, DOFM, Init, &
    ! Set OmegaL and PhiL from Eq. 2
    !....................................................
    IF ( DOFvar > 0 ) THEN ! Only time this wouldn't happen is if no modes retained and no static improvement...
-      CALL EigenSolve(KLL, MLL, p%DOFL, DOFvar, .False.,Init,p, PhiL(:,1:DOFvar), OmegaL(1:DOFvar),  ErrStat2, ErrMsg2); if(Failed()) return
+      CALL EigenSolveWrap(KLL, MLL, p%DOFL, DOFvar, .False.,Init,p, PhiL(:,1:DOFvar), OmegaL(1:DOFvar),  ErrStat2, ErrMsg2); if(Failed()) return
 
       ! --- Normalize PhiL
       ! bjj: break up this equation to avoid as many tenporary variables on the stack
@@ -1878,7 +1878,7 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, DOFM, Init, &
    ! Set PhiR from Eq. 3:
    !....................................................   
    ! now factor KLL to compute PhiR: KLL*PhiR=-TRANSPOSE(KRL)
-   ! ** note this must be done after EigenSolve() because it modifies KLL **
+   ! ** note this must be done after EigenSolveWrap() because it modifies KLL **
    CALL LAPACK_getrf( p%DOFL, p%DOFL, KLL, ipiv, ErrStat2, ErrMsg2); if(Failed()) return
    
    PhiR = -1.0_ReKi * TRANSPOSE(KRL) !set "b" in Ax=b  (solve KLL * PhiR = - TRANSPOSE( KRL ) for PhiR)
@@ -1993,8 +1993,10 @@ SUBROUTINE TrnsfTI(Init, m, TI, DOFI, IDI, TI2, DOFR, IDR, ErrStat, ErrMsg)
 END SUBROUTINE TrnsfTI
 
 !------------------------------------------------------------------------------------------------------
-!> Return eigenvalues, Omega, and eigenvectors, Phi, 
-SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, Phi, Omega, ErrStat, ErrMsg )
+!> Warpper funciton for eigen value analyses, for two cases:
+!! Case1: K and M are taken "as is" (bRemoveConstraints=false), This is used for the "LL" part of the matrix
+!! Case2: K and M constain some constraints lines, and they need to be removed from the Mass/Stiffness matrix. Used for full system
+SUBROUTINE EigenSolveWrap(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, Phi, Omega, ErrStat, ErrMsg )
    USE NWTC_ScaLAPACK, only: ScaLAPACK_LASRT
    INTEGER,                INTENT(IN   )    :: nDOF                               ! Total degrees of freedom of the incoming system
    REAL(ReKi),             INTENT(IN   )    :: K(nDOF, nDOF)                      ! stiffness matrix 
@@ -2008,14 +2010,9 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, Phi, Omeg
    INTEGER(IntKi),         INTENT(  OUT)    :: ErrStat                            ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT)    :: ErrMsg                             ! Error message if ErrStat /= ErrID_None
    ! LOCALS         
-   REAL(LAKi), ALLOCATABLE                   :: Omega2(:)                         !RRD: Eigen-values new system
-! note: SGGEV seems to have memory issues in certain cases. The eigenvalues seem to be okay, but the eigenvectors vary wildly with different compiling options.
-!       DGGEV seems to work better, so I'm making these variables LAKi (which is set to R8Ki for now)   - bjj 4/25/2014
    REAL(LAKi), ALLOCATABLE                   :: Kred(:,:), Mred(:,:) 
-   REAL(LAKi), ALLOCATABLE                   :: WORK (:),  VL(:,:), VR(:,:), ALPHAR(:), ALPHAI(:), BETA(:) ! eigensolver variables
-   INTEGER                                   :: i  
-   INTEGER                                   :: N, LWORK                          !variables for the eigensolver
-   INTEGER,    ALLOCATABLE                   :: KEY(:)
+   REAL(LAKi), ALLOCATABLE                   :: EigVect(:,:), Omega2_LaKi(:) 
+   INTEGER                                   :: N
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
    logical, allocatable                      :: bDOF(:)        ! Mask for DOF to keep (True), or reduce (False)
@@ -2023,14 +2020,13 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, Phi, Omeg
    ErrStat = ErrID_None
    ErrMsg  = ''
          
-   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+   ! --- Special handling if constraint are present, and type conversion
    IF (bRemoveConstraints) THEN 
-      ! Removing constrained nodes DOFs
-      ! This is actually done when we are printing out the 'full' set of eigenvalues
-      !    Mred = M[bDOF,bDOF],  Kred = K[bDOF,bDOF]
+      ! Removing constrained nodes DOFs, only done for printing out the 'full' set of eigenvalues
+      ! Mred = M[bDOF,bDOF],  Kred = K[bDOF,bDOF]
       call SelectNonBCConstraintsDOF(Init, p, nDOF, bDOF, ErrStat2, ErrMsg2); if(Failed()) return
       call RemoveDOF(M, bDOF, Mred, ErrStat2, ErrMsg2); if(Failed()) return
-      call RemoveDOF(M, bDOF, Kred, ErrStat2, ErrMsg2); if(Failed()) return
+      call RemoveDOF(K, bDOF, Kred, ErrStat2, ErrMsg2); if(Failed()) return
       N=SIZE(Kred,1)    
    ELSE
       ! This is actually done whe we are generating the CB-reduced set of eigenvalues
@@ -2042,64 +2038,23 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, Phi, Omeg
    ENDIF
    ! Note:  NOmega must be <= N, which is the length of Omega2, Phi!
    IF ( NOmega > N ) THEN
-      CALL SetErrStat(ErrID_Fatal,"NOmega must be less than or equal to N",ErrStat,ErrMsg,'EigenSolve')
+      CALL SetErrStat(ErrID_Fatal,"NOmega must be less than or equal to N",ErrStat,ErrMsg,'EigenSolveWrap')
       CALL CleanupEigen()
       RETURN
    END IF
 
-   ! allocate working arrays and return arrays for the eigensolver
-   LWORK=8*N + 16  !this is what the eigensolver wants  >> bjj: +16 because of MKL ?ggev documenation ( "lwork >= max(1, 8n+16) for real flavors"), though LAPACK documenation says 8n is fine
-   !bjj: there seems to be a memory problem in *GGEV, so I'm making the WORK array larger to see if I can figure it out
-   CALL AllocAry( Work,   lwork,     'Work',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve') 
-   CALL AllocAry( Omega2, n,         'Omega2', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
-   CALL AllocAry( ALPHAR, n,         'ALPHAR', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
-   CALL AllocAry( ALPHAI, n,         'ALPHAI', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
-   CALL AllocAry( BETA,   n,         'BETA',   ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
-   CALL AllocAry( VR,     n,  n,     'VR',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
-   CALL AllocAry( VL,     n,  n,     'VL',     ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'EigenSolve')
-   CALL AllocAry( KEY,    n,         'KEY',    ErrStat2, ErrMsg2 ); if(Failed()) return
-    
-   CALL  LAPACK_ggev('N','V',N ,Kred, Mred, ALPHAR, ALPHAI, BETA, VL, VR, work, lwork, ErrStat2, ErrMsg2)
-   if(Failed()) return
-   !if (.not. reduced) call wrmatrix(REAL(VR,ReKi),77,'ES15.8e2')    
-   ! bjj: This comes from the LAPACK documentation:
-   !   Note: the quotients ALPHAR(j)/BETA(j) and ALPHAI(j)/BETA(j) may easily over- or underflow, and BETA(j) may even be zero.
-   !   Thus, the user should avoid naively computing the ratio alpha/beta.  However, ALPHAR and ALPHAI will be always less
-   !   than and usually comparable with norm(A) in magnitude, and BETA always less than and usually comparable with norm(B).    
-   ! Omega2=ALPHAR/BETA  !Note this may not be correct if ALPHAI<>0 and/or BETA=0 TO INCLUDE ERROR CHECK, also they need to be sorted
-   DO I=1,N !Initialize the key and calculate Omega2
-      KEY(I)=I
-      IF ( EqualRealNos(Beta(I),0.0_LAKi) ) THEN
-         Omega2(I) = HUGE(Omega2)  ! bjj: should this be an error?
-      ELSE
-         Omega2(I) = REAL( ALPHAR(I)/BETA(I), ReKi )
-      END IF           
-   ENDDO  
-   CALL ScaLAPACK_LASRT('I',N,Omega2,KEY,ErrStat2,ErrMsg2); if(Failed()) return
-    
-   !we need to rearrange eigenvectors based on sorting of Omega2
-   !Now rearrange VR based on the new key, also I might have to scale the eigenvectors following generalized mass =idnetity criterion, also if i reduced the matrix I will need to re-expand the eigenvector
-   ! ALLOCATE(normcoeff(N,N), STAT = ErrStat )
-   ! result1 = matmul(Mred2,VR)
-   ! result2 = matmul(transpose(VR),result1)
-   ! normcoeff=sqrt(result2)  !This should be a diagonal matrix which contains the normalization factors
-   !normcoeff=sqrt(matmul(transpose(VR),matmul(Mred2,VR)))  !This should be a diagonal matrix which contains the normalization factors
-   VL=VR  !temporary storage for sorting VR
-   DO I=1,N 
-      !VR(:,I)=VL(:,KEY(I))/normcoeff(KEY(I),KEY(I))  !reordered and normalized
-      VR(:,I)=VL(:,KEY(I))  !just reordered as Huimin had a normalization outside of this one
-   ENDDO
-   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++!
+   ! --- Eigenvalue analysis
+   CALL AllocAry( Omega2_LaKi, N,     'Omega',    ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL AllocAry( EigVect    , N,  N, 'EigVect',  ErrStat2, ErrMsg2 ); if (Failed()) return;
+   CALL EigenSolve(Kred, Mred, N, EigVect, Omega2_LaKi, ErrStat2, ErrMsg2 ); if (Failed()) return;
 
-   ! --- Finish EigenSolve
-   ! Note:  NOmega must be <= N, which is the length of Omega2, Phi!
-   Omega=SQRT( Omega2(1:NOmega) ) !Assign my new Omega and below my new Phi (eigenvectors) [eigenvalues are actually the square of omega]
+   ! --- Setting up Phi, and type conversion
+   Omega=sqrt(Omega2_LaKi(1:NOmega) )
    IF ( bRemoveConstraints ) THEN ! this is called for the full system Eigenvalues:
       !Need to expand eigenvectors for removed DOFs, setting Phi 
-      CALL InsertDOFrows(VR(:,1:NOmega), bDOF, 0.0_ReKi, Phi, ErrStat2, ErrMsg2 ); if(Failed()) return
-   ELSE ! For the time being Phi gets updated only when CB eigensolver is requested. I need to fix it for the other case (full fem) and then get rid of the other eigensolver, this implies "unreducing" the VR
-       ! This is done as part of the CB-reduced eigensolve
-      Phi=REAL( VR(:,1:NOmega), ReKi )   ! eigenvectors
+      CALL InsertDOFrows(EigVect(:,1:NOmega), bDOF, 0.0_ReKi, Phi, ErrStat2, ErrMsg2 ); if(Failed()) return
+   ELSE 
+      Phi=REAL( EigVect(:,1:NOmega), ReKi )   ! eigenvectors
    ENDIF  
    
    CALL CleanupEigen()
@@ -2107,26 +2062,20 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, bRemoveConstraints, Init, p, Phi, Omeg
 
 CONTAINS
    LOGICAL FUNCTION Failed()
-        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'EigenSolve') 
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'EigenSolveWrap') 
         Failed =  ErrStat >= AbortErrLev
         if (Failed) call CleanUpEigen()
    END FUNCTION Failed
 
    SUBROUTINE CleanupEigen()
-      IF (ALLOCATED(Work)  ) DEALLOCATE(Work)
-      IF (ALLOCATED(Omega2)) DEALLOCATE(Omega2)  !bjj: break in Debug_Doub
-      IF (ALLOCATED(ALPHAR)) DEALLOCATE(ALPHAR)
-      IF (ALLOCATED(ALPHAI)) DEALLOCATE(ALPHAI)
-      IF (ALLOCATED(BETA)  ) DEALLOCATE(BETA)
-      IF (ALLOCATED(VR)    ) DEALLOCATE(VR)
-      IF (ALLOCATED(VL)    ) DEALLOCATE(VL)
-      IF (ALLOCATED(KEY)   ) DEALLOCATE(KEY)
+      IF (ALLOCATED(Omega2_LaKi)) DEALLOCATE(Omega2_LaKi) 
+      IF (ALLOCATED(EigVect)   ) DEALLOCATE(EigVect)
       IF (ALLOCATED(Kred)  ) DEALLOCATE(Kred)
       IF (ALLOCATED(Mred)  ) DEALLOCATE(Mred)
       IF (ALLOCATED(bDOF)  ) DEALLOCATE(bDOF)
    END SUBROUTINE CleanupEigen
   
-END SUBROUTINE EigenSolve
+END SUBROUTINE EigenSolveWrap
 
 !> Returns a list of boolean which are true if a DOF is not part of a BC constraint
 SUBROUTINE SelectNonBCConstraintsDOF(Init, p, nDOF, bDOF, ErrStat, ErrMsg )
