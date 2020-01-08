@@ -51,7 +51,7 @@ MODULE WAMIT2
          !!
 
 
-
+   USE Waves, ONLY: WaveNumber
    USE WAMIT2_Types
    USE WAMIT_Interp
    USE NWTC_Library
@@ -1347,8 +1347,8 @@ ThisBodyNum=1
 
          ! Wave information and QTF temporary
       COMPLEX(SiKi)                                      :: QTF_Value            !< Temporary complex number for QTF
-      COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm1C(:)      !< First  term in the newman calculation, complex frequency space.  Current load dimension.
-      COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm2C(:)      !< Second term in the newman calculation, complex frequency space.  Current load dimension.
+      COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm1C(:,:)    !< First  term in the newman calculation, complex frequency space.  All dimensions, this body.
+      COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm2C(:,:)    !< Second term in the newman calculation, complex frequency space.  All dimensions, this body.
       COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm1t(:)      !< First  term in the newman calculation, time domain.  Current load dimension.
       COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm2t(:)      !< Second term in the newman calculation, time domain.  Current load dimension.
       COMPLEX(SiKi)                                      :: aWaveElevC           !< Wave elevation of current frequency component.  NStepWave2 factor removed.
@@ -1360,7 +1360,8 @@ ThisBodyNum=1
       REAL(SiKi)                                         :: Coord3(3)            !< The (omega1,beta1,beta2) coordinate we want in the 3D dataset
       REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
       REAL(SiKi)                                         :: RotateZMatrixT(2,2)  !< The transpose of rotation in matrix form for rotation about z (from global to local)
-      REAL(SiKi)                                         :: OffsetXY(2)          !< The phase shift offset to apply to the body
+      COMPLEX(SiKi)                                      :: PhaseShiftXY         !< The phase shift offset to apply to the body
+      REAL(SiKi)                                         :: WaveNmbr1            !< Wavenumber for this frequency
       COMPLEX(SiKi), ALLOCATABLE                         :: TmpData3D(:,:,:)     !< Temporary 3D array we put the 3D data into (minus the load component indice)
       COMPLEX(SiKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
 
@@ -1644,10 +1645,10 @@ ThisBodyNum=1
       ALLOCATE( NewmanTerm2t( 0:InitInp%NStepWave  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the second term of the Newmans '// &
                                              'approximation in the time domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanTerm1C( 0:InitInp%NStepWave2 ), STAT=ErrStatTmp )
+      ALLOCATE( NewmanTerm1C( 0:InitInp%NStepWave2, 6 ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the first term of the Newmans '// &
                                              'approximation in the frequency domain.',ErrStat, ErrMsg, RoutineName)
-      ALLOCATE( NewmanTerm2C( 0:InitInp%NStepWave2 ), STAT=ErrStatTmp )
+      ALLOCATE( NewmanTerm2C( 0:InitInp%NStepWave2, 6 ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,' Cannot allocate array for calculating the second term of the Newmans '// &
                                              'approximation in the frequency domain.',ErrStat, ErrMsg, RoutineName)
       ALLOCATE( NewmanAppForce( 0:InitInp%NStepWave, 6*p%NBody), STAT=ErrStatTmp )
@@ -1688,16 +1689,20 @@ ThisBodyNum=1
       END IF
 
 
-
-         ! Now loop through all the dimensions and perform the calculation
+         ! Loop through all bodies
       DO IBody=1,p%NBody
+
+            ! set all frequency terms to zero to start
+         NewmanTerm1C(:,:) = CMPLX(0.0, 0.0, SiKi)
+         NewmanTerm2C(:,:) = CMPLX(0.0, 0.0, SiKi)
+
+         !----------------------------------------------------
+         ! Populate the frequency terms for this body
+         !----------------------------------------------------
+
          DO ThisDim=1,6
 
             Idx= (IBody-1)*6+ThisDim
-
-               ! set zero frequency term to zero
-            NewmanTerm1C(0) = CMPLX(0.0, 0.0, SiKi)
-            NewmanTerm2C(0) = CMPLX(0.0, 0.0, SiKi)
 
             IF (NewmanAppData%DataIs3D) THEN
                TmpFlag = NewmanAppData%Data3D%LoadComponents(Idx)
@@ -1725,6 +1730,7 @@ ThisBodyNum=1
                      ! First get the wave amplitude -- must be reconstructed from the WaveElevC array.  First index is the real (1) or
                      ! imaginary (2) part.  Divide by NStepWave2 so that the wave amplitude is of the same form as the paper.
                   aWaveElevC = CMPLX( InitInp%WaveElevC0(1,J), InitInp%WaveElevC0(2,J), SiKi) / InitInp%NStepWave2
+
                      ! Calculate the frequency
                   Omega1 = J * InitInp%WaveDOmega
 
@@ -1762,14 +1768,17 @@ ThisBodyNum=1
 
                      ENDIF !QTF value find
 
+                        ! Now we have the value of the QTF.  These values should only be real for the omega1=omega2 case of the approximation.
+                        ! However if the value came from the 4D interpolation routine, it might have some residual complex part to it.  So
+                        ! we throw the complex part out.  NOTE: the phase shift due to location will be added before the FFT.
+                     QTF_Value = CMPLX(REAL(QTF_Value,SiKi),0.0,SiKi)
+
 
                   ELSE     ! outside the frequency range
 
                      QTF_Value = CMPLX(0.0,0.0,SiKi)
 
                   ENDIF    ! frequency check
-
-
 
                      ! Check and make sure nothing bombed in the interpolation that we need to be aware of
                   CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
@@ -1784,74 +1793,125 @@ ThisBodyNum=1
                      RETURN
                   ENDIF
 
-
-
-                     ! Now we have the value of the QTF.  These values should only be real for the omega1=omega2 case of the approximation.
-                     ! However if the value came from the 4D interpolation routine, it might have some residual complex part to it.  So
-                     ! we throw the complex part out.
-                  QTF_Value = CMPLX(REAL(QTF_Value,SiKi),0.0,SiKi)
-
-
-                     ! Now we place these results into the arrays
+                     ! Now calculate the Newman terms
                   IF (REAL(QTF_Value) > 0.0_SiKi) THEN
 
-                     NewmanTerm1C(J) = aWaveElevC * (QTF_Value)**0.5_SiKi
-                     NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+                     NewmanTerm1C(J,ThisDim) = aWaveElevC * (QTF_Value)**0.5_SiKi
+                     NewmanTerm2C(J,ThisDim) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
 
                   ELSE IF (REAL(QTF_Value) < 0.0_SiKi) THEN
 
-                     NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
-                     NewmanTerm2C(J) = aWaveElevC * (-QTF_Value)**0.5_SiKi
+                     NewmanTerm1C(J,ThisDim) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+                     NewmanTerm2C(J,ThisDim) = aWaveElevC * (-QTF_Value)**0.5_SiKi
 
                   ELSE ! at 0
 
-                     NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
-                     NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+                     NewmanTerm1C(J,ThisDim) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
+                     NewmanTerm2C(J,ThisDim) = CMPLX(0.0_SiKi, 0.0_SiKi, SiKi)
 
                   ENDIF
 
+
                ENDDO    ! J=1,InitInp%NStepWave2
-
-                  ! Now we apply the FFT to the first piece.
-               CALL ApplyCFFT(  NewmanTerm1t(:), NewmanTerm1C(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
-                  IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-                  IF (ALLOCATED(NewmanTerm1t))     DEALLOCATE(NewmanTerm1t,STAT=ErrStatTmp)
-                  IF (ALLOCATED(NewmanTerm2t))     DEALLOCATE(NewmanTerm2t,STAT=ErrStatTmp)
-                  IF (ALLOCATED(NewmanTerm1C))     DEALLOCATE(NewmanTerm1C,STAT=ErrStatTmp)
-                  IF (ALLOCATED(NewmanTerm2C))     DEALLOCATE(NewmanTerm2C,STAT=ErrStatTmp)
-                  IF (ALLOCATED(NewmanAppForce))   DEALLOCATE(NewmanAppForce,STAT=ErrStatTmp)
-                  RETURN
-               END IF
-
-                  ! Now we apply the FFT to the second piece.
-               CALL ApplyCFFT( NewmanTerm2t(:), NewmanTerm2C(:), FFT_Data, ErrStatTmp )
-               CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-               IF ( ErrStat >= AbortErrLev ) THEN
-                  IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
-                  IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
-                  IF (ALLOCATED(NewmanTerm1t))     DEALLOCATE(NewmanTerm1t,STAT=ErrStatTmp)
-                  IF (ALLOCATED(NewmanTerm2t))     DEALLOCATE(NewmanTerm2t,STAT=ErrStatTmp)
-                  IF (ALLOCATED(NewmanTerm1C))     DEALLOCATE(NewmanTerm1C,STAT=ErrStatTmp)
-                  IF (ALLOCATED(NewmanTerm2C))     DEALLOCATE(NewmanTerm2C,STAT=ErrStatTmp)
-                  IF (ALLOCATED(NewmanAppForce))   DEALLOCATE(NewmanAppForce,STAT=ErrStatTmp)
-                  RETURN
-               ENDIF
-
-
-                  ! Now square the real part of the resulting time domain pieces and add them together to get the final force time series.
-               DO J=0,InitInp%NStepWave-1
-                  NewmanAppForce(J,Idx) = (abs(NewmanTerm1t(J)))**2 - (abs(NewmanTerm2t(J)))**2
-               ENDDO
-
-                  ! Copy the last first term to the last so that it is cyclic
-               NewmanAppForce(InitInp%NStepWave,Idx) = NewmanAppForce(0,Idx)
 
             ENDIF    ! Load component to calculate
 
          ENDDO ! ThisDim -- index to current dimension
+
+
+         !----------------------------------------------------
+         ! Rotate back to global frame and phase shift and set the terms for the summation
+         !----------------------------------------------------
+
+            ! Set rotation
+            ! NOTE: RotateZMatrixT is the rotation from local to global.
+         RotateZMatrixT(:,1) = (/  cos(InitInp%PtfmRefztRot(ThisBodyNum)), -sin(InitInp%PtfmRefztRot(ThisBodyNum)) /)
+         RotateZMatrixT(:,2) = (/  sin(InitInp%PtfmRefztRot(ThisBodyNum)),  cos(InitInp%PtfmRefztRot(ThisBodyNum)) /)
+
+            ! Loop through all the frequencies
+         DO J=1,InitInp%NStepWave2
+
+               ! Frequency
+            Omega1 = J * InitInp%WaveDOmega
+
+            !> Phase shift due to offset in location
+            !! The phase shift due to an (x,y) offset is of the form
+            !! \f$  exp(-\imath k(\omega) ( X cos(\Beta(w)) + Y sin(\beta(w)) )) \f$
+            !  NOTE: the phase shift applies to the aWaveElevC of the incoming wave.  Including it here instead
+            !        of above is mathematically equivalent, but only because each frequency has only one wave
+            !        direction associated with it through the equal energy approach used in multidirectional waves.
+
+            WaveNmbr1   = WaveNumber ( REAL(Omega1,SiKi), InitInp%Gravity, InitInp%WtrDpth )    ! SiKi returned
+            TmpReal1    = WaveNmbr1 * ( InitInp%PtfmRefxt(1)*cos(InitInp%WaveDirArr(J)*D2R) + InitInp%PtfmRefyt(1)*sin(InitInp%WaveDirArr(J)*D2R) )
+            PhaseShiftXY = CMPLX( cos(TmpReal1), -sin(TmpReal1) )
+
+
+               ! Apply the phase shift
+            DO ThisDim=1,6
+               NewmanTerm1C(J,ThisDim) = NewmanTerm1C(J,ThisDim)*PhaseShiftXY       ! Newman term 1
+               NewmanTerm2C(J,ThisDim) = NewmanTerm2C(J,ThisDim)*PhaseShiftXY       ! Newman term 2
+            ENDDO
+
+
+               ! Apply the rotation to get back to global frame  -- Term 1
+            NewmanTerm1C(J,1:2) = MATMUL(RotateZMatrixT, NewmanTerm1C(J,1:2))
+            NewmanTerm1C(J,4:5) = MATMUL(RotateZMatrixT, NewmanTerm1C(J,4:5))
+
+               ! Apply the rotation to get back to global frame  -- Term 2
+            NewmanTerm2C(J,1:2) = MATMUL(RotateZMatrixT, NewmanTerm2C(J,1:2))
+            NewmanTerm2C(J,4:5) = MATMUL(RotateZMatrixT, NewmanTerm2C(J,4:5))
+
+         ENDDO    ! J=1,InitInp%NStepWave2
+
+
+
+         !----------------------------------------------------
+         ! Apply the FFT to get time domain results
+         !----------------------------------------------------
+
+         DO ThisDim=1,6    ! Loop through all dimensions
+
+            Idx= (IBody-1)*6+ThisDim
+
+               ! Now we apply the FFT to the first piece.
+            CALL ApplyCFFT(  NewmanTerm1t(:), NewmanTerm1C(:,ThisDim), FFT_Data, ErrStatTmp )
+            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+            IF ( ErrStat >= AbortErrLev ) THEN
+               IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
+               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+               IF (ALLOCATED(NewmanTerm1t))     DEALLOCATE(NewmanTerm1t,STAT=ErrStatTmp)
+               IF (ALLOCATED(NewmanTerm2t))     DEALLOCATE(NewmanTerm2t,STAT=ErrStatTmp)
+               IF (ALLOCATED(NewmanTerm1C))     DEALLOCATE(NewmanTerm1C,STAT=ErrStatTmp)
+               IF (ALLOCATED(NewmanTerm2C))     DEALLOCATE(NewmanTerm2C,STAT=ErrStatTmp)
+               IF (ALLOCATED(NewmanAppForce))   DEALLOCATE(NewmanAppForce,STAT=ErrStatTmp)
+               RETURN
+            END IF
+
+               ! Now we apply the FFT to the second piece.
+            CALL ApplyCFFT( NewmanTerm2t(:), NewmanTerm2C(:,ThisDim), FFT_Data, ErrStatTmp )
+            CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+            IF ( ErrStat >= AbortErrLev ) THEN
+               IF (ALLOCATED(TmpData3D))        DEALLOCATE(TmpData3D,STAT=ErrStatTmp)
+               IF (ALLOCATED(TmpData4D))        DEALLOCATE(TmpData4D,STAT=ErrStatTmp)
+               IF (ALLOCATED(NewmanTerm1t))     DEALLOCATE(NewmanTerm1t,STAT=ErrStatTmp)
+               IF (ALLOCATED(NewmanTerm2t))     DEALLOCATE(NewmanTerm2t,STAT=ErrStatTmp)
+               IF (ALLOCATED(NewmanTerm1C))     DEALLOCATE(NewmanTerm1C,STAT=ErrStatTmp)
+               IF (ALLOCATED(NewmanTerm2C))     DEALLOCATE(NewmanTerm2C,STAT=ErrStatTmp)
+               IF (ALLOCATED(NewmanAppForce))   DEALLOCATE(NewmanAppForce,STAT=ErrStatTmp)
+               RETURN
+            ENDIF
+
+
+               ! Now square the real part of the resulting time domain pieces and add them together to get the final force time series.
+            DO J=0,InitInp%NStepWave-1
+               NewmanAppForce(J,Idx) = (abs(NewmanTerm1t(J)))**2 - (abs(NewmanTerm2t(J)))**2
+            ENDDO
+
+               ! Copy the last first term to the last so that it is cyclic
+            NewmanAppForce(InitInp%NStepWave,Idx) = NewmanAppForce(0,Idx)
+
+         ENDDO ! ThisDim -- index to current dimension
+
       ENDDO    ! IBody -- current body
 
 
