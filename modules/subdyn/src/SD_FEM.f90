@@ -845,7 +845,7 @@ CONTAINS
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
       TYPE(SD_ParameterType),INTENT(IN   ) :: p
       INTEGER(IntKi) :: I, J, iNode
-      Init%BCs = 0
+      Init%BCs = -9999
       DO I = 1, p%NReact
          iNode = p%Reacts(I,1) ! Node index
          DO J = 1, 6
@@ -862,7 +862,7 @@ CONTAINS
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
       TYPE(SD_ParameterType),INTENT(IN   ) :: p
       INTEGER(IntKi) :: I, J, iNode
-      Init%IntFc = 0
+      Init%IntFc = -9999
       DO I = 1, Init%NInterf
          iNode = Init%Interf(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
@@ -1238,7 +1238,6 @@ CONTAINS
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
       TYPE(SD_ParameterType),INTENT(IN   ) :: p
       INTEGER(IntKi) :: I, J, iNode
-      Init%IntFc = 0
       DO I = 1, Init%NInterf
          iNode = Init%Interf(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
