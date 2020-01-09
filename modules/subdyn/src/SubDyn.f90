@@ -68,23 +68,10 @@ SUBROUTINE CreateTPMeshes( TP_RefPoint, inputMesh, outputMesh, ErrStat, ErrMsg )
                   ,RotationVel       = .TRUE.            &
                   ,TranslationAcc    = .TRUE.            &
                   ,RotationAcc       = .TRUE.            )
-   
-   ! Create the node on the mesh
-   CALL MeshPositionNode (   inputMesh           &
-                           , 1                   &
-                           , TP_RefPoint         &
-                           , ErrStat             &
-                           , ErrMsg              ) !note: assumes identiy matrix as reference orientation
-   IF ( ErrStat >= AbortErrLev ) RETURN
-      
-   ! Create the mesh element
-   CALL MeshConstructElement (   inputMesh          &
-                               , ELEMENT_POINT      &                         
-                               , ErrStat            &
-                               , ErrMsg             &
-                               , 1                  )
-   CALL MeshCommit ( inputMesh, ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) RETURN
+   ! Create the node and mesh element, note: assumes identiy matrix as reference orientation
+   CALL MeshPositionNode (inputMesh, 1, TP_RefPoint, ErrStat, ErrMsg); IF(ErrStat>=AbortErrLev) return
+   CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, 1)
+   CALL MeshCommit( inputMesh, ErrStat, ErrMsg); if(ErrStat >= AbortErrLev) return
    
    ! Create the Transition Piece reference point output mesh as a sibling copy of the input mesh
    CALL MeshCopy ( SrcMesh      = inputMesh              &
@@ -97,69 +84,50 @@ SUBROUTINE CreateTPMeshes( TP_RefPoint, inputMesh, outputMesh, ErrStat, ErrMsg )
                   ,Moment       = .TRUE.                 ) 
 END SUBROUTINE CreateTPMeshes
 
-SUBROUTINE CreateY2Meshes( NNode, Nodes, NNodes_I, IDI, NNodes_L, IDL, NNodes_C, IDC, inputMesh, outputMesh, ErrStat, ErrMsg )
+SUBROUTINE CreateY2Meshes( NNode, Nodes, INodes_I, INodes_L, INodes_C, inputMesh, outputMesh, ErrStat, ErrMsg )
    INTEGER(IntKi),            INTENT( IN    ) :: NNode                     !total number of nodes in the structure, used to size the array Nodes, i.e. its rows
    REAL(ReKi),                INTENT( IN    ) :: Nodes(NNode, JointsCol)
-   INTEGER(IntKi),            INTENT( IN    ) :: NNodes_I                  ! number interface nodes   i.e. Y2 stuff at the beginning
-   INTEGER(IntKi),            INTENT( IN    ) :: IDI(NNodes_I*6)
-   INTEGER(IntKi),            INTENT( IN    ) :: NNodes_L                  ! number interior nodes  (no constraints) i.e. Y2 stuff after interface stuff
-   INTEGER(IntKi),            INTENT( IN    ) :: IDL(NNodes_L*6)
-   INTEGER(IntKi),            INTENT( IN    ) :: NNodes_C                  ! number base reaction nodes  i.e. Y2 stuff after interior stuff
-   INTEGER(IntKi),            INTENT( IN    ) :: IDC(NNodes_C*6)
+   INTEGER(IntKi),            INTENT( IN    ) :: INodes_I(:) !< Indices of interface nodes
+   INTEGER(IntKi),            INTENT( IN    ) :: INodes_L(:) !< Indices of interior nodes
+   INTEGER(IntKi),            INTENT( IN    ) :: INodes_C(:) !< Indices of reaction nodes
    TYPE(MeshType),            INTENT( INOUT ) :: inputMesh   ! u%LMesh
    TYPE(MeshType),            INTENT( INOUT ) :: outputMesh  ! y%Y2Mesh
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat                   ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    ! Local variables
    REAL(ReKi), dimension(3) :: Point
-   INTEGER         :: I, iOffset  ! generic counter variable
+   INTEGER         :: I, iOffset, iNode  ! generic counter variable
    INTEGER         :: nodeIndx
    
    CALL MeshCreate( BlankMesh        = inputMesh                           &
                   ,IOS               = COMPONENT_INPUT                     &
-                  ,Nnodes            = NNodes_I + NNodes_L + NNodes_C      &
+                  ,Nnodes            = size(INodes_I) + size(INodes_L) + size(INodes_C)      &
                   ,ErrStat           = ErrStat                             &
                   ,ErrMess           = ErrMsg                              &
                   ,Force             = .TRUE.                              &
                   ,Moment            = .TRUE.                              )
    ! --- Interface nodes
-   print*,'NNodes_I',NNodes_I
    iOffset = 0
-   DO I = 1,NNodes_I 
-      ! Create the node and mesh element
-      nodeIndx = IDI(I*6) / 6     ! TODO TODO TODO integer division gives me the actual node index, is it true? Yes it is not the nodeID
-      print*,'I',I,'IDI',IDI(I*6), 'nodeIndx',nodeIndx
-      !iDOF = IDI(I) ! DOF index in constrained system
-      !iNode       = m%DOFtilde2Nodes(iDOF,1) ! First column is node 
-      !nDOFPerNode = m%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
-      !iiDOF       = m%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
-      Point = Nodes(nodeIndx, 2:4)
+   DO I = 1,size(INodes_I)
+      Point = Nodes(INodes_I(I), 2:4)
       CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
       CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
-   END DO
-   
+   ENDDO
    ! --- Interior nodes
-   iOffset = NNodes_I
-   DO I = 1,NNodes_L 
-      ! Create the node and mesh element
-      nodeIndx = IDL(I*6) / 6     !TODO TODO TODO integer division gives me the actual node index, is it true? Yes it is not the nodeID of the input file that may not be sequential, but the renumbered list of nodes
-      Point = Nodes(nodeIndx, 2:4)
+   iOffset = size(INodes_I)
+   DO I = 1,size(INodes_L)
+      Point = Nodes(INodes_L(I), 2:4)
       CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
       CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
    END DO
-   
-   ! --- Base Reaction nodes
-   iOffset = NNodes_I + NNodes_L
-   DO I = 1,NNodes_C 
-      ! Create the node and mesh element
-      nodeIndx = IDC(I*6) / 6     ! TODO  TODO TODO integer division gives me the actual node index, is it true? Yes it is not the nodeID
-      print*,'I',I,'IDC',IDC(I*6), 'nodeIndx',nodeIndx
-      Point = Nodes(nodeIndx, 2:4)
+   ! --- Base Reaction nodes 
+   iOffset = size(INodes_I) + size(INodes_L)
+   DO I = 1,size(INodes_C)
+      Point = Nodes(INodes_C(I), 2:4)
       CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
       CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
    END DO
-   CALL MeshCommit ( inputMesh, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL MeshCommit ( inputMesh, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
          
    ! Create the Interior Points output mesh as a sibling copy of the input mesh
    CALL MeshCopy (    SrcMesh      = inputMesh              &
@@ -356,7 +324,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL CreateTPMeshes( InitInput%TP_RefPoint, u%TPMesh, y%Y1Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
    
    ! Construct the input mesh for the interior nodes which result from the Craig-Bampton reduction
-   CALL CreateY2Meshes( Init%NNode, Init%Nodes, p%NInterf, p%IDI, p%NNodes_L, p%IDL, p%NReact, p%IDC, u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL CreateY2Meshes( Init%NNode, Init%Nodes, p%Interf(:,1), p%Nodes_L(:,1), p%Reacts(:,1), u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
    
    ! Initialize the outputs & Store mapping between nodes and elements  
    CALL SDOUT_Init( Init, y, p, m, InitOut, InitInput%WtrDpth, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -448,8 +416,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       REAL(ReKi)                   :: ULS(p%DOFL),  UL0m(p%DOFL),  FLt(p%DOFL)  ! Temporary values in static improvement method
       REAL(ReKi)                   :: Y1(6)
       INTEGER(IntKi)               :: startDOF
-      REAL(ReKi)                   :: DCM(3,3),junk(6,p%NNodes_L)
-      REAL(ReKi)                   :: HydroForces(6*p%NNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
+      REAL(ReKi)                   :: DCM(3,3),junk(6,p%nNodes_L)
+      REAL(ReKi)                   :: HydroForces(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
@@ -503,7 +471,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --------------------------------------------------------------------------------- 
       ! Place the outputs onto interface node portion of Y2 output mesh        
       ! ---------------------------------------------------------------------------------
-      DO I = 1, p%NNodes_I 
+      DO I = 1, p%nNodes_I 
          startDOF = (I-1)*6 + 1
          ! Construct the direction cosine matrix given the output angles
          CALL SmllRotTrans( 'UR_bar input angles', m%UR_bar(startDOF + 3), m%UR_bar(startDOF + 4), m%UR_bar(startDOF + 5), DCM, '', ErrStat2, ErrMsg2 )
@@ -521,12 +489,12 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --------------------------------------------------------------------------------- 
       ! Place the outputs onto interior node portion of Y2 output mesh 
       ! ---------------------------------------------------------------------------------      
-      DO I = 1, p%NNodes_L   !Only interior nodes here     
+      DO I = 1, p%nNodes_L   !Only interior nodes here     
          ! starting index in the master arrays for the current node    
          startDOF = (I-1)*6 + 1
          
          ! index into the Y2Mesh
-         J = p%NNodes_I + I
+         J = p%nNodes_I + I
        
          ! Construct the direction cosine matrix given the output angles
          CALL SmllRotTrans( 'UL input angles', m%UL(startDOF + 3), m%UL(startDOF + 4), m%UL(startDOF + 5), DCM, '', ErrStat2, ErrMsg2 )
@@ -541,17 +509,17 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       END DO
       
       !Repeat for the acceleration, there should be a way to combine into 1 loop
-      L1 = p%NNodes_I+1
-      L2 = p%NNodes_I+p%NNodes_L
-      junk=   RESHAPE(m%UL_dotdot,(/6  ,p%NNodes_L/)) 
+      L1 = p%nNodes_I+1
+      L2 = p%nNodes_I+p%nNodes_L
+      junk=   RESHAPE(m%UL_dotdot,(/6  ,p%nNodes_L/)) 
       y%Y2mesh%TranslationAcc (  :,L1:L2)   = junk(1:3,:) 
       y%Y2mesh%RotationAcc    (  :,L1:L2)   = junk(4:6,:) 
       
       ! ---------------------------------------------------------------------------------
       ! Base reaction nodes
       ! ---------------------------------------------------------------------------------
-      L1 = p%NNodes_I+p%NNodes_L+1   
-      L2 = p%NNodes_I+p%NNodes_L+p%NReact
+      L1 = p%nNodes_I+p%nNodes_L+1   
+      L2 = p%nNodes_I+p%nNodes_L+p%NReact
 
       y%Y2mesh%TranslationDisp(  :,L1:L2)   = 0.0
       CALL Eye( y%Y2mesh%Orientation(:,:,L1:L2), ErrStat2, ErrMsg2 ) ; if(Failed()) return
@@ -571,7 +539,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       !NEED TO ADD HYDRODYNAMIC FORCES AT THE Interface NODES
         !Aggregate the forces and moments at the interface nodes to the reference point
         !TODO: where are these HydroTP, HydroForces documented?
-      DO I = 1, p%NNodes_I 
+      DO I = 1, p%nNodes_I 
          startDOF = (I-1)*6 + 1
          !Take care of Hydrodynamic Forces that will go into INterface Forces later
          HydroForces(startDOF:startDOF+5 ) =  (/u%LMesh%Force(:,I),u%LMesh%Moment(:,I)/)  !(6,NNODES_I)
@@ -2355,7 +2323,7 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    integer(IntKi), allocatable :: IDT(:)
    integer(IntKi)              :: I                ! counters
    integer(IntKi)              :: iNode, iiNode
-   integer(IntKi) :: NNodes_R
+   integer(IntKi) :: nNodes_R
    integer(IntKi), allocatable :: INodesAll(:)
    integer(IntKi), allocatable :: Nodes_R(:)
    integer(IntKi)              :: ErrStat2 ! < Error status of the operation
@@ -2363,12 +2331,12 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
    ! --- Count nodes per types
-   p%NNodes_I  = p%NInterf             ! Number of interface nodes
-   NNodes_R    = p%NReact+p%NInterf    ! Number of retained nodes
-   p%NNodes_L  = Init%NNode - NNodes_R ! Number of Interior nodes =(TDOF-DOFC-DOFI)/6 =  (6*Init%NNode - (p%NReact+p%NNodes_I)*6 ) / 6 = Init%NNode - p%NReact -p%NNodes_I
+   p%nNodes_I  = p%NInterf             ! Number of interface nodes
+   nNodes_R    = p%NReact+p%NInterf    ! Number of retained nodes
+   p%nNodes_L  = Init%NNode - nNodes_R ! Number of Interior nodes =(TDOF-DOFC-DOFI)/6 =  (6*Init%NNode - (p%NReact+p%nNodes_I)*6 ) / 6 = Init%NNode - p%NReact -p%nNodes_I
 
-   CALL AllocAry( p%Nodes_L, p%NNodes_L, 1, 'p%Nodes_L', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
-   CALL AllocAry( Nodes_R  , NNodes_R     , 'Nodes_R'  , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+   CALL AllocAry( p%Nodes_L, p%nNodes_L, 1, 'p%Nodes_L', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+   CALL AllocAry( Nodes_R  , nNodes_R     , 'Nodes_R'  , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
 
    ! --- Partition Nodes 
    ! Nodes_L = IAll - NodesR
@@ -2383,13 +2351,11 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    ! Interface DOFS
    p%DOFI =0
    do iiNode= 1,p%NInterf
-      iNode = p%Interf(iiNode,1)
-      p%DOFI = p%DOFI + len(m%NodesDOFtilde(iNode))
+      p%DOFI = p%DOFI + len(m%NodesDOFtilde( p%Interf(iiNode,1) ))
    enddo
    ! Reaction DOFs
    do iiNode= 1,p%NReact
-      iNode = p%Reacts(iiNode,1)
-      p%DOFC = p%DOFC + len(m%NodesDOFtilde(iNode))
+      p%DOFC = p%DOFC + len(m%NodesDOFtilde( p%Reacts(iiNode,1) ))
    enddo
    p%DOFR = p%DOFC + p%DOFI
    p%DOFL = Init%nDOFRed - p%DOFR ! TODO
@@ -2397,7 +2363,7 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    if (p%DOFC /= p%NReact*6) then
       call Fatal('Wrong number of DOF for reactions nodes, likely some reaction nodes are special joints and should be cantilever instead.'); return
    endif
-   if (p%DOFI /= p%NNodes_I*6) then
+   if (p%DOFI /= p%nNodes_I*6) then
       call Fatal('Wrong number of DOF for interface nodes, likely some interface nodes are special joints and should be cantilever instead.'); return
    endif
 
@@ -2446,9 +2412,9 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    print*,'Number of DOFs: interface   (R)',p%DOFR
    print*,'Number of DOFs: internal    (L)',p%DOFL
    print*,'Number of DOFs: total     (R+L)',Init%nDOFRed
-   print*,'Number of Nodes: "interface" (I)',p%NNodes_I
+   print*,'Number of Nodes: "interface" (I)',p%nNodes_I
    print*,'Number of Nodes: "reactions" (C)',p%NReact
-   print*,'Number of Nodes: internal    (L)',p%NNodes_L
+   print*,'Number of Nodes: internal    (L)',p%nNodes_L
    print*,'Number of Nodes: total     (R+L)',Init%NNode
 contains
    LOGICAL FUNCTION Failed()
@@ -2477,12 +2443,12 @@ SUBROUTINE ConstructUFL( u, p, UFL )
    REAL(ReKi)                                     :: UFL(p%DOFL)
    INTEGER                                        :: I, J, StartDOF  ! integers for indexing into mesh and UFL
 
-   ! note that p%DOFL = p%NNodes_L*6
-   DO I = 1, p%NNodes_L   !Only interior nodes here     
+   ! note that p%DOFL = p%nNodes_L*6
+   DO I = 1, p%nNodes_L   !Only interior nodes here     
       ! starting index in the master arrays for the current node    
       startDOF = (I-1)*6 + 1 ! TODO
       ! index into the Y2Mesh
-      J  = p%NNodes_I + I
+      J  = p%nNodes_I + I
       ! Construct UFL array from the Force and Moment fields of the input mesh
       UFL ( startDOF   : startDOF + 2 ) = u%LMesh%Force (:,J)
       UFL ( startDOF+3 : startDOF + 5 ) = u%LMesh%Moment(:,J)
@@ -2540,7 +2506,7 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '(A)') SectionDivide
       
    WRITE(UnSum, '()')    
-   WRITE(UnSum, '(A,I6)')  'Number of nodes (NNodes):',Init%NNode
+   WRITE(UnSum, '(A,I6)')  'Number of nodes (nNodes):',Init%NNode
    WRITE(UnSum, '(A8,1x,A11,3(1x,A15))')  'Node No.', 'Y2Mesh Node',          'X (m)',           'Y (m)',           'Z (m)'         
    WRITE(UnSum, '(A8,1x,A11,3(1x,A15))')  '--------', '-----------', '---------------', '---------------', '---------------'
 !   WRITE(UnSum, '(I8.0, E15.6,E15.6,E15.6)') (INT(Init%Nodes(i, 1)),(Init%Nodes(i, j), j = 2, JointsCol), i = 1, Init%NNode) !do not group the format or it won't work 3(E15.6) does not work !bjj???

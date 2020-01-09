@@ -240,10 +240,10 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: DofI      !< Interface nodes   of DOFs [-]
     INTEGER(IntKi)  :: DofR      !< Interface and restrained nodes   of DOFs [-]
     INTEGER(IntKi)  :: DofC      !< Contrained nodes   of DOFs [-]
-    INTEGER(IntKi)  :: NNodes_RbarL      !< Number of Interface + Internal nodes [-]
-    INTEGER(IntKi)  :: NNodes_L      !< Number of Internal nodes [-]
+    INTEGER(IntKi)  :: nNodes_RbarL      !< Number of Interface + Internal nodes [-]
+    INTEGER(IntKi)  :: nNodes_L      !< Number of Internal nodes [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Nodes_L      !< Internal nodes (not interface nor reaction) [-]
-    INTEGER(IntKi)  :: NNodes_I      !< Number of Interface nodes [-]
+    INTEGER(IntKi)  :: nNodes_I      !< Number of Interface nodes [-]
     INTEGER(IntKi)  :: NInterf      !< Number of joints attached to transition piece [-]
     INTEGER(IntKi) , DIMENSION(:,:), ALLOCATABLE  :: Interf      !< Interface degree of freedoms [-]
     INTEGER(IntKi)  :: NReact      !< Number of joints with reactions [-]
@@ -6869,8 +6869,8 @@ ENDIF
     DstParamData%DofI = SrcParamData%DofI
     DstParamData%DofR = SrcParamData%DofR
     DstParamData%DofC = SrcParamData%DofC
-    DstParamData%NNodes_RbarL = SrcParamData%NNodes_RbarL
-    DstParamData%NNodes_L = SrcParamData%NNodes_L
+    DstParamData%nNodes_RbarL = SrcParamData%nNodes_RbarL
+    DstParamData%nNodes_L = SrcParamData%nNodes_L
 IF (ALLOCATED(SrcParamData%Nodes_L)) THEN
   i1_l = LBOUND(SrcParamData%Nodes_L,1)
   i1_u = UBOUND(SrcParamData%Nodes_L,1)
@@ -6885,7 +6885,7 @@ IF (ALLOCATED(SrcParamData%Nodes_L)) THEN
   END IF
     DstParamData%Nodes_L = SrcParamData%Nodes_L
 ENDIF
-    DstParamData%NNodes_I = SrcParamData%NNodes_I
+    DstParamData%nNodes_I = SrcParamData%nNodes_I
     DstParamData%NInterf = SrcParamData%NInterf
 IF (ALLOCATED(SrcParamData%Interf)) THEN
   i1_l = LBOUND(SrcParamData%Interf,1)
@@ -7398,14 +7398,14 @@ ENDIF
       Int_BufSz  = Int_BufSz  + 1  ! DofI
       Int_BufSz  = Int_BufSz  + 1  ! DofR
       Int_BufSz  = Int_BufSz  + 1  ! DofC
-      Int_BufSz  = Int_BufSz  + 1  ! NNodes_RbarL
-      Int_BufSz  = Int_BufSz  + 1  ! NNodes_L
+      Int_BufSz  = Int_BufSz  + 1  ! nNodes_RbarL
+      Int_BufSz  = Int_BufSz  + 1  ! nNodes_L
   Int_BufSz   = Int_BufSz   + 1     ! Nodes_L allocated yes/no
   IF ( ALLOCATED(InData%Nodes_L) ) THEN
     Int_BufSz   = Int_BufSz   + 2*2  ! Nodes_L upper/lower bounds for each dimension
       Int_BufSz  = Int_BufSz  + SIZE(InData%Nodes_L)  ! Nodes_L
   END IF
-      Int_BufSz  = Int_BufSz  + 1  ! NNodes_I
+      Int_BufSz  = Int_BufSz  + 1  ! nNodes_I
       Int_BufSz  = Int_BufSz  + 1  ! NInterf
   Int_BufSz   = Int_BufSz   + 1     ! Interf allocated yes/no
   IF ( ALLOCATED(InData%Interf) ) THEN
@@ -8029,9 +8029,9 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%DofC
       Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NNodes_RbarL
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNodes_RbarL
       Int_Xferred   = Int_Xferred   + 1
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NNodes_L
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNodes_L
       Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. ALLOCATED(InData%Nodes_L) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -8049,7 +8049,7 @@ ENDIF
       IF (SIZE(InData%Nodes_L)>0) IntKiBuf ( Int_Xferred:Int_Xferred+(SIZE(InData%Nodes_L))-1 ) = PACK(InData%Nodes_L,.TRUE.)
       Int_Xferred   = Int_Xferred   + SIZE(InData%Nodes_L)
   END IF
-      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NNodes_I
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%nNodes_I
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%NInterf
       Int_Xferred   = Int_Xferred   + 1
@@ -9128,9 +9128,9 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%DofC = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%NNodes_RbarL = IntKiBuf( Int_Xferred ) 
+      OutData%nNodes_RbarL = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
-      OutData%NNodes_L = IntKiBuf( Int_Xferred ) 
+      OutData%nNodes_L = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! Nodes_L not allocated
     Int_Xferred = Int_Xferred + 1
@@ -9158,7 +9158,7 @@ ENDIF
       Int_Xferred   = Int_Xferred   + SIZE(OutData%Nodes_L)
     DEALLOCATE(mask2)
   END IF
-      OutData%NNodes_I = IntKiBuf( Int_Xferred ) 
+      OutData%nNodes_I = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%NInterf = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
