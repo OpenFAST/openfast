@@ -21,10 +21,54 @@ module IntegerList
       module procedure pop_last
       module procedure pop_item
    end interface
+   interface init_list
+      module procedure init_list_n_def
+      module procedure init_list_vect
+   end interface
+   interface find
+      module procedure find_list
+      module procedure find_raw
+   end interface
 contains
 
+   !> Concatenate lists: I3=[I1,I2]
+   subroutine concatenate_lists(I1,I2,I3, ErrStat, ErrMsg)
+      integer(intki), intent(in)    :: i1(:), i2(:)
+      integer(intki), intent(out)   :: i3(:)
+      integer(IntKi), intent(  out) :: ErrStat   !< Error status of the operation
+      character(*),   intent(  out) :: ErrMsg    !< Error message if ErrStat /    = ErrID_None
+      I3(1:size(I1)) = I1 
+      I3(size(I1)+1:size(I1)+size(I2)) = I2
+   endsubroutine
+
+   !> Set difference: I3=I1-I2 (assumes I1 is biggger than I2), elements of I1 not in I2
+   subroutine lists_difference(I1, I2, I3, ErrStat, ErrMsg)
+      integer(IntKi), intent(in)    :: I1(:), I2(:)
+      integer(IntKi), intent(out)   :: I3(:)
+      integer(IntKi), intent(  out) :: ErrStat      !< Error status of the operation
+      character(*),   intent(  out) :: ErrMsg       !< Error message if ErrStat /= ErrID_None
+      integer(IntKi) :: I
+      logical, dimension(:), allocatable :: bUnique
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      allocate(bUnique(1:size(I1)))
+      ! Then, remove DOFs on the boundaries:
+      DO i = 1, size(I1)  !Boundary DOFs (Interface + Constraints)
+         if (find(I2,I1(i))>0) then
+            bUnique(I) = .false.
+         else
+            bUnique(I) = .true.
+         endif
+      ENDDO
+      if (count(bUnique) /= size(I3)) then
+         ErrStat=ErrID_Fatal; ErrMsg='Storage for list difference is of wrong size'; return
+      endif
+      I3 = pack(I1, bUnique)
+      deallocate(bUnique)
+   endsubroutine
+
    !> Initialize an integer list
-   subroutine init_list(L,n,default_val,ErrStat,ErrMsg)
+   subroutine init_list_n_def(L,n,default_val,ErrStat,ErrMsg)
       type(IList), intent(inout)                  :: L !< List
       integer(IntKi), intent(in)                  :: n !< number of initial values
       integer(IntKi), intent(in)                  :: default_val !< default values
@@ -32,12 +76,22 @@ contains
       character(*),                 intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       ErrStat = ErrID_None
       ErrMsg  = ""
-
       call AllocAry(L%List, n, 'L%List', ErrStat, ErrMsg) 
       if (ErrStat/=ErrID_None) return
       L%List(1:n) = default_val
+   end subroutine init_list_n_def
 
-   end subroutine init_list
+   subroutine init_list_vect(L,vect,ErrStat,ErrMsg)
+      type(IList), intent(inout)               :: L    !< List
+      integer(IntKi), dimension(:), intent(in) :: vect !< number of initial values
+      integer(IntKi),               intent(  out) :: ErrStat     !< Error status of the operation
+      character(*),                 intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      call AllocAry(L%List, size(vect), 'L%List', ErrStat, ErrMsg) 
+      if (ErrStat/=ErrID_None) return
+      L%List = vect
+   end subroutine init_list_vect
 
    !> Deallocate list
    subroutine destroy_list(L,ErrStat,ErrMsg)
@@ -160,7 +214,7 @@ contains
 
    !> Returns index of element e in L, returns 0 if not found
    !! NOTE: list but be sorted to call this function
-   integer(IntKi) function find(L, e, ErrStat, ErrMsg)
+   integer(IntKi) function find_list(L, e, ErrStat, ErrMsg)
       type(IList),     intent(inout) :: L  
       integer(IntKi),  intent(in   ) :: e  
       integer(IntKi),  intent(  out) :: ErrStat !< Error status of the operation
@@ -168,16 +222,34 @@ contains
       ErrStat = ErrID_None
       ErrMsg  = ""
       if (len(L)>0) then
-         find = binary_search(L%List, e) ! Binary search returns index for inequality List(i)<=e
-         if (find>0) then
-            if (L%List(find)/=e) then
-               find=-1
+         find_list = binary_search(L%List, e) ! Binary search returns index for inequality List(i)<=e
+         if (find_list>0) then
+            if (L%List(find_list)/=e) then
+               find_list=-1
             endif
          endif
       else
-         find=-1
+         find_list=-1
       endif
-   end function find
+   end function find_list
+
+   !> Returns index of val in Array (val is an integer!)
+   ! NOTE: in the future use intrinsinc function findloc
+   function find_raw(Array, Val) result(i)
+      integer(IntKi), dimension(:), intent(in) :: Array !< Array to search in
+      integer(IntKi), intent(in)               :: val   !< Val
+      integer(IntKi)                           :: i     !< Index of joint in joint table
+      logical :: found
+      i = 1
+      do while ( i <= size(Array) )
+         if ( Val == Array(i) ) THEN
+            return ! Exit when found
+         else
+            i = i + 1
+         endif
+      enddo
+      i=-1
+   end function
 
    !> Print
    subroutine print_list(L, varname, u_opt)

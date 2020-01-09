@@ -111,7 +111,8 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, NNodes_I, IDI, NNodes_L, IDL, NNodes_C,
    INTEGER(IntKi),            INTENT(   OUT ) :: ErrStat                   ! Error status of the operation
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    ! Local variables
-   INTEGER         :: I                 ! generic counter variable
+   REAL(ReKi), dimension(3) :: Point
+   INTEGER         :: I, iOffset  ! generic counter variable
    INTEGER         :: nodeIndx
    
    CALL MeshCreate( BlankMesh        = inputMesh                           &
@@ -121,67 +122,41 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, NNodes_I, IDI, NNodes_L, IDL, NNodes_C,
                   ,ErrMess           = ErrMsg                              &
                   ,Force             = .TRUE.                              &
                   ,Moment            = .TRUE.                              )
-   !---------------------------------------------------------------------
-   !    Interface nodes
-   !---------------------------------------------------------------------
+   ! --- Interface nodes
+   print*,'NNodes_I',NNodes_I
+   iOffset = 0
    DO I = 1,NNodes_I 
-      ! Create the node on the mesh
+      ! Create the node and mesh element
       nodeIndx = IDI(I*6) / 6     ! TODO TODO TODO integer division gives me the actual node index, is it true? Yes it is not the nodeID
-      CALL MeshPositionNode (   inputMesh           &
-                              , I                   &
-                              , Nodes(nodeIndx,2:4) &  ! position
-                              , ErrStat             &
-                              , ErrMsg              )
-      IF ( ErrStat /= ErrID_None ) RETURN
-
-      ! Create the mesh element
-      CALL MeshConstructElement (   inputMesh          &
-                                  , ELEMENT_POINT      &                         
-                                  , ErrStat            &
-                                  , ErrMsg             &
-                                  , I                  )
+      print*,'I',I,'IDI',IDI(I*6), 'nodeIndx',nodeIndx
+      !iDOF = IDI(I) ! DOF index in constrained system
+      !iNode       = m%DOFtilde2Nodes(iDOF,1) ! First column is node 
+      !nDOFPerNode = m%DOFtilde2Nodes(iDOF,2) ! Second column is number of DOF per node
+      !iiDOF       = m%DOFtilde2Nodes(iDOF,3) ! Third column is dof index for this joint (1-6 for cantilever)
+      Point = Nodes(nodeIndx, 2:4)
+      CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
+      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
    END DO
    
-   !---------------------------------------------------------------------
-   !    Interior nodes
-   !---------------------------------------------------------------------
+   ! --- Interior nodes
+   iOffset = NNodes_I
    DO I = 1,NNodes_L 
-      ! Create the node on the mesh
+      ! Create the node and mesh element
       nodeIndx = IDL(I*6) / 6     !TODO TODO TODO integer division gives me the actual node index, is it true? Yes it is not the nodeID of the input file that may not be sequential, but the renumbered list of nodes
-      CALL MeshPositionNode (   inputMesh           &
-                              , I + NNodes_I        &
-                              , Nodes(nodeIndx,2:4) &
-                              , ErrStat             &
-                              , ErrMsg              )
-      IF ( ErrStat /= ErrID_None ) RETURN
-
-      ! Create the mesh element
-      CALL MeshConstructElement (   inputMesh          &
-                                  , ELEMENT_POINT      &                         
-                                  , ErrStat            &
-                                  , ErrMsg             &
-                                  , I + NNodes_I       )
+      Point = Nodes(nodeIndx, 2:4)
+      CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
+      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
    END DO
    
-   !---------------------------------------------------------------------
-   !    Base Reaction nodes
-   !---------------------------------------------------------------------
+   ! --- Base Reaction nodes
+   iOffset = NNodes_I + NNodes_L
    DO I = 1,NNodes_C 
-      ! Create the node on the mesh
+      ! Create the node and mesh element
       nodeIndx = IDC(I*6) / 6     ! TODO  TODO TODO integer division gives me the actual node index, is it true? Yes it is not the nodeID
-      CALL MeshPositionNode (   inputMesh                 &
-                              , I + NNodes_I + NNodes_L   &
-                              , Nodes(nodeIndx,2:4)       &  
-                              , ErrStat                   &
-                              , ErrMsg                    )
-      IF ( ErrStat /= ErrID_None ) RETURN
-      
-      ! Create the mesh element
-      CALL MeshConstructElement (   inputMesh                 &
-                                  , ELEMENT_POINT             &                         
-                                  , ErrStat                   &
-                                  , ErrMsg                    &
-                                  , I + NNodes_I + NNodes_L   )
+      print*,'I',I,'IDC',IDC(I*6), 'nodeIndx',nodeIndx
+      Point = Nodes(nodeIndx, 2:4)
+      CALL MeshPositionNode(inputMesh, I+iOffSet, Point, ErrStat, ErrMsg); IF(ErrStat/=ErrID_None) RETURN
+      CALL MeshConstructElement(inputMesh, ELEMENT_POINT, ErrStat, ErrMsg, I+iOffset)
    END DO
    CALL MeshCommit ( inputMesh, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) RETURN
@@ -323,10 +298,9 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ! Assemble Stiffness and mass matrix
    CALL AssembleKM(Init, p, m, ErrStat2, ErrMsg2); if(Failed()) return
 
-   ! --- Calculate values for FEMparams (for summary file output only
-   ! Solve dynamics problem
+   ! --- Eigen values of full system (for summary file output only)
+   ! True below is to remove the constraints
    ! We call the EigenSolver here only so that we get a print-out the eigenvalues from the full system (minus Reaction DOF)
-   ! The results, Phi is not used in the remainder of this Init subroutine, Omega goes to outsummary.
    FEMparams%NOmega = Init%TDOF - p%Nreact*6 !removed an extra "-6"  !Note if fixity changes at the reaction points, this will need to change
    CALL AllocAry(FEMparams%Omega,            FEMparams%NOmega, 'FEMparams%Omega', ErrStat2, ErrMsg2 ); if(Failed()) return
    CALL AllocAry(FEMparams%Modes, Init%TDOF, FEMparams%NOmega, 'FEMparams%Modes', ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -382,7 +356,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    CALL CreateTPMeshes( InitInput%TP_RefPoint, u%TPMesh, y%Y1Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
    
    ! Construct the input mesh for the interior nodes which result from the Craig-Bampton reduction
-   CALL CreateY2Meshes( Init%NNode, Init%Nodes, Init%NInterf, p%IDI, p%NNodes_L, p%IDL, p%NReact, p%IDC, u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
+   CALL CreateY2Meshes( Init%NNode, Init%Nodes, p%NInterf, p%IDI, p%NNodes_L, p%IDL, p%NReact, p%IDC, u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
    
    ! Initialize the outputs & Store mapping between nodes and elements  
    CALL SDOUT_Init( Init, y, p, m, InitOut, InitInput%WtrDpth, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -936,16 +910,16 @@ IF (Check ( ( p%NReact < 1 ) .OR. (p%NReact > Init%NJoints) , 'NReact must be gr
 
 !------- INTERFACE JOINTS: T/F for Locked (to the TP)/Free DOF @each Interface Joint (only Locked-to-TP implemented thus far (=rigid TP)) ---------
 ! Joints with reaction forces, joint number and locked/free dof
-CALL ReadCom  ( UnIn, SDInputFile,               'INTERFACE JOINTS'                     ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadIVar ( UnIn, SDInputFile, Init%NInterf, 'NInterf', 'Number of joints fixed to TP',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadCom  ( UnIn, SDInputFile,               'Interface joints headers',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL ReadCom  ( UnIn, SDInputFile,               'Interface joints units  ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
-CALL AllocAry(Init%Interf, Init%NInterf, InterfCol, 'Interf', ErrStat2, ErrMsg2); if(Failed()) return
-DO I = 1, Init%NInterf
+CALL ReadCom  ( UnIn, SDInputFile,              'INTERFACE JOINTS'                     ,ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadIVar ( UnIn, SDInputFile, p%NInterf, 'NInterf', 'Number of joints fixed to TP',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadCom  ( UnIn, SDInputFile,            'Interface joints headers',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL ReadCom  ( UnIn, SDInputFile,            'Interface joints units  ',ErrStat2, ErrMsg2, UnEc ); if(Failed()) return
+CALL AllocAry(p%Interf, p%NInterf, InterfCol, 'Interf', ErrStat2, ErrMsg2); if(Failed()) return
+DO I = 1, p%NInterf
    CALL ReadIAry( UnIn, SDInputFile, Dummy_IntAry, InterfCol, 'Interf', 'Interface joint number and dof', ErrStat2,ErrMsg2, UnEc); if(Failed()) return
-   Init%Interf(I,:) = Dummy_IntAry(1:InterfCol)
+   p%Interf(I,:) = Dummy_IntAry(1:InterfCol)
 ENDDO
-IF (Check( ( Init%NInterf < 0 ) .OR. (Init%NInterf > Init%NJoints), 'NInterf must be non-negative and less than number of joints.')) RETURN
+IF (Check( ( p%NInterf < 0 ) .OR. (p%NInterf > Init%NJoints), 'NInterf must be non-negative and less than number of joints.')) RETURN
 
 !----------------------------------- MEMBERS --------------------------------------
 ! One day we will need to take care of COSMIDs for non-circular members
@@ -1566,15 +1540,13 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ! number of nodes:
-   p%NNodes_I  = Init%NInterf                         ! Number of interface nodes
-   p%NNodes_L  = Init%NNode - p%NReact - p%NNodes_I   ! Number of Interior nodes =(TDOF-DOFC-DOFI)/6 =  (6*Init%NNode - (p%NReact+p%NNodes_I)*6 ) / 6 = Init%NNode - p%NReact -p%NNodes_I
 
-   ! --- Counting DOFs:  
-   ! DOFR (retained) = DOFI (interface), DOFC (reaction),
-   ! DOFL (internal)
-   ! DOFM (CB modes)
-   call CountDOFs(); if(Failed()) return
+   ! --- Partitioon DOFs and Nodes into sets:  I=Interface ,C=Boundary (bottom), R=(I+C), L=Interior
+   !! Partition Nodes into: Nodes_I (Interf), Nodes_C (React), Nodes_L
+   !! Partitions the DOF index arrays into IDR=[IDC, ICI] and IDL (interior)
+   !! Sets the DOF mapping [_,IDY] =sort([IDI, IDL, IDC]), DOF map, Y is in the continuous order [I,L,C]
+   call PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat2, ErrMsg2) ; if(Failed()) return
+
    IF(Init%CBMod) THEN ! C-B reduction         
       ! check number of internal modes
       IF(p%Nmodes > p%DOFL) THEN
@@ -1616,8 +1588,6 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    CALL AllocAry( CBparams%OmegaL, p%DOFL,               'CBparams%OmegaL', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Craig_Bampton')
    CALL AllocAry( CBparams%TI2,    p%DOFR, 6,            'CBparams%TI2',    ErrStat2, ErrMsg2 ); if(Failed()) return
    
-   ! Set the index arrays p%IDI, p%IDR, p%IDL, p%IDC, and p%IDY. 
-   CALL SetIndexArrays(Init, p, ErrStat2, ErrMsg2) ; if(Failed()) return
 
    ! Set MRR, MLL, MRL, KRR, KLL, KRL, FGR, FGL, based on
    !     Init%M, Init%K, and Init%FG data and indices p%IDR and p%IDL:
@@ -1670,38 +1640,6 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    CALL CleanUpCB()
 
 contains
-   SUBROUTINE CountDOFs()
-      use IntegerList, only: len
-      INTEGER(IntKi) :: iNode, iiNode
-      ErrStat2 = ErrID_None
-      ErrMsg2  = ""
-      ! Interface DOFS
-      p%DOFI =0
-      do iiNode= 1,Init%NInterf
-         iNode = Init%Interf(iiNode,1)
-         p%DOFI = p%DOFI + len(m%NodesDOFtilde(iNode))
-      enddo
-      if (p%DOFI /= p%NNodes_I*6) then
-         ErrMsg2='Wrong number of DOF for interface nodes, likely some interface nodes are special joints and should be cantilever instead.'; ErrStat2=ErrID_Fatal
-         return
-      endif
-      ! Reaction DOFs
-      do iiNode= 1,p%NReact
-         iNode = p%Reacts(iiNode,1)
-         p%DOFC = p%DOFC + len(m%NodesDOFtilde(iNode))
-      enddo
-      if (p%DOFC /= p%NReact*6) then
-         ErrMsg2='Wrong number of DOF for reactions nodes, likely some reaction nodes are special joints and should be cantilever instead.'; ErrStat2=ErrID_Fatal
-         return
-      endif
-      p%DOFR = p%DOFC + p%DOFI
-      p%DOFL = Init%nDOFRed - p%DOFR ! TODO
-      print*,'Number of DOFs: "interface" (I)',p%DOFI
-      print*,'Number of DOFs: "reactions" (C)',p%DOFC
-      print*,'Number of DOFs: interface   (R)',p%DOFR
-      print*,'Number of DOFs: internal    (L)',p%DOFL
-      print*,'Number of DOFs: total     (R+L)',Init%nDOFRed
-   END SUBROUTINE
 
    SUBROUTINE Fatal(ErrMsg_in)
       character(len=*), intent(in) :: ErrMsg_in
@@ -2365,12 +2303,6 @@ if (p%Nmodes > 0 ) THEN
    CALL AllocAry( p%D2_64,         p%DOFL, p%DOFL, 'p%D2_64',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%NModes == 0       
    CALL AllocAry( p%F2_61,         p%DOFL,         'p%F2_61',         ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters') ! is zero when p%NModes == 0
 end if
-                                   
-   CALL AllocAry( p%IDI,           p%DOFI,               'p%IDI',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%IDR,           p%DOFR,               'p%IDR',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%IDL,           p%DOFL,               'p%IDL',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%IDC,           p%DOFC,               'p%IDC',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
-   CALL AllocAry( p%IDY,           p%DOFC+p%DOFI+p%DOFL, 'p%IDY',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')        
            
 if ( p%SttcSolve ) THEN  
    CALL AllocAry( p%PhiL_T,        p%DOFL, p%DOFL, 'p%PhiL_T',        ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'AllocParameters')
@@ -2406,55 +2338,89 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
 END SUBROUTINE AllocMiscVars
 
 !------------------------------------------------------------------------------------------------------
-!> Set the index arrays IDI, IDR, IDL, IDC, and IDY. 
-SUBROUTINE SetIndexArrays(Init, p, ErrStat, ErrMsg)
-   USE qsort_c_module, only: QsortC
-
-   TYPE(SD_InitType),       INTENT(  IN)        :: Init        ! Input data for initialization routine
-   TYPE(SD_ParameterType),  INTENT(INOUT)       :: p           ! Parameters   
-   INTEGER(IntKi),          INTENT(  OUT)       :: ErrStat     ! Error status of the operation
-   CHARACTER(*),            INTENT(  OUT)       :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+!> Partition DOFs and Nodes into sets:  I=Interface ,C=Boundary (bottom), R=(I+C), L=Interior
+!! Partition Nodes into: Nodes_I (Interf), Nodes_C (React), Nodes_L
+!! Partition the DOF index arrays into IDR=[IDC, ICI] and IDL (interior)
+!! Sets the DOF mapping [_,IDY] =sort([IDI, IDL, IDC]), Y is in the continuous order [I,L,C]
+SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
+   use qsort_c_module, only: QsortC
+   use IntegerList, only: len, concatenate_lists, lists_difference
+   type(SD_Inittype),       intent(  in)  :: Init        !< Input data for initialization routine
+   type(SD_MiscVartype),    intent(  in)  :: m           !< Misc
+   type(SD_Parametertype),  intent(inout) :: p           !< Parameters   
+   integer(IntKi),          intent(  out) :: ErrStat     !< Error status of the operation
+   character(*),            intent(  out) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    ! local variables
-   INTEGER(IntKi), allocatable                  :: TempIDY(:,:)
-   INTEGER(IntKi), allocatable                  :: IDT(:)
-   INTEGER(IntKi)                               :: I, K  ! counters
+   integer(IntKi), allocatable :: TempIDY(:,:)
+   integer(IntKi), allocatable :: IDT(:)
+   integer(IntKi)              :: I                ! counters
+   integer(IntKi)              :: iNode, iiNode
+   integer(IntKi) :: NNodes_R
+   integer(IntKi), allocatable :: INodesAll(:)
+   integer(IntKi), allocatable :: Nodes_R(:)
+   integer(IntKi)              :: ErrStat2 ! < Error status of the operation
+   character(ErrMsgLen)        :: ErrMsg2
    ErrStat = ErrID_None
    ErrMsg  = ""
-         
+   ! --- Count nodes per types
+   p%NNodes_I  = p%NInterf             ! Number of interface nodes
+   NNodes_R    = p%NReact+p%NInterf    ! Number of retained nodes
+   p%NNodes_L  = Init%NNode - NNodes_R ! Number of Interior nodes =(TDOF-DOFC-DOFI)/6 =  (6*Init%NNode - (p%NReact+p%NNodes_I)*6 ) / 6 = Init%NNode - p%NReact -p%NNodes_I
+
+   CALL AllocAry( p%Nodes_L, p%NNodes_L, 1, 'p%Nodes_L', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+   CALL AllocAry( Nodes_R  , NNodes_R     , 'Nodes_R'  , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+
+   ! --- Partition Nodes 
+   ! Nodes_L = IAll - NodesR
+   allocate(INodesAll(1:Init%NNode));
+   do iNode=1,Init%NNode
+      INodesAll(iNode)=iNode
+   enddo
+   call concatenate_lists(p%Reacts(:,1), p%Interf(:,1), Nodes_R, ErrStat2, ErrMsg2); if(Failed()) return
+   call lists_difference(INodesAll, Nodes_R, p%Nodes_L(:,1), ErrStat2, ErrMsg2); if(Failed()) return
+  
+   ! --- Count DOFs
+   ! Interface DOFS
+   p%DOFI =0
+   do iiNode= 1,p%NInterf
+      iNode = p%Interf(iiNode,1)
+      p%DOFI = p%DOFI + len(m%NodesDOFtilde(iNode))
+   enddo
+   ! Reaction DOFs
+   do iiNode= 1,p%NReact
+      iNode = p%Reacts(iiNode,1)
+      p%DOFC = p%DOFC + len(m%NodesDOFtilde(iNode))
+   enddo
+   p%DOFR = p%DOFC + p%DOFI
+   p%DOFL = Init%nDOFRed - p%DOFR ! TODO
+   ! --- Safety checks
+   if (p%DOFC /= p%NReact*6) then
+      call Fatal('Wrong number of DOF for reactions nodes, likely some reaction nodes are special joints and should be cantilever instead.'); return
+   endif
+   if (p%DOFI /= p%NNodes_I*6) then
+      call Fatal('Wrong number of DOF for interface nodes, likely some interface nodes are special joints and should be cantilever instead.'); return
+   endif
+
+   ! Set the index arrays p%IDI, p%IDR, p%IDL, p%IDC, and p%IDY. 
+   CALL AllocAry( p%IDI, p%DOFI,               'p%IDI',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+   CALL AllocAry( p%IDC, p%DOFC,               'p%IDC',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+   CALL AllocAry( p%IDR, p%DOFR,               'p%IDR',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+   CALL AllocAry( p%IDL, p%DOFL,               'p%IDL',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+   CALL AllocAry( p%IDY, p%DOFC+p%DOFI+p%DOFL, 'p%IDY',     ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
+   if(Failed()) return
+
    ! Indices IDI for interface DOFs
    p%IDI = Init%IntFc(1:p%DOFI, 1)  ! Interface DOFs (indices updated after DirectElimination)
-    
    ! Indices IDC for constraint DOFs
    p%IDC = Init%BCs(1:p%DOFC, 1) ! Reaction DOFs (indices updated after DirectElimination)
-   
    ! Indices IDR = [IDC, IDI], "retained interface DOFS" 
-   p%IDR(       1:p%DOFC ) = p%IDC  ! Constraint DOFs again
-   p%IDR(p%DOFC+1:p%DOFR)  = p%IDI  ! IDR contains DOFs ofboundaries, constraints first then interface
+   call concatenate_lists(p%IDC, p%IDI, p%IDR, ErrStat2, ErrMsg2); if(Failed()) return
 
    ! --- Indices IDL for internal DOFs = AllDOF - IDR 
    ! First set the all DOFs indices IDT = 1:nDOFRed
    allocate(IDT(1:Init%nDOFRed))
-   DO I = 1, Init%nDOFRed  !Total DOFs
-      IDT(I) = I      
-   ENDDO
-   ! Then, remove DOFs on the boundaries:
-   DO I = 1, p%DOFR  !Boundary DOFs (Interface + Constraints)
-      IDT(p%IDR(I)) = 0   !Set 0 wherever DOFs belong to boundaries
-   ENDDO
-   ! That leaves the internal DOFs:
-   K = 0
-   DO I = 1, Init%nDOFRed
-      IF ( IDT(I) .NE. 0 ) THEN
-         K = K+1
-         p%IDL(K) = IDT(I)   !Internal DOFs
-      ENDIF
-   ENDDO   
-   deallocate(IDT)
-   IF ( K /= p%DOFL ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg = "SetIndexArrays: IDL or p%DOFL are the incorrect size."
-      RETURN
-   END IF
+   DO I = 1, Init%nDOFRed; IDT(I) = I;      ENDDO
+   call lists_difference(IDT, p%IDR, p%IDL, ErrStat2, ErrMsg2); if(Failed()) return
    
    ! --- Index [_,IDY] =sort([IDI, IDL, IDC]), DOF map, Y is in the continuous order [I,L,C]
    ! set the second column of the temp array      
@@ -2467,13 +2433,41 @@ SUBROUTINE SetIndexArrays(Init, p, ErrStat, ErrMsg)
    TempIDY(1:p%DOFI, 1)                              = p%IDI
    TempIDY(p%DOFI+1 : p%DOFI+p%DOFL, 1)              = p%IDL
    TempIDY(p%DOFI+p%DOFL+1: p%DOFI+p%DOFL+p%DOFC, 1) = p%IDC
-   ! sort based on the first column
-   CALL QsortC( TempIDY )
-   ! the second column is the key:
-   p%IDY = TempIDY(:, 2)
-   deallocate(TempIDY)
+   CALL QsortC( TempIDY ) ! sort based on the first column
+   p%IDY = TempIDY(:, 2)  ! the second column is the key:
+   !
+   call CleanUp()
+
+   print*,'Nodes_I',p%Interf(:,1)
+   print*,'Nodes_C',p%Reacts(:,1)
+   print*,'Nodes_L',p%Nodes_L
+   print*,'Number of DOFs: "interface" (I)',p%DOFI
+   print*,'Number of DOFs: "reactions" (C)',p%DOFC
+   print*,'Number of DOFs: interface   (R)',p%DOFR
+   print*,'Number of DOFs: internal    (L)',p%DOFL
+   print*,'Number of DOFs: total     (R+L)',Init%nDOFRed
+   print*,'Number of Nodes: "interface" (I)',p%NNodes_I
+   print*,'Number of Nodes: "reactions" (C)',p%NReact
+   print*,'Number of Nodes: internal    (L)',p%NNodes_L
+   print*,'Number of Nodes: total     (R+L)',Init%NNode
+contains
+   LOGICAL FUNCTION Failed()
+        call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L') 
+        Failed =  ErrStat >= AbortErrLev
+        if (Failed) call CleanUp()
+   END FUNCTION Failed
+   SUBROUTINE Fatal(ErrMsg_in)
+      character(len=*), intent(in) :: ErrMsg_in
+      CALL SetErrStat(ErrID_Fatal, ErrMsg_in, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L');
+      CALL CleanUp()
+   END SUBROUTINE Fatal
+   SUBROUTINE CleanUp()
+      if(allocated(TempIDY))   deallocate(TempIDY)
+      if(allocated(IDT))       deallocate(IDT)
+      if(allocated(INodesAll)) deallocate(INodesAll)
+   END SUBROUTINE CleanUp
    
-END SUBROUTINE SetIndexArrays
+END SUBROUTINE PartitionDOFNodes_I_C_R_L
 
 !------------------------------------------------------------------------------------------------------
 !> Take the input u LMesh and constructs the appropriate corresponding UFL vector
@@ -2566,12 +2560,12 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'No. of Reaction DOFs:',p%NReact*6
    WRITE(UnSum, '(A, A6)')  'Reaction DOF_ID',      'LOCK'
-   WRITE(UnSum, '(I10, I10)') ((Init%BCs(i, j), j = 1, 2), i = 1, p%NReact*6)
+   WRITE(UnSum, '(I10, I10)') ((Init%BCs(i, j), j = 1, 2), i = 1, p%NReact*6)! TODO TODO TODO might have been updated
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'No. of Interface DOFs:',p%DOFI
    WRITE(UnSum, '(A,A6)')  'Interface DOF ID',      'LOCK'
-   WRITE(UnSum, '(I10, I10)') ((Init%IntFc(i, j), j = 1, 2), i = 1, p%DOFI)
+   WRITE(UnSum, '(I10, I10)') ((Init%IntFc(i, j), j = 1, 2), i = 1, p%DOFI) ! TODO TODO TODO might have been updated
 
    WRITE(UnSum, '()') 
    WRITE(UnSum, '(A,I6)')  'Number of concentrated masses (NCMass):',Init%NCMass

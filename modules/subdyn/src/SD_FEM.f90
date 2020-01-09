@@ -268,10 +268,10 @@ SUBROUTINE SD_ReIndex_CreateNodesAndElems(Init,p, ErrStat, ErrMsg)
    enddo
 
    ! --- Re-Initialize interface joints, pointing to index instead of JointID
-   do I = 1, Init%NInterf
-      JointID=Init%Interf(I,1)
-      Init%Interf(I,1) = FINDLOCI(Init%Joints(:,1), JointID )
-      if (Init%Interf(I,1)<=0) then
+   do I = 1, p%NInterf
+      JointID=p%Interf(I,1)
+      p%Interf(I,1) = FINDLOCI(Init%Joints(:,1), JointID )
+      if (p%Interf(I,1)<=0) then
          CALL Fatal('Interface joint table: line '//TRIM(Num2LStr(I))//' refers to JointID '//trim(Num2LStr(JointID))//' which is not in the joint list!')
          return
       endif
@@ -381,8 +381,8 @@ SUBROUTINE SD_Discrt(Init,p, ErrStat, ErrMsg)
    Init%NNode = Init%NNode + (NNE - 2)*Init%NElem  ! TODO TODO TODO Same as above. 
    
    ! check the number of interior modes
-   IF ( p%Nmodes > 6*(Init%NNode - Init%NInterf - p%NReact) ) THEN
-      CALL Fatal(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(Init%NNode - Init%NInterf - p%NReact) )))
+   IF ( p%Nmodes > 6*(Init%NNode - p%NInterf - p%NReact) ) THEN
+      CALL Fatal(' NModes must be less than or equal to '//TRIM(Num2LStr( 6*(Init%NNode - p%NInterf - p%NReact) )))
       RETURN
    ENDIF
    
@@ -808,7 +808,7 @@ SUBROUTINE DistributeDOF(Init, p, m, ErrStat, ErrMsg)
    CALL InitBCs(Init, p)
       
    ! --- Initialize interface constraint vector - NOTE: Needs Reindexing first
-   CALL AllocAry(Init%IntFc,      6*Init%NInterf,2,          'Init%IntFc',      ErrStat2, ErrMsg2); if(Failed()) return
+   CALL AllocAry(Init%IntFc,      6*p%NInterf,2,          'Init%IntFc',      ErrStat2, ErrMsg2); if(Failed()) return
    CALL InitIntFc(Init, p)
 
    ! --- Safety check
@@ -863,11 +863,11 @@ CONTAINS
       TYPE(SD_ParameterType),INTENT(IN   ) :: p
       INTEGER(IntKi) :: I, J, iNode
       Init%IntFc = -9999
-      DO I = 1, Init%NInterf
-         iNode = Init%Interf(I,1) ! Node index
+      DO I = 1, p%NInterf
+         iNode = p%Interf(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
             Init%IntFc( (I-1)*6+J, 1) = m%NodesDOF(iNode)%List(J) ! DOF number (unconstrained)
-            Init%IntFc( (I-1)*6+J, 2) = Init%Interf(I, J+1);      ! 0 or 1 if fixed to interface 
+            Init%IntFc( (I-1)*6+J, 2) = p%Interf(I, J+1);      ! 0 or 1 if fixed to interface 
          ENDDO
       ENDDO
    END SUBROUTINE InitIntFc
@@ -1238,8 +1238,8 @@ CONTAINS
       TYPE(SD_InitType     ),INTENT(INOUT) :: Init
       TYPE(SD_ParameterType),INTENT(IN   ) :: p
       INTEGER(IntKi) :: I, J, iNode
-      DO I = 1, Init%NInterf
-         iNode = Init%Interf(I,1) ! Node index
+      DO I = 1, p%NInterf
+         iNode = p%Interf(I,1) ! Node index
          DO J = 1, 6 ! ItfTDXss    ItfTDYss    ItfTDZss    ItfRDXss    ItfRDYss    ItfRDZss
             Init%IntFc( (I-1)*6+J, 1) = m%NodesDOFtilde(iNode)%List(J) ! DOF number (unconstrained)
          ENDDO
@@ -1288,7 +1288,7 @@ SUBROUTINE RAElimination(Elements, Tc, INodesID, Init, p, ErrStat, ErrMsg)
    call init_list(INodesInterf, 0, 0, ErrStat2, ErrMsg2);
    do iNodeID = 1, size(INodesID)
       NodeID = INodesID(iNodeID)
-      iFound =  FINDLOCI( Init%Interf(:,1), NodeID)
+      iFound =  FINDLOCI( p%Interf(:,1), NodeID)
       if (iFound>0) then
          call append(INodesInterf, iNodeID, ErrStat2, ErrMsg2)
          ! This node is an interface node
