@@ -38,14 +38,14 @@ typedef	^	MeshAuxDataType	ReKi   	Me      	{:}{:}{:}{:}	-	-	"Mass matrix connect
 typedef	^	MeshAuxDataType	ReKi   	Ke      	{:}{:}{:}{:}	-	-	"Mass matrix connected to each joint element for outAll output"
 typedef	^	MeshAuxDataType	ReKi   	Fg      	{:}{:}{:}	-	-	"Gravity load vector connected to each joint element for requested member output"
 # CB_MatArrays: Matrices and arrays for CB summary
-typedef	SubDyn/SD	CB_MatArrays	INTEGER	DOFM	-	-	-	"retained degrees of freedom (modes)"
+typedef	SubDyn/SD	CB_MatArrays	INTEGER	nDOFM	-	-	-	"retained degrees of freedom (modes)"
 typedef	^	CB_MatArrays	ReKi   	TI2	{:}{:}	-	-	"TI2 matrix to refer to total mass to (0,0,0)"
 typedef	^	CB_MatArrays	ReKi   	MBB	{:}{:}	-	-	"FULL MBB ( no constraints applied)"
 typedef	^	CB_MatArrays	ReKi   	MBM	{:}{:}	-	-	"FULL MBM ( no constraints applied)"
 typedef	^	CB_MatArrays	ReKi   	KBB	{:}{:}	-	-	"FULL KBB ( no constraints applied)"
-typedef	^	CB_MatArrays	ReKi   	PhiL	{:}{:}	-	-	"Retained CB modes, possibly allPhiL(DOFL,DOFL), or PhiL(DOFL,DOFM)"
+typedef	^	CB_MatArrays	ReKi   	PhiL	{:}{:}	-	-	"Retained CB modes, possibly allPhiL(nDOFL,nDOFL), or PhiL(nDOFL,nDOFM)"
 typedef	^	CB_MatArrays	ReKi   	PhiR	{:}{:}	-	-	"FULL PhiR ( no constraints applied)"
-typedef	^	CB_MatArrays	ReKi   	OmegaL	{:}	-	-	"Eigenvalues of retained CB modes, possibly all (DOFL or DOFM)"
+typedef	^	CB_MatArrays	ReKi   	OmegaL	{:}	-	-	"Eigenvalues of retained CB modes, possibly all (nDOFL or nDOFM)"
 # FEM_MatArrays: Matrices and arrays for FEM summary
 typedef	SubDyn/SD	FEM_MatArrays	ReKi   	Omega	{:}	-	-	"Eigenvalues of full FEM model,  we calculate them all"
 typedef	^	FEM_MatArrays	INTEGER	NOmega	-	-	-	"Number of full FEM Eigenvalues (for now TDOF-6*Nreact)"
@@ -96,13 +96,10 @@ typedef	^	^	CHARACTER(10)	SSOutList	{:}	-	-	"List of Output Channels"
 typedef	^	^	LOGICAL	OutCOSM	-	-	-	"Output Cos-matrices Flag"
 typedef	^	^	LOGICAL	TabDelim	-	-	-	"Generate a tab-delimited output file in OutJckF-Flag"
 #-------------------------- arrays and variables used in the module ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-typedef	^	^	INTEGER	NNode	-	-	-	"Total number of nodes"
 typedef	^	^	INTEGER	NElem	-	-	-	"Total number of elements"
 typedef	^	^	INTEGER	NPropB  -	-	-	"Total number of property sets for Beams"
 typedef	^	^	INTEGER	NPropC 	-	-	-	"Total number of property sets for Cable"
 typedef	^	^	INTEGER	NPropR 	-	-	-	"Total number of property sets for Rigid"
-typedef	^	^	INTEGER	TDOF	-	-	-	"Total degree of freedom"
-typedef	^	^	INTEGER	nDOFRed	-	-	-	"Total degree of freedom after constraint reduction"
 typedef	^	^	ReKi	Nodes	{:}{:}	-	-	"Nodes number and coordinates"
 typedef	^	^	ReKi	PropsB    	{:}{:}	-	-	"Property sets and values for Beams"
 typedef	^	^	ReKi	PropsC    	{:}{:}	-	-	"Property sets and values for Cable"
@@ -148,6 +145,12 @@ typedef  ^            ^             ReKi                     UR_bar_dotdot {:}  
 typedef  ^            ^             ReKi                     UL            {:}  -  -  
 typedef  ^            ^             ReKi                     UL_dot        {:}  -  -  
 typedef  ^            ^             ReKi                     UL_dotdot     {:}  -  -  
+typedef  ^            ^             ReKi                     U_full        {:}  -  -  
+typedef  ^            ^             ReKi                     U_full_dot    {:}  -  -  
+typedef  ^            ^             ReKi                     U_full_dotdot {:}  -  -  
+typedef  ^            ^             ReKi                     U_red          {:}  -  -  
+typedef  ^            ^             ReKi                     U_red_dot      {:}  -  -  
+typedef  ^            ^             ReKi                     U_red_dotdot   {:}  -  -  
 ### data for writing to an output file (this data is associated with time, but saved/written in CalcOutput so not stored as an other state) ###
 typedef	^	          ^             ReKi                     SDWrOutput {:} -  -  "Data from previous step to be written to a SubDyn output file"
 typedef	^	          ^             DbKi                     LastOutTime -  -  -  "The time of the most recent stored output data"	"s"
@@ -158,15 +161,27 @@ typedef	^	          ^             IntKi                    INodes_Mesh_to_SD {:}
 typedef	^	          ^             IntKi                    INodes_SD_to_Mesh {:} - - "Nodes indices from subdyn nodes to U/Y2-Mesh iMeshNode = INodes_SD_to_Mesh(iSDNode)  "	"-"
 typedef	^	          ^             IntKi                    ElemsDOF  {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system "	"-"
 typedef	^	          ^             IntKi                    DOFtilde2Nodes {:}{:} -  -  "nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1"	"-"
-typedef	^	          ^             ReKi                     Tred      {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"	"-"
 typedef	^	          ^             ReKi                     Fext      {:} -  -  "External loads on unconstrained DOFs"	"-"
 typedef	^	          ^             ReKi                     Fext_red  {:} -  -  "External loads on constrained DOFs, Fext_red= T^t Fext"	"-"
 
 
 
 # ============================== Parameters ============================================================================================================================================
+# --- Algo
 typedef	^	ParameterType	DbKi	SDDeltaT	-	-	-	"Time step (for integration of continuous states)"	seconds
+typedef	^	ParameterType	IntKi	IntMethod	-	-	-	"INtegration Method (1/2/3)Length of y2 array"
+# --- FEM
+typedef	^	ParameterType	INTEGER	nDOF	    -	-	-	"Total degree of freedom"
+typedef	^	ParameterType	INTEGER	nDOF_red	-	-	-	"Total degree of freedom after constraint reduction"
+typedef	^	ParameterType	IntKi	Nmembers	-	-	-	"Number of members of the sub structure"
+typedef	^	ParameterType	IntKi	Elems	{:}{:}	-	-	"Element nodes connections"
+typedef	^	ParameterType	ElemPropType	ElemProps	{:}	-	-	"List of element properties"
+# --- Constraints reduction
+typedef	^	          ^     ReKi    T_red {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"	"-"
+# --- CB reduction
 typedef	^	ParameterType	Logical	SttcSolve	-	-	-	"Solve dynamics about static equilibrium point (flag)"
+typedef	^	ParameterType	IntKi	NModes	-	-	-	"Number of modes to retain in C-B method"
+typedef	^	ParameterType	IntKi	qmL	-	-	-	"Length of state array"
 typedef	^	ParameterType	ReKi	NOmegaM2	{:}	-	-	"Coefficient of x in X (negative omegaM squared)"
 typedef	^	ParameterType	ReKi	N2OmegaMJDamp	{:}	-	-	"Coefficient of x in X (negative 2 omegaM * JDamping)"
 typedef	^	ParameterType	ReKi	MMB	{:}{:}	-	-	"Matrix after C-B reduction (transpose of MBM"
@@ -188,35 +203,31 @@ typedef	^	ParameterType	ReKi	KBB	{:}{:}	-	-	"Matrix after C-B reduction"
 typedef	^	ParameterType	ReKi	MBM	{:}{:}	-	-	"Matrix after C-B reduction"
 typedef	^	ParameterType	ReKi	PhiL_T	{:}{:}	-	-	"Transpose of Matrix of C-B  modes"
 typedef	^	ParameterType	ReKi	PhiLInvOmgL2	{:}{:}	-	-	"Matrix of C-B  modes times the inverse of OmegaL**2 (Phi_L*(Omg**2)^-1)"
-typedef	^	ParameterType	ReKi	FGL	{:}	-	-	"Internal node DOFL, gravity loads"
 typedef	^	ParameterType	ReKi	AM2Jac	{:}{:}	-	-	"Jacobian (factored) for Adams-Boulton 2nd order Integration"
 typedef	^	ParameterType	IntKi	AM2JacPiv	{:}	-	-	"Pivot array for Jacobian factorization (for Adams-Boulton 2nd order Integration)"
 typedef	^	ParameterType	ReKi	TI	{:}{:}	-	-	"Matrix to calculate TP reference point reaction at top of structure"
 typedef	^	ParameterType	ReKi	TIreact	{:}{:}	-	-	"Matrix to calculate single point reaction at base of structure"
-typedef	^	ParameterType	IntKi	NModes	-	-	-	"Number of modes to retain in C-B method"
-typedef	^	ParameterType	IntKi	Elems	{:}{:}	-	-	"Element nodes connections"
-typedef	^	ParameterType	IntKi	qmL	-	-	-	"Length of state array"
-typedef	^	ParameterType	IntKi	DofL	-	-	-	"Internal nodes # of DOFs"
-typedef	^	ParameterType	IntKi	DofI	-	-	-	"Interface nodes # of DOFs"
-typedef	^	ParameterType	IntKi	DofR	-	-	-	"Interface and restrained nodes # of DOFs"
-typedef	^	ParameterType	IntKi	DofC	-	-	-	"Contrained nodes # of DOFs"
-typedef	^	ParameterType	IntKi	nNodes_RbarL	-	-	-	"Number of Interface + Internal nodes"
-typedef	^	ParameterType	IntKi	nNodes_L	-	-	-	"Number of Internal nodes"
-typedef	^	ParameterType	IntKi	Nodes_L	{:}{:}	-	-	"Internal nodes (not interface nor reaction)"
+# --- Partitioning I L C Y, R=[C I]
+typedef	^	ParameterType	IntKi	nNodes   	-	-	-	"Total number of nodes"
 typedef	^	ParameterType	IntKi	nNodes_I	-	-	-	"Number of Interface nodes"
-typedef	^	ParameterType	IntKi	NInterf	-	-	-	"Number of joints attached to transition piece"
-typedef	^	ParameterType	IntKi	Interf	{:}{:}	-	-	"Interface degree of freedoms"
-typedef	^	ParameterType	IntKi	NReact	-	-	-	"Number of joints with reactions"
-typedef	^	ParameterType	IntKi	Reacts	{:}{:}	-	-	"React degree of freedoms"
-typedef	^	ParameterType	IntKi	Nmembers	-	-	-	"Number of members of the sub structure"
-typedef	^	ParameterType	IntKi	URbarL	-	-	-	"Length of URbar, subarray of y2 array (DOFRb)"
-typedef	^	ParameterType	IntKi	IntMethod	-	-	-	"INtegration Method (1/2/3)Length of y2 array"
-typedef	^	ParameterType	IntKi	NAvgEls	-	2	-	"Max number of elements that should be averaged when calculating outputs at nodes"
+typedef	^	ParameterType	IntKi	nNodes_L	-	-	-	"Number of Internal nodes"
+typedef	^	ParameterType	IntKi	nNodes_C	-	-	-	"Number of joints with reactions"
+typedef	^	ParameterType	IntKi	Nodes_I	{:}{:}	-	-	"Interface degree of freedoms"
+typedef	^	ParameterType	IntKi	Nodes_L	{:}{:}	-	-	"Internal nodes (not interface nor reaction)"
+typedef	^	ParameterType	IntKi	Nodes_C	{:}{:}	-	-	"React degree of freedoms"
+typedef	^	ParameterType	IntKi	nDOFI	-	-	-	"Interface nodes # of DOFs"
+typedef	^	ParameterType	IntKi	nDOFL	-	-	-	"Internal nodes # of DOFs"
+typedef	^	ParameterType	IntKi	nDOFC	-	-	-	"Contrained nodes # of DOFs"
+typedef	^	ParameterType	IntKi	nDOFR	-	-	-	"Interface and restrained nodes # of DOFs"
 typedef	^	ParameterType	IntKi	IDI	{:}	-	-	"Index array of the interface(nodes connect to TP) dofs"
-typedef	^	ParameterType	IntKi	IDR	{:}	-	-	"Index array of the interface and restraint dofs"
 typedef	^	ParameterType	IntKi	IDL	{:}	-	-	"Index array of the internal dofs"
 typedef	^	ParameterType	IntKi	IDC	{:}	-	-	"Index array of the contraint dofs"
+typedef	^	ParameterType	IntKi	IDR	{:}	-	-	"Index array of the interface and restraint dofs"
 typedef	^	ParameterType	IntKi	IDY	{:}	-	-	"Index array of the all dofs in Y2"
+typedef	^	ParameterType	IntKi	URbarL	-	-	-	"Length of URbar, subarray of y2 array (DOFRb)"
+typedef	^	ParameterType	ReKi	FGL	{:}	-	-	"Internal node nDOFL, gravity loads"
+# --- Outputs
+typedef	^	ParameterType	IntKi	NAvgEls	-	2	-	"Max number of elements that should be averaged when calculating outputs at nodes"
 typedef	^	ParameterType	IntKi	NMOutputs	-	- 	-	"Number of members whose output is written"
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of output channels read from input file"
 typedef	^	ParameterType	IntKi	OutSwtch	-	-	-	"Output Requested Channels to local or global output file [1/2/3]"
@@ -227,7 +238,6 @@ typedef	^	ParameterType	CHARACTER(20)	OutSFmt	-	-	-	"Format for Output Headers"
 typedef	^	ParameterType	MeshAuxDataType	MoutLst	{:}	-	-	"List of user requested members and nodes"
 typedef	^	ParameterType	MeshAuxDataType	MoutLst2	{:}	-	-	"List of all member joint nodes and elements for output"
 typedef	^	ParameterType	MeshAuxDataType	MoutLst3	{:}	-	-	"List of all member joint nodes and elements for output"
-typedef	^	ParameterType	ElemPropType	ElemProps	{:}	-	-	"List of element properties"
 typedef	^	ParameterType	OutParmType	OutParam	{:}	-	-	"An array holding names, units, and indices of all of the selected output channels. # logical"
 typedef	^	ParameterType	LOGICAL	OutAll	-	-	-	"Flag to output or not all joint forces"
 typedef	^	ParameterType	LOGICAL	OutReact	-	-	-	"Flag to check whether reactions are requested"

@@ -187,13 +187,13 @@ SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
  
    IF (p%OutReact) THEN  !I need to store all constrained forces and moments; WE do not allow more than one member to be connected at a constrained joint for the time being
 
-      ALLOCATE ( p%MOutLst3(p%NReact), STAT = ErrStat2)     !this list contains different arrays for each of its elements
+      ALLOCATE ( p%MOutLst3(p%nNodes_C), STAT = ErrStat2)     !this list contains different arrays for each of its elements
       ErrMsg2 = 'Error allocating p%MOutLst3 array in SDOut_Init'
       if(Failed()) return
 
-      DO I=1,p%NReact  !For all constrained node
+      DO I=1,p%nNodes_C  !For all constrained node
          pLst => p%MOutLst3(I)
-         pLst%Noutcnt=p%Reacts(I,1) !Assign nodeID for list I, I am using Noutcnt as a temporary holder for it, since nodeID is n array
+         pLst%Noutcnt=p%Nodes_C(I,1) !Assign nodeID for list I, I am using Noutcnt as a temporary holder for it, since nodeID is n array
          NconEls=Init%NodesConnE(pLst%Noutcnt,1) !Number of elements connecting to the joint
          ! ElmIDs: element IDs connecting to the joint; (1,NconEls) and not (NconEls) as the same meshauxtype is used with other MOutLst
          ! Me: has for each selected joint, and for each element attached to that node, a 12x12 matrix (extra dimension redundant)
@@ -258,7 +258,7 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
    ErrStat=ErrID_None
    ErrMsg=""
    
-   DOFC = p%NReact*6 ! bjj, this is p%DOFC    !Total DOFs at the base of structure 
+   DOFC = p%nNodes_C*6 ! bjj, this is p%DOFC    !Total DOFs at the base of structure 
    
    CALL AllocAry(p%TIreact, 6, DOFC, 'p%TIReact', ErrStat, ErrMsg )
    if ( ErrStat /= ErrID_None ) return
@@ -271,7 +271,7 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
 
     !Other rows done per column actually  
    DO I = 1, DOFC
-      nodeID = p%Reacts(ceiling(I/6.0),1)  !Constrained Node ID (this works in the reordered/renumbered p%Reacts) 
+      nodeID = p%Nodes_C(ceiling(I/6.0),1)  !Constrained Node ID (this works in the reordered/renumbered p%Nodes_C) 
       
       x = Init%Nodes(nodeID, 2)
       y = Init%Nodes(nodeID, 3)
@@ -321,8 +321,8 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    Real(ReKi), ALLOCATABLE                  :: ReactNs(:)    !6*Nreact reactions
    REAL(ReKi)                               :: Tmp_Udotdot(12), Tmp_y2(12) !temporary storage for calls to CALC_LOCAL
    
-   Real(ReKi), DIMENSION( p%URbarL+p%DOFL+6*p%Nreact)      :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
-   Real(ReKi),  DIMENSION(p%URbarL+p%DOFL+6*p%Nreact)      ::uddout           ! modifications to Y2 and Udotdot to include constrained node DOFs
+   Real(ReKi), DIMENSION(p%URbarL+p%nDOFL+6*p%nNodes_C) :: yout            ! modifications to Y2 and Udotdot to include constrained node DOFs
+   Real(ReKi), DIMENSION(p%URbarL+p%nDOFL+6*p%nNodes_C) ::uddout           ! modifications to Y2 and Udotdot to include constrained node DOFs
    Integer(IntKi)                              ::sgn !+1/-1 for node force calculations
    type(MeshAuxDataType), pointer :: pLst !< Alias to shorten notation and highlight code similarities
    ErrStat = ErrID_None   
@@ -332,13 +332,13 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
    
    !Create a variable that lists Y2 and adds removed constrained nodes' dofs; we will be using it to carry out other calculations with a special indexing array
    yout =0 !Initialize and populate with Y2 data  
-   yout(1:         p%UrbarL       ) = m%UR_bar
-   yout(p%URbarL+1:p%URbarL+p%DOFL) = m%UL
+   yout(1:         p%UrbarL        ) = m%UR_bar
+   yout(p%URbarL+1:p%URbarL+p%nDOFL) = m%UL
   
    !Same for a variable that deals with Udotdot
    uddout =0 !Initialize and populate with Udotdot data
-   uddout(1          : p%URbarL         ) = m%UR_bar_dotdot
-   uddout(p%URbarL+1 : p%URbarL+p%DOFL  ) = m%UL_dotdot
+   uddout(1          : p%URbarL          ) = m%UR_bar_dotdot
+   uddout(p%URbarL+1 : p%URbarL+p%nDOFL  ) = m%UL_dotdot
 
    ! TODO TODO TODO, there is a lot of similarity between the three outputs sections with some code redundency
          
@@ -434,11 +434,11 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
   ENDIF
   
   !Assign interface forces and moments 
-  AllOuts(IntfSS(1:TPdofL))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
+  AllOuts(IntfSS(1:nDOFL_TP))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
   !Assign interface translations and rotations at the TP ref point  
-  AllOuts(IntfTRss(1:TPdofL))=m%u_TP 
+  AllOuts(IntfTRss(1:nDOFL_TP))=m%u_TP 
   !Assign interface translations and rotations accelerations
-  AllOuts(IntfTRAss(1:TPdofL))= m%udotdot_TP 
+  AllOuts(IntfTRAss(1:nDOFL_TP))= m%udotdot_TP 
 
   ! Assign all SSqm, SSqmdot, SSqmdotdot
   ! We only have space for the first 99 values
@@ -453,7 +453,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
   !Need to Calculate Reaction Forces Now, but only if requested
   IF (p%OutReact) THEN 
        
-       ALLOCATE ( ReactNs(6*p%NReact), STAT = ErrStat )
+       ALLOCATE ( ReactNs(6*p%nNodes_C), STAT = ErrStat )
        IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for ReactNs array.'
          ErrStat = ErrID_Fatal
@@ -462,7 +462,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
        
        ReactNs = 0.0 !Initialize
        
-       DO I=1,p%NReact   !Do for each constrained node, they are ordered as given in the input file and so as in the order of y2mesh
+       DO I=1,p%nNodes_C   !Do for each constrained node, they are ordered as given in the input file and so as in the order of y2mesh
           FK_elm2=0. !Initialize for cumulative force
           FM_elm2=0. !Initialize
           pLst => p%MOutLst3(I)
@@ -492,7 +492,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg 
              ReactNs((I-1)*6+1:6*I)=FK_elm2 - junk  !Accumulate reactions from all nodes in GLOBAL COORDINATES ! TODO TODO TODO assumed DOF order maybe
        ENDDO
        ! Store into AllOuts
-       AllOuts( ReactSS(1:TPdofL) ) = matmul(p%TIreact,ReactNs)
+       AllOuts( ReactSS(1:nDOFL_TP) ) = matmul(p%TIreact,ReactNs)
   ENDIF
   if (allocated(ReactNs)) deallocate(ReactNs)
 
