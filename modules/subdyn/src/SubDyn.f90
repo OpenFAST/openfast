@@ -274,15 +274,6 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
  
    ! Allocate miscellaneous variables, used only to avoid temporary copies of variables allocated/deallocated and sometimes recomputed each time
    CALL AllocMiscVars(p, m, ErrStat2, ErrMsg2); if(Failed()) return
-
-   ! --- Write the summary file
-   IF ( Init%SSSum ) THEN 
-      ! note p%KBB/MBB are KBBt/MBBt
-      ! Write a summary of the SubDyn Initialization                     
-      CALL OutSummary(Init,p,FEMparams,CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
-      IF( ALLOCATED(Init%K) ) DEALLOCATE(Init%K)
-      IF( ALLOCATED(Init%M) ) DEALLOCATE(Init%M)     
-   ENDIF 
       
    ! --- Initialize Inputs and Outputs
    ! Create the input and output meshes associated with Transition Piece reference point       
@@ -290,8 +281,19 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    ! Construct the input mesh for the interior nodes which result from the Craig-Bampton reduction
    CALL CreateY2Meshes( Init%NNode, Init%Nodes, p%Interf(:,1), p%Nodes_L(:,1), p%Reacts(:,1), u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
-   call AllocAry(m%INodes_Mesh_to_SD, Init%NNode, 'INodes_Mesh_to_SD', ErrStat2, ErrMsg2); if(Failed()) return
+   call AllocAry(m%INodes_Mesh_to_SD, Init%NNode, 'INodes_Mesh_to_SD', ErrStat2, ErrMsg2); if(Failed()) return ! TODO move to AllocMiscVars, when Nnode in p
+   call AllocAry(m%INodes_SD_to_Mesh, Init%NNode, 'INodes_SD_to_Mesh', ErrStat2, ErrMsg2); if(Failed()) return
    call Y2Mesh_SD_Mapping(p, m%INodes_Mesh_to_SD) ! Store mapping from y2/u mesh to Subdyn nodes indices
+   call SD_Y2Mesh_Mapping(p, m%INodes_SD_to_Mesh) ! Store mapping from Subdyn to y2/u-mesh nodes indices
+
+   ! --- Write the summary file
+   IF ( Init%SSSum ) THEN 
+      ! note p%KBB/MBB are KBBt/MBBt
+      ! Write a summary of the SubDyn Initialization                     
+      CALL OutSummary(Init,p,m%INodes_SD_to_Mesh,FEMparams,CBparams,  ErrStat2, ErrMsg2); if(Failed()) return
+      IF( ALLOCATED(Init%K) ) DEALLOCATE(Init%K)
+      IF( ALLOCATED(Init%M) ) DEALLOCATE(Init%M)     
+   ENDIF 
    
    ! Initialize the outputs & Store mapping between nodes and elements  
    CALL SDOUT_Init( Init, y, p, m, InitOut, InitInput%WtrDpth, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -388,7 +390,6 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(SD_ContinuousStateType) :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       INTEGER(IntKi)               :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
-                                                 
       ! Initialize ErrStat
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -438,8 +439,10 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --------------------------------------------------------------------------------- 
       ! Place the outputs onto interface node portion of Y2 output mesh        
       ! ---------------------------------------------------------------------------------
+      ! TODO TODO TODO UL is constrained, need to multiply by T to get full DOFs
       DO I = 1, p%nNodes_I 
-         startDOF = (I-1)*6 + 1
+         startDOF = (I-1)*6 + 1 ! OK since interface Nodes are limited to 6 DOFs for now
+         ! TODO: code below might need to change if not all DOF fixed at interface
          ! Construct the direction cosine matrix given the output angles
          CALL SmllRotTrans( 'UR_bar input angles', m%UR_bar(startDOF + 3), m%UR_bar(startDOF + 4), m%UR_bar(startDOF + 5), DCM, '', ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
@@ -456,6 +459,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       ! --------------------------------------------------------------------------------- 
       ! Place the outputs onto interior node portion of Y2 output mesh 
       ! ---------------------------------------------------------------------------------      
+      ! TODO TODO TODO UL is constrained, need to multiply by T to get full DOFs
       DO I = 1, p%nNodes_L   !Only interior nodes here     
          ! starting index in the master arrays for the current node    
          startDOF = (I-1)*6 + 1
@@ -476,6 +480,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       END DO
       
       !Repeat for the acceleration, there should be a way to combine into 1 loop
+      ! TODO TODO TODO UL is constrained
       L1 = p%nNodes_I+1
       L2 = p%nNodes_I+p%nNodes_L
       junk=   RESHAPE(m%UL_dotdot,(/6  ,p%nNodes_L/)) 
@@ -483,18 +488,16 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       y%Y2mesh%RotationAcc    (  :,L1:L2)   = junk(4:6,:) 
       
       ! ---------------------------------------------------------------------------------
-      ! Base reaction nodes
+      ! Base reaction nodes have zero disp vel and acc
       ! ---------------------------------------------------------------------------------
-      L1 = p%nNodes_I+p%nNodes_L+1   
+      L1 = p%nNodes_I+p%nNodes_L+1    
       L2 = p%nNodes_I+p%nNodes_L+p%NReact
-
-      y%Y2mesh%TranslationDisp(  :,L1:L2)   = 0.0
+      y%Y2mesh%TranslationDisp(:,L1:L2)   = 0.0
       CALL Eye( y%Y2mesh%Orientation(:,:,L1:L2), ErrStat2, ErrMsg2 ) ; if(Failed()) return
-
-      y%Y2mesh%TranslationVel (  :,L1:L2)   = 0.0
-      y%Y2mesh%RotationVel    (  :,L1:L2)   = 0.0
-      y%Y2mesh%TranslationAcc (  :,L1:L2)   = 0.0
-      y%Y2mesh%RotationAcc    (  :,L1:L2)   = 0.0
+      y%Y2mesh%TranslationVel (:,L1:L2)   = 0.0
+      y%Y2mesh%RotationVel    (:,L1:L2)   = 0.0
+      y%Y2mesh%TranslationAcc (:,L1:L2)   = 0.0
+      y%Y2mesh%RotationAcc    (:,L1:L2)   = 0.0
 
       !________________________________________
       ! Set loads outputs on y%Y1Mesh
@@ -2444,9 +2447,10 @@ END SUBROUTINE
 
 !------------------------------------------------------------------------------------------------------
 !> Output the summary file    
-SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
+SUBROUTINE OutSummary(Init, p, SDtoMeshIndx, FEMparams,CBparams, ErrStat,ErrMsg)
    TYPE(SD_InitType),      INTENT(IN)     :: Init           ! Input data for initialization routine, this structure contains many variables needed for summary file
    TYPE(SD_ParameterType), INTENT(IN)     :: p              ! Parameters,this structure contains many variables needed for summary file
+   INTEGER(IntKi)        , INTENT(IN)     :: SDtoMeshIndx(:) ! SD to mesh mapping
    TYPE(CB_MatArrays),     INTENT(IN)     :: CBparams       ! CB parameters that will be passed in for summary file use
    TYPE(FEM_MatArrays),    INTENT(IN)     :: FEMparams      ! FEM parameters that will be passed in for summary file use
    INTEGER(IntKi),         INTENT(OUT)    :: ErrStat        ! Error status of the operation
@@ -2459,17 +2463,13 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    INTEGER(IntKi)         :: i, j, k, propids(2)  !counter and temporary holders
    INTEGER(IntKi)         :: mType ! Member Type
    Real(ReKi)             :: mMass, mLength ! Member mass and length
-   INTEGER(IntKi)         :: SDtoMeshIndx(Init%NNode)
    REAL(ReKi)             :: MRB(6,6)    !REDUCED SYSTEM Kmatrix, equivalent mass matrix
    REAL(ReKi)             :: XYZ1(3),XYZ2(3), DirCos(3,3) !temporary arrays, member i-th direction cosine matrix (global to local) and member length
    CHARACTER(*),PARAMETER                 :: SectionDivide = '____________________________________________________________________________________________________'
    CHARACTER(*),PARAMETER                 :: SubSectionDivide = '__________'
    CHARACTER(2),  DIMENSION(6), PARAMETER :: MatHds= (/'X ', 'Y ', 'Z ', 'XX', 'YY', 'ZZ'/)  !Headers for the columns and rows of 6x6 matrices
-   
    ErrStat = ErrID_None
    ErrMsg  = ""
-    
-   CALL SD_Y2Mesh_Mapping(p, SDtoMeshIndx )
 
    !-------------------------------------------------------------------------------------------------------------
    ! open txt file
