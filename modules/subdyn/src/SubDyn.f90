@@ -372,16 +372,18 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       TYPE(SD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
       TYPE(SD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                   !!   nectivity information does not have to be recalculated)
-      TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+      TYPE(SD_MiscVarType), target, INTENT(INOUT)  :: m           !< Misc/optimization variables
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       !locals
       INTEGER(IntKi)               :: L1,L2       ! partial Lengths of state and input arrays
-      INTEGER(IntKi)               :: I,J         ! Counters
+      INTEGER(IntKi)               :: I,J          ! Counters
+      INTEGER(IntKi)               :: iSDNode, iY2Node
       REAL(ReKi)                   :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims)
       REAL(ReKi)                   :: rotations(3)
       REAL(ReKi)                   :: ULS(p%nDOFL),  UL0m(p%nDOFL),  FLt(p%nDOFL)  ! Temporary values in static improvement method
       REAL(ReKi)                   :: Y1(6)
+      INTEGER(IntKi), pointer      :: DOFList(:)
       INTEGER(IntKi)               :: startDOF
       REAL(ReKi)                   :: DCM(3,3),junk(6,p%nNodes_L)
       REAL(ReKi)                   :: HydroForces(6*p%nNodes_I) !  !Forces from all interface nodes listed in one big array  ( those translated to TP ref point HydroTP(6) are implicitly calculated in the equations)
@@ -434,83 +436,35 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          END IF          
       ENDIF    
       ! --- Build original DOF vectors (DOF before the CB reduction)
-      !m%U_red       (p%IDI) = m%UR_bar
-      !m%U_red       (p%IDC) = 0           !!! TODO, might not be generic
-      !m%U_red       (p%IDL) = m%UL     
-      !m%U_red_dot   (p%IDI) = m%UR_bar_dot
-      !m%U_red_dot   (p%IDC) = 0           !!! TODO, might not be generic
-      !m%U_red_dot   (p%IDL) = m%UL_dot     
-      !m%U_red_dotdot(p%IDI) = m%UR_bar_dotdot
-      !m%U_red_dotdot(p%IDC) = 0           !!! TODO, might not be generic
-      !m%U_red_dotdot(p%IDL) = m%UL_dotdot    
+      m%U_red       (p%IDI) = m%UR_bar
+      m%U_red       (p%IDC) = 0           !!! TODO, might not be generic
+      m%U_red       (p%IDL) = m%UL     
+      m%U_red_dot   (p%IDI) = m%UR_bar_dot
+      m%U_red_dot   (p%IDC) = 0           !!! TODO, might not be generic
+      m%U_red_dot   (p%IDL) = m%UL_dot     
+      m%U_red_dotdot(p%IDI) = m%UR_bar_dotdot
+      m%U_red_dotdot(p%IDC) = 0           !!! TODO, might not be generic
+      m%U_red_dotdot(p%IDL) = m%UL_dotdot    
 
-      !m%U_full        = matmul(p%T_red, m%U_red)
-      !m%U_full_dot    = matmul(p%T_red, m%U_red_dot)
-      !m%U_full_dotdot = matmul(p%T_red, m%U_red_dotdot)
+      m%U_full        = matmul(p%T_red, m%U_red)
+      m%U_full_dot    = matmul(p%T_red, m%U_red_dot)
+      m%U_full_dotdot = matmul(p%T_red, m%U_red_dotdot)
                                                             
-      ! --------------------------------------------------------------------------------- 
-      ! Place the outputs onto interface node portion of Y2 output mesh        
-      ! ---------------------------------------------------------------------------------
-      ! TODO TODO TODO UL is constrained, need to multiply by T to get full DOFs
-      DO I = 1, p%nNodes_I 
-         startDOF = (I-1)*6 + 1 ! OK since interface Nodes are limited to 6 DOFs for now
-         ! TODO: code below might need to change if not all DOF fixed at interface
+      ! --- Place displacement/velocity/acceleration into Y2 output mesh        
+      DO iSDNode = 1,p%nNodes
+         iY2Node = m%INodes_SD_to_Mesh(iSDNode)
+         DOFList => m%NodesDOF(iSDNode)%List  ! Alias to shorten notations
+         ! TODO TODO which orientation to give for joints with more than 6 dofs?
          ! Construct the direction cosine matrix given the output angles
-         CALL SmllRotTrans( 'UR_bar input angles', m%UR_bar(startDOF + 3), m%UR_bar(startDOF + 4), m%UR_bar(startDOF + 5), DCM, '', ErrStat2, ErrMsg2 )
+         CALL SmllRotTrans( 'UR_bar input angles', m%U_full(DOFList(4)), m%U_full(DOFList(5)), m%U_full(DOFList(6)), DCM, '', ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
-
-         y%Y2mesh%TranslationDisp (:,I)     = m%UR_bar  (       startDOF     : startDOF + 2 )
-         y%Y2mesh%Orientation     (:,:,I)   = DCM
-         y%Y2mesh%TranslationVel  (:,I)     = m%UR_bar_dot (    startDOF     : startDOF + 2 )
-         y%Y2mesh%RotationVel     (:,I)     = m%UR_bar_dot (    startDOF + 3 : startDOF + 5 )
-         y%Y2mesh%TranslationAcc  (:,I)     = m%UR_bar_dotdot ( startDOF     : startDOF + 2 )
-         y%Y2mesh%RotationAcc     (:,I)     = m%UR_bar_dotdot ( startDOF + 3 : startDOF + 5 )
-                  
-      ENDDO
-     
-      ! --------------------------------------------------------------------------------- 
-      ! Place the outputs onto interior node portion of Y2 output mesh 
-      ! ---------------------------------------------------------------------------------      
-      ! TODO TODO TODO UL is constrained, need to multiply by T to get full DOFs
-      DO I = 1, p%nNodes_L   !Only interior nodes here     
-         ! starting index in the master arrays for the current node    
-         startDOF = (I-1)*6 + 1
-         
-         ! index into the Y2Mesh
-         J = p%nNodes_I + I
-       
-         ! Construct the direction cosine matrix given the output angles
-         CALL SmllRotTrans( 'UL input angles', m%UL(startDOF + 3), m%UL(startDOF + 4), m%UL(startDOF + 5), DCM, '', ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
-         
-         ! Y2 = Interior node displacements and velocities  for use as inputs to HydroDyn
-         y%Y2mesh%TranslationDisp (:,J)     = m%UL     ( startDOF     : startDOF + 2 )
-         y%Y2mesh%Orientation     (:,:,J)   = DCM
-         y%Y2mesh%TranslationVel  (:,J)     = m%UL_dot ( startDOF     : startDOF + 2 )
-         y%Y2mesh%RotationVel     (:,J)     = m%UL_dot ( startDOF + 3 : startDOF + 5 )
-         
-      END DO
-      
-      !Repeat for the acceleration, there should be a way to combine into 1 loop
-      ! TODO TODO TODO UL is constrained
-      L1 = p%nNodes_I+1
-      L2 = p%nNodes_I+p%nNodes_L
-      junk=   RESHAPE(m%UL_dotdot,(/6  ,p%nNodes_L/)) 
-      y%Y2mesh%TranslationAcc (  :,L1:L2)   = junk(1:3,:) 
-      y%Y2mesh%RotationAcc    (  :,L1:L2)   = junk(4:6,:) 
-      
-      ! ---------------------------------------------------------------------------------
-      ! Base reaction nodes have zero disp vel and acc
-      ! ---------------------------------------------------------------------------------
-      L1 = p%nNodes_I+p%nNodes_L+1    
-      L2 = p%nNodes_I+p%nNodes_L+p%nNodes_C
-      y%Y2mesh%TranslationDisp(:,L1:L2)   = 0.0
-      CALL Eye( y%Y2mesh%Orientation(:,:,L1:L2), ErrStat2, ErrMsg2 ) ; if(Failed()) return
-      y%Y2mesh%TranslationVel (:,L1:L2)   = 0.0
-      y%Y2mesh%RotationVel    (:,L1:L2)   = 0.0
-      y%Y2mesh%TranslationAcc (:,L1:L2)   = 0.0
-      y%Y2mesh%RotationAcc    (:,L1:L2)   = 0.0
-
+         y%Y2mesh%Orientation     (:,:,iY2Node)   = DCM
+         y%Y2mesh%TranslationDisp (:,iY2Node)     = m%U_full        (DOFList(1:3))
+         y%Y2mesh%TranslationVel  (:,iY2Node)     = m%U_full_dot    (DOFList(1:3))
+         y%Y2mesh%TranslationAcc  (:,iY2Node)     = m%U_full_dotdot (DOFList(1:3))
+         y%Y2mesh%RotationVel     (:,iY2Node)     = m%U_full_dot    (DOFList(4:6))
+         y%Y2mesh%RotationAcc     (:,iY2Node)     = m%U_full_dotdot (DOFList(4:6))
+      enddo
       !________________________________________
       ! Set loads outputs on y%Y1Mesh
       !________________________________________
@@ -522,7 +476,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
         !Aggregate the forces and moments at the interface nodes to the reference point
         !TODO: where are these HydroTP, HydroForces documented?
       DO I = 1, p%nNodes_I 
-         startDOF = (I-1)*6 + 1
+         startDOF = (I-1)*6 + 1 ! NOTE: this works since interface is assumed to be sorted like LMesh and have 6 DOF per nodes
          !Take care of Hydrodynamic Forces that will go into INterface Forces later
          HydroForces(startDOF:startDOF+5 ) =  (/u%LMesh%Force(:,I),u%LMesh%Moment(:,I)/)  !(6,NNODES_I)
       ENDDO
