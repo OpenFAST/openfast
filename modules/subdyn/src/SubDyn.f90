@@ -290,6 +290,8 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    
    ! Construct the input mesh for the interior nodes which result from the Craig-Bampton reduction
    CALL CreateY2Meshes( Init%NNode, Init%Nodes, p%Interf(:,1), p%Nodes_L(:,1), p%Reacts(:,1), u%LMesh, y%Y2Mesh, ErrStat2, ErrMsg2 ); if(Failed()) return
+   call AllocAry(m%INodes_Mesh_to_SD, Init%NNode, 'INodes_Mesh_to_SD', ErrStat2, ErrMsg2); if(Failed()) return
+   call Y2Mesh_SD_Mapping(p, m%INodes_Mesh_to_SD) ! Store mapping from y2/u mesh to Subdyn nodes indices
    
    ! Initialize the outputs & Store mapping between nodes and elements  
    CALL SDOUT_Init( Init, y, p, m, InitOut, InitInput%WtrDpth, ErrStat2, ErrMsg2 ); if(Failed()) return
@@ -399,7 +401,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
       ! Inputs on interior nodes:
-      CALL ConstructUFL( u, p, m%UFL )
+      CALL ConstructUFL( u, p, m, m%UFL )
 
       !________________________________________
       ! Set motion outputs on y%Y2mesh
@@ -613,7 +615,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrSta
       m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       
       ! form u(4) in Eq. 10:
-      CALL ConstructUFL( u, p, m%UFL )
+      CALL ConstructUFL( u, p, m, m%UFL )
       
       !Equation 12: X=A*x + B*u + Fx (Eq 12)
       dxdt%qm= x%qmdot
@@ -1410,12 +1412,12 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg 
    ! interpolate u to find u_interp = u(t) = u_n     
    CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL ConstructUFL( u_interp, p, m%UFL )     
+   CALL ConstructUFL( u_interp, p, m, m%UFL )     
                 
    ! extrapolate u to find u_interp = u(t + dt)=u_n+1
    CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
    udotdot_TP2 = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-   CALL ConstructUFL( u_interp, p, UFL2 )     
+   CALL ConstructUFL( u_interp, p, m, UFL2 )     
    
    ! calculate (u_n + u_n+1)/2
    udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
@@ -1538,6 +1540,7 @@ SUBROUTINE Craig_Bampton(Init, p, m, CBparams, ErrStat, ErrMsg)
    !................................
    CALL CBMatrix(MRR, MLL, MRL, KRR, KLL, KRL, CBparams%DOFM, Init, &  ! < inputs
                  CBparams%MBB, CBparams%MBM, CBparams%KBB, CBparams%PhiL, CBparams%PhiR, CBparams%OmegaL, ErrStat2, ErrMsg2, p)  ! <- outputs (p is also input )
+   ! TODO TODO TODO DAMPING MATRIX 
    if(Failed()) return
       
    ! to use a little less space, let's deallocate these arrays that we don't need anymore, then allocate the next set of temporary arrays:     
@@ -2299,6 +2302,7 @@ SUBROUTINE PartitionDOFNodes_I_C_R_L(Init, m, p, ErrStat, ErrMsg)
    p%nNodes_I  = p%NInterf             ! Number of interface nodes
    nNodes_R    = p%NReact+p%NInterf    ! Number of retained nodes
    p%nNodes_L  = Init%NNode - nNodes_R ! Number of Interior nodes =(TDOF-DOFC-DOFI)/6 =  (6*Init%NNode - (p%NReact+p%nNodes_I)*6 ) / 6 = Init%NNode - p%NReact -p%nNodes_I
+   ! NOTE: some of the interior nodes may have no DOF if they are involved in a rigid assembly..
 
    CALL AllocAry( p%Nodes_L, p%nNodes_L, 1, 'p%Nodes_L', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
    CALL AllocAry( Nodes_R  , nNodes_R     , 'Nodes_R'  , ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'PartitionDOFNodes_I_C_R_L')        
@@ -2401,23 +2405,40 @@ contains
 END SUBROUTINE PartitionDOFNodes_I_C_R_L
 
 !------------------------------------------------------------------------------------------------------
-!> Take the input u LMesh and constructs the appropriate corresponding UFL vector
-SUBROUTINE ConstructUFL( u, p, UFL )
-   TYPE(SD_InputType),             INTENT(IN   )  :: u               ! Inputs
-   TYPE(SD_ParameterType),         INTENT(IN   )  :: p               ! Parameters
-   REAL(ReKi)                                     :: UFL(p%DOFL)
-   INTEGER                                        :: I, J, StartDOF  ! integers for indexing into mesh and UFL
+!> Construct force vector on internal DOF (L) from the values on the input mesh 
+!! First, the full vector of external forces is built on the non-reduced DOF
+!! Then, the vector is reduced using the Tred matrix
+SUBROUTINE ConstructUFL( u, p, m, UFL )
+   type(SD_InputType),     intent(in   )  :: u ! Inputs
+   type(SD_ParameterType), intent(in   )  :: p ! Parameters
+   type(SD_MiscVarType),   intent(inout)  :: m ! Misc, for storage optimization of Fext and Fext_red
+   real(ReKi)          ,   intent(out)    :: UFL(p%DOFL)
+   integer :: iMeshNode, iSDNode ! indices of u-mesh nodes and SD nodes
+   integer :: nMembers
+   real(ReKi), parameter :: myNaN = -9999998.989_ReKi 
+   ! TODO to save time, perform Tred multiplication only if Tred is not identity
 
-   ! note that p%DOFL = p%nNodes_L*6
-   DO I = 1, p%nNodes_L   !Only interior nodes here     
-      ! starting index in the master arrays for the current node    
-      startDOF = (I-1)*6 + 1 ! TODO
-      ! index into the Y2Mesh
-      J  = p%nNodes_I + I
-      ! Construct UFL array from the Force and Moment fields of the input mesh
-      UFL ( startDOF   : startDOF + 2 ) = u%LMesh%Force (:,J)
-      UFL ( startDOF+3 : startDOF + 5 ) = u%LMesh%Moment(:,J)
-   END DO   
+   ! --- Build vector of external force
+   m%Fext= myNaN
+   DO iMeshNode = 1,size(m%INodes_Mesh_to_SD)
+      iSDNode = m%INodes_Mesh_to_SD(iMeshNode) 
+      nMembers = (size(m%NodesDOF(iSDNode)%List)-3)/3 ! Number of members deducted from Node's DOFlist
+      ! Force - All nodes have only 3 translational DOFs 
+      m%Fext( m%NodesDOF(iSDNode)%List(1:3) ) =  u%LMesh%Force (:,iMeshNode)
+      ! Moment is spread equally across all rotational DOFs if more than 3 rotational DOFs
+      m%Fext( m%NodesDOF(iSDNode)%List(4::3)) =  u%LMesh%Moment(1,iMeshNode)/nMembers
+      m%Fext( m%NodesDOF(iSDNode)%List(5::3)) =  u%LMesh%Moment(2,iMeshNode)/nMembers
+      m%Fext( m%NodesDOF(iSDNode)%List(6::3)) =  u%LMesh%Moment(3,iMeshNode)/nMembers
+   enddo
+   ! TODO: remove test below in the future
+   if (any(m%Fext == myNaN)) then
+      print*,'Error in setting up Fext'
+      STOP
+   endif
+   ! --- Reduced vector of external force
+   m%Fext_red = matmul(transpose(m%Tred), m%Fext)
+   UFL=0
+   UFL= m%Fext_red(p%IDL)
 
 END SUBROUTINE
 
@@ -2685,40 +2706,47 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
 #endif   
    
    CALL SDOut_CloseSum( UnSum, ErrStat, ErrMsg )  
-contains
-   !------------------------------------------------------------------------------------------------------
-   !> Set the index array that maps SD internal nodes to the Y2Mesh nodes.
-   !! NOTE: SDtoMesh is not checked for size, nor are the index array values checked for validity, 
-   !!       so this routine could easily have segmentation faults if any errors exist.
-   SUBROUTINE SD_Y2Mesh_Mapping(p, SDtoMesh)
-      TYPE(SD_ParameterType), INTENT(IN   )  :: p           !< Parameters
-      INTEGER(IntKi),         INTENT(  OUT)  :: SDtoMesh(:) !< index/mapping of mesh nodes with SD mesh
-      ! locals
-      INTEGER(IntKi) :: i
-      INTEGER(IntKi) :: SDnode
-      INTEGER(IntKi) :: y2Node
-      y2Node = 0
-      ! Interface nodes (IDI)
-      DO I = 1,SIZE(p%Interf,1)
-         y2Node = y2Node + 1      
-         SDnode = p%Interf(I,1)
-         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-      END DO
-      ! Interior nodes (IDL)
-      DO I = 1,SIZE(p%Nodes_L,1)
-         y2Node = y2Node + 1      
-         SDnode = p%Nodes_L(I,1)
-         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-      END DO
-      ! Base Reaction nodes (IDC)
-      DO I = 1,SIZE(p%Reacts,1) 
-         y2Node = y2Node + 1      
-         SDnode = p%Reacts(I,1)
-         SDtoMesh( SDnode ) = y2Node ! TODO add safety check
-      END DO
-   END SUBROUTINE SD_Y2Mesh_Mapping
-
 END SUBROUTINE OutSummary
+
+!------------------------------------------------------------------------------------------------------
+!> Set the index array that maps SD internal nodes to the Y2Mesh nodes.
+!! NOTE: SDtoMesh is not checked for size, nor are the index array values checked for validity, 
+!!       so this routine could easily have segmentation faults if any errors exist.
+SUBROUTINE SD_Y2Mesh_Mapping(p, SDtoMesh)
+   TYPE(SD_ParameterType), INTENT(IN   )  :: p           !< Parameters
+   INTEGER(IntKi),         INTENT(  OUT)  :: SDtoMesh(:) !< index/mapping of mesh nodes with SD mesh
+   ! locals
+   INTEGER(IntKi) :: i
+   INTEGER(IntKi) :: SDnode
+   INTEGER(IntKi) :: y2Node
+   y2Node = 0
+   ! Interface nodes (IDI)
+   DO I = 1,SIZE(p%Interf,1)
+      y2Node = y2Node + 1      
+      SDnode = p%Interf(I,1)
+      SDtoMesh( SDnode ) = y2Node ! TODO add safety check
+   END DO
+   ! Interior nodes (IDL)
+   DO I = 1,SIZE(p%Nodes_L,1)
+      y2Node = y2Node + 1      
+      SDnode = p%Nodes_L(I,1)
+      SDtoMesh( SDnode ) = y2Node ! TODO add safety check
+   END DO
+   ! Base Reaction nodes (IDC)
+   DO I = 1,SIZE(p%Reacts,1) 
+      y2Node = y2Node + 1      
+      SDnode = p%Reacts(I,1)
+      SDtoMesh( SDnode ) = y2Node ! TODO add safety check
+   END DO
+END SUBROUTINE SD_Y2Mesh_Mapping
+!>
+SUBROUTINE Y2Mesh_SD_Mapping(p, MeshtoSD)
+   TYPE(SD_ParameterType), INTENT(IN   )  :: p           !< Parameters
+   INTEGER(IntKi),         INTENT(  OUT)  :: MeshtoSD(:) !< index/mapping of mesh nodes with SD mesh
+   MeshtoSD(                      1:p%nNodes_I)                       = p%Interf(:,1)
+   MeshtoSD(p%nNodes_I+           1:p%nNodes_I+p%nNodes_L)            = p%Nodes_L(:,1)
+   MeshtoSD(p%nNodes_I+p%nNodes_L+1:p%nNodes_I+p%nNodes_L+p%nReact) = p%Reacts(:,1)
+END SUBROUTINE Y2Mesh_SD_Mapping
 
 !------------------------------------------------------------------------------------------------------
 !> This function calculates the length of a member 

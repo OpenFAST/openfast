@@ -154,9 +154,12 @@ typedef	^	          ^             DbKi                     LastOutTime -  -  -  
 typedef	^	          ^             IntKi                    Decimat     -  -  -  "Current output decimation counter"	"-"
 typedef	^	          ^             IList                    NodesDOF     {:}  -  -  "DOF indices of each nodes in unconstrained assembled system "	"-"
 typedef	^	          ^             IList                    NodesDOFtilde {:}  -  -  "DOF indices of each nodes in constrained assembled system "	"-"
+typedef	^	          ^             IntKi                    INodes_Mesh_to_SD {:} - - "Nodes indices from Y2/U-mesh to subdyn iSDNode = INodes_Mesh_to_SD(iMeshNode)  "	"-"
 typedef	^	          ^             IntKi                    ElemsDOF  {:}{:} -  -  "12 DOF indices of node 1 and 2 of a given member in unconstrained assembled system "	"-"
 typedef	^	          ^             IntKi                    DOFtilde2Nodes {:}{:} -  -  "nDOFRed x 3, for each constrained DOF, col1 node index, col2 number of DOF, col3 DOF starting from 1"	"-"
 typedef	^	          ^             ReKi                     Tred      {:}{:} -  -  "Transformation matrix performing the constraint reduction x = T. xtilde"	"-"
+typedef	^	          ^             ReKi                     Fext      {:} -  -  "External loads on unconstrained DOFs"	"-"
+typedef	^	          ^             ReKi                     Fext_red  {:} -  -  "External loads on constrained DOFs, Fext_red= T^t Fext"	"-"
 
 
 

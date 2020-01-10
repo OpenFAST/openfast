@@ -1019,7 +1019,7 @@ SUBROUTINE BuildTMatrix(Init, p, RA, RAm1, m, Tred, ErrStat, ErrMsg)
 
    Init%nDOFRed = nDOF_ConstraintReduced()
    print*,'nDOF constraint elim', Init%nDOFRed , '/' , Init%TDOF
-   CALL AllocAry( m%Tred, Init%TDOF, Init%nDOFRed, 'm%Tred',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   CALL AllocAry( Tred, Init%TDOF, Init%nDOFRed, 'm%Tred',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
    Tred=0
    call init_list(IRA, size(RA), 0, ErrStat2, ErrMsg2); if(Failed()) return;
    IRA%List(1:size(RA)) = (/(ia , ia = 1,size(RA))/)
@@ -1175,15 +1175,17 @@ SUBROUTINE DirectElimination(Init, p, m, ErrStat, ErrMsg)
    call move_alloc(Init%FG, FF)
    !  Reallocating
    nDOF = Init%nDOFRed
-   CALL AllocAry( Init%D, nDOF, nDOF, 'Init%D',  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
-   CALL AllocAry( Init%K, nDOF, nDOF, 'Init%K',  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
-   CALL AllocAry( Init%M, nDOF, nDOF, 'Init%M',  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
-   CALL AllocAry( Init%FG,nDOF,       'Init%FG', ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( Init%D,      nDOF, nDOF,   'Init%D'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system damping matrix 
+   CALL AllocAry( Init%K,      nDOF, nDOF,   'Init%K'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system stiffness matrix 
+   CALL AllocAry( Init%M,      nDOF, nDOF,   'Init%M'   ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system mass matrix 
+   CALL AllocAry( Init%FG     ,nDOF,         'Init%FG'  ,  ErrStat2, ErrMsg2); if(Failed()) return; ! system gravity force vector 
+   CALL AllocAry( m%Fext,      Init%TDOF   , 'm%Fext    ', ErrStat2, ErrMsg2 ); if(Failed()) return ! external force
+   CALL AllocAry( m%Fext_red,  Init%nDOFRed, 'm%Fext_red', ErrStat2, ErrMsg2 ); if(Failed()) return ! external force, reduced by Tred
    ! Elimination
    Init%M  = matmul(transpose(m%Tred), matmul(MM, m%Tred))
    Init%K  = matmul(transpose(m%Tred), matmul(KK, m%Tred))
    Init%FG = matmul(transpose(m%Tred), FF)
-   Init%D = 0 !< Used for additional stiffness
+   Init%D = 0 !< Used for additional stiffness 
 
    ! --- Triggers for storage of DOF indices, replacing with indices in constrained system
    CALL ReInitBCs(Init, p)
